@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// Concretely x <= y at the check: each branch assigns x below y.
+//
+// Interval joins the branches to x = [0,20] and y = [10,30], which overlap, so it
+// cannot order x and y. Run with the order analysis, which asks Interval at each
+// assignment to y, the check is proved (precision/06-order_asks_interval). Backs the
+// "Interval" tab of the site figure "Two analyses, one question".
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  __voblint_check(x <= y); // UNKNOWN
+}

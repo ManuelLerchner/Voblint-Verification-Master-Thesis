@@ -58,6 +58,7 @@
   <link rel="stylesheet" href="figures/particles.css">
   <link rel="stylesheet" href="figures/gamma.css">
   <link rel="stylesheet" href="figures/reduce.css">
+  <link rel="stylesheet" href="figures/coop.css">
   <link rel="stylesheet" href="figures/source-morph.css">
 <link rel="stylesheet" href="figures/gen.css">
 <link rel="stylesheet" href="figures/infinite.css">
@@ -98,6 +99,7 @@
   <script src="figures/gamma.js" defer></script>
   <script src="figures/obs.js" defer></script>
   <script src="figures/reduce.js" defer></script>
+  <script src="figures/coop.js" defer></script>
   <script src="figures/source-morph.js" defer></script>
   <script src="figures/eqs.js" defer></script>
   <script src="figures/gen.js" defer></script>
@@ -360,7 +362,7 @@
             <div>
               <p class="ans-label">Settings</p>
               <ul class="ans-settings">
-                <li>domain <b>interval</b></li>
+                <li>analyses <b>interval</b></li>
                 <li>contexts <b>none</b></li>
                 <li>globals <b>warrow</b></li>
               </ul>
@@ -869,6 +871,111 @@
         <figcaption>No. In C, a remainder takes the sign of its dividend, so <code>n = −1</code> gives <code>x = −1</code> and <code>x % 6 = −1</code>. That run is real, and a bound without <code>−1</code> would be unsound; this is why <code>a &gt;= 0</code> comes back <code>UNKNOWN</code>. The bound is also reduction at work, and no single component reaches it. Interval alone stops at <code>[−5, 5]</code>, because it never learns <code>x ≡ 5 (mod 6)</code>. Congruence keeps that class but knows nothing about magnitude, so the sign guard tells it nothing. Under <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Domain/Parity_Lattice.html#Parity_Lattice.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Domain/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a> alone, both arms come back <code>UNKNOWN</code>. Together, the class and the bounds leave <code>{−1, 5}</code>, which the guard splits into one value per arm.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/45-remainder_sign_split.vimp&amp;analysis=int&amp;context=none">Run it in the playground ↗</a></figcaption>
       </figure>
+      </details>
+
+      <h3 class="setting-title">Two analyses, one question</h3>
+      <p class="setting-copy">The Int product combines four numeric domains inside one value. Separate analyses can also work together while they run. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks the other analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
+
+      <figure class="scene scene-coop" data-prog="eq" data-sel="both">
+        <div class="coop-controls">
+          <div class="call-modes coop-progs" role="tablist" aria-label="Program" hidden>
+            <button type="button" role="tab" data-prog="eq" aria-selected="true">Interval asks Order</button>
+            <button type="button" role="tab" data-prog="le" aria-selected="false">Order asks Interval</button>
+          </div>
+          <div class="call-modes coop-sels" role="tablist" aria-label="Analyses" hidden>
+            <button type="button" role="tab" data-sel="interval" aria-selected="false">interval</button>
+            <button type="button" role="tab" data-sel="order" aria-selected="false">order</button>
+            <button type="button" role="tab" data-sel="both" aria-selected="true">interval,order</button>
+          </div>
+        </div>
+
+        <div class="coop-layout">
+          <div class="coop-code">
+            <p class="td-panel-title">Program</p>
+            <pre class="coop-prog" data-prog="eq" data-lang="vimp"><code>fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x &lt;= y) {
+    if (y &lt;= x) {
+      z = (x == y);
+      __voblint_check(z == 1);
+    }
+  }
+}</code></pre>
+            <pre class="coop-prog" data-prog="le" data-lang="vimp" hidden><code>fun main() {
+  c = __voblint_nondet_int();
+  if (0 &lt; c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  __voblint_check(x &lt;= y);
+}</code></pre>
+          </div>
+
+          <div class="coop-main">
+            <p class="td-panel-title">State at the check, per analysis</p>
+
+            <div class="coop-view" data-view="eq-interval" hidden>
+              <div class="coop-states"><div class="coop-state"><span class="coop-name">interval</span><code>z = [0,1]</code></div><div class="coop-state off"><span class="coop-name">order</span><span>not run</span></div></div>
+              <p class="coop-note">Each guard compares two unbounded ranges and learns nothing, so <code>x == y</code> can only be <code>0</code> or <code>1</code>.</p>
+              <p class="coop-result"><span class="verdict unknown">UNKNOWN</span> <code>z == 1</code></p>
+            </div>
+            <div class="coop-view" data-view="eq-order" hidden>
+              <div class="coop-states"><div class="coop-state off"><span class="coop-name">interval</span><span>not run</span></div><div class="coop-state"><span class="coop-name">order</span><code>{x≤y ∧ y≤x}</code></div></div>
+              <p class="coop-note">The pairs say <code>x = y</code>, but after <code>z = (x == y)</code> no pair mentions <code>z</code>.</p>
+              <p class="coop-result"><span class="verdict unknown">UNKNOWN</span> <code>z == 1</code></p>
+            </div>
+            <div class="coop-view" data-view="eq-both">
+              <div class="coop-states"><div class="coop-state"><span class="coop-name">interval</span><code>z = [1,1]</code></div><div class="coop-state"><span class="coop-name">order</span><code>{x≤y ∧ y≤x}</code></div></div>
+              <ol class="coop-exchange">
+                <li>At <code>z = (x == y)</code>, Interval asks: what does <code>x == y</code> evaluate to?</li>
+                <li>Interval itself answers <code>[0,1]</code>; the order analysis holds both pairs and answers <code>1</code>.</li>
+                <li>The answers are met: <code>[0,1] ⊓ 1 = 1</code>, so Interval assigns <code>z = [1,1]</code>.</li>
+              </ol>
+              <p class="coop-result"><span class="verdict proved">PROVED</span> <code>z == 1</code></p>
+            </div>
+
+            <div class="coop-view" data-view="le-interval" hidden>
+              <div class="coop-states"><div class="coop-state"><span class="coop-name">interval</span><code>x = [0,20], y = [10,30]</code></div><div class="coop-state off"><span class="coop-name">order</span><span>not run</span></div></div>
+              <p class="coop-note">The join of the two branches overlaps, so the ranges cannot order <code>x</code> and <code>y</code>.</p>
+              <p class="coop-result"><span class="verdict unknown">UNKNOWN</span> <code>x &lt;= y</code></p>
+            </div>
+            <div class="coop-view" data-view="le-order" hidden>
+              <div class="coop-states"><div class="coop-state off"><span class="coop-name">interval</span><span>not run</span></div><div class="coop-state"><span class="coop-name">order</span><code>⊤</code></div></div>
+              <p class="coop-note">Alone, the order analysis cannot compare a variable with a constant, so neither branch records a pair.</p>
+              <p class="coop-result"><span class="verdict unknown">UNKNOWN</span> <code>x &lt;= y</code></p>
+            </div>
+            <div class="coop-view" data-view="le-both" hidden>
+              <div class="coop-states"><div class="coop-state"><span class="coop-name">interval</span><code>x = [0,20], y = [10,30]</code></div><div class="coop-state"><span class="coop-name">order</span><code>{x≤y}</code></div></div>
+              <ol class="coop-exchange">
+                <li>At <code>y = 10</code>, the order analysis asks whether <code>x ≤ 10</code>. Interval knows <code>x = 0</code> and answers <code>1</code>.</li>
+                <li>At <code>y = 30</code>, it asks whether <code>x ≤ 30</code>. Interval knows <code>x = 20</code> and answers <code>1</code>.</li>
+                <li>Both branches record <code>x ≤ y</code>, so the pair survives the join.</li>
+              </ol>
+              <p class="coop-result"><span class="verdict proved">PROVED</span> <code>x &lt;= y</code></p>
+            </div>
+          </div>
+        </div>
+
+        <figcaption>Analyzer output for both programs under each selection of analyses; the check's state is shown as the analyzer prints it. In the first program Interval asks and the order analysis answers. In the second the direction reverses: at each assignment, the order analysis asks how the new value compares with the other variables, and Interval answers. Both runs are also checked in Isabelle by evaluating the exported analyzer on variants of these programs (<a href="Voblint/Voblint_Examples_CLI/Example_Analysis_Dispatch_Regression.html#Example_Analysis_Dispatch_Regression.coop_demo_needs_both%7Cfact"><code>coop_demo_needs_both</code></a>, <a href="Voblint/Voblint_Examples_CLI/Example_Order_Asks_Interval.html#Example_Order_Asks_Interval.order_asks_needs_both%7Cfact"><code>order_asks_needs_both</code></a>).
+          <a class="try-link" href="playground.html?fixture=25-cooperation/precision/03-equality_asked_of_order.vimp&amp;analysis=interval,order">Run the first program ↗</a>
+          <a class="try-link" href="playground.html?fixture=25-cooperation/precision/06-order_asks_interval.vimp&amp;analysis=interval,order">Run the second ↗</a></figcaption>
+      </figure>
+
+      <details class="blackbox deepdive">
+        <summary>
+          <i class="fa-solid fa-code" aria-hidden="true"></i>
+          <span class="blackbox-label">how the framework represents this</span>
+          <i class="fa-solid fa-chevron-down blackbox-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="prose-block">
+          <p>Each analysis supplies a <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype"><code>local_spec</code></a>: its transfers, which may ask questions, and a handler that answers questions from its own state. An answer to “what does <code>e</code> evaluate to?” is sound at a store if the value of <code>e</code> there lies in the answer. Two laws make answers combine. The top answer holds everywhere, so an analysis that cannot answer says <code>⊤</code> and claims nothing. Two answers that both hold can be met, so a question asked of all analyses gets the meet of their answers (<a href="Voblint/Voblint_CLI/MCP_Analyses.html#MCP_Analyses.mcp_answer%7Cconst"><code>mcp_answer</code></a> does the same for checks).</p>
+          <p>The questions travel through a channel built from the state before the edge (<a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.ls_channel%7Cconst"><code>ls_channel</code></a>). A question asked again while it is being answered gets <code>⊤</code>, as in Goblint's <code>MCP.query'</code>, and a depth bound (<a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.query_depth%7Cconst"><code>query_depth</code></a>) stops the recursion in the logic. No analysis has to be ordered before another. <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.ls_channel_sound%7Cfact"><code>ls_channel_sound</code></a> proves the channel's answers hold.</p>
+          <p>An analysis proves its own laws once, as <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, and the laws mention no other analysis. <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of%7Cconst"><code>dg_spec_of</code></a> turns a local specification into the record the equations consume, and <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of_contract%7Cfact"><code>dg_spec_of_contract</code></a> carries the laws to the analysis contract. <a href="Voblint/Voblint_CLI/MCP_Analyses.html#MCP_Analyses.mcp_comp_sound%7Cfact"><code>mcp_comp_sound</code></a> gives that contract for every selection of analyses, so the rest of the pipeline treats a combination like a single analysis.</p>
+        </div>
       </details>
 
     </section>
@@ -2171,6 +2278,9 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         </figcaption>
       </figure>
       </details>
+      <div class="prose-block">
+        <p><strong>Watch the real solver run.</strong> The playground can record the generated analyzer's solver trace and replay it on the graph: each query and its answer, each value stored, each side effect into a seed, each update and the readers it destabilizes, and the context each call is routed to. The trace is an unverified observation of the verified computation, not part of any theorem; <a href="#replay">Watching the solver work</a> says how it is recorded.</p>
+      </div>
     </section>
 
     <!-- ================================================================== -->

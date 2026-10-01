@@ -30,6 +30,7 @@ blocks.
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
 | One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |
 | What the analyzer will answer (collecting semantics) | `sum(2)` via `dec`, no contexts | `known-imprecision/19-sum_dec_no_context` |
+| Two analyses, one question | equality from two guards; order asks Interval | `25-cooperation/precision/03`, `25-cooperation/precision/06`, `25-cooperation/known-imprecision/01`, `03`, `05`, `06` |
 | What does it tell you? | `100 / k`, `100 / d` and two checks | `precision/47-answers_every_kind` |
 | Thesis Figure 1.2 (every answer) | a clamp function, one check per verdict and two divisions | `precision/48-clamp_every_answer` |
 
