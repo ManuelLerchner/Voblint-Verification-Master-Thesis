@@ -29,6 +29,7 @@ import {
   Decoration,
   EditorView,
   highlightSpecialChars,
+  keymap,
   lineNumbers,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
@@ -520,14 +521,21 @@ const currentField = StateField.define({
  * current (by default [first] and the value lines that continue it) and centers the first one's label in both directions, unfolding it if needed;
  * [show(null)] marks none and returns to the top.
  */
+/* Only the lines on screen are in the DOM, so the browser's own select-all cannot reach the rest. */
+function selectAll(view) {
+  view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
+  return true;
+}
+
 export function createTraceView(parent, { label, onLine = null }) {
   const view = new EditorView({
     parent,
     extensions: [
       highlightSpecialChars(),
+      /* Read-only but focusable, so a selection and its copy cover the whole trace. */
       EditorState.readOnly.of(true),
-      EditorView.editable.of(false),
-      EditorView.contentAttributes.of({ "aria-label": label, tabindex: "0" }),
+      EditorView.contentAttributes.of({ "aria-label": label }),
+      keymap.of([{ key: "Mod-a", run: selectAll, preventDefault: true }]),
       StreamLanguage.define(traceParser),
       syntaxHighlighting(traceHighlight),
       lineNumbers(),
@@ -594,8 +602,9 @@ export function createTraceView(parent, { label, onLine = null }) {
         changes: { from: 0, to: view.state.doc.length, insert: text },
         effects: setCurrent.of(null),
         selection: { anchor: 0 },
-        scrollIntoView: true,
       });
+      /* The pane's own scroller only: scrollIntoView would also move the page. */
+      view.scrollDOM.scrollTo({ top: 0, left: 0 });
     },
 
     show(first, last) {
