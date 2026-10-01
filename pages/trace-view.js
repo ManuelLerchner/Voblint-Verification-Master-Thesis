@@ -39,26 +39,13 @@ import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 /*
  * Every event label of the three forms, by what it does to the solve. A query's answer,
  * a solve step's `sol` and the change it stores carry the values the solve computes,
- * so they get kinds of their own.
+ * so they get kinds of their own; beginning an iteration or an equation is bookkeeping
+ * between them and is drawn quieter than the query that caused it.
  */
 const KIND_OF = new Map(
   Object.entries({
-    query: [
-      "solver_query",
-      "eq",
-      "iter",
-      "multivar",
-      "QUERY",
-      "QUERY-L",
-      "QUERY-G",
-      "VALUE-L",
-      "RETURN",
-      "EQ",
-      "ITERATE",
-      "SOLVE",
-      "RESOLVE",
-      "START",
-    ],
+    query: ["solver_query", "QUERY", "QUERY-L", "QUERY-G", "VALUE-L", "RETURN"],
+    iterate: ["eq", "iter", "multivar", "EQ", "ITERATE", "SOLVE", "RESOLVE", "START"],
     answer: ["answer", "ANSWER"],
     sol: ["sol"],
     stored: ["update", "UPDATE-L", "UPDATE-G"],
@@ -73,6 +60,7 @@ const KIND_OF = new Map(
 
 const KINDS = [
   "query",
+  "iterate",
   "answer",
   "sol",
   "stored",
@@ -123,6 +111,7 @@ function callOf(text) {
 /* Existing tags, one per kind of token, which only the trace's own style below colors. */
 const traceTags = {
   query: tags.controlKeyword,
+  iterate: tags.processingInstruction,
   answer: tags.className,
   sol: tags.typeName,
   stored: tags.attributeName,

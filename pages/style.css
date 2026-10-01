@@ -2014,7 +2014,14 @@ button.solver-global-key:hover {
   color: #f08a65;
 }
 
-.tr-stable,
+.tr-iterate {
+  color: #95adb4;
+}
+
+.tr-stable {
+  color: #6c8188;
+}
+
 .tr-key,
 .tr-step {
   color: #7c9096;
