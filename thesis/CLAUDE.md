@@ -20,7 +20,7 @@ clean. The checks that keep the text honest, and what each one reads:
 
 | Task | Fails when |
 | --- | --- |
-| `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_ltr`, `EA_Assign`) is written as prose without markup |
+| `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup |
 | `thesis-links` | a name the markup links has no anchor in the rendered theories (`--write` regenerates `shared/generated/links.json`; `--live` checks the deployed pages) |
 | `thesis-snippets`, `thesis-facts`, `thesis-claims` | a quoted definition, theorem statement or analyzer output no longer matches the sources |
 | `thesis-figures` | an SVG extracted from the explainer drifted |
@@ -32,7 +32,7 @@ checked, coloured and linked:
 | Helper | For | Colour |
 | --- | --- | --- |
 | `isaconst`, `isathm`, `isatype`, `isalocale` | constants, facts, types, locales | blue, green, purple, teal |
-| `oblig("INIT")` | a named assumption of `ltr_coverage` (`of:` for another locale) | teal small capitals |
+| `oblig("INIT")` | a named assumption of `activation_coverage` (`of:` for another locale) | teal small capitals |
 | `ctor("Root")` | a datatype constructor in notation | purple sans |
 | `keyw("while")` | a VIMP keyword in notation | maroon bold |
 | `isai("a \<le> b")`, `isa(```…```)` | inline and block Isabelle, ASCII symbols decoded | listing |

@@ -229,7 +229,7 @@ carries the solver's domain predicate as a **hypothesis**:
 
 i.e. **partial correctness**: *if* the side solver's `iterate_dom` holds at the
 queried point, the post-fixpoint soundly over-approximates the interprocedural
-activation-local collecting semantics (`ltr_collect` / `activation_collect`).
+activation-local collecting semantics (`node_collect` / `activation_collect`).
 
 Executable examples discharge the hypothesis **per concrete run** by computation:
 `term_equivalence` reduces `solve_dom` to `solve_c` (the option-valued executable

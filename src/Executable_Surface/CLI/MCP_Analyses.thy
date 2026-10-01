@@ -21,13 +21,13 @@ lemma local_spec_of_frame:
       rule field_frame; simp add: lift_get_put_other)
 
 lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
-  by (cases a; cases x) (simp_all add: mcp_rd_def)
+  by (cases a; cases x) (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
 
 subsection \<open>Each analysis answers what it knows\<close>
 
 text \<open>
   While the system is solved, a field answers a query as its published value
-  does: from its own readback, through the answer its analysis registers for
+  does: from its own publication map, through the answer its analysis registers for
   checks. An analysis written without a query handler thereby becomes a
   provider on the combined state, as every Goblint analysis answers
   \<open>EvalInt\<close> from its own domain. The answer is sound for the stores the
@@ -110,7 +110,7 @@ subsection \<open>What the combined state publishes\<close>
 
 text \<open>
   A solved combined state is published field by field, each through its
-  analysis's own readback. Its concretization is the intersection over the
+  analysis's own publication map. Its concretization is the intersection over the
   active fields, and a check is decided from the meet of the active analyses'
   answers.
 \<close>
@@ -136,7 +136,7 @@ lemma part_empty_rd:
   "part_empty (declared_global_vars p) a r = val_empty a (mcp_rd (declared_global p) r)"
   by (cases a)
      (simp_all add: mcp_rd_def
-        resolved_st_q_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
+        default_st_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
         split: lifted.split)
 
 lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"
@@ -208,8 +208,9 @@ lemma mcp_routed_dg_analysis:
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)"
-proof (unfold_locales, goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe
-    SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
+proof (rule dg_analysis.intro[OF td_certified_solver dg_analysis_axioms.intro],
+    goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe ClProved ClRefuted BotState
+    Init)
   case (CompSound p)
   have eq: "mcp_gamma (map (part_gamma (declared_global p)) (activation as))
       = (\<lambda>d. gamma_lift (mcp_gamma_v (activation as)) (map_lift (mcp_rd (declared_global p)) d))"
@@ -229,11 +230,6 @@ next
 next
   case (SeedNe v ctx) show ?case by (rule assms)
 next
-  case (SolvePP eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (SolveFin eqs x) then show ?case by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
   case (ClProved e d s) then show ?case by (rule mcp_classify_proved)
 next
   case (ClRefuted e d s) then show ?case by (rule mcp_classify_refuted)
@@ -241,8 +237,6 @@ next
   case BotState show ?case by (rule mcp_gamma_v_bot[OF activation_ne])
 next
   case (Init p) show ?case by (rule mcp_init_sound)
-next
-  case (DomC eqs x) then show ?case by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
 qed
 
 subsection \<open>At the unit context\<close>

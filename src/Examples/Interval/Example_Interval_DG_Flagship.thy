@@ -2,18 +2,18 @@ section \<open>Flagship: interval analysis of a counting loop, executed and cert
 
 text \<open>
   A bounded counting loop is compiled to a CFG, the D/G framework turns that graph into
-  an equation system, the verified seed-joining warrowing solver computes an interval
-  solution for it inside Isabelle, and the context-insensitive analysis turns that
-  solution into a statement about every VIMP run of the source:
+  an equation system, the verified solver computes an interval solution for it inside
+  Isabelle, and the context-insensitive analysis turns that solution into a statement
+  about every VIMP run of the source:
   \<open>flagship_source_run_sound\<close> bounds every store a run reaches by the published state at
   its matched program point. The bound is informative --- \<open>x in [0,20]\<close> at the loop head,
   \<open>[0,19]\<close> in the body, \<open>[20,20]\<close> on exit --- and \<open>flagship_head_bound_proper\<close> exhibits a
   store it rejects.
 
-  The analysis is \<open>interval_seed_join\<close> below: the routed analysis at the unit
-  route, at Interval's own transfer and the seed-joining
-  warrowing solver, which no production Interval registration selects. It is generic
-  in the program, so \<open>Example_Interval_DG_IP_Flagship\<close> reuses it.
+  The analysis is Interval's production registration at the unit context,
+  \<open>interval_rule\<close>, with the joining global rule \<open>Globals_Join\<close>.
+  \<open>Example_Interval_DG_IP_Flagship\<close> runs the same analysis on a program with
+  calls.
 \<close>
 
 theory Example_Interval_DG_Flagship
@@ -24,70 +24,6 @@ theory Example_Interval_DG_Flagship
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
-
-subsection \<open>The analysis: Interval at the seed-joining warrowing solver\<close>
-
-text \<open>
-  An activation seed is joined and never widened, which is what
-  \<^const>\<open>is_activation_seed\<close> tells the solver's key-selected update rule; every
-  other unknown is warrowed. Every obligation is discharged exactly as Interval's
-  production registrations discharge it, and only the three solver contracts name
-  the update rule. The \<^theory_text>\<open>defines\<close> clause is what gives the published
-  constants code equations, so the readings below evaluate.
-\<close>
-
-global_interpretation interval_seed_join: dg_analysis_exec
-    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
-    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
-    "TD_side_seed_join_warrowing_Interp_solve is_activation_seed"
-    "TD_side_seed_join_warrowing_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) is_activation_seed"
-    bot interval_classify_check
-    skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
-    enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
-    "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed"
-  defines
-    interval_sj_spec = interval_seed_join.analysis_spec
-    and interval_sj_root_query = interval_seed_join.root_query
-    and interval_sj_equations = interval_seed_join.equations
-    and interval_sj_solution = interval_seed_join.solution
-    and interval_sj_terminates = interval_seed_join.terminates
-    and interval_sj_vars = interval_seed_join.sol_vars
-    and interval_sj_env = interval_seed_join.sol_env
-    and interval_sj_result = interval_seed_join.result
-    and interval_sj_state_at = interval_seed_join.state_at
-proof (rule dg_analysis_exec.intro, goal_cases)
-  case (1 \<G>) show ?case by (rule ivl_tf.is_sound_nonrelational_transfer)
-next
-  case (2 \<G> a s) then show ?case
-    by (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def])
-next
-  case (3 \<G> ci s) show ?case
-    by (rule ivl_enter_st_for_commute)
-next
-  case (4 \<G> u ctx d ca) show ?case by simp
-next
-  case (5 v ctx) show ?case by simp
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_seed_join_warrowing_Interp.partial_post_solution[OF _ surjective_pairing])
-next
-  case (7 eqs x) then show ?case
-    by (rule TD_side_seed_join_warrowing_Interp.finite_stabl_solve)
-next
-  case (8 c d s) then show ?case by (rule ivl_tf.check.classify_check_proved)
-next
-  case (9 c d s) then show ?case by (rule ivl_tf.check.classify_check_refuted)
-next
-  case 10 show ?case by (rule refl)
-next
-  case (11 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (12 eqs x) then show ?case
-    by (rule TD_side_seed_join_warrowing_Interp.solve_dom_of_solve_c)
-qed
-
-declare interval_sj_spec_def [code_unfold]
 
 subsection \<open>The VIMP source program\<close>
 
@@ -138,48 +74,52 @@ lemma flagship_cfg_prog_cfg: "flagship_cfg = prog_cfg flagship_prog"
 subsection \<open>Equation generation and the executable solve\<close>
 
 text \<open>
-  The seed-joining warrowing solver --- pointwise interval widening for termination
-  --- \<^emph>\<open>computes\<close> a solution.  Termination is a code-generated \<^verbatim>\<open>by eval\<close> fact;
+  The solver --- pointwise interval warrowing at the loop head for termination ---
+  \<^emph>\<open>computes\<close> a solution.  Termination is a code-generated \<^verbatim>\<open>by eval\<close> fact;
   the solution is not written by hand.
 \<close>
 
 definition flagship_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
-  "flagship_eqs = interval_sj_equations flagship_gs flagship_prog"
+       (ivl default_st lifted, ivl default_st lifted) dg_state) strategy_tree" where
+  "flagship_eqs = interval_rule.equations flagship_gs flagship_prog"
 
 lemma flagship_terminates_c:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed flagship_eqs
-     (cfg_exit flagship_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Join flagship_eqs (cfg_exit flagship_cfg, ()) \<noteq> None"
   by eval
 
-lemma flagship_terminates: "interval_sj_terminates flagship_gs flagship_prog"
-  unfolding interval_seed_join.terminates_code
-  using TD_side_seed_join_warrowing_Interp.solve_dom_of_solve_c[OF flagship_terminates_c]
+lemma flagship_terminates: "interval_rule.terminates Globals_Join flagship_gs flagship_prog"
+  unfolding interval_rule.terminates_code
+  using TD_side_rule_Interp.solve_dom_of_solve_c[OF flagship_terminates_c]
   by (simp add: flagship_eqs_def flagship_cfg_prog_cfg)
 
 subsection \<open>Inspecting the certified result\<close>
 
+text \<open>The published state at a program point, at the one unit context.\<close>
+
+abbreviation flagship_at :: "pp \<Rightarrow> ivl abs_state" where
+  "flagship_at \<equiv> interval_rule.state_at Globals_Join flagship_gs flagship_prog ()"
+
 lemma flagship_head_computed:
-  "interval_sj_state_at flagship_gs flagship_prog () (Statement 1) (STR ''x'')
+  "flagship_at (Statement 1) (STR ''x'')
      = Ivl (Fin 0) (Fin 20)"
   by eval
 
 lemma flagship_body_computed:
-  "interval_sj_state_at flagship_gs flagship_prog () (Statement 2) (STR ''x'')
+  "flagship_at (Statement 2) (STR ''x'')
      = Ivl (Fin 0) (Fin 19)"
   by eval
 
 lemma flagship_exit_computed:
-  "interval_sj_state_at flagship_gs flagship_prog () (Statement 3) (STR ''x'')
+  "flagship_at (Statement 3) (STR ''x'')
      = Ivl (Fin 20) (Fin 20)"
   by eval
 
 subsection \<open>Source-level soundness\<close>
 
 text \<open>
-  \<open>interval_seed_join.fun_route_source_sound\<close> turns the single \<^verbatim>\<open>by eval\<close> solver
+  \<open>interval_rule.fun_route_source_sound\<close> turns the single \<^verbatim>\<open>by eval\<close> solver
   success \<open>flagship_terminates_c\<close> into a source-level guarantee: every reachable VIMP
   store is bounded by the interval state published at its matched program point,
   under the one context \<open>()\<close> the unit route names.
@@ -194,7 +134,7 @@ theorem flagship_source_run_sound:
     "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
   shows "\<exists>v stk. flagship_pi, flagship_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-                 \<and> t \<in> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog () v\<rbrakk>"
+                 \<and> t \<in> \<lbrakk>flagship_at v\<rbrakk>"
 proof -
   have run':
     "flagship_gs, prog_table flagship_prog \<turnstile> (main_body (prog_table flagship_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
@@ -203,7 +143,7 @@ proof -
     using flagship_wf by (simp add: flagship_pi_def)
   have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   show ?thesis
-    using interval_seed_join.fun_route_source_sound[OF unit_route wf flagship_terminates init run']
+    using interval_rule.fun_route_source_sound[OF unit_route wf flagship_terminates init run']
     by (simp add: flagship_cfg_prog_cfg flagship_pi_def)
 qed
 
@@ -214,10 +154,10 @@ text \<open>
 \<close>
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog () (Statement 1)\<rbrakk>"
+  "(\<lambda>_. 100) \<notin> \<lbrakk>flagship_at (Statement 1)\<rbrakk>"
 proof
-  assume "(\<lambda>_. 100) \<in> \<lbrakk>interval_sj_state_at flagship_gs flagship_prog () (Statement 1)\<rbrakk>"
-  then have "(100::int) \<in> \<gamma> (interval_sj_state_at flagship_gs flagship_prog () (Statement 1)
+  assume "(\<lambda>_. 100) \<in> \<lbrakk>flagship_at (Statement 1)\<rbrakk>"
+  then have "(100::int) \<in> \<gamma> (flagship_at (Statement 1)
       (STR ''x''))"
     by (simp add: gamma_state_def)
   then show False using flagship_head_computed by simp

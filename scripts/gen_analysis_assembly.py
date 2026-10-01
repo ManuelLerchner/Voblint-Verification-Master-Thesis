@@ -55,6 +55,7 @@ COMMON_IMPORTS = [
 ]
 
 INTERP = "TD_side_rule_Interp"
+CERTIFIED = "td_certified_solver"
 
 GENERATED_NOTICE = (
     "GENERATED FILE. Source: \\<^verbatim>\\<open>manifests/analyses.yaml\\<close>; generator:\n"
@@ -221,16 +222,16 @@ class Domain:
             self.prefix,
         )
         roles = {
-            "state_type": f"{vt} exec_dg_st lifted",
+            "state_type": f"{vt} default_st lifted",
             "published_type": f"{vt} abs_state lifted",
             "context_type": f"{vt} list",
-            "component": "ask_assign (exec_spec $G"
-            " (resolved_st_q_is_bot_for (declared_global_vars $p))"
+            "component": "ask_assign (exec_local_spec $G"
+            " (default_st_is_bot_for (declared_global_vars $p))"
             f" {applied(r['tf_st'], '$G')} {applied(r['enter_st'], '$G')})",
-            "gamma": "\\<lbrakk>map_lift (fun_of_resolved_st_q_for $G) $f\\<rbrakk>\\<^sub>\\<bottom>",
+            "gamma": "gamma_lift (default_st_gamma $G) $f",
             "empty": "(case $f of Bot \\<Rightarrow> True"
-            " | Lifted st \\<Rightarrow> resolved_st_q_is_bot_for $gs st)",
-            "read": "map_lift (fun_of_resolved_st_q_for $G) $f",
+            " | Lifted st \\<Rightarrow> default_st_is_bot_for $gs st)",
+            "read": "map_lift (default_st_to_fun $G) $f",
             "published_gamma": "\\<lbrakk>$v\\<rbrakk>\\<^sub>\\<bottom>",
             "published_empty": "(case $v of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> is_empty_state st)",
@@ -241,8 +242,8 @@ class Domain:
             "init": f"Lifted {bare(r['init_st'])}",
             "route": "exec_formals_route $G u [] $f ca",
             "context_values": f"map {vc} $c",
-            "component_sound": f"ask_assign_sound[OF {p}_rule.comp_sound]",
-            "single_entry": "single_entry_ask_assign[OF single_entry_exec_spec]",
+            "component_sound": f"ask_assign_sound[OF {p}_rule.exec_comp_sound]",
+            "single_entry": "single_entry_ask_assign[OF single_entry_exec_local_spec]",
             "init_sound": f"{p}_rule.init_sound",
             "answer_sound": f"{self.impl}_tf.check.eval_answer_sound",
         }
@@ -313,8 +314,8 @@ def const_name(role):
 
 def registration(dom, ctx):
     """One registration. The bundle's certificate discharges every domain
-    obligation; the six left are the context's, the solver's and the initial
-    state's, and only the route agreement varies with the context."""
+    obligation; the four left are the context's two, the solver's and the
+    initial state's, and only the route agreement varies with the context."""
     r = dom.roles()
     t = {k: role_term(v) for k, v in r.items()}
     vt = dom.value_type
@@ -326,7 +327,7 @@ def registration(dom, ctx):
     out += [
         f'    "{INTERP}_solve r"',
         f'    "{INTERP}.solve_dom TYPE({ctx["gk"](vt)})',
-        f'       TYPE(({vt} exec_dg_st lifted, {vt} exec_dg_st lifted) dg_state) r"',
+        f'       TYPE(({vt} default_st lifted, {vt} default_st lifted) dg_state) r"',
         f"    bot {t['classifier']}",
     ]
     groups = [
@@ -344,16 +345,9 @@ def registration(dom, ctx):
         "next",
         "  case (2 v ctx) show ?case by simp",
         "next",
-        "  case (3 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.partial_post_solution[OF _ surjective_pairing]"),
+        f"  case 3 show ?case by (rule {CERTIFIED})",
         "next",
-        "  case (4 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.finite_stabl_solve"),
-        "next",
-        f"  case (5 \\<G>) show ?case by (rule {r['init_gamma']})",
-        "next",
-        "  case (6 eqs x) then show ?case",
-        *rule_step(f"{INTERP}.solve_dom_of_solve_c"),
+        f"  case (4 \\<G>) show ?case by (rule {r['init_gamma']})",
         "qed",
     ]
     return out
@@ -793,7 +787,7 @@ def render_mcp(doms):
     out += wrap_term(f'"a \\<in> {{{", ".join(silent)}}}', 2)
     out += [
         f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
-        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)",
+        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)",
         "",
     ]
     inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])

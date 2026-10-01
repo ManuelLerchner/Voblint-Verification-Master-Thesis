@@ -1,7 +1,7 @@
 {
   /*
    * One entry per source step of the factorial run, with the graph steps csim_step matches
-   * it to and the trace constructors valid_ltr applies. Residuals flatten the nested Seq;
+   * it to and the trace constructors valid_activation_trace applies. Residuals flatten the nested Seq;
    * trees list each activation's path, its live callee and whether it has returned.
    */
   const FRAME_MAIN = "Frame {x = ?} x";
@@ -622,7 +622,7 @@
           ),
         ]),
       ]),
-      text: "**Source**: nothing is left to do. **CFG**: `main`'s implicit return edge still fires, landing on `exit_main`. **Trace**: the root's path ends at the exit, which is where `source_completes_ltr_collect_exit` puts the final store.",
+      text: "**Source**: nothing is left to do. **CFG**: `main`'s implicit return edge still fires, landing on `exit_main`. **Trace**: the root's path ends at the exit, which is where `source_completes_node_collect_exit` puts the final store.",
     },
   ];
 
@@ -631,7 +631,7 @@
   function observerTitle(a, sink, store, caller) {
     const end = a.path[a.path.length - 1];
     const lines = [
-      `path t = ${a.path.length} nodes, ${a.path.join(" -> ")}`,
+      `path_of t = ${a.path.length} nodes, ${a.path.join(" -> ")}`,
       `sink_node t = ${end}`,
       a === sink ? `sink_store t = {${store}}` : "sink_store t = the store it ended with",
       `caller_of t = ${caller ?? "None"}`,

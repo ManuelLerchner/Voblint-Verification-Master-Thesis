@@ -57,7 +57,7 @@ lemma nest_2_eqs_statement3:
   unfolding nest_2_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
     routed_call_program_def routed_callee_call_program_def nest_S_st_def
-    dgs_enter_local_state_st_for_lifted
+    dgs_enter_exec_dg_spec
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
         statement3_targets statement3_no_calls nest_entry Let_def
         sp_compile_def sp_compile_with_bind sp_bind_def sp_return_def sp_read_local_def
@@ -76,7 +76,7 @@ lemma nest_1_eqs_statement3:
   unfolding nest_1_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
     routed_call_program_def routed_callee_call_program_def nest_S_st_def
-    dgs_enter_local_state_st_for_lifted
+    dgs_enter_exec_dg_spec
   by (simp add: intra_predecessor_addr_list_def statement3_no_intra statement3_comb
         statement3_targets statement3_no_calls nest_entry Let_def
         sp_compile_def sp_compile_with_bind sp_bind_def sp_return_def sp_read_local_def

@@ -24,7 +24,7 @@ text \<open>
   nothing here forces a route to look at the entered value at all.  Unlike
   \<open>Call_String_Routed_Context\<close>'s \<open>call_string_routed_context\<close>, no single seed-key datatype
   is shared across instances: each is keyed by its own carrier's value list, so \<open>analysis_global\<close> and
-  \<open>seed_unknown\<close> stay genuine locale parameters too.
+  \<open>seed\<close> stay genuine locale parameters too.
 
   Everything the routed locale asks about \<open>R\<close> reduces to two facts about \<open>alts\<close>: its
   alternatives cover every concrete call at a covered call site (\<open>enter_cover\<close>), and the
@@ -35,16 +35,16 @@ text \<open>
 
   Two of the routed obligations are facts about \<^const>\<open>compile_prog\<close> alone and are
   discharged here once: \<open>finC\<close> (\<open>compile_prog_finite\<close>) and \<open>calls_unique\<close>
-  (\<open>compile_prog_calls_source_unique\<close>).  \<open>seed_unknown_ne_analysis_global\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close>
+  (\<open>compile_prog_calls_source_unique\<close>).  \<open>seed_ne_analysis_global\<close>, \<open>call_fwd\<close> and \<open>comb_fwd\<close>
   remain per-instance assumptions: the first is datatype distinctness of the instance's
   seed key, the other two say the solved variable set covers a routed callee entry or return
   continuation, a property of the program together with what the solver explored.
 \<close>
 
 locale pure_entry_routed_context =
-  dg_ctx_activation_base S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global route
-    "routed_call_program S analysis_global seed_unknown (static_resolve (compile_prog Pi ps)) is_bot"
-    "routed_entry_seed_programs seed_unknown"
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global route
+    "routed_call_program S analysis_global seed (static_resolve (compile_prog Pi ps)) is_bot"
+    "routed_entry_seed_programs seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -54,11 +54,11 @@ locale pure_entry_routed_context =
     and analysis_global :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d s0g sigma vars x0 sg
-    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and alts :: "call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list" +
-  assumes seed_unknown_ne_analysis_global[simp]: "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global"
+  assumes seed_ne_analysis_global[simp]: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
     and is_bot_bot: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d gv = {}"
     and enter_pure: "\<And>ci. enter\<^sup># S ci = local_enter_transfer (alts ci)"
@@ -89,8 +89,8 @@ text \<open>The context relation this instance keys its collecting semantics by.
 abbreviation entry_context_rel :: "'c call_context_rel" where
   "entry_context_rel \<equiv> routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma analysis_global route"
 
-sublocale routed: routed_context_base_hetero S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global
-  route bot0 s0d s0g sigma vars x0 sg seed_unknown
+sublocale routed: routed_context S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global
+  route bot0 s0d s0g sigma vars x0 sg seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M entry_context_rel
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
@@ -98,7 +98,7 @@ next
   show "calls_source_unique (compile_prog Pi ps)"
     unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast
 next
-  show "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global" by (rule seed_unknown_ne_analysis_global)
+  show "\<And>p ctx. seed p ctx \<noteq> analysis_global" by (rule seed_ne_analysis_global)
 next
   show "is_bot bot" by (rule is_bot_bot)
 next

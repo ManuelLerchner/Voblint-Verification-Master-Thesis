@@ -37,7 +37,7 @@ The numeric operations are *not* re-abstracted: both instances receive the same
 `'a backward_exec_ops` value, so no "these fields agree" assumption is needed.
 
 Both existing constants came back as instances, each by a one-line induction,
-and `write_rb` needed no new proof --- `fun_of_resolved_st_q_for_update` already
+and `write_rb` needed no new proof --- `default_st_to_fun_set` already
 exists and is `[simp]`.
 
 ## Measured cost

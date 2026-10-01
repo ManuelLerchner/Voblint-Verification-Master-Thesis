@@ -108,8 +108,8 @@ form, and stores them in `shared/generated/facts.json`. An unlisted name is a
 compile error and a changed statement is a diff.
 
 ```typst
-#stmt("ltr_collect_semantic_postfix")      // the statement, nothing else
-#proved("ltr_collect_semantic_postfix", note: [...]) // statement plus its name
+#stmt("node_collect_semantic_postfix")      // the statement, nothing else
+#proved("node_collect_semantic_postfix", note: [...]) // statement plus its name
 ```
 
 Statements are exported with `show_types`, `show_sorts` and

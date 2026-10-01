@@ -18,7 +18,7 @@ text \<open>
   joins to \<open>PTop\<close>; the two locals therefore separate what the loop preserves
   from what it destroys.
 
-  The local unknown carries the whole reachability-lifted \<open>parity exec_dg_st\<close>,
+  The local unknown carries the whole reachability-lifted \<open>parity default_st\<close>,
   locals and \<open>total\<close> (the one declared global) alike, with no separate
   flow-insensitive \<open>G\<close> slot to reconstruct through.  \<open>total\<close> is therefore read back
   exactly as \<open>x\<close> and \<open>Gcount\<close> are: through the local unknown at a program point,
@@ -80,14 +80,14 @@ lemma parity_gcount_not_global [simp]: "\<not> parity_gs (STR ''Gcount'')"
 text \<open>
   The Base construction routes the whole abstract state through the local
   unknown, reachability-lifted: \<open>parity_lookup\<close> reads a computed
-  \<open>exec_dg_st lifted\<close> value back through \<^const>\<open>fun_of_resolved_st_q_for\<close>,
+  \<open>default_st lifted\<close> value back through \<^const>\<open>default_st_to_fun\<close>,
   matching Sign's own DG flagship -- a genuinely unreachable local unknown
   (\<open>Bot\<close>) reads back as \<open>PTop\<close>, never spuriously observed here since every
   inspected node below is reachable.
 \<close>
-abbreviation parity_lookup :: "parity exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> parity" where
+abbreviation parity_lookup :: "parity default_st lifted \<Rightarrow> vname \<Rightarrow> parity" where
   "parity_lookup d x \<equiv>
-     (case map_lift (fun_of_resolved_st_q_for parity_gs) d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
+     (case map_lift (default_st_to_fun parity_gs) d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
 
 definition parity_pi :: proc_table where
   "parity_pi = prog_table parity_program"
@@ -131,7 +131,7 @@ text \<open>The equation system is \<open>parity_rule.equations\<close> at this 
 definition parity_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state) strategy_tree" where
+        (parity default_st lifted, parity default_st lifted) dg_state) strategy_tree" where
   "parity_eqs = parity_rule.equations parity_gs parity_program"
 
 lemma parity_terminates_c:
@@ -146,7 +146,7 @@ lemma parity_terminates: "parity_rule.terminates Globals_Join parity_gs parity_p
 definition parity_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (parity exec_dg_st lifted, parity exec_dg_st lifted) dg_state)" where
+        \<Rightarrow> (parity default_st lifted, parity default_st lifted) dg_state)" where
   "parity_sol = TD_side_rule_Interp_solve Globals_Join parity_eqs (cfg_exit parity_cfg, ())"
 
 
@@ -183,7 +183,8 @@ text \<open>
   \<open>parity_terminates_c\<close> into a source-level guarantee: every reachable VIMP store
   is described by the state published at its matched program point, under the one
   context \<open>()\<close> the unit route names.  No transport lemma,
-  \<^const>\<open>part_post_solution\<close>, or readback appears in this proof.
+  \<^const>\<open>part_post_solution\<close>, or equation about the function a carrier
+  state represents appears in this proof.
 \<close>
 
 lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"

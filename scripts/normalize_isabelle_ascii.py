@@ -10,14 +10,13 @@ Usage:
     normalize_isabelle_ascii.py FILE...
 
 After running, re-open the file in jEdit (I/Q ``open_file``) so the buffer
-picks up the on-disk content.  Companion to ``check_isabelle_ascii.py``.
+picks up the on-disk content.  Companion to ``pixi run isabelle-ascii-check`` (``isar check --group symbols``).
 """
 
 import sys
 from pathlib import Path
 
-# Unicode -> ASCII Isabelle tokens.  Extend as needed; keep in sync with
-# scripts/check_isabelle_ascii.py.
+# Unicode -> ASCII Isabelle tokens.  Extend as needed.
 REPL = {
     "‹": r"\<open>",
     "›": r"\<close>",

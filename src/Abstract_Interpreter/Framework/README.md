@@ -31,12 +31,12 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | `dgs_*` fields of `dg_spec` | `Spec.*` methods of the same name |
 | `man_local` / `man_global` / `man_sideg` | `man.local` / `man.global` / `man.sideg` |
 | `route` (notation `context#`) | `Spec.context` |
-| `startcontext` | `Spec.startcontext` |
+| `c\<^sub>0` (start context) | `Spec.startcontext` |
 | `Inl (pp, ctx)` | local unknown `lv = node * C.t` |
 | `Analysis_Global v` | `G of V.t` |
 | `Activation_Seed` | none; stands in for `sidel` |
 | `FunctionResult` | `Function` |
-| `call_context_rel` / `trace_context` | none; proof-only |
+| `call_context_rel` / `activation_context_rel` | none; proof-only |
 
 `context` is an Isar outer keyword, so the selector is spelled `route` and
 carries `context#` as notation.
@@ -78,8 +78,8 @@ in the session derives from, transports, or instantiates one of them.
 | --- | --- | --- |
 | `dg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
 | `analysis_contract` | a joint concretization `gammaDG d g` the edge and combine programs' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
-| `dg_ctx_activation_base` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
-| `routed_context_base_hetero` | a routing policy `route`/`call_context_rel`/`seed_unknown`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
+| `dg_context_activation` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
+| `routed_context` | a routing policy `route`/`call_context_rel`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
 | `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
 Entry is deliberately absent from `analysis_contract`. A call answers a *list* of
@@ -95,8 +95,8 @@ entry obligation, both through the shared `entry_pairs_cover`.
 | `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Local_State_Spec` (`sound_nonrelational_transfer`, and the two whole-state constructions built from it -- raw and reachability-lifted), `DG_Ownership_Split_Spec` (the `Spec2Spec` lifter that puts a whole-state analysis's global names on the shared channel) |
 | `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `abs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the structural return combine -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (the local/global projections derived from the generic `combine_env` selector) |
 | `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Programs` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Indexed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied program hooks, and the `TD_side_mono` discharge asks each hook only for well-formedness, traverse/sides monotonicity and `env_indep_deps`), `DG_Reader_Transport` (`dg_reader_commute_gen`: a whole equation system read through a `bot`- and join-preserving reader pair) |
-| `Activation/` | What does one activation see? | `Activation_Backbone` (`ltr_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
-| `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Programs` (the routed key space, and the programs one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those programs and discharges CALL and COMB), `Routed_Context_Unit` (the context-insensitive policy: `route_unit`, its trace-semantic counterpart `enterc_unit`, and `activation_collect_unit_eq_ltr_collect`, the collapse of the one context's bucket to `ltr_collect`), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
+| `Activation/` | What does one activation see? | `Activation_Backbone` (`activation_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
+| `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Programs` (the routed key space, and the programs one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those programs and discharges CALL and COMB), `Routed_Context_Unit` (the context-insensitive policy: `route_unit`, its trace-semantic counterpart `enterc_unit`, and `activation_collect_unit_eq_node_collect`, the collapse of the one context's bucket to `node_collect`), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
 | `Result/` | What does a solved table publish? | `Analysis_Result`, `DG_Analysis_Adapter` |
 | `Checks/` | How is a `__goblint_assert` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report` |
 

@@ -182,11 +182,11 @@ classifies checks as described below.
 
 The node-soundness bridge is generic and proved once in `DG_Live_Unknowns.thy`
 for every route that is a function of the call site, the unit route among them.
-`fun_route_result_node_sound` bounds `ltr_collect` at *any* node by the union of
+`fun_route_result_node_sound` bounds `node_collect` at *any* node by the union of
 the states published there over the contexts — not only at the solver's own
 query seed (`cfg_exit`); at the unit route the union has the one member `()`, and
-`activation_collect_unit_eq_ltr_collect` (`Routed_Context_Unit.thy`) turns the
-per-context report endpoints into statements about `ltr_collect`. A
+`activation_collect_unit_eq_node_collect` (`Routed_Context_Unit.thy`) turns the
+per-context report endpoints into statements about `node_collect`. A
 domain inherits both from its interpretation rather than re-exporting the
 adapter lemma under a spine prefix of its own. That is what lets a check be
 discharged at its own CFG node without forwarding stores to the procedure

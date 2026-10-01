@@ -3,8 +3,10 @@ theory Nonrelational_Ops
     Special_Ops
     Exec_Backward
     "Voblint_Framework.DG_Local_State_Spec"
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
 begin
+
+unbundle default_st_syntax
 
 section \<open>The primitives one abstract value per variable is built from\<close>
 
@@ -22,7 +24,7 @@ text \<open>
   reset the callee frame to the whole-value element, bind the formals.
   \<open>generic_tf_st_for\<close> is the per-edge executable step, and
   \<open>generic_tf_st_for_commute\<close> says it agrees with the abstract dispatcher
-  \<open>generic_tf_abs\<close> once the executable store is read back, provided the guard
+  \<open>generic_tf_abs\<close> on the function the executable store represents, provided the guard
   filter commutes with the abstract branch on the state at hand.
 
   \<open>generic_tf_abs\<close> takes the abstract branch as a separate argument so this
@@ -63,45 +65,43 @@ text \<open>
 
 abbreviation n_bfilter ::
   "'a::executable_domain nonrelational_ops
-   \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a resolved_st_q \<Rightarrow> 'a resolved_st_q" where
+   \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> bool \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st" where
   "n_bfilter ops \<equiv> branch_st_with (n_aval ops) (n_refine ops)"
 
 subsection \<open>Procedure entry\<close>
 
 definition generic_enter_st_for ::
     "'a::{bot, top} nonrelational_ops => (vname => bool) => call_info =>
-       'a resolved_st_q => 'a resolved_st_q" where
+       'a default_st => 'a default_st" where
   "generic_enter_st_for ops \<G> ci s =
-     bind_formals_resolved_q \<G> (ci_formals ci)
-       (map (\<lambda>e. n_aval ops e (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
-       (enter_frame_D_resolved_q top s)"
+     bind_formals_default_st \<G> (ci_formals ci)
+       (map (\<lambda>e. n_aval ops e (default_st_to_fun \<G> s)) (ci_args ci))
+       (enter_frame_D_default_st top s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
 
 fun generic_tf_st_for ::
     "'a::executable_domain nonrelational_ops => (vname => bool) => edge_action =>
-       'a resolved_st_q => 'a resolved_st_q" where
+       'a default_st => 'a default_st" where
     "generic_tf_st_for ops \<G> EA_Nop s = s"
   | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
-       update_resolved_st_q s (location_of \<G> x)
-         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+       s\<langle>location_of \<G> x := n_aval ops a (default_st_to_fun \<G> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Special sc x) s =
-       update_resolved_st_q s (location_of \<G> x)
+       s\<langle>location_of \<G> x :=
          (case sc of
             Nondet_Int => top
           | Min a b => special_min (n_special ops)
-                         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
-                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s))
+                         (n_aval ops a (default_st_to_fun \<G> s))
+                         (n_aval ops b (default_st_to_fun \<G> s))
           | Max a b => special_max (n_special ops)
-                         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))
-                         (n_aval ops b (fun_of_resolved_st_q_for \<G> s)))"
+                         (n_aval ops a (default_st_to_fun \<G> s))
+                         (n_aval ops b (default_st_to_fun \<G> s)))\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Assume b) s = n_bfilter ops \<G> b True s"
   | "generic_tf_st_for ops \<G> (EA_AssumeNot b) s = n_bfilter ops \<G> b False s"
   | "generic_tf_st_for ops \<G> (EA_Body p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret None p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret (Some a) p) s =
-       update_resolved_st_q s (location_of \<G> ret_var)
-         (n_aval ops a (fun_of_resolved_st_q_for \<G> s))"
+       s\<langle>location_of \<G> ret_var := n_aval ops a (default_st_to_fun \<G> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
@@ -137,7 +137,7 @@ lemma generic_tf_abs_simps [simp]:
   by (simp_all add: generic_tf_abs_def)
 
 text \<open>
-  Every case but the guard rewrites by \<^const>\<open>fun_of_resolved_st_q_for\<close>'s own
+  Every case but the guard rewrites by \<^const>\<open>default_st_to_fun\<close>'s own
   update equation, which is what leaves the guard as the only obligation an
   instance still has to discharge.
 \<close>
@@ -145,11 +145,11 @@ text \<open>
 theorem generic_tf_st_for_commute:
   fixes ops :: "'a::executable_domain nonrelational_ops"
   assumes branch:
-    "\<And>b pol. fun_of_resolved_st_q_for \<G> (n_bfilter ops \<G> b pol s) =
-               br b pol (fun_of_resolved_st_q_for \<G> s)"
+    "\<And>b pol. default_st_to_fun \<G> (n_bfilter ops \<G> b pol s) =
+               br b pol (default_st_to_fun \<G> s)"
   shows
-    "fun_of_resolved_st_q_for \<G> (generic_tf_st_for ops \<G> a s) =
-     generic_tf_abs ops br a (fun_of_resolved_st_q_for \<G> s)"
+    "default_st_to_fun \<G> (generic_tf_st_for ops \<G> a s) =
+     generic_tf_abs ops br a (default_st_to_fun \<G> s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by simp
@@ -175,5 +175,7 @@ next
   case (EA_Check l cnd)
   then show ?thesis by simp
 qed
+
+unbundle no default_st_syntax
 
 end

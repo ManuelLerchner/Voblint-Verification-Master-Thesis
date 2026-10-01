@@ -1,0 +1,14 @@
+// PARAM: --analysis sign
+// check_query answers a compound condition from the domain's two queries.
+// x <= y becomes not less(y, x) and y != 0 becomes not eq(y, 0). With x
+// non-positive and y positive, Sign's less(+, <=0) and eq(+, 0) are both
+// definitely false, so both conjuncts hold and the check is proved.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (x <= 0) {
+    if (0 < y) {
+      __voblint_check(x <= y && y != 0); // PROVED
+    }
+  }
+}

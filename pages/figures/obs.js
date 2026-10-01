@@ -1,11 +1,11 @@
 {
   /*
-   * What each observer of `ltr` reads, shown against one activation of the run above.
+   * What each observer of `activation_trace` reads, shown against one activation of the run above.
    * `t` is whichever box the reader picks; the table says what the six answers are for
    * each of them, since the shapes differ: `main` is a `Root` with no caller, a callee
    * that has returned nothing yet is a `Call`, and one that has is a `Resume`.
    */
-  const LTR = "Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.";
+  const TRACE_DEF = "Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.";
 
   const ACTS = {
     0: {
@@ -66,28 +66,29 @@
   };
 
   const DEFS = {
-    path: "path (Root p) = p | path (Call _ p) = p | path (Resume _ _ p) = p",
-    entry: "entry_store t = snd (hd (path t))",
-    sinknode: "sink_node t = fst (last (path t))",
-    sinkstore: "sink_store t = snd (last (path t))",
+    path: "path_of (Root p) = p | path_of (Call _ p) = p | path_of (Resume _ _ p) = p",
+    entry: "entry_store t = snd (hd (path_of t))",
+    sinknode: "sink_node t = fst (last (path_of t))",
+    sinkstore: "sink_store t = snd (last (path_of t))",
     caller:
       "caller_of (Root _) = None | caller_of (Call c _) = Some c | caller_of (Resume cur _ _) = caller_of cur",
-    callee: "Resume (ltr_current: ltr) (ltr_callee: ltr) trace",
+    callee:
+      "Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace) activation_path",
   };
 
   const LINKS = {
-    path: "path%7Cconst",
+    path: "path_of%7Cconst",
     entry: "entry_store%7Cconst",
     sinknode: "sink_node%7Cconst",
     sinkstore: "sink_store%7Cconst",
     caller: "caller_of%7Cconst",
-    callee: "ltr%7Ctype",
+    callee: "activation_trace%7Ctype",
   };
 
   const answer = (key, id) => {
     const a = ACTS[id];
     if (key === "path") {
-      return `\`path t\` is whichever \`trace\` the constructor carries, here ${a.steps} \`(node, store)\` pairs. Only this activation's own steps are on it.`;
+      return `\`path_of t\` is whichever \`activation_path\` the constructor carries, here ${a.steps} \`(node, store)\` pairs. Only this activation's own steps are on it.`;
     }
     if (key === "entry") {
       return `\`entry_store t\` is \`${a.entry}\`, the store at the head of the trace, as \`${a.name}\` was entered.`;
@@ -96,7 +97,7 @@
       return `\`sink_node t\` is \`${a.sink}\`, the node of the last pair. Every question of the form “which runs are at node \`v\`” is a question about this.`;
     }
     if (key === "sinkstore") {
-      return `\`sink_store t\` is \`${a.store}\`, the store of that same last pair. This is the value \`ltr_collect\` keeps when it buckets traces by node.`;
+      return `\`sink_store t\` is \`${a.store}\`, the store of that same last pair. This is the value \`node_collect\` keeps when it buckets traces by node.`;
     }
     if (key === "caller") {
       if (a.caller === undefined) {
@@ -104,14 +105,14 @@
       }
       const via =
         a.ctor === "Resume"
-          ? "descends `ltr_current` rather than stopping at the callee"
+          ? "descends `activation_trace_current` rather than stopping at the callee"
           : "reads the `Call`'s own caller field";
       return `\`caller_of t\` is the whole \`${ACTS[a.caller].name}\` trace. \`${a.name}\` is a \`${a.ctor}\`, so this ${via}.`;
     }
     if (a.callee === undefined) {
       return `\`${a.name}\` is a \`${a.ctor}\`, not a \`Resume\`, so there is no finished callee to read. Nothing it called has returned into it yet.`;
     }
-    return `\`ltr_callee t\` is the whole \`${ACTS[a.callee].name}\` trace, the call \`${a.name}\` has just finished. It is a selector of the constructor, not a search.`;
+    return `\`activation_trace_callee t\` is the whole \`${ACTS[a.callee].name}\` trace, the call \`${a.name}\` has just finished. It is a selector of the constructor, not a search.`;
   };
 
   for (const figure of document.querySelectorAll(".scene-obs")) {
@@ -161,7 +162,7 @@
         const box = boxes.find((b) => Number(b.dataset.box) === id);
         if (box) box.classList.add("is-lit");
       }
-      const where = `<a href="${LTR}${LINKS[key]}"><code>${DEFS[key]}</code></a>`;
+      const where = `<a href="${TRACE_DEF}${LINKS[key]}"><code>${DEFS[key]}</code></a>`;
       answerBox.innerHTML = `${withCode(answer(key, subject))} <span class="obs-def">${where}</span>`;
     };
 

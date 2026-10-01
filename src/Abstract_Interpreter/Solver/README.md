@@ -30,7 +30,8 @@ keyed generator from per-hook properties; they are the hypotheses of the
 least-solution theorem for the solver without widening, which the shipped
 analyses do not use. `TD_Solver_Bridge` packages TD's proof vocabulary
 (`term_equivalence`, `solve_c_dom_def`, `partial_post_solution`) as
-`part_post_solution_of_solve_c`, used by the Sign examples. The generated
-`<Domain>_Analyses.thy` registrations cite TD's facts directly:
-`TD_side_rule_Interp.partial_post_solution` for the certificate and
-`TD_side_rule_Interp.solve_dom_of_solve_c` for the termination premise.
+`part_post_solution_of_solve_c`, used by the Sign examples. The locale
+`certified_solver` names the solver contract the analysis pipeline assumes
+(post-solution, finite key set, `solve_c` success implies `solve_dom`), and
+`td_certified_solver` (`Globals_Rule`) discharges it for every `globals_rule`;
+the generated `<Domain>_Analyses.thy` registrations cite that one fact.

@@ -197,11 +197,11 @@ text \<open>
   program computes, which is what makes the verdict claim there bite.
 
   Walking it takes one hop the collecting vocabulary does not close over
-  step by step: \<^const>\<open>ltr_collect\<close> is closed under intra edges but not under a
+  step by step: \<^const>\<open>node_collect\<close> is closed under intra edges but not under a
   call or a return alone, since a return has to pop the trace's \<^emph>\<open>own\<close> caller.
   A call and its matching return together do compose, and that is
-  \<open>ltr_collect_call_return_step\<close> in
-  \<^theory>\<open>Voblint_CFG.LTR_Collect\<close>; the two hops through \<open>bump\<close> below are its two
+  \<open>node_collect_call_return_step\<close> in
+  \<^theory>\<open>Voblint_CFG.Activation_Trace_Collect\<close>; the two hops through \<open>bump\<close> below are its two
   instances.
 \<close>
 
@@ -277,14 +277,14 @@ lemma certificate_demo_reaches_check:
 proof -
   have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub>
                           (FunctionEntry (STR ''main''))"
-    using ltr_collect_init
+    using node_collect_init
             [OF certificate_demo_init,
              where \<G> = "declared_global certificate_demo_prog"
                and g = "prog_cfg certificate_demo_prog"]
     by (simp add: certificate_demo_entry_eval)
   have s2:
     "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 2)"
-    by (rule ltr_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
+    by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: certificate_demo_intra_eval)
   have ce1: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],
               FunctionEntry (STR ''bump''), Statement 3)
@@ -299,7 +299,7 @@ proof -
     by (simp add: certificate_demo_enter)
   have s3: "(\<lambda>_. 0)(STR ''a'' := 2)
               \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 3)"
-    using ltr_collect_call_return_step [OF s2 ce1 bd1]
+    using node_collect_call_return_step [OF s2 ce1 bd1]
     by (simp add: certificate_demo_combine)
   have ce2: "(Statement 3, CallEdge (Some (STR ''b'')) [STR ''n''] [N 41],
               FunctionEntry (STR ''bump''), Statement 4)
@@ -313,7 +313,7 @@ proof -
     using certificate_demo_bump_body [where k = 41]
     by (simp add: certificate_demo_enter)
   show ?thesis
-    using ltr_collect_call_return_step [OF s3 ce2 bd2]
+    using node_collect_call_return_step [OF s3 ce2 bd2]
     by (simp add: certificate_demo_combine)
 qed
 

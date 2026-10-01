@@ -99,18 +99,18 @@ subsection \<open>The executable mirror is exact, not just the specification\<cl
 text \<open>
   \<^const>\<open>bfilter_sign_st_lift\<close> is the code-generatable mirror of
   \<^const>\<open>bfilter_lifted_sign\<close>; \<open>bfilter_st_lift_correct\<close>
-  (\<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) proves that readback commutes
-  exactly with filtering. This lemma is not a restatement of that theorem:
+  (\<^theory>\<open>Voblint_Nonrelational.Exec_Backward\<close>) proves that taking the represented
+  function commutes exactly with filtering. This lemma is not a restatement of that theorem:
   it separately checks that code
   generation for the whole dependency chain still succeeds (no
   non-executable \<open>is_empty_state\<close> leaked into it) and that the concrete,
-  finite bottom test built into \<^const>\<open>update_resolved_st_q_lift\<close> fires on
+  finite bottom test built into \<^const>\<open>default_st_set_lift\<close> fires on
   this state, producing structural \<open>Bot\<close> rather than a \<open>Lifted\<close> state that
   only reads back as empty.
 \<close>
 
 lemma bfilter_sign_exec_pollution_fixed:
-  "bfilter_sign_st_lift (\<lambda>_. False) x_or_y_contradiction True (Lifted (initial_resolved_st_q STop STop)) = Bot"
+  "bfilter_sign_st_lift (\<lambda>_. False) x_or_y_contradiction True (Lifted (initial_default_st STop STop)) = Bot"
   unfolding x_or_y_contradiction_def x_eq_0_and_1_def y_eq_0_and_1_def by eval
 
 subsection \<open>The semantic branch operation inherits the fix\<close>

@@ -15,7 +15,7 @@ text \<open>
   A return follows no edge.  The stack supplies the continuation, so one
   \<^term>\<open>FunctionResult\<close> node serves every caller of a procedure and recursion needs no
   duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
-  graph, just as \<open>valid_ltr\<close> is the trace semantics of any graph.
+  graph, just as \<open>valid_activation_trace\<close> is the activation-trace semantics of any graph.
 \<close>
 type_synonym cframe = "cfg_node \<times> vname option \<times> store"
 type_synonym cconf = "cfg_node \<times> store \<times> cframe list"

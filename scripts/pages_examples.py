@@ -114,6 +114,7 @@ PLAYGROUND_KEYS = {
     "context_depth": "k",
     "globals": "globals",
     "int_refinement": "refinement",
+    "narrow_bound": "narrow",
 }
 
 

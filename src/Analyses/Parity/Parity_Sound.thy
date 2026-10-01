@@ -24,10 +24,8 @@ text \<open>
 \<close>
 
 lemma parity_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_parity_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q)
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_parity_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 
 end

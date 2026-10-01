@@ -28,8 +28,8 @@
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
-   join|per-origin|warrow|warrow-per-origin] [--int-refinement \
-   never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+   join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
+   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--format text|jsonl] [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
@@ -75,12 +75,19 @@ let usage =
   \  --context-depth K          Call-string bound (only valid with --context\n\
   \                             call-string). K = 0 keeps no call site, so\n\
   \                             every callee shares one context.\n\
-  \  --globals join|per-origin|warrow|warrow-per-origin\n\
+  \  --globals join|per-origin|warrow|warrow-per-origin|bounded-narrowing\n\
   \                             How the solver merges a value side-effected\n\
   \                             into a global: joined, joined per origin,\n\
-  \                             warrowed, or warrowed per origin (default:\n\
-  \                             warrow). Locals are warrowed at loop heads\n\
-  \                             under every rule.\n\
+  \                             warrowed, warrowed per origin, or widened per\n\
+  \                             origin with narrowing bounded by\n\
+  \                             --narrow-bound (default: warrow). Locals\n\
+  \                             are warrowed at loop heads under every rule.\n\
+  \  --narrow-bound N           bounded-narrowing narrows an origin once each\n\
+  \                             time it switches from widening to narrowing,\n\
+  \                             and keeps narrowing only while it has\n\
+  \                             switched fewer than N times (default: 5, the\n\
+  \                             default of Goblint's narrow-gas option). Only\n\
+  \                             valid with --globals bounded-narrowing.\n\
   \  --int-refinement never|once|fixpoint\n\
   \                             How the components of int teach each other\n\
   \                             after every operation: not at all, one round,\n\
@@ -388,6 +395,11 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
    from both together. *)
 type context_kind = CK_None | CK_EntryState | CK_CallString
 
+(* The default of Goblint's solvers.td3.narrow-globs.narrow-gas option. The
+   vendored rule counts differently: 0 still allows the one narrowing step of
+   each switch. *)
+let default_narrow_bound = 5
+
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
@@ -396,6 +408,7 @@ let () =
   let context_kind = ref CK_None in
   let context_depth = ref None in
   let globals = ref Voblint_CLI.Generated.Globals_Warrow in
+  let narrow_bound = ref None in
   let dot = ref false in
   let graph_snapshot = ref false in
   let html = ref false in
@@ -455,9 +468,18 @@ let () =
         | "warrow" -> globals := Voblint_CLI.Generated.Globals_Warrow
         | "warrow-per-origin" ->
             globals := Voblint_CLI.Generated.Globals_Warrow_Per_Origin
+        (* The bound is filled in once every flag is read, so --narrow-bound
+           may come before or after --globals. *)
+        | "bounded-narrowing" -> ()
         | _ ->
             prerr_endline ("unknown --globals value: " ^ v);
             exit 1);
+        parse_args rest
+    | "--narrow-bound" :: v :: rest ->
+        (try narrow_bound := Some (int_of_string v)
+         with _ ->
+           prerr_endline ("--narrow-bound expects an integer: " ^ v);
+           exit 1);
         parse_args rest
     | "--dot" :: rest ->
         dot := true;
@@ -545,6 +567,20 @@ let () =
         "voblint: --int-refinement is only valid with --analysis int";
       exit 1
   | _ -> ());
+  (match (!globals_name, !narrow_bound) with
+  | "bounded-narrowing", Some n when n < 0 ->
+      prerr_endline "voblint: --narrow-bound must not be negative";
+      exit 1
+  | "bounded-narrowing", n ->
+      globals :=
+        Voblint_CLI.Generated.Globals_Bounded_Narrowing
+          (Voblint_CLI.Generated.nat_of_integer
+             (Z.of_int (Option.value n ~default:default_narrow_bound)))
+  | _, Some _ ->
+      prerr_endline
+        "voblint: --narrow-bound is only valid with --globals bounded-narrowing";
+      exit 1
+  | _, None -> ());
   (* --context-depth is only meaningful paired with --context call-string, so
      a mismatch between the two flags is rejected here. *)
   let context =

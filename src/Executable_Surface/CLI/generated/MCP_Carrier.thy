@@ -170,9 +170,9 @@ lemmas slot_defs [simp] = slot1_def slot2_def slot3_def slot4_def slot5_def slot
   set_slot5_def set_slot6_def set_slot7_def set_slot8_def
 
 type_synonym mcp_st =
-  "(sign exec_dg_st lifted, (ivl exec_dg_st lifted, (parity exec_dg_st lifted, (int_dom
-    exec_dg_st lifted, (int_dom exec_dg_st lifted, (int_dom exec_dg_st lifted, (congruence
-    exec_dg_st lifted, relc) analysis_product) analysis_product) analysis_product)
+  "(sign default_st lifted, (ivl default_st lifted, (parity default_st lifted, (int_dom
+    default_st lifted, (int_dom default_st lifted, (int_dom default_st lifted, (congruence
+    default_st lifted, relc) analysis_product) analysis_product) analysis_product)
     analysis_product) analysis_product) analysis_product) analysis_product"
 
 type_synonym mcp_val =
@@ -191,51 +191,51 @@ subsection \<open>Each analysis on its own field\<close>
 fun local_spec_of ::
   "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
   "local_spec_of \<G> p Sign_Analysis =
-     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
+     lens_of (lift_get slot1) (lift_put set_slot1) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (sign_tf_st_for \<G>)
        (sign_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Interval_Analysis =
-     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
+     lens_of (lift_get slot2) (lift_put set_slot2) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (ivl_tf_st_for \<G>)
        (ivl_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Parity_Analysis =
-     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
+     lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
        (parity_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Int_Analysis =
-     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint
-       \<G>) (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
+     lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint \<G>)
+       (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
 | "local_spec_of \<G> p Int_Once_Analysis =
-     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
+     lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
        (int_dom_enter_st_for Refine_Once \<G>)))"
 | "local_spec_of \<G> p Int_Never_Analysis =
-     lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
+     lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
        (int_dom_enter_st_for Refine_Never \<G>)))"
 | "local_spec_of \<G> p Congruence_Analysis =
-     lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign (exec_spec \<G>
-       (resolved_st_q_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
+     lens_of (lift_get slot7) (lift_put set_slot7) (ask_assign (exec_local_spec \<G>
+       (default_st_is_bot_for (declared_global_vars p)) (congruence_tf_st_for \<G>)
        (congruence_enter_st_for \<G>)))"
 | "local_spec_of \<G> p Order_Analysis =
      lens_of (lift_get slot8) (lift_put set_slot8) (order_spec (program_vars p))"
 
 fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> store set" where
   "part_gamma \<G> Sign_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot1 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot1 x))"
 | "part_gamma \<G> Interval_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot2 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot2 x))"
 | "part_gamma \<G> Parity_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot3 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot3 x))"
 | "part_gamma \<G> Int_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot4 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot4 x))"
 | "part_gamma \<G> Int_Once_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot5 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot5 x))"
 | "part_gamma \<G> Int_Never_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot6 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot6 x))"
 | "part_gamma \<G> Congruence_Analysis =
-     (\<lambda>x. \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (lift_get slot7 x)\<rbrakk>\<^sub>\<bottom>)"
+     (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot7 x))"
 | "part_gamma \<G> Order_Analysis =
      (\<lambda>x. \<lbrakk>(lift_get slot8 x)\<rbrakk>)"
 
@@ -259,31 +259,30 @@ fun part_live :: "analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
 
 fun part_empty :: "vname list \<Rightarrow> analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
   "part_empty gs Sign_Analysis r =
-     (case (slot1 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot1 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Interval_Analysis r =
-     (case (slot2 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot2 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Parity_Analysis r =
-     (case (slot3 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot3 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Analysis r =
-     (case (slot4 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot4 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Once_Analysis r =
-     (case (slot5 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot5 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Int_Never_Analysis r =
-     (case (slot6 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot6 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Congruence_Analysis r =
-     (case (slot7 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> resolved_st_q_is_bot_for gs st)"
+     (case (slot7 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Order_Analysis r =
      ((slot8 r) = RelBot)"
 
 subsection \<open>What each field publishes\<close>
 
 definition mcp_rd :: "(vname \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightarrow> mcp_val" where
-  "mcp_rd \<G> r = Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot1 r)) (Product
-    (map_lift (fun_of_resolved_st_q_for \<G>) (slot2 r)) (Product (map_lift
-    (fun_of_resolved_st_q_for \<G>) (slot3 r)) (Product (map_lift (fun_of_resolved_st_q_for
-    \<G>) (slot4 r)) (Product (map_lift (fun_of_resolved_st_q_for \<G>) (slot5 r)) (Product
-    (map_lift (fun_of_resolved_st_q_for \<G>) (slot6 r)) (Product (map_lift
-    (fun_of_resolved_st_q_for \<G>) (slot7 r)) (slot8 r)))))))"
+  "mcp_rd \<G> r = Product (map_lift (default_st_to_fun \<G>) (slot1 r)) (Product (map_lift
+    (default_st_to_fun \<G>) (slot2 r)) (Product (map_lift (default_st_to_fun \<G>) (slot3 r))
+    (Product (map_lift (default_st_to_fun \<G>) (slot4 r)) (Product (map_lift
+    (default_st_to_fun \<G>) (slot5 r)) (Product (map_lift (default_st_to_fun \<G>) (slot6 r))
+    (Product (map_lift (default_st_to_fun \<G>) (slot7 r)) (slot8 r)))))))"
 
 fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "val_gamma Sign_Analysis v =
@@ -340,7 +339,7 @@ fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<R
 | "val_answer Congruence_Analysis v q =
      (case (slot7 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)"
 | "val_answer Order_Analysis v q =
-     rel_qry (slot8 v) q"
+     relc_qry (slot8 v) q"
 
 fun field_of ::
   "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> vname list \<Rightarrow> abstract_value field_state" where
@@ -430,25 +429,25 @@ lemma local_spec_of_sound:
   "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
      (local_spec_of (declared_global p) p a)"
   by (cases a; simp only: part_gamma.simps local_spec_of.simps;
-      rule field_component_sound[OF ask_assign_sound[OF sign_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF interval_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF parity_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_once_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_never_rule.comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF congruence_rule.comp_sound]]
+      rule field_component_sound[OF ask_assign_sound[OF sign_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF interval_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF parity_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_once_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_never_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF congruence_rule.exec_comp_sound]]
         field_component_sound[OF order_spec_sound];
       auto simp: less_eq_analysis_product_def)
 
 lemma single_entry_local_spec_of: "single_entry (local_spec_of \<G> p a)"
   by (cases a) (auto intro!: single_entry_lens_of lift_put_get single_entry_ask_assign[OF
-    single_entry_exec_spec] single_entry_order_spec)
+    single_entry_exec_local_spec] single_entry_order_spec)
 
 lemma local_spec_of_silent:
   "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, Int_Analysis,
     Int_Once_Analysis, Int_Never_Analysis, Congruence_Analysis}
      \<Longrightarrow> ls_query (local_spec_of \<G> p a) A x q = \<top>"
-  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_spec_def)
+  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)
 
 lemma mcp_init_sound:
   "cinit_stores (declared_global p)
@@ -469,6 +468,7 @@ lemma val_answer_sound: "s \<in> val_gamma a v \<Longrightarrow> eval_holds q (v
      (auto split: lifted.splits intro: sign_tf.check.eval_answer_sound
        ivl_tf.check.eval_answer_sound parity_tf.check.eval_answer_sound
        int_tf.check.eval_answer_sound int_tf.check.eval_answer_sound
-       int_tf.check.eval_answer_sound congruence_tf.check.eval_answer_sound rel_qry_sound)
+       int_tf.check.eval_answer_sound congruence_tf.check.eval_answer_sound
+       relc_qry_sound)
 
 end

@@ -1,0 +1,14 @@
+// PARAM: --analysis interval --globals bounded-narrowing
+// The program of 06-warrow_per_origin_keeps_bound.vimp under the
+// bounded-narrowing rule. It widens per origin like warrow-per-origin: each
+// call site's contribution to p's FunctionEntry seed stays constant, so no
+// origin is widened and the entry slot reads [1,2], enough to decide n < 10.
+// Under --globals warrow the same program answers UNKNOWN
+// (known-imprecision/03-warrow_joins_before_widening.vimp).
+fun p(n) {
+  __voblint_check(n < 10); // PROVED
+}
+fun main() {
+  p(1);
+  p(2);
+}

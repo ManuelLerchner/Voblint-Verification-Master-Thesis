@@ -21,16 +21,16 @@ text \<open>
 \<close>
 
 definition interval_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl exec_dg_st \<Rightarrow> bool)
-   \<Rightarrow> ('x, 'k, unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec"
+  "(vname \<Rightarrow> bool) \<Rightarrow> (ivl default_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, unit, ivl default_st lifted, ivl default_st lifted) dg_spec"
 where
   "interval_spec \<G> empty_pred =
-     local_state_dg_spec_st_for_lifted \<G> empty_pred (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>)"
+     exec_dg_spec \<G> empty_pred (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>)"
 
 definition interval_abs_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, ivl abs_state lifted, ivl abs_state lifted) dg_spec"
 where
-  "interval_abs_spec \<G> = local_state_dg_spec_for_lifted \<G> is_empty_state
+  "interval_abs_spec \<G> = lifted_state_dg_spec \<G> is_empty_state
      skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
      (enter_ivl_ci_for \<G>) event_ivl"
 
@@ -38,8 +38,8 @@ declare interval_spec_def [code_unfold]
 declare interval_abs_spec_def [code_unfold]
 
 definition interval_gamma ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "interval_gamma \<G> d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) d\<rbrakk>\<^sub>\<bottom>"
+    "(vname \<Rightarrow> bool) \<Rightarrow> ivl default_st lifted \<Rightarrow> ivl default_st lifted \<Rightarrow> store set" where
+  "interval_gamma \<G> d g = gamma_lift (default_st_gamma \<G>) d"
 
 lemma interval_gamma_Bot [simp]: "interval_gamma \<G> Bot g = {}"
   by (simp add: interval_gamma_def)
@@ -53,8 +53,8 @@ text \<open>
 \<close>
 
 context
-  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "ivl exec_dg_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "ivl default_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
 begin
 
 interpretation ivl_dom: dg_domain_exec
@@ -98,9 +98,7 @@ text \<open>
 \<close>
 
 lemma interval_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_ivl_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q)
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_ivl_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 end

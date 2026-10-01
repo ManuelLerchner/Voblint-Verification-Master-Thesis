@@ -5,10 +5,12 @@ theory Example_Sign_DG_Custom_Combine
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Analysis_Sign.Sign_Transfer"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
+
+unbundle default_st_syntax
 
 section \<open>An analysis-supplied return combine on the D/G spine\<close>
 
@@ -42,18 +44,18 @@ text \<open>
 \<close>
 
 definition sign_combine_env_callee_join ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
 where
   "sign_combine_env_callee_join =
-     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)"
+     local_combine_transfer (\<lambda>dc de. dc \<squnion> restrict_local_default_st de)"
 
 subsection \<open>The Sign specification that uses it\<close>
 
 definition sign_dg_spec_callee_join ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
+   \<Rightarrow> (edge_action \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> (call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> ('x, 'k, unit, sign default_st, sign default_st) dg_spec" where
   "sign_dg_spec_callee_join \<G> tf_st enter_st =
      (ownership_split_dg_spec_st_for \<G> tf_st enter_st)
        \<lparr> dgs_combine_env := (\<lambda>ci. sign_combine_env_callee_join) \<rparr>"
@@ -93,32 +95,31 @@ text \<open>
 abbreviation cj_gs :: "vname \<Rightarrow> bool" where
   "cj_gs \<equiv> (\<lambda>_. False)"
 
-definition cj_caller :: "sign exec_dg_st" where
-  "cj_caller = update_resolved_st_q bot (Local_Location (STR ''r'')) SPos"
+definition cj_caller :: "sign default_st" where
+  "cj_caller = bot\<langle>Local_Location (STR ''r'') := SPos\<rangle>"
 
-definition cj_callee :: "sign exec_dg_st" where
-  "cj_callee = update_resolved_st_q bot (Local_Location (STR ''r'')) SNeg"
+definition cj_callee :: "sign default_st" where
+  "cj_callee = bot\<langle>Local_Location (STR ''r'') := SNeg\<rangle>"
 
 lemma stock_env_keeps_caller:
-  "lookup_resolved_st_q cj_caller (Local_Location (STR ''r'')) = SPos"
+  "cj_caller\<langle>Local_Location (STR ''r'')\<rangle> = SPos"
   by (simp add: cj_caller_def)
 
 lemma callee_join_env_publishes_top:
-  "lookup_resolved_st_q (cj_caller \<squnion> restrict_local_resolved_q cj_callee)
-     (Local_Location (STR ''r'')) = STop"
+  "(cj_caller \<squnion> restrict_local_default_st cj_callee)\<langle>Local_Location (STR ''r'')\<rangle> = STop"
   by (simp add: cj_caller_def cj_callee_def sup_sign_def)
 
 text \<open>So the two environment merges are different functions, and the override is
   not a re-spelling of the stock one.\<close>
 
 lemma callee_join_merge_neq_stock:
-  "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
-     \<noteq> (\<lambda>dc (de :: sign exec_dg_st). dc)"
+  "(\<lambda>dc de. dc \<squnion> restrict_local_default_st de)
+     \<noteq> (\<lambda>dc (de :: sign default_st). dc)"
 proof
-  assume "(\<lambda>dc de. dc \<squnion> restrict_local_resolved_q de)
-            = (\<lambda>dc (de :: sign exec_dg_st). dc)"
+  assume "(\<lambda>dc de. dc \<squnion> restrict_local_default_st de)
+            = (\<lambda>dc (de :: sign default_st). dc)"
   from fun_cong[OF fun_cong[OF this, of cj_caller], of cj_callee]
-  have "cj_caller \<squnion> restrict_local_resolved_q cj_callee = cj_caller" .
+  have "cj_caller \<squnion> restrict_local_default_st cj_callee = cj_caller" .
   then show False
     using stock_env_keeps_caller callee_join_env_publishes_top by simp
 qed
@@ -145,7 +146,7 @@ text \<open>
 
 abbreviation sign_base_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x,'k,unit,sign abs_state,sign abs_state) dg_spec" where
-  "sign_base_spec \<G> \<equiv> local_state_dg_spec_for \<G>
+  "sign_base_spec \<G> \<equiv> state_dg_spec \<G>
      skip_sign assign_sign special_sign branch_sign body_sign return_sign
      (enter_sign_ci_for \<G>) event_sign"
 
@@ -181,7 +182,7 @@ lemma dgs_query_sign_dg_spec_env_join [simp]:
 
 lemma dg_spec_wf_ownership_split_lift_sign_base [intro]:
   "dg_spec_wf (ownership_split_lift \<G> (sign_base_spec \<G>))"
-  by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+  by (rule dg_spec_wf_ownership_split_lift[OF dg_spec_wf_state_dg_spec])
 
 lemma dg_spec_wf_sign_dg_spec_env_join [intro, simp]:
   "dg_spec_wf (sign_dg_spec_env_join \<G>)"
@@ -207,7 +208,7 @@ next
     by (auto simp: sign_dg_spec_env_join_def combine_env_callee_join_abs_def
         local_combine_transfer_def
         intro!: sp_wf_bind
-          sp_wf_dgs_combine_assign_ownership_split_lift[OF dg_spec_wf_local_state_dg_spec_for])
+          sp_wf_dgs_combine_assign_ownership_split_lift[OF dg_spec_wf_state_dg_spec])
 qed
 
 text \<open>
@@ -259,7 +260,7 @@ lemma traverse_combine_env_join:
             (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -273,7 +274,7 @@ lemma sides_combine_env_join:
             (combine_env \<G> (dc \<squnion> restrict_local_for \<G> de) (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_env_join
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -290,7 +291,7 @@ lemma traverse_combine_stock:
             (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -304,7 +305,7 @@ lemma sides_combine_stock:
             (combine_env \<G> dc (dg_global (\<tau> (Inr gk))))
             (combine_env \<G> de (dg_global (\<tau> (Inr gk)))))"
   unfolding dg_spec_combine_transfer_ownership_split_lift
-    ownership_split_combine_transfer_def local_state_dg_spec_for_def
+    ownership_split_combine_transfer_def state_dg_spec_def
     dg_spec_combine_transfer_dg_spec_of
   by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc)
@@ -386,51 +387,51 @@ abbreviation cj_prog_gs :: "vname \<Rightarrow> bool" where
 definition cj_cfg :: cfg where
   "cj_cfg = compile_prog (prog_table cj_program) (prog_procs cj_program)"
 
-abbreviation cj_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
-  "cj_lookup s x \<equiv> lookup_resolved_st_q s (location_of cj_prog_gs x)"
+abbreviation cj_lookup :: "sign default_st \<Rightarrow> vname \<Rightarrow> sign" where
+  "cj_lookup s x \<equiv> s\<langle>location_of cj_prog_gs x\<rangle>"
 
 definition cj_stock_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "cj_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition cj_custom_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "cj_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_callee_join cj_prog_gs
         (sign_tf_st_for cj_prog_gs) (sign_enter_st_for cj_prog_gs))
-     cj_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     cj_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 lemma cj_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_stock_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join cj_stock_eqs
      (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 lemma cj_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed cj_custom_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join cj_custom_eqs
      (cfg_exit cj_cfg, ()) \<noteq> None"
   by eval
 
 definition cj_stock_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "cj_stock_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_stock_eqs
+     TD_side_rule_Interp_solve Globals_Join cj_stock_eqs
        (cfg_exit cj_cfg, ())"
 
 definition cj_custom_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "cj_custom_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed cj_custom_eqs
+     TD_side_rule_Interp_solve Globals_Join cj_custom_eqs
        (cfg_exit cj_cfg, ())"
 
 text \<open>The single call site is \<open>Statement 4\<close>, resuming at \<open>Statement 5\<close>.\<close>
@@ -468,5 +469,7 @@ lemma cj_return_assignment_unaffected:
   "cj_lookup (dg_local (snd cj_stock_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   "cj_lookup (dg_local (snd cj_custom_sol (Inl (Statement 5, ())))) (STR ''z'') = SPos"
   by eval+
+
+unbundle no default_st_syntax
 
 end

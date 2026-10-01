@@ -20,14 +20,14 @@ text \<open>
 subsection \<open>The executable bottom predicate\<close>
 
 text \<open>The equation system reads the program's own declared globals for its bottom
-  test. At a concrete program it is \<^const>\<open>resolved_st_q_is_bot_for\<close> on those
+  test. At a concrete program it is \<^const>\<open>default_st_is_bot_for\<close> on those
   globals, which is exact for \<^const>\<open>is_empty_state\<close>.\<close>
 
-definition rc_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "rc_empty_pred = resolved_st_q_is_bot_for (declared_global_vars rc_program)"
+definition rc_empty_pred :: "ivl default_st \<Rightarrow> bool" where
+  "rc_empty_pred = default_st_is_bot_for (declared_global_vars rc_program)"
 
-lemma rc_exact: "rc_empty_pred s = is_empty_state (fun_of_resolved_st_q_for rc_gs s)"
-  unfolding rc_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma rc_exact: "rc_empty_pred s = is_empty_state (default_st_to_fun rc_gs s)"
+  unfolding rc_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 subsection \<open>The routed equation system and its solution\<close>
 
@@ -38,7 +38,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 definition rc_ctx_sol ::
   "(pp \<times> ivl list) set
     \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown
-      \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+      \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "rc_ctx_sol = interval_es_rule.solution Globals_Warrow rc_gs rc_program"
 
 lemma rc_ctx_terminates_c:

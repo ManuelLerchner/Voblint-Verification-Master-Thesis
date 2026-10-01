@@ -36,7 +36,7 @@ global_interpretation sign_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((sign exec_dg_st lifted, sign exec_dg_st lifted) dg_state) r"
+       TYPE((sign default_st lifted, sign default_st lifted) dg_state) r"
     bot sign_classify_check
     skip_sign assign_sign special_sign branch_sign body_sign return_sign
     enter_sign_ci_for event_sign "\<lambda>_. route_unit"
@@ -48,16 +48,9 @@ proof (rule sign_tf.dg_analysis_execI
 next
   case (2 v ctx) show ?case by simp
 next
-  case (3 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+  case 3 show ?case by (rule td_certified_solver)
 next
-  case (4 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (5 \<G>) show ?case by (rule sign_cinit_gamma)
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+  case (4 \<G>) show ?case by (rule sign_cinit_gamma)
 qed
 
 end

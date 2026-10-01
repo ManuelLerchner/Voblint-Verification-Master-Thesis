@@ -46,7 +46,8 @@
    carries no such field and the solver records nothing.
 
    [globals] names how the solver merges side-effected globals: "join",
-   "per-origin", "warrow" or "warrow-per-origin".
+   "per-origin", "warrow", "warrow-per-origin", or "bounded-narrowing" with an
+   optional ":N" narrowing bound (default 5, as the CLI's --narrow-bound).
 *)
 
 open Js_of_ocaml
@@ -82,12 +83,22 @@ let domain_of_string int_analysis = function
   | "order" -> Some C.Order_Analysis
   | _ -> None
 
+let bounded_narrowing n =
+  Some (C.Globals_Bounded_Narrowing (C.nat_of_integer (Z.of_int n)))
+
 let globals_of_string = function
   | "join" -> Some C.Globals_Join
   | "per-origin" -> Some C.Globals_Per_Origin
   | "warrow" -> Some C.Globals_Warrow
   | "warrow-per-origin" -> Some C.Globals_Warrow_Per_Origin
-  | _ -> None
+  | "bounded-narrowing" -> bounded_narrowing 5
+  | s -> (
+      match String.split_on_char ':' s with
+      | [ "bounded-narrowing"; n ] -> (
+          match int_of_string_opt n with
+          | Some n when n >= 0 -> bounded_narrowing n
+          | _ -> None)
+      | _ -> None)
 
 (* The depth arrives as a JavaScript number. Only one that fits a Wasm OCaml
    int would arrive as an int; reading it as a number first turns a fraction

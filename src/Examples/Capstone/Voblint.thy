@@ -9,7 +9,7 @@ theory Voblint
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_CFG.CFG_Def"
     "Voblint_Compile.VIMP_Proc_to_CFG"
-    "Voblint_CFG.LTR_Def"
+    "Voblint_CFG.Activation_Trace_Def"
     "Voblint_CFG.CFG_Prune"
     "Voblint_Domain.Abstract_Domain"
     "Voblint_Framework.Transfer_Algebra"
@@ -33,7 +33,7 @@ theory Voblint
     "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Framework.Activation_Backbone"
     "Voblint_Framework.DG_Ctx_Activation"
-    "Voblint_Exec.Exec_St_Reachability"
+    "Voblint_Exec.Default_St_Reachability"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
     "Voblint_Examples_CLI.Example_Checks_Store_Only"
@@ -90,7 +90,7 @@ text \<open>
   \<^verbatim>\<open>
     source execution
       -> procedure-aware CFG execution
-      -> activation-local trace
+      -> activation trace
       -> collecting semantics
       -> D/G equation system
       -> verified side-effecting solver
@@ -200,18 +200,18 @@ text \<open>
   cannot.
 \<close>
 
-subsection \<open>Activation-local concrete semantics\<close>
+subsection \<open>Activation-trace concrete semantics\<close>
 
 text \<open>
-  \<^const>\<open>valid_ltr\<close> represents one procedure activation and its ancestry.
+  \<^const>\<open>valid_activation_trace\<close> represents one procedure activation and its ancestry.
   \<^const>\<open>Root\<close> starts main, \<^const>\<open>Call\<close> records an immediate caller, and
   \<^const>\<open>Resume\<close> continues that caller after its callee reaches the matching
   result node.  Structural caller links distinguish nested and recursive activations
   without placing an unbounded stack in CFG nodes.
 
-  \<^const>\<open>ltr_collect\<close> forgets the activation structure and collects stores by
+  \<^const>\<open>node_collect\<close> forgets the activation structure and collects stores by
   node, while \<^const>\<open>activation_collect\<close> keys the same collection by the
-  structural activation context.  Both contain only stores from valid local traces.
+  structural activation context.  Both contain only stores from valid activation traces.
 \<close>
 
 subsection \<open>Procedure-aware source and CFG\<close>
@@ -286,7 +286,7 @@ text \<open>
     \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
-  the activation-local trace semantics it carries.
+  the activation trace semantics it carries.
     \<^item> @{theory Voblint_CFG.CFG_Def} --- CFG node and edge types,
       predecessor enumeration, and finite code lists.
     \<^item> @{theory Voblint_Compile.VIMP_Proc_to_CFG} ---
@@ -298,19 +298,19 @@ text \<open>
       \<^verbatim>\<open>edges_collect\<close>,
       \<^verbatim>\<open>combine_collect\<close>, and
       \<^verbatim>\<open>call_enter_store\<close>.
-    \<^item> @{theory Voblint_CFG.LTR_Def} --- the call-structured
-      activation-local trace \<^const>\<open>valid_ltr\<close>
+    \<^item> @{theory Voblint_CFG.Activation_Trace_Def} --- the call-structured
+      activation trace \<^const>\<open>valid_activation_trace\<close>
       (\<^verbatim>\<open>Root\<close>/\<^verbatim>\<open>Call\<close>/
-      \<^verbatim>\<open>Resume\<close>), the \<^const>\<open>ltr_collect\<close> and
+      \<^verbatim>\<open>Resume\<close>), the \<^const>\<open>node_collect\<close> and
       \<^const>\<open>activation_collect\<close> projections, and the
-      \<^locale>\<open>ltr_coverage\<close> interface with
-      \<^verbatim>\<open>ltr_collect_semantic_postfix\<close>.
+      \<^locale>\<open>activation_coverage\<close> interface with
+      \<^verbatim>\<open>node_collect_semantic_postfix\<close>.
     \<^item> @{theory Voblint_CFG.CFG_Prune} --- interprocedural graph
       reachability (\<^const>\<open>cfg_reaches\<close>), which feeds the cone
       guard. The graph itself is unchanged; the cone restriction belongs to the
       abstract concretization.
 
-  \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the TD_side solver bridge; every
+  \<^bold>\<open>3. Analysis spine.\<close> Abstract domains, equation systems, and the \<open>TD_side\<close> solver bridge; every
   generic endpoint concludes over the trace projections.
     \<^item> @{theory Voblint_Domain.Abstract_Domain} ---
       \<^verbatim>\<open>numeric_domain\<close>, lifted state concretization, and
@@ -403,20 +403,20 @@ text \<open>
       (\<^verbatim>\<open>analysis_contract\<close>). The routed context locales in
       @{theory Voblint_Framework.Routed_Context} feed those obligations into
       \<^const>\<open>activation_collect\<close>. The unit-context instance reaches
-      \<^const>\<open>ltr_collect\<close> through
-      \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>
+      \<^const>\<open>node_collect\<close> through
+      \<^verbatim>\<open>node_collect_eq_Union_activation_of_fun\<close>
       (@{theory Voblint_Framework.Routed_Context_Unit}).
     \<^item> @{theory Voblint_Analysis_Sign.Sign_Analyses} and its four siblings --- each
       domain as a \<^locale>\<open>dg_analysis_exec\<close> instance at the unit context, and
       Interval also at entry state and call string, so each reaches
-      \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>ltr_collect\<close>,
+      \<^const>\<open>activation_collect\<close>, and at the unit context \<^const>\<open>node_collect\<close>,
       through the locale's generic node-soundness bridge.
 
-  \<^bold>\<open>4c. Activation-local certification.\<close> The concrete object the context-sensitive soundness
+  \<^bold>\<open>4c. Activation-trace certification.\<close> The concrete object the context-sensitive soundness
     rides: one trace per activation, with a stable call-only context.
     \<^item> @{theory Voblint_Framework.Activation_Backbone} --- the generic
       \<^verbatim>\<open>activation_collect_sound\<close>. Over
-      \<^const>\<open>valid_ltr\<close>, the five obligations
+      \<^const>\<open>valid_activation_trace\<close>, the five obligations
       \<^verbatim>\<open>INIT\<close>/\<^verbatim>\<open>INTRA\<close>/
       \<^verbatim>\<open>CALL\<close>/\<^verbatim>\<open>RETURN\<close>/
       \<^verbatim>\<open>TOTAL\<close> on a \<^verbatim>\<open>cover\<close> map bound
@@ -428,19 +428,19 @@ text \<open>
       solution certifies the activation collecting semantics.
 
   \<^bold>\<open>5. Executable frontend.\<close> Finite-map state representation and certified execution.
-    \<^item> @{theory Voblint_Exec.Exec_St_Base} --- executable abstract-state maps for code
+    \<^item> @{theory Voblint_Exec.Default_St_Base} --- executable abstract-state maps for code
       generation, layered as representation, algebra
-      (@{theory Voblint_Exec.Exec_St_Algebra}), refinement to variable-indexed states
-      (@{theory Voblint_Exec.Exec_St_Transfer}) and dead-code detection
-      (@{theory Voblint_Exec.Exec_St_Reachability}).
-    \<^item> @{theory Voblint_Exec.Exec_St_Restriction_Refinement} ---
+      (@{theory Voblint_Exec.Default_St_Algebra}), refinement to variable-indexed states
+      (@{theory Voblint_Exec.Default_St_Transfer}) and dead-code detection
+      (@{theory Voblint_Exec.Default_St_Reachability}).
+    \<^item> @{theory Voblint_Exec.Default_St_Restriction_Refinement} ---
       commutation from executable states to function states.
     \<^item> @{theory Voblint_Routing.Compiled_Routed_Equations} --- the D/G
       equation generator (\<^const>\<open>compiled_routed_eqs_for\<close>) every analysis,
       context-insensitive or not, is solved over; the verified solver \<^emph>\<open>runs\<close> on it.
     \<^item> @{theory Voblint_Framework.DG_Reader_Transport} --- reads a
       whole equation system through carrier-generic readers
-      (\<^const>\<open>fun_of_dg_st_gen\<close>), letting the executable run answer
+      (\<^const>\<open>map_dg_state\<close>), letting the executable run answer
       for the mathematical system.
     \<^item> @{theory Voblint_Exec.DG_Local_State_Exec_Refinement} ---
       \<^locale>\<open>dg_domain_exec\<close> proves a registered domain's
@@ -479,10 +479,10 @@ text \<open>
   \<^bold>\<open>6. End-to-end theorems.\<close> Headline soundness and the source bridge.
     \<^item> @{theory Voblint_Result.Source_Activation_Sound} --- the
       source-adequacy bridge. A reachable VIMP source configuration produces a
-      \<^const>\<open>valid_ltr\<close> trace
-      (\<^verbatim>\<open>source_run_has_ltr\<close>), bounded at its activation
+      \<^const>\<open>valid_activation_trace\<close> trace
+      (\<^verbatim>\<open>source_run_has_activation_trace\<close>), bounded at its activation
       context (\<^verbatim>\<open>source_activation_sound\<close>) and monovariantly
-      (\<^verbatim>\<open>source_reaches_ltr_collect\<close>).
+      (\<^verbatim>\<open>source_reaches_node_collect\<close>).
     \<^item> @{theory Voblint_Result.DG_Live_Unknowns} --- the endpoints of a routed
       analysis whose route is a function of the call site, the unit context
       among them; they are what every flagship and codegen entry point applies: one
@@ -649,7 +649,7 @@ text \<open>
     \<^item> VIMP source \<^verbatim>\<open>compile_prog\<close> to a CFG;
     \<^item> the generic D/G generator \<^verbatim>\<open>compiled_routed_eqs_for\<close> emits the equation system;
     \<^item> the verified solver \<^emph>\<open>computes\<close> a solution (\<^verbatim>\<open>solve_c ... = Some sigma\<close>, \<^verbatim>\<open>by eval\<close>);
-    \<^item> the endpoint \<open>interval_seed_join.fun_route_source_sound\<close>
+    \<^item> the endpoint \<open>interval_rule.fun_route_source_sound\<close>
       (@{theory Voblint_Result.DG_Live_Unknowns}, the routed analysis at the unit
       context) bundles solver correctness,
       executable/pure commutation,
@@ -662,8 +662,8 @@ text \<open>
   the relational activation spine and its per-context admitted slots --- the unit
   and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), while
   entry-state routing genuinely admits several contexts per call. There is one
-  such spine: every domain reaches \<^const>\<open>ltr_collect\<close> through the routed
-  unit-context instance's \<^verbatim>\<open>ltr_collect_eq_Union_activation_of_fun\<close>, and the routed
+  such spine: every domain reaches \<^const>\<open>node_collect\<close> through the routed
+  unit-context instance's \<^verbatim>\<open>node_collect_eq_Union_activation_of_fun\<close>, and the routed
   instances through \<^verbatim>\<open>activation_collect_sound\<close> above it.
 \<close>
 

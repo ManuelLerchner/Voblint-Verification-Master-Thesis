@@ -5,10 +5,12 @@ theory Example_Sign_DG_Custom_Body
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
     "Voblint_Analysis_Sign.Sign_Transfer"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
+
+unbundle default_st_syntax
 
 section \<open>What a procedure-entry transfer can change\<close>
 
@@ -49,18 +51,18 @@ text \<open>
 
 definition sign_body_forget ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname
-   \<Rightarrow> ('x,'k,unit,sign exec_dg_st,sign exec_dg_st) man_transfer"
+   \<Rightarrow> ('x,'k,unit,sign default_st,sign default_st) man_transfer"
 where
   "sign_body_forget \<G> x =
-     local_transfer (\<lambda>d. update_resolved_st_q d (location_of \<G> x) STop)"
+     local_transfer (\<lambda>d. d\<langle>location_of \<G> x := STop\<rangle>)"
 
 subsection \<open>The Sign specification that uses it\<close>
 
 definition sign_dg_spec_body_forget ::
   "(vname \<Rightarrow> bool) \<Rightarrow> vname
-   \<Rightarrow> (edge_action \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> sign exec_dg_st \<Rightarrow> sign exec_dg_st)
-   \<Rightarrow> ('x, 'k, unit, sign exec_dg_st, sign exec_dg_st) dg_spec" where
+   \<Rightarrow> (edge_action \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> (call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st)
+   \<Rightarrow> ('x, 'k, unit, sign default_st, sign default_st) dg_spec" where
   "sign_dg_spec_body_forget \<G> x tf_st enter_st =
      (ownership_split_dg_spec_st_for \<G> tf_st enter_st)
        \<lparr> dgs_body := (\<lambda>p. sign_body_forget \<G> x) \<rparr>"
@@ -123,51 +125,51 @@ abbreviation bf_prog_gs :: "vname \<Rightarrow> bool" where
 definition bf_cfg :: cfg where
   "bf_cfg = compile_prog (prog_table bf_program) (prog_procs bf_program)"
 
-abbreviation bf_lookup :: "sign exec_dg_st \<Rightarrow> vname \<Rightarrow> sign" where
-  "bf_lookup s x \<equiv> lookup_resolved_st_q s (location_of bf_prog_gs x)"
+abbreviation bf_lookup :: "sign default_st \<Rightarrow> vname \<Rightarrow> sign" where
+  "bf_lookup s x \<equiv> s\<langle>location_of bf_prog_gs x\<rangle>"
 
 definition bf_stock_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "bf_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for bf_prog_gs
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition bf_custom_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-        (sign exec_dg_st, sign exec_dg_st) dg_state) strategy_tree" where
+        (sign default_st, sign default_st) dg_state) strategy_tree" where
   "bf_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
         (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
-     bf_cfg cinit_sign_st (restrict_global_resolved_q cinit_sign_st)"
+     bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 lemma bf_stock_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_stock_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join bf_stock_eqs
      (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
 lemma bf_custom_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed bf_custom_eqs
+  "TD_side_rule_Interp_solve_c Globals_Join bf_custom_eqs
      (cfg_exit bf_cfg, ()) \<noteq> None"
   by eval
 
 definition bf_stock_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "bf_stock_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_stock_eqs
+     TD_side_rule_Interp_solve Globals_Join bf_stock_eqs
        (cfg_exit bf_cfg, ())"
 
 definition bf_custom_sol ::
   "(pp \<times> unit) set
    \<times> (pp \<times> unit + (unit, unit) global_unknown
-        \<Rightarrow> (sign exec_dg_st, sign exec_dg_st) dg_state)" where
+        \<Rightarrow> (sign default_st, sign default_st) dg_state)" where
   "bf_custom_sol =
-     TD_side_seed_join_warrowing_Interp_solve is_activation_seed bf_custom_eqs
+     TD_side_rule_Interp_solve Globals_Join bf_custom_eqs
        (cfg_exit bf_cfg, ())"
 
 subsection \<open>The procedure-entry edge, and what runs on it\<close>
@@ -220,5 +222,7 @@ lemma bf_caller_unaffected:
   "bf_lookup (dg_local (snd bf_stock_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
   "bf_lookup (dg_local (snd bf_custom_sol (Inl (Statement 4, ())))) (STR ''r'') = SPos"
   by eval+
+
+unbundle no default_st_syntax
 
 end

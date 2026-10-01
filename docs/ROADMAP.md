@@ -22,7 +22,7 @@ The supported pipeline is:
 ```text
 VIMP source
   -> procedure-aware CFG
-  -> activation-local collecting semantics
+  -> activation-trace collecting semantics
   -> generic D/G equations
   -> verified side-effecting TD solver
   -> abstract post-solution
@@ -33,7 +33,7 @@ The source language uses explicit procedure calls and returns. Main completes
 only by fall-through. Compiler certificates expose node ownership, local ranges,
 call continuations, and matching result boundaries.
 
-`valid_ltr`, `ltr_collect`, and `activation_collect` are the concrete semantic
+`valid_activation_trace`, `node_collect`, and `activation_collect` are the concrete semantic
 targets. The equation system has three contribution families: ordinary local
 edges, procedure entry, and return combination.
 
@@ -81,8 +81,8 @@ more precise shared-state communication. Keep routing generic over the `D` and
 The hook-tree layer (`sound_dg_hooks`) and the owner-sensitive placement
 examples built on it were removed; `docs/GOBLINT_ALIGNMENT_REGISTER.md` ("D/G
 reconstruction and publication timing") records why. Every analysis interprets
-`analysis_contract` through `dg_ctx_activation_base` and
-`routed_context_base_hetero`. An analysis-specific sharing policy belongs in that
+`analysis_contract` through `dg_context_activation` and
+`routed_context`. An analysis-specific sharing policy belongs in that
 analysis's own semantics over the keyed manager, not in a generic placement
 layer.
 

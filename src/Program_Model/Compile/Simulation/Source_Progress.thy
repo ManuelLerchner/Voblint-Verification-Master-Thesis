@@ -127,17 +127,17 @@ lemma csim_progress_cfg:
   shows "(fst cfg = SKIP \<and> snd (snd cfg) = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> cfg \<rightarrow>\<^sub>p cfg')"
   using assms(1)
 proof (induction rule: csim.induct)
-  case (Base p c0 k n c v s)
-  from Base.hyps(2) obtain decl where decl: "\<Pi> p = Some decl" and c0: "c0 = body decl"
+  case (Base p body_p k n c v s)
+  from Base.hyps(2) obtain decl where decl: "\<Pi> p = Some decl" and body_p: "body_p = body decl"
     by (rule compiled_at_decl)
-  have "wf_source_com \<Pi> c0"
-    using wf_decls[OF decl] c0 by (simp add: wf_proc_decl_def)
+  have "wf_source_com \<Pi> body_p"
+    using wf_decls[OF decl] body_p by (simp add: wf_proc_decl_def)
   from control_at_wf_source_com[OF Base.hyps(1) this]
   have "wf_source_com \<Pi> c" .
   from wf_source_com_progress[OF _ this, of \<G> s "[]"] wf_decls
   show ?case by (auto simp: wf_proc_decl_def)
 next
-  case (Nested inner s frs v stk pc c0c kc nc afters cont caller dst)
+  case (Nested inner s frs v stk pc body_pc kc nc afters cont caller dst)
   let ?F = "[Frame caller dst]"
   have "\<exists>w'. \<G>, \<Pi> \<turnstile> (Seq inner Restore, s, frs @ ?F) \<rightarrow>\<^sub>p w'"
     using Nested.IH
@@ -154,7 +154,7 @@ next
     by auto
   from pstep_seq_after_lift[OF this, of afters] show ?case by auto
 next
-  case (Returning w pc c0c kc nc afters cont callee caller dst p)
+  case (Returning w pc body_pc kc nc afters cont callee caller dst p)
   from pop_ready_progress[OF Returning.hyps(1), of \<G> \<Pi> callee caller dst "[]"]
   obtain w' s' f' where "\<G>, \<Pi> \<turnstile> (w, callee, [Frame caller dst]) \<rightarrow>\<^sub>p (w', s', f')"
     by auto

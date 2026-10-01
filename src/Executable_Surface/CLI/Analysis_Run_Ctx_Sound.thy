@@ -30,7 +30,7 @@ proof (rule sound_table_of_activation
      OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
   case (1 u)
   show ?case
-    by (simp add: mcp_es_rule.entry_state_ltr_collect_eq_Union_of_terminates [OF wf cov])
+    by (simp add: mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf cov])
 next
   case (2 u ctx)
   show ?case
@@ -57,7 +57,7 @@ proof (rule sound_table_of_activation
   case (1 u)
   show ?case
     by (rule equalityD1
-          [OF mcp_cs_rule.fun_route_ltr_collect_eq_Union [where ctx_fun = "cs_context k"]])
+          [OF mcp_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k"]])
 next
   case (2 u ctx)
   show ?case

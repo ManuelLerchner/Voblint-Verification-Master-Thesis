@@ -190,7 +190,7 @@ import `VIMP_Program`.
 - **A session boundary is the only thing that enforces a layering claim.** The
   soundness endpoints are stated for an arbitrary CFG, not only compiled ones.
   Nothing but the `Voblint_CFG` boundary stops a later edit from importing
-  `compile` into `LTR_Def` and quietly narrowing every one of them.
+  `compile` into `Activation_Trace_Def` and quietly narrowing every one of them.
 - **One named simp bundle instead of N selector lemmas.** `call_info_of_simps`
   (four `ci_*` projections) and `mk_program_simps` (four `prog_*_make`
   projections) each collapse to one `[simp]` lemma with N conclusions, proved
@@ -370,5 +370,5 @@ graph-generic half. Constants were renamed for the same reason as the theories:
 
 Largest theory in either session is now 852 lines. No `metis`, no `smt`, no
 `sorry`, no apply scripts, and each session ends with a non-vacuity witness
-(`pcompletes_witness`, `ltr_collect_witness`, `procs_embedded_witness` /
-`csim_witness` / `source_run_has_ltr_witness`).
+(`pcompletes_witness`, `node_collect_witness`, `procs_embedded_witness` /
+`csim_witness` / `source_run_has_activation_trace_witness`).

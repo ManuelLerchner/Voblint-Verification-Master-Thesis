@@ -24,17 +24,15 @@ text \<open>
 subsection \<open>What the initial abstract state describes\<close>
 
 text \<open>
-  The stores a run may start in are described by the entry state read back
-  through the executable bridge. This mentions neither a solver nor a coverage
+  The stores a run may start in are described by the function the entry state
+  represents. This mentions neither a solver nor a coverage
   assumption --- only the entry state and the global-variable predicate --- so
   it is stated here rather than inside a solved-system context.
 \<close>
 
 lemma int_cinit_gamma:
-  "cinit_stores \<G>
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted cinit_int_dom_st)\<rbrakk>\<^sub>\<bottom>"
-  by (auto simp: cinit_stores_def gamma_state_def
-      fun_of_resolved_st_q_for_def fun_of_initial_resolved_st_q
+  "cinit_stores \<G> \<subseteq> default_st_gamma \<G> cinit_int_dom_st"
+  by (auto simp: cinit_stores_def gamma_state_def default_st_gamma_initial
       gamma_top [where 'a = int_dom, unfolded gamma_abs_int_dom_ext])
 
 end

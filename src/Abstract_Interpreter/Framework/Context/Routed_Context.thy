@@ -1,12 +1,13 @@
 theory Routed_Context
-  imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec "Voblint_CFG.LTR_Def"
+  imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec
+    "Voblint_CFG.Activation_Trace_Def"
     Activation_Backbone
 begin
 
 section \<open>One route, CALL and COMB discharged once\<close>
 
 text \<open>
-  \<^locale>\<open>dg_ctx_activation_base\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
+  \<^locale>\<open>dg_context_activation\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
   post-solution, independent of \<open>route\<close>/\<open>cmb\<close>/\<open>extra\<close>: intra edges never route. Its COMB
   analogue (\<open>dg_ctx_act_comb_covered\<close>) is generic in the same sense but still takes the
   program's contribution as an assumption (\<open>bound\<close>) rather than deriving it, because \<open>cmb\<close> is
@@ -14,7 +15,7 @@ text \<open>
   return combine are hand-written has to rederive that same routing argument itself. This
   theory fixes \<open>cmb\<close> and \<open>extra\<close> to the one canonical shape \<open>Routed_Call_Programs\<close>
   builds --- parametric only in a routing function \<open>route\<close> and a seed-key injection
-  \<open>seed_unknown\<close> --- and discharges CALL and COMB as theorems of that shape: a k-call-string
+  \<open>seed\<close> --- and discharges CALL and COMB as theorems of that shape: a k-call-string
   or a partial-tabulation context becomes an interpretation of this locale, not a second
   proof development.
 \<close>
@@ -22,21 +23,21 @@ text \<open>
 subsection \<open>The routed-context locale: D and G independently typed\<close>
 
 text \<open>
-  \<open>routed_context_base_hetero\<close> instantiates \<^locale>\<open>dg_ctx_activation_base\<close> at
+  \<open>routed_context\<close> instantiates \<^locale>\<open>dg_context_activation\<close> at
   \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>, so \<open>S\<close>'s own \<open>'D\<close>/\<open>'G\<close> stay as
   independent as that locale already keeps them: no \<open>'D = 'G\<close> constraint is threaded
-  in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_ctx_activation_base\<close> itself carries
+  in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_context_activation\<close> itself carries
   no routing-specific content: every fact it supplies (\<open>pp_eq_bound\<close>,
   \<open>pp_sides_bound\<close>, \<open>sides_fold_le_Gen\<close>, \<open>edge_bound_local\<close>/\<open>_global\<close>,
   \<open>dg_ctx_act_edge\<close>, \<open>dg_ctx_act_comb_covered\<close>) is already generic in
   \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>
   reuses those proofs unchanged; only the seed-specific reasoning below, which
-  \<open>dg_ctx_activation_base\<close> never has since seeding is \<open>routed_call_program\<close>'s own
+  \<open>dg_context_activation\<close> never has since seeding is \<open>routed_call_program\<close>'s own
   addition, is carried out here.
 
-  Beyond \<^locale>\<open>dg_ctx_activation_base\<close>'s parameters: \<open>seed_unknown\<close> injects a routed
+  Beyond \<^locale>\<open>dg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>R\<close> is the trace-semantic context relation
-  keying the activation-local collecting semantics; and two obligations about it cannot be
+  keying the activation-trace collecting semantics; and two obligations about it cannot be
   discharged generically.  \<open>routed_entry_cover\<close> is adequacy: whenever \<open>R\<close> admits a context
   for a real call edge and a covered caller store, some alternative of the specification's
   own entry run describes that call --- its continuation half containing the caller store,
@@ -54,10 +55,10 @@ text \<open>
   the collecting semantics itself never needs it, and compiled programs have it for free.
 \<close>
 
-locale routed_context_base_hetero =
-  dg_ctx_activation_base S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route
-    "routed_call_program S analysis_global seed_unknown resolve is_bot"
-      "routed_entry_seed_programs seed_unknown"
+locale routed_context =
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route
+    "routed_call_program S analysis_global seed resolve is_bot"
+      "routed_entry_seed_programs seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -66,14 +67,14 @@ locale routed_context_base_hetero =
     and g analysis_global
     and route ("context\<^sup>#")
     and bot0 s0d s0g sigma vars x0 sg
-    and seed_unknown :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set" +
   fixes R :: "'c call_context_rel"
   assumes finC: "finite (calls g)"
     and calls_unique: "calls_source_unique g"
-    and seed_unknown_ne_analysis_global[simp]: "\<And>p ctx. seed_unknown p ctx \<noteq> analysis_global"
+    and seed_ne_analysis_global[simp]: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
     and is_bot_bot[simp]: "is_bot bot"
     and is_bot_sound: "\<And>d g. is_bot d \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d g = {}"
     and resolve_sound:
@@ -188,7 +189,7 @@ text \<open>
 
 lemma resolved_site_mem:
   assumes ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "routed_call_program S analysis_global seed_unknown resolve is_bot route ctx
+  shows "routed_call_program S analysis_global seed resolve is_bot route ctx
              (CallEdge dst pars args) cc cont
            \<in> set (contribs cont ctx)"
 proof -
@@ -201,9 +202,9 @@ lemma resolved_target_mem:
   assumes covV: "(cc, ctx) \<in> vars"
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
-  shows "routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) cc
+  shows "routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) cc
              (dg_local (sigma (Inl (cc, ctx)))) p
-           \<in> set (map (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx
+           \<in> set (map (routed_callee_call_program S analysis_global seed route is_bot ctx
                           (CallEdge dst pars args) cc
                         (dg_local (sigma (Inl (cc, ctx)))))
                       (resolve cont cc (CallEdge dst pars args)
@@ -215,15 +216,15 @@ lemma resolved_at_le_site_acc:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
   shows "dg_local (traverse_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma)
          \<le> side_acc_dg (acc0 cont) sigma (contribs cont ctx)"
 proof -
   have "dg_local (traverse_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma)
       \<le> dg_local (traverse_program
-           (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx
+           (routed_call_program S analysis_global seed resolve is_bot route ctx
               (CallEdge dst pars args) cc cont)
            sigma)"
     using dg_local_traverse_le_side_acc_dg[OF resolved_target_mem[OF covV ce sin], where acc = bot]
@@ -239,15 +240,15 @@ lemma resolved_at_le_site_sides:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
   shows "sides_of_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma z
          \<le> sides_of_program (side_rhs_fold_dg (acc0 cont) (contribs cont ctx)) sigma z"
 proof -
   have "sides_of_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma z
       \<le> sides_of_program
-           (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx
+           (routed_call_program S analysis_global seed resolve is_bot route ctx
               (CallEdge dst pars args) cc cont)
            sigma z"
     by (rule routed_call_program_sides_ge_at
@@ -266,14 +267,14 @@ text \<open>The CALL obligation, ending in \<open>routed_context_call\<close>: t
   and the callee's entry equation meet.\<close>
 lemma routed_seed_read_bound:
   assumes covV: "(FunctionEntry p, ctx') \<in> vars"
-  shows "dg_local (sigma (Inr (seed_unknown (FunctionEntry p) ctx')))
+  shows "dg_local (sigma (Inr (seed (FunctionEntry p) ctx')))
            \<le> dg_local (sigma (Inl (FunctionEntry p, ctx')))"
 proof -
-  let ?t = "do { s \<leftarrow> sp_read_global (seed_unknown (FunctionEntry p) ctx');
+  let ?t = "do { s \<leftarrow> sp_read_global (seed (FunctionEntry p) ctx');
                  sp_return (DG (dg_local s) bot) }"
   have mem: "?t \<in> set (contribs (FunctionEntry p) ctx')"
     by (rule routed_contribution_programs_extraI) (simp add: routed_entry_seed_programs_def)
-  have "dg_local (sigma (Inr (seed_unknown (FunctionEntry p) ctx')))
+  have "dg_local (sigma (Inr (seed (FunctionEntry p) ctx')))
       = dg_local (traverse_program ?t sigma)"
     by (simp add: sp_compile_def)
   also have "\<dots> \<le> side_acc_dg (acc0 (FunctionEntry p)) sigma (contribs (FunctionEntry p) ctx')"
@@ -304,12 +305,12 @@ lemma routed_seed_publish_bound_seed:
     and mem: "(cont', entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
   shows "entry
-         \<le> dg_local (sigma (Inr (seed_unknown (FunctionEntry p)
+         \<le> dg_local (sigma (Inr (seed (FunctionEntry p)
                (route u ctx entry (CallEdge dst pars args)))))"
 proof -
   let ?ctx' = "route u ctx entry (CallEdge dst pars args)"
-  let ?k = "Inr (seed_unknown (FunctionEntry p) ?ctx')"
-  let ?t = "routed_callee_call_program S analysis_global seed_unknown route is_bot ctx (CallEdge dst pars args) u
+  let ?k = "Inr (seed (FunctionEntry p) ?ctx')"
+  let ?t = "routed_callee_call_program S analysis_global seed route is_bot ctx (CallEdge dst pars args) u
               (dg_local (sigma (Inl (u, ctx)))) p"
   have seedb: "DG entry bot \<le> sides_of_program ?t sigma ?k"
     using spec_wf R mem nb by (rule routed_callee_call_program_sides_ge_seed)
@@ -397,15 +398,15 @@ lemma routed_comb_bound_local:
               (man_at cl c1) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "dg_local (traverse_program
-           (routed_call_alternative_program S analysis_global seed_unknown route is_bot c1
+           (routed_call_alternative_program S analysis_global seed route is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma)
          \<le> dg_local (sigma (Inl (cont, c1)))"
 proof -
   have "dg_local (traverse_program
-           (routed_call_alternative_program S analysis_global seed_unknown route is_bot c1
+           (routed_call_alternative_program S analysis_global seed route is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma)
       \<le> dg_local (traverse_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_program S analysis_global seed route is_bot c1 (CallEdge dst pars args) cl
               (dg_local (sigma (Inl (cl, c1)))) p) sigma)"
     by (rule routed_callee_call_program_traverse_ge[OF spec_wf R mem])
   also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (contribs cont c1)"
@@ -426,15 +427,15 @@ lemma routed_comb_bound_global:
               (man_at cl c1) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "dg_global (sides_of_program
-           (routed_call_alternative_program S analysis_global seed_unknown route is_bot c1
+           (routed_call_alternative_program S analysis_global seed route is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma (Inr analysis_global))
          \<le> dg_global (sigma (Inr analysis_global))"
 proof -
   have "dg_global (sides_of_program
-           (routed_call_alternative_program S analysis_global seed_unknown route is_bot c1
+           (routed_call_alternative_program S analysis_global seed route is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma (Inr analysis_global))
       \<le> dg_global (sides_of_program
-           (routed_callee_call_program S analysis_global seed_unknown route is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_program S analysis_global seed route is_bot c1 (CallEdge dst pars args) cl
               (dg_local (sigma (Inl (cl, c1)))) p) sigma (Inr analysis_global))"
     by (rule le_dg_state_globalD[OF routed_callee_call_program_sides_ge_combine[OF spec_wf R mem]])
   also have "\<dots> \<le> dg_global (sides_of_program
@@ -486,7 +487,7 @@ next
       and req: "route cl c1 entry (CallEdge dst pars args) = ctx'"
     by (rule routed_enter_witness[OF True ce sin Rc])
   let ?ex_ctx = "route cl c1 entry (CallEdge dst pars args)"
-  let ?alt = "routed_call_alternative_program S analysis_global seed_unknown route is_bot c1
+  let ?alt = "routed_call_alternative_program S analysis_global seed route is_bot c1
                 (CallEdge dst pars args) cl p (cont', entry)"
   have nb: "\<not> is_bot entry" using ecov by (rule entry_cover_not_bot)
   show ?thesis
@@ -507,7 +508,7 @@ next
     have tr: "traverse_program ?alt sigma = traverse_rhs ?sub sigma"
       using nb by (simp add: sp_compile_def)
     have knk:
-      "(Inr analysis_global :: (pp \<times> 'c) + 'k) \<noteq> Inr (seed_unknown (FunctionEntry p) ?ex_ctx)"
+      "(Inr analysis_global :: (pp \<times> 'c) + 'k) \<noteq> Inr (seed (FunctionEntry p) ?ex_ctx)"
       by (rule not_sym) simp
     have sd:
       "sides_of_program ?alt sigma (Inr analysis_global) = sides_of_rhs ?sub sigma (Inr analysis_global)"
@@ -539,7 +540,7 @@ subsection \<open>Activation-collect soundness against the routed local unknown\
 text \<open>
   Every activation-collected store at any \<open>(v, ctx)\<close> pair is concretized by the routed
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
-  \<open>activation_collect_sound\<close> are this locale's own facts: the two entry bounds discharge
+  \<^locale>\<open>activation_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
   \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routed_entry_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
@@ -565,22 +566,22 @@ proof (intro allI impI)
 qed
 
 lemma activation_collect_dg_sound:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<A>\<^bsub>\<G>,R,startcontext,g,S0\<^esub> v ctx
+  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
-proof (rule activation_collect_sound[where cover = "cover"])
+proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
-  have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, startcontext)))"
+  have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
     by (rule pp_entry_s0d_bound[OF entry_cov])
   have le_global: "s0g \<le> dg_global (sigma (Inr analysis_global))"
     by (rule pp_entry_s0g_bound[OF entry_cov])
   have "\<gamma>\<^sub>D\<^sub>G s0d s0g
-        \<subseteq> gamma_at (cfg_entry g) startcontext"
+        \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
     by (rule gammaDG_mono[OF le_local le_global])
-  with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) startcontext" by blast
-  thus "s0 \<in> cover (cfg_entry g) startcontext"
+  with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+  thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
     using entry_cov by simp
 next
   fix u a v' c' s' s''
@@ -608,32 +609,32 @@ next
 qed
 
 text \<open>
-  Every valid trace of a covered program carries some context under this instance's own
+  Every valid activation trace of a covered program carries some context under this instance's own
   \<open>R\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>ltr_coverage\<close> total here, so a \<open>Source_Ctx\<close>-style example can discharge the
-  \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
+  \<open>activation_coverage\<close> total here, so an example such as
+  \<open>Example_Interval_Source_Ctx\<close> can discharge the \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
   interpretation itself.
 \<close>
 
-lemma routed_valid_ltr_has_context:
-  fixes S0 :: "store set" and startcontext :: 'c
-  assumes entry_cov: "(cfg_entry g, startcontext) \<in> vars"
+lemma routed_valid_activation_trace_has_context:
+  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
     and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
-  shows "\<exists>c. trace_context \<G> R startcontext g t c"
+  shows "\<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
 proof -
-  interpret G: ltr_coverage g S0 cover R startcontext \<G>
+  interpret G: activation_coverage g S0 cover R c\<^sub>0 \<G>
   proof unfold_locales
     fix s0 assume s0mem: "s0 \<in> S0"
-    have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, startcontext)))"
+    have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
       by (rule pp_entry_s0d_bound[OF entry_cov])
     have le_global: "s0g \<le> dg_global (sigma (Inr analysis_global))"
       by (rule pp_entry_s0g_bound[OF entry_cov])
     have "\<gamma>\<^sub>D\<^sub>G s0d s0g
-          \<subseteq> gamma_at (cfg_entry g) startcontext"
+          \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
       by (rule gammaDG_mono[OF le_local le_global])
-    with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) startcontext" by blast
-    thus "s0 \<in> cover (cfg_entry g) startcontext"
+    with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+    thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
       using entry_cov by simp
   next
     fix u a v' c' s' s''
@@ -659,7 +660,7 @@ proof -
     show "call_context_total_on cover R \<G> g"
       by (rule routed_call_context_total)
   qed
-  show ?thesis using G.valid_ltr_has_context[OF tv] by blast
+  show ?thesis using G.valid_activation_trace_has_context[OF tv] by blast
 qed
 
 end
@@ -746,7 +747,7 @@ text \<open>
   domain provides for a concrete value and the CFG needed to look up a call
   site's own formal list. Neither definition mentions a domain-specific accessor
   beyond \<open>decode\<close> itself, nor a specification, so any domain reusing
-  \<^locale>\<open>routed_context_base_hetero\<close> instantiates this pair once instead of
+  \<^locale>\<open>routed_context\<close> instantiates this pair once instead of
   hand-writing a per-formal projection.
 \<close>
 
@@ -837,8 +838,8 @@ subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<cl
 
 text \<open>
   \<^const>\<open>formals_context\<close> above operates on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context_base_hetero\<close> caller state
-  has. The routed executable spine (\<^locale>\<open>dg_ctx_activation_base\<close>, every current
+  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>routed_context\<close> caller state
+  has. The routed executable spine (\<^locale>\<open>dg_context_activation\<close>, every current
   instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
   activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
   \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:

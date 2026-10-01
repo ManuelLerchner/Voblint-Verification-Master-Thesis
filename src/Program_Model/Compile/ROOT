@@ -13,7 +13,7 @@ session Voblint_Compile in "." = "Voblint_CFG" +
        graph it compiles to, and that graph's connectivity. *)
     Compile_Invariants
     (* Source-step to CFG-step forward simulation.  Independent of the
-       collecting semantics: nothing under Simulation/ mentions valid_ltr. *)
+       collecting semantics: nothing under Simulation/ mentions valid_activation_trace. *)
     Residual_Location
     Residual_Edges
     Simulation_Relation
@@ -22,12 +22,12 @@ session Voblint_Compile in "." = "Voblint_CFG" +
        can step, with csim reused as the shape invariant. *)
     Source_Progress
     (* Per-procedure node classification and edge locality; carries
-       valid_ltr_entry_result_eq, the activation procedure-locality theorem.
+       valid_activation_trace_entry_result_eq, the activation procedure-locality theorem.
        Independent of Simulation/. *)
     Procedure_Ownership
     (* The live statements of each procedure: edges out of them stay live, and
        every live node reaches its procedure's result. *)
     Live_Nodes
     (* The bridge, and the only theory that needs both branches: a source run
-       becomes a valid local trace (csim -> valid_ltr). *)
+       becomes a valid activation trace (csim -> valid_activation_trace). *)
     Source_To_Trace

@@ -83,6 +83,25 @@ def test_flags_in_any_order_override_the_header(tmp_path):
     assert unpack(url.split("#code=")[1]) == "fun main() {}"
 
 
+def test_narrow_bound_is_a_setting_only_off_the_default(tmp_path):
+    program = tmp_path / "prog.vimp"
+    program.write_text(
+        "// PARAM: --analysis interval --globals bounded-narrowing\nfun main() {}\n"
+    )
+    for flags in ([], ["--narrow-bound", "5"]):
+        url = playground_link.program_link(program, flags)
+        assert "?analysis=interval&globals=bounded-narrowing&context=none#" in url
+    url = playground_link.program_link(program, ["--narrow-bound", "2"])
+    assert "globals=bounded-narrowing&narrow=2&context=none#" in url
+
+
+def test_narrow_bound_needs_bounded_narrowing(tmp_path):
+    program = tmp_path / "prog.vimp"
+    program.write_text("// PARAM: --analysis interval\nfun main() {}\n")
+    with pytest.raises(ValueError):
+        playground_link.program_link(program, ["--narrow-bound", "2"])
+
+
 def test_a_program_without_header_keeps_its_first_line(tmp_path):
     program = tmp_path / "prog.vimp"
     program.write_text("// my own comment\nfun main() {}\n")
@@ -109,16 +128,24 @@ def test_link_check_rejects_what_the_playground_cannot_open():
     assert check.check_playground(shared, "pages/index.html", vocabulary) == []
     older = playground_link.link("fun main() {}", "interval").replace("#", "&trace=1#")
     assert check.check_playground(older, "pages/index.html", vocabulary) == []
+    bounded = playground_link.link(
+        "fun main() {}", "interval", "bounded-narrowing", narrow=2
+    )
+    assert check.check_playground(bounded, "pages/index.html", vocabulary) == []
 
     other = playground_link.link("fun main() {}", "interval")
     # Derived, not written out: the depth control's bound moves when the
     # explainer needs a deeper setting, and a literal here would pass as a
     # rejection long after that value became legal.
     too_deep = vocabulary["max_depth"] + 1
+    too_high = vocabulary["max_narrow"] + 1
     cases = {
         "playground.html?fixture=00-sanity/none.vimp": "not a regression file",
         "playground.html?context=entrystate": "not a playground option",
         f"playground.html?k={too_deep}": "outside",
+        f"playground.html?globals=bounded-narrowing&narrow={too_high}": "outside",
+        "playground.html?globals=bounded-narrowing&narrow=-1": "outside",
+        "playground.html?globals=warrow&narrow=2": "only read with",
         "playground.html?colour=red": "unknown parameter",
         "playground.html?trace=yes": "not a playground option",
         "playground.html?trace=full": "not a playground option",

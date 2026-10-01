@@ -1,7 +1,7 @@
 theory Parity_Exec
   imports
-    "Voblint_Exec.Exec_St_Reachability"
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Reachability"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     Parity_Transfer
 begin
@@ -11,7 +11,7 @@ section \<open>Does the runnable parity step agree with the one soundness talks 
 text \<open>
   Two parity transfers exist. The soundness proofs are stated over a store that
   is a plain function from variable name to parity; the generated code runs on
-  \<open>resolved_st_q\<close>, an association list paired with defaults for locals and
+  \<open>default_st\<close>, an association list paired with defaults for locals and
   globals. This theory shows the two never disagree: reading back the executable
   store after a step gives the same function as taking the step on the function
   directly, for every edge action and for procedure entry.
@@ -22,8 +22,8 @@ text \<open>
 
 text \<open>The state a run starts in: a declared global holds \<open>PEven\<close>, a local \<open>PTop\<close>.\<close>
 
-abbreviation cinit_parity_st :: "parity resolved_st_q" where
-  "cinit_parity_st \<equiv> initial_resolved_st_q PTop PEven"
+abbreviation cinit_parity_st :: "parity default_st" where
+  "cinit_parity_st \<equiv> initial_default_st PTop PEven"
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
@@ -39,20 +39,20 @@ text \<open>The executable mirror of \<open>parity_tf_abs\<close>/\<open>enter_p
 
 definition parity_enter_st_for ::
   "(vname => bool) => call_info =>
-   parity resolved_st_q => parity resolved_st_q" where
+   parity default_st => parity default_st" where
   "parity_enter_st_for = generic_enter_st_for parity_ops"
 
 lemma parity_enter_st_for_eq [simp]:
   "parity_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_parity e
-        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q PTop s)"
+        (default_st_to_fun \<G> s)) (ci_args ci))
+      (enter_frame_D_default_st PTop s)"
   by (simp add: parity_enter_st_for_def generic_enter_st_for_def top_parity_def)
 
 definition parity_tf_st_for ::
   "(vname => bool) => edge_action =>
-   parity resolved_st_q => parity resolved_st_q" where
+   parity default_st => parity default_st" where
   "parity_tf_st_for = generic_tf_st_for parity_ops"
 
 lemmas parity_tf_st_for_simps [simp] =
@@ -63,20 +63,20 @@ text \<open>The liveness premise is the guard's: the derived filter commutes wit
   action, the guard included.\<close>
 
 theorem parity_tf_st_for_commute:
-  assumes live: "live_resolved_st_q \<G> s"
-  shows "fun_of_resolved_st_q_for \<G> (parity_tf_st_for \<G> a s) =
-         parity_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
+  assumes live: "live_default_st \<G> s"
+  shows "default_st_to_fun \<G> (parity_tf_st_for \<G> a s) =
+         parity_tf_abs a (default_st_to_fun \<G> s)"
   unfolding parity_tf_st_for_def
   by (rule parity_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_parity_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q PTop s) =
-   enter_frame_parity_for \<G> (fun_of_resolved_st_q_for \<G> s)"
+  "default_st_to_fun \<G> (enter_frame_D_default_st PTop s) =
+   enter_frame_parity_for \<G> (default_st_to_fun \<G> s)"
   by (simp add: parity_tf.op_defs)
 
 lemma parity_enter_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (parity_enter_st_for \<G> ci s) =
-   enter_parity_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+  "default_st_to_fun \<G> (parity_enter_st_for \<G> ci s) =
+   enter_parity_ci_for \<G> ci (default_st_to_fun \<G> s)"
   by (simp add: parity_tf.op_defs enter_binding_def
                 enter_frame_def enter_frame_parity_st_for_commute)
 

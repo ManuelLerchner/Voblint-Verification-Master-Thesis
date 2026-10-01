@@ -1,0 +1,63 @@
+// PARAM: --analysis interval --context none --globals bounded-narrowing
+// Backs the bounded-narrowing cell of the site's Globals guide table: p(1); p(2) enter p with [1,2], and the check is PROVED.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: p / unit
+//     p_pp1_ctx0
+//     p_exit_p_ctx0
+//     p_pp0_ctx0
+//     p_entry_p_ctx0
+//   cluster_ctx_1: main / unit
+//     main_exit_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   p_pp1_ctx0: pp1
+//       interval:
+//         x=[1,2]
+//   p_exit_p_ctx0: exit_p
+//       interval:
+//         x=[1,2]
+//   main_exit_main_ctx0: exit_main
+//       interval:
+//   p_pp0_ctx0: pp0 [proved]
+//       interval:
+//         x=[1,2]
+//       check x <= 2
+//   main_pp2_ctx0: pp2
+//       interval:
+//   main_pp3_ctx0: pp3
+//       interval:
+//   p_entry_p_ctx0: entry_p
+//       interval:
+//         x=[1,2]
+//   main_pp4_ctx0: pp4
+//       interval:
+//   main_entry_main_ctx0: entry_main
+//       interval:
+//
+// edges:
+//   p_pp0_ctx0 -> p_pp1_ctx0: check(x <= 2)
+//   p_pp1_ctx0 -> p_exit_p_ctx0: return
+//   main_pp4_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   p_entry_p_ctx0 -> p_pp0_ctx0: body(p)
+//   main_pp2_ctx0 -> p_entry_p_ctx0: enter p(1)
+//   p_exit_p_ctx0 -> main_pp3_ctx0: combine
+//   main_pp2_ctx0 -> main_pp3_ctx0: call-to-return p
+//   main_pp3_ctx0 -> p_entry_p_ctx0: enter p(2)
+//   p_exit_p_ctx0 -> main_pp4_ctx0: combine
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return p
+// EXPECT-GRAPH-END
+
+fun p(x) {
+  __voblint_check(x <= 2); // PROVED
+}
+
+fun main() {
+  p(1);
+  p(2);
+}

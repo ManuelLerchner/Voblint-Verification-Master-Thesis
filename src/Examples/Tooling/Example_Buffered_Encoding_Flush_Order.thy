@@ -4,10 +4,12 @@ theory Example_Buffered_Encoding_Flush_Order
     "Voblint_Framework.DG_Reader_Transport"
     "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
+    "Voblint_Solver.Globals_Rule"
     "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
 begin
+
+unbundle default_st_syntax
 
 section \<open>Whether the two encodings solve alike\<close>
 
@@ -37,14 +39,14 @@ definition fo_cfg :: cfg where
   "fo_cfg = compile_prog (prog_table fo_program) (prog_procs fo_program)"
 
 definition fo_spec ::
-  "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl exec_dg_st, ivl exec_dg_st) dg_spec" where
+  "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl default_st, ivl default_st) dg_spec" where
   "fo_spec = ownership_split_dg_spec_st_for fo_gs (ivl_tf_st_for fo_gs) (ivl_enter_st_for fo_gs)"
 
 text \<open>The direct encoding is spelled as the unbuffered routed generator itself, at
   the unit context; the buffered one is the constructor every analysis solves.\<close>
 
 definition fo_direct ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "fo_direct =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ()) route_unit
@@ -52,25 +54,25 @@ definition fo_direct ::
        (routed_call_program fo_spec (Analysis_Global ()) Activation_Seed (static_resolve fo_cfg)
           (\<lambda>d. d = bot))
        (routed_entry_seed_programs Activation_Seed)
-       fo_cfg bot cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+       fo_cfg bot cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 definition fo_buffered ::
-  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl exec_dg_st, ivl exec_dg_st) dg_state) strategy_tree"
+  "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "fo_buffered = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit fo_spec
-     fo_cfg cinit_ivl_st (restrict_global_resolved_q cinit_ivl_st)"
+     fo_cfg cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 abbreviation fo_sol where
-  "fo_sol E \<equiv> snd (TD_side_seed_join_warrowing_Interp_solve is_activation_seed E (cfg_exit fo_cfg, ()))"
+  "fo_sol E \<equiv> snd (TD_side_rule_Interp_solve Globals_Warrow E (cfg_exit fo_cfg, ()))"
 
 abbreviation fo_look where
-  "fo_look s x \<equiv> lookup_resolved_st_q s (location_of fo_gs x)"
+  "fo_look s x \<equiv> s\<langle>location_of fo_gs x\<rangle>"
 
-subsection \<open>Interval, seed-join warrowing\<close>
+subsection \<open>Interval, warrowing every global\<close>
 
 lemma fo_ivl_terminates:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed fo_direct (cfg_exit fo_cfg, ()) \<noteq> None"
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed fo_buffered (cfg_exit fo_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Warrow fo_direct (cfg_exit fo_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Warrow fo_buffered (cfg_exit fo_cfg, ()) \<noteq> None"
   by eval+
 
 text \<open>The analysis global is the observation a different flush order would
@@ -171,5 +173,7 @@ text \<open>
   narrows back --- so the most scheduling-sensitive shape cannot be compared at
   all, by either generator.
 \<close>
+
+unbundle no default_st_syntax
 
 end

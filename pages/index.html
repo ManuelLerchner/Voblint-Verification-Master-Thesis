@@ -689,7 +689,7 @@
           interval continues past the drawn range. The intervals and verdicts are the interval analyzer's result
           for this program (no context); with <code>--analysis int</code> both checks are DEAD. The
           collecting semantics
-          <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>
           is the set of stores a node could ever receive; each dot is one of them, read at
           <code>x</code>.
           <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>
@@ -1116,17 +1116,19 @@
       </figure>
 
       <div class="prose-block">
-        <h3>What &ldquo;local&rdquo; means</h3>
+        <h3>What an activation trace is</h3>
         <p>
-          The shape Voblint actually uses is the second one below, and <em>local</em> is the
-          word for the difference. A local trace is the same steps in the same order, grouped:
-          the debugger's step log, cut along the call stack, so that every step
-          ends up under the activation that executed it. A local trace is about one activation: it
-          holds one trace, its own, and no step of any other activation
-          is on it. What surrounds the activation sits beside that trace instead, and it sits there as
-          local traces of the same kind: the one belonging to the caller that started this
-          activation, and one per callee that has already returned into it. The definition is
-          recursive because the thing it describes is.
+          The shape Voblint actually uses is the second one below. An activation trace is one
+          activation's view of the run: it holds one path, its own, in execution order, and no
+          step of any other activation is on it. What surrounds the activation sits beside that
+          path instead, and it sits there as activation traces of the same kind: the caller that
+          started this activation, frozen at its call node, and one per callee that has already
+          returned into it. The definition is recursive because the thing it describes is.
+        </p>
+        <p>
+          The shape is borrowed from the local traces of Schwarz et al., which belong to a
+          multithreaded semantics where operations of different threads are only partially
+          ordered; a sequential run has no such concurrency, so Voblint does not reuse the name.
         </p>
       </div>
 
@@ -1215,7 +1217,7 @@
         <p>
           The debugger has a name for that cut. Press <em>step into</em> at every call and you get
           the flat list: the callee's lines scroll past in the same stream as your own. Press
-          <em>step over</em> instead and you get one activation's path, exactly as a local trace
+          <em>step over</em> instead and you get one activation's path, exactly as an activation trace
           records it. The callee still runs and its effect is still in the store when you land,
           but none of its steps appear on your line. The coloured bars in the figure above are the
           points where you pressed <em>step over</em>, and the box beneath each bar is the run you
@@ -1238,22 +1240,23 @@
 
       <div class="prose-block">
         <p>
-          Start from the type. It is three lines, and with <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> named it says its own
-          shape: a local trace is one trace plus the activations around it.
+          Start from the type. It is three lines, and with <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> named it says its own
+          shape: an activation trace is one path plus the activations around it.
         </p>
-        <pre class="prose-code" data-lang="isabelle"><code>type_synonym trace = "(cfg_node &times; store) list"
+        <pre class="prose-code" data-lang="isabelle"><code>type_synonym activation_path = "(cfg_node &times; store) list"
 
-datatype ltr =
-    Root                                         trace
-  | Call   (ltr_caller: ltr)                     trace
-  | Resume (ltr_current: ltr) (ltr_callee: ltr)  trace</code></pre>
+datatype activation_trace =
+    Root                                                                   activation_path
+  | Call   (activation_trace_caller: activation_trace)                     activation_path
+  | Resume (activation_trace_current: activation_trace)
+           (activation_trace_callee: activation_trace)                     activation_path</code></pre>
         <p>
           One constructor per situation an activation can be in. <code>Root</code> is
-          <code>main</code>, which nobody called, so it carries a trace and nothing else.
+          <code>main</code>, which nobody called, so it carries a path and nothing else.
           <code>Call</code> is an activation that is running and will have to return to its
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_caller</code></a>, which it holds. <code>Resume</code> is that same activation after
-          a callee came back: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_current</code></a> is that activation frozen at its call node and
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr_callee</code></a> is the finished callee, kept whole rather than spliced into the
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_caller</code></a>, which it holds. <code>Resume</code> is that same activation after
+          a callee came back: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_current</code></a> is that activation frozen at its call node and
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_callee</code></a> is the finished callee, kept whole rather than spliced into the
           path, which is why a returned call is still one box you can ask questions about.
         </p>
       </div>
@@ -1263,27 +1266,27 @@ datatype ltr =
           <div class="obs-terms">
             <p class="td-panel-title">Observers, at <span class="obs-subject"></span></p>
             <button type="button" data-obs="path">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.path%7Cconst"><code>path</code></a> :: ltr &#8658; trace</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.path_of%7Cconst"><code>path_of</code></a> :: activation_trace &#8658; activation_path</span>
               <span class="obs-gloss">the activation's own trace</span>
             </button>
             <button type="button" data-obs="entry">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.entry_store%7Cconst"><code>entry_store</code></a> :: ltr &#8658; store</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.entry_store%7Cconst"><code>entry_store</code></a> :: activation_trace &#8658; store</span>
               <span class="obs-gloss">the store it started in</span>
             </button>
             <button type="button" data-obs="sinknode">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_node%7Cconst"><code>sink_node</code></a> :: ltr &#8658; cfg_node</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_node%7Cconst"><code>sink_node</code></a> :: activation_trace &#8658; cfg_node</span>
               <span class="obs-gloss">where it has got to</span>
             </button>
             <button type="button" data-obs="sinkstore">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a> :: ltr &#8658; store</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a> :: activation_trace &#8658; store</span>
               <span class="obs-gloss">what memory holds there</span>
             </button>
             <button type="button" data-obs="caller">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> :: ltr &#8658; ltr option</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> :: activation_trace &#8658; activation_trace option</span>
               <span class="obs-gloss">who called it</span>
             </button>
             <button type="button" data-obs="callee">
-              <span class="obs-sig"><code>ltr_callee</code> :: ltr &#8658; ltr</span>
+              <span class="obs-sig"><code>activation_trace_callee</code> :: activation_trace &#8658; activation_trace</span>
               <span class="obs-gloss">the call it just finished</span>
             </button>
           </div>
@@ -1396,12 +1399,12 @@ datatype ltr =
           program reads an unconstrained input.
         </p>
         <p>
-          A local trace is a value in the logic and nowhere else. It exists so that soundness has
+          An activation trace is a value in the logic and nowhere else. It exists so that soundness has
           something to be a statement <em>about</em>, and the proofs quantify over the set without
           anything ever enumerating it. The evidence is the generated code: of the <span data-stat="generated_ocaml">—</span> lines of
-          OCaml exported from these theories, the number that mention <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a>,
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> or
-          <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> is zero. The specification does not ship.
+          OCaml exported from these theories, the number that mention <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a>,
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> or
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> is zero. The specification does not ship.
         </p>
       </div>
     </section>
@@ -1410,7 +1413,7 @@ datatype ltr =
     <section class="section" id="semantics" aria-labelledby="semantics-heading">
       <div class="section-heading">
         <p class="eyebrow">The meaning</p>
-        <h2 id="semantics-heading">What a run is: source, graph, local trace</h2>
+        <h2 id="semantics-heading">What a run is: source, graph, activation trace</h2>
         <p class="section-intro">
           A semantics is a rule for what a program does: given a state, which states may come
           next. Writing one down is what turns &ldquo;what the program really does&rdquo; from an
@@ -1422,8 +1425,8 @@ datatype ltr =
           that is still program text, carrying the store and a stack of caller frames. A
           <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through a
           control-flow graph, carrying a stack of return points. The third does not step at
-          all. <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a> is the local trace of the previous section, and
-          <strong><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></strong> is a rule that says which of those values the
+          all. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a> is the activation trace of the previous section, and
+          <strong><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></strong> is a rule that says which of those values the
           graph actually admits: one activation with its whole history in a single value,
           accepted or not, rather than a move from one state to the next.
         </p>
@@ -1434,7 +1437,7 @@ datatype ltr =
           at all, so that sentence cannot even be written against it. <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> has nodes,
           but its state is a whole configuration including the call stack, so standing at
           <code>v</code> says nothing on its own. Being local is exactly what fixes that: the
-          local traces whose path ends at <code>v</code> are the activations sitting there, one
+          activation traces whose path ends at <code>v</code> are the activations sitting there, one
           box each, and the store they hold is the one at the end of that path.
         </p>
       </div>
@@ -1538,7 +1541,7 @@ datatype ltr =
           </div>
 
           <div class="run-panel run-trace">
-            <p class="td-panel-title">Local trace <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a> <small>in <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></small></p>
+            <p class="td-panel-title">Activation trace <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a> <small>in <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></small></p>
             <div class="run-rulebox">
               <span class="run-rule-kind">applicable inductive rule</span>
               <code class="run-rule" data-rule="trace"></code>
@@ -1567,7 +1570,7 @@ datatype ltr =
           </div>
           <div>
             <ol class="run-stack run-callers"></ol>
-            <p class="run-label is-under">Trace callers <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a></p>
+            <p class="run-label is-under">Trace callers <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a></p>
           </div>
         </div>
 
@@ -1588,12 +1591,12 @@ datatype ltr =
           <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a>,
           the graph rules
           <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>,
-          and the local-trace type
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a>, whose
+          and the activation-trace type
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a>, whose
           three constructors are <code>Root</code>, <code>Call</code> and <code>Resume</code>.
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>
           is the predicate that says one of them is a run the graph really admits.
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> descends the frozen caller a <code>Resume</code> keeps, which is
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> descends the frozen caller a <code>Resume</code> keeps, which is
           why a returned callee composes the same way whatever constructor it came from.
         </figcaption>
       </figure>
@@ -1602,16 +1605,16 @@ datatype ltr =
         <p>
           The three stacks under that figure are where the semantics differ. At an open call the
           source keeps a <code>Frame</code>, the caller's store and the variable to assign; the
-          graph keeps those and the node to come back to; a local trace keeps the caller itself,
+          graph keeps those and the node to come back to; an activation trace keeps the caller itself,
           whole, as a field. Soundness has to name a program point, say which stores can be there,
           and do it one activation at a time, so ask all three the same four questions. A fourth
-          candidate comes for free: <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> is a type, and one <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> over
+          candidate comes for free: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> is just a list of pairs, and one such list over
           the whole run rather than one per activation is the flat list from the trace section.
         </p>
         <div class="table-wrap">
           <table class="obs-table">
             <thead>
-              <tr><th>asked of</th><th><code>path t</code></th><th><code>entry_store t</code></th><th><code>sink_node t</code></th><th><code>caller_of t</code></th></tr>
+              <tr><th>asked of</th><th><code>path_of t</code></th><th><code>entry_store t</code></th><th><code>sink_node t</code></th><th><code>caller_of t</code></th></tr>
             </thead>
             <tbody>
               <tr>
@@ -1623,11 +1626,11 @@ datatype ltr =
                 <td>no history is kept</td><td>not in the state</td><td>the node, directly</td><td>a frame, not a run</td>
               </tr>
               <tr>
-                <th>one flat <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> of the whole run</th>
+                <th>one flat list of the whole run</th>
                 <td>scan it, matching calls to returns</td><td>scan back to its call</td><td>the run's last step, not this activation's</td><td>scan back for the unmatched call</td>
               </tr>
               <tr class="is-good">
-                <th>a local trace, <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.ltr%7Ctype"><code>ltr</code></a></th>
+                <th>an activation trace, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a></th>
                 <td>a field</td><td>the first pair</td><td>the last pair</td><td>a field</td>
               </tr>
             </tbody>
@@ -1637,7 +1640,7 @@ datatype ltr =
           The repeated answers are facts about those stacks. A configuration is a snapshot, so
           there is no path to read off it. The frames hold the <em>callers'</em> stores, so an
           activation's own entry store is gone the moment it assigns anything. And a frame names a
-          return point, not a run. The flat <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.trace%7Ctype"><code>trace</code></a> has the steps but not the
+          return point, not a run. The flat list has the steps but not the
           grouping, so every answer costs a scan.
         </p>
         <p>
@@ -1646,8 +1649,8 @@ datatype ltr =
           rule simply writes <code>caller_of callee = Some caller</code>. Against a stack there is
           no term for the caller's run to bind, and recursion is where that bites.
           <a href="#settings">Contexts</a> later read the same two fields:
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.caller_of%7Cconst"><code>caller_of</code></a> for the activation that made the call,
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.entry_store%7Cconst"><code>entry_store</code></a> for the store it was entered with.
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> for the activation that made the call,
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.entry_store%7Cconst"><code>entry_store</code></a> for the store it was entered with.
         </p>
         <p>
           That is the general shape of the choice. A claim can only be as fine as the semantics
@@ -1655,7 +1658,7 @@ datatype ltr =
           abstract side intends to: an analyzer that keeps activations apart needs a semantics
           that keeps them apart, or the theorem has no way to say what it covers. Picking the
           finer base costs nothing, because the coarser views are projections of it &mdash;
-          <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> drops the activation, <a href="Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst"><code>activation_collect</code></a> keeps
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> drops the activation, <a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a> keeps
           the key &mdash; while a base that has already forgotten cannot be sharpened afterwards.
         </p>
       </div>
@@ -1666,9 +1669,9 @@ datatype ltr =
           The figure above is one run. The analyzer never sees a run: what it produces is a
           table keyed by program point, with nothing in it about paths, calls or activations
           (contexts split those keys further, and the section on procedures does that). So
-          the concrete side has to be put into that shape. Take every local trace the graph
+          the concrete side has to be put into that shape. Take every activation trace the graph
           admits, which is what
-          <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a>
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>
           collects by starting at the entry node, walking an edge, opening a call and closing one.
           Ask where each trace ends. Keep the store it ended with.
         </p>
@@ -1684,7 +1687,7 @@ datatype ltr =
           It is also where the grouping of the last two sections is deliberately spent. A trace had
           to be local for &ldquo;ends at <code>v</code>&rdquo; to mean anything, and then the
           collection drops the activation and pours all of them into one bucket.
-          <a href="Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst"><code>activation_collect</code></a> is the variant that keeps the key, and how much of it to
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a> is the variant that keeps the key, and how much of it to
           keep is what a <a href="#settings">context</a> will be.
         </p>
       </div>
@@ -1720,7 +1723,7 @@ datatype ltr =
         <div class="cl-grid">
           <p class="cl-head">activations that reached the node</p>
           <p class="cl-arrow" aria-hidden="true"></p>
-          <p class="cl-head">ltr_collect there</p>
+          <p class="cl-head">node_collect there</p>
           <p class="cl-arrow" aria-hidden="true"></p>
           <p class="cl-head">what the analyzer will answer</p>
         <div class="cl-from">
@@ -1788,7 +1791,7 @@ datatype ltr =
         </div>
         <figcaption>
           Four nodes of the run from above, with the activation colours carried over. The middle
-          column is <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> at that node for this one program, on the variables
+          column is <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> at that node for this one program, on the variables
           shown: the stores a real run holds there, activation forgotten. The right column is what
           <code>voblint --analysis interval --context none</code> will answer at those nodes once
           the next sections have built it. Every answer is wider than the set beside it, and none
@@ -2557,7 +2560,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         happens to publish and query. The walk never goes into the callee. That is why a recursive
         call needs no special case, and why generating the equations never follows the recursion
         down: depth is the solver's problem, not the generator's. A real run does go into <code>f</code>, and
-        <a href="#semantics">What a run is: source, graph, local trace</a> steps one through a
+        <a href="#semantics">What a run is: source, graph, activation trace</a> steps one through a
         program with calls.
       </p>
 
@@ -4022,17 +4025,17 @@ fun main() {
           twice, with <code>1</code> and with <code>2</code>, and both publish into the one entry
           key <code>p</code> has. Those two values are what the setting has to combine, and they
           are why <code>x &lt;= 2</code> comes out differently under Warrow than under the other
-          three.
+          four.
         </figcaption>
       </figure>
 
       <div class="prose-block">
         <p>
-          Every key here takes several contributions, so all four settings have something to do, and
+          Every key here takes several contributions, so all five settings have something to do, and
           they do not agree. Warrow widens <code>p</code>'s and <code>g</code>'s entry away and
-          loses both checks. Warrow per origin keeps those two and loses <code>s</code>. Join and Join
-          per origin keep all three, and neither of them finishes on a recursion whose argument
-          climbs, which is why neither is the default. The four-program table further down is
+          loses both checks. Warrow per origin keeps those two and loses <code>s</code>, and so does
+          Bounded narrowing. Join and Join per origin keep all three, and neither of them finishes
+          on a recursion whose argument climbs, which is why neither is the default. The four-program table further down is
           those runs.
         </p>
         <p>
@@ -4046,7 +4049,7 @@ fun main() {
         </p>
       </div>
 
-      <h3 class="setting-title">One key, four rules</h3>
+      <h3 class="setting-title">One key, five rules</h3>
 
       <p class="setting-copy">
         What a site sends is the state its call binds the callee's parameters to, so
@@ -4067,8 +4070,9 @@ fun main() {
       <p class="setting-copy">
         Below, <em>A</em> and <em>B</em> are two writers at one key. The numbers are not the
         program's; they are picked so that <em>A</em> sends three times, smaller and then larger,
-        which is what it takes to tell all four rules apart: step 2 separates Warrow from the rest,
-        step 3 Join from Join per origin, step 4 Join from Warrow per origin. They are intervals
+        which is what it takes to tell the first four rules apart: step 2 separates Warrow from the
+        rest, step 3 Join from Join per origin, step 4 Join from Warrow per origin. Bounded
+        narrowing takes more steps to tell apart from Warrow per origin. They are intervals
         because the rules hold for any domain with a join, a widening and a narrowing, and Interval
         is the one where the widening does something the join does not: Sign and Parity are short
         enough lattices that their widening is defined as the join.
@@ -4120,6 +4124,14 @@ fun main() {
                 <td class="c3"><code>[0, 4]</code></td>
                 <td class="c4 widened"><code>[0, +&#8734;]</code></td>
               </tr>
+              <tr>
+                <th scope="row">Bounded narrowing</th>
+                <td>∇ or Δ inside each call site's value, narrowing bounded per call site; report their join</td>
+                <td class="c1"><code>[0, 3]</code></td>
+                <td class="c2"><code>[0, 4]</code></td>
+                <td class="c3"><code>[0, 4]</code></td>
+                <td class="c4 widened"><code>[0, +&#8734;]</code></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -4131,8 +4143,14 @@ fun main() {
           because <code>[0, 4]</code> outgrows <code>[0, 3]</code>. Join never forgets A's first
           contribution; Join per origin replaces it. At step 4 <em>A</em>'s own contributions climb,
           which is the one thing per-origin widening reacts to, so Warrow per origin jumps to
-          <code>[0, +&#8734;]</code> where Join keeps <code>[0, 8]</code>. The setting governs these procedure entries; loop points always use
-          warrowing.
+          <code>[0, +&#8734;]</code> where Join keeps <code>[0, 8]</code>. Bounded narrowing widens
+          and narrows each origin's value as Warrow per origin does, but counts per origin how often
+          it has switched from widening to narrowing; once that count reaches the bound (5 unless
+          <code>--narrow-bound</code> sets another), each switch takes only its first narrowing
+          step, so a bound of 0 behaves like 1. Here <em>A</em> switches once, at step 3, and the
+          row matches Warrow per origin; the bound changes a result only where an origin needs
+          several narrowing steps in a row. The setting governs these procedure entries; loop points
+          always use warrowing.
         </figcaption>
       </figure>
 
@@ -4142,7 +4160,7 @@ fun main() {
         walked one step at a time and the solver needs a round for each; widening takes the
         same chain in one step. On <code>f(x) { if (x &lt; N) f(x + 1); }</code> from
         <code>f(0)</code> every rule proves <code>x &lt;= N</code>, but as <code>N</code> goes
-        from 64 to 4096 the two joining rules go from 5&nbsp;ms to about 240, while the two
+        from 64 to 4096 the two joining rules go from 5&nbsp;ms to about 240, while the three
         widening rules stay at 4. Take the bound away and that growth has no end, which is the
         <em>no answer</em> in the table below.
       </p>
@@ -4169,7 +4187,8 @@ fun main() {
           <p>
             Try <strong>Warrow per origin</strong>. It widens each call site's contribution on
             its own, so one caller's growth is not blurred into a jump to infinity for all of them.
-            It is not always better: see the last row below.
+            It is not always better: see the last row below. <strong>Bounded narrowing</strong>
+            widens per call site too, and bounds how long each one keeps narrowing.
           </p>
         </article>
         <article class="guide-card caution">
@@ -4184,7 +4203,8 @@ fun main() {
           <p>
             The playground has no timeout; the command-line analyzer takes one with
             <code>--timeout</code>. Press <strong>Cancel</strong>, or change any setting, then pick
-            Warrow or Warrow per origin, and switch entry-state contexts to None or a call string.
+            Warrow, Warrow per origin or Bounded narrowing, and switch entry-state contexts to None
+            or a call string.
           </p>
         </article>
       </div>
@@ -4199,6 +4219,7 @@ fun main() {
                 <th scope="col">Join per origin</th>
                 <th scope="col">Warrow</th>
                 <th scope="col">Warrow per origin</th>
+                <th scope="col">Bounded narrowing</th>
               </tr>
             </thead>
             <tbody>
@@ -4211,6 +4232,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[1,+∞]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/07-two_sites_warrow.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>[1,2]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4221,6 +4243,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[0,+∞]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/08-loop_call_warrow.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>[0,9]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4231,6 +4254,7 @@ fun main() {
                 <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
+                <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">PROVED <code>x &gt;= 0</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -4241,6 +4265,7 @@ fun main() {
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
                 <td class="ok"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">PROVED <code>[-1,9]</code></a></td>
                 <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">UNKNOWN <code>[-∞,+∞]</code></a></td>
               </tr>
             </tbody>
           </table>
@@ -4255,7 +4280,7 @@ fun main() {
           only the upper bound is widened, and narrowing brings it back to <code>9</code>. Per
           origin, the recursive site's own lower bound drops from <code>9</code> to <code>1</code>
           and is widened to <code>−∞</code>, which narrowing cannot undo once the division has
-          lost everything.
+          lost everything. Bounded narrowing widens per origin as well and gives the same answer.
         </figcaption>
       </figure>
 
@@ -4267,8 +4292,9 @@ fun main() {
         never moves, because this setting adds and removes no unknown. Precision moves both
         ways, and the coarser the context the more damage a widening does &#8212; Warrow proves
         one of the three checks with no contexts and all three once entry states keep the
-        writers apart, while both joining rules prove all three everywhere. The cheapest fully
-        precise cell is <code>None</code> with <code>Join</code>, which is also the combination
+        writers apart, Warrow per origin and Bounded narrowing lose only <code>s</code>'s check
+        and only with no contexts, and both joining rules prove all three everywhere. The
+        cheapest fully precise cell is <code>None</code> with <code>Join</code>, which is also the combination
         that never finishes on a recursion whose argument climbs.
       </p>
 
@@ -4349,6 +4375,7 @@ fun main() {
               <tr><th scope="row">Join per origin</th><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td><td class="none">no answer</td></tr>
               <tr><th scope="row">Warrow</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
               <tr><th scope="row">Warrow per origin</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
+              <tr><th scope="row">Bounded narrowing</th><td><code>[0,+∞]</code></td><td><code>[0,0] | [1,+∞]</code></td><td><code>[0,0] | [1,1] | [2,+∞]</code></td><td><code>[0,0] | [1,1] | [2,2] | [3,+∞]</code></td><td class="none">no answer</td></tr>
             </tbody>
           </table>
         </div>
@@ -4392,9 +4419,9 @@ fun main() {
           really what a C-like language does is a reading task no proof discharges.
         </p>
         <p>
-          The graph and trace semantics are not on that list: they are reached from
+          The graph and activation-trace semantics are not on that list: they are reached from
           <code>pstep</code> by proof
-          (<a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact"><code>source_reaches_ltr_collect</code></a>).
+          (<a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_node_collect%7Cfact"><code>source_reaches_node_collect</code></a>).
         </p>
         <p>
           What is left to read is <span data-stat="semantics.theories">—</span> theories,
@@ -4508,7 +4535,7 @@ fun main() {
           strings are computed in HOL but no theorem says they read back what the states mean; the
           verdicts beside them are covered. Above the box sits the other thing no proof covers:
           the source semantics the theorems assume a run of, which is the one part a reader has to
-          check for themselves. The graph and trace semantics are not up there, because they are
+          check for themselves. The graph and activation-trace semantics are not up there, because they are
           reached from it by proof.
         </figcaption>
       </figure>
@@ -4671,7 +4698,7 @@ fun main() {
         <h2 id="chain-heading">The proof chain: each set inside the next</h2>
         <p class="section-intro">
           Soundness is a chain of set inclusions. At one program point, start from the stores
-          real runs have there and widen step by step: the stores the graph's local traces reach,
+          real runs have there and widen step by step: the stores the graph's activation traces reach,
           then those traces split by context, then what the solver's answer concretizes to. Each
           link is its own theorem, and the analysis may lose precision at every link but never a
           store. One more step at the end turns the last set into the badge you see.
@@ -4715,18 +4742,18 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">⊆</span>
-            <a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact"><code>source_reaches_ltr_collect</code></a>
-            <span>the simulation matches each source run to a local trace in <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a> that ends at <code>pp0</code> with the same store</span>
+            <a href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_node_collect%7Cfact"><code>source_reaches_node_collect</code></a>
+            <span>the simulation matches each source run to an activation trace in <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a> that ends at <code>pp0</code> with the same store</span>
           </li>
           <li class="chain-rung" data-rung="collect">
             <div class="chain-head">
               <span class="chain-index">2</span>
               <div>
-                <h4>Collecting semantics <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect pp0</code></a></h4>
+                <h4>Collecting semantics <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect pp0</code></a></h4>
                 <p>
-                  The <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_store%7Cconst"><code>sink_store</code></a> of every local
+                  The <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a> of every local
                   trace the graph admits whose
-                  <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.sink_node%7Cconst"><code>sink_node</code></a> is <code>pp0</code>,
+                  <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_node%7Cconst"><code>sink_node</code></a> is <code>pp0</code>,
                   with the activation each belonged to forgotten.
                 </p>
               </div>
@@ -4736,17 +4763,17 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">=</span>
-            <a data-mode-link="none" href="Voblint/Voblint_Framework/Routed_Context_Unit.html#Routed_Context_Unit.activation_collect_unit_eq_ltr_collect%7Cfact"><code>activation_collect_unit_eq_ltr_collect</code></a>
-            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_ltr_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_ltr_collect_eq_Union_of_terminates</code></a>
+            <a data-mode-link="none" href="Voblint/Voblint_Framework/Routed_Context_Unit.html#Routed_Context_Unit.activation_collect_unit_eq_node_collect%7Cfact"><code>activation_collect_unit_eq_node_collect</code></a>
+            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_node_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_node_collect_eq_Union_of_terminates</code></a>
             <span class="chain-link-note"></span>
           </li>
           <li class="chain-rung" data-rung="activation">
             <div class="chain-head">
               <span class="chain-index">3</span>
               <div>
-                <h4>Per context <a href="Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst"><code>activation_collect pp0 c</code></a></h4>
+                <h4>Per context <a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect pp0 c</code></a></h4>
                 <p>
-                  The same local traces, grouped by the contexts their activation was analyzed
+                  The same activation traces, grouped by the contexts their activation was analyzed
                   under; the key is read off the trace, so one trace may carry several.
                 </p>
               </div>
@@ -4756,7 +4783,7 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">⊆</span>
-            <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>
+            <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>
             <span>given a post-solution and a sound specification, every trace step stays inside
             <code>γ</code>; the induction itself is
             <a href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact"><code>activation_collect_sound</code></a>,
@@ -4859,7 +4886,7 @@ fun main() {
 
         <div class="bridge-toggles" role="group" aria-label="Pillars">
           <button type="button" data-pillar="1" aria-pressed="true"><b>1</b> Compiler simulation <code>csim_step</code></button>
-          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_nonrelational_transfer</code></button>
+          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_local_spec</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routed_entry_cover</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
           <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
@@ -4872,17 +4899,27 @@ fun main() {
 
         <figcaption>
           Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler; it also needs the other
-          half of the simulation, which carries a source run into a valid trace. Pillars 2 and 5,
-          <a href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale"><code>sound_nonrelational_transfer</code></a>
-          and <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
-          are obligations each domain discharges, pillar 3,
-          <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
-          one that each context policy discharges.
+          half of the simulation, which carries a source run into a valid activation trace. Pillar 2,
+          <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>,
+          is what every analysis the analyzer can select must prove about its transfers, and
+          pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>,
+          what its check classifier must satisfy. A numeric domain proves neither by hand: it
+          certifies one bundle of value operations once, in
+          <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale"><code>sound_nonrelational_ops</code></a>,
+          and both follow from that certificate. The order analysis proves pillar 2 directly
+          (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>).
+          Pillar 3,
+          <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>,
+          is one that each context policy discharges.
           Pillar 4 bridges to the vendored solver's own theorem, and it promises a post-solution
           only for a solve that terminates, which is why every flagship soundness theorem below
           assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>. Two more obligations do not appear here: that the
           initial state covers the initial stores, and that the executable states read back to the
-          transfers and routes these theorems are stated over. The failures shown are what the
+          transfers and routes these theorems are stated over. For a numeric domain the transfer
+          half of the second also comes from the bundle: the executable transfer and the one the proofs use are
+          built from the same operations, and
+          <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact"><code>tf_st_for_commute</code></a>
+          shows they agree on every live state. The failures shown are what the
           obligations rule out, not bugs anyone has found in Voblint.
         </figcaption>
       </figure>
@@ -4917,12 +4954,12 @@ fun main() {
           <tr><td class="nl-sym">skip<sup>#</sup> S / assign<sup>#</sup> S / special<sup>#</sup> S / branch<sup>#</sup> S / body<sup>#</sup> S / return<sup>#</sup> S / event<sup>#</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
           <tr><td class="nl-sym">enter<sup>#</sup> S / combine_env<sup>#</sup> S / combine_assign<sup>#</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
           <tr><td class="nl-sym">combine<sup>#</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
-          <tr><td class="nl-sym">context<sup>#</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale"><code>route</code></a></td></tr>
+          <tr><td class="nl-sym">context<sup>#</sup></td><td>the computed callee context</td><td><a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale"><code>route</code></a></td></tr>
           <tr><td class="nl-sym">a ∇ b / a Δ b</td><td><em>a</em> widened by <em>b</em>, <em>a</em> narrowed by <em>b</em></td><td><a href="Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst"><code>widen</code></a> <a href="Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst"><code>narrow</code></a></td></tr>
           <tr><td class="nl-sym">𝒢</td><td>the globals classifier</td><td><a href="Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst"><code>declared_global</code></a></td></tr>
-          <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a></td></tr>
-          <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a></td></tr>
-          <tr><td class="nl-sym">𝒜<sub>𝒢,R,startcontext,g,S</sub> v c<span class="nl-local">Within <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage%7Clocale"><code>ltr_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/LTR_Abstract.html#LTR_Abstract.ltr_coverage.buckets%7Cconst">𝒜 v c</a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/LTR_Activation_Context.html#LTR_Activation_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
+          <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid activation traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></td></tr>
+          <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a></td></tr>
+          <tr><td class="nl-sym">𝒜<sub>𝒢,R,c₀,g,S</sub> v c<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst">𝒜 v c</a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
           </tbody>
         </table>
         <p class="notation-note">Each name links to its declaration. <a href="thesis.pdf">The thesis</a>, appendix B, gives the meaning of every symbol and the proof-local shorthands.</p>
@@ -4945,7 +4982,7 @@ fun main() {
             <div class="rule" aria-label="Inference rule">
               <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
               <div class="rule-bar"><span class="rule-name">certified_source_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ ltr_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover">the result at <code>v</code> contains <code>s</code></span><span class="rule-item" tabindex="0" data-ref="checks">checks at <code>v</code> hold, none DEAD</span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover">the result at <code>v</code> contains <code>s</code></span><span class="rule-item" tabindex="0" data-ref="checks">checks at <code>v</code> hold, none DEAD</span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
@@ -5008,7 +5045,7 @@ fun main() {
             <div class="rule" aria-label="Inference rule">
               <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="listed2">check <code>chk</code> is listed</span><span class="rule-item" tabindex="0" data-ref="deadv">its verdict is DEAD</span></div>
               <div class="rule-bar"><span class="rule-name">dead_check_unreached</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="empty"><a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a> at its node <code>= ∅</code></span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="empty"><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> at its node <code>= ∅</code></span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
@@ -5032,7 +5069,7 @@ fun main() {
           <article class="thm-panel" data-for="arith">
             <h4><code>run_voblint_arithmetic_safe</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact">in the formalization ↗</a></h4>
             <div class="rule" aria-label="Inference rule">
-              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="coll2"><code>s ∈ ltr_collect v</code></span><span class="rule-item" tabindex="0" data-ref="nodiag">no diagnostic listed at <code>v</code></span></div>
+              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="coll2"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="nodiag">no diagnostic listed at <code>v</code></span></div>
               <div class="rule-bar"><span class="rule-name">arithmetic_safe</span></div>
               <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="div">no divisor at <code>v</code> is 0 in <code>s</code></span></div>
             </div>
@@ -5153,7 +5190,7 @@ fun main() {
               <!-- Per-theorem overlays: only the selected theorem's are shown. -->
               <g class="ov ov-source ov-check">
                 <circle class="ring" data-refs="v coll" cx="150" cy="356" r="22"/>
-                <text class="ov-note small" data-refs="coll" x="128" y="396" text-anchor="end">s ∈ ltr_collect(3)</text>
+                <text class="ov-note small" data-refs="coll" x="128" y="396" text-anchor="end">s ∈ node_collect(3)</text>
               </g>
               <g class="ov ov-source">
                 <text class="ov-note small" data-refs="cover" x="128" y="378" text-anchor="end">n = 2 ∈ [1,+∞]</text>
@@ -5263,9 +5300,11 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                 <p>
                   The analysis says PROVED only when every store its state <code>d</code> describes
                   satisfies the check. At the check, <code>d</code> is <code>i ∈ [5, 5]</code>: one
-                  value, and it is <code>5</code>.
+                  value, and it is <code>5</code>. The classifier is not Interval's own code: it is
+                  built from the two comparison queries of Interval's operation bundle, and this
+                  lemma is proved once for every domain that supplies such a bundle.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Transfer.html#Interval_Transfer.ivl_tf.check.classify_check_proved%7Cfact">ivl_tf.check.classify_check_proved ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Framework/Abstract_Checks.html#Abstract_Checks.sound_check_query.classify_check_proved%7Cfact">classify_check_proved ↗</a>
               </li>
 
               <li class="zoom-level" data-level="3">
@@ -5281,7 +5320,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="4">
                 <p class="zoom-kicker">Why every node is covered</p>
-                <pre class="zoom-formal" data-lang="isabelle">activation_collect 𝒢 R startcontext g S v c ⊆ cover v c</pre>
+                <pre class="zoom-formal" data-lang="isabelle">activation_collect 𝒢 R c₀ g S v c ⊆ cover v c</pre>
                 <p>
                   By induction along the run's trace <code>E → H → B → H → … → X</code>: if one
                   store is covered by the solver's value at its node, the next store is covered at
@@ -5293,26 +5332,26 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="5">
                 <p class="zoom-kicker">One step: the edge <code>i := i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := ⟦a⟧<sub>e</sub> s) ∈ ⟦asn x a σ⟧</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ s(x := ⟦a⟧<sub>e</sub> s) ∈ ⟦assign x a σ⟧</pre>
                 <p>
                   On its last pass the run is at <code>B</code> with <code>i = 4</code>, inside
                   <code>σ(B) = [0, 4]</code>. This is the contract every transfer meets: the
-                  assignment must cover the store after the step, <code>i = 5</code>. The
-                  non-relational domains discharge it once, in
-                  <code>sound_nonrelational_ops.assign_sound</code>.
+                  assignment must cover the store after the step, <code>i = 5</code>. No domain
+                  writes its assignment transfer by hand: it is built from the domain's evaluator,
+                  and this lemma is proved once for every certified bundle.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer.tf_sound_assign_for%7Cfact">tf_sound_assign_for ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.assign_sound%7Cfact">sound_nonrelational_ops.assign_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="6">
                 <p class="zoom-kicker">The right-hand side <code>i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">(∀x. s x ∈ γ (σ x)) ⟹ ⟦e⟧<sub>e</sub> s ∈ γ (ev e σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ ⟦σ⟧ ⟹ ⟦e⟧<sub>e</sub> s ∈ γ (aval_abs e σ)</pre>
                 <p>
                   If every variable's value is covered by the abstract state, evaluating the
                   expression abstractly covers evaluating it concretely: <code>4 + 1 = 5</code>
                   lies in <code>γ([0, 4] + [1, 1])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Backward.html#Interval_Backward.ivl_arith.aval_dom_sound%7Cfact">ivl_arith.aval_dom_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Analysis_Interval/Interval_Backward.html#Interval_Backward.ivl_arith.aval_abs_sound%7Cfact">ivl_arith.aval_abs_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="7">
@@ -5392,12 +5431,12 @@ qed</code></pre>
 
       <figure class="scene scene-metro">
         <svg class="metro-svg" viewBox="0 24 1100 520" role="img"
-          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
+          aria-label="A metro map. The semantics, compiler, domain, framework and solver lines each pass through three to five stations and meet at interchanges; a short branch carrying the order analysis joins the domain line at the interchange where the analyses meet; the semantics line runs on into the central interchange, which the result line leaves, ending at three terminals: PROVED, DEAD and SAFE.">
           <g class="metro-lines">
             <path class="line-sem" d="M70 70 H 700 V 336"/>
             <path class="line-comp" d="M70 165 H 960 V 380"/>
-            <path class="line-dom" d="M70 270 H 490 V 350"/>
-            <path class="line-fw" d="M70 350 H 700"/>
+            <path class="line-dom" d="M70 270 H 490 V 350 M390 222 H 490 V 270"/>
+            <path class="line-fw" d="M55 350 H 700"/>
             <path class="line-sol" d="M70 470 H 560 L 640 440 H 700"/>
             <path class="line-res" d="M700 395 L 800 440 H 900 M900 440 L 960 380 H 1010 M900 440 H 1010 M900 440 L 960 500 H 1010"/>
           </g>
@@ -5416,10 +5455,10 @@ qed</code></pre>
               <circle cx="70" cy="70" r="8"/><text x="70" y="96">pstep</text></a>
             <a class="metro-station" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
               <circle cx="190" cy="70" r="8"/><text x="190" y="96">cstep</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst" data-name="valid_ltr" data-theory="Voblint_CFG.LTR_Def" data-info="Activation-local traces: each records one activation's path, with its callers and finished callees nested inside.">
-              <circle cx="320" cy="70" r="8"/><text x="320" y="96">valid_ltr</text></a>
-            <a class="metro-station" href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst" data-name="ltr_collect" data-theory="Voblint_CFG.LTR_Collect" data-info="The collecting semantics: every store some valid trace reaches at a node. Every soundness theorem is judged against it.">
-              <circle cx="450" cy="70" r="8"/><text x="450" y="96">ltr_collect</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst" data-name="valid_activation_trace" data-theory="Voblint_CFG.Activation_Trace_Def" data-info="Activation traces: each records one activation's path, with its callers and finished callees nested inside.">
+              <circle cx="320" cy="70" r="8"/><text x="320" y="96">valid_activation_trace</text></a>
+            <a class="metro-station" href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst" data-name="node_collect" data-theory="Voblint_CFG.Activation_Trace_Collect" data-info="The collecting semantics: every store some valid activation trace reaches at a node. Every soundness theorem is judged against it.">
+              <circle cx="450" cy="70" r="8"/><text x="450" y="96">node_collect</text></a>
 
             <a class="metro-station" href="Voblint/Voblint_Compile/VIMP_Proc_to_CFG.html#VIMP_Proc_to_CFG.compile_prog%7Cconst" data-name="compile_prog" data-theory="Voblint_Compile.VIMP_Proc_to_CFG" data-info="The compiler from VIMP procedures to a graph with entry and result nodes per procedure.">
               <circle cx="70" cy="165" r="8"/><text x="70" y="191">compile_prog</text></a>
@@ -5427,26 +5466,32 @@ qed</code></pre>
               <circle cx="210" cy="165" r="8"/><text x="210" y="191">csim</text></a>
             <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact" data-name="csim_step" data-theory="Voblint_Compile.Simulation_Preservation" data-info="Forward simulation: one source step is matched by zero or more CFG steps.">
               <circle cx="350" cy="165" r="8"/><text x="350" y="191">csim_step</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_ltr%7Cfact" data-name="source_run_has_ltr" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid trace ending there.">
-              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_ltr</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_ltr_collect%7Cfact" data-name="source_reaches_ltr_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
-              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_ltr_collect</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_activation_trace%7Cfact" data-name="source_run_has_activation_trace" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid activation trace ending there.">
+              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_activation_trace</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Result/Source_Activation_Sound.html#Source_Activation_Sound.source_reaches_node_collect%7Cfact" data-name="source_reaches_node_collect" data-theory="Voblint_Result.Source_Activation_Sound" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
+              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_node_collect</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain%7Cclass" data-name="numeric_domain" data-theory="Voblint_Domain.Abstract_Domain" data-info="What an abstract value is: a concretization γ that is monotone, empty at ⊥ and full at ⊤.">
-              <circle cx="70" cy="270" r="8"/><text x="70" y="296">numeric_domain</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Abstract_Arithmetic.html#Abstract_Arithmetic.sound_arith_ops%7Clocale" data-name="sound_arith_ops" data-theory="Voblint_Nonrelational.Abstract_Arithmetic" data-info="One soundness lemma per arithmetic operator and comparison, such as ivl_plus_sound.">
-              <circle cx="230" cy="270" r="8"/><text x="230" y="296">sound_arith_ops</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Domain/Backward_Domain.html#Backward_Domain.sound_refinement%7Clocale" data-name="sound_refinement" data-theory="Voblint_Domain.Backward_Domain" data-info="Guards: the backward filter keeps every store the condition admits.">
-              <circle cx="390" cy="270" r="8"/><text x="390" y="296">sound_refinement</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/DG_Local_State_Spec.html#DG_Local_State_Spec.sound_nonrelational_transfer%7Clocale" data-name="sound_nonrelational_transfer" data-theory="Voblint_Framework.DG_Local_State_Spec" data-info="Interchange of domain and framework: one soundness assumption per transfer (assign, branch, enter, return, …), which the per-variable domains discharge through the reuse locales.">
-              <rect x="479" y="259" width="22" height="102" rx="11"/><text x="512" y="316" text-anchor="start">sound_nonrelational_transfer</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Ops.html#Nonrelational_Ops.nonrelational_ops%7Ctype" data-name="nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Ops" data-info="All a numeric domain writes: one bundle of value operations. An evaluator for expressions, two comparison queries, the refinement operations guards use, min and max, and the top value.">
+              <circle cx="70" cy="270" r="8"/><text x="70" y="296">nonrelational_ops</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale" data-name="sound_nonrelational_ops" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The certificate, proved once per domain: the evaluator and min/max are sound, refining never drops a store the condition admits, and the queries answer truthfully. The transfers, the guard filter, procedure entry and the check classifier are built from the bundle, and their soundness follows from this one certificate.">
+              <circle cx="230" cy="270" r="8"/><text x="230" y="296">sound_nonrelational_ops</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact" data-name="tf_st_for_commute" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="The executable transfer the analyzer runs and the one the proofs reason about are built from the same bundle. This theorem shows they agree on every live state, so there is no second implementation to keep in step.">
+              <circle cx="390" cy="270" r="8"/><text x="390" y="296">tf_st_for_commute</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact" data-name="order_spec_sound" data-theory="Voblint_Analysis_Relational.Rel_Order_Local" data-info="The order analysis joins without a bundle. It records pairs x ≤ y instead of one value per variable, and proves its local specification sound directly.">
+              <circle cx="390" cy="222" r="8"/><text x="390" y="248">order_spec_sound</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst" data-name="sound_local_spec" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses: what every analysis the analyzer can select proves about its transfers, its query answers, procedure entry and return. The numeric domains get it from their certificate; the order analysis proves it by hand. A local specification reads and publishes no globals.">
+              <circle cx="490" cy="270" r="11"/><text x="512" y="275" text-anchor="start">sound_local_spec</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign. Goblint's Spec, in Isabelle.">
-              <circle cx="70" cy="350" r="8"/><text x="70" y="376">dg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign, plus a query handler. Goblint's Spec, in Isabelle.">
+              <circle cx="55" cy="350" r="8"/><text x="55" y="376">dg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale" data-name="analysis_contract" data-theory="Voblint_Framework.DG_Spec_Sound" data-info="The boundary of the proof: a dg_spec with a soundness assumption per transfer. Equations, routing and solver soundness are proved once for any analysis meeting it. An analysis that uses globals, such as the order domain of Rel_Order_Domain, meets it directly, without a local specification.">
+              <circle cx="160" cy="350" r="8"/><text x="160" y="376">analysis_contract</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
-              <circle cx="230" cy="350" r="8"/><text x="230" y="376">routed_node_rhs</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
-              <circle cx="390" cy="350" r="8"/><text x="390" y="376">routed_entry_cover</text></a>
+              <circle cx="285" cy="350" r="8"/><text x="285" y="376">routed_node_rhs</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact" data-name="routed_entry_cover" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
+              <circle cx="415" cy="350" r="8"/><text x="415" y="376">routed_entry_cover</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of_contract%7Cfact" data-name="dg_spec_of_contract" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses and the framework: a sound local specification, lifted to a dg_spec, meets analysis_contract. This is where every analysis the analyzer runs enters the proof.">
+              <circle cx="490" cy="350" r="11"/><text x="512" y="332" text-anchor="start">dg_spec_of_contract</text></a>
 
             <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
               <circle cx="70" cy="470" r="8"/><text x="70" y="496">strategy_tree</text></a>
@@ -5461,7 +5506,7 @@ qed</code></pre>
 
             <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
               <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
-            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
+            <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
@@ -5495,8 +5540,9 @@ qed</code></pre>
           to each other on a line says only that two stations belong to the same layer. The map
           follows the session structure: the semantics line lives in <code>Voblint_VIMP</code>
           and <code>Voblint_CFG</code>, the compiler in <code>Voblint_Compile</code>, the domain
-          and framework lines in <code>Voblint_Domain</code>,
-          <code>Voblint_Nonrelational</code> and <code>Voblint_Framework</code>, the solver in the
+          line in <code>Voblint_Nonrelational</code> and, for its branch,
+          <code>Voblint_Analysis_Relational</code>, the framework line in
+          <code>Voblint_Framework</code>, the solver in the
           vendored <code>TD</code> session, <code>Voblint_Solver</code> and
           <code>Voblint_Exec</code>, and the result line in <code>Voblint_Routing</code>,
           <code>Voblint_Result</code> and <code>Voblint_CLI</code>.
@@ -5506,7 +5552,7 @@ qed</code></pre>
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact"><code>run_voblint_sound_at</code></a>,
           which speaks about a node of the graph and a store the collecting semantics has there.
           That is why the semantics line runs on into the central interchange: DEAD and SAFE are
-          stated over <a href="Voblint/Voblint_CFG/LTR_Collect.html#LTR_Collect.ltr_collect%7Cconst"><code>ltr_collect</code></a>
+          stated over <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>
           too. What
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>
           adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
@@ -5580,7 +5626,7 @@ qed</code></pre>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L196-L197" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">context from the callee state</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context_base_hetero%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
             <span class="align-note">The context is chosen from the state after enter, as in Goblint, though the selector does not see which callee it is choosing for.</span>
           </li>
           <li class="align-row simplified">
@@ -5592,7 +5638,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L381-L394" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Widening and narrowing</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype" title="Definition in the formalization">Four global update rules</a>
+            <a class="align-voblint" href="Voblint/Voblint_Solver/Globals_Rule.html#Globals_Rule.globals_rule%7Ctype" title="Definition in the formalization">Five global update rules</a>
             <span class="align-note">Local unknowns are warrowed at widening points under every rule; the merge rule for side-effected globals is chosen once per run, not per unknown.</span>
           </li>
           <li class="align-row simplified">
@@ -5676,7 +5722,12 @@ qed</code></pre>
           with it and no change to the framework, and
           <a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html"><code>Rel_Order_Local</code></a>
           runs the same carrier inside the combined state next to the other analyses. There it
-          answers comparisons from the pairs it records and, at an assignment, asks the others how
+          plugs in where every analysis the analyzer can select does: it supplies a
+          <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype"><code>local_spec</code></a>
+          and proves it sound
+          (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>),
+          the same interface the five pointwise analyses reach from their certified operation
+          bundles. It answers comparisons from the pairs it records and, at an assignment, asks the others how
           the new value compares with each variable. It stays small on purpose: no transitive
           closure, and calls enter and return with no facts. Run with Interval, it proves checks
           neither analysis proves alone.
@@ -5927,73 +5978,73 @@ qed</code></pre>
           <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
             aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI, code export, and the example sessions at the surface. Thickness grows with line count.">
               <g class="stratum stratum-examples" data-layer="examples">
-                <text class="stratum-name" x="236" y="52" text-anchor="end">Examples and regressions</text>
-                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="10 sessions · 65 theories · 14,382 lines · 877 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="250.0" y="14" width="720.0" height="68"></rect><text x="610.0" y="52">10 example sessions</text></a>
+                <text class="stratum-name" x="306" y="52" text-anchor="end">Examples and regressions</text>
+                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="68"></rect><text x="655.0" y="52">Example sessions</text></a>
               </g>
               <g class="stratum stratum-d11" data-layer="d11">
-                <text class="stratum-name" x="236" y="97" text-anchor="end">Code export</text>
-                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="1 theory · 152 lines · 0 lemmas" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="250.0" y="82" width="720.0" height="22"></rect><text x="610.0" y="97">Codegen</text></a>
+                <text class="stratum-name" x="306" y="97" text-anchor="end">Code export</text>
+                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="—" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="320.0" y="82" width="670.0" height="22"></rect><text x="655.0" y="97">Codegen</text></a>
               </g>
               <g class="stratum stratum-d10" data-layer="d10">
-                <text class="stratum-name" x="236" y="123" text-anchor="end">Entry point</text>
-                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="7 theories · 2,098 lines · 67 lemmas" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="250.0" y="104" width="720.0" height="29"></rect><text x="610.0" y="123">CLI</text></a>
+                <text class="stratum-name" x="306" y="123" text-anchor="end">Entry point</text>
+                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
-                <text class="stratum-name" x="236" y="157" text-anchor="end">Int product</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="12 theories · 5,324 lines · 238 lemmas" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="250.0" y="133" width="720.0" height="39"></rect><text x="610.0" y="157">Int</text></a>
+                <text class="stratum-name" x="306" y="157" text-anchor="end">Int product</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="320.0" y="133" width="670.0" height="39"></rect><text x="655.0" y="157">Int</text></a>
               </g>
               <g class="stratum stratum-d8" data-layer="d8">
-                <text class="stratum-name" x="236" y="203" text-anchor="end">Per-variable domains</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="12 theories · 3,405 lines · 132 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The congruence domain and its instantiation of the shared endpoints."><rect x="250.0" y="172" width="247.5" height="53"></rect><text x="373.7" y="203">Congruence</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="14 theories · 3,107 lines · 163 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The interval domain with widening and narrowing, and its instantiation of the shared endpoints."><rect x="497.5" y="172" width="225.8" height="53"></rect><text x="610.4" y="203">Interval</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="10 theories · 1,964 lines · 93 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The sign domain and its instantiation of the shared endpoints."><rect x="723.3" y="172" width="142.7" height="53"></rect><text x="794.6" y="203">Sign</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="8 theories · 1,187 lines · 64 lemmas" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The parity domain and its instantiation of the shared endpoints."><rect x="866.0" y="172" width="104.0" height="53"></rect><text x="918.0" y="203">Parity</text></a>
+                <text class="stratum-name" x="306" y="203" text-anchor="end">Value domains (operation bundles)</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The congruence domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="320.0" y="172" width="230.3" height="53"></rect><text x="435.1" y="203">Congruence</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The interval domain with widening and narrowing, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="550.3" y="172" width="210.1" height="53"></rect><text x="655.4" y="203">Interval</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The sign domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="760.4" y="172" width="132.8" height="53"></rect><text x="826.8" y="203">Sign</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The parity domain, its bundle of value operations, and the certificate the shared machinery builds on."><rect x="893.2" y="172" width="96.8" height="53"></rect><text x="941.6" y="203">Parity</text></a>
               </g>
               <g class="stratum stratum-d7" data-layer="d7">
-                <text class="stratum-name" x="236" y="243" text-anchor="end">Nonrelational reuse</text>
-                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="5 theories · 1,617 lines · 45 lemmas" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="The reuse locales every per-variable domain interprets: abstract arithmetic, special operations and non-relational transfers."><rect x="250.0" y="225" width="720.0" height="27"></rect><text x="610.0" y="243">Nonrelational</text></a>
+                <text class="stratum-name" x="306" y="243" text-anchor="end">Non-relational analysis builder</text>
+                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="What a per-variable domain reuses: the bundle of value operations it supplies, the certificate that bundle is checked against once, and everything built from it: transfers, guard filtering, procedure entry, the check classifier and their executable versions."><rect x="320.0" y="225" width="670.0" height="27"></rect><text x="655.0" y="243">Nonrelational</text></a>
               </g>
               <g class="stratum stratum-d6" data-layer="d6">
-                <text class="stratum-name" x="236" y="271" text-anchor="end">Result</text>
-                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="6 theories · 2,575 lines · 90 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="250.0" y="252" width="720.0" height="30"></rect><text x="610.0" y="271">Result</text></a>
+                <text class="stratum-name" x="306" y="271" text-anchor="end">Result</text>
+                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="320.0" y="252" width="670.0" height="30"></rect><text x="655.0" y="271">Result</text></a>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
-                <text class="stratum-name" x="236" y="299" text-anchor="end">Routing and relational domain</text>
-                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="4 theories · 649 lines · 10 lemmas" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="250.0" y="282" width="381.5" height="26"></rect><text x="440.7" y="299">Routing</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="1 theory · 576 lines · 22 lemmas" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable reuse locales are unavailable to it."><rect x="631.5" y="282" width="338.5" height="26"></rect><text x="800.7" y="299">Relational</text></a>
+                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and relational analysis</text>
+                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Relational</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
-                <text class="stratum-name" x="236" y="327" text-anchor="end">Executable carrier</text>
-                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="11 theories · 2,413 lines · 124 lemmas" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="250.0" y="308" width="720.0" height="30"></rect><text x="610.0" y="327">Exec</text></a>
+                <text class="stratum-name" x="306" y="327" text-anchor="end">Executable carrier</text>
+                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="308" width="670.0" height="30"></rect><text x="655.0" y="327">Exec</text></a>
               </g>
               <g class="stratum stratum-d3" data-layer="d3">
-                <text class="stratum-name" x="236" y="376" text-anchor="end">Framework and compiler</text>
-                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="26 theories · 8,471 lines · 366 lemmas" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="250.0" y="338" width="427.0" height="68"></rect><text x="463.5" y="376">Framework</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="10 theories · 5,813 lines · 233 lemmas" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="677.0" y="338" width="293.0" height="68"></rect><text x="823.5" y="376">Compile</text></a>
+                <text class="stratum-name" x="306" y="376" text-anchor="end">Framework and compiler</text>
+                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="—" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="320.0" y="338" width="397.3" height="68"></rect><text x="518.7" y="376">Framework</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="—" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="717.3" y="338" width="272.7" height="68"></rect><text x="853.7" y="376">Compile</text></a>
               </g>
               <g class="stratum stratum-d2" data-layer="d2">
-                <text class="stratum-name" x="236" y="431" text-anchor="end">Values, graph and solver interface</text>
-                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="8 theories · 2,733 lines · 132 lemmas" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering."><rect x="250.0" y="406" width="327.1" height="41"></rect><text x="413.6" y="431">Domain</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="8 theories · 2,023 lines · 112 lemmas" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution cstep, activation-local traces and the collecting semantics ltr_collect. It never mentions the compiler."><rect x="577.1" y="406" width="242.2" height="41"></rect><text x="698.2" y="431">CFG</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="7 theories · 1,259 lines · 104 lemmas" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="819.3" y="406" width="150.7" height="41"></rect><text x="894.6" y="431">Solver</text></a>
+                <text class="stratum-name" x="306" y="431" text-anchor="end">Values, graph and solver interface</text>
+                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="—" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering."><rect x="320.0" y="406" width="304.4" height="41"></rect><text x="472.2" y="431">Domain</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="—" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler."><rect x="624.4" y="406" width="225.4" height="41"></rect><text x="737.1" y="431">CFG</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="—" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="849.8" y="406" width="140.2" height="41"></rect><text x="919.8" y="431">Solver</text></a>
               </g>
               <g class="stratum stratum-d1" data-layer="d1">
-                <text class="stratum-name" x="236" y="515" text-anchor="end">Solver and language</text>
-                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="26 theories · 31,328 lines · 541 lemmas" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="250.0" y="447" width="616.0" height="127"></rect><text x="558.0" y="515">TD</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="8 theories · 1,507 lines · 75 lemmas" data-rests="" data-info="The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="866.0" y="447" width="104.0" height="127"></rect><text x="918.0" y="515">VIMP</text></a>
+                <text class="stratum-name" x="306" y="515" text-anchor="end">Solver and language</text>
+                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="—" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="320.0" y="447" width="573.2" height="127"></rect><text x="606.6" y="515">TD</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="—" data-rests="" data-info="The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="893.2" y="447" width="96.8" height="127"></rect><text x="941.6" y="515">VIMP</text></a>
               </g>
               <g class="stratum stratum-bedrock" data-layer="bedrock">
-                <text class="stratum-name" x="236" y="596" text-anchor="end">Bedrock</text>
-                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="250.0" y="574" width="720.0" height="36"></rect><text x="610.0" y="596">Isabelle/HOL · HOL-IMP · Deriving</text></a>
+                <text class="stratum-name" x="306" y="596" text-anchor="end">Bedrock</text>
+                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="320.0" y="574" width="670.0" height="36"></rect><text x="655.0" y="596">Isabelle/HOL · HOL-IMP · Deriving</text></a>
               </g>
           </svg>
 
           <div class="strata-info" aria-live="polite">
             <p class="td-panel-title">Core sample</p>
             <p class="strata-info-name"><code>Voblint_Framework</code></p>
-            <p class="strata-info-meta">26 theories · 8,471 lines · 366 lemmas</p>
+            <p class="strata-info-meta">—</p>
             <p class="strata-info-rests">Rests directly on <code>TD</code>, <code>CFG</code>, <code>Domain</code>, <code>Solver</code>, <code>VIMP</code>, and transitively on 1 more: <code>Isabelle/HOL</code>.</p>
-            <p class="strata-info-text">The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
+            <p class="strata-info-text">The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
             <p class="strata-info-hint">Hover a layer to take a sample: the sessions it rests on light up. Click to open the session.</p>
           </div>
         </div>
@@ -6167,7 +6218,7 @@ qed</code></pre>
             <li id="ref-schwarz-2021" data-year="2021">
               <a href="https://doi.org/10.1007/978-3-030-88806-0_18" target="_blank" rel="noreferrer">Improving Thread-Modular Abstract Interpretation</a>
               <span class="reading-meta">Michael Schwarz, Simmo Saan, Helmut Seidl, Kalmer Apinis, Julian Erhard, Vesal Vojdani · SAS 2021</span>
-              <span class="reading-why">Its local-trace semantics was the guide for modeling Voblint's traces, the <a href="Voblint/Voblint_CFG/LTR_Def.html#LTR_Def.valid_ltr%7Cconst"><code>valid_ltr</code></a> trace set.</span>
+              <span class="reading-why">Its thread-modular local-trace semantics, stated for multithreaded programs, was the model for the shape of Voblint's activation traces, the <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a> trace set.</span>
             </li>
             <li id="ref-stemmler-2025" data-year="2025">
               <a href="https://doi.org/10.1145/3729297" target="_blank" rel="noreferrer">Taking out the Toxic Trash: Recovering Precision in Mixed Flow-Sensitive Static Analyses</a>

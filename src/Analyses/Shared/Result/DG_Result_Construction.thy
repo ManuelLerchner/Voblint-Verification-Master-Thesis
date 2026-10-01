@@ -5,9 +5,9 @@ theory DG_Result_Construction
     "Voblint_Framework.Routed_Call_Programs"
     "Voblint_Framework.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Program"
-    "Voblint_Exec.Exec_Result_Readback"
+    "Voblint_Exec.Exec_Result_Abs"
     "Voblint_Exec.Exec_DG_State"
-    "Voblint_Exec.Exec_St_Reachability"
+    "Voblint_Exec.Default_St_Reachability"
 begin
 
 section \<open>What a solved D/G system publishes\<close>
@@ -19,10 +19,10 @@ text \<open>
   theory states that construction once, over an arbitrary solved pair, so an
   analysis's result table is one application rather than a rewritten body.
 
-  Reading a local unknown back means two steps in sequence.
+  Publishing a local unknown means two steps in sequence.
   \<^const>\<open>canonicalize_lift\<close> collapses a stored \<^const>\<open>Lifted\<close> payload that
-  describes no store to \<^const>\<open>Bot\<close>, so a dead point reads as dead; the readback
-  \<open>rd\<close> then turns the carrier into the value the table publishes. Coverage is
+  describes no store to \<^const>\<open>Bot\<close>, so a dead point reads as dead; the publication
+  map \<open>rd\<close> then turns the carrier into the value the table publishes. Coverage is
   separate from deadness: a key the solver never visited is absent from the
   table, and \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for it without any
   claim about the program.
@@ -60,8 +60,8 @@ lemma lookup_context_dg_result_for [simp]:
   unfolding dg_result_for_def lookup_context_def by simp
 
 text \<open>
-  Normalizing before the readback agrees with normalizing after it whenever the
-  two emptiness tests agree, so a soundness bridge stated after the readback
+  Normalizing before publication agrees with normalizing after it whenever the
+  two emptiness tests agree, so a soundness bridge stated after publication
   applies to the table built before it.
 \<close>
 

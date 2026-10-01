@@ -27,13 +27,13 @@ SETTINGS = ["interval", "warrow", "entry-state", 0, "fixpoint"]
 EXPECT_DIR = REPO_ROOT / "tests/solver-trace"
 
 
-def voblint_web(*traces):
+def voblint_web(*traces, settings=SETTINGS, program=PROGRAM):
     """One answer per entry of [traces], all from one loaded module."""
     node = shutil.which("node")
     assert node, "node not on PATH"
     assert BUNDLE.is_file(), f"{BUNDLE} missing -- run `pixi run browser-build`"
-    source = PROGRAM.read_text()
-    calls = [[*SETTINGS, source, trace] for trace in traces]
+    source = program.read_text()
+    calls = [[*settings, source, trace] for trace in traces]
     proc = subprocess.run(
         [node, "--require", str(HARNESS), str(BUNDLE)],
         capture_output=True,
@@ -102,3 +102,45 @@ def test_tracing_off_adds_nothing(runs):
 def test_unknown_mode_is_an_error():
     (answer,) = voblint_web("yes")
     assert answer == {"status": "error", "message": "Unknown trace mode: yes"}
+
+
+# One origin of this program narrows in two steps, so its first check needs a
+# bound of at least 2; the CLI regression pins the same verdicts.
+TWO_STEPS = (
+    REPO_ROOT
+    / "tests/regression/15-solver-choice/precision/12-bounded_narrowing_two_narrowing_steps.vimp"
+)
+
+
+def verdicts(answer):
+    return re.findall(
+        r'"condition": "([^"]*)", "verdict": "([A-Za-z_]+)"', json.dumps(answer)
+    )
+
+
+@pytest.mark.parametrize(
+    ("rule", "first"),
+    [
+        ("bounded-narrowing", "PROVED"),
+        ("bounded-narrowing:5", "PROVED"),
+        ("bounded-narrowing:1", "UNKNOWN"),
+        ("bounded-narrowing:0", "UNKNOWN"),
+    ],
+)
+def test_the_narrowing_bound_reaches_the_solver(rule, first):
+    settings = ["interval", rule, "none", 0, "fixpoint"]
+    off, traced = voblint_web("off", "compact", settings=settings, program=TWO_STEPS)
+    assert set(verdicts(off)) == {("a <= 2", first), ("b <= 2", "PROVED")}
+    assert "trace" in traced
+    assert without_timing({k: v for k, v in traced.items() if k != "trace"}) == (
+        without_timing(off)
+    )
+
+
+@pytest.mark.parametrize(
+    "rule", ["bounded-narrowing:", "bounded-narrowing:-1", "warrow:2"]
+)
+def test_a_malformed_bound_is_an_error(rule):
+    settings = ["interval", rule, "none", 0, "fixpoint"]
+    (answer,) = voblint_web("off", settings=settings, program=TWO_STEPS)
+    assert answer == {"status": "error", "message": f"Unknown globals rule: {rule}"}

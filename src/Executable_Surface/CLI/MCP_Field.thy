@@ -45,8 +45,8 @@ lemma field_frame:
   shows "mcp_frame (lens_of get (lift_put u) cmp) g"
   unfolding mcp_frame_def lens_of_def by (auto simp: assms)
 
-lemma single_entry_exec_spec:
-  "single_entry (exec_spec \<G> empty_pred tf_st enter_st)"
-  by (simp add: single_entry_def exec_spec_def)
+lemma single_entry_exec_local_spec:
+  "single_entry (exec_local_spec \<G> empty_pred tf_st enter_st)"
+  by (simp add: single_entry_def exec_local_spec_def)
 
 end

@@ -1,6 +1,6 @@
 theory Sign_Exec
   imports
-    "Voblint_Exec.Exec_St_Restriction_Refinement"
+    "Voblint_Exec.Default_St_Restriction_Refinement"
     "Voblint_Nonrelational.Nonrelational_Ops"
     Sign_Transfer
 begin
@@ -9,8 +9,8 @@ section \<open>Sign per-domain seam: executable transfer mirror and commutation\
 
 text \<open>The state a run starts in: a declared global holds \<open>SZero\<close>, a local \<open>STop\<close>.\<close>
 
-abbreviation cinit_sign_st :: "sign resolved_st_q" where
-  "cinit_sign_st \<equiv> initial_resolved_st_q STop SZero"
+abbreviation cinit_sign_st :: "sign default_st" where
+  "cinit_sign_st \<equiv> initial_default_st STop SZero"
 
 subsection \<open>Classifier-parametric executable transfer\<close>
 
@@ -30,20 +30,20 @@ text \<open>
 
 definition sign_enter_st_for ::
   "(vname => bool) => call_info =>
-   sign resolved_st_q => sign resolved_st_q" where
+   sign default_st => sign default_st" where
   "sign_enter_st_for = generic_enter_st_for sign_ops"
 
 lemma sign_enter_st_for_eq [simp]:
   "sign_enter_st_for \<G> ci s =
-    bind_formals_resolved_q \<G> (ci_formals ci)
+    bind_formals_default_st \<G> (ci_formals ci)
       (map (\<lambda>e. aval_sign e
-        (fun_of_resolved_st_q_for \<G> s)) (ci_args ci))
-      (enter_frame_D_resolved_q STop s)"
+        (default_st_to_fun \<G> s)) (ci_args ci))
+      (enter_frame_D_default_st STop s)"
   by (simp add: sign_enter_st_for_def generic_enter_st_for_def top_sign_def)
 
 definition sign_tf_st_for ::
   "(vname => bool) => edge_action =>
-   sign resolved_st_q => sign resolved_st_q" where
+   sign default_st => sign default_st" where
   "sign_tf_st_for = generic_tf_st_for sign_ops"
 
 lemmas sign_tf_st_for_simps [simp] =
@@ -61,21 +61,21 @@ text \<open>The classifier-parametric commutation of the executable and abstract
   included, on a live state.\<close>
 
 theorem sign_tf_st_for_commute:
-  assumes live: "live_resolved_st_q \<G> s"
+  assumes live: "live_default_st \<G> s"
   shows
-    "fun_of_resolved_st_q_for \<G> (sign_tf_st_for \<G> a s) =
-     sign_tf_abs a (fun_of_resolved_st_q_for \<G> s)"
+    "default_st_to_fun \<G> (sign_tf_st_for \<G> a s) =
+     sign_tf_abs a (default_st_to_fun \<G> s)"
   unfolding sign_tf_st_for_def
   by (rule sign_tf.tf_st_for_commute[OF live])
 
 lemma enter_frame_sign_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (enter_frame_D_resolved_q STop s) =
-   enter_frame_sign_for \<G> (fun_of_resolved_st_q_for \<G> s)"
+  "default_st_to_fun \<G> (enter_frame_D_default_st STop s) =
+   enter_frame_sign_for \<G> (default_st_to_fun \<G> s)"
   by (simp add: sign_tf.op_defs)
 
 lemma sign_enter_st_for_commute:
-  "fun_of_resolved_st_q_for \<G> (sign_enter_st_for \<G> ci s) =
-   enter_sign_ci_for \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+  "default_st_to_fun \<G> (sign_enter_st_for \<G> ci s) =
+   enter_sign_ci_for \<G> ci (default_st_to_fun \<G> s)"
   by (simp add: sign_tf.op_defs enter_binding_def enter_frame_def
                 enter_frame_sign_st_for_commute)
 

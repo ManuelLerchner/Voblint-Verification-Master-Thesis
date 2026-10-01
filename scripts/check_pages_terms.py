@@ -43,9 +43,14 @@ SECTION = re.compile(r'<section[^>]*\bid="([^"]+)"')
 # not being pointed at a Voblint definition, so a link would mislead.
 EXEMPT = {"export_code", "module_name", "code_unfold", "by_eval"}
 # Isabelle renders a datatype's selectors on the datatype's own anchor and gives
-# them none of their own, so `#LTR_Def.ltr|type` is where `ltr_caller` lives and a
-# per-selector anchor would 404. Checked against build/isabelle-html.
-SELECTORS_ON_THEIR_DATATYPE = {"ltr_caller", "ltr_callee", "ltr_current"}
+# them none of their own, so `#Activation_Trace_Def.activation_trace|type` is
+# where `activation_trace_caller` lives and a per-selector anchor would 404.
+# Checked against build/isabelle-html.
+SELECTORS_ON_THEIR_DATATYPE = {
+    "activation_trace_caller",
+    "activation_trace_callee",
+    "activation_trace_current",
+}
 EXEMPT |= SELECTORS_ON_THEIR_DATATYPE
 
 COMMAND = (

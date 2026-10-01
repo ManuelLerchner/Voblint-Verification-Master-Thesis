@@ -5,6 +5,8 @@ theory Exec_Interval_Run
             Example_Interval_Loop_Coverage
 begin
 
+unbundle default_st_syntax
+
 section \<open>Executable interval loop: backward filters + TD solver (eval only)\<close>
 
 text \<open>
@@ -48,26 +50,26 @@ lemma loop_cfg_exit [simp]: "cfg_exit loop_cfg = FunctionResult (STR ''main'')"
 
 definition loop_ivl_eqs ::
     "(pp \<times> unit, (unit, unit) global_unknown,
-      (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+      (ivl default_st lifted, ivl default_st lifted) dg_state) eqsT" where
   "loop_ivl_eqs = interval_rule.equations loop_gs loop_prog"
 
 text \<open>One projection, reused by every engine below: take a solved D/G slot's local
   component and read \<open>x\<close> out of it.\<close>
 
 definition loop_read_x ::
-    "(ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state \<Rightarrow> ivl" where
+    "(ivl default_st lifted, ivl default_st lifted) dg_state \<Rightarrow> ivl" where
   "loop_read_x d =
-     case_lifted bot (\<lambda>q. lookup_resolved_st_q q (location_of loop_gs (STR ''x''))) (dg_local d)"
+     case_lifted bot (\<lambda>q. q\<langle>location_of loop_gs (STR ''x'')\<rangle>) (dg_local d)"
 
 definition loop_sig0 ::
     "pp \<times> unit + (unit, unit) global_unknown
-       \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state" where
+       \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state" where
   "loop_sig0 = (\<lambda>_. bot)"
 
 definition loop_kleene_step ::
-    "(pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+    "(pp \<times> unit + (unit, unit) global_unknown \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)
        \<Rightarrow> (pp \<times> unit + (unit, unit) global_unknown
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "loop_kleene_step sig =
      (\<lambda>k. case k of
         Inl v \<Rightarrow> eq loop_ivl_eqs v sig
@@ -76,9 +78,9 @@ definition loop_kleene_step ::
 fun loop_iter_sig ::
     "nat
        \<Rightarrow> (pp \<times> unit + (unit, unit) global_unknown
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)
        \<Rightarrow> (pp \<times> unit + (unit, unit) global_unknown
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "loop_iter_sig 0 sig = sig"
 | "loop_iter_sig (Suc n) sig = loop_iter_sig n (loop_kleene_step sig)"
 
@@ -98,7 +100,7 @@ lemma loop_body_ivl:
 definition loop_ivl_td_sol ::
     "(pp \<times> unit) set
        \<times> (pp \<times> unit + (unit, unit) global_unknown
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "loop_ivl_td_sol = interval_rule.solution Globals_Warrow loop_gs loop_prog"
 
 definition loop_ivl_td_at :: "pp \<Rightarrow> ivl" where
@@ -202,5 +204,7 @@ text \<open>
   \<open>Interval_Analysis\<close>; a second, domain-specific export module would just
   be a parallel, redundant API surface for the same computation.
 \<close>
+
+unbundle no default_st_syntax
 
 end

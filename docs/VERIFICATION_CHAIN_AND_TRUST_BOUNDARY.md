@@ -35,7 +35,7 @@ proves certificates about those operations (a backward domain, sound checks, sou
 special calls), and interprets `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`)
 once, which yields `<impl>_tf.is_sound_nonrelational_transfer`. The `int_dom` product
 interprets it once, parametric in its refinement mode.
-`local_state_dg_spec_for_contract` turns that into `analysis_contract` for
+`state_dg_spec_contract` turns that into `analysis_contract` for
 the whole-state specification every shipped domain uses.
 
 Guards go through `branch_lifted` (`Backward_Domain.thy`): a forward feasibility
@@ -47,17 +47,17 @@ denoting `Bot`. `branch_sound` holds either way; the gate is a precision change
 
 The mathematical layer works over `'a abs_state = vname => 'a`
 (`Nonrelational_State.thy`), a function over an infinite domain with no finite
-representation. The executable layer works over `'a resolved_st_q`
-(`Exec_St_Base.thy`), a `quotient_type` of a default-value-plus-finite-override
-encoding, quotiented by observable lookup so that `=`, `<=` and `bot` are
-well-defined.
+representation. The executable layer works over `'a default_st`
+(`Default_St_Base.thy`), a `quotient_type` over one default dictionary (a
+default plus finitely many entries) per partition, quotiented by observable
+lookup so that `=`, `<=` and `bot` are well-defined.
 
-The link is a total function, `fun_of_resolved_st_q_for gs`
-(`Exec_St_Transfer.thy`), which reads each name at the location the classifier
-`gs` selects. It is not injective: a quotient value carries both a local and a
-global location per name and the conversion reads one. That is why
-`resolved_st_is_bot` filters through `canonical_location`
-(`Exec_St_Reachability.thy`).
+The link is a total function, `default_st_to_fun gs`
+(`Default_St_Transfer.thy`), which reads each name at the location the classifier
+`gs` selects. It is not injective: a quotient value carries a local and a
+global dictionary, each able to answer for every name, and the conversion reads
+one per name. That is why `default_st_rep_is_bot` consults `gs` for each
+dictionary entry (`Default_St_Reachability.thy`).
 
 ## 3. Commute theorems
 
@@ -84,19 +84,23 @@ agree on `solve`'s domain, and `solve_code_equation [code]` (`:2387`) installs
 `solve_c` as `solve`'s code equation, so the equality between them is proved.
 `solve_dom_of_solve_c` (`TD_Solver_Bridge.thy`) turns a successful `solve_c`
 into `solve_dom`, and the vendored `partial_post_solution` turns `solve_dom`
-into the certificate `part_post_solution` (`Basics_side.thy`). The analysis
-locale `dg_analysis` assumes both facts of its solver parameters, and
-every generated domain registration discharges them with
-`TD_side_rule_Interp.solve_dom_of_solve_c` and
-`TD_side_rule_Interp.partial_post_solution`; `run_voblint`'s termination
+into the certificate `part_post_solution` (`Basics_side.thy`). The locale
+`certified_solver` (`TD_Solver_Bridge.thy`) states these two facts and the
+finiteness of the solved key set as one solver contract; the analysis locale
+`dg_analysis` extends it, and every registration discharges it with
+`td_certified_solver` (`Globals_Rule.thy`), proved once for every
+`globals_rule` from `TD_side_rule_Interp.partial_post_solution`,
+`finite_stabl_solve` and `solve_dom_of_solve_c`; `run_voblint`'s termination
 premise is `solve_dom`. The composite `part_post_solution_of_solve_c` is not on
 that path. The certificate is solver-independent:
 `activation_collect_dg_sound` (`Routed_Context.thy`) proves collecting
 soundness from any valuation satisfying it, without asking how it was computed.
 
-The four update rules of `globals_rule` (always-join, per-origin, Apinis
-warrowing, warrowing-per-origin) are vendored rules, selected through one
-`TD_side_rule_Interp` interpretation (`Globals_Rule.thy`), and widening is a type-class
+The five update rules of `globals_rule` (always-join, per-origin, Apinis
+warrowing, warrowing-per-origin, bounded narrowing) are vendored rules, selected
+through one `TD_side_rule_Interp` interpretation (`Globals_Rule.thy`). The first
+four run on the contribution part of the bounded-narrowing rule's update state
+(`lift_basic_rule`, proved to keep the update-rule interface), and widening is a type-class
 instance of the vendored `widening` class, so there is no refinement gap at the
 solver layer beyond ordinary code-generation trust.
 

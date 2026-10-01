@@ -10,7 +10,8 @@ not here.
 voblint --analysis sign|interval|int|parity|congruence[,...]
         [--context none|entry-state|call-string] [--context-depth K]
         [--dot | --graph-snapshot | --html | --html-out DIR]
-        [--globals join|per-origin|warrow|warrow-per-origin]
+        [--globals join|per-origin|warrow|warrow-per-origin|bounded-narrowing]
+        [--narrow-bound N]
         [--timeout SECONDS] FILE.vimp
 voblint --parse-only FILE.vimp
 voblint --help
@@ -54,10 +55,20 @@ voblint --help
   emits a deterministic, DOT-free textual form of that graph (the regression
   corpus's structural oracle, see `tests/run.py`). `--html` writes a browsable
   result directory instead (see `docs/HTML_REPORT.md`).
-- `--globals join|per-origin|warrow|warrow-per-origin` selects how the vendored
-  solver merges a value side-effected into a global unknown: joined, joined per
-  origin, warrowed, or warrowed per origin. Local unknowns are warrowed at
-  widening points under every rule. The default is `warrow` for every domain,
+- `--globals join|per-origin|warrow|warrow-per-origin|bounded-narrowing` selects
+  how the vendored solver merges a value side-effected into a global unknown:
+  joined, joined per origin, warrowed, warrowed per origin, or widened per
+  origin with bounded narrowing (the vendored `update_global_bounded_narrowing`).
+  That rule narrows an origin once each time it switches from widening to
+  narrowing, and keeps narrowing within a phase only while the origin has
+  switched fewer than `--narrow-bound N` times. `N` defaults to 5, the default
+  of Goblint's `solvers.td3.narrow-globs.narrow-gas`; unlike Goblint's option,
+  `0` does not disable narrowing, it only stops narrowing after the first step
+  of each switch.
+  `--narrow-bound` is rejected with any other rule. The playground offers the
+  bound as a control from 0 to 100 while that rule is selected, and a link
+  carries it as `narrow=N` when it is not 5. Local unknowns are warrowed at widening points
+  under every rule. The default is `warrow` for every domain,
   chosen in `cli/entry/voblint.ml`; Isabelle's `run_voblint` takes the rule as
   an argument and has no default. Every output mode renders the table the
   chosen rule solved, contextual graphs included.

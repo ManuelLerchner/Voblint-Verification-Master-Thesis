@@ -7,22 +7,24 @@ theory Ownership_Split_Exec
     "Voblint_Framework.Routed_Context"
 begin
 
+unbundle default_st_syntax
+
 section \<open>The ownership-splitting analysis at the executable carrier\<close>
 
 text \<open>
   \<^const>\<open>ownership_split_transfer_gen\<close> asks only that a carrier can merge a local and a
   global half and project each back out. The association-list carrier answers
-  with \<^const>\<open>combine_resolved_st_q\<close> and the two \<open>restrict_\<dots>_resolved_q\<close>
+  with \<^const>\<open>combine_default_st\<close> and the two \<open>restrict_\<dots>_default_st\<close>
   projections, so the executable analysis is that transfer at those three
   arguments -- not a second definition of what the analysis does.
 \<close>
 
 definition ownership_split_transfer_st ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_transfer
-   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) man_transfer"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_transfer
+   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_transfer"
 where
   "ownership_split_transfer_st =
-     ownership_split_transfer_gen combine_resolved_st_q restrict_global_resolved_q restrict_local_resolved_q"
+     ownership_split_transfer_gen combine_default_st restrict_global_default_st restrict_local_default_st"
 
 text \<open>
   Entry is the same wrapping one step up in arity: it answers a list of
@@ -32,12 +34,12 @@ text \<open>
 \<close>
 
 definition ownership_split_enter_transfer_st ::
-  "('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_enter_transfer
-   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) man_enter_transfer"
+  "('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_enter_transfer
+   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) man_enter_transfer"
 where
   "ownership_split_enter_transfer_st =
-     ownership_split_enter_transfer_gen combine_resolved_st_q restrict_global_resolved_q
-       restrict_local_resolved_q"
+     ownership_split_enter_transfer_gen combine_default_st restrict_global_default_st
+       restrict_local_default_st"
 
 text \<open>
   The callee exit reaches the wrapped stage merged against the same shared fact,
@@ -48,20 +50,20 @@ text \<open>
 
 definition ownership_split_combine_transfer_st ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot exec_dg_st,'a exec_dg_st) man_combine_transfer"
+   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot default_st,'a default_st) man_combine_transfer"
 where
   "ownership_split_combine_transfer_st \<G> ci =
-     ownership_split_combine_transfer_gen combine_resolved_st_q restrict_global_resolved_q
-       restrict_local_resolved_q
+     ownership_split_combine_transfer_gen combine_default_st restrict_global_default_st
+       restrict_local_default_st
        (local_combine_transfer
-          (\<lambda>env de. combine_assign_resolved_q \<G> (ci_dst ci)
-                      (lookup_resolved_st_q de (location_of \<G> ret_var)) env))"
+          (\<lambda>env de. combine_assign_default_st \<G> (ci_dst ci)
+                      de\<langle>location_of \<G> ret_var\<rangle> env))"
 
 definition ownership_split_dg_spec_st_for ::
   "(vname \<Rightarrow> bool)
-   \<Rightarrow> (edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> (call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st)
-   \<Rightarrow> ('x,'k,unit,'a exec_dg_st,'a exec_dg_st) dg_spec"
+   \<Rightarrow> (edge_action \<Rightarrow> 'a::bounded_semilattice_sup_bot default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> (call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st)
+   \<Rightarrow> ('x,'k,unit,'a default_st,'a default_st) dg_spec"
 where
   "ownership_split_dg_spec_st_for \<G> tf_st enter_st = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_st (local_transfer (tf_st EA_Nop)),
@@ -93,5 +95,7 @@ lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:
      = ownership_split_combine_transfer_st \<G> ci m de"
   unfolding dg_spec_combine_transfer_def ownership_split_dg_spec_st_for_def
   by (simp add: local_transfer_def local_combine_transfer_def)
+
+unbundle no default_st_syntax
 
 end

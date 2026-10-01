@@ -23,8 +23,20 @@ GRAPH_END = "// EXPECT-GRAPH-END"
 
 # Flags that choose what voblint prints, not what it computes.
 OUTPUT_FLAGS = frozenset(
-    {"--dot", "--graph-snapshot", "--parse-only", "--ast", "--html"}
+    {
+        "--dot",
+        "--graph-snapshot",
+        "--parse-only",
+        "--ast",
+        "--html",
+        "--trace",
+        "--verbose",
+        "--compact",
+    }
 )
+
+# Output flags that take a value, such as the solver trace's format.
+VALUED_OUTPUT_FLAGS = frozenset({"--format", "--output"})
 
 # Flags that bound the run rather than select an analysis.
 RUNNER_FLAGS = frozenset({"--timeout"})
@@ -36,7 +48,11 @@ SETTING_FLAGS = {
     "--context-depth": "context_depth",
     "--globals": "globals",
     "--int-refinement": "int_refinement",
+    "--narrow-bound": "narrow_bound",
 }
+
+# The bound voblint's bounded-narrowing rule takes when --narrow-bound is absent.
+DEFAULT_NARROW_BOUND = 5
 
 
 def param_args(path: Path) -> list[str] | None:
@@ -62,6 +78,10 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
         if flag in OUTPUT_FLAGS:
             continue
 
+        if flag in VALUED_OUTPUT_FLAGS:
+            rest.pop(0)
+            continue
+
         if flag not in SETTING_FLAGS and flag not in RUNNER_FLAGS:
             raise ValueError(f"unknown PARAM flag {flag!r}")
 
@@ -76,7 +96,7 @@ def analysis_settings(args: list[str]) -> dict[str, object]:
         key = SETTING_FLAGS[flag]
         if key == "analyses":
             settings[key] = value.split(",")
-        elif key == "context_depth":
+        elif key in ("context_depth", "narrow_bound"):
             settings[key] = int(value)
         else:
             settings[key] = value

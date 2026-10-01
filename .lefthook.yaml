@@ -285,38 +285,6 @@ pre-commit:
               - "cli/**/*.ml"
             run: pixi run analysis-registry-check
 
-          # ----------------------------------------------------------------
-          # Thesis: cheap source-level freshness checks
-          # ----------------------------------------------------------------
-
-          # A rename in the theories can leave the thesis naming something
-          # that no longer exists. Either side can break the pairing.
-          - name: thesis-refs
-            glob:
-              - "thesis/**/*.typ"
-              - "src/**/*.thy"
-            run: pixi run thesis-refs
-
-          # Isabelle declarations shown in the thesis are extracted by name.
-          # Reject commits where the checked-in snippets are stale.
-          - name: thesis-snippets
-            glob:
-              - "thesis/shared/snippets.toml"
-              - "thesis/shared/generated/snippets/*.thy"
-              - "src/**/*.thy"
-            run: pixi run thesis-snippets
-
-          # Link-map consistency can be checked opportunistically against
-          # locally available generated documentation. The lenient task is
-          # intentionally used here because pre-commit does not build HTML.
-          - name: thesis-links
-            glob:
-              - "thesis/**/*.typ"
-              - "thesis/**/*.toml"
-              - "src/**/*.thy"
-              - "scripts/check_thesis_links.py"
-            run: pixi run thesis-links
-
           # Site pages: every internal link and same-page anchor resolves to a
           # source file. Needs no site build; theory anchors only warn, as the
           # rendered theories are checked against the deployed site on main.
@@ -382,7 +350,9 @@ pre-commit:
           # ----------------------------------------------------------------
 
           - name: theory-prose-check
-            glob: "src/**/*.thy"
+            glob:
+              - "src/**/*.thy"
+              - "isar.toml"
             run: pixi run theory-prose-check
 
           - name: retired-identifiers-check
@@ -406,6 +376,110 @@ pre-commit:
             glob: "src/**/*.thy"
             run: pixi run locale-parameters-check
 
+    # ----------------------------------------------------------------------
+    # Thesis: cheap source-level freshness checks
+    #
+    # The thesis is written on `writing`; main keeps a frozen copy of thesis/
+    # that these checks no longer describe, so they run on that branch only.
+    # ----------------------------------------------------------------------
+    - name: thesis-checks
+      only:
+        - ref: writing
+      group:
+        parallel: true
+        jobs:
+          # The thesis quotes repository figures from stats.json; regenerate it
+          # whenever what it measures changes, and fail so the refreshed file
+          # is staged with the change that moved it.
+          - name: thesis-stats-drift
+            glob:
+              - "src/**"
+              - "tests/regression/**"
+              - "cli/**"
+              - "codegen/generated/**"
+              - "scripts/pages_stats.py"
+              - "thesis/tools/stats.py"
+            run: pixi run thesis-stats-write && bash scripts/mk/check-clean.sh thesis/shared/generated/stats.json
+
+          # Offline: the recorded conda-forge status must list exactly the
+          # packages of the manifest. Refreshing the status needs the network
+          # (`pixi run thesis-conda-write`) and is done by hand.
+          - name: thesis-conda-drift
+            glob:
+              - "manifests/conda-forge-ocaml.toml"
+              - "thesis/tools/conda_forge.py"
+              - "thesis/shared/generated/conda-forge.json"
+            run: pixi run thesis-conda
+
+          # A rename in the theories can leave the thesis naming something
+          # that no longer exists. Either side can break the pairing.
+          - name: thesis-refs
+            glob:
+              - "thesis/**/*.typ"
+              - "thesis/shared/generated/goblint-alignment.json"
+              - "thesis/shared/generated/notation.json"
+              - "src/**/*.thy"
+            run: pixi run thesis-refs
+
+          # Isabelle declarations shown in the thesis are extracted by name.
+          # Reject commits where the checked-in snippets are stale.
+          - name: thesis-snippets
+            glob:
+              - "thesis/shared/snippets.toml"
+              - "thesis/shared/generated/snippets/*.thy"
+              - "src/**/*.thy"
+            run: pixi run thesis-snippets
+
+          # The Goblint comparison appendix renders the explainer's alignment
+          # rows through a generated JSON; the committed copy must match.
+          - name: thesis-alignment
+            glob:
+              - "pages/index.html"
+              - "thesis/shared/generated/goblint-alignment.json"
+              - "thesis/tools/goblint_alignment.py"
+              - "tests/test_goblint_alignment.py"
+            run: pixi run thesis-alignment
+
+          # The notation table is derived from the theories' declarations and
+          # rendered in the thesis, the README and the explainer.
+          - name: thesis-notation
+            glob:
+              - "src/**/*.thy"
+              - "README.md"
+              - "pages/index.html"
+              - "thesis/shared/notation.toml"
+              - "thesis/shared/generated/notation.json"
+              - "thesis/shared/generated/links.json"
+              - "thesis/tools/notation.py"
+              - "tests/test_thesis_notation.py"
+            run: pixi run thesis-notation
+
+          # Every citation must have an HTML target, even without a local
+          # Isabelle presentation build. Check anchors too when it is available.
+          - name: thesis-links
+            glob:
+              - "thesis/**/*.typ"
+              - "thesis/**/*.toml"
+              - "thesis/shared/generated/links.json"
+              - "thesis/shared/generated/goblint-alignment.json"
+              - "thesis/shared/generated/notation.json"
+              - "src/**/*.thy"
+              - "scripts/check_thesis_links.py"
+              - "pixi.toml"
+            run: pixi run thesis-links
+
+          # VIMP code must reach the thesis through the linked listing helper,
+          # and the claim programs its links open must be current.
+          - name: thesis-vimp-source
+            glob:
+              - "thesis/**/*.typ"
+              - "thesis/shared/claims.toml"
+              - "thesis/shared/generated/vimp-claims.json"
+              - "thesis/tools/vimp_listings.py"
+              - "tests/regression/**"
+              - "pages/playground.html"
+            run: pixi run thesis-vimp-source
+
 
 # --------------------------------------------------------------------------
 # Expensive freshness checks
@@ -415,6 +489,8 @@ pre-commit:
 # - thesis-claims builds/uses the CLI and compares analyzer-derived figures.
 # - thesis-facts queries a built Isabelle session.
 # - thesis-typst rebuilds the thesis PDF and treats warnings as errors.
+# - thesis-stats measures the whole repository and fails on any theory or
+#   fixture edit until stats.json is regenerated.
 # - codegen-check builds the export session and fails when the OCaml or its
 #   source stamp no longer matches the theories.
 #
@@ -438,6 +514,8 @@ pre-push:
       run: pixi run codegen-check
 
     - name: thesis-current
+      only:
+        - ref: writing
       group:
         parallel: true
         jobs:
@@ -449,3 +527,18 @@ pre-push:
 
           - name: thesis-build
             run: pixi run thesis-typst
+
+          - name: thesis-vimp-links
+            run: pixi run thesis-vimp
+
+          # Repository figures the thesis cites are measured, not typed: the
+          # committed stats.json must match the repository, and the chapters
+          # may not carry a hand-typed statistic. Needs the vendored solver.
+          - name: thesis-stats
+            run: pixi run thesis-stats
+
+          # conda-forge's answer changes as recipes are merged: refresh the
+          # recorded status and fail when it moved, so the refreshed record is
+          # committed with the push. Skips without network access.
+          - name: thesis-conda-status
+            run: pixi run thesis-conda-write && bash scripts/mk/check-clean.sh thesis/shared/generated/conda-forge.json

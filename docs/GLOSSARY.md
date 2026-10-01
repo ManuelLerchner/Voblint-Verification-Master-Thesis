@@ -36,32 +36,35 @@ layer without embedding line numbers that drift.
 | `compile_prog` | Compiles the procedure table and distinguished main command into one CFG. | `src/Program_Model/Compile/VIMP_Proc_to_CFG.thy` |
 | `wf_compile_input` | Canonical static contract for accepted source programs. | `src/Program_Model/Compile/Compile_Invariants.thy` |
 
-## Activation-local semantics
+## Activation-trace semantics
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `trace` | One activation's record: a list of `(cfg_node, store)` pairs. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `ltr` | Activation-local trace: root, called activation, or resumed caller. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `valid_ltr` | Inductive concrete semantics over activation-local traces. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/LTR_Def.thy` |
-| `ltr_collect` | Reachable sink stores at each CFG node, forgetting trace structure. | `src/Program_Model/CFG/Collecting/LTR_Collect.thy` |
-| `activation_collect` | `activation_collect gs R startcontext g S v c`: reachable sink stores at `v` in context `c`, the `trace_context`-grouped view of `ltr_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `ltr_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid trace. | `src/Program_Model/CFG/Collecting/LTR_Abstract.thy` |
-| `trace_context` | Inductive `trace_context gs R startcontext g t c`: the context a valid trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`ltr_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
-| `startcontext` | Context of the root activation, Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/LTR_Activation_Context.thy` |
+| `activation_path` | One activation's own path: a list of `(cfg_node, store)` pairs, read by `path_of`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `activation_trace` | One procedure activation of a sequential run: its own `activation_path`, its frozen caller ancestry, and its completed callee subtrees (root, called activation, or resumed caller). Distinct from the local traces of Schwarz et al., which are per-thread traces of a multithreaded semantics. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `valid_activation_trace` | Inductive concrete semantics over activation traces. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
+| `node_collect` | Node-indexed collecting semantics: reachable sink stores at each CFG node, forgetting activation structure and context. `activation_collect` is its context-indexed refinement. | `src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy` |
+| `activation_collect` | `activation_collect gs R c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `activation_context_rel`-grouped view of `node_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `activation_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid activation trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy` |
+| `activation_context_rel` | Inductive `activation_context_rel gs R c\<^sub>0 g t c`: the context a valid activation trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`node_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `c\<^sub>0` | Context of the root activation (locale parameter, formerly `startcontext`), Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
 
 ## Abstract interpretation
 
 | Term | Meaning | Source |
 | --- | --- | --- |
 | `abs_state` | Pointwise abstract variable environment. | `src/Abstract_Interpreter/Domain/State/Nonrelational_State.thy` |
+| `default_st_to_fun` | The function a carrier state represents, written `ρ⇘𝒢⇙ s` in bundle `default_st_syntax` ("its function", "the represented function"). It plays the role of `fun_rep` in HOL-IMP's `Abs_State.thy` (Concrete Semantics) for the executable `default_st`, with the classifier `𝒢` choosing the local or global slot of each name. | `src/Abstract_Interpreter/Exec/State/Default_St_Transfer.thy` |
+| `result_value_to_abs` | Result conversion: turns a solved local unknown over `default_st lifted` into the `abs_state lifted` it represents. | `src/Abstract_Interpreter/Exec/State/Exec_Result_Abs.thy` |
 | `numeric_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
 | `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every side contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
-| `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) it discharges the solver assumptions of `dg_analysis`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
+| `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) and `finite_stabl_solve` it discharges `certified_solver`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
+| `certified_solver` | The solver contract the analysis pipeline assumes, over any equation system: in the solver's domain a solve answers a `part_post_solution` over a finite key set, and `solve_c` succeeding implies `solve_dom` (assumptions `solve_pp`, `solve_fin`, `dom_of_solve_c`). `dg_analysis` and `dg_analysis_exec` extend it; `td_certified_solver` (`Globals_Rule.thy`) proves it for the vendored solver at every `globals_rule`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
 
 ## D/G framework
 
@@ -84,9 +87,9 @@ and where the correspondence is inexact.
 
 | `Spec` component | Voblint realization | Note |
 | --- | --- | --- |
-| `D` | Opaque `'D` carrier (`dg_state.locals`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
-| `G` | Opaque `'G` carrier (`dg_state.globs`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
-| `C` | `'c` (type parameter of `dg_ctx_activation_base`/`routed_context_base_hetero`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
+| `D` | Opaque `'D` carrier (`dg_state.dg_local`) | Chosen by each `dg_spec`. Base analyses use a non-relational or executable state carrier; `Rel_Order_Domain` demonstrates a relational carrier. |
+| `G` | Opaque `'G` carrier (`dg_state.dg_global`) | Chosen independently by each `dg_spec`; homogeneous analyses may use the same type for `D` and `G`. See "Local/global payloads" in `docs/GOBLINT_ALIGNMENT_REGISTER.md`. |
+| `C` | `'c` (type parameter of `dg_context_activation`/`routed_context`, `DG_Ctx_Activation.thy`, `Routed_Context.thy`) | Instantiated per analysis instance (`unit`, call-string, entry-state, ...). |
 | `V` | `'v` (the `dg_spec` record's global-name parameter, `DG_Spec.thy`) | An analysis reaches shared state only through `man_global`/`man_sideg` at a `'v`; `mk_dg_man` embeds it into the solver's global-key type `'k` (`DG_Manager.thy`). Not the combined unknown space -- see below. |
 
 **The combined unknown space is not `V`.** The vendored solver's equation type
@@ -95,7 +98,7 @@ and `'g` (global key): `('x, 'g, 'd) eqsT = 'x => ('x, 'g, 'd) strategy_tree`,
 with unknowns typed `'x + 'g`. `DG_Ctx_Activation.thy` instantiates
 `'x = pp \<times> 'c` and, deliberately, `'g = 'k` rather than reusing the bare
 letter `'g` -- `DG_State.thy`'s `dg_state` datatype already fixes `'g` as
-the global *value* type (the `globs` field, i.e. Goblint's `G.t`), one layer
+the global *value* type (the `dg_global` field, i.e. Goblint's `G.t`), one layer
 up. Reusing `'g` for the global *key* at the activation layer would silently
 overload one letter for two different `Spec` components (`G` and `V`) across
 two adjacent files. `'k` names the vendor solver's global-key slot without
@@ -112,13 +115,13 @@ carries the soundness proof -- notation does not rename the identifier.
 | Notation | Identifier | Layer |
 | --- | --- | --- |
 | `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `context#` | `route` (locale parameter of `dg_ctx_activation_base`, carrying the notation in `routed_context_base_hetero`) | Generator, `Routed_Context.thy` |
+| `context#` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
 | `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
 `route`'s semantic counterpart is the relation `call_context_rel`
-(`LTR_Activation_Context.thy`), which consumes **concrete** stores rather than
+(`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
 counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the
 per-instance locale obligation: at a real call edge, some `(cont, entry)`
@@ -132,7 +135,7 @@ outer keyword, hence `route` -- see `docs/GOBLINT_ALIGNMENT_REGISTER.md`.
 
 ### `sigma` / `sg`
 
-Both fixed in `dg_ctx_activation_base` (`DG_Ctx_Activation.thy`) and genuinely
+Both fixed in `dg_context_activation` (`DG_Ctx_Activation.thy`) and genuinely
 different objects, not naming duplication:
 
 | Term | Meaning |
@@ -160,7 +163,7 @@ reading or meaning; everything else comes from the theories.
 Locale abbreviations unfold at parse time, so every exported theorem is the same
 term as without them. A printing abbreviation also folds goals and facts,
 including those of every interpretation of its locale, which then print as
-`X.cover v c`. `ltr_coverage` is only interpreted inside proofs, so printing
+`X.cover v c`. `activation_coverage` is only interpreted inside proofs, so printing
 mode is safe there. The other locales have theory-level interpretations, so
 their abbreviations are input-only and interpreted facts keep the explicit
 terms. The anonymous context fixing `p` in `DG_Analysis.thy` adds the

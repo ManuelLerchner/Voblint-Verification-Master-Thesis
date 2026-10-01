@@ -8,8 +8,8 @@ begin
 
 text \<open>
   Third-domain worked example, mirroring
-  Voblint_Examples_CLI.Example_Checks_Store_Only (Sign) and
-  Voblint_Examples_CLI.Example_Interval_Checks_Store_Only, discharged
+  \<open>Voblint_Examples_CLI.Example_Checks_Store_Only\<close> (Sign) and
+  \<open>Voblint_Examples_CLI.Example_Interval_Checks_Store_Only\<close>, discharged
   node-locally through \<^theory>\<open>Voblint_Analysis_Parity.Parity_Classify\<close> rather than by
   forwarding stores to the procedure exit. The run is Parity's unit-context registration
   \<open>parity_rule\<close> at \<^const>\<open>Globals_Join\<close>.
@@ -158,10 +158,10 @@ text \<open>Non-vacuity: reading \<open>7\<close> for \<open>x\<close> and \<ope
 lemma parity_ex_reach_nonempty:
   "parity_ex_reach (Statement 3) \<noteq> {}" "parity_ex_reach (Statement 6) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where \<G> = parity_ex_gs and g = "prog_cfg parity_ex_program"
+  note step = node_collect_intra_step[where \<G> = parity_ex_gs and g = "prog_cfg parity_ex_program"
       and S = "cinit_stores parity_ex_gs", folded parity_ex_reach_def]
   have "(\<lambda>_. 0) \<in> parity_ex_reach (cfg_entry (prog_cfg parity_ex_program))"
-    unfolding parity_ex_reach_def by (rule ltr_collect_init) (simp add: cinit_stores_def)
+    unfolding parity_ex_reach_def by (rule node_collect_init) (simp add: cinit_stores_def)
   then have "(\<lambda>_. 0) \<in> parity_ex_reach (Statement 0)"
     by (rule step) (auto simp: parity_ex_entry_eval parity_ex_intra_eval)
   then have "(\<lambda>_. 0)(STR ''x'' := 7) \<in> parity_ex_reach (Statement 1)"
@@ -205,7 +205,7 @@ corollary parity_ex_report_proved_entry_sound:
       [where ctx_fun = enterc_unit, OF parity_ex_unit_route parity_ex_wf
          parity_ex_solver_terminates,
        of "Statement 3" "NotEq (V (STR ''y'')) (V (STR ''z''))" "()"]
-  unfolding activation_collect_unit_eq_ltr_collect
+  unfolding activation_collect_unit_eq_node_collect
   by (simp add: parity_ex_reach_def parity_ex_report_eval)
 
 lemma parity_direct_comparisons:

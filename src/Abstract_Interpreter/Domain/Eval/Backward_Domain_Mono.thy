@@ -191,7 +191,7 @@ text \<open>
   only shrink a location, never repopulate one already empty, so whichever
   location witnessed \<open>sigma\<close>'s emptiness survives every leaf update and every
   join arm untouched. This is what lets an executable caller skip
-  \<open>bfilter_st_lift\<close>'s \<open>live_resolved_st_q\<close> precondition entirely on a dead
+  \<open>bfilter_st_lift\<close>'s \<open>live_default_st\<close> precondition entirely on a dead
   state: the answer is \<open>Bot\<close> either way, forward-gate false positive or not.
 \<close>
 

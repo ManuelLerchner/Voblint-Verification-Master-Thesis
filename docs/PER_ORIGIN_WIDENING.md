@@ -6,7 +6,7 @@ the first improvement over widening a global's accumulated value, and states it
 is "sufficient to recover a precise result in Example 1".
 
 Voblint uses the vendored `TD` solver's own `update_global_warrowing_per_origin`
-rule. It is one of four update rules the solver menu offers, reachable from the
+rule. It is one of five update rules the solver menu offers, reachable from the
 CLI as `--solver warrow-per-origin` and from `Analysis_Config`'s
 `Solver_WarrowPerOrigin`. There is no domain lift and no separate solver.
 

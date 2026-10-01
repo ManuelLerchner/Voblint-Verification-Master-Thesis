@@ -24,7 +24,7 @@ blocks.
 | A real bug, replayed (Voblint side) | goblint/analyzer #1161 regression test `37-congruence/14` | `precision/04-goblint_1161_congruence_mod` |
 | The flagship theorems (explorer program) | `theorems` example | `precision/05-theorems_program` |
 | Many runs in, one region per node out | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
-| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`17`, `known-imprecision/07`–`09`, `01`–`02-recursion_grows_*_diverges` |
+| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`17`, `precision/49`–`51`, `known-imprecision/07`–`09`, `known-imprecision/20`, `01`–`02-recursion_grows_*_diverges` |
 | A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`30`, `03-recursion_grows_entry_state_diverges` |
 | The price of precision | fan-out, `down(5)` | `precision/31`–`42`, `known-imprecision/10-down_call_string_4` |
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
@@ -38,10 +38,11 @@ blocks.
 - "No answer within 12 s" (the Globals table) and "within 60 s" (the spiral) are
   pinned only as "does not finish within 5 s".
 - The spiral's "Stops at 10" program is pinned for Join and Warrow in each
-  context mode; Join per origin and Warrow per origin, which the figure reports
-  as identical, are not.
+  context mode; Join per origin, Warrow per origin and Bounded narrowing, which
+  the figure reports as identical, are not.
 - The spiral's Join and Join-per-origin rows under call strings, and Warrow per
-  origin under entry state, report "no answer" without a case.
+  origin and Bounded narrowing under entry state, report "no answer" without a
+  case. Bounded narrowing's other cells on the endless program are unpinned too.
 - Figures that transcribe a proof or a solver definition by hand (the solver
   step-through, the strategy trees' evaluation steps) are checked by reading,
   not by a case.

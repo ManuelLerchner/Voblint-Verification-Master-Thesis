@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// On the true arm of x + 1 < 5, every execution has x <= 3, so x < 4 holds.
+// Interval's inverse of < refines x + 1 to [-inf,4], but its inverse of + is
+// the identity, so nothing reaches x and the check stays unknown. An
+// interval analysis that inverts addition, x := x meet (r - 1), would prove
+// it (Nipkow and Klein, Concrete Semantics, Sect. 13.8.3).
+fun main() {
+  x = __voblint_nondet_int();
+  if (x + 1 < 5) {
+    __voblint_check(x < 4); // UNKNOWN
+  }
+}

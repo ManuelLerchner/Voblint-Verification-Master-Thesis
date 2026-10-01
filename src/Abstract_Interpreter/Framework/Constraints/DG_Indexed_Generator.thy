@@ -377,7 +377,7 @@ text \<open>
   -- lifts to their whole-list fold, in both the local-answer and global-side
   components. This is the list-level engine behind
   \<open>routed_node_rhs_buffered_correspondence\<close>: each of \<open>intra\<close>, \<open>comb\<close>, and
-  \<open>extra\<close> instantiates it once, and \<open>foldr_append\<close> combines the three.
+  \<open>extra\<close> instantiates it once, and \<open>list_all2_appendI\<close> combines the three.
 \<close>
 
 text \<open>

@@ -1,0 +1,24 @@
+// PARAM: --analysis interval --globals bounded-narrowing --narrow-bound 1
+// a and b stay in [0,2] on every run, so a <= 2 genuinely holds. The call
+// p(k, k2) is one origin of p's FunctionEntry seed, and its contribution
+// shrinks in two steps after widening: [0,+inf] x [0,2], then [0,2] x [0,2].
+// The first step switches the origin to narrowing and sets its count to 1.
+// At bound 1 that count already reaches the bound, so the rule refuses the
+// second step and a keeps [0,+inf]. Bound 0 behaves the same.
+// precision/12-bounded_narrowing_two_narrowing_steps.vimp is the same program
+// at the default bound 5, which takes both steps and proves both checks.
+fun p(a, b) {
+  __voblint_check(a <= 2); // UNKNOWN
+  __voblint_check(b <= 2); // PROVED
+}
+fun main() {
+  i = 0;
+  k = 0;
+  k2 = 0;
+  while (i < 3) {
+    p(k, k2);
+    k = k2;
+    k2 = i;
+    i = i + 1;
+  }
+}

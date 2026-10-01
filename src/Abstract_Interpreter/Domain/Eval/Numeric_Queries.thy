@@ -57,10 +57,12 @@ text \<open>
   the judgments were read off: a narrowing operator, a comparison of bounds,
   a test that one side denotes nothing.
 
-  Interpreting it introduces \<open>less\<close>/\<open>eq\<close> as ordinary top-level constants
-  through a \<^theory_text>\<open>defines\<close> clause, and therefore with the code
-  equation a constant living in a still-abstract locale context does not
-  have.
+  The two queries are named \<open>query_less\<close>/\<open>query_eq\<close> rather than
+  \<open>less\<close>/\<open>eq\<close>, which would share a base name with the order's \<^const>\<open>less\<close>
+  and the vendored solver's \<open>eq\<close>. Interpreting the locale introduces them as
+  ordinary top-level constants through a \<^theory_text>\<open>defines\<close> clause, and
+  therefore with the code equation a constant living in a still-abstract locale
+  context does not have.
 
   \<open>less_true\<close> and \<open>less_false\<close> (and \<open>eq_true\<close> and \<open>eq_false\<close>) can both hold
   at once only when an operand denotes nothing: a live witness pair on both
@@ -84,32 +86,32 @@ locale numeric_query_judgments =
       "eq_false a b \<Longrightarrow> i \<in> \<gamma> a \<Longrightarrow> j \<in> \<gamma> b \<Longrightarrow> i \<noteq> j"
 begin
 
-definition less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
-  "less a b = (if less_true a b then Some True else if less_false a b then Some False else None)"
+definition query_less :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
+  "query_less a b = (if less_true a b then Some True else if less_false a b then Some False else None)"
 
-definition eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
-  "eq a b = (if eq_true a b then Some True else if eq_false a b then Some False else None)"
+definition query_eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option" where
+  "query_eq a b = (if eq_true a b then Some True else if eq_false a b then Some False else None)"
 
 lemma less_opt_sound:
-  assumes "less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  assumes "query_less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "(i < j) = r"
-  using assms less_true_sound less_false_sound unfolding less_def by (auto split: if_splits)
+  using assms less_true_sound less_false_sound unfolding query_less_def by (auto split: if_splits)
 
 lemma eq_opt_sound:
-  assumes "eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  assumes "query_eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   shows "(i = j) = r"
-  using assms eq_true_sound eq_false_sound unfolding eq_def by (auto split: if_splits)
+  using assms eq_true_sound eq_false_sound unfolding query_eq_def by (auto split: if_splits)
 
 end
 
-sublocale numeric_query_judgments \<subseteq> sound_numeric_queries less eq
+sublocale numeric_query_judgments \<subseteq> sound_numeric_queries query_less query_eq
 proof
   fix a b r i j
-  assume "less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  assume "query_less a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i < j) = r" by (rule less_opt_sound)
 next
   fix a b r i j
-  assume "eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
+  assume "query_eq a b = Some r" and "i \<in> \<gamma> a" and "j \<in> \<gamma> b"
   then show "(i = j) = r" by (rule eq_opt_sound)
 qed
 

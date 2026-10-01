@@ -20,6 +20,13 @@ on:
   pull_request:
     types: [ opened, synchronize ]
 
+# The thesis is written on `writing`; main keeps a frozen copy of thesis/ that
+# the thesis checks no longer describe. Thesis steps run only for that branch:
+# a push to it, a pull request from it, or a pull request into it. Steps
+# read this flag; a job-level `if` cannot read `env`, so it repeats the test.
+env:
+  THESIS: ${{ github.ref == 'refs/heads/writing' || github.head_ref == 'writing' || github.base_ref == 'writing' }}
+
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
@@ -337,9 +344,11 @@ jobs:
       # authoritative check is thesis-links-live, which runs after the pages
       # are actually published.
       - name: Regenerate thesis link map from the fresh HTML
+        if: env.THESIS == 'true'
         run: pixi run thesis-links-write
 
       - name: Report link-map drift (advisory)
+        if: env.THESIS == 'true'
         run: |
           if ! git diff --quiet -- thesis/shared/generated/links.json; then
             echo "::warning::thesis/shared/generated/links.json is out of date."
@@ -398,6 +407,7 @@ jobs:
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
       - name: Digest what the facts check compares
+        if: env.THESIS == 'true'
         id: sources
         shell: bash
         run: |
@@ -406,6 +416,7 @@ jobs:
           echo "Facts input digest: $digest"
 
       - name: Restore the marker of an earlier passing run
+        if: env.THESIS == 'true'
         id: facts-cache
         uses: actions/cache/restore@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
@@ -413,17 +424,17 @@ jobs:
           key: thesis-facts-${{ runner.os }}-${{ runner.arch }}-${{ steps.sources.outputs.digest }}
 
       - name: Setup Isabelle
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         uses: $/.github/actions/setup-isabelle-action
         with:
           use-cache: 'false'
 
       - name: Bridge AFP_COMPONENT_BASE to AFP
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         run: echo "AFP=$AFP_COMPONENT_BASE" >> "$GITHUB_ENV"
 
       - name: Download exact heap state from isabelle-build
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: isabelle-heaps
@@ -433,34 +444,40 @@ jobs:
       # session and diffed. This is the Typst template's replacement for
       # Isabelle's @{thm} antiquotation, so it needs the heaps this job has.
       - name: Thesis theorem statements match what Isabelle proves
-        if: steps.facts-cache.outputs.cache-hit != 'true'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true'
         run: pixi run thesis-facts
 
       - name: Report the reused result
         if: steps.facts-cache.outputs.cache-hit == 'true'
         run: echo "Inputs unchanged since these checks passed; skipping them."
 
-      # Written only after the check passed, and only from main, so a marker can
-      # never outrun the result it stands for.
+      # Written only after the check passed, and only from a push to writing, so
+      # a marker can never outrun the result it stands for.
       - name: Record the passing run
-        if: steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/writing'
         run: |
           mkdir -p "$RUNNER_TEMP/ci-marker"
           echo "$GITHUB_SHA" > "$RUNNER_TEMP/ci-marker/thesis-facts"
 
       - name: Save the marker for later runs
-        if: steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/main'
+        if: env.THESIS == 'true' && steps.facts-cache.outputs.cache-hit != 'true' && github.event_name == 'push' && github.ref == 'refs/heads/writing'
         uses: actions/cache/save@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ${{ runner.temp }}/ci-marker/thesis-facts
           key: ${{ steps.facts-cache.outputs.cache-primary-key }}
 
-      # Both read the vendored solver: pages_stats.py measures it, and a name the
-      # page cites may be declared there. They live in this job because it is the
+      # These read the vendored solver: pages_stats.py measures it, and a name
+      # the page cites may be declared there. They live in this job because it is the
       # one lint job that initialises the submodule; without it pages_stats.py
       # refuses to run rather than publish a wrong solver count.
       - name: Site repository figures are derived and current
         run: pixi run pages-stats
+
+      # Same measurement, for the thesis: the committed stats.json must match
+      # and no repository figure may be typed into the chapters by hand.
+      - name: Thesis repository figures are derived and current
+        if: env.THESIS == 'true'
+        run: pixi run thesis-stats
 
       - name: Every Isabelle name the site uses is linked into the theory HTML
         run: pixi run pages-terms
@@ -655,24 +672,17 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
-      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
-      # resolved against the command that declares it, so a rename in the
-      # theories fails here instead of leaving the thesis describing something
-      # that no longer exists. Reads .thy sources directly -- no Isabelle.
-      - name: Thesis references resolve against the theories (no build needed)
-        run: pixi run thesis-refs
+      # The Goblint comparison appendix is generated from the explainer's
+      # alignment rows; the committed JSON must match the page.
+      - name: Thesis Goblint comparison matches the explainer (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-alignment
 
-      # Declarations the thesis shows are lifted out of the theories by name.
-      # Text extraction only, so this catches an edited definition without
-      # waiting for Isabelle.
-      - name: Thesis snippets match the theories (no build needed)
-        run: pixi run thesis-snippets
-
-      # check_thy_prose_refs resolves a cited name against every .thy under src/
-      # AND vendor/, so prose naming a vendored TD constant
+      # theory-prose-check resolves a cited name against the declarations of
+      # src/ AND vendor/td-verification, so prose naming a vendored TD constant
       # (update_global_warrowing_apinis, sides_of_rhs_local, ...) reads as
       # dangling unless the submodule is present. The checkout above is
-      # submodules: false, so it has to be initialised here -- after the four
+      # submodules: false, so it has to be initialised here -- after the
       # checks that genuinely need nothing, so those still fail fast.
       - name: Trust the checked-out workspace
         run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
@@ -684,6 +694,60 @@ jobs:
           git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
           git submodule sync vendor/td-verification
           git submodule update --init --depth 1 vendor/td-verification
+
+      # Every \isathm / \isaconst / \isatype / \isalocale in the thesis is
+      # resolved against the command that declares it, so a rename in the
+      # theories fails here instead of leaving the thesis describing something
+      # that no longer exists. Reads .thy sources directly -- no Isabelle; HOL
+      # names resolve through the committed link map. Needs td-verification.
+      - name: Thesis references resolve against the theories (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-refs
+
+      # Declarations the thesis shows are lifted out of the theories by name.
+      # Text extraction only, so this catches an edited definition without
+      # waiting for Isabelle. HOL snippets are left to the jobs that have it.
+      - name: Thesis snippets match the theories (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-snippets
+
+      # The chapter 5 domain trees list their implementations by hand; a new
+      # class instance or certificate lemma must appear in the list.
+      - name: Thesis domain trees list every implementation (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-domain-tree
+
+      # Figures lifted from the explainer and the README playground, the solver
+      # sketch the background chapter prints, and the stored link targets of every
+      # citation. Text checks only; the anchors themselves are checked against the
+      # deployed pages after deployment.
+      - name: Thesis figures, sketches and stored link targets (no build needed)
+        if: env.THESIS == 'true'
+        run: |
+          pixi run thesis-figures
+          pixi run thesis-playground
+          pixi run thesis-sketches
+          pixi run thesis-links
+          pixi run thesis-links-coverage
+
+      # The notation table is derived from the theories and rendered in the
+      # thesis, the README and the explainer; all three must be current.
+      # Needs td-verification: widen and narrow are declared there.
+      - name: Thesis notation table matches the theories (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-notation
+
+      # The recorded conda-forge status must describe the OCaml packaging
+      # manifest; refreshing it needs the network and is done by hand.
+      - name: Thesis conda-forge record matches the manifest (no build needed)
+        if: env.THESIS == 'true'
+        run: pixi run thesis-conda
+
+      # Asks conda-forge: fails once a recipe is merged and the thesis figure
+      # would show an outdated status. Fix with `pixi run thesis-conda-write`.
+      - name: Thesis conda-forge record is current
+        if: env.THESIS == 'true'
+        run: pixi run thesis-conda-live
 
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
@@ -744,7 +808,14 @@ jobs:
       # fails here, naming the claim, instead of silently making the figure a
       # record of how the analyzer used to behave.
       - name: Thesis claims still match the CLI
+        if: env.THESIS == 'true'
         run: pixi run thesis-claims
+
+      # Every VIMP listing opens its own program in the playground, at the
+      # settings of the claim or fixture it shows, as a clickable PDF link.
+      - name: Thesis VIMP listings link their programs
+        if: env.THESIS == 'true'
+        run: pixi run thesis-vimp
 
       - name: Parser/printer property tests (round-trip + mutation fuzzing)
         run: pixi run property-test
@@ -854,7 +925,10 @@ jobs:
           retention-days: 7
           if-no-files-found: error
 
+  # Also on every run that assembles the site, which publishes this PDF and
+  # needs it; skipping it would skip pages-site with it.
   thesis-pdf:
+    if: github.ref == 'refs/heads/writing' || github.head_ref == 'writing' || github.base_ref == 'writing' || (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout Goblint Formalization
@@ -996,6 +1070,7 @@ jobs:
       # Pages serves a new deployment with a short delay; the checker retries
       # with backoff rather than failing on the first miss.
       - name: Thesis links reach their definition on the published site
+        if: env.THESIS == 'true'
         run: pixi run thesis-links-live
 
       - name: Site page links reach their targets on the published site

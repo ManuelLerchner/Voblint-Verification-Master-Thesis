@@ -2,8 +2,10 @@
 """Keep the Pixi task interface and GitHub verification surface aligned.
 
 ``verify`` is the supported local aggregate. GitHub Actions schedules its
-dependencies separately, but must invoke the same named tasks. This check also
-keeps task descriptions complete and rejects references to retired task names.
+dependencies separately, but must invoke the same named tasks. Thesis tasks
+run only for the ``writing`` branch, whose thesis/ they check, so they sit in
+``thesis-check`` instead of ``verify``. This check also keeps task
+descriptions complete and rejects references to retired task names.
 """
 
 from __future__ import annotations
@@ -169,14 +171,27 @@ def main() -> int:
     else:
         verify_tasks = set(verify.get("depends-on", []))
 
+    thesis_check = tasks.get("thesis-check")
+    thesis_tasks = (
+        set(thesis_check.get("depends-on", []))
+        if isinstance(thesis_check, dict)
+        else set()
+    )
+    misplaced = sorted(verify_tasks & thesis_tasks)
+    if misplaced:
+        problems.append(
+            "thesis tasks belong in thesis-check, not verify: " + ", ".join(misplaced)
+        )
+
     ci_tasks = workflow_tasks() - CI_SETUP_TASKS - CI_ONLY_TASKS
     missing_ci = sorted(verify_tasks - ci_tasks)
-    extra_ci = sorted(ci_tasks - verify_tasks)
+    extra_ci = sorted(ci_tasks - verify_tasks - thesis_tasks)
     if missing_ci:
         problems.append("verify tasks absent from GitHub CI: " + ", ".join(missing_ci))
     if extra_ci:
         problems.append(
-            "GitHub CI verification tasks absent from verify: " + ", ".join(extra_ci)
+            "GitHub CI verification tasks absent from verify and thesis-check: "
+            + ", ".join(extra_ci)
         )
 
     retired = retired_references()

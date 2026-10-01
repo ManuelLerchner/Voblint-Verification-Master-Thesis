@@ -35,7 +35,7 @@ definition twice_main :: "VIMP_Proc.com" where "twice_main = prog_main twice_pro
 text \<open>The storage classifier: \<open>twice_program\<close> declares no globals, so \<open>twice_gs\<close>
   classifies every variable this chain touches as local, matching the
   \<open>declared_global\<close> pattern used by every other flagship rather than
-  the \<open>is_global\<close> naming convention.\<close>
+  the retired convention that read a name starting with \<open>G\<close> as global.\<close>
 abbreviation twice_gs :: "vname \<Rightarrow> bool" where
   "twice_gs \<equiv> declared_global twice_program"
 
@@ -85,46 +85,50 @@ lemma twice_cfg_prog_cfg: "twice_cfg = prog_cfg twice_program"
 
 subsection \<open>The analysis, and its equation system at this program\<close>
 
-text \<open>The analysis is \<open>interval_seed_join\<close> from \<open>Example_Interval_DG_Flagship\<close>:
-  the routed analysis at the unit context, solved by the seed-joining warrowing rule.
+text \<open>The analysis is the one \<open>Example_Interval_DG_Flagship\<close> runs: Interval at the
+  unit context, solved with the joining global rule \<^const>\<open>Globals_Join\<close>.
   Both call sites publish into the one seed
   \<open>Activation_Seed (FunctionEntry (STR ''twice'')) ()\<close>, which is the monovariant view.\<close>
 
 definition twice_eqs ::
   "pp \<times> unit
    \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown,
-       (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) strategy_tree" where
-  "twice_eqs = interval_sj_equations twice_gs twice_program"
+       (ivl default_st lifted, ivl default_st lifted) dg_state) strategy_tree" where
+  "twice_eqs = interval_rule.equations twice_gs twice_program"
 
 lemma twice_terminates_c:
-  "TD_side_seed_join_warrowing_Interp_solve_c is_activation_seed twice_eqs
-     (cfg_exit twice_cfg, ()) \<noteq> None"
+  "TD_side_rule_Interp_solve_c Globals_Join twice_eqs (cfg_exit twice_cfg, ()) \<noteq> None"
   by eval
 
-lemma twice_terminates: "interval_sj_terminates twice_gs twice_program"
-  unfolding interval_seed_join.terminates_code
-  using TD_side_seed_join_warrowing_Interp.solve_dom_of_solve_c[OF twice_terminates_c]
+lemma twice_terminates: "interval_rule.terminates Globals_Join twice_gs twice_program"
+  unfolding interval_rule.terminates_code
+  using TD_side_rule_Interp.solve_dom_of_solve_c[OF twice_terminates_c]
   by (simp add: twice_eqs_def twice_cfg_prog_cfg)
 
 subsection \<open>Inspecting the certified result\<close>
 
+text \<open>The published state at a program point, at the one unit context.\<close>
+
+abbreviation twice_at :: "pp \<Rightarrow> ivl abs_state" where
+  "twice_at \<equiv> interval_rule.state_at Globals_Join twice_gs twice_program ()"
+
 lemma twice_p_at_entry:
-  "interval_sj_state_at twice_gs twice_program () (FunctionEntry (STR ''twice'')) (STR ''p'')
+  "twice_at (FunctionEntry (STR ''twice'')) (STR ''p'')
      = Ivl (Fin 3) (Fin 10)"
   by eval
 
 lemma twice_ret_at_exit:
-  "interval_sj_state_at twice_gs twice_program () (FunctionResult (STR ''twice''))
+  "twice_at (FunctionResult (STR ''twice''))
      (STR ''#ret'') = Ivl (Fin 6) (Fin 20)"
   by eval
 
 lemma twice_x_computed:
-  "interval_sj_state_at twice_gs twice_program () (Statement 3) (STR ''x'')
+  "twice_at (Statement 3) (STR ''x'')
      = Ivl (Fin 6) (Fin 20)"
   by eval
 
 lemma twice_y_computed:
-  "interval_sj_state_at twice_gs twice_program () (Statement 4) (STR ''y'')
+  "twice_at (Statement 4) (STR ''y'')
      = Ivl (Fin 6) (Fin 20)"
   by eval
 
@@ -143,7 +147,7 @@ theorem twice_source_run_sound:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s, []) \<rightarrow>\<^sub>p\<^sup>* src'"
       and init: "s \<in> cinit_stores twice_gs"
   shows "\<exists>v t stk. twice_pi, twice_cfg \<turnstile> src' \<approx> (v, t, stk)
-                   \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program () v\<rbrakk>"
+                   \<and> t \<in> \<lbrakk>twice_at v\<rbrakk>"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have run':
@@ -154,8 +158,8 @@ proof -
   have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   have cert:
     "\<exists>v stk. twice_pi, twice_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-       \<and> t \<in> \<lbrakk>interval_sj_state_at twice_gs twice_program () v\<rbrakk>"
-    using interval_seed_join.fun_route_source_sound[OF unit_route wf twice_terminates init run']
+       \<and> t \<in> \<lbrakk>twice_at v\<rbrakk>"
+    using interval_rule.fun_route_source_sound[OF unit_route wf twice_terminates init run']
     by (simp add: twice_cfg_prog_cfg twice_pi_def)
   show ?thesis using cert src' by blast
 qed

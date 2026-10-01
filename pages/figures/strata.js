@@ -13,7 +13,7 @@
     Voblint_VIMP:
       "The source language: syntax, the small-step semantics pstep with calls, frames and returns, and the generated grammar. Parented on HOL, using HOL-IMP and Deriving.",
     Voblint_CFG:
-      "The graph model: nodes, intra and call edges, graph execution cstep, activation-local traces and the collecting semantics ltr_collect. It never mentions the compiler.",
+      "The graph model: nodes, intra and call edges, graph execution cstep, activation traces and the collecting semantics node_collect. It never mentions the compiler.",
     Voblint_Domain:
       "What an abstract value is: sound-domain classes with concretization, the dead-code lift, pointwise states and backward filtering.",
     Voblint_Solver:
@@ -21,23 +21,25 @@
     Voblint_Compile:
       "The compiler from VIMP to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces.",
     Voblint_Framework:
-      "The D/G analysis framework: transfer contracts, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
+      "The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.",
     Voblint_Exec:
       "The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over.",
     Voblint_Routing:
       "Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework.",
     Voblint_Analysis_Relational:
-      "A relational order domain. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable reuse locales are unavailable to it.",
+      "A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it.",
     Voblint_Result:
       "The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound.",
     Voblint_Nonrelational:
-      "The reuse locales every per-variable domain interprets: abstract arithmetic, special operations and non-relational transfers.",
-    Voblint_Analysis_Sign: "The sign domain and its instantiation of the shared endpoints.",
+      "What a per-variable domain reuses: the bundle of value operations it supplies, the certificate that bundle is checked against once, and everything built from it: transfers, guard filtering, procedure entry, the check classifier and their executable versions.",
+    Voblint_Analysis_Sign:
+      "The sign domain, its bundle of value operations, and the certificate the shared machinery builds on.",
     Voblint_Analysis_Interval:
-      "The interval domain with widening and narrowing, and its instantiation of the shared endpoints.",
-    Voblint_Analysis_Parity: "The parity domain and its instantiation of the shared endpoints.",
+      "The interval domain with widening and narrowing, its bundle of value operations, and the certificate the shared machinery builds on.",
+    Voblint_Analysis_Parity:
+      "The parity domain, its bundle of value operations, and the certificate the shared machinery builds on.",
     Voblint_Analysis_Congruence:
-      "The congruence domain and its instantiation of the shared endpoints.",
+      "The congruence domain, its bundle of value operations, and the certificate the shared machinery builds on.",
     Voblint_Analysis_Int:
       "The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them.",
     Voblint_CLI: "run_voblint, the function the browser calls, and the flagship theorems about it.",
@@ -56,13 +58,13 @@
     Voblint_Framework: "framework",
     Voblint_Exec: "executable carrier",
     Voblint_Routing: "routing",
-    Voblint_Analysis_Relational: "relational domain",
+    Voblint_Analysis_Relational: "relational analysis",
     Voblint_Result: "result",
-    Voblint_Nonrelational: "nonrelational reuse",
-    Voblint_Analysis_Sign: "per-variable domains",
-    Voblint_Analysis_Interval: "per-variable domains",
-    Voblint_Analysis_Parity: "per-variable domains",
-    Voblint_Analysis_Congruence: "per-variable domains",
+    Voblint_Nonrelational: "non-relational analysis builder",
+    Voblint_Analysis_Sign: "value domains (operation bundles)",
+    Voblint_Analysis_Interval: "value domains (operation bundles)",
+    Voblint_Analysis_Parity: "value domains (operation bundles)",
+    Voblint_Analysis_Congruence: "value domains (operation bundles)",
     Voblint_Analysis_Int: "Int product",
     Voblint_CLI: "entry point",
     Voblint_Codegen: "code export",
@@ -82,8 +84,8 @@
   };
 
   /* Sizes: a layer is MIN px plus height per line; sessions share its width by lines, never under MINW. */
-  const W = 720;
-  const X0 = 250;
+  const W = 670;
+  const X0 = 320;
   const TOP = 14;
   const MIN = 22;
   const PER_LINE = 0.0032;

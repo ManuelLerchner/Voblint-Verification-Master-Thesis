@@ -8,7 +8,7 @@ section \<open>What a solved routed system says about one program point\<close>
 text \<open>
   A post-solution bounds a right-hand side by the value at its own unknown and
   every published side effect by the value at its target key.
-  \<open>dg_ctx_activation_base\<close> fixes such a solution over the routed generator, a
+  \<open>dg_context_activation\<close> fixes such a solution over the routed generator, a
   set \<open>vars\<close> of keys whose own equations it bounds, and a reader \<open>sg\<close> that
   answers the empty set off \<open>vars\<close>. The set may contain every key the solver
   visited or any subset. These facts derive the EDGE and COMB obligations the
@@ -22,7 +22,7 @@ text \<open>
   to \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against that global.
 \<close>
 
-locale dg_ctx_activation_base = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
+locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -231,7 +231,7 @@ qed
 subsection \<open>COMB: the guarded combine transport\<close>
 
 text \<open>The caller, callee-result and continuation slots are transported independently; which
-  caller a return belongs to is settled by the trace semantics, so this layer never has to
+  caller a return belongs to is settled by the activation-trace semantics, so this layer never has to
   reconstruct the activation pairing itself.  The two bounds are assumptions because the
   combine program that establishes them is built by the routed call generator, not here.\<close>
 

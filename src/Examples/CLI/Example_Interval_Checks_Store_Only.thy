@@ -1,4 +1,4 @@
-section \<open>Example: checks_proven/checks_provenD alone, store-only, Interval\<close>
+section \<open>Example: \<open>checks_proven\<close> alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
   imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Analyses"
@@ -164,11 +164,11 @@ text \<open>Non-vacuity: reading \<open>5\<close> for \<open>x\<close> satisfies
 
 lemma checks_ivl_ex_reach2_nonempty: "checks_ivl_ex_reach (Statement 2) \<noteq> {}"
 proof -
-  note step = ltr_collect_intra_step[where \<G> = checks_ivl_ex_gs
+  note step = node_collect_intra_step[where \<G> = checks_ivl_ex_gs
       and g = "prog_cfg checks_ivl_ex_program" and S = "cinit_stores checks_ivl_ex_gs",
       folded checks_ivl_ex_reach_def]
   have "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (cfg_entry (prog_cfg checks_ivl_ex_program))"
-    unfolding checks_ivl_ex_reach_def by (rule ltr_collect_init) (simp add: cinit_stores_def)
+    unfolding checks_ivl_ex_reach_def by (rule node_collect_init) (simp add: cinit_stores_def)
   then have "(\<lambda>_. 0) \<in> checks_ivl_ex_reach (Statement 0)"
     by (rule step) (auto simp: checks_ivl_ex_entry_eval checks_ivl_ex_intra_eval)
   then have "(\<lambda>_. 0)(STR ''x'' := 5) \<in> checks_ivl_ex_reach (Statement 1)"

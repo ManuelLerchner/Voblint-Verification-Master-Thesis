@@ -1,15 +1,15 @@
 theory Exec_DG_State
-  imports Exec_St_Restriction_Refinement "Voblint_Framework.DG_Constraint_Programs"
+  imports Default_St_Restriction_Refinement "Voblint_Framework.DG_Constraint_Programs"
 begin
 
-section \<open>The executable carrier and its readback\<close>
+section \<open>The executable carrier and the functions it represents\<close>
 
 text \<open>
-  The verified solver uses the executable association-list carrier \<open>'a exec_dg_st\<close>, while
+  The verified solver uses the executable association-list carrier \<open>'a default_st\<close>, while
   soundness is stated over function-valued abstract states. This theory is the bottom of the
-  bridge: the D/G product's lattice structure and the classifier-parametric readback
-  \<open>fun_of_dg_st_for\<close> that lifts \<^const>\<open>fun_of_resolved_st_q_for\<close> to that product. Everything
-  here is carrier-level -- no specification, no transfer, no equation shape -- so a
+  bridge: the D/G product's lattice structure and \<open>dg_state_to_fun\<close>, which lifts
+  \<^const>\<open>default_st_to_fun\<close> to that product: the pair of functions a D/G state
+  represents, parametric in the classifier. Everything here is carrier-level -- no specification, no transfer, no equation shape -- so a
   domain's executable mirror is related to its abstract state once, here, and the
   specification layers above never restate it.
 
@@ -18,32 +18,30 @@ text \<open>
 \<close>
 
 
-type_synonym 'a exec_dg_st = "'a resolved_st_q"
-
-subsection \<open>Classifier-parametric readback\<close>
+subsection \<open>Classifier-parametric represented function\<close>
 
 text \<open>
-  The executable local/side readback is \<^const>\<open>fun_of_resolved_st_q_for\<close>, generic in
-  the classifier: an executable state is written with a declaration-driven classifier,
-  so reading it back needs the same classifier or the readback consults the wrong slot.
-  \<open>fun_of_dg_st_for\<close> applies it to both components.
+  The function a local or side state represents is \<^const>\<open>default_st_to_fun\<close>,
+  generic in the classifier: an executable state is written with a declaration-driven
+  classifier, so its function needs the same classifier or it consults the wrong slot.
+  \<open>dg_state_to_fun\<close> applies it to both components.
 \<close>
 
-definition fun_of_dg_st_for ::
+definition dg_state_to_fun ::
   "(vname => bool) =>
-   (('a::bot) exec_dg_st, ('b::bot) exec_dg_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
+   (('a::bot) default_st, ('b::bot) default_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
 where
-  "fun_of_dg_st_for \<G> d =
-    DG (fun_of_resolved_st_q_for \<G> (dg_local d)) (fun_of_resolved_st_q_for \<G> (dg_global d))"
+  "dg_state_to_fun \<G> d =
+    DG (default_st_to_fun \<G> (dg_local d)) (default_st_to_fun \<G> (dg_global d))"
 
-lemma fun_of_dg_st_for_simps [simp]:
-  "dg_local (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (dg_local d)"
-  "dg_global (fun_of_dg_st_for \<G> d) = fun_of_resolved_st_q_for \<G> (dg_global d)"
-  "fun_of_dg_st_for \<G> (DG a b) = DG (fun_of_resolved_st_q_for \<G> a) (fun_of_resolved_st_q_for \<G> b)"
-  by (simp_all add: fun_of_dg_st_for_def)
+lemma dg_state_to_fun_simps [simp]:
+  "dg_local (dg_state_to_fun \<G> d) = default_st_to_fun \<G> (dg_local d)"
+  "dg_global (dg_state_to_fun \<G> d) = default_st_to_fun \<G> (dg_global d)"
+  "dg_state_to_fun \<G> (DG a b) = DG (default_st_to_fun \<G> a) (default_st_to_fun \<G> b)"
+  by (simp_all add: dg_state_to_fun_def)
 
-lemma fun_of_dg_st_for_bot [simp]:
-  "fun_of_dg_st_for \<G> (bot :: ('a::bounded_semilattice_sup_bot exec_dg_st,
-                         'b::bounded_semilattice_sup_bot exec_dg_st) dg_state) = bot"
+lemma dg_state_to_fun_bot [simp]:
+  "dg_state_to_fun \<G> (bot :: ('a::bounded_semilattice_sup_bot default_st,
+                         'b::bounded_semilattice_sup_bot default_st) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 end

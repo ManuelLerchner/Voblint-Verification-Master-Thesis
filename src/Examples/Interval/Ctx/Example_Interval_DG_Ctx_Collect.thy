@@ -156,9 +156,9 @@ theorem twice_activation_collect_sound:
   "\<A>\<^bsub>twice_gs,
      interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program,
      [],compile_prog twice_pi twice_procs,cinit_stores twice_gs\<^esub> v ctx
-   \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for twice_gs)
-       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  unfolding twice_cfg_alt[symmetric]
+   \<subseteq> gamma_lift (default_st_gamma twice_gs)
+       (interval_es_rule.reader Globals_Warrow twice_gs twice_program (Inl (v, ctx)))"
+  unfolding twice_cfg_alt[symmetric] gamma_lift_default_st_gamma_to_fun
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF twice_entry_state_hyps])
 
 subsection \<open>The context each call site selects\<close>
@@ -226,8 +226,9 @@ proof -
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_to_fun
+             twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
+             interval_es_rule.entry_of_exec\<close>)
   thus ?thesis    by (simp add: twice_route_at_call1)
 qed
 
@@ -264,8 +265,9 @@ proof -
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def twice_empty_pred_def twice_ctx_sol_def
-             interval_es_rule.sol_env_def interval_es_rule.entry_of_exec\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_to_fun
+             twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
+             interval_es_rule.entry_of_exec\<close>)
   thus ?thesis    by (simp add: twice_route_at_call2)
 qed
 
@@ -360,7 +362,7 @@ subsection \<open>Shared-state regression facts\<close>
 text \<open>The local unknown carries the whole abstract state, so a variable that is shared
   across activations is read at the very same slot as a formal.  A name that
   \<^const>\<open>twice_program\<close> never declares --- \<open>Gx\<close> --- therefore reads identically in both
-  callee contexts: no name-based \<open>is_global\<close> convention gives it a separate,
+  callee contexts: no name-based convention for globals gives it a separate,
   context-indexed slot.\<close>
 lemma global_slot_shared:
   "twice_ctx_lookup (dg_local (snd twice_ctx_sol (Inl (FunctionEntry (STR ''twice''), ctx_call1)))) (STR ''Gx'')

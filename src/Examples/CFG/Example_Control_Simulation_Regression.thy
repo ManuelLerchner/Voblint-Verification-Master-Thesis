@@ -155,15 +155,15 @@ proof (induction rule: star.induct)
 qed simp
 
 lemma csim_tailcall_callee_entry:
-  assumes callee: "control_at \<Pi> p c0 k n SKIP v"
-      and calleecacc: "compiled_at \<Pi> g p c0 k n"
-      and caller: "control_at \<Pi> pc c0c kc nc SKIP cont"
-      and callercacc: "compiled_at \<Pi> g pc c0c kc nc"
+  assumes callee: "control_at \<Pi> p body_p k n SKIP v"
+      and calleecacc: "compiled_at \<Pi> g p body_p k n"
+      and caller: "control_at \<Pi> pc body_pc kc nc SKIP cont"
+      and callercacc: "compiled_at \<Pi> g pc body_pc kc nc"
   shows "\<Pi>, g \<turnstile> (Seq SKIP Restore, callee, [Frame caller dst]) \<approx> (v, callee, [(cont, dst, caller)])"
 proof -
   have base: "\<Pi>, g \<turnstile> (SKIP, callee, []) \<approx> (v, callee, [])"
     by (rule csim.Base[OF callee calleecacc])
-  have caller': "control_at \<Pi> pc c0c kc nc (seq_after SKIP []) cont" using caller by simp
+  have caller': "control_at \<Pi> pc body_pc kc nc (seq_after SKIP []) cont" using caller by simp
   have "\<Pi>, g \<turnstile> (seq_after (Seq SKIP Restore) [], callee, [] @ [Frame caller dst]) \<approx> (v, callee, [] @ [(cont, dst, caller)])"
     by (rule csim.Nested[OF base caller' callercacc])
   thus ?thesis by simp

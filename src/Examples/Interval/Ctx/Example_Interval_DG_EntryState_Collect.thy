@@ -3,7 +3,7 @@ theory Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_EntryState_Ctx
 begin
 
-section \<open>Activation-indexed collecting soundness: one context covers every __voblint_nondet_int() draw\<close>
+section \<open>Activation-indexed collecting soundness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
 text \<open>
   \<^const>\<open>rc_program\<close> is the concrete instance of the production entry-state
@@ -75,7 +75,7 @@ text \<open>The state a call enters its callee with, as the registration's pipel
 
 lemma rc_entered:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
         (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
      rc_gs rc_program ci d
    = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"
@@ -142,9 +142,9 @@ theorem rc_activation_collect_sound:
   "\<A>\<^bsub>rc_gs,
      interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program,
      [],compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub> v ctx
-   \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
-       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
-  unfolding rc_cfg_alt[symmetric]
+   \<subseteq> gamma_lift (default_st_gamma rc_gs)
+       (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (v, ctx)))"
+  unfolding rc_cfg_alt[symmetric] gamma_lift_default_st_gamma_to_fun
   by (rule interval_es_rule.entry_state_activation_collect_sound[OF rc_entry_state_hyps])
 
 subsection \<open>Acceptance witness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
@@ -198,8 +198,8 @@ proof -
     unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def rc_entered rc_empty_pred_def
-             interval_es_rule.sol_env_def\<close>)
+          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_to_fun rc_entered
+             rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
 qed
@@ -213,12 +213,12 @@ text \<open>The crux corollary: for \<^emph>\<open>every\<close> concrete store 
   argument occurred.\<close>
 
 corollary rc_entry_state_coverage:
-  assumes sm: "s \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
-    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))\<rbrakk>\<^sub>\<bottom>"
+  assumes sm: "s \<in> gamma_lift (default_st_gamma rc_gs)
+    (interval_es_rule.reader Globals_Warrow rc_gs rc_program (Inl (Statement 3, [])))"
   shows "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-           \<in> \<lbrakk>map_lift (fun_of_resolved_st_q_for rc_gs)
+           \<in> gamma_lift (default_st_gamma rc_gs)
                 (interval_es_rule.reader Globals_Warrow rc_gs rc_program
-                  (Inl (FunctionEntry (STR ''p''), ctx_call)))\<rbrakk>\<^sub>\<bottom>"
+                  (Inl (FunctionEntry (STR ''p''), ctx_call)))"
 proof -
   have ce: "(Statement 3, CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')],
               FunctionEntry (STR ''p''), Statement 4)
@@ -234,15 +234,16 @@ proof -
     by simp
   show ?thesis
     using interval_es_rule.entry_state_routed_context_call[OF rc_routed_hyps
-          ce[folded rc_cfg_alt] sm[unfolded interval_es_rule.reader_def]
+          ce[folded rc_cfg_alt]
+          sm[unfolded interval_es_rule.reader_def gamma_lift_default_st_gamma_to_fun]
           rc_context_at_call[OF sin[unfolded rc_ctx_sol_def]]]
-    by (simp add: interval_es_rule.reader_def)
+    by (simp add: interval_es_rule.reader_def gamma_lift_default_st_gamma_to_fun)
 qed
 
 text \<open>Unfolding \<^const>\<open>activation_collect\<close> at \<^const>\<open>ctx_call\<close> makes the
-  \<^const>\<open>trace_context\<close> side of the same fact syntactically manifest: every concrete
+  \<^const>\<open>activation_context_rel\<close> side of the same fact syntactically manifest: every concrete
   callee-entry trace this set counts --- one per \<open>__voblint_nondet_int()\<close> outcome that
-  actually occurs --- is one whose \<^const>\<open>trace_context\<close> admits the single context
+  actually occurs --- is one whose \<^const>\<open>activation_context_rel\<close> admits the single context
   \<^const>\<open>ctx_call\<close>. The admitted-context relation is a relation rather than a
   function, so this is membership, not an equation.
   \<open>rc_activation_collect_sound\<close> then bounds this whole set, every context alike.\<close>
@@ -255,7 +256,7 @@ corollary rc_activation_ctx_key:
    = {sink_store t | t.
         t \<in> \<T>\<^bsub>rc_gs,compile_prog rc_pi rc_procs,cinit_stores rc_gs\<^esub>
         \<and> sink_node t = FunctionEntry (STR ''p'')
-        \<and> trace_context rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
+        \<and> activation_context_rel rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
             [] (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
 

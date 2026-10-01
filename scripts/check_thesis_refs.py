@@ -28,23 +28,23 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import os
 import re
 import shutil
 import subprocess
 import sys
 from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
+import tomllib
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+from isar_json import base_name, names, project_directories  # noqa: E402
+from isar_json import sessions as isar_sessions  # noqa: E402
+
 REPO = Path(__file__).resolve().parent.parent
-
-SKIP_PARTS = {".git", ".claude/worktrees", "_build", "docs/history"}
-
-
-def active_path(path: Path) -> bool:
-    """Ignore generated and auxiliary worktrees absent from CI checkouts."""
-    rel = path.relative_to(REPO).as_posix()
-    return not any(rel == part or rel.startswith(f"{part}/") for part in SKIP_PARTS)
 
 
 # One kind per declaring command. A name may legitimately hold several kinds
@@ -53,6 +53,7 @@ def active_path(path: Path) -> bool:
 KIND_COMMANDS = {
     "thm": ("lemma", "theorem", "corollary", "proposition", "schematic_goal"),
     "const": (
+        "consts",
         "definition",
         "fun",
         "primrec",
@@ -63,32 +64,17 @@ KIND_COMMANDS = {
         "partial_function",
         "lift_definition",
     ),
-    "type": ("datatype", "type_synonym", "record", "typedef"),
+    "type": ("datatype", "type_synonym", "record", "typedef", "quotient_type"),
     "locale": ("locale", "class"),
 }
 COMMAND_KIND = {cmd: kind for kind, cmds in KIND_COMMANDS.items() for cmd in cmds}
 
-# `record 'a domain_transfer =` and `datatype ('a, 'b) t = ...` put type
-# parameters between the command and the name, so those are skipped first.
-DECL = re.compile(
-    r"^\s*(?:qualified\s+)?("
-    + "|".join(sorted(COMMAND_KIND, key=len, reverse=True))
-    + r")\b\s+(?:(?:\([^)]*\)|'[A-Za-z][A-Za-z0-9_']*)\s+)*"
-    + r"([A-Za-z][A-Za-z0-9_']*)",
-    re.M,
+# `thy:` and `display:` (either order) change the link target and printed text,
+# not the cited name.
+TYPST_REF = re.compile(
+    r"\bisa(thm|const|type|locale|session|cmd)\(\s*\"([^\"]*)\""
+    r"(?:\s*,\s*(?:thy|display):\s*\"[^\"]*\")*\s*,?\s*\)"
 )
-# `lemma foo:` and `lemma foo [simp]:` both declare foo; `lemma "..."` does not.
-ANON = re.compile(r'^\s*(?:lemma|theorem|corollary)\s+["\\]')
-# `  field :: "type"` lines inside a record / datatype body.
-FIELD = re.compile(r"^\s+([a-z][A-Za-z0-9_']*)\s*::", re.M)
-
-# A datatype's constructors are constants too, and prose cites them as often as
-# it cites the type: `EA_Assign`, `Root`, `CallEdge`.  They are capitalised and
-# introduced after `=` or after a `|`, which may sit mid-line when several
-# nullary constructors share one (`Sign_Analysis | Interval_Analysis | ...`).
-CONSTRUCTOR = re.compile(r"(?:^\s*(?:\||=)|\|)\s*([A-Z][A-Za-z0-9_']*)", re.M)
-
-TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\)")
 
 # The theorem environments in lib/theorems.typ carry the Isabelle name they
 # state as `isa: "..."`, and render it in the margin.  That is a reference like
@@ -96,6 +82,10 @@ TYPST_REF = re.compile(r"\bisa(thm|const|type|locale|session|cmd)\(\"([^\"]*)\"\
 # only because the environment already knows it is a name.  The kind is left
 # open, since a definition may name a constant, a type or a locale.
 ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
+# A definition environment also names the command that declares its entity
+# (`cmd: "datatype"`), so the header says what kind of object it defines.
+DEFINITION_ENV = re.compile(r"#definition\((.*?)\)\[", re.S)
+CMD_ARG = re.compile(r"\bcmd:\s*\"([a-z_]+)\"")
 
 # Names that deliberately do not resolve, with the reason.
 ALLOWED = {
@@ -104,14 +94,22 @@ ALLOWED = {
     "assign",
     "ctx",
     "combine_env",
+    "id_binary_log",
+    # OCaml toolchain packages, named in the tooling chapter.
+    "js_of_ocaml",
+    "wasm_of_ocaml",
+    # An Isabelle command keyword, matched by the chapter 5 domain-tree parser.
+    "global_interpretation",
+    # HOL-IMP's Abs_State, outside the linked sessions, cited in related work.
+    "fun_rep",
 }
 
 
 COMMAND_DECL = re.compile(r"command_keyword>\\<open>([A-Za-z0-9_']+)\\<close>")
 
 
-def isabelle_commands() -> set[str] | None:
-    """Outer-syntax command names, or None when Isabelle is not reachable."""
+def isabelle_home() -> Path | None:
+    """The Isabelle distribution directory, or None when Isabelle is not reachable."""
     home = os.environ.get("ISABELLE_HOME")
     if not home:
         exe = shutil.which("isabelle")
@@ -127,42 +125,99 @@ def isabelle_commands() -> set[str] | None:
                 home = None
     if not home or not Path(home).is_dir():
         return None
+    return Path(home)
+
+
+def isabelle_commands() -> set[str] | None:
+    """Outer-syntax command names, or None when Isabelle is not reachable."""
+    home = isabelle_home()
+    if home is None:
+        return None
     names: set[str] = set()
     for sub in ("src/Pure", "src/HOL/Tools", "src/Tools"):
-        for path in (Path(home) / sub).rglob("*"):
+        for path in (home / sub).rglob("*"):
             if path.suffix in (".ML", ".thy") and path.is_file():
                 names |= set(COMMAND_DECL.findall(path.read_text(errors="ignore")))
     return names or None
 
 
-def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
-    """Map every declared name to the kinds it is declared with."""
+# isar-tools' kinds, in the thesis's vocabulary.
+ISAR_KIND = {
+    "fact": "thm",
+    "constant": "const",
+    "type": "type",
+    "locale": "locale",
+    "class": "locale",
+}
+# Names a declaration derives that prose cites: `f.simps` of a function, and
+# the rules of an inductive (`pstep.Seq2`) but not its generated `.intros`.
+FUNCTIONS = ("fun", "primrec", "function")
+INDUCTIVES = ("inductive", "inductive_set")
+INDUCTIVE_FACTS = (".intros", ".cases", ".induct", ".simps")
+
+
+def add_name(
+    row: dict, kinds: dict[str, set[str]], declared_by: dict[str, set[str]]
+) -> None:
+    """Record one `isar project names --derived` row, as far as prose cites it."""
+    command, name = row["command"], base_name(row)
+    if row["derived_from"]:
+        suffix = name.rsplit(".", 1)[-1]
+        if (command in FUNCTIONS and suffix == "simps") or (
+            command in INDUCTIVES and "." in name and not name.endswith(INDUCTIVE_FACTS)
+        ):
+            kinds[name].add("thm")
+        return
+    kind = ISAR_KIND.get(row["kind"])
+    if kind is None:
+        return
+    if command in COMMAND_KIND and kind == COMMAND_KIND[command]:
+        kinds[name].add(kind)
+        declared_by[name].add(command)
+    # Record fields, and datatype constructors, discriminators and selectors.
+    elif command in ("record", "datatype") and kind == "const":
+        kinds[name].add(kind)
+    elif command == "assumes":  # a named locale or class assumption
+        kinds[name].add(kind)
+    # Type-class parameters become overloaded global constants, named in the
+    # class's `c_class` locale. Arbitrary locale fixes do not.
+    elif command == "fixes" and row["name"].rsplit(".", 2)[-2].endswith("_class"):
+        kinds[name].add(kind)
+
+
+def build_inventory() -> tuple[
+    dict[str, set[str]], set[str], set[str], dict[str, set[str]]
+]:
+    """Map every declared name to the kinds and commands it is declared with."""
     kinds: dict[str, set[str]] = defaultdict(set)
-    for root in ("src", "vendor"):
-        for path in (REPO / root).rglob("*.thy"):
-            text = path.read_text(errors="ignore")
-            text = re.sub(r"\(\*.*?\*\)", "", text, flags=re.S)
-            for m in DECL.finditer(text):
-                line_start = text.rfind("\n", 0, m.start()) + 1
-                if ANON.match(text, line_start):
-                    continue
-                kinds[m.group(2)].add(COMMAND_KIND[m.group(1)])
-                # A record's fields and a datatype's selectors are constants;
-                # prose cites them (`intra`, `calls`) as often as it cites the
-                # type they belong to.
-                if m.group(1) in ("record", "datatype"):
-                    for f in FIELD.finditer(text, m.end()):
-                        if f.group(0).lstrip().startswith(("record", "datatype")):
-                            break
-                        kinds[f.group(1)].add("const")
-                if m.group(1) == "datatype":
-                    # Constructors run until the next top-level command.
-                    rest = text[m.end() :]
-                    stop = re.search(r"^\S", rest, re.M)
-                    for c in CONSTRUCTOR.finditer(
-                        rest[: stop.start() if stop else len(rest)]
-                    ):
-                        kinds[c.group(1)].add("const")
+    declared_by: dict[str, set[str]] = defaultdict(set)
+    # The background chapter cites HOL's own order and lattice classes, which
+    # live in the top-level theories of the HOL session.
+    home = isabelle_home()
+    library = (
+        sorted(str(p) for p in (home / "src" / "HOL").glob("*.thy")) if home else []
+    )
+    sources = [(d,) for d in project_directories(REPO)] + (
+        [tuple(library)] if library else []
+    )
+    # One isar run per project and one for HOL's theories, side by side.
+    with ThreadPoolExecutor() as pool:
+        found = pool.map(lambda paths: names(*paths, derived=True), sources)
+    for rows in found:
+        for row in rows:
+            add_name(row, kinds, declared_by)
+
+    # Without an Isabelle installation the HOL sources are not readable. The
+    # committed link map was generated from HOL's rendered theories and records
+    # every HOL entity the thesis links, with its kind, so it stands in for them.
+    if not home:
+        links = REPO / "thesis" / "shared" / "generated" / "links.json"
+        if links.is_file():
+            data = json.loads(links.read_text(encoding="utf-8"))
+            for key, target in data.get("links", data).items():
+                kind, _, name = key.partition(":")
+                if target.startswith("HOL/") and kind != "any":
+                    kinds[name].add(kind)
 
     # Theory names, so a figure that labels a node with a theory is not
     # mistaken for one naming a declaration that does not exist.
@@ -170,17 +225,10 @@ def build_inventory() -> tuple[dict[str, set[str]], set[str], set[str]]:
         path.stem for root in ("src", "vendor") for path in (REPO / root).rglob("*.thy")
     }
 
-    sessions: set[str] = set()
-    for roots in REPO.rglob("ROOT"):
-        if not active_path(roots):
-            continue
-        for m in re.finditer(
-            r"^\s*session\s+\"?([A-Za-z0-9_]+)\"?",
-            roots.read_text(errors="ignore"),
-            re.M,
-        ):
-            sessions.add(m.group(1))
-    return kinds, sessions, theories
+    sessions = {
+        s["session"] for d in project_directories(REPO) for s in isar_sessions(d)
+    }
+    return kinds, sessions, theories, declared_by
 
 
 def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
@@ -195,6 +243,30 @@ def collect_refs(thesis: Path) -> list[tuple[Path, int, str, str]]:
         for m in ISA_ARG.finditer(text):
             line = text.count("\n", 0, m.start()) + 1
             refs.append((path, line, "any", m.group(1)))
+    return refs + generated_citations(thesis)
+
+
+def generated_citations(thesis: Path) -> list[tuple[Path, int, str, str]]:
+    """Citations the data files carry for the tables Typst renders from them."""
+    refs = []
+    for path in sorted((thesis / "shared" / "generated").glob("*.json")):
+        data = json.loads(path.read_text())
+        if isinstance(data, dict):
+            refs += [(path, 1, c["kind"], c["name"]) for c in data.get("citations", [])]
+    # Manifests Typst iterates: the anchor index appendix renders every
+    # `anchors.toml` item, and the oracle audit table every `facts.toml` key.
+    anchors = thesis / "shared" / "anchors.toml"
+    if anchors.is_file():
+        refs += [
+            (anchors, 1, a["kind"], a["name"])
+            for a in tomllib.loads(anchors.read_text()).get("anchor", [])
+        ]
+    facts = thesis / "shared" / "facts.toml"
+    if facts.is_file():
+        refs += [
+            (facts, 1, "thm", name)
+            for name in tomllib.loads(facts.read_text()).get("facts", {})
+        ]
     return refs
 
 
@@ -250,12 +322,12 @@ def collect_raw_names(thesis: Path) -> list[tuple[Path, int, str]]:
 
 # A declared name written into prose without the markup that colours and links
 # it. Only names that cannot be English are considered -- an underscore or an
-# inner capital (`valid_ltr`, `EA_Assign`, `FunctionEntry`) -- so a constant
+# inner capital (`valid_activation_trace`, `EA_Assign`, `FunctionEntry`) -- so a constant
 # that is also a word (`intra`, `route`) never fires. Everything the markup
 # helpers wrap is blanked first, as are comments, raw blocks and labels.
 MARKUP_CALL = re.compile(
     r"\b(?:isa(?:thm|const|type|locale|session|cmd|name|file)|oblig|ctor|keyw|isai"
-    r"|thy-badge)\((?:[^()]|\([^()]*\))*\)"
+    r"|thy-badge|thy|proved|stated)\((?:[^()]|\([^()]*\))*\)"
     r"|#isa\((?:[^()]|\([^()]*\))*\)"
     r"|//[^\n]*"
     r"|<[a-z]+:[^>]*>|@[a-z]+:[A-Za-z0-9_-]+"
@@ -309,7 +381,7 @@ def main() -> int:
         print(f"check_thesis_refs: no such directory: {thesis}", file=sys.stderr)
         return 1
 
-    kinds, sessions, theories = build_inventory()
+    kinds, sessions, theories, declared_by = build_inventory()
     commands = isabelle_commands()
     if not kinds:
         print(
@@ -339,6 +411,8 @@ def main() -> int:
         if name in ALLOWED:
             continue
         site = f"{path.relative_to(REPO)}:{line}"
+        # `compile.simps(4)` selects one theorem of the fact `compile.simps`.
+        name = re.sub(r"\([0-9]+\)$", "", name)
         if kind == "cmd":
             if commands is None:
                 skipped_cmds.append(name)
@@ -355,6 +429,11 @@ def main() -> int:
                     f"  {site}: session {name} is not declared in any ROOT{hint}"
                 )
             continue
+        if kind == "theory":
+            session, _, theory = name.rpartition(".")
+            if session not in sessions or theory not in theories:
+                missing.append(f"  {site}: theory {name} is not a Session.Theory pair")
+            continue
         if kind == "any":
             # A theorem environment's own `isa:` name: it must exist, but the
             # environment does not claim which kind it is.
@@ -366,6 +445,11 @@ def main() -> int:
                 missing.append(f'  {site}: isa: "{name}" does not exist{hint}')
             continue
         have = kinds.get(name)
+        # `locale.name`: a constant declared inside a locale, cited qualified
+        # because the short name is not unique (`admits`).
+        locale, _, local = name.rpartition(".")
+        if have is None and "locale" in kinds.get(locale, ()):
+            have = kinds.get(local)
         if have is None:
             near = difflib.get_close_matches(name, sorted(kinds), 1, 0.75)
             hint = f" -- did you mean {near[0]}?" if near else ""
@@ -376,7 +460,28 @@ def main() -> int:
                 f"it as {'/'.join(sorted(have))}"
             )
 
+    for path in sorted((thesis / "content").glob("*.typ")):
+        text = path.read_text(errors="ignore")
+        for m in DEFINITION_ENV.finditer(text):
+            isa, cmd = ISA_ARG.search(m.group(1)), CMD_ARG.search(m.group(1))
+            if isa is None:
+                continue
+            site = f"{path.relative_to(REPO)}:{text.count(chr(10), 0, m.start()) + 1}"
+            have = declared_by.get(isa.group(1), set())
+            if cmd is None:
+                missing.append(
+                    f"  {site}: definition of {isa.group(1)} needs cmd: "
+                    f'"{"/".join(sorted(have)) or "?"}"'
+                )
+            elif cmd.group(1) not in have:
+                deviated.append(
+                    f'  {site}: {isa.group(1)} is cited with cmd: "{cmd.group(1)}", '
+                    f"but the sources declare it with {'/'.join(sorted(have))}"
+                )
+
     for path, line, name in collect_unmarked(thesis, kinds):
+        if name in ALLOWED:
+            continue
         kind = "/".join(sorted(kinds[name]))
         missing.append(
             f"  {path.relative_to(REPO)}:{line}: {name} ({kind}) is written as prose; "

@@ -115,7 +115,7 @@ avoids (E3), enlarging surface for no faithfulness gain.
 | --- | --- | --- |
 | `analysis_contract` (D, G, `gammaDG`, edge and combine soundness) | `Spec` (D, G, `sideg`) | **Faithful.** Built-in `Side` = E2/E4. Unchanged. |
 | `routed_call_alternative_program` (`route cc ctx entry ca`) | `context man f v` at the call | **Faithful.** Routing reads the entered local value = E3/E4. |
-| `local_state_dg_spec_for_lifted` (whole state in D, G inert) | a `Spec` instance that keeps globals in `D` | Faithful specialization. |
+| `lifted_state_dg_spec` (whole state in D, G inert) | a `Spec` instance that keeps globals in `D` | Faithful specialization. |
 
 ### Correction to the prior `side_env_ctx` determination
 

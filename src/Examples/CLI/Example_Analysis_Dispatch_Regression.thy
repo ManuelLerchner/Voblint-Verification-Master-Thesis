@@ -51,7 +51,8 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_rule_invariant:
-  "\<forall>rule \<in> {Globals_Join, Globals_Per_Origin, Globals_Warrow, Globals_Warrow_Per_Origin}.
+  "\<forall>rule \<in> {Globals_Join, Globals_Per_Origin, Globals_Warrow, Globals_Warrow_Per_Origin,
+      Globals_Bounded_Narrowing 0, Globals_Bounded_Narrowing 5}.
      \<forall>ctx \<in> {Ctx_None, Ctx_EntryState, Ctx_CallString 0, Ctx_CallString 1}.
        dispatch_demo_checks Interval_Analysis rule ctx =
          dispatch_demo_checks Interval_Analysis Globals_Warrow Ctx_None"

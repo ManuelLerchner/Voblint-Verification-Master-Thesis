@@ -52,10 +52,10 @@ subsection \<open>Classifying one contextual point\<close>
 text \<open>
   The reachability decision is not remade here: it was already made when the
   raw solved local unknown crossed the result boundary, one layer before
-  \<open>readback_result_value\<close>'s own structural relabeling. A witness-bottom
+  \<open>result_value_to_abs\<close>'s own structural relabeling. A witness-bottom
   \<^const>\<open>Lifted\<close> payload is collapsed to \<^const>\<open>Bot\<close> by
   \<^const>\<open>canonicalize_lift\<close>, so by the time a value reaches
-  \<open>readback_result_value\<close> --- as every public result adapter's raw value
+  \<open>result_value_to_abs\<close> --- as every public result adapter's raw value
   does --- \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already agree with concrete
   emptiness and non-emptiness respectively, and \<^const>\<open>Bot\<close> at the
   \<open>lifted\<close> level means exactly that. \<open>classify_point\<close> only refuses to

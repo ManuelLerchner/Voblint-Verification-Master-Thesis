@@ -5,7 +5,7 @@ investigation against the 2026-07-30 tree; their locale, lemma and file
 names (`routed_context`, `dg_ctx_activation`, `enterc`,
 `route_enterc_agree`, `DG_Soundness.thy`, `LTR_Def.thy`,
 `Example_Interval_DG_CallString.thy`) are not maintained. The current
-locales are `routed_context_base_hetero` and `dg_ctx_activation_base`
+locales are `routed_context` and `dg_context_activation`
 (`Routed_Context.thy`, `DG_Ctx_Activation.thy`); `key` lives in
 `LTR_Activation_Context.thy`. Sections 8 and 9 and the theories are
 authoritative.
@@ -94,8 +94,8 @@ this pair:
 
 ```isabelle
 locale routed_context =
-  dg_ctx_activation S gs g analysis_global route "routed_cmb S analysis_global" "routed_extra g S seed_unknown analysis_global" ...
-  for ... and seed_unknown :: "pp => 'c => 'k" +
+  dg_ctx_activation S gs g analysis_global route "routed_cmb S analysis_global" "routed_extra g S seed analysis_global" ...
+  for ... and seed :: "pp => 'c => 'k" +
   fixes enterc :: "cfg_node => 'c => store => 'c"
   assumes ...
     and route_enterc_agree:
@@ -165,7 +165,7 @@ choice of `cfg_node` for the call-site type), `route_k u ctx d ca = take k
   owes the same obligations every `routed_context` interpretation owes:
   finite reachable context space (checked per instance, section 0/2), solver
   coverage (`part_post_solution`, `by eval`), seed discipline
-  (`seed_unknown_ne_analysis_global`), route/enter agreement, and an actual executable
+  (`seed_ne_analysis_global`), route/enter agreement, and an actual executable
   evaluation that terminates. None of these disappear for `k > 1`; they just
   happen to specialize cleanly. `route_enterc_agree` in particular reduces
   to reflexivity here, since both sides compute the identical `take k (u #
@@ -309,7 +309,7 @@ No changes to any of the three locales themselves.
 `Example_Interval_DG_CallString.thy` already discharges for `route_cs`):
 
 - `finC`: `finite (calls g)` — unchanged, generic per-CFG fact.
-- `seed_unknown_ne_analysis_global` — unchanged shape.
+- `seed_ne_analysis_global` — unchanged shape.
 - `route_enterc_agree` — **simpler than the k=1 case**, since `route_k`/
   `enterc_k` both reduce to the identical `take k (u # ctx)` term regardless
   of the abstract/concrete value passed in; no case split on `s`/`d` needed.
@@ -441,7 +441,7 @@ leaves the existing solver integration. (This stage is M1's stage A2/A3;
 under this design it collapses into Stage 1.) If it turns out `k`'s context
 type needs a genuinely different global-key discipline than `gk_cs` (e.g.
 because `SeedK`/`GlobalK` need to carry the truncated string too), that
-surfaces here and is still small — `Routed_Context.thy`'s `seed_unknown` is
+surfaces here and is still small — `Routed_Context.thy`'s `seed` is
 already a free parameter for exactly this.
 
 **Stage 3 — precision witness.**

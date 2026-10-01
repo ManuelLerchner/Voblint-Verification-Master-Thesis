@@ -30,16 +30,17 @@ pinned="$(git rev-parse "$commit:$solver" 2>/dev/null || true)"
 if [ -n "$pinned" ] && git -C "$solver" cat-file -e "$pinned^{commit}" 2>/dev/null; then
   git -C "$solver" archive "$pinned" | tar -x -C "$tree/$solver"
 else
-  echo "check-ref: $solver at ${pinned:-?} unavailable; theory-prose may fail" >&2
+  echo "check-ref: $solver at ${pinned:-?} unavailable; the prose check may fail" >&2
 fi
 
 checks=(
+  "isar check --group links . pages/index.html pages/playground.html"
   "python3 scripts/check_theory_anchors.py"
   "python3 scripts/check_pages_links.py --sources"
-  "python3 scripts/check_retired_identifiers.py"
-  "python3 scripts/check_thy_prose_refs.py"
+  "isar check --group retired --retired-file scripts/retired_identifiers.txt src"
+  "isar check --group prose src"
   "isar check locales src"
-  "python3 scripts/check_isabelle_ascii.py"
+  "isar check --group symbols src"
   "python3 scripts/check_thesis_refs.py"
 )
 

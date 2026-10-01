@@ -8,7 +8,7 @@ text \<open>
   Backward predecessor relations and deterministic edge enumeration over a compiled
   two-relation CFG.  These are the equation-generation and code-generation views the TD
   solver reads to build and evaluate the constraint system; they are not part of the
-  concrete CFG semantics --- \<open>valid_ltr\<close> never refers to them.  Ordinary control flow is
+  concrete CFG semantics --- \<open>valid_activation_trace\<close> never refers to them.  Ordinary control flow is
   enumerated over \<^const>\<open>intra\<close>; procedure calls --- entry routing and return combining ---
   over \<^const>\<open>calls\<close>.  There is no unified edge set and no separate combine relation: a
   return is recovered from the same \<^const>\<open>calls\<close> tuple that created the activation.

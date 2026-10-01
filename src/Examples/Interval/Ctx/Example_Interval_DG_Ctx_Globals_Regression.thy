@@ -4,6 +4,8 @@ theory Example_Interval_DG_Ctx_Globals_Regression
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle default_st_syntax
+
 section \<open>Globals and return values across calls under entry-state context sensitivity\<close>
 
 text \<open>
@@ -50,7 +52,7 @@ text \<open>Every value below is Interval's entry-state registration \<open>inte
 
 
 definition gcall_sol ::
-  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)"
+  "(pp \<times> ivl list) set \<times> (pp \<times> ivl list + (unit, ivl list) global_unknown \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)"
     where
   "gcall_sol = interval_es_rule.solution Globals_Warrow gcall_gs gcall_prog"
 
@@ -60,8 +62,8 @@ lemma gcall_terminates:
      (cfg_exit gcall_cfg, []) \<noteq> None"
   by eval
 
-abbreviation gcall_lookup :: "('a::bot) exec_dg_st \<Rightarrow> vname \<Rightarrow> 'a" where
-  "gcall_lookup s x \<equiv> lookup_resolved_st_q s (location_of gcall_gs x)"
+abbreviation gcall_lookup :: "('a::bot) default_st \<Rightarrow> vname \<Rightarrow> 'a" where
+  "gcall_lookup s x \<equiv> s\<langle>location_of gcall_gs x\<rangle>"
 
 definition gcall_ctx_first :: "ivl list" where
   "gcall_ctx_first = interval_es_rule.ctx_succ Globals_Warrow gcall_gs gcall_prog
@@ -160,5 +162,7 @@ lemma gcall_verdict_report:
       (Statement 10, exp.Eq (V (STR ''c'')) (exp.N 38), Decided Check_Proved),
       (Statement 11, exp.Eq (V (STR ''g'')) (exp.N 38), Decided Check_Proved)]"
   by eval
+
+unbundle no default_st_syntax
 
 end

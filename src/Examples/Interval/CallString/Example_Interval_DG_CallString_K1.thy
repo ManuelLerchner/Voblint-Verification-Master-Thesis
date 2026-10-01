@@ -11,6 +11,8 @@ theory Example_Interval_DG_CallString_K1
     "Voblint_VIMP.VIMP_Notation"
 begin
 
+unbundle default_st_syntax
+
 section \<open>A computed 1-call-string context, routed by truncated call history\<close>
 
 text \<open>
@@ -21,9 +23,9 @@ text \<open>
   longer call string, keying on which \<open>f\<close> call led there, can.
 
   Storage is Base-style: the local unknown carries the whole abstract state on the lifted
-  carrier \<^typ>\<open>ivl exec_dg_st lifted\<close>, so a global is read and written exactly where a
+  carrier \<^typ>\<open>ivl default_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
-  \<^const>\<open>local_state_dg_spec_st_for_lifted\<close> threads its incoming \<open>g\<close> through unchanged, so
+  \<^const>\<open>exec_dg_spec\<close> threads its incoming \<open>g\<close> through unchanged, so
   \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
   (\<^const>\<open>cs_route\<close>, \<^const>\<open>cs_context\<close>) is call-string specific; the storage, the
   transfer primitives, and the CALL/COMB discharge are shared with the
@@ -44,9 +46,9 @@ abbreviation nest_gs :: "vname \<Rightarrow> bool" where
 
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable point
   (\<^const>\<open>Bot\<close>) reads \<open>bot\<close> at every variable.\<close>
-abbreviation nest_lookup :: "ivl exec_dg_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
+abbreviation nest_lookup :: "ivl default_st lifted \<Rightarrow> vname \<Rightarrow> ivl" where
   "nest_lookup d x \<equiv>
-     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> lookup_resolved_st_q d0 (location_of nest_gs x))"
+     (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0\<langle>location_of nest_gs x\<rangle>)"
 
 definition nest_pi :: proc_table where "nest_pi = prog_table nest_program"
 definition nest_procs :: "pname list" where "nest_procs = prog_procs nest_program"
@@ -96,11 +98,11 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
   declared globals; \<open>nest_exact\<close> is the exactness fact every transport step below
   consumes.\<close>
 
-definition nest_empty_pred :: "ivl resolved_st_q \<Rightarrow> bool" where
-  "nest_empty_pred = resolved_st_q_is_bot_for (declared_global_vars nest_program)"
+definition nest_empty_pred :: "ivl default_st \<Rightarrow> bool" where
+  "nest_empty_pred = default_st_is_bot_for (declared_global_vars nest_program)"
 
-lemma nest_exact: "nest_empty_pred s = is_empty_state (fun_of_resolved_st_q_for nest_gs s)"
-  unfolding nest_empty_pred_def by (rule resolved_st_q_is_bot_for_iff) simp
+lemma nest_exact: "nest_empty_pred s = is_empty_state (default_st_to_fun nest_gs s)"
+  unfolding nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair the context-insensitive and entry-state-keyed interval
   analyses solve over, at the same \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close>
@@ -108,18 +110,18 @@ text \<open>The same Base-style pair the context-insensitive and entry-state-key
 
 definition nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
-     unit, ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_spec" where
-  "nest_S_st = local_state_dg_spec_st_for_lifted nest_gs nest_empty_pred
+     unit, ivl default_st lifted, ivl default_st lifted) dg_spec" where
+  "nest_S_st = exec_dg_spec nest_gs nest_empty_pred
                  (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
-text \<open>The executable spec is sound for the concretization that reads a local unknown back
-  through \<^const>\<open>fun_of_resolved_st_q_for\<close> and ignores the inert global slot; Interval's
+text \<open>The executable spec is sound for the concretization that reads a local unknown
+  through \<^const>\<open>default_st_gamma\<close> and ignores the inert global slot; Interval's
   own primitive commute facts are all the generic engine needs.\<close>
 
-definition nest_gamma :: "ivl exec_dg_st lifted \<Rightarrow> ivl exec_dg_st lifted \<Rightarrow> store set" where
-  "nest_gamma d g = \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) d\<rbrakk>\<^sub>\<bottom>"
+definition nest_gamma :: "ivl default_st lifted \<Rightarrow> ivl default_st lifted \<Rightarrow> store set" where
+  "nest_gamma d g = gamma_lift (default_st_gamma nest_gs) d"
 
 interpretation nest_domain: dg_domain_exec
   nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
@@ -131,7 +133,7 @@ interpretation nest_domain: dg_domain_exec
 
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
-  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def gamma_dg_local_state_def)
+  by (intro ext) (simp add: nest_gamma_def nest_domain.gamma_exec_def)
 
 interpretation nest_dg_sound: analysis_contract nest_S_st nest_gamma nest_gs
   unfolding nest_gamma_eq nest_S_st_def
@@ -145,7 +147,7 @@ text \<open>The global-key type \<^type>\<open>call_string_gk\<close> comes from
 
 definition nest_1_eqs ::
   "(pp \<times> cfg_node list, call_string_gk,
-     (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) eqsT" where
+     (ivl default_st lifted, ivl default_st lifted) dg_state) eqsT" where
   "nest_1_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 1)
       (\<lambda>ctx' src a. dg_spec_edge_program nest_S_st a src (\<lambda>_. Global))
@@ -156,7 +158,7 @@ definition nest_1_eqs ::
 definition nest_1_sol ::
   "(pp \<times> cfg_node list) set
      \<times> (pp \<times> cfg_node list + call_string_gk
-          \<Rightarrow> (ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)" where
+          \<Rightarrow> (ivl default_st lifted, ivl default_st lifted) dg_state)" where
   "nest_1_sol = TD_side_warrowing_apinis_Interp_solve nest_1_eqs
                     (cfg_exit nest_cfg, [])"
 
@@ -271,7 +273,7 @@ section \<open>The solver's post-solution\<close>
 
 lemma nest_1_solve_dom:
   "TD_side_warrowing_apinis_Interp.solve_dom TYPE(call_string_gk)
-     TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state)
+     TYPE((ivl default_st lifted, ivl default_st lifted) dg_state)
      nest_1_eqs (cfg_exit nest_cfg, [])"
   by (rule TD_side_warrowing_apinis_Interp.solve_dom_of_solve_c[OF nest_1_terminates])
 
@@ -288,7 +290,7 @@ text \<open>The solver's own table is the solved system the routed spine is inte
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
 
 abbreviation nest_1_sg ::
-  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> ivl exec_dg_st lifted" where
+  "pp \<times> cfg_node list + call_string_gk \<Rightarrow> ivl default_st lifted" where
   "nest_1_sg \<equiv> solved_local_reader (fst nest_1_sol) (snd nest_1_sol)"
 
 text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
@@ -303,7 +305,7 @@ interpretation nest_1_cs: call_string_routed_context
     nest_S_st nest_gamma nest_gs nest_pi nest_procs 1 Bot "Lifted cinit_ivl_st" Bot
     "snd nest_1_sol" "fst nest_1_sol" "(cfg_exit nest_cfg, [])" nest_1_sg
     "\<lambda>d. d = Bot"
-    "\<lambda>m. \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) m\<rbrakk>\<^sub>\<bottom>"
+    "gamma_lift (default_st_gamma nest_gs)"
 proof (unfold_locales, unfold nest_cfg_compile,
        goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd IsBotBot IsBotSound
        EnterComplete CallFwd CombFwd)
@@ -344,7 +346,7 @@ next
       EnterComplete(3)
     by (simp add: nest_gamma_eq nest_domain.gamma_exec_def)
   show ?case
-    unfolding nest_S_st_def dgs_enter_local_state_st_for_lifted
+    unfolding nest_S_st_def dgs_enter_exec_dg_spec
     using enter_runs_local_enter_transfer enter_deps_local_enter_transfer cov by fastforce
 next
   case (CallFwd u ctx dst pars args p cont)
@@ -385,16 +387,15 @@ section \<open>The headline theorem: 1-call-string activation collecting soundne
 
 lemma nest_cinit_le_cinit_ivl_st:
   "cinit_stores nest_gs \<subseteq> nest_gamma (Lifted cinit_ivl_st) Bot"
-  by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def fun_of_resolved_st_q_for_def
-                 fun_of_initial_resolved_st_q)
+  by (auto simp: nest_gamma_def cinit_stores_def gamma_state_def default_st_gamma_initial)
 
 text \<open>The routed interpretation carries the theorem: every store the 1-call-string
-  activation-local collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
-  local unknown at that key, read back into an abstract state.\<close>
+  activation-trace collecting semantics reaches at \<open>(v, ctx)\<close> is concretized by the solved
+  local unknown at that key, through the abstract state it represents.\<close>
 
 theorem nest_1_activation_collect_sound:
   "\<A>\<^bsub>nest_gs,call_context_rel_of_fun (cs_context 1),[],nest_cfg,cinit_stores nest_gs\<^esub> v ctx
-     \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for nest_gs) (nest_1_sg (Inl (v, ctx)))\<rbrakk>\<^sub>\<bottom>"
+     \<subseteq> gamma_lift (default_st_gamma nest_gs) (nest_1_sg (Inl (v, ctx)))"
   by (rule nest_1_cs.routed.activation_collect_dg_sound[unfolded nest_cfg_compile,
             OF entry_covered_1 nest_cinit_le_cinit_ivl_st])
 
@@ -463,5 +464,6 @@ lemma nest_1_seed_f_second:
      (STR ''p'') = Ivl (Fin 10) (Fin 10)"
   using nest_1_snapshot_eq by (simp add: nest_1_snapshot_def)
 
+unbundle no default_st_syntax
 
 end

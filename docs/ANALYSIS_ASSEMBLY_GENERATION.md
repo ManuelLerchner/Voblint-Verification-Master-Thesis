@@ -43,8 +43,8 @@ README.
 
 Generated: the interpretations and their proofs. Each proof applies
 `<impl>_tf.dg_analysis_execI`, which the domain's bundle certificate already
-provides: the transfer, the two readbacks and the classifier are discharged
-once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
+provides: the transfer, the step and entry equations on the represented
+function and the classifier are discharged once in `sound_nonrelational_ops` (`Nonrelational_Transfer.thy`). Six
 obligations remain per registration: the routing agreement, the seed key, the
 three solver contracts and the initial state. Between the contexts only the
 context terms and the routing agreement differ.
@@ -81,7 +81,7 @@ arguments, so an applied fact role is a registry error.
 `MCP_Carrier.thy` is generated from the same registry, in registry order. It
 holds the `analysis_domain` datatype, one constructor per domain, and the
 combined state `mcp_st`: a nested product with one lifted field per domain,
-each field carrying that domain's `exec_dg_st`. Beside it comes the per-domain
+each field carrying that domain's `default_st`. Beside it comes the per-domain
 dispatch the combined state needs, one equation per domain each:
 `local_spec_of` (a field's transfer, lensed into the product), the field
 concretization and liveness readers, `val_answer` (a field's answer to a
@@ -94,11 +94,11 @@ facts the domains already export.
 
 Each of these lines comes from a field role, a term template in the generator's
 `FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
-field runs `ask_assign (exec_spec ...)`, which asks for the value of an
+field runs `ask_assign (exec_local_spec ...)`, which asks for the value of an
 assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
-`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `rel_qry`, and
+`order_spec` (`Rel_Order_Local.thy`), answers comparisons with `relc_qry`, and
 keys no context. The generator also emits `local_spec_of_silent`: every
 pointwise field's own component answers every query with `\<top>`.
 `MCP_Analyses.thy` replaces each field's handler with the answer the field

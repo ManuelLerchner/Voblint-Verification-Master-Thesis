@@ -50,19 +50,19 @@ qed
 
 lemma dep_program_routed_call_program:
   assumes wfS: "dg_spec_wf S"
-  shows "dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route ctx ca cc v)
+  shows "dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v)
      = insert (Inl (cc, ctx))
          (\<Union>q\<in>set (resolve v cc ca (dg_local (\<tau> (Inl (cc, ctx))))).
-            dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot ctx ca cc
+            dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
                         (dg_local (\<tau> (Inl (cc, ctx)))) q))"
   by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes
       dep_program_side_rhs_fold_dg_char[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
 lemma routed_call_program_mem:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-  shows "routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k
+  shows "routed_call_program S analysis_global seed resolve is_bot route cx ca u k
            \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                    (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx k)"
+                    (routed_call_program S analysis_global seed resolve is_bot) extra g cx k)"
 proof -
   have "(u, ca) \<in> set (call_site_list g k)" using e fin by auto
   then show ?thesis by (rule routed_contribution_programs_combineI)
@@ -72,17 +72,17 @@ lemma dep_L_routed_node_rhs_call_site:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-            (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+            (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   have "Inl (u, cx)
-          \<in> dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k)"
+          \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
     by (simp add: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed_unknown resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
@@ -94,23 +94,23 @@ lemma dep_L_routed_node_rhs_callee_result:
     and nb: "\<not> is_bot (f (dg_local (\<tau> (Inl (u, cx)))))"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(FunctionResult q, route u cx (f (dg_local (\<tau> (Inl (u, cx))))) ca)
            \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-                (routed_call_program S analysis_global seed_unknown resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+                (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   let ?d = "dg_local (\<tau> (Inl (u, cx)))"
-  have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot cx ca u ?d q)
+  have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)
       = dep_aux \<tau> (sp_compile (side_rhs_fold_dg bot
-          (map (routed_call_alternative_program S analysis_global seed_unknown route is_bot cx ca u q)
+          (map (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q)
              [(?d, f ?d)])))"
     unfolding routed_callee_call_program_def enter sp_compile_bind
     by (rule enter_depsD[OF enter_deps_local_enter_transfer_mk_dg_man, simplified])
   have "Inl (FunctionResult q, route u cx (f ?d) ca)
-          \<in> dep_program \<tau> (routed_callee_call_program S analysis_global seed_unknown route is_bot cx ca u ?d q)"
+          \<in> dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)"
   proof -
     have "Inl (FunctionResult q, route u cx (f ?d) ca)
-            \<in> dep_program \<tau> (routed_call_alternative_program S analysis_global seed_unknown route is_bot cx ca u q
+            \<in> dep_program \<tau> (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q
                            (?d, f ?d))"
       using nb by (simp add: routed_call_alternative_program_def Let_def)
     then show ?thesis
@@ -119,12 +119,12 @@ proof -
       by simp
   qed
   then have "Inl (FunctionResult q, route u cx (f ?d) ca)
-               \<in> dep_program \<tau> (routed_call_program S analysis_global seed_unknown resolve is_bot route cx ca u k)"
+               \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
     using res by (auto simp: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed_unknown resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
@@ -313,14 +313,14 @@ interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
   unfolding analysis_spec_def by (rule dg_spec_of_contract[OF comp_sound])
 
 text \<open>
-  The routed soundness at the live keys, for any relation admitting call contexts.
+  Establishes \<open>routed_analysis\<close> over the live keys, for any relation admitting call contexts.
   Beyond termination and well-formedness a policy owes only its own two facts: an
   admitted context is the one this pipeline routes the entered state to, and every
   concrete call at a live key is admitted somewhere. \<open>live_unknowns_cover\<close> supplies
   callee-entry membership.
 \<close>
 
-lemma routed_analysis_sound_live_unknowns:
+lemma routed_analysis_from_live_unknowns:
   fixes R :: "'c call_context_rel"
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
@@ -336,7 +336,7 @@ lemma routed_analysis_sound_live_unknowns:
         \<Longrightarrow> s \<in> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec (declared_global p) p)
+  shows "routed_analysis (analysis_spec (declared_global p) p)
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) R
@@ -456,13 +456,13 @@ theorem activation_collect_sound_live_unknowns:
            \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx))))"
 proof -
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" R
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule routed_analysis_sound_live_unknowns[where R = R, OF wf solves cover_R total_R])
+    by (rule routed_analysis_from_live_unknowns[where R = R, OF wf solves cover_R total_R])
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
              (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx))))"
@@ -535,7 +535,7 @@ theorem fun_route_result_node_sound:
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
            \<subseteq> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
-  using fun_route_ltr_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
+  using fun_route_node_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
     fun_route_state_at_sound[OF route_const wf solves]
   by (simp add: SUP_mono')
 
@@ -594,22 +594,22 @@ proof -
   have "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
           \<and> s \<in> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
     unfolding cfg_eq
-    by (rule source_sound_from_ltr_collecting_cap[OF wf s0 run])
+    by (rule source_sound_from_node_collect_cap[OF wf s0 run])
        (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
   then show ?thesis by blast
 qed
 
 subsection \<open>Entry-state routing\<close>
 
-lemma entry_state_routed_analysis_sound_live_unknowns:
+lemma entry_state_routed_analysis_from_live_unknowns:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "routed_analysis_sound (analysis_spec (declared_global p) p)
+  shows "routed_analysis (analysis_spec (declared_global p) p)
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
      (map_lift (rd (declared_global p))) gamma\<^sub>V empty\<^sub>V classify"
-proof (rule routed_analysis_sound_live_unknowns[OF wf solves])
+proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
@@ -647,14 +647,14 @@ theorem entry_state_activation_collect_sound_of_terminates:
            \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
                  (reader (declared_global p) p (Inl (v, ctx))))"
 proof -
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule entry_state_routed_analysis_sound_live_unknowns[OF wf solves])
+    by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
@@ -672,25 +672,25 @@ corollary entry_state_lookup_sound_of_terminates:
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 
-theorem entry_state_ltr_collect_eq_Union_of_terminates:
+theorem entry_state_node_collect_eq_Union_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
                        root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
-proof (rule ltr_collect_eq_Union_activation_of_has_context)
-  interpret live: routed_analysis_sound "analysis_spec (declared_global p) p"
+proof (rule node_collect_eq_Union_activation_of_has_context)
+  interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
-    by (rule entry_state_routed_analysis_sound_live_unknowns[OF wf solves])
+    by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   fix t
   assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
-  then show "\<exists>c. trace_context (declared_global p) (admitted_contexts (declared_global p) p)
+  then show "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
                    root_ctx (prog_cfg p) t c"
-    by (rule live.routed_valid_ltr_has_context
+    by (rule live.routed_valid_activation_trace_has_context
           [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
 qed
 

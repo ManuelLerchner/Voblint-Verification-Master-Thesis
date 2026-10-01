@@ -28,7 +28,7 @@
   the definitions are the ones intended. `docs/THESIS_BLUEPRINT.md` §15.3 holds
   the reviewer-facing list, ordered by what a mistake would cost, beginning
   with #isaconst("pstep") being the anchor (@ch:program-model) and
-  #isaconst("valid_ltr") against #isaconst("cstep") (@ch:traces). It must also
+  #isaconst("valid_activation_trace") against #isaconst("cstep") (@ch:traces). It must also
   say plainly what a `PROVED` verdict does and does not mean, and that
   `REFUTED` is not a verified counterexample.
 ]

@@ -6,33 +6,35 @@ theory DG_Local_State_Exec_Refinement
     "Voblint_Framework.MCP_Spec"
 begin
 
-section \<open>Reading an executable D/G run back as the mathematical one\<close>
+unbundle default_st_syntax
+
+section \<open>The mathematical run an executable D/G run represents\<close>
 
 text \<open>
   The executable construction above computes on association-list states; the
   soundness statements are about function-valued ones. This theory is the
   bridge: it fixes a domain whose executable transfer agrees with its abstract
-  transfer after readback (\<open>dg_domain_exec\<close>) and derives, from
+  transfer on the represented functions (\<open>dg_domain_exec\<close>) and derives, from
   those three agreements alone, that a whole D/G specification is sound at the
   executable carrier -- with no separate abstract-carrier run to compare against.
 \<close>
 
-subsection \<open>The readback of one return combine\<close>
+subsection \<open>The function one return combine represents\<close>
 
 text \<open>
   The one fact about the executable state representation this theory needs
   that no lifter supplies: merging caller against callee and then writing the
-  return value reads back as the mathematical \<^const>\<open>combine_collect_abs\<close> of
-  the two readbacks. Everything else transports through
+  return value represents the mathematical \<^const>\<open>combine_collect_abs\<close> of
+  the two represented functions. Everything else transports through
   \<^const>\<open>transfer_lift\<close>/\<^const>\<open>transfer_lift2\<close> naturality.
 \<close>
 
-lemma fun_of_resolved_st_q_for_combine_assign:
-  "fun_of_resolved_st_q_for \<G>
-     (combine_assign_resolved_q \<G> dst (lookup_resolved_st_q y (location_of \<G> ret_var))
-        (combine_resolved_st_q x y))
-   = combine\<^sup># \<G> dst (fun_of_resolved_st_q_for \<G> x) (fun_of_resolved_st_q_for \<G> y)"
-  unfolding fun_of_resolved_st_q_for_def
+lemma default_st_to_fun_combine_assign:
+  "default_st_to_fun \<G>
+     (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
+        (combine_default_st x y))
+   = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
+  unfolding default_st_to_fun_def
   by (auto simp add: combine_collect_abs_def fun_eq_iff location_of_def
       split: option.splits)
 
@@ -41,7 +43,7 @@ subsection \<open>Routed-domain compatibility, independent of any routing contex
 text \<open>
   Every routed domain instance needs the same shapes
   -- the compiled edge, enter and combine trees commuting under
-  \<^const>\<open>fun_of_resolved_st_q_for\<close>, plus \<^locale>\<open>dg_reader_commute_gen\<close> at that
+  \<^const>\<open>default_st_to_fun\<close>, plus \<^locale>\<open>dg_reader_commute_gen\<close> at that
   same reader -- from its own executable/abstract transfer-commute facts,
   citing this theory's packaging theorems verbatim. Nothing in that derivation
   is domain-specific beyond the two primitive commute facts a domain's own
@@ -55,23 +57,23 @@ text \<open>
 
 text \<open>
   \<^locale>\<open>dg_reader_commute_gen\<close>'s instance at the same reader on both sides needs no
-  domain fact at all: \<^const>\<open>fun_of_resolved_st_q_for\<close> is already carrier-polymorphic and
-  \<open>sup\<close>-homomorphic (\<open>fun_of_resolved_st_q_for_sup\<close>,
-  \<open>Voblint_Exec.Exec_St_Transfer\<close>), so this
+  domain fact at all: \<^const>\<open>default_st_to_fun\<close> is already carrier-polymorphic and
+  \<open>sup\<close>-homomorphic (\<open>default_st_to_fun_sup\<close>,
+  \<open>Voblint_Exec.Default_St_Transfer\<close>), so this
   is a free-standing fact, not part of the \<open>dg_domain_exec\<close> locale below -- keeping it
   outside means citing it never drags in that locale's \<open>empty_pred\<close>/transfer obligations.
 \<close>
 
 lemma dg_reader_commute_gen_lifted_for:
   "dg_reader_commute_gen
-     (map_lift (fun_of_resolved_st_q_for \<G>)) (map_lift (fun_of_resolved_st_q_for \<G>))"
+     (map_lift (default_st_to_fun \<G>)) (map_lift (default_st_to_fun \<G>))"
   by unfold_locales (simp_all add: map_lift_sup)
 
 locale dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
-    and empty_pred :: "'a::numeric_domain exec_dg_st \<Rightarrow> bool"
-    and tf_st :: "edge_action \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
+    and empty_pred :: "'a::numeric_domain default_st \<Rightarrow> bool"
+    and tf_st :: "edge_action \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
+    and enter_st :: "call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
     and sk :: "'a abs_state \<Rightarrow> 'a abs_state"
     and asn :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and sp :: "special_call \<Rightarrow> vname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
@@ -81,20 +83,26 @@ locale dg_domain_exec =
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_st_commute:
-      "\<And>a s. live_resolved_st_q \<G> s \<Longrightarrow>
-         fun_of_resolved_st_q_for \<G> (tf_st a s)
-           = local_spec_step sk asn sp br bd rt ev a (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>a s. live_default_st \<G> s \<Longrightarrow>
+         default_st_to_fun \<G> (tf_st a s)
+           = local_spec_step sk asn sp br bd rt ev a (default_st_to_fun \<G> s)"
     and enter_st_commute:
-      "\<And>ci s. fun_of_resolved_st_q_for \<G> (enter_st ci s)
-                   = en ci (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>ci s. default_st_to_fun \<G> (enter_st ci s)
+                   = en ci (default_st_to_fun \<G> s)"
     and empty_pred_exact:
-      "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
 begin
 
-abbreviation reader :: "'a exec_dg_st lifted \<Rightarrow> 'a abs_state lifted" where
-  "reader \<equiv> map_lift (fun_of_resolved_st_q_for \<G>)"
+text \<open>With \<open>\<G>\<close> fixed, \<open>\<lbrakk>s\<rbrakk>\<close> is the carrier's concretization, for a plain and
+  for a lifted carrier state alike.\<close>
 
-text \<open>Each field's readback equation, once. These are the only inputs the tree
+adhoc_overloading gamma_S == "default_st_gamma \<G>"
+adhoc_overloading gamma_S == "gamma_lift (default_st_gamma \<G>)"
+
+abbreviation reader :: "'a default_st lifted \<Rightarrow> 'a abs_state lifted" where
+  "reader \<equiv> map_lift (default_st_to_fun \<G>)"
+
+text \<open>Each field's equation on the represented function, once. These are the only inputs the tree
   commutes below take: a local-only transfer compiles to a single answer, so
   its transport is exactly the pure equation on the function it wraps.\<close>
 
@@ -117,8 +125,8 @@ using norm proof (cases d)
   then show ?thesis by (simp add: transfer_lift_def)
 next
   case (Lifted s)
-  with norm have "live_resolved_st_q \<G> s"
-    by (simp add: live_resolved_st_q_def empty_pred_exact)
+  with norm have "live_default_st \<G> s"
+    by (simp add: live_default_st_def empty_pred_exact)
   then show ?thesis
     unfolding Lifted
     by (simp add: transfer_lift_def normalize_lift_def tf_st_commute empty_pred_exact)
@@ -128,10 +136,10 @@ lemma enter_lift_commute:
   "reader (transfer_lift empty_pred (enter_st ci) d)
      = transfer_lift is_empty_state (en ci) (reader d)"
 proof (rule transfer_lift_commute)
-  show "\<And>s. fun_of_resolved_st_q_for \<G> (enter_st ci s)
-              = en ci (fun_of_resolved_st_q_for \<G> s)"
+  show "\<And>s. default_st_to_fun \<G> (enter_st ci s)
+              = en ci (default_st_to_fun \<G> s)"
     by (simp add: enter_st_commute)
-  show "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  show "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
     by (rule empty_pred_exact)
 qed
 
@@ -141,23 +149,23 @@ text \<open>The env stage merges into the assign stage: both collapse on the sam
 
 lemma transfer_lift2_combine_env_st_lifted:
   "transfer_lift2 empty_pred g (combine_env_st_lifted dc de) de
-     = transfer_lift2 empty_pred (\<lambda>x y. g (combine_resolved_st_q x y) y) dc de"
+     = transfer_lift2 empty_pred (\<lambda>x y. g (combine_default_st x y) y) dc de"
   by (cases dc; cases de) (simp_all add: combine_env_st_lifted_def transfer_lift2_def)
 
 lemma combine_lift_commute:
   "reader (transfer_lift2 empty_pred
-            (\<lambda>env0 de0. combine_assign_resolved_q \<G> dst
-                 (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+            (\<lambda>env0 de0. combine_assign_default_st \<G> dst
+                 de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)
      = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
-  show "\<And>x y. fun_of_resolved_st_q_for \<G>
-      (combine_assign_resolved_q \<G> dst (lookup_resolved_st_q y (location_of \<G> ret_var))
-         (combine_resolved_st_q x y))
-        = combine\<^sup># \<G> dst (fun_of_resolved_st_q_for \<G> x) (fun_of_resolved_st_q_for \<G> y)"
-    by (rule fun_of_resolved_st_q_for_combine_assign)
-  show "\<And>s. empty_pred s = is_empty_state (fun_of_resolved_st_q_for \<G> s)"
+  show "\<And>x y. default_st_to_fun \<G>
+      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
+         (combine_default_st x y))
+        = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
+    by (rule default_st_to_fun_combine_assign)
+  show "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
     by (rule empty_pred_exact)
 qed
 
@@ -168,22 +176,21 @@ text \<open>
   The routed spine's transport hypotheses are commutes of compiled sub-trees.
   Both specifications are
   local-only, so each such commute reduces to the corresponding field equation
-  above -- and \<open>caller_cont\<close> needs no hypothesis at all, since
-  \<^const>\<open>dg_spec_combine_transfer\<close> already runs it inside the combine sub-tree.
+  above.
 \<close>
 
-abbreviation spec_st :: "('x,'k,unit,'a exec_dg_st lifted,'a exec_dg_st lifted) dg_spec" where
-  "spec_st \<equiv> local_state_dg_spec_st_for_lifted \<G> empty_pred tf_st enter_st"
+abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) dg_spec" where
+  "spec_st \<equiv> exec_dg_spec \<G> empty_pred tf_st enter_st"
 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
-  "spec_abs \<equiv> local_state_dg_spec_for_lifted \<G> is_empty_state sk asn sp br bd rt en ev"
+  "spec_abs \<equiv> lifted_state_dg_spec \<G> is_empty_state sk asn sp br bd rt en ev"
 
 lemma Hstep_lifted_for:
   assumes "normalized_lift empty_pred d"
   shows "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
      (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dg_spec_step_local_state_st_for_lifted dg_spec_step_local_state_for_lifted
+  unfolding dg_spec_step_exec_dg_spec dg_spec_step_lifted_state_dg_spec
   using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
     step_lift_commute[OF assms] by fastforce
 
@@ -191,7 +198,7 @@ lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
      (enter\<^sup># spec_st ci (mk_dg_man d (\<lambda>_. gk)))
      (enter\<^sup># spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
-  unfolding dgs_enter_local_state_st_for_lifted dgs_enter_local_state_for_lifted
+  unfolding dgs_enter_exec_dg_spec dgs_enter_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_enter_st_commute_local_enter_transfer
         [OF dg_reader_commute_gen_lifted_for])
      (simp add: enter_lift_commute)
@@ -202,27 +209,27 @@ lemma Hcomb_lifted_for:
         (dg_spec_combine_transfer spec_st ci (mk_dg_man d (\<lambda>_. gk)) de))
      (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)) (reader de)))"
-  unfolding dg_spec_combine_transfer_local_state_st_for_lifted
-    dg_spec_combine_transfer_local_state_for_lifted
+  unfolding dg_spec_combine_transfer_exec_dg_spec
+    dg_spec_combine_transfer_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_tree_st_commute_local_combine_transfer
         [OF dg_reader_commute_gen_lifted_for,
          where F = "transfer_lift2 is_empty_state (combine\<^sup># \<G> (ci_dst ci))"])
      (rule combine_lift_commute)
 
-subsection \<open>Soundness at the executable carrier, pulled back along the readback\<close>
+subsection \<open>Soundness at the executable carrier, pulled back through its functions\<close>
 
 text \<open>
   The framework is carrier-agnostic, so nothing forces it to be instantiated at
-  \<open>'a abs_state lifted\<close>: with the concretization read through
-  \<^const>\<open>fun_of_resolved_st_q_for\<close>, the executable Base-style spec is itself a
+  \<open>'a abs_state lifted\<close>: with the carrier's own concretization
+  \<^const>\<open>default_st_gamma\<close>, the executable Base-style spec is itself a
   \<^locale>\<open>analysis_contract\<close>, and the field equations above are all that the proof
   needs. An instance that interprets the routed spine at \<open>spec_st\<close> with this
   concretization feeds it the solver's own table and never transports a solved
   system between carriers.
 \<close>
 
-definition gamma_exec :: "'a exec_dg_st lifted \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> store set" where
-  "gamma_exec d g = \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
+definition gamma_exec :: "'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
+  "gamma_exec d g = \<lbrakk>d\<rbrakk>"
 
 lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
@@ -236,18 +243,18 @@ text \<open>
 
 lemma entered_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and s: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
+    and s: "s \<in> \<lbrakk>d\<rbrakk>"
   shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> \<lbrakk>reader (transfer_lift empty_pred (enter_st ci) d)\<rbrakk>\<^sub>\<bottom>"
-  unfolding enter_lift_commute
-  by (rule transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty s])
+           \<in> \<lbrakk>transfer_lift empty_pred (enter_st ci) d\<rbrakk>"
+  using s unfolding gamma_lift_default_st_gamma_to_fun enter_lift_commute
+  by (intro transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty])
      (simp add: call_enter_CallEdge
        sound_nonrelational_transfer.tf_sound_enter_entry_for[OF tf_sound])
 
 theorem entry_pairs_cover_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and sin: "s \<in> \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>"
-  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>reader d'\<rbrakk>\<^sub>\<bottom>) s
+    and sin: "s \<in> \<lbrakk>d\<rbrakk>"
+  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>d'\<rbrakk>) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (enter_st ci) d)]"
   by (rule entry_pairs_coverI
@@ -255,13 +262,14 @@ theorem entry_pairs_cover_st:
      (simp_all add: sin entered_st[OF tf_sound sin])
 
 text \<open>
-  The executable analysis as a component, read back through \<open>reader\<close>. The
+  The executable analysis as a component, sound for the carrier's
+  concretization. The proof maps each state to its function through \<open>reader\<close>; the
   contract below is its one-line consequence.
 \<close>
 
-theorem exec_spec_sound:
+theorem exec_local_spec_sound:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom>) (exec_spec \<G> empty_pred tf_st enter_st)"
+  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>) (exec_local_spec \<G> empty_pred tf_st enter_st)"
 proof -
   have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
     for a d
@@ -278,67 +286,30 @@ proof -
     then show ?thesis by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
   qed
   have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>reader (transfer_lift2 empty_pred
-        (\<lambda>env0 de0. combine_assign_resolved_q \<G> (ci_dst ci)
-           (lookup_resolved_st_q de0 (location_of \<G> ret_var)) env0)
+        (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
+           de0\<langle>location_of \<G> ret_var\<rangle> env0)
         (combine_env_st_lifted dc de) de)\<rbrakk>\<^sub>\<bottom>"
     if "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci
     unfolding combine_lift_commute
     by (rule
       transfer_lift2_sound_mem[OF combine_collect_sound is_empty_state_gamma_state_empty that])
   have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
-    by (meson gamma_lift_mono gamma_state_mono map_lift_fun_of_resolved_st_q_for_mono)
+    by (meson gamma_lift_mono gamma_state_mono map_lift_default_st_to_fun_mono)
   show ?thesis
-    unfolding sound_local_spec_def
-    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step] entered_st[OF tf_sound] comb
-    by (auto simp: exec_spec_def)
+    unfolding sound_local_spec_def gamma_lift_default_st_gamma_to_fun
+    using mono subset_trans[OF edge_collect_mono[OF Int_lower1] step]
+      entered_st[OF tf_sound, unfolded gamma_lift_default_st_gamma_to_fun] comb
+    by (auto simp: exec_local_spec_def)
 qed
 
 theorem analysis_contract_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
   shows "analysis_contract spec_st gamma_exec \<G>"
-  unfolding local_state_dg_spec_st_for_lifted_def gamma_exec_def[abs_def]
-  by (rule dg_spec_of_contract[OF exec_spec_sound[OF tf_sound]])
-
-subsection \<open>A generic exec-level formal-entry route, and its commute to the abstract one\<close>
-
-text \<open>
-  \<open>formals_route_lifted\<close>/\<open>formals_route_lifted_gen\<close> (\<^theory>\<open>Voblint_Framework.Routed_Context\<close>)
-  are already domain-generic at the abstract carrier \<open>'a abs_state lifted\<close> -- the shape
-  \<^locale>\<open>routed_context_base_hetero\<close>'s own \<open>route\<close> parameter needs. The executable equation
-  system a solver actually runs needs the same construction at the exec carrier
-  \<open>'a exec_dg_st lifted\<close> instead, built from this locale's own \<open>enter_st\<close>/\<open>empty_pred\<close>
-  rather than the mathematical \<open>enter#\<close>/\<open>tf\<close>: every EntryState-style routed
-  instance needs this exact projection and its commute lemma (\<open>exec_formals_route\<close>,
-  \<open>exec_formals_route_commute\<close>); stating it here once lets a
-  domain interpret it instead of restating it, mirroring how \<open>Hstep_lifted_for\<close> etc.
-  already generalize the step/enter/combine commute facts.
-
-  The route is a pure projection of the state it is handed: the routed generator
-  enters the callee frame once and routes on that entered state, so entering again
-  here would key the seed on a doubly-entered frame.
-\<close>
-
-definition entry_exec_route :: "'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
-  "entry_exec_route d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (fun_of_resolved_st_q_for \<G>
-          (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
-
-definition entry_exec_route_gen :: "pp \<Rightarrow> 'a list \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-  where
-  "entry_exec_route_gen u ctx d ca = entry_exec_route d ca"
-
-lemma entry_exec_route_commute:
-  "formals_route_lifted (reader s) ca = entry_exec_route s ca"
-  by (cases ca; cases s)
-     (simp_all add: formals_route_lifted_def entry_exec_route_def
-                    formals_context_def fun_of_resolved_st_q_for_def)
-
-lemma entry_exec_route_gen_commute:
-  "formals_route_lifted_gen u ctx (reader s) ca = entry_exec_route_gen u ctx s ca"
-  by (simp add: formals_route_lifted_gen_def entry_exec_route_gen_def entry_exec_route_commute)
+  unfolding exec_dg_spec_def gamma_exec_def[abs_def]
+  by (rule dg_spec_of_contract[OF exec_local_spec_sound[OF tf_sound]])
 
 end
 
+unbundle no default_st_syntax
 
 end

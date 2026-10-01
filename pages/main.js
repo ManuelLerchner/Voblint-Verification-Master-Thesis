@@ -74,6 +74,8 @@ const contextSelect = query("#context-select");
 
 const contextDepthInput = query("#context-depth");
 const contextDepthGroup = query("#context-depth-group");
+const narrowBoundInput = query("#narrow-bound");
+const narrowBoundGroup = query("#narrow-bound-group");
 
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
@@ -2940,11 +2942,13 @@ function saveGraphImage() {
 
 /* The analysis settings as part of a file name. */
 function settingsSlug() {
-  const settings = [
-    activationControl.value.replaceAll(",", "+"),
-    globalsSelect.value,
-    contextSelect.value,
-  ];
+  const settings = [activationControl.value.replaceAll(",", "+"), globalsSelect.value];
+
+  if (globalsSelect.value === "bounded-narrowing") {
+    settings.push(`n${narrowBoundInput.value}`);
+  }
+
+  settings.push(contextSelect.value);
 
   if (contextSelect.value === "call-string") {
     settings.push(`k${contextDepthInput.value}`);
@@ -3188,7 +3192,18 @@ function updateContextControls() {
   contextDepthInput.disabled = !usesCallString;
 }
 
-function updateGlobalsHelp() {
+/* The bound control belongs to Bounded narrowing, so it is offered only with that rule. */
+function updateGlobalsControls() {
+  const usesNarrowBound = globalsSelect.value === "bounded-narrowing";
+
+  narrowBoundGroup.hidden = !usesNarrowBound;
+  narrowBoundInput.disabled = !usesNarrowBound;
+
+  const bound = parseCount(narrowBoundInput.value, MAX_NARROW_BOUND) ?? DEFAULT_NARROW_BOUND;
+  const narrowing =
+    bound <= 1
+      ? "take one narrowing step each time an origin switches from widening to narrowing"
+      : `narrow freely until an origin has switched from widening to narrowing ${bound} times, then take one step per switch`;
   const descriptions = {
     join: "Join every value side-effected into a global.",
 
@@ -3197,6 +3212,8 @@ function updateGlobalsHelp() {
     warrow: "Widen, then narrow, every value side-effected into a global.",
 
     "warrow-per-origin": "Widen and narrow side-effected values separately per origin.",
+
+    "bounded-narrowing": `Widen side-effected values per origin; ${narrowing}.`,
   };
 
   globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
@@ -3210,16 +3227,25 @@ function updateGlobalsHelp() {
  */
 const MAX_CONTEXT_DEPTH = 100;
 
-function parseContextDepth(text) {
+/*
+ * The narrowing bound counts one origin's switches from widening to narrowing; a
+ * bound beyond the switches a run makes acts as no bound, so 100 is ample. The
+ * default is the CLI's --narrow-bound default.
+ */
+const DEFAULT_NARROW_BOUND = 5;
+const MAX_NARROW_BOUND = 100;
+
+/* A whole number from 0 to max, or null. */
+function parseCount(text, max) {
   const trimmed = String(text ?? "").trim();
 
   if (!/^\d+$/.test(trimmed)) {
     return null;
   }
 
-  const depth = Number(trimmed);
+  const count = Number(trimmed);
 
-  return depth <= MAX_CONTEXT_DEPTH ? depth : null;
+  return count <= max ? count : null;
 }
 
 function readConfiguration() {
@@ -3229,7 +3255,13 @@ function readConfiguration() {
 
   const context = contextSelect.value;
 
-  const allowedGlobals = new Set(["join", "per-origin", "warrow", "warrow-per-origin"]);
+  const allowedGlobals = new Set([
+    "join",
+    "per-origin",
+    "warrow",
+    "warrow-per-origin",
+    "bounded-narrowing",
+  ]);
 
   if (!allowedGlobals.has(globals)) {
     throw new Error(`Unknown globals rule: ${globals}`);
@@ -3244,10 +3276,20 @@ function readConfiguration() {
   let contextDepth = 0;
 
   if (context === "call-string") {
-    contextDepth = parseContextDepth(contextDepthInput.value);
+    contextDepth = parseCount(contextDepthInput.value, MAX_CONTEXT_DEPTH);
 
     if (contextDepth === null) {
       throw new Error(`Call-string depth must be a whole number from 0 to ${MAX_CONTEXT_DEPTH}.`);
+    }
+  }
+
+  let narrowBound = DEFAULT_NARROW_BOUND;
+
+  if (globals === "bounded-narrowing") {
+    narrowBound = parseCount(narrowBoundInput.value, MAX_NARROW_BOUND);
+
+    if (narrowBound === null) {
+      throw new Error(`Narrowing bound must be a whole number from 0 to ${MAX_NARROW_BOUND}.`);
     }
   }
 
@@ -3268,6 +3310,7 @@ function readConfiguration() {
     globals,
     context,
     contextDepth,
+    narrowBound,
     intRefinement,
     trace,
   };
@@ -3278,11 +3321,13 @@ function selectedLabel(select) {
 }
 
 function configurationLabel(configuration) {
-  const parts = [
-    activationControl.label,
-    selectedLabel(globalsSelect),
-    selectedLabel(contextSelect),
-  ];
+  const parts = [activationControl.label, selectedLabel(globalsSelect)];
+
+  if (configuration.globals === "bounded-narrowing") {
+    parts.push(`bound=${configuration.narrowBound}`);
+  }
+
+  parts.push(selectedLabel(contextSelect));
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
@@ -3469,7 +3514,10 @@ function runAnalysisInWorker(configuration, source) {
         type: "run",
         id,
         analysis: configuration.analysis,
-        globals: configuration.globals,
+        globals:
+          configuration.globals === "bounded-narrowing"
+            ? `bounded-narrowing:${configuration.narrowBound}`
+            : configuration.globals,
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
@@ -3722,6 +3770,7 @@ contextSelect.addEventListener("change", updateContextControls);
 for (const control of [
   ...analysisChoices,
   globalsSelect,
+  narrowBoundInput,
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
@@ -3738,7 +3787,8 @@ for (const box of analysisChoices) {
   box.addEventListener("change", updateIntRefinementControls);
 }
 
-globalsSelect.addEventListener("change", updateGlobalsHelp);
+globalsSelect.addEventListener("change", updateGlobalsControls);
+narrowBoundInput.addEventListener("input", updateGlobalsControls);
 
 graphZoomIn.addEventListener("click", () => cy && zoomGraphIn());
 
@@ -3863,7 +3913,7 @@ graphPanel.addEventListener("toggle", resizeGraph);
 
 updateContextControls();
 updateIntRefinementControls();
-updateGlobalsHelp();
+updateGlobalsControls();
 /* A reload can restore the checkbox's last state, which the editor field does not know. */
 syncValueHints();
 renderRawCall(null);
@@ -3889,7 +3939,12 @@ const editorFile = query("#editor-file");
  * What voblint assumes for a flag a fixture's header leaves out. A header that
  * omits one must not inherit whatever the previous run selected.
  */
-const FIXTURE_DEFAULTS = { context: "none", globals: "warrow", refinement: "fixpoint" };
+const FIXTURE_DEFAULTS = {
+  context: "none",
+  globals: "warrow",
+  narrow: String(DEFAULT_NARROW_BOUND),
+  refinement: "fixpoint",
+};
 
 let examplesPromise = null;
 
@@ -3946,7 +4001,7 @@ function exampleCard(group, fixture, pick = null) {
   chips.className = "example-chips";
   chips.append(exampleChip(fixture.analyses.join(", ")));
 
-  const { context = FIXTURE_DEFAULTS.context, k, globals, refinement } = fixture.settings;
+  const { context = FIXTURE_DEFAULTS.context, k, globals, narrow, refinement } = fixture.settings;
 
   if (context !== "none") {
     chips.append(exampleChip(k === undefined ? context : `${context} k=${k}`));
@@ -3957,7 +4012,7 @@ function exampleCard(group, fixture, pick = null) {
   }
 
   if (globals) {
-    chips.append(exampleChip(globals));
+    chips.append(exampleChip(narrow === undefined ? globals : `${globals} bound=${narrow}`));
   }
 
   if (fixture.category) {
@@ -4114,15 +4169,21 @@ function openProgram({ source, fileName, settings = {} }) {
   /* trace=1 is how links named the compact trace before it had a full form. */
   selectIfOffered(traceSelect, settings.trace === "1" ? "compact" : (settings.trace ?? null));
 
-  const depth = parseContextDepth(settings.k);
+  const depth = parseCount(settings.k, MAX_CONTEXT_DEPTH);
 
   if (depth !== null) {
     contextDepthInput.value = String(depth);
   }
 
+  const bound = parseCount(settings.narrow, MAX_NARROW_BOUND);
+
+  if (bound !== null) {
+    narrowBoundInput.value = String(bound);
+  }
+
   updateContextControls();
   updateIntRefinementControls();
-  updateGlobalsHelp();
+  updateGlobalsControls();
   run();
 }
 
@@ -4160,7 +4221,7 @@ function selectIfOffered(select, value) {
  * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
-const LINK_SETTINGS = ["analysis", "globals", "context", "k", "refinement", "trace"];
+const LINK_SETTINGS = ["analysis", "globals", "narrow", "context", "k", "refinement", "trace"];
 
 const shareButton = query("#share-link");
 const shareLabel = query("#share-link-label");
@@ -4248,6 +4309,10 @@ async function shareLink() {
   const parameters = [
     linkParam("analysis", activationControl.value),
     linkParam("globals", globalsSelect.value),
+    ...(globalsSelect.value === "bounded-narrowing" &&
+    parseCount(narrowBoundInput.value, MAX_NARROW_BOUND) !== DEFAULT_NARROW_BOUND
+      ? [linkParam("narrow", narrowBoundInput.value)]
+      : []),
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),

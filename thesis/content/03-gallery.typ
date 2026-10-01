@@ -33,7 +33,7 @@ every figure kind the thesis needs, built from the vocabulary in
   now wrong. Verified wrong as of the figure audit: the module graph named
   five theories that do not exist (removed below); #isatype("dg_spec") is a
   record, not a locale, and `route` belongs to
-  #isalocale("routed_context_base_hetero"), so @fig:correspondence misstates
+  #isalocale("routed_context"), so @fig:correspondence misstates
   both; @tab:instantiation marks Congruence unavailable standalone, though it
   is one of the five selectable domains; @fig:cfg-source and @fig:ast write
   `proc`, where VIMP's keyword is `fun`; @fig:validltr names the constructors
@@ -82,7 +82,7 @@ between two proved stages is a gap, visible at a glance.
     flow((3.2, 1.2), (4.8, 1.2), label: "TD_side"),
     flow((4.8, 1.2), (0, 2.4), label: "solver_correct", bend: -12deg),
     flow((0, 2.4), (1.6, 2.4), label: "analysis_contract"),
-    flow((1.6, 2.4), (3.2, 2.4), label: "ltr_collect"),
+    flow((1.6, 2.4), (3.2, 2.4), label: "node_collect"),
     flow((3.2, 2.4), (0, 3.6), bend: -12deg),
     flow((0, 3.6), (1.6, 3.6)),
 
@@ -234,8 +234,8 @@ Between the two sits the abstract syntax the compiler actually consumes.
     )),
   ),
   kind: image,
-  caption: [The activation-local trace semantics #isaconst("valid_ltr"). Every
-    rule matches one constructor of #isatype("ltr"), so the induction
+  caption: [The activation-local trace semantics #isaconst("valid_activation_trace"). Every
+    rule matches one constructor of #isatype("activation_trace"), so the induction
     principle in the proofs has exactly these four cases.],
 ) <fig:validltr>
 
@@ -451,7 +451,7 @@ the trust boundary follows @leroy09.
     locale-node((0, 1), "bounded_lattice"),
     locale-node((0, 2), "numeric_domain"),
     locale-node((-1, 3), "man_transfer"),
-    locale-node((1, 3), "dg_ctx_activation_base"),
+    locale-node((1, 3), "dg_context_activation"),
     locale-node((0, 4), "dg_spec"),
     locale-node((0, 5), "analysis_contract"),
     instance-node((-1.6, 6), "Sign_Analysis"),
@@ -496,7 +496,7 @@ the trust boundary follows @leroy09.
     table.hline(stroke: 0.5pt),
     [#isalocale("numeric_domain")], yes, yes, yes, yes, yes,
     [#isatype("man_transfer")], yes, yes, yes, yes, yes,
-    [#isalocale("dg_ctx_activation_base")], yes, yes, yes, no, yes,
+    [#isalocale("dg_context_activation")], yes, yes, yes, no, yes,
     [#isatype("dg_spec")], yes, yes, yes, no, yes,
     [#isalocale("analysis_contract")], yes, yes, yes, no, yes,
     table.hline(),
@@ -529,7 +529,7 @@ them, and decoded at render time with Isabelle's own symbol table.
     reader check the obligations a domain must discharge.],
 ) <fig:isasnippet>
 
-#proved("ltr_collect_semantic_postfix", note: [
+#proved("node_collect_semantic_postfix", note: [
   The bridge from a semantic post-fixpoint to the compiled program's collecting
   semantics.
 ])
@@ -545,8 +545,8 @@ them, and decoded at render time with Isabelle's own symbol table.
     [endpoint], [session], [oracles], [`sorry`],
     table.hline(stroke: 0.5pt),
     [#isathm("source_sound")], [#isasession("Voblint_CLI")], [none], yes,
-    [#isathm("ltr_collect_semantic_postfix")], [#isasession("Voblint_CFG")], [none], yes,
-    [#isathm("source_completes_ltr_collect_exit")], [#isasession("Voblint_CFG")], [none], yes,
+    [#isathm("node_collect_semantic_postfix")], [#isasession("Voblint_CFG")], [none], yes,
+    [#isathm("source_completes_node_collect_exit")], [#isasession("Voblint_CFG")], [none], yes,
     [#isathm("source_activation_sound")], [#isasession("Voblint_Result")], [none], yes,
     table.hline(),
   ),
@@ -685,7 +685,7 @@ material this chapter quotes, so it grows when a new snippet does.
   columns: (1fr, 1fr),
   align: top,
   caption: [The same runtime stack under two semantics.
-    #isaconst("valid_ltr") keeps only the active frame and a pointer to its
+    #isaconst("valid_activation_trace") keeps only the active frame and a pointer to its
     caller, which is what makes the collecting semantics finite per activation
     and what #isaconst("combine_env") has to restore on return.],
   label: <fig:stack>,

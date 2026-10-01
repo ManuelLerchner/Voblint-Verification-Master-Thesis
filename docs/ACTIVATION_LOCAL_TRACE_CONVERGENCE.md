@@ -1,5 +1,9 @@
 # From global witnesses to canonical activation-local semantics
 
+> Terminology note (2026-09-30): the concept this document calls local traces is now called
+> activation traces (`activation_trace`, `valid_activation_trace`, `node_collect`, in
+> `Activation_Trace_*.thy`); the names below are historical.
+
 Status: **implemented and batch-green.** Stages 1–5 plus the concrete instantiation are landed
 (`Voblint_CFG` through `Voblint_Result` clean, no `sorry`). The activation-local trace semantics
 `valid_ltr` is the concrete foundation, `cfg_collect_ctx_act` is its sink/`key` projection,

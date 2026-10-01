@@ -48,9 +48,9 @@
       Goblint's `D` and `G`.],
   ),
   (
-    key: "ltr",
-    short: "LTR",
-    long: "activation-local trace",
+    key: "activation-trace",
+    short: "activation trace",
+    long: "activation trace",
     description: [A trace that keeps one activation plus a structural link to
       its caller, rather than the whole stack. What makes the collecting
       semantics finite per activation.],

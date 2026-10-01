@@ -104,7 +104,7 @@ module Generated : sig
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type 'a cfg_ext
   type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
-    Globals_Warrow_Per_Origin
+    Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat
   type abstract_value
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type arithmetic_obligation
@@ -2659,16 +2659,6 @@ let executable_domain_ivl =
      to_string = to_string_ivl}
     : ivl executable_domain);;
 
-type location = Local_Location of string | Global_Location of string;;
-
-let rec equal_locationa
-  x0 x1 = match x0, x1 with Local_Location x1, Global_Location x2 -> false
-    | Global_Location x2, Local_Location x1 -> false
-    | Global_Location x2, Global_Location y2 -> ((x2 : string) = y2)
-    | Local_Location x1, Local_Location y1 -> ((x1 : string) = y1);;
-
-let equal_location = ({equal = equal_locationa} : location equal);;
-
 let rec less_eint a b = eint_le a b && not (eint_le b a);;
 
 let ord_eint = ({less_eq = less_eq_eint; less = less_eint} : eint ord);;
@@ -2925,6 +2915,141 @@ let semilattice_sup_check_result =
      order_semilattice_sup = order_check_result}
     : check_result semilattice_sup);;
 
+let rec map_of _A
+  x0 k = match x0, k with [], k -> None
+    | (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k);;
+
+let rec default_dict_get
+  (d, ps) x = (match map_of equal_literal ps x with None -> d | Some a -> a);;
+
+let rec le_default_dict _A
+  (d, ps) (e, qs) =
+    less_eq _A.preorder_order.ord_preorder d e &&
+      list_all
+        (fun x ->
+          less_eq _A.preorder_order.ord_preorder (default_dict_get (d, ps) x)
+            (default_dict_get (e, qs) x))
+        (map fst ps @ map fst qs);;
+
+let rec le_default_st_rep_code _A
+  (l1, g1) (l2, g2) =
+    le_default_dict _A.order_order_bot l1 l2 &&
+      le_default_dict _A.order_order_bot g1 g2;;
+
+type 'a default_st =
+  Abs_default_st of (('a * (string * 'a) list) * ('a * (string * 'a) list));;
+
+let rec less_eq_default_st _A
+  (Abs_default_st xb) (Abs_default_st x) = le_default_st_rep_code _A xb x;;
+
+let rec equal_default_sta (_A1, _A2)
+  s t = less_eq_default_st _A2 s t && less_eq_default_st _A2 t s;;
+
+let rec equal_default_st (_A1, _A2) =
+  ({equal = equal_default_sta (_A1, _A2)} : 'a default_st equal);;
+
+let rec remdups _A
+  = function [] -> []
+    | x :: xs ->
+        (if membera _A xs x then remdups _A xs else x :: remdups _A xs);;
+
+let rec map2_default_dict
+  f (d1, ps1) (d2, ps2) =
+    (f d1 d2,
+      map (fun x ->
+            (x, f (default_dict_get (d1, ps1) x)
+                  (default_dict_get (d2, ps2) x)))
+        (remdups equal_literal (map fst ps1 @ map fst ps2)));;
+
+let rec map2_default_st_rep _A
+  f (l1, g1) (l2, g2) = (map2_default_dict f l1 l2, map2_default_dict f g1 g2);;
+
+let rec merge_default_st_rep _A
+  s t = map2_default_st_rep
+          _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup)
+          s t;;
+
+let rec sup_default_sta _A
+  (Abs_default_st xa) (Abs_default_st x) =
+    Abs_default_st (merge_default_st_rep _A xa x);;
+
+let rec sup_default_st _A = ({sup = sup_default_sta _A} : 'a default_st sup);;
+
+let rec bot_default_sta _A = Abs_default_st ((bot _A, []), (bot _A, []));;
+
+let rec bot_default_st _A = ({bot = bot_default_sta _A} : 'a default_st bot);;
+
+let rec less_default_st _A
+  s t = less_eq_default_st _A s t && not (less_eq_default_st _A t s);;
+
+let rec ord_default_st _A =
+  ({less_eq = less_eq_default_st _A; less = less_default_st _A} :
+    'a default_st ord);;
+
+let rec preorder_default_st _A =
+  ({ord_preorder = (ord_default_st _A)} : 'a default_st preorder);;
+
+let rec order_default_st _A =
+  ({preorder_order = (preorder_default_st _A)} : 'a default_st order);;
+
+let rec widen_default_st_rep (_A1, _A2)
+  s t = map2_default_st_rep
+          _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          (widen _A2.widening_warrowing) s t;;
+
+let rec widen_on_default_st (_A1, _A2)
+  (Abs_default_st xa) (Abs_default_st x) =
+    Abs_default_st (widen_default_st_rep (_A1, _A2) xa x);;
+
+let rec widen_default_st (_A1, _A2) s t = widen_on_default_st (_A1, _A2) s t;;
+
+let rec widening_default_st (_A1, _A2) =
+  ({order_widening =
+      (order_default_st _A1.order_bot_bounded_semilattice_sup_bot);
+     widen = widen_default_st (_A1, _A2)}
+    : 'a default_st widening);;
+
+let rec order_bot_default_st _A =
+  ({bot_order_bot = (bot_default_st _A.bot_order_bot);
+     order_order_bot = (order_default_st _A)}
+    : 'a default_st order_bot);;
+
+let rec narrow_default_st_rep (_A1, _A2)
+  s t = map2_default_st_rep
+          _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+          (narrow _A2.narrowing_warrowing) s t;;
+
+let rec narrow_on_default_st (_A1, _A2)
+  (Abs_default_st xa) (Abs_default_st x) =
+    Abs_default_st (narrow_default_st_rep (_A1, _A2) xa x);;
+
+let rec narrow_default_st (_A1, _A2) s t = narrow_on_default_st (_A1, _A2) s t;;
+
+let rec narrowing_default_st (_A1, _A2) =
+  ({order_narrowing =
+      (order_default_st _A1.order_bot_bounded_semilattice_sup_bot);
+     narrow = narrow_default_st (_A1, _A2)}
+    : 'a default_st narrowing);;
+
+let rec warrowing_default_st (_A1, _A2) =
+  ({narrowing_warrowing = (narrowing_default_st (_A1, _A2));
+     widening_warrowing = (widening_default_st (_A1, _A2))}
+    : 'a default_st warrowing);;
+
+let rec semilattice_sup_default_st _A =
+  ({sup_semilattice_sup = (sup_default_st _A);
+     order_semilattice_sup =
+       (order_default_st _A.order_bot_bounded_semilattice_sup_bot)}
+    : 'a default_st semilattice_sup);;
+
+let rec bounded_semilattice_sup_bot_default_st _A =
+  ({semilattice_sup_bounded_semilattice_sup_bot =
+      (semilattice_sup_default_st _A);
+     order_bot_bounded_semilattice_sup_bot =
+       (order_bot_default_st _A.order_bot_bounded_semilattice_sup_bot)}
+    : 'a default_st bounded_semilattice_sup_bot);;
+
 type order_key = Key_Int of int | Key_Node of cfg_node |
   Key_List of order_key list;;
 
@@ -2967,145 +3092,6 @@ let order_order_key =
 
 let linorder_order_key =
   ({order_linorder = order_order_key} : order_key linorder);;
-
-let rec map_of _A
-  x0 k = match x0, k with [], k -> None
-    | (l, v) :: ps, k -> (if eq _A l k then Some v else map_of _A ps k);;
-
-let rec lookup_resolved_st _A
-  (dl, (dg, ps)) loc =
-    (match map_of equal_location ps loc
-      with None ->
-        (match loc with Local_Location _ -> dl | Global_Location _ -> dg)
-      | Some a -> a);;
-
-let rec le_resolved_st_code _A
-  s t = (let (dl, (dg, ps)) = s in
-         let (el, (eg, qs)) = t in
-          less_eq _A.order_order_bot.preorder_order.ord_preorder dl el &&
-            (less_eq _A.order_order_bot.preorder_order.ord_preorder dg eg &&
-              list_all
-                (fun loc ->
-                  less_eq _A.order_order_bot.preorder_order.ord_preorder
-                    (lookup_resolved_st _A.bot_order_bot (dl, (dg, ps)) loc)
-                    (lookup_resolved_st _A.bot_order_bot (el, (eg, qs)) loc))
-                (map fst ps @ map fst qs)));;
-
-type 'a resolved_st_q = Abs_resolved_st of ('a * ('a * (location * 'a) list));;
-
-let rec less_eq_resolved_st_q _A
-  (Abs_resolved_st xb) (Abs_resolved_st x) = le_resolved_st_code _A xb x;;
-
-let rec equal_resolved_st_qa (_A1, _A2)
-  s t = less_eq_resolved_st_q _A2 s t && less_eq_resolved_st_q _A2 t s;;
-
-let rec equal_resolved_st_q (_A1, _A2) =
-  ({equal = equal_resolved_st_qa (_A1, _A2)} : 'a resolved_st_q equal);;
-
-let rec remdups _A
-  = function [] -> []
-    | x :: xs ->
-        (if membera _A xs x then remdups _A xs else x :: remdups _A xs);;
-
-let rec support2_resolved_st _A
-  (uu, (uv, ps1)) (uw, (ux, ps2)) =
-    remdups equal_location (map fst ps1 @ map fst ps2);;
-
-let rec map2_resolved_st _A
-  f (dl1, (dg1, ps1)) (dl2, (dg2, ps2)) =
-    (f dl1 dl2,
-      (f dg1 dg2,
-        map (fun loc ->
-              (loc, f (lookup_resolved_st _A (dl1, (dg1, ps1)) loc)
-                      (lookup_resolved_st _A (dl2, (dg2, ps2)) loc)))
-          (support2_resolved_st _A (dl1, (dg1, ps1)) (dl2, (dg2, ps2)))));;
-
-let rec merge_resolved_st _A
-  s t = map2_resolved_st _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup)
-          s t;;
-
-let rec sup_resolved_st_qa _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (merge_resolved_st _A xa x);;
-
-let rec sup_resolved_st_q _A =
-  ({sup = sup_resolved_st_qa _A} : 'a resolved_st_q sup);;
-
-let rec bot_resolved_st_qa _A = Abs_resolved_st (bot _A, (bot _A, []));;
-
-let rec bot_resolved_st_q _A =
-  ({bot = bot_resolved_st_qa _A} : 'a resolved_st_q bot);;
-
-let rec less_resolved_st_q _A
-  s t = less_eq_resolved_st_q _A s t && not (less_eq_resolved_st_q _A t s);;
-
-let rec ord_resolved_st_q _A =
-  ({less_eq = less_eq_resolved_st_q _A; less = less_resolved_st_q _A} :
-    'a resolved_st_q ord);;
-
-let rec preorder_resolved_st_q _A =
-  ({ord_preorder = (ord_resolved_st_q _A)} : 'a resolved_st_q preorder);;
-
-let rec order_resolved_st_q _A =
-  ({preorder_order = (preorder_resolved_st_q _A)} : 'a resolved_st_q order);;
-
-let rec widen_resolved_st (_A1, _A2)
-  s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          (widen _A2.widening_warrowing) s t;;
-
-let rec widen_on_resolved_st_q (_A1, _A2)
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (widen_resolved_st (_A1, _A2) xa x);;
-
-let rec widen_resolved_st_q (_A1, _A2)
-  s t = widen_on_resolved_st_q (_A1, _A2) s t;;
-
-let rec widening_resolved_st_q (_A1, _A2) =
-  ({order_widening =
-      (order_resolved_st_q _A1.order_bot_bounded_semilattice_sup_bot);
-     widen = widen_resolved_st_q (_A1, _A2)}
-    : 'a resolved_st_q widening);;
-
-let rec order_bot_resolved_st_q _A =
-  ({bot_order_bot = (bot_resolved_st_q _A.bot_order_bot);
-     order_order_bot = (order_resolved_st_q _A)}
-    : 'a resolved_st_q order_bot);;
-
-let rec narrow_resolved_st (_A1, _A2)
-  s t = map2_resolved_st _A1.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-          (narrow _A2.narrowing_warrowing) s t;;
-
-let rec narrow_on_resolved_st_q (_A1, _A2)
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (narrow_resolved_st (_A1, _A2) xa x);;
-
-let rec narrow_resolved_st_q (_A1, _A2)
-  s t = narrow_on_resolved_st_q (_A1, _A2) s t;;
-
-let rec narrowing_resolved_st_q (_A1, _A2) =
-  ({order_narrowing =
-      (order_resolved_st_q _A1.order_bot_bounded_semilattice_sup_bot);
-     narrow = narrow_resolved_st_q (_A1, _A2)}
-    : 'a resolved_st_q narrowing);;
-
-let rec warrowing_resolved_st_q (_A1, _A2) =
-  ({narrowing_warrowing = (narrowing_resolved_st_q (_A1, _A2));
-     widening_warrowing = (widening_resolved_st_q (_A1, _A2))}
-    : 'a resolved_st_q warrowing);;
-
-let rec semilattice_sup_resolved_st_q _A =
-  ({sup_semilattice_sup = (sup_resolved_st_q _A);
-     order_semilattice_sup =
-       (order_resolved_st_q _A.order_bot_bounded_semilattice_sup_bot)}
-    : 'a resolved_st_q semilattice_sup);;
-
-let rec bounded_semilattice_sup_bot_resolved_st_q _A =
-  ({semilattice_sup_bounded_semilattice_sup_bot =
-      (semilattice_sup_resolved_st_q _A);
-     order_bot_bounded_semilattice_sup_bot =
-       (order_bot_resolved_st_q _A.order_bot_bounded_semilattice_sup_bot)}
-    : 'a resolved_st_q bounded_semilattice_sup_bot);;
 
 type analysis_domain = Sign_Analysis | Interval_Analysis | Parity_Analysis |
   Int_Analysis | Int_Once_Analysis | Int_Never_Analysis | Congruence_Analysis |
@@ -4041,6 +4027,8 @@ type 'a fset = Abs_fset of 'a set;;
 
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
 
+type phase = Widening | Narrowing;;
+
 type 'a cfg_ext =
   Cfg_ext of
     (cfg_node * (edge_action * cfg_node)) set *
@@ -4073,8 +4061,10 @@ type ('a, 'b, 'c, 'd) state_ext =
     'a set * (('a, 'b) sum, ('a list)) fmap * 'a set * (('a, 'b) sum -> 'c) *
       'd;;
 
+type location = Local_Location of string | Global_Location of string;;
+
 type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
-  Globals_Warrow_Per_Origin;;
+  Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
@@ -4241,6 +4231,9 @@ type ('a, 'b, 'c, 'd) func_state =
                  (('b -> 'c) *
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext))));;
+
+type ('a, 'b, 'c) ug_state_with_gas_ext =
+  Ug_state_with_gas_ext of ('b -> 'a -> phase * nat) * 'c;;
 
 type ('a, 'b) nonrelational_ops_ext =
   Nonrelational_ops_ext of
@@ -4767,13 +4760,16 @@ let ret_var : string = "#ret";;
 
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
-let rec lookup_resolved_st_q _A (Abs_resolved_st x) = lookup_resolved_st _A x;;
-
 let rec location_of
   g x = (if g x then Global_Location x else Local_Location x);;
 
-let rec fun_of_resolved_st_q_for _A
-  g s x = lookup_resolved_st_q _A s (location_of g x);;
+let rec default_st_rep_get _A
+  x0 x1 = match x0, x1 with (l, g), Local_Location x -> default_dict_get l x
+    | (l, g), Global_Location x -> default_dict_get g x;;
+
+let rec default_st_get _A (Abs_default_st x) = default_st_rep_get _A x;;
+
+let rec default_st_to_fun _A g s x = default_st_get _A s (location_of g x);;
 
 let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
                     | Lifted a, f -> f a;;
@@ -4782,29 +4778,28 @@ let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
 
 let rec mcp_rd
   g r = Product
-          (map_lift (fun_of_resolved_st_q_for bot_sign g) (slot1 r),
+          (map_lift (default_st_to_fun bot_sign g) (slot1 r),
             Product
-              (map_lift (fun_of_resolved_st_q_for bot_ivl g) (slot2 r),
+              (map_lift (default_st_to_fun bot_ivl g) (slot2 r),
                 Product
-                  (map_lift (fun_of_resolved_st_q_for bot_parity g) (slot3 r),
+                  (map_lift (default_st_to_fun bot_parity g) (slot3 r),
                     Product
                       (map_lift
-                         (fun_of_resolved_st_q_for
+                         (default_st_to_fun
                            (bot_int_dom_ext bounded_lattice_unit) g)
                          (slot4 r),
                         Product
                           (map_lift
-                             (fun_of_resolved_st_q_for
+                             (default_st_to_fun
                                (bot_int_dom_ext bounded_lattice_unit) g)
                              (slot5 r),
                             Product
                               (map_lift
-                                 (fun_of_resolved_st_q_for
+                                 (default_st_to_fun
                                    (bot_int_dom_ext bounded_lattice_unit) g)
                                  (slot6 r),
                                 Product
-                                  (map_lift
-                                     (fun_of_resolved_st_q_for bot_congruence g)
+                                  (map_lift (default_st_to_fun bot_congruence g)
                                      (slot7 r),
                                     slot8 r)))))));;
 
@@ -5025,75 +5020,64 @@ let abort_empty_set _ = failwith "List.abort_empty_set";;
 let rec declared_global_vars
   (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
 
-let rec location_vname = function Local_Location x1 -> x1
-                         | Global_Location x2 -> x2;;
+let rec default_st_rep_is_bot _A
+  g ((dl, ls), (dg, gs)) =
+    is_empty _A dl ||
+      (list_ex (fun x -> not (g x) && is_empty _A (default_dict_get (dl, ls) x))
+         (map fst ls) ||
+        list_ex (fun x -> g x && is_empty _A (default_dict_get (dg, gs) x))
+          (map fst gs));;
 
-let rec canonical_location
-  g loc = equal_locationa (location_of g (location_vname loc)) loc;;
-
-let rec resolved_st_is_bot _A
-  g s = (let (dl, (_, ps)) = s in
-          is_empty _A dl ||
-            list_ex
-              (fun loc ->
-                is_empty _A
-                  (lookup_resolved_st
-                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                    s loc) &&
-                  canonical_location g loc)
-              (map fst ps));;
-
-let rec resolved_st_is_bot_for _A
+let rec default_st_rep_is_bot_for _A
   globals g s =
     list_ex
       (fun x ->
         is_empty _A
-          (lookup_resolved_st
+          (default_st_rep_get
             _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
             s (location_of g x)))
       globals ||
-      resolved_st_is_bot _A g s;;
+      default_st_rep_is_bot _A g s;;
 
-let rec resolved_st_q_is_bot_for _A
-  xb (Abs_resolved_st xa) =
-    resolved_st_is_bot_for _A xb (membera equal_literal xb) xa;;
+let rec default_st_is_bot_for _A
+  xb (Abs_default_st xa) =
+    default_st_rep_is_bot_for _A xb (membera equal_literal xb) xa;;
 
 let rec part_empty
   gs x1 r = match gs, x1, r with
     gs, Sign_Analysis, r ->
       (match slot1 r with Bot -> true
-        | Lifted a -> resolved_st_q_is_bot_for executable_domain_sign gs a)
+        | Lifted a -> default_st_is_bot_for executable_domain_sign gs a)
     | gs, Interval_Analysis, r ->
         (match slot2 r with Bot -> true
-          | Lifted a -> resolved_st_q_is_bot_for executable_domain_ivl gs a)
+          | Lifted a -> default_st_is_bot_for executable_domain_ivl gs a)
     | gs, Parity_Analysis, r ->
         (match slot3 r with Bot -> true
-          | Lifted a -> resolved_st_q_is_bot_for executable_domain_parity gs a)
+          | Lifted a -> default_st_is_bot_for executable_domain_parity gs a)
     | gs, Int_Analysis, r ->
         (match slot4 r with Bot -> true
           | Lifted a ->
-            resolved_st_q_is_bot_for
+            default_st_is_bot_for
               (executable_domain_int_dom_ext
                 (bounded_lattice_unit, warrowing_unit))
               gs a)
     | gs, Int_Once_Analysis, r ->
         (match slot5 r with Bot -> true
           | Lifted a ->
-            resolved_st_q_is_bot_for
+            default_st_is_bot_for
               (executable_domain_int_dom_ext
                 (bounded_lattice_unit, warrowing_unit))
               gs a)
     | gs, Int_Never_Analysis, r ->
         (match slot6 r with Bot -> true
           | Lifted a ->
-            resolved_st_q_is_bot_for
+            default_st_is_bot_for
               (executable_domain_int_dom_ext
                 (bounded_lattice_unit, warrowing_unit))
               gs a)
     | gs, Congruence_Analysis, r ->
         (match slot7 r with Bot -> true
-          | Lifted a ->
-            resolved_st_q_is_bot_for executable_domain_congruence gs a)
+          | Lifted a -> default_st_is_bot_for executable_domain_congruence gs a)
     | gs, Order_Analysis, r -> equal_relca (slot8 r) RelBot;;
 
 let rec mcp_emp
@@ -5193,8 +5177,9 @@ let rec field_of
     | Order_Analysis, v, vars ->
         Field_Whole (OrderValue (order_pairs (slot8 v)));;
 
-let rec initial_resolved_st_q _A
-  local_value global_value = Abs_resolved_st (local_value, (global_value, []));;
+let rec initial_default_st _A
+  local_value global_value =
+    Abs_default_st ((local_value, []), (global_value, []));;
 
 let top_relc : relc = RelC bot_set;;
 
@@ -5218,64 +5203,64 @@ let rec int_dom_of_int
 let rec mcp_init
   asa = Product
           ((if membera equal_analysis_domain asa Sign_Analysis
-             then Lifted (initial_resolved_st_q bot_sign STop SZero)
+             then Lifted (initial_default_st bot_sign STop SZero)
              else bot_lifteda
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_sign)),
             Product
               ((if membera equal_analysis_domain asa Interval_Analysis
                  then Lifted
-                        (initial_resolved_st_q bot_ivl (Ivl (MinInf, PlusInf))
+                        (initial_default_st bot_ivl (Ivl (MinInf, PlusInf))
                           (Ivl (Fin zero_inta, Fin zero_inta)))
                  else bot_lifteda
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_ivl)),
                 Product
                   ((if membera equal_analysis_domain asa Parity_Analysis
-                     then Lifted (initial_resolved_st_q bot_parity PTop PEven)
+                     then Lifted (initial_default_st bot_parity PTop PEven)
                      else bot_lifteda
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_parity)),
                     Product
                       ((if membera equal_analysis_domain asa Int_Analysis
                          then Lifted
-                                (initial_resolved_st_q
+                                (initial_default_st
                                   (bot_int_dom_ext bounded_lattice_unit)
                                   (top_int_dom_exta bounded_lattice_unit)
                                   (int_dom_of_int zero_inta))
                          else bot_lifteda
-                                (semilattice_sup_resolved_st_q
+                                (semilattice_sup_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit))),
                         Product
                           ((if membera equal_analysis_domain asa
                                  Int_Once_Analysis
                              then Lifted
-                                    (initial_resolved_st_q
+                                    (initial_default_st
                                       (bot_int_dom_ext bounded_lattice_unit)
                                       (top_int_dom_exta bounded_lattice_unit)
                                       (int_dom_of_int zero_inta))
                              else bot_lifteda
-                                    (semilattice_sup_resolved_st_q
+                                    (semilattice_sup_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit))),
                             Product
                               ((if membera equal_analysis_domain asa
                                      Int_Never_Analysis
                                  then Lifted
-(initial_resolved_st_q (bot_int_dom_ext bounded_lattice_unit)
+(initial_default_st (bot_int_dom_ext bounded_lattice_unit)
   (top_int_dom_exta bounded_lattice_unit) (int_dom_of_int zero_inta))
                                  else bot_lifteda
-(semilattice_sup_resolved_st_q
+(semilattice_sup_default_st
   (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit))),
                                 Product
                                   ((if membera equal_analysis_domain asa
  Congruence_Analysis
                                      then Lifted
-    (initial_resolved_st_q bot_congruence top_congruencea
+    (initial_default_st bot_congruence top_congruencea
       (congruence_of_int zero_inta))
                                      else bot_lifteda
-    (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_congruence)),
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence)),
                                     (if membera equal_analysis_domain asa
   Order_Analysis
                                       then top_relc else bot_relca))))))));;
@@ -5438,32 +5423,32 @@ let rec map_local_spec
           (ls_combine_env c)
           (fun b ci x de -> k (ls_combine_assign c b ci x de));;
 
+let rec enter_frame_D_default_st_rep _A top_val s = ((top_val, []), snd s);;
+
+let rec enter_frame_D_default_st _A
+  xa (Abs_default_st x) =
+    Abs_default_st (enter_frame_D_default_st_rep _A xa x);;
+
+let rec default_dict_set
+  (d, ps) x a = (d, (x, a) :: delete equal_literal x ps);;
+
+let rec default_st_rep_set _A
+  x0 x1 a = match x0, x1, a with
+    (l, g), Local_Location x, a -> (default_dict_set l x a, g)
+    | (l, g), Global_Location x, a -> (l, default_dict_set g x a);;
+
+let rec bind_formals_default_st_rep _A
+  g xs avs s =
+    fold (fun (x, a) t -> default_st_rep_set _A t (location_of g x) a)
+      (zip xs avs) s;;
+
+let rec bind_formals_default_st _A
+  xc xb xa (Abs_default_st x) =
+    Abs_default_st (bind_formals_default_st_rep _A xc xb xa x);;
+
 let rec n_aval (_A1, _A2)
   (Nonrelational_ops_ext (n_aval, n_query, n_refine, n_special, more)) =
     n_aval;;
-
-let rec location_is_global = function Local_Location x -> false
-                             | Global_Location x -> true;;
-
-let rec enter_frame_D_resolved _A
-  top_val s =
-    (let (_, (dg, ps)) = s in
-      (top_val, (dg, filtera (fun p -> location_is_global (fst p)) ps)));;
-
-let rec enter_frame_D_resolved_q _A
-  xa (Abs_resolved_st x) = Abs_resolved_st (enter_frame_D_resolved _A xa x);;
-
-let rec update_resolved_st _A
-  (dl, (dg, ps)) loc a = (dl, (dg, (loc, a) :: delete equal_location loc ps));;
-
-let rec bind_formals_resolved _A
-  g xs avs s =
-    fold (fun (x, a) t -> update_resolved_st _A t (location_of g x) a)
-      (zip xs avs) s;;
-
-let rec bind_formals_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (bind_formals_resolved _A xc xb xa x);;
 
 let rec ci_formals
   (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
@@ -5473,10 +5458,10 @@ let rec ci_args
 
 let rec generic_enter_st_for (_A1, _A2)
   ops g ci s =
-    bind_formals_resolved_q _A1 g (ci_formals ci)
-      (map (fun e -> n_aval (_A1, _A2) ops e (fun_of_resolved_st_q_for _A1 g s))
+    bind_formals_default_st _A1 g (ci_formals ci)
+      (map (fun e -> n_aval (_A1, _A2) ops e (default_st_to_fun _A1 g s))
         (ci_args ci))
-      (enter_frame_D_resolved_q _A1 (top _A2) s);;
+      (enter_frame_D_default_st _A1 (top _A2) s);;
 
 let rec congruence_min a b = sup_congruencea a b;;
 
@@ -5727,8 +5712,8 @@ let rec special_min
 let rec special_max
   (Special_ops_ext (special_min, special_max, more)) = special_max;;
 
-let rec update_resolved_st_q _A
-  (Abs_resolved_st xb) xa x = Abs_resolved_st (update_resolved_st _A xb xa x);;
+let rec default_st_set _A
+  (Abs_default_st xb) xa x = Abs_default_st (default_st_rep_set _A xb xa x);;
 
 let rec r_inv_less
   (Refine_ops_ext
@@ -5736,13 +5721,13 @@ let rec r_inv_less
       r_intersect, more))
     = r_inv_less;;
 
-let rec update_resolved_st_q_lift _A
+let rec default_st_set_lift _A
   x loc a =
     bind_lift x
       (fun s ->
         (if is_empty _A a then Bot
           else Lifted
-                 (update_resolved_st_q
+                 (default_st_set
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    s loc a)));;
 
@@ -5775,9 +5760,9 @@ let rec afilter_st_lift_with _A
     ev, ops, g, V x, a, x_lift ->
       bind_lift x_lift
         (fun s ->
-          update_resolved_st_q_lift _A (Lifted s) (location_of g x)
+          default_st_set_lift _A (Lifted s) (location_of g x)
             (r_intersect ops a
-              (fun_of_resolved_st_q_for
+              (default_st_to_fun
                 _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                 g s x)))
     | ev, ops, g, Plus (e1, e2), a, x_lift ->
@@ -5786,11 +5771,11 @@ let rec afilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_plus ops a
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5802,11 +5787,11 @@ let rec afilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_minus ops a
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5818,11 +5803,11 @@ let rec afilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_times ops a
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5867,11 +5852,11 @@ let rec bfilter_st_lift_with _A
           (let (a1, a2) =
              r_inv_less ops res
                (ev e1
-                 (fun_of_resolved_st_q_for
+                 (default_st_to_fun
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    g s))
                (ev e2
-                 (fun_of_resolved_st_q_for
+                 (default_st_to_fun
                    _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                    g s))
              in
@@ -5883,11 +5868,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_less ops (not res)
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5899,11 +5884,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_less ops res
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5915,11 +5900,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_less ops (not res)
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5934,16 +5919,16 @@ let rec bfilter_st_lift_with _A
         bind_lift x_lift
           (fun s ->
             sup_lifteda
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 _A.bounded_semilattice_sup_bot_executable_domain)
               (if feasible_with _A ev ops b1 false
-                    (fun_of_resolved_st_q_for
+                    (default_st_to_fun
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
                 then bfilter_st_lift_with _A ev ops g b1 false (Lifted s)
                 else Bot)
               (if feasible_with _A ev ops b2 false
-                    (fun_of_resolved_st_q_for
+                    (default_st_to_fun
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
                 then bfilter_st_lift_with _A ev ops g b2 false (Lifted s)
@@ -5952,16 +5937,16 @@ let rec bfilter_st_lift_with _A
         bind_lift x_lift
           (fun s ->
             sup_lifteda
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 _A.bounded_semilattice_sup_bot_executable_domain)
               (if feasible_with _A ev ops b1 true
-                    (fun_of_resolved_st_q_for
+                    (default_st_to_fun
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
                 then bfilter_st_lift_with _A ev ops g b1 true (Lifted s)
                 else Bot)
               (if feasible_with _A ev ops b2 true
-                    (fun_of_resolved_st_q_for
+                    (default_st_to_fun
                       _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                       g s)
                 then bfilter_st_lift_with _A ev ops g b2 true (Lifted s)
@@ -5975,11 +5960,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_eq ops res
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -5991,11 +5976,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, a2) =
                r_inv_eq ops (not res)
                  (ev e1
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev e2
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6007,11 +5992,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (N v)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6022,11 +6007,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (V v)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6037,11 +6022,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (Plus (v, va))
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6052,11 +6037,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (Minus (v, va))
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6067,11 +6052,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (Times (v, va))
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6082,11 +6067,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (Div (v, va))
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6097,11 +6082,11 @@ let rec bfilter_st_lift_with _A
             (let (a1, _) =
                r_inv_eq ops (not res)
                  (ev (Mod (v, va))
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                  (ev (N zero_inta)
-                   (fun_of_resolved_st_q_for
+                   (default_st_to_fun
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
@@ -6113,31 +6098,31 @@ let rec collapse_lift _A = function Bot -> bot _A
 let rec branch_st_with _A
   ev ops g e pol s =
     (if feasible_with _A ev ops e pol
-          (fun_of_resolved_st_q_for
+          (default_st_to_fun
             _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
             g s)
       then collapse_lift
-             (bot_resolved_st_q
+             (bot_default_st
                _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
              (bfilter_st_lift_with _A ev ops g e pol (Lifted s))
-      else bot_resolved_st_qa
+      else bot_default_sta
              _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
 
 let rec generic_tf_st_for _A
   ops g x2 s = match ops, g, x2, s with ops, g, EA_Nop, s -> s
     | ops, g, EA_Assign (x, a), s ->
-        update_resolved_st_q
+        default_st_set
           _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
           s (location_of g x)
           (n_aval
             (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
               _A.order_top_executable_domain.top_order_top)
             ops a
-            (fun_of_resolved_st_q_for
+            (default_st_to_fun
               _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
               g s))
     | ops, g, EA_Special (sc, x), s ->
-        update_resolved_st_q
+        default_st_set
           _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
           s (location_of g x)
           (match sc
@@ -6152,14 +6137,14 @@ let rec generic_tf_st_for _A
                   (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                     _A.order_top_executable_domain.top_order_top)
                   ops a
-                  (fun_of_resolved_st_q_for
+                  (default_st_to_fun
                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                     g s))
                 (n_aval
                   (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                     _A.order_top_executable_domain.top_order_top)
                   ops b
-                  (fun_of_resolved_st_q_for
+                  (default_st_to_fun
                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                     g s))
             | Max (a, b) ->
@@ -6172,14 +6157,14 @@ let rec generic_tf_st_for _A
                   (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                     _A.order_top_executable_domain.top_order_top)
                   ops a
-                  (fun_of_resolved_st_q_for
+                  (default_st_to_fun
                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                     g s))
                 (n_aval
                   (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
                     _A.order_top_executable_domain.top_order_top)
                   ops b
-                  (fun_of_resolved_st_q_for
+                  (default_st_to_fun
                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                     g s)))
     | ops, g, EA_Assume b, s ->
@@ -6207,20 +6192,79 @@ let rec generic_tf_st_for _A
     | ops, g, EA_Body p, s -> s
     | ops, g, EA_Ret (None, p), s -> s
     | ops, g, EA_Ret (Some a, p), s ->
-        update_resolved_st_q
+        default_st_set
           _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
           s (location_of g ret_var)
           (n_aval
             (_A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot,
               _A.order_top_executable_domain.top_order_top)
             ops a
-            (fun_of_resolved_st_q_for
+            (default_st_to_fun
               _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
               g s))
     | ops, g, EA_Check (l, cnd), s -> s;;
 
 let rec congruence_tf_st_for
   x = generic_tf_st_for executable_domain_congruence congruence_ops x;;
+
+let rec combine_assign_default_st_rep _A
+  g dst v s =
+    (match dst with None -> s
+      | Some x -> default_st_rep_set _A s (location_of g x) v);;
+
+let rec combine_assign_default_st _A
+  xc xb xa (Abs_default_st x) =
+    Abs_default_st (combine_assign_default_st_rep _A xc xb xa x);;
+
+let rec combine_default_st_rep _A sc se = (fst sc, snd se);;
+
+let rec combine_default_st _A
+  (Abs_default_st xa) (Abs_default_st x) =
+    Abs_default_st (combine_default_st_rep _A xa x);;
+
+let rec combine_env_st_lifted _A
+  dc de =
+    (match dc with Bot -> Bot
+      | Lifted x ->
+        (match de with Bot -> Bot
+          | Lifted y ->
+            Lifted
+              (combine_default_st
+                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot x y)));;
+
+let rec normalize_lift empty_pred a = (if empty_pred a then Bot else Lifted a);;
+
+let rec transfer_lift2
+  empty_pred f x y =
+    bind_lift x
+      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
+
+let rec transfer_lift
+  empty_pred f x = bind_lift x (fun a -> normalize_lift empty_pred (f a));;
+
+let rec top_fun _B x = top _B;;
+
+let rec ci_dst
+  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+
+let rec exec_local_spec _A
+  g empty_pred tf_st enter_st =
+    make_local_spec
+      (fun _ _ ->
+        top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit)))
+      (fun _ a -> transfer_lift empty_pred (tf_st a))
+      (fun _ ci p -> [(fst p, transfer_lift empty_pred (enter_st ci) (fst p))])
+      (fun _ _ _ -> combine_env_st_lifted _A)
+      (fun _ ci ->
+        transfer_lift2 empty_pred
+          (fun env0 de0 ->
+            combine_assign_default_st
+              _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot g
+              (ci_dst ci)
+              (default_st_get
+                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de0
+                (location_of g ret_var))
+              env0));;
 
 let rec parity_less
   a b = (if parity_less_true a b then Some true
@@ -6540,14 +6584,6 @@ let rec plus_ivl
        (normalize_ivl (Ivl (l1, u1)), normalize_ivl (Ivl (l2, u2))) in
       normalize_ivl (Ivl (plus_eint a c, plus_eint b d)));;
 
-let rec interval_eqb
-  a b = (if interval_eq_true a b then Some true
-          else (if interval_eq_false a b then Some false else None));;
-
-let rec interval_lt
-  a b = (if interval_less_true a b then Some true
-          else (if interval_less_false a b then Some false else None));;
-
 let rec ivl_of_int n = Ivl (Fin n, Fin n);;
 
 let rec ivl_mod_bound
@@ -6635,35 +6671,35 @@ let rec aval_ivl
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_lt (aval_ivl a sigma) (aval_ivl b sigma)))
+                 (interval_less (aval_ivl a sigma) (aval_ivl b sigma)))
     | LessEq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
                  (map_option not
-                   (interval_lt (aval_ivl b sigma) (aval_ivl a sigma))))
+                   (interval_less (aval_ivl b sigma) (aval_ivl a sigma))))
     | Greater (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_lt (aval_ivl b sigma) (aval_ivl a sigma)))
+                 (interval_less (aval_ivl b sigma) (aval_ivl a sigma)))
     | GreaterEq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
                  (map_option not
-                   (interval_lt (aval_ivl a sigma) (aval_ivl b sigma))))
+                   (interval_less (aval_ivl a sigma) (aval_ivl b sigma))))
     | NotEq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
                  (map_option not
-                   (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma))))
+                   (interval_eq (aval_ivl a sigma) (aval_ivl b sigma))))
     | Eq (a, b), sigma ->
         (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_eqb (aval_ivl a sigma) (aval_ivl b sigma)))
+                 (interval_eq (aval_ivl a sigma) (aval_ivl b sigma)))
     | Not a, sigma ->
         (if is_empty_ivl (aval_ivl a sigma) then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
@@ -7283,7 +7319,7 @@ let rec sign_eqb
 let rec int_dom_eqb
   d1 d2 =
     first_deciding2
-      [(fun a b -> interval_eqb (int_ivl a) (int_ivl b));
+      [(fun a b -> interval_eq (int_ivl a) (int_ivl b));
         (fun a b -> sign_eqb (int_sign a) (int_sign b));
         (fun a b -> parity_eqb (int_parity a) (int_parity b));
         (fun a b -> congruence_eqb (int_congruence a) (int_congruence b))]
@@ -7313,7 +7349,7 @@ let rec sign_lt
 let rec int_dom_lt
   d1 d2 =
     first_deciding2
-      [(fun a b -> interval_lt (int_ivl a) (int_ivl b));
+      [(fun a b -> interval_less (int_ivl a) (int_ivl b));
         (fun a b -> sign_lt (int_sign a) (int_sign b));
         (fun a b -> parity_lt (int_parity a) (int_parity b));
         (fun a b -> congruence_lt (int_congruence a) (int_congruence b))]
@@ -7425,73 +7461,6 @@ let rec int_dom_enter_st_for
       ((bot_int_dom_ext bounded_lattice_unit),
         (top_int_dom_ext bounded_lattice_unit))
       (int_dom_ops mode);;
-
-let rec combine_assign_resolved _A
-  g dst v s =
-    (match dst with None -> s
-      | Some x -> update_resolved_st _A s (location_of g x) v);;
-
-let rec combine_assign_resolved_q _A
-  xc xb xa (Abs_resolved_st x) =
-    Abs_resolved_st (combine_assign_resolved _A xc xb xa x);;
-
-let rec location_is_local = function Local_Location x -> true
-                            | Global_Location x -> false;;
-
-let rec combine_resolved_st _A
-  sc se =
-    (let (dlc, (_, psc)) = sc in
-     let (_, (dge, pse)) = se in
-      (dlc, (dge, filtera (fun p -> location_is_local (fst p)) psc @
-                    filtera (fun p -> location_is_global (fst p)) pse)));;
-
-let rec combine_resolved_st_q _A
-  (Abs_resolved_st xa) (Abs_resolved_st x) =
-    Abs_resolved_st (combine_resolved_st _A xa x);;
-
-let rec combine_env_st_lifted _A
-  dc de =
-    (match dc with Bot -> Bot
-      | Lifted x ->
-        (match de with Bot -> Bot
-          | Lifted y ->
-            Lifted
-              (combine_resolved_st_q
-                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot x y)));;
-
-let rec normalize_lift empty_pred a = (if empty_pred a then Bot else Lifted a);;
-
-let rec transfer_lift2
-  empty_pred f x y =
-    bind_lift x
-      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
-
-let rec transfer_lift
-  empty_pred f x = bind_lift x (fun a -> normalize_lift empty_pred (f a));;
-
-let rec top_fun _B x = top _B;;
-
-let rec ci_dst
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
-
-let rec exec_spec _A
-  g empty_pred tf_st enter_st =
-    make_local_spec
-      (fun _ _ ->
-        top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit)))
-      (fun _ a -> transfer_lift empty_pred (tf_st a))
-      (fun _ ci p -> [(fst p, transfer_lift empty_pred (enter_st ci) (fst p))])
-      (fun _ _ _ -> combine_env_st_lifted _A)
-      (fun _ ci ->
-        transfer_lift2 empty_pred
-          (fun env0 de0 ->
-            combine_assign_resolved_q
-              _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot g
-              (ci_dst ci)
-              (lookup_resolved_st_q
-                _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot de0
-                (location_of g ret_var))
-              env0));;
 
 let rec parity_tf_st_for
   x = generic_tf_st_for executable_domain_parity parity_ops x;;
@@ -7925,7 +7894,7 @@ let rec assume_step
               | Eq (Or (_, _), _) -> RelC ps | Not _ -> RelC ps
               | And (_, _) -> RelC ps | Or (_, _) -> RelC ps));;
 
-let rec branch_step_rel
+let rec relc_branch_step
   b pol d = (if pol then assume_step b d else assume_not_step b d);;
 
 let rec combine_env_identity a b ci x de = x;;
@@ -7951,7 +7920,7 @@ let rec answer_const = function QLifted d -> int_dom_constant d
                        | QBot -> None
                        | QTop -> None;;
 
-let rec rel_learn
+let rec relc_learn
   ask ys x e d =
     (match d with RelBot -> RelBot
       | RelC ps ->
@@ -7983,7 +7952,7 @@ let rec forget_relc
                (fun (a, b) -> not ((a : string) = x) && not ((b : string) = x))
                ps);;
 
-let rec rel_ret
+let rec relc_ret
   eo d = (match eo with None -> d | Some _ -> forget_relc ret_var d);;
 
 let rec answer_of_int n = QLifted (int_dom_of_int n);;
@@ -8010,12 +7979,12 @@ let rec relc_has
     | x, y, RelC ps ->
         member (equal_prod equal_literal equal_literal) (x, y) ps;;
 
-let rec rel_le
+let rec relc_le
   d a b =
     (match (var_of a, var_of b) with (None, _) -> false
       | (Some _, None) -> false | (Some x, Some y) -> relc_has x y d);;
 
-let rec rel_eval
+let rec relc_eval
   d e = (match e
           with N _ -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | V _ -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
@@ -8030,22 +7999,22 @@ let rec rel_eval
           | Mod (_, _) ->
             top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Less (a, b) ->
-            (if rel_le d b a then answer_of_int zero_inta
+            (if relc_le d b a then answer_of_int zero_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | LessEq (a, b) ->
-            (if rel_le d a b then answer_of_int one_inta
+            (if relc_le d a b then answer_of_int one_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | Greater (a, b) ->
-            (if rel_le d a b then answer_of_int zero_inta
+            (if relc_le d a b then answer_of_int zero_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | GreaterEq (a, b) ->
-            (if rel_le d b a then answer_of_int one_inta
+            (if relc_le d b a then answer_of_int one_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | NotEq (a, b) ->
-            (if rel_le d a b && rel_le d b a then answer_of_int zero_inta
+            (if relc_le d a b && relc_le d b a then answer_of_int zero_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | Eq (a, b) ->
-            (if rel_le d a b && rel_le d b a then answer_of_int one_inta
+            (if relc_le d a b && relc_le d b a then answer_of_int one_inta
               else top_query_lifta (order_int_dom_ext bounded_lattice_unit))
           | Not _ -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | And (_, _) ->
@@ -8053,14 +8022,14 @@ let rec rel_eval
           | Or (_, _) ->
             top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec rel_qry d (EvalInt e) = rel_eval d e;;
+let rec relc_qry d (EvalInt e) = relc_eval d e;;
 
 let rec order_spec
-  ys = ls_branch_update (fun _ _ -> branch_step_rel)
-         (ls_query_update (fun _ _ -> rel_qry)
+  ys = ls_branch_update (fun _ _ -> relc_branch_step)
+         (ls_query_update (fun _ _ -> relc_qry)
            (conservative_local_spec
-             (fun a x e d -> rel_learn a ys x e (forget_relc x d))
-             (fun _ _ -> forget_relc) (fun _ eo _ -> rel_ret eo)
+             (fun a x e d -> relc_learn a ys x e (forget_relc x d))
+             (fun _ _ -> forget_relc) (fun _ eo _ -> relc_ret eo)
              (fun _ _ p -> [(fst p, top_relc)]) (fun _ _ _ _ -> top_relc)));;
 
 let rec ls_assign_update
@@ -8209,210 +8178,202 @@ let rec local_spec_of
       lens_of
         (lift_get
           (bot_lifted
-            (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+            (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
           slot1)
         (lift_put
           (bot_analysis_product
             (order_bot_lifted
-              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign))
+              (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
             (order_bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
+                  (semilattice_sup_default_st
                     bounded_semilattice_sup_bot_parity))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       (bounded_semilattice_sup_bot_int_dom_ext
                         bounded_lattice_unit)))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             bounded_semilattice_sup_bot_congruence))
                         order_bot_relc)))))))
           ((equal_lifted
-             (equal_resolved_st_q
+             (equal_default_st
                (equal_sign,
                  bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot))),
             (bot_lifted
-              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign)))
+              (semilattice_sup_default_st bounded_semilattice_sup_bot_sign)))
           set_slot1)
         (ask_assign
-          (exec_spec bounded_semilattice_sup_bot_sign g
-            (resolved_st_q_is_bot_for executable_domain_sign
+          (exec_local_spec bounded_semilattice_sup_bot_sign g
+            (default_st_is_bot_for executable_domain_sign
               (declared_global_vars p))
             (sign_tf_st_for g) (sign_enter_st_for g)))
     | g, p, Interval_Analysis ->
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_ivl))
+              (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
             slot2)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  (equal_ivl,
                    bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_ivl)))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl)))
             set_slot2)
           (ask_assign
-            (exec_spec bounded_semilattice_sup_bot_ivl g
-              (resolved_st_q_is_bot_for executable_domain_ivl
+            (exec_local_spec bounded_semilattice_sup_bot_ivl g
+              (default_st_is_bot_for executable_domain_ivl
                 (declared_global_vars p))
               (ivl_tf_st_for g) (ivl_enter_st_for g)))
     | g, p, Parity_Analysis ->
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q
-                bounded_semilattice_sup_bot_parity))
+              (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
             slot3)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  (equal_parity,
                    bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   bounded_semilattice_sup_bot_parity)))
             set_slot3)
           (ask_assign
-            (exec_spec bounded_semilattice_sup_bot_parity g
-              (resolved_st_q_is_bot_for executable_domain_parity
+            (exec_local_spec bounded_semilattice_sup_bot_parity g
+              (default_st_is_bot_for executable_domain_parity
                 (declared_global_vars p))
               (parity_tf_st_for g) (parity_enter_st_for g)))
     | g, p, Int_Analysis ->
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
             slot4)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  ((equal_int_dom_ext equal_unit),
                    (bounded_semilattice_sup_bot_int_dom_ext
                      bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
             set_slot4)
           (ask_assign
-            (exec_spec
+            (exec_local_spec
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
-              (resolved_st_q_is_bot_for
+              (default_st_is_bot_for
                 (executable_domain_int_dom_ext
                   (bounded_lattice_unit, warrowing_unit))
                 (declared_global_vars p))
@@ -8422,56 +8383,54 @@ let rec local_spec_of
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
             slot5)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  ((equal_int_dom_ext equal_unit),
                    (bounded_semilattice_sup_bot_int_dom_ext
                      bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
             set_slot5)
           (ask_assign
-            (exec_spec
+            (exec_local_spec
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
-              (resolved_st_q_is_bot_for
+              (default_st_is_bot_for
                 (executable_domain_int_dom_ext
                   (bounded_lattice_unit, warrowing_unit))
                 (declared_global_vars p))
@@ -8481,56 +8440,54 @@ let rec local_spec_of
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
             slot6)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  ((equal_int_dom_ext equal_unit),
                    (bounded_semilattice_sup_bot_int_dom_ext
                      bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
             set_slot6)
           (ask_assign
-            (exec_spec
+            (exec_local_spec
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit) g
-              (resolved_st_q_is_bot_for
+              (default_st_is_bot_for
                 (executable_domain_int_dom_ext
                   (bounded_lattice_unit, warrowing_unit))
                 (declared_global_vars p))
@@ -8540,53 +8497,51 @@ let rec local_spec_of
         lens_of
           (lift_get
             (bot_lifted
-              (semilattice_sup_resolved_st_q
+              (semilattice_sup_default_st
                 bounded_semilattice_sup_bot_congruence))
             slot7)
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             ((equal_lifted
-               (equal_resolved_st_q
+               (equal_default_st
                  (equal_congruence,
                    bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot))),
               (bot_lifted
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   bounded_semilattice_sup_bot_congruence)))
             set_slot7)
           (ask_assign
-            (exec_spec bounded_semilattice_sup_bot_congruence g
-              (resolved_st_q_is_bot_for executable_domain_congruence
+            (exec_local_spec bounded_semilattice_sup_bot_congruence g
+              (default_st_is_bot_for executable_domain_congruence
                 (declared_global_vars p))
               (congruence_tf_st_for g) (congruence_enter_st_for g)))
     | g, p, Order_Analysis ->
@@ -8594,34 +8549,32 @@ let rec local_spec_of
           (lift_put
             (bot_analysis_product
               (order_bot_lifted
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_sign))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
               (order_bot_analysis_product
                 (order_bot_lifted
-                  (semilattice_sup_resolved_st_q
-                    bounded_semilattice_sup_bot_ivl))
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                 (order_bot_analysis_product
                   (order_bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_parity))
                   (order_bot_analysis_product
                     (order_bot_lifted
-                      (semilattice_sup_resolved_st_q
+                      (semilattice_sup_default_st
                         (bounded_semilattice_sup_bot_int_dom_ext
                           bounded_lattice_unit)))
                     (order_bot_analysis_product
                       (order_bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit)))
                       (order_bot_analysis_product
                         (order_bot_lifted
-                          (semilattice_sup_resolved_st_q
+                          (semilattice_sup_default_st
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit)))
                         (order_bot_analysis_product
                           (order_bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_congruence))
                           order_bot_relc)))))))
             (equal_relc, bot_relc) set_slot8)
@@ -9031,7 +8984,7 @@ let rec val_answer
         (match slot7 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Lifted st -> congruence_eval_answer st q)
-    | Order_Analysis, v, q -> rel_qry (slot8 v) q;;
+    | Order_Analysis, v, q -> relc_qry (slot8 v) q;;
 
 let rec part_answer
   g a x q =
@@ -9045,58 +8998,57 @@ let rec mcp_field
 let rec part_live
   x0 r = match x0, r with
     Sign_Analysis, r ->
-      not (equal_lifteda (equal_resolved_st_q (equal_sign, order_bot_sign))
+      not (equal_lifteda (equal_default_st (equal_sign, order_bot_sign))
             (slot1 r)
             (bot_lifteda
-              (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_sign)))
+              (semilattice_sup_default_st bounded_semilattice_sup_bot_sign)))
     | Interval_Analysis, r ->
-        not (equal_lifteda (equal_resolved_st_q (equal_ivl, order_bot_ivl))
+        not (equal_lifteda (equal_default_st (equal_ivl, order_bot_ivl))
               (slot2 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
-                  bounded_semilattice_sup_bot_ivl)))
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl)))
     | Parity_Analysis, r ->
-        not (equal_lifteda
-              (equal_resolved_st_q (equal_parity, order_bot_parity)) (slot3 r)
+        not (equal_lifteda (equal_default_st (equal_parity, order_bot_parity))
+              (slot3 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   bounded_semilattice_sup_bot_parity)))
     | Int_Analysis, r ->
         not (equal_lifteda
-              (equal_resolved_st_q
+              (equal_default_st
                 ((equal_int_dom_ext equal_unit),
                   (order_bot_int_dom_ext bounded_lattice_unit)))
               (slot4 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
     | Int_Once_Analysis, r ->
         not (equal_lifteda
-              (equal_resolved_st_q
+              (equal_default_st
                 ((equal_int_dom_ext equal_unit),
                   (order_bot_int_dom_ext bounded_lattice_unit)))
               (slot5 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
     | Int_Never_Analysis, r ->
         not (equal_lifteda
-              (equal_resolved_st_q
+              (equal_default_st
                 ((equal_int_dom_ext equal_unit),
                   (order_bot_int_dom_ext bounded_lattice_unit)))
               (slot6 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
     | Congruence_Analysis, r ->
         not (equal_lifteda
-              (equal_resolved_st_q (equal_congruence, order_bot_congruence))
+              (equal_default_st (equal_congruence, order_bot_congruence))
               (slot7 r)
               (bot_lifteda
-                (semilattice_sup_resolved_st_q
+                (semilattice_sup_default_st
                   bounded_semilattice_sup_bot_congruence)))
     | Order_Analysis, r -> not (equal_relca (slot8 r) bot_relca);;
 
@@ -9484,10 +9436,10 @@ let rec intra_predecessor_index
         (fun (u, (a, _)) -> Some (u, a)) (cfg_intra_list g);;
 
 let rec routed_entry_seed_programs _C _D
-  seed_unknown route ctx v =
+  seed route ctx v =
     (match v with Statement _ -> []
       | FunctionEntry _ ->
-        [sp_bind (sp_read_global (seed_unknown v ctx))
+        [sp_bind (sp_read_global (seed v ctx))
            (fun seed_state ->
              sp_return
                (DG (dg_local seed_state,
@@ -9614,7 +9566,7 @@ let rec dg_spec_combine_transfer
 let rec sp_map e p = (fun k -> p (fun v -> k (e v)));;
 
 let rec routed_call_alternative_program _C _D
-  s analysis_global seed_unknown route is_bot ctx ca cc p alt =
+  s analysis_global seed route is_bot ctx ca cc p alt =
     (let (cont, entry) = alt in
       (if is_bot entry
         then sp_map
@@ -9627,7 +9579,7 @@ let rec routed_call_alternative_program _C _D
                  (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
         else (let ctxa = route cc ctx entry ca in
                sp_bind
-                 (sp_publish (seed_unknown (FunctionEntry p) ctxa)
+                 (sp_publish (seed (FunctionEntry p) ctxa)
                    (DG (entry,
                          bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
                  (fun _ ->
@@ -9663,7 +9615,7 @@ let rec dgs_enter
     = dgs_enter;;
 
 let rec routed_callee_call_program _C _D
-  s analysis_global seed_unknown route is_bot ctx ca cc caller p =
+  s analysis_global seed route is_bot ctx ca cc caller p =
     sp_bind
       (dgs_enter s (call_info_of ca p)
         (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
@@ -9671,18 +9623,18 @@ let rec routed_callee_call_program _C _D
       (fun pairs ->
         side_rhs_fold_dg _C _D
           (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_call_alternative_program _C _D s analysis_global
-                 seed_unknown route is_bot ctx ca cc p)
+          (map (routed_call_alternative_program _C _D s analysis_global seed
+                 route is_bot ctx ca cc p)
             pairs));;
 
 let rec routed_call_program _C _D
-  s analysis_global seed_unknown resolve is_bot route ctx ca cc v =
+  s analysis_global seed resolve is_bot route ctx ca cc v =
     sp_bind (sp_read_local (cc, ctx))
       (fun caller_state ->
         side_rhs_fold_dg _C _D
           (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_callee_call_program _C _D s analysis_global seed_unknown
-                 route is_bot ctx ca cc (dg_local caller_state))
+          (map (routed_callee_call_program _C _D s analysis_global seed route
+                 is_bot ctx ca cc (dg_local caller_state))
             (resolve v cc ca (dg_local caller_state))));;
 
 let rec dgs_query
@@ -10278,6 +10230,71 @@ let rec update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C
             let join_over_origins = sup_over_origins _B _A2 statea g in
              (Some join_over_origins, statea)));;
 
+let rec gas_update
+  gasa (Ug_state_ext (rho, Ug_state_with_gas_ext (gas, more))) =
+    Ug_state_ext (rho, Ug_state_with_gas_ext (gasa gas, more));;
+
+let rec equal_phase x0 x1 = match x0, x1 with Widening, Narrowing -> false
+                      | Narrowing, Widening -> false
+                      | Narrowing, Narrowing -> true
+                      | Widening, Widening -> true;;
+
+let rec gas (Ug_state_ext (rho, Ug_state_with_gas_ext (gas, more))) = gas;;
+
+let rec update_global_bounded_narrowing (_A1, _A2, _A3) _B _C
+  i da orig g d state =
+    (if eq _A1
+          (fmlookup_default _B (rho state g)
+            (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+          d
+      then (None, state)
+      else (let (phase, ia) = gas state g orig in
+             (if less_eq
+                   _A2.order_bot_bounded_semilattice_sup_bot.order_order_bot.preorder_order.ord_preorder
+                   d (fmlookup_default _B (rho state g)
+                       (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                       orig) &&
+                   (equal_phase phase Narrowing && less_eq_nat i ia)
+               then (None, state)
+               else (let (db, (phasea, ib)) =
+                       (if not (less_eq
+                                 _A2.order_bot_bounded_semilattice_sup_bot.order_order_bot.preorder_order.ord_preorder
+                                 d (fmlookup_default _B (rho state g)
+                                     (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                                     orig))
+                         then (widen _A3.widening_warrowing
+                                 (fmlookup_default _B (rho state g)
+                                   (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+                                   orig)
+                                 d,
+                                (Widening, ia))
+                         else (if equal_phase phase Narrowing
+                                then (narrow _A3.narrowing_warrowing
+(fmlookup_default _B (rho state g)
+  (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+d,
+                                       (phase, ia))
+                                else (narrow _A3.narrowing_warrowing
+(fmlookup_default _B (rho state g)
+  (bot _A2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) orig)
+d,
+                                       (Narrowing, plus_nat ia one_nat))))
+                       in
+                     let statea =
+                       gas_update
+                         (fun _ ->
+                           fun_upd _C (gas state) g
+                             (fun_upd _B (gas state g) orig (phasea, ib)))
+                         (rho_update
+                           (fun _ ->
+                             fun_upd _C (rho state) g
+                               (fmupd _B orig db (rho state g)))
+                           state)
+                       in
+                     let join_over_origins = sup_over_origins _B _A2 statea g in
+                      (if eq _A1 join_over_origins da then (None, statea)
+                        else (Some join_over_origins, statea))))));;
+
 let rec update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
   da orig g d state =
     (if eq _A1
@@ -10317,12 +10334,26 @@ let rec update_global_per_origin (_A1, _A2) _B _C
      let db = sup_over_origins _B _A2 statea g in
       (if eq _A1 db da then (None, statea) else (Some db, statea)));;
 
+let rec truncatea r = Ug_state_ext (rho r, ());;
+
+let rec lift_basic_rule
+  f da orig g d state =
+    (let (res, st) = f da orig g d (truncatea state) in
+      (res, rho_update (fun _ -> rho st) state));;
+
 let rec update_global_of (_A1, _A2, _A3) _B _C
-  r = (match r with Globals_Join -> update_global_always_join (_A1, _A2) _B _C
-        | Globals_Per_Origin -> update_global_per_origin (_A1, _A2) _B _C
-        | Globals_Warrow -> update_global_warrowing_apinis (_A1, _A2, _A3) _B _C
+  r = (match r
+        with Globals_Join ->
+          lift_basic_rule (update_global_always_join (_A1, _A2) _B _C)
+        | Globals_Per_Origin ->
+          lift_basic_rule (update_global_per_origin (_A1, _A2) _B _C)
+        | Globals_Warrow ->
+          lift_basic_rule (update_global_warrowing_apinis (_A1, _A2, _A3) _B _C)
         | Globals_Warrow_Per_Origin ->
-          update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C);;
+          lift_basic_rule
+            (update_global_warrowing_per_origin (_A1, _A2, _A3) _B _C)
+        | Globals_Bounded_Narrowing a ->
+          update_global_bounded_narrowing (_A1, _A2, _A3) _B _C a);;
 
 let rec point
   (State_ext (called, infl, stabl, sigma, State_exta (point, more))) = point;;
@@ -10443,7 +10474,10 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
                                      (infl_update (fun _ -> infla) state)),
                                   ug_statea)))))))));;
 
-let rec init_basic_ug_state _C = Ug_state_ext ((fun _ -> fmempty), ());;
+let rec init_ug_state_with_gas _C
+  = Ug_state_ext
+      ((fun _ -> fmempty),
+        Ug_state_with_gas_ext ((fun _ _ -> (Widening, zero_nat)), ()));;
 
 let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
   r t x =
@@ -10451,7 +10485,7 @@ let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
            (I (x, (called_update
                      (fun _ -> inserta _A x (called (init_state (_C2, _C3))))
                      (init_state (_C2, _C3)),
-                    init_basic_ug_state
+                    init_ug_state_with_gas
                       _C2.order_bot_bounded_semilattice_sup_bot))))
       (fun (_, (state, _)) -> Some (stabl state, sigma state));;
 
@@ -10529,8 +10563,8 @@ let rec exec_formals_route _A
   g u ctx d ca =
     (let CallEdge (_, pars, _) = ca in
       formals_context pars
-        (fun_of_resolved_st_q_for _A g
-          (match d with Bot -> bot_resolved_st_qa _A | Lifted d0 -> d0)));;
+        (default_st_to_fun _A g
+          (match d with Bot -> bot_default_sta _A | Lifted d0 -> d0)));;
 
 let rec mcp_formals_route
   asa g u ctx d ca =
@@ -10539,7 +10573,7 @@ let rec mcp_formals_route
          then exec_formals_route bot_sign g u []
                 (lift_get
                   (bot_lifted
-                    (semilattice_sup_resolved_st_q
+                    (semilattice_sup_default_st
                       bounded_semilattice_sup_bot_sign))
                   slot1 d)
                 ca
@@ -10549,7 +10583,7 @@ let rec mcp_formals_route
              then exec_formals_route bot_ivl g u []
                     (lift_get
                       (bot_lifted
-                        (semilattice_sup_resolved_st_q
+                        (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_ivl))
                       slot2 d)
                     ca
@@ -10559,7 +10593,7 @@ let rec mcp_formals_route
                  then exec_formals_route bot_parity g u []
                         (lift_get
                           (bot_lifted
-                            (semilattice_sup_resolved_st_q
+                            (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_parity))
                           slot3 d)
                         ca
@@ -10570,7 +10604,7 @@ let rec mcp_formals_route
                             (bot_int_dom_ext bounded_lattice_unit) g u []
                             (lift_get
                               (bot_lifted
-                                (semilattice_sup_resolved_st_q
+                                (semilattice_sup_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)))
                               slot4 d)
@@ -10582,7 +10616,7 @@ let rec mcp_formals_route
                                 (bot_int_dom_ext bounded_lattice_unit) g u []
                                 (lift_get
                                   (bot_lifted
-                                    (semilattice_sup_resolved_st_q
+                                    (semilattice_sup_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)))
                                   slot5 d)
@@ -10595,7 +10629,7 @@ bounded_lattice_unit)))
                                     (bot_int_dom_ext bounded_lattice_unit) g u
                                     [] (lift_get
  (bot_lifted
-   (semilattice_sup_resolved_st_q
+   (semilattice_sup_default_st
      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
  slot6 d)
                                     ca
@@ -10606,7 +10640,7 @@ bounded_lattice_unit)))
                                  then exec_formals_route bot_congruence g u []
 (lift_get
   (bot_lifted
-    (semilattice_sup_resolved_st_q bounded_semilattice_sup_bot_congruence))
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
   slot7 d)
 ca
                                  else []),
@@ -10917,73 +10951,71 @@ let rec analysis_result
          result_with_globals
            ((equal_analysis_product
               (equal_lifted
-                (equal_resolved_st_q
+                (equal_default_st
                   (equal_sign,
                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
               (equal_analysis_product
                 (equal_lifted
-                  (equal_resolved_st_q
+                  (equal_default_st
                     (equal_ivl,
                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                 (equal_analysis_product
                   (equal_lifted
-                    (equal_resolved_st_q
+                    (equal_default_st
                       (equal_parity,
                         bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                   (equal_analysis_product
                     (equal_lifted
-                      (equal_resolved_st_q
+                      (equal_default_st
                         ((equal_int_dom_ext equal_unit),
                           (bounded_semilattice_sup_bot_int_dom_ext
                             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           ((equal_int_dom_ext equal_unit),
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             ((equal_int_dom_ext equal_unit),
                               (bounded_semilattice_sup_bot_int_dom_ext
                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               (equal_congruence,
                                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                           equal_relc))))))),
              (semilattice_sup_analysis_product
                (semilattice_sup_lifted
-                 (semilattice_sup_resolved_st_q
-                   bounded_semilattice_sup_bot_sign))
+                 (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
                (semilattice_sup_analysis_product
                  (semilattice_sup_lifted
-                   (semilattice_sup_resolved_st_q
-                     bounded_semilattice_sup_bot_ivl))
+                   (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
                  (semilattice_sup_analysis_product
                    (semilattice_sup_lifted
-                     (semilattice_sup_resolved_st_q
+                     (semilattice_sup_default_st
                        bounded_semilattice_sup_bot_parity))
                    (semilattice_sup_analysis_product
                      (semilattice_sup_lifted
-                       (semilattice_sup_resolved_st_q
+                       (semilattice_sup_default_st
                          (bounded_semilattice_sup_bot_int_dom_ext
                            bounded_lattice_unit)))
                      (semilattice_sup_analysis_product
                        (semilattice_sup_lifted
-                         (semilattice_sup_resolved_st_q
+                         (semilattice_sup_default_st
                            (bounded_semilattice_sup_bot_int_dom_ext
                              bounded_lattice_unit)))
                        (semilattice_sup_analysis_product
                          (semilattice_sup_lifted
-                           (semilattice_sup_resolved_st_q
+                           (semilattice_sup_default_st
                              (bounded_semilattice_sup_bot_int_dom_ext
                                bounded_lattice_unit)))
                          (semilattice_sup_analysis_product
                            (semilattice_sup_lifted
-                             (semilattice_sup_resolved_st_q
+                             (semilattice_sup_default_st
                                bounded_semilattice_sup_bot_congruence))
                            semilattice_sup_relc))))))))
            (equal_global_unknown equal_unit equal_unit)
@@ -10996,80 +11028,80 @@ let rec analysis_result
                 (equal_lifted
                   (equal_analysis_product
                     (equal_lifted
-                      (equal_resolved_st_q
+                      (equal_default_st
                         (equal_sign,
                           bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_ivl,
                             bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_parity,
                               bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               ((equal_int_dom_ext equal_unit),
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     (equal_congruence,
                                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                 equal_relc))))))))
                 (equal_lifted
                   (equal_analysis_product
                     (equal_lifted
-                      (equal_resolved_st_q
+                      (equal_default_st
                         (equal_sign,
                           bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_ivl,
                             bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_parity,
                               bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               ((equal_int_dom_ext equal_unit),
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     (equal_congruence,
                                       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                 equal_relc))))))))),
@@ -11077,551 +11109,551 @@ let rec analysis_result
                  (bounded_semilattice_sup_bot_lifted
                    (bounded_semilattice_sup_bot_analysis_product
                      (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_default_st
                          bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                (bounded_semilattice_sup_bot_int_dom_ext
                                  bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                  bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)
                  (bounded_semilattice_sup_bot_lifted
                    (bounded_semilattice_sup_bot_analysis_product
                      (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_resolved_st_q
+                       (bounded_semilattice_sup_bot_default_st
                          bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                (bounded_semilattice_sup_bot_int_dom_ext
                                  bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                  bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)),
                (warrowing_dg_state
                  ((bounded_semilattice_sup_bot_lifted
                     (bounded_semilattice_sup_bot_analysis_product
                       (bounded_semilattice_sup_bot_lifted
-                        (bounded_semilattice_sup_bot_resolved_st_q
+                        (bounded_semilattice_sup_bot_default_st
                           bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                   bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                    (warrowing_lifted
                      ((bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))),
                        (warrowing_analysis_product
                          ((bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                            (warrowing_lifted
-                             ((bounded_semilattice_sup_bot_resolved_st_q
+                             ((bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign),
-                               (warrowing_resolved_st_q
+                               (warrowing_default_st
                                  (bounded_semilattice_sup_bot_sign,
                                    warrowing_sign)))))
                          ((bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc)))))),
                            (warrowing_analysis_product
                              ((bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                (warrowing_lifted
-                                 ((bounded_semilattice_sup_bot_resolved_st_q
+                                 ((bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl),
-                                   (warrowing_resolved_st_q
+                                   (warrowing_default_st
                                      (bounded_semilattice_sup_bot_ivl,
                                        warrowing_ivl)))))
                              ((bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc))))),
                                (warrowing_analysis_product
                                  ((bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                    (warrowing_lifted
-                                     ((bounded_semilattice_sup_bot_resolved_st_q
+                                     ((bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity),
-                                       (warrowing_resolved_st_q
+                                       (warrowing_default_st
  (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                  ((bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc)))),
                                    (warrowing_analysis_product
                                      ((bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
                                        (warrowing_lifted
- ((bounded_semilattice_sup_bot_resolved_st_q
+ ((bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-   (warrowing_resolved_st_q
+   (warrowing_default_st
      ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
        (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                      ((bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc))),
                                        (warrowing_analysis_product
  ((bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
    (warrowing_lifted
-     ((bounded_semilattice_sup_bot_resolved_st_q
+     ((bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-       (warrowing_resolved_st_q
+       (warrowing_default_st
          ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
            (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
  ((bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc)),
    (warrowing_analysis_product
      ((bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
        (warrowing_lifted
-         ((bounded_semilattice_sup_bot_resolved_st_q
+         ((bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-           (warrowing_resolved_st_q
+           (warrowing_default_st
              ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                (warrowing_int_dom_ext
                  (bounded_lattice_unit, warrowing_unit)))))))
      ((bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc),
        (warrowing_analysis_product
          ((bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
            (warrowing_lifted
-             ((bounded_semilattice_sup_bot_resolved_st_q
+             ((bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence),
-               (warrowing_resolved_st_q
+               (warrowing_default_st
                  (bounded_semilattice_sup_bot_congruence,
                    warrowing_congruence)))))
          (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))
                  ((bounded_semilattice_sup_bot_lifted
                     (bounded_semilattice_sup_bot_analysis_product
                       (bounded_semilattice_sup_bot_lifted
-                        (bounded_semilattice_sup_bot_resolved_st_q
+                        (bounded_semilattice_sup_bot_default_st
                           bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                   bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                    (warrowing_lifted
                      ((bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))),
                        (warrowing_analysis_product
                          ((bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                            (warrowing_lifted
-                             ((bounded_semilattice_sup_bot_resolved_st_q
+                             ((bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign),
-                               (warrowing_resolved_st_q
+                               (warrowing_default_st
                                  (bounded_semilattice_sup_bot_sign,
                                    warrowing_sign)))))
                          ((bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc)))))),
                            (warrowing_analysis_product
                              ((bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                (warrowing_lifted
-                                 ((bounded_semilattice_sup_bot_resolved_st_q
+                                 ((bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl),
-                                   (warrowing_resolved_st_q
+                                   (warrowing_default_st
                                      (bounded_semilattice_sup_bot_ivl,
                                        warrowing_ivl)))))
                              ((bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc))))),
                                (warrowing_analysis_product
                                  ((bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                    (warrowing_lifted
-                                     ((bounded_semilattice_sup_bot_resolved_st_q
+                                     ((bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity),
-                                       (warrowing_resolved_st_q
+                                       (warrowing_default_st
  (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                  ((bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc)))),
                                    (warrowing_analysis_product
                                      ((bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
                                        (warrowing_lifted
- ((bounded_semilattice_sup_bot_resolved_st_q
+ ((bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-   (warrowing_resolved_st_q
+   (warrowing_default_st
      ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
        (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                      ((bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc))),
                                        (warrowing_analysis_product
  ((bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
    (warrowing_lifted
-     ((bounded_semilattice_sup_bot_resolved_st_q
+     ((bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-       (warrowing_resolved_st_q
+       (warrowing_default_st
          ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
            (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
  ((bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc)),
    (warrowing_analysis_product
      ((bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
        (warrowing_lifted
-         ((bounded_semilattice_sup_bot_resolved_st_q
+         ((bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-           (warrowing_resolved_st_q
+           (warrowing_default_st
              ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                (warrowing_int_dom_ext
                  (bounded_lattice_unit, warrowing_unit)))))))
      ((bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc),
        (warrowing_analysis_product
          ((bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
            (warrowing_lifted
-             ((bounded_semilattice_sup_bot_resolved_st_q
+             ((bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence),
-               (warrowing_resolved_st_q
+               (warrowing_default_st
                  (bounded_semilattice_sup_bot_congruence,
                    warrowing_congruence)))))
          (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))))
@@ -11636,73 +11668,73 @@ bounded_semilattice_sup_bot_parity),
            result_with_globals
              ((equal_analysis_product
                 (equal_lifted
-                  (equal_resolved_st_q
+                  (equal_default_st
                     (equal_sign,
                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                 (equal_analysis_product
                   (equal_lifted
-                    (equal_resolved_st_q
+                    (equal_default_st
                       (equal_ivl,
                         bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                   (equal_analysis_product
                     (equal_lifted
-                      (equal_resolved_st_q
+                      (equal_default_st
                         (equal_parity,
                           bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           ((equal_int_dom_ext equal_unit),
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             ((equal_int_dom_ext equal_unit),
                               (bounded_semilattice_sup_bot_int_dom_ext
                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               ((equal_int_dom_ext equal_unit),
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 (equal_congruence,
                                   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                             equal_relc))))))),
                (semilattice_sup_analysis_product
                  (semilattice_sup_lifted
-                   (semilattice_sup_resolved_st_q
+                   (semilattice_sup_default_st
                      bounded_semilattice_sup_bot_sign))
                  (semilattice_sup_analysis_product
                    (semilattice_sup_lifted
-                     (semilattice_sup_resolved_st_q
+                     (semilattice_sup_default_st
                        bounded_semilattice_sup_bot_ivl))
                    (semilattice_sup_analysis_product
                      (semilattice_sup_lifted
-                       (semilattice_sup_resolved_st_q
+                       (semilattice_sup_default_st
                          bounded_semilattice_sup_bot_parity))
                      (semilattice_sup_analysis_product
                        (semilattice_sup_lifted
-                         (semilattice_sup_resolved_st_q
+                         (semilattice_sup_default_st
                            (bounded_semilattice_sup_bot_int_dom_ext
                              bounded_lattice_unit)))
                        (semilattice_sup_analysis_product
                          (semilattice_sup_lifted
-                           (semilattice_sup_resolved_st_q
+                           (semilattice_sup_default_st
                              (bounded_semilattice_sup_bot_int_dom_ext
                                bounded_lattice_unit)))
                          (semilattice_sup_analysis_product
                            (semilattice_sup_lifted
-                             (semilattice_sup_resolved_st_q
+                             (semilattice_sup_default_st
                                (bounded_semilattice_sup_bot_int_dom_ext
                                  bounded_lattice_unit)))
                            (semilattice_sup_analysis_product
                              (semilattice_sup_lifted
-                               (semilattice_sup_resolved_st_q
+                               (semilattice_sup_default_st
                                  bounded_semilattice_sup_bot_congruence))
                              semilattice_sup_relc))))))))
              (equal_global_unknown equal_unit
@@ -11752,80 +11784,80 @@ bounded_semilattice_sup_bot_parity),
                   (equal_lifted
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_sign,
                             bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_ivl,
                               bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               (equal_parity,
                                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     ((equal_int_dom_ext equal_unit),
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                                 (equal_analysis_product
                                   (equal_lifted
-                                    (equal_resolved_st_q
+                                    (equal_default_st
                                       (equal_congruence,
 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                   equal_relc))))))))
                   (equal_lifted
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_sign,
                             bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_ivl,
                               bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               (equal_parity,
                                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     ((equal_int_dom_ext equal_unit),
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                                 (equal_analysis_product
                                   (equal_lifted
-                                    (equal_resolved_st_q
+                                    (equal_default_st
                                       (equal_congruence,
 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                   equal_relc))))))))),
@@ -11833,551 +11865,551 @@ bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                    (bounded_semilattice_sup_bot_lifted
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      (bounded_semilattice_sup_bot_int_dom_ext
                                        bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                  (bounded_semilattice_sup_bot_analysis_product
                                    (bounded_semilattice_sup_bot_lifted
-                                     (bounded_semilattice_sup_bot_resolved_st_q
+                                     (bounded_semilattice_sup_bot_default_st
                                        bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                    bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)
                    (bounded_semilattice_sup_bot_lifted
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      (bounded_semilattice_sup_bot_int_dom_ext
                                        bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                  (bounded_semilattice_sup_bot_analysis_product
                                    (bounded_semilattice_sup_bot_lifted
-                                     (bounded_semilattice_sup_bot_resolved_st_q
+                                     (bounded_semilattice_sup_bot_default_st
                                        bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                    bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)),
                  (warrowing_dg_state
                    ((bounded_semilattice_sup_bot_lifted
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                      (warrowing_lifted
                        ((bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc))))))),
                          (warrowing_analysis_product
                            ((bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                              (warrowing_lifted
-                               ((bounded_semilattice_sup_bot_resolved_st_q
+                               ((bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_sign),
-                                 (warrowing_resolved_st_q
+                                 (warrowing_default_st
                                    (bounded_semilattice_sup_bot_sign,
                                      warrowing_sign)))))
                            ((bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc)))))),
                              (warrowing_analysis_product
                                ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                  (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_resolved_st_q
+                                   ((bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_ivl),
-                                     (warrowing_resolved_st_q
+                                     (warrowing_default_st
                                        (bounded_semilattice_sup_bot_ivl,
  warrowing_ivl)))))
                                ((bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc))))),
                                  (warrowing_analysis_product
                                    ((bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                      (warrowing_lifted
-                                       ((bounded_semilattice_sup_bot_resolved_st_q
+                                       ((bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_parity),
- (warrowing_resolved_st_q
+ (warrowing_default_st
    (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                    ((bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc)))),
                                      (warrowing_analysis_product
                                        ((bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
  (warrowing_lifted
-   ((bounded_semilattice_sup_bot_resolved_st_q
+   ((bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-     (warrowing_resolved_st_q
+     (warrowing_default_st
        ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
          (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                        ((bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc))),
  (warrowing_analysis_product
    ((bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
      (warrowing_lifted
-       ((bounded_semilattice_sup_bot_resolved_st_q
+       ((bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-         (warrowing_resolved_st_q
+         (warrowing_default_st
            ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
              (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
    ((bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
       (bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc)),
      (warrowing_analysis_product
        ((bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext
               bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
          (warrowing_lifted
-           ((bounded_semilattice_sup_bot_resolved_st_q
+           ((bounded_semilattice_sup_bot_default_st
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-             (warrowing_resolved_st_q
+             (warrowing_default_st
                ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                  (warrowing_int_dom_ext
                    (bounded_lattice_unit, warrowing_unit)))))))
        ((bounded_semilattice_sup_bot_analysis_product
           (bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
           bounded_semilattice_sup_bot_relc),
          (warrowing_analysis_product
            ((bounded_semilattice_sup_bot_lifted
-              (bounded_semilattice_sup_bot_resolved_st_q
+              (bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
              (warrowing_lifted
-               ((bounded_semilattice_sup_bot_resolved_st_q
+               ((bounded_semilattice_sup_bot_default_st
                   bounded_semilattice_sup_bot_congruence),
-                 (warrowing_resolved_st_q
+                 (warrowing_default_st
                    (bounded_semilattice_sup_bot_congruence,
                      warrowing_congruence)))))
            (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))
                    ((bounded_semilattice_sup_bot_lifted
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                      (warrowing_lifted
                        ((bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc))))))),
                          (warrowing_analysis_product
                            ((bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                              (warrowing_lifted
-                               ((bounded_semilattice_sup_bot_resolved_st_q
+                               ((bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_sign),
-                                 (warrowing_resolved_st_q
+                                 (warrowing_default_st
                                    (bounded_semilattice_sup_bot_sign,
                                      warrowing_sign)))))
                            ((bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc)))))),
                              (warrowing_analysis_product
                                ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                  (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_resolved_st_q
+                                   ((bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_ivl),
-                                     (warrowing_resolved_st_q
+                                     (warrowing_default_st
                                        (bounded_semilattice_sup_bot_ivl,
  warrowing_ivl)))))
                                ((bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc))))),
                                  (warrowing_analysis_product
                                    ((bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                      (warrowing_lifted
-                                       ((bounded_semilattice_sup_bot_resolved_st_q
+                                       ((bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_parity),
- (warrowing_resolved_st_q
+ (warrowing_default_st
    (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                    ((bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc)))),
                                      (warrowing_analysis_product
                                        ((bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
  (warrowing_lifted
-   ((bounded_semilattice_sup_bot_resolved_st_q
+   ((bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-     (warrowing_resolved_st_q
+     (warrowing_default_st
        ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
          (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                        ((bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc))),
  (warrowing_analysis_product
    ((bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
      (warrowing_lifted
-       ((bounded_semilattice_sup_bot_resolved_st_q
+       ((bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-         (warrowing_resolved_st_q
+         (warrowing_default_st
            ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
              (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
    ((bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
       (bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc)),
      (warrowing_analysis_product
        ((bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext
               bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
          (warrowing_lifted
-           ((bounded_semilattice_sup_bot_resolved_st_q
+           ((bounded_semilattice_sup_bot_default_st
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-             (warrowing_resolved_st_q
+             (warrowing_default_st
                ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                  (warrowing_int_dom_ext
                    (bounded_lattice_unit, warrowing_unit)))))))
        ((bounded_semilattice_sup_bot_analysis_product
           (bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
           bounded_semilattice_sup_bot_relc),
          (warrowing_analysis_product
            ((bounded_semilattice_sup_bot_lifted
-              (bounded_semilattice_sup_bot_resolved_st_q
+              (bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
              (warrowing_lifted
-               ((bounded_semilattice_sup_bot_resolved_st_q
+               ((bounded_semilattice_sup_bot_default_st
                   bounded_semilattice_sup_bot_congruence),
-                 (warrowing_resolved_st_q
+                 (warrowing_default_st
                    (bounded_semilattice_sup_bot_congruence,
                      warrowing_congruence)))))
            (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))))
@@ -12408,73 +12440,73 @@ bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
            result_with_globals
              ((equal_analysis_product
                 (equal_lifted
-                  (equal_resolved_st_q
+                  (equal_default_st
                     (equal_sign,
                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                 (equal_analysis_product
                   (equal_lifted
-                    (equal_resolved_st_q
+                    (equal_default_st
                       (equal_ivl,
                         bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                   (equal_analysis_product
                     (equal_lifted
-                      (equal_resolved_st_q
+                      (equal_default_st
                         (equal_parity,
                           bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           ((equal_int_dom_ext equal_unit),
                             (bounded_semilattice_sup_bot_int_dom_ext
                               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             ((equal_int_dom_ext equal_unit),
                               (bounded_semilattice_sup_bot_int_dom_ext
                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               ((equal_int_dom_ext equal_unit),
                                 (bounded_semilattice_sup_bot_int_dom_ext
                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 (equal_congruence,
                                   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                             equal_relc))))))),
                (semilattice_sup_analysis_product
                  (semilattice_sup_lifted
-                   (semilattice_sup_resolved_st_q
+                   (semilattice_sup_default_st
                      bounded_semilattice_sup_bot_sign))
                  (semilattice_sup_analysis_product
                    (semilattice_sup_lifted
-                     (semilattice_sup_resolved_st_q
+                     (semilattice_sup_default_st
                        bounded_semilattice_sup_bot_ivl))
                    (semilattice_sup_analysis_product
                      (semilattice_sup_lifted
-                       (semilattice_sup_resolved_st_q
+                       (semilattice_sup_default_st
                          bounded_semilattice_sup_bot_parity))
                      (semilattice_sup_analysis_product
                        (semilattice_sup_lifted
-                         (semilattice_sup_resolved_st_q
+                         (semilattice_sup_default_st
                            (bounded_semilattice_sup_bot_int_dom_ext
                              bounded_lattice_unit)))
                        (semilattice_sup_analysis_product
                          (semilattice_sup_lifted
-                           (semilattice_sup_resolved_st_q
+                           (semilattice_sup_default_st
                              (bounded_semilattice_sup_bot_int_dom_ext
                                bounded_lattice_unit)))
                          (semilattice_sup_analysis_product
                            (semilattice_sup_lifted
-                             (semilattice_sup_resolved_st_q
+                             (semilattice_sup_default_st
                                (bounded_semilattice_sup_bot_int_dom_ext
                                  bounded_lattice_unit)))
                            (semilattice_sup_analysis_product
                              (semilattice_sup_lifted
-                               (semilattice_sup_resolved_st_q
+                               (semilattice_sup_default_st
                                  bounded_semilattice_sup_bot_congruence))
                              semilattice_sup_relc))))))))
              equal_call_string_gk (mcp_comp (activation asa))
@@ -12487,80 +12519,80 @@ bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                   (equal_lifted
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_sign,
                             bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_ivl,
                               bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               (equal_parity,
                                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     ((equal_int_dom_ext equal_unit),
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                                 (equal_analysis_product
                                   (equal_lifted
-                                    (equal_resolved_st_q
+                                    (equal_default_st
                                       (equal_congruence,
 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                   equal_relc))))))))
                   (equal_lifted
                     (equal_analysis_product
                       (equal_lifted
-                        (equal_resolved_st_q
+                        (equal_default_st
                           (equal_sign,
                             bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
                       (equal_analysis_product
                         (equal_lifted
-                          (equal_resolved_st_q
+                          (equal_default_st
                             (equal_ivl,
                               bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
                         (equal_analysis_product
                           (equal_lifted
-                            (equal_resolved_st_q
+                            (equal_default_st
                               (equal_parity,
                                 bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
                           (equal_analysis_product
                             (equal_lifted
-                              (equal_resolved_st_q
+                              (equal_default_st
                                 ((equal_int_dom_ext equal_unit),
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                             (equal_analysis_product
                               (equal_lifted
-                                (equal_resolved_st_q
+                                (equal_default_st
                                   ((equal_int_dom_ext equal_unit),
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                               (equal_analysis_product
                                 (equal_lifted
-                                  (equal_resolved_st_q
+                                  (equal_default_st
                                     ((equal_int_dom_ext equal_unit),
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
                                 (equal_analysis_product
                                   (equal_lifted
-                                    (equal_resolved_st_q
+                                    (equal_default_st
                                       (equal_congruence,
 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                   equal_relc))))))))),
@@ -12568,551 +12600,551 @@ bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                    (bounded_semilattice_sup_bot_lifted
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      (bounded_semilattice_sup_bot_int_dom_ext
                                        bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                  (bounded_semilattice_sup_bot_analysis_product
                                    (bounded_semilattice_sup_bot_lifted
-                                     (bounded_semilattice_sup_bot_resolved_st_q
+                                     (bounded_semilattice_sup_bot_default_st
                                        bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                    bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)
                    (bounded_semilattice_sup_bot_lifted
                      (bounded_semilattice_sup_bot_analysis_product
                        (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_resolved_st_q
+                         (bounded_semilattice_sup_bot_default_st
                            bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                        (bounded_semilattice_sup_bot_analysis_product
                          (bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_resolved_st_q
+                           (bounded_semilattice_sup_bot_default_st
                              bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                          (bounded_semilattice_sup_bot_analysis_product
                            (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_resolved_st_q
+                             (bounded_semilattice_sup_bot_default_st
                                bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                            (bounded_semilattice_sup_bot_analysis_product
                              (bounded_semilattice_sup_bot_lifted
-                               (bounded_semilattice_sup_bot_resolved_st_q
+                               (bounded_semilattice_sup_bot_default_st
                                  (bounded_semilattice_sup_bot_int_dom_ext
                                    bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                              (bounded_semilattice_sup_bot_analysis_product
                                (bounded_semilattice_sup_bot_lifted
-                                 (bounded_semilattice_sup_bot_resolved_st_q
+                                 (bounded_semilattice_sup_bot_default_st
                                    (bounded_semilattice_sup_bot_int_dom_ext
                                      bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                (bounded_semilattice_sup_bot_analysis_product
                                  (bounded_semilattice_sup_bot_lifted
-                                   (bounded_semilattice_sup_bot_resolved_st_q
+                                   (bounded_semilattice_sup_bot_default_st
                                      (bounded_semilattice_sup_bot_int_dom_ext
                                        bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                  (bounded_semilattice_sup_bot_analysis_product
                                    (bounded_semilattice_sup_bot_lifted
-                                     (bounded_semilattice_sup_bot_resolved_st_q
+                                     (bounded_semilattice_sup_bot_default_st
                                        bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                    bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot)),
                  (warrowing_dg_state
                    ((bounded_semilattice_sup_bot_lifted
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                      (warrowing_lifted
                        ((bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc))))))),
                          (warrowing_analysis_product
                            ((bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                              (warrowing_lifted
-                               ((bounded_semilattice_sup_bot_resolved_st_q
+                               ((bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_sign),
-                                 (warrowing_resolved_st_q
+                                 (warrowing_default_st
                                    (bounded_semilattice_sup_bot_sign,
                                      warrowing_sign)))))
                            ((bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc)))))),
                              (warrowing_analysis_product
                                ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                  (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_resolved_st_q
+                                   ((bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_ivl),
-                                     (warrowing_resolved_st_q
+                                     (warrowing_default_st
                                        (bounded_semilattice_sup_bot_ivl,
  warrowing_ivl)))))
                                ((bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc))))),
                                  (warrowing_analysis_product
                                    ((bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                      (warrowing_lifted
-                                       ((bounded_semilattice_sup_bot_resolved_st_q
+                                       ((bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_parity),
- (warrowing_resolved_st_q
+ (warrowing_default_st
    (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                    ((bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc)))),
                                      (warrowing_analysis_product
                                        ((bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
  (warrowing_lifted
-   ((bounded_semilattice_sup_bot_resolved_st_q
+   ((bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-     (warrowing_resolved_st_q
+     (warrowing_default_st
        ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
          (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                        ((bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc))),
  (warrowing_analysis_product
    ((bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
      (warrowing_lifted
-       ((bounded_semilattice_sup_bot_resolved_st_q
+       ((bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-         (warrowing_resolved_st_q
+         (warrowing_default_st
            ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
              (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
    ((bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
       (bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc)),
      (warrowing_analysis_product
        ((bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext
               bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
          (warrowing_lifted
-           ((bounded_semilattice_sup_bot_resolved_st_q
+           ((bounded_semilattice_sup_bot_default_st
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-             (warrowing_resolved_st_q
+             (warrowing_default_st
                ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                  (warrowing_int_dom_ext
                    (bounded_lattice_unit, warrowing_unit)))))))
        ((bounded_semilattice_sup_bot_analysis_product
           (bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
           bounded_semilattice_sup_bot_relc),
          (warrowing_analysis_product
            ((bounded_semilattice_sup_bot_lifted
-              (bounded_semilattice_sup_bot_resolved_st_q
+              (bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
              (warrowing_lifted
-               ((bounded_semilattice_sup_bot_resolved_st_q
+               ((bounded_semilattice_sup_bot_default_st
                   bounded_semilattice_sup_bot_congruence),
-                 (warrowing_resolved_st_q
+                 (warrowing_default_st
                    (bounded_semilattice_sup_bot_congruence,
                      warrowing_congruence)))))
            (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))
                    ((bounded_semilattice_sup_bot_lifted
                       (bounded_semilattice_sup_bot_analysis_product
                         (bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_resolved_st_q
+                          (bounded_semilattice_sup_bot_default_st
                             bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                         (bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   (bounded_semilattice_sup_bot_int_dom_ext
                                     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                     bounded_semilattice_sup_bot_relc))))))).semilattice_sup_bounded_semilattice_sup_bot),
                      (warrowing_lifted
                        ((bounded_semilattice_sup_bot_analysis_product
                           (bounded_semilattice_sup_bot_lifted
-                            (bounded_semilattice_sup_bot_resolved_st_q
+                            (bounded_semilattice_sup_bot_default_st
                               bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot)
                           (bounded_semilattice_sup_bot_analysis_product
                             (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                             (bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     (bounded_semilattice_sup_bot_int_dom_ext
                                       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
                                       bounded_semilattice_sup_bot_relc))))))),
                          (warrowing_analysis_product
                            ((bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_resolved_st_q
+                              (bounded_semilattice_sup_bot_default_st
                                 bounded_semilattice_sup_bot_sign).semilattice_sup_bounded_semilattice_sup_bot),
                              (warrowing_lifted
-                               ((bounded_semilattice_sup_bot_resolved_st_q
+                               ((bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_sign),
-                                 (warrowing_resolved_st_q
+                                 (warrowing_default_st
                                    (bounded_semilattice_sup_bot_sign,
                                      warrowing_sign)))))
                            ((bounded_semilattice_sup_bot_analysis_product
                               (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_resolved_st_q
+                                (bounded_semilattice_sup_bot_default_st
                                   bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot)
                               (bounded_semilattice_sup_bot_analysis_product
                                 (bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                 (bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       (bounded_semilattice_sup_bot_int_dom_ext
 bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
 bounded_semilattice_sup_bot_relc)))))),
                              (warrowing_analysis_product
                                ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_resolved_st_q
+                                  (bounded_semilattice_sup_bot_default_st
                                     bounded_semilattice_sup_bot_ivl).semilattice_sup_bounded_semilattice_sup_bot),
                                  (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_resolved_st_q
+                                   ((bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_ivl),
-                                     (warrowing_resolved_st_q
+                                     (warrowing_default_st
                                        (bounded_semilattice_sup_bot_ivl,
  warrowing_ivl)))))
                                ((bounded_semilattice_sup_bot_analysis_product
                                   (bounded_semilattice_sup_bot_lifted
-                                    (bounded_semilattice_sup_bot_resolved_st_q
+                                    (bounded_semilattice_sup_bot_default_st
                                       bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
                                   (bounded_semilattice_sup_bot_analysis_product
                                     (bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 (bounded_semilattice_sup_bot_int_dom_ext
   bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                     (bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
   bounded_semilattice_sup_bot_relc))))),
                                  (warrowing_analysis_product
                                    ((bounded_semilattice_sup_bot_lifted
-                                      (bounded_semilattice_sup_bot_resolved_st_q
+                                      (bounded_semilattice_sup_bot_default_st
 bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot),
                                      (warrowing_lifted
-                                       ((bounded_semilattice_sup_bot_resolved_st_q
+                                       ((bounded_semilattice_sup_bot_default_st
   bounded_semilattice_sup_bot_parity),
- (warrowing_resolved_st_q
+ (warrowing_default_st
    (bounded_semilattice_sup_bot_parity, warrowing_parity)))))
                                    ((bounded_semilattice_sup_bot_analysis_product
                                       (bounded_semilattice_sup_bot_lifted
-(bounded_semilattice_sup_bot_resolved_st_q
+(bounded_semilattice_sup_bot_default_st
   (bounded_semilattice_sup_bot_int_dom_ext
     bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
                                       (bounded_semilattice_sup_bot_analysis_product
 (bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
 (bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
     bounded_semilattice_sup_bot_relc)))),
                                      (warrowing_analysis_product
                                        ((bounded_semilattice_sup_bot_lifted
-  (bounded_semilattice_sup_bot_resolved_st_q
+  (bounded_semilattice_sup_bot_default_st
     (bounded_semilattice_sup_bot_int_dom_ext
       bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
  (warrowing_lifted
-   ((bounded_semilattice_sup_bot_resolved_st_q
+   ((bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-     (warrowing_resolved_st_q
+     (warrowing_default_st
        ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
          (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
                                        ((bounded_semilattice_sup_bot_analysis_product
   (bounded_semilattice_sup_bot_lifted
-    (bounded_semilattice_sup_bot_resolved_st_q
+    (bounded_semilattice_sup_bot_default_st
       (bounded_semilattice_sup_bot_int_dom_ext
         bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
   (bounded_semilattice_sup_bot_analysis_product
     (bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
     (bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
       bounded_semilattice_sup_bot_relc))),
  (warrowing_analysis_product
    ((bounded_semilattice_sup_bot_lifted
-      (bounded_semilattice_sup_bot_resolved_st_q
+      (bounded_semilattice_sup_bot_default_st
         (bounded_semilattice_sup_bot_int_dom_ext
           bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
      (warrowing_lifted
-       ((bounded_semilattice_sup_bot_resolved_st_q
+       ((bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-         (warrowing_resolved_st_q
+         (warrowing_default_st
            ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
              (warrowing_int_dom_ext (bounded_lattice_unit, warrowing_unit)))))))
    ((bounded_semilattice_sup_bot_analysis_product
       (bounded_semilattice_sup_bot_lifted
-        (bounded_semilattice_sup_bot_resolved_st_q
+        (bounded_semilattice_sup_bot_default_st
           (bounded_semilattice_sup_bot_int_dom_ext
             bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot)
       (bounded_semilattice_sup_bot_analysis_product
         (bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
         bounded_semilattice_sup_bot_relc)),
      (warrowing_analysis_product
        ((bounded_semilattice_sup_bot_lifted
-          (bounded_semilattice_sup_bot_resolved_st_q
+          (bounded_semilattice_sup_bot_default_st
             (bounded_semilattice_sup_bot_int_dom_ext
               bounded_lattice_unit)).semilattice_sup_bounded_semilattice_sup_bot),
          (warrowing_lifted
-           ((bounded_semilattice_sup_bot_resolved_st_q
+           ((bounded_semilattice_sup_bot_default_st
               (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
-             (warrowing_resolved_st_q
+             (warrowing_default_st
                ((bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit),
                  (warrowing_int_dom_ext
                    (bounded_lattice_unit, warrowing_unit)))))))
        ((bounded_semilattice_sup_bot_analysis_product
           (bounded_semilattice_sup_bot_lifted
-            (bounded_semilattice_sup_bot_resolved_st_q
+            (bounded_semilattice_sup_bot_default_st
               bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot)
           bounded_semilattice_sup_bot_relc),
          (warrowing_analysis_product
            ((bounded_semilattice_sup_bot_lifted
-              (bounded_semilattice_sup_bot_resolved_st_q
+              (bounded_semilattice_sup_bot_default_st
                 bounded_semilattice_sup_bot_congruence).semilattice_sup_bounded_semilattice_sup_bot),
              (warrowing_lifted
-               ((bounded_semilattice_sup_bot_resolved_st_q
+               ((bounded_semilattice_sup_bot_default_st
                   bounded_semilattice_sup_bot_congruence),
-                 (warrowing_resolved_st_q
+                 (warrowing_default_st
                    (bounded_semilattice_sup_bot_congruence,
                      warrowing_congruence)))))
            (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))))

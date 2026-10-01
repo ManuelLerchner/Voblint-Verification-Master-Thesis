@@ -33,6 +33,13 @@
           cs3: "[0,0] | [1,1] | [2,2] | [3,+∞]",
           entry: NO,
         },
+        "bounded-narrowing": {
+          none: "[0,+∞]",
+          cs1: "[0,0] | [1,+∞]",
+          cs2: "[0,0] | [1,1] | [2,+∞]",
+          cs3: "[0,0] | [1,1] | [2,2] | [3,+∞]",
+          entry: NO,
+        },
       },
     },
     bounded: {
@@ -41,7 +48,7 @@
       endless: false,
       code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  if (x < 10) {\n    f(x + 1);\n  }\n}\n\nfun main() {\n  f(0);\n}",
       grid: Object.fromEntries(
-        ["join", "per-origin", "warrow", "warrow-per-origin"].map((g) => [
+        ["join", "per-origin", "warrow", "warrow-per-origin", "bounded-narrowing"].map((g) => [
           g,
           {
             none: "[0,10]",
@@ -60,6 +67,7 @@
     ["per-origin", "Join per origin"],
     ["warrow", "Warrow"],
     ["warrow-per-origin", "Warrow per origin"],
+    ["bounded-narrowing", "Bounded narrowing"],
   ];
   const CONTEXTS = [
     ["none", "none"],

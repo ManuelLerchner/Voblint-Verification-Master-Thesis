@@ -8,6 +8,7 @@ theory DG_Analysis
     Source_Activation_Sound
     "Voblint_Routing.Compiled_Routed_Equations"
     "Voblint_Routing.Entry_State_Routed_Context"
+    "Voblint_Solver.TD_Solver_Bridge"
 begin
 
 section \<open>One context-sensitive analysis, assembled from its choices\<close>
@@ -52,17 +53,17 @@ text \<open>
 
 definition exec_formals_route ::
     "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'a list
-       \<Rightarrow> ('a::bot) exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
+       \<Rightarrow> ('a::bot) default_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
   "exec_formals_route \<G> u ctx d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
-          (fun_of_resolved_st_q_for \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (default_st_to_fun \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 text \<open>
   The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
   solver's carrier. A rendering that draws one node per activation has to know
   which callee context a call edge enters, and the table it draws from holds
-  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a exec_dg_st\<close> --- so the projection
+  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a default_st\<close> --- so the projection
   \<^const>\<open>exec_formals_route\<close> performs is unavailable to it, and the entered
   state has to be recomputed from the caller's. \<open>enter\<close> is the domain's own
   entry transfer and is the only domain-specific value involved; emptiness is
@@ -95,11 +96,11 @@ definition callee_ctx_of ::
             else Some (formals_context pars entered)))"
 
 lemma exec_formals_route_commute:
-  "formals_route_lifted_gen u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca
+  "formals_route_lifted_gen u ctx (map_lift (default_st_to_fun \<G>) d) ca
      = exec_formals_route \<G> u ctx d ca"
   by (cases d; cases ca)
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
-        exec_formals_route_def fun_of_resolved_st_q_for_def)
+        exec_formals_route_def default_st_to_fun_def)
 
 lemma gamma_point_canonicalize:
   fixes x :: "'a::numeric_domain abs_state lifted"
@@ -238,7 +239,7 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
 text \<open>
   The result table and the global unknowns beside it, off one solve. The second
   component reads the analysis-wide global, the third reads the seed a call
-  published at a procedure entry under a context. Both are read back exactly as a
+  published at a procedure entry under a context. Both are published exactly as a
   table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
 
   The fourth is what one edge's local step makes of a point's solved state: the term
@@ -372,11 +373,11 @@ subsection \<open>The contracts\<close>
 
 text \<open>
   What an instance owes, and nothing more: its component is sound for the
-  concretization its readback induces, its entry answers one alternative, its two
+  concretization its publication map induces, its entry answers one alternative, its two
   emptiness tests are exact, its seed keys are distinct from the analysis-wide
-  global, its solver answers a post-solution over finitely many keys once it
-  terminates, its classifier is correct, and its entry state describes every
-  initial store. The equation system, the solve, the covered keys, the reader,
+  global, its solver is a \<^locale>\<open>certified_solver\<close> (a post-solution over
+  finitely many keys once it terminates), its classifier is correct, and its entry
+  state describes every initial store. The equation system, the solve, the covered keys, the reader,
   the result table and the report are all fixed by \<^locale>\<open>dg_pipeline\<close>
   above and appear here only in conclusions. Each obligation is stated at the
   program's own declared globals, the one set the soundness statement uses.
@@ -385,6 +386,7 @@ text \<open>
 locale dg_analysis =
   dg_pipeline comp emp rd init_st analysis_global seed route root_ctx solve solve_dom
     bot_state classify
+  + certified_solver solve solve_dom solve_c
   for comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
     and rd :: "(vname \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
@@ -395,13 +397,13 @@ locale dg_analysis =
     and root_ctx :: 'c
     and solve solve_dom
     and bot_state :: 'v
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result" +
-  fixes gamma\<^sub>V :: "'v \<Rightarrow> store set"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+    and gamma\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and solve_c :: "(pp \<times> 'c, 'k, ('s lifted, 's lifted) dg_state) eqsT
                     \<Rightarrow> pp \<times> 'c
                     \<Rightarrow> ((pp \<times> 'c) set
-                          \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)) option"
+                          \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)) option" +
   assumes comp_sound:
       "\<And>p. sound_local_spec (declared_global p)
                (\<lambda>d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
@@ -413,10 +415,6 @@ locale dg_analysis =
     and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
     and empty\<^sub>V_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> gamma\<^sub>V v = {}"
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and solve_pp:
-      "\<And>eqs x. solve_dom eqs x
-         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
-    and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and classify_refuted:
@@ -425,7 +423,6 @@ locale dg_analysis =
     and bot_state_empty: "gamma\<^sub>V bot_state = {}"
     and init_sound:
       "\<And>p. cinit_stores (declared_global p) \<subseteq> gamma\<^sub>V (rd (declared_global p) init_st)"
-    and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
 begin
 
 text \<open>
@@ -475,7 +472,7 @@ begin
 abbreviation (input) pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_global p"
   \<comment> \<open>input-only, so interpreted facts print \<open>declared_global p\<close>\<close>
 
-text \<open>What a carrier state describes, read back and concretized.\<close>
+text \<open>What a carrier state describes, published and concretized.\<close>
 
 abbreviation cgam :: "'s lifted \<Rightarrow> store set" where
   "cgam d \<equiv> gamma_lift gamma\<^sub>V (map_lift (rd pgs) d)"
@@ -491,7 +488,7 @@ text \<open>
   key. A caller states soundness against \<^const>\<open>lookup_context\<close> of the result
   table, while the routed endpoints are stated against the reader; this is the
   equation between them, and it needs no coverage premise. At a covered key it
-  is the readback commuting with the normalization; at an uncovered one it is
+  is publication commuting with the normalization; at an uncovered one it is
   \<^const>\<open>Bot\<close> against \<^const>\<open>Bot\<close>, and both describe nothing.
 \<close>
 
@@ -619,7 +616,7 @@ lemma routed_analysis_sound_of_live:
         \<Longrightarrow> s \<in> cgam (dg_local (sol_env pgs p (Inl (u, ctx))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
@@ -716,7 +713,7 @@ lemma routed_analysis_sound_of:
         \<Longrightarrow> s \<in> cgam (dg_local (sol_env pgs p (Inl (u, ctx))))
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter pgs (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) R (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
   by (rule routed_analysis_sound_of_live [where R = R, OF solves _ comb_fwd_ok _ total_R])
@@ -728,7 +725,7 @@ lemma cinit_le_init: "cinit_stores pgs \<subseteq> cgam (Lifted init_st)"
   using init_sound[of p] by simp
 
 text \<open>
-  Every activation the trace semantics admits at a context is described by the
+  Every activation the activation-trace semantics admits at a context is described by the
   solved table's entry for that context. The coverage premises are the shape a
   solver's own reachable set supplies: an edge out of an unknown the solve
   visited lands on one it also visited.
@@ -763,7 +760,7 @@ lemma activation_collect_sound_of:
            \<subseteq> cgam
                  ((reader pgs p (Inl (v, ctx))))"
 proof -
-  interpret adapter: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
+  interpret adapter: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
       "prog_cfg p" analysis_global "route pgs" Bot "Lifted init_st" Bot
       "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot" R
       "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
@@ -849,7 +846,7 @@ lemma entry_state_routed_analysis_sound:
     and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
         \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-  shows "routed_analysis_sound (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
+  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d g. cgam d) pgs (prog_cfg p) analysis_global
      (route pgs) Bot (Lifted init_st) Bot (sol_env pgs p) (sol_vars pgs p) (root_query p)
      seed (\<lambda>d. d = Bot) entry_context_rel (map_lift (rd pgs)) gamma\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_sound_of
@@ -887,7 +884,7 @@ qed
 
 text \<open>
   The two endpoints an entry-state caller consumes: the per-context collecting
-  bound, and the existence of a context for every valid trace, which a
+  bound, and the existence of a context for every valid activation trace, which a
   source-level caller needs to name a context witness at all. Both are the
   routed spine's own theorems at the interpretation just established.
 \<close>
@@ -909,7 +906,7 @@ context
         \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
 begin
 
-interpretation entry: routed_analysis_sound "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
+interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam d" pgs
     "prog_cfg p" analysis_global "route pgs" Bot "Lifted init_st" Bot
     "sol_env pgs p" "sol_vars pgs p" "root_query p" seed "\<lambda>d. d = Bot"
     entry_context_rel "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
@@ -934,22 +931,22 @@ theorem entry_state_activation_collect_sound:
 theorem entry_state_has_context:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
     and trace: "t \<in> \<T>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub>"
-  shows "\<exists>c. trace_context pgs entry_context_rel root_ctx (prog_cfg p) t c"
-  by (rule entry.routed_valid_ltr_has_context[OF entry_cov cinit_le_init trace])
+  shows "\<exists>c. activation_context_rel pgs entry_context_rel root_ctx (prog_cfg p) t c"
+  by (rule entry.routed_valid_activation_trace_has_context[OF entry_cov cinit_le_init trace])
 
 text \<open>
   The two together: covering the entry is enough for the activation buckets to
   exhaust the context-insensitive collection, so a caller holding only a
-  \<^const>\<open>ltr_collect\<close> membership -- which is what a source run delivers -- can
+  \<^const>\<open>node_collect\<close> membership -- which is what a source run delivers -- can
   pass to the bucket its own call history produced.  Without this the per-context
   bounds above say nothing about a run whose context is not known in advance.
 \<close>
 
-theorem entry_state_ltr_collect_eq_Union:
+theorem entry_state_node_collect_eq_Union:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule ltr_collect_eq_Union_activation_of_has_context)
+  by (rule node_collect_eq_Union_activation_of_has_context)
      (rule entry_state_has_context [OF entry_cov])
 
 end
@@ -974,12 +971,12 @@ theorem entry_state_activation_collect_sound_of_cover:
             ctx_vars_cover_combineD [OF cover]
             ctx_vars_cover_entryD [OF cover]])
 
-theorem entry_state_ltr_collect_eq_Union_of_cover:
+theorem entry_state_node_collect_eq_Union_of_cover:
   assumes solves: "terminates pgs p"
     and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
   shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
            = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule entry_state_ltr_collect_eq_Union
+  by (rule entry_state_node_collect_eq_Union
         [OF solves ctx_vars_cover_edgeD [OF cover]
             ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
             ctx_vars_cover_combineD [OF cover]
@@ -1037,7 +1034,7 @@ qed
 text \<open>
   The functional route's counterpart of the entry-state pair, and the reason a
   source-level statement is available for it too. The union side needs nothing
-  at all: \<^const>\<open>activation_context\<close> is total, so every valid trace carries a context without
+  at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
   any coverage having been established. Only the per-bucket bound depends on the
   solve, and it takes the same single closure premise as the entry-state one.
 
@@ -1047,10 +1044,10 @@ text \<open>
   those coincide, which is what \<open>route_const\<close> says and all this proof uses it for.
 \<close>
 
-theorem fun_route_ltr_collect_eq_Union:
+theorem fun_route_node_collect_eq_Union:
   "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
      = (\<Union>ctx. \<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule ltr_collect_eq_Union_activation_of_fun)
+  by (rule node_collect_eq_Union_activation_of_fun)
 
 theorem fun_route_activation_collect_sound_of_cover:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
@@ -1082,29 +1079,29 @@ subsection \<open>An executable analysis as the pipeline's component\<close>
 text \<open>
   What an executable non-relational analysis owes, stated over its own
   transfers: the abstract transfer it implements is sound, its executable
-  mirror reads back to that transfer, and its routing, solver, classifier and
-  entry state satisfy the pipeline's contracts at the abstract-store readback.
-  Its component is \<^const>\<open>exec_spec\<close>, so the generic pipeline runs
+  mirror represents that transfer, and its routing, solver, classifier and
+  entry state satisfy the pipeline's contracts on the represented abstract store.
+  Its component is \<^const>\<open>exec_local_spec\<close>, so the generic pipeline runs
   exactly its local specification, and every theorem above holds of it.
 
   \<open>route_abs\<close> is the same routing decision taken on the abstract carrier, kept
   for the analyses that state it; the pipeline's soundness does not use it.
 \<close>
 
-locale dg_analysis_exec =
-  fixes tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
-                  \<Rightarrow> 'a::numeric_domain exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a exec_dg_st \<Rightarrow> 'a exec_dg_st"
-    and init_st :: "'a exec_dg_st"
+locale dg_analysis_exec = certified_solver solve solve_dom solve_c
+  for tf_st :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action
+                  \<Rightarrow> 'a::numeric_domain default_st \<Rightarrow> 'a default_st"
+    and enter_st :: "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st"
+    and init_st :: "'a default_st"
     and analysis_global :: 'k
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a exec_dg_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a default_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and root_ctx :: 'c
-    and solve :: "(pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+    and solve :: "(pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                   \<Rightarrow> pp \<times> 'c
                   \<Rightarrow> (pp \<times> 'c) set
-                       \<times> (pp \<times> 'c + 'k \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)"
-    and solve_dom :: "(pp \<times> 'c, 'k, ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+                       \<times> (pp \<times> 'c + 'k \<Rightarrow> ('a default_st lifted, 'a default_st lifted) dg_state)"
+    and solve_dom :: "(pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                       \<Rightarrow> pp \<times> 'c \<Rightarrow> bool"
     and bot_state :: "'a abs_state"
     and classify :: "exp \<Rightarrow> 'a abs_state \<Rightarrow> check_result"
@@ -1118,70 +1115,61 @@ locale dg_analysis_exec =
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and route_abs :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 'a abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'c"
     and solve_c :: "(pp \<times> 'c, 'k,
-                       ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state) eqsT
+                       ('a default_st lifted, 'a default_st lifted) dg_state) eqsT
                     \<Rightarrow> pp \<times> 'c
                     \<Rightarrow> ((pp \<times> 'c) set
                           \<times> (pp \<times> 'c + 'k
-                               \<Rightarrow> ('a exec_dg_st lifted, 'a exec_dg_st lifted) dg_state)) option"
+                               \<Rightarrow> ('a default_st lifted, 'a default_st lifted) dg_state)) option" +
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
-      "\<And>\<G> a s. live_resolved_st_q \<G> s
-         \<Longrightarrow> fun_of_resolved_st_q_for \<G> (tf_st \<G> a s)
-               = local_spec_step sk asn spc br bd rt ev a (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>\<G> a s. live_default_st \<G> s
+         \<Longrightarrow> default_st_to_fun \<G> (tf_st \<G> a s)
+               = local_spec_step sk asn spc br bd rt ev a (default_st_to_fun \<G> s)"
     and enter_commute:
-      "\<And>\<G> ci s. fun_of_resolved_st_q_for \<G> (enter_st \<G> ci s)
-                    = en \<G> ci (fun_of_resolved_st_q_for \<G> s)"
+      "\<And>\<G> ci s. default_st_to_fun \<G> (enter_st \<G> ci s)
+                    = en \<G> ci (default_st_to_fun \<G> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (fun_of_resolved_st_q_for \<G>) d) ca"
+         = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"
     and exec_seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and exec_solve_pp:
-      "\<And>eqs x. solve_dom eqs x
-         \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
-    and exec_solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and exec_classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and exec_classify_refuted:
       "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk>
          \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and bot_state_eq: "bot_state = bot"
-    and exec_init_sound:
-      "\<And>\<G>. cinit_stores \<G>
-               \<subseteq> \<lbrakk>map_lift (fun_of_resolved_st_q_for \<G>) (Lifted init_st)\<rbrakk>\<^sub>\<bottom>"
-    and exec_dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
+    and exec_init_sound: "\<And>\<G>. cinit_stores \<G> \<subseteq> default_st_gamma \<G> init_st"
 
 sublocale dg_analysis_exec \<subseteq> dg_analysis
-    "\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+    "\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
              (tf_st \<G>) (enter_st \<G>)"
-    "\<lambda>p. resolved_st_q_is_bot_for (declared_global_vars p)"
-    fun_of_resolved_st_q_for init_st analysis_global seed route root_ctx solve solve_dom bot_state
+    "\<lambda>p. default_st_is_bot_for (declared_global_vars p)"
+    default_st_to_fun init_st analysis_global seed route root_ctx solve solve_dom bot_state
       classify
     gamma_state is_empty_state solve_c
-proof (unfold_locales, goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe
-    SolvePP SolveFin ClProved ClRefuted BotState Init DomC)
+proof (rule dg_analysis.intro[OF certified_solver_axioms dg_analysis_axioms.intro],
+    goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe ClProved ClRefuted BotState
+    Init)
   case (CompSound p)
   interpret dom: dg_domain_exec "declared_global p"
-      "resolved_st_q_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
+      "default_st_is_bot_for (declared_global_vars p)" "tf_st (declared_global p)"
       "enter_st (declared_global p)" sk asn spc br bd rt "en (declared_global p)" ev
     by unfold_locales
        (rule tf_commute, assumption,
         rule enter_commute,
-        rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
-  show ?case by (rule dom.exec_spec_sound[OF tf_sound])
+        rule default_st_is_bot_for_iff[OF declared_global_iff])
+  show ?case
+    by (rule dom.exec_local_spec_sound[OF tf_sound, unfolded gamma_lift_default_st_gamma_to_fun])
 next
   case (EnterSingle p ci d)
   then show ?case by (simp add: dg_pipeline.entry_of_def)
 next
   case (EmptyExact p s)
-  then show ?case by (rule resolved_st_q_is_bot_for_iff[OF declared_global_iff])
+  then show ?case by (rule default_st_is_bot_for_iff[OF declared_global_iff])
 next
   case (EmptyVExact v) then show ?case by (rule is_empty_state_gamma_state_empty)
 next
   case (SeedNe v ctx) then show ?case by (rule exec_seed_ne_analysis_global)
-next
-  case (SolvePP eqs x) then show ?case by (rule exec_solve_pp)
-next
-  case (SolveFin eqs x) then show ?case by (rule exec_solve_fin)
 next
   case (ClProved c d s) then show ?case by (rule exec_classify_proved)
 next
@@ -1191,10 +1179,19 @@ next
     by (simp add: bot_state_eq is_empty_state_iff_gamma_state_empty[symmetric])
 next
   case (Init p) then show ?case
-    using exec_init_sound[of "declared_global p"] by simp
-next
-  case (DomC eqs x) then show ?case by (rule exec_dom_of_solve_c)
+    using exec_init_sound[of "declared_global p"] by (simp add: default_st_gamma_def)
 qed
+
+text \<open>
+  The component's soundness at the carrier's own concretization, which is
+  what a caller composing components on the carrier needs.
+\<close>
+
+lemma (in dg_analysis_exec) exec_comp_sound:
+  "sound_local_spec (declared_global p) (gamma_lift (default_st_gamma (declared_global p)))
+     (exec_local_spec (declared_global p) (default_st_is_bot_for (declared_global_vars p))
+        (tf_st (declared_global p)) (enter_st (declared_global p)))"
+  unfolding gamma_lift_default_st_gamma_to_fun by (rule comp_sound)
 
 text \<open>
   The state a call enters its callee with, at the executable component: the entry
@@ -1203,10 +1200,10 @@ text \<open>
 
 lemma (in dg_analysis_exec) entry_of_exec:
   "dg_pipeline.entry_of
-     (\<lambda>\<G> p. exec_spec \<G> (resolved_st_q_is_bot_for (declared_global_vars p))
+     (\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
         (tf_st \<G>) (enter_st \<G>))
      \<G> p ci d
-   = transfer_lift (resolved_st_q_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
+   = transfer_lift (default_st_is_bot_for (declared_global_vars p)) (enter_st \<G> ci) d"
   by (simp add: dg_pipeline.entry_of_def)
 
 end

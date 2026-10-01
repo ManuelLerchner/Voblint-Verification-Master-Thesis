@@ -12,8 +12,8 @@ text \<open>
   skip, assign, special, branch, body, return, event, with branch covering both
   \<open>EA_Assume\<close> and \<open>EA_AssumeNot\<close> --- plus the callee entry, and this theory
   turns them into a
-  \<^type>\<open>dg_spec\<close> two ways: \<open>local_state_dg_spec_for\<close> on the raw
-  states, and \<open>local_state_dg_spec_for_lifted\<close> on states carrying an
+  \<^type>\<open>dg_spec\<close> two ways: \<open>state_dg_spec\<close> on the raw
+  states, and \<open>lifted_state_dg_spec\<close> on states carrying an
   explicit unreachable value, where a dead point collapses to \<^const>\<open>Bot\<close>
   before any transfer runs.
 
@@ -107,7 +107,7 @@ text \<open>What a whole-state analysis actually supplies: eight pure operations
   and whose return runs the fixed combine in the assign stage. The lifted sibling
   further down differs only in carrying the dead-code lift.\<close>
 
-definition state_spec ::
+definition state_local_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -119,7 +119,7 @@ definition state_spec ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> 'a abs_state local_spec"
 where
-  "state_spec \<G> sk asn sp br bd rt en ev = \<lparr>
+  "state_local_spec \<G> sk asn sp br bd rt en ev = \<lparr>
      ls_query = (\<lambda>_ _. \<top>),
      ls_skip = (\<lambda>_. sk), ls_assign = (\<lambda>_. asn), ls_special = (\<lambda>_. sp),
      ls_branch = (\<lambda>_. br), ls_body = (\<lambda>_. bd), ls_return = (\<lambda>_. rt), ls_event = (\<lambda>_. ev),
@@ -127,44 +127,44 @@ where
      ls_combine_env = (\<lambda>_ _ ci dc de. dc),
      ls_combine_assign = (\<lambda>_ ci. combine\<^sup># \<G> (ci_dst ci)) \<rparr>"
 
-lemma closed_step_state_spec [simp]:
-  "closed_step (state_spec \<G> sk asn sp br bd rt en ev) a
+lemma closed_step_state_local_spec [simp]:
+  "closed_step (state_local_spec \<G> sk asn sp br bd rt en ev) a
      = local_spec_step sk asn sp br bd rt ev a"
-  by (simp add: closed_step_def ls_step_def state_spec_def fun_eq_iff)
+  by (simp add: closed_step_def ls_step_def state_local_spec_def fun_eq_iff)
 
-lemma ls_step_state_spec [simp]:
-  "ls_step (state_spec \<G> sk asn sp br bd rt en ev) A a
+lemma ls_step_state_local_spec [simp]:
+  "ls_step (state_local_spec \<G> sk asn sp br bd rt en ev) A a
      = local_spec_step sk asn sp br bd rt ev a"
-  by (simp add: ls_step_def state_spec_def)
+  by (simp add: ls_step_def state_local_spec_def)
 
-lemma ls_combine_state_spec [simp]:
-  "ls_combine (state_spec \<G> sk asn sp br bd rt en ev) A B ci dc de
+lemma ls_combine_state_local_spec [simp]:
+  "ls_combine (state_local_spec \<G> sk asn sp br bd rt en ev) A B ci dc de
      = combine\<^sup># \<G> (ci_dst ci) dc de"
-  by (simp add: state_spec_def)
+  by (simp add: state_local_spec_def)
 
 context sound_nonrelational_transfer
 begin
 
 abbreviation tf_spec :: "'a abs_state local_spec" where
-  "tf_spec \<equiv> state_spec \<G> sk asn sp br bd rt en ev"
+  "tf_spec \<equiv> state_local_spec \<G> sk asn sp br bd rt en ev"
 
-theorem state_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
+theorem state_local_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
 proof -
   have step: "edge_collect a (\<lbrakk>d\<rbrakk> \<inter> Collect (eval_query.oracle_holds A))
       \<subseteq> \<lbrakk>ls_step tf_spec A a d\<rbrakk>" for a A and d :: "'a abs_state"
-    by (simp only: ls_step_state_spec)
+    by (simp only: ls_step_state_local_spec)
        (rule subset_trans[OF edge_collect_mono[OF Int_lower1] step_sound_for])
   show ?thesis
     unfolding sound_local_spec_def
     using gamma_state_mono step
-    by (auto simp: state_spec_def call_enter_CallEdge combine_collect_sound)
+    by (auto simp: state_local_spec_def call_enter_CallEdge combine_collect_sound)
 qed
 
 end
 
 subsection \<open>The unlifted specification\<close>
 
-definition local_state_dg_spec_for ::
+definition state_dg_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
@@ -176,23 +176,23 @@ definition local_state_dg_spec_for ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "local_state_dg_spec_for \<G> sk asn sp br bd rt en ev
-     = dg_spec_of (state_spec \<G> sk asn sp br bd rt en ev)"
+  "state_dg_spec \<G> sk asn sp br bd rt en ev
+     = dg_spec_of (state_local_spec \<G> sk asn sp br bd rt en ev)"
 
-declare local_state_dg_spec_for_def [code_unfold]
+declare state_dg_spec_def [code_unfold]
 
-lemma dg_spec_step_local_state_for:
-  "dg_spec_step (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) a
+lemma dg_spec_step_state_dg_spec:
+  "dg_spec_step (state_dg_spec \<G> sk asn sp br bd rt en ev) a
      = local_transfer (local_spec_step sk asn sp br bd rt ev a)"
-  by (simp add: local_state_dg_spec_for_def)
+  by (simp add: state_dg_spec_def)
 
-lemma dg_spec_wf_local_state_dg_spec_for [intro, simp]:
-  "dg_spec_wf (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev)"
-  by (simp add: local_state_dg_spec_for_def)
+lemma dg_spec_wf_state_dg_spec [intro, simp]:
+  "dg_spec_wf (state_dg_spec \<G> sk asn sp br bd rt en ev)"
+  by (simp add: state_dg_spec_def)
 
-theorem (in sound_nonrelational_transfer) local_state_dg_spec_for_contract:
-  "analysis_contract (local_state_dg_spec_for \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
-  unfolding local_state_dg_spec_for_def by (rule dg_spec_of_contract[OF state_spec_sound])
+theorem (in sound_nonrelational_transfer) state_dg_spec_contract:
+  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
+  unfolding state_dg_spec_def by (rule dg_spec_of_contract[OF state_local_spec_sound])
 
 
 subsection \<open>Transporting soundness through the reachability lift\<close>
@@ -207,7 +207,7 @@ text \<open>
 \<close>
 subsection \<open>The reachability-lifted construction\<close>
 
-definition lifted_state_spec ::
+definition lifted_state_local_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
@@ -220,7 +220,7 @@ definition lifted_state_spec ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> 'a abs_state lifted local_spec"
 where
-  "lifted_state_spec \<G> empty_pred sk asn sp br bd rt en ev = \<lparr>
+  "lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev = \<lparr>
      ls_query = (\<lambda>_ _. \<top>),
      ls_skip = (\<lambda>_. transfer_lift empty_pred sk),
      ls_assign = (\<lambda>_ x e. transfer_lift empty_pred (asn x e)),
@@ -234,7 +234,7 @@ where
      ls_combine_assign = (\<lambda>_ ci dcM de.
         transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dcM de) \<rparr>"
 
-definition local_state_dg_spec_for_lifted ::
+definition lifted_state_dg_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a abs_state \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
@@ -247,10 +247,10 @@ definition local_state_dg_spec_for_lifted ::
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
 where
-  "local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev
-     = dg_spec_of (lifted_state_spec \<G> empty_pred sk asn sp br bd rt en ev)"
+  "lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev
+     = dg_spec_of (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev)"
 
-declare local_state_dg_spec_for_lifted_def [code_unfold]
+declare lifted_state_dg_spec_def [code_unfold]
 
 lemma local_spec_step_transfer_lift:
   "local_spec_step (transfer_lift empty_pred sk)
@@ -263,46 +263,46 @@ lemma local_spec_step_transfer_lift:
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (cases a) simp_all
 
-lemma ls_step_lifted_state_spec [simp]:
-  "ls_step (lifted_state_spec \<G> empty_pred sk asn sp br bd rt en ev) A a
+lemma ls_step_lifted_state_local_spec [simp]:
+  "ls_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) A a
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
-  by (simp add: ls_step_def lifted_state_spec_def local_spec_step_transfer_lift)
+  by (simp add: ls_step_def lifted_state_local_spec_def local_spec_step_transfer_lift)
 
-lemma closed_step_lifted_state_spec [simp]:
-  "closed_step (lifted_state_spec \<G> empty_pred sk asn sp br bd rt en ev) a
+lemma closed_step_lifted_state_local_spec [simp]:
+  "closed_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) a
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: closed_step_def fun_eq_iff)
 
-lemma dg_spec_step_local_state_for_lifted:
-  "dg_spec_step (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) a
+lemma dg_spec_step_lifted_state_dg_spec:
+  "dg_spec_step (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) a
      = local_transfer (transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a))"
-  by (simp add: local_state_dg_spec_for_lifted_def)
+  by (simp add: lifted_state_dg_spec_def)
 
-lemma dg_spec_wf_local_state_dg_spec_for_lifted [intro, simp]:
-  "dg_spec_wf (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)"
-  by (simp add: local_state_dg_spec_for_lifted_def)
+lemma dg_spec_wf_lifted_state_dg_spec [intro, simp]:
+  "dg_spec_wf (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev)"
+  by (simp add: lifted_state_dg_spec_def)
 
-lemma dgs_enter_local_state_for_lifted:
-  "enter\<^sup># (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) ci
+lemma dgs_enter_lifted_state_dg_spec:
+  "enter\<^sup># (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (en ci) d)])"
-  by (simp add: local_state_dg_spec_for_lifted_def lifted_state_spec_def)
+  by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
 text \<open>The caller continuation and the env stage are both identities, so the
   whole return pipeline is the return assignment applied to the raw call-site
   value and the callee exit.\<close>
 
-lemma dg_spec_combine_transfer_local_state_for_lifted:
+lemma dg_spec_combine_transfer_lifted_state_dg_spec:
   "dg_spec_combine_transfer
-     (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev) ci
+     (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de)"
-  by (simp add: local_state_dg_spec_for_lifted_def lifted_state_spec_def)
+  by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
 subsection \<open>Soundness of the lifted construction\<close>
 
 text \<open>
   The meaning of a Base-style equation never depends on the global slot:
-  nothing in \<^const>\<open>local_state_dg_spec_for_lifted\<close> ever publishes to or reads
+  nothing in \<^const>\<open>lifted_state_dg_spec\<close> ever publishes to or reads
   from it, so \<open>gamma_dg_local_state\<close> ignores its global argument entirely and the
   component's obligations are the transported pure facts.
 \<close>
@@ -318,15 +318,15 @@ begin
 abbreviation lifted_tf_spec ::
   "('a abs_state \<Rightarrow> bool) \<Rightarrow> 'a abs_state lifted local_spec" where
   "lifted_tf_spec empty_pred \<equiv>
-     lifted_state_spec \<G> empty_pred sk asn sp br bd rt en ev"
+     lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev"
 
-theorem lifted_state_spec_sound:
+theorem lifted_state_local_spec_sound:
   assumes empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
   shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>\<^sub>\<bottom>) (lifted_tf_spec empty_pred)"
 proof -
   have step: "edge_collect a (\<lbrakk>d\<rbrakk>\<^sub>\<bottom> \<inter> Collect (eval_query.oracle_holds A))
       \<subseteq> \<lbrakk>ls_step (lifted_tf_spec empty_pred) A a d\<rbrakk>\<^sub>\<bottom>" for a A and d :: "'a abs_state lifted"
-    by (simp only: ls_step_lifted_state_spec)
+    by (simp only: ls_step_lifted_state_local_spec)
        (rule subset_trans[OF edge_collect_mono[OF Int_lower1] transfer_lift_sound_collect
           [OF step_sound_for edge_collect_empty_set empty_pred_sound]])
   have enter: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
@@ -341,15 +341,15 @@ proof -
     by (meson gamma_lift_mono gamma_state_mono)
   show ?thesis
     unfolding sound_local_spec_def
-    using mono step enter comb by (auto simp: lifted_state_spec_def)
+    using mono step enter comb by (auto simp: lifted_state_local_spec_def)
 qed
 
-theorem local_state_dg_spec_for_lifted_contract:
+theorem lifted_state_dg_spec_contract:
   assumes empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "analysis_contract (local_state_dg_spec_for_lifted \<G> empty_pred sk asn sp br bd rt en ev)
+  shows "analysis_contract (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev)
            gamma_dg_local_state \<G>"
-  unfolding local_state_dg_spec_for_lifted_def gamma_dg_local_state_def[abs_def]
-  by (rule dg_spec_of_contract[OF lifted_state_spec_sound[OF empty_pred_sound]])
+  unfolding lifted_state_dg_spec_def gamma_dg_local_state_def[abs_def]
+  by (rule dg_spec_of_contract[OF lifted_state_local_spec_sound[OF empty_pred_sound]])
 
 end
 

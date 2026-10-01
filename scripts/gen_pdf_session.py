@@ -14,9 +14,56 @@ import re
 import shutil
 from pathlib import Path
 
-from check_root_entries import COMMENT, entries, owned_theories
-
 REPO = Path(__file__).resolve().parents[1]
+
+# A ROOT line that introduces a block, so scanning knows which block it is in.
+BLOCK = re.compile(r"^\s*(sessions|theories|directories|document_files|export_files)\b")
+ENTRY = re.compile(r'^\s+(?:\(\*.*\*\)\s*)?"?([A-Za-z0-9_./-]+)"?\s*(?:\(.*\))?\s*$')
+
+
+COMMENT = re.compile(r"\(\*.*?\*\)", re.S)
+OPTIONS = re.compile(r"\[[^\]]*\]")
+
+
+def entries(text):
+    """(block, entry) pairs, with comments and block options removed.
+
+    Comments nest across lines and a block keyword may carry options
+    (`theories [document = false]`), so both are stripped before scanning
+    rather than per line.
+    """
+    block = None
+    for raw in OPTIONS.sub("", COMMENT.sub("", text)).split("\n"):
+        line = raw
+        if not line.strip():
+            continue
+        head = BLOCK.match(line)
+        if head:
+            block = head.group(1)
+            rest = line[head.end() :].strip()
+            if rest:
+                yield block, rest.strip('"')
+            continue
+        if line.lstrip() != line and block:
+            m = ENTRY.match(line)
+            if m:
+                yield block, m.group(1)
+        elif not line[:1].isspace():
+            block = None
+
+
+def owned_theories(base, dirs, all_roots):
+    """The .thy files this session owns: those on its search path that no
+    nested session claims first."""
+    nested = {
+        r.parent for r in all_roots if r.parent != base and base in r.parent.parents
+    }
+    found = []
+    for d in [base] + [base / x for x in dirs]:
+        for thy in sorted(d.glob("*.thy")):
+            if not any(n == thy.parent or n in thy.parents for n in nested):
+                found.append(thy)
+    return found
 
 
 def inventory():

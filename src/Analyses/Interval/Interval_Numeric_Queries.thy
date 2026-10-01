@@ -243,8 +243,8 @@ text \<open>
 global_interpretation interval_numeric_queries:
   numeric_query_judgments
     interval_less_true interval_less_false interval_eq_true interval_eq_false
-  defines interval_less = interval_numeric_queries.less
-    and interval_eq = interval_numeric_queries.eq
+  defines interval_less = interval_numeric_queries.query_less
+    and interval_eq = interval_numeric_queries.query_eq
   by unfold_locales
      (auto intro: interval_less_true_sound interval_eq_true_sound
             dest: interval_less_false_sound interval_eq_false_sound)

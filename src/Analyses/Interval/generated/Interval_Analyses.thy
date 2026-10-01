@@ -38,7 +38,7 @@ global_interpretation interval_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
@@ -50,16 +50,9 @@ proof (rule ivl_tf.dg_analysis_execI
 next
   case (2 v ctx) show ?case by simp
 next
-  case (3 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+  case 3 show ?case by (rule td_certified_solver)
 next
-  case (4 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (5 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
 qed
 
 subsection \<open>At the entry-state context\<close>
@@ -69,7 +62,7 @@ global_interpretation interval_es_rule: dg_analysis_exec
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) global_unknown)
-       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
@@ -82,16 +75,9 @@ proof (rule ivl_tf.dg_analysis_execI
 next
   case (2 v ctx) show ?case by simp
 next
-  case (3 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+  case 3 show ?case by (rule td_certified_solver)
 next
-  case (4 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (5 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
 qed
 
 subsection \<open>At the call-string context\<close>
@@ -101,7 +87,7 @@ global_interpretation interval_cs_rule: dg_analysis_exec
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
-       TYPE((ivl exec_dg_st lifted, ivl exec_dg_st lifted) dg_state) r"
+       TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
     bot interval_classify_check
     skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
     enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
@@ -113,16 +99,9 @@ proof (rule ivl_tf.dg_analysis_execI
 next
   case (2 v ctx) show ?case by simp
 next
-  case (3 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing])
+  case 3 show ?case by (rule td_certified_solver)
 next
-  case (4 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.finite_stabl_solve)
-next
-  case (5 \<G>) show ?case by (rule interval_cinit_gamma)
-next
-  case (6 eqs x) then show ?case
-    by (rule TD_side_rule_Interp.solve_dom_of_solve_c)
+  case (4 \<G>) show ?case by (rule interval_cinit_gamma)
 qed
 
 end

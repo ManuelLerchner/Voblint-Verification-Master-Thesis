@@ -29,6 +29,7 @@ from isar_json import (
     STRUCTURE_COMMANDS,
     THEOREM_COMMANDS,
     command_counts,
+    names,
     sessions,
     theory_command_counts,
     theory_sizes,
@@ -85,27 +86,19 @@ def count_lines(path: Path) -> int:
         return sum(1 for _ in f)
 
 
-def pstep_rules() -> int:
-    """Introduction rules of the `pstep` inductive, counted from its source.
+PSTEP = "VIMP_Proc.pstep"
+# Facts every inductive derives, beside one per named rule.
+INDUCTIVE_FACTS = ("intros", "cases", "induct", "simps")
 
-    The block runs from `inductive` to the first blank line after the last rule;
-    each rule is a named clause at the start of a line (`Assign:` or `| Call:`).
-    """
-    text = (VIMP_DIR / "VIMP_Proc.thy").read_text(encoding="utf-8")
-    lines = text.split("\n")
-    start = next(
-        i
-        for i, line in enumerate(lines)
-        if line.startswith("inductive") and "cases" not in line
+
+def pstep_rules() -> int:
+    """Named introduction rules of the `pstep` inductive (`pstep.Assign`, ...)."""
+    return sum(
+        1
+        for row in names(derived=True)
+        if row["derived_from"] == PSTEP
+        and row["name"].removeprefix(PSTEP + ".") not in INDUCTIVE_FACTS
     )
-    where = next(i for i in range(start, len(lines)) if lines[i].strip() == "where")
-    rules = 0
-    for line in lines[where + 1 :]:
-        if not line.strip():
-            break
-        if re.match(r"(\| )?[A-Z][A-Za-z0-9_]*:", line.strip()):
-            rules += 1
-    return rules
 
 
 # What a source checkout shows for a figure; the site build replaces it.

@@ -103,7 +103,7 @@ them.
     [graph, #isaconst("cstep")],
     [moves along one CFG edge, keeping a stack of return points],
     [@ch:background],
-    [trace, #isaconst("valid_ltr")],
+    [trace, #isaconst("valid_activation_trace")],
     [extends one activation's path, nesting its caller and finished callees],
     [this chapter],
     table.hline(),
@@ -119,7 +119,7 @@ is the language's own semantics. The graph view is the one the analysis is built
 from, because equations are generated per CFG node. The trace view is the one
 soundness is stated against, because it is the only one of the three that
 records which activation a store belongs to. #isathm("csim_step") relates the
-first two and #isathm("source_run_has_ltr") relates the second to the third.
+first two and #isathm("source_run_has_activation_trace") relates the second to the third.
 
 == Traces <sec:traces>
 
@@ -128,7 +128,7 @@ first two and #isathm("source_run_has_ltr") relates the second to the third.
 An _activation-local trace_ is one activation of one procedure, together with
 the activation that called it and the calls it has already finished.
 
-#definition(name: [Activation-local trace], isa: "ltr")[
+#definition(name: [Activation-local trace], isa: "activation_trace")[
   A trace $tau$ is one of
   #set enum(numbering: "(i)")
   + $#Root($pi$)$ — the initial activation of the program, with local path $pi$;
@@ -236,7 +236,7 @@ Not every term of the shape above describes an execution. Validity is the
 inductive set of traces that the graph can actually produce, with one rule per
 phenomenon the graph has.
 
-#definition(name: [Valid traces], isa: "valid_ltr")[
+#definition(name: [Valid traces], isa: "valid_activation_trace")[
   For a global classifier $italic("gs")$, a graph $cfg$ and a set $S$ of initial stores,
   $#validltr$ is the least set closed under the four rules of
   @fig:valid-rules.
@@ -277,8 +277,8 @@ phenomenon the graph has.
     )),
   ),
   kind: image,
-  caption: [The four rules of #isaconst("valid_ltr"), writing $cal(V)$ for
-    #isaconst("valid_ltr") itself and $[k]$ for the continuation the call edge
+  caption: [The four rules of #isaconst("valid_activation_trace"), writing $cal(V)$ for
+    #isaconst("valid_activation_trace") itself and $[k]$ for the continuation the call edge
     carries. Each rule reads exactly the relation for its own phenomenon:
     #isaconst("intra") for local flow (solid), #isaconst("calls") for entering a
     callee and for recovering a continuation (dashed). An induction over this
@@ -299,7 +299,7 @@ are worth extracting, because later proofs turn on them.
     table.hline(),
     [*phenomenon*],
     [*graph step* (#isaconst("cstep"))],
-    [*trace rule* (#isaconst("valid_ltr"))],
+    [*trace rule* (#isaconst("valid_activation_trace"))],
     table.hline(stroke: 0.5pt),
 
     [start],
@@ -326,7 +326,7 @@ are worth extracting, because later proofs turn on them.
   ),
   caption: [The graph's execution and the trace semantics, phenomenon by
     phenomenon. The rules match one for one, which is what makes
-    #isathm("source_run_has_ltr") a step-by-step correspondence rather than a
+    #isathm("source_run_has_activation_trace") a step-by-step correspondence rather than a
     reconstruction. The last row is the whole reason for the second column: a
     frame stack answers "where do I return to", and once popped the information
     is gone; the caller chain answers "which activation am I", and is still
@@ -369,14 +369,14 @@ callee's own structure.
 
 With validity fixed, the set an analysis must over-approximate is immediate.
 
-#definition(name: [Collecting semantics], isa: "ltr_collect")[
+#definition(name: [Collecting semantics], isa: "node_collect")[
   $ #ltrcollect (v) = #setcomp($#sinkstore (tau)$, $tau in #validltr ", " #sinknode (tau) = v$) $
 ]
 
 That is: take every valid trace that ends at $v$ and keep its final store. A
 store is in $#ltrcollect (v)$ exactly when some activation can be at $v$
 holding it. Membership is introduced and eliminated by
-#isathm("ltr_collect_I") and #isathm("ltr_collect_E"), which are the only two
+#isathm("node_collect_I") and #isathm("node_collect_E"), which are the only two
 facts the rest of the development uses about it.
 
 Two consequences of the definition are easy to miss.
@@ -428,7 +428,7 @@ about that, exactly as the Return rule of @fig:valid-rules does.
 
 A trace's context is then read off its structure.
 
-#definition(name: [Context of a trace], isa: "trace_context")[
+#definition(name: [Context of a trace], isa: "activation_context_rel")[
   $#tracectx (tau, c)$ — "$tau$ may carry $c$" — is
   inductively defined by
   #set enum(numbering: "(i)")
@@ -498,7 +498,7 @@ Five local conditions suffice. They are local in the strong sense: each mentions
 one step of the concrete semantics, none mentions a trace, and none mentions how
 $#cover$ was computed.
 
-#definition(name: [Coverage contract], isa: "ltr_coverage")[
+#definition(name: [Coverage contract], isa: "activation_coverage")[
   #set enum(numbering: "1.")
   + #oblig("INIT"). Every initial store is covered at the entry node in the initial
     context.
@@ -529,7 +529,7 @@ correlation, a claim could satisfy the other four obligations and still be
 false: it could compose the result of `f` analyzed under one caller's context
 into a different caller, which is precisely the unsoundness context sensitivity
 is supposed to prevent. The correlation is not an extra hypothesis to assume;
-#isathm("trace_context_caller_entry") makes it a theorem about $#validltr$.
+#isathm("activation_context_rel_caller_entry") makes it a theorem about $#validltr$.
 
 *#oblig("TOTAL") makes the buckets meaningful rather than merely safe.* Without it a
 resumed caller may carry a context under which its callee was never assigned
@@ -611,7 +611,7 @@ The point of the contract is that it is _sufficient_. Nothing further is needed:
 no property of the analysis, no shape of the claim, no assumption about how it
 was computed.
 
-#theorem(name: [Coverage], isa: "valid_ltr_covered_at")[
+#theorem(name: [Coverage], isa: "valid_activation_trace_covered_at")[
   Assume the five obligations. Then for every valid trace $tau$ and every
   context $c$ that $tau$ carries,
   $ #sinkstore (tau) in #cover (#sinknode (tau), c). $
@@ -629,7 +629,7 @@ over the collecting semantics rather than over traces, the same fact reads:
 
 #theorem(
   name: [The buckets exhaust the collection],
-  isa: "ltr_collect_eq_Union_activation_collect",
+  isa: "node_collect_eq_Union_activation_collect",
 )[
   Under TOTAL,
   $ #ltrcollect (v) = union.big_c #actcollect (v, c). $
@@ -665,13 +665,13 @@ about VIMP programs. @ch:program-model supplied the forward simulation
 #isathm("csim_step"); composing it with the trace construction closes the
 distance.
 
-#theorem(name: [Source runs are traces], isa: "source_run_has_ltr")[
+#theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
   For a well-formed compiled program, every finite source execution from an
   initial store has a matching graph configuration and a valid trace ending at
   the same node with the same store.
 ]
 
-#corollary(name: [Source runs are collected], isa: "source_reaches_ltr_collect")[
+#corollary(name: [Source runs are collected], isa: "source_reaches_node_collect")[
   Under the same hypotheses, if a source run reaches the configuration
   $(c, s, kappa)$, then there are a node $v$ and a stack such that #isaconst("csim") relates
   them and $ s in #ltrcollect (v). $
@@ -707,13 +707,13 @@ denotes it. This table is the human half of the translation.
     [*thesis*], [*Isabelle*], [*note*],
     table.hline(stroke: 0.5pt),
 
-    $tau$, [a value of #isatype("ltr")], [a trace is a term, not a set],
-    $#tracepath (tau)$, [#isaconst("path")], [the activation-local path],
+    $tau$, [a value of #isatype("activation_trace")], [a trace is a term, not a set],
+    $#tracepath (tau)$, [#isaconst("path_of")], [the activation-local path],
     $#sinknode (tau)$, [#isaconst("sink_node")], [node of the last entry],
     $#sinkstore (tau)$, [#isaconst("sink_store")], [store of the last entry],
     $#callerof (tau)$, [#isaconst("caller_of")], [partial; #sym.bot at a $ctor("Root")$],
-    $cal(V)$, [#isaconst("valid_ltr")], [written $#validltr$ in prose],
-    $#ltrcollect (v)$, [#isaconst("ltr_collect")], [classifier, graph and seed set suppressed],
+    $cal(V)$, [#isaconst("valid_activation_trace")], [written $#validltr$ in prose],
+    $#ltrcollect (v)$, [#isaconst("node_collect")], [classifier, graph and seed set suppressed],
     $#actcollect (v, c)$,
     [#isaconst("activation_collect")],
     [likewise, plus the relation and initial context],
@@ -721,10 +721,10 @@ denotes it. This table is the human half of the translation.
     [#isatype("call_context_rel")],
     [six arguments in Isabelle; applied as a relation here],
     $#admits (...)$, [#isaconst("admits_call_context")], [names the call edge by its effect],
-    $#tracectx (tau, c)$, [#isaconst("trace_context")], [inductive, not a function],
+    $#tracectx (tau, c)$, [#isaconst("activation_context_rel")], [inductive, not a function],
     $#ctxtotal$, [#isaconst("call_context_total_on")], [conditional on the claim itself],
     $#cover (v, c)$,
-    [the #isalocale("ltr_coverage") locale's `cover` parameter],
+    [the #isalocale("activation_coverage") locale's `cover` parameter],
     [an arbitrary claim, not yet an abstract state],
     $#edgecollect (a, s)$,
     [#isaconst("edge_collect")],

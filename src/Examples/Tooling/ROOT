@@ -19,6 +19,9 @@ session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
     (* Two producers, one global: warrowing after the join loses the upper
        bound that warrowing per origin keeps. *)
     Example_Per_Origin_Widening_Precision
+    (* One global fed the same contributions under each update rule, outside
+       any solver run: the values each rule computes step by step. *)
+    Example_Update_Rule_Steps
     (* Tilscher's TDside lock-set running example, through the typed
        strategy_program frontend. *)
     Example_TD_Side_Program

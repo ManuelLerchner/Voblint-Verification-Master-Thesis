@@ -191,9 +191,9 @@ text \<open>
   that the store reaches the point at all, so it needs the buckets to exhaust
   the point --- the union direction, which is where a context policy pays for
   being total. Both readings are settled in
-  \<^theory>\<open>Voblint_CFG.LTR_Collect\<close>: a functional policy has the union outright,
+  \<^theory>\<open>Voblint_CFG.Activation_Trace_Collect\<close>: a functional policy has the union outright,
   a relational one --- such as the entry-state policy --- earns it from the
-  existence of a context for every valid trace. \<^const>\<open>Bot\<close> cannot be the entry
+  existence of a context for every valid activation trace. \<^const>\<open>Bot\<close> cannot be the entry
   found, since it concretizes to no store at all.
 \<close>
 
@@ -340,7 +340,7 @@ theorem source_sound:
                \<and> table_covers gm r v s \<and> checks_sound_at res v s"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
-  from source_reaches_ltr_collect [OF wf s0 run]
+  from source_reaches_node_collect [OF wf s0 run]
   obtain v stk
     where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
@@ -424,7 +424,8 @@ proof (rule sound_table_of_activation
      OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
   case (1 u)
   show ?case
-    by (rule equalityD1 [OF mcp_rule.fun_route_ltr_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
+    by (rule equalityD1
+      [OF mcp_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
 next
   case (2 u ctx)
   show ?case

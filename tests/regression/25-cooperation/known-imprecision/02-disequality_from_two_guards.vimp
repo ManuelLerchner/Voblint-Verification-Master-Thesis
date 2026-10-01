@@ -7,7 +7,7 @@
 // [0,1].
 //
 // The order analysis answers EvalInt (x != y) with the exact integer 0 once it holds both
-// (x, y) and (y, x) (rel_qry, src/Analyses/Relational/Rel_Order_Local.thy), so
+// (x, y) and (y, x) (relc_qry, src/Analyses/Relational/Rel_Order_Local.thy), so
 // --analysis interval,order assigns 0 and proves the check
 // (precision/04-disequality_asked_of_order). This case pins the baseline.
 fun main() {
