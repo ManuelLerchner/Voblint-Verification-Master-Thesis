@@ -1,9 +1,0 @@
-tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp [interval]
-
-Arithmetic diagnostics
-None
-
-Assertion checks
-Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  -----------------
-122:3     pp6    a == 2     PROVED   interval: a=[2,2]

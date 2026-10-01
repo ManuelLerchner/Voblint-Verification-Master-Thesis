@@ -3,6 +3,7 @@
 #import "../lib/theme.typ": vb
 #import "../lib/math.typ": ctor, sem
 #import "../lib/figures.typ": check-row, int-axis, int-strip, printed-set, snapshot-var
+#import "../lib/claims.typ": claim-snapshot, snapshot-cluster-of, snapshot-verdict
 
 // One check row of a registered CLI claim (shared/claims.toml), so a verdict
 // or state drawn in a figure is read from checked output rather than typed.
@@ -15,190 +16,217 @@
   cells
 }
 
-// The value range of `a` in a one-variable interval state, `none` for top.
-#let a-range(state) = {
-  let m = state.match(regex("\[(-?\d+),(-?\d+)\]"))
-  if m == none {
-    assert(state.contains("⊤"), message: "unexpected state " + state)
-    none
-  } else { (int(m.captures.at(0)), int(m.captures.at(1))) }
-}
-
 = The Source-Level Soundness Theorem <ch:results>
 
 This chapter answers what the analyzer's output guarantees about the
-executions of the source program. The previous chapters supply the pieces: the
-compiler simulation, the trace semantics, equation soundness and the solver
-certificate, closed forward over every unknown an execution visits
-(@sec:cert-forward). Chaining them leaves two gaps. The client reads a result table
-and one verdict per check, not a solver valuation per context. And a verdict
-needs a precise meaning, since a check that no execution reaches makes every
-condition true there. @sec:chain assembles the pieces, @sec:headline states
-the theorem about the exported analyzer #isaconst("run_voblint") that they
-must yield, and @sec:verdicts closes the two gaps.
+executions of the source program. The solver of @ch:solving returns a valuation
+of the unknowns it solved, each a pair of a CFG node and a context, and the
+previous chapters show that this valuation covers every execution: the compiler
+simulation, the trace semantics, equation soundness and the solver certificate,
+closed forward over every unknown an execution visits (@sec:cert-forward). The
+client reads neither the valuation nor its contexts. It reads a result table
+and one verdict per check, and a verdict needs a precise meaning, since a check
+that no execution reaches makes every condition true there. @sec:chain
+assembles the pieces at one check, @sec:headline states the theorem about the
+exported analyzer #isaconst("run_voblint") that they must yield, and
+@sec:verdicts relates the table and the verdicts to the solver's valuation.
 
 == The chain at one check <sec:chain>
 
 At a CFG node $v$, the argument that a verdict is sound is a chain of
-inclusions between sets of stores, followed by one implication. Writing $C_c$ for
-#isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c"), the stores of the
-valid traces that end at $v$ and carry context $c$ under the policy's relation
-$R$, with `main` in the initial context #isai("c\<^sub>0") (@sec:contexts),
+inclusions between sets of stores, followed by one implication. Each step is a
+theorem:
+#let _by(body) = text(size: 7pt, body)
 $
-  "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
-  = union.big_c C_c, quad forall c. thin C_c subset.eq sem(A_(v, c))_bot
-  quad => quad "verdict at" v
+  "stores of source runs at" v & underbrace(subset.eq, #_by(isathm("source_reaches_node_collect")))
+  #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") \
+  & underbrace(=, #_by(isathm("node_collect_eq_Union_activation_collect")))
+  union.big_c #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") \
+  & underbrace(subset.eq, #_by(isathm("activation_collect_dg_sound")))
+  union.big_c sem(#isaconst("lookup_context") thin r thin v thin c) \
+  & underbrace(==>, #_by(isathm("run_voblint_sound_at"))) quad "verdict at" v
 $
-(#isathm("source_reaches_node_collect"), #isathm("node_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
-Here $A_(v,c)$ is the lifted abstract state the result table holds for $v$
-in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
-unreachable state #ctor("Bot"). The bound holds for every context, and the
-verdict at $v$ combines the per-context results (@sec:verdicts). Each later set
-in the chain may contain stores that no execution reaches. Soundness requires
-only that it contains the set before it.
+The first set is the stores that finite source runs reach at $v$. The node
+collecting semantics #isaconst("node_collect") splits into the activation
+collecting semantics #isaconst("activation_collect") of the contexts the
+policy's relation $R$ admits, with `main` in the initial context
+#isai("c\<^sub>0") (@sec:contexts). #isaconst("lookup_context") $r$ $v$ $c$ is
+the state the result table $r$ holds at $v$ in context $c$, and
+$sem(dot)$ its set of stores, empty for the unreachable state #ctor("Bot").
+The third step bounds each context separately, $c$ by $c$, and the verdict at $v$
+combines the per-context results (@sec:verdicts). Each later set may contain
+stores that no execution reaches. Soundness requires only that it contains the
+set before it.
 
-The recursive program below computes $f(2) = 2 dot f(1) = 2$, so every run
-reaches the check with $a = 2$. It is a regression fixture of the analyzer.
+The program below calls `f` twice. The first call passes $1$; the second
+passes an input $x$ with $1 <= x <= 3$, if the input is in that range. So `m` is
+$2$, $4$ or $6$ at the check, and `m == 2` holds in some runs and fails in
+others.
 
-#listing(lang: "c", claim: "chain-factorial-entry", ```
+#listing(lang: "c", claim: "chain-split-entry", ```
 fun f(n) {
-  if (n < 2) {
-    return 1;
-  } else {
-    r = f(n - 1);
-    return n * r;
-  }
+  m = 2 * n;
+  __voblint_check(m == 2);
+  return m;
 }
 
 fun main() {
-  a = f(2);
-  __voblint_check(a == 2);
+  a = f(1);
+  x = __voblint_nondet_int();
+  if (0 < x) {
+    if (x < 4) {
+      b = f(x);
+    }
+  }
 }
 ```)
 
-#let chain-none = cli-row("chain-factorial-none", "a == 2")
-#let chain-entry = cli-row("chain-factorial-entry", "a == 2")
+#let _snap = claim-snapshot("chain-split-entry")
+#let _ctx(node) = snapshot-cluster-of(_snap, node).ctx
+#let _range(state) = {
+  let m = state.match(regex("\[(-?\d+),(-?\d+)\]"))
+  assert(m != none, message: "unexpected state " + state)
+  (int(m.captures.at(0)), int(m.captures.at(1)))
+}
+#let _m1 = snapshot-var("chain-split-entry", "f_pp1_ctx0", "m")
+#let _m2 = snapshot-var("chain-split-entry", "f_pp1_ctx1", "m")
+#let _v1 = upper(_snap.nodes.at("f_pp1_ctx0").status)
+#let _v2 = upper(_snap.nodes.at("f_pp1_ctx1").status)
+#let _vnode = snapshot-verdict(_snap, "m == 2")
+#let _none = cli-row("chain-split-none", "m == 2")
 
 #figure(
   {
     set text(size: 9pt)
-    let values = range(-1, 5)
-    let cell(kind, body: none) = box(
-      width: 7.2mm,
+    let values = range(0, 8)
+    let cell(kind) = box(
+      width: 6.2mm,
       height: 4.2mm,
       radius: 1pt,
       stroke: 0.5pt + vb.frame,
       fill: if kind == "run" { vb.proved.lighten(25%) } else if kind == "extra" {
         vb.accent.lighten(72%)
       } else if kind == "cond" { vb.neutral.lighten(55%) } else { none },
-      align(center + horizon, body),
     )
-    // A strip over a = -1..4 with an overflow cell at each end.
-    let strip(range, kind: "run") = {
-      let unbounded = range == none
-      let inside(x) = unbounded or (range.at(0) <= x and x <= range.at(1))
-      let pick(x) = if not inside(x) { "none" } else if x == 2 or kind == "cond" {
-        kind
-      } else { "extra" }
-      let edge = cell(if unbounded { "extra" } else { "none" }, body: sym.dots.h)
-      (edge, ..values.map(x => cell(pick(x))), edge)
-    }
+    // `runs` are the values some execution has; the rest of `range` is extra.
+    // A concrete row fills only `runs`; an abstract row also marks the rest of
+    // `range` as admitted.
+    let strip(range, runs, kind: "abstract") = values.map(x => {
+      let inside = range.at(0) <= x and x <= range.at(1)
+      cell(if not inside { "none" } else if kind == "cond" { kind } else if x in runs {
+        "run"
+      } else if kind == "abstract" { "extra" } else { "none" })
+    })
     let label-col(n, body) = align(left + horizon)[#text(fill: vb.muted)[#n] #h(3pt) #body]
+    let A(c) = [#isai("\<A>") $v$ #raw(c)]
     table(
-      columns: (auto,) + (auto,) * (values.len() + 2) + (auto,),
+      columns: (auto,) + (auto,) * values.len() + (auto,),
       stroke: none,
       inset: (x: 1.2pt, y: 1.5pt),
       align: center + horizon,
-      [], [], ..values.map(x => [$#x$]), [], [*verdict*],
-      label-col(1, [stores of source runs at the check]), ..strip((2, 2)), [],
-      label-col(2, [#isaconst("node_collect") at `pp6`, the one context of `main`]),
-      ..strip((2, 2)),
-      [],
+      [], ..values.map(x => [$#x$]), [*verdict*],
+      label-col(1, [stores of source runs at the check]), ..strip(
+        (2, 6),
+        (2, 4, 6),
+        kind: "concrete",
+      ), [],
+      label-col(2, [#isai("\<C>") $v$]), ..strip((2, 6), (2, 4, 6), kind: "concrete"), [],
+      label-col(3, A(_ctx("f_pp1_ctx0"))), ..strip((2, 2), (2,), kind: "concrete"), [],
+      label-col(4, A(_ctx("f_pp1_ctx1"))), ..strip((2, 6), (2, 4, 6), kind: "concrete"), [],
+      label-col(5, [$sem(dot)$ in context #raw(_ctx("f_pp1_ctx0")), #raw(_m1)]),
+      ..strip(_range(_m1), (2,)),
+      raw(_v1),
 
-      label-col(3, [$sem(A)_bot$ without contexts, #raw(chain-none.at(4))]),
-      ..strip(a-range(chain-none.at(4))),
-      raw(chain-none.at(3)),
-
-      label-col(4, [$sem(A)_bot$ with entry-state contexts, #raw(chain-entry.at(4))]),
-      ..strip(a-range(chain-entry.at(4))),
-      raw(chain-entry.at(3)),
+      label-col(6, [$sem(dot)$ in context #raw(_ctx("f_pp1_ctx1")), #raw(_m2)]),
+      ..strip(_range(_m2), (2, 4, 6)),
+      raw(_v2),
 
       table.hline(stroke: 0.4pt + vb.frame),
-      label-col([], [stores where `a == 2` holds]), ..strip((2, 2), kind: "cond"), [],
+      label-col([], [stores where `m == 2` holds]), ..strip((2, 2), (), kind: "cond"), [],
     )
   },
-  caption: [The soundness chain at the check of this section, projected on $a$. Green:
-    the value every run has there; blue: values admitted although no run has
-    them. Rows 1 and 2 are derived by hand; rows 3 and 4 are analyzer output.
-    Row 1 lies in row 2 by #isathm("source_reaches_node_collect"), and row 2 in
-    rows 3 and 4 by #isathm("run_voblint_sound_at"). `PROVED` requires the
-    admitted stores to lie in the bottom row.],
+  caption: [The soundness chain at the check `m == 2`, projected on $m$, with
+    Interval and entry-state contexts. Green: values some run has there; blue:
+    values admitted although no run has them. Rows 1 to 4 are derived by hand;
+    rows 5 and 6 and the verdicts are analyzer output (claim
+    `chain-split-entry`). Each context row lies inside the abstract row of the
+    same context. The node verdict joins the two contexts to #raw(_vnode).],
   kind: image,
   placement: auto,
 ) <fig:chain>
 
-@fig:chain draws the chain for two context policies. Rows 1 and 2 do not
-depend on the policy, and every inclusion holds under both. The policy only decides
-how far the abstract rows exceed row 2. Without contexts the recursive
-activations share one abstract result, so the returned value is imprecise;
-entry-state contexts separate the recursion depths and keep it exact. The
-difference affects precision only, and the chain is sound in both cases.
+@fig:chain draws the chain. `f` is analyzed in two contexts, one per entry
+state. The first call enters with $n = 1$, and in its context the check holds
+for every admitted store: #raw(_v1). The second call enters with
+$n in {1, 2, 3}$, abstracted to the interval $[1, 3]$. Its state
+#raw(_m2) admits the odd values $3$ and $5$, which no run has, and the check is
+#raw(_v2) there, as it must be, since the runs with $x = 2$ and $x = 3$ violate
+it. The store with $m = 2$ lies in both contexts' sets, so the sets cover the
+node collecting semantics without partitioning it. The theorem only says that
+each reached store is covered in some context, so the node verdict may claim
+only what both contexts claim: #raw(_vnode). Without contexts the one entry of
+`f` widens, and the check is #raw(_none.at(3)) at #raw(_none.at(4)) (claim
+`chain-split-none`). Precision differs between the policies; every inclusion
+holds under both.
 
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the node collecting semantics by
-context is #isathm("node_collect_eq_Union_activation_collect"), which rests on
-#oblig("TOTAL"): every covered call reaches some context. Equation soundness
-(@ch:equations) bounds the activation collecting semantics of each context by the
-solver's valuation, given the
-certificate of @ch:solving. What the chain should deliver to a client is this:
-every store a finite source run reaches is covered by the result table at a
-node that simulates the run, in some context, and every definite verdict listed
-there holds of the store.
+context rests on #oblig("TOTAL"): every covered call reaches some context.
+Equation soundness (@ch:equations) bounds the activation collecting semantics
+of each context by the solver's valuation, given the certificate of
+@ch:solving. What the chain should deliver to a client is this: every store a
+finite source run reaches is covered by the result table at a node that
+simulates the run, in some context, and every definite verdict listed there
+holds of the store.
 
 == The source-level theorem <sec:headline>
 
-One theorem establishes this for the exported analyzer. It is stated once for
-every list of activated analyses, global update rule and context
-policy that #isaconst("run_voblint") accepts. Its first argument
-$"as"$ is the activation list: the analyses run together as the combined
-component of @ch:cooperation, and a single analysis is the list of length one.
+One theorem establishes this for the exported analyzer. Its parameters are
+the configuration and the program, the four arguments of
+#isaconst("run_voblint") (@sec:codegen):
+- $"as"$, a list of #isatype("analysis_domain") values, the analyses that run
+  together as the combined component of @ch:cooperation, for example
+  [#ctor("Interval_Analysis")] or [#ctor("Interval_Analysis"), #ctor("Order_Analysis")];
+- $"rule"$, a #isatype("globals_rule"), the update rule for the solver's global
+  unknowns, for example #ctor("Globals_Warrow");
+- $"ctx"$, a #isatype("context_mode"), the context policy: #ctor("Ctx_None"),
+  #ctor("Ctx_EntryState") or #ctor("Ctx_CallString") $k$;
+- $p$, the program, an #isatype("imp_prog").
+The run of @fig:chain is #isaconst("run_voblint") [#ctor("Interval_Analysis")]
+#ctor("Globals_Warrow") #ctor("Ctx_EntryState") $p$. The variables are universally quantified, so the theorem
+holds for every configuration, without a separate theorem per analysis or
+policy.
 #proved("run_voblint_certified_source_sound", note: [Source-level soundness of
   the analyzer.])
 
-#figure(
-  table(
-    columns: (1fr, 1fr),
-    align: (left, left),
-    stroke: none,
-    inset: (x: 6pt, y: 4pt),
-    table.hline(),
-    [*What it assumes*], [*What it establishes*],
-    table.hline(stroke: 0.5pt),
-    [$s_0 in #isaconst("cinit_stores")$, the initial stores $S$ of
-      @ch:traces: $s_0$ zeroes every global; locals are unconstrained.],
-    [A CFG node $v$ and stack that #isaconst("csim") relates to the source
-      configuration.],
+The theorem assumes four premises:
 
-    [A finite source execution from `main` reaches $("residual", s, "frs")$.
-      Any stopping point is allowed, so nonterminating programs are covered
-      through their prefixes.],
-    [#isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node.],
+#[
+  #set enum(numbering: n => "(P" + str(n) + ")")
+  + $s_0 in #isaconst("cinit_stores")$, the initial stores $S$ of @ch:traces:
+    $s_0$ zeroes every global, and the locals are unconstrained.
+  + A finite source execution from `main` reaches $("residual", s, "frs")$. Any
+    stopping point is allowed, so nonterminating programs are covered through
+    their prefixes.
+  + #isaconst("config_terminates"): the solver's recursion is defined on this
+    program's query under this configuration.
+  + The analyzer returned an answer. Malformed programs are rejected, so
+    well-formedness is not a separate premise.
+]
 
-    [#isaconst("config_terminates"): the solver's recursion is defined on this
-      program's query under this configuration.],
-    [The typed result table covers $s$ at $v$ in some context, before its abstract
-      values are printed (@sec:codegen).],
+From all four together, not from any one of them, it concludes:
 
-    [The analyzer returned an answer. Malformed programs are rejected, so
-      well-formedness is not a separate premise.],
-    [Every check listed at $v$ is not `DEAD`; every `PROVED` check holds in
-      $s$, and every `REFUTED` check is false in $s$.],
-    table.hline(),
-  ),
-  caption: [The premises and conclusions of
-    #isathm("run_voblint_certified_source_sound"). The rows are not paired: the
-    conclusions follow from all four premises together.],
-) <tab:headline>
+#[
+  #set enum(numbering: n => "(S" + str(n) + ")")
+  + some CFG node $v$ and stack are related to the source configuration by
+    #isaconst("csim");
+  + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected
+    at that node;
+  + the typed result table covers $s$ at $v$ in some context, before its
+    abstract values are printed (@sec:codegen);
+  + every check listed at $v$ is not `DEAD`, every `PROVED` check holds in $s$,
+    and every `REFUTED` check is false in $s$.
+]
 
 Two gaps separate the chain of @sec:chain from this statement: the client
 reads a table instead of a solver valuation, and one verdict per check instead
@@ -247,7 +275,7 @@ set because a terminating solve returns a finite set of unknowns
 (#isathm("finite_stabl_solve"), @sec:cert-param).
 
 Each verdict below has a meaning only under the premises of the theorem
-(@tab:headline): the abstract solve terminates, and #isaconst("run_voblint")
+(P3 and P4 in @sec:headline): the abstract solve terminates, and #isaconst("run_voblint")
 returned an answer. It speaks about _covered executions_: finite source
 executions of `main` from an initial store in #isaconst("cinit_stores"),
 stopped at any point. Except for `DEAD`, the meaning is conditional on

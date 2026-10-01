@@ -374,37 +374,26 @@ why = "Evaluation, Goblint #1161 replay: congruence alone knows only c in 1+2Z a
 # The results chapter's soundness-chain figure: one program, the same check, two
 # context policies.
 
-[claims.chain-factorial-none]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
-]
-why = "Without contexts the factorial result a == 2 is UNKNOWN at state a=⊤, although every run has a = 2."
-
-[claims.chain-factorial-none-join]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--globals",
-  "join",
-  "tests/regression/24-site-figures/known-imprecision/01-factorial_no_context.vimp",
-]
-why = "Under the joining rule, without contexts, the factorial result a == 2 is still UNKNOWN at state a=⊤; no widening occurs."
-
-[claims.chain-factorial-entry]
+[claims.chain-split-entry]
 argv = [
   "--analysis",
   "interval",
   "--context",
   "entry-state",
-  "tests/regression/24-site-figures/precision/01-factorial_entry_state.vimp",
+  "--graph-snapshot",
+  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
 ]
-why = "With entry-state contexts the factorial result a == 2 is PROVED at state a=[2,2]."
+why = "Soundness chain figure: f gets the contexts {n=[1,1]} (m=[2,2], check proved) and {n=[1,3]} (m=[2,6], check unknown), so the node verdict is unknown."
+
+[claims.chain-split-none]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
+]
+why = "Without contexts the one entry of f widens to n=[1,+∞] and the check m == 2 is UNKNOWN at m=⊤."
 
 # Explainer scenes redrawn in Chapters 1 and 9.
 
