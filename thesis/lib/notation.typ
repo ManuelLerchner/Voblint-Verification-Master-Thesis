@@ -1,5 +1,5 @@
-// The notation table of appendix B, rendered from the data
-// `tools/notation.py` derives from the theories. The README and the explainer
+// The notation table, rendered from the data `tools/notation.py` derives from
+// the theories through `isar project notation`. The README and the explainer
 // render the same file, so edit `shared/notation.toml` (reading and meaning)
 // or the theories (everything else), never the rendered table.
 #import "theme.typ": vb

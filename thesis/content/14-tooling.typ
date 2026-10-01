@@ -41,7 +41,7 @@ Isabelle/Isar projects that reads `.thy` and `ROOT` files as text and never
 runs Isabelle, so its checks finish before the build has loaded its first
 session. It replaces
 Python scripts this repository used before, and it is published under the MIT
-license on PyPI, with a conda-forge recipe under review.
+license on PyPI and conda-forge.
 
 The formatter changes only layout: it indents proofs, removes trailing
 whitespace and optionally wraps long lines, but it never changes a token, a
@@ -51,7 +51,13 @@ proofs and syntax, which report unfinished, abandoned and unclosed proofs,
 theories no session reaches, malformed `ROOT` files and lexical errors, and the
 locale check described below. The project commands read sessions, the theory
 import graph, the class and locale hierarchy and every named declaration the way
-`isabelle build -D` finds them. The statistics report sizes and proof counts,
+`isabelle build -D` finds them. Three more read what a document needs from the
+theories: the source of a declaration, the symbol a declaration introduces
+through its mixfix, and the anchors of the rendered theories. The generators of
+this thesis use them. Its theorem statements come from `isar project extract`,
+the notation table of the README and the explainer from `isar project notation`,
+and its links into the rendered theories are resolved against `isar project
+anchors`. The statistics report sizes and proof counts,
 and from a verbose build log they report which theories were elaborated more
 than once, which this repository bounds per session in CI.
 
@@ -84,8 +90,9 @@ compiler, Dune, findlib, Menhir, and Zarith with the GMP library. The browser bu
 conda-forge, and two of the existing packages were outdated or missing on
 Apple Silicon. We submitted the missing libraries `csexp`, `re`, `cmdliner`,
 `yojson`, `seq`, `gen`, `sexplib0`, `stdlib-shims`, `ppx-derivers` and
-`compiler-libs` as one recipe @cfstaged34872 and `isar-tools` as another @cfstaged34960; both
-await review.
+`compiler-libs` as one recipe @cfstaged34872, which awaits review. The
+recipe for `isar-tools` @cfstaged34960 has been merged, and the package is
+installed from conda-forge.
 
 #let _cf = json("/shared/generated/conda-forge.json")
 #figure(
