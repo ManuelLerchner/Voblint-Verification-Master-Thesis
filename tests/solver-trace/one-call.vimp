@@ -1,7 +1,6 @@
-// One call, traced in full (#251): the callee is first solved with a bottom seed,
-// because the call's publication into the seed waits until its right-hand side
-// answers. Once the seed is published before the exit is read, the expected traces
-// lose the bottom pass and the restart.
+// One call, traced in full (#251): the call publishes the callee's entry state
+// into the seed before it reads the callee's exit, so the callee is solved once,
+// from the published seed, and the caller is not restarted.
 fun bump(n) {
   return n + 1;
 }

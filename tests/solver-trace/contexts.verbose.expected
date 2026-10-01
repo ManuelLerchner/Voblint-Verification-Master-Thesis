@@ -58,65 +58,8 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
           %%% answer: exiting query for (pp2, root)
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
         %%% route: call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
-        %%% solver_query: entering query for (exit_bump, [[5,5]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (exit_bump, [[5,5]])
-          %%% solver_query: entering query for (pp0, [[5,5]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0, [[5,5]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0, [[5,5]])
-            %%% solver_query: entering query for (entry_bump, [[5,5]]); stable false; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_bump, [[5,5]]), called: true, stable: false, wpoint: false
-              %%% eq: eq (entry_bump, [[5,5]])
-              %%% solver_query: entering query for Seed(bump, [[5,5]])
-                %%% infl: add_infl Seed(bump, [[5,5]]) (entry_bump, [[5,5]])
-                %%% answer: exiting query for Seed(bump, [[5,5]])
-answer: ⊥
-              %%% rhs: (entry_bump, [[5,5]]) = ⊥
-              %%% sol: Var: (entry_bump, [[5,5]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-              %%% infl: add_infl (entry_bump, [[5,5]]) (pp0, [[5,5]])
-              %%% answer: exiting query for (entry_bump, [[5,5]])
-answer: ⊥
-            %%% rhs: (pp0, [[5,5]]) = ⊥
-            %%% sol: Var: (pp0, [[5,5]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-            %%% infl: add_infl (pp0, [[5,5]]) (exit_bump, [[5,5]])
-            %%% answer: exiting query for (pp0, [[5,5]])
-answer: ⊥
-          %%% rhs: (exit_bump, [[5,5]]) = ⊥
-          %%% sol: Var: (exit_bump, [[5,5]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-          %%% infl: add_infl (exit_bump, [[5,5]]) (pp3, root)
-          %%% answer: exiting query for (exit_bump, [[5,5]])
-answer: ⊥
         %%% side: side to Seed(bump, [[5,5]]) from (pp3, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
         %%% destab: destabilize Seed(bump, [[5,5]])
-        %%% destab: stable remove (entry_bump, [[5,5]])
-        %%% destab: destabilize (entry_bump, [[5,5]])
-        %%% destab: stable remove (pp0, [[5,5]])
-        %%% destab: destabilize (pp0, [[5,5]])
-        %%% destab: stable remove (exit_bump, [[5,5]])
-        %%% destab: destabilize (exit_bump, [[5,5]])
-        %%% destab: stable remove (pp3, root)
-        %%% rhs: (pp3, root) = ⊥
-        %%% iter: iterate still unstable (pp3, root)
-        %%% eq: eq (pp3, root)
-        %%% solver_query: entering query for (pp2, root); stable true; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2, root), called: true, stable: true, wpoint: false
-          %%% infl: add_infl (pp2, root) (pp3, root)
-          %%% answer: exiting query for (pp2, root)
-answer: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
-        %%% route: call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
         %%% solver_query: entering query for (exit_bump, [[5,5]]); stable false; called false
           %%% iter: iterate called from query
           %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: false, wpoint: false
@@ -166,7 +109,6 @@ New value: interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
           %%% infl: add_infl (exit_bump, [[5,5]]) (pp3, root)
           %%% answer: exiting query for (exit_bump, [[5,5]])
 answer: interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-        %%% side: side to Seed(bump, [[5,5]]) from (pp3, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
         %%% rhs: (pp3, root) = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
         %%% sol: Var: (pp3, root) (wp: false)
 Old value: ⊥
@@ -179,65 +121,8 @@ New value: interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
         %%% answer: exiting query for (pp3, root)
 answer: interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
       %%% route: call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
-      %%% solver_query: entering query for (exit_bump, [[4,4]]); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (exit_bump, [[4,4]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (exit_bump, [[4,4]])
-        %%% solver_query: entering query for (pp0, [[4,4]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp0, [[4,4]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp0, [[4,4]])
-          %%% solver_query: entering query for (entry_bump, [[4,4]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_bump, [[4,4]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (entry_bump, [[4,4]])
-            %%% solver_query: entering query for Seed(bump, [[4,4]])
-              %%% infl: add_infl Seed(bump, [[4,4]]) (entry_bump, [[4,4]])
-              %%% answer: exiting query for Seed(bump, [[4,4]])
-answer: ⊥
-            %%% rhs: (entry_bump, [[4,4]]) = ⊥
-            %%% sol: Var: (entry_bump, [[4,4]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-            %%% infl: add_infl (entry_bump, [[4,4]]) (pp0, [[4,4]])
-            %%% answer: exiting query for (entry_bump, [[4,4]])
-answer: ⊥
-          %%% rhs: (pp0, [[4,4]]) = ⊥
-          %%% sol: Var: (pp0, [[4,4]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-          %%% infl: add_infl (pp0, [[4,4]]) (exit_bump, [[4,4]])
-          %%% answer: exiting query for (pp0, [[4,4]])
-answer: ⊥
-        %%% rhs: (exit_bump, [[4,4]]) = ⊥
-        %%% sol: Var: (exit_bump, [[4,4]]) (wp: false)
-Old value: ⊥
-Eqd: ⊥
-New value: ⊥
-        %%% infl: add_infl (exit_bump, [[4,4]]) (pp4, root)
-        %%% answer: exiting query for (exit_bump, [[4,4]])
-answer: ⊥
       %%% side: side to Seed(bump, [[4,4]]) from (pp4, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
       %%% destab: destabilize Seed(bump, [[4,4]])
-      %%% destab: stable remove (entry_bump, [[4,4]])
-      %%% destab: destabilize (entry_bump, [[4,4]])
-      %%% destab: stable remove (pp0, [[4,4]])
-      %%% destab: destabilize (pp0, [[4,4]])
-      %%% destab: stable remove (exit_bump, [[4,4]])
-      %%% destab: destabilize (exit_bump, [[4,4]])
-      %%% destab: stable remove (pp4, root)
-      %%% rhs: (pp4, root) = ⊥
-      %%% iter: iterate still unstable (pp4, root)
-      %%% eq: eq (pp4, root)
-      %%% solver_query: entering query for (pp3, root); stable true; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3, root), called: true, stable: true, wpoint: false
-        %%% infl: add_infl (pp3, root) (pp4, root)
-        %%% answer: exiting query for (pp3, root)
-answer: interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-      %%% route: call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
       %%% solver_query: entering query for (exit_bump, [[4,4]]); stable false; called false
         %%% iter: iterate called from query
         %%% iter: begin iterate (exit_bump, [[4,4]]), called: true, stable: false, wpoint: false
@@ -287,7 +172,6 @@ New value: interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
         %%% infl: add_infl (exit_bump, [[4,4]]) (pp4, root)
         %%% answer: exiting query for (exit_bump, [[4,4]])
 answer: interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-      %%% side: side to Seed(bump, [[4,4]]) from (pp4, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
       %%% rhs: (pp4, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
       %%% sol: Var: (pp4, root) (wp: false)
 Old value: ⊥

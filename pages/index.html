@@ -4721,8 +4721,9 @@ fun main() {
         <figcaption>
           The solve replay on the context example, one frame per solver step. Dashed nodes are
           not reached yet, orange ones are being solved, the thick one is solved now, and dark
-          ones are stable; a seed fills once a call has published into it. Each callee context is
-          first solved while its seed is still ⊥ and once more after the call publishes
+          ones are stable; a seed fills once a call has published into it. Each call publishes its
+          seed before it reads the callee's exit, so each callee context is solved from its
+          published entry state
           (<a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues/251" target="_blank" rel="noreferrer">#251</a>).
           The replay folds the run's trace into these states; it visualizes the trace and is
           outside the proof.

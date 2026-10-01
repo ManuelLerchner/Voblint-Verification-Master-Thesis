@@ -103,23 +103,23 @@ def test_expected_trace(name, trace_args):
     assert actual == expected.read_text()
 
 
-BOTTOM_PASS = "tests/solver-trace/bottom-pass.vimp"
+ONE_CALL = "tests/solver-trace/one-call.vimp"
 
 
 @pytest.mark.parametrize(
     "name, trace_args",
     [
-        ("bottom-pass.compact", ["--trace"]),
-        ("bottom-pass.verbose", ["--trace", "--verbose"]),
+        ("one-call.compact", ["--trace"]),
+        ("one-call.verbose", ["--trace", "--verbose"]),
     ],
 )
-def test_bottom_pass_trace(name, trace_args):
-    """The whole trace of one call, kept for issue #251: it shows the callee
-    solved with a bottom seed, the seed published, the caller restarted and the
-    callee solved again. Fixing #251 changes these files, which is the point;
-    rewrite them with UPDATE_TRACE_EXPECT=1 and review the diff."""
+def test_one_call_trace(name, trace_args):
+    """The whole trace of one call (issue #251): the seed is published before
+    the callee's exit is read, so the callee is solved once, from the published
+    entry state, and the caller is not restarted. Rewrite with
+    UPDATE_TRACE_EXPECT=1 and review the diff."""
     expected = EXPECT_DIR / f"{name}.expected"
-    actual = voblint(*ARGS, *trace_args, BOTTOM_PASS).stderr
+    actual = voblint(*ARGS, *trace_args, ONE_CALL).stderr
     if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
         expected.write_text(actual)
     assert actual == expected.read_text()
@@ -224,10 +224,10 @@ def test_main_reads_its_own_seed(events):
 
 
 @pytest.mark.parametrize("context", ["[5,5]", "[4,4]"])
-def test_buffered_publication_is_read_back(events, context):
-    """The call routes to its context; the callee's entry first reads its seed
-    as bottom, the flushed side effect then changes the seed, and a later
-    evaluation reads the published value."""
+def test_seed_is_published_before_it_is_read(events, context):
+    """The call routes to its context and publishes the entered state into the
+    seed before it reads the callee's exit, so the callee's entry never reads
+    the seed as bottom and the seed changes exactly once."""
     order = [e for e in events if "step" in e]
     route = next(
         i
@@ -243,13 +243,9 @@ def test_buffered_publication_is_read_back(events, context):
     updates = [
         i for i, e in enumerate(order) if e["event"] == "update_global" and seed(e)
     ]
-    assert route < reads[0] < sides[0]
-    assert order[reads[0]]["value"] == "⊥"
-    assert updates and sides[0] < updates[0]
-    later = [i for i in reads if i > updates[0]]
-    assert later and order[later[0]]["value"] != "⊥"
-    # The second publication finds the seed unchanged.
-    assert len(sides) >= 2 and len(updates) == 1
+    assert route < sides[0] < updates[0] < reads[0]
+    assert all(order[i]["value"] != "⊥" for i in reads)
+    assert len(updates) == 1
 
 
 def test_compact_names_the_story():
@@ -257,9 +253,9 @@ def test_compact_names_the_story():
     assert text.startswith("Voblint trace\n")
     assert "reads Seed(main, root) = ⊥" in text
     assert "-> context [[5,5]]" in text
-    assert "reads Seed(bump, [[5,5]]) = ⊥" in text
+    assert "reads Seed(bump, [[5,5]]) = interval" in text
     assert "FLUSH    Seed(bump, [[5,5]])" in text
-    assert "RESTART  (pp3, root)" in text
+    assert "RESTART" not in text
     assert "Trace complete:" in text
 
 
@@ -276,8 +272,8 @@ def test_generated_module_carries_trace_calls():
 
 
 def test_schema2_internal_steps(events):
-    """Queries nest (the replay's stack), every destabilization is followed by
-    its stable removals, and each solve evaluates its right-hand side."""
+    """Queries nest (the replay's stack), reads record influence, and each
+    solve evaluates its right-hand side."""
     steps = [e for e in events if "step" in e]
     depth = 0
     for e in steps:
@@ -288,10 +284,21 @@ def test_schema2_internal_steps(events):
         assert depth >= 0
     assert depth == 0
     kinds = [e["event"] for e in steps]
-    assert "destabilize" in kinds and "stable_remove" in kinds and "add_infl" in kinds
+    assert "add_infl" in kinds
     assert kinds.count("eq") >= kinds.count("solve") + kinds.count("resolve")
     first = kinds.index("iterate")
     assert kinds[first + 1] == "solve"
+
+
+def test_loop_destabilizes():
+    """A loop re-reads what it changes, so its trace destabilizes and removes
+    stable unknowns. The context example no longer does: every seed is
+    published before anything reads it (#251)."""
+    proc = voblint(
+        *ARGS, "--trace", "--format", "jsonl", "docs/readme-figures/while-loop.vimp"
+    )
+    kinds = [json.loads(line)["event"] for line in proc.stderr.splitlines()]
+    assert "destabilize" in kinds and "stable_remove" in kinds
 
 
 def test_step_lines_point_into_the_verbose_trace(events):
@@ -306,11 +313,11 @@ def test_step_lines_point_into_the_verbose_trace(events):
         assert verbose[step["line"] - 1].lstrip().startswith("%%% "), step
 
 
-def test_callee_is_solved_once_with_bottom_before_its_seed_is_published():
-    """Pins issue #251. A call site's seed publication is buffered until its
-    right-hand side answers, so each newly entered context is first solved with
-    a ⊥ seed: the exit returns ⊥, the flush changes the seed, the caller
-    restarts and asks again. Fixing #251 changes this test."""
+def test_callee_is_solved_once_from_its_published_seed():
+    """Issue #251. Each call flushes its seed publication before it reads the
+    callee's exit, so the first query of every exit is answered from the
+    published entry state: the flush comes first, the callee's entry reads a
+    value, the exit returns one, and the caller is not restarted."""
     lines = voblint(*ARGS, "--trace", PROGRAM).stderr.splitlines()
     first_query = {}
     for at, line in enumerate(lines):
@@ -321,8 +328,12 @@ def test_callee_is_solved_once_with_bottom_before_its_seed_is_published():
 
     for exit_unknown, (at, caller) in first_query.items():
         procedure, context = re.match(r"\(exit_(\w+), (.*)\)$", exit_unknown).groups()
-        assert lines[at + 2] == f"         {exit_unknown} returns ⊥"
-        assert lines[at + 3].startswith(f"FLUSH    Seed({procedure}, {context}) += ")
-        assert lines[at + 3].endswith("(changed: readers restart)")
-        assert lines[at + 5] == f"RESTART  {caller}"
-        assert lines[at + 7] == f"QUERY    {caller} asks {exit_unknown}"
+        assert lines[at - 1].startswith(f"FLUSH    Seed({procedure}, {context}) += ")
+        assert lines[at - 1].endswith("(changed)")
+        assert re.match(
+            rf"         \(entry_{procedure}, .*\) reads Seed\({procedure}, .*\) = (?!⊥)",
+            lines[at + 1],
+        )
+        assert lines[at + 2].startswith(f"         {exit_unknown} returns ")
+        assert not lines[at + 2].endswith("returns ⊥")
+        assert f"RESTART  {caller}" not in lines
