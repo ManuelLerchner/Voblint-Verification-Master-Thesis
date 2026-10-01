@@ -25,7 +25,7 @@ import {
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
-import { createSolveReplay } from "./replay.js";
+import { createSolveReplay, seedLabelOf } from "./replay.js";
 import { createTraceView } from "./trace-view.js";
 
 function query(selector) {
@@ -2175,16 +2175,16 @@ function nodeBox(lines) {
 const SEED_SIZE = 18;
 
 /*
- * A seed's label: the formals and globals it holds that say anything, in one line.
+ * A seed's label: the formals and globals it holds that say anything, in one short line.
  * [lines] are the section lines the analyzer reports, "interval:" headers with
  * indented bindings; ⊤ bindings and headers are dropped.
  */
 function seedLabel(lines) {
-  const said = lines
-    .map((line) => line.trim())
-    .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤"));
-
-  return said.length > 0 ? said.join(", ") : "⊤";
+  return seedLabelOf(
+    lines
+      .map((line) => line.trim())
+      .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤")),
+  );
 }
 
 /* The shown graph's seeds by the entry they feed, for their tooltips. */

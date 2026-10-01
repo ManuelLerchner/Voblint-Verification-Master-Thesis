@@ -55,6 +55,26 @@ function shortValue(value) {
  * A value in one line without its ⊤ components or analysis names: only what it says.
  * A value that says nothing beyond ⊤ is ⊤.
  */
+/* A product domain's binding alone can be as wide as a box; the tooltip has it all. */
+const SEED_LABEL_MAX = 40;
+
+/* A seed's bindings in one line of at most SEED_LABEL_MAX characters, cut at a binding where one fits. */
+export function seedLabelOf(bindings) {
+  let label = "";
+
+  for (const binding of bindings) {
+    const longer = label ? `${label}, ${binding}` : binding;
+
+    if (longer.length > SEED_LABEL_MAX) {
+      return label ? `${label}, \u2026` : `${binding.slice(0, SEED_LABEL_MAX - 1)}\u2026`;
+    }
+
+    label = longer;
+  }
+
+  return label || "\u22a4";
+}
+
 function compactValue(value) {
   if (value === "⊥") {
     return "⊥";
@@ -457,7 +477,11 @@ export function createSolveReplay(deps) {
           .filter(Boolean)
           .join(" ");
 
-        const label = g ? compactValue(g.value) : "";
+        const label = !g
+          ? ""
+          : g.value === "⊥"
+            ? "⊥"
+            : seedLabelOf(compactValue(g.value).split(", "));
         const last = drawn.get(node.id());
 
         if (last?.classes !== classes || last?.label !== label) {
