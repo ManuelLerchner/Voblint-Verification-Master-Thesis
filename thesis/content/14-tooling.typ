@@ -194,36 +194,50 @@ heap.
 
 == Watching the solve <sec:tracing>
 
-#_todo[Draft skeleton; write once the exported tracer (PR \#246) builds and its
-  gate passes. Until then the tracer paragraph in @sec:pipeline describes the
-  current, patched hooks.]
-
 A post-solution certificate states that the solver's result bounds the
-equations; it does not show how the solver reached it. For explaining a run and
-for debugging an analysis, the order of the solver's steps matters.
-#_todo[one running example: the call of `bump` from @ch:equations, which
-  @tab:eq-trace already shows.]
+equations; it says nothing about how the solver reached it. For explaining a
+run and for debugging an analysis, the order of the steps matters: which
+unknown is queried when, which update destabilizes whom, where widening sets
+in. @tab:eq-trace shows such a sequence for the calls of `bump` in
+@ch:equations, including the first pass through a callee whose seed is still
+$lbot$.
 
-*Tracing inside the export.* #_todo[`trace_event` is logically `()`; traced code
-  equations are proved equal to the solver's own and replace them for code
-  generation; one `code_printing` entry maps `trace_event` to an OCaml hook that
-  returns unit and raises nothing. State what this adds to the trusted base
-  (@sec:trust-boundary) and that the untraced run executes the same code.]
+*Tracing inside the export.* The executable solver reports its steps through
+one constant, #isaconst("trace_event"), which takes a channel name and a
+suspended event and is $()$ in the logic. Alternative code equations for the
+solver call it at each step, and because it is $()$, each is proved equal to
+the vendored equation it replaces by unfolding it
+(#isathm("solve_rec_c_traced")); the routing policies and the reading of the
+result are traced the same way (#isathm("trace_route"), #isathm("trace_run")). Code export
+uses the traced equations and drops the originals, so the vendored definitions
+and proofs stay untouched, and a traced and an untraced run execute the same
+generated code. The only addition to the trusted base (@sec:trust-boundary) is
+the target-language mapping that sends #isaconst("trace_event") to an OCaml
+hook. Like every other such mapping, the hook must return, raise nothing and
+leave the solver's values alone; it forces the suspended event only when
+tracing is on. Evaluation inside Isabelle has no mapping and runs the
+equation, so proofs by evaluation see no hook. A gate checks after each code
+export that the trace calls survive in the generated module and that traced
+and untraced runs print the same result on the regression corpus.
 
-*Events.* #_todo[the event vocabulary follows Goblint's tracing output and the
-  steps of its top-down solvers; name the subsystems, the deliberate differences
-  and the Goblint events without a counterpart; point to the mapping in the CLI
-  documentation rather than reproducing it.]
+*Events.* The events (#isatype("solver_event")) follow the steps Goblint's
+tracing of its top-down solvers reports: queries and their answers, iterations,
+evaluations of a right-hand side, updates with their widening, side effects,
+influences and destabilizations. A few have no counterpart there, among them
+the value a right-hand side returns and the start and end of a solve. The
+verbose output prints them in Goblint's tracing format, indented by query
+depth; the CLI documentation maps each line to its Goblint counterpart.
 
-*Replay.* #_todo[one reducer over the JSON Lines events rebuilds each step:
-  node values, the solve stack, the stable set, influences and widening points;
-  the playground draws them on the graph. A figure generated from the replay,
-  registered like the other playground figures.]
+*Replay.* The playground folds the run's events, as JSON Lines, through one
+reducer into the state at every step: node values, the stack of open queries,
+the stable set, influences, widening points and the seeds. It draws that state
+on the graph beside the verbose trace, and each step names the trace line it
+comes from. @fig:eq-walk is drawn from the same events.
 
-*What the trace is.* #_todo[three layers in three sentences: the result is
-  proved; the trace is an unverified observation of the run; the replay is an
-  unverified visualization of the trace. Hand off to @ch:equations, where such a
-  trace explains the running example.]
+*What the trace is.* The result is the exported computation of proved
+equations. The trace is an unverified observation of that computation, and
+the replay an unverified visualization of the trace. Neither feeds back into a
+result.
 
 == From sources to the site and the thesis <sec:pipeline>
 
@@ -336,17 +350,10 @@ adapter into a WebAssembly module that runs in a Web Worker the user can
 cancel.
 
 To show how the solver reaches a result, the command-line tool can record a
-trace of the solve (#raw("voblint --trace", lang: "sh")): each query, seed read, publication and
-update, and each routing decision, as text or as JSON Lines. The hooks are not
-part of the theories or the export. The build copies the exported module and
-inserts guarded calls at named places in its text, each of which must occur
-exactly once, so a regeneration that moves one fails the build instead of
-silently losing events. The command-line tool and the WebAssembly module run
-this patched copy on every invocation, and without the flag the hooks record
-nothing. The hooks only observe, and a test checks that the untraced output is
-unchanged. The insertion is outside the proof (@sec:trust-boundary). The playground shows the same trace in a panel when the
-reader asks for it. @tab:eq-trace and @fig:eq-walk are generated from such a
-trace, registered as a claim.
+trace of the solve (#raw("voblint --trace", lang: "sh")), as text or as JSON
+Lines; @sec:tracing describes how the trace calls come out of the export.
+@tab:eq-trace and @fig:eq-walk are generated from such a trace, registered as a
+claim.
 
 Everything a reader sees is derived in the same way. The website and this
 document take their repository figures from the sources, their Isabelle names,

@@ -290,9 +290,10 @@ components, which the theorem does not mention.
   non-vacuity instances of @sec:nonvacuity and the one-program bound of
   @sec:mixed-flow, trust the same generator inside Isabelle
   (@tab:oracles-audit).
-- The tracer's hooks (@sec:pipeline). The build inserts them into the
-  generated module, and every run executes that patched copy, with or without
-  tracing. A fault in an insertion changes the code that computes the verdicts.
+- The mapping of #isaconst("trace_event") to the tracer's OCaml hook
+  (@sec:tracing). The traced code equations are theorems; the hook must return,
+  raise nothing and leave the solver's values alone, like every other target
+  mapping.
 - The OCaml compiler and runtime, #raw("wasm_of_ocaml", lang: "sh") with the
   #raw("js_of_ocaml", lang: "sh") runtime library, Zarith with its JavaScript stubs, and the
   browser. They run the generated code.
