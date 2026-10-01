@@ -4,8 +4,8 @@
  * It reads two forms of the same events: the CLI's trace (`voblint --trace`, compact or
  * --verbose) and the replay's step blocks (`[007] QUERY-L ...`). Everything it adds is
  * presentation: the coloring follows each line's event kind, a query of a procedure's
- * exit unknown opens a banner naming the call, side effects get a gutter mark, and a
- * line folds together with the deeper lines after it. The text itself is never
+ * exit unknown opens a banner naming the call, and a line folds together with the
+ * deeper lines after it. The text itself is never
  * changed, so a download is still the analyzer's output byte for byte.
  */
 
@@ -28,8 +28,6 @@ import {
 import {
   Decoration,
   EditorView,
-  GutterMarker,
-  gutter,
   highlightSpecialChars,
   lineNumbers,
   WidgetType,
@@ -496,24 +494,6 @@ const bannerField = StateField.define({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-const sideMark = new (class extends GutterMarker {
-  toDOM() {
-    const mark = document.createElement("span");
-
-    mark.className = "tr-side-mark";
-    mark.textContent = "◆";
-    mark.title = "Side effect on a global unknown";
-    return mark;
-  }
-})();
-
-const sideGutter = gutter({
-  class: "tr-side-gutter",
-  lineMarker: (view, line) =>
-    headOf(view.state.doc.sliceString(line.from, line.to))?.kind === "side" ? sideMark : null,
-  initialSpacer: () => sideMark,
-});
-
 /* ---------------------------------------------------------------- current lines */
 
 const setCurrent = StateEffect.define();
@@ -565,7 +545,6 @@ export function createTraceView(parent, { label, onLine = null }) {
       codeFolding(),
       foldGutter(),
       foldByDepth,
-      sideGutter,
       bannerField,
       layoutField,
       currentField,

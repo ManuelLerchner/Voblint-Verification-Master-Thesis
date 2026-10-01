@@ -1984,14 +1984,6 @@ button.solver-global-key:hover {
   font-weight: 700;
 }
 
-.trace-view .tr-side-gutter .cm-gutterElement {
-  padding: 0 4px;
-}
-
-.tr-side-mark {
-  color: var(--warning);
-}
-
 .tr-query {
   color: var(--primary);
   font-weight: 700;
@@ -2148,8 +2140,7 @@ button.solver-global-key:hover {
   color: #7c9096;
 }
 
-.code-editor.trace-view .tr-side,
-.code-editor.trace-view .tr-side-mark {
+.code-editor.trace-view .tr-side {
   color: #c9a2e8;
 }
 
