@@ -2206,7 +2206,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           </div>
 
           <div class="walk-panel">
-            <p class="td-panel-title">The equations it has built</p>
+            <p class="td-panel-title">The generated equations</p>
             <div class="walk-notes">
               <p class="walk-note" data-for="0"><code>main</code>'s entry. Its one contribution is the seed read: whatever a caller published there. Nothing calls <code>main</code>, so the seed stays <code>bot</code> and the answer is <code>cinit</code>.</p>
               <p class="walk-note" data-for="1">An ordinary edge: one predecessor, one transfer, one query.</p>
@@ -2238,20 +2238,17 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         </div>
 
         <div class="loop-controls walk-controls" hidden>
-          <button type="button" class="loop-play" aria-label="Pause">
-            <i class="fa-solid fa-pause" aria-hidden="true"></i>
-          </button>
-          <div class="loop-chips walk-steps" role="group" aria-label="Walk steps">
+          <div class="loop-chips walk-steps" role="group" aria-label="Select a node">
             <button type="button" data-goto="0">entry_main</button>
             <button type="button" data-goto="1">pp5</button>
             <button type="button" data-goto="2">the call</button>
             <button type="button" data-goto="3">pp7</button>
             <button type="button" data-goto="4">exit_main</button>
-            <button type="button" data-goto="5" class="done">done</button>
+            <button type="button" data-goto="5" class="done">overview</button>
           </div>
         </div>
 
-        <figcaption>This shows how the equations are generated, not how they are solved. Each node's right-hand side is built from its own incoming contributions (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>), independently of the other nodes; the figure goes through them in source order only for reading. A call site contributes one program that publishes and then reads (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>). The solver later starts from the other end, at <code>exit_main</code>, as the <a href="#replay">solve replay</a> shows. <code>enter</code> and <code>combine</code> belong to the analysis, as fields of <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype"><code>dg_spec</code></a>; as in Goblint, combining is split into two fields, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> and then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint writes the two connections with <code>sidel</code> and a query of the callee's exit. The keys above are written without their context, which the next subsection adds.
+        <figcaption>This shows how the equations are generated, not how they are solved. Each node's right-hand side is built from its own incoming contributions (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>), independently of the other nodes, so the figure shows all five at once; select a node to see its equation. A call site contributes one program that publishes and then reads (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>). The solver later starts from the other end, at <code>exit_main</code>, as the <a href="#replay">solve replay</a> shows. <code>enter</code> and <code>combine</code> belong to the analysis, as fields of <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype"><code>dg_spec</code></a>; as in Goblint, combining is split into two fields, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> and then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint writes the two connections with <code>sidel</code> and a query of the callee's exit. The keys above are written without their context, which the next subsection adds.
           <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/01-factorial_no_context.vimp&amp;analysis=interval&amp;context=entry-state">Run this program &#8599;</a></figcaption>
       </figure>
 
