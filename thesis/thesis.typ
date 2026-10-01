@@ -119,10 +119,9 @@
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
 
-// The glossary is disabled for now.
-// #pagebreak(weak: true)
-// = Glossary <glossary>
-// #print-thesis-glossary(print-glossary)
+#pagebreak(weak: true)
+= Glossary <glossary>
+#print-thesis-glossary(print-glossary)
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "ieee")

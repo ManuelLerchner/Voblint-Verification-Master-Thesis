@@ -578,7 +578,7 @@
     _eq,
     isa: isaconst("Activation_Seed"),
     notation: $italic("Seed")(p, c)$,
-    see: <sec:eq-seed>,
+    see: <sec:eq-seed-global>,
   )[
     A global unknown indexed by a callee entry and a context. A caller
     publishes the callee's entry value to it, and the entry equation reads it
@@ -822,7 +822,7 @@
     A VIMP program of the regression corpus whose analyzer output is recorded
     and rechecked. It demonstrates one behaviour, not a general result.
   ],
-  term("playground", "playground", _trust, see: <sec:playground>)[
+  term("playground", "playground", _trust, see: <sec:ocaml-boundary>)[
     The browser page that runs the exported analyzer compiled to WebAssembly
     and shows its solved states per point and context.
   ],
