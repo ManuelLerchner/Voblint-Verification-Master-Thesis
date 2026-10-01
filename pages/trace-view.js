@@ -422,7 +422,7 @@ function layout(doc) {
     if (shift > 0) {
       ranges.push(
         Decoration.line({
-          attributes: { style: `padding-left: calc(6px + ${shift}ch)` },
+          attributes: { style: `padding-left: calc(16px + ${shift}ch)` },
         }).range(line.from),
       );
     }

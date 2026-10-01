@@ -569,22 +569,12 @@ main {
   min-height: 560px;
 }
 
-.code-editor:empty,
-.trace-view:empty {
+.code-editor:empty {
   --skeleton: rgb(255 255 255 / 0.09);
   position: relative;
 }
 
-.trace-view:empty {
-  --skeleton: var(--surface-muted);
-}
-
-.code-editor.trace-view:empty {
-  --skeleton: rgb(255 255 255 / 0.09);
-}
-
-.code-editor:empty::before,
-.trace-view:empty::before {
+.code-editor:empty::before {
   content: "";
   position: absolute;
   inset: 18px 24px;
@@ -1503,7 +1493,8 @@ kbd {
   color: var(--text-muted);
 }
 
-.raw-result-hint {
+/* Every collapsible panel says it can be opened, and closed again. */
+.expand-hint {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -1513,21 +1504,21 @@ kbd {
   font-size: 0.76rem;
 }
 
-.raw-result-hint i {
+.expand-hint i {
   font-size: 0.7rem;
   transition: transform 150ms ease;
 }
 
-.raw-result summary:hover .raw-result-hint {
+summary:hover .expand-hint {
   color: var(--primary);
 }
 
-.raw-result[open] .raw-result-hint i {
+details[open] > summary .expand-hint i {
   transform: rotate(180deg);
 }
 
-.raw-result:not([open]) .raw-result-hint-open,
-.raw-result[open] .raw-result-hint-closed {
+details:not([open]) > summary .expand-hint-open,
+details[open] > summary .expand-hint-closed {
   display: none;
 }
 
@@ -1941,36 +1932,22 @@ button.solver-global-key:hover {
 
 /* ------------------------------------------------------------- trace view */
 
+/*
+ * A trace view is a .code-editor too: gutters, line padding and font follow the
+ * dark editors beside it, and only the trace's own colors are set here.
+ */
 .trace-view {
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
 }
 
 .trace-view .cm-editor {
   height: 100%;
-  font: 0.74rem / 1.5 var(--mono);
-}
-
-.trace-view .cm-scroller {
-  overflow: auto;
-  font-family: var(--mono);
-}
-
-.trace-view .cm-gutters {
-  background: var(--surface-muted);
-  border-right: 1px solid var(--border);
-  color: var(--text-faint);
-}
-
-.solver-trace-view {
-  height: min(560px, 60vh);
-  margin: 10px 0 0;
+  font: 0.78rem / 1.6 var(--mono);
 }
 
 .trace-view .tr-current {
-  background: var(--accent-soft);
+  background: rgb(215 102 66 / 0.18);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -1978,20 +1955,30 @@ button.solver-global-key:hover {
 .trace-view .tr-banner {
   margin: 6px 0 2px;
   padding: 1px 8px;
-  color: var(--primary);
-  background: var(--primary-soft);
-  border-left: 3px solid var(--primary);
+  color: #8fc4e8;
+  background: rgb(143 196 232 / 0.1);
+  border-left: 3px solid #8fc4e8;
+  font-weight: 700;
+}
+
+.tr-query,
+.tr-update,
+.tr-widen,
+.tr-side,
+.tr-route,
+.tr-check,
+.tr-proved,
+.tr-failed {
   font-weight: 700;
 }
 
 .tr-query {
-  color: var(--primary);
-  font-weight: 700;
+  color: #8fc4e8;
 }
 
-.tr-update {
-  color: var(--success);
-  font-weight: 700;
+.tr-update,
+.tr-proved {
+  color: #6fcf97;
 }
 
 /* The value-carrying events: a soft chip that does not move the text. */
@@ -2003,171 +1990,60 @@ button.solver-global-key:hover {
 }
 
 .tr-answer {
-  color: var(--primary);
-  background: var(--primary-soft);
-  box-shadow: 0 0 0 2px var(--primary-soft);
-}
-
-.tr-stored {
-  color: var(--success);
-  background: var(--success-soft);
-  box-shadow: 0 0 0 2px var(--success-soft);
-}
-
-.tr-sol {
-  color: var(--caution);
-  background: color-mix(in srgb, var(--caution) 12%, transparent);
-  box-shadow: 0 0 0 2px color-mix(in srgb, var(--caution) 12%, transparent);
-}
-
-.tr-widen {
-  color: var(--accent);
-  font-weight: 700;
-}
-
-.tr-stable {
-  color: var(--text-faint);
-}
-
-.tr-side {
-  color: var(--warning);
-  font-weight: 700;
-}
-
-.tr-route,
-.tr-check {
-  color: var(--tok-keyword);
-  font-weight: 700;
-}
-
-.tr-unknown {
-  color: var(--text-muted);
-}
-
-.tr-value {
-  color: var(--tok-number);
-}
-
-.tr-key,
-.tr-step {
-  color: var(--text-muted);
-}
-
-/* An old/new pair marks the components that differ, like a diff. */
-.tr-removed {
-  background: var(--danger-soft);
-  border-radius: 2px;
-}
-
-.tr-added {
-  background: var(--success-soft);
-  border-radius: 2px;
-}
-
-.tr-proved {
-  color: var(--success);
-  font-weight: 700;
-}
-
-.tr-failed {
-  color: var(--danger);
-  font-weight: 700;
-}
-
-/* The trace in the dark editor style of the panes beside it. */
-.code-editor.trace-view {
-  border: 1px solid var(--editor-border);
-  border-radius: 10px;
-}
-
-/* The trace's own light rules come later in the file; the panes' dark ones win here. */
-.code-editor.trace-view .cm-editor {
-  font: 0.78rem / 1.6 var(--mono);
-}
-
-.code-editor.trace-view .cm-gutters {
-  color: #647f86;
-  background: var(--surface-dark-2);
-  border-right: 1px solid var(--editor-border);
-}
-
-.code-editor.trace-view .cm-content {
-  padding: 16px 0;
-}
-
-/* The layout pads continuation lines from a 6px start. */
-.code-editor.trace-view .cm-line {
-  padding: 0 2px 0 6px;
-}
-
-.code-editor.trace-view .tr-query {
-  color: #8fc4e8;
-}
-
-.code-editor.trace-view .tr-update,
-.code-editor.trace-view .tr-proved {
-  color: #6fcf97;
-}
-
-.code-editor.trace-view .tr-answer {
   color: #8bd5ca;
   background: rgb(139 213 202 / 0.14);
   box-shadow: 0 0 0 2px rgb(139 213 202 / 0.14);
 }
 
-.code-editor.trace-view .tr-stored {
+.tr-stored {
   color: #6fcf97;
   background: rgb(111 207 151 / 0.14);
   box-shadow: 0 0 0 2px rgb(111 207 151 / 0.14);
 }
 
-.code-editor.trace-view .tr-sol {
+.tr-sol {
   color: #f0c674;
   background: rgb(240 198 116 / 0.14);
   box-shadow: 0 0 0 2px rgb(240 198 116 / 0.14);
 }
 
-.code-editor.trace-view .tr-widen,
-.code-editor.trace-view .tr-route,
-.code-editor.trace-view .tr-check,
-.code-editor.trace-view .tr-failed {
+.tr-widen,
+.tr-route,
+.tr-check,
+.tr-failed {
   color: #f08a65;
 }
 
-.code-editor.trace-view .tr-stable,
-.code-editor.trace-view .tr-key,
-.code-editor.trace-view .tr-step {
+.tr-stable,
+.tr-key,
+.tr-step {
   color: #7c9096;
 }
 
-.code-editor.trace-view .tr-side {
+.tr-side {
   color: #c9a2e8;
 }
 
-.code-editor.trace-view .tr-unknown {
+.tr-unknown {
   color: #a7bbc0;
 }
 
-.code-editor.trace-view .tr-value {
+.tr-value {
   color: #c4a7e7;
 }
 
-.code-editor.trace-view .tr-removed {
+/* An old/new pair marks the components that differ, like a diff. */
+.tr-removed,
+.tr-added {
+  border-radius: 2px;
+}
+
+.tr-removed {
   background: rgb(255 138 115 / 0.2);
 }
 
-.code-editor.trace-view .tr-added {
+.tr-added {
   background: rgb(111 207 151 / 0.2);
-}
-
-.code-editor.trace-view .tr-current {
-  background: rgb(215 102 66 / 0.18);
-}
-
-.code-editor.trace-view .tr-banner {
-  color: #8fc4e8;
-  background: rgb(143 196 232 / 0.1);
-  border-left-color: #8fc4e8;
 }
 
 .analysis-graph-header {

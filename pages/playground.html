@@ -300,9 +300,9 @@
           <summary>
             <span class="eyebrow">Generated core</span>
             <code id="raw-result-call" class="raw-call"></code>
-            <span class="raw-result-hint" aria-hidden="true">
-              <span class="raw-result-hint-closed">Click to expand</span>
-              <span class="raw-result-hint-open">Click to collapse</span>
+            <span class="expand-hint" aria-hidden="true">
+              <span class="expand-hint-closed">Click to expand</span>
+              <span class="expand-hint-open">Click to collapse</span>
               <i class="fa-solid fa-chevron-down"></i>
             </span>
           </summary>
@@ -405,6 +405,11 @@
         >
           <summary>
             <h2 id="analysis-graph-heading" class="eyebrow">Control-flow graph</h2>
+            <span class="expand-hint" aria-hidden="true">
+              <span class="expand-hint-closed">Click to expand</span>
+              <span class="expand-hint-open">Click to collapse</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </span>
           </summary>
 
           <div class="analysis-graph-header">
@@ -461,6 +466,11 @@
           <summary>
             <span class="eyebrow">Solve replay</span>
             <span id="solve-replay-count" class="solver-globals-count"></span>
+            <span class="expand-hint" aria-hidden="true">
+              <span class="expand-hint-closed">Click to expand</span>
+              <span class="expand-hint-open">Click to collapse</span>
+              <i class="fa-solid fa-chevron-down"></i>
+            </span>
           </summary>
 
           <p class="solver-globals-note">
@@ -523,7 +533,7 @@
                 tabindex="0"
                 aria-label="Control-flow graph at the current solver step. Left and right arrows step."
               ></div>
-              <div id="solve-replay-trace" class="trace-view replay-trace-view"></div>
+              <div id="solve-replay-trace" class="code-editor trace-view replay-trace-view"></div>
             </div>
 
             <div class="replay-below">
