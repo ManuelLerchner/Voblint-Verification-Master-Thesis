@@ -298,8 +298,11 @@ each form's trace of the command above with its file in `tests/solver-trace/`,
 whose program name it swaps for `browser.vimp`.
 
 JSON Lines schema 2. The first line is the run header; every solver event
-carries an increasing `step`; check records and an `end` record with counts
-follow. No timestamps, so equal runs give equal traces.
+carries an increasing `step` and the `line` of the `--verbose` trace of the
+same run that its solver event prints on (an event the verbose form leaves out
+takes the line of the last one it printed); check records and an `end` record
+with counts follow. No timestamps, so equal runs give equal traces. Each step
+below also carries `"line":n` after its `event`.
 
 ```text
 {"event":"run","schema":2,"analysis":[..],"context_policy":..,"update_rule":..,"program":..}

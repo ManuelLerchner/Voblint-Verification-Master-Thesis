@@ -565,6 +565,22 @@ let verbose ~out ~selected nm events =
       | _ -> ())
     events
 
+(* The verbose text's line each event prints on, numbered from the header's
+   first line, which takes the first six. An event the verbose form leaves out
+   takes the line of the last event it printed, so every JSON Lines step can
+   name the line a viewer of the verbose text shows it at. *)
+let verbose_lines nm events =
+  let next = ref 7 and last = ref 7 in
+  List.map
+    (fun e ->
+      (match goblint_line nm e with
+      | Some (_, msg, _) ->
+          last := !next;
+          next := !next + List.length (String.split_on_char '\n' msg)
+      | None -> ());
+      !last)
+    events
+
 (* ------------------------------------------------------------------ emit *)
 
 (* The returned result's state at every point and context, named as the trace
@@ -626,7 +642,13 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
   | None -> pr "Voblint trace: the run recorded no solve\n"
   | Some printers -> (
       let nm = names_of printers in
-      let steps = List.concat_map steps_of events in
+      let lined =
+        List.concat
+          (List.map2
+             (fun e line -> List.map (fun s -> (s, line)) (steps_of e))
+             events (verbose_lines nm events))
+      in
+      let steps = List.map fst lined in
       let locals, globals_n = counts steps in
       match format with
       | Jsonl ->
@@ -638,15 +660,16 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
           let seen = Hashtbl.create 64 in
           ignore
             (List.fold_left
-               (fun step e ->
+               (fun step (e, line) ->
                  let r = record_of nm seen e in
-                 pr "{\"step\":%d,\"event\":%s%s}\n" step (json_string r.kind)
+                 pr "{\"step\":%d,\"event\":%s,\"line\":%d%s}\n" step
+                   (json_string r.kind) line
                    (String.concat ""
                       (List.map
                          (fun (k, v) -> "," ^ json_string k ^ ":" ^ v)
                          r.json));
                  step + 1)
-               1 steps);
+               1 lined);
           List.iter (fun r -> pr "%s\n" r) (result_records result);
           List.iter
             (fun (point, cond, verdict) ->

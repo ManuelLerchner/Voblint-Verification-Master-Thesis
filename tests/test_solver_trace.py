@@ -270,3 +270,15 @@ def test_schema2_internal_steps(events):
     assert kinds.count("eq") >= kinds.count("solve") + kinds.count("resolve")
     first = kinds.index("iterate")
     assert kinds[first + 1] == "solve"
+
+
+def test_step_lines_point_into_the_verbose_trace(events):
+    """Every step names the verbose line of the solver event it comes from, so a
+    viewer of the verbose text can show where a step happened."""
+    verbose = voblint(*ARGS, "--trace", "--verbose", PROGRAM).stderr.split("\n")
+    steps = [e for e in events if isinstance(e.get("step"), int)]
+    lines = [step["line"] for step in steps]
+
+    assert lines == sorted(lines)
+    for step in steps:
+        assert verbose[step["line"] - 1].lstrip().startswith("%%% "), step
