@@ -486,7 +486,17 @@ export function createSolveReplay(deps) {
       ...state.counters.updates.keys(),
       ...state.counters.destabilizations.keys(),
     ]);
-    const rows = [...keys].sort().map((key) => {
+    const { evaluations, updates } = state.counters;
+    const naturally = new Intl.Collator(undefined, { numeric: true });
+
+    /* The busiest unknowns first: most evaluations, then most updates, then by name. */
+    const busiest = [...keys].sort(
+      (a, b) =>
+        (evaluations.get(b) ?? 0) - (evaluations.get(a) ?? 0) ||
+        (updates.get(b) ?? 0) - (updates.get(a) ?? 0) ||
+        naturally.compare(a, b),
+    );
+    const rows = busiest.map((key) => {
       const row = document.createElement("tr");
       const cells = [
         key.startsWith("L:") ? `(${key.slice(2).replace("|", ", ")})` : globalName(key),

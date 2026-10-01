@@ -2648,31 +2648,49 @@ function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
 }
 
 /*
- * A route is stored relative to its endpoints' centers, so dragging a node recomputes
- * its edges' routes from the layout's absolute bend points. A route between boxes runs
- * through the boxes' ports and channels, which a moved box leaves behind, so an edge
- * leaving a dragged box falls back to the plain taxi style instead.
+ * A route is stored relative to its endpoints' centers, and each drag event recomputes
+ * the routes of the moved nodes' edges from where both endpoints now are. Endpoints
+ * moved alike, as inside a dragged box, keep the route as it is. Within one box, one
+ * moved endpoint stretches it. A route between boxes runs through bends at both boxes'
+ * ports, which no end bend can follow, so moving either end leaves it behind and the
+ * edge falls back to the plain taxi style. A drag reports every moved node, so this
+ * reads positions rather than the event's target.
  */
 function followRoutesOnDrag(view) {
+  const offset = (now, then) => ({ x: now.x - then.x, y: now.y - then.y });
+  const still = (delta) => Math.abs(delta.x) < 0.5 && Math.abs(delta.y) < 0.5;
+
   view.on("drag", "node", (event) => {
-    const box = event.target.isParent();
-    const moved = box ? event.target.descendants() : event.target;
+    const moved = event.target.isParent() ? event.target.descendants() : event.target;
 
-    moved
-      .connectedEdges(".routed, .placed-label")
-      .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
-      .forEach((edge) => {
-        const route = !box && edge.scratch("route");
-        const source = edge.source().position();
-        const target = edge.target().position();
-        const style = route && segmentStyle(stretchedRoute(route, source, target), source, target);
+    moved.connectedEdges(".routed").forEach((edge) => {
+      const route = edge.scratch("route");
+      const source = edge.source().position();
+      const target = edge.target().position();
 
-        if (style) {
-          edge.data(style);
-        } else {
-          edge.removeClass("routed placed-label");
-        }
-      });
+      if (!route) {
+        return;
+      }
+
+      const bySource = offset(source, route.source);
+      const byTarget = offset(target, route.target);
+
+      if (still(offset(bySource, byTarget))) {
+        return;
+      }
+
+      const withinBox = edge.source().parent().same(edge.target().parent());
+      const points =
+        withinBox && (still(bySource) || still(byTarget)) && stretchedRoute(route, source, target);
+      const style = points && segmentStyle(points, source, target);
+
+      if (style) {
+        /* The stretched route is the one a later drag of either end starts from. */
+        edge.data(style).scratch("route", { points, source: { ...source }, target: { ...target } });
+      } else {
+        edge.removeClass("routed placed-label");
+      }
+    });
   });
 }
 
