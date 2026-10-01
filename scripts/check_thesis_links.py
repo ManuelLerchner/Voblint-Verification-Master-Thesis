@@ -19,7 +19,8 @@ to read. A name with no verified anchor is a build failure, not a dead link.
     scripts/check_thesis_links.py --live    fetch the deployed pages and verify
     scripts/check_thesis_links.py --list    show what is linked
 
-`--write` and `--check` read the rendered theories under build/isabelle-html, which a
+`--write` and `--check` read the anchors of the rendered theories under
+build/isabelle-html through `isar project anchors` (isar-tools), which a
 working copy usually does not have (or has stale). `--lenient` turns that from
 a failure into a warning, which is what the local hook and the day-to-day
 `make check` use. Even in lenient mode, every citation must have a stored
@@ -116,63 +117,75 @@ DEFINITIONS: dict[tuple[str, str], set[str]] = {}
 SCOPES: set[str] = set()
 
 
-def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+def _index_rel(index: dict[tuple[str, str], str], rel: str) -> None:
     path = Path(rel)
     if path.name == "index.html":
         index.setdefault((path.parent.name, "page"), rel)
     else:
         index.setdefault((f"{path.parent.name}.{path.stem}", "page"), rel)
+
+
+def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+    """A fetched page's anchors, for the published site, where no build directory exists."""
+    _index_rel(index, rel)
     for m in ANCHOR.finditer(body):
         escaped, kind = m.group(1), m.group(2)
-        qualified = escaped.replace("&lt;", "<").replace("&gt;", ">")
-        if rel.startswith(("Voblint/", "Unsorted/TD/")):
-            # A datatype scopes its constructors as a locale scopes its members,
-            # so two datatypes with an `Answer` make `Answer` ambiguous.
-            if kind in ("locale", "class", "type"):
-                SCOPES.add(qualified)
-            if kind in ("const", "type", "locale"):
-                DEFINITIONS.setdefault((qualified.split(".")[-1], kind), set()).add(
-                    qualified
-                )
-        anchor = quote(f"{qualified}|{kind}", safe="._()'")
-        parts = qualified.split(".")
-        # Every suffix, including the theory-qualified name a `thy:` citation uses.
-        # `Theory.name` also reaches a member of a locale or datatype, which is
-        # how `thy:` qualifies a constructor: ctor("Answer", thy: "Basics_side").
-        keys = [".".join(parts[i:]) for i in range(len(parts))]
-        if len(parts) == 3:
-            keys.append(f"{parts[0]}.{parts[2]}")
-        for dotted in keys:
-            key = (dotted, kind)
-            target = f"{rel}#{anchor}"
+        _index_anchor(
+            index, rel, escaped.replace("&lt;", "<").replace("&gt;", ">"), kind
+        )
 
-            # Keep current project exports ahead of stale/library duplicates.
-            # Per-domain and example sessions interpret the generic locales, so
-            # a copy there is an instance, not the definition.
-            # Among library pages, the HOL session defines what HOL-IMP and
-            # HOL-Library only redefine or interpret (lfp, mono).
-            # A named interpretation (`..._Interp`) copies a locale's facts;
-            # the generic locale entity is the definition a citation means.
-            # The vendored solver's sessions render under Unsorted/, but their
-            # owner pages define what the project cites (widen, narrow).
-            # A name several project theories define is cited with `thy:`
-            # (see definitions_of), so the ranking never has to guess between them.
-            def rank(
-                value: str,
-            ) -> tuple[bool, bool, bool, bool, bool, str]:
-                page, _, entity = value.partition("#")
-                project = page.startswith(("Voblint/", "Unsorted/TD/"))
-                return (
-                    not page.startswith("Voblint/"),
-                    not project,
-                    not (project or page.startswith("HOL/HOL/")),
-                    "_Interp." in entity,
-                    "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
-                    value,
-                )
 
-            if key not in index or rank(target) < rank(index[key]):
-                index[key] = target
+def _index_anchor(
+    index: dict[tuple[str, str], str], rel: str, qualified: str, kind: str
+) -> None:
+    if rel.startswith(("Voblint/", "Unsorted/TD/")):
+        # A datatype scopes its constructors as a locale scopes its members,
+        # so two datatypes with an `Answer` make `Answer` ambiguous.
+        if kind in ("locale", "class", "type"):
+            SCOPES.add(qualified)
+        if kind in ("const", "type", "locale"):
+            DEFINITIONS.setdefault((qualified.split(".")[-1], kind), set()).add(
+                qualified
+            )
+    anchor = quote(f"{qualified}|{kind}", safe="._()'")
+    parts = qualified.split(".")
+    # Every suffix, including the theory-qualified name a `thy:` citation uses.
+    # `Theory.name` also reaches a member of a locale or datatype, which is
+    # how `thy:` qualifies a constructor: ctor("Answer", thy: "Basics_side").
+    keys = [".".join(parts[i:]) for i in range(len(parts))]
+    if len(parts) == 3:
+        keys.append(f"{parts[0]}.{parts[2]}")
+    for dotted in keys:
+        key = (dotted, kind)
+        target = f"{rel}#{anchor}"
+
+        # Keep current project exports ahead of stale/library duplicates.
+        # Per-domain and example sessions interpret the generic locales, so
+        # a copy there is an instance, not the definition.
+        # Among library pages, the HOL session defines what HOL-IMP and
+        # HOL-Library only redefine or interpret (lfp, mono).
+        # A named interpretation (`..._Interp`) copies a locale's facts;
+        # the generic locale entity is the definition a citation means.
+        # The vendored solver's sessions render under Unsorted/, but their
+        # owner pages define what the project cites (widen, narrow).
+        # A name several project theories define is cited with `thy:`
+        # (see definitions_of), so the ranking never has to guess between them.
+        def rank(
+            value: str,
+        ) -> tuple[bool, bool, bool, bool, bool, str]:
+            page, _, entity = value.partition("#")
+            project = page.startswith(("Voblint/", "Unsorted/TD/"))
+            return (
+                not page.startswith("Voblint/"),
+                not project,
+                not (project or page.startswith("HOL/HOL/")),
+                "_Interp." in entity,
+                "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
+                value,
+            )
+
+        if key not in index or rank(target) < rank(index[key]):
+            index[key] = target
 
 
 def index_live(
@@ -221,10 +234,34 @@ def index_live(
 
 
 def index_anchors() -> dict[tuple[str, str], str]:
-    """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html."""
+    """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html.
+
+    `isar project anchors` reads the build's anchors, HOL and library sessions
+    included, and leaves out the copy a session presents of another session's
+    theory (`<Owner>.<Theory>.html`), so a citation reaches the owner's page.
+    """
+    listing = json.loads(
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "isar_tools",
+                "project",
+                "anchors",
+                "--browser-info",
+                str(HTML),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
     index: dict[tuple[str, str], str] = {}
-    # Prefer this project's definitions over identically named HOL examples.
-    # Old ungrouped exports may also coexist with the current Voblint group.
+    # Session and theory pages are cited as pages; an index page carries no anchor.
+    # The first page indexed under a name wins: this project's current export
+    # before old ungrouped exports that may coexist with it.
     for path in sorted(
         HTML.rglob("*.html"),
         key=lambda p: (
@@ -233,12 +270,11 @@ def index_anchors() -> dict[tuple[str, str], str]:
             p.as_posix(),
         ),
     ):
-        # A session that elaborates another session's theory presents a copy
-        # named `<Owner>.<Theory>.html`; cite the owner's page instead.
-        if "." in path.stem:
-            continue
-        rel = path.relative_to(HTML).as_posix()
-        _index_page(index, rel, path.read_text(errors="ignore"))
+        if "." not in path.stem:
+            _index_rel(index, path.relative_to(HTML).as_posix())
+    for row in listing["anchors"]:
+        rel = row["url"].partition("#")[0]
+        _index_anchor(index, rel, row["anchor"].rpartition("|")[0], row["kind"])
     return index
 
 
