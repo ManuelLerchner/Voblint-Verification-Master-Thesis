@@ -409,6 +409,69 @@ const FIGURES = {
     await page.close();
   },
 
+  /*
+   * One frame of the solve replay, for the thesis, which cannot animate: the step
+   * where the first call into a new context reads the callee's seed and finds it
+   * still bottom, because the call's publication waits until its right-hand side
+   * answers. The frame is the replay's own drawing at that step.
+   */
+  async "solve-replay-still"() {
+    const page = await run(
+      programLink("contexts", "--analysis", "interval", "--context", "entry-state"),
+      1180,
+      "contexts.vimp",
+    );
+
+    await page.click("#solve-replay summary");
+    await page.waitForFunction(() => document.querySelector("#solve-replay-graph canvas"), null, {
+      timeout: 60000,
+    });
+    await page.dblclick("#solve-replay-graph", { position: { x: 8, y: 8 } });
+
+    const steps = Number(await page.$eval("#solve-replay-slider", (slider) => slider.max));
+    let found = null;
+
+    for (let step = 1; step <= steps && found === null; step++) {
+      await page.$eval(
+        "#solve-replay-slider",
+        (slider, value) => {
+          slider.value = String(value);
+          slider.dispatchEvent(new Event("input"));
+        },
+        step,
+      );
+      await page.waitForTimeout(40);
+
+      const line = await page.$eval("#solve-replay-trace", (pane) =>
+        pane.querySelector(".tr-current")?.textContent ?? "",
+      );
+
+      if (line.includes("Seed(bump")) {
+        found = step;
+      }
+    }
+
+    if (found === null) {
+      throw new Error("the replay never reads the seed of bump");
+    }
+
+    await page.waitForTimeout(600);
+
+    const body = await page.$("#solve-replay-body");
+
+    await body.scrollIntoViewIfNeeded();
+
+    const clip = await page.evaluate(() => {
+      const top = document.querySelector("#solve-replay-body").getBoundingClientRect();
+      const bottom = document.querySelector(".replay-layout").getBoundingClientRect();
+
+      return { x: top.x, y: top.y, width: top.width, height: bottom.bottom - top.y };
+    });
+
+    await page.screenshot({ clip, path: join(OUT, "solve-replay-still.png"), scale: "device" });
+    await page.close();
+  },
+
   async "playground-division-possible"() {
     const page = await run(programLink("division-possible", "--analysis", "interval"), 1100, "division-possible.vimp");
 
