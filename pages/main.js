@@ -1295,7 +1295,7 @@ function inspectCursor(state) {
   }
 }
 
-/* [configuration] and [source] are the run's own; the trace views solve them again. */
+/* [configuration] and [source] are the run's own; the trace views show the traces it recorded. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
 
@@ -1884,13 +1884,16 @@ function showCancelledTrace(live) {
   });
 }
 
+/* The browser reads a large blob after the click returns; revoking its URL at once cancels that download. */
+const BLOB_URL_LIFETIME_MS = 60_000;
+
 function downloadBlob(blob, name) {
   const link = document.createElement("a");
 
   link.href = URL.createObjectURL(blob);
   link.download = name;
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  setTimeout(() => URL.revokeObjectURL(link.href), BLOB_URL_LIFETIME_MS);
 }
 
 function downloadSolverTrace() {
