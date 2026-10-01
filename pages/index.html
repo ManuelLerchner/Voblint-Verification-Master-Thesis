@@ -841,7 +841,7 @@
         </div>
         <noscript><p class="td-caption">The step-through needs JavaScript.</p></noscript>
 
-        <figcaption>The bottom row never moves. Reduction leaves the set of integers alone (<a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_exact%7Cfact"><code>refine_exact</code></a>) and only shrinks the description (<a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_reductive%7Cfact"><code>refine_reductive</code></a>), so a reduced value is sound whenever the unreduced one was. One round is <a href="Voblint/Voblint_Analysis_Int/Int_Refinement.html#Int_Refinement.refine_round%7Cconst"><code>refine_round</code></a>, and Int repeats rounds after every arithmetic operation and every guard until nothing changes. Here that takes two rounds; a third finds nothing new. In general nothing bounds the number of rounds: <a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_fix%7Cconst"><code>refine_fix</code></a> iterates until the tuple stops changing, and in the logic returns the value it started from if that never happens; the generated code would keep iterating.
+        <figcaption>The bottom row never moves. Reduction leaves the set of integers alone (<a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_exact%7Cfact"><code>refine_exact</code></a>) and only shrinks the description (<a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_reductive%7Cfact"><code>refine_reductive</code></a>), so a reduced value is sound whenever the unreduced one was. One round is <a href="Voblint/Voblint_Analysis_Int/Int_Refinement.html#Int_Refinement.refine_round%7Cconst"><code>refine_round</code></a>, and Int repeats rounds after every arithmetic operation and every guard until nothing changes. Here that takes two rounds; a third finds nothing new. The thesis argues that a chain of refinements is at most two rounds long, but no bound is proved: <a href="Voblint/Voblint_Analysis_Int/Int_Refinement_Control.html#Int_Refinement_Control.refine_fix%7Cconst"><code>refine_fix</code></a> iterates until the tuple stops changing, and in the logic returns the value it started from if that never happens; the generated code would keep iterating.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/02-int_reduction_int.vimp&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a></figcaption>
       </figure>
 
@@ -3752,7 +3752,8 @@ fun main() {
           <h4><i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i> Join and Join per origin on intervals</h4>
           <p>
             Precise when a procedure receives finitely many values, but they never widen: a call
-            chain that keeps growing an argument makes the run spin forever.
+            chain that keeps growing an argument gives no answer within the time limit, and we
+            expect, without a proof, that the run never finishes.
           </p>
         </article>
         <article class="guide-card stuck">
@@ -3842,7 +3843,7 @@ fun main() {
       </figure>
 
       <h3 class="setting-title">Both settings at once</h3>
-      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate cleanly. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing lose only <code>s</code>'s check, and only with no contexts. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that never finishes on a recursion whose argument keeps growing.</p>
+      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate cleanly. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing lose only <code>s</code>'s check, and only with no contexts. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that gives no answer within the time limit on a recursion whose argument keeps growing.</p>
 
       <h3 class="setting-title">A call that never stops calling</h3>
       <p class="setting-copy">
@@ -3850,7 +3851,7 @@ fun main() {
         real runs wind outward on an endless spiral: <code>f(0)</code>, <code>f(1)</code>,
         <code>f(2)</code>, each turn wider than the last. The analysis has to describe every turn
         with finitely many contexts, and whether it can depends on the settings: Join and
-        entry-state contexts follow the spiral and never finish, warrowing cuts across it. Switch
+        entry-state contexts follow the spiral and give no answer within the time limit, warrowing cuts across it. Switch
         to the same function stopped at <code>x = 10</code> and every setting finishes.
       </p>
 
@@ -5362,7 +5363,7 @@ qed</code></pre>
       <div class="guide-grid">
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-hourglass-half" aria-hidden="true"></i> That a run finishes</h4>
-          <p>Every soundness guarantee assumes the solve terminates. Proving that in general is out of scope; for intervals, the join-based rules can run forever, and entry-state contexts can under any rule.</p>
+          <p>Every soundness guarantee assumes the solve terminates. Proving that in general is out of scope; for intervals, the join-based rules give no answer within a time limit on some programs, and so do entry-state contexts. We expect these solves to diverge, but a timeout does not prove it.</p>
         </article>
         <article class="guide-card caution">
           <h4><i class="fa-solid fa-door-closed" aria-hidden="true"></i> Anything about a program it turned down</h4>
