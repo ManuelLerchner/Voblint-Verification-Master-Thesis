@@ -365,13 +365,8 @@ pre-commit:
 
     # ----------------------------------------------------------------------
     # Thesis: cheap source-level freshness checks
-    #
-    # The thesis is written on `writing`; main keeps a frozen copy of thesis/
-    # that these checks no longer describe, so they run on that branch only.
     # ----------------------------------------------------------------------
     - name: thesis-checks
-      only:
-        - ref: writing
       group:
         parallel: true
         jobs:
@@ -501,8 +496,6 @@ pre-push:
       run: pixi run codegen-check
 
     - name: thesis-current
-      only:
-        - ref: writing
       group:
         parallel: true
         jobs:
