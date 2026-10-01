@@ -444,6 +444,8 @@ format = { depends-on = [
 # voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
+golden-write = { cmd = "python3 scripts/golden_outputs.py --write", description = "Record the CLI text, graph snapshot, solver trace and browser payload of every regression fixture under build/golden." }
+golden-check = { cmd = "python3 scripts/golden_outputs.py --check", description = "Compare the corpus output against build/golden and list every fixture whose output changed." }
 # CLI plumbing (exit codes, --help, argument errors) that isn't expressible
 # as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
 cli-smoke = { cmd = "python3 tests/cli_smoke.py", description = "Build the CLI and test help, errors, exit codes, and output plumbing." }

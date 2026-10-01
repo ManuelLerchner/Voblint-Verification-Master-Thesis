@@ -110,6 +110,8 @@ let usage =
    build/report 8080\n\
   \  --html-out DIR             Write that directory to DIR instead. Implies\n\
   \                             --html.\n\
+  \  --json                     Print the result as the browser adapter receives\n\
+  \                             it (analysis time reported as 0).\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
   \                             of the solved CFG (clusters/nodes/edges), for\n\
   \                             embedding as a regression fixture's expected\n\
@@ -420,6 +422,7 @@ let () =
   let narrow_bound = ref None in
   let dot = ref false in
   let graph_snapshot = ref false in
+  let json = ref false in
   let html = ref false in
   (* Generated report output stays under build/; --html-out is the override.
      Taking no argument keeps `--html FILE.vimp` from reading the program as
@@ -496,6 +499,9 @@ let () =
         parse_args rest
     | "--graph-snapshot" :: rest ->
         graph_snapshot := true;
+        parse_args rest
+    | "--json" :: rest ->
+        json := true;
         parse_args rest
     | "--html" :: rest ->
         html := true;
@@ -646,7 +652,7 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, stmt_positions, _ =
+  let prog, stmt_positions, header_positions =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
@@ -669,6 +675,22 @@ let () =
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
      combination to silently resolve. *)
+  if !json then begin
+    let answer =
+      Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
+    in
+    let raw =
+      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
+        answer
+    in
+    (match answer with
+    | C.Analysed result ->
+        print_endline
+          (Render_json.result_json 0. prog ~stmt_positions ~header_positions
+             ~raw result)
+    | C.Invalid_Activation | C.Malformed_Program -> print_endline raw);
+    exit 0
+  end;
   if !html && (!dot || !graph_snapshot) then begin
     prerr_endline
       "voblint: --html cannot be combined with --dot/--graph-snapshot";
