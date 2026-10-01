@@ -550,13 +550,14 @@ let subsystems =
     "route";
   ]
 
-let verbose ~pr ~selected nm events =
+let verbose ~out ~selected nm events =
   let level = ref 0 in
   List.iter
     (fun e ->
       match goblint_line nm e with
       | Some (sys, msg, indent) when selected sys -> (
-          pr "%s%%%%%% %s: %s\n" (String.make !level ' ') sys msg;
+          out
+            (Printf.sprintf "%s%%%%%% %s: %s\n" (String.make !level ' ') sys msg);
           match indent with
           | In -> level := !level + 2
           | Out -> level := max 0 (!level - 2)
@@ -663,7 +664,7 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
           pr "  globals:  %s\n" globals;
           pr "  program:  %s\n\n" program;
           if is_verbose then
-            verbose ~pr
+            verbose ~out
               ~selected:(fun s -> systems = [] || List.mem s systems)
               nm events
           else List.iter (fun l -> pr "%s\n" l) (compact nm steps);

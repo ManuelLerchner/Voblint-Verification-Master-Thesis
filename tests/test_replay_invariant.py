@@ -23,8 +23,8 @@ PROGRAMS = [
     "docs/readme-figures/while-loop.vimp",
     *sorted(
         str(p.relative_to(REPO_ROOT))
-        for p in (REPO_ROOT / "tests/regression").glob("0[0-4]-*/*.vimp")
-    )[:40],
+        for p in (REPO_ROOT / "tests/regression").rglob("*.vimp")
+    ),
 ]
 CONFIGS = [
     ["--analysis", "interval", "--context", "entry-state", "--globals", "warrow"],
