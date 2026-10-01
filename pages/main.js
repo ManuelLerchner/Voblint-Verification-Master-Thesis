@@ -380,6 +380,17 @@ function callCell(kind, ...parts) {
 }
 
 /*
+ * The trace's line in the title. It is no part of run_voblint's answer: the hook observed
+ * it during a second solve, so it gets its own row, without the arrow.
+ */
+let traceSummary = null;
+
+function setTraceSummary(text) {
+  traceSummary = text;
+  renderRawCall(rawRunProgram);
+}
+
+/*
  * The panel's title: the call run_voblint received and the outline of its answer --
  * the constructor, then each result field with a list's length in place of the list.
  * The answer sits under the arguments, the arrow under the function name.
@@ -415,6 +426,12 @@ function renderRawCall(raw) {
     callCell("body", ...args),
     callCell("head", callPart("\u27f9", "arrow")),
     callCell("body", ...result),
+    ...(input && traceSummary
+      ? [
+          callCell("head", callPart("observed", "observed")),
+          callCell("body", callPart(traceSummary, "observed")),
+        ]
+      : []),
   );
   rawResultCall.title = rawResultCall.textContent;
 }
@@ -1867,6 +1884,7 @@ function offerSolverTrace(run) {
   solverTraceView.setText("");
   solverTrace.hidden = run === null;
   solverTraceCount.textContent = "";
+  setTraceSummary(null);
   loadSolverTrace();
 }
 
@@ -1882,6 +1900,7 @@ async function loadSolverTrace() {
 
   solverTraceLoading = request;
   solverTraceCount.textContent = "loading";
+  setTraceSummary("trace: solving again with trace_event hooked\u2026");
 
   try {
     const answer = JSON.parse(
@@ -1900,6 +1919,9 @@ async function loadSolverTrace() {
     solverTraceRun = request;
     solverTraceCount.textContent = sizeLabel(answer.trace);
     solverTraceView.setText(answer.trace);
+    setTraceSummary(
+      `trace: ${countLines(answer.trace).toLocaleString("en")} lines, from a second solve with trace_event hooked`,
+    );
   } catch (error) {
     if (solverTraceLoading === request) {
       const message = error instanceof Error ? error.message : String(error);
@@ -1908,6 +1930,7 @@ async function loadSolverTrace() {
       solverTraceContent = "";
       solverTraceView.setText(`The trace could not be produced: ${message}`);
       solverTraceCount.textContent = "";
+      setTraceSummary("trace: not produced");
     }
   } finally {
     if (solverTraceLoading === request) {

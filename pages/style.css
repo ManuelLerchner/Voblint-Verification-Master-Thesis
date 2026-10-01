@@ -1494,6 +1494,11 @@ kbd {
   font-weight: 700;
 }
 
+.raw-call-observed {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 .raw-call-fields {
   color: var(--text-muted);
 }
