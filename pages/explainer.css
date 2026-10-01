@@ -1232,7 +1232,8 @@
   height: 18px;
 }
 
-.replay-key .replay-swatch.r-edge {
+.replay-key .replay-swatch.r-edge,
+.replay-key .replay-swatch.r-infl {
   height: 0;
 }
 

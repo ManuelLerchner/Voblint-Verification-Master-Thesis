@@ -1628,13 +1628,6 @@ button.solver-global-key:hover {
   font-size: 0.8rem;
 }
 
-.solver-trace-form {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  color: var(--text-muted);
-}
-
 .solver-trace-tools button:disabled {
   color: var(--text-muted);
   cursor: progress;
@@ -1728,6 +1721,17 @@ button.solver-global-key:hover {
   border: 2px dotted var(--border-strong);
 }
 
+.replay-swatch.r-wpoint {
+  border: 4px double var(--border-strong);
+}
+
+.replay-swatch.r-infl {
+  height: 0;
+  border: 0;
+  border-top: 2px dotted var(--text-faint);
+  border-radius: 0;
+}
+
 .replay-swatch.r-edge {
   height: 0;
   border: 0;
@@ -1785,13 +1789,13 @@ button.solver-global-key:hover {
 }
 
 .replay-scroll {
-  height: 11em;
+  height: 17em;
   overflow: auto;
   overscroll-behavior: contain;
 }
 
 .replay-stack.replay-scroll {
-  height: 8.6em;
+  height: 14.6em;
   margin: 0;
   padding-left: 2.6em;
 }
@@ -1898,7 +1902,7 @@ button.solver-global-key:hover {
 }
 
 .tr-unknown {
-  color: var(--tok-name);
+  color: var(--text-muted);
 }
 
 .tr-value {
@@ -2881,16 +2885,6 @@ a:focus-visible {
   }
 }
 
-.replay-overlays {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 8px 0;
-  padding: 0;
-  border: 0;
-  font-size: 0.85rem;
-}
-
 .replay-stack,
 .replay-routes {
   margin: 0 0 12px;
@@ -2911,6 +2905,7 @@ a:focus-visible {
 
 .replay-counters {
   width: 100%;
+  table-layout: auto;
   margin-bottom: 12px;
   border-collapse: collapse;
   font-size: 0.75rem;
@@ -2920,6 +2915,22 @@ a:focus-visible {
 .replay-counters td {
   padding: 2px 4px;
   text-align: right;
+}
+
+.replay-counters td:first-child {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-route {
+  font-weight: 600;
+}
+
+.replay-routes li + li {
+  margin-top: 6px;
 }
 
 .replay-counters th:first-child,

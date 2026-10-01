@@ -75,24 +75,6 @@ export function createSolveReplay(deps) {
   const stackList = query("#solve-replay-stack");
   const routesList = query("#solve-replay-routes");
   const countersBody = query("#solve-replay-counters");
-  /* Values, the active unknown, the stack, the current query edge and the cards under
-     the graph are always drawn; what else the graph shows is an overlay the reader
-     turns on. */
-  const overlays = {
-    infl: false,
-    stable: false,
-    wpoints: false,
-    destab: false,
-  };
-
-  for (const toggle of document.querySelectorAll("[data-replay-overlay]")) {
-    toggle.checked = overlays[toggle.dataset.replayOverlay] ?? false;
-    toggle.addEventListener("change", () => {
-      overlays[toggle.dataset.replayOverlay] = toggle.checked;
-      drawn = new Map();
-      render();
-    });
-  }
   const slider = query("#solve-replay-slider");
   const stepLabel = query("#solve-replay-step");
   const speed = query("#solve-replay-speed");
@@ -275,6 +257,18 @@ export function createSolveReplay(deps) {
       autounselectify: true,
     });
 
+    /*
+     * Cytoscape draws node labels from textures it caches by text and style and
+     * reuses without checking their size. Here labels change at every step, the cache
+     * buys nothing, and a reused texture drew labels squashed; labels are drawn
+     * directly instead. This reaches into the renderer's private state.
+     */
+    const labelCache = cy.renderer()?.data?.lblTxrCache;
+
+    if (labelCache) {
+      labelCache.getElement = () => null;
+    }
+
     deps.applyGraphLayout(cy, layout);
     deps.followRoutesOnDrag(cy);
     cy.fit(undefined, 24);
@@ -333,7 +327,7 @@ export function createSolveReplay(deps) {
       return "r-solving";
     }
 
-    if (overlays.stable && state.stable.has(key)) {
+    if (state.stable.has(key)) {
       return "r-stable";
     }
 
@@ -392,7 +386,7 @@ export function createSolveReplay(deps) {
 
   function renderGraph(state, event, finished) {
     const changed = event?.event === "update_local" ? localKey(event.unknown) : null;
-    const cascade = overlays.destab ? state.cascade : new Set();
+    const cascade = state.cascade;
     const { edges, nodes } = touched(event);
 
     cy.batch(() => {
@@ -404,8 +398,8 @@ export function createSolveReplay(deps) {
           "point",
           status(state, key, finished),
           cascade.has(key) ? "r-destabilized" : "",
-          overlays.wpoints && state.wpoints.has(key) ? "r-wpoint" : "",
-          overlays.wpoints && state.widened === key ? "r-widened" : "",
+          state.wpoints.has(key) ? "r-wpoint" : "",
+          state.widened === key ? "r-widened" : "",
           key === changed ? "r-changed" : "",
           nodes.includes(node.id()) ? "r-target" : "",
           node.id() === selected ? "graph-node-selected" : "",
@@ -449,10 +443,6 @@ export function createSolveReplay(deps) {
   /* Influence edges, reader to read unknown, as an overlay of their own; rebuilt per step. */
   function drawInfluence(state) {
     cy.remove("edge.r-infl");
-
-    if (!overlays.infl) {
-      return;
-    }
 
     const edges = [];
 
@@ -506,10 +496,15 @@ export function createSolveReplay(deps) {
       ];
 
       row.replaceChildren(
-        ...cells.map((value) => {
+        ...cells.map((value, index) => {
           const cell = document.createElement("td");
 
           cell.textContent = String(value);
+
+          if (index === 0) {
+            cell.title = String(value);
+          }
+
           return cell;
         }),
       );
@@ -524,9 +519,15 @@ export function createSolveReplay(deps) {
     routesList.replaceChildren(
       ...state.routes.map(({ call, context, entry }) => {
         const row = document.createElement("li");
+        const head = document.createElement("span");
+        const detailText = document.createElement("span");
         const [point, callContext] = call.slice(2).split("|");
 
-        row.textContent = `call at (${point}, ${callContext}) with entry ${entry} → context ${context}`;
+        head.className = "replay-route";
+        head.textContent = `${point} (${callContext}) → context ${context}`;
+        detailText.className = "replay-global-detail";
+        detailText.textContent = `entry ${entry}`;
+        row.append(head, detailText);
         return row;
       }),
     );
@@ -781,6 +782,7 @@ function replayStyle(cssToken) {
         "border-width": 2,
         "border-color": cssToken("--accent"),
         "background-color": cssToken("--accent-soft"),
+        "underlay-opacity": 0.25,
       },
     },
     {

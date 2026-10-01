@@ -124,11 +124,10 @@ PLAYGROUND_SELECTS = {
     "globals": "globals-select",
     "context": "context-select",
     "refinement": "int-refinement-select",
-    "trace": "trace-select",
 }
-# Values a link may carry besides the select's own: trace=1 is how links named
-# the compact trace before the full one existed, and the playground still reads it.
-PLAYGROUND_ALIASES = {"trace": {"1"}}
+# Values a link may carry besides a select's own. The playground shows only the full
+# trace and opens it for any trace= value older links name: 1, compact or verbose.
+PLAYGROUND_ALIASES = {"trace": {"1", "compact", "verbose"}}
 MARKDOWN_PLAYGROUND = re.compile(
     r"(?:https?://[^\s\"'<>()]*/)?playground\.html[^\s\"'<>()]*"
 )
@@ -141,6 +140,8 @@ def playground_vocabulary() -> dict[str, object]:
     html = (PAGES / "playground.html").read_text()
     script = (PAGES / "main.js").read_text()
     options = {}
+    for key in PLAYGROUND_ALIASES.keys() - PLAYGROUND_SELECTS.keys():
+        options[key] = set(PLAYGROUND_ALIASES[key])
     for key, select in PLAYGROUND_SELECTS.items():
         block = re.search(rf'<select id="{select}"[^>]*>(.*?)</select>', html, re.S)
         options[key] = (

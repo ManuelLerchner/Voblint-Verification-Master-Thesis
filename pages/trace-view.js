@@ -243,8 +243,15 @@ function parts(text, offset) {
   }
 }
 
-/* Ranges of [mine]'s parts that [other] lacks, marked with [mark]. */
+/*
+ * Ranges of [mine]'s parts that [other] lacks, marked with [mark]. A side of one part,
+ * such as ⊥, has nothing to line up with, so a pair with one marks nothing.
+ */
 function changes(mine, other, mark) {
+  if (mine.length < 2 || other.length < 2) {
+    return [];
+  }
+
   const theirs = new Set(other.map((part) => part.text));
 
   return mine
@@ -453,6 +460,37 @@ export function createTraceView(parent, { label, onLine = null }) {
     ],
   });
 
+  /*
+   * Centers [at] in the view's own scroller. EditorView.scrollIntoView would also
+   * scroll the page to the view, which pulls a reader back on every replay step.
+   */
+  function centerInPane(at, again = true) {
+    view.requestMeasure({
+      read() {
+        const scroller = view.scrollDOM;
+        const block = view.lineBlockAt(at);
+        const coords = view.coordsAtPos(at);
+        const box = scroller.getBoundingClientRect();
+
+        return {
+          top: block.top - (scroller.clientHeight - block.height) / 2,
+          left: coords && coords.left - box.left + scroller.scrollLeft - scroller.clientWidth / 2,
+        };
+      },
+      write({ top, left }) {
+        view.scrollDOM.scrollTo({
+          top: Math.max(0, top),
+          left: left === null ? view.scrollDOM.scrollLeft : Math.max(0, left),
+        });
+
+        /* A line off screen has no coordinates until the scroll above renders it. */
+        if (left === null && again) {
+          centerInPane(at, false);
+        }
+      },
+    });
+  }
+
   return {
     view,
 
@@ -467,7 +505,8 @@ export function createTraceView(parent, { label, onLine = null }) {
 
     show(first, last) {
       if (first === null) {
-        view.dispatch({ effects: [setCurrent.of(null), EditorView.scrollIntoView(0)] });
+        view.dispatch({ effects: setCurrent.of(null) });
+        view.scrollDOM.scrollTo({ top: 0, left: 0 });
         return;
       }
 
@@ -490,12 +529,9 @@ export function createTraceView(parent, { label, onLine = null }) {
       });
 
       view.dispatch({
-        effects: [
-          ...folds,
-          setCurrent.of({ first, last: Math.min(last, doc.lines) }),
-          EditorView.scrollIntoView(at, { y: "center", x: "center" }),
-        ],
+        effects: [...folds, setCurrent.of({ first, last: Math.min(last, doc.lines) })],
       });
+      centerInPane(at);
     },
   };
 }

@@ -82,8 +82,6 @@ const narrowBoundGroup = query("#narrow-bound-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
-const traceSelect = query("#trace-select");
-
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -1832,8 +1830,6 @@ function showSolverGlobals(seeds) {
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
-const TRACE_MODES = new Set(["compact", "verbose"]);
-
 /*
  * A run never traces. The text trace, the JSON Lines download and the replay each
  * solve the shown run again with the trace they need, one at a time; the solver is
@@ -1887,28 +1883,23 @@ function offerSolverTrace(run) {
   loadSolverTrace();
 }
 
-/* The offered run's trace in the selected form, solved when the panel is open. */
+/* The offered run's full (--verbose) trace, solved when the panel is open. */
 async function loadSolverTrace() {
   const run = solverTraceOffered;
-  const mode = traceSelect.value;
 
-  if (!run || !solverTrace.open || !TRACE_MODES.has(mode)) {
+  if (!run || !solverTrace.open || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
     return;
   }
 
-  for (const shown of [solverTraceRun, solverTraceLoading]) {
-    if (shown?.run === run && shown.mode === mode) {
-      return;
-    }
-  }
-
-  const request = { run, mode };
+  const request = { run };
 
   solverTraceLoading = request;
   solverTraceCount.textContent = "loading";
 
   try {
-    const answer = JSON.parse(await solveAgain({ ...run.configuration, trace: mode }, run.source));
+    const answer = JSON.parse(
+      await solveAgain({ ...run.configuration, trace: "verbose" }, run.source),
+    );
 
     if (solverTraceLoading !== request) {
       return;
@@ -1920,7 +1911,7 @@ async function loadSolverTrace() {
 
     solverTraceContent = answer.trace;
     solverTraceRun = { ...request, lines: countLines(answer.trace) };
-    solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${mode === "verbose" ? "full" : "compact"}`;
+    solverTraceCount.textContent = `${solverTraceRun.lines} lines`;
     solverTraceView.setText(answer.trace);
   } catch (error) {
     if (solverTraceLoading === request) {
@@ -1951,7 +1942,7 @@ function downloadSolverTrace() {
   if (solverTraceRun) {
     downloadBlob(
       new Blob([solverTraceContent], { type: "text/plain" }),
-      `voblint-trace-${settingsSlug()}-${solverTraceRun.mode}.txt`,
+      `voblint-trace-${settingsSlug()}.txt`,
     );
   }
 }
@@ -3866,7 +3857,6 @@ for (const control of [
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-traceSelect.addEventListener("change", loadSolverTrace);
 solverTrace.addEventListener("toggle", loadSolverTrace);
 
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
@@ -4255,11 +4245,8 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  /* A linked trace opens the trace panel; trace=1 is how links named the compact form. */
-  const linkedTrace = settings.trace === "1" ? "compact" : settings.trace;
-
-  if (TRACE_MODES.has(linkedTrace)) {
-    traceSelect.value = linkedTrace;
+  /* A linked trace, in any form older links name, opens the trace panel. */
+  if (settings.trace != null && settings.trace !== "off") {
     solverTrace.open = true;
   }
 
@@ -4410,7 +4397,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(solverTrace.open ? [linkParam("trace", traceSelect.value)] : []),
+    ...(solverTrace.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);
 
