@@ -240,6 +240,25 @@
   --kind-3: #7563c4;
   --kind-4: #d49a00;
   --kind-5: #1f9a66;
+
+  /* One colour per kind inside a group's family, largest kind first: steps in lightness and
+     hue, so neighbouring kinds stay apart where opacity steps blurred together. */
+  --kind-1-0: #1f6fa8;
+  --kind-1-1: #35b0d8;
+  --kind-1-2: #8a74d9;
+  --kind-2-0: #d9531f;
+  --kind-2-1: #f2a33a;
+  --kind-2-2: #c43b62;
+  --kind-3-0: #5d47b8;
+  --kind-3-1: #c27ad6;
+  --kind-4-0: #b07a00;
+  --kind-4-1: #e8c033;
+  --kind-4-2: #8d6a3e;
+  --kind-5-0: #157a50;
+  --kind-5-1: #3fbf86;
+  --kind-5-2: #2a9aa6;
+  --kind-5-3: #9ccc4a;
+  --kind-5-4: #9ad9c0;
 }
 
 :where(.scene-iceberg) .stats-kinds-head {
@@ -326,26 +345,9 @@
 :where(.scene-iceberg) .kind-run i {
   width: 9px;
   height: 9px;
-  background: var(--kind);
+  background: var(--tone, var(--kind));
   border-radius: 2px;
   transition: opacity 150ms ease;
-}
-
-:where(.scene-iceberg) [data-shade="1"] i,
-:where(.scene-iceberg) .kind-swatch[data-shade="1"] {
-  opacity: 0.66;
-}
-:where(.scene-iceberg) [data-shade="2"] i,
-:where(.scene-iceberg) .kind-swatch[data-shade="2"] {
-  opacity: 0.44;
-}
-:where(.scene-iceberg) [data-shade="3"] i,
-:where(.scene-iceberg) .kind-swatch[data-shade="3"] {
-  opacity: 0.3;
-}
-:where(.scene-iceberg) [data-shade="4"] i,
-:where(.scene-iceberg) .kind-swatch[data-shade="4"] {
-  opacity: 0.2;
 }
 
 :where(.scene-iceberg) .kind-waffle.has-focus .kind-run:not(.is-focus) i {
@@ -374,7 +376,7 @@
 :where(.scene-iceberg) .kind-swatch {
   width: 10px;
   height: 10px;
-  background: var(--kind);
+  background: var(--tone, var(--kind));
   border-radius: 2px;
 }
 

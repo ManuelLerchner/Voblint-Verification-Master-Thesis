@@ -275,6 +275,20 @@
         ),
     );
 
+    /* The tip grows with the generated code; the drawing grows upward with it instead of cutting its peak. */
+    const svg = tip.ownerSVGElement;
+    const [, , width, height] = svg.getAttribute("viewBox").split(/\s+/).map(Number);
+    const shift = Number(
+      /translate\(\s*-?[\d.]+[ ,]+(-?[\d.]+)/.exec(tip.parentNode.getAttribute("transform"))?.[1] ??
+        0,
+    );
+    const peak = Math.min(
+      ...[...tip.getAttribute("d").matchAll(/-?[\d.]+[ ,]+(-?[\d.]+)/g)].map((m) => Number(m[1])),
+    );
+    const top = Math.min(0, Math.floor(peak + shift - 16));
+
+    svg.setAttribute("viewBox", `0 ${top} ${width} ${height - top}`);
+
     const sessions = figure.querySelector('[data-stats="sessions"]');
     const widest = Math.max(...stats.isabelle.sessions.map((s) => s.lines));
     sessions.replaceChildren(
@@ -308,7 +322,7 @@
 
     /*
      * Groups of declaration and statement kinds; each entry sums the keywords it lists. Every
-     * group draws one square per KIND_UNIT items, in its own hue, one shade per kind.
+     * group draws one square per KIND_UNIT items, in its own family of colours, one per kind.
      */
     const KIND_UNIT = 10;
     const KIND_GROUPS = [
@@ -408,8 +422,10 @@
         waffle.addEventListener("pointerleave", () => focus(null));
 
         kinds.forEach((kind, shade) => {
+          const tone = `var(--kind-${hue}-${shade}, var(--kind-${hue}))`;
           const run = el("span", "kind-run");
           run.dataset.shade = String(shade);
+          run.style.setProperty("--tone", tone);
           run.title = `${kind.label}: ${formatCount(kind.total)} (${kind.keywords.join(", ")})`;
           for (let i = 0; i < Math.ceil(kind.total / KIND_UNIT); i++) {
             run.append(el("i"));
@@ -420,6 +436,7 @@
           item.title = run.title;
           const swatch = el("span", "kind-swatch");
           swatch.dataset.shade = String(shade);
+          swatch.style.setProperty("--tone", tone);
           item.append(swatch, el("b", "", formatCount(kind.total)), el("span", "", kind.label));
           legend.append(item);
 
