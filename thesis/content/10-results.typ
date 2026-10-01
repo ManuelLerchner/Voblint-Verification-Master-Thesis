@@ -46,14 +46,16 @@ valid traces that end at $v$ and carry context $c$ under the policy's relation
 $R$, with `main` in the initial context #isai("c\<^sub>0") (@sec:contexts),
 $
   "stores of source runs at" v subset.eq #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
-  = union.big_c C_c, quad C_c subset.eq sem(A_(v, c))_bot
+  = union.big_c C_c, quad forall c. thin C_c subset.eq sem(A_(v, c))_bot
   quad => quad "verdict at" v
 $
 (#isathm("source_reaches_node_collect"), #isathm("node_collect_eq_Union_activation_collect"), #isathm("run_voblint_sound_at")).
 Here $A_(v,c)$ is the lifted abstract state the result table holds for $v$
 in context $c$, and $sem(A_(v,c))_bot$ is its set of stores, empty for the
-unreachable state #ctor("Bot"). Each later set in the chain may contain stores that no execution
-reaches. Soundness requires only that it contains the set before it.
+unreachable state #ctor("Bot"). The bound holds for every context, and the
+verdict at $v$ combines the per-context results (@sec:verdicts). Each later set
+in the chain may contain stores that no execution reaches. Soundness requires
+only that it contains the set before it.
 
 The recursive program below computes $f(2) = 2 dot f(1) = 2$, so every run
 reaches the check with $a = 2$. It is a regression fixture of the analyzer.
@@ -76,7 +78,6 @@ fun main() {
 
 #let chain-none = cli-row("chain-factorial-none", "a == 2")
 #let chain-entry = cli-row("chain-factorial-entry", "a == 2")
-#let chain-join = cli-row("chain-factorial-none-join", "a == 2")
 
 #figure(
   {
@@ -138,15 +139,10 @@ fun main() {
 
 @fig:chain draws the chain for two context policies. Rows 1 and 2 do not
 depend on the policy, and every inclusion holds under both. The policy only decides
-how far the abstract rows exceed row 2.
-Without contexts, the two activations of `f` share one entry node and one
-result node. The combine after the recursive call reads the returned value from
-that same result node, so the value `f` returns is computed from itself. The
-solver widens around this cycle through the result node and combine, and the
-value is lost.
-Widening the entry is not the cause: under the joining update rule the check
-is still #raw(chain-join.at(3)) with #raw(chain-join.at(4)). With entry-state contexts each recursion depth keeps
-its own entry and result node, and the result stays exact.
+how far the abstract rows exceed row 2. Without contexts the recursive
+activations share one abstract result, so the returned value is imprecise;
+entry-state contexts separate the recursion depths and keep it exact. The
+difference affects precision only, and the chain is sound in both cases.
 
 The first link is the compiler simulation of @ch:program-model composed with
 the trace construction of @ch:traces. The split of the node collecting semantics by
@@ -195,8 +191,8 @@ component of @ch:cooperation, and a single analysis is the list of length one.
 
     [The analyzer returned an answer. Malformed programs are rejected, so
       well-formedness is not a separate premise.],
-    [Every check listed at $v$ is not `DEAD`; `PROVED` holds and `REFUTED`
-      fails in $s$.],
+    [Every check listed at $v$ is not `DEAD`; every `PROVED` check holds in
+      $s$, and every `REFUTED` check is false in $s$.],
     table.hline(),
   ),
   caption: [The premises and conclusions of
@@ -370,17 +366,17 @@ For a source run about to execute a check,
 #isathm("run_voblint_check_sound") finds a listed check with the same label
 and condition at a node where the store is collected, and that check's verdict
 holds of the store. The label is the check's source position, written by the
-parser, which is trusted to write it correctly. When the labels of a result are
-distinct, and the command-line tool refuses to print a result where they are
-not,
-#isathm("run_voblint_labelled_check_sound") shows that every row with that
-label is this check, so the verdict printed at a position belongs to the check
-written there. The listed check is existential because a source state does not
+parser, which is trusted to write it correctly.
+#isathm("run_voblint_labelled_check_sound") additionally assumes that the labels
+of a result are distinct. The command-line tool checks this condition and
+refuses to print a result when it fails. Under this assumption, every row
+carrying a source label belongs to the check written at that position. The listed check is existential because a source state does not
 determine its node, so the statement cannot be read backwards to conclude that
 a `DEAD` node is unreached. #isathm("run_voblint_dead_check_unreached") proves
 that conclusion forwards instead: every store collected at the node would
-satisfy the claim there, and a `DEAD` claim admits none. Arithmetic
-diagnostics are stated per node as well. By
+satisfy the claim there, and a `DEAD` claim admits none.
+
+Arithmetic diagnostics are stated per node as well. By
 #isathm("run_voblint_arithmetic_safe"), a node without a diagnostic has nonzero
 divisors in every collected store. A warning only means that the abstraction
 could not exclude a zero divisor.
