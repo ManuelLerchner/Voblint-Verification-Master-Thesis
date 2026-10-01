@@ -1,7 +1,6 @@
 theory DG_Indexed_Generator
   imports DG_Constraint_Programs CFG_Enumeration "TD.TD_side_Interface"
     "Voblint_Solver.Strategy_Tree_Side_Buffering"
-    "Voblint_Solver.Strategy_Tree_Post_Solution"
 begin
 
 context

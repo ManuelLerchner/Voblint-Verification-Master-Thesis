@@ -1,6 +1,6 @@
 theory DG_Ctx_Activation
   imports DG_Spec_Sound DG_Indexed_Generator
-    "Voblint_Domain.Nonrelational_State" "Voblint_Solver.Strategy_Tree_Post_Solution"
+    "Voblint_Domain.Nonrelational_State"
 begin
 
 section \<open>What a solved routed system says about one program point\<close>

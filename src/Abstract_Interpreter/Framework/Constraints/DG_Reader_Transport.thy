@@ -22,9 +22,6 @@ text \<open>
   the valuation.  Hence dependencies transport verbatim.
 \<close>
 
-lemma dep_aux_Side: "dep_aux \<sigma> (Side y d t) = dep_aux \<sigma> t"
-  by (simp add: dep_aux_def)
-
 subsection \<open>Carrier-generic whole-CFG commute\<close>
 
 text \<open>
@@ -330,7 +327,7 @@ proof -
   qed
   show ?thesis
     using cont sides unfolding dg_tree_st_commute_def
-    by (simp add: dep_aux_Side)
+    by simp
 qed
 
 lemma dg_prog_st_commute_side_rhs_fold_dg:

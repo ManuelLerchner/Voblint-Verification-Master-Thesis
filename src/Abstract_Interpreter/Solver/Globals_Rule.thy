@@ -47,9 +47,6 @@ lemma lift_basic_ruleE:
     and "ug_state.\<rho> state' = ug_state.\<rho> st"
   using assms by (auto simp: lift_basic_rule_def split: prod.splits)
 
-lemma rho_truncate [simp]: "ug_state.\<rho> (ug_state.truncate s) = ug_state.\<rho> s"
-  by (simp add: ug_state.defs)
-
 lemma update_rule_lift_basic_rule:
   assumes f: "update_rule init_basic_ug_state f"
   shows "update_rule init_ug_state_with_gas (lift_basic_rule f)"

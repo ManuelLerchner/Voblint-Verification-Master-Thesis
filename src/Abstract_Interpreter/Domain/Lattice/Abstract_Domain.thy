@@ -106,12 +106,6 @@ text \<open>
   \<open>b \<le> a \<nabla>\<Delta> b \<le> a\<close>. \<open>warrow_idem\<close> is the fixpoint case of that sandwich.
 \<close>
 
-lemma warrow_idem: "a \<nabla>\<Delta> a = a" for a :: "'a::warrowing"
-  unfolding warrow_def using narrow_ge[of a a] narrow_le[of a a] by (auto intro: order.antisym)
-
-lemma warrow_le_when_le: "b \<le> a \<Longrightarrow> a \<nabla>\<Delta> b \<le> a" for a b :: "'a::warrowing"
-  unfolding warrow_def using narrow_le by simp
-
 subsection \<open>Printing values\<close>
 
 text \<open>
