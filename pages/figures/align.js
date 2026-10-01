@@ -3,7 +3,7 @@
     const buttons = figure.querySelectorAll("[data-filter]");
     const more = figure.querySelector(".align-more");
     const total = figure.querySelectorAll(".align-row").length;
-    const label = (collapsed) => (collapsed ? `Show all ${total} differences` : "Show fewer");
+    const label = (collapsed) => (collapsed ? `Show all ${total} rows` : "Show fewer");
 
     figure.classList.add("is-collapsed");
     more.textContent = label(true);

@@ -54,3 +54,8 @@
     grid-template-columns: minmax(0, 1fr);
   }
 }
+
+/* Long theorem names would otherwise force the narrow columns wider. */
+:where(.scene-prov) code {
+  overflow-wrap: anywhere;
+}

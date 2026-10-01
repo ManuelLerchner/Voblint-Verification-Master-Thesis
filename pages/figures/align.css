@@ -160,9 +160,11 @@
   display: none;
 }
 
-/* The first rows cover the architecture; the rest wait behind the button. Only the
-   script sets is-collapsed, so without it every row shows. */
-.scene-align.is-collapsed[data-filter="all"] .align-row:nth-child(n + 9) {
+/* The first rows cover the architecture; the rest wait behind the button, except the
+   first row Voblint does not model, so the short view still shows every kind. Only
+   the script sets is-collapsed, so without it every row shows. */
+.scene-align.is-collapsed[data-filter="all"]
+.align-row:nth-child(n + 9):not(:nth-child(1 of .absent)) {
   display: none;
 }
 

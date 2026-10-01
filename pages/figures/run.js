@@ -1,6 +1,6 @@
 {
   /*
-   * One entry per source step of the factorial run, with the graph steps csim_step matches
+   * One entry per source step of the sum run, with the graph steps csim_step matches
    * it to and the trace constructors valid_activation_trace applies. Residuals flatten the nested Seq;
    * trees list each activation's path, its live callee and whether it has returned.
    */
@@ -286,7 +286,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Call` then `Return`, so `dec` is entered and finished in one move. **CFG**: the call edge, `dec`'s body and its return edge. **Trace**: a fourth activation, the deepest the run gets.",
+      text: "**Source**: `Call` then `ReturnSome`, so `dec` is entered and finished in one move. **CFG**: the call edge, `dec`'s body and its return edge. **Trace**: a fourth activation, the deepest the run gets.",
     },
     {
       entry: "n = 1, m = 0, r = 0",
@@ -316,7 +316,7 @@
         false,
         [],
       ),
-      text: "**Source**: `UnwindAct` writes `0` into `m` and pops. **CFG**: the resume edge to `pp6`. **Trace**: the second `dec` closes into a `Resume`. Push, pop, push again: a run is not a stack that only grows.",
+      text: "**Source**: `UnwindAct` writes `0` into `m` and pops. **CFG**: the resume edge to `pp6`. **Trace**: `sum(1)` becomes a `Resume` that holds the finished `dec(1)`. Push, pop, push again: a run is not a stack that only grows.",
     },
     {
       entry: "n = 0, m = 0, r = 0",
@@ -362,7 +362,7 @@
         false,
         [],
       ),
-      text: "**Source**: the third `Call` of `sum`, with `n` bound to `0`. **CFG**: the same `entry_sum` and the same body edge as the other two. **Trace**: `Call (Resume (Resume (Call (Root …) …) …) …) …`: the new activation's caller is `sum(1)`, which already holds the finished `dec(1)`. The nesting lives in the trace, not in the graph.",
+      text: "**Source**: the third `Call` of `sum`, with `n` bound to `0`. **CFG**: the same `entry_sum` and the same body edge as the other two. **Trace**: `Call (Resume (Call (Resume (Call (Root …) …) …) …) …) …`: the new activation's caller is `sum(1)`, a `Resume` that already holds the finished `dec(1)` and whose own caller is `sum(2)`. The nesting lives in the trace, not in the graph.",
     },
     {
       entry: "n = 0, m = 0, r = 0",
@@ -377,7 +377,7 @@
       rules: {
         source: "IfTrue, ReturnSome, UnwindDead",
         graph: "Intra n < 1, Intra return 0",
-        trace: "intra",
+        trace: "intra, intra",
       },
       tree: act(
         "main",
@@ -504,7 +504,7 @@
         false,
         [],
       ),
-      text: "**Source**: `UnwindAct` writes `1` into `r` in `sum(2)` and pops. **CFG**: the resume edge to `pp7`. **Trace**: `sum(1)` closes into a `Resume`, carrying `sum(0)` inside it.",
+      text: "**Source**: `UnwindAct` writes `1` into `r` in `sum(2)` and pops. **CFG**: the resume edge to `pp7`. **Trace**: `sum(2)` continues as a new `Resume` that holds the finished `sum(1)`, which in turn holds `sum(0)`.",
     },
     {
       entry: "n = 2, m = 0, r = 0",
