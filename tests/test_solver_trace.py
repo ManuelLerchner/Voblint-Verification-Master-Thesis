@@ -282,3 +282,25 @@ def test_step_lines_point_into_the_verbose_trace(events):
     assert lines == sorted(lines)
     for step in steps:
         assert verbose[step["line"] - 1].lstrip().startswith("%%% "), step
+
+
+def test_callee_is_solved_once_with_bottom_before_its_seed_is_published():
+    """Pins issue #251. A call site's seed publication is buffered until its
+    right-hand side answers, so each newly entered context is first solved with
+    a ⊥ seed: the exit returns ⊥, the flush changes the seed, the caller
+    restarts and asks again. Fixing #251 changes this test."""
+    lines = voblint(*ARGS, "--trace", PROGRAM).stderr.splitlines()
+    first_query = {}
+    for at, line in enumerate(lines):
+        query = re.match(r"QUERY    (\(.*?\)) asks (\(exit_\w+, .*\))$", line)
+        if query and query.group(2) not in first_query:
+            first_query[query.group(2)] = (at, query.group(1))
+    assert first_query, "the program makes no call"
+
+    for exit_unknown, (at, caller) in first_query.items():
+        procedure, context = re.match(r"\(exit_(\w+), (.*)\)$", exit_unknown).groups()
+        assert lines[at + 2] == f"         {exit_unknown} returns ⊥"
+        assert lines[at + 3].startswith(f"FLUSH    Seed({procedure}, {context}) += ")
+        assert lines[at + 3].endswith("(changed: readers restart)")
+        assert lines[at + 5] == f"RESTART  {caller}"
+        assert lines[at + 7] == f"QUERY    {caller} asks {exit_unknown}"
