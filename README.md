@@ -479,13 +479,9 @@ with the same `AFP` setting.
 formatting with isar-tools, without Isabelle or the AFP. `pixi task list` lists
 everything else.
 
-The thesis is written on the `writing` branch, which differs from `main` only in
-`thesis/`; every other change reaches `main` first. `main` keeps an older copy of
-`thesis/` that the thesis checks no longer describe, so they run only for
-`writing`. CI steps compare `github.ref`, `github.head_ref` and `github.base_ref`
-with it, the Lefthook groups `thesis-checks` and `thesis-current` run on that
-branch only, and `pixi run thesis-check` gathers the tasks that `pixi run verify`
-leaves out.
+The thesis lives in `thesis/`, and its checks run on every branch: in CI and in
+the Lefthook groups `thesis-checks` and `thesis-current`. `pixi run thesis-check`
+gathers the thesis tasks, which `pixi run verify` leaves out.
 
 > The vendored solver is pinned to a private fork of
 > [stilscher/td-verification](https://github.com/stilscher/td-verification); CI
