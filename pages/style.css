@@ -1947,7 +1947,8 @@ button.solver-global-key:hover {
 
 /* The value-carrying events: a soft chip that does not move the text. */
 .tr-answer,
-.tr-sol {
+.tr-sol,
+.tr-stored {
   font-weight: 700;
   border-radius: 2px;
 }
@@ -1956,6 +1957,12 @@ button.solver-global-key:hover {
   color: var(--primary);
   background: var(--primary-soft);
   box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.tr-stored {
+  color: var(--success);
+  background: var(--success-soft);
+  box-shadow: 0 0 0 2px var(--success-soft);
 }
 
 .tr-sol {

@@ -38,9 +38,9 @@ import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 /* ---------------------------------------------------------------- event kinds */
 
 /*
- * Every event label of the three forms, by what it does to the solve. A query's answer
- * and a solve step's `sol` carry the values the solve computes, so they get kinds of
- * their own.
+ * Every event label of the three forms, by what it does to the solve. A query's answer,
+ * a solve step's `sol` and the change it stores carry the values the solve computes,
+ * so they get kinds of their own.
  */
 const KIND_OF = new Map(
   Object.entries({
@@ -62,7 +62,8 @@ const KIND_OF = new Map(
     ],
     answer: ["answer", "ANSWER"],
     sol: ["sol"],
-    update: ["rhs", "update", "UPDATE-L", "UPDATE-G"],
+    stored: ["update", "UPDATE-L", "UPDATE-G"],
+    update: ["rhs"],
     widen: ["wpoint", "WIDEN", "WPOINT+", "WPOINT-"],
     stable: ["destab", "infl", "DESTAB", "STABLE+", "STABLE-", "UNSTABLE", "INFL+", "RESTART"],
     side: ["side", "SIDE", "FLUSH"],
@@ -71,7 +72,18 @@ const KIND_OF = new Map(
   }).flatMap(([kind, labels]) => labels.map((label) => [label, kind])),
 );
 
-const KINDS = ["query", "answer", "sol", "update", "widen", "stable", "side", "route", "check"];
+const KINDS = [
+  "query",
+  "answer",
+  "sol",
+  "stored",
+  "update",
+  "widen",
+  "stable",
+  "side",
+  "route",
+  "check",
+];
 
 /* A line that starts an event, and where its label sits; other lines continue one. */
 const HEAD = /^(\[\d+\] )?( *)(?:%%% ([a-z_]+):|([A-Z][A-Z+-]+)(?= ))/;
@@ -114,6 +126,7 @@ const traceTags = {
   query: tags.controlKeyword,
   answer: tags.className,
   sol: tags.typeName,
+  stored: tags.attributeName,
   update: tags.definitionKeyword,
   widen: tags.operatorKeyword,
   stable: tags.comment,
@@ -130,7 +143,7 @@ const failedTag = tags.deleted;
 
 const traceParser = {
   name: "voblint-trace",
-  startState: () => ({ atHead: true }),
+  startState: () => ({ atHead: true, event: null }),
   token(stream, state) {
     if (stream.sol()) {
       state.atHead = true;
@@ -150,7 +163,8 @@ const traceParser = {
       const label = stream.match(/^%%% ([a-z_]+):/) ?? stream.match(/^[A-Z][A-Z+-]+(?= )/);
 
       if (label) {
-        return KIND_OF.get(label[1] ?? label[0]) ?? "key";
+        state.event = KIND_OF.get(label[1] ?? label[0]) ?? "key";
+        return state.event;
       }
     }
 
@@ -158,12 +172,9 @@ const traceParser = {
       return "answer";
     }
 
-    if (stream.match(/^(?:Old value|New value|Eqd)(?=:)/)) {
-      return "sol";
-    }
-
-    if (stream.match(/^(?:old|new)(?= =)/)) {
-      return "key";
+    // A value line takes the chip of the event it belongs to.
+    if (stream.match(/^(?:Old value|New value|Eqd)(?=:)|^(?:old|new)(?= =)/)) {
+      return state.event === "sol" || state.event === "stored" ? state.event : "key";
     }
 
     if (stream.match(/^(?:PROVED|DEAD)\b/)) {
