@@ -1,0 +1,24 @@
+Voblint trace
+  analysis: interval
+  context:  entry-state
+  globals:  warrow
+  program:  tests/solver-trace/bottom-pass.vimp
+
+         (entry_main, root) reads Seed(main, root) = ⊥
+ROUTE    call at (pp2, root): entry interval: a=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
+QUERY    (pp3, root) asks (exit_bump, [[5,5]])
+         (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = ⊥
+         (exit_bump, [[5,5]]) returns ⊥
+FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, #ret=⊤, n=[5,5]  (changed: readers restart)
+RETURN   (pp3, root) = ⊥
+RESTART  (pp3, root)
+ROUTE    call at (pp2, root): entry interval: a=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
+QUERY    (pp3, root) asks (exit_bump, [[5,5]])
+         (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: a=⊤, #ret=⊤, n=[5,5]
+         (exit_bump, [[5,5]]) returns interval: a=⊤, #ret=[6,6], n=[5,5]
+FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, #ret=⊤, n=[5,5]  (no change)
+RETURN   (pp3, root) = interval: a=[6,6], #ret=⊤, n=⊤
+
+CHECK    a == 6 at pp3: PROVED
+
+Trace complete: 8 local and 2 global unknowns solved

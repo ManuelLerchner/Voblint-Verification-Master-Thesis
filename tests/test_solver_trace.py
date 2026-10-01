@@ -103,6 +103,28 @@ def test_expected_trace(name, trace_args):
     assert actual == expected.read_text()
 
 
+BOTTOM_PASS = "tests/solver-trace/bottom-pass.vimp"
+
+
+@pytest.mark.parametrize(
+    "name, trace_args",
+    [
+        ("bottom-pass.compact", ["--trace"]),
+        ("bottom-pass.verbose", ["--trace", "--verbose"]),
+    ],
+)
+def test_bottom_pass_trace(name, trace_args):
+    """The whole trace of one call, kept for issue #251: it shows the callee
+    solved with a bottom seed, the seed published, the caller restarted and the
+    callee solved again. Fixing #251 changes these files, which is the point;
+    rewrite them with UPDATE_TRACE_EXPECT=1 and review the diff."""
+    expected = EXPECT_DIR / f"{name}.expected"
+    actual = voblint(*ARGS, *trace_args, BOTTOM_PASS).stderr
+    if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
+        expected.write_text(actual)
+    assert actual == expected.read_text()
+
+
 GOBLINT_LINE = re.compile(r"^( *)%%% (\w+): (.*)$")
 
 
