@@ -6,30 +6,16 @@ Voblint trace
 
          (entry_main, root) reads Seed(main, root) = ⊥
 ROUTE    call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
-QUERY    (pp3, root) asks (exit_bump, [[5,5]])
-         (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = ⊥
-         (exit_bump, [[5,5]]) returns ⊥
-FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]  (changed: readers restart)
-RETURN   (pp3, root) = ⊥
-RESTART  (pp3, root)
-ROUTE    call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
+FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]  (changed)
 QUERY    (pp3, root) asks (exit_bump, [[5,5]])
          (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
          (exit_bump, [[5,5]]) returns interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]  (no change)
 RETURN   (pp3, root) = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
 ROUTE    call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
-QUERY    (pp4, root) asks (exit_bump, [[4,4]])
-         (entry_bump, [[4,4]]) reads Seed(bump, [[4,4]]) = ⊥
-         (exit_bump, [[4,4]]) returns ⊥
-FLUSH    Seed(bump, [[4,4]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]  (changed: readers restart)
-RETURN   (pp4, root) = ⊥
-RESTART  (pp4, root)
-ROUTE    call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
+FLUSH    Seed(bump, [[4,4]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]  (changed)
 QUERY    (pp4, root) asks (exit_bump, [[4,4]])
          (entry_bump, [[4,4]]) reads Seed(bump, [[4,4]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
          (exit_bump, [[4,4]]) returns interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-FLUSH    Seed(bump, [[4,4]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]  (no change)
 RETURN   (pp4, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 
 CHECK    a == 6 at pp4: PROVED

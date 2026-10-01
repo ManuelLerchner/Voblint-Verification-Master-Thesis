@@ -45,7 +45,8 @@ text \<open>
   in the answer, so the node's own \<open>analysis_global_at c\<close> is published once, after the whole
   fold has been evaluated, and the enclosing \<^const>\<open>buffer_sides\<close> then
   consolidates \<^emph>\<open>every\<close> key it names --- activation seeds included --- into
-  one flush apiece.
+  one flush apiece. The flush comes before the next local read at a node where
+  at most one call returns, and at the answer elsewhere.
 
   \<open>routed_node_rhs_buffered_correspondence\<close> relates the two declaratively:
   equal answer, publications and dependencies at a fixed valuation, under
@@ -267,15 +268,29 @@ text \<open>
   \<open>comb\<close>) with \<^const>\<open>fold_rhs_program\<close> and publishes \<open>analysis_global_at c\<close> once, after every
   contribution has been read.
 
-  That fold shapes the node's \<^emph>\<open>own\<close> key, but \<open>extra route c v\<close> stays a list of
-  independent programs, and a caller node's extras publish one routed callee seed per call
-  action. Two call sites resuming at the same node therefore still name one seed key
-  twice. \<^const>\<open>buffer_sides\<close> closes that case for every key uniformly, so
-  \<open>distinct_side_path_buffer_sides\<close> --- not an argument about which keys the hooks
-  happen to choose --- is what establishes at most one \<^const>\<open>Side\<close> per key per RHS
-  evaluation. It preserves the declarative
-  \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value, so the correspondence with the
-  unbuffered generator below is unaffected.
+  That fold shapes the node's \<^emph>\<open>own\<close> key, but each call returning at the node
+  still publishes its callee's seed from inside its \<open>cmb_c\<close> program. Two call sites
+  resuming at the same node, as the two branches of a conditional that both end in a call
+  do, can therefore name one seed key twice. \<^const>\<open>buffer_sides\<close> accumulates the
+  writes per key and preserves the declarative
+  \<^const>\<open>traverse_rhs\<close>/\<^const>\<open>sides_of_rhs\<close> value wherever it flushes, so the
+  correspondence with the unbuffered generator below is unaffected by the choice of
+  flush points.
+
+  The choice does decide when a seed reaches the solver. A call program publishes the
+  seed and then reads the callee's exit, and that read is what makes the solver evaluate
+  the callee. Held back to the answer, the seed arrives after the callee has been solved
+  from \<^const>\<open>bot\<close>, and the seed's change then sends the caller round again. So a node
+  at which at most one call returns flushes before every local read, and the seed is
+  published before the exit is read, in the order of Goblint's \<open>sidel\<close> and
+  \<open>getl\<close>. A node at which several calls return flushes at the answer only: a flush
+  before the first call's exit read would write a seed the second call may write again,
+  and an update rule that keeps one slot per origin would see a partial contribution
+  first in every evaluation. There \<open>distinct_side_path_buffer_sides_answers_only\<close>
+  bounds the writes unconditionally; at the other nodes the bound
+  \<open>distinct_side_path_buffer_sides\<close> holds as long as one call program does not
+  write a seed again after reading an exit, which the shipped specifications'
+  single-alternative entry transfers ensure.
 \<close>
 
 definition routed_node_rhs_buffered ::
@@ -299,7 +314,7 @@ where
         let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
             t = sp_compile (fold_rhs_program acc0
                   (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g c v))
-        in buffer_sides (sp_lift_tree t (\<lambda>res.
+        in buffer_sides (\<lambda>_. length (site_sel g v) \<le> 1) (sp_lift_tree t (\<lambda>res.
           Side (analysis_global_at c) (DG bot (dg_global res)) (Answer (DG (dg_local res) bot)))))"
 
 text \<open>

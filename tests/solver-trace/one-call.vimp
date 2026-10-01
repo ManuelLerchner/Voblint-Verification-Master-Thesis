@@ -1,0 +1,11 @@
+// One call, traced in full (#251): the call publishes the callee's entry state
+// into the seed before it reads the callee's exit, so the callee is solved once,
+// from the published seed, and the caller is not restarted.
+fun bump(n) {
+  return n + 1;
+}
+
+fun main() {
+  a = bump(5);
+  __voblint_check(a == 6);
+}

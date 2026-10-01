@@ -366,9 +366,11 @@ let compact nm steps =
     match n with C.FunctionResult _ -> true | _ -> false
   in
   let is_seed y = match nm.global y with Seed _ -> true | _ -> false in
-  (* The caller whose result query saw a publication change the seed it
-     depends on; the solver evaluates it again from its call. *)
+  (* The caller whose result query saw a publication change a seed the
+     callee had already read; the solver evaluates it again from its call. A
+     seed published before anything reads it restarts nobody. *)
   let restart = ref None and asking = ref None in
+  let read_seeds = Hashtbl.create 8 in
   let announce_restart () =
     Option.iter (fun x -> add ("RESTART  " ^ local_text nm x)) !restart;
     restart := None
@@ -395,6 +397,7 @@ let compact nm steps =
               (Printf.sprintf "         %s returns %s" (local_text nm y)
                  (nm.local_value d))
         | Query_global (x, y, d) when is_seed y ->
+            Hashtbl.replace read_seeds y ();
             add
               (Printf.sprintf "         %s reads %s = %s" (local_text nm x)
                  (global_text nm y) (nm.global_value y d))
@@ -407,11 +410,13 @@ let compact nm steps =
               | Update_global (y', _, _) :: _ when y' = y -> true
               | _ -> false
             in
-            if changed then restart := !asking;
+            let was_read = Hashtbl.mem read_seeds y in
+            if changed && was_read then restart := !asking;
             add
               (Printf.sprintf "FLUSH    %s += %s%s" (global_text nm y)
                  (nm.global_value y d)
-                 (if changed then "  (changed: readers restart)"
+                 (if changed && was_read then "  (changed: readers restart)"
+                  else if changed then "  (changed)"
                   else "  (no change)"))
         | Answer (x, d) when Hashtbl.mem callers x ->
             add
