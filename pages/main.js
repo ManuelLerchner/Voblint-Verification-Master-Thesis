@@ -122,6 +122,10 @@ const rawMounts = {
   input: query("#raw-input-body"),
   output: query("#raw-output-body"),
 };
+const rawStats = {
+  input: query("#raw-input-stats"),
+  output: query("#raw-output-stats"),
+};
 
 /*
  * Every editor feature on one screen, at the page's default configuration
@@ -310,6 +314,19 @@ function setRawText(view, text) {
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
 }
 
+/* A pane header's size of its text: lines, then UTF-8 bytes. */
+function sizeLabel(text) {
+  const bytes = new Blob([text]).size;
+  const size =
+    bytes < 1024
+      ? `${bytes} B`
+      : bytes < 1024 * 1024
+        ? `${(bytes / 1024).toFixed(1)} KB`
+        : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+  return `${countLines(text).toLocaleString("en")} lines · ${size}`;
+}
+
 function fillRawViews() {
   if (!rawResult.open || !rawRunProgram) {
     return;
@@ -317,7 +334,10 @@ function fillRawViews() {
 
   for (const [part, view] of Object.entries(rawViews)) {
     if (view.state.doc.length === 0) {
-      setRawText(view, formatJson(rawRunProgram[part] ?? null));
+      const text = formatJson(rawRunProgram[part] ?? null);
+
+      setRawText(view, text);
+      rawStats[part].textContent = sizeLabel(text);
     }
   }
 }
@@ -401,6 +421,10 @@ function showRawRunProgram(raw) {
 
   for (const view of Object.values(rawViews)) {
     setRawText(view, "");
+  }
+
+  for (const stats of Object.values(rawStats)) {
+    stats.textContent = "";
   }
 
   renderRawCall(rawRunProgram);
@@ -1838,15 +1862,15 @@ function offerSolverTrace(run) {
   solverTraceLoading = null;
   solverTraceView.setText("");
   solverTrace.hidden = run === null;
-  solverTraceCount.textContent = run ? "open to load" : "";
+  solverTraceCount.textContent = "";
   loadSolverTrace();
 }
 
-/* The offered run's full (--verbose) trace, solved when the panel is open. */
+/* The offered run's full (--verbose) trace, solved again right after the run. */
 async function loadSolverTrace() {
   const run = solverTraceOffered;
 
-  if (!run || !solverTrace.open || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
+  if (!run || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
     return;
   }
 
@@ -1869,8 +1893,8 @@ async function loadSolverTrace() {
     }
 
     solverTraceContent = answer.trace;
-    solverTraceRun = { ...request, lines: countLines(answer.trace) };
-    solverTraceCount.textContent = `${solverTraceRun.lines} lines`;
+    solverTraceRun = request;
+    solverTraceCount.textContent = sizeLabel(answer.trace);
     solverTraceView.setText(answer.trace);
   } catch (error) {
     if (solverTraceLoading === request) {
@@ -1917,7 +1941,7 @@ async function downloadSolverTraceJsonl() {
   const idle = solverTraceDownloadJsonlLabel.textContent;
 
   solverTraceDownloadJsonl.disabled = true;
-  solverTraceDownloadJsonlLabel.textContent = "Preparing JSON Lines...";
+  solverTraceDownloadJsonlLabel.textContent = "preparing…";
 
   try {
     const answer = JSON.parse(
@@ -3956,8 +3980,6 @@ for (const control of [
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-solverTrace.addEventListener("toggle", loadSolverTrace);
-
 /* Cytoscape reports no mouseout when the pointer leaves the graph from a node. */
 graph.addEventListener("mouseleave", hideGraphTooltip);
 
@@ -4347,9 +4369,9 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  /* A linked trace, in any form older links name, opens the trace panel. */
+  /* A linked trace, in any form older links name, opens the panel that shows it. */
   if (settings.trace != null && settings.trace !== "off") {
-    solverTrace.open = true;
+    rawResult.open = true;
   }
 
   const depth = parseCount(settings.k, MAX_CONTEXT_DEPTH);
@@ -4499,7 +4521,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(solverTrace.open ? [linkParam("trace", "verbose")] : []),
+    ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);
 

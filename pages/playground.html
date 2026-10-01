@@ -325,6 +325,7 @@
             <section class="raw-result-pane" aria-labelledby="raw-input-heading">
               <div class="raw-result-pane-header">
                 <h2 id="raw-input-heading">Input</h2>
+                <span id="raw-input-stats" class="raw-result-stats"></span>
               </div>
               <div id="raw-input-body" class="code-editor raw-result-body"></div>
             </section>
@@ -332,10 +333,46 @@
             <section class="raw-result-pane" aria-labelledby="raw-output-heading">
               <div class="raw-result-pane-header">
                 <h2 id="raw-output-heading">Output</h2>
+                <span id="raw-output-stats" class="raw-result-stats"></span>
               </div>
               <div id="raw-output-body" class="code-editor raw-result-body"></div>
             </section>
+
+            <section id="solver-trace" class="raw-result-pane raw-result-trace" aria-labelledby="solver-trace-heading" hidden>
+              <div class="raw-result-pane-header">
+                <h2 id="solver-trace-heading">Solver trace</h2>
+                <span id="solver-trace-count" class="raw-result-stats"></span>
+                <span class="raw-result-tools">
+                  <button id="solver-trace-download" type="button" title="Download the trace (.txt)" aria-label="Download the trace as text">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i> .txt
+                  </button>
+                  <button id="solver-trace-download-jsonl" type="button" title="Download the trace as JSON Lines (.jsonl)" aria-label="Download the trace as JSON Lines">
+                    <i class="fa-solid fa-download" aria-hidden="true"></i>
+                    <span id="solver-trace-download-jsonl-label">.jsonl</span>
+                  </button>
+                </span>
+              </div>
+              <div id="solver-trace-text" class="code-editor trace-view raw-result-body"></div>
+            </section>
           </div>
+
+          <p class="raw-result-note">
+            Every solver step of the run, as <code>voblint --trace --verbose</code> prints it,
+            computed by solving the run again right after it: each unknown solved, each
+            query with the value it returns, each side effect, each update, each
+            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
+            indented by the solver's query depth. A banner marks where the solver asks for a
+            procedure's result, and ◆ marks a side effect.
+          </p>
+
+          <p class="raw-result-note">
+            Three layers: the solver result is the exported computation of proved equations,
+            and the trace calls come from code equations proved equal to the untraced ones.
+            The trace is an unverified observation of that computation, recorded by a hook
+            that returns nothing, swallows exceptions and never touches solver state. The
+            solve replay further down is an unverified visualization of the trace.
+          </p>
+
         </details>
 
         <section
@@ -409,42 +446,6 @@
           ></div>
         </details>
 
-        <details id="solver-trace" class="solver-globals solver-trace" hidden>
-          <summary>
-            <span class="eyebrow">Solver trace</span>
-            <span id="solver-trace-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            Every solver step of the run, as <code>voblint --trace --verbose</code> prints it,
-            computed by solving the run again when this panel opens: each unknown solved, each
-            query with the value it returns, each side effect, each update, each
-            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
-            indented by the solver's query depth. A banner marks where the solver asks for a
-            procedure's result, and ◆ marks a side effect.
-          </p>
-
-          <p class="solver-globals-note">
-            Three layers: the solver result is the exported computation of proved equations,
-            and the trace calls come from code equations proved equal to the untraced ones.
-            The trace is an unverified observation of that computation, recorded by a hook
-            that returns nothing, swallows exceptions and never touches solver state. The
-            replay below is an unverified visualization of the trace.
-          </p>
-
-          <div class="solver-trace-tools">
-            <button id="solver-trace-download" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              Download trace (.txt)
-            </button>
-            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
-            </button>
-          </div>
-
-          <div id="solver-trace-text" class="trace-view solver-trace-view"></div>
-        </details>
 
         <details id="solve-replay" class="solver-globals solve-replay" hidden>
           <summary>

@@ -89,8 +89,8 @@ restart the caller. `--verbose` lists every step in a Goblint-aligned tracing
 vocabulary (`%%% iter: begin iterate ...`; the mapping table in
 `docs/CLI_DESIGN.md` records every difference), `--trace-sys iter,side` selects
 subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
-file; standard output stays the same. The playground's **Solver trace** panel
-shows the full (`--verbose`) trace below the graph, colored by step and folded
+file; standard output stays the same. The playground's **Generated core** panel
+shows the full (`--verbose`) trace under the call and its answer, colored by step and folded
 by query, with downloads of the whole text and of its JSON Lines form. Three layers: the solver
 result is the exported computation of proved equations, and the trace calls
 inside it come from code equations proved equal to the untraced ones; the trace

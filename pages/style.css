@@ -579,6 +579,10 @@ main {
   --skeleton: var(--surface-muted);
 }
 
+.code-editor.trace-view:empty {
+  --skeleton: rgb(255 255 255 / 0.09);
+}
+
 .code-editor:empty::before,
 .trace-view:empty::before {
   content: "";
@@ -1425,8 +1429,10 @@ kbd {
   border-radius: 10px;
 }
 
+/* The call takes a second row and wraps there, so it is never cut off. */
 .raw-result summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
   list-style: none;
@@ -1443,16 +1449,15 @@ kbd {
 
 /* One line: a long answer outline is cut with an ellipsis; the panel holds the whole term. */
 .raw-call {
-  flex: 1 1 0;
+  order: 1;
+  flex: 1 1 100%;
   min-width: 0;
-  overflow: hidden;
   padding: 0;
   border: 0;
   color: var(--text-muted);
   background: none;
   font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
 }
 
 .raw-call-fn {
@@ -1524,9 +1529,20 @@ kbd {
 
 .raw-result-panes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 12px;
+}
+
+/* Too narrow for three panes of JSON and trace: the trace takes its own row. */
+@media (max-width: 1280px) {
+  .raw-result-panes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .raw-result-trace {
+    grid-column: 1 / -1;
+  }
 }
 
 .raw-result-pane {
@@ -1541,6 +1557,30 @@ kbd {
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.raw-result-stats {
+  margin-right: auto;
+  color: var(--text-faint);
+  font: 0.72rem var(--mono);
+}
+
+.raw-result-tools {
+  display: flex;
+  gap: 10px;
+}
+
+.raw-result-tools button {
+  padding: 0;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  font: 600 0.74rem var(--mono);
+  cursor: pointer;
+}
+
+.raw-result-tools button:hover {
+  text-decoration: underline;
 }
 
 .raw-result-pane-header h2 {
@@ -2023,6 +2063,91 @@ button.solver-global-key:hover {
 .tr-failed {
   color: var(--danger);
   font-weight: 700;
+}
+
+/* The trace in the dark editor style of the panes beside it. */
+.code-editor.trace-view {
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
+}
+
+.code-editor.trace-view .cm-line {
+  padding: 0 2px 0 6px;
+}
+
+.code-editor.trace-view .cm-content {
+  padding: 8px 0;
+}
+
+.code-editor.trace-view .tr-query {
+  color: #8fc4e8;
+}
+
+.code-editor.trace-view .tr-update,
+.code-editor.trace-view .tr-proved {
+  color: #6fcf97;
+}
+
+.code-editor.trace-view .tr-answer {
+  color: #8bd5ca;
+  background: rgb(139 213 202 / 0.14);
+  box-shadow: 0 0 0 2px rgb(139 213 202 / 0.14);
+}
+
+.code-editor.trace-view .tr-stored {
+  color: #6fcf97;
+  background: rgb(111 207 151 / 0.14);
+  box-shadow: 0 0 0 2px rgb(111 207 151 / 0.14);
+}
+
+.code-editor.trace-view .tr-sol {
+  color: #f0c674;
+  background: rgb(240 198 116 / 0.14);
+  box-shadow: 0 0 0 2px rgb(240 198 116 / 0.14);
+}
+
+.code-editor.trace-view .tr-widen,
+.code-editor.trace-view .tr-route,
+.code-editor.trace-view .tr-check,
+.code-editor.trace-view .tr-failed {
+  color: #f08a65;
+}
+
+.code-editor.trace-view .tr-stable,
+.code-editor.trace-view .tr-key,
+.code-editor.trace-view .tr-step {
+  color: #7c9096;
+}
+
+.code-editor.trace-view .tr-side,
+.code-editor.trace-view .tr-side-mark {
+  color: #c9a2e8;
+}
+
+.code-editor.trace-view .tr-unknown {
+  color: #a7bbc0;
+}
+
+.code-editor.trace-view .tr-value {
+  color: #c4a7e7;
+}
+
+.code-editor.trace-view .tr-removed {
+  background: rgb(255 138 115 / 0.2);
+}
+
+.code-editor.trace-view .tr-added {
+  background: rgb(111 207 151 / 0.2);
+}
+
+.code-editor.trace-view .tr-current {
+  background: rgb(215 102 66 / 0.18);
+}
+
+.code-editor.trace-view .tr-banner {
+  color: #8fc4e8;
+  background: rgb(143 196 232 / 0.1);
+  border-left-color: #8fc4e8;
 }
 
 .analysis-graph-header {
@@ -2635,16 +2760,6 @@ a:focus-visible {
 
   .editor-file {
     display: none;
-  }
-
-  /* Truncated to two or three glyphs the outline says nothing; the panel below
-     still holds the whole term. */
-  .raw-call {
-    display: none;
-  }
-
-  .raw-result summary {
-    flex-wrap: wrap;
   }
 
   .site-nav-inner {
