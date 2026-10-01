@@ -4910,8 +4910,9 @@ qed</code></pre>
         <h2 id="goblint-heading">Voblint and Goblint, side by side</h2>
         <p class="section-intro">
           Voblint follows the architecture of <a href="https://goblint.in.tum.de/" target="_blank" rel="noreferrer">Goblint</a>,
-          a static analyzer for real C programs, and simplifies wherever a proof would otherwise
-          have to model all of C. The project's own register of differences says what the claim is:
+          a static analyzer for C programs. Voblint analyzes VIMP instead,
+          a small imperative language with integer variables, globals and recursive procedures
+          (<a href="#limits">see what it leaves out</a>). The project's own register of differences says what the claim is:
           <em>“a simplified, machine-checked semantic model of Goblint's interprocedural
           context-sensitive architecture”</em>, and not the exact implementation. Its vocabulary
           of locals, globals and side effects, and many of this page's examples, follow the
