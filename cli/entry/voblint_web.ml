@@ -154,17 +154,23 @@ let trace_text (format, verbose) ~source ~domains ~globals ~context result =
    trace again, so a chunk is only ever a preview. *)
 let live_interval_ms = 100.
 
-(* What a run records at most: a run that never finishes stops growing here. *)
+(* What a run records at most: a run that never finishes stops growing here.
+   Lines grow with the states they print, so the text has a limit of its own:
+   a page holding much more turns slow to receive, keep and show it. *)
 let live_event_limit = 50_000
+let live_byte_limit = 8 * 1024 * 1024
 
-let post_chunk text =
-  let sink = Js.Unsafe.get Js.Unsafe.global "Voblint_trace_chunk" in
+(* Calls the worker's [name] with [text], if the worker defines it. *)
+let post name text =
+  let sink = Js.Unsafe.get Js.Unsafe.global name in
   if Js.typeof sink = Js.string "function" then
     ignore (Js.Unsafe.fun_call sink [| Js.Unsafe.inject (Js.string text) |])
 
+let post_chunk = post "Voblint_trace_chunk"
+
 let stream_live ~source ~domains ~globals ~context =
   let buffer = Buffer.create 4096 in
-  let last = ref (now_ms ()) and since = ref 0 in
+  let last = ref (now_ms ()) and since = ref 0 and posted = ref 0 in
   let render =
     Solver_trace.live_verbose ~out:(Buffer.add_string buffer) ~source
       ~analyses:(List.map Result_text.analysis_label domains)
@@ -173,6 +179,7 @@ let stream_live ~source ~domains ~globals ~context =
   in
   let flush () =
     if Buffer.length buffer > 0 then begin
+      posted := !posted + Buffer.length buffer;
       post_chunk (Buffer.contents buffer);
       Buffer.clear buffer
     end;
@@ -184,11 +191,17 @@ let stream_live ~source ~domains ~globals ~context =
     fun channel o ->
       render channel o;
       incr since;
-      if !Solver_trace_hook.kept >= live_event_limit then begin
+      let kept = !Solver_trace_hook.kept in
+      if
+        kept >= live_event_limit
+        || !posted + Buffer.length buffer >= live_byte_limit
+      then begin
+        (* Keeps nothing more, so the listener is not called again. *)
+        Solver_trace_hook.limit := kept;
         Buffer.add_string buffer
           (Printf.sprintf
              "\nTrace stopped after %d events; the run goes on unrecorded.\n"
-             live_event_limit);
+             kept);
         flush ()
       end
       else if !since >= 256 then begin
@@ -242,6 +255,11 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               let program, stmt_positions, header_positions =
                 Vimp_frontend.program "browser.vimp" source
               in
+              (* The call as run_voblint receives it, for a page that cancels the run
+                 before an answer exists. *)
+              post "Voblint_run_input"
+                (Render_json.run_voblint_input_json ~domains ~globals
+                   ~ctx:context program);
               if trace = Some (Solver_trace.Text, true) then
                 stream_live ~source:(source, stmt_positions) ~domains
                   ~globals:globals_name ~context;

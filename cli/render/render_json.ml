@@ -607,17 +607,19 @@ let program_json p =
       );
     ]
 
+let run_voblint_input_json ~domains ~globals ~ctx program =
+  json_object
+    [
+      ("as", json_list domain_json domains);
+      ("rule", globals_rule_json globals);
+      ("ctx", context_mode_json ctx);
+      ("p", program_json program);
+    ]
+
 let run_voblint_json ~domains ~globals ~ctx program answer =
   json_object
     [
-      ( "input",
-        json_object
-          [
-            ("as", json_list domain_json domains);
-            ("rule", globals_rule_json globals);
-            ("ctx", context_mode_json ctx);
-            ("p", program_json program);
-          ] );
+      ("input", run_voblint_input_json ~domains ~globals ~ctx program);
       ("output", analysis_answer_json answer);
     ]
 

@@ -310,6 +310,13 @@ const rawViews = Object.fromEntries(
   ]),
 );
 
+/* A cancelled run's output is the absence of an answer, not a JSON value. */
+function rawText(part) {
+  return rawRunProgram.cancelled && part === "output"
+    ? "Cancelled: the run was stopped before run_voblint returned."
+    : formatJson(rawRunProgram[part] ?? null);
+}
+
 function setRawText(view, text) {
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
 }
@@ -334,7 +341,7 @@ function fillRawViews() {
 
   for (const [part, view] of Object.entries(rawViews)) {
     if (view.state.doc.length === 0) {
-      const text = formatJson(rawRunProgram[part] ?? null);
+      const text = rawText(part);
 
       setRawText(view, text);
       rawStats[part].textContent = sizeLabel(text);
@@ -409,7 +416,9 @@ function renderRawCall(raw) {
     : [callPart("as rule ctx p", "arg")];
   let result = [callPart("?", "arg")];
 
-  if (input && typeof output === "string") {
+  if (raw?.cancelled) {
+    result = [callPart("cancelled", "observed")];
+  } else if (input && typeof output === "string") {
     result = [callPart(output, "ctor")];
   } else if (input) {
     const [tag, record] = Object.entries(output ?? {})[0] ?? ["?", {}];
@@ -1886,8 +1895,17 @@ function offerSolverTrace(run) {
   solverTraceOffered = run;
   solverTraceContent = trace;
   solverTrace.hidden = run === null;
-  solverTraceView.setText(trace || (run ? "The run returned no trace." : ""));
+  solverTraceView.setText("");
   solverTraceCount.textContent = trace ? sizeLabel(trace) : "";
+
+  /* Laying out tens of thousands of lines takes a moment; everything else shows first. */
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      if (solverTraceOffered === run) {
+        solverTraceView.setText(trace || (run ? "The run returned no trace." : ""));
+      }
+    }, 0),
+  );
   setTraceSummary(
     run === null
       ? null
@@ -1898,10 +1916,11 @@ function offerSolverTrace(run) {
 }
 
 /*
- * A cancelled run has no answer, only the trace that reached the page before its
- * worker was terminated: the panel shows that, and no input or output.
+ * A cancelled run has no answer. The panel shows what reached the page before its
+ * worker was terminated: the call's input, posted before the solve, and the trace.
  */
 function showCancelledTrace(live) {
+  showRawRunProgram({ input: live.input, output: null, cancelled: true });
   rawResultEmpty.hidden = true;
   rawResultPanes.hidden = false;
   offerSolverTrace({
@@ -3635,9 +3654,9 @@ function cancelRun() {
   retireActiveRun("Analysis cancelled.");
   clearResults();
 
-  if (live && live.chunks.length > 0) {
-    showCancelledTrace(live);
+  if (live && (live.chunks.length > 0 || live.input)) {
     showStatus("Analysis cancelled \u00b7 its trace so far is under Generated core");
+    showCancelledTrace(live);
   } else {
     showStatus("Analysis cancelled \u00b7 run again when ready");
   }
@@ -3655,6 +3674,11 @@ function createAnalysisWorker() {
 
     if (message.type === "trace-chunk") {
       pendingAnalysis.onChunk?.(message.text);
+      return;
+    }
+
+    if (message.type === "run-input") {
+      pendingAnalysis.onInput?.(message.text);
       return;
     }
 
@@ -3709,8 +3733,11 @@ function getAnalysisWorker() {
   return analysisWorker;
 }
 
-/* [onChunk] receives the verbose trace in pieces while the worker still solves. */
-function runAnalysisInWorker(configuration, source, { onChunk = null } = {}) {
+/*
+ * [onChunk] receives the verbose trace in pieces while the worker still solves, and
+ * [onInput] the call's input JSON before the solve starts.
+ */
+function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = null } = {}) {
   if (pendingAnalysis) {
     throw new Error("An analysis is already running.");
   }
@@ -3723,6 +3750,7 @@ function runAnalysisInWorker(configuration, source, { onChunk = null } = {}) {
       resolve,
       reject,
       onChunk,
+      onInput,
     };
 
     try {
@@ -3804,10 +3832,13 @@ async function run() {
 
   try {
     /* The hook records the trace during this run; it changes nothing in the answer. */
-    liveTrace = { configuration, source, chunks: [] };
+    liveTrace = { configuration, source, chunks: [], input: null };
     const live = liveTrace;
     const rawResult = await runAnalysisInWorker({ ...configuration, trace: "verbose" }, source, {
       onChunk: (text) => live.chunks.push(text),
+      onInput: (text) => {
+        live.input = JSON.parse(text);
+      },
     });
 
     liveTrace = null;
@@ -4011,7 +4042,7 @@ for (const part of Object.keys(rawMounts)) {
   query(`#raw-${part}-download`).addEventListener("click", () => {
     if (rawRunProgram) {
       downloadBlob(
-        new Blob([formatJson(rawRunProgram[part] ?? null)], { type: "application/json" }),
+        new Blob([rawText(part)], { type: "application/json" }),
         `voblint-${part}-${settingsSlug()}.json`,
       );
     }

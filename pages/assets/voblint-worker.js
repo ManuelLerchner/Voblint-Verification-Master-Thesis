@@ -64,6 +64,11 @@ self.Voblint_trace_chunk = (text) => {
   self.postMessage({ type: "trace-chunk", id: runningId, text });
 };
 
+/* The call's input, posted before the solve, so a cancelled run can still show it. */
+self.Voblint_run_input = (text) => {
+  self.postMessage({ type: "run-input", id: runningId, text });
+};
+
 self.onmessage = async (event) => {
   const request = event.data;
 

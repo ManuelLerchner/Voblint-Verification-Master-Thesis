@@ -290,11 +290,13 @@ hands over.
 A run may never finish, and the page cancels it by terminating its worker. In
 `"verbose"` mode the adapter therefore installs `Solver_trace_hook.listener`,
 which renders each kept event as it is recorded (`Solver_trace.live_verbose`)
-and posts the text to the worker's `Voblint_trace_chunk` about every 100 ms. On
-cancel the page shows the chunks it received. The adapter also sets
-`Solver_trace_hook.limit` to 50,000 events: later events are counted, not kept,
-so a run that never finishes stops growing its trace, and a finished run's text
-ends with `Trace truncated` instead of `Trace complete`. The listener runs inside
+and posts the text to the worker's `Voblint_trace_chunk` about every 100 ms;
+before the solve it posts the call's input to `Voblint_run_input`. On cancel the
+page shows that input, no output, and the chunks it received. The adapter stops
+keeping events at 50,000 or once 8 MB of text are posted, whichever comes first:
+states grow with the run, and so do the lines that print them. Later events are
+counted, not kept, so a run that never finishes stops growing its trace, and a
+finished run's text ends with `Trace truncated` instead of `Trace complete`. The listener runs inside
 the hook's `try`, and the hook still returns `()`. The CLI sets neither.
 The page's **Solve replay** section, when opened, solves the shown run again in
 `"jsonl"` mode and steps through the events on its own drawing of the graph
