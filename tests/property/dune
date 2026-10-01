@@ -52,7 +52,7 @@
  (name ast_driver_grammar)
  (wrapped false)
  (modules Voblint_CLI vimp_parser vimp_lexer)
- (libraries ast_driver_positions menhirLib str zarith)
+ (libraries ast_driver_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))
 

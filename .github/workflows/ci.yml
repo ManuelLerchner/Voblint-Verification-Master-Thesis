@@ -114,6 +114,19 @@ jobs:
           echo "thy=$changed" >> "$GITHUB_OUTPUT"
           echo "Isabelle theory changes: $changed"
 
+      # Skipping the build is only safe when the restore produced heaps: a missed
+      # or pruned cache leaves none, and every job that downloads them fails.
+      - name: Check for restored heaps
+        id: heaps
+        shell: bash
+        run: |
+          if [[ -n "$(ls -A "$ISABELLE_HOME_USER/heaps" 2>/dev/null)" ]]; then
+            echo "present=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "present=false" >> "$GITHUB_OUTPUT"
+            echo "No heaps restored from the cache; building."
+          fi
+
       # Plain incremental build (no -c): the actual cache writer and the
       # thing that validates/warms the heap cache. html.sh's -c flag
       # forces a clean rebuild of every session regardless of cache state
@@ -122,16 +135,14 @@ jobs:
       # single run. html generation is its own downstream consumer job
       # below, which pays that -c cost only when actually needed.
       - name: Build (incremental, populates the heap cache)
-        if: steps.changed.outputs.thy == 'true'
+        if: steps.changed.outputs.thy == 'true' || steps.heaps.outputs.present != 'true'
         run: pixi run isabelle-build
 
       - name: Skip build when theories are unchanged
-        if: steps.changed.outputs.thy != 'true'
-        run: echo "No .thy files changed; skipping the Isabelle build."
+        if: steps.changed.outputs.thy != 'true' && steps.heaps.outputs.present == 'true'
+        run: echo "No .thy files changed and the cache restored heaps; skipping the Isabelle build."
 
-      # A skipped build leaves no heap store behind to measure.
       - name: Report heap store size
-        if: steps.changed.outputs.thy == 'true'
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
 
       - name: Upload heap state for same-run consumers
