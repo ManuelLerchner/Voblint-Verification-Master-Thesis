@@ -119,9 +119,10 @@
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
 
-#pagebreak(weak: true)
-= Glossary <glossary>
-#print-thesis-glossary(print-glossary)
+// The glossary is disabled: every term is defined where the chapters introduce it.
+// #pagebreak(weak: true)
+// = Glossary <glossary>
+// #print-thesis-glossary(print-glossary)
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "ieee")
