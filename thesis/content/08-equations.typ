@@ -834,12 +834,21 @@ contribution first shrinks to $a$ and then grows back to $a union.sq b$. Under
 warrowing the shrinking step narrows and the growing step widens again, and
 the solve need not stabilize. #isaconst("buffer_sides") gives the update rule
 only complete joins: it collects the publications of one right-hand side,
-joins those to the same target, and issues one #ctor("Side") per target when
-the right-hand side has answered, which is the input the update rules of
-Stemmler et al. assume @stemmler25[§3]. As a consequence every publication is
-delayed behind the queries of its equation, so a newly routed callee context
-is first read with an empty seed and the flush destabilizes it for a second
-pass (@sec:eq-example). Goblint's narrowing rule for globals, which also keeps
+joins those to the same target, and issues one #ctor("Side") per target at a
+flush point, which is the input the update rules of Stemmler et al. assume
+@stemmler25[§3]. Where the flush points lie decides when a seed reaches the
+solver. A call publishes the callee's entry state and then reads the callee's
+result, and that read is what makes the solver evaluate the callee. Flushed
+only when the right-hand side has answered, the publication would arrive after
+the callee had been solved from an empty seed, and the seed's change would send
+the caller round a second time. So at a node where at most one call returns, the
+buffer flushes before every local read, and the seed is published before the
+result is read, in the order of Goblint's normal-call transfer
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
+At a node where several calls return, it flushes only at the answer: an earlier
+flush would write a seed the next call may write again, and the per-origin
+rules would again see a partial contribution first. There a newly routed
+callee is still read once with an empty seed. Goblint's narrowing rule for globals, which also keeps
 one contribution per origin, joins the side effects of an evaluation before
 updating
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L116")[`td3UpdateRule.ml`]).
@@ -890,12 +899,10 @@ and the initial state $d_0$ supplies the value. The bottom test is omitted.
 @tab:eq-trace shows how the solver reaches this fragment, condensed into
 phases, and @fig:eq-walk draws the same phases on the unknowns. Both are
 generated from the solver trace of the executable analyzer (`--trace`,
-Interval, the warrowing update rule), stored as a checked claim. The trace
-shows the delay of @sec:eq-buffer at work: the seed of a new context is read
-before anything is published to it, because the publication is flushed only
-after the result query has returned. The first pass through `bump` therefore
-reads $lbot$ and returns $lbot$. The flush then destabilizes the entry, and a
-second pass computes the real result.
+Interval, the warrowing update rule), stored as a checked claim. Each call
+resumes at a node of its own, so the buffer of @sec:eq-buffer flushes the
+seed before the callee's result is read: the entry of `bump` reads the
+published entry state, and each context of `bump` is solved once.
 
 #let _trace = claim-trace("pg-contexts-trace")
 #let _tctx(c) = $c_#c.slice(1)$
@@ -966,6 +973,13 @@ second pass computes the real result.
           .map(e => e.unknown)
       }
       let unchanged = evs.any(e => e.event == "side")
+      // A seed the call publishes before it first queries the callee.
+      let first-query = evs.position(e => e.event == "query_local")
+      let published = evs
+        .slice(0, if first-query == none { evs.len() } else { first-query })
+        .any(e => (
+          e.event == "side"
+        ))
       (
         [#_tnode(cur)#if again [, again]],
         if again [
@@ -973,8 +987,9 @@ second pass computes the real result.
           #_tval(seed.value, route: r): #fresh.map(raw).join(", ")#if unchanged [. The second flush changes nothing]#if up.len() > 1 [. The answers then propagate up through #up.slice(0, -1).map(_tnode).join(" and ") to #_tnode(up.last())]
         ] else [
           computes #_tval(r.entry, route: r) and routes to the new context #_tctx(r.context),
-          queries #_tunk(res.target), which queries back to the entry, which reads
-          #_tunk(seed.target) $=$ #_tval(seed.value, route: r): the result is #_tval(res.value)
+          #if published [publishes it to #_tunk(seed.target), ]queries #_tunk(res.target),
+          which queries back to the entry, which reads #_tunk(seed.target) $=$
+          #_tval(seed.value, route: r): the result is #_tval(res.value)#if up.len() > 1 [. The answers then propagate up through #up.slice(0, -1).map(_tnode).join(" and ") to #_tnode(up.last())]
         ],
       )
     }
@@ -1133,10 +1148,8 @@ calls publish to one seed, and `bump` is solved once for both.
   caption: [The solve of @tab:eq-trace drawn on the unknowns. Grey arrows are
     the edges of the graph, including a seed feeding its entry. Blue dashed
     arrows are the solver's queries and publications, labelled with the
-    phases of the table. Arrows labelled with two phases are taken twice: the
-    first pass through a copy of `bump` reads an empty seed, the flush fills
-    it, and the second pass repeats the queries and publishes again without
-    change. The solve runs backwards from the result node of `main` and demands the
+    phases of the table. Each call publishes to its seed before it queries the
+    callee, so every arrow is taken once. The solve runs backwards from the result node of `main` and demands the
     copies of `bump` for $c_1$ (right) and $c_2$ (left) as those contexts are
     discovered. Generated from the same solver trace as @tab:eq-trace.],
 ) <fig:eq-walk>

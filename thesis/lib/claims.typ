@@ -97,8 +97,10 @@
 //   descent    the first queries, before any global is read
 //   root-seed  the program entry reads its seed
 //   pass       one evaluation of a call's continuation (starts at a route, or
-//              at the re-evaluation after a flush)
-//   flush      a buffered side effect that changes its seed
+//              at the re-evaluation after a flush); a seed published before
+//              the call's first local query belongs to its pass
+//   flush      a buffered side effect that changes its seed, issued after the
+//              call's queries
 // Contexts are named c0, c1, ... in order of appearance; `arrows` maps
 // "source -> target" (queries and side effects) to the phases that took it.
 #let claim-trace(name) = {
@@ -140,7 +142,13 @@
     } else if k == "route" and not (last.kind == "pass" and last.route == none) {
       "pass"
     } else if k == "query_local" and last.kind == "flush" { "pass" } else if (
-      k == "side" and next == "update_global"
+      k == "side"
+        and next == "update_global"
+        and not (
+          last.kind == "pass"
+            and last.route != none
+            and not last.events.any(e => e.event == "query_local")
+        )
     ) { "flush" } else { none }
     if start != none {
       phases.push((kind: start, route: none, events: ()))
