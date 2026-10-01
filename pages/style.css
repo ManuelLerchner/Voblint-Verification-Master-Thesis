@@ -561,6 +561,67 @@ main {
   min-height: 560px;
 }
 
+/*
+ * Until CodeMirror loads, an editor's mount is empty: skeleton lines hold its place
+ * so the page does not jump, and CodeMirror's own DOM replaces them.
+ */
+#program-editor:empty {
+  min-height: 560px;
+}
+
+.code-editor:empty,
+.trace-view:empty {
+  --skeleton: rgb(255 255 255 / 0.09);
+  position: relative;
+}
+
+.trace-view:empty {
+  --skeleton: var(--surface-muted);
+}
+
+.code-editor:empty::before,
+.trace-view:empty::before {
+  content: "";
+  position: absolute;
+  inset: 18px 24px;
+  background-image:
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton));
+  background-repeat: no-repeat;
+  background-size:
+    34% 10px,
+    58% 10px,
+    46% 10px,
+    22% 10px,
+    64% 10px,
+    40% 10px,
+    52% 10px,
+    18% 10px;
+  background-position:
+    0 0,
+    24px 24px,
+    24px 48px,
+    48px 72px,
+    24px 96px,
+    24px 120px,
+    0 144px,
+    0 168px;
+  border-radius: 4px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
+}
+
 #program-editor .cm-scroller {
   max-height: max(560px, 78vh);
 }
