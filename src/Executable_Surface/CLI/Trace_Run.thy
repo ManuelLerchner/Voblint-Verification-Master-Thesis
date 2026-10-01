@@ -90,12 +90,19 @@ lemma trace_run:
   "f = rhs \<Longrightarrow> f = (let _ = trace_event STR ''run'' e in rhs)"
   by (simp add: trace_event_def Let_def)
 
+text \<open>
+  Each context mode fixes the types of its contexts and global unknowns; they are
+  spelled out, since a type variable left free in a code equation's right-hand
+  side makes code export drop the equation.
+\<close>
+
 lemmas analysis_result_traced =
   trace_run[OF analysis_result.simps(1)[of as r p],
-    of "\<lambda>_. mcp_trace_printers as p (\<lambda>_. Context_Unit) seed_of_global_unknown"]
+    of "\<lambda>_. mcp_trace_printers as p (\<lambda>_ :: unit. Context_Unit)
+          (seed_of_global_unknown :: (unit, unit) global_unknown \<Rightarrow> _)"]
   trace_run[OF analysis_result.simps(2)[of as r p],
     of "\<lambda>_. mcp_trace_printers as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
-          seed_of_global_unknown"]
+          (seed_of_global_unknown :: (unit, mcp_ctx) global_unknown \<Rightarrow> _)"]
   trace_run[OF analysis_result.simps(3)[of as r k p],
     of "\<lambda>_. mcp_trace_printers as p Context_Call_String seed_of_call_string_gk"]
   for as r k p
