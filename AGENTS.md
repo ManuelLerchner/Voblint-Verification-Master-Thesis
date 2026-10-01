@@ -446,6 +446,9 @@ A thesis change intended to render in the document is not done until
 
 `pages/index.html` is a valuable exposition prototype, not a formal source.
 
+When editing its prose, follow `docs/SITE_VOICE.md` as well as the claim rules
+here.
+
 Its strongest explanatory structures should inform the thesis where useful:
 
 - source, graph, and trace as three views of one execution;
