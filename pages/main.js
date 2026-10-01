@@ -25,6 +25,7 @@ import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
 import { createSolveReplay } from "./replay.js";
+import { createTraceView } from "./trace-view.js";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -114,10 +115,6 @@ const solverGlobalsList = query("#solver-globals-list");
 
 const solverTrace = query("#solver-trace");
 const solverTraceCount = query("#solver-trace-count");
-const solverTraceText = query("#solver-trace-text");
-const solverTraceCut = query("#solver-trace-cut");
-const solverTraceCutLabel = query("#solver-trace-cut-label");
-const solverTraceAll = query("#solver-trace-all");
 const solverTraceDownload = query("#solver-trace-download");
 const solverTraceDownloadJsonl = query("#solver-trace-download-jsonl");
 const solverTraceDownloadJsonlLabel = query("#solver-trace-download-jsonl-label");
@@ -1835,14 +1832,6 @@ function showSolverGlobals(seeds) {
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
-/*
- * A full trace, or a recursive program under a deep call string, can run to tens of
- * thousands of lines, and laying all of them out at once stalls the page. The panel
- * first lays out only the head; the whole trace is still computed and kept, and
- * "Show all" and the download buttons give all of it.
- */
-const TRACE_PREVIEW_LINES = 400;
-
 const TRACE_MODES = new Set(["compact", "verbose"]);
 
 /*
@@ -1867,43 +1856,14 @@ function solveAgain(configuration, source) {
   return answer;
 }
 
+/* Only the lines on screen are laid out, so even a trace of tens of thousands of lines shows whole. */
+const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "Solver trace" });
+
 /* The finished run the panel offers, the trace shown for it, and the one being loaded. */
 let solverTraceOffered = null;
 let solverTraceContent = "";
 let solverTraceRun = null;
 let solverTraceLoading = null;
-
-/* The offset just past the first [lines] lines of [text], or its length. */
-function lineBoundary(text, lines) {
-  let offset = 0;
-
-  for (let line = 0; line < lines; line++) {
-    offset = text.indexOf("\n", offset) + 1;
-
-    if (offset === 0) {
-      return text.length;
-    }
-  }
-
-  return offset;
-}
-
-function showSolverTraceHead() {
-  const { lines } = solverTraceRun;
-  const shown = Math.min(TRACE_PREVIEW_LINES, lines);
-
-  solverTraceText.textContent = solverTraceContent.slice(
-    0,
-    lineBoundary(solverTraceContent, shown),
-  );
-  solverTraceCut.hidden = shown >= lines;
-  solverTraceCutLabel.textContent = `Showing the first ${shown} of ${lines} lines.`;
-}
-
-function showSolverTraceAll() {
-  solverTraceText.textContent = solverTraceContent;
-  solverTraceCut.hidden = true;
-}
 
 function countLines(text) {
   let lines = text.endsWith("\n") ? 0 : 1;
@@ -1921,8 +1881,7 @@ function offerSolverTrace(run) {
   solverTraceContent = "";
   solverTraceRun = null;
   solverTraceLoading = null;
-  solverTraceText.textContent = "";
-  solverTraceCut.hidden = true;
+  solverTraceView.setText("");
   solverTrace.hidden = run === null;
   solverTraceCount.textContent = run ? "open to load" : "";
   loadSolverTrace();
@@ -1962,15 +1921,14 @@ async function loadSolverTrace() {
     solverTraceContent = answer.trace;
     solverTraceRun = { ...request, lines: countLines(answer.trace) };
     solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${mode === "verbose" ? "full" : "compact"}`;
-    showSolverTraceHead();
+    solverTraceView.setText(answer.trace);
   } catch (error) {
     if (solverTraceLoading === request) {
       const message = error instanceof Error ? error.message : String(error);
 
       solverTraceRun = null;
       solverTraceContent = "";
-      solverTraceText.textContent = `The trace could not be produced: ${message}`;
-      solverTraceCut.hidden = true;
+      solverTraceView.setText(`The trace could not be produced: ${message}`);
       solverTraceCount.textContent = "";
     }
   } finally {
@@ -2699,19 +2657,21 @@ function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
 }
 
 /*
- * A route is stored relative to its endpoints' centers, so dragging an endpoint
- * recomputes it from the layout's absolute bend points. An edge that cannot keep its
- * route falls back to the plain taxi style.
+ * A route is stored relative to its endpoints' centers, so dragging a node recomputes
+ * its edges' routes from the layout's absolute bend points. A route between boxes runs
+ * through the boxes' ports and channels, which a moved box leaves behind, so an edge
+ * leaving a dragged box falls back to the plain taxi style instead.
  */
 function followRoutesOnDrag(view) {
   view.on("drag", "node", (event) => {
-    const moved = event.target.isParent() ? event.target.descendants() : event.target;
+    const box = event.target.isParent();
+    const moved = box ? event.target.descendants() : event.target;
 
     moved
-      .connectedEdges(".routed")
+      .connectedEdges(".routed, .placed-label")
       .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
       .forEach((edge) => {
-        const route = edge.scratch("route");
+        const route = !box && edge.scratch("route");
         const source = edge.source().position();
         const target = edge.target().position();
         const style = route && segmentStyle(stretchedRoute(route, source, target), source, target);
@@ -3909,7 +3869,6 @@ for (const control of [
 traceSelect.addEventListener("change", loadSolverTrace);
 solverTrace.addEventListener("toggle", loadSolverTrace);
 
-solverTraceAll.addEventListener("click", showSolverTraceAll);
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
 solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);
 

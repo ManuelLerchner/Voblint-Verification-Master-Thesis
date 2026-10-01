@@ -13,21 +13,13 @@
  * the page.
  */
 
-import {
-  contextLabel,
-  createCache,
-  globalKey,
-  localKey,
-  parseEvents,
-  stepBlock,
-} from "./replay_state.js";
+import { contextLabel, createCache, globalKey, localKey, parseEvents } from "./replay_state.js";
+import { createTraceView } from "./trace-view.js";
 
 /* Replay states kept for jumps: stepping back or dragging the slider replays at most this many events. */
 const SNAPSHOT_EVERY = 256;
 /* Characters of a value shown inside a node; the node itself sizes for this many. */
 const VALUE_CHARS = 30;
-/* Trace lines kept around the current step in the text pane. */
-const TRACE_WINDOW = 60;
 
 const UNREACHED = "not reached";
 
@@ -69,23 +61,28 @@ export function createSolveReplay(deps) {
   const body = query("#solve-replay-body");
   const graph = query("#solve-replay-graph");
   const globalsList = query("#solve-replay-globals");
-  const tracePane = query("#solve-replay-trace");
+  /* Clicking a line goes to the step whose block it belongs to. */
+  const trace = createTraceView(query("#solve-replay-trace"), {
+    label: "Trace of the solve. Click a line to go to its step.",
+    onLine: (line) => {
+      if (replay) {
+        stop();
+        go(stepOfLine(line));
+      }
+    },
+  });
   const detail = query("#solve-replay-detail");
   const stackList = query("#solve-replay-stack");
-  const routesPanel = query("#solve-replay-routes-panel");
   const routesList = query("#solve-replay-routes");
-  const countersPanel = query("#solve-replay-counters-panel");
   const countersBody = query("#solve-replay-counters");
-  /* Values, the active unknown, the stack and the current query edge are always drawn;
-     everything else is an overlay the reader turns on. */
+  /* Values, the active unknown, the stack, the current query edge and the cards under
+     the graph are always drawn; what else the graph shows is an overlay the reader
+     turns on. */
   const overlays = {
     infl: false,
     stable: false,
     wpoints: false,
     destab: false,
-    globals: false,
-    routes: false,
-    counters: false,
   };
 
   for (const toggle of document.querySelectorAll("[data-replay-overlay]")) {
@@ -143,7 +140,7 @@ export function createSolveReplay(deps) {
     cy = null;
     graph.replaceChildren();
     globalsList.replaceChildren();
-    tracePane.replaceChildren();
+    trace.setText("");
     detail.textContent = "";
     body.hidden = true;
     panel.open = false;
@@ -181,17 +178,30 @@ export function createSolveReplay(deps) {
 
       const records = parseEvents(answer.trace);
 
-      return { answer, events: records.filter((record) => Number.isInteger(record.step)) };
+      /* The verbose text the steps' lines point into: the trace panel's full form. */
+      const verbose = JSON.parse(
+        await deps.solve({ ...run.configuration, trace: "verbose" }, run.source),
+      );
+
+      if (typeof verbose.trace !== "string" || verbose.status !== "ok") {
+        throw new Error(verbose.message ?? "the analyzer returned no trace");
+      }
+
+      return {
+        answer,
+        events: records.filter((record) => Number.isInteger(record.step)),
+        text: verbose.trace,
+      };
     })();
 
     try {
-      const { answer, events } = await loading;
+      const { answer, events, text } = await loading;
 
       if (offered !== run) {
         return;
       }
 
-      await build(answer, events);
+      await build(answer, events, text);
       setMessage("");
       count.textContent = `${events.length} steps`;
     } catch (error) {
@@ -211,7 +221,7 @@ export function createSolveReplay(deps) {
     }
   }
 
-  async function build(answer, events) {
+  async function build(answer, events, text) {
     const nodeOf = new Map();
     const keyOf = new Map();
     const pointOf = new Map();
@@ -233,7 +243,6 @@ export function createSolveReplay(deps) {
     };
 
     const cache = createCache(events, SNAPSHOT_EVERY);
-    const blocks = events.map((event, index) => stepBlock(event, index, cache.stateAt(index + 1)));
 
     const { cytoscape, elk } = await deps.getGraphLibraries();
     const elements = deps.graphElements(answer).map((element) => {
@@ -298,7 +307,7 @@ export function createSolveReplay(deps) {
 
     replay = {
       events,
-      blocks,
+      lines: events.map((event) => event.line),
       cache,
       nodeOf,
       keyOf,
@@ -307,6 +316,8 @@ export function createSolveReplay(deps) {
       edgesBetween,
       step: 0,
     };
+
+    trace.setText(text);
 
     slider.max = String(events.length);
     render();
@@ -535,20 +546,18 @@ export function createSolveReplay(deps) {
       text.textContent = g.value;
       row.append(name, text);
 
-      if (overlays.globals) {
-        const detailText = document.createElement("span");
+      const detailText = document.createElement("span");
 
-        detailText.className = "replay-global-detail";
-        detailText.textContent = [
-          g.last ? `last change ${g.last.old} → ${g.last.new}` : "unchanged",
-          `${g.contributions.length} contribution(s)${
-            g.contributions.length > 0
-              ? `, last ${g.contributions.at(-1).value} from ${g.contributions.at(-1).from.slice(2).replace("|", " @ ")}`
-              : ""
-          }`,
-        ].join("; ");
-        row.append(detailText);
-      }
+      detailText.className = "replay-global-detail";
+      detailText.textContent = [
+        g.last ? `last change ${g.last.old} → ${g.last.new}` : "unchanged",
+        `${g.contributions.length} contribution(s)${
+          g.contributions.length > 0
+            ? `, last ${g.contributions.at(-1).value} from ${g.contributions.at(-1).from.slice(2).replace("|", " @ ")}`
+            : ""
+        }`,
+      ].join("; ");
+      row.append(detailText);
 
       return row;
     });
@@ -564,38 +573,39 @@ export function createSolveReplay(deps) {
     globalsList.replaceChildren(...rows);
   }
 
+  /* The verbose text is set once per load; a step only moves the current line. */
   function renderTrace(step) {
-    const { events, blocks } = replay;
-    const from = Math.max(0, step - 1 - TRACE_WINDOW);
-    const to = Math.min(events.length, step + TRACE_WINDOW);
-    const lines = [];
-    let current = null;
+    trace.show(step === 0 ? null : replay.lines[step - 1]);
+  }
 
-    for (let index = from; index < to; index++) {
-      const line = document.createElement("button");
+  /* The first step printed on the last event line at or before [line]; 0 above them. */
+  function stepOfLine(line) {
+    const { lines } = replay;
+    let low = 0;
+    let high = lines.length;
 
-      line.type = "button";
-      line.className = "replay-line";
-      line.dataset.step = String(index + 1);
-      line.textContent = blocks[index];
+    while (low < high) {
+      const middle = (low + high) >> 1;
 
-      if (index === step - 1) {
-        line.classList.add("is-current");
-        line.setAttribute("aria-current", "step");
-        current = line;
+      if (lines[middle] <= line) {
+        low = middle + 1;
+      } else {
+        high = middle;
       }
-
-      lines.push(line);
     }
 
-    tracePane.replaceChildren(...lines);
-
-    if (current) {
-      tracePane.scrollTop =
-        current.offsetTop - tracePane.clientHeight / 2 + current.clientHeight / 2;
-    } else {
-      tracePane.scrollTop = 0;
+    if (low === 0) {
+      return 0;
     }
+
+    const at = lines[low - 1];
+    let first = low - 1;
+
+    while (first > 0 && lines[first - 1] === at) {
+      first--;
+    }
+
+    return first + 1;
   }
 
   function renderDetail(state) {
@@ -630,16 +640,8 @@ export function createSolveReplay(deps) {
     renderGraph(state, event, finished);
     renderStack(state, finished);
     renderGlobals(state, event);
-    routesPanel.hidden = !overlays.routes;
-    countersPanel.hidden = !overlays.counters;
-
-    if (overlays.routes) {
-      renderRoutes(state);
-    }
-
-    if (overlays.counters) {
-      counterRows(state);
-    }
+    renderRoutes(state);
+    counterRows(state);
 
     renderTrace(step);
     renderDetail(state);
@@ -718,15 +720,6 @@ export function createSolveReplay(deps) {
   buttons.end.addEventListener("click", () => go(replay.events.length));
   buttons.play.addEventListener("click", play);
   slider.addEventListener("input", () => go(Number(slider.value)));
-
-  tracePane.addEventListener("click", (event) => {
-    const line = event.target.closest(".replay-line");
-
-    if (line) {
-      stop();
-      go(Number(line.dataset.step));
-    }
-  });
 
   /* Arrow keys step, space plays, Home and End jump, anywhere in the panel but the slider. */
   body.addEventListener("keydown", (event) => {

@@ -472,12 +472,7 @@
             </button>
           </div>
 
-          <pre id="solver-trace-text" class="solver-trace-text"></pre>
-
-          <p id="solver-trace-cut" class="solver-globals-note" hidden>
-            <span id="solver-trace-cut-label"></span>
-            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
-          </p>
+          <div id="solver-trace-text" class="trace-view solver-trace-view"></div>
         </details>
 
         <details id="solve-replay" class="solver-globals solve-replay" hidden>
@@ -543,9 +538,6 @@
               <label><input type="checkbox" data-replay-overlay="stable"> stable set</label>
               <label><input type="checkbox" data-replay-overlay="destab"> destabilization cascade</label>
               <label><input type="checkbox" data-replay-overlay="wpoints"> widening points</label>
-              <label><input type="checkbox" data-replay-overlay="globals"> side effects on globals</label>
-              <label><input type="checkbox" data-replay-overlay="routes"> routes</label>
-              <label><input type="checkbox" data-replay-overlay="counters"> counters</label>
             </fieldset>
 
             <div class="replay-layout">
@@ -555,29 +547,32 @@
                 tabindex="0"
                 aria-label="Control-flow graph at the current solver step. Left and right arrows step."
               ></div>
+              <div id="solve-replay-trace" class="trace-view replay-trace-view"></div>
+            </div>
 
-              <div class="replay-side">
-                <h3 class="eyebrow">Trace</h3>
-                <div id="solve-replay-trace" class="replay-trace" tabindex="0" aria-label="Trace around the current step. Click a line to go to its step."></div>
-                <p id="solve-replay-detail" class="solver-globals-note replay-detail replay-scroll"></p>
+            <div class="replay-below">
+              <section class="replay-card">
                 <h3 class="eyebrow">Solve stack</h3>
+                <p id="solve-replay-detail" class="solver-globals-note replay-detail"></p>
                 <ol id="solve-replay-stack" class="replay-stack replay-scroll" aria-label="Open queries, innermost first"></ol>
+              </section>
+              <section class="replay-card">
                 <h3 class="eyebrow">Global unknowns</h3>
                 <ul id="solve-replay-globals" class="solver-globals-list replay-scroll"></ul>
-                <div id="solve-replay-routes-panel" hidden>
-                  <h3 class="eyebrow">Routes</h3>
-                  <ul id="solve-replay-routes" class="replay-routes replay-scroll"></ul>
+              </section>
+              <section class="replay-card">
+                <h3 class="eyebrow">Routes</h3>
+                <ul id="solve-replay-routes" class="replay-routes replay-scroll"></ul>
+              </section>
+              <section class="replay-card">
+                <h3 class="eyebrow">Counters</h3>
+                <div class="replay-scroll">
+                  <table class="replay-counters">
+                    <thead><tr><th>unknown</th><th>evaluations</th><th>updates</th><th>destabilizations</th></tr></thead>
+                    <tbody id="solve-replay-counters"></tbody>
+                  </table>
                 </div>
-                <div id="solve-replay-counters-panel" hidden>
-                  <h3 class="eyebrow">Counters</h3>
-                  <div class="replay-scroll replay-counters-scroll">
-                    <table class="replay-counters">
-                      <thead><tr><th>unknown</th><th>evaluations</th><th>updates</th><th>destabilizations</th></tr></thead>
-                      <tbody id="solve-replay-counters"></tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+              </section>
             </div>
           </div>
         </details>

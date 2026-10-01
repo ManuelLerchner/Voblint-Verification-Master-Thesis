@@ -1605,19 +1605,6 @@ button.solver-global-key:hover {
 }
 
 /* Scrolls inside the panel: a long trace must not stretch the page. */
-.solver-trace-text {
-  max-height: min(560px, 60vh);
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  overflow: auto;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: 0.74rem / 1.5 var(--mono);
-  white-space: pre;
-}
-
 .solver-trace-all {
   padding: 0;
   color: var(--primary);
@@ -1748,63 +1735,77 @@ button.solver-global-key:hover {
   border-radius: 0;
 }
 
+/* The graph and the trace beside it share the row's height. */
 .replay-layout {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(260px, 380px);
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  height: clamp(380px, 64vh, 760px);
   gap: 12px;
 }
 
-.replay-graph {
-  height: clamp(380px, 64vh, 760px);
+.replay-layout > .replay-graph,
+.replay-layout > .replay-trace-view {
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .replay-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: clamp(380px, 64vh, 760px) 360px;
+    height: auto;
+  }
 }
 
 /*
- * Every section whose content changes from step to step has a fixed height and
- * scrolls, so stepping never moves the controls or the trace. Only toggling an
- * overlay changes the layout.
+ * Under the graph and the trace: one card per view. Every view that changes from
+ * step to step has a fixed height and scrolls, so stepping never moves the player,
+ * the graph or the trace.
  */
-.replay-side {
+.replay-below {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  gap: 14px 20px;
+  margin-top: 14px;
+}
+
+.replay-card {
   display: flex;
   flex-direction: column;
   min-width: 0;
   gap: 6px;
 }
 
-.replay-side > * {
-  flex: none;
+.replay-card[hidden] {
+  display: none;
+}
+
+.replay-card h3 {
+  margin: 0;
 }
 
 .replay-scroll {
-  overflow-y: auto;
+  height: 11em;
+  overflow: auto;
   overscroll-behavior: contain;
 }
 
-.replay-detail.replay-scroll {
-  height: 4.4em;
-}
-
 .replay-stack.replay-scroll {
-  height: 7.5em;
+  height: 8.6em;
+  margin: 0;
   padding-left: 2.6em;
 }
 
 #solve-replay-globals.replay-scroll {
-  height: 7.5em;
   margin: 0;
-}
-
-.replay-routes.replay-scroll,
-.replay-counters-scroll {
-  height: 7.5em;
-}
-
-.replay-side h3 {
-  margin: 8px 0 0;
 }
 
 .replay-detail {
+  height: 2.6em;
   margin: 0;
+  overflow: hidden;
   font-family: var(--mono);
+  text-overflow: ellipsis;
   overflow-wrap: anywhere;
 }
 
@@ -1813,42 +1814,121 @@ button.solver-global-key:hover {
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-/* Positioned, so a line's offsetTop measures from the pane when it scrolls to the current step. */
-.replay-trace {
-  position: relative;
-  height: 280px;
-  overflow: auto;
+/* ------------------------------------------------------------- trace view */
+
+.trace-view {
+  overflow: hidden;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: 6px;
 }
 
-.replay-line {
-  display: block;
-  width: 100%;
-  padding: 1px 10px;
-  color: var(--text);
-  background: none;
-  border: 0;
-  font: 0.72rem / 1.45 var(--mono);
-  text-align: left;
-  white-space: pre;
-  cursor: pointer;
+.trace-view .cm-editor {
+  height: 100%;
+  font: 0.74rem / 1.5 var(--mono);
 }
 
-.replay-line:hover {
-  background: var(--surface-hover);
+.trace-view .cm-scroller {
+  overflow: auto;
+  font-family: var(--mono);
 }
 
-.replay-line.is-current {
+.trace-view .cm-gutters {
+  background: var(--surface-muted);
+  border-right: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+.solver-trace-view {
+  height: min(560px, 60vh);
+  margin: 10px 0 0;
+}
+
+.trace-view .tr-current {
   background: var(--accent-soft);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
-@media (max-width: 860px) {
-  .replay-layout {
-    grid-template-columns: minmax(0, 1fr);
-  }
+/* A call opens a banner; the trace itself is unchanged. */
+.trace-view .tr-banner {
+  margin: 6px 0 2px;
+  padding: 1px 8px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary);
+  font-weight: 700;
+}
+
+.trace-view .tr-side-gutter .cm-gutterElement {
+  padding: 0 4px;
+}
+
+.tr-side-mark {
+  color: var(--warning);
+}
+
+.tr-query {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.tr-update {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tr-widen {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tr-stable {
+  color: var(--text-faint);
+}
+
+.tr-side {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.tr-route,
+.tr-check {
+  color: var(--tok-keyword);
+  font-weight: 700;
+}
+
+.tr-unknown {
+  color: var(--tok-name);
+}
+
+.tr-value {
+  color: var(--tok-number);
+}
+
+.tr-key,
+.tr-step {
+  color: var(--text-muted);
+}
+
+/* An old/new pair marks the components that differ, like a diff. */
+.tr-removed {
+  background: var(--danger-soft);
+  border-radius: 2px;
+}
+
+.tr-added {
+  background: var(--success-soft);
+  border-radius: 2px;
+}
+
+.tr-proved {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tr-failed {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .analysis-graph-header {
