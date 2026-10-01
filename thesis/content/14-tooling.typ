@@ -201,8 +201,8 @@ equations; it says nothing about how the solver reached it. For explaining a
 run and for debugging an analysis, the order of the steps matters: which
 unknown is queried when, which update destabilizes whom, where widening sets
 in. @tab:eq-trace shows such a sequence for the calls of `bump` in
-@ch:equations, including the first pass through a callee whose seed is still
-$lbot$.
+@ch:equations, where each call publishes its entry state to the callee's seed
+before the callee is read.
 
 *Tracing inside the export.* The executable solver reports its steps through
 one constant, #isaconst("trace_event"), which takes a channel name and a
@@ -228,10 +228,13 @@ evaluations of a right-hand side, updates with their widening, side effects,
 influences and destabilizations. A few have no counterpart there, among them
 the value a right-hand side returns and the start and end of a solve. The
 verbose output prints them in Goblint's tracing format, indented by query
-depth; the CLI documentation maps each line to its Goblint counterpart.
+depth; the CLI documentation maps each line to its Goblint counterpart. As in
+Goblint, a query names the unknown that asks it, and a program point carries
+its statement and source line.
 
-*Replay.* The playground folds the run's events, as JSON Lines, through one
-reducer into the state at every step: node values, the stack of open queries,
+*Replay.* The playground records the trace in the same solve that computes the
+result shown. It folds the run's events, as JSON Lines, through one reducer
+into the state at every step: node values, the stack of open queries,
 the stable set, influences, widening points and the seeds. It draws that state
 on the graph beside the verbose trace, and each step names the trace line it
 comes from. @fig:replay-still shows one step; @fig:eq-walk is drawn from the
