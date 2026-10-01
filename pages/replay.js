@@ -44,15 +44,18 @@ function globalName(key) {
   return `enter ${procedure} @ ${context}`;
 }
 
-/* One analysis's value loses its "interval: " prefix; a product keeps every label. */
+/* A node's value in one line: what it says beyond ⊤, cut to the node's width. */
 function shortValue(value) {
-  const bare = value.includes("; ") ? value : value.replace(/^[^:;=]+: /, "");
+  const said = compactValue(value);
 
-  return bare.length > VALUE_CHARS ? `${bare.slice(0, VALUE_CHARS - 1)}…` : bare;
+  return said.length > VALUE_CHARS ? `${said.slice(0, VALUE_CHARS - 1)}…` : said;
 }
 
-/* A seed's value in one line, without its ⊤ components or analysis names. */
-function seedValue(value) {
+/*
+ * A value in one line without its ⊤ components or analysis names: only what it says.
+ * A value that says nothing beyond ⊤ is ⊤.
+ */
+function compactValue(value) {
   if (value === "⊥") {
     return "⊥";
   }
@@ -454,7 +457,7 @@ export function createSolveReplay(deps) {
           .filter(Boolean)
           .join(" ");
 
-        const label = g ? seedValue(g.value) : "";
+        const label = g ? compactValue(g.value) : "";
         const last = drawn.get(node.id());
 
         if (last?.classes !== classes || last?.label !== label) {
