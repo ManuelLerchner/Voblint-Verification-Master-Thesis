@@ -279,10 +279,12 @@ The playground offers the same traces. `cli/entry/voblint_web.ml` takes a
 seventh argument, `trace`, naming the form as the flags do: `"compact"`,
 `"verbose"` or `"jsonl"` add a `trace` field holding the text
 `Solver_trace.emit` writes in that form, and `"off"` leaves the answer as it
-was before the tracer existed. The page runs every analysis in `"verbose"`
-mode and shows the text in the **run_voblint: call and answer** panel beside the call's input
-and output; its JSON Lines download solves the shown run again in `"jsonl"`
-mode. Share links carry `trace=verbose` to open that panel; older forms still
+was before the tracer existed. `"all"` adds the verbose text as `trace` and
+JSON Lines as `trace_jsonl`, both rendered from the one recording. The page
+runs every analysis in `"all"` mode, so each run is solved once: the
+**run_voblint: call and answer** panel shows the text beside the call's input
+and output, its downloads save either form, and the solve replay folds the
+JSON Lines. Share links carry `trace=verbose` to open that panel; older forms still
 open it. The browser module outlives a run, so the adapter sets the hook's
 switch on every call and `Solver_trace_hook.recorded` empties the event list it
 hands over.
@@ -298,8 +300,8 @@ states grow with the run, and so do the lines that print them. Later events are
 counted, not kept, so a run that never finishes stops growing its trace, and a
 finished run's text ends with `Trace truncated` instead of `Trace complete`. The listener runs inside
 the hook's `try`, and the hook still returns `()`. The CLI sets neither.
-The page's **Solve replay** section, when opened, solves the shown run again in
-`"jsonl"` mode and steps through the events on its own drawing of the graph
+The page's **Solve replay** section, when opened, steps through the run's
+`trace_jsonl` events on its own drawing of the graph
 (`pages/replay.js`). Every state it shows comes from one reducer,
 `reduce(state, event)` in `pages/replay_state.js` (pure, no DOM): the animation,
 the per-step text and the snapshot cache all fold events through it. The

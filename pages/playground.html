@@ -299,6 +299,7 @@
         <details id="raw-result" class="raw-result">
           <summary>
             <span class="eyebrow">run_voblint: call and answer</span>
+            <span class="panel-lead">What the Isabelle-generated analyzer received and returned, and the trace it recorded.</span>
             <code id="raw-result-call" class="raw-call"></code>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
@@ -358,7 +359,7 @@
                   </button>
                   <button id="solver-trace-download-jsonl" type="button" title="Download the trace as JSON Lines (.jsonl)" aria-label="Download the trace as JSON Lines">
                     <i class="fa-solid fa-download" aria-hidden="true"></i>
-                    <span id="solver-trace-download-jsonl-label">.jsonl</span>
+                    .jsonl
                   </button>
                 </span>
               </div>
@@ -406,6 +407,7 @@
         >
           <summary>
             <h2 id="analysis-graph-heading" class="eyebrow">Control-flow graph</h2>
+            <span class="panel-lead">One node per program point and context; hover a node to see its state.</span>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
               <span class="expand-hint-open">Click to collapse</span>
@@ -466,6 +468,7 @@
         <details id="solve-replay" class="solver-globals solve-replay" hidden>
           <summary>
             <span class="eyebrow">Solve replay</span>
+            <span class="panel-lead">Step through the solve on the graph, one solver event at a time.</span>
             <span id="solve-replay-count" class="solver-globals-count"></span>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
@@ -484,8 +487,8 @@
           </p>
 
           <p class="solver-globals-note">
-            The run is solved again with its JSON Lines trace, and one reducer folds those
-            events into every state shown here: an unverified visualization of the trace.
+            The run's own JSON Lines trace, recorded in the same solve as the result, is folded
+            by one reducer into every state shown here: an unverified visualization of the trace.
           </p>
 
           <p id="solve-replay-message" class="solver-globals-note" hidden></p>
@@ -680,7 +683,7 @@
             <div><dt><span class="replay-swatch r-seed"></span></dt><dd>A seed, filled once a call published into it; green when this step changed it.</dd></div>
           </dl>
           <figcaption>
-            The replay solves the run again and steps through the solver's events.
+            The replay steps through the events the run's solve recorded.
           </figcaption>
         </figure>
       </div>

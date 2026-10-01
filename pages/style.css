@@ -919,7 +919,8 @@ main {
   display: none;
 }
 
-.inspector-message {
+.inspector-message,
+.panel-lead {
   color: var(--text-muted);
   font-size: 0.8rem;
 }

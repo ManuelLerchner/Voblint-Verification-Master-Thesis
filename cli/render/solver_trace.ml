@@ -700,10 +700,13 @@ let live_verbose ~out ?source ~analyses ~context ~globals ~program () =
    for the browser, which returns the text with the result. [systems] limits
    the verbose form to those subsystems; empty selects all. [source], the
    program text and its statement positions, names statement points after
-   their source in the text forms. *)
-let emit ~out ~format ~verbose:is_verbose ?(systems = []) ?source ~analyses
-    ~context ~globals ~program result =
-  let recorded, dropped = H.recorded () in
+   their source in the text forms. [recorded] renders events already taken
+   from the hook, so one run can be written in several forms. *)
+let emit ~out ~format ~verbose:is_verbose ?(systems = []) ?source ?recorded
+    ~analyses ~context ~globals ~program result =
+  let recorded, dropped =
+    match recorded with Some r -> r | None -> H.recorded ()
+  in
   let printers, events = read_back recorded in
   let pr fmt = Printf.ksprintf out fmt in
   match printers with

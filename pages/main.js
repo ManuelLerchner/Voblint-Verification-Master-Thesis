@@ -113,7 +113,6 @@ const solverTrace = query("#solver-trace");
 const solverTraceCount = query("#solver-trace-count");
 const solverTraceDownload = query("#solver-trace-download");
 const solverTraceDownloadJsonl = query("#solver-trace-download-jsonl");
-const solverTraceDownloadJsonlLabel = query("#solver-trace-download-jsonl-label");
 
 const rawResult = query("#raw-result");
 const rawResultEmpty = query("#raw-result-empty");
@@ -415,7 +414,8 @@ function renderRawCall(raw) {
         callPart("p", "program"),
       ]
     : [callPart("as rule ctx p", "arg")];
-  let result = [callPart("?", "arg")];
+  /* Before any run the title asks for one. */
+  let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
   if (raw?.cancelled) {
     result = [callPart("cancelled", "observed")];
@@ -1331,7 +1331,11 @@ function showAnalysisView(result, configuration, source) {
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
-  offerSolverTrace(analysisModel ? { configuration, source, trace: result.trace } : null);
+  offerSolverTrace(
+    analysisModel
+      ? { configuration, source, trace: result.trace, jsonl: result.trace_jsonl }
+      : null,
+  );
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1845,28 +1849,6 @@ function scrollEditorTo(pos) {
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
-/*
- * A run never traces. The text trace, the JSON Lines download and the replay each
- * solve the shown run again with the trace they need, one at a time; the solver is
- * deterministic, so every view shows the steps of the run on screen. A request
- * queued behind a run that a new run or a changed setting retired is dropped.
- */
-let solveAgainQueue = Promise.resolve();
-
-function solveAgain(configuration, source) {
-  const generation = analysisRunGeneration;
-  const answer = solveAgainQueue.then(() => {
-    if (generation !== analysisRunGeneration) {
-      throw new Error("A new run started.");
-    }
-
-    return runAnalysisInWorker(configuration, source);
-  });
-
-  solveAgainQueue = answer.catch(() => {});
-  return answer;
-}
-
 /* Only the lines on screen are laid out, so even a trace of tens of thousands of lines shows whole. */
 const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "Solver trace" });
 
@@ -1950,53 +1932,21 @@ function downloadSolverTrace() {
   }
 }
 
-/* The offered run solved again with its JSON Lines trace. */
-async function downloadSolverTraceJsonl() {
-  const shown = solverTraceOffered;
-
-  /* A cancelled run would only be solved again until cancelled again. */
-  if (!shown || shown.cancelled || solverTraceDownloadJsonl.disabled) {
-    return;
-  }
-
-  const idle = solverTraceDownloadJsonlLabel.textContent;
-
-  solverTraceDownloadJsonl.disabled = true;
-  solverTraceDownloadJsonlLabel.textContent = "preparing…";
-
-  try {
-    const answer = JSON.parse(
-      await solveAgain({ ...shown.configuration, trace: "jsonl" }, shown.source),
+/* The JSON Lines form of the same recording the trace pane shows. */
+function downloadSolverTraceJsonl() {
+  if (solverTraceOffered?.jsonl) {
+    downloadBlob(
+      new Blob([solverTraceOffered.jsonl], { type: "application/jsonl" }),
+      `voblint-trace-${settingsSlug()}.jsonl`,
     );
-
-    if (typeof answer.trace !== "string") {
-      throw new Error(answer.message ?? "the analyzer returned no trace");
-    }
-
-    if (solverTraceOffered === shown) {
-      downloadBlob(
-        new Blob([answer.trace], { type: "application/jsonl" }),
-        `voblint-trace-${settingsSlug()}.jsonl`,
-      );
-    }
-  } catch (error) {
-    if (solverTraceOffered === shown) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      showStatus(`The JSON Lines trace could not be produced: ${message}`, "error");
-    }
-  } finally {
-    solverTraceDownloadJsonl.disabled = false;
-    solverTraceDownloadJsonlLabel.textContent = idle;
   }
 }
 
 /*
  * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
- * its graph, from a run solved again with its traces.
+ * its graph, from the traces the run recorded.
  */
 const solveReplay = createSolveReplay({
-  solve: solveAgain,
   getGraphLibraries,
   graphElements,
   nodeBox,
@@ -3833,10 +3783,14 @@ async function run() {
   let result = null;
 
   try {
-    /* The hook records the trace during this run; it changes nothing in the answer. */
+    /*
+     * The hook records the trace during this run, the only solve: the answer carries it
+     * as text and as JSON Lines, for the trace pane, its downloads and the replay. It
+     * changes nothing else in the answer.
+     */
     liveTrace = { configuration, source, chunks: [], input: null };
     const live = liveTrace;
-    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "verbose" }, source, {
+    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "all" }, source, {
       onChunk: (text) => live.chunks.push(text),
       onInput: (text) => {
         live.input = JSON.parse(text);
@@ -3877,7 +3831,7 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
         showDiagnosticsSummary(result);
-        solveReplay.offer({ configuration, source });
+        solveReplay.offer({ configuration, source, answer: result });
       }
     } else {
       /*

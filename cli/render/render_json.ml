@@ -695,8 +695,8 @@ let seeds_json program result (graph : G.t) =
   ^ "]"
 
 (* [trace] is the solver trace's text, present only when the run asked for it. *)
-let result_json ?trace analysis_ms program ~stmt_positions ~header_positions
-    ~raw result =
+let result_json ?trace ?trace_jsonl analysis_ms program ~stmt_positions
+    ~header_positions ~raw result =
   let checks =
     positioned_checks (C.res_checks result)
     |> List.map (check_json result)
@@ -717,6 +717,10 @@ let result_json ?trace analysis_ms program ~stmt_positions ~header_positions
     (nodes_json result graph (context_key contexts stmt_positions))
     (seeds_json program result graph)
     raw (graph_json graph)
-    (match trace with
-    | Some text -> ",\"trace\":" ^ json_string text
+    ((match trace with
+       | Some text -> ",\"trace\":" ^ json_string text
+       | None -> "")
+    ^
+    match trace_jsonl with
+    | Some text -> ",\"trace_jsonl\":" ^ json_string text
     | None -> "")

@@ -131,17 +131,21 @@ let domains_of_string int_analysis names =
     (if names = "" then [] else String.split_on_char ',' names)
     (Ok [])
 
-(* None is tracing off; otherwise the format and whether text is verbose. *)
+(* None is tracing off; otherwise the format and whether text is verbose.
+   "all" is the verbose text plus JSON Lines of the same recording, for a page
+   that shows the one and replays the other without solving again. *)
 let trace_of_string = function
   | "off" -> Ok None
   | "compact" -> Ok (Some (Solver_trace.Text, false))
-  | "verbose" -> Ok (Some (Solver_trace.Text, true))
+  | "verbose" | "all" -> Ok (Some (Solver_trace.Text, true))
   | "jsonl" -> Ok (Some (Solver_trace.Jsonl, false))
   | mode -> Error ("Unknown trace mode: " ^ mode)
 
-let trace_text (format, verbose) ~source ~domains ~globals ~context result =
+let trace_text ?recorded (format, verbose) ~source ~domains ~globals ~context
+    result =
   let buffer = Buffer.create 4096 in
   Solver_trace.emit ~out:(Buffer.add_string buffer) ~format ~verbose ~source
+    ?recorded
     ~analyses:(List.map Result_text.analysis_label domains)
     ~context:(Solver_trace.context_name context)
     ~globals ~program:"browser.vimp" result;
@@ -227,6 +231,7 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
   let source = Js.to_string source_js in
 
   let trace = trace_of_string (Js.to_string trace_js) in
+  let with_jsonl = Js.to_string trace_js = "all" in
 
   (* Set on every call: the worker keeps this module alive between runs. *)
   Solver_trace_hook.enabled :=
@@ -286,15 +291,18 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
                   in
                   Render_json.error_json ~raw message
               | C.Analysed result ->
-                  let trace =
-                    Option.map
-                      (fun form ->
-                        trace_text form ~source:(source, stmt_positions)
-                          ~domains ~globals:globals_name ~context result)
-                      trace
+                  let recorded = Solver_trace_hook.recorded () in
+                  let render form =
+                    trace_text ~recorded form ~source:(source, stmt_positions)
+                      ~domains ~globals:globals_name ~context result
                   in
-                  Render_json.result_json ?trace analysis_ms program
-                    ~stmt_positions ~header_positions ~raw result
+                  let trace = Option.map render trace in
+                  let trace_jsonl =
+                    if with_jsonl then Some (render (Solver_trace.Jsonl, false))
+                    else None
+                  in
+                  Render_json.result_json ?trace ?trace_jsonl analysis_ms
+                    program ~stmt_positions ~header_positions ~raw result
             with Vimp_frontend.Parse_error { line; col; msg; _ } ->
               Render_json.parse_error_json ~line ~column:col msg))
   in
