@@ -556,9 +556,10 @@ main {
   font-family: inherit;
 }
 
+/* The editor fits its program: a short example gets a short editor, a long one grows up to the cap and scrolls. */
 #program-editor .cm-editor,
 #program-editor .cm-scroller {
-  min-height: 560px;
+  min-height: 240px;
 }
 
 /*
@@ -566,7 +567,7 @@ main {
  * so the page does not jump, and CodeMirror's own DOM replaces them.
  */
 #program-editor:empty {
-  min-height: 560px;
+  min-height: 240px;
 }
 
 .code-editor:empty {
