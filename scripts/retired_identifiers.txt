@@ -2297,7 +2297,6 @@ analyse_with_state
 analyse_with_state_default
 analyse_with_state_default_eq
 analyse_with_state_some_iff_with_solver
-analysis_config
 analysis_plan
 cfg_context
 cfg_domain

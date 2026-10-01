@@ -476,18 +476,18 @@ let context_json = function
   | C.Context_Call_String us ->
       tagged "Context_Call_String" [ json_list cfg_node_json us ]
 
-let domain_json d =
-  tagged
-    (match d with
-    | C.Sign_Analysis -> "Sign_Analysis"
-    | C.Interval_Analysis -> "Interval_Analysis"
-    | C.Int_Analysis -> "Int_Analysis"
-    | C.Int_Once_Analysis -> "Int_Once_Analysis"
-    | C.Int_Never_Analysis -> "Int_Never_Analysis"
-    | C.Parity_Analysis -> "Parity_Analysis"
-    | C.Congruence_Analysis -> "Congruence_Analysis"
-    | C.Order_Analysis -> "Order_Analysis")
-    []
+let refine_mode_json = function
+  | C.Refine_Fixpoint -> tagged "Refine_Fixpoint" []
+  | C.Refine_Once -> tagged "Refine_Once" []
+  | C.Refine_Never -> tagged "Refine_Never" []
+
+let domain_json = function
+  | C.Sign_Analysis -> tagged "Sign_Analysis" []
+  | C.Interval_Analysis -> tagged "Interval_Analysis" []
+  | C.Int_Analysis mode -> tagged "Int_Analysis" [ refine_mode_json mode ]
+  | C.Parity_Analysis -> tagged "Parity_Analysis" []
+  | C.Congruence_Analysis -> tagged "Congruence_Analysis" []
+  | C.Order_Analysis -> tagged "Order_Analysis" []
 
 let field_state_json = function
   | C.Field_Store bs ->

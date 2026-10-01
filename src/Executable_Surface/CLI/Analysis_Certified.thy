@@ -41,12 +41,12 @@ fun analysis_result_covers ::
        (mcp_cs_rule.result as k r (declared_global p) p)"
 
 lemma analyse_program_AnalysedE [elim]:
-  assumes "analyse_program as rule ctx p = Analysed res"
+  assumes "analyse_program (Analysis_Config as rule ctx) p = Analysed res"
   obtains "wf_program_compile_input_exec p" and "res = analysis_result as rule ctx p"
   using assms unfolding analyse_program_def by (auto split: if_splits)
 
 lemma run_voblint_AnalysedE [elim]:
-  assumes "run_voblint as rule ctx p = Analysed res"
+  assumes "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
   obtains "wf_program_compile_input_exec p"
     and "res = map_run_result string_of_abstract_value (analysis_result as rule ctx p)"
   using assms unfolding run_voblint_def analyse_program_def by (auto split: if_splits)
@@ -113,7 +113,7 @@ text \<open>
 
 lemma run_voblint_sound_at:
   assumes terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "analysis_result_covers as rule ctx p v s \<and> checks_sound_at res v s
            \<and> diagnostics_sound_at res p v s"
@@ -127,7 +127,7 @@ qed
 
 theorem run_voblint_arithmetic_safe:
   assumes terminates: "config_terminates as rule ctx p"
-    and ans: "run_voblint as rule ctx p = Analysed res"
+    and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and absent: "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
@@ -136,7 +136,7 @@ theorem run_voblint_arithmetic_safe:
 
 corollary run_voblint_arithmetic_intra_safe:
   assumes "config_terminates as rule ctx p"
-    and "run_voblint as rule ctx p = Analysed res"
+    and "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
     and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     and "\<forall>d \<in> set (res_diagnostics res). diagnostic_point d \<noteq> v"
     and "(v, action, w) \<in> intra (prog_cfg p)"
@@ -153,7 +153,7 @@ text \<open>
 \<close>
 
 corollary run_voblint_check_sites:
-  assumes "run_voblint as rule ctx p = Analysed res"
+  assumes "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
   shows "map (\<lambda>chk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
            = check_sites (prog_cfg p)"
 proof -
@@ -180,7 +180,7 @@ theorem run_voblint_certified_source_sound:
   assumes s0: "s0 \<in> cinit_stores \<G>"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
   shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
                  \<and> analysis_result_covers as rule ctx p v s
@@ -214,7 +214,7 @@ theorem run_voblint_check_sound:
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and chk: "next_check residual = Some (l, e)"
       and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
   shows "\<exists>c \<in> set (res_checks res). check_label c = l \<and> check_exp c = e
            \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> (check_point c)
            \<and> check_verdict c \<noteq> Dead
@@ -257,7 +257,7 @@ corollary run_voblint_labelled_check_sound:
                     \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and chk: "next_check residual = Some (l, e)"
       and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
       and distinct: "distinct (map check_label (res_checks res))"
   shows "\<exists>c \<in> set (res_checks res). check_label c = l"
     and "\<forall>c \<in> set (res_checks res). check_label c = l \<longrightarrow>
@@ -301,7 +301,7 @@ text \<open>
 
 corollary run_voblint_dead_check_unreached:
   assumes terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as rule ctx) p = Analysed res"
       and listed: "chk \<in> set (res_checks res)"
       and dead: "check_verdict chk = Dead"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,

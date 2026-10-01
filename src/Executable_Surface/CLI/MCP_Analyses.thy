@@ -17,11 +17,13 @@ subsection \<open>Each analysis on its own field\<close>
 
 lemma local_spec_of_frame:
   "a \<noteq> b \<Longrightarrow> mcp_frame (local_spec_of \<G> p a) (part_gamma \<G> b)"
-  by (cases a; cases b; simp only: part_gamma.simps local_spec_of.simps;
+  by (cases a rule: analysis_domain_cases; cases b rule: analysis_domain_cases;
+      simp only: part_gamma.simps local_spec_of.simps;
       rule field_frame; simp add: lift_get_put_other)
 
 lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
-  by (cases a; cases x) (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
+  by (cases a rule: analysis_domain_cases; cases x)
+    (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
 
 subsection \<open>Each analysis answers what it knows\<close>
 
@@ -70,10 +72,10 @@ definition mcp_norm :: "analysis_domain list \<Rightarrow> mcp_st lifted \<Right
      (case x of Bot \<Rightarrow> Bot | Lifted r \<Rightarrow> if list_all (\<lambda>a. part_live a r) as then x else Bot)"
 
 lemma part_gamma_Bot [simp]: "part_gamma \<G> a Bot = {}"
-  by (cases a) simp_all
+  by (cases a rule: analysis_domain_cases) simp_all
 
 lemma part_gamma_dead: "\<not> part_live a r \<Longrightarrow> part_gamma \<G> a (Lifted r) = {}"
-  by (cases a) simp_all
+  by (cases a rule: analysis_domain_cases) simp_all
 
 lemma mcp_gamma_norm:
   "mcp_gamma (map (part_gamma \<G>) as) (mcp_norm as x) = mcp_gamma (map (part_gamma \<G>) as) x"
@@ -122,7 +124,7 @@ lemma mcp_gamma_rd:
 
 lemma mcp_gamma_v_bot: "as \<noteq> [] \<Longrightarrow> mcp_gamma_v as \<bottom> = {}"
 proof -
-  have "val_gamma a \<bottom> = {}" for a by (cases a) simp_all
+  have "val_gamma a \<bottom> = {}" for a by (cases a rule: analysis_domain_cases) simp_all
   then show "as \<noteq> [] \<Longrightarrow> ?thesis" by (auto simp: mcp_gamma_v_def)
 qed
 
@@ -134,7 +136,7 @@ definition mcp_empty_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarr
 
 lemma part_empty_rd:
   "part_empty (declared_global_vars p) a r = val_empty a (mcp_rd (declared_global p) r)"
-  by (cases a)
+  by (cases a rule: analysis_domain_cases)
      (simp_all add: mcp_rd_def
         default_st_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
         split: lifted.split)
@@ -143,7 +145,8 @@ lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r
   by (simp add: mcp_emp_def mcp_empty_v_def part_empty_rd)
 
 lemma val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
-  by (cases a) (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
+  by (cases a rule: analysis_domain_cases)
+    (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
 
 lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = {}"
   by (auto simp: mcp_empty_v_def mcp_gamma_v_def list_ex_iff dest: val_empty_gamma)
@@ -179,7 +182,7 @@ text \<open>
 \<close>
 
 definition activation :: "analysis_domain list \<Rightarrow> analysis_domain list" where
-  "activation as = (if as = [] then [Int_Analysis] else remdups as)"
+  "activation as = (if as = [] then [Int_Analysis Refine_Fixpoint] else remdups as)"
 
 lemma activation_ne [simp]: "activation as \<noteq> []"
   by (simp add: activation_def)

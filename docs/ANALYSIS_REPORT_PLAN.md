@@ -43,7 +43,7 @@ the simulation is not functional.
 | Concept | Isabelle | Thesis and site |
 | --- | --- | --- |
 | analysis report | variable `res`, type `analysis_report` | "analysis report", `res` |
-| configuration | record `analysis_config`, variable `config` | spelled out |
+| configuration | datatype `analysis_config`, variable `config` | spelled out |
 | report semantics | `report_sem res v`, syntax `⟦res⟧⇩v` | `⟦res⟧_v` |
 | verdict semantics | `verdict_stores res v` | `𝒱(res, v)` |
 | reported checks at a node | `report_checks res v` | `Checks(res, v)` |
@@ -57,6 +57,11 @@ takes one argument. `𝒱` joins the store-set family `𝒞`, `𝒜`; it is defi
 `UNKNOWN` and `DEAD` contribute no constraint to `𝒱`; `DEAD` is handled by
 `analysis_report_dead_iff`.
 
+The verdicts get one corollary each: `analysis_report_proved` and
+`analysis_report_refuted` restate the second fact for one check, and
+`analysis_report_unknown` states `UNKNOWN ⟹ ⟦res⟧ᵥ ≠ ∅`, the converse half of the
+third fact, so every verdict word has a theorem.
+
 ## Invariants
 
 - CLI text and JSON stay byte-identical. Phase 0 records the golden output; every
@@ -68,10 +73,13 @@ takes one argument. `𝒱` joins the store-set family `𝒞`, `𝒜`; it is defi
 
 0. **Guardrails.** Snapshot CLI text and JSON for the regression corpus, the
    playground fixtures and the registered thesis and site claims.
-1. **Typed configuration.** `analysis_kind` gains `Int_Analysis refine_mode` in place
-   of `Int_Analysis`, `Int_Once_Analysis` and `Int_Never_Analysis` (manifest
-   generator change). `context_policy = Unit_Context | Entry_State_Context |
-   Call_String_Context nat`. Record `analysis_config` and one `valid_config`.
+1. **Typed configuration.** `analysis_domain` gains `Int_Analysis refine_mode` in
+   place of `Int_Analysis`, `Int_Once_Analysis` and `Int_Never_Analysis` (manifest
+   `constructor` field). The fixpoint registration becomes `Int_Fixpoint`, beside
+   `Int_Once` and `Int_Never`. The existing `context_mode` (`Ctx_None`,
+   `Ctx_EntryState`, `Ctx_CallString nat`) is already typed and stays; renaming it
+   would churn every consumer for no gain. Datatype `analysis_config` with
+   selectors, so the export is one constructor, and one `valid_config`.
    Validity keeps today's meaning, a non-empty distinct list, so two refinement
    modes may still be active together. This is a deliberate compatibility choice.
 2. **One context dispatch.** Resolve `analysis_config` once into the

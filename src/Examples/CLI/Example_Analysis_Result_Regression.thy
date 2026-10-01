@@ -60,7 +60,7 @@ abbreviation result_demo_sign :: "(unit, sign abs_state) analysis_result" where
 
 abbreviation result_demo_int :: "(unit, int_dom abs_state) analysis_result" where
   "result_demo_int \<equiv>
-     int_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
+     int_fixpoint_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
 
 subsection \<open>Interval: the four reachability cases\<close>
 

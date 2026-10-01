@@ -34,9 +34,9 @@ let unlabelled = (mk_nat 0, mk_nat 0)
 let domain_label = function
   | Sign_Analysis -> "Sign_Analysis"
   | Interval_Analysis -> "Interval_Analysis"
-  | Int_Analysis -> "Int_Analysis"
-  | Int_Once_Analysis -> "Int_Once_Analysis"
-  | Int_Never_Analysis -> "Int_Never_Analysis"
+  | Int_Analysis Refine_Fixpoint -> "Int_Analysis"
+  | Int_Analysis Refine_Once -> "Int_Once_Analysis"
+  | Int_Analysis Refine_Never -> "Int_Never_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
   | Order_Analysis -> "Order_Analysis"
@@ -206,7 +206,9 @@ let rec show_exp_compact = function
    well-formed, so `Malformed_Program` is a defect in the export rather than a
    failed expectation. *)
 let report domain prog =
-  match run_voblint [ domain ] Globals_Warrow Ctx_None prog with
+  match
+    run_voblint (Analysis_Config ([ domain ], Globals_Warrow, Ctx_None)) prog
+  with
   | Invalid_Activation ->
       print_endline ("FAIL " ^ domain_label domain ^ ": invalid activation list");
       exit 1

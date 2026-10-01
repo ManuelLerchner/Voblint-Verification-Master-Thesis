@@ -24,7 +24,7 @@ theory Voblint
     "Voblint_Analysis_Interval.Interval_Analyses"
     "Voblint_Analysis_Parity.Parity_Analyses"
     "Voblint_Analysis_Congruence.Congruence_Analyses"
-    "Voblint_Analysis_Int.Int_Analyses"
+    "Voblint_Analysis_Int.Int_Fixpoint_Analyses"
     "Voblint_CLI.Analysis_Run_Ctx_Sound"
     "Voblint_Framework.DG_Constraint_Programs"
     "Voblint_Framework.DG_Spec_Sound"
@@ -454,7 +454,7 @@ text \<open>
     \<^item> @{theory Voblint_Analysis_Interval.Interval_Analyses},
       @{theory Voblint_Analysis_Parity.Parity_Analyses},
       @{theory Voblint_Analysis_Congruence.Congruence_Analyses} and
-      @{theory Voblint_Analysis_Int.Int_Analyses} --- the same runtime for the other
+      @{theory Voblint_Analysis_Int.Int_Fixpoint_Analyses} --- the same runtime for the other
       four domains, generated from the same template.
 
   \<^bold>\<open>5b. Solved results and reports.\<close> What a finished analysis \<^emph>\<open>is\<close>, before anyone

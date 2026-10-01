@@ -360,8 +360,22 @@ fun analysis_result ::
 subsection \<open>The public operation\<close>
 
 text \<open>
-  Three answers: an activation that is empty or names an analysis twice asks for no
-  run, a malformed program was never analysed, and every well-formed one is.
+  A caller's three choices travel together as one value: the analyses that run, the
+  rule for side-effected globals, and the context policy. A configuration is valid
+  when it activates at least one analysis and none twice.
+\<close>
+
+datatype analysis_config = Analysis_Config
+  (config_analyses: "analysis_domain list")
+  (config_rule: globals_rule)
+  (config_context: context_mode)
+
+definition valid_config :: "analysis_config \<Rightarrow> bool" where
+  "valid_config config \<longleftrightarrow> config_analyses config \<noteq> [] \<and> distinct (config_analyses config)"
+
+text \<open>
+  Three answers: an invalid configuration asks for no run, a malformed program was never
+  analysed, and every well-formed one is.
 \<close>
 
 datatype 'v analysis_answer =
@@ -369,15 +383,13 @@ datatype 'v analysis_answer =
   | Malformed_Program
   | Analysed "'v run_result"
 
-definition valid_activation :: "analysis_domain list \<Rightarrow> bool" where
-  "valid_activation as \<longleftrightarrow> as \<noteq> [] \<and> distinct as"
-
-definition analyse_program ::
-    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> abstract_value analysis_answer" where
-  "analyse_program as rule ctx p =
-     (if \<not> valid_activation as then Invalid_Activation
-      else if wf_program_compile_input_exec p then Analysed (analysis_result as rule ctx p)
+definition analyse_program :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> abstract_value analysis_answer"
+where
+  "analyse_program config p =
+     (if \<not> valid_config config then Invalid_Activation
+      else if wf_program_compile_input_exec p then
+        Analysed (analysis_result (config_analyses config) (config_rule config)
+          (config_context config) p)
       else Malformed_Program)"
 
 fun map_analysis_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_answer \<Rightarrow> 'w analysis_answer" where
@@ -390,10 +402,8 @@ text \<open>
   domain's rendering applied to every abstract value and nothing else changed.
 \<close>
 
-definition run_voblint ::
-    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> String.literal analysis_answer" where
-  "run_voblint as rule ctx p =
-     map_analysis_answer string_of_abstract_value (analyse_program as rule ctx p)"
+definition run_voblint :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> String.literal analysis_answer" where
+  "run_voblint config p =
+     map_analysis_answer string_of_abstract_value (analyse_program config p)"
 
 end

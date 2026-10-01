@@ -5,7 +5,7 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domains globals context
+       -> Voblint_CLI.Generated.run_voblint (Analysis_Config (domains, globals, context))
           (Isabelle-generated). One call checks the program is well-formed and
           runs the analyses the activation list, global update rule and context name;
           every combination is answered. What comes back is data -- states per point and
@@ -449,11 +449,14 @@ let () =
     | "--int-refinement" :: v :: rest ->
         (match v with
         | "never" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Never_Analysis
+            int_refinement :=
+              Some Voblint_CLI.Generated.(Int_Analysis Refine_Never)
         | "once" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Once_Analysis
+            int_refinement :=
+              Some Voblint_CLI.Generated.(Int_Analysis Refine_Once)
         | "fixpoint" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Analysis
+            int_refinement :=
+              Some Voblint_CLI.Generated.(Int_Analysis Refine_Fixpoint)
         | _ ->
             prerr_endline ("unknown --int-refinement value: " ^ v);
             exit 1);
@@ -582,7 +585,7 @@ let () =
       | "interval" -> Voblint_CLI.Generated.Interval_Analysis
       | "int" ->
           Option.value !int_refinement
-            ~default:Voblint_CLI.Generated.Int_Analysis
+            ~default:Voblint_CLI.Generated.(Int_Analysis Refine_Fixpoint)
       | "parity" -> Voblint_CLI.Generated.Parity_Analysis
       | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
       | "order" -> Voblint_CLI.Generated.Order_Analysis
@@ -677,7 +680,8 @@ let () =
      combination to silently resolve. *)
   if !json then begin
     let answer =
-      Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
+      Value_symbols.decode_answer
+        (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
     in
     let raw =
       Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
@@ -718,7 +722,8 @@ let () =
   in
   let solve () =
     match
-      Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
+      Value_symbols.decode_answer
+        (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
     with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)

@@ -27,9 +27,9 @@ ROOT = Path(__file__).resolve().parent.parent
 DOMAINS = {
     "Sign_Analysis": ("Sign", "sign"),
     "Interval_Analysis": ("Interval", "interval"),
-    "Int_Analysis": ("Int", "int"),
-    "Int_Once_Analysis": ("Int_Once", "int_once"),
-    "Int_Never_Analysis": ("Int_Never", "int_never"),
+    "Int_Analysis Refine_Fixpoint": ("Int_Fixpoint", "int_fixpoint"),
+    "Int_Analysis Refine_Once": ("Int_Once", "int_once"),
+    "Int_Analysis Refine_Never": ("Int_Never", "int_never"),
     "Parity_Analysis": ("Parity", "parity"),
     "Congruence_Analysis": ("Congruence", "congruence"),
 }
@@ -93,7 +93,8 @@ def test_every_domain_is_a_field_of_the_combined_state(generated):
     """The analyses a caller may activate are exactly the registered domains."""
     body = generated["MCP_Carrier"].split("datatype analysis_domain =")[1]
     body = body.split("\n\n")[0]
-    assert sorted(re.findall(r"\w+_Analysis", body)) == sorted([*DOMAINS, *FIELD_ONLY])
+    constructors = {d.split()[0] for d in [*DOMAINS, *FIELD_ONLY]}
+    assert sorted(re.findall(r"\w+_Analysis", body)) == sorted(constructors)
 
 
 def test_run_surface_passes_the_rule_through():

@@ -69,9 +69,9 @@ let now_ms () : float =
 
 (* Each refinement mode is an analysis of its own in the generated carrier. *)
 let int_analysis_of_string = function
-  | "never" -> Some C.Int_Never_Analysis
-  | "once" -> Some C.Int_Once_Analysis
-  | "fixpoint" -> Some C.Int_Analysis
+  | "never" -> Some (C.Int_Analysis C.Refine_Never)
+  | "once" -> Some (C.Int_Analysis C.Refine_Once)
+  | "fixpoint" -> Some (C.Int_Analysis C.Refine_Fixpoint)
   | _ -> None
 
 let domain_of_string int_analysis = function
@@ -272,7 +272,9 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               let answer =
                 Fun.protect ~finally:stop_live (fun () ->
                     Value_symbols.decode_answer
-                      (C.run_voblint domains globals context program))
+                      (C.run_voblint
+                         (C.Analysis_Config (domains, globals, context))
+                         program))
               in
               let analysis_ms = now_ms () -. analysis_start in
               let raw =

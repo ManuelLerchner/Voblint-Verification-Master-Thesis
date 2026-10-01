@@ -167,7 +167,19 @@ class Domain:
         self.overrides = entry.get("roles", {})
         self.contexts = entry.get("contexts", ["unit"])
         self.prefix = self.name.lower()
-        self.constructor = f"{self.name}_Analysis"
+        # The analysis's case of `analysis_domain`: its own constructor, or one
+        # value of a constructor several variants share through an argument, as
+        # `Int_Analysis Refine_Once`. `constructor` is the term every generated
+        # equation matches on; `ctor_case` the datatype case it belongs to.
+        ctor = entry.get("constructor")
+        if ctor is None:
+            self.constructor = f"{self.name}_Analysis"
+            self.ctor_case = self.constructor
+            self.ctor_arg_type = None
+        else:
+            self.constructor = f"({ctor['name']} {ctor['arg']})"
+            self.ctor_case = f'{ctor["name"]} "{ctor["type"]}"'
+            self.ctor_arg_type = ctor["type"]
         self.value_constructor = entry.get("value_constructor", f"{self.name}Value")
         self.field_overrides = entry.get("field", {})
         # The directory, and with it the session, the registration belongs to:
@@ -511,7 +523,19 @@ def render_mcp(doms):
         )
     ) + [""]
     out += ["datatype analysis_domain ="]
-    out += [("    " if i == 0 else "  | ") + d.constructor for i, d in enumerate(doms)]
+    cases = list(dict.fromkeys(d.ctor_case for d in doms))
+    out += [("    " if i == 0 else "  | ") + c for i, c in enumerate(cases)]
+    out += [""]
+    # One case per registered analysis, a shared constructor split by its
+    # argument, so a proof by cases sees exactly the analyses that exist.
+    out += ["lemma analysis_domain_cases:"]
+    out += ["  obtains " + f'"a = {doms[0].constructor}"']
+    out += [f'  | "a = {d.constructor}"' for d in doms[1:]]
+    arg_types = list(dict.fromkeys(d.ctor_arg_type for d in doms if d.ctor_arg_type))
+    exhaust = " ".join(f"{t}.exhaust" for t in arg_types)
+    out += [
+        f"  by (cases a) (metis {exhaust})+" if arg_types else "  by (cases a) auto"
+    ]
     out += [""]
     out += [
         "subsection \\<open>One value type wide enough for every analysis\\<close>",
@@ -770,7 +794,7 @@ def render_mcp(doms):
         "lemma local_spec_of_sound:",
         '  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)',
         '     (local_spec_of (declared_global p) p a)"',
-        "  by (cases a; simp only: part_gamma.simps local_spec_of.simps;",
+        "  by (cases a rule: analysis_domain_cases; simp only: part_gamma.simps local_spec_of.simps;",
     ]
     out += wrap_term("rule " + comps + ";", 6)
     out += ["      auto simp: less_eq_analysis_product_def)", ""]
@@ -779,7 +803,8 @@ def render_mcp(doms):
         'lemma single_entry_local_spec_of: "single_entry (local_spec_of \\<G> p a)"'
     ]
     out += wrap_term(
-        f"by (cases a) (auto intro!: single_entry_lens_of lift_put_get {singles})", 2
+        f"by (cases a rule: analysis_domain_cases) (auto intro!: single_entry_lens_of lift_put_get {singles})",
+        2,
     )
     out += [""]
     silent = [d.constructor for d in doms if "component" not in d.field_overrides]
@@ -787,7 +812,7 @@ def render_mcp(doms):
     out += wrap_term(f'"a \\<in> {{{", ".join(silent)}}}', 2)
     out += [
         f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
-        "  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)",
+        "  by (cases a rule: analysis_domain_cases)\n    (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)",
         "",
     ]
     inits = " ".join(d.field()["init_sound"] for d in doms if d.field()["init_sound"])
@@ -799,7 +824,7 @@ def render_mcp(doms):
         '  have "cinit_stores (declared_global p)',
         '          \\<subseteq> val_gamma a (mcp_rd (declared_global p) (mcp_init as))"',
         '    if "a \\<in> set as" for a',
-        "    by (cases a)",
+        "    by (cases a rule: analysis_domain_cases)",
     ]
     out += wrap_term(
         "(use that "
@@ -811,7 +836,7 @@ def render_mcp(doms):
     answers = " ".join(d.field()["answer_sound"] for d in doms)
     out += [
         'lemma val_answer_sound: "s \\<in> val_gamma a v \\<Longrightarrow> eval_holds q (val_answer a v q) s"',
-        "  by (cases a)",
+        "  by (cases a rule: analysis_domain_cases)",
     ]
     out += wrap_term("(auto split: lifted.splits intro: " + answers + ")", 5)
     out += ["", "end"]

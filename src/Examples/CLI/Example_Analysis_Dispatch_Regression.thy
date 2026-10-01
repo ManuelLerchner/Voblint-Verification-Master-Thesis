@@ -33,7 +33,7 @@ definition dispatch_demo_prog :: imp_prog where
 
 definition dispatch_demo_checks where
   "dispatch_demo_checks D rule ctx =
-     (case run_voblint [D] rule ctx dispatch_demo_prog of
+     (case run_voblint (Analysis_Config [D] rule ctx) dispatch_demo_prog of
         Analysed res \<Rightarrow> Some (map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk))
                                  (res_checks res))
       | Malformed_Program \<Rightarrow> None)"
@@ -66,16 +66,18 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_call_string_reads_the_named_rule:
-  "(case run_voblint [Int_Analysis] Globals_Warrow (Ctx_CallString 1) dispatch_demo_prog of
+  "(case run_voblint (Analysis_Config [Int_Analysis Refine_Fixpoint] Globals_Warrow
+           (Ctx_CallString 1)) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Warrow
+          = mcp_cs_rule.verdict_report [Int_Analysis Refine_Fixpoint] 1 Globals_Warrow
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
-  "(case run_voblint [Int_Analysis] Globals_Join (Ctx_CallString 1) dispatch_demo_prog of
+  "(case run_voblint (Analysis_Config [Int_Analysis Refine_Fixpoint] Globals_Join
+           (Ctx_CallString 1)) dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
-          = mcp_cs_rule.verdict_report [Int_Analysis] 1 Globals_Join
+          = mcp_cs_rule.verdict_report [Int_Analysis Refine_Fixpoint] 1 Globals_Join
               (declared_global dispatch_demo_prog) dispatch_demo_prog
     | _ \<Rightarrow> False)"
   by eval+
@@ -86,7 +88,8 @@ text \<open>
 \<close>
 
 lemma dispatch_demo_run_voblint_entry_state:
-  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState dispatch_demo_prog of
+  "(case run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState)
+           dispatch_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res) =
           [(Statement 1, Lifted Check_Proved), (Statement 3, Lifted Check_Refuted)]
@@ -96,7 +99,8 @@ lemma dispatch_demo_run_voblint_entry_state:
   by eval
 
 lemma dispatch_demo_run_voblint_flat:
-  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_None dispatch_demo_prog of
+  "(case run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_None)
+           dispatch_demo_prog of
       Analysed res \<Rightarrow> res_contexts res = [Context_Unit]
     | _ \<Rightarrow> False)"
   by eval
@@ -216,7 +220,7 @@ definition coop_demo_prog :: imp_prog where
 
 definition coop_demo_verdicts where
   "coop_demo_verdicts as =
-     (case run_voblint as Globals_Warrow Ctx_None coop_demo_prog of
+     (case run_voblint (Analysis_Config as Globals_Warrow Ctx_None) coop_demo_prog of
         Analysed res \<Rightarrow> Some (map check_verdict (res_checks res))
       | _ \<Rightarrow> None)"
 
@@ -249,7 +253,8 @@ definition labelled_checks_prog :: imp_prog where
        []"
 
 lemma labelled_checks_rows:
-  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_None labelled_checks_prog of
+  "(case run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_None)
+           labelled_checks_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_label chk, check_verdict chk)) (res_checks res) =
           [((6, 3), Lifted Check_Refuted), ((2, 3), Lifted Check_Proved)]

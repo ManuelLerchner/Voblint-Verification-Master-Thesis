@@ -98,9 +98,9 @@ module Generated : sig
   type parity
   type 'a lifted = Bot | Lifted of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
+  type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
   type analysis_domain = Sign_Analysis | Interval_Analysis | Parity_Analysis |
-    Int_Analysis | Int_Once_Analysis | Int_Never_Analysis | Congruence_Analysis
-    | Order_Analysis
+    Int_Analysis of refine_mode | Congruence_Analysis | Order_Analysis
   type congruence
   type 'a int_dom_ext
   type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
@@ -145,6 +145,8 @@ module Generated : sig
   type ('a, 'b) run_result_ext
   type 'a analysis_answer = Invalid_Activation | Malformed_Program |
     Analysed of ('a, unit) run_result_ext
+  type analysis_config =
+    Analysis_Config of analysis_domain list * globals_rule * context_mode
   type 'a imp_prog_ext
   val cfg_entry : 'a cfg_ext -> cfg_node
   val declared_global_vars : 'a imp_prog_ext -> string list
@@ -189,9 +191,7 @@ module Generated : sig
   val prog_cfg : unit imp_prog_ext -> unit cfg_ext
   val arithmetic_divisor : arithmetic_obligation -> exp
   val run_voblint :
-    analysis_domain list ->
-      globals_rule ->
-        context_mode -> unit imp_prog_ext -> string analysis_answer
+    analysis_config -> unit imp_prog_ext -> string analysis_answer
   val route_point : 'a call_route_ext -> cfg_node
   val check_exp : 'a result_check_ext -> exp
   val route_callee : 'a call_route_ext -> string
@@ -3118,72 +3118,56 @@ let order_order_key =
 let linorder_order_key =
   ({order_linorder = order_order_key} : order_key linorder);;
 
+type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
+
+let rec equal_refine_mode
+  x0 x1 = match x0, x1 with Refine_Once, Refine_Fixpoint -> false
+    | Refine_Fixpoint, Refine_Once -> false
+    | Refine_Never, Refine_Fixpoint -> false
+    | Refine_Fixpoint, Refine_Never -> false
+    | Refine_Never, Refine_Once -> false
+    | Refine_Once, Refine_Never -> false
+    | Refine_Fixpoint, Refine_Fixpoint -> true
+    | Refine_Once, Refine_Once -> true
+    | Refine_Never, Refine_Never -> true;;
+
 type analysis_domain = Sign_Analysis | Interval_Analysis | Parity_Analysis |
-  Int_Analysis | Int_Once_Analysis | Int_Never_Analysis | Congruence_Analysis |
-  Order_Analysis;;
+  Int_Analysis of refine_mode | Congruence_Analysis | Order_Analysis;;
 
 let rec equal_analysis_domaina
   x0 x1 = match x0, x1 with Congruence_Analysis, Order_Analysis -> false
     | Order_Analysis, Congruence_Analysis -> false
-    | Int_Never_Analysis, Order_Analysis -> false
-    | Order_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Congruence_Analysis -> false
-    | Congruence_Analysis, Int_Never_Analysis -> false
-    | Int_Once_Analysis, Order_Analysis -> false
-    | Order_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Congruence_Analysis -> false
-    | Congruence_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Int_Once_Analysis -> false
-    | Int_Analysis, Order_Analysis -> false
-    | Order_Analysis, Int_Analysis -> false
-    | Int_Analysis, Congruence_Analysis -> false
-    | Congruence_Analysis, Int_Analysis -> false
-    | Int_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Int_Analysis -> false
-    | Int_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Int_Analysis -> false
+    | Int_Analysis x4, Order_Analysis -> false
+    | Order_Analysis, Int_Analysis x4 -> false
+    | Int_Analysis x4, Congruence_Analysis -> false
+    | Congruence_Analysis, Int_Analysis x4 -> false
     | Parity_Analysis, Order_Analysis -> false
     | Order_Analysis, Parity_Analysis -> false
     | Parity_Analysis, Congruence_Analysis -> false
     | Congruence_Analysis, Parity_Analysis -> false
-    | Parity_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Parity_Analysis -> false
-    | Parity_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Parity_Analysis -> false
-    | Parity_Analysis, Int_Analysis -> false
-    | Int_Analysis, Parity_Analysis -> false
+    | Parity_Analysis, Int_Analysis x4 -> false
+    | Int_Analysis x4, Parity_Analysis -> false
     | Interval_Analysis, Order_Analysis -> false
     | Order_Analysis, Interval_Analysis -> false
     | Interval_Analysis, Congruence_Analysis -> false
     | Congruence_Analysis, Interval_Analysis -> false
-    | Interval_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Interval_Analysis -> false
-    | Interval_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Interval_Analysis -> false
-    | Interval_Analysis, Int_Analysis -> false
-    | Int_Analysis, Interval_Analysis -> false
+    | Interval_Analysis, Int_Analysis x4 -> false
+    | Int_Analysis x4, Interval_Analysis -> false
     | Interval_Analysis, Parity_Analysis -> false
     | Parity_Analysis, Interval_Analysis -> false
     | Sign_Analysis, Order_Analysis -> false
     | Order_Analysis, Sign_Analysis -> false
     | Sign_Analysis, Congruence_Analysis -> false
     | Congruence_Analysis, Sign_Analysis -> false
-    | Sign_Analysis, Int_Never_Analysis -> false
-    | Int_Never_Analysis, Sign_Analysis -> false
-    | Sign_Analysis, Int_Once_Analysis -> false
-    | Int_Once_Analysis, Sign_Analysis -> false
-    | Sign_Analysis, Int_Analysis -> false
-    | Int_Analysis, Sign_Analysis -> false
+    | Sign_Analysis, Int_Analysis x4 -> false
+    | Int_Analysis x4, Sign_Analysis -> false
     | Sign_Analysis, Parity_Analysis -> false
     | Parity_Analysis, Sign_Analysis -> false
     | Sign_Analysis, Interval_Analysis -> false
     | Interval_Analysis, Sign_Analysis -> false
+    | Int_Analysis x4, Int_Analysis y4 -> equal_refine_mode x4 y4
     | Order_Analysis, Order_Analysis -> true
     | Congruence_Analysis, Congruence_Analysis -> true
-    | Int_Never_Analysis, Int_Never_Analysis -> true
-    | Int_Once_Analysis, Int_Once_Analysis -> true
-    | Int_Analysis, Int_Analysis -> true
     | Parity_Analysis, Parity_Analysis -> true
     | Interval_Analysis, Interval_Analysis -> true
     | Sign_Analysis, Sign_Analysis -> true;;
@@ -4218,12 +4202,13 @@ type ('a, 'b) run_result_ext =
 type 'a analysis_answer = Invalid_Activation | Malformed_Program |
   Analysed of ('a, unit) run_result_ext;;
 
+type analysis_config =
+  Analysis_Config of analysis_domain list * globals_rule * context_mode;;
+
 type ('a, 'b) analysis_result =
   Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b lifted);;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
-
-type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint;;
 
 type ('a, 'b) local_spec_ext =
   Local_spec_ext of
@@ -5100,21 +5085,21 @@ let rec part_empty
     | gs, Parity_Analysis, r ->
         (match slot3 r with Bot -> true
           | Lifted a -> default_st_is_bot_for executable_domain_parity gs a)
-    | gs, Int_Analysis, r ->
+    | gs, Int_Analysis Refine_Fixpoint, r ->
         (match slot4 r with Bot -> true
           | Lifted a ->
             default_st_is_bot_for
               (executable_domain_int_dom_ext
                 (bounded_lattice_unit, warrowing_unit))
               gs a)
-    | gs, Int_Once_Analysis, r ->
+    | gs, Int_Analysis Refine_Once, r ->
         (match slot5 r with Bot -> true
           | Lifted a ->
             default_st_is_bot_for
               (executable_domain_int_dom_ext
                 (bounded_lattice_unit, warrowing_unit))
               gs a)
-    | gs, Int_Never_Analysis, r ->
+    | gs, Int_Analysis Refine_Never, r ->
         (match slot6 r with Bot -> true
           | Lifted a ->
             default_st_is_bot_for
@@ -5189,7 +5174,7 @@ let rec field_of
                        (match slot3 v with Bot -> bot_paritya
                          | Lifted st -> st x)))
             vars)
-    | Int_Analysis, v, vars ->
+    | Int_Analysis Refine_Fixpoint, v, vars ->
         Field_Store
           (map (fun x ->
                  (x, IntDomValue
@@ -5197,7 +5182,7 @@ let rec field_of
                          with Bot -> bot_int_dom_exta bounded_lattice_unit
                          | Lifted st -> st x)))
             vars)
-    | Int_Once_Analysis, v, vars ->
+    | Int_Analysis Refine_Once, v, vars ->
         Field_Store
           (map (fun x ->
                  (x, IntDomOnceValue
@@ -5205,7 +5190,7 @@ let rec field_of
                          with Bot -> bot_int_dom_exta bounded_lattice_unit
                          | Lifted st -> st x)))
             vars)
-    | Int_Never_Analysis, v, vars ->
+    | Int_Analysis Refine_Never, v, vars ->
         Field_Store
           (map (fun x ->
                  (x, IntDomNeverValue
@@ -5268,7 +5253,8 @@ let rec mcp_init
                             (semilattice_sup_default_st
                               bounded_semilattice_sup_bot_parity)),
                     Product
-                      ((if membera equal_analysis_domain asa Int_Analysis
+                      ((if membera equal_analysis_domain asa
+                             (Int_Analysis Refine_Fixpoint)
                          then Lifted
                                 (initial_default_st
                                   (bot_int_dom_ext bounded_lattice_unit)
@@ -5280,7 +5266,7 @@ let rec mcp_init
                                     bounded_lattice_unit))),
                         Product
                           ((if membera equal_analysis_domain asa
-                                 Int_Once_Analysis
+                                 (Int_Analysis Refine_Once)
                              then Lifted
                                     (initial_default_st
                                       (bot_int_dom_ext bounded_lattice_unit)
@@ -5292,7 +5278,7 @@ let rec mcp_init
 bounded_lattice_unit))),
                             Product
                               ((if membera equal_analysis_domain asa
-                                     Int_Never_Analysis
+                                     (Int_Analysis Refine_Never)
                                  then Lifted
 (initial_default_st (bot_int_dom_ext bounded_lattice_unit)
   (top_int_dom_exta bounded_lattice_unit) (int_dom_of_int zero_inta))
@@ -8368,7 +8354,7 @@ let rec local_spec_of
               (default_st_is_bot_for executable_domain_parity
                 (declared_global_vars p))
               (parity_tf_st_for g) (parity_enter_st_for g)))
-    | g, p, Int_Analysis ->
+    | g, p, Int_Analysis Refine_Fixpoint ->
         lens_of
           (lift_get
             (bot_lifted
@@ -8425,7 +8411,7 @@ let rec local_spec_of
                 (declared_global_vars p))
               (int_tf_st_for Refine_Fixpoint g)
               (int_dom_enter_st_for Refine_Fixpoint g)))
-    | g, p, Int_Once_Analysis ->
+    | g, p, Int_Analysis Refine_Once ->
         lens_of
           (lift_get
             (bot_lifted
@@ -8482,7 +8468,7 @@ let rec local_spec_of
                 (declared_global_vars p))
               (int_tf_st_for Refine_Once g)
               (int_dom_enter_st_for Refine_Once g)))
-    | g, p, Int_Never_Analysis ->
+    | g, p, Int_Analysis Refine_Never ->
         lens_of
           (lift_get
             (bot_lifted
@@ -9014,15 +9000,15 @@ let rec val_answer
         (match slot3 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Lifted st -> parity_eval_answer st q)
-    | Int_Analysis, v, q ->
+    | Int_Analysis Refine_Fixpoint, v, q ->
         (match slot4 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Lifted st -> int_eval_answer Refine_Fixpoint st q)
-    | Int_Once_Analysis, v, q ->
+    | Int_Analysis Refine_Once, v, q ->
         (match slot5 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Lifted st -> int_eval_answer Refine_Once st q)
-    | Int_Never_Analysis, v, q ->
+    | Int_Analysis Refine_Never, v, q ->
         (match slot6 v
           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Lifted st -> int_eval_answer Refine_Never st q)
@@ -9059,7 +9045,7 @@ let rec part_live
               (bot_lifteda
                 (semilattice_sup_default_st
                   bounded_semilattice_sup_bot_parity)))
-    | Int_Analysis, r ->
+    | Int_Analysis Refine_Fixpoint, r ->
         not (equal_lifteda
               (equal_default_st
                 ((equal_int_dom_ext equal_unit),
@@ -9069,7 +9055,7 @@ let rec part_live
                 (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
-    | Int_Once_Analysis, r ->
+    | Int_Analysis Refine_Once, r ->
         not (equal_lifteda
               (equal_default_st
                 ((equal_int_dom_ext equal_unit),
@@ -9079,7 +9065,7 @@ let rec part_live
                 (semilattice_sup_default_st
                   (bounded_semilattice_sup_bot_int_dom_ext
                     bounded_lattice_unit))))
-    | Int_Never_Analysis, r ->
+    | Int_Analysis Refine_Never, r ->
         not (equal_lifteda
               (equal_default_st
                 ((equal_int_dom_ext equal_unit),
@@ -9120,9 +9106,12 @@ let rec ctx_values
     Sign_Analysis, ctx -> map (fun a -> SignValue a) (slot1 ctx)
     | Interval_Analysis, ctx -> map (fun a -> IntervalValue a) (slot2 ctx)
     | Parity_Analysis, ctx -> map (fun a -> ParityValue a) (slot3 ctx)
-    | Int_Analysis, ctx -> map (fun a -> IntDomValue a) (slot4 ctx)
-    | Int_Once_Analysis, ctx -> map (fun a -> IntDomOnceValue a) (slot5 ctx)
-    | Int_Never_Analysis, ctx -> map (fun a -> IntDomNeverValue a) (slot6 ctx)
+    | Int_Analysis Refine_Fixpoint, ctx ->
+        map (fun a -> IntDomValue a) (slot4 ctx)
+    | Int_Analysis Refine_Once, ctx ->
+        map (fun a -> IntDomOnceValue a) (slot5 ctx)
+    | Int_Analysis Refine_Never, ctx ->
+        map (fun a -> IntDomNeverValue a) (slot6 ctx)
     | Congruence_Analysis, ctx -> map (fun a -> CongruenceValue a) (slot7 ctx)
     | Order_Analysis, ctx -> [];;
 
@@ -9254,7 +9243,7 @@ let rec prog_main p = main_body (prog_table p);;
 let rec mcp_render asa vars v = map (fun a -> (a, field_of a v vars)) asa;;
 
 let rec activation
-  asa = (if null asa then [Int_Analysis]
+  asa = (if null asa then [Int_Analysis Refine_Fixpoint]
           else remdups equal_analysis_domain asa);;
 
 let rec mcp_answer
@@ -9453,8 +9442,11 @@ let rec wf_program_compile_input_exec
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
 
-let rec valid_activation
-  asa = not (null asa) && distinct equal_analysis_domain asa;;
+let rec config_analyses (Analysis_Config (x1, x2, x3)) = x1;;
+
+let rec config_context (Analysis_Config (x1, x2, x3)) = x3;;
+
+let rec config_rule (Analysis_Config (x1, x2, x3)) = x2;;
 
 let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
 
@@ -10763,7 +10755,8 @@ let rec mcp_formals_route
                            ca
                     else []),
                    Product
-                     ((if membera equal_analysis_domain asa Int_Analysis
+                     ((if membera equal_analysis_domain asa
+                            (Int_Analysis Refine_Fixpoint)
                         then exec_formals_route
                                (bot_int_dom_ext bounded_lattice_unit) g u []
                                (lift_get
@@ -10776,7 +10769,7 @@ let rec mcp_formals_route
                         else []),
                        Product
                          ((if membera equal_analysis_domain asa
-                                Int_Once_Analysis
+                                (Int_Analysis Refine_Once)
                             then exec_formals_route
                                    (bot_int_dom_ext bounded_lattice_unit) g u []
                                    (lift_get
@@ -10788,7 +10781,7 @@ let rec mcp_formals_route
                             else []),
                            Product
                              ((if membera equal_analysis_domain asa
-                                    Int_Never_Analysis
+                                    (Int_Analysis Refine_Never)
                                 then exec_formals_route
                                        (bot_int_dom_ext bounded_lattice_unit) g
                                        u []
@@ -13363,17 +13356,23 @@ bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
             (fun a -> Context_Call_String a) (live_targets succ)
             (mcp_classify (activation asa)) t shared seed_at step_at p);;
 
+let rec valid_config
+  config =
+    not (null (config_analyses config)) &&
+      distinct equal_analysis_domain (config_analyses config);;
+
 let rec analyse_program
-  asa rule ctx p =
-    (if not (valid_activation asa) then Invalid_Activation
+  config p =
+    (if not (valid_config config) then Invalid_Activation
       else (if wf_program_compile_input_exec p
-             then Analysed (analysis_result asa rule ctx p)
+             then Analysed
+                    (analysis_result (config_analyses config)
+                      (config_rule config) (config_context config) p)
              else Malformed_Program));;
 
 let rec run_voblint
-  asa rule ctx p =
-    map_analysis_answer string_of_abstract_value
-      (analyse_program asa rule ctx p);;
+  config p =
+    map_analysis_answer string_of_abstract_value (analyse_program config p);;
 
 let rec procs_stmt_next
   pi x1 n = match pi, x1, n with pi, [], n -> n

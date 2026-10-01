@@ -5,7 +5,7 @@ theory MCP_Carrier
     "Voblint_Analysis_Sign.Sign_Analyses"
     "Voblint_Analysis_Interval.Interval_Analyses"
     "Voblint_Analysis_Parity.Parity_Analyses"
-    "Voblint_Analysis_Int.Int_Analyses"
+    "Voblint_Analysis_Int.Int_Fixpoint_Analyses"
     "Voblint_Analysis_Int.Int_Once_Analyses"
     "Voblint_Analysis_Int.Int_Never_Analyses"
     "Voblint_Analysis_Congruence.Congruence_Analyses"
@@ -32,11 +32,20 @@ datatype analysis_domain =
     Sign_Analysis
   | Interval_Analysis
   | Parity_Analysis
-  | Int_Analysis
-  | Int_Once_Analysis
-  | Int_Never_Analysis
+  | Int_Analysis "refine_mode"
   | Congruence_Analysis
   | Order_Analysis
+
+lemma analysis_domain_cases:
+  obtains "a = Sign_Analysis"
+  | "a = Interval_Analysis"
+  | "a = Parity_Analysis"
+  | "a = (Int_Analysis Refine_Fixpoint)"
+  | "a = (Int_Analysis Refine_Once)"
+  | "a = (Int_Analysis Refine_Never)"
+  | "a = Congruence_Analysis"
+  | "a = Order_Analysis"
+  by (cases a) (metis refine_mode.exhaust)+
 
 subsection \<open>One value type wide enough for every analysis\<close>
 
@@ -202,15 +211,15 @@ fun local_spec_of ::
      lens_of (lift_get slot3) (lift_put set_slot3) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (parity_tf_st_for \<G>)
        (parity_enter_st_for \<G>)))"
-| "local_spec_of \<G> p Int_Analysis =
+| "local_spec_of \<G> p (Int_Analysis Refine_Fixpoint) =
      lens_of (lift_get slot4) (lift_put set_slot4) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Fixpoint \<G>)
        (int_dom_enter_st_for Refine_Fixpoint \<G>)))"
-| "local_spec_of \<G> p Int_Once_Analysis =
+| "local_spec_of \<G> p (Int_Analysis Refine_Once) =
      lens_of (lift_get slot5) (lift_put set_slot5) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Once \<G>)
        (int_dom_enter_st_for Refine_Once \<G>)))"
-| "local_spec_of \<G> p Int_Never_Analysis =
+| "local_spec_of \<G> p (Int_Analysis Refine_Never) =
      lens_of (lift_get slot6) (lift_put set_slot6) (ask_assign (exec_local_spec \<G>
        (default_st_is_bot_for (declared_global_vars p)) (int_tf_st_for Refine_Never \<G>)
        (int_dom_enter_st_for Refine_Never \<G>)))"
@@ -228,11 +237,11 @@ fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Ri
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot2 x))"
 | "part_gamma \<G> Parity_Analysis =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot3 x))"
-| "part_gamma \<G> Int_Analysis =
+| "part_gamma \<G> (Int_Analysis Refine_Fixpoint) =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot4 x))"
-| "part_gamma \<G> Int_Once_Analysis =
+| "part_gamma \<G> (Int_Analysis Refine_Once) =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot5 x))"
-| "part_gamma \<G> Int_Never_Analysis =
+| "part_gamma \<G> (Int_Analysis Refine_Never) =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot6 x))"
 | "part_gamma \<G> Congruence_Analysis =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot7 x))"
@@ -246,11 +255,11 @@ fun part_live :: "analysis_domain \<Rightarrow> mcp_st \<Rightarrow> bool" where
      (slot2 r \<noteq> \<bottom>)"
 | "part_live Parity_Analysis r =
      (slot3 r \<noteq> \<bottom>)"
-| "part_live Int_Analysis r =
+| "part_live (Int_Analysis Refine_Fixpoint) r =
      (slot4 r \<noteq> \<bottom>)"
-| "part_live Int_Once_Analysis r =
+| "part_live (Int_Analysis Refine_Once) r =
      (slot5 r \<noteq> \<bottom>)"
-| "part_live Int_Never_Analysis r =
+| "part_live (Int_Analysis Refine_Never) r =
      (slot6 r \<noteq> \<bottom>)"
 | "part_live Congruence_Analysis r =
      (slot7 r \<noteq> \<bottom>)"
@@ -264,11 +273,11 @@ fun part_empty :: "vname list \<Rightarrow> analysis_domain \<Rightarrow> mcp_st
      (case (slot2 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Parity_Analysis r =
      (case (slot3 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
-| "part_empty gs Int_Analysis r =
+| "part_empty gs (Int_Analysis Refine_Fixpoint) r =
      (case (slot4 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
-| "part_empty gs Int_Once_Analysis r =
+| "part_empty gs (Int_Analysis Refine_Once) r =
      (case (slot5 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
-| "part_empty gs Int_Never_Analysis r =
+| "part_empty gs (Int_Analysis Refine_Never) r =
      (case (slot6 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
 | "part_empty gs Congruence_Analysis r =
      (case (slot7 r) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> default_st_is_bot_for gs st)"
@@ -291,11 +300,11 @@ fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set"
      \<lbrakk>(slot2 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Parity_Analysis v =
      \<lbrakk>(slot3 v)\<rbrakk>\<^sub>\<bottom>"
-| "val_gamma Int_Analysis v =
+| "val_gamma (Int_Analysis Refine_Fixpoint) v =
      \<lbrakk>(slot4 v)\<rbrakk>\<^sub>\<bottom>"
-| "val_gamma Int_Once_Analysis v =
+| "val_gamma (Int_Analysis Refine_Once) v =
      \<lbrakk>(slot5 v)\<rbrakk>\<^sub>\<bottom>"
-| "val_gamma Int_Never_Analysis v =
+| "val_gamma (Int_Analysis Refine_Never) v =
      \<lbrakk>(slot6 v)\<rbrakk>\<^sub>\<bottom>"
 | "val_gamma Congruence_Analysis v =
      \<lbrakk>(slot7 v)\<rbrakk>\<^sub>\<bottom>"
@@ -312,11 +321,11 @@ fun val_empty :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> bool" wher
      (case (slot2 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
 | "val_empty Parity_Analysis v =
      (case (slot3 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
-| "val_empty Int_Analysis v =
+| "val_empty (Int_Analysis Refine_Fixpoint) v =
      (case (slot4 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
-| "val_empty Int_Once_Analysis v =
+| "val_empty (Int_Analysis Refine_Once) v =
      (case (slot5 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
-| "val_empty Int_Never_Analysis v =
+| "val_empty (Int_Analysis Refine_Never) v =
      (case (slot6 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
 | "val_empty Congruence_Analysis v =
      (case (slot7 v) of Bot \<Rightarrow> True | Lifted st \<Rightarrow> is_empty_state st)"
@@ -330,11 +339,11 @@ fun val_answer :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> query \<R
      (case (slot2 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> interval_eval_answer st q)"
 | "val_answer Parity_Analysis v q =
      (case (slot3 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> parity_eval_answer st q)"
-| "val_answer Int_Analysis v q =
+| "val_answer (Int_Analysis Refine_Fixpoint) v q =
      (case (slot4 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st q)"
-| "val_answer Int_Once_Analysis v q =
+| "val_answer (Int_Analysis Refine_Once) v q =
      (case (slot5 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Once st q)"
-| "val_answer Int_Never_Analysis v q =
+| "val_answer (Int_Analysis Refine_Never) v q =
      (case (slot6 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Never st q)"
 | "val_answer Congruence_Analysis v q =
      (case (slot7 v) of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> congruence_eval_answer st q)"
@@ -352,13 +361,13 @@ fun field_of ::
 | "field_of Parity_Analysis v vars =
      Field_Store (map (\<lambda>x. (x, ParityValue (case (slot3 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
        x))) vars)"
-| "field_of Int_Analysis v vars =
+| "field_of (Int_Analysis Refine_Fixpoint) v vars =
      Field_Store (map (\<lambda>x. (x, IntDomValue (case (slot4 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
        x))) vars)"
-| "field_of Int_Once_Analysis v vars =
+| "field_of (Int_Analysis Refine_Once) v vars =
      Field_Store (map (\<lambda>x. (x, IntDomOnceValue (case (slot5 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st
        x))) vars)"
-| "field_of Int_Never_Analysis v vars =
+| "field_of (Int_Analysis Refine_Never) v vars =
      Field_Store (map (\<lambda>x. (x, IntDomNeverValue (case (slot6 v) of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow>
        st x))) vars)"
 | "field_of Congruence_Analysis v vars =
@@ -381,11 +390,11 @@ definition mcp_init :: "analysis_domain list \<Rightarrow> mcp_st" where
   "mcp_init as = Product (if Sign_Analysis \<in> set as then (Lifted cinit_sign_st) else \<bottom>)
     (Product (if Interval_Analysis \<in> set as then (Lifted cinit_ivl_st) else \<bottom>) (Product
     (if Parity_Analysis \<in> set as then (Lifted cinit_parity_st) else \<bottom>) (Product (if
-    Int_Analysis \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>) (Product (if
-    Int_Once_Analysis \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>) (Product (if
-    Int_Never_Analysis \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>) (Product (if
-    Congruence_Analysis \<in> set as then (Lifted cinit_congruence_st) else \<bottom>) (if
-    Order_Analysis \<in> set as then (\<top> :: relc) else \<bottom>)))))))"
+    (Int_Analysis Refine_Fixpoint) \<in> set as then (Lifted cinit_int_dom_st) else \<bottom>)
+    (Product (if (Int_Analysis Refine_Once) \<in> set as then (Lifted cinit_int_dom_st) else
+    \<bottom>) (Product (if (Int_Analysis Refine_Never) \<in> set as then (Lifted cinit_int_dom_st)
+    else \<bottom>) (Product (if Congruence_Analysis \<in> set as then (Lifted cinit_congruence_st)
+    else \<bottom>) (if Order_Analysis \<in> set as then (\<top> :: relc) else \<bottom>)))))))"
 
 definition mcp_formals_route ::
   "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> mcp_ctx \<Rightarrow> mcp_st lifted
@@ -394,12 +403,13 @@ definition mcp_formals_route ::
     exec_formals_route \<G> u [] (lift_get slot1 d) ca else []) (Product (if
     Interval_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get slot2 d) ca else
     []) (Product (if Parity_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get
-    slot3 d) ca else []) (Product (if Int_Analysis \<in> set as then exec_formals_route \<G> u []
-    (lift_get slot4 d) ca else []) (Product (if Int_Once_Analysis \<in> set as then
-    exec_formals_route \<G> u [] (lift_get slot5 d) ca else []) (Product (if
-    Int_Never_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get slot6 d) ca else
-    []) (Product (if Congruence_Analysis \<in> set as then exec_formals_route \<G> u [] (lift_get
-    slot7 d) ca else []) (if Order_Analysis \<in> set as then [] else [])))))))"
+    slot3 d) ca else []) (Product (if (Int_Analysis Refine_Fixpoint) \<in> set as then
+    exec_formals_route \<G> u [] (lift_get slot4 d) ca else []) (Product (if (Int_Analysis
+    Refine_Once) \<in> set as then exec_formals_route \<G> u [] (lift_get slot5 d) ca else [])
+    (Product (if (Int_Analysis Refine_Never) \<in> set as then exec_formals_route \<G> u []
+    (lift_get slot6 d) ca else []) (Product (if Congruence_Analysis \<in> set as then
+    exec_formals_route \<G> u [] (lift_get slot7 d) ca else []) (if Order_Analysis \<in> set as
+    then [] else [])))))))"
 
 definition mcp_root_ctx :: mcp_ctx where
   "mcp_root_ctx = Product [] (Product [] (Product [] (Product [] (Product [] (Product []
@@ -412,11 +422,11 @@ fun ctx_values :: "analysis_domain \<Rightarrow> mcp_ctx \<Rightarrow> abstract_
      map IntervalValue (slot2 ctx)"
 | "ctx_values Parity_Analysis ctx =
      map ParityValue (slot3 ctx)"
-| "ctx_values Int_Analysis ctx =
+| "ctx_values (Int_Analysis Refine_Fixpoint) ctx =
      map IntDomValue (slot4 ctx)"
-| "ctx_values Int_Once_Analysis ctx =
+| "ctx_values (Int_Analysis Refine_Once) ctx =
      map IntDomOnceValue (slot5 ctx)"
-| "ctx_values Int_Never_Analysis ctx =
+| "ctx_values (Int_Analysis Refine_Never) ctx =
      map IntDomNeverValue (slot6 ctx)"
 | "ctx_values Congruence_Analysis ctx =
      map CongruenceValue (slot7 ctx)"
@@ -428,11 +438,11 @@ subsection \<open>What each analysis's registration supplies\<close>
 lemma local_spec_of_sound:
   "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
      (local_spec_of (declared_global p) p a)"
-  by (cases a; simp only: part_gamma.simps local_spec_of.simps;
+  by (cases a rule: analysis_domain_cases; simp only: part_gamma.simps local_spec_of.simps;
       rule field_component_sound[OF ask_assign_sound[OF sign_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF interval_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF parity_rule.exec_comp_sound]]
-        field_component_sound[OF ask_assign_sound[OF int_rule.exec_comp_sound]]
+        field_component_sound[OF ask_assign_sound[OF int_fixpoint_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF int_once_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF int_never_rule.exec_comp_sound]]
         field_component_sound[OF ask_assign_sound[OF congruence_rule.exec_comp_sound]]
@@ -440,14 +450,15 @@ lemma local_spec_of_sound:
       auto simp: less_eq_analysis_product_def)
 
 lemma single_entry_local_spec_of: "single_entry (local_spec_of \<G> p a)"
-  by (cases a) (auto intro!: single_entry_lens_of lift_put_get single_entry_ask_assign[OF
-    single_entry_exec_local_spec] single_entry_order_spec)
+  by (cases a rule: analysis_domain_cases) (auto intro!: single_entry_lens_of lift_put_get
+    single_entry_ask_assign[OF single_entry_exec_local_spec] single_entry_order_spec)
 
 lemma local_spec_of_silent:
-  "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, Int_Analysis,
-    Int_Once_Analysis, Int_Never_Analysis, Congruence_Analysis}
+  "a \<in> {Sign_Analysis, Interval_Analysis, Parity_Analysis, (Int_Analysis Refine_Fixpoint),
+    (Int_Analysis Refine_Once), (Int_Analysis Refine_Never), Congruence_Analysis}
      \<Longrightarrow> ls_query (local_spec_of \<G> p a) A x q = \<top>"
-  by (cases a) (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)
+  by (cases a rule: analysis_domain_cases)
+    (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)
 
 lemma mcp_init_sound:
   "cinit_stores (declared_global p)
@@ -456,15 +467,15 @@ proof -
   have "cinit_stores (declared_global p)
           \<subseteq> val_gamma a (mcp_rd (declared_global p) (mcp_init as))"
     if "a \<in> set as" for a
-    by (cases a)
+    by (cases a rule: analysis_domain_cases)
        (use that sign_rule.init_sound interval_rule.init_sound parity_rule.init_sound
-         int_rule.init_sound int_once_rule.init_sound int_never_rule.init_sound
+         int_fixpoint_rule.init_sound int_once_rule.init_sound int_never_rule.init_sound
          congruence_rule.init_sound in \<open>simp_all add: mcp_init_def mcp_rd_def\<close>)
   then show ?thesis by (auto simp: mcp_gamma_v_def)
 qed
 
 lemma val_answer_sound: "s \<in> val_gamma a v \<Longrightarrow> eval_holds q (val_answer a v q) s"
-  by (cases a)
+  by (cases a rule: analysis_domain_cases)
      (auto split: lifted.splits intro: sign_tf.check.eval_answer_sound
        ivl_tf.check.eval_answer_sound parity_tf.check.eval_answer_sound
        int_tf.check.eval_answer_sound int_tf.check.eval_answer_sound
