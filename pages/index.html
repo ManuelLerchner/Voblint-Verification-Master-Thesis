@@ -168,7 +168,7 @@
         "name": "Voblint Playground",
         "applicationCategory": "DeveloperApplication",
         "operatingSystem": "Any (runs in the browser)",
-        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick one or more domains, a globals rule and a context sensitivity, then inspect every abstract state.",
+        "description": "Run Voblint's Isabelle-generated abstract interpreter on VIMP programs in the browser: pick one or more analyses, a globals rule and a context sensitivity, then inspect every abstract state.",
         "author": {
           "@type": "Person",
           "name": "Manuel Lerchner"
@@ -270,7 +270,7 @@
         <a href="#values">Abstract values</a>
         <a href="#trace">Traces</a>
         <a href="#observers">Observers</a>
-        <a href="#semantics">Three semantics</a>
+        <a href="#semantics">What a run is</a>
         <a href="#solver">Graph to values</a>
         <a href="#settings">Contexts</a>
         <a href="#unknowns">Implicit system</a>
@@ -312,8 +312,8 @@
           <li class="doc-toc-part">III · How it works</li>
           <li><a href="#solver" data-target="solver">From a graph to equations to values</a></li>
           <li><a href="#settings" data-target="settings">Procedures: how many copies to keep apart</a></li>
-          <li><a href="#unknowns" data-target="unknowns">The system nobody can write down</a></li>
-          <li><a href="#globals" data-target="globals">Globals: what several callers write into one entry</a></li>
+          <li><a href="#unknowns" data-target="unknowns">The implicit equation system</a></li>
+          <li><a href="#globals" data-target="globals">Merging calls</a></li>
           <li class="doc-toc-part">IV · Why you can trust it</li>
           <li><a href="#verified" data-target="verified">What does “verified” mean?</a></li>
           <li><a href="#chain" data-target="chain">The proof chain</a></li>
@@ -686,7 +686,7 @@
           there.
         </p>
         <p class="section-intro">The analyzer computes with these abstract values instead of with single integers; it never handles the sets themselves, only their descriptions. Where one run holds <code>x = 7</code> and executes <code>x = x + 1</code>, the analyzer holds the interval <code>[0, 9]</code> for <code>x</code> and computes <code>[1, 10]</code>. This single step of interval arithmetic covers every run in which <code>x</code> lies between 0 and 9.</p>
-        <p class="section-intro">The price is precision. A domain can name only some sets, so the answer is usually wider than the truth. The exact set of values at a point may not be nameable at all, and even when it is, the analyzer may not find it. This is not a weakness of one particular domain. For general programs, the questions an analyzer would like to decide exactly are undecidable (Rice's theorem covers every non-trivial property of the function a program computes), so an analyzer that always terminates and never gives a wrong answer must sometimes answer too wide. The rest of this page asks whether a wide answer still settles the questions you care about.</p>
+        <p class="section-intro">The price is precision. A domain can name only some sets, so the answer is usually wider than the truth. The exact set of values at a point may not be nameable at all, and even when it is, the analyzer may not find it. This is not a weakness of one particular domain. For general programs, many semantic questions we would like to decide exactly are undecidable. A sound analyzer that always terminates therefore has to lose information somewhere. The rest of this page asks whether a wide answer still settles the questions you care about.</p>
       </div>
 
       <figure class="scene scene-gamma" data-preset="0">
@@ -876,7 +876,7 @@
       </details>
 
       <h3 class="setting-title">Two analyses, one question</h3>
-      <p class="setting-copy">The Int product combines four numeric domains inside one value. Separate analyses can also work together while they run. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks the other analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
+      <p class="setting-copy">The Int product combines four numeric domains inside one value. Separate analyses can also exchange information while the fixpoint is being computed. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks the other analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
 
       <figure class="scene scene-coop" data-prog="eq" data-sel="both">
         <div class="coop-controls">
@@ -3828,7 +3828,7 @@ fun main() {
           </table>
         </div>
         <figcaption>
-          Measured with the analyzer on this site: Interval domain, no context sensitivity.
+          Measured with the analyzer on this site: Interval analysis, no context sensitivity.
           “No answer” means no result within 12 seconds. Click a cell to run it in the playground. In the last row the recursive call
           site's own contribution changes from <code>9</code> to <code>[1, 9]</code>. Warrow per
           origin sees that one call site grow and widens it to <code>−∞</code>; after that
@@ -3949,22 +3949,22 @@ fun main() {
 
       <div class="prose-block">
         <h3>What came before, and what is new</h3>
-        <p>Before the guarantee itself, it helps to know which parts of it Voblint builds on. Much of the machinery is inherited, some is adapted, and the contribution is the formalization that connects it end to end with a machine-checked proof.</p>
+        <p>Before the guarantee itself, it helps to know which parts of it Voblint builds on. Much of the machinery rests on prior work, some is adapted here, and the contribution is the formalization that connects it end to end with a machine-checked proof.</p>
       </div>
 
       <figure class="scene scene-prov">
         <div class="prov-grid">
           <div class="prov-col inherited">
-            <p class="prov-head">Inherited</p>
+            <p class="prov-head">Prior foundations</p>
             <ul>
               <li>Widening, narrowing and the reduced product (<a href="#ref-cousot-1977">Cousot and Cousot, 1977</a>, <a href="#ref-cousot-1979">1979</a>)</li>
               <li>Side-effecting constraint systems (<a href="#ref-apinis-2012">Apinis et al., 2012</a>)</li>
-              <li>The top-down solver and the soundness proofs of its update rules (<a href="#ref-tilscher-2026-nfm">Tilscher et al., 2026</a>), with the rules from <a href="#ref-stemmler-2025">Stemmler</a></li>
+              <li><strong>Reused directly:</strong> the verified top-down solver and the soundness proofs of its update rules (<a href="#ref-tilscher-2026-nfm">Tilscher et al., 2026</a>), with the rules from <a href="#ref-stemmler-2025">Stemmler</a></li>
               <li>The split into local and global analysis information (<a href="#ref-vojdani-2016">Goblint</a>)</li>
             </ul>
           </div>
           <div class="prov-col adapted">
-            <p class="prov-head">Adapted</p>
+            <p class="prov-head">Adapted here</p>
             <ul>
               <li>Local traces of threads (<a href="#ref-schwarz-2021">Schwarz et al., 2021</a>) become activation traces, one per procedure activation</li>
               <li>Transfer functions derived from sound value operations (<a href="#ref-nipkow-klein-2014">Nipkow and Klein, 2014</a>) yield both the abstract transfer and the executable one, proved to agree</li>
@@ -3972,16 +3972,16 @@ fun main() {
             </ul>
           </div>
           <div class="prov-col new">
-            <p class="prov-head">This work</p>
+            <p class="prov-head">Contributions of this work</p>
             <ul>
               <li><strong>End-to-end soundness.</strong> The definite verdicts of <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> are correct for every source execution from an initial store with zeroed globals that reaches the check, in every configuration, provided the solve terminates (<a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>).</li>
-              <li><strong>A concrete semantics of calling contexts.</strong> A context policy is a relation between calls and callee contexts, and the per-context collections together equal the context-free one (<a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.node_collect_eq_Union_activation_collect%7Cfact"><code>node_collect_eq_Union_activation_collect</code></a>).</li>
+              <li><strong>A semantic account of calling contexts.</strong> A context policy is a relation between calls and callee contexts, and the per-context collections together equal the context-free one (<a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.node_collect_eq_Union_activation_collect%7Cfact"><code>node_collect_eq_Union_activation_collect</code></a>).</li>
               <li><strong>Compositional soundness.</strong> Domain, context policy and solver are verified separately (<a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>), and so are analyses that exchange queries (<a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_combine_sound%7Cfact"><code>mcp_combine_sound</code></a>).</li>
               <li><strong>Necessity and non-vacuity as theorems.</strong> Counterexample theorems show that weakening several obligations admits unsound results (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.total_dropped_unsound%7Cfact"><code>total_dropped_unsound</code></a>), and evaluated theorems give non-vacuous verdicts (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
             </ul>
           </div>
         </div>
-        <figcaption>Where the pieces come from, following the thesis's contribution statement and its comparison with related work. The claims under “This work” are scoped: each records that the literature search behind the thesis found no existing result of that kind, and none is a priority claim. Goblint's architecture is modeled, not its implementation; the <a href="#goblint">comparison with Goblint</a> lists the differences.</figcaption>
+        <figcaption>Where the pieces come from, following the thesis's contribution statement and its comparison with related work. The bottom box follows the thesis's stated contribution scope. It describes what this formalization contributes, without claiming that no related result exists elsewhere. Goblint's architecture is modeled, not its implementation; the <a href="#goblint">comparison with Goblint</a> lists the differences.</figcaption>
       </figure>
 
       <div class="prose-block">
@@ -4486,7 +4486,7 @@ fun main() {
       </figure>
 
       <h3 class="setting-title">What the proof forced us to make explicit</h3>
-      <p class="setting-copy">Some obligations look like proof bookkeeping, but several of them correspond to design constraints that only became visible once the soundness theorem had to be stated precisely. For each of the three below, a design that looks reasonable is shown to go wrong by a counterexample in the theories. Each counterexample weakens one condition and keeps the others; it shows that this condition is needed, not that every premise of the development is.</p>
+      <p class="setting-copy">Some obligations look like proof bookkeeping, but several of them correspond to design constraints that only became visible once the soundness theorem had to be stated precisely. The first two below are necessity results: weakening the condition while keeping the others admits an unsound claim. They show that these conditions are needed, not that every premise of the development is. The third is an executable witness that the implemented equation system obeys another constraint the proof exposed.</p>
 
       <figure class="scene scene-forced">
         <div class="forced-grid">
