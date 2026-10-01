@@ -3655,7 +3655,7 @@ function cancelRun() {
   clearResults();
 
   if (live && (live.chunks.length > 0 || live.input)) {
-    showStatus("Analysis cancelled \u00b7 its trace so far is under Generated core");
+    showStatus("Analysis cancelled \u00b7 its trace so far is under run_voblint: call and answer");
     showCancelledTrace(live);
   } else {
     showStatus("Analysis cancelled \u00b7 run again when ready");

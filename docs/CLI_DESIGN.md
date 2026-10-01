@@ -280,7 +280,7 @@ seventh argument, `trace`, naming the form as the flags do: `"compact"`,
 `"verbose"` or `"jsonl"` add a `trace` field holding the text
 `Solver_trace.emit` writes in that form, and `"off"` leaves the answer as it
 was before the tracer existed. The page runs every analysis in `"verbose"`
-mode and shows the text in the **Generated core** panel beside the call's input
+mode and shows the text in the **run_voblint: call and answer** panel beside the call's input
 and output; its JSON Lines download solves the shown run again in `"jsonl"`
 mode. Share links carry `trace=verbose` to open that panel; older forms still
 open it. The browser module outlives a run, so the adapter sets the hook's
