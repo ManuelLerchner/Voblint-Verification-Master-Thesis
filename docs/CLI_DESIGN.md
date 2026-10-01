@@ -279,13 +279,23 @@ The playground offers the same traces. `cli/entry/voblint_web.ml` takes a
 seventh argument, `trace`, naming the form as the flags do: `"compact"`,
 `"verbose"` or `"jsonl"` add a `trace` field holding the text
 `Solver_trace.emit` writes in that form, and `"off"` leaves the answer as it
-was before the tracer existed. The page shows the compact or the full
-(verbose) text above the graph, lays out its first 400 lines until the reader
-asks for all of them, and saves the whole text; its JSON Lines download solves
-the shown run again in `"jsonl"` mode. Share links carry the form as
-`trace=compact` or `trace=verbose`; `trace=1` still opens the compact one. The
-browser module outlives a run, so the adapter sets the hook's switch on every
-call and `Solver_trace_hook.recorded` empties the event list it hands over.
+was before the tracer existed. The page runs every analysis in `"verbose"`
+mode and shows the text in the **Generated core** panel beside the call's input
+and output; its JSON Lines download solves the shown run again in `"jsonl"`
+mode. Share links carry `trace=verbose` to open that panel; older forms still
+open it. The browser module outlives a run, so the adapter sets the hook's
+switch on every call and `Solver_trace_hook.recorded` empties the event list it
+hands over.
+
+A run may never finish, and the page cancels it by terminating its worker. In
+`"verbose"` mode the adapter therefore installs `Solver_trace_hook.listener`,
+which renders each kept event as it is recorded (`Solver_trace.live_verbose`)
+and posts the text to the worker's `Voblint_trace_chunk` about every 100 ms. On
+cancel the page shows the chunks it received. The adapter also sets
+`Solver_trace_hook.limit` to 50,000 events: later events are counted, not kept,
+so a run that never finishes stops growing its trace, and a finished run's text
+ends with `Trace truncated` instead of `Trace complete`. The listener runs inside
+the hook's `try`, and the hook still returns `()`. The CLI sets neither.
 The page's **Solve replay** section, when opened, solves the shown run again in
 `"jsonl"` mode and steps through the events on its own drawing of the graph
 (`pages/replay.js`). Every state it shows comes from one reducer,

@@ -147,6 +147,60 @@ let trace_text (format, verbose) ~source ~domains ~globals ~context result =
     ~globals ~program:"browser.vimp" result;
   Buffer.contents buffer
 
+(* The verbose trace of a run that may never finish, handed to the page while
+   it solves: the page cancels such a run by terminating this worker, and only
+   what reached it survives. Chunks go to the worker's [Voblint_trace_chunk],
+   about every [live_interval_ms]. The finished run's answer carries the whole
+   trace again, so a chunk is only ever a preview. *)
+let live_interval_ms = 100.
+
+(* What a run records at most: a run that never finishes stops growing here. *)
+let live_event_limit = 50_000
+
+let post_chunk text =
+  let sink = Js.Unsafe.get Js.Unsafe.global "Voblint_trace_chunk" in
+  if Js.typeof sink = Js.string "function" then
+    ignore (Js.Unsafe.fun_call sink [| Js.Unsafe.inject (Js.string text) |])
+
+let stream_live ~source ~domains ~globals ~context =
+  let buffer = Buffer.create 4096 in
+  let last = ref (now_ms ()) and since = ref 0 in
+  let render =
+    Solver_trace.live_verbose ~out:(Buffer.add_string buffer) ~source
+      ~analyses:(List.map Result_text.analysis_label domains)
+      ~context:(Solver_trace.context_name context)
+      ~globals ~program:"browser.vimp" ()
+  in
+  let flush () =
+    if Buffer.length buffer > 0 then begin
+      post_chunk (Buffer.contents buffer);
+      Buffer.clear buffer
+    end;
+    last := now_ms ()
+  in
+  flush ();
+  Solver_trace_hook.limit := live_event_limit;
+  Solver_trace_hook.listener :=
+    fun channel o ->
+      render channel o;
+      incr since;
+      if !Solver_trace_hook.kept >= live_event_limit then begin
+        Buffer.add_string buffer
+          (Printf.sprintf
+             "\nTrace stopped after %d events; the run goes on unrecorded.\n"
+             live_event_limit);
+        flush ()
+      end
+      else if !since >= 256 then begin
+        (* Reading the clock on every event would cost more than the event. *)
+        since := 0;
+        if now_ms () -. !last >= live_interval_ms then flush ()
+      end
+
+let stop_live () =
+  Solver_trace_hook.limit := max_int;
+  Solver_trace_hook.listener := fun _ _ -> ()
+
 let run analysis_js globals_js context_js context_depth refinement_js source_js
     trace_js =
   let analysis_name = Js.to_string analysis_js in
@@ -164,6 +218,8 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
   (* Set on every call: the worker keeps this module alive between runs. *)
   Solver_trace_hook.enabled :=
     Result.fold ~ok:Option.is_some ~error:(fun _ -> false) trace;
+  Solver_trace_hook.reset ();
+  stop_live ();
 
   let answer =
     match
@@ -186,10 +242,14 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               let program, stmt_positions, header_positions =
                 Vimp_frontend.program "browser.vimp" source
               in
+              if trace = Some (Solver_trace.Text, true) then
+                stream_live ~source:(source, stmt_positions) ~domains
+                  ~globals:globals_name ~context;
               let analysis_start = now_ms () in
               let answer =
-                Value_symbols.decode_answer
-                  (C.run_voblint domains globals context program)
+                Fun.protect ~finally:stop_live (fun () ->
+                    Value_symbols.decode_answer
+                      (C.run_voblint domains globals context program))
               in
               let analysis_ms = now_ms () -. analysis_start in
               let raw =

@@ -426,7 +426,7 @@ function renderRawCall(raw) {
     callCell("body", ...args),
     callCell("head", callPart("\u27f9", "arrow")),
     callCell("body", ...result),
-    ...(input && traceSummary
+    ...(traceSummary
       ? [
           callCell("head", callPart("observed", "observed")),
           callCell("body", callPart(traceSummary, "observed")),
@@ -1863,6 +1863,9 @@ const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "S
 let solverTraceOffered = null;
 let solverTraceContent = "";
 
+/* The running main run's trace as the worker hands it over, kept for a cancel. */
+let liveTrace = null;
+
 function countLines(text) {
   let lines = text.endsWith("\n") ? 0 : 1;
 
@@ -1889,9 +1892,23 @@ function offerSolverTrace(run) {
     run === null
       ? null
       : trace
-        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run`
+        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run${run.cancelled ? " until it was cancelled" : ""}`
         : "trace: not produced",
   );
+}
+
+/*
+ * A cancelled run has no answer, only the trace that reached the page before its
+ * worker was terminated: the panel shows that, and no input or output.
+ */
+function showCancelledTrace(live) {
+  rawResultEmpty.hidden = true;
+  rawResultPanes.hidden = false;
+  offerSolverTrace({
+    ...live,
+    trace: `${live.chunks.join("")}\nCancelled here: the run was stopped.\n`,
+    cancelled: true,
+  });
 }
 
 function downloadBlob(blob, name) {
@@ -1916,7 +1933,8 @@ function downloadSolverTrace() {
 async function downloadSolverTraceJsonl() {
   const shown = solverTraceOffered;
 
-  if (!shown || solverTraceDownloadJsonl.disabled) {
+  /* A cancelled run would only be solved again until cancelled again. */
+  if (!shown || shown.cancelled || solverTraceDownloadJsonl.disabled) {
     return;
   }
 
@@ -3612,9 +3630,17 @@ function resetForConfigurationChange() {
 }
 
 function cancelRun() {
+  const live = pendingAnalysis ? liveTrace : null;
+
   retireActiveRun("Analysis cancelled.");
   clearResults();
-  showStatus("Analysis cancelled \u00b7 run again when ready");
+
+  if (live && live.chunks.length > 0) {
+    showCancelledTrace(live);
+    showStatus("Analysis cancelled \u00b7 its trace so far is under Generated core");
+  } else {
+    showStatus("Analysis cancelled \u00b7 run again when ready");
+  }
 }
 
 function createAnalysisWorker() {
@@ -3624,6 +3650,11 @@ function createAnalysisWorker() {
     const message = event.data;
 
     if (!pendingAnalysis || !message || message.id !== pendingAnalysis.id) {
+      return;
+    }
+
+    if (message.type === "trace-chunk") {
+      pendingAnalysis.onChunk?.(message.text);
       return;
     }
 
@@ -3678,7 +3709,8 @@ function getAnalysisWorker() {
   return analysisWorker;
 }
 
-function runAnalysisInWorker(configuration, source) {
+/* [onChunk] receives the verbose trace in pieces while the worker still solves. */
+function runAnalysisInWorker(configuration, source, { onChunk = null } = {}) {
   if (pendingAnalysis) {
     throw new Error("An analysis is already running.");
   }
@@ -3690,6 +3722,7 @@ function runAnalysisInWorker(configuration, source) {
       id,
       resolve,
       reject,
+      onChunk,
     };
 
     try {
@@ -3762,7 +3795,7 @@ async function run() {
     if (runGeneration === analysisRunGeneration && pendingAnalysis) {
       showStatus(
         `Still analyzing after ${SLOW_RUN_MS / 1000} s. Some settings never finish on some ` +
-          "programs, such as Join on a growing recursion: press Cancel to stop.",
+          "programs, such as Join on a growing recursion: press Cancel to stop and see its trace so far.",
       );
     }
   }, SLOW_RUN_MS);
@@ -3771,7 +3804,13 @@ async function run() {
 
   try {
     /* The hook records the trace during this run; it changes nothing in the answer. */
-    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "verbose" }, source);
+    liveTrace = { configuration, source, chunks: [] };
+    const live = liveTrace;
+    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "verbose" }, source, {
+      onChunk: (text) => live.chunks.push(text),
+    });
+
+    liveTrace = null;
 
     if (typeof rawResult !== "string") {
       throw new TypeError(`Voblint_run returned ${typeof rawResult}; expected a JSON string.`);

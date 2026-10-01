@@ -53,6 +53,17 @@ function waitForAnalyzer() {
 
 const analyzerReady = waitForAnalyzer();
 
+/*
+ * The analyzer hands the verbose trace over in chunks while it solves. The page
+ * cancels a run by terminating this worker, so only chunks posted before that
+ * reach it.
+ */
+let runningId = null;
+
+self.Voblint_trace_chunk = (text) => {
+  self.postMessage({ type: "trace-chunk", id: runningId, text });
+};
+
 self.onmessage = async (event) => {
   const request = event.data;
 
@@ -62,6 +73,8 @@ self.onmessage = async (event) => {
 
   try {
     await analyzerReady;
+
+    runningId = request.id;
 
     const result = self.Voblint_run(
       request.analysis,
