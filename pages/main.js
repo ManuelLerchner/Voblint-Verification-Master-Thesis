@@ -659,36 +659,6 @@ function failureTitle(result) {
     : "The program could not be analyzed";
 }
 
-function showDiagnosticsSummary(result) {
-  const diagnostics = Array.isArray(result.diagnostics) ? result.diagnostics : [];
-
-  if (diagnostics.length === 0) {
-    return false;
-  }
-
-  const errors = diagnostics.filter((d) => d.severity === "error").length;
-  const count = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const parts = [
-    errors && count(errors, "error"),
-    diagnostics.length - errors && count(diagnostics.length - errors, "warning"),
-  ]
-    .filter(Boolean)
-    .join(" and ");
-
-  showProblem({
-    kind: errors > 0 ? "error" : "warning",
-    title: `${parts[0].toUpperCase()}${parts.slice(1)} in arithmetic`,
-    note: "An error means a divisor is zero in every live context; a warning means it may be zero.",
-    items: diagnostics.map((d) => ({
-      kind: d.severity === "error" ? "error" : "warning",
-      message: d.message ?? "",
-      line: d.line,
-    })),
-  });
-
-  return true;
-}
-
 /* -------------------------------------------------------------------------- */
 /* Source and result navigation                                               */
 /* -------------------------------------------------------------------------- */
@@ -3830,7 +3800,6 @@ async function run() {
 
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
-        showDiagnosticsSummary(result);
         solveReplay.offer({ configuration, source, answer: result });
       }
     } else {
@@ -3870,14 +3839,11 @@ async function run() {
           "error",
         );
 
-        /* The graph panel already names the failure; arithmetic findings take the banner. */
-        if (!showDiagnosticsSummary(result)) {
-          showProblem({
-            kind: "warning",
-            title: "The result is ready, but the graph could not be drawn",
-            message: error.message,
-          });
-        }
+        showProblem({
+          kind: "warning",
+          title: "The result is ready, but the graph could not be drawn",
+          message: error.message,
+        });
 
         console.error(error);
 
