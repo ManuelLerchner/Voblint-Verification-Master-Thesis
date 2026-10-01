@@ -838,7 +838,7 @@
     that produce the abstract syntax tree the public analysis function takes,
     and a renderer. The parser is trusted.
   ],
-  term("goblint", "Goblint", _trust, see: <app:goblint-alignment>)[
+  term("goblint", "Goblint", _trust, see: <sec:eval-goblint>)[
     The static analyzer for C whose architecture Voblint follows: the local and
     shared split, the side-effecting top-down solver and the enter and combine
     protocol. The correspondence is architectural, not operational.

@@ -387,7 +387,7 @@ $[v, c]$. The context belongs to the whole activation: extending a trace by a
 local edge keeps its contexts (#isathm("activation_context_rel_extend")). We call
 contexts _activation-stable_ for this reason. The classical designs differ in what a context records @sharir81 @rival20[§8.4.1] @seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records the call history, and practical variants bound it to the $k$ most recent call sites, since a recursive procedure otherwise has infinitely many contexts. The functional approach computes a procedure summary independent of callers, which each call site instantiates. Goblint computes the callee context after its entry operation, by passing each
 resulting callee entry state to the analysis's `context` operation
-(@app:goblint-alignment), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
+(@sec:eval-goblint), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
 
 Voblint models context membership as a relation, for two reasons. First,
 with entry-state contexts the context of a call is an abstract value the

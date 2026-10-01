@@ -544,8 +544,10 @@ of Goblint's
 at revision #raw(alignment.revision.slice(0, 8)). There, a call runs the
 analysis's `enter`, selects the callee context from the entered state,
 publishes the callee entry, and combines the callee's exit with the caller.
-Voblint's D/G specification has the same four roles. @app:goblint-alignment
-compares #alignment.rows.len() Goblint constructs with their counterparts:
+Voblint's D/G specification has the same four roles. The project site's
+side-by-side comparison
+(#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#goblint")[site]) lists #alignment.rows.len() Goblint constructs with
+their counterparts:
 #alignment-count("modeled") are modeled, #alignment-count("simplified")
 simplified, and #alignment-count("absent") not modeled. It records
 architectural correspondence; no row claims that the two compute the same

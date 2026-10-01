@@ -50,7 +50,7 @@ from the trace.
 For the analysis framework, agents read Goblint's OCaml sources to find the
 interfaces that the formalization could approximate: the split into local and
 global unknowns, unknowns indexed by node and context, and the enter/combine
-protocol at calls (@app:goblint-alignment). Goblint offered a working architecture whose parts correspond to standard
+protocol at calls (@sec:eval-goblint). Goblint offered a working architecture whose parts correspond to standard
 constructions of abstract interpretation. @sec:eval-1161 discusses one
 implementation defect found during this work. The source language, its compiler to the control-flow graph, the traces, the
 coverage contract and the proofs have no counterpart in Goblint. The solver

@@ -4,10 +4,10 @@
 ``pages/index.html`` carries the Goblint/Voblint comparison as the rows of
 ``ul.align-list``: a Goblint construct linked to its source at a pinned commit,
 a status (modeled, simplified or absent), the Voblint counterpart linked to the
-rendered theories, and a note. The thesis prints the same comparison as an
-appendix table. Keeping one copy is the point: this tool reads the rows and
-writes ``thesis/shared/generated/goblint-alignment.json``, and the appendix
-renders that file. It never writes to ``pages/``.
+rendered theories, and a note. The thesis cites the comparison and counts its
+rows by status. Keeping one copy is the point: this tool reads the rows and
+writes ``thesis/shared/generated/goblint-alignment.json``, and the thesis
+reads that file. It never writes to ``pages/``.
 
 A Voblint link becomes a formal citation. An entity anchor
 (``#DG_Spec.dg_spec%7Ctype``) is cited by its kind and short name, and a bare

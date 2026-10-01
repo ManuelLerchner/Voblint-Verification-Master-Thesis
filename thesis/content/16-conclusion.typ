@@ -142,8 +142,7 @@ arises.
   (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run, and
   the comparison with prior work rests on a targeted search rather than a
   systematic review (@ch:related).
-+ *Goblint.* The correspondence is architectural (@app:goblint-alignment).
-  No theorem transfers to Goblint's OCaml implementation, and no agreement
++ *Goblint.* The correspondence is architectural. No theorem transfers to Goblint's OCaml implementation, and no agreement
   rate between the two analyzers is measured (@sec:eval-goblint).
 
 == Outlook and future work <sec:outlook>
@@ -204,7 +203,7 @@ A faster executable needs the data refinement of @sec:eval-absent.
 
 === Voblint and Goblint <sec:outlook-goblint>
 
-Within the architectural correspondence of @app:goblint-alignment, Voblint can serve as an executable specification of the
+Within the architectural correspondence of @sec:eval-goblint, Voblint can serve as an executable specification of the
 architecture with proved soundness obligations. From Goblint to Voblint, a
 Goblint feature gives the design that an extension follows, as the query
 mechanism did for @ch:cooperation. A documented Goblint defect can be replayed

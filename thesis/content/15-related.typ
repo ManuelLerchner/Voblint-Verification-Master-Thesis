@@ -230,8 +230,8 @@ describe how Goblint uses them to decouple a mixed flow-sensitive analysis from
 the solver, with digests on the analysis side and update rules on the solver
 side recovering precision. Voblint adopts the split: an analysis supplies local
 and global transfer behaviour, and the generator and solver organize their
-interaction. @app:goblint-alignment records where the model differs from
-Goblint's implementation.
+interaction. @sec:eval-goblint records where the model differs from Goblint's
+implementation.
 
 Goblint combines its analyses at run time. Its MCP runs every activated
 analysis on its part of one combined state, meets the answers of all analyses

@@ -1,6 +1,6 @@
-// The Goblint comparison, rendered from the rows of the explainer's alignment
+// The Goblint comparison, read from the rows of the explainer's alignment
 // list. `tools/goblint_alignment.py` extracts them into the JSON read here, so
-// the page and the appendix cannot disagree; edit `pages/index.html`, never
+// the page and the thesis cannot disagree; edit `pages/index.html`, never
 // this data.
 #import "theme.typ": tint, vb
 #import "code.typ": isaconst, isalink, isalocale, isathm, isatype
