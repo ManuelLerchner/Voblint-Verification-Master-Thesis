@@ -248,7 +248,6 @@ const foldByDepth = foldService.of((state, from) => {
 const OLD_VALUE = /^ *(?:Old value: |old = )/;
 const NEW_VALUE = /^ *(?:New value: |new = )/;
 const VALUE_LINE = /^ *(?:Old value: |Eqd: |New value: |answer: |value = |old = |new = )/;
-const UPDATE = /\(wpx: \w+\): (.*) -> (.*)$/;
 
 function parts(text, offset) {
   const found = [];
@@ -404,17 +403,6 @@ function layout(doc) {
     if (head) {
       labelAt = head.labelAt;
       old = null;
-
-      const update = UPDATE.exec(line.text);
-
-      if (update) {
-        const isAt = line.to - update[2].length;
-        const was = parts(update[1], isAt - 4 - update[1].length);
-        const is = parts(update[2], isAt);
-
-        ranges.push(...changes(was, is, removedMark), ...changes(is, was, addedMark));
-      }
-
       continue;
     }
 

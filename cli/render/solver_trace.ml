@@ -520,8 +520,8 @@ let goblint_line nm = function
           else
             Some
               ( "update",
-                Printf.sprintf "%s (wpx: %b): %s -> %s" (x i) wpx
-                  (nm.local_value old) (nm.local_value now),
+                Printf.sprintf "%s (wpx: %b)\nOld value: %s\nNew value: %s"
+                  (x i) wpx (nm.local_value old) (nm.local_value now),
                 Keep )
       | C.Ev_Iterate_Changed i -> Some ("iter", "iterate changed " ^ x i, Keep)
       | C.Ev_Side (i, g, d) ->

@@ -204,7 +204,7 @@ value report. Checked against the local Goblint checkout at `0dc12d355`
 | `Ev_Widen x wp` | `wpoint: widen x` (if `wp`) | 122 | none |
 | `Ev_Sol x wp old eqd new` | `sol: Var: x (wp: wp)` / `Old value` / `Eqd` / `New value` | none | 396 (`sol`) |
 | `Ev_Wpoint_Remove x wp` | `wpoint: iterate removing wpoint x` (if `wp`) | 141 | 423 |
-| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx): old -> new` (unless old is ⊥) | 127 | 404 (`solchange`) |
+| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx)` / `Old value` / `New value` (unless old is ⊥) | 127 | 404 (`solchange`) |
 | `Ev_Iterate_Changed x` | `iter: iterate changed x` | 131 | none |
 | `Ev_Side x g d` | `side: side to g from x; value: d` | 89 | 476 |
 | `Ev_Update_Global x g bot old new` | `update: side to g from x new: new` (unless old is ⊥) | 102 | 498 (`solside`) |
