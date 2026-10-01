@@ -59,6 +59,7 @@
   <link rel="stylesheet" href="figures/gamma.css">
   <link rel="stylesheet" href="figures/reduce.css">
   <link rel="stylesheet" href="figures/coop.css">
+  <link rel="stylesheet" href="figures/prov.css">
   <link rel="stylesheet" href="figures/source-morph.css">
 <link rel="stylesheet" href="figures/gen.css">
 <link rel="stylesheet" href="figures/infinite.css">
@@ -3944,6 +3945,43 @@ fun main() {
         <h2 id="verified-heading">What does “verified” mean?</h2>
         <p class="section-intro">The first section showed what a verdict promises a user. This one says where that guarantee starts and where it stops. The congruence bug at the start of this page is the kind of mistake a proof rules out. VIMP's <code>%</code> is <a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.c_mod%7Cconst"><code>c_mod</code></a>, and the congruence domain has to prove that <code>c_mod i j</code> lies inside &#947; of whatever it answers. An operation that rounds the wrong way cannot satisfy that obligation. Voblint's analysis is written in Isabelle/HOL, and theorems there state that, once the solve finishes, its answer covers every store a real run can have. Isabelle checks every step of those proofs down to the axioms of its logic.</p>
       </div>
+
+      <div class="prose-block">
+        <h3>What came before, and what is new</h3>
+        <p>Before the guarantee itself, it helps to know which parts of it Voblint builds on. Much of the machinery is inherited, some is adapted, and the contribution is the formalization that connects it end to end with a machine-checked proof.</p>
+      </div>
+
+      <figure class="scene scene-prov">
+        <div class="prov-grid">
+          <div class="prov-col inherited">
+            <p class="prov-head">Inherited</p>
+            <ul>
+              <li>Widening, narrowing and the reduced product (<a href="#ref-cousot-1977">Cousot and Cousot, 1977</a>, <a href="#ref-cousot-1979">1979</a>)</li>
+              <li>Side-effecting constraint systems (<a href="#ref-apinis-2012">Apinis et al., 2012</a>)</li>
+              <li>The top-down solver and the soundness proofs of its update rules (<a href="#ref-tilscher-2026-nfm">Tilscher et al., 2026</a>), with the rules from <a href="#ref-stemmler-2025">Stemmler</a></li>
+              <li>The split into local and global analysis information (<a href="#ref-vojdani-2016">Goblint</a>)</li>
+            </ul>
+          </div>
+          <div class="prov-col adapted">
+            <p class="prov-head">Adapted</p>
+            <ul>
+              <li>Local traces of threads (<a href="#ref-schwarz-2021">Schwarz et al., 2021</a>) become activation traces, one per procedure activation</li>
+              <li>Transfer functions derived from sound value operations (<a href="#ref-nipkow-klein-2014">Nipkow and Klein, 2014</a>) yield both the abstract transfer and the executable one, proved to agree</li>
+              <li>Goblint's queries between analyses become a query channel each analysis is proved sound against</li>
+            </ul>
+          </div>
+          <div class="prov-col new">
+            <p class="prov-head">This work</p>
+            <ul>
+              <li><strong>End-to-end soundness.</strong> The definite verdicts of <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> are correct for every source execution from an initial store with zeroed globals that reaches the check, in every configuration, provided the solve terminates (<a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>).</li>
+              <li><strong>A concrete semantics of calling contexts.</strong> A context policy is a relation between calls and callee contexts, and the per-context collections together equal the context-free one (<a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.node_collect_eq_Union_activation_collect%7Cfact"><code>node_collect_eq_Union_activation_collect</code></a>).</li>
+              <li><strong>Compositional soundness.</strong> Domain, context policy and solver are verified separately (<a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>), and so are analyses that exchange queries (<a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_combine_sound%7Cfact"><code>mcp_combine_sound</code></a>).</li>
+              <li><strong>Necessity and non-vacuity as theorems.</strong> Counterexample theorems show that weakening several obligations admits unsound results (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.total_dropped_unsound%7Cfact"><code>total_dropped_unsound</code></a>), and evaluated theorems give non-vacuous verdicts (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
+            </ul>
+          </div>
+        </div>
+        <figcaption>Where the pieces come from, following the thesis's contribution statement and its comparison with related work. The claims under “This work” are scoped: each records that the literature search behind the thesis found no existing result of that kind, and none is a priority claim. Goblint's architecture is modeled, not its implementation; the <a href="#goblint">comparison with Goblint</a> lists the differences.</figcaption>
+      </figure>
 
       <div class="prose-block">
         <h3>Correct with respect to what?</h3>

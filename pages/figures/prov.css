@@ -1,0 +1,56 @@
+/* What came before, and what is new */
+
+:where(.scene-prov) .prov-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+:where(.scene-prov) .prov-col {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-top: 3px solid var(--border-strong);
+  border-radius: var(--radius);
+}
+
+:where(.scene-prov) .prov-col.adapted {
+  border-top-color: var(--primary);
+}
+
+:where(.scene-prov) .prov-col.new {
+  grid-column: 1 / -1;
+  background: var(--accent-soft);
+  border-top-color: var(--accent);
+}
+
+:where(.scene-prov) .prov-col.new ul {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0 28px;
+}
+
+:where(.scene-prov) .prov-head {
+  margin: 0 0 8px;
+  font: 700 0.74rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+:where(.scene-prov) ul {
+  margin: 0;
+  padding-left: 18px;
+}
+
+:where(.scene-prov) li {
+  margin: 6px 0;
+  font-size: 0.92rem;
+}
+
+@media (max-width: 900px) {
+  :where(.scene-prov) .prov-grid,
+  :where(.scene-prov) .prov-col.new ul {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
