@@ -1,0 +1,24 @@
+// PARAM: --analysis interval --context entry-state
+// Concretely m == 2 holds for the call f(1) and for f(x) with x = 1, and fails
+// for x = 2 and x = 3, so UNKNOWN is the only sound verdict at the check.
+//
+// Entry-state contexts give f two contexts: {n=[1,1]} from the first call, in
+// which m=[2,2] and the check is PROVED, and {n=[1,3]} from the second, in which
+// m=[2,6] admits the odd values no run has and the check is UNKNOWN. The node
+// verdict joins the two to UNKNOWN. Backs the soundness chain figure of the
+// thesis (Chapter 10).
+fun f(n) {
+  m = 2 * n;
+  __voblint_check(m == 2); // UNKNOWN
+  return m;
+}
+
+fun main() {
+  a = f(1);
+  x = __voblint_nondet_int();
+  if (0 < x) {
+    if (x < 4) {
+      b = f(x);
+    }
+  }
+}

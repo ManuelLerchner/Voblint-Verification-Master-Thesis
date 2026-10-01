@@ -44,7 +44,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import tomllib
 
@@ -172,13 +172,14 @@ def _index_anchor(
         # (see definitions_of), so the ranking never has to guess between them.
         def rank(
             value: str,
-        ) -> tuple[bool, bool, bool, bool, bool, str]:
+        ) -> tuple[bool, bool, bool, bool, bool, bool, str]:
             page, _, entity = value.partition("#")
             project = page.startswith(("Voblint/", "Unsorted/TD/"))
             return (
                 not page.startswith("Voblint/"),
                 not project,
                 not (project or page.startswith("HOL/HOL/")),
+                _interpretation_copy(entity),
                 "_Interp." in entity,
                 "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
                 value,
@@ -186,6 +187,29 @@ def _index_anchor(
 
         if key not in index or rank(target) < rank(index[key]):
             index[key] = target
+
+
+def _interpretation_copy(entity: str) -> bool:
+    """Whether an anchor names a fact through an interpretation prefix.
+
+    `interpretation mcp_rule: dg_analysis ...` renders every fact of the locale
+    again as `MCP_Analyses.mcp_rule.<fact>`, on a page that never states it. The
+    declaration's own anchor is qualified by the locale, `DG_Analysis.dg_analysis.
+    <fact>`, so a qualifier that is not a known locale or class marks a copy.
+    """
+    parts = unquote(entity).partition("|")[0].split(".")
+    return len(parts) >= 3 and ".".join(parts[:-1]) not in SCOPES
+
+
+def _collect_scopes(rows: list[tuple[str, str, str]]) -> None:
+    """Record every locale and class before ranking, which reads SCOPES."""
+    for rel, qualified, kind in rows:
+        if rel.startswith(("Voblint/", "Unsorted/TD/")) and kind in (
+            "locale",
+            "class",
+            "type",
+        ):
+            SCOPES.add(qualified)
 
 
 def index_live(
@@ -207,12 +231,12 @@ def index_live(
         if sessions in m.group(1)
     ]
     index: dict[tuple[str, str], str] = {}
-    pages = 0
+    fetched: list[tuple[str, str]] = []
     for session in sorted(names):
         listing = fetch(f"{base}Voblint/{session}/index.html", retries)
         if listing is None:
             continue
-        _index_page(index, f"Voblint/{session}/index.html", listing)
+        fetched.append((f"Voblint/{session}/index.html", listing))
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
             # A session that elaborates another session's theory presents a
@@ -223,8 +247,18 @@ def index_live(
             body = fetch(base + rel, retries)
             if body is None:
                 continue
-            _index_page(index, rel, body)
-            pages += 1
+            fetched.append((rel, body))
+    # Ranking reads SCOPES, so every page's locales are known before any is indexed.
+    _collect_scopes(
+        [
+            (rel, m.group(1).replace("&lt;", "<").replace("&gt;", ">"), m.group(2))
+            for rel, body in fetched
+            for m in ANCHOR.finditer(body)
+        ]
+    )
+    for rel, body in fetched:
+        _index_page(index, rel, body)
+    pages = sum(not rel.endswith("/index.html") for rel, _ in fetched)
     print(
         f"check_thesis_links: indexed {len(index)} anchor(s) from {pages} "
         f"published page(s)",
@@ -272,9 +306,13 @@ def index_anchors() -> dict[tuple[str, str], str]:
     ):
         if "." not in path.stem:
             _index_rel(index, path.relative_to(HTML).as_posix())
-    for row in listing["anchors"]:
-        rel = row["url"].partition("#")[0]
-        _index_anchor(index, rel, row["anchor"].rpartition("|")[0], row["kind"])
+    rows = [
+        (row["url"].partition("#")[0], row["anchor"].rpartition("|")[0], row["kind"])
+        for row in listing["anchors"]
+    ]
+    _collect_scopes(rows)
+    for rel, qualified, kind in rows:
+        _index_anchor(index, rel, qualified, kind)
     return index
 
 
