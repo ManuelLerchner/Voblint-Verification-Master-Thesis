@@ -60,6 +60,7 @@
   <link rel="stylesheet" href="figures/reduce.css">
   <link rel="stylesheet" href="figures/coop.css">
   <link rel="stylesheet" href="figures/prov.css">
+  <link rel="stylesheet" href="figures/forced.css">
   <link rel="stylesheet" href="figures/source-morph.css">
 <link rel="stylesheet" href="figures/gen.css">
 <link rel="stylesheet" href="figures/infinite.css">
@@ -4478,6 +4479,53 @@ fun main() {
         <figcaption>Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler. It also needs the other half of the simulation, which carries a source run into a valid activation trace. Pillar 2, <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, is what every selectable analysis must prove about its transfers, and pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>, is what its check classifier must satisfy. A numeric domain proves neither by hand. It certifies one bundle of value operations once, in <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale"><code>sound_nonrelational_ops</code></a>, and both pillars follow from that certificate. The order analysis proves pillar 2 directly (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>). Pillar 3, <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>, is discharged by each context policy. Pillar 4 connects to the vendored solver's own theorem, which promises a post-solution only for a solve that terminates. This is why every flagship soundness theorem below assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>.</p>
           <p>Two more obligations are not drawn: the initial state covers the initial stores, and the executable states read back to the transfers and routes the theorems are stated over. For a numeric domain, the transfer half of the second also follows from the bundle: the executable transfer and the one the proofs use are built from the same operations, and <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact"><code>tf_st_for_commute</code></a> shows that they agree on every live state. The failures shown are what the obligations rule out; they are not bugs anyone has found in Voblint.</figcaption>
       </figure>
+
+      <h3 class="setting-title">What the proof forced us to make explicit</h3>
+      <p class="setting-copy">Some obligations look like proof bookkeeping, but several of them correspond to design constraints that only became visible once the soundness theorem had to be stated precisely. For each of the three below, a design that looks reasonable is shown to go wrong by a counterexample in the theories. Each counterexample weakens one condition and keeps the others; it shows that this condition is needed, not that every premise of the development is.</p>
+
+      <figure class="scene scene-forced">
+        <div class="forced-grid">
+          <article class="forced-card">
+            <p class="forced-head">Read a callee's result at the callee's context</p>
+            <p><span class="forced-label">Tempting</span> When a call returns, read the callee's exit at the caller's own context, since that is the context the caller is in.</p>
+            <p><span class="forced-label">Fails on</span> The program <code>fun f(n) { return n; }</code> with <code>a = f(1); b = f(5);</code>, where the context of <code>f</code> is the entry value of <code>n</code>. A claim that reads the result that way meets every other obligation, yet covers no store after the first call, although a run gets there. The analysis would call <code>b = f(5)</code> unreachable.</p>
+            <p><span class="forced-label">So</span> The return obligation reads the callee's exit at the context the call entered.</p>
+            <a class="forced-link" href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.return_at_caller_context_unsound%7Cfact"><code>return_at_caller_context_unsound</code></a>
+          </article>
+          <article class="forced-card">
+            <p class="forced-head">Every call needs a context</p>
+            <p><span class="forced-label">Tempting</span> Let a context policy decline some calls, for instance ones it cannot classify. Every call it does classify is still handled soundly.</p>
+            <p><span class="forced-label">Fails on</span> The same program, with a policy that admits no context at all. The claim meets the initial, edge, call and return obligations, but the caller resumes after the call in its own context, where the claim is empty, so a store the run reaches lies outside it.</p>
+            <p><span class="forced-label">So</span> The coverage contract requires totality: every call the claim covers is admitted at some context.</p>
+            <a class="forced-link" href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.total_dropped_unsound%7Cfact"><code>total_dropped_unsound</code></a>
+          </article>
+          <article class="forced-card">
+            <p class="forced-head">Choose the context and publish the seed from the same state</p>
+            <p><span class="forced-label">Tempting</span> Pick the callee's context from the caller's state, which is at hand, and publish the entered state the analysis computes for the callee.</p>
+            <p><span class="forced-label">Fails on</span> A call whose entered state differs from the caller's: here the caller holds <code>[1,1]</code> and the entered state is <code>[7,7]</code>. The seed must land at the key of <code>[7,7]</code>; under the caller's key it would describe an activation it does not belong to.</p>
+            <p><span class="forced-label">So</span> The call program routes and publishes with the same entered value, and reads the callee's exit at that same key.</p>
+            <a class="forced-link" href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.w0_seed_at_entered_frame%7Cfact"><code>w0_seed_at_entered_frame</code></a>
+          </article>
+        </div>
+        <figcaption>The first two are theorems about a concrete program, with the facts about that program established by evaluation. The third is evaluated for one hand-built call (<code>w0_seed_at_entered_frame</code> and <a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.w0_no_seed_at_caller_frame%7Cfact"><code>w0_no_seed_at_caller_frame</code></a>), so it shows the implementation follows the rule, not that every alternative fails.</figcaption>
+      </figure>
+
+      <details class="blackbox deepdive">
+        <summary>
+          <i class="fa-solid fa-list-check" aria-hidden="true"></i>
+          <span class="blackbox-label">more constraints the formalization made explicit</span>
+          <i class="fa-solid fa-chevron-down blackbox-chevron" aria-hidden="true"></i>
+        </summary>
+        <div class="prose-block">
+          <ul>
+            <li><strong>Soundness alone is cheap.</strong> An analyzer that answers <code>UNKNOWN</code> at every check satisfies the soundness statement (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unknown_everywhere_sound%7Cfact"><code>unknown_everywhere_sound</code></a>), while one that answers <code>PROVED</code> everywhere violates it (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.proved_everywhere_unsound%7Cfact"><code>proved_everywhere_unsound</code></a>). This is why the theorems come with non-vacuity witnesses: evaluated verdicts that are actually decided (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
+            <li><strong>A domain obligation rules out the Goblint bug for every operand.</strong> Any abstract remainder that returns the constant <code>1</code> for an odd value modulo <code>2</code> violates the statement that the shipped congruence remainder satisfies, at <code>−5</code> (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.prefix_congruence_mod_unsound%7Cfact"><code>prefix_congruence_mod_unsound</code></a>). Goblint's regression test samples one program; the obligation covers all of them. This is machine-checked; the upstream behaviour is documented, not re-run here.</li>
+            <li><strong>Entry states must be covered in pairs.</strong> When <code>enter</code> returns several alternatives, each pair of caller continuation and callee entry has to cover the run together. Covering the caller store with one pair and the entered store with another lets the combined result exclude the run's real value (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unpaired_entry_cover_unsound%7Cfact"><code>unpaired_entry_cover_unsound</code></a>).</li>
+            <li><strong>Publish to a global unknown at most once per evaluation.</strong> The solver's update rules record one contribution per origin, so the equations buffer their writes (see the <a href="#solver">buffering</a> above). The buffered system terminates on a regression whose equation would otherwise publish twice in one evaluation (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.keyed_multiwrite_buffered_terminates%7Cfact"><code>keyed_multiwrite_buffered_terminates</code></a>). That the unbuffered system does not terminate is expected, but neither proved nor evaluated.</li>
+            <li><strong>A verdict is about VIMP.</strong> VIMP's integers are unbounded and division by zero is defined, so a verdict about a VIMP program does not automatically transfer to a corresponding C program. The theorem is only as meaningful as the semantics it is stated against; the <a href="#limits">limits</a> section returns to this.</li>
+          </ul>
+        </div>
+      </details>
 
     </section>
 
