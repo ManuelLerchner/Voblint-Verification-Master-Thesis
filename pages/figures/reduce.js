@@ -22,7 +22,7 @@
       congruence: "1 (mod 4)",
       changed: [],
       proved: false,
-      text: "Four descriptions of the same `x`, and one of them is `⊤`: the guards left `x` straddling zero, so sign knows nothing at all. The other three are true and too loose, and none rules out `-2` or `10`, so the check is not decided. Together they already allow only `1`, `5` and `9`. Each is true, and none is tight.",
+      text: "Four descriptions of the same `x`, and one of them is `⊤`: the guards left `x` straddling zero, so sign knows nothing at all. The interval still admits `-2` and `10`, so the check is not decided, although parity and congruence each exclude both. Together they already allow only `1`, `5` and `9`. Each is true, and none is tight.",
     },
     {
       sign: "⊤",
