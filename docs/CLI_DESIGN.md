@@ -191,13 +191,13 @@ value report. Checked against the local Goblint checkout at `0dc12d355`
 | Voblint event (`solver_event`) | Line | `td_simplified.ml` | `td3.ml` (`sol2` unless noted) |
 | --- | --- | --- | --- |
 | `Ev_Start x` | `multivar: solving for x` | 174 | none |
-| `Ev_Query y x st cl` | `solver_query: entering query for x; stable st; called cl` | 68 | 454 `eval %a ## %a` |
+| `Ev_Query y x st cl` | `solver_query: entering query for x from y; stable st; called cl` | 68 | 454 `eval %a ## %a` |
 | `Ev_Query_Wpoint x w` | `wpoint: query adding wpoint x` (unless `w`) | 80 | 468 `eval adding wpoint` |
 | `Ev_Iterate_From_Query x` | `iter: iterate called from query` | 76 | none |
 | `Ev_Add_Infl y x` | `infl: add_infl y x` | 37 | 305 |
-| `Ev_Answer y x d` | `answer: exiting query for x` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
-| `Ev_Query_Global x g` | `solver_query: entering query for g` | 68 | 454 |
-| `Ev_Answer_Global x g d` | `answer: exiting query for g` / `answer: d` | 85 | 473 |
+| `Ev_Answer y x d` | `answer: exiting query for x from y` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
+| `Ev_Query_Global x g` | `solver_query: entering query for g from x` | 68 | 454 |
+| `Ev_Answer_Global x g d` | `answer: exiting query for g from x` / `answer: d` | 85 | 473 |
 | `Ev_Iterate x cl st wp` | `iter: begin iterate x, called: cl, stable: st, wpoint: wp` | 111 | 351 `solve %a, phase ...` |
 | `Ev_Eq x` | `eq: eq x` | 50 | 430 |
 | `Ev_Still_Unstable x` | `iter: iterate still unstable x` | 137 | 412 |

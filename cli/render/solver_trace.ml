@@ -454,11 +454,12 @@ let goblint_line nm = function
       match e with
       | C.Ev_Start r -> Some ("multivar", "solving for " ^ x r, Keep)
       | C.Ev_Stop -> None
-      | C.Ev_Query (_, q, stable, called) ->
+      | C.Ev_Query (y, q, stable, called) ->
           Some
             ( "solver_query",
-              Printf.sprintf "entering query for %s; stable %b; called %b" (x q)
-                stable called,
+              Printf.sprintf
+                "entering query for %s from %s; stable %b; called %b" (x q)
+                (x y) stable called,
               In )
       | C.Ev_Query_Wpoint (q, already) ->
           if already then None
@@ -470,19 +471,23 @@ let goblint_line nm = function
             ( "infl",
               Printf.sprintf "add_infl %s %s" (unknown_text nm y) (x r),
               Keep )
-      | C.Ev_Answer (_, q, d) ->
+      | C.Ev_Answer (y, q, d) ->
           Some
             ( "answer",
-              Printf.sprintf "exiting query for %s\nanswer: %s" (x q)
-                (nm.local_value d),
+              Printf.sprintf "exiting query for %s from %s\nanswer: %s" (x q)
+                (x y) (nm.local_value d),
               Out )
-      | C.Ev_Query_Global (_, g) ->
-          Some ("solver_query", "entering query for " ^ global_text nm g, In)
-      | C.Ev_Answer_Global (_, g, d) ->
+      | C.Ev_Query_Global (y, g) ->
+          Some
+            ( "solver_query",
+              Printf.sprintf "entering query for %s from %s" (global_text nm g)
+                (x y),
+              In )
+      | C.Ev_Answer_Global (y, g, d) ->
           Some
             ( "answer",
-              Printf.sprintf "exiting query for %s\nanswer: %s"
-                (global_text nm g) (nm.global_value g d),
+              Printf.sprintf "exiting query for %s from %s\nanswer: %s"
+                (global_text nm g) (x y) (nm.global_value g d),
               Out )
       | C.Ev_Iterate (i, called, stable, wpoint) ->
           Some

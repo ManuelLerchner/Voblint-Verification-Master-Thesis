@@ -7,33 +7,33 @@ Voblint trace
 %%% multivar: solving for (exit_main, root)
 %%% iter: begin iterate (exit_main, root), called: true, stable: false, wpoint: false
 %%% eq: eq (exit_main, root)
-%%% solver_query: entering query for (pp6, root); stable false; called false
+%%% solver_query: entering query for (pp6, root) from (exit_main, root); stable false; called false
   %%% iter: iterate called from query
   %%% iter: begin iterate (pp6, root), called: true, stable: false, wpoint: false
   %%% eq: eq (pp6, root)
-  %%% solver_query: entering query for (pp5, root); stable false; called false
+  %%% solver_query: entering query for (pp5, root) from (pp6, root); stable false; called false
     %%% iter: iterate called from query
     %%% iter: begin iterate (pp5, root), called: true, stable: false, wpoint: false
     %%% eq: eq (pp5, root)
-    %%% solver_query: entering query for (pp4, root); stable false; called false
+    %%% solver_query: entering query for (pp4, root) from (pp5, root); stable false; called false
       %%% iter: iterate called from query
       %%% iter: begin iterate (pp4, root), called: true, stable: false, wpoint: false
       %%% eq: eq (pp4, root)
-      %%% solver_query: entering query for (pp3, root); stable false; called false
+      %%% solver_query: entering query for (pp3, root) from (pp4, root); stable false; called false
         %%% iter: iterate called from query
         %%% iter: begin iterate (pp3, root), called: true, stable: false, wpoint: false
         %%% eq: eq (pp3, root)
-        %%% solver_query: entering query for (pp2, root); stable false; called false
+        %%% solver_query: entering query for (pp2, root) from (pp3, root); stable false; called false
           %%% iter: iterate called from query
           %%% iter: begin iterate (pp2, root), called: true, stable: false, wpoint: false
           %%% eq: eq (pp2, root)
-          %%% solver_query: entering query for (entry_main, root); stable false; called false
+          %%% solver_query: entering query for (entry_main, root) from (pp2, root); stable false; called false
             %%% iter: iterate called from query
             %%% iter: begin iterate (entry_main, root), called: true, stable: false, wpoint: false
             %%% eq: eq (entry_main, root)
-            %%% solver_query: entering query for Seed(main, root)
+            %%% solver_query: entering query for Seed(main, root) from (entry_main, root)
               %%% infl: add_infl Seed(main, root) (entry_main, root)
-              %%% answer: exiting query for Seed(main, root)
+              %%% answer: exiting query for Seed(main, root) from (entry_main, root)
 answer: ⊥
             %%% rhs: (entry_main, root) = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
             %%% sol: Var: (entry_main, root) (wp: false)
@@ -44,7 +44,7 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
             %%% iter: iterate changed (entry_main, root)
             %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
             %%% infl: add_infl (entry_main, root) (pp2, root)
-            %%% answer: exiting query for (entry_main, root)
+            %%% answer: exiting query for (entry_main, root) from (pp2, root)
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
           %%% rhs: (pp2, root) = interval: a=⊤, b=⊤, #ret=⊤, n=⊤
           %%% sol: Var: (pp2, root) (wp: false)
@@ -55,26 +55,26 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
           %%% iter: iterate changed (pp2, root)
           %%% iter: begin iterate (pp2, root), called: true, stable: true, wpoint: false
           %%% infl: add_infl (pp2, root) (pp3, root)
-          %%% answer: exiting query for (pp2, root)
+          %%% answer: exiting query for (pp2, root) from (pp3, root)
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=⊤
         %%% route: call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
         %%% side: side to Seed(bump, [[5,5]]) from (pp3, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
         %%% destab: destabilize Seed(bump, [[5,5]])
-        %%% solver_query: entering query for (exit_bump, [[5,5]]); stable false; called false
+        %%% solver_query: entering query for (exit_bump, [[5,5]]) from (pp3, root); stable false; called false
           %%% iter: iterate called from query
           %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: false, wpoint: false
           %%% eq: eq (exit_bump, [[5,5]])
-          %%% solver_query: entering query for (pp0, [[5,5]]); stable false; called false
+          %%% solver_query: entering query for (pp0, [[5,5]]) from (exit_bump, [[5,5]]); stable false; called false
             %%% iter: iterate called from query
             %%% iter: begin iterate (pp0, [[5,5]]), called: true, stable: false, wpoint: false
             %%% eq: eq (pp0, [[5,5]])
-            %%% solver_query: entering query for (entry_bump, [[5,5]]); stable false; called false
+            %%% solver_query: entering query for (entry_bump, [[5,5]]) from (pp0, [[5,5]]); stable false; called false
               %%% iter: iterate called from query
               %%% iter: begin iterate (entry_bump, [[5,5]]), called: true, stable: false, wpoint: false
               %%% eq: eq (entry_bump, [[5,5]])
-              %%% solver_query: entering query for Seed(bump, [[5,5]])
+              %%% solver_query: entering query for Seed(bump, [[5,5]]) from (entry_bump, [[5,5]])
                 %%% infl: add_infl Seed(bump, [[5,5]]) (entry_bump, [[5,5]])
-                %%% answer: exiting query for Seed(bump, [[5,5]])
+                %%% answer: exiting query for Seed(bump, [[5,5]]) from (entry_bump, [[5,5]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
               %%% rhs: (entry_bump, [[5,5]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
               %%% sol: Var: (entry_bump, [[5,5]]) (wp: false)
@@ -85,7 +85,7 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
               %%% iter: iterate changed (entry_bump, [[5,5]])
               %%% iter: begin iterate (entry_bump, [[5,5]]), called: true, stable: true, wpoint: false
               %%% infl: add_infl (entry_bump, [[5,5]]) (pp0, [[5,5]])
-              %%% answer: exiting query for (entry_bump, [[5,5]])
+              %%% answer: exiting query for (entry_bump, [[5,5]]) from (pp0, [[5,5]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
             %%% rhs: (pp0, [[5,5]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
             %%% sol: Var: (pp0, [[5,5]]) (wp: false)
@@ -96,7 +96,7 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
             %%% iter: iterate changed (pp0, [[5,5]])
             %%% iter: begin iterate (pp0, [[5,5]]), called: true, stable: true, wpoint: false
             %%% infl: add_infl (pp0, [[5,5]]) (exit_bump, [[5,5]])
-            %%% answer: exiting query for (pp0, [[5,5]])
+            %%% answer: exiting query for (pp0, [[5,5]]) from (exit_bump, [[5,5]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
           %%% rhs: (exit_bump, [[5,5]]) = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
           %%% sol: Var: (exit_bump, [[5,5]]) (wp: false)
@@ -107,7 +107,7 @@ New value: interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
           %%% iter: iterate changed (exit_bump, [[5,5]])
           %%% iter: begin iterate (exit_bump, [[5,5]]), called: true, stable: true, wpoint: false
           %%% infl: add_infl (exit_bump, [[5,5]]) (pp3, root)
-          %%% answer: exiting query for (exit_bump, [[5,5]])
+          %%% answer: exiting query for (exit_bump, [[5,5]]) from (pp3, root)
 answer: interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
         %%% rhs: (pp3, root) = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
         %%% sol: Var: (pp3, root) (wp: false)
@@ -118,26 +118,26 @@ New value: interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
         %%% iter: iterate changed (pp3, root)
         %%% iter: begin iterate (pp3, root), called: true, stable: true, wpoint: false
         %%% infl: add_infl (pp3, root) (pp4, root)
-        %%% answer: exiting query for (pp3, root)
+        %%% answer: exiting query for (pp3, root) from (pp4, root)
 answer: interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
       %%% route: call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
       %%% side: side to Seed(bump, [[4,4]]) from (pp4, root); value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
       %%% destab: destabilize Seed(bump, [[4,4]])
-      %%% solver_query: entering query for (exit_bump, [[4,4]]); stable false; called false
+      %%% solver_query: entering query for (exit_bump, [[4,4]]) from (pp4, root); stable false; called false
         %%% iter: iterate called from query
         %%% iter: begin iterate (exit_bump, [[4,4]]), called: true, stable: false, wpoint: false
         %%% eq: eq (exit_bump, [[4,4]])
-        %%% solver_query: entering query for (pp0, [[4,4]]); stable false; called false
+        %%% solver_query: entering query for (pp0, [[4,4]]) from (exit_bump, [[4,4]]); stable false; called false
           %%% iter: iterate called from query
           %%% iter: begin iterate (pp0, [[4,4]]), called: true, stable: false, wpoint: false
           %%% eq: eq (pp0, [[4,4]])
-          %%% solver_query: entering query for (entry_bump, [[4,4]]); stable false; called false
+          %%% solver_query: entering query for (entry_bump, [[4,4]]) from (pp0, [[4,4]]); stable false; called false
             %%% iter: iterate called from query
             %%% iter: begin iterate (entry_bump, [[4,4]]), called: true, stable: false, wpoint: false
             %%% eq: eq (entry_bump, [[4,4]])
-            %%% solver_query: entering query for Seed(bump, [[4,4]])
+            %%% solver_query: entering query for Seed(bump, [[4,4]]) from (entry_bump, [[4,4]])
               %%% infl: add_infl Seed(bump, [[4,4]]) (entry_bump, [[4,4]])
-              %%% answer: exiting query for Seed(bump, [[4,4]])
+              %%% answer: exiting query for Seed(bump, [[4,4]]) from (entry_bump, [[4,4]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
             %%% rhs: (entry_bump, [[4,4]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
             %%% sol: Var: (entry_bump, [[4,4]]) (wp: false)
@@ -148,7 +148,7 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
             %%% iter: iterate changed (entry_bump, [[4,4]])
             %%% iter: begin iterate (entry_bump, [[4,4]]), called: true, stable: true, wpoint: false
             %%% infl: add_infl (entry_bump, [[4,4]]) (pp0, [[4,4]])
-            %%% answer: exiting query for (entry_bump, [[4,4]])
+            %%% answer: exiting query for (entry_bump, [[4,4]]) from (pp0, [[4,4]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
           %%% rhs: (pp0, [[4,4]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
           %%% sol: Var: (pp0, [[4,4]]) (wp: false)
@@ -159,7 +159,7 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
           %%% iter: iterate changed (pp0, [[4,4]])
           %%% iter: begin iterate (pp0, [[4,4]]), called: true, stable: true, wpoint: false
           %%% infl: add_infl (pp0, [[4,4]]) (exit_bump, [[4,4]])
-          %%% answer: exiting query for (pp0, [[4,4]])
+          %%% answer: exiting query for (pp0, [[4,4]]) from (exit_bump, [[4,4]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
         %%% rhs: (exit_bump, [[4,4]]) = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
         %%% sol: Var: (exit_bump, [[4,4]]) (wp: false)
@@ -170,7 +170,7 @@ New value: interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
         %%% iter: iterate changed (exit_bump, [[4,4]])
         %%% iter: begin iterate (exit_bump, [[4,4]]), called: true, stable: true, wpoint: false
         %%% infl: add_infl (exit_bump, [[4,4]]) (pp4, root)
-        %%% answer: exiting query for (exit_bump, [[4,4]])
+        %%% answer: exiting query for (exit_bump, [[4,4]]) from (pp4, root)
 answer: interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
       %%% rhs: (pp4, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
       %%% sol: Var: (pp4, root) (wp: false)
@@ -181,7 +181,7 @@ New value: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
       %%% iter: iterate changed (pp4, root)
       %%% iter: begin iterate (pp4, root), called: true, stable: true, wpoint: false
       %%% infl: add_infl (pp4, root) (pp5, root)
-      %%% answer: exiting query for (pp4, root)
+      %%% answer: exiting query for (pp4, root) from (pp5, root)
 answer: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
     %%% rhs: (pp5, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
     %%% sol: Var: (pp5, root) (wp: false)
@@ -192,7 +192,7 @@ New value: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
     %%% iter: iterate changed (pp5, root)
     %%% iter: begin iterate (pp5, root), called: true, stable: true, wpoint: false
     %%% infl: add_infl (pp5, root) (pp6, root)
-    %%% answer: exiting query for (pp5, root)
+    %%% answer: exiting query for (pp5, root) from (pp6, root)
 answer: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
   %%% rhs: (pp6, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
   %%% sol: Var: (pp6, root) (wp: false)
@@ -203,7 +203,7 @@ New value: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
   %%% iter: iterate changed (pp6, root)
   %%% iter: begin iterate (pp6, root), called: true, stable: true, wpoint: false
   %%% infl: add_infl (pp6, root) (exit_main, root)
-  %%% answer: exiting query for (pp6, root)
+  %%% answer: exiting query for (pp6, root) from (exit_main, root)
 answer: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 %%% rhs: (exit_main, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 %%% sol: Var: (exit_main, root) (wp: false)
