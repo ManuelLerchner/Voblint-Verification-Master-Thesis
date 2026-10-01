@@ -50,6 +50,8 @@ match the tree.
 - [Core refactor plan](CORE_REFACTOR_PLAN.md) — the four-phase split of
   `Voblint_Framework` along Goblint's library boundaries, with the measured
   import evidence and a per-step status table.
+- [Analysis report plan](ANALYSIS_REPORT_PLAN.md) — one semantic report object,
+  no termination premise, typed configuration; phases and invariants.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.
