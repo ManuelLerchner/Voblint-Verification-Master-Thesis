@@ -971,52 +971,6 @@
 /* Reading a result                                                           */
 /* -------------------------------------------------------------------------- */
 
-/*
- * One legend per row, each a heading, its key and a caption, laid out for the full
- * width: the editor beside its badges, the replay key in two columns.
- */
-.reading-grid {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr);
-  gap: 20px;
-  margin-top: 28px;
-}
-
-.reading-grid .scene {
-  display: flex;
-  flex-direction: column;
-  margin: 0;
-}
-
-@media (min-width: 900px) {
-  .reading-grid .scene-editor {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 12px 32px;
-    align-items: center;
-  }
-
-  .reading-grid .scene-editor .legend {
-    margin: 0;
-  }
-
-  .reading-grid .scene-graph svg {
-    max-width: 640px;
-    margin-inline: 0;
-  }
-
-  .reading-grid .scene-replay .replay-key {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    column-gap: 32px;
-  }
-
-  .reading-grid .legend-head,
-  .reading-grid .scene-editor figcaption,
-  .reading-grid .scene-replay figcaption {
-    grid-column: 1 / -1;
-  }
-}
-
 .mock-editor {
   margin: 0;
   padding: 12px 0;
@@ -1142,14 +1096,6 @@
   font-weight: 600;
 }
 
-/* The graph legend repeats the playground drawing's own styles. */
-.scene-graph .legend-head {
-  fill: var(--text-muted);
-  font: 700 11px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
 .gn {
   fill: var(--surface);
   stroke: var(--border-strong);
@@ -1240,48 +1186,6 @@
 .g-cluster {
   fill: var(--surface);
   stroke: var(--border-strong);
-}
-
-.scene-graph .g-cluster-label {
-  fill: var(--text-muted);
-  font: 700 11px var(--mono);
-  text-anchor: middle;
-}
-
-.reading-grid .legend-head {
-  margin: 0;
-  color: var(--text-muted);
-  font: 700 11px var(--mono);
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* A swatch, not a pill: the key shows the node style itself. */
-.replay-key > div {
-  grid-template-columns: 3rem minmax(0, 1fr);
-}
-
-.replay-key dt {
-  display: flex;
-  align-items: center;
-  align-self: center;
-  padding: 0;
-  background: none;
-}
-
-.replay-key .replay-swatch {
-  width: 32px;
-  height: 18px;
-}
-
-.replay-key .replay-swatch.r-seed {
-  width: 16px;
-  height: 16px;
-}
-
-.replay-key .replay-swatch.r-edge,
-.replay-key .replay-swatch.r-infl {
-  height: 0;
 }
 
 @media (max-width: 640px) {

@@ -32,31 +32,34 @@ type event = Solver of solver_event | Route of route_event
 
 (* The run's readers, and the events of its one solve: route events outside
    the solve are the result being read back, not solver steps. *)
+type reader = { mutable printers : printers option; mutable solving : bool }
+
+let reader () = { printers = None; solving = false }
+
+(* One recorded event, read in order: the run's readers are kept, and a route
+   event counts only inside the solve. *)
+let read_one r (channel, o) =
+  match channel with
+  | "run" ->
+      r.printers <- Some (Obj.obj o : printers);
+      None
+  | "solver" -> (
+      let e : solver_event = Obj.obj o in
+      match e with
+      | C.Ev_Start _ ->
+          r.solving <- true;
+          Some (Solver e)
+      | C.Ev_Stop ->
+          r.solving <- false;
+          None
+      | _ -> Some (Solver e))
+  | "route" when r.solving -> Some (Route (Obj.obj o : route_event))
+  | _ -> None
+
 let read_back raw =
-  let printers = ref None in
-  let solving = ref false in
-  let events =
-    List.filter_map
-      (fun (channel, o) ->
-        match channel with
-        | "run" ->
-            printers := Some (Obj.obj o : printers);
-            None
-        | "solver" -> (
-            let e : solver_event = Obj.obj o in
-            match e with
-            | C.Ev_Start _ ->
-                solving := true;
-                Some (Solver e)
-            | C.Ev_Stop ->
-                solving := false;
-                None
-            | _ -> Some (Solver e))
-        | "route" when !solving -> Some (Route (Obj.obj o : route_event))
-        | _ -> None)
-      raw
-  in
-  (!printers, events)
+  let r = reader () in
+  let events = List.filter_map (read_one r) raw in
+  (r.printers, events)
 
 (* ---------------------------------------------------------------- naming *)
 
@@ -103,6 +106,7 @@ type global = Analysis_global | Seed of C.cfg_node * Obj.t
 
 (* Everything that reads a run's unknowns and values, from its printers. *)
 type names = {
+  point : C.cfg_node -> string;
   context : Obj.t -> C.abstract_value C.analysis_context;
   global : Obj.t -> global;
   local_value : Obj.t -> string;
@@ -110,13 +114,43 @@ type names = {
   entry_value : Obj.t -> string;
 }
 
-let names_of (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers)
-    =
+(* A statement point named after its source, as Goblint names a node by its
+   statement and location: the statement's first line up to a block's brace,
+   then its line. A point on a closing brace has no statement to show. *)
+let source_point (text, positions) =
+  let lines = Array.of_list (String.split_on_char '\n' text) in
+  fun n ->
+    match n with
+    | C.Statement k -> (
+        match List.assoc_opt (A.int_of_nat k) positions with
+        | Some (line, column, end_line, end_column)
+          when line >= 1 && line <= Array.length lines ->
+            let first = lines.(line - 1) in
+            let stop =
+              if end_line = line then min (end_column - 1) (String.length first)
+              else String.length first
+            in
+            let start = min (column - 1) stop in
+            let head =
+              String.trim (String.sub first start (stop - start)) |> fun s ->
+              if String.ends_with ~suffix:"{" s then
+                String.trim (String.sub s 0 (String.length s - 1))
+              else s
+            in
+            if head = "" || head = "}" then
+              Printf.sprintf "%s L%d" (node_name n) line
+            else Printf.sprintf "%s \"%s\" L%d" (node_name n) head line
+        | _ -> node_name n)
+    | _ -> node_name n
+
+let names_of ?source
+    (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers) =
   let read f o = try view_text (f o) with _ -> "?" in
   let global g =
     match seed_of g with None -> Analysis_global | Some (n, c) -> Seed (n, c)
   in
   {
+    point = Option.fold ~none:node_name ~some:source_point source;
     context = ctx;
     global;
     local_value = read local;
@@ -129,7 +163,7 @@ let names_of (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers)
   }
 
 let local_text nm ((n, c) : x) =
-  Printf.sprintf "(%s, %s)" (node_name n) (context_label (nm.context c))
+  Printf.sprintf "(%s, %s)" (nm.point n) (context_label (nm.context c))
 
 let global_text nm g =
   match nm.global g with
@@ -454,11 +488,12 @@ let goblint_line nm = function
       match e with
       | C.Ev_Start r -> Some ("multivar", "solving for " ^ x r, Keep)
       | C.Ev_Stop -> None
-      | C.Ev_Query (_, q, stable, called) ->
+      | C.Ev_Query (y, q, stable, called) ->
           Some
             ( "solver_query",
-              Printf.sprintf "entering query for %s; stable %b; called %b" (x q)
-                stable called,
+              Printf.sprintf
+                "entering query for %s from %s; stable %b; called %b" (x q)
+                (x y) stable called,
               In )
       | C.Ev_Query_Wpoint (q, already) ->
           if already then None
@@ -470,19 +505,23 @@ let goblint_line nm = function
             ( "infl",
               Printf.sprintf "add_infl %s %s" (unknown_text nm y) (x r),
               Keep )
-      | C.Ev_Answer (_, q, d) ->
+      | C.Ev_Answer (y, q, d) ->
           Some
             ( "answer",
-              Printf.sprintf "exiting query for %s\nanswer: %s" (x q)
-                (nm.local_value d),
+              Printf.sprintf "exiting query for %s from %s\nanswer: %s" (x q)
+                (x y) (nm.local_value d),
               Out )
-      | C.Ev_Query_Global (_, g) ->
-          Some ("solver_query", "entering query for " ^ global_text nm g, In)
-      | C.Ev_Answer_Global (_, g, d) ->
+      | C.Ev_Query_Global (y, g) ->
+          Some
+            ( "solver_query",
+              Printf.sprintf "entering query for %s from %s" (global_text nm g)
+                (x y),
+              In )
+      | C.Ev_Answer_Global (y, g, d) ->
           Some
             ( "answer",
-              Printf.sprintf "exiting query for %s\nanswer: %s"
-                (global_text nm g) (nm.global_value g d),
+              Printf.sprintf "exiting query for %s from %s\nanswer: %s"
+                (global_text nm g) (x y) (nm.global_value g d),
               Out )
       | C.Ev_Iterate (i, called, stable, wpoint) ->
           Some
@@ -515,8 +554,8 @@ let goblint_line nm = function
           else
             Some
               ( "update",
-                Printf.sprintf "%s (wpx: %b): %s -> %s" (x i) wpx
-                  (nm.local_value old) (nm.local_value now),
+                Printf.sprintf "%s (wpx: %b)\nOld value: %s\nNew value: %s"
+                  (x i) wpx (nm.local_value old) (nm.local_value now),
                 Keep )
       | C.Ev_Iterate_Changed i -> Some ("iter", "iterate changed " ^ x i, Keep)
       | C.Ev_Side (i, g, d) ->
@@ -555,20 +594,19 @@ let subsystems =
     "route";
   ]
 
+let verbose_step ~out ~selected nm level e =
+  match goblint_line nm e with
+  | Some (sys, msg, indent) when selected sys -> (
+      out (Printf.sprintf "%s%%%%%% %s: %s\n" (String.make !level ' ') sys msg);
+      match indent with
+      | In -> level := !level + 2
+      | Out -> level := max 0 (!level - 2)
+      | Keep -> ())
+  | _ -> ()
+
 let verbose ~out ~selected nm events =
   let level = ref 0 in
-  List.iter
-    (fun e ->
-      match goblint_line nm e with
-      | Some (sys, msg, indent) when selected sys -> (
-          out
-            (Printf.sprintf "%s%%%%%% %s: %s\n" (String.make !level ' ') sys msg);
-          match indent with
-          | In -> level := !level + 2
-          | Out -> level := max 0 (!level - 2)
-          | Keep -> ())
-      | _ -> ())
-    events
+  List.iter (verbose_step ~out ~selected nm level) events
 
 (* The verbose text's line each event prints on, numbered from the header's
    first line, which takes the first six. An event the verbose form leaves out
@@ -636,17 +674,45 @@ let context_name = function
   | C.Ctx_EntryState -> "entry-state"
   | C.Ctx_CallString k -> "call-string:" ^ string_of_int (A.int_of_nat k)
 
+let text_header ~out ~analyses ~context ~globals ~program =
+  out "Voblint trace\n";
+  out (Printf.sprintf "  analysis: %s\n" (String.concat "," analyses));
+  out (Printf.sprintf "  context:  %s\n" context);
+  out (Printf.sprintf "  globals:  %s\n" globals);
+  out (Printf.sprintf "  program:  %s\n\n" program)
+
+(* The verbose text while the run records it, for a viewer of a run that may
+   never finish: the header now, then each event's lines as the hook keeps it.
+   The result's checks and the summary need the finished run and are left to
+   [emit]. Install the returned function as [Solver_trace_hook.listener]. *)
+let live_verbose ~out ?source ~analyses ~context ~globals ~program () =
+  let r = reader () and level = ref 0 and nm = ref None in
+  text_header ~out ~analyses ~context ~globals ~program;
+  fun channel o ->
+    match (read_one r (channel, o), !nm) with
+    | Some e, Some nm -> verbose_step ~out ~selected:(fun _ -> true) nm level e
+    | Some _, None -> ()
+    | None, _ ->
+        if Option.is_none !nm then
+          nm := Option.map (names_of ?source) r.printers
+
 (* [out] receives the trace piece by piece: a channel for the CLI, a buffer
    for the browser, which returns the text with the result. [systems] limits
-   the verbose form to those subsystems; empty selects all. *)
-let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
-    ~globals ~program result =
-  let printers, events = read_back (H.recorded ()) in
+   the verbose form to those subsystems; empty selects all. [source], the
+   program text and its statement positions, names statement points after
+   their source in the text forms. [recorded] renders events already taken
+   from the hook, so one run can be written in several forms. *)
+let emit ~out ~format ~verbose:is_verbose ?(systems = []) ?source ?recorded
+    ~analyses ~context ~globals ~program result =
+  let recorded, dropped =
+    match recorded with Some r -> r | None -> H.recorded ()
+  in
+  let printers, events = read_back recorded in
   let pr fmt = Printf.ksprintf out fmt in
   match printers with
   | None -> pr "Voblint trace: the run recorded no solve\n"
   | Some printers -> (
-      let nm = names_of printers in
+      let nm = names_of ?source printers in
       let lined =
         List.concat
           (List.map2
@@ -686,11 +752,7 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
             globals_n;
           pr "\n"
       | Text ->
-          pr "Voblint trace\n";
-          pr "  analysis: %s\n" (String.concat "," analyses);
-          pr "  context:  %s\n" context;
-          pr "  globals:  %s\n" globals;
-          pr "  program:  %s\n\n" program;
+          text_header ~out ~analyses ~context ~globals ~program;
           if is_verbose then
             verbose ~out
               ~selected:(fun s -> systems = [] || List.mem s systems)
@@ -701,5 +763,12 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
             (fun (point, cond, verdict) ->
               pr "CHECK    %s at %s: %s\n" cond point verdict)
             (checks result);
-          pr "\nTrace complete: %d local and %d global unknowns solved\n" locals
-            globals_n)
+          if dropped > 0 then
+            pr
+              "\n\
+               Trace truncated: the first %d events are shown, %d more were \
+               not recorded\n"
+              (List.length recorded) dropped
+          else
+            pr "\nTrace complete: %d local and %d global unknowns solved\n"
+              locals globals_n)

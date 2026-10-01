@@ -70,9 +70,9 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
 
 <p align="center">
   <a href="docs/images/playground-overview.png">
-    <img src="docs/images/playground-overview.png" width="820" alt="The browser playground: an Interval analysis with call-string contexts showing PROVED, REFUTED, UNKNOWN, DEAD and a division warning in the source, the state inspector for one check, and the solved graph with one box per procedure and context">
+    <img src="docs/images/playground-overview.png" width="820" alt="The browser playground: Interval and Order analyses with call-string contexts showing PROVED, REFUTED, DEAD and a division warning in the source, the state inspector for one check, and the solved graph with one box per procedure and context">
   </a>
-  <br><sub>Calls, contexts, every verdict and an arithmetic warning in one run. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=call-string&amp;k=1">Open this run</a>.</sub>
+  <br><sub>Calls, contexts, a relational domain, verdicts and an arithmetic warning in one run. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval%2Corder&amp;globals=warrow&amp;context=call-string&amp;k=1">Open this run</a>.</sub>
 </p>
 
 `--context none|entry-state|call-string` selects the analysis context and
@@ -89,8 +89,8 @@ restart the caller. `--verbose` lists every step in a Goblint-aligned tracing
 vocabulary (`%%% iter: begin iterate ...`; the mapping table in
 `docs/CLI_DESIGN.md` records every difference), `--trace-sys iter,side` selects
 subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
-file; standard output stays the same. The playground's **Solver trace** panel
-shows the full (`--verbose`) trace below the graph, colored by step and folded
+file; standard output stays the same. The playground's **run_voblint: call and answer** panel
+shows the full (`--verbose`) trace under the call and its answer, colored by step and folded
 by query, with downloads of the whole text and of its JSON Lines form. Three layers: the solver
 result is the exported computation of proved equations, and the trace calls
 inside it come from code equations proved equal to the untraced ones; the trace
@@ -132,13 +132,13 @@ report nothing, and diagnostics never change the exit code.
   <tr>
     <td align="center">
       <a href="docs/images/playground-division-definite.png">
-        <img src="docs/images/playground-division-definite.png" width="400" alt="The playground on definite division and remainder by zero: two ERROR badges, the arithmetic findings, and the selected statement's state with divisor equal to zero">
+        <img src="docs/images/playground-division-definite.png" width="400" alt="The playground on definite division and remainder by zero: two ERROR badges and the selected statement's state with divisor equal to zero">
       </a>
       <br><sub>Definite: errors, while both checks still prove. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVTCwBnILS_NLMlPzSoB8cwV9mCxIpigVpCsltQgspYosFR9flp-Uk5lXEp-ckZqcrYEwBGiqJjYVSIYBTQMqqQUA">Open</a>.</sub>
     </td>
     <td align="center">
       <a href="docs/images/playground-division-possible.png">
-        <img src="docs/images/playground-division-possible.png" width="400" alt="The playground on a possible zero divisor from a nondeterministic input: a WARNING badge and an UNKNOWN check">
+        <img src="docs/images/playground-division-possible.png" width="400" alt="The playground on a possible zero divisor from a nondeterministic input: a WARNING badge, an UNKNOWN check, and the state at the division">
       </a>
       <br><sub>Possible: the state cannot exclude zero. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQSMksyyzOL1KwVYiPL8tPysnMK4nPy89LSS2JBzI1NK2BagpL80syU_NKgIrMFfRhWkAyCD3JGanJ2Row0xRtFQyAWmsB">Open</a>.</sub>
     </td>

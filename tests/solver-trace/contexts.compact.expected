@@ -5,18 +5,18 @@ Voblint trace
   program:  docs/readme-figures/contexts.vimp
 
          (entry_main, root) reads Seed(main, root) = ⊥
-ROUTE    call at (pp2, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
+ROUTE    call at (pp2 "a = bump(5);" L6, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
 FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]  (changed)
-QUERY    (pp3, root) asks (exit_bump, [[5,5]])
+QUERY    (pp3 "b = bump(4);" L7, root) asks (exit_bump, [[5,5]])
          (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
          (exit_bump, [[5,5]]) returns interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
-RETURN   (pp3, root) = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
-ROUTE    call at (pp3, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
+RETURN   (pp3 "b = bump(4);" L7, root) = interval: a=[6,6], b=⊤, #ret=⊤, n=⊤
+ROUTE    call at (pp3 "b = bump(4);" L7, root): entry interval: a=⊤, b=⊤, #ret=⊤, n=[4,4] -> context [[4,4]]
 FLUSH    Seed(bump, [[4,4]]) += interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]  (changed)
-QUERY    (pp4, root) asks (exit_bump, [[4,4]])
+QUERY    (pp4 "__voblint_check(a == 6);" L8, root) asks (exit_bump, [[4,4]])
          (entry_bump, [[4,4]]) reads Seed(bump, [[4,4]]) = interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
          (exit_bump, [[4,4]]) returns interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
-RETURN   (pp4, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
+RETURN   (pp4 "__voblint_check(a == 6);" L8, root) = interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 
 CHECK    a == 6 at pp4: PROVED
 CHECK    b == 5 at pp5: PROVED

@@ -25,7 +25,7 @@ import {
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
-import { createSolveReplay } from "./replay.js";
+import { createSolveReplay, seedLabelOf } from "./replay.js";
 import { createTraceView } from "./trace-view.js";
 
 function query(selector) {
@@ -95,6 +95,7 @@ const problems = query("#analysis-problems");
 const timing = query("#analysis-timing");
 const timingValue = query("#analysis-timing-value");
 
+const stateInspector = query("#state-inspector");
 const inspectorLocation = query("#state-inspector-location");
 const inspectorBody = query("#state-inspector-body");
 const valueHintsToggle = query("#value-hints-toggle");
@@ -112,7 +113,6 @@ const solverTrace = query("#solver-trace");
 const solverTraceCount = query("#solver-trace-count");
 const solverTraceDownload = query("#solver-trace-download");
 const solverTraceDownloadJsonl = query("#solver-trace-download-jsonl");
-const solverTraceDownloadJsonlLabel = query("#solver-trace-download-jsonl-label");
 
 const rawResult = query("#raw-result");
 const rawResultEmpty = query("#raw-result-empty");
@@ -121,6 +121,10 @@ const rawResultPanes = query("#raw-result-panes");
 const rawMounts = {
   input: query("#raw-input-body"),
   output: query("#raw-output-body"),
+};
+const rawStats = {
+  input: query("#raw-input-stats"),
+  output: query("#raw-output-stats"),
 };
 
 /*
@@ -306,8 +310,28 @@ const rawViews = Object.fromEntries(
   ]),
 );
 
+/* A cancelled run's output is the absence of an answer, not a JSON value. */
+function rawText(part) {
+  return rawRunProgram.cancelled && part === "output"
+    ? "Cancelled: the run was stopped before run_voblint returned."
+    : formatJson(rawRunProgram[part] ?? null);
+}
+
 function setRawText(view, text) {
   view.dispatch({ changes: { from: 0, to: view.state.doc.length, insert: text } });
+}
+
+/* A pane header's size of its text: lines, then UTF-8 bytes. */
+function sizeLabel(text) {
+  const bytes = new Blob([text]).size;
+  const size =
+    bytes < 1024
+      ? `${bytes} B`
+      : bytes < 1024 * 1024
+        ? `${(bytes / 1024).toFixed(1)} KB`
+        : `${(bytes / 1024 / 1024).toFixed(1)} MB`;
+
+  return `${countLines(text).toLocaleString("en")} lines · ${size}`;
 }
 
 function fillRawViews() {
@@ -317,7 +341,10 @@ function fillRawViews() {
 
   for (const [part, view] of Object.entries(rawViews)) {
     if (view.state.doc.length === 0) {
-      setRawText(view, formatJson(rawRunProgram[part] ?? null));
+      const text = rawText(part);
+
+      setRawText(view, text);
+      rawStats[part].textContent = sizeLabel(text);
     }
   }
 }
@@ -349,49 +376,73 @@ function constructorTerm(value) {
   return `(${[tag, ...args].join(" ")})`;
 }
 
+/* One cell of the title's grid, holding [parts]. */
+function callCell(kind, ...parts) {
+  const cell = document.createElement("span");
+
+  cell.className = `raw-call-${kind}`;
+  cell.append(...parts);
+
+  return cell;
+}
+
+/*
+ * The trace's line in the title. It is no part of run_voblint's answer: the hook observed
+ * it during the run, so it gets its own row, without the arrow.
+ */
+let traceSummary = null;
+
+function setTraceSummary(text) {
+  traceSummary = text;
+  renderRawCall(rawRunProgram);
+}
+
 /*
  * The panel's title: the call run_voblint received and the outline of its answer --
  * the constructor, then each result field with a list's length in place of the list.
+ * The answer sits under the arguments, the arrow under the function name.
  */
 function renderRawCall(raw) {
   const input = raw?.input;
-  const parts = [callPart("run_voblint", "fn")];
+  const output = raw?.output;
+  const args = input
+    ? [
+        callPart(
+          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+          "arg",
+        ),
+        callPart("p", "program"),
+      ]
+    : [callPart("as rule ctx p", "arg")];
+  /* Before any run the title asks for one. */
+  let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
-  if (!input) {
-    parts.push(
-      callPart(" as rule ctx p", "arg"),
-      callPart(" \u27f9 ", "arrow"),
-      callPart("?", "arg"),
-    );
-    rawResultCall.replaceChildren(...parts);
-    rawResultCall.title = rawResultCall.textContent;
-    return;
-  }
-
-  parts.push(
-    callPart(
-      ` [${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
-      "arg",
-    ),
-    callPart("p", "program"),
-    callPart(" \u27f9 ", "arrow"),
-  );
-
-  const output = raw.output;
-
-  if (typeof output === "string") {
-    parts.push(callPart(output, "ctor"));
-  } else {
+  if (raw?.cancelled) {
+    result = [callPart("cancelled", "observed")];
+  } else if (input && typeof output === "string") {
+    result = [callPart(output, "ctor")];
+  } else if (input) {
     const [tag, record] = Object.entries(output ?? {})[0] ?? ["?", {}];
     const fields = Object.entries(record ?? {}).map(
       ([name, value]) =>
         `${name}: ${Array.isArray(value) ? `[\u2026\u00d7${value.length}]` : "\u2026"}`,
     );
 
-    parts.push(callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields"));
+    result = [callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields")];
   }
 
-  rawResultCall.replaceChildren(...parts);
+  rawResultCall.replaceChildren(
+    callCell("head", callPart("run_voblint", "fn")),
+    callCell("body", ...args),
+    callCell("head", callPart("\u27f9", "arrow")),
+    callCell("body", ...result),
+    ...(traceSummary
+      ? [
+          callCell("head", callPart("observed", "observed")),
+          callCell("body", callPart(traceSummary, "observed")),
+        ]
+      : []),
+  );
   rawResultCall.title = rawResultCall.textContent;
 }
 
@@ -401,6 +452,10 @@ function showRawRunProgram(raw) {
 
   for (const view of Object.values(rawViews)) {
     setRawText(view, "");
+  }
+
+  for (const stats of Object.values(rawStats)) {
+    stats.textContent = "";
   }
 
   renderRawCall(rawRunProgram);
@@ -602,36 +657,6 @@ function failureTitle(result) {
   return Number.isInteger(result.line)
     ? "The program could not be parsed"
     : "The program could not be analyzed";
-}
-
-function showDiagnosticsSummary(result) {
-  const diagnostics = Array.isArray(result.diagnostics) ? result.diagnostics : [];
-
-  if (diagnostics.length === 0) {
-    return false;
-  }
-
-  const errors = diagnostics.filter((d) => d.severity === "error").length;
-  const count = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
-  const parts = [
-    errors && count(errors, "error"),
-    diagnostics.length - errors && count(diagnostics.length - errors, "warning"),
-  ]
-    .filter(Boolean)
-    .join(" and ");
-
-  showProblem({
-    kind: errors > 0 ? "error" : "warning",
-    title: `${parts[0].toUpperCase()}${parts.slice(1)} in arithmetic`,
-    note: "An error means a divisor is zero in every live context; a warning means it may be zero.",
-    items: diagnostics.map((d) => ({
-      kind: d.severity === "error" ? "error" : "warning",
-      message: d.message ?? "",
-      line: d.line,
-    })),
-  });
-
-  return true;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -1270,13 +1295,17 @@ function inspectCursor(state) {
   }
 }
 
-/* [configuration] and [source] are the run's own; the trace views solve them again. */
+/* [configuration] and [source] are the run's own; the trace views show the traces it recorded. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
-  offerSolverTrace(analysisModel ? { configuration, source } : null);
+  offerSolverTrace(
+    analysisModel
+      ? { configuration, source, trace: result.trace, jsonl: result.trace_jsonl }
+      : null,
+  );
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1462,11 +1491,12 @@ function statementExcerpt(statement) {
     .trim();
 }
 
+/* Before a run there are no states to inspect, so the panel waits with the graph. */
 function renderInspector() {
   inspectorLocation.replaceChildren();
+  stateInspector.hidden = !analysisModel;
 
   if (!analysisModel) {
-    inspectorMessage("Run the analysis, then place the cursor on a statement.");
     return;
   }
 
@@ -1789,36 +1819,15 @@ function scrollEditorTo(pos) {
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
-/*
- * A run never traces. The text trace, the JSON Lines download and the replay each
- * solve the shown run again with the trace they need, one at a time; the solver is
- * deterministic, so every view shows the steps of the run on screen. A request
- * queued behind a run that a new run or a changed setting retired is dropped.
- */
-let solveAgainQueue = Promise.resolve();
-
-function solveAgain(configuration, source) {
-  const generation = analysisRunGeneration;
-  const answer = solveAgainQueue.then(() => {
-    if (generation !== analysisRunGeneration) {
-      throw new Error("A new run started.");
-    }
-
-    return runAnalysisInWorker(configuration, source);
-  });
-
-  solveAgainQueue = answer.catch(() => {});
-  return answer;
-}
-
 /* Only the lines on screen are laid out, so even a trace of tens of thousands of lines shows whole. */
 const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "Solver trace" });
 
-/* The finished run the panel offers, the trace shown for it, and the one being loaded. */
+/* The finished run the panel offers, and the trace it recorded. */
 let solverTraceOffered = null;
 let solverTraceContent = "";
-let solverTraceRun = null;
-let solverTraceLoading = null;
+
+/* The running main run's trace as the worker hands it over, kept for a cancel. */
+let liveTrace = null;
 
 function countLines(text) {
   let lines = text.endsWith("\n") ? 0 : 1;
@@ -1830,63 +1839,59 @@ function countLines(text) {
   return lines;
 }
 
-/* [run] is the finished run's configuration and source; null hides the panel. */
+/*
+ * [run] is the finished run's configuration, source and the --verbose trace its hook
+ * recorded; null hides the panel.
+ */
 function offerSolverTrace(run) {
+  const trace = typeof run?.trace === "string" ? run.trace : "";
+
   solverTraceOffered = run;
-  solverTraceContent = "";
-  solverTraceRun = null;
-  solverTraceLoading = null;
-  solverTraceView.setText("");
+  solverTraceContent = trace;
   solverTrace.hidden = run === null;
-  solverTraceCount.textContent = run ? "open to load" : "";
-  loadSolverTrace();
+
+  /* Only the verbose text streams during a run, so a cancelled one has no JSON Lines. */
+  solverTraceDownloadJsonl.disabled = !run?.jsonl;
+  solverTraceDownloadJsonl.title = run?.jsonl
+    ? "Download the trace as JSON Lines (.jsonl)"
+    : "Only a finished run has a JSON Lines trace";
+  solverTraceView.setText("");
+  solverTraceCount.textContent = trace ? sizeLabel(trace) : "";
+
+  /* Laying out tens of thousands of lines takes a moment; everything else shows first. */
+  requestAnimationFrame(() =>
+    setTimeout(() => {
+      if (solverTraceOffered === run) {
+        solverTraceView.setText(trace || (run ? "The run returned no trace." : ""));
+      }
+    }, 0),
+  );
+  setTraceSummary(
+    run === null
+      ? null
+      : trace
+        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run${run.cancelled ? " until it was cancelled" : ""}`
+        : "trace: not produced",
+  );
 }
 
-/* The offered run's full (--verbose) trace, solved when the panel is open. */
-async function loadSolverTrace() {
-  const run = solverTraceOffered;
-
-  if (!run || !solverTrace.open || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
-    return;
-  }
-
-  const request = { run };
-
-  solverTraceLoading = request;
-  solverTraceCount.textContent = "loading";
-
-  try {
-    const answer = JSON.parse(
-      await solveAgain({ ...run.configuration, trace: "verbose" }, run.source),
-    );
-
-    if (solverTraceLoading !== request) {
-      return;
-    }
-
-    if (typeof answer.trace !== "string" || answer.status !== "ok") {
-      throw new Error(answer.message ?? "the analyzer returned no trace");
-    }
-
-    solverTraceContent = answer.trace;
-    solverTraceRun = { ...request, lines: countLines(answer.trace) };
-    solverTraceCount.textContent = `${solverTraceRun.lines} lines`;
-    solverTraceView.setText(answer.trace);
-  } catch (error) {
-    if (solverTraceLoading === request) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      solverTraceRun = null;
-      solverTraceContent = "";
-      solverTraceView.setText(`The trace could not be produced: ${message}`);
-      solverTraceCount.textContent = "";
-    }
-  } finally {
-    if (solverTraceLoading === request) {
-      solverTraceLoading = null;
-    }
-  }
+/*
+ * A cancelled run has no answer. The panel shows what reached the page before its
+ * worker was terminated: the call's input, posted before the solve, and the trace.
+ */
+function showCancelledTrace(live) {
+  showRawRunProgram({ input: live.input, output: null, cancelled: true });
+  rawResultEmpty.hidden = true;
+  rawResultPanes.hidden = false;
+  offerSolverTrace({
+    ...live,
+    trace: `${live.chunks.join("")}\nCancelled here: the run was stopped.\n`,
+    cancelled: true,
+  });
 }
+
+/* The browser reads a large blob after the click returns; revoking its URL at once cancels that download. */
+const BLOB_URL_LIFETIME_MS = 60_000;
 
 function downloadBlob(blob, name) {
   const link = document.createElement("a");
@@ -1894,11 +1899,11 @@ function downloadBlob(blob, name) {
   link.href = URL.createObjectURL(blob);
   link.download = name;
   link.click();
-  setTimeout(() => URL.revokeObjectURL(link.href), 0);
+  setTimeout(() => URL.revokeObjectURL(link.href), BLOB_URL_LIFETIME_MS);
 }
 
 function downloadSolverTrace() {
-  if (solverTraceRun) {
+  if (solverTraceContent) {
     downloadBlob(
       new Blob([solverTraceContent], { type: "text/plain" }),
       `voblint-trace-${settingsSlug()}.txt`,
@@ -1906,52 +1911,21 @@ function downloadSolverTrace() {
   }
 }
 
-/* The offered run solved again with its JSON Lines trace. */
-async function downloadSolverTraceJsonl() {
-  const shown = solverTraceOffered;
-
-  if (!shown || solverTraceDownloadJsonl.disabled) {
-    return;
-  }
-
-  const idle = solverTraceDownloadJsonlLabel.textContent;
-
-  solverTraceDownloadJsonl.disabled = true;
-  solverTraceDownloadJsonlLabel.textContent = "Preparing JSON Lines...";
-
-  try {
-    const answer = JSON.parse(
-      await solveAgain({ ...shown.configuration, trace: "jsonl" }, shown.source),
+/* The JSON Lines form of the same recording the trace pane shows. */
+function downloadSolverTraceJsonl() {
+  if (solverTraceOffered?.jsonl) {
+    downloadBlob(
+      new Blob([solverTraceOffered.jsonl], { type: "application/jsonl" }),
+      `voblint-trace-${settingsSlug()}.jsonl`,
     );
-
-    if (typeof answer.trace !== "string") {
-      throw new Error(answer.message ?? "the analyzer returned no trace");
-    }
-
-    if (solverTraceOffered === shown) {
-      downloadBlob(
-        new Blob([answer.trace], { type: "application/jsonl" }),
-        `voblint-trace-${settingsSlug()}.jsonl`,
-      );
-    }
-  } catch (error) {
-    if (solverTraceOffered === shown) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      showStatus(`The JSON Lines trace could not be produced: ${message}`, "error");
-    }
-  } finally {
-    solverTraceDownloadJsonl.disabled = false;
-    solverTraceDownloadJsonlLabel.textContent = idle;
   }
 }
 
 /*
  * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
- * its graph, from a run solved again with its traces.
+ * its graph, from the traces the run recorded.
  */
 const solveReplay = createSolveReplay({
-  solve: solveAgain,
   getGraphLibraries,
   graphElements,
   nodeBox,
@@ -2151,16 +2125,16 @@ function nodeBox(lines) {
 const SEED_SIZE = 18;
 
 /*
- * A seed's label: the formals and globals it holds that say anything, in one line.
+ * A seed's label: the formals and globals it holds that say anything, in one short line.
  * [lines] are the section lines the analyzer reports, "interval:" headers with
  * indented bindings; ⊤ bindings and headers are dropped.
  */
 function seedLabel(lines) {
-  const said = lines
-    .map((line) => line.trim())
-    .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤"));
-
-  return said.length > 0 ? said.join(", ") : "⊤";
+  return seedLabelOf(
+    lines
+      .map((line) => line.trim())
+      .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤")),
+  );
 }
 
 /* The shown graph's seeds by the entry they feed, for their tooltips. */
@@ -3606,9 +3580,17 @@ function resetForConfigurationChange() {
 }
 
 function cancelRun() {
+  const live = pendingAnalysis ? liveTrace : null;
+
   retireActiveRun("Analysis cancelled.");
   clearResults();
-  showStatus("Analysis cancelled \u00b7 run again when ready");
+
+  if (live && (live.chunks.length > 0 || live.input)) {
+    showStatus("Analysis cancelled \u00b7 its trace so far is under run_voblint: call and answer");
+    showCancelledTrace(live);
+  } else {
+    showStatus("Analysis cancelled \u00b7 run again when ready");
+  }
 }
 
 function createAnalysisWorker() {
@@ -3618,6 +3600,16 @@ function createAnalysisWorker() {
     const message = event.data;
 
     if (!pendingAnalysis || !message || message.id !== pendingAnalysis.id) {
+      return;
+    }
+
+    if (message.type === "trace-chunk") {
+      pendingAnalysis.onChunk?.(message.text);
+      return;
+    }
+
+    if (message.type === "run-input") {
+      pendingAnalysis.onInput?.(message.text);
       return;
     }
 
@@ -3672,7 +3664,11 @@ function getAnalysisWorker() {
   return analysisWorker;
 }
 
-function runAnalysisInWorker(configuration, source) {
+/*
+ * [onChunk] receives the verbose trace in pieces while the worker still solves, and
+ * [onInput] the call's input JSON before the solve starts.
+ */
+function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = null } = {}) {
   if (pendingAnalysis) {
     throw new Error("An analysis is already running.");
   }
@@ -3684,6 +3680,8 @@ function runAnalysisInWorker(configuration, source) {
       id,
       resolve,
       reject,
+      onChunk,
+      onInput,
     };
 
     try {
@@ -3756,7 +3754,7 @@ async function run() {
     if (runGeneration === analysisRunGeneration && pendingAnalysis) {
       showStatus(
         `Still analyzing after ${SLOW_RUN_MS / 1000} s. Some settings never finish on some ` +
-          "programs, such as Join on a growing recursion: press Cancel to stop.",
+          "programs, such as Join on a growing recursion: press Cancel to stop and see its trace so far.",
       );
     }
   }, SLOW_RUN_MS);
@@ -3764,7 +3762,21 @@ async function run() {
   let result = null;
 
   try {
-    const rawResult = await runAnalysisInWorker(configuration, source);
+    /*
+     * The hook records the trace during this run, the only solve: the answer carries it
+     * as text and as JSON Lines, for the trace pane, its downloads and the replay. It
+     * changes nothing else in the answer.
+     */
+    liveTrace = { configuration, source, chunks: [], input: null };
+    const live = liveTrace;
+    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "all" }, source, {
+      onChunk: (text) => live.chunks.push(text),
+      onInput: (text) => {
+        live.input = JSON.parse(text);
+      },
+    });
+
+    liveTrace = null;
 
     if (typeof rawResult !== "string") {
       throw new TypeError(`Voblint_run returned ${typeof rawResult}; expected a JSON string.`);
@@ -3797,8 +3809,7 @@ async function run() {
 
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
-        showDiagnosticsSummary(result);
-        solveReplay.offer({ configuration, source });
+        solveReplay.offer({ configuration, source, answer: result });
       }
     } else {
       /*
@@ -3837,14 +3848,11 @@ async function run() {
           "error",
         );
 
-        /* The graph panel already names the failure; arithmetic findings take the banner. */
-        if (!showDiagnosticsSummary(result)) {
-          showProblem({
-            kind: "warning",
-            title: "The result is ready, but the graph could not be drawn",
-            message: error.message,
-          });
-        }
+        showProblem({
+          kind: "warning",
+          title: "The result is ready, but the graph could not be drawn",
+          message: error.message,
+        });
 
         console.error(error);
 
@@ -3956,12 +3964,21 @@ for (const control of [
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-solverTrace.addEventListener("toggle", loadSolverTrace);
-
 /* Cytoscape reports no mouseout when the pointer leaves the graph from a node. */
 graph.addEventListener("mouseleave", hideGraphTooltip);
 
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
+
+for (const part of Object.keys(rawMounts)) {
+  query(`#raw-${part}-download`).addEventListener("click", () => {
+    if (rawRunProgram) {
+      downloadBlob(
+        new Blob([rawText(part)], { type: "application/json" }),
+        `voblint-${part}-${settingsSlug()}.json`,
+      );
+    }
+  });
+}
 solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);
 
 for (const box of analysisChoices) {
@@ -4347,9 +4364,9 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  /* A linked trace, in any form older links name, opens the trace panel. */
+  /* A linked trace, in any form older links name, opens the panel that shows it. */
   if (settings.trace != null && settings.trace !== "off") {
-    solverTrace.open = true;
+    rawResult.open = true;
   }
 
   const depth = parseCount(settings.k, MAX_CONTEXT_DEPTH);
@@ -4499,7 +4516,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(solverTrace.open ? [linkParam("trace", "verbose")] : []),
+    ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);
 

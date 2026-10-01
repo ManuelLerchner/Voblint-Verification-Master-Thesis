@@ -125,6 +125,10 @@ async function run(query, width, fileName = "example.vimp") {
   await page.setViewportSize({ width, height: 1000 });
   await page.goto(`${BASE}?${query}`);
   await page.addStyleTag({ content: CAPTURE_CSS });
+  /* The graph panel starts collapsed; its Save PNG button needs it open. */
+  await page.$eval("#analysis-graph-panel", (panel) => {
+    panel.open = true;
+  });
   await page.waitForFunction(
     () =>
       document.querySelector("#analysis-graph canvas") &&
@@ -160,6 +164,23 @@ async function shot(page, selector) {
   await element.scrollIntoViewIfNeeded();
 
   return element.screenshot({ animations: "disabled" });
+}
+
+/*
+ * The capture layout can make the page wider than the window; a clip past the window
+ * edge is cut, so the window grows to the replay's full width first.
+ */
+async function fitReplay(page) {
+  const width = await page.evaluate(() => {
+    const body = document.querySelector("#solve-replay-body").getBoundingClientRect();
+
+    return Math.ceil(body.right + scrollX + 2);
+  });
+
+  if (width > page.viewportSize().width) {
+    await page.setViewportSize({ width, height: page.viewportSize().height });
+    await page.waitForTimeout(600);
+  }
 }
 
 /* The whole graph, as the playground's Save PNG button exports it. */
@@ -244,18 +265,17 @@ const FIGURES = {
   },
 
   async "playground-overview"() {
-    const page = await run("analysis=interval&globals=warrow&context=call-string&k=1", 1100);
+    const page = await run("analysis=interval,order&globals=warrow&context=call-string&k=1", 1100);
 
-    await inspect(page, "__voblint_check(i == 5)");
+    await inspect(page, "__voblint_check(i == 3)");
     await compose(
       "playground-overview",
       [
         { image: await shot(page, ".editor-shell"), area: "editor" },
-        { image: await shot(page, "#analysis-problems"), area: "problems" },
         { image: await shot(page, ".state-inspector"), area: "inspector" },
         { image: await graph(page), area: "graph", fit: true },
       ],
-      `"editor graph" "problems graph" "inspector graph"`,
+      `"editor graph" "inspector graph"`,
     );
   },
 
@@ -305,9 +325,8 @@ const FIGURES = {
       [
         { image: await shot(page, ".editor-shell"), area: "editor" },
         { image: await shot(page, ".state-inspector"), area: "inspector" },
-        { image: await shot(page, "#analysis-problems"), area: "problems" },
       ],
-      `"editor problems" "inspector problems"`,
+      `"editor" "inspector"`,
     );
   },
 
@@ -336,6 +355,7 @@ const FIGURES = {
     await page.waitForFunction(() => document.querySelector("#solve-replay-graph canvas"), null, {
       timeout: 60000,
     });
+    await fitReplay(page);
     await page.dblclick("#solve-replay-graph", { position: { x: 8, y: 8 } });
     await page.waitForTimeout(600);
 
@@ -411,9 +431,9 @@ const FIGURES = {
 
   /*
    * One frame of the solve replay, for the thesis, which cannot animate: the step
-   * where the first call into a new context reads the callee's seed and finds it
-   * still bottom, because the call's publication waits until its right-hand side
-   * answers. The frame is the replay's own drawing at that step.
+   * where the first call into a new context has published its entry state and the
+   * callee's entry reads its seed, with the whole callee still on the solver's stack.
+   * The frame is the replay's own drawing at that step.
    */
   async "solve-replay-still"() {
     const page = await run(
@@ -426,6 +446,7 @@ const FIGURES = {
     await page.waitForFunction(() => document.querySelector("#solve-replay-graph canvas"), null, {
       timeout: 60000,
     });
+    await fitReplay(page);
     await page.dblclick("#solve-replay-graph", { position: { x: 8, y: 8 } });
 
     const steps = Number(await page.$eval("#solve-replay-slider", (slider) => slider.max));
@@ -442,11 +463,12 @@ const FIGURES = {
       );
       await page.waitForTimeout(40);
 
-      const line = await page.$eval("#solve-replay-trace", (pane) =>
-        pane.querySelector(".tr-current")?.textContent ?? "",
+      const lines = await page.$eval("#solve-replay-trace", (pane) =>
+        [...pane.querySelectorAll(".tr-current")].map((line) => line.textContent).join("\n"),
       );
 
-      if (line.includes("Seed(bump")) {
+      /* The first call's context, while the whole callee is still on the solver's stack. */
+      if (lines.includes("exiting query for Seed(bump, [[5,5]])")) {
         found = step;
       }
     }
@@ -481,9 +503,8 @@ const FIGURES = {
       [
         { image: await shot(page, ".editor-shell"), area: "editor" },
         { image: await shot(page, ".state-inspector"), area: "inspector" },
-        { image: await shot(page, "#analysis-problems"), area: "problems" },
       ],
-      `"editor problems" "inspector problems"`,
+      `"editor" "inspector"`,
     );
   },
 };

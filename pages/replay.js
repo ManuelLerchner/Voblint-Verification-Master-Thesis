@@ -55,6 +55,26 @@ function shortValue(value) {
  * A value in one line without its ⊤ components or analysis names: only what it says.
  * A value that says nothing beyond ⊤ is ⊤.
  */
+/* A product domain's binding alone can be as wide as a box; the tooltip has it all. */
+const SEED_LABEL_MAX = 40;
+
+/* A seed's bindings in one line of at most SEED_LABEL_MAX characters, cut at a binding where one fits. */
+export function seedLabelOf(bindings) {
+  let label = "";
+
+  for (const binding of bindings) {
+    const longer = label ? `${label}, ${binding}` : binding;
+
+    if (longer.length > SEED_LABEL_MAX) {
+      return label ? `${label}, \u2026` : `${binding.slice(0, SEED_LABEL_MAX - 1)}\u2026`;
+    }
+
+    label = longer;
+  }
+
+  return label || "\u22a4";
+}
+
 function compactValue(value) {
   if (value === "⊥") {
     return "⊥";
@@ -151,12 +171,15 @@ export function createSolveReplay(deps) {
     setMessage("");
   }
 
-  /* A finished run can be replayed; the traces are computed only when the panel opens. */
+  /* A finished run is replayed from the traces it recorded; it is laid out when the panel opens. */
   function offer(run) {
     clear();
     offered = run;
     panel.hidden = false;
-    count.textContent = "open to load";
+
+    const steps = run.answer.trace_jsonl?.match(/^\{"step":/gm)?.length ?? 0;
+
+    count.textContent = `${steps.toLocaleString("en")} steps`;
   }
 
   async function load() {
@@ -166,46 +189,33 @@ export function createSolveReplay(deps) {
       return;
     }
 
-    setMessage("Solving the run again with its traces...");
-    count.textContent = "loading";
+    const { answer } = run;
 
-    loading = (async () => {
-      const answer = JSON.parse(
-        await deps.solve({ ...run.configuration, trace: "jsonl" }, run.source),
-      );
+    if (typeof answer.trace_jsonl !== "string" || typeof answer.trace !== "string") {
+      setMessage("The run returned no trace to replay.", { kind: "error" });
+      return;
+    }
 
-      if (typeof answer.trace !== "string" || answer.status !== "ok") {
-        throw new Error(answer.message ?? "the analyzer returned no trace");
-      }
-
-      const records = parseEvents(answer.trace);
-
-      /* The verbose text the steps' lines point into: the trace panel's full form. */
-      const verbose = JSON.parse(
-        await deps.solve({ ...run.configuration, trace: "verbose" }, run.source),
-      );
-
-      if (typeof verbose.trace !== "string" || verbose.status !== "ok") {
-        throw new Error(verbose.message ?? "the analyzer returned no trace");
-      }
-
-      return {
-        answer,
-        events: records.filter((record) => Number.isInteger(record.step)),
-        text: verbose.trace,
-      };
-    })();
+    setMessage("Laying out the replay...");
+    loading = true;
 
     try {
-      const { answer, events, text } = await loading;
+      const events = parseEvents(answer.trace_jsonl).filter((record) =>
+        Number.isInteger(record.step),
+      );
+
+      /* The verbose text the steps' lines point into: the trace panel's full form. */
+      await build(answer, events, answer.trace);
 
       if (offered !== run) {
         return;
       }
 
-      await build(answer, events, text);
-      setMessage("");
-      count.textContent = `${events.length} steps`;
+      setMessage(
+        answer.trace.includes("\nTrace truncated:")
+          ? "The run's trace was cut short, so the replay stops where the recording did."
+          : "",
+      );
     } catch (error) {
       if (offered === run) {
         const detailText = error instanceof Error ? error.message : String(error);
@@ -214,7 +224,6 @@ export function createSolveReplay(deps) {
           canRetry: true,
           kind: "error",
         });
-        count.textContent = "";
       }
     } finally {
       if (offered === run) {
@@ -457,7 +466,11 @@ export function createSolveReplay(deps) {
           .filter(Boolean)
           .join(" ");
 
-        const label = g ? compactValue(g.value) : "";
+        const label = !g
+          ? ""
+          : g.value === "⊥"
+            ? "⊥"
+            : seedLabelOf(compactValue(g.value).split(", "));
         const last = drawn.get(node.id());
 
         if (last?.classes !== classes || last?.label !== label) {

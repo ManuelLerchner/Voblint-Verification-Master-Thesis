@@ -556,9 +556,65 @@ main {
   font-family: inherit;
 }
 
+/* The editor fits its program: a short example gets a short editor, a long one grows up to the cap and scrolls. */
 #program-editor .cm-editor,
 #program-editor .cm-scroller {
-  min-height: 560px;
+  min-height: 240px;
+}
+
+/*
+ * Until CodeMirror loads, an editor's mount is empty: skeleton lines hold its place
+ * so the page does not jump, and CodeMirror's own DOM replaces them.
+ */
+#program-editor:empty {
+  min-height: 240px;
+}
+
+.code-editor:empty {
+  --skeleton: rgb(255 255 255 / 0.09);
+  position: relative;
+}
+
+.code-editor:empty::before {
+  content: "";
+  position: absolute;
+  inset: 18px 24px;
+  background-image:
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton)),
+    linear-gradient(var(--skeleton), var(--skeleton));
+  background-repeat: no-repeat;
+  background-size:
+    34% 10px,
+    58% 10px,
+    46% 10px,
+    22% 10px,
+    64% 10px,
+    40% 10px,
+    52% 10px,
+    18% 10px;
+  background-position:
+    0 0,
+    24px 24px,
+    24px 48px,
+    48px 72px,
+    24px 96px,
+    24px 120px,
+    0 144px,
+    0 168px;
+  border-radius: 4px;
+  animation: skeleton-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.45;
+  }
 }
 
 #program-editor .cm-scroller {
@@ -864,7 +920,86 @@ main {
   display: none;
 }
 
-.inspector-message {
+/* A panel's key, inline above what it explains: one wrapping strip of small items. */
+.panel-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+  margin: 8px 0 12px;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+}
+
+/* A key in groups: one row per kind of annotation, each wrapping on its own. */
+.panel-legend.grouped {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.legend-row > span,
+.panel-legend > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* The editor's badges and hints, redrawn for the light page: icon and label as in the editor. */
+.lg-badge {
+  padding: 1px 0.5em;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  color: var(--verdict-color);
+  background: var(--surface);
+  font: 600 0.7rem var(--mono);
+  white-space: pre;
+}
+
+.lg-badge.proved {
+  --verdict-color: var(--success);
+}
+
+.lg-badge.unknown {
+  --verdict-color: var(--caution);
+}
+
+.lg-badge.warning {
+  --verdict-color: var(--warning);
+}
+
+.lg-badge.refuted {
+  --verdict-color: var(--danger);
+}
+
+.lg-badge.dead {
+  --verdict-color: var(--text-faint);
+}
+
+.lg-badge.error {
+  --verdict-color: var(--danger);
+}
+
+.lg-badge.hint {
+  color: var(--text-muted);
+  font-style: italic;
+  font-weight: 400;
+}
+
+.lg-badge.hint.merge {
+  color: var(--text-faint);
+}
+
+.panel-legend .legend-defs {
+  position: absolute;
+}
+
+.inspector-message,
+.panel-lead {
   color: var(--text-muted);
   font-size: 0.8rem;
 }
@@ -1364,8 +1499,10 @@ kbd {
   border-radius: 10px;
 }
 
+/* The call takes a second row and wraps there, so it is never cut off. */
 .raw-result summary {
   display: flex;
+  flex-wrap: wrap;
   align-items: baseline;
   gap: 4px 12px;
   list-style: none;
@@ -1382,16 +1519,26 @@ kbd {
 
 /* One line: a long answer outline is cut with an ellipsis; the panel holds the whole term. */
 .raw-call {
-  flex: 1 1 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 0.6em;
+  order: 1;
+  flex: 1 1 100%;
   min-width: 0;
-  overflow: hidden;
   padding: 0;
   border: 0;
   color: var(--text-muted);
   background: none;
   font-size: 0.72rem;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+}
+
+.raw-call-head {
+  justify-self: end;
+}
+
+.raw-call-body {
+  min-width: 0;
 }
 
 .raw-call-fn {
@@ -1417,11 +1564,17 @@ kbd {
   font-weight: 700;
 }
 
+.raw-call-observed {
+  color: var(--text-faint);
+  font-style: italic;
+}
+
 .raw-call-fields {
   color: var(--text-muted);
 }
 
-.raw-result-hint {
+/* Every collapsible panel says it can be opened, and closed again. */
+.expand-hint {
   display: inline-flex;
   flex: none;
   align-items: center;
@@ -1431,21 +1584,21 @@ kbd {
   font-size: 0.76rem;
 }
 
-.raw-result-hint i {
+.expand-hint i {
   font-size: 0.7rem;
   transition: transform 150ms ease;
 }
 
-.raw-result summary:hover .raw-result-hint {
+summary:hover .expand-hint {
   color: var(--primary);
 }
 
-.raw-result[open] .raw-result-hint i {
+details[open] > summary .expand-hint i {
   transform: rotate(180deg);
 }
 
-.raw-result:not([open]) .raw-result-hint-open,
-.raw-result[open] .raw-result-hint-closed {
+details:not([open]) > summary .expand-hint-open,
+details[open] > summary .expand-hint-closed {
   display: none;
 }
 
@@ -1463,9 +1616,20 @@ kbd {
 
 .raw-result-panes {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px;
   margin-top: 12px;
+}
+
+/* Too narrow for three panes of JSON and trace: the trace takes its own row. */
+@media (max-width: 1280px) {
+  .raw-result-panes {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .raw-result-trace {
+    grid-column: 1 / -1;
+  }
 }
 
 .raw-result-pane {
@@ -1477,9 +1641,39 @@ kbd {
 
 .raw-result-pane-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
+}
+
+.raw-result-stats {
+  margin-right: auto;
+  color: var(--text-faint);
+  font: 0.72rem var(--mono);
+}
+
+.raw-result-tools {
+  display: flex;
+  gap: 10px;
+}
+
+.raw-result-tools button {
+  padding: 0;
+  color: var(--primary);
+  background: none;
+  border: 0;
+  font: 600 0.74rem var(--mono);
+  cursor: pointer;
+}
+
+.raw-result-tools button:hover:not(:disabled) {
+  text-decoration: underline;
+}
+
+.raw-result-tools button:disabled {
+  color: var(--text-faint);
+  cursor: not-allowed;
 }
 
 .raw-result-pane-header h2 {
@@ -1823,36 +2017,22 @@ button.solver-global-key:hover {
 
 /* ------------------------------------------------------------- trace view */
 
+/*
+ * A trace view is a .code-editor too: gutters, line padding and font follow the
+ * dark editors beside it, and only the trace's own colors are set here.
+ */
 .trace-view {
-  overflow: hidden;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
+  border: 1px solid var(--editor-border);
+  border-radius: 10px;
 }
 
 .trace-view .cm-editor {
   height: 100%;
-  font: 0.74rem / 1.5 var(--mono);
-}
-
-.trace-view .cm-scroller {
-  overflow: auto;
-  font-family: var(--mono);
-}
-
-.trace-view .cm-gutters {
-  background: var(--surface-muted);
-  border-right: 1px solid var(--border);
-  color: var(--text-faint);
-}
-
-.solver-trace-view {
-  height: min(560px, 60vh);
-  margin: 10px 0 0;
+  font: 0.78rem / 1.6 var(--mono);
 }
 
 .trace-view .tr-current {
-  background: var(--accent-soft);
+  background: rgb(215 102 66 / 0.18);
   box-shadow: inset 3px 0 0 var(--accent);
 }
 
@@ -1860,82 +2040,110 @@ button.solver-global-key:hover {
 .trace-view .tr-banner {
   margin: 6px 0 2px;
   padding: 1px 8px;
-  color: var(--primary);
-  background: var(--primary-soft);
-  border-left: 3px solid var(--primary);
+  color: #8fc4e8;
+  background: rgb(143 196 232 / 0.1);
+  border-left: 3px solid #8fc4e8;
   font-weight: 700;
 }
 
-.trace-view .tr-side-gutter .cm-gutterElement {
-  padding: 0 4px;
-}
-
-.tr-side-mark {
-  color: var(--warning);
+.tr-query,
+.tr-update,
+.tr-widen,
+.tr-side,
+.tr-route,
+.tr-check,
+.tr-proved,
+.tr-failed {
+  font-weight: 700;
 }
 
 .tr-query {
-  color: var(--primary);
-  font-weight: 700;
+  color: #8fc4e8;
 }
 
-.tr-update {
-  color: var(--success);
-  font-weight: 700;
+.tr-update,
+.tr-proved {
+  color: #6fcf97;
 }
 
-.tr-widen {
-  color: var(--accent);
+/* The value-carrying events: a soft chip that does not move the text. */
+.tr-answer,
+.tr-sol,
+.tr-stored {
   font-weight: 700;
+  border-radius: 2px;
+}
+
+.tr-answer {
+  color: #8bd5ca;
+  background: rgb(139 213 202 / 0.14);
+  box-shadow: 0 0 0 2px rgb(139 213 202 / 0.14);
+}
+
+.tr-stored {
+  color: #6fcf97;
+  background: rgb(111 207 151 / 0.14);
+  box-shadow: 0 0 0 2px rgb(111 207 151 / 0.14);
+}
+
+.tr-sol {
+  color: #f0c674;
+  background: rgb(240 198 116 / 0.14);
+  box-shadow: 0 0 0 2px rgb(240 198 116 / 0.14);
+}
+
+.tr-widen,
+.tr-route,
+.tr-check,
+.tr-failed {
+  color: #f08a65;
+}
+
+.tr-iterate {
+  color: #95adb4;
 }
 
 .tr-stable {
-  color: var(--text-faint);
-}
-
-.tr-side {
-  color: var(--warning);
-  font-weight: 700;
-}
-
-.tr-route,
-.tr-check {
-  color: var(--tok-keyword);
-  font-weight: 700;
-}
-
-.tr-unknown {
-  color: var(--text-muted);
-}
-
-.tr-value {
-  color: var(--tok-number);
+  color: #6c8188;
 }
 
 .tr-key,
 .tr-step {
-  color: var(--text-muted);
+  color: #7c9096;
+}
+
+.tr-side {
+  color: #c9a2e8;
+}
+
+.tr-unknown {
+  color: #a7bbc0;
+}
+
+.tr-on {
+  color: #6fcf97;
+}
+
+.tr-off {
+  color: #6c8188;
+}
+
+.tr-value {
+  color: #c4a7e7;
 }
 
 /* An old/new pair marks the components that differ, like a diff. */
-.tr-removed {
-  background: var(--danger-soft);
+.tr-removed,
+.tr-added {
   border-radius: 2px;
+}
+
+.tr-removed {
+  background: rgb(255 138 115 / 0.2);
 }
 
 .tr-added {
-  background: var(--success-soft);
-  border-radius: 2px;
-}
-
-.tr-proved {
-  color: var(--success);
-  font-weight: 700;
-}
-
-.tr-failed {
-  color: var(--danger);
-  font-weight: 700;
+  background: rgb(111 207 151 / 0.2);
 }
 
 .analysis-graph-header {
@@ -2548,16 +2756,6 @@ a:focus-visible {
 
   .editor-file {
     display: none;
-  }
-
-  /* Truncated to two or three glyphs the outline says nothing; the panel below
-     still holds the whole term. */
-  .raw-call {
-    display: none;
-  }
-
-  .raw-result summary {
-    flex-wrap: wrap;
   }
 
   .site-nav-inner {

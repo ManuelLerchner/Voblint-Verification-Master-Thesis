@@ -188,23 +188,29 @@ value report. Checked against the local Goblint checkout at `0dc12d355`
 (`src/solver/td_simplified.ml`, `src/solver/td3.ml`); the registered revision
 `5320a6b7` was not re-checked for these files.
 
+A statement point is named after its source, as Goblint's `pretty_trace` names a
+node by its statement and location (`src/common/framework/node.ml`,
+`src/framework/analyses.ml`): `(pp2 "x = x + 1;" L4, ctx)`. A block statement
+shows its head (`while (x < 10)`), a point on a closing brace only its line.
+The compact form names points the same way; JSON Lines keeps the bare `pp2`.
+
 | Voblint event (`solver_event`) | Line | `td_simplified.ml` | `td3.ml` (`sol2` unless noted) |
 | --- | --- | --- | --- |
 | `Ev_Start x` | `multivar: solving for x` | 174 | none |
-| `Ev_Query y x st cl` | `solver_query: entering query for x; stable st; called cl` | 68 | 454 `eval %a ## %a` |
+| `Ev_Query y x st cl` | `solver_query: entering query for x from y; stable st; called cl` | 68 | 454 `eval %a ## %a` |
 | `Ev_Query_Wpoint x w` | `wpoint: query adding wpoint x` (unless `w`) | 80 | 468 `eval adding wpoint` |
 | `Ev_Iterate_From_Query x` | `iter: iterate called from query` | 76 | none |
 | `Ev_Add_Infl y x` | `infl: add_infl y x` | 37 | 305 |
-| `Ev_Answer y x d` | `answer: exiting query for x` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
-| `Ev_Query_Global x g` | `solver_query: entering query for g` | 68 | 454 |
-| `Ev_Answer_Global x g d` | `answer: exiting query for g` / `answer: d` | 85 | 473 |
+| `Ev_Answer y x d` | `answer: exiting query for x from y` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
+| `Ev_Query_Global x g` | `solver_query: entering query for g from x` | 68 | 454 |
+| `Ev_Answer_Global x g d` | `answer: exiting query for g from x` / `answer: d` | 85 | 473 |
 | `Ev_Iterate x cl st wp` | `iter: begin iterate x, called: cl, stable: st, wpoint: wp` | 111 | 351 `solve %a, phase ...` |
 | `Ev_Eq x` | `eq: eq x` | 50 | 430 |
 | `Ev_Still_Unstable x` | `iter: iterate still unstable x` | 137 | 412 |
 | `Ev_Widen x wp` | `wpoint: widen x` (if `wp`) | 122 | none |
 | `Ev_Sol x wp old eqd new` | `sol: Var: x (wp: wp)` / `Old value` / `Eqd` / `New value` | none | 396 (`sol`) |
 | `Ev_Wpoint_Remove x wp` | `wpoint: iterate removing wpoint x` (if `wp`) | 141 | 423 |
-| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx): old -> new` (unless old is ⊥) | 127 | 404 (`solchange`) |
+| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx)` / `Old value` / `New value` (unless old is ⊥) | 127 | 404 (`solchange`) |
 | `Ev_Iterate_Changed x` | `iter: iterate changed x` | 131 | none |
 | `Ev_Side x g d` | `side: side to g from x; value: d` | 89 | 476 |
 | `Ev_Update_Global x g bot old new` | `update: side to g from x new: new` (unless old is ⊥) | 102 | 498 (`solside`) |
@@ -273,15 +279,29 @@ The playground offers the same traces. `cli/entry/voblint_web.ml` takes a
 seventh argument, `trace`, naming the form as the flags do: `"compact"`,
 `"verbose"` or `"jsonl"` add a `trace` field holding the text
 `Solver_trace.emit` writes in that form, and `"off"` leaves the answer as it
-was before the tracer existed. The page shows the compact or the full
-(verbose) text above the graph, lays out its first 400 lines until the reader
-asks for all of them, and saves the whole text; its JSON Lines download solves
-the shown run again in `"jsonl"` mode. Share links carry the form as
-`trace=compact` or `trace=verbose`; `trace=1` still opens the compact one. The
-browser module outlives a run, so the adapter sets the hook's switch on every
-call and `Solver_trace_hook.recorded` empties the event list it hands over.
-The page's **Solve replay** section, when opened, solves the shown run again in
-`"jsonl"` mode and steps through the events on its own drawing of the graph
+was before the tracer existed. `"all"` adds the verbose text as `trace` and
+JSON Lines as `trace_jsonl`, both rendered from the one recording. The page
+runs every analysis in `"all"` mode, so each run is solved once: the
+**run_voblint: call and answer** panel shows the text beside the call's input
+and output, its downloads save either form, and the solve replay folds the
+JSON Lines. Share links carry `trace=verbose` to open that panel; older forms still
+open it. The browser module outlives a run, so the adapter sets the hook's
+switch on every call and `Solver_trace_hook.recorded` empties the event list it
+hands over.
+
+A run may never finish, and the page cancels it by terminating its worker. In
+`"verbose"` mode the adapter therefore installs `Solver_trace_hook.listener`,
+which renders each kept event as it is recorded (`Solver_trace.live_verbose`)
+and posts the text to the worker's `Voblint_trace_chunk` about every 100 ms;
+before the solve it posts the call's input to `Voblint_run_input`. On cancel the
+page shows that input, no output, and the chunks it received. The adapter stops
+keeping events at 50,000 or once 8 MB of text are posted, whichever comes first:
+states grow with the run, and so do the lines that print them. Later events are
+counted, not kept, so a run that never finishes stops growing its trace, and a
+finished run's text ends with `Trace truncated` instead of `Trace complete`. The listener runs inside
+the hook's `try`, and the hook still returns `()`. The CLI sets neither.
+The page's **Solve replay** section, when opened, steps through the run's
+`trace_jsonl` events on its own drawing of the graph
 (`pages/replay.js`). Every state it shows comes from one reducer,
 `reduce(state, event)` in `pages/replay_state.js` (pure, no DOM): the animation,
 the per-step text and the snapshot cache all fold events through it. The

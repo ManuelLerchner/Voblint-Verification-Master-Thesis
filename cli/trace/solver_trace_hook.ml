@@ -14,13 +14,38 @@
 let enabled = ref false
 let events : (string * Obj.t) list ref = ref []
 
+(* At most [limit] events are kept, later ones only counted: a run that never
+   finishes would otherwise keep growing the list, and every solver value an
+   event names, until it is killed. *)
+let limit = ref max_int
+let kept = ref 0
+let dropped = ref 0
+
+(* Sees each kept event as it is recorded, so a viewer can show the trace of a
+   run that is still solving, or never finishes. *)
+let listener : (string -> Obj.t -> unit) ref = ref (fun _ _ -> ())
+
 let emit channel event =
   if !enabled then
-    try events := (channel, Obj.repr (event ())) :: !events with _ -> ()
+    try
+      if !kept < !limit then begin
+        let o = Obj.repr (event ()) in
+        events := (channel, o) :: !events;
+        incr kept;
+        !listener channel o
+      end
+      else incr dropped
+    with _ -> ()
 
-(* Hands the events over and forgets them: the browser adapter lives across
-   runs, and the events keep the run's solver values alive. *)
-let recorded () =
-  let es = List.rev !events in
+let reset () =
   events := [];
-  es
+  kept := 0;
+  dropped := 0
+
+(* Hands the events over, with how many the limit left out, and forgets them:
+   the browser adapter lives across runs, and the events keep the run's solver
+   values alive. *)
+let recorded () =
+  let es = List.rev !events and d = !dropped in
+  reset ();
+  (es, d)

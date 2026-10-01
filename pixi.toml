@@ -162,6 +162,10 @@ browser-trace-check = { cmd = "python3 -m pytest tests/test_browser_trace.py", d
   "browser-build",
 ], description = "Run the WebAssembly analyzer under Node and check the playground's solver trace against the CLI's, and that tracing off changes nothing." }
 pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
+pages-dev = { cmd = "python3 scripts/pages_dev.py", depends-on = [
+  "vendor-init",
+  "browser-build",
+], description = "Serve the site from its sources at http://localhost:8000 and reload open tabs when pages/, docs/images or the wasm build change; no pages-site-build needed." }
 
 # Source-level and assembled-site link/metadata checks.
 pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }

@@ -4,8 +4,8 @@
  * It reads two forms of the same events: the CLI's trace (`voblint --trace`, compact or
  * --verbose) and the replay's step blocks (`[007] QUERY-L ...`). Everything it adds is
  * presentation: the coloring follows each line's event kind, a query of a procedure's
- * exit unknown opens a banner naming the call, side effects get a gutter mark, and a
- * line folds together with the deeper lines after it. The text itself is never
+ * exit unknown opens a banner naming the call, and a line folds together with the
+ * deeper lines after it. The text itself is never
  * changed, so a download is still the analyzer's output byte for byte.
  */
 
@@ -28,37 +28,29 @@ import {
 import {
   Decoration,
   EditorView,
-  GutterMarker,
-  gutter,
   highlightSpecialChars,
+  keymap,
+  lineNumbers,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 
 /* ---------------------------------------------------------------- event kinds */
 
-/* Every event label of the three forms, by what it does to the solve. */
+/*
+ * Every event label of the three forms, by what it does to the solve. A query's answer,
+ * a solve step's `sol` and the change it stores carry the values the solve computes,
+ * so they get kinds of their own; beginning an iteration or an equation is bookkeeping
+ * between them and is drawn quieter than the query that caused it.
+ */
 const KIND_OF = new Map(
   Object.entries({
-    query: [
-      "solver_query",
-      "answer",
-      "eq",
-      "iter",
-      "multivar",
-      "QUERY",
-      "QUERY-L",
-      "QUERY-G",
-      "VALUE-L",
-      "ANSWER",
-      "RETURN",
-      "EQ",
-      "ITERATE",
-      "SOLVE",
-      "RESOLVE",
-      "START",
-    ],
-    update: ["sol", "rhs", "update", "UPDATE-L", "UPDATE-G"],
+    query: ["solver_query", "QUERY", "QUERY-L", "QUERY-G", "VALUE-L", "RETURN"],
+    iterate: ["eq", "iter", "multivar", "EQ", "ITERATE", "SOLVE", "RESOLVE", "START"],
+    answer: ["answer", "ANSWER"],
+    sol: ["sol"],
+    stored: ["update", "UPDATE-L", "UPDATE-G"],
+    update: ["rhs"],
     widen: ["wpoint", "WIDEN", "WPOINT+", "WPOINT-"],
     stable: ["destab", "infl", "DESTAB", "STABLE+", "STABLE-", "UNSTABLE", "INFL+", "RESTART"],
     side: ["side", "SIDE", "FLUSH"],
@@ -67,7 +59,19 @@ const KIND_OF = new Map(
   }).flatMap(([kind, labels]) => labels.map((label) => [label, kind])),
 );
 
-const KINDS = ["query", "update", "widen", "stable", "side", "route", "check"];
+const KINDS = [
+  "query",
+  "iterate",
+  "answer",
+  "sol",
+  "stored",
+  "update",
+  "widen",
+  "stable",
+  "side",
+  "route",
+  "check",
+];
 
 /* A line that starts an event, and where its label sits; other lines continue one. */
 const HEAD = /^(\[\d+\] )?( *)(?:%%% ([a-z_]+):|([A-Z][A-Z+-]+)(?= ))/;
@@ -89,7 +93,7 @@ function headOf(text) {
 }
 
 /* A query of a procedure's exit unknown asks for that procedure's result: a call. */
-const CALL = /(?:entering query for|asks|->) \(exit_([\w']+), (.*?)\)(?:;|$)/;
+const CALL = /(?:entering query for|asks|->) \(exit_([\w']+), (.*?)\)(?:;| from |$)/;
 const ROOT = /(?:solving for|START) +\(exit_([\w']+), (.*?)\)/;
 
 function callOf(text) {
@@ -108,6 +112,10 @@ function callOf(text) {
 /* Existing tags, one per kind of token, which only the trace's own style below colors. */
 const traceTags = {
   query: tags.controlKeyword,
+  iterate: tags.processingInstruction,
+  answer: tags.className,
+  sol: tags.typeName,
+  stored: tags.attributeName,
   update: tags.definitionKeyword,
   widen: tags.operatorKeyword,
   stable: tags.comment,
@@ -121,10 +129,12 @@ const keyTag = tags.propertyName;
 const stepTag = tags.meta;
 const provedTag = tags.inserted;
 const failedTag = tags.deleted;
+const onTag = tags.bool;
+const offTag = tags.atom;
 
 const traceParser = {
   name: "voblint-trace",
-  startState: () => ({ atHead: true }),
+  startState: () => ({ atHead: true, event: null }),
   token(stream, state) {
     if (stream.sol()) {
       state.atHead = true;
@@ -144,12 +154,31 @@ const traceParser = {
       const label = stream.match(/^%%% ([a-z_]+):/) ?? stream.match(/^[A-Z][A-Z+-]+(?= )/);
 
       if (label) {
-        return KIND_OF.get(label[1] ?? label[0]) ?? "key";
+        state.event = KIND_OF.get(label[1] ?? label[0]) ?? "key";
+        return state.event;
       }
     }
 
-    if (stream.match(/^(?:Old value|New value|Eqd|answer|value|old|new)(?=:| =)/)) {
+    if (stream.match(/^(?:answer|value)(?=:| =)/)) {
+      return "answer";
+    }
+
+    // A value line takes the chip of the event it belongs to.
+    if (stream.match(/^(?:Old value|New value|Eqd)(?=:)|^(?:old|new)(?= =)/)) {
+      return state.event === "sol" || state.event === "stored" ? state.event : "key";
+    }
+
+    /* The solver's flags on an unknown: a set one stands out, a clear one recedes. */
+    if (stream.match(/^(?:called|stable|wpoint|wpx|wp)(?=:? (?:true|false)\b)/)) {
       return "key";
+    }
+
+    if (stream.match(/^true\b/)) {
+      return "on";
+    }
+
+    if (stream.match(/^false\b/)) {
+      return "off";
     }
 
     if (stream.match(/^(?:PROVED|DEAD)\b/)) {
@@ -160,7 +189,10 @@ const traceParser = {
       return "failed";
     }
 
-    if (stream.match(/^(?:Seed|Global)?\((?:entry_|exit_)?[\w']+, [^()]*\)/)) {
+    // A statement point carries its source: `(pp4 "x = x + 1;" L4, ctx)`.
+    if (
+      stream.match(/^(?:Seed|Global)?\((?:entry_|exit_)?[\w']+(?: "[^"]*")?(?: L\d+)?, [^()]*\)/)
+    ) {
       return "unknown";
     }
 
@@ -179,6 +211,8 @@ const traceParser = {
     step: stepTag,
     proved: provedTag,
     failed: failedTag,
+    on: onTag,
+    off: offTag,
   },
 };
 
@@ -190,6 +224,8 @@ const traceHighlight = HighlightStyle.define([
   { tag: stepTag, class: "tr-step" },
   { tag: provedTag, class: "tr-proved" },
   { tag: failedTag, class: "tr-failed" },
+  { tag: onTag, class: "tr-on" },
+  { tag: offTag, class: "tr-off" },
 ]);
 
 /* ---------------------------------------------------------------- folding */
@@ -228,11 +264,12 @@ const foldByDepth = foldService.of((state, from) => {
 /*
  * The CLI prints an event's value lines (`Old value:`, `answer:`) at column 0; they are
  * drawn under their event instead. In an old/new pair, the components (`x=[0,9]`) one
- * side has and the other lacks are marked, like a diff.
+ * side has and the other lacks are marked, like a diff. The value lines of one event
+ * are padded into columns so the same component sits at the same place on each.
  */
 const OLD_VALUE = /^ *(?:Old value: |old = )/;
 const NEW_VALUE = /^ *(?:New value: |new = )/;
-const UPDATE = /\(wpx: \w+\): (.*) -> (.*)$/;
+const VALUE_LINE = /^ *(?:Old value: |Eqd: |New value: |answer: |value = |old = |new = )/;
 
 function parts(text, offset) {
   const found = [];
@@ -277,38 +314,124 @@ function valueAt(line, pattern) {
   return match ? parts(line.text.slice(match[0].length), line.from + match[0].length) : null;
 }
 
+class Pad extends WidgetType {
+  constructor(width) {
+    super();
+    this.width = width;
+  }
+
+  eq(other) {
+    return other.width === this.width;
+  }
+
+  toDOM() {
+    const pad = document.createElement("span");
+
+    pad.textContent = " ".repeat(this.width);
+    return pad;
+  }
+}
+
+/* Padding goes before what it moves, outside any diff mark that starts there. */
+function padAt(at, width) {
+  return Decoration.widget({ widget: new Pad(width), side: -1 }).range(at);
+}
+
+function keyOf(part) {
+  return part.text.split("=")[0];
+}
+
+/* A value line's components, and the column its value starts at. */
+function valueRow(line) {
+  const label = VALUE_LINE.exec(line.text);
+
+  return label
+    ? {
+        column: label[0].length,
+        parts: parts(line.text.slice(label[0].length), line.from + label[0].length),
+      }
+    : null;
+}
+
+/*
+ * Pads a block of value rows into columns: the values first, then each component for
+ * the rows whose components so far have the same names as the longest row's. A row of
+ * one component, such as ⊥, only has its start aligned.
+ */
+function align(block) {
+  const ranges = [];
+  const start = Math.max(...block.map((row) => row.column));
+  const reference = block.reduce((a, b) => (b.parts.length > a.parts.length ? b : a)).parts;
+
+  for (const row of block) {
+    if (row.column < start) {
+      ranges.push(padAt(row.parts[0].from, start - row.column));
+    }
+
+    row.matched =
+      row.parts.length < 2
+        ? 0
+        : row.parts.findIndex((part, k) => keyOf(part) !== keyOf(reference[k] ?? { text: "" }));
+
+    if (row.matched < 0) {
+      row.matched = row.parts.length;
+    }
+  }
+
+  for (let column = 0; column < reference.length; column++) {
+    const rows = block.filter((row) => row.matched > column);
+    const width = Math.max(0, ...rows.map((row) => row.parts[column].text.length));
+
+    for (const row of rows) {
+      const cell = row.parts[column];
+      const next = row.parts[column + 1];
+
+      if (cell.text.length < width && next) {
+        ranges.push(padAt(next.from, width - cell.text.length));
+      }
+    }
+  }
+
+  return ranges;
+}
+
 function layout(doc) {
   const ranges = [];
   let labelAt = 0;
   let old = null;
+  let block = [];
+
+  const endBlock = () => {
+    if (block.length > 1) {
+      ranges.push(...align(block));
+    }
+
+    block = [];
+  };
 
   for (let at = 1; at <= doc.lines; at++) {
     const line = doc.line(at);
     const head = headOf(line.text);
+    const own = /^ */.exec(line.text)[0].length;
+    const shift = !head && own < labelAt ? labelAt + 4 - own : 0;
+    const row = head ? null : valueRow(line);
+
+    if (row) {
+      block.push(row);
+    } else {
+      endBlock();
+    }
 
     if (head) {
       labelAt = head.labelAt;
       old = null;
-
-      const update = UPDATE.exec(line.text);
-
-      if (update) {
-        const isAt = line.to - update[2].length;
-        const was = parts(update[1], isAt - 4 - update[1].length);
-        const is = parts(update[2], isAt);
-
-        ranges.push(...changes(was, is, removedMark), ...changes(is, was, addedMark));
-      }
-
       continue;
     }
 
-    const own = /^ */.exec(line.text)[0].length;
-
-    if (own < labelAt) {
+    if (shift > 0) {
       ranges.push(
         Decoration.line({
-          attributes: { style: `padding-left: calc(6px + ${labelAt + 4 - own}ch)` },
+          attributes: { style: `padding-left: calc(16px + ${shift}ch)` },
         }).range(line.from),
       );
     }
@@ -324,6 +447,7 @@ function layout(doc) {
     }
   }
 
+  endBlock();
   return Decoration.set(ranges, true);
 }
 
@@ -379,24 +503,6 @@ const bannerField = StateField.define({
   provide: (field) => EditorView.decorations.from(field),
 });
 
-const sideMark = new (class extends GutterMarker {
-  toDOM() {
-    const mark = document.createElement("span");
-
-    mark.className = "tr-side-mark";
-    mark.textContent = "◆";
-    mark.title = "Side effect on a global unknown";
-    return mark;
-  }
-})();
-
-const sideGutter = gutter({
-  class: "tr-side-gutter",
-  lineMarker: (view, line) =>
-    headOf(view.state.doc.sliceString(line.from, line.to))?.kind === "side" ? sideMark : null,
-  initialSpacer: () => sideMark,
-});
-
 /* ---------------------------------------------------------------- current lines */
 
 const setCurrent = StateEffect.define();
@@ -434,20 +540,27 @@ const currentField = StateField.define({
  * current (by default [first] and the value lines that continue it) and centers the first one's label in both directions, unfolding it if needed;
  * [show(null)] marks none and returns to the top.
  */
+/* Only the lines on screen are in the DOM, so the browser's own select-all cannot reach the rest. */
+function selectAll(view) {
+  view.dispatch({ selection: { anchor: 0, head: view.state.doc.length } });
+  return true;
+}
+
 export function createTraceView(parent, { label, onLine = null }) {
   const view = new EditorView({
     parent,
     extensions: [
       highlightSpecialChars(),
+      /* Read-only but focusable, so a selection and its copy cover the whole trace. */
       EditorState.readOnly.of(true),
-      EditorView.editable.of(false),
-      EditorView.contentAttributes.of({ "aria-label": label, tabindex: "0" }),
+      EditorView.contentAttributes.of({ "aria-label": label }),
+      keymap.of([{ key: "Mod-a", run: selectAll, preventDefault: true }]),
       StreamLanguage.define(traceParser),
       syntaxHighlighting(traceHighlight),
+      lineNumbers(),
       codeFolding(),
       foldGutter(),
       foldByDepth,
-      sideGutter,
       bannerField,
       layoutField,
       currentField,
@@ -508,8 +621,9 @@ export function createTraceView(parent, { label, onLine = null }) {
         changes: { from: 0, to: view.state.doc.length, insert: text },
         effects: setCurrent.of(null),
         selection: { anchor: 0 },
-        scrollIntoView: true,
       });
+      /* The pane's own scroller only: scrollIntoView would also move the page. */
+      view.scrollDOM.scrollTo({ top: 0, left: 0 });
     },
 
     show(first, last) {
