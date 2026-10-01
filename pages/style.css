@@ -935,49 +935,51 @@ main {
   gap: 6px;
 }
 
-/* The editor's own badges and hints, on a lighter shade of its background. */
+/* The editor's badges and hints, redrawn for the light page: icon and label as in the editor. */
 .lg-badge {
   padding: 1px 0.5em;
+  border: 1px solid var(--border);
   border-radius: 4px;
   color: var(--verdict-color);
-  background: #2c4a52;
+  background: var(--surface);
   font: 600 0.7rem var(--mono);
   white-space: pre;
 }
 
 .lg-badge.proved {
-  --verdict-color: #6fcf97;
+  --verdict-color: var(--success);
 }
 
 .lg-badge.unknown {
-  --verdict-color: #f0c674;
+  --verdict-color: var(--caution);
 }
 
 .lg-badge.warning {
-  --verdict-color: #d7a0ff;
+  --verdict-color: var(--warning);
 }
 
 .lg-badge.refuted {
-  --verdict-color: #ff8a73;
+  --verdict-color: var(--danger);
 }
 
 .lg-badge.dead {
-  --verdict-color: #7c9096;
+  --verdict-color: var(--text-faint);
 }
 
 .lg-badge.error {
   color: #1c1c1c;
   background: #ff8a73;
+  border-color: #ff8a73;
 }
 
 .lg-badge.hint {
-  color: #8fb3ba;
+  color: var(--text-muted);
   font-style: italic;
   font-weight: 400;
 }
 
 .lg-badge.hint.merge {
-  color: #6f878d;
+  color: var(--text-faint);
 }
 
 .panel-legend .legend-defs {
