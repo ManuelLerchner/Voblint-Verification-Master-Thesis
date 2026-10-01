@@ -630,7 +630,7 @@ names the kind of its evidence and the section that argues it.
   (#isathm("prefix_congruence_mod_unsound")); the upstream behaviour is
   documented, not re-run. @sec:eval-1161.
 
-+ *A `PROVED` verdict may depend on behaviour that C11 leaves undefined*:
++ *A `PROVED` verdict may depend on VIMP's convention for behaviour that C11 leaves undefined*:
   division by zero, and the zeroed locals of a callee (#isaconst("enter_state")),
   which no shipped analysis uses but the theorem would accept. _Source
   inspection_, and executable for the division (claim #claim-ref("pg-division-definite"):

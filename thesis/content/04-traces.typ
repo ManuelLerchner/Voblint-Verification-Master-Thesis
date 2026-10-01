@@ -587,7 +587,7 @@ at one call.
   placement: none,
   caption: [The obligations at one call (schematic). Boxes are (node, context)
     pairs. Solid arrows show where each obligation applies; #oblig("INTRA") may be
-    applied repeatedly along a activation path. The dotted arrow is no
+    applied repeatedly along an activation path. The dotted arrow is no
     obligation. It shows the caller store $s$ that #oblig("RETURN") reads.
     #oblig("RETURN") combines the caller's store $s$ with the
     callee's result read in the admitted context $c'$. #oblig("TOTAL") demands

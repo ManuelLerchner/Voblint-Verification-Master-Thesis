@@ -382,17 +382,19 @@ Lines; @sec:tracing describes how the trace calls come out of the export.
 @tab:eq-trace and @fig:eq-walk are generated from such a trace, registered as a
 claim.
 
-Everything a reader sees is derived in the same way. The website and this
-document take their repository figures from the sources, their Isabelle names,
-definitions and theorem statements from the theories and a built session, and
-their analyzer output from the exported analyzer. The thesis also takes figures
+Most of what a reader sees is derived in the same way. This document takes
+its repository figures from the sources, its Isabelle names, definitions and
+theorem statements from the theories and a built session, and its analyzer
+output from the exported analyzer. The website takes its repository figures
+and notation the same way, and its links into the theories are checked against
+them; the theorem statements it quotes are copied by hand. The thesis also takes figures
 and the Goblint comparison from the explainer page. Each such artifact is either
 produced during the build or committed together with a check that regenerates it
 and fails on a difference. Every check runs in continuous integration next to
 the batch build, and the links into the rendered theories are checked again
 against the published pages after each deployment. A stale name, statement,
-figure or quoted output therefore fails the build instead of reaching the
-reader. Prose that describes the repository in words is not checked. The checks
+figure or quoted output in this document therefore fails the build instead of
+reaching the reader. Prose that describes the repository in words is not checked. The checks
 caught stale names, statements and figures while this thesis was written, and
 typesetting it turned up a layout bug in Typst that we reported upstream
 @typst8890. The pattern of a manifest, its generators and a

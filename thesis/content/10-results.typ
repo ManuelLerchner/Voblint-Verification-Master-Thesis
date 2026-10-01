@@ -265,7 +265,7 @@ reaching the check:
   that any admitted store is reached.
 - `UNKNOWN`: the abstraction decides neither.
 - `DEAD`: the node collecting semantics at the node is empty, so no covered
-  execution reaches the check (#isathm("run_voblint_dead_check_unreached")). This is the one reachability claim. The other
+  execution reaches the check's node (#isathm("run_voblint_dead_check_unreached")). This is the one reachability claim. The other
   three verdicts constrain each store at the node and hold vacuously when there
   is none. `DEAD` constrains the whole set.
 
