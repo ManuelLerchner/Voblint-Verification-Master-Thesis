@@ -1849,6 +1849,12 @@ function offerSolverTrace(run) {
   solverTraceOffered = run;
   solverTraceContent = trace;
   solverTrace.hidden = run === null;
+
+  /* Only the verbose text streams during a run, so a cancelled one has no JSON Lines. */
+  solverTraceDownloadJsonl.disabled = !run?.jsonl;
+  solverTraceDownloadJsonl.title = run?.jsonl
+    ? "Download the trace as JSON Lines (.jsonl)"
+    : "Only a finished run has a JSON Lines trace";
   solverTraceView.setText("");
   solverTraceCount.textContent = trace ? sizeLabel(trace) : "";
 
