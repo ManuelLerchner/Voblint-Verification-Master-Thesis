@@ -67,3 +67,11 @@ analysis = "interval"
 globals = "warrow"
 context = "none"
 why = "Every answer kind in one run of a clamp function, each shown inline at its line: Figure 1.2."
+
+[figures.solve-replay-still]
+image = "docs/images/solve-replay-still.png"
+program = "docs/readme-figures/contexts.vimp"
+analysis = "interval"
+globals = "warrow"
+context = "entry-state"
+why = "One step of the solve replay: the first call into a context reads its callee's seed, with the graph and the trace line beside it."

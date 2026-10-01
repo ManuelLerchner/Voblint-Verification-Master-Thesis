@@ -53,6 +53,15 @@
     "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=call-string&k=1",
     "why": "Every verdict kind, an arithmetic warning, and one graph box per procedure and context, in one run."
   },
+  "solve-replay-still": {
+    "analysis": "interval",
+    "context": "entry-state",
+    "globals": "warrow",
+    "image": "solve-replay-still.png",
+    "program": "solve-replay-still.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
+    "why": "One step of the solve replay: the first call into a context reads its callee's seed, with the graph and the trace line beside it."
+  },
   "while-loop": {
     "analysis": "interval",
     "context": "none",

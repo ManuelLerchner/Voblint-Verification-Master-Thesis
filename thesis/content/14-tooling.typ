@@ -1,4 +1,6 @@
-#import "../lib/code.typ": isaconst, isalocale, isathm
+#import "../lib/code.typ": isaconst, isalocale, isathm, isatype
+#import "../lib/figures.typ": playground-figure, playground-settings
+#import "../lib/math.typ": lbot
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 
@@ -232,7 +234,22 @@ depth; the CLI documentation maps each line to its Goblint counterpart.
 reducer into the state at every step: node values, the stack of open queries,
 the stable set, influences, widening points and the seeds. It draws that state
 on the graph beside the verbose trace, and each step names the trace line it
-comes from. @fig:eq-walk is drawn from the same events.
+comes from. @fig:replay-still shows one step; @fig:eq-walk is drawn from the
+same events.
+
+#playground-figure(
+  "solve-replay-still",
+  width: 100%,
+  placement: auto,
+  [One step of the solve replay on the example of @tab:eq-trace: the first call
+    of `bump` asks for the callee's result, and the callee's entry reads its
+    seed. The
+    graph shows each unknown's value at this step, and the trace beside it marks
+    the step's line under a banner naming the call. Captured from the
+    playground; the project site shows the whole replay as an animation
+    (#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#verified")[site]).
+    Settings #playground-settings("solve-replay-still")],
+) <fig:replay-still>
 
 *What the trace is.* The result is the exported computation of proved
 equations. The trace is an unverified observation of that computation, and
