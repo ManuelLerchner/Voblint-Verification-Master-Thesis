@@ -294,15 +294,21 @@
               with its settings.
             </p>
 
-            <div id="reading" class="panel-legend" aria-label="Badges and hints in the editor">
-              <span><span class="lg-badge proved">✓ PROVED</span>holds in every run that reaches the check</span>
-              <span><span class="lg-badge refuted">✗ REFUTED</span>fails in every run that reaches it; no run need reach it</span>
-              <span><span class="lg-badge unknown">? UNKNOWN</span>undecided, or contexts disagree</span>
-              <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero</span>
-              <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
-              <span><span class="lg-badge dead">∅ DEAD</span>no context reaches it</span>
-              <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return</span>
-              <span><span class="lg-badge hint merge">⊔ i: [0,5]</span>paths meet, so the value covers more than this step</span>
+            <div id="reading" class="panel-legend grouped" aria-label="Badges and hints in the editor">
+              <div class="legend-row" aria-label="Checks">
+                <span><span class="lg-badge proved">✓ PROVED</span>holds in every run that reaches the check</span>
+                <span><span class="lg-badge refuted">✗ REFUTED</span>fails in every run that reaches it; no run need reach it</span>
+                <span><span class="lg-badge unknown">? UNKNOWN</span>undecided, or contexts disagree</span>
+                <span><span class="lg-badge dead">∅ DEAD</span>no context reaches it</span>
+              </div>
+              <div class="legend-row" aria-label="Arithmetic">
+                <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero</span>
+                <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
+              </div>
+              <div class="legend-row" aria-label="Value hints">
+                <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return</span>
+                <span><span class="lg-badge hint merge">⊔ i: [0,5]</span>paths meet, so the value covers more than this step</span>
+              </div>
             </div>
           </div>
         </div>

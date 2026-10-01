@@ -929,6 +929,19 @@ main {
   font-size: 0.74rem;
 }
 
+/* A key in groups: one row per kind of annotation, each wrapping on its own. */
+.panel-legend.grouped {
+  flex-direction: column;
+  gap: 4px;
+}
+
+.legend-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 18px;
+}
+
+.legend-row > span,
 .panel-legend > span {
   display: inline-flex;
   align-items: center;
