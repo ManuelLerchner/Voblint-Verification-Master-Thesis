@@ -381,7 +381,7 @@ function callCell(kind, ...parts) {
 
 /*
  * The trace's line in the title. It is no part of run_voblint's answer: the hook observed
- * it during a second solve, so it gets its own row, without the arrow.
+ * it during the run, so it gets its own row, without the arrow.
  */
 let traceSummary = null;
 
@@ -1321,7 +1321,7 @@ function showAnalysisView(result, configuration, source) {
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
-  offerSolverTrace(analysisModel ? { configuration, source } : null);
+  offerSolverTrace(analysisModel ? { configuration, source, trace: result.trace } : null);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1859,11 +1859,9 @@ function solveAgain(configuration, source) {
 /* Only the lines on screen are laid out, so even a trace of tens of thousands of lines shows whole. */
 const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "Solver trace" });
 
-/* The finished run the panel offers, the trace shown for it, and the one being loaded. */
+/* The finished run the panel offers, and the trace it recorded. */
 let solverTraceOffered = null;
 let solverTraceContent = "";
-let solverTraceRun = null;
-let solverTraceLoading = null;
 
 function countLines(text) {
   let lines = text.endsWith("\n") ? 0 : 1;
@@ -1875,68 +1873,25 @@ function countLines(text) {
   return lines;
 }
 
-/* [run] is the finished run's configuration and source; null hides the panel. */
+/*
+ * [run] is the finished run's configuration, source and the --verbose trace its hook
+ * recorded; null hides the panel.
+ */
 function offerSolverTrace(run) {
+  const trace = typeof run?.trace === "string" ? run.trace : "";
+
   solverTraceOffered = run;
-  solverTraceContent = "";
-  solverTraceRun = null;
-  solverTraceLoading = null;
-  solverTraceView.setText("");
+  solverTraceContent = trace;
   solverTrace.hidden = run === null;
-  solverTraceCount.textContent = "";
-  setTraceSummary(null);
-  loadSolverTrace();
-}
-
-/* The offered run's full (--verbose) trace, solved again right after the run. */
-async function loadSolverTrace() {
-  const run = solverTraceOffered;
-
-  if (!run || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
-    return;
-  }
-
-  const request = { run };
-
-  solverTraceLoading = request;
-  solverTraceCount.textContent = "loading";
-  setTraceSummary("trace: solving again with trace_event hooked\u2026");
-
-  try {
-    const answer = JSON.parse(
-      await solveAgain({ ...run.configuration, trace: "verbose" }, run.source),
-    );
-
-    if (solverTraceLoading !== request) {
-      return;
-    }
-
-    if (typeof answer.trace !== "string" || answer.status !== "ok") {
-      throw new Error(answer.message ?? "the analyzer returned no trace");
-    }
-
-    solverTraceContent = answer.trace;
-    solverTraceRun = request;
-    solverTraceCount.textContent = sizeLabel(answer.trace);
-    solverTraceView.setText(answer.trace);
-    setTraceSummary(
-      `trace: ${countLines(answer.trace).toLocaleString("en")} lines, from a second solve with trace_event hooked`,
-    );
-  } catch (error) {
-    if (solverTraceLoading === request) {
-      const message = error instanceof Error ? error.message : String(error);
-
-      solverTraceRun = null;
-      solverTraceContent = "";
-      solverTraceView.setText(`The trace could not be produced: ${message}`);
-      solverTraceCount.textContent = "";
-      setTraceSummary("trace: not produced");
-    }
-  } finally {
-    if (solverTraceLoading === request) {
-      solverTraceLoading = null;
-    }
-  }
+  solverTraceView.setText(trace || (run ? "The run returned no trace." : ""));
+  solverTraceCount.textContent = trace ? sizeLabel(trace) : "";
+  setTraceSummary(
+    run === null
+      ? null
+      : trace
+        ? `trace: ${countLines(trace).toLocaleString("en")} lines, recorded by trace_event during this run`
+        : "trace: not produced",
+  );
 }
 
 function downloadBlob(blob, name) {
@@ -1949,7 +1904,7 @@ function downloadBlob(blob, name) {
 }
 
 function downloadSolverTrace() {
-  if (solverTraceRun) {
+  if (solverTraceContent) {
     downloadBlob(
       new Blob([solverTraceContent], { type: "text/plain" }),
       `voblint-trace-${settingsSlug()}.txt`,
@@ -3815,7 +3770,8 @@ async function run() {
   let result = null;
 
   try {
-    const rawResult = await runAnalysisInWorker(configuration, source);
+    /* The hook records the trace during this run; it changes nothing in the answer. */
+    const rawResult = await runAnalysisInWorker({ ...configuration, trace: "verbose" }, source);
 
     if (typeof rawResult !== "string") {
       throw new TypeError(`Voblint_run returned ${typeof rawResult}; expected a JSON string.`);
