@@ -37,7 +37,7 @@
 aria_prefix = "Left: four tested runs pass"
 css = ["runs"]
 # The panel notes repeat the caption at an unreadable print size.
-drop_classes = ["probe", "sweep", "panel-note"]
+drop_classes = ["probe", "panel-note"]
 # Tight around the drawn content; the page reserves room below for the notes.
 viewbox = "15 8 790 254"
 chapter = "1.1"

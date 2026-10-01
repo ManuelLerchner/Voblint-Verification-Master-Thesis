@@ -63,7 +63,6 @@
             <path class="run faint" d="M20 200 C 110 158, 175 158, 240 139 S 330 126, 370 130"/>
             <path class="run faint" d="M20 200 C 95 214, 180 208, 245 212 S 330 205, 370 208"/>
             <path class="run faint" d="M20 200 C 75 184, 140 124, 215 116 S 320 106, 370 110"/>
-            
 
             <text class="envelope-label" x="300" y="200" text-anchor="middle">analysis result</text>
             <line class="gap-line" x1="330" y1="72" x2="330" y2="94"/>
