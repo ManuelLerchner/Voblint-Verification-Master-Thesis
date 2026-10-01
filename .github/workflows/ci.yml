@@ -129,7 +129,9 @@ jobs:
         if: steps.changed.outputs.thy != 'true'
         run: echo "No .thy files changed; skipping the Isabelle build."
 
+      # A skipped build leaves no heap store behind to measure.
       - name: Report heap store size
+        if: steps.changed.outputs.thy == 'true'
         run: du -sh "$ISABELLE_HOME_USER/heaps/"
 
       - name: Upload heap state for same-run consumers
