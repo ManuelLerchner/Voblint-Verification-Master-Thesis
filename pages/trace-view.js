@@ -33,7 +33,7 @@ import {
   highlightSpecialChars,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
-import { Tag } from "https://esm.sh/@lezer/highlight@1.2.3";
+import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
 
 /* ---------------------------------------------------------------- event kinds */
 
@@ -105,13 +105,26 @@ function callOf(text) {
 
 /* ---------------------------------------------------------------- highlighting */
 
-const traceTags = Object.fromEntries(KINDS.map((kind) => [kind, Tag.define()]));
-const unknownTag = Tag.define();
-const valueTag = Tag.define();
-const keyTag = Tag.define();
-const stepTag = Tag.define();
-const provedTag = Tag.define();
-const failedTag = Tag.define();
+/*
+ * Existing tags, one per kind of token, which only the trace's own style below colors.
+ * Defining new tags instead made the program editor lose its builtin color: a tag
+ * defined at load time changes how the modified tag for builtins resolves.
+ */
+const traceTags = {
+  query: tags.controlKeyword,
+  update: tags.definitionKeyword,
+  widen: tags.operatorKeyword,
+  stable: tags.comment,
+  side: tags.moduleKeyword,
+  route: tags.namespace,
+  check: tags.annotation,
+};
+const unknownTag = tags.labelName;
+const valueTag = tags.number;
+const keyTag = tags.propertyName;
+const stepTag = tags.meta;
+const provedTag = tags.inserted;
+const failedTag = tags.deleted;
 
 const traceParser = {
   name: "voblint-trace",
