@@ -72,6 +72,16 @@ not `⟦res⟧ᵥ ≠ ∅`), so every verdict word has a theorem.
 
 ## Invariants
 
+- After `analysis_config` is resolved, no theory case-splits on an analysis kind,
+  context policy, refinement mode or update rule. The one split over the context
+  policy sits in the function that builds the report; each policy is a generic
+  locale instance below it, since the three context types differ.
+- After a solve becomes an `analysis_report`, no public theorem mentions solver
+  tables, context representations or rendering projections.
+- One canonical API per concept: concretization through `γ`/`⟦·⟧` (with `⟦res⟧ᵥ`
+  as the located form), solved data through `solved_table`, analyzer output through
+  `analysis_report`, verdict truth through `𝒱(res, v)` and the CAPS queries.
+
 - CLI text and JSON stay byte-identical. Phase 0 records the golden output; every
   later phase reproduces it.
 - Each phase ends with the batch build, the codegen regression, the CLI corpus and
@@ -140,12 +150,37 @@ not `⟦res⟧ᵥ ≠ ∅`), so every verdict word has a theorem.
      exactness differs, and an overloaded name would hide which one a proof uses.
    - if it falls out cheaply, one contextual classification helper shared by the
      check column and the arithmetic diagnostics.
+7a. **Named solve and split contracts.**
+   - `result_with_globals` returns a record `solved_run` (table, shared global,
+     seeds, steps, successors) in place of a five-tuple; no caller destructures a
+     tuple.
+   - Rename the framework table: `analysis_result` → `solved_table`,
+     `result_unknowns` → `covered_keys`, `result_at` → `table_at`,
+     `lookup_context` → `lookup_table`, `lookup_context_result` →
+     `lookup_coverage`, `contexts_at` → `table_contexts`. This supersedes the
+     `analysis_table` name above.
+   - Split `sound_table` into `covered_table` (finite contexts, coverage) and
+     `sound_classifier` (proved, refuted); the classifier is not a table property.
+   - CAPS queries `PROVED res v e`, `REFUTED res v e`, `UNKNOWN res v e` and
+     `DEAD res v` on the report; clients stop destructuring `check_verdict`.
+   - `⟦res⟧ᵥ` as an overloaded located concretization (`consts gamma_at`), so a
+     later table representation can register under the same notation.
 7b. **One registration per analysis.** The generator emits one record of
    operations per `analysis_domain` (`registration_of`) in place of the parallel
    functions `local_spec_of`, `part_gamma`, `part_live`, `part_empty`, `val_gamma`,
    `val_empty`, `val_answer`, `field_of`; the old names become accessors. With
    `Int_Analysis refine_mode` the mode is then read in one equation. Optional for
-   this branch: it touches only generated theories and their consumers.
+   this branch: it touches only generated theories and their consumers. The
+   Int modes keep one carrier slot each behind the parameterized constructor, which
+   is why two modes may still run together.
+7c. **Shared contracts where proofs repeat.** `sound_empty` / `exact_empty` locales
+   for the emptiness tests, and a representation locale for executable readbacks
+   that commute with an operation, adopted only where they remove repeated
+   proofs. Exactness stays visible in which locale a test interprets.
+
+Out of scope: replacing the fixed generated MCP product with a carrier keyed by
+analysis instance. It would remove the slot lenses and per-analysis dispatch,
+but it changes the core of MCP composition and needs its own design.
 8. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
    README, the notation table, and the site's theorem cards, metro map (result side
    collapses to `⟦res⟧ᵥ` with checks, `DEAD` and SAFE branches) and alignment rows.
