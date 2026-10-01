@@ -185,7 +185,10 @@ const traceParser = {
       return "failed";
     }
 
-    if (stream.match(/^(?:Seed|Global)?\((?:entry_|exit_)?[\w']+, [^()]*\)/)) {
+    // A statement point carries its source: `(pp4 "x = x + 1;" L4, ctx)`.
+    if (
+      stream.match(/^(?:Seed|Global)?\((?:entry_|exit_)?[\w']+(?: "[^"]*")?(?: L\d+)?, [^()]*\)/)
+    ) {
       return "unknown";
     }
 

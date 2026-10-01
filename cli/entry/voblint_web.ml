@@ -139,9 +139,9 @@ let trace_of_string = function
   | "jsonl" -> Ok (Some (Solver_trace.Jsonl, false))
   | mode -> Error ("Unknown trace mode: " ^ mode)
 
-let trace_text (format, verbose) ~domains ~globals ~context result =
+let trace_text (format, verbose) ~source ~domains ~globals ~context result =
   let buffer = Buffer.create 4096 in
-  Solver_trace.emit ~out:(Buffer.add_string buffer) ~format ~verbose
+  Solver_trace.emit ~out:(Buffer.add_string buffer) ~format ~verbose ~source
     ~analyses:(List.map Result_text.analysis_label domains)
     ~context:(Solver_trace.context_name context)
     ~globals ~program:"browser.vimp" result;
@@ -211,8 +211,8 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
                   let trace =
                     Option.map
                       (fun form ->
-                        trace_text form ~domains ~globals:globals_name ~context
-                          result)
+                        trace_text form ~source:(source, stmt_positions)
+                          ~domains ~globals:globals_name ~context result)
                       trace
                   in
                   Render_json.result_json ?trace analysis_ms program

@@ -188,6 +188,12 @@ value report. Checked against the local Goblint checkout at `0dc12d355`
 (`src/solver/td_simplified.ml`, `src/solver/td3.ml`); the registered revision
 `5320a6b7` was not re-checked for these files.
 
+A statement point is named after its source, as Goblint's `pretty_trace` names a
+node by its statement and location (`src/common/framework/node.ml`,
+`src/framework/analyses.ml`): `(pp2 "x = x + 1;" L4, ctx)`. A block statement
+shows its head (`while (x < 10)`), a point on a closing brace only its line.
+The compact form names points the same way; JSON Lines keeps the bare `pp2`.
+
 | Voblint event (`solver_event`) | Line | `td_simplified.ml` | `td3.ml` (`sol2` unless noted) |
 | --- | --- | --- | --- |
 | `Ev_Start x` | `multivar: solving for x` | 174 | none |

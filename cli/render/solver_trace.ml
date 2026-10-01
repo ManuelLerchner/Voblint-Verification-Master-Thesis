@@ -103,6 +103,7 @@ type global = Analysis_global | Seed of C.cfg_node * Obj.t
 
 (* Everything that reads a run's unknowns and values, from its printers. *)
 type names = {
+  point : C.cfg_node -> string;
   context : Obj.t -> C.abstract_value C.analysis_context;
   global : Obj.t -> global;
   local_value : Obj.t -> string;
@@ -110,13 +111,43 @@ type names = {
   entry_value : Obj.t -> string;
 }
 
-let names_of (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers)
-    =
+(* A statement point named after its source, as Goblint names a node by its
+   statement and location: the statement's first line up to a block's brace,
+   then its line. A point on a closing brace has no statement to show. *)
+let source_point (text, positions) =
+  let lines = Array.of_list (String.split_on_char '\n' text) in
+  fun n ->
+    match n with
+    | C.Statement k -> (
+        match List.assoc_opt (A.int_of_nat k) positions with
+        | Some (line, column, end_line, end_column)
+          when line >= 1 && line <= Array.length lines ->
+            let first = lines.(line - 1) in
+            let stop =
+              if end_line = line then min (end_column - 1) (String.length first)
+              else String.length first
+            in
+            let start = min (column - 1) stop in
+            let head =
+              String.trim (String.sub first start (stop - start)) |> fun s ->
+              if String.ends_with ~suffix:"{" s then
+                String.trim (String.sub s 0 (String.length s - 1))
+              else s
+            in
+            if head = "" || head = "}" then
+              Printf.sprintf "%s L%d" (node_name n) line
+            else Printf.sprintf "%s \"%s\" L%d" (node_name n) head line
+        | _ -> node_name n)
+    | _ -> node_name n
+
+let names_of ?source
+    (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers) =
   let read f o = try view_text (f o) with _ -> "?" in
   let global g =
     match seed_of g with None -> Analysis_global | Some (n, c) -> Seed (n, c)
   in
   {
+    point = Option.fold ~none:node_name ~some:source_point source;
     context = ctx;
     global;
     local_value = read local;
@@ -129,7 +160,7 @@ let names_of (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers)
   }
 
 let local_text nm ((n, c) : x) =
-  Printf.sprintf "(%s, %s)" (node_name n) (context_label (nm.context c))
+  Printf.sprintf "(%s, %s)" (nm.point n) (context_label (nm.context c))
 
 let global_text nm g =
   match nm.global g with
@@ -643,15 +674,17 @@ let context_name = function
 
 (* [out] receives the trace piece by piece: a channel for the CLI, a buffer
    for the browser, which returns the text with the result. [systems] limits
-   the verbose form to those subsystems; empty selects all. *)
-let emit ~out ~format ~verbose:is_verbose ?(systems = []) ~analyses ~context
-    ~globals ~program result =
+   the verbose form to those subsystems; empty selects all. [source], the
+   program text and its statement positions, names statement points after
+   their source in the text forms. *)
+let emit ~out ~format ~verbose:is_verbose ?(systems = []) ?source ~analyses
+    ~context ~globals ~program result =
   let printers, events = read_back (H.recorded ()) in
   let pr fmt = Printf.ksprintf out fmt in
   match printers with
   | None -> pr "Voblint trace: the run recorded no solve\n"
   | Some printers -> (
-      let nm = names_of printers in
+      let nm = names_of ?source printers in
       let lined =
         List.concat
           (List.map2

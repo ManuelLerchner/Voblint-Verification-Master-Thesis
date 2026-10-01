@@ -682,6 +682,7 @@ let () =
     let write out =
       Solver_trace.emit ~out:(output_string out) ~format:!trace_format
         ~verbose:!trace_verbose ~systems:!trace_systems
+        ~source:(src, stmt_positions)
         ~analyses:(List.map A.analysis_label domains)
         ~context:(Solver_trace.context_name context)
         ~globals:!globals_name ~program:path result;
