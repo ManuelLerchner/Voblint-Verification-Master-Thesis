@@ -51,6 +51,10 @@
   border-top: 1px dashed var(--border-strong);
 }
 
+.scene-source-morph .sm-rule > summary {
+  cursor: pointer;
+}
+
 .scene-source-morph .sm-rule-name {
   margin: 0 0 6px;
 }

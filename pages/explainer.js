@@ -230,3 +230,26 @@ function drawDots(svg, { low, high, x0, dx, y, classOf, radius = 6 }) {
     svg.append(circle);
   }
 }
+
+/* A link into a collapsed deep dive opens it first, so the target is visible. */
+function openTarget() {
+  let id;
+  try {
+    id = decodeURIComponent(location.hash.slice(1));
+  } catch {
+    return; // a malformed escape names no element
+  }
+  const target = id && document.getElementById(id);
+
+  for (let node = target; node; node = node.parentElement) {
+    if (node instanceof HTMLDetailsElement) {
+      node.open = true;
+    }
+  }
+  target?.scrollIntoView();
+}
+
+window.addEventListener("hashchange", openTarget);
+if (location.hash) {
+  openTarget();
+}

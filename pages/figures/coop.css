@@ -1,0 +1,78 @@
+/* Two analyses, one question */
+
+:where(.scene-coop) .coop-controls {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+:where(.scene-coop) .coop-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+  gap: 16px;
+}
+
+:where(.scene-coop) .coop-layout > div {
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-radius: var(--radius);
+}
+
+:where(.scene-coop) .coop-prog {
+  margin: 0;
+}
+
+:where(.scene-coop) .coop-states {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+:where(.scene-coop) .coop-state {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+:where(.scene-coop) .coop-state.off {
+  color: var(--text-faint);
+  border-style: dashed;
+}
+
+:where(.scene-coop) .coop-name {
+  font: 700 0.72rem var(--mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+:where(.scene-coop) .coop-exchange {
+  margin: 14px 0 0;
+  padding-left: 22px;
+}
+
+:where(.scene-coop) .coop-exchange li {
+  margin: 4px 0;
+}
+
+:where(.scene-coop) .coop-note {
+  margin: 14px 0 0;
+}
+
+:where(.scene-coop) .coop-result {
+  margin: 14px 0 0;
+}
+
+@media (max-width: 820px) {
+  :where(.scene-coop) .coop-layout,
+  :where(.scene-coop) .coop-states {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

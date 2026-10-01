@@ -2,19 +2,20 @@
   /*
    * What each observer of `activation_trace` reads, shown against one activation of the run above.
    * `t` is whichever box the reader picks; the table says what the six answers are for
-   * each of them, since the shapes differ: `main` is a `Root` with no caller, a callee
-   * that has returned nothing yet is a `Call`, and one that has is a `Resume`.
+   * each of them, since the shapes differ: a callee that has returned nothing yet is a
+   * `Call`, one that has is a `Resume`, and `main` is a `Resume` around its `Root` prefix.
    */
   const TRACE_DEF = "Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.";
 
   const ACTS = {
     0: {
       name: "main",
-      ctor: "Root",
+      ctor: "Resume",
       steps: 5,
       entry: "{x = ?}",
       sink: "exit_main",
       store: "{x = 3}",
+      callee: 1,
     },
     1: {
       name: "sum(2)",
@@ -101,13 +102,13 @@
     }
     if (key === "caller") {
       if (a.caller === undefined) {
-        return `\`caller_of t\` is \`None\`. \`${a.name}\` is the \`Root\`: nobody called it, so there is no caller field to read.`;
+        return `\`caller_of t\` is \`None\`. \`${a.name}\` is a \`Resume\`, so \`caller_of\` descends \`activation_trace_current\` to the \`Root\` at its start, and nobody called that.`;
       }
       const via =
         a.ctor === "Resume"
           ? "descends `activation_trace_current` rather than stopping at the callee"
           : "reads the `Call`'s own caller field";
-      return `\`caller_of t\` is the whole \`${ACTS[a.caller].name}\` trace. \`${a.name}\` is a \`${a.ctor}\`, so this ${via}.`;
+      return `\`caller_of t\` is the \`${ACTS[a.caller].name}\` trace as it stood when it made the call. \`${a.name}\` is a \`${a.ctor}\`, so this ${via}.`;
     }
     if (a.callee === undefined) {
       return `\`${a.name}\` is a \`${a.ctor}\`, not a \`Resume\`, so there is no finished callee to read. Nothing it called has returned into it yet.`;

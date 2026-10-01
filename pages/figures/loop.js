@@ -8,6 +8,8 @@
     const chips = figure.querySelectorAll("[data-goto]");
     const toggle = figure.querySelector(".loop-play");
     const icon = toggle.querySelector("i");
+    /* Autoplay passes over the step the solver never takes; its chip still shows it. */
+    const skipped = Number(figure.dataset.skip);
     let step = 0;
     let timer = null;
 
@@ -25,7 +27,7 @@
       timer = playing
         ? setInterval(() => {
             if (!figure.classList.contains("is-offscreen")) {
-              show(step + 1);
+              show(step + 1 === skipped ? step + 2 : step + 1);
             }
           }, 2200)
         : null;

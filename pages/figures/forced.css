@@ -1,0 +1,45 @@
+/* What the proof forced us to make explicit */
+
+:where(.scene-forced) .forced-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+}
+
+:where(.scene-forced) .forced-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 14px 16px;
+  background: var(--surface-muted);
+  border-top: 3px solid var(--accent);
+  border-radius: var(--radius);
+  font-size: 0.92rem;
+}
+
+:where(.scene-forced) .forced-card p {
+  margin: 0 0 10px;
+}
+
+:where(.scene-forced) .forced-head {
+  font-weight: 700;
+  color: var(--primary);
+}
+
+:where(.scene-forced) .forced-label {
+  display: block;
+  font: 700 0.7rem var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+:where(.scene-forced) .forced-link {
+  margin-top: auto;
+}
+
+@media (max-width: 960px) {
+  :where(.scene-forced) .forced-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

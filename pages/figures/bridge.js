@@ -2,10 +2,10 @@
   /* What each theorem rules out, told as the failure an analysis without it could show. */
   const BRIDGE_FAILURES = {
     1: "Without compiler simulation, a compiler could drop the edge for the `else` branch of `if (n < 2)`. Runs with `n ≥ 2` would exist in the source but not in the graph, and the analysis could report the node of `return n * r` as unreachable.",
-    2: "Without sound transfers, a single wrong lemma suffices: Goblint's congruence domain read `c % 2` as the constant `1` for a negative `c`, and reported a check that every run violates as succeeding, the bug replayed earlier on this page.",
-    3: "Without context coverage, a policy could file a call under a key that no call site seeds. That copy of the callee starts from `⊥`, its body looks unreachable, and its checks read DEAD.",
-    4: "Without a post-solution, stop the solver after its first pass over the counting loop: `H = [0, 1]`, so `X = assume(i ≥ 5) [0, 1] = ⊥`, and the check after the loop reads DEAD although every run reaches it. The solver promises a post-solution only when it terminates.",
-    5: "Without honest verdicts, a classifier could say PROVED for `i == 5` whenever `5` lies in the interval, so `[0, 5]` would prove it too. `classify_proved` demands that every store in `γ` satisfies the check.",
+    2: "Without sound transfers, a single wrong lemma is enough. Goblint's congruence domain evaluated `c % 2` to the constant `1` for a negative odd `c` and reported a check that every run violates as succeeding; this is the bug replayed earlier on this page.",
+    3: "Without context coverage, a policy could assign a call to a key that no call site publishes to. That copy of the callee starts from `⊥`, its body appears unreachable, and its checks are reported DEAD.",
+    4: "Without a post-solution, read the solver's values before the loop head has settled, while `H = [0, 0]`. Then `X = assume(i ≥ 5) [0, 0] = ⊥`, and the check after the loop is reported DEAD although every run reaches it. The solver promises a post-solution only when it terminates.",
+    5: "Without a sound classifier, a check `i == 5` could be reported PROVED whenever `5` lies in the interval, so `[0, 5]` would prove it too. `classify_proved` requires that every store in `γ` satisfies the check.",
   };
 
   const BRIDGE_X = { 1: 267, 2: 383, 3: 500, 4: 617, 5: 733 };

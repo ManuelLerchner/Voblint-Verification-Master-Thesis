@@ -160,6 +160,33 @@
   display: none;
 }
 
+/* The first rows cover the architecture; the rest wait behind the button, except the
+   first row Voblint does not model, so the short view still shows every kind. Only
+   the script sets is-collapsed, so without it every row shows. */
+.scene-align.is-collapsed[data-filter="all"]
+.align-row:nth-child(n + 9):not(:nth-child(1 of .absent)) {
+  display: none;
+}
+
+:where(.scene-align) .align-more {
+  margin: 12px 0 0;
+  padding: 6px 14px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+:where(.scene-align) .align-more:hover {
+  border-color: var(--primary);
+}
+
+.scene-align:not([data-filter="all"]) .align-more {
+  display: none;
+}
+
 .scene-align[data-filter="modeled"] .align-row.modeled,
 .scene-align[data-filter="simplified"] .align-row.simplified,
 .scene-align[data-filter="absent"] .align-row.absent {

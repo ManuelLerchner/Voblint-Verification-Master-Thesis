@@ -1,0 +1,19 @@
+// PARAM: --analysis order
+// Concretely x <= y at the check: each branch assigns x below y.
+//
+// The order analysis alone cannot compare a variable with a constant, so neither
+// branch records a pair and the check stays open. With Interval beside it, it asks
+// at each assignment to y how the new value compares with x and records x <= y in
+// both branches (precision/06-order_asks_interval). Backs the "Order" tab of the
+// site figure "Two analyses, one question".
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  __voblint_check(x <= y); // UNKNOWN
+}
