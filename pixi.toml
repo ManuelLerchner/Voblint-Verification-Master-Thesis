@@ -17,7 +17,7 @@ python = ">=3.11"
 # isar-tools: source tooling for the .thy/ROOT files (`isar check`, `isar fmt`,
 # `isar stats`, `isar project extract|names`). Pure Python, no Isabelle or AFP
 # needed; configured in isar.toml.
-isar-tools = ">=0.3.0,<0.4"
+isar-tools = ">=0.4.0,<0.5"
 
 [pypi-dependencies]
 # I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
