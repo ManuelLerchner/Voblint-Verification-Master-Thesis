@@ -935,12 +935,12 @@ main {
   gap: 6px;
 }
 
-/* The editor's own badges and hints, on a scrap of its background. */
+/* The editor's own badges and hints, on a lighter shade of its background. */
 .lg-badge {
   padding: 1px 0.5em;
   border-radius: 4px;
   color: var(--verdict-color);
-  background: var(--surface-dark);
+  background: #2c4a52;
   font: 600 0.7rem var(--mono);
   white-space: pre;
 }
