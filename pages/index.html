@@ -880,14 +880,14 @@
 
       <figure class="scene scene-coop" data-prog="eq" data-sel="both">
         <div class="coop-controls">
-          <div class="call-modes coop-progs" role="tablist" aria-label="Program" hidden>
-            <button type="button" role="tab" data-prog="eq" aria-selected="true">Interval asks Order</button>
-            <button type="button" role="tab" data-prog="le" aria-selected="false">Order asks Interval</button>
+          <div class="call-modes coop-progs" role="group" aria-label="Program" hidden>
+            <button type="button" data-prog="eq" aria-pressed="true">Interval asks Order</button>
+            <button type="button" data-prog="le" aria-pressed="false">Order asks Interval</button>
           </div>
-          <div class="call-modes coop-sels" role="tablist" aria-label="Analyses" hidden>
-            <button type="button" role="tab" data-sel="interval" aria-selected="false">interval</button>
-            <button type="button" role="tab" data-sel="order" aria-selected="false">order</button>
-            <button type="button" role="tab" data-sel="both" aria-selected="true">interval,order</button>
+          <div class="call-modes coop-sels" role="group" aria-label="Analyses" hidden>
+            <button type="button" data-sel="interval" aria-pressed="false">interval</button>
+            <button type="button" data-sel="order" aria-pressed="false">order</button>
+            <button type="button" data-sel="both" aria-pressed="true">interval,order</button>
           </div>
         </div>
 
@@ -1532,7 +1532,8 @@ datatype activation_trace =
         <noscript><p class="td-caption">The step-through needs JavaScript.</p></noscript>
 
         <figcaption>
-          The same program and graph as above, now with one run walking them. Stores list only
+          The same program and graph as above, now with one run walking them. A transition between two
+          displayed states can group several consecutive source steps; its rule box names every rule it crosses. Stores list only
           the variables the current activation uses; a callee's locals start at <code>0</code>
           except its formals, which take the actuals, and <code>x</code> in <code>main</code>
           starts at any value.
@@ -2190,8 +2191,8 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           </div>
           <figcaption>
             A sketch of an interval analysis on a counting loop: the value of <code>i</code> at
-            the loop head, and after the loop in the last two steps. Voblint applies warrowing at
-            loop points in every configuration, so the solver itself jumps from <code>[0,0]</code>
+            the loop head, and after the loop in the last two steps. In every configuration the solver
+            applies warrowing at the widening point it discovers at this loop head, so it jumps from <code>[0,0]</code>
             straight to <code>[0,+∞]</code> as soon as the equation yields <code>[0,1]</code>; the dashed <code>[0,1]</code> bar is the equation's result, not a stored value, and the dashed <code>[0,2]</code> frame, which autoplay skips, shows what plain
             iteration would do instead. The solver's own trace is in the black box below.
             <a class="try-link" href="playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp&amp;analysis=interval&amp;context=none">Run it in the playground ↗</a>

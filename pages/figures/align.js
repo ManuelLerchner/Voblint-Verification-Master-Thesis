@@ -2,6 +2,9 @@
   for (const figure of document.querySelectorAll(".scene-align")) {
     const buttons = figure.querySelectorAll("[data-filter]");
     const more = figure.querySelector(".align-more");
+    if (!more) {
+      continue;
+    }
     const total = figure.querySelectorAll(".align-row").length;
     const label = (collapsed) => (collapsed ? `Show all ${total} rows` : "Show fewer");
 

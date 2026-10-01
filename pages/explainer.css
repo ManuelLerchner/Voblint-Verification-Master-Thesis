@@ -1266,7 +1266,7 @@
   cursor: pointer;
 }
 
-.call-modes button[aria-selected="true"] {
+.call-modes button:is([aria-selected="true"], [aria-pressed="true"]) {
   color: #ffffff;
   background: var(--primary);
   border-color: var(--primary);

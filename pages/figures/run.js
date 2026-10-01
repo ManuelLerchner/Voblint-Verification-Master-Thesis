@@ -1,7 +1,9 @@
 {
   /*
-   * One entry per source step of the sum run, with the graph steps csim_step matches
-   * it to and the trace constructors valid_activation_trace applies. Residuals flatten the nested Seq;
+   * One displayed state per point of interest in the sum run. A transition between two
+   * displayed states may compress several consecutive source steps; `rules.source` names
+   * every pstep rule crossed, `rules.graph` the graph steps csim_step matches them to, and
+   * `rules.trace` the valid_activation_trace rules applied. Residuals flatten the nested Seq;
    * trees list each activation's path, its live callee and whether it has returned.
    */
   const FRAME_MAIN = "Frame {x = ?} x";
@@ -286,7 +288,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Call` then `ReturnSome`, so `dec` is entered and finished in one move. **CFG**: the call edge, `dec`'s body and its return edge. **Trace**: a fourth activation, the deepest the run gets.",
+      text: "**Source**: `Call` then `ReturnSome`, so `dec` is entered and reaches its return before the next displayed state; the figure groups the two source steps. **CFG**: the call edge, `dec`'s body and its return edge. **Trace**: a fourth activation, the deepest the run gets.",
     },
     {
       entry: "n = 1, m = 0, r = 0",

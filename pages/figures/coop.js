@@ -5,17 +5,17 @@
    * pair has its own pre-rendered view.
    */
   for (const figure of document.querySelectorAll(".scene-coop")) {
-    const progTabs = figure.querySelectorAll("[data-prog][role='tab']");
-    const selTabs = figure.querySelectorAll("[data-sel][role='tab']");
+    const progTabs = figure.querySelectorAll(".coop-progs [data-prog]");
+    const selTabs = figure.querySelectorAll(".coop-sels [data-sel]");
 
     const render = () => {
       const { prog, sel } = figure.dataset;
 
       for (const tab of progTabs) {
-        tab.setAttribute("aria-selected", String(tab.dataset.prog === prog));
+        tab.setAttribute("aria-pressed", String(tab.dataset.prog === prog));
       }
       for (const tab of selTabs) {
-        tab.setAttribute("aria-selected", String(tab.dataset.sel === sel));
+        tab.setAttribute("aria-pressed", String(tab.dataset.sel === sel));
       }
       for (const code of figure.querySelectorAll(".coop-prog")) {
         code.hidden = code.dataset.prog !== prog;

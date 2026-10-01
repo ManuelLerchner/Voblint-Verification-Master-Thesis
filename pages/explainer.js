@@ -233,8 +233,13 @@ function drawDots(svg, { low, high, x0, dx, y, classOf, radius = 6 }) {
 
 /* A link into a collapsed deep dive opens it first, so the target is visible. */
 function openTarget() {
-  const target =
-    location.hash && document.getElementById(decodeURIComponent(location.hash.slice(1)));
+  let id;
+  try {
+    id = decodeURIComponent(location.hash.slice(1));
+  } catch {
+    return; // a malformed escape names no element
+  }
+  const target = id && document.getElementById(id);
 
   for (let node = target; node; node = node.parentElement) {
     if (node instanceof HTMLDetailsElement) {
