@@ -107,10 +107,6 @@ const graphZoomIn = query("#graph-zoom-in");
 const graphZoomFit = query("#graph-zoom-fit");
 const graphSaveImage = query("#graph-save-image");
 
-const solverGlobals = query("#solver-globals");
-const solverGlobalsCount = query("#solver-globals-count");
-const solverGlobalsList = query("#solver-globals-list");
-
 const solverTrace = query("#solver-trace");
 const solverTraceCount = query("#solver-trace-count");
 const solverTraceDownload = query("#solver-trace-download");
@@ -1271,7 +1267,6 @@ function showAnalysisView(result, configuration, source) {
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
-  showSolverGlobals(analysisModel ? result.seeds : null);
   offerSolverTrace(analysisModel ? { configuration, source } : null);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
@@ -1299,7 +1294,6 @@ function clearAnalysisView() {
   focusedNodeId = null;
   hoveredSpan = null;
 
-  showSolverGlobals(null);
   offerSolverTrace(null);
 
   editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
@@ -1783,50 +1777,6 @@ function scrollEditorTo(pos) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Solver globals                                                             */
-/* -------------------------------------------------------------------------- */
-
-/*
- * One seed per procedure entry per context: the state the calls routed there
- * published, which that entry reads back. A seed that feeds a graph node jumps to it.
- */
-function showSolverGlobals(seeds) {
-  solverGlobalsList.replaceChildren();
-  solverGlobals.hidden = !seeds || seeds.length === 0;
-
-  if (solverGlobals.hidden) {
-    return;
-  }
-
-  const entered = seeds.filter((seed) => seed.reachable).length;
-
-  solverGlobalsCount.textContent = `${seeds.length} seeds \u00b7 ${entered} entered`;
-
-  for (const seed of seeds) {
-    const item = document.createElement("li");
-
-    item.className = seed.reachable ? "solver-global" : "solver-global dead";
-
-    const key = seed.entry ? document.createElement("button") : document.createElement("span");
-
-    key.className = "solver-global-key";
-    key.textContent = seed.key;
-
-    if (seed.entry) {
-      key.type = "button";
-      key.title = "Inspect the procedure entry this seed feeds";
-      key.addEventListener("click", () => {
-        inspectGraphNode(seed.entry);
-        revealGraphNodes([seed.entry]);
-      });
-    }
-
-    item.append(key, seedLines(seed));
-    solverGlobalsList.append(item);
-  }
-}
-
-/* -------------------------------------------------------------------------- */
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
@@ -2000,6 +1950,7 @@ const solveReplay = createSolveReplay({
   graphStyle,
   applyGraphLayout,
   followRoutesOnDrag,
+  seedId,
   cssToken,
 });
 
@@ -2187,11 +2138,41 @@ function nodeBox(lines) {
 }
 
 /* A node's label names its point and findings; the full state is the hover tooltip. */
+/* The seed node standing for the global unknown a procedure entry reads its state from. */
+const SEED_SIZE = 18;
+
+/*
+ * A seed's label: the formals and globals it holds that say anything, in one line.
+ * [lines] are the section lines the analyzer reports, "interval:" headers with
+ * indented bindings; ⊤ bindings and headers are dropped.
+ */
+function seedLabel(lines) {
+  const said = lines
+    .map((line) => line.trim())
+    .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤"));
+
+  return said.length > 0 ? said.join(", ") : "⊤";
+}
+
+/* The shown graph's seeds by the entry they feed, for their tooltips. */
+let graphSeeds = new Map();
+
+function seedId(entryId) {
+  return `seed-${entryId}`;
+}
+
+/*
+ * Every procedure entry gets its seed: the global unknown the entry reads its state
+ * from and its callers publish theirs into. It sits in the entry's box, a call edge
+ * ends at it, and an edge from it to the entry stands for that read.
+ */
 function graphElements(result) {
   const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
   const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
   const parentOf = new Map();
   const elements = [];
+  const seeded = new Set();
+  const seedOf = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
 
   for (const cluster of result.graph.clusters) {
     elements.push({
@@ -2219,6 +2200,31 @@ function graphElements(result) {
       },
       classes: `point ${status}`,
     });
+
+    if (node.point?.startsWith("entry_")) {
+      const seed = seedOf.get(node.id);
+
+      seeded.add(node.id);
+      elements.push(
+        {
+          group: "nodes",
+          data: {
+            id: seedId(node.id),
+            parent: parentOf.get(node.id),
+            width: SEED_SIZE,
+            height: SEED_SIZE,
+            entry: node.id,
+            label: !seed ? "" : seed.reachable ? seedLabel(seed.lines) : "no call",
+          },
+          classes: seed && !seed.reachable ? "seed unreached" : "seed",
+        },
+        {
+          group: "edges",
+          data: { id: `${seedId(node.id)}-read`, source: seedId(node.id), target: node.id },
+          classes: "seed_read",
+        },
+      );
+    }
   }
 
   result.graph.edges.forEach((edge, index) => {
@@ -2227,13 +2233,15 @@ function graphElements(result) {
     }
 
     const label = edgeLabel(edge);
+    const target =
+      edge.kind === "enter" && seeded.has(edge.target) ? seedId(edge.target) : edge.target;
 
     elements.push({
       group: "edges",
       data: {
         id: `edge-${index}`,
         source: edge.source,
-        target: edge.target,
+        target,
         label,
         labelWidth: textWidth(label, edgeFont),
         /* How far along the edge a label beside its end node is centered. */
@@ -2473,7 +2481,7 @@ async function layoutGraph(elk, elements) {
 
   const local = edges.filter(
     (edge) =>
-      (edge.kind === "intra" || edge.kind === "call_to_return") &&
+      (edge.kind === "intra" || edge.kind === "call_to_return" || edge.kind === "seed_read") &&
       parentOf.get(edge.source) === parentOf.get(edge.target),
   );
   const { back, looping } = loopEdges(
@@ -2701,7 +2709,7 @@ function followRoutesOnDrag(view) {
  */
 function applyGraphLayout(view, { centers, routes, labels }) {
   view.batch(() => {
-    view.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
+    view.nodes(".point, .seed").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
     for (const [id, points] of routes) {
       const edge = view.getElementById(id);
@@ -2804,6 +2812,43 @@ function graphStyle() {
         "underlay-shape": "round-rectangle",
         "transition-property": "underlay-opacity",
         "transition-duration": 300,
+      },
+    },
+    /* A seed: the global unknown an entry reads, drawn as a circle on its call edges. */
+    {
+      selector: "node.seed",
+      style: {
+        shape: "ellipse",
+        width: "data(width)",
+        height: "data(height)",
+        "background-color": cssToken("--warning-soft"),
+        "border-color": cssToken("--warning"),
+        "border-width": 2,
+        "overlay-opacity": 0,
+        label: "data(label)",
+        color: cssToken("--warning"),
+        "font-family": cssToken("--mono"),
+        "font-size": EDGE_FONT_SIZE,
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": 6,
+      },
+    },
+    {
+      selector: "node.seed.unreached",
+      style: {
+        "background-color": cssToken("--surface-muted"),
+        "border-color": cssToken("--text-faint"),
+        "border-style": "dashed",
+      },
+    },
+    {
+      selector: "edge.seed_read",
+      style: {
+        width: 1.4,
+        "line-style": "dotted",
+        "line-color": cssToken("--warning"),
+        "target-arrow-color": cssToken("--warning"),
       },
     },
     {
@@ -3134,6 +3179,21 @@ function placeGraphTooltip(event) {
   graphTooltip.style.top = `${Math.max(4, top)}px`;
 }
 
+/* A seed's tooltip: its global unknown, then the formals and globals it holds. */
+function showSeedTooltip(seed, event) {
+  const title = document.createElement("strong");
+  const body = document.createElement("pre");
+
+  title.textContent = seed.key;
+  body.textContent = !seed.reachable
+    ? "no call enters this context"
+    : seed.lines.join("\n") || "no formals or globals";
+  graphTooltip.replaceChildren(title, body);
+  delete graphTooltip.dataset.node;
+  graphTooltip.hidden = false;
+  placeGraphTooltip(event);
+}
+
 /* A node's tooltip: its point, then its state and findings. */
 function showGraphTooltip(node, event) {
   if (graphTooltip.dataset.node !== node.id) {
@@ -3184,6 +3244,16 @@ function attachGraphInteraction() {
     hideGraphTooltip();
   });
 
+  cy.on("mouseover", "node.seed", (event) => {
+    const seed = graphSeeds.get(event.target.data("entry"));
+
+    if (seed) {
+      showSeedTooltip(seed, event.originalEvent);
+    }
+  });
+  cy.on("mousemove", "node.seed", (event) => placeGraphTooltip(event.originalEvent));
+  cy.on("mouseout", "node.seed", hideGraphTooltip);
+
   cy.on("mouseover", "node.context", () => graph.classList.add("is-over-context"));
   cy.on("mouseout", "node.context", () => graph.classList.remove("is-over-context"));
 
@@ -3233,6 +3303,8 @@ async function renderGraph(result, runGeneration) {
     }
 
     const elements = graphElements(result);
+
+    graphSeeds = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
     const layout = await layoutGraph(elk, elements);
 
     if (runGeneration !== analysisRunGeneration) {
@@ -3876,6 +3948,9 @@ for (const control of [
 }
 
 solverTrace.addEventListener("toggle", loadSolverTrace);
+
+/* Cytoscape reports no mouseout when the pointer leaves the graph from a node. */
+graph.addEventListener("mouseleave", hideGraphTooltip);
 
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
 solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);

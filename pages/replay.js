@@ -51,6 +51,20 @@ function shortValue(value) {
   return bare.length > VALUE_CHARS ? `${bare.slice(0, VALUE_CHARS - 1)}…` : bare;
 }
 
+/* A seed's value in one line, without its ⊤ components or analysis names. */
+function seedValue(value) {
+  if (value === "⊥") {
+    return "⊥";
+  }
+
+  const said = value
+    .split("; ")
+    .flatMap((section) => section.replace(/^[^:=]+: /, "").split(", "))
+    .filter((part) => part !== "⊤" && !part.endsWith("=⊤"));
+
+  return said.length > 0 ? said.join(", ") : "⊤";
+}
+
 /* --------------------------------------------------------------------- view */
 
 export function createSolveReplay(deps) {
@@ -60,7 +74,6 @@ export function createSolveReplay(deps) {
   const retry = query("#solve-replay-load");
   const body = query("#solve-replay-body");
   const graph = query("#solve-replay-graph");
-  const globalsList = query("#solve-replay-globals");
   /* Clicking a line goes to the step whose block it belongs to. */
   const trace = createTraceView(query("#solve-replay-trace"), {
     label: "Trace of the solve. Click a line to go to its step.",
@@ -127,7 +140,6 @@ export function createSolveReplay(deps) {
     cy?.destroy();
     cy = null;
     graph.replaceChildren();
-    globalsList.replaceChildren();
     trace.setText("");
     body.hidden = true;
     panel.open = false;
@@ -222,17 +234,30 @@ export function createSolveReplay(deps) {
       pointOf.set(node.id, node.point);
     }
 
-    /* A seed is the entry of its procedure in its context; the analysis global has no node. */
+    /* A seed's node stands beside its procedure's entry in its context. */
     const entryOf = (key) => {
       const [procedure, context] = key.slice(2).split("|");
+      const entry = nodeOf.get(`L:entry_${procedure}|${context}`);
 
-      return nodeOf.get(`L:entry_${procedure}|${context}`);
+      return entry && deps.seedId(entry);
     };
+
+    for (const node of answer.nodes ?? []) {
+      if (node.point.startsWith("entry_")) {
+        const context = node.context.slice(node.context.indexOf(" / ") + 3);
+
+        keyOf.set(deps.seedId(node.id), `G:${node.point.slice(6)}|${context}`);
+      }
+    }
 
     const cache = createCache(events, SNAPSHOT_EVERY);
 
     const { cytoscape, elk } = await deps.getGraphLibraries();
     const elements = deps.graphElements(answer).map((element) => {
+      if (element.classes?.startsWith("seed ") || element.classes === "seed") {
+        return { ...element, data: { ...element.data, label: "" }, classes: "seed r-unseen" };
+      }
+
       if (element.group !== "nodes" || !pointOf.has(element.data.id)) {
         return element;
       }
@@ -291,13 +316,13 @@ export function createSolveReplay(deps) {
         cy.animate({ fit: { padding: 24 } }, { duration: 260 });
       }
     });
-    cy.on("mouseover", "node.point", (event) => {
+    cy.on("mouseover", "node.point, node.seed", (event) => {
       hovered = event.target.id();
       renderTooltip(replay.cache.stateAt(replay.step));
       placeTooltip(event.originalEvent);
     });
-    cy.on("mousemove", "node.point", (event) => placeTooltip(event.originalEvent));
-    cy.on("mouseout", "node.point", hideTooltip);
+    cy.on("mousemove", "node.point, node.seed", (event) => placeTooltip(event.originalEvent));
+    cy.on("mouseout", "node.point, node.seed", hideTooltip);
 
     const edgesBetween = new Map();
 
@@ -386,12 +411,6 @@ export function createSolveReplay(deps) {
     return { edges, nodes: nodes.filter(Boolean) };
   }
 
-  function eventGlobal(event) {
-    const unknown = event?.event === "update_global" ? event.unknown : event?.target;
-
-    return unknown && unknown.kind !== "local" ? globalKey(unknown) : null;
-  }
-
   function renderGraph(state, event, finished) {
     const changed = event?.event === "update_local" ? localKey(event.unknown) : null;
     const cascade = state.cascade;
@@ -417,6 +436,28 @@ export function createSolveReplay(deps) {
         const last = drawn.get(node.id());
 
         if (!last || last.classes !== classes || last.label !== label) {
+          node.classes(classes);
+          node.data("label", label);
+          drawn.set(node.id(), { classes, label });
+        }
+      });
+
+      cy.nodes(".seed").forEach((node) => {
+        const key = replay.keyOf.get(node.id());
+        const g = state.globals.get(key);
+        const classes = [
+          "seed",
+          !g ? "r-unseen" : g.value === "⊥" ? "r-seen" : "r-seed-set",
+          event?.event === "update_global" && globalKey(event.unknown) === key ? "r-changed" : "",
+          nodes.includes(node.id()) ? "r-target" : "",
+        ]
+          .filter(Boolean)
+          .join(" ");
+
+        const label = g ? seedValue(g.value) : "";
+        const last = drawn.get(node.id());
+
+        if (last?.classes !== classes || last?.label !== label) {
           node.classes(classes);
           node.data("label", label);
           drawn.set(node.id(), { classes, label });
@@ -550,47 +591,6 @@ export function createSolveReplay(deps) {
     );
   }
 
-  function renderGlobals(state, event) {
-    const active = eventGlobal(event);
-    const rows = [...state.globals].map(([key, g]) => {
-      const row = document.createElement("li");
-      const name = document.createElement("code");
-      const text = document.createElement("span");
-
-      row.className =
-        key === active ? "solver-global replay-global is-active" : "solver-global replay-global";
-      name.className = "solver-global-key";
-      name.textContent = globalName(key);
-      text.textContent = g.value;
-      row.append(name, text);
-
-      const detailText = document.createElement("span");
-
-      detailText.className = "replay-global-detail";
-      detailText.textContent = [
-        g.last ? `last change ${g.last.old} → ${g.last.new}` : "unchanged",
-        `${g.contributions.length} contribution(s)${
-          g.contributions.length > 0
-            ? `, last ${g.contributions.at(-1).value} from ${g.contributions.at(-1).from.slice(2).replace("|", " @ ")}`
-            : ""
-        }`,
-      ].join("; ");
-      row.append(detailText);
-
-      return row;
-    });
-
-    if (rows.length === 0) {
-      const empty = document.createElement("li");
-
-      empty.className = "solver-globals-note";
-      empty.textContent = "No global unknown reached yet.";
-      rows.push(empty);
-    }
-
-    globalsList.replaceChildren(...rows);
-  }
-
   /* The verbose text is set once per load; a step only moves the current line. */
   function renderTrace(step) {
     trace.show(step === 0 ? null : replay.lines[step - 1]);
@@ -637,6 +637,12 @@ export function createSolveReplay(deps) {
     }
 
     const key = replay.keyOf.get(hovered);
+
+    if (key.startsWith("G:")) {
+      renderSeedTooltip(state, key);
+      return;
+    }
+
     const [point, context] = key.slice(2).split("|");
     const readers = [...(state.infl.get(key) ?? [])].map((reader) =>
       reader.slice(2).replace("|", " @ "),
@@ -653,6 +659,27 @@ export function createSolveReplay(deps) {
       `${state.counters.evaluations.get(key) ?? 0} evaluation(s)`,
       `read by ${readers.join(", ") || "nothing"}`,
     ].join("\n");
+    tooltip.replaceChildren(title, body);
+    tooltip.hidden = false;
+  }
+
+  /* A seed's value, its last change, and the side effects joined into it so far. */
+  function renderSeedTooltip(state, key) {
+    const g = state.globals.get(key);
+    const title = document.createElement("strong");
+    const body = document.createElement("pre");
+    const from = (contribution) => contribution.from.slice(2).replace("|", " @ ");
+
+    title.textContent = globalName(key);
+    body.textContent = !g
+      ? "not reached"
+      : [
+          g.value,
+          "",
+          g.last ? `last change ${g.last.old} → ${g.last.new}` : "unchanged",
+          `${g.contributions.length} side effect(s)`,
+          ...g.contributions.map((c) => `  from ${from(c)}: ${c.value}`),
+        ].join("\n");
     tooltip.replaceChildren(title, body);
     tooltip.hidden = false;
   }
@@ -685,7 +712,6 @@ export function createSolveReplay(deps) {
 
     renderGraph(state, event, finished);
     renderStack(state, finished);
-    renderGlobals(state, event);
     renderRoutes(state);
     counterRows(state);
 
@@ -861,6 +887,33 @@ function replayStyle(cssToken) {
     {
       selector: "node.point.r-widened",
       style: { "underlay-color": cssToken("--accent"), "underlay-opacity": 0.35 },
+    },
+    {
+      selector: "node.seed.r-unseen",
+      style: {
+        "background-color": cssToken("--surface-muted"),
+        "border-color": cssToken("--text-faint"),
+        "border-style": "dashed",
+      },
+    },
+    {
+      selector: "node.seed.r-seen",
+      style: { "background-color": cssToken("--surface"), "border-color": cssToken("--warning") },
+    },
+    {
+      selector: "node.seed.r-seed-set",
+      style: { "background-color": cssToken("--warning"), "border-color": cssToken("--warning") },
+    },
+    {
+      selector: "node.seed.r-changed",
+      style: {
+        "border-color": cssToken("--success"),
+        "border-width": 4,
+      },
+    },
+    {
+      selector: "node.seed.r-target",
+      style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 3 },
     },
     {
       selector: "edge.r-infl",

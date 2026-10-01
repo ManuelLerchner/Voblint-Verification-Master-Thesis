@@ -1148,6 +1148,12 @@
   stroke-dasharray: 5 3;
 }
 
+.gn.seed {
+  fill: var(--warning-soft);
+  stroke: var(--warning);
+  stroke-width: 2;
+}
+
 .gn.entry {
   fill: var(--primary-soft);
   stroke: var(--primary);
@@ -1230,6 +1236,11 @@
 .replay-key .replay-swatch {
   width: 32px;
   height: 18px;
+}
+
+.replay-key .replay-swatch.r-seed {
+  width: 16px;
+  height: 16px;
 }
 
 .replay-key .replay-swatch.r-edge,

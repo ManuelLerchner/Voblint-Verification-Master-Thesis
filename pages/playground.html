@@ -348,26 +348,6 @@
           <div id="state-inspector-body" class="state-inspector-body"></div>
         </section>
 
-        <details id="solver-globals" class="solver-globals" hidden>
-          <summary>
-            <span class="eyebrow">Entry seeds</span>
-            <span id="solver-globals-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            A call cannot write its callee's entry state directly: the solver side-effects
-            only global unknowns. So each call publishes the entered state into a seed, one
-            per procedure entry per context, and the callee's entry reads it back. Calls
-            routed to the same context meet in its seed, merged by the
-            <strong>Globals</strong> rule. Shown here are the callee's formals and the
-            program's globals; the other locals are reset on entry. These analyses keep
-            declared globals in the per-point state, so the solver's analysis-wide global
-            slot stays unused. Presentation only; no soundness statement reads these rows.
-          </p>
-
-          <ul id="solver-globals-list" class="solver-globals-list"></ul>
-        </details>
-
         <details
           id="analysis-graph-panel"
           class="solver-globals analysis-graph-panel"
@@ -474,8 +454,9 @@
             Steps through the solve on the control-flow graph, one solver step at a time. The
             solver starts from the program's exit and queries backward toward the entry. Each
             node shows the value the solver holds for its point in its context box at that step;
-            every context has its own box, so every unknown has its own node. Global unknowns,
-            the analysis global and the activation seeds, are listed beside the graph.
+            every context has its own box, so every unknown has its own node. The global
+            unknowns are the seeds: the circle at the top of each box, which the calls routed
+            to that context publish into and its entry reads.
           </p>
 
           <p class="solver-globals-note">
@@ -542,14 +523,6 @@
                 <ol id="solve-replay-stack" class="replay-stack replay-scroll" aria-label="Open queries, innermost first"></ol>
               </section>
               <section class="replay-card">
-                <h3 class="eyebrow">Global unknowns</h3>
-                <p class="solver-globals-note">
-                  The callee entry states (<code>enter f @ context</code>) and globals reached
-                  so far, with their value, last change and the side effects joined into them.
-                </p>
-                <ul id="solve-replay-globals" class="solver-globals-list replay-scroll"></ul>
-              </section>
-              <section class="replay-card">
                 <h3 class="eyebrow">Routes</h3>
                 <p class="solver-globals-note">
                   Each call the solver evaluated, and the callee context its entry state was
@@ -609,7 +582,7 @@
 
         <figure class="scene scene-graph">
           <svg viewBox="0 0 640 300" role="img"
-            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points and procedure entry or exit; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
+            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points, procedure entry or exit and seeds; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
             <defs>
               <marker id="g-arrow-step" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path class="ga step" d="M0 0 L10 5 L0 10 z"/>
@@ -634,6 +607,8 @@
             <rect class="gn entry" x="16" y="216" width="70" height="26" rx="6"/>
             <rect class="gn entry-inner" x="20" y="220" width="62" height="18" rx="4"/>
             <text x="100" y="234">entry or exit</text>
+            <circle class="gn seed" cx="51" cy="265" r="9"/>
+            <text x="100" y="270">seed: the state calls publish</text>
 
             <text class="legend-head" x="330" y="22">Edges</text>
             <line x1="330" y1="50" x2="400" y2="50" class="ge step" marker-end="url(#g-arrow-step)"/>
@@ -652,7 +627,10 @@
           </svg>
           <figcaption>
             Each (point, context) pair is its own node, so contexts are drawn apart rather than
-            joined. Hover a node to see its full state; drag a node or a whole box to move it.
+            joined. The circle at a procedure's entry is its seed: the solver side-effects only
+            global unknowns, so a call publishes the entered state into the seed of the context
+            it is routed to, and the entry reads it back. Hover a node or a seed to see its
+            state; drag a node or a whole box to move it.
           </figcaption>
         </figure>
 
@@ -668,6 +646,7 @@
             <div><dt><span class="replay-swatch r-wpoint"></span></dt><dd>A widening point.</dd></div>
             <div><dt><span class="replay-swatch r-edge"></span></dt><dd>The step's query, value or call.</dd></div>
             <div><dt><span class="replay-swatch r-infl"></span></dt><dd>Influence: the reader re-evaluates when this unknown changes.</dd></div>
+            <div><dt><span class="replay-swatch r-seed"></span></dt><dd>A seed, filled once a call published into it; green when this step changed it.</dd></div>
           </dl>
           <figcaption>
             The replay solves the run again and steps through the solver's events.

@@ -1725,6 +1725,14 @@ button.solver-global-key:hover {
   border: 4px double var(--border-strong);
 }
 
+.replay-swatch.r-seed {
+  width: 14px;
+  height: 14px;
+  background: var(--warning);
+  border: 2px solid var(--warning);
+  border-radius: 50%;
+}
+
 .replay-swatch.r-infl {
   height: 0;
   border: 0;
@@ -1798,10 +1806,6 @@ button.solver-global-key:hover {
   height: 14.6em;
   margin: 0;
   padding-left: 2.6em;
-}
-
-#solve-replay-globals.replay-scroll {
-  margin: 0;
 }
 
 .replay-global.is-active {
