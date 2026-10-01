@@ -369,10 +369,10 @@ const FIGURES = {
     /*
      * One small undithered palette for every frame keeps the pixels a step leaves
      * alone equal, so the GIF stores only what the step changed. The frames are device
-     * pixels; REPLAY_WIDTH (default 1600) lowers the width if the file passes 10 MB.
+     * pixels; REPLAY_WIDTH (default 1280, under 10 MB) sets the width.
      */
     const palette = join(frames, "palette.gif");
-    const width = ["-resize", `${process.env.REPLAY_WIDTH ?? "1600"}x`];
+    const width = ["-resize", `${process.env.REPLAY_WIDTH ?? "1280"}x`];
 
     execFileSync("magick", [
       join(frames, "*.png"),
