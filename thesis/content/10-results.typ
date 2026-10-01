@@ -36,16 +36,31 @@ exported analyzer #isaconst("run_voblint") that they must yield, and
 At a CFG node $v$, the argument that a verdict is sound is a chain of
 inclusions between sets of stores, followed by one implication. Each step is a
 theorem:
-#let _by(body) = text(size: 7pt, body)
-$
-  "stores of source runs at" v & underbrace(subset.eq, #_by(isathm("source_reaches_node_collect")))
-  #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") \
-  & underbrace(=, #_by(isathm("node_collect_eq_Union_activation_collect")))
-  union.big_c #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") \
-  & underbrace(subset.eq, #_by(isathm("activation_collect_dg_sound")))
-  union.big_c sem(#isaconst("lookup_context") thin r thin v thin c) \
-  & underbrace(==>, #_by(isathm("run_voblint_sound_at"))) quad "verdict at" v
-$
+// One relation per row, centred over the fact that proves it, so the relations
+// line up whatever the length of the fact's name.
+#let _step(rel, fact) = stack(dir: ttb, spacing: 2pt, align(center, $#rel$), align(
+  center,
+  text(size: 7pt, fact),
+))
+#align(center, grid(
+  columns: (auto, auto, auto),
+  column-gutter: 8pt,
+  row-gutter: 6pt,
+  align: (right + horizon, center + horizon, left + horizon),
+  [stores of source runs at $v$],
+  _step(sym.subset.eq, isathm("source_reaches_node_collect")),
+  isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
+
+  [],
+  _step($=$, isathm("node_collect_eq_Union_activation_collect")),
+  $union.big_c #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c")$,
+
+  [],
+  _step(sym.subset.eq, isathm("activation_collect_dg_sound")),
+  $union.big_c sem(#isaconst("lookup_context") thin r thin v thin c)$,
+
+  [], _step(sym.arrow.r.double.long, isathm("run_voblint_sound_at")), [verdict at $v$],
+))
 The first set is the stores that finite source runs reach at $v$. The node
 collecting semantics #isaconst("node_collect") splits into the activation
 collecting semantics #isaconst("activation_collect") of the contexts the
@@ -152,7 +167,7 @@ fun main() {
     `chain-split-entry`). Each context row lies inside the abstract row of the
     same context. The node verdict joins the two contexts to #raw(_vnode).],
   kind: image,
-  placement: auto,
+  placement: none,
 ) <fig:chain>
 
 @fig:chain draws the chain. `f` is analyzed in two contexts, one per entry
@@ -188,7 +203,7 @@ the configuration and the program, the four arguments of
   together as the combined component of @ch:cooperation, for example
   [#ctor("Interval_Analysis")] or [#ctor("Interval_Analysis"), #ctor("Order_Analysis")];
 - $"rule"$, a #isatype("globals_rule"), the update rule for the solver's global
-  unknowns, for example #ctor("Globals_Warrow");
+  unknowns, for example #ctor("Globals_Warrow")\;
 - $"ctx"$, a #isatype("context_mode"), the context policy: #ctor("Ctx_None"),
   #ctor("Ctx_EntryState") or #ctor("Ctx_CallString") $k$;
 - $p$, the program, an #isatype("imp_prog").
@@ -199,101 +214,119 @@ policy.
 #proved("run_voblint_certified_source_sound", note: [Source-level soundness of
   the analyzer.])
 
-The theorem assumes four premises:
+Here $cal(G)$ is the global-variable classifier #isaconst("declared_global") $p$,
+#isai("\<Pi>") the procedure table #isaconst("prog_table") $p$, and $g$ the
+compiled graph #isaconst("prog_cfg") $p$. The theorem assumes four premises:
 
 #[
   #set enum(numbering: n => "(P" + str(n) + ")")
-  + $s_0 in #isaconst("cinit_stores")$, the initial stores $S$ of @ch:traces:
-    $s_0$ zeroes every global, and the locals are unconstrained.
-  + A finite source execution from `main` reaches $("residual", s, "frs")$. Any
-    stopping point is allowed, so nonterminating programs are covered through
-    their prefixes.
-  + #isaconst("config_terminates"): the solver's recursion is defined on this
-    program's query under this configuration.
-  + The analyzer returned an answer. Malformed programs are rejected, so
-    well-formedness is not a separate premise.
+  + #isai("s0 \<in> cinit_stores \<G>"): the run starts from a store in
+    #isaconst("cinit_stores"), the initial stores $S$ of @ch:traces, which zero
+    every global and leave the locals unconstrained.
+  + #isai("\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"):
+    a finite #isaconst("pstep") execution of $p$ runs from the body of `main`
+    to a configuration with store $s$. Any stopping point is allowed, so
+    nonterminating programs are covered through their prefixes.
+  + #isaconst("config_terminates") $"as"$ $"rule"$ $"ctx"$ $p$: the solver's
+    recursion is defined on this program's query under this configuration.
+  + #isaconst("run_voblint") $"as"$ $"rule"$ $"ctx"$ $p$ $=$
+    #ctor("Analysed") $"res"$: the analyzer returned a result. Malformed
+    programs are rejected, so well-formedness is not a separate premise.
 ]
 
-From all four together, not from any one of them, it concludes:
+From all four together, not from any one of them, it concludes that some node
+$v$ of $g$ and some frame stack exist such that:
 
 #[
   #set enum(numbering: n => "(S" + str(n) + ")")
-  + some CFG node $v$ and stack are related to the source configuration by
-    #isaconst("csim");
-  + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected
-    at that node;
-  + the typed result table covers $s$ at $v$ in some context, before its
-    abstract values are printed (@sec:codegen);
-  + every check listed at $v$ is not `DEAD`, every `PROVED` check holds in $s$,
-    and every `REFUTED` check is false in $s$.
+  + the source configuration and the graph configuration $(v, s, "stk")$ are
+    related by the simulation #isaconst("csim") of @sec:csim, so $v$ is the
+    node at which the compiled program stands when the source run reaches $s$;
+  + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node;
+  + #isaconst("analysis_result_covers") $"as"$ $"rule"$ $"ctx"$ $p$ $v$ $s$: the
+    typed result table covers $s$ at $v$ in some context, before its abstract
+    values are printed (@sec:codegen);
+  + #isaconst("checks_sound_at") $"res"$ $v$ $s$: every check listed at $v$ is
+    not `DEAD`, every `PROVED` check holds in $s$, and every `REFUTED` check is
+    false in $s$.
 ]
-
-Two gaps separate the chain of @sec:chain from this statement: the client
-reads a table instead of a solver valuation, and one verdict per check instead
-of one per context (@sec:verdicts).
 
 == Verdicts <sec:verdicts>
 
-The solver returns a valuation over its unknowns, but the client reads the result
-table, indexed by node and context, through #isaconst("lookup_context"). The theorem
-#isathm("gamma_reader_eq_lookup") states that both describe the same stores at
-every node and context. Unsolved unknowns read as unreachable, which is sound
-because every unknown an execution visits is solved (@sec:cert-forward). A
-reached store is covered at its node _in some context_:
+The chain ends in a table that holds one abstract state per node and context.
+The analyzer prints one word per check. This section explains how the word is
+computed and what it may claim.
+
+*From the solver's valuation to the table.* The table $r$ is built from the
+solver's valuation, and #isaconst("lookup_context") $r$ $v$ $c$ reads the state
+at node $v$ in context $c$. Both describe the same stores at every node and
+context (#isathm("gamma_reader_eq_lookup")). A pair the solver never solved
+reads as #ctor("Bot"). This loses no execution, because every unknown an
+execution visits is solved (@sec:cert-forward). What the table guarantees for a
+store $s$ that reaches $v$ is coverage in _some_ context
+(#isaconst("table_covers")):
 $
-  exists c, A. quad #isaconst("lookup_context") thin r thin v thin c = ctor("Lifted") A and s in sem(A)
+  exists c, A. quad #isaconst("lookup_context") thin r thin v thin c = ctor("Lifted") A and s in sem(A).
 $
-for the result table $r$ (#isaconst("table_covers")).
-The quantifier cannot become universal. Under entry-state routing the test in
-`f` is analyzed in one context per recursion depth, and a store with $n = 2$
-is admitted in the context of the outer call only. The relation is the
-solution-dependent #isaconst("admitted_contexts"), the #isalocale("dg_analysis")
-instance of #isaconst("routed_entry_context_rel") (@sec:eq-entry-routing).
+The quantifier cannot become universal. In @fig:chain the store with $m = 4$
+lies in the context #raw(_ctx("f_pp1_ctx1")) only. The context
+#raw(_ctx("f_pp1_ctx0")) holds #raw(_m1), which excludes it, and rightly so,
+since no activation in that context has $m = 4$.
 
-A check has one verdict per node, while the table may hold several contexts
-there. Each context whose state is not #ctor("Bot") is classified as proved,
-refuted or unknown from the answers of @sec:coop-examples: the check asks the
-truth value of its condition, every active analysis answers this query from
-its field, and #isaconst("answer_check") reads the meet of these answers. An
-exact $1$ proves the check, an exact $0$ refutes it, and every other answer
-leaves it unknown. Proved and refuted are sound because a definite answer
-holds in every store the state describes (#isathm("mcp_classify_proved"),
-#isathm("mcp_classify_refuted")). An answer that admits no value also gives
-unknown, so the classification never yields `DEAD`.
+*One verdict per context.* #isaconst("classify_point") classifies the check
+at each context separately. The state #ctor("Bot") describes no store and
+gives #ctor("Dead"). A state $A$ gives a decided verdict: the check asks every
+active analysis for the truth value of its condition (@sec:coop-examples), and
+#isaconst("answer_check") reads the meet of the answers. An exact $1$ gives
+#ctor("Check_Proved"), an exact $0$ gives #ctor("Check_Refuted"), and any other
+answer gives #ctor("Check_Unknown"). A definite answer holds in every store
+$A$ describes, so the two definite verdicts are sound for those stores
+(#isathm("mcp_classify_proved"), #isathm("mcp_classify_refuted")). Only
+#ctor("Bot") yields #ctor("Dead")\; a state that admits stores never does.
 
-The per-context verdicts are joined in the flat order in which unknown is the
-top. The join follows from the existential context above: the theorem
-does not say which context covers a store, so the node verdict may claim only
-what every contributing context claims, and a proved and a refuted context
-give unknown. A context whose state is #ctor("Bot") denotes no store and
-contributes nothing: classifying it would be vacuous, since every verdict is
-true of every store it denotes. The type #isatype("contextual_verdict") is the
-verdict type lifted by a bottom element, and that bottom is `DEAD`, the unit of
-the join. A node is `DEAD` exactly when every context the table holds there is
-#ctor("Bot"). The join ranges over the contexts solved at the node, a finite
-set because a terminating solve returns a finite set of unknowns
-(#isathm("finite_stabl_solve"), @sec:cert-param).
+*One verdict per check.* #isaconst("aggregate_verdicts") joins the
+per-context verdicts. Their type #isatype("contextual_verdict") is
+#isatype("check_result") lifted by a bottom element, which is #ctor("Dead").
+On decided verdicts the order is flat with #ctor("Check_Unknown") on top: two
+equal verdicts join to themselves, and two different ones to unknown. The
+existential coverage forces this join. The theorem does not say which context
+covers a reached store, so the node verdict may claim only what every
+context with a non-#ctor("Bot") state claims. In @fig:chain, #raw(_v1) and
+#raw(_v2) join to #raw(_vnode). #ctor("Dead") is the unit of the join, so a
+context that describes no store does not weaken the others, and a node is
+`DEAD` exactly when every context the table holds there is #ctor("Bot"). The
+join ranges over the contexts solved at the node, a finite set because a
+terminating solve returns finitely many unknowns (#isathm("finite_stabl_solve"),
+@sec:cert-param).
 
-Each verdict below has a meaning only under the premises of the theorem
-(P3 and P4 in @sec:headline): the abstract solve terminates, and #isaconst("run_voblint")
-returned an answer. It speaks about _covered executions_: finite source
-executions of `main` from an initial store in #isaconst("cinit_stores"),
-stopped at any point. Except for `DEAD`, the meaning is conditional on
-reaching the check:
-
+*What the four verdicts mean.* Each meaning holds under the premises of the
+theorem, in particular (P3) and (P4): the abstract solve terminates and
+#isaconst("run_voblint") returned an answer. The verdicts speak about _covered
+executions_, finite source executions of `main` from an initial store in
+#isaconst("cinit_stores"), stopped at any point.
 - `PROVED`: whenever a covered execution reaches the check, the condition
   holds (#isathm("run_voblint_check_sound")).
 - `REFUTED`: whenever a covered execution reaches the check, the condition
-  fails (#isathm("run_voblint_check_sound")). It is not a verified counterexample. The abstraction admits stores no
-  run has, so a condition that fails at every admitted store does not imply
-  that any admitted store is reached.
-- `UNKNOWN`: the abstraction decides neither.
-- `DEAD`: the node collecting semantics at the node is empty, so no covered
-  execution reaches the check's node (#isathm("run_voblint_dead_check_unreached")). This is the one reachability claim. The other
-  three verdicts constrain each store at the node and hold vacuously when there
-  is none. `DEAD` constrains the whole set.
+  fails (#isathm("run_voblint_check_sound")). This is not a verified
+  counterexample. The state admits stores no run has, so a condition that
+  fails at every admitted store does not show that any store is reached.
+- `UNKNOWN`: the analysis decides neither.
+- `DEAD`: the node collecting semantics at the check's node is empty, so no
+  covered execution reaches that node
+  (#isathm("run_voblint_dead_check_unreached")).
+The first three constrain each store at the node and hold vacuously when there
+is none. Only `DEAD` constrains the set itself, so it is the one verdict that
+makes a claim about reachability.
 
 #let _pu = check-row("verdicts-proved-unreachable", cond: "x > 0")
+
+*Truth and reachability are separate.* A check no run reaches can still be
+`PROVED`. In the program below, $x = 3n$ is never $1$ or $2$, so no run
+reaches the check. The interval analysis cannot see this and keeps
+#raw(_pu.state) there, where `x > 0` holds, so it reports #raw(_pu.verdict).
+The verdict is sound: it claims only that `x > 0` holds whenever a run reaches
+the check.
+
 A `PROVED` verdict at a check that no run reaches is therefore no
 contradiction. In the program below, $x = 3n$ is never 1 or 2, so no run
 reaches the check. The interval analysis cannot see this and keeps
@@ -313,11 +346,12 @@ fun main() {
 }
 ```)
 
-Conditions are evaluated in the VIMP semantics, so a `PROVED` verdict can
-depend on its convention for division by zero (@sec:vimp-vs-c).
-
-In @fig:verdict-regions no run reaches either check, yet the interval analysis
-marks only one of them `DEAD`.
+Whether an unreached check is reported `DEAD` depends on the precision of the
+analysis. In the next program no run reaches either check. Interval reports
+only the second `DEAD`; the Int product, which also knows $x equiv 0 med
+(mod 3)$, reports both (@fig:verdict-regions). Conditions are evaluated in the
+VIMP semantics, so a verdict can also depend on its convention for division by
+zero (@sec:vimp-vs-c).
 
 #listing(lang: "c", claim: "verdicts-mult3-interval", ```
 fun main() {
@@ -390,25 +424,25 @@ fun main() {
     Int product also tracks $x equiv 0 med (mod 3)$ and marks both `DEAD`.],
 ) <fig:verdict-regions>
 
-For a source run about to execute a check,
-#isathm("run_voblint_check_sound") finds a listed check with the same label
-and condition at a node where the store is collected, and that check's verdict
+*From check rows to source positions.* The theorems speak about the checks the
+result lists, each at a CFG node. For a source run about to execute a check,
+#isathm("run_voblint_check_sound") finds a listed check with the same label and
+condition at a node where the store is collected, and that check's verdict
 holds of the store. The label is the check's source position, written by the
-parser, which is trusted to write it correctly.
-#isathm("run_voblint_labelled_check_sound") additionally assumes that the labels
-of a result are distinct. The command-line tool checks this condition and
-refuses to print a result when it fails. Under this assumption, every row
-carrying a source label belongs to the check written at that position. The listed check is existential because a source state does not
-determine its node, so the statement cannot be read backwards to conclude that
-a `DEAD` node is unreached. #isathm("run_voblint_dead_check_unreached") proves
-that conclusion forwards instead: every store collected at the node would
-satisfy the claim there, and a `DEAD` claim admits none.
+trusted parser. #isathm("run_voblint_labelled_check_sound") additionally
+assumes that the labels of a result are distinct. The command-line tool checks
+this condition and refuses to print a result when it fails. Under this
+assumption, every row carrying a source label belongs to the check written at
+that position. Because the listed check is found existentially, the statement
+cannot be read backwards to show that a `DEAD` node is unreached.
+#isathm("run_voblint_dead_check_unreached") proves that conclusion directly: a
+store collected at the node would satisfy the node's claim, and a `DEAD` claim
+admits none.
 
-Arithmetic diagnostics are stated per node as well. By
+*Arithmetic diagnostics.* Diagnostics are stated per node as well. By
 #isathm("run_voblint_arithmetic_safe"), a node without a diagnostic has nonzero
-divisors in every collected store. A warning only means that the abstraction
+divisors in every collected store. A warning means only that the analysis
 could not exclude a zero divisor.
-
 
 Four features of the theorem are forced. The node is existential because a
 source configuration does not determine its CFG node (@ch:traces), the context
