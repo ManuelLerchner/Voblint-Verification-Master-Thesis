@@ -101,6 +101,10 @@
   font-weight: 600;
 }
 
+.tok-function {
+  color: var(--tok-ctor);
+}
+
 .tok-variableName {
   color: var(--tok-name);
 }

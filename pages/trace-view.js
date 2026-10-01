@@ -18,7 +18,7 @@ import {
   StreamLanguage,
   syntaxHighlighting,
   unfoldEffect,
-} from "https://esm.sh/@codemirror/language@6.12.4";
+} from "https://esm.sh/@codemirror/language@^6.0.0";
 import {
   EditorState,
   RangeSetBuilder,
@@ -33,7 +33,7 @@ import {
   highlightSpecialChars,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
-import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
+import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 
 /* ---------------------------------------------------------------- event kinds */
 
@@ -105,11 +105,7 @@ function callOf(text) {
 
 /* ---------------------------------------------------------------- highlighting */
 
-/*
- * Existing tags, one per kind of token, which only the trace's own style below colors.
- * Defining new tags instead made the program editor lose its builtin color: a tag
- * defined at load time changes how the modified tag for builtins resolves.
- */
+/* Existing tags, one per kind of token, which only the trace's own style below colors. */
 const traceTags = {
   query: tags.controlKeyword,
   update: tags.definitionKeyword,

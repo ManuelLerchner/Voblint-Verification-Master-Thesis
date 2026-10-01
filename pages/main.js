@@ -3,7 +3,7 @@ import {
   HighlightStyle,
   StreamLanguage,
   syntaxHighlighting,
-} from "https://esm.sh/@codemirror/language@6.12.4";
+} from "https://esm.sh/@codemirror/language@^6.0.0";
 import {
   EditorState,
   Prec,
@@ -13,7 +13,8 @@ import {
 /*
  * Same semver ranges codemirror@6.0.2 itself imports, so esm.sh resolves them to
  * the one module instance basicSetup uses. A second @codemirror/state instance
- * rejects every extension built from it.
+ * rejects every extension built from it; a second @lezer/highlight instance numbers
+ * its tags on its own, so a style matches the wrong tokens or none.
  */
 import {
   Decoration,
@@ -21,7 +22,7 @@ import {
   keymap,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
-import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
+import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
 import { createSolveReplay } from "./replay.js";
@@ -192,7 +193,11 @@ fun main() {
 /* VIMP syntax highlighting                                                   */
 /* -------------------------------------------------------------------------- */
 
-const vimpLanguage = StreamLanguage.define(vimpStreamParser);
+/* `function` is the tokenizer's own name, not one CodeMirror maps by itself. */
+const vimpLanguage = StreamLanguage.define({
+  ...vimpStreamParser,
+  tokenTable: { function: tags.function(tags.variableName) },
+});
 
 /* Shared by the VIMP editor and the raw JSON views; each language uses its own tags. */
 const codeHighlight = HighlightStyle.define([
@@ -213,6 +218,10 @@ const codeHighlight = HighlightStyle.define([
     tag: tags.comment,
     color: "var(--tok-comment)",
     fontStyle: "italic",
+  },
+  {
+    tag: tags.function(tags.variableName),
+    color: "var(--tok-ctor)",
   },
   {
     tag: tags.standard(tags.variableName),
