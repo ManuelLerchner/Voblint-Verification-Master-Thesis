@@ -71,7 +71,12 @@ export function createSolveReplay(deps) {
       }
     },
   });
-  const detail = query("#solve-replay-detail");
+  /* The full state of the hovered node, kept current while the replay plays. */
+  const tooltip = document.createElement("div");
+
+  tooltip.className = "graph-tooltip";
+  tooltip.hidden = true;
+  document.body.append(tooltip);
   const stackList = query("#solve-replay-stack");
   const routesList = query("#solve-replay-routes");
   const countersBody = query("#solve-replay-counters");
@@ -92,7 +97,7 @@ export function createSolveReplay(deps) {
   let replay = null;
   let cy = null;
   let playing = 0;
-  let selected = null;
+  let hovered = null;
   /* What each drawn node shows, so a step touches only nodes that changed. */
   let drawn = new Map();
 
@@ -116,14 +121,14 @@ export function createSolveReplay(deps) {
     offered = null;
     loading = null;
     replay = null;
-    selected = null;
+    hovered = null;
+    tooltip.hidden = true;
     drawn = new Map();
     cy?.destroy();
     cy = null;
     graph.replaceChildren();
     globalsList.replaceChildren();
     trace.setText("");
-    detail.textContent = "";
     body.hidden = true;
     panel.open = false;
     panel.hidden = true;
@@ -286,10 +291,13 @@ export function createSolveReplay(deps) {
         cy.animate({ fit: { padding: 24 } }, { duration: 260 });
       }
     });
-    cy.on("tap", "node.point", (event) => {
-      selected = event.target.id();
-      render();
+    cy.on("mouseover", "node.point", (event) => {
+      hovered = event.target.id();
+      renderTooltip(replay.cache.stateAt(replay.step));
+      placeTooltip(event.originalEvent);
     });
+    cy.on("mousemove", "node.point", (event) => placeTooltip(event.originalEvent));
+    cy.on("mouseout", "node.point", hideTooltip);
 
     const edgesBetween = new Map();
 
@@ -402,7 +410,6 @@ export function createSolveReplay(deps) {
           state.widened === key ? "r-widened" : "",
           key === changed ? "r-changed" : "",
           nodes.includes(node.id()) ? "r-target" : "",
-          node.id() === selected ? "graph-node-selected" : "",
         ]
           .filter(Boolean)
           .join(" ");
@@ -619,23 +626,51 @@ export function createSolveReplay(deps) {
     return first + 1;
   }
 
-  function renderDetail(state) {
-    if (!selected) {
-      detail.textContent = "Click a node to read its whole value.";
+  function hideTooltip() {
+    hovered = null;
+    tooltip.hidden = true;
+  }
+
+  function renderTooltip(state) {
+    if (!hovered) {
       return;
     }
 
-    const key = replay.keyOf.get(selected);
+    const key = replay.keyOf.get(hovered);
     const [point, context] = key.slice(2).split("|");
-    const value = state.reached.has(key) ? (state.values.get(key) ?? "⊥") : UNREACHED;
-    const facts = [
-      state.stable.has(key) ? "stable" : "not stable",
-      state.wpoints.has(key) ? "widening point" : "",
-      `${state.counters.evaluations.get(key) ?? 0} evaluation(s)`,
-      `read by ${[...(state.infl.get(key) ?? [])].map((reader) => reader.slice(2).replace("|", " @ ")).join(", ") || "nothing"}`,
-    ].filter(Boolean);
+    const readers = [...(state.infl.get(key) ?? [])].map((reader) =>
+      reader.slice(2).replace("|", " @ "),
+    );
+    const title = document.createElement("strong");
+    const body = document.createElement("pre");
 
-    detail.textContent = `(${point}, ${context}) = ${value} · ${facts.join(" · ")}`;
+    title.textContent = `(${point}, ${context})`;
+    body.textContent = [
+      state.reached.has(key) ? (state.values.get(key) ?? "⊥") : UNREACHED,
+      "",
+      state.stable.has(key) ? "stable" : "not stable",
+      ...(state.wpoints.has(key) ? ["widening point"] : []),
+      `${state.counters.evaluations.get(key) ?? 0} evaluation(s)`,
+      `read by ${readers.join(", ") || "nothing"}`,
+    ].join("\n");
+    tooltip.replaceChildren(title, body);
+    tooltip.hidden = false;
+  }
+
+  function placeTooltip(event) {
+    const margin = 14;
+    const { width, height } = tooltip.getBoundingClientRect();
+    const left =
+      event.clientX + margin + width > window.innerWidth
+        ? event.clientX - margin - width
+        : event.clientX + margin;
+    const top =
+      event.clientY + margin + height > window.innerHeight
+        ? event.clientY - margin - height
+        : event.clientY + margin;
+
+    tooltip.style.left = `${Math.max(4, left)}px`;
+    tooltip.style.top = `${Math.max(4, top)}px`;
   }
 
   function render() {
@@ -655,7 +690,7 @@ export function createSolveReplay(deps) {
     counterRows(state);
 
     renderTrace(step);
-    renderDetail(state);
+    renderTooltip(state);
 
     slider.value = String(step);
     stepLabel.textContent = `Step ${step} of ${events.length}${finished ? " · solved" : ""}`;
@@ -725,6 +760,9 @@ export function createSolveReplay(deps) {
   });
 
   retry.addEventListener("click", load);
+  /* Cytoscape reports no mouseout when the pointer leaves the graph from a node. */
+  graph.addEventListener("mouseleave", hideTooltip);
+
   buttons.start.addEventListener("click", () => go(0));
   buttons.back.addEventListener("click", () => go(replay.step - 1));
   buttons.forward.addEventListener("click", () => go(replay.step + 1));

@@ -1804,15 +1804,6 @@ button.solver-global-key:hover {
   margin: 0;
 }
 
-.replay-detail {
-  height: 2.6em;
-  margin: 0;
-  overflow: hidden;
-  font-family: var(--mono);
-  text-overflow: ellipsis;
-  overflow-wrap: anywhere;
-}
-
 .replay-global.is-active {
   border-color: var(--accent);
   box-shadow: inset 3px 0 0 var(--accent);
