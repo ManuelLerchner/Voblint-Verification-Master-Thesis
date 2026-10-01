@@ -119,6 +119,8 @@ def test_declarations_come_from_isar(tool, tmp_path, monkeypatch):
         "end\n\nend\n"
     )
     monkeypatch.setattr(tool, "REPO", tmp_path)
+    # The fake session has no rendered theories, whatever build/ holds for the real one.
+    monkeypatch.setattr(tool, "HTML", tmp_path / "isabelle-html")
     rows = tool.resolve_declarations(
         {
             "sq": {"name": "sq", "args": ["n"]},
