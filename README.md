@@ -479,10 +479,6 @@ with the same `AFP` setting.
 formatting with isar-tools, without Isabelle or the AFP. `pixi task list` lists
 everything else.
 
-The thesis lives in `thesis/`, and its checks run on every branch: in CI and in
-the Lefthook groups `thesis-checks` and `thesis-current`. `pixi run thesis-check`
-gathers the thesis tasks, which `pixi run verify` leaves out.
-
 > The vendored solver is pinned to a private fork of
 > [stilscher/td-verification](https://github.com/stilscher/td-verification); CI
 > needs a `SUBMODULES_TOKEN` secret to clone it. Making that fork public is the
