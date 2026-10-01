@@ -9517,13 +9517,22 @@ let rec acc_add _A _B
                  kvs
           else (k, d) :: acc_add _A _B ka da kvs);;
 
-let rec buffer_aux _A _B
-  acc x1 = match acc, x1 with acc, Answer d -> flush_sides _B acc (Answer d)
-    | acc, QueryL (y, g) -> QueryL (y, (fun v -> buffer_aux _A _B acc (g v)))
-    | acc, QueryG (y, g) -> QueryG (y, (fun v -> buffer_aux _A _B acc (g v)))
-    | acc, Side (y, d, t) -> buffer_aux _A _B (acc_add _A _B y d acc) t;;
+let rec buffer_aux _B _C
+  publish_before acc x2 = match publish_before, acc, x2 with
+    publish_before, acc, Answer d -> flush_sides _C acc (Answer d)
+    | publish_before, acc, QueryL (y, g) ->
+        (if publish_before y
+          then flush_sides _C acc
+                 (QueryL
+                   (y, (fun v -> buffer_aux _B _C publish_before [] (g v))))
+          else QueryL (y, (fun v -> buffer_aux _B _C publish_before acc (g v))))
+    | publish_before, acc, QueryG (y, g) ->
+        QueryG (y, (fun v -> buffer_aux _B _C publish_before acc (g v)))
+    | publish_before, acc, Side (y, d, t) ->
+        buffer_aux _B _C publish_before (acc_add _B _C y d acc) t;;
 
-let rec buffer_sides _B _C t = buffer_aux _B _C [] t;;
+let rec buffer_sides _B _C
+  publish_before t = buffer_aux _B _C publish_before [] t;;
 
 let rec fold_rhs_program _A
   acc x1 = match acc, x1 with acc, [] -> sp_return acc
@@ -9564,6 +9573,7 @@ let rec routed_node_rhs_buffered _B _C _D
                cmb_c extra g c v))
          in
         buffer_sides _B (bounded_semilattice_sup_bot_dg_state _C _D)
+          (fun _ -> less_eq_nat (size_list (site_sel g v)) one_nat)
           (sp_lift_tree t
             (fun res ->
               Side (analysis_global_at c,
