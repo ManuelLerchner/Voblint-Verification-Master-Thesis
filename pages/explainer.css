@@ -1210,6 +1210,32 @@
   text-anchor: middle;
 }
 
+.scene-replay .legend-head {
+  margin: 0;
+  color: var(--text-muted);
+  font: 700 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A swatch, not a pill: the key shows the node style itself. */
+.replay-key dt {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  padding: 0;
+  background: none;
+}
+
+.replay-key .replay-swatch {
+  width: 32px;
+  height: 18px;
+}
+
+.replay-key .replay-swatch.r-edge {
+  height: 0;
+}
+
 @media (max-width: 640px) {
   .legend > div {
     grid-template-columns: minmax(0, 1fr);

@@ -1707,23 +1707,6 @@ button.solver-global-key:hover {
   font-variant-numeric: tabular-nums;
 }
 
-.replay-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 4px 16px;
-  margin: 10px 0;
-  padding: 0;
-  color: var(--text-muted);
-  font-size: 0.76rem;
-  list-style: none;
-}
-
-.replay-legend li {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-}
-
 /* The swatches repeat the node styles replay.js gives Cytoscape. */
 .replay-swatch {
   display: inline-block;

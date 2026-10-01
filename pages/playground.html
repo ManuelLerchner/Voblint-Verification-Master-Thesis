@@ -533,15 +533,9 @@
               <span id="solve-replay-step" class="replay-step" aria-live="polite"></span>
             </div>
 
-            <ul class="replay-legend" aria-label="Legend">
-              <li><span class="replay-swatch r-unseen"></span>not reached yet</li>
-              <li><span class="replay-swatch r-seen"></span>evaluated (value may be ⊥)</li>
-              <li><span class="replay-swatch r-solving"></span>being solved (on the call stack)</li>
-              <li><span class="replay-swatch r-current"></span>solved now</li>
-              <li><span class="replay-swatch r-stable"></span>stable (overlay)</li>
-              <li><span class="replay-swatch r-destabilized"></span>removed from the stable set by the last update (overlay)</li>
-              <li><span class="replay-swatch r-edge"></span>the step's query, value or call</li>
-            </ul>
+            <p class="solver-globals-note">
+              Node colors are explained under <a href="#reading">Reading a result</a>.
+            </p>
 
             <fieldset class="replay-overlays">
               <legend class="eyebrow">Overlays</legend>
@@ -667,6 +661,23 @@
           <figcaption>
             Each (point, context) pair is its own node, so contexts are drawn apart rather than
             joined. Hover a node to see its full state; drag a node or a whole box to move it.
+          </figcaption>
+        </figure>
+
+        <figure class="scene scene-replay">
+          <p class="legend-head">Solve replay</p>
+          <dl class="legend replay-key">
+            <div><dt><span class="replay-swatch r-unseen"></span></dt><dd>Not reached yet.</dd></div>
+            <div><dt><span class="replay-swatch"></span></dt><dd>Evaluated; its value may still be ⊥.</dd></div>
+            <div><dt><span class="replay-swatch r-solving"></span></dt><dd>Being solved: on the solver's call stack.</dd></div>
+            <div><dt><span class="replay-swatch r-current"></span></dt><dd>Solved in this step.</dd></div>
+            <div><dt><span class="replay-swatch r-stable"></span></dt><dd>In the stable set (overlay).</dd></div>
+            <div><dt><span class="replay-swatch r-destabilized"></span></dt><dd>Removed from the stable set by the last update (overlay).</dd></div>
+            <div><dt><span class="replay-swatch r-edge"></span></dt><dd>The step's query, value or call.</dd></div>
+          </dl>
+          <figcaption>
+            The replay solves the run again and steps through the solver's events. Overlays
+            are switched on in the replay panel.
           </figcaption>
         </figure>
       </div>
