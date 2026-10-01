@@ -95,6 +95,7 @@ const problems = query("#analysis-problems");
 const timing = query("#analysis-timing");
 const timingValue = query("#analysis-timing-value");
 
+const stateInspector = query("#state-inspector");
 const inspectorLocation = query("#state-inspector-location");
 const inspectorBody = query("#state-inspector-body");
 const valueHintsToggle = query("#value-hints-toggle");
@@ -1516,11 +1517,12 @@ function statementExcerpt(statement) {
     .trim();
 }
 
+/* Before a run there are no states to inspect, so the panel waits with the graph. */
 function renderInspector() {
   inspectorLocation.replaceChildren();
+  stateInspector.hidden = !analysisModel;
 
   if (!analysisModel) {
-    inspectorMessage("Run the analysis, then place the cursor on a statement.");
     return;
   }
 
