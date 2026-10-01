@@ -4115,9 +4115,9 @@ fun main() {
           background worker started by the playground calls it. The analysis core in the browser is exactly the code in the solid box above. The parser and adapters around it are compiled into the same bundle, unproved.
         </p>
         <p>
-          This page is tied to the theories the same way. Its links into the rendered theories and
-          its notation table are derived from the Isabelle sources with isar-tools, our source tooling
-          for Isabelle, and a check fails when a link no longer names a declaration.
+          This page is checked against the theories too. Its notation table is generated from the
+          Isabelle sources with isar-tools, our source tooling for Isabelle, and a check against the
+          same sources fails when a link into the rendered theories no longer names a declaration.
         </p>
       </div>
 
