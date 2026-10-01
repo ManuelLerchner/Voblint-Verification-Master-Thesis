@@ -299,7 +299,7 @@
           <li class="doc-toc-part">II · The idea</li>
           <li><a href="#abstract-interpretation" data-target="abstract-interpretation">What is abstract interpretation?</a></li>
           <li><a href="#values" data-target="values">What an abstract value stands for</a></li>
-          <li><a href="#trace" data-target="trace">A trace, and what makes it local</a></li>
+          <li><a href="#trace" data-target="trace">A trace, and why it follows one activation</a></li>
           <li><a href="#observers" data-target="observers">What you can ask a trace</a></li>
           <li><a href="#semantics" data-target="semantics">What a run is</a></li>
           <li class="doc-toc-part">III · How it works</li>
@@ -942,7 +942,7 @@
     <section class="section" id="trace" aria-labelledby="trace-heading">
       <div class="section-heading">
         <p class="eyebrow">The foundation</p>
-        <h2 id="trace-heading">A trace, and what makes it local</h2>
+        <h2 id="trace-heading">A trace, and why it follows one activation</h2>
         <p class="section-intro">
           The soundness theorems on this page are statements about traces. A trace is the record a single
           run leaves behind: the nodes control passed through, and the store at each of them. One trace is one concrete run, written down.
@@ -1378,8 +1378,9 @@ datatype activation_trace =
           and deciding, for every occurrence of <code>v</code>, whether it belongs to the
           activation being reasoned about. The analysis answers per program point &#8212; per
           point and context, once a policy keeps copies of a procedure apart &#8212; so that
-          first question is the one every soundness proof in the chain has to ask, and a trace is local
-          precisely so that asking it is a projection rather than a reconstruction.
+          first question is the one every soundness proof in the chain has to ask, and an activation
+          trace holds one activation precisely so that asking it is a projection rather than a
+          reconstruction.
         </p>
         <p>
           Grouping by activation rather than by procedure has one more consequence.
