@@ -3984,6 +3984,17 @@ for (const control of [
 graph.addEventListener("mouseleave", hideGraphTooltip);
 
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
+
+for (const part of Object.keys(rawMounts)) {
+  query(`#raw-${part}-download`).addEventListener("click", () => {
+    if (rawRunProgram) {
+      downloadBlob(
+        new Blob([formatJson(rawRunProgram[part] ?? null)], { type: "application/json" }),
+        `voblint-${part}-${settingsSlug()}.json`,
+      );
+    }
+  });
+}
 solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);
 
 for (const box of analysisChoices) {

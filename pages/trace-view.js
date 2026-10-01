@@ -31,6 +31,7 @@ import {
   GutterMarker,
   gutter,
   highlightSpecialChars,
+  lineNumbers,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
@@ -560,6 +561,7 @@ export function createTraceView(parent, { label, onLine = null }) {
       EditorView.contentAttributes.of({ "aria-label": label, tabindex: "0" }),
       StreamLanguage.define(traceParser),
       syntaxHighlighting(traceHighlight),
+      lineNumbers(),
       codeFolding(),
       foldGutter(),
       foldByDepth,

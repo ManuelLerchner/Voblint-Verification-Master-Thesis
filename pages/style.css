@@ -1554,6 +1554,7 @@ kbd {
 
 .raw-result-pane-header {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
@@ -2071,12 +2072,24 @@ button.solver-global-key:hover {
   border-radius: 10px;
 }
 
-.code-editor.trace-view .cm-line {
-  padding: 0 2px 0 6px;
+/* The trace's own light rules come later in the file; the panes' dark ones win here. */
+.code-editor.trace-view .cm-editor {
+  font: 0.78rem / 1.6 var(--mono);
+}
+
+.code-editor.trace-view .cm-gutters {
+  color: #647f86;
+  background: var(--surface-dark-2);
+  border-right: 1px solid var(--editor-border);
 }
 
 .code-editor.trace-view .cm-content {
-  padding: 8px 0;
+  padding: 16px 0;
+}
+
+/* The layout pads continuation lines from a 6px start. */
+.code-editor.trace-view .cm-line {
+  padding: 0 2px 0 6px;
 }
 
 .code-editor.trace-view .tr-query {
