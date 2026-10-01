@@ -2050,7 +2050,7 @@ const solveReplay = createSolveReplay({
   layoutGraph,
   graphStyle,
   applyGraphLayout,
-  dropRoutesOnDrag,
+  followRoutesOnDrag,
   cssToken,
 });
 
@@ -2678,18 +2678,50 @@ function segmentStyle(points, source, target) {
 }
 
 /*
- * A route is stored relative to its endpoints' centers at layout time, so an edge
- * whose endpoint is dragged away from its box draws straight again rather than
- * bending through the old route's corners.
+ * The route's bend points with its ends following moved endpoints. A route leaves its
+ * source and enters its target along one axis, so the first bend moves with the source
+ * across that axis, and the last with the target: every segment stays horizontal or
+ * vertical, and only the segments at a moved end stretch.
  */
-function dropRoutesOnDrag(view) {
+function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
+  const moved = points.map((point) => ({ ...point }));
+  const follow = (point, from, delta) => {
+    if (Math.abs(point.x - from.x) < Math.abs(point.y - from.y)) {
+      point.x += delta.x;
+    } else {
+      point.y += delta.y;
+    }
+  };
+
+  follow(moved[0], source, { x: sourceNow.x - source.x, y: sourceNow.y - source.y });
+  follow(moved.at(-1), target, { x: targetNow.x - target.x, y: targetNow.y - target.y });
+  return moved;
+}
+
+/*
+ * A route is stored relative to its endpoints' centers, so dragging an endpoint
+ * recomputes it from the layout's absolute bend points. An edge that cannot keep its
+ * route falls back to the plain taxi style.
+ */
+function followRoutesOnDrag(view) {
   view.on("drag", "node", (event) => {
     const moved = event.target.isParent() ? event.target.descendants() : event.target;
 
     moved
-      .connectedEdges(".routed, .placed-label")
+      .connectedEdges(".routed")
       .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
-      .removeClass("routed placed-label");
+      .forEach((edge) => {
+        const route = edge.scratch("route");
+        const source = edge.source().position();
+        const target = edge.target().position();
+        const style = route && segmentStyle(stretchedRoute(route, source, target), source, target);
+
+        if (style) {
+          edge.data(style);
+        } else {
+          edge.removeClass("routed placed-label");
+        }
+      });
   });
 }
 
@@ -2711,7 +2743,14 @@ function applyGraphLayout(view, { centers, routes, labels }) {
       );
 
       if (style) {
-        edge.addClass("routed").data(style);
+        edge
+          .addClass("routed")
+          .data(style)
+          .scratch("route", {
+            points,
+            source: centers.get(edge.data("source")),
+            target: centers.get(edge.data("target")),
+          });
       }
     }
   });
@@ -3192,7 +3231,7 @@ function attachGraphInteraction() {
     hideGraphTooltip();
   });
 
-  dropRoutesOnDrag(cy);
+  followRoutesOnDrag(cy);
 
   cy.on("dragpan pinchzoom scrollzoom", () => {
     graphFitted = false;
