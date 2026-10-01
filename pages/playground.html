@@ -212,19 +212,6 @@
                 </span>
               </div>
 
-              <div class="control-group">
-                <label for="trace-select">Solver trace</label>
-                <select id="trace-select" aria-describedby="trace-help">
-                  <option value="off" selected>Off</option>
-                  <option value="compact">Compact: calls</option>
-                  <option value="verbose">Full: every step</option>
-                </select>
-                <span id="trace-help" class="visually-hidden">
-                  Also record what the solver did, shown above the graph: per call, or
-                  every solver step.
-                </span>
-              </div>
-
               <button id="run-analysis" type="button" disabled>
                 <i
                   id="run-analysis-icon"
@@ -381,51 +368,6 @@
           <ul id="solver-globals-list" class="solver-globals-list"></ul>
         </details>
 
-        <details id="solver-trace" class="solver-globals solver-trace" hidden>
-          <summary>
-            <span class="eyebrow">Solver trace</span>
-            <span id="solver-trace-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            The run's solver steps, as <code>voblint --trace</code> prints them. The compact
-            form follows calls: the context each call is routed to, the query of the callee's
-            result, what the callee's entry reads from its seed, each publication into a seed
-            and whether it changed the seed, the restarts that change causes, and what the
-            caller returns, so a program without calls shows little more than its checks. The
-            full form, <code>--verbose</code>, lists every solver step: each unknown solved,
-            each query with the value it returns, each side effect, each update, each
-            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
-            indented by the solver's query depth.
-          </p>
-
-          <p class="solver-globals-note">
-            Three layers: the solver result is the exported computation of proved equations,
-            and the trace calls come from code equations proved equal to the untraced ones.
-            The trace is an unverified observation of that computation, recorded by a hook
-            that returns nothing, swallows exceptions and never touches solver state. The
-            replay below is an unverified visualization of the trace.
-          </p>
-
-          <div class="solver-trace-tools">
-            <button id="solver-trace-download" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              Download trace (.txt)
-            </button>
-            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
-            </button>
-          </div>
-
-          <pre id="solver-trace-text" class="solver-trace-text"></pre>
-
-          <p id="solver-trace-cut" class="solver-globals-note" hidden>
-            <span id="solver-trace-cut-label"></span>
-            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
-          </p>
-        </details>
-
         <details
           id="analysis-graph-panel"
           class="solver-globals analysis-graph-panel"
@@ -483,6 +425,59 @@
             tabindex="0"
             aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
           ></div>
+        </details>
+
+        <details id="solver-trace" class="solver-globals solver-trace" hidden>
+          <summary>
+            <span class="eyebrow">Solver trace</span>
+            <span id="solver-trace-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            The run's solver steps, as <code>voblint --trace</code> prints them, computed
+            by solving the run again when this panel opens. The compact
+            form follows calls: the context each call is routed to, the query of the callee's
+            result, what the callee's entry reads from its seed, each publication into a seed
+            and whether it changed the seed, the restarts that change causes, and what the
+            caller returns, so a program without calls shows little more than its checks. The
+            full form, <code>--verbose</code>, lists every solver step: each unknown solved,
+            each query with the value it returns, each side effect, each update, each
+            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
+            indented by the solver's query depth.
+          </p>
+
+          <p class="solver-globals-note">
+            Three layers: the solver result is the exported computation of proved equations,
+            and the trace calls come from code equations proved equal to the untraced ones.
+            The trace is an unverified observation of that computation, recorded by a hook
+            that returns nothing, swallows exceptions and never touches solver state. The
+            replay below is an unverified visualization of the trace.
+          </p>
+
+          <div class="solver-trace-tools">
+            <label class="solver-trace-form">
+              Form
+              <select id="trace-select">
+                <option value="compact" selected>Compact: calls</option>
+                <option value="verbose">Full: every step</option>
+              </select>
+            </label>
+            <button id="solver-trace-download" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              Download trace (.txt)
+            </button>
+            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
+            </button>
+          </div>
+
+          <pre id="solver-trace-text" class="solver-trace-text"></pre>
+
+          <p id="solver-trace-cut" class="solver-globals-note" hidden>
+            <span id="solver-trace-cut-label"></span>
+            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
+          </p>
         </details>
 
         <details id="solve-replay" class="solver-globals solve-replay" hidden>
@@ -568,21 +563,23 @@
               ></div>
 
               <div class="replay-side">
-                <p id="solve-replay-detail" class="solver-globals-note replay-detail"></p>
+                <p id="solve-replay-detail" class="solver-globals-note replay-detail replay-scroll"></p>
                 <h3 class="eyebrow">Solve stack</h3>
-                <ol id="solve-replay-stack" class="replay-stack" aria-label="Open queries, innermost first"></ol>
+                <ol id="solve-replay-stack" class="replay-stack replay-scroll" aria-label="Open queries, innermost first"></ol>
                 <h3 class="eyebrow">Global unknowns</h3>
-                <ul id="solve-replay-globals" class="solver-globals-list"></ul>
+                <ul id="solve-replay-globals" class="solver-globals-list replay-scroll"></ul>
                 <div id="solve-replay-routes-panel" hidden>
                   <h3 class="eyebrow">Routes</h3>
-                  <ul id="solve-replay-routes" class="replay-routes"></ul>
+                  <ul id="solve-replay-routes" class="replay-routes replay-scroll"></ul>
                 </div>
                 <div id="solve-replay-counters-panel" hidden>
                   <h3 class="eyebrow">Counters</h3>
-                  <table class="replay-counters">
-                    <thead><tr><th>unknown</th><th>evaluations</th><th>updates</th><th>destabilizations</th></tr></thead>
-                    <tbody id="solve-replay-counters"></tbody>
-                  </table>
+                  <div class="replay-scroll replay-counters-scroll">
+                    <table class="replay-counters">
+                      <thead><tr><th>unknown</th><th>evaluations</th><th>updates</th><th>destabilizations</th></tr></thead>
+                      <tbody id="solve-replay-counters"></tbody>
+                    </table>
+                  </div>
                 </div>
                 <h3 class="eyebrow">Trace</h3>
                 <div id="solve-replay-trace" class="replay-trace" tabindex="0" aria-label="Trace around the current step. Click a line to go to its step."></div>

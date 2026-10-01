@@ -267,6 +267,7 @@ export function createSolveReplay(deps) {
     });
 
     deps.applyGraphLayout(cy, layout);
+    deps.dropRoutesOnDrag(cy);
     cy.fit(undefined, 24);
 
     /* A graph too large to read when fitted starts at the solve's root unknown instead. */

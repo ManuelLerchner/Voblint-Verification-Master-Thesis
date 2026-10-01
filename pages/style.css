@@ -1635,9 +1635,17 @@ button.solver-global-key:hover {
 .solver-trace-tools {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px 18px;
   margin: 10px 0 0;
   font-size: 0.8rem;
+}
+
+.solver-trace-form {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
 }
 
 .solver-trace-tools button:disabled {
@@ -1691,9 +1699,12 @@ button.solver-global-key:hover {
   font-size: 0.8rem;
 }
 
+/* A fixed width, so a growing step number never rewraps the player row. */
 .replay-step {
+  min-width: 26ch;
   color: var(--text-muted);
   font: 600 0.8rem var(--mono);
+  font-variant-numeric: tabular-nums;
 }
 
 .replay-legend {
@@ -1764,11 +1775,44 @@ button.solver-global-key:hover {
   height: clamp(380px, 64vh, 760px);
 }
 
+/*
+ * Every section whose content changes from step to step has a fixed height and
+ * scrolls, so stepping never moves the controls or the trace. Only toggling an
+ * overlay changes the layout.
+ */
 .replay-side {
   display: flex;
   flex-direction: column;
   min-width: 0;
   gap: 6px;
+}
+
+.replay-side > * {
+  flex: none;
+}
+
+.replay-scroll {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.replay-detail.replay-scroll {
+  height: 4.4em;
+}
+
+.replay-stack.replay-scroll {
+  height: 7.5em;
+  padding-left: 2.6em;
+}
+
+#solve-replay-globals.replay-scroll {
+  height: 7.5em;
+  margin: 0;
+}
+
+.replay-routes.replay-scroll,
+.replay-counters-scroll {
+  height: 7.5em;
 }
 
 .replay-side h3 {
@@ -1789,9 +1833,7 @@ button.solver-global-key:hover {
 /* Positioned, so a line's offsetTop measures from the pane when it scrolls to the current step. */
 .replay-trace {
   position: relative;
-  flex: 1 1 240px;
-  min-height: 240px;
-  max-height: clamp(240px, 46vh, 520px);
+  height: 280px;
   overflow: auto;
   background: var(--surface);
   border: 1px solid var(--border);

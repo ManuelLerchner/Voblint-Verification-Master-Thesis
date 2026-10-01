@@ -1270,14 +1270,14 @@ function inspectCursor(state) {
   }
 }
 
-/* [configuration] and [source] are the run's own; the JSON Lines download solves them again. */
+/* [configuration] and [source] are the run's own; the trace views solve them again. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
   showSolverGlobals(analysisModel ? result.seeds : null);
-  showSolverTrace(analysisModel ? result.trace : null, configuration, source);
+  offerSolverTrace(analysisModel ? { configuration, source } : null);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1305,7 +1305,7 @@ function clearAnalysisView() {
   hoveredSpan = null;
 
   showSolverGlobals(null);
-  showSolverTrace(null);
+  offerSolverTrace(null);
 
   editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
 
@@ -1843,11 +1843,35 @@ function showSolverGlobals(seeds) {
  */
 const TRACE_PREVIEW_LINES = 400;
 
-const TRACE_MODES = new Set(["off", "compact", "verbose"]);
+const TRACE_MODES = new Set(["compact", "verbose"]);
 
-/* The shown trace in full, and the run that produced it. */
+/*
+ * A run never traces. The text trace, the JSON Lines download and the replay each
+ * solve the shown run again with the trace they need, one at a time; the solver is
+ * deterministic, so every view shows the steps of the run on screen. A request
+ * queued behind a run that a new run or a changed setting retired is dropped.
+ */
+let solveAgainQueue = Promise.resolve();
+
+function solveAgain(configuration, source) {
+  const generation = analysisRunGeneration;
+  const answer = solveAgainQueue.then(() => {
+    if (generation !== analysisRunGeneration) {
+      throw new Error("A new run started.");
+    }
+
+    return runAnalysisInWorker(configuration, source);
+  });
+
+  solveAgainQueue = answer.catch(() => {});
+  return answer;
+}
+
+/* The finished run the panel offers, the trace shown for it, and the one being loaded. */
+let solverTraceOffered = null;
 let solverTraceContent = "";
 let solverTraceRun = null;
+let solverTraceLoading = null;
 
 /* The offset just past the first [lines] lines of [text], or its length. */
 function lineBoundary(text, lines) {
@@ -1891,25 +1915,69 @@ function countLines(text) {
   return lines;
 }
 
-/* The text of the run's trace mode; null when the run recorded none. */
-function showSolverTrace(trace, configuration, source) {
-  solverTraceContent = typeof trace === "string" ? trace : "";
-  solverTraceRun =
-    solverTraceContent === ""
-      ? null
-      : { configuration, source, lines: countLines(solverTraceContent) };
-  solverTrace.hidden = solverTraceRun === null;
+/* [run] is the finished run's configuration and source; null hides the panel. */
+function offerSolverTrace(run) {
+  solverTraceOffered = run;
+  solverTraceContent = "";
+  solverTraceRun = null;
+  solverTraceLoading = null;
+  solverTraceText.textContent = "";
+  solverTraceCut.hidden = true;
+  solverTrace.hidden = run === null;
+  solverTraceCount.textContent = run ? "open to load" : "";
+  loadSolverTrace();
+}
 
-  if (solverTrace.hidden) {
-    solverTraceText.textContent = "";
-    solverTraceCut.hidden = true;
+/* The offered run's trace in the selected form, solved when the panel is open. */
+async function loadSolverTrace() {
+  const run = solverTraceOffered;
+  const mode = traceSelect.value;
+
+  if (!run || !solverTrace.open || !TRACE_MODES.has(mode)) {
     return;
   }
 
-  const form = configuration.trace === "verbose" ? "full" : "compact";
+  for (const shown of [solverTraceRun, solverTraceLoading]) {
+    if (shown?.run === run && shown.mode === mode) {
+      return;
+    }
+  }
 
-  solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${form}`;
-  showSolverTraceHead();
+  const request = { run, mode };
+
+  solverTraceLoading = request;
+  solverTraceCount.textContent = "loading";
+
+  try {
+    const answer = JSON.parse(await solveAgain({ ...run.configuration, trace: mode }, run.source));
+
+    if (solverTraceLoading !== request) {
+      return;
+    }
+
+    if (typeof answer.trace !== "string" || answer.status !== "ok") {
+      throw new Error(answer.message ?? "the analyzer returned no trace");
+    }
+
+    solverTraceContent = answer.trace;
+    solverTraceRun = { ...request, lines: countLines(answer.trace) };
+    solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${mode === "verbose" ? "full" : "compact"}`;
+    showSolverTraceHead();
+  } catch (error) {
+    if (solverTraceLoading === request) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      solverTraceRun = null;
+      solverTraceContent = "";
+      solverTraceText.textContent = `The trace could not be produced: ${message}`;
+      solverTraceCut.hidden = true;
+      solverTraceCount.textContent = "";
+    }
+  } finally {
+    if (solverTraceLoading === request) {
+      solverTraceLoading = null;
+    }
+  }
 }
 
 function downloadBlob(blob, name) {
@@ -1925,20 +1993,16 @@ function downloadSolverTrace() {
   if (solverTraceRun) {
     downloadBlob(
       new Blob([solverTraceContent], { type: "text/plain" }),
-      `voblint-trace-${settingsSlug()}-${solverTraceRun.configuration.trace}.txt`,
+      `voblint-trace-${settingsSlug()}-${solverTraceRun.mode}.txt`,
     );
   }
 }
 
-/*
- * The shown run solved again with its JSON Lines trace. The solver is
- * deterministic, so the records are the steps of the run on screen. A new run or
- * a changed setting cancels it like any pending analysis.
- */
+/* The offered run solved again with its JSON Lines trace. */
 async function downloadSolverTraceJsonl() {
-  const shown = solverTraceRun;
+  const shown = solverTraceOffered;
 
-  if (!shown || pendingAnalysis) {
+  if (!shown || solverTraceDownloadJsonl.disabled) {
     return;
   }
 
@@ -1949,21 +2013,21 @@ async function downloadSolverTraceJsonl() {
 
   try {
     const answer = JSON.parse(
-      await runAnalysisInWorker({ ...shown.configuration, trace: "jsonl" }, shown.source),
+      await solveAgain({ ...shown.configuration, trace: "jsonl" }, shown.source),
     );
 
     if (typeof answer.trace !== "string") {
       throw new Error(answer.message ?? "the analyzer returned no trace");
     }
 
-    if (solverTraceRun === shown) {
+    if (solverTraceOffered === shown) {
       downloadBlob(
         new Blob([answer.trace], { type: "application/jsonl" }),
         `voblint-trace-${settingsSlug()}.jsonl`,
       );
     }
   } catch (error) {
-    if (solverTraceRun === shown) {
+    if (solverTraceOffered === shown) {
       const message = error instanceof Error ? error.message : String(error);
 
       showStatus(`The JSON Lines trace could not be produced: ${message}`, "error");
@@ -1979,13 +2043,14 @@ async function downloadSolverTraceJsonl() {
  * its graph, from a run solved again with its traces.
  */
 const solveReplay = createSolveReplay({
-  solve: runAnalysisInWorker,
+  solve: solveAgain,
   getGraphLibraries,
   graphElements,
   nodeBox,
   layoutGraph,
   graphStyle,
   applyGraphLayout,
+  dropRoutesOnDrag,
   cssToken,
 });
 
@@ -2613,6 +2678,22 @@ function segmentStyle(points, source, target) {
 }
 
 /*
+ * A route is stored relative to its endpoints' centers at layout time, so an edge
+ * whose endpoint is dragged away from its box draws straight again rather than
+ * bending through the old route's corners.
+ */
+function dropRoutesOnDrag(view) {
+  view.on("drag", "node", (event) => {
+    const moved = event.target.isParent() ? event.target.descendants() : event.target;
+
+    moved
+      .connectedEdges(".routed, .placed-label")
+      .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
+      .removeClass("routed placed-label");
+  });
+}
+
+/*
  * Cytoscape centers an edge label on the edge's midpoint, where a loop's forward and
  * back edges put theirs on top of each other. The inner pass reserves room for each
  * label and places it, so the label keeps that place as an offset from the midpoint.
@@ -3111,14 +3192,7 @@ function attachGraphInteraction() {
     hideGraphTooltip();
   });
 
-  cy.on("drag", "node", (event) => {
-    const moved = event.target.isParent() ? event.target.descendants() : event.target;
-
-    moved
-      .connectedEdges(".routed, .placed-label")
-      .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
-      .removeClass("routed placed-label");
-  });
+  dropRoutesOnDrag(cy);
 
   cy.on("dragpan pinchzoom scrollzoom", () => {
     graphFitted = false;
@@ -3319,12 +3393,6 @@ function readConfiguration() {
     throw new Error(`Unknown Int refinement: ${intRefinement}`);
   }
 
-  const trace = traceSelect.value;
-
-  if (!TRACE_MODES.has(trace)) {
-    throw new Error(`Unknown solver trace: ${trace}`);
-  }
-
   return {
     analysis,
     globals,
@@ -3332,7 +3400,6 @@ function readConfiguration() {
     contextDepth,
     narrowBound,
     intRefinement,
-    trace,
   };
 }
 
@@ -3542,7 +3609,7 @@ function runAnalysisInWorker(configuration, source) {
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
-        trace: configuration.trace,
+        trace: configuration.trace ?? "off",
         source,
       });
     } catch (error) {
@@ -3796,10 +3863,12 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
-  traceSelect,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
+
+traceSelect.addEventListener("change", loadSolverTrace);
+solverTrace.addEventListener("toggle", loadSolverTrace);
 
 solverTraceAll.addEventListener("click", showSolverTraceAll);
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
@@ -4188,8 +4257,13 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  /* trace=1 is how links named the compact trace before it had a full form. */
-  selectIfOffered(traceSelect, settings.trace === "1" ? "compact" : (settings.trace ?? null));
+  /* A linked trace opens the trace panel; trace=1 is how links named the compact form. */
+  const linkedTrace = settings.trace === "1" ? "compact" : settings.trace;
+
+  if (TRACE_MODES.has(linkedTrace)) {
+    traceSelect.value = linkedTrace;
+    solverTrace.open = true;
+  }
 
   const depth = parseCount(settings.k, MAX_CONTEXT_DEPTH);
 
@@ -4338,7 +4412,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(traceSelect.value !== "off" ? [linkParam("trace", traceSelect.value)] : []),
+    ...(solverTrace.open ? [linkParam("trace", traceSelect.value)] : []),
   ];
   const url = new URL(location.href);
 
