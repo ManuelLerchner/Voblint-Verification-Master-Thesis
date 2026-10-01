@@ -85,15 +85,41 @@ a report.
 
 `--trace` also writes the solver's steps to stderr: per call, the context it is
 routed to, what the callee's entry reads from its seed, and which publications
-restart the caller. `--verbose` lists every step, `--format jsonl` emits JSON
-Lines and `--output FILE` writes to a file; standard output stays the same.
-The playground's **Solver trace** setting shows the compact or the full
-(`--verbose`) trace above the graph, with downloads of the whole text and of
-its JSON Lines form.
+restart the caller. `--verbose` lists every step in a Goblint-aligned tracing
+vocabulary (`%%% iter: begin iterate ...`; the mapping table in
+`docs/CLI_DESIGN.md` records every difference), `--trace-sys iter,side` selects
+subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
+file; standard output stays the same. The playground's **Solver trace** panel
+shows the full (`--verbose`) trace below the graph, colored by step and folded
+by query, with downloads of the whole text and of its JSON Lines form. Three layers: the solver
+result is the exported computation of proved equations, and the trace calls
+inside it come from code equations proved equal to the untraced ones; the trace
+is an unverified observation of that computation, through a `code_printing`
+mapping of `trace_event` to an OCaml hook that returns unit, swallows
+exceptions and never touches solver state, so it cannot feed back; the replay
+and animation are an unverified visualization of the trace
+([`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md#solver-trace---trace)).
 
 ```bash
 pixi run voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
 ```
+
+The playground's **Solve replay** section steps through the same solve on the
+graph, with the verbose trace beside it: the value each unknown holds, the seed
+each call publishes its entry state into, the stack of open queries and the
+edge each query follows backward from the exit, with the stable set,
+destabilization cascades, widening points and influence edges drawn on the
+graph and the routes and counters below it. One reducer folds the run's JSON
+Lines trace into every state it shows.
+`node scripts/capture_readme_figures.mjs solve-replay` regenerates the
+animation below from the playground.
+
+<p align="center">
+  <a href="docs/images/solve-replay.gif">
+    <img src="docs/images/solve-replay.gif" width="720" alt="The playground's solve replay on the context example: the solver starts at the exit of main, queries backward to its entry, routes each call of bump to its own context, and fills in every node's interval step by step, with the indented trace beside the graph">
+  </a>
+  <br><sub>The context example solved step by step. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open this run</a>.</sub>
+</p>
 
 ### Arithmetic diagnostics
 

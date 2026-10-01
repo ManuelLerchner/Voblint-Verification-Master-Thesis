@@ -101,6 +101,10 @@
   font-weight: 600;
 }
 
+.tok-function {
+  color: var(--tok-ctor);
+}
+
 .tok-variableName {
   color: var(--tok-name);
 }
@@ -1605,19 +1609,6 @@ button.solver-global-key:hover {
 }
 
 /* Scrolls inside the panel: a long trace must not stretch the page. */
-.solver-trace-text {
-  max-height: min(560px, 60vh);
-  margin: 10px 0 0;
-  padding: 10px 12px;
-  overflow: auto;
-  color: var(--text);
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  font: 0.74rem / 1.5 var(--mono);
-  white-space: pre;
-}
-
 .solver-trace-all {
   padding: 0;
   color: var(--primary);
@@ -1635,6 +1626,7 @@ button.solver-global-key:hover {
 .solver-trace-tools {
   display: flex;
   flex-wrap: wrap;
+  align-items: center;
   gap: 6px 18px;
   margin: 10px 0 0;
   font-size: 0.8rem;
@@ -1643,6 +1635,307 @@ button.solver-global-key:hover {
 .solver-trace-tools button:disabled {
   color: var(--text-muted);
   cursor: progress;
+}
+
+.solve-replay-body {
+  margin-top: 12px;
+}
+
+.replay-player {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 8px;
+}
+
+.replay-player button {
+  min-width: 36px;
+  height: 34px;
+  padding: 0 10px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.replay-player button:hover:not(:disabled) {
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
+}
+
+.replay-player button:disabled {
+  color: var(--text-faint);
+  cursor: default;
+}
+
+.replay-player input[type="range"] {
+  flex: 1 1 200px;
+  min-width: 140px;
+  accent-color: var(--primary);
+}
+
+.replay-speed {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+}
+
+/* A fixed width, so a growing step number never rewraps the player row. */
+.replay-step {
+  min-width: 26ch;
+  color: var(--text-muted);
+  font: 600 0.8rem var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The swatches repeat the node styles replay.js gives Cytoscape. */
+.replay-swatch {
+  display: inline-block;
+  width: 18px;
+  height: 12px;
+  border: 1px solid var(--border-strong);
+  border-radius: 3px;
+  background: var(--surface);
+}
+
+.replay-swatch.r-unseen {
+  background: var(--surface-muted);
+  border: 1px dashed var(--text-faint);
+}
+
+.replay-swatch.r-solving {
+  background: var(--accent-soft);
+  border: 2px solid var(--accent);
+}
+
+.replay-swatch.r-current {
+  background: var(--accent-soft);
+  border: 4px solid var(--accent);
+}
+
+.replay-swatch.r-stable {
+  background: var(--primary-soft);
+  border: 2px solid var(--primary);
+}
+
+.replay-swatch.r-destabilized {
+  border: 2px dotted var(--border-strong);
+}
+
+.replay-swatch.r-wpoint {
+  border: 4px double var(--border-strong);
+}
+
+.replay-swatch.r-seed {
+  width: 14px;
+  height: 14px;
+  background: var(--warning);
+  border: 2px solid var(--warning);
+  border-radius: 50%;
+}
+
+.replay-swatch.r-infl {
+  height: 0;
+  border: 0;
+  border-top: 2px dotted var(--text-faint);
+  border-radius: 0;
+}
+
+.replay-swatch.r-edge {
+  height: 0;
+  border: 0;
+  border-top: 4px solid var(--accent);
+  border-radius: 0;
+}
+
+/* The graph and the trace beside it share the row's height. */
+.replay-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  height: clamp(380px, 64vh, 760px);
+  gap: 12px;
+}
+
+.replay-layout > .replay-graph,
+.replay-layout > .replay-trace-view {
+  height: 100%;
+  min-height: 0;
+}
+
+@media (max-width: 960px) {
+  .replay-below {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .replay-layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: clamp(380px, 64vh, 760px) 360px;
+    height: auto;
+  }
+}
+
+/*
+ * Under the graph and the trace: one card per view. Every view that changes from
+ * step to step has a fixed height and scrolls, so stepping never moves the player,
+ * the graph or the trace.
+ */
+.replay-below {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px 20px;
+  margin-top: 14px;
+}
+
+.replay-card {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  gap: 6px;
+}
+
+.replay-card[hidden] {
+  display: none;
+}
+
+.replay-card h3 {
+  margin: 0;
+}
+
+.replay-scroll {
+  height: 17em;
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+
+.replay-stack.replay-scroll {
+  height: 14.6em;
+  margin: 0;
+  padding-left: 2.6em;
+}
+
+.replay-global.is-active {
+  border-color: var(--accent);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* ------------------------------------------------------------- trace view */
+
+.trace-view {
+  overflow: hidden;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+}
+
+.trace-view .cm-editor {
+  height: 100%;
+  font: 0.74rem / 1.5 var(--mono);
+}
+
+.trace-view .cm-scroller {
+  overflow: auto;
+  font-family: var(--mono);
+}
+
+.trace-view .cm-gutters {
+  background: var(--surface-muted);
+  border-right: 1px solid var(--border);
+  color: var(--text-faint);
+}
+
+.solver-trace-view {
+  height: min(560px, 60vh);
+  margin: 10px 0 0;
+}
+
+.trace-view .tr-current {
+  background: var(--accent-soft);
+  box-shadow: inset 3px 0 0 var(--accent);
+}
+
+/* A call opens a banner; the trace itself is unchanged. */
+.trace-view .tr-banner {
+  margin: 6px 0 2px;
+  padding: 1px 8px;
+  color: var(--primary);
+  background: var(--primary-soft);
+  border-left: 3px solid var(--primary);
+  font-weight: 700;
+}
+
+.trace-view .tr-side-gutter .cm-gutterElement {
+  padding: 0 4px;
+}
+
+.tr-side-mark {
+  color: var(--warning);
+}
+
+.tr-query {
+  color: var(--primary);
+  font-weight: 700;
+}
+
+.tr-update {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tr-widen {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.tr-stable {
+  color: var(--text-faint);
+}
+
+.tr-side {
+  color: var(--warning);
+  font-weight: 700;
+}
+
+.tr-route,
+.tr-check {
+  color: var(--tok-keyword);
+  font-weight: 700;
+}
+
+.tr-unknown {
+  color: var(--text-muted);
+}
+
+.tr-value {
+  color: var(--tok-number);
+}
+
+.tr-key,
+.tr-step {
+  color: var(--text-muted);
+}
+
+/* An old/new pair marks the components that differ, like a diff. */
+.tr-removed {
+  background: var(--danger-soft);
+  border-radius: 2px;
+}
+
+.tr-added {
+  background: var(--success-soft);
+  border-radius: 2px;
+}
+
+.tr-proved {
+  color: var(--success);
+  font-weight: 700;
+}
+
+.tr-failed {
+  color: var(--danger);
+  font-weight: 700;
 }
 
 .analysis-graph-header {
@@ -2593,4 +2886,58 @@ a:focus-visible {
     order: 3;
     flex-basis: 100%;
   }
+}
+
+.replay-stack,
+.replay-routes {
+  margin: 0 0 12px;
+  padding-left: 1.4em;
+  font-family: var(--mono);
+  font-size: 0.8rem;
+}
+
+.replay-stack-entry.is-active {
+  font-weight: 600;
+}
+
+.replay-global-detail {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--text-faint);
+}
+
+.replay-counters {
+  width: 100%;
+  table-layout: auto;
+  margin-bottom: 12px;
+  border-collapse: collapse;
+  font-size: 0.75rem;
+}
+
+.replay-counters th,
+.replay-counters td {
+  padding: 2px 4px;
+  text-align: right;
+}
+
+.replay-counters td:first-child {
+  width: 100%;
+  max-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.replay-route {
+  font-weight: 600;
+}
+
+.replay-routes li + li {
+  margin-top: 6px;
+}
+
+.replay-counters th:first-child,
+.replay-counters td:first-child {
+  text-align: left;
+  font-family: var(--mono);
 }

@@ -1,6 +1,7 @@
 theory Voblint_Codegen
   imports
     "Voblint_CLI.Analysis_Run"
+    "Voblint_CLI.Trace_Run"
 begin
 
 section "Code export surface"
@@ -104,6 +105,10 @@ text \<open>
     They exist for the OCaml program printer and the CFG regressions, and are listed
     apart so that reading the surface as ``what the CLI calls'' does not quietly drop
     them.
+
+  \<^item> \<^bold>\<open>Trace.\<close> The solver's events and the readers a run hands the tracer
+    (\<^theory>\<open>Voblint_CLI.Trace_Run\<close>). The CLI's trace renderer matches on them, so
+    they must be public.
 \<close>
 
 export_code
@@ -146,6 +151,14 @@ export_code
   prog_cfg cfg_intra_list cfg_calls_list prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check
   CallEdge Nondet_Int
+
+  \<comment> \<open>Trace: the events the solver reports and the readers a run hands the tracer\<close>
+  Ev_Start Ev_Stop Ev_Query Ev_Query_Wpoint Ev_Iterate_From_Query Ev_Add_Infl Ev_Answer
+  Ev_Query_Global Ev_Answer_Global Ev_Iterate Ev_Eq Ev_Rhs Ev_Still_Unstable Ev_Widen Ev_Sol
+  Ev_Wpoint_Remove Ev_Wpoint_Clear Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global
+    Ev_Destabilize
+  Ev_Stable_Remove
+  Ev_Route Trace_Printers string_of_abstract_value Inl Inr
 
   in OCaml module_name Generated file_prefix "Voblint_CLI"
 

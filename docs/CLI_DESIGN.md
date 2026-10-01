@@ -113,30 +113,153 @@ subprocess below), not new proof work.
 
 `--trace` writes the solver's steps to stderr, or to `--output FILE`. Standard
 output is byte-identical with and without it. `--compact` (the default) tells
-the interprocedural story per call; `--verbose` lists every step; `--format
-jsonl` is the machine-readable form. Each of `--compact`, `--verbose`,
-`--format` and `--output` implies `--trace`; none of these names is used by
-another option.
+the interprocedural story per call; `--verbose` lists every step in a
+Goblint-aligned tracing vocabulary (subsystems and messages of Goblint's
+`--trace` output; the table below records every difference); `--trace-sys SYS[,...]` limits the verbose form to
+those subsystems; `--format jsonl` is the machine-readable form. Each of
+`--compact`, `--verbose`, `--trace-sys`, `--format` and `--output` implies
+`--trace`; none of these names is used by another option.
 
 ```text
 voblint --analysis interval --context entry-state --trace docs/readme-figures/contexts.vimp
 ```
 
-The hooks are inserted at build time: `cli/trace/patch_generated.ml` copies
-the generated `Voblint_CLI.ml` into the build with guarded calls into
-`cli/trace/solver_trace_hook.ml`. Each patch names generated text that must
-occur exactly once (a per-mode patch: once per context mode that uses it), so
-a regeneration that moves one fails the build with the patch's name. Neither
-the Isabelle sources nor the export change, and no hook changes a computed
-value; the tracer is outside the proof like the rest of the CLI. With
-`--trace` off every hook is one branch on a reference.
+### Where the events come from
 
-The solver is polymorphic in its unknowns, so events hold them untyped. The
-patches also define, next to each generated global-unknown datatype
-(`global_unknown`, and `call_string_gk` under call strings), a decoder that
-matches its constructors, and install it where the context mode fixes the
-type. The renderer tells an activation seed from the analysis global through
-that decoder only.
+Tracing is part of the exported code. `Voblint_Solver.Solver_Trace` defines
+`trace_event :: String.literal => (unit => 'e) => unit` as `()` and gives the
+exported solver alternative code equations with `trace_event` calls at its steps:
+`solve` (start and stop of one solve), `solve_rec_c` (query, iterate, one
+evaluation of the right-hand side, each strategy-tree instruction) and
+`destab_opt`/`destab_iter_opt` (destabilization). `Voblint_CLI.Trace_Run` does
+the same for the three routing policies and for `analysis_result`, which hands
+the trace the run's readers for contexts, global unknowns and values before the
+solve. Each equation is proved equal to the vendored or original equation it
+replaces by unfolding `trace_event`, and the originals are removed from code
+export with `[code del]`; the vendored definitions and proofs are untouched. The
+code the CLI and the browser run is therefore the code of proved equations.
+
+`Trace_Run` maps `trace_event` to `Solver_trace_hook.emit` with `code_printing`.
+That mapping is the one trusted addition, of the same kind as the other
+target-language mappings. It forces the suspended event only when tracing is on,
+so an untraced run builds no event. There is no mapping for the Eval target, so
+proofs by evaluation run the logical equation.
+
+Three layers, with different standing:
+
+1. The solver result is the exported computation of proved equations. Tracing
+   adds nothing to it but calls whose logical value is `()`.
+2. The trace is an unverified observation of that computation. It cannot feed
+   back: `emit` returns `()`, swallows every exception its suspension raises,
+   and only appends to its own event list; it never touches solver state. What
+   it could get wrong is the trace, not the result.
+3. The playground's replay and animation are an unverified visualization of the
+   trace.
+
+The solver is generic in its unknowns and values, so the hook keeps events as
+`Obj.t` under their channel (`solver`, `route`, `run`). The one place that casts
+them back is `read_back` in `cli/render/solver_trace.ml`: it types the `run`
+event as `trace_printers` and each other event as `solver_event` or
+`route_event` over `cfg_node * Obj.t` unknowns, and every `Obj.t` inside only
+ever reaches a printer the same run installed. Cast values flow into strings for
+the trace and nowhere else: the renderer runs after `run_voblint` has returned,
+and nothing it computes reaches the solver or the result. A wrong cast can
+therefore only produce wrong or missing trace output (or crash the renderer
+after the result is complete). Route events outside the solve's start and stop
+events are the result being read back and are dropped.
+
+Fallback, should code generation ever drop a unit-valued `let` (checked by
+`test_generated_module_carries_trace_calls`): a traced executable solver that
+returns its result together with its event list, with a proved projection
+`fst (traced_solve ...) = solve ...`, so the trace becomes a value instead of
+an effect.
+
+### Verbose form: a Goblint-aligned tracing vocabulary
+
+The verbose form uses a Goblint-aligned tracing vocabulary: it is not
+Goblint-compatible output, and the table below is the record of where it
+differs. It writes one line per solver event as Goblint's tracing library
+(`src/util/tracing/goblint_tracing.ml`) does: indentation, then
+`%%% <subsystem>: <message>`; a message's continuation lines start at column 0.
+Subsystems and messages follow Goblint's `td_simplified.ml`, the side-effecting
+top-down solver whose `query`/`iterate`/`side`/`destabilize` structure matches the
+vendored solver's `Q`/`I`/`E`/`destab_opt`; `td3.ml` contributes the `sol`
+value report. Checked against the local Goblint checkout at `0dc12d355`
+(`src/solver/td_simplified.ml`, `src/solver/td3.ml`); the registered revision
+`5320a6b7` was not re-checked for these files.
+
+| Voblint event (`solver_event`) | Line | `td_simplified.ml` | `td3.ml` (`sol2` unless noted) |
+| --- | --- | --- | --- |
+| `Ev_Start x` | `multivar: solving for x` | 174 | none |
+| `Ev_Query y x st cl` | `solver_query: entering query for x; stable st; called cl` | 68 | 454 `eval %a ## %a` |
+| `Ev_Query_Wpoint x w` | `wpoint: query adding wpoint x` (unless `w`) | 80 | 468 `eval adding wpoint` |
+| `Ev_Iterate_From_Query x` | `iter: iterate called from query` | 76 | none |
+| `Ev_Add_Infl y x` | `infl: add_infl y x` | 37 | 305 |
+| `Ev_Answer y x d` | `answer: exiting query for x` / `answer: d` | 85 | 473 `eval %a ## %a -> %a` |
+| `Ev_Query_Global x g` | `solver_query: entering query for g` | 68 | 454 |
+| `Ev_Answer_Global x g d` | `answer: exiting query for g` / `answer: d` | 85 | 473 |
+| `Ev_Iterate x cl st wp` | `iter: begin iterate x, called: cl, stable: st, wpoint: wp` | 111 | 351 `solve %a, phase ...` |
+| `Ev_Eq x` | `eq: eq x` | 50 | 430 |
+| `Ev_Still_Unstable x` | `iter: iterate still unstable x` | 137 | 412 |
+| `Ev_Widen x wp` | `wpoint: widen x` (if `wp`) | 122 | none |
+| `Ev_Sol x wp old eqd new` | `sol: Var: x (wp: wp)` / `Old value` / `Eqd` / `New value` | none | 396 (`sol`) |
+| `Ev_Wpoint_Remove x wp` | `wpoint: iterate removing wpoint x` (if `wp`) | 141 | 423 |
+| `Ev_Update x wpx bot old new` | `update: x (wpx: wpx): old -> new` (unless old is ⊥) | 127 | 404 (`solchange`) |
+| `Ev_Iterate_Changed x` | `iter: iterate changed x` | 131 | none |
+| `Ev_Side x g d` | `side: side to g from x; value: d` | 89 | 476 |
+| `Ev_Update_Global x g bot old new` | `update: side to g from x new: new` (unless old is ⊥) | 102 | 498 (`solside`) |
+| `Ev_Destabilize y` | `destab: destabilize y` | 57 | 551 |
+| `Ev_Stable_Remove x` | `destab: stable remove x` | 61 | 555 |
+| `Ev_Stop` | no line | `stop_event`, not a trace | none |
+| `Ev_Rhs x d` | `rhs: x = d` | Voblint only | Voblint only |
+| `Ev_Route (u, c) d c'` | `route: call at (u, c): entry d -> context c'` | Voblint only | Voblint only |
+
+Differences, each deliberate or forced by the vendored solver:
+
+- Indentation. `td_simplified.ml` traces with plain `trace`, which never
+  indents. Voblint indents as if entering a query were a `tracei` and its answer
+  a `traceu`: the entering line is printed, then the level grows by two; the
+  answer is printed at the inner level, then it shrinks. The level is the
+  solver's query depth. As in Goblint, an unselected subsystem prints nothing and
+  changes no indentation.
+- Unknowns print as `(node, context)`, Goblint's `dbg.trace.context` form,
+  without the `on <location>` suffix. A global prints as `Global` or
+  `Seed(procedure, context)`.
+- `update` prints `old -> new` where Goblint prints `pretty_diff`.
+- A query of a global unknown prints no `stable`/`called` flags: the vendored
+  solver keeps neither set for globals. `side` and the global `update` print no
+  `wpx`: globals are merged by the chosen update rule and never become widening
+  points.
+- The vendored solver repeats a right-hand side whose unknown lost stability
+  inside the evaluation (`R`) before comparing values, so `iterate still
+  unstable` is followed by a new `eq`, not by a new `begin iterate`. An
+  iteration entered for a stable unknown also clears its widening point, which
+  `td_simplified.ml` does not; no line reports it.
+- `--trace-sys` stands for Goblint's repeatable `--trace SYS`, which needs a
+  Goblint built in the `trace` profile; `--tracevars` and `--tracelocs` have no
+  counterpart.
+
+Goblint traces with no counterpart here: `init` (the vendored solver's value map
+is total, ⊥ by default), `side widen` and `side adding wpoint` (no widening
+points for globals), and the `td3.ml`-only steps of features the vendored solver
+does not have: widening gas (`widengas`), the narrowing phase (`solve switching
+to narrow`, `eq reused`), widening-point restarts (`wpoint restart`), the side
+and incremental destabilizations (`destabilize_vs`, `destabilize_with_side`,
+`destabilize_leaf`, `Restarting to bot`), weak dependencies (`demand weak
+dep`), the local cache (`cache`), start values (`set_start`), `stable add`,
+the postsolver's `restored var`, and `td3UpdateRule.ml`'s divided side effects.
+
+### Compact form, JSON Lines, playground
+
+The compact form and JSON Lines are read off the same events. The compact form
+keeps its per-call story. JSON Lines schema 2 keeps every schema 1 event and
+field unchanged (`solve`/`resolve` is an iteration of an unstable unknown,
+`query_local`/`value_local` a query and its answer, `query_global` a global's
+answer, `answer` the `rhs` value) and adds the solver's internal steps:
+`start`, `iterate`, `eq`, `stable_add`, `still_unstable`, `widen`, `add_infl`,
+`wpoint_add`, `wpoint_remove`, `destabilize` and `stable_remove`, then one
+`result` record per point and context of the returned result. The added events
+shift the `step` numbers of the schema 1 events.
 
 `tests/solver-trace/` holds the whole compact, verbose and JSON Lines traces of
 the command above; `pixi run solver-trace-check` compares them, and
@@ -157,16 +280,32 @@ the shown run again in `"jsonl"` mode. Share links carry the form as
 `trace=compact` or `trace=verbose`; `trace=1` still opens the compact one. The
 browser module outlives a run, so the adapter sets the hook's switch on every
 call and `Solver_trace_hook.recorded` empties the event list it hands over.
+The page's **Solve replay** section, when opened, solves the shown run again in
+`"jsonl"` mode and steps through the events on its own drawing of the graph
+(`pages/replay.js`). Every state it shows comes from one reducer,
+`reduce(state, event)` in `pages/replay_state.js` (pure, no DOM): the animation,
+the per-step text and the snapshot cache all fold events through it. The
+CLI's compact form keeps no state beyond its per-call story and reads the same
+events with the same meaning.
+
+By default the replay shows values, the active unknown, the solve stack and the
+current query edge. The stable set, the destabilization cascade, widening
+points, influence edges, globals with their contributions, routes and counters
+are overlays the reader turns on.
+
 `pixi run browser-trace-check` runs the wasm build under Node and compares
 each form's trace of the command above with its file in `tests/solver-trace/`,
 whose program name it swaps for `browser.vimp`.
 
-JSON Lines schema 1. The first line is the run header; every solver event
-carries an increasing `step`; check records and an `end` record with counts
-follow. No timestamps, so equal runs give equal traces.
+JSON Lines schema 2. The first line is the run header; every solver event
+carries an increasing `step` and the `line` of the `--verbose` trace of the
+same run that its solver event prints on (an event the verbose form leaves out
+takes the line of the last one it printed); check records and an `end` record
+with counts follow. No timestamps, so equal runs give equal traces. Each step
+below also carries `"line":n` after its `event`.
 
 ```text
-{"event":"run","schema":1,"analysis":[..],"context_policy":..,"update_rule":..,"program":..}
+{"event":"run","schema":2,"analysis":[..],"context_policy":..,"update_rule":..,"program":..}
 {"step":n,"event":"solve"|"resolve","unknown":L}
 {"step":n,"event":"query_local","current":L,"target":L}
 {"step":n,"event":"value_local","current":L,"target":L,"value":V}
@@ -176,6 +315,11 @@ follow. No timestamps, so equal runs give equal traces.
 {"step":n,"event":"update_local","unknown":L,"old":V,"new":V}
 {"step":n,"event":"answer","current":L,"value":V}
 {"step":n,"event":"route","call":L,"entry":V,"context":C}
+{"step":n,"event":"iterate","unknown":L,"called":B,"stable":B,"wpoint":B}
+{"step":n,"event":"start"|"eq"|"stable_add"|"stable_remove"|"still_unstable"|"widen"|"wpoint_add"|"wpoint_remove","unknown":L}
+{"step":n,"event":"add_infl","unknown":L|G,"reader":L}
+{"step":n,"event":"destabilize","unknown":L|G}
+{"event":"result","unknown":L,"value":V}
 {"event":"check","point":..,"condition":..,"verdict":..}
 {"event":"end","local_unknowns":n,"global_unknowns":n}
 
@@ -183,7 +327,49 @@ L = {"kind":"local","node":"pp3"|"entry_f"|"exit_f","context":C}
 G = {"kind":"activation_seed","procedure":f,"context":C} | {"kind":"analysis_global"}
 C = {"kind":"unit"} | {"kind":"entry_state","values":[..]} | {"kind":"call_string","sites":[..]}
 V = the value as the text report prints it, "⊥" for bottom
+B = true | false
 ```
+
+What each event is, and what the reducer does with it:
+
+| Event | Kind | Replay state |
+| --- | --- | --- |
+| `start` | scope enter | the root unknown opens the solve stack |
+| `query_local` | scope enter | the queried unknown is pushed on the stack |
+| `value_local` | scope leave, observation | the queried unknown is popped |
+| `eq` | state transition | one right-hand-side evaluation of the unknown |
+| `stable_add` | state transition | the unknown enters the stable set |
+| `stable_remove` | state transition | the unknown leaves the stable set |
+| `wpoint_add`, `wpoint_remove` | state transition | widening-point membership |
+| `widen` | observation | widening is applied at this step |
+| `add_infl` | relation add | reader -> read unknown |
+| `destabilize` | relation remove | every reader of the unknown is dropped |
+| `update_local`, `update_global` | state transition | the stored value |
+| `iterate`, `solve`, `resolve`, `still_unstable` | observation | none |
+| `query_global`, `side`, `answer`, `route` | observation | the global's read value, its contributions, routes |
+
+The stack is balanced by construction. `query_local` is emitted when the
+solver's `Q` case starts and `value_local` in the continuation `Option.bind`
+runs after `Q`'s recursive call has returned, so every event of the query lies
+between the two. `Q` returns in every branch: a query of an unknown already
+being solved (a widening point, re-entry) returns its current value at once, and
+destabilization never aborts a query. A run that does not terminate emits no
+unmatched `value_local`; it never ends. The stable set changes only through
+`stable_add` (the solver's `R` case inserts the unknown before evaluating it)
+and `stable_remove` (`destab_iter_opt`); the widening points only through
+`wpoint_add` (`Q` of an unknown being solved) and `wpoint_remove` (`I`, whether
+the unknown was unchanged or already stable). `destabilize` is emitted where
+`destab_opt` drops the unknown's influence set with `fmdrop`, so no stale
+edge survives it.
+
+Counters: evaluations(u) counts `eq` of u; updates(u) counts updates whose new
+value differs from the old one; destabilizations(u) counts `stable_remove` of u
+while u was stable.
+
+Versioning: adding event kinds or fields is compatible and bumps nothing when
+existing events keep their meaning. Changing what an existing event means is a
+breaking change even when its JSON shape stays the same, and so is any change of
+replay semantics: both bump `schema`.
 
 `query_global` carries the value the solver held for the global when it was
 read. `side` is the solver's `Side` step, which is where buffered

@@ -37,7 +37,8 @@
 
   <link rel="canonical" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html">
   <link rel="sitemap" type="application/xml" href="sitemap.xml">
-  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/favicon.png">
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
@@ -81,6 +82,7 @@
     src="main.js"
     onerror="voblintPlaygroundFailed('a script could not be downloaded')"
   ></script>
+  <script src="highlight.js" type="module"></script>
 </head>
 
 <body>
@@ -209,19 +211,6 @@
                 >
                 <span id="context-depth-help" class="visually-hidden">
                   Number of recent call sites kept in each context, from 0 to 100.
-                </span>
-              </div>
-
-              <div class="control-group">
-                <label for="trace-select">Solver trace</label>
-                <select id="trace-select" aria-describedby="trace-help">
-                  <option value="off" selected>Off</option>
-                  <option value="compact">Compact: calls</option>
-                  <option value="verbose">Full: every step</option>
-                </select>
-                <span id="trace-help" class="visually-hidden">
-                  Also record what the solver did, shown above the graph: per call, or
-                  every solver step.
                 </span>
               </div>
 
@@ -361,63 +350,6 @@
           <div id="state-inspector-body" class="state-inspector-body"></div>
         </section>
 
-        <details id="solver-globals" class="solver-globals" hidden>
-          <summary>
-            <span class="eyebrow">Entry seeds</span>
-            <span id="solver-globals-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            A call cannot write its callee's entry state directly: the solver side-effects
-            only global unknowns. So each call publishes the entered state into a seed, one
-            per procedure entry per context, and the callee's entry reads it back. Calls
-            routed to the same context meet in its seed, merged by the
-            <strong>Globals</strong> rule. Shown here are the callee's formals and the
-            program's globals; the other locals are reset on entry. These analyses keep
-            declared globals in the per-point state, so the solver's analysis-wide global
-            slot stays unused. Presentation only; no soundness statement reads these rows.
-          </p>
-
-          <ul id="solver-globals-list" class="solver-globals-list"></ul>
-        </details>
-
-        <details id="solver-trace" class="solver-globals solver-trace" hidden>
-          <summary>
-            <span class="eyebrow">Solver trace</span>
-            <span id="solver-trace-count" class="solver-globals-count"></span>
-          </summary>
-
-          <p class="solver-globals-note">
-            The run's solver steps, as <code>voblint --trace</code> prints them. The compact
-            form follows calls: the context each call is routed to, the query of the callee's
-            result, what the callee's entry reads from its seed, each publication into a seed
-            and whether it changed the seed, the restarts that change causes, and what the
-            caller returns, so a program without calls shows little more than its checks. The
-            full form, <code>--verbose</code>, lists every solver step: each unknown solved,
-            each query with the value it returns, each side effect, each update, and each
-            call's routing. The hooks that record the steps change no computed value; the
-            trace is presentation outside the proof.
-          </p>
-
-          <div class="solver-trace-tools">
-            <button id="solver-trace-download" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              Download trace (.txt)
-            </button>
-            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
-              <i class="fa-solid fa-download" aria-hidden="true"></i>
-              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
-            </button>
-          </div>
-
-          <pre id="solver-trace-text" class="solver-trace-text"></pre>
-
-          <p id="solver-trace-cut" class="solver-globals-note" hidden>
-            <span id="solver-trace-cut-label"></span>
-            <button id="solver-trace-all" class="solver-trace-all" type="button">Show all</button>
-          </p>
-        </details>
-
         <details
           id="analysis-graph-panel"
           class="solver-globals analysis-graph-panel"
@@ -477,6 +409,146 @@
           ></div>
         </details>
 
+        <details id="solver-trace" class="solver-globals solver-trace" hidden>
+          <summary>
+            <span class="eyebrow">Solver trace</span>
+            <span id="solver-trace-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            Every solver step of the run, as <code>voblint --trace --verbose</code> prints it,
+            computed by solving the run again when this panel opens: each unknown solved, each
+            query with the value it returns, each side effect, each update, each
+            destabilization and each call's routing, in a Goblint-aligned tracing vocabulary,
+            indented by the solver's query depth. A banner marks where the solver asks for a
+            procedure's result, and ◆ marks a side effect.
+          </p>
+
+          <p class="solver-globals-note">
+            Three layers: the solver result is the exported computation of proved equations,
+            and the trace calls come from code equations proved equal to the untraced ones.
+            The trace is an unverified observation of that computation, recorded by a hook
+            that returns nothing, swallows exceptions and never touches solver state. The
+            replay below is an unverified visualization of the trace.
+          </p>
+
+          <div class="solver-trace-tools">
+            <button id="solver-trace-download" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              Download trace (.txt)
+            </button>
+            <button id="solver-trace-download-jsonl" class="solver-trace-all" type="button">
+              <i class="fa-solid fa-download" aria-hidden="true"></i>
+              <span id="solver-trace-download-jsonl-label">Download JSON Lines (.jsonl)</span>
+            </button>
+          </div>
+
+          <div id="solver-trace-text" class="trace-view solver-trace-view"></div>
+        </details>
+
+        <details id="solve-replay" class="solver-globals solve-replay" hidden>
+          <summary>
+            <span class="eyebrow">Solve replay</span>
+            <span id="solve-replay-count" class="solver-globals-count"></span>
+          </summary>
+
+          <p class="solver-globals-note">
+            Steps through the solve on the control-flow graph, one solver step at a time. The
+            solver starts from the program's exit and queries backward toward the entry. Each
+            node shows the value the solver holds for its point in its context box at that step;
+            every context has its own box, so every unknown has its own node. The global
+            unknowns are the seeds: the circle at the top of each box, which the calls routed
+            to that context publish into and its entry reads.
+          </p>
+
+          <p class="solver-globals-note">
+            The run is solved again with its JSON Lines trace, and one reducer folds those
+            events into every state shown here: an unverified visualization of the trace.
+          </p>
+
+          <p id="solve-replay-message" class="solver-globals-note" hidden></p>
+          <button id="solve-replay-load" class="solver-trace-all" type="button" hidden>Try again</button>
+
+          <div id="solve-replay-body" class="solve-replay-body" hidden>
+            <div class="replay-player" role="group" aria-label="Replay controls">
+              <button id="solve-replay-start" type="button" title="First step (Home)" aria-label="First step">
+                <i class="fa-solid fa-backward-step" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-back" type="button" title="Step back (left arrow)" aria-label="Step back">
+                <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-play" type="button" title="Play (space)" aria-label="Play">
+                <i class="fa-solid fa-play" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-forward" type="button" title="Step forward (right arrow)" aria-label="Step forward">
+                <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+              </button>
+              <button id="solve-replay-end" type="button" title="Last step (End)" aria-label="Last step">
+                <i class="fa-solid fa-forward-step" aria-hidden="true"></i>
+              </button>
+              <input id="solve-replay-slider" type="range" min="0" max="0" value="0" aria-label="Step">
+              <label class="replay-speed">
+                <span>Speed</span>
+                <select id="solve-replay-speed">
+                  <option value="2">2 steps/s</option>
+                  <option value="5" selected>5 steps/s</option>
+                  <option value="15">15 steps/s</option>
+                  <option value="50">50 steps/s</option>
+                  <option value="200">200 steps/s</option>
+                </select>
+              </label>
+              <span id="solve-replay-step" class="replay-step" aria-live="polite"></span>
+            </div>
+
+            <p class="solver-globals-note">
+              Node colors are explained under <a href="#reading">Reading a result</a>.
+            </p>
+
+
+            <div class="replay-layout">
+              <div
+                id="solve-replay-graph"
+                class="analysis-graph replay-graph"
+                tabindex="0"
+                aria-label="Control-flow graph at the current solver step. Left and right arrows step."
+              ></div>
+              <div id="solve-replay-trace" class="trace-view replay-trace-view"></div>
+            </div>
+
+            <div class="replay-below">
+              <section class="replay-card">
+                <h3 class="eyebrow">Solve stack</h3>
+                <p class="solver-globals-note">
+                  The queries open at this step, innermost first: each unknown waits for the
+                  one above it to answer.
+                </p>
+                <ol id="solve-replay-stack" class="replay-stack replay-scroll" aria-label="Open queries, innermost first"></ol>
+              </section>
+              <section class="replay-card">
+                <h3 class="eyebrow">Routes</h3>
+                <p class="solver-globals-note">
+                  Each call the solver evaluated, and the callee context its entry state was
+                  routed to.
+                </p>
+                <ul id="solve-replay-routes" class="replay-routes replay-scroll"></ul>
+              </section>
+              <section class="replay-card">
+                <h3 class="eyebrow">Counters</h3>
+                <p class="solver-globals-note">
+                  Per unknown so far: right-hand-side evaluations, updates that changed its
+                  value, and removals from the stable set.
+                </p>
+                <div class="replay-scroll">
+                  <table class="replay-counters">
+                    <thead><tr><th>unknown</th><th title="evaluations of its right-hand side">eval</th><th title="updates of its value">upd</th><th title="times it was destabilized">destab</th></tr></thead>
+                    <tbody id="solve-replay-counters"></tbody>
+                  </table>
+                </div>
+              </section>
+            </div>
+          </div>
+        </details>
+
       </div>
     </section>
 
@@ -492,7 +564,8 @@
 
       <div class="reading-grid">
         <figure class="scene scene-editor">
-          <pre class="mock-editor" aria-label="Example editor annotations"><span class="ml proved">__voblint_check(i == 5);<span class="mb">✓ PROVED</span></span>
+          <p class="legend-head">Source</p>
+          <pre class="mock-editor" data-lang="vimp" aria-label="Example editor annotations"><span class="ml proved">__voblint_check(i == 5);<span class="mb">✓ PROVED</span></span>
 <span class="ml refuted">__voblint_check(i &lt; 5);<span class="mb">✗ REFUTED</span></span>
 <span class="ml unknown">__voblint_check(a == 2);<span class="mb">? UNKNOWN</span></span>
 <span class="ml warning">share = 10 / (a - 2);<span class="mb">⚠ WARNING</span></span>
@@ -508,11 +581,17 @@
             <div><dt class="lg hint">x: [2,2]</dt><dd>What a statement assigns; <code>→</code> marks callee parameters, <code>↩</code> a return.</dd></div>
             <div><dt class="lg hint">⊔ i: [0,5]</dt><dd>Several paths meet here, so the value includes more than this step.</dd></div>
           </dl>
+          <figcaption>
+            Every check gets a verdict badge, and a statement that assigns or merges values
+            gets a hint with what it leaves behind. Hover a badge for its details; put the
+            cursor on a statement to see its state in every context.
+          </figcaption>
         </figure>
 
         <figure class="scene scene-graph">
+          <p class="legend-head">Control-flow graph</p>
           <svg viewBox="0 0 640 300" role="img"
-            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points and procedure entry or exit; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
+            aria-label="Legend of the control-flow graph: node styles for proved, refuted, unknown, unreachable, plain points, procedure entry or exit and seeds; edge styles for steps, calls, resumes and continuations; one box per procedure and context.">
             <defs>
               <marker id="g-arrow-step" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto">
                 <path class="ga step" d="M0 0 L10 5 L0 10 z"/>
@@ -537,6 +616,8 @@
             <rect class="gn entry" x="16" y="216" width="70" height="26" rx="6"/>
             <rect class="gn entry-inner" x="20" y="220" width="62" height="18" rx="4"/>
             <text x="100" y="234">entry or exit</text>
+            <circle class="gn seed" cx="51" cy="265" r="9"/>
+            <text x="100" y="270">seed: the state calls publish</text>
 
             <text class="legend-head" x="330" y="22">Edges</text>
             <line x1="330" y1="50" x2="400" y2="50" class="ge step" marker-end="url(#g-arrow-step)"/>
@@ -555,7 +636,29 @@
           </svg>
           <figcaption>
             Each (point, context) pair is its own node, so contexts are drawn apart rather than
-            joined. Hover a node to see its full state; drag a node or a whole box to move it.
+            joined. The circle at a procedure's entry is its seed: the solver side-effects only
+            global unknowns, so a call publishes the entered state into the seed of the context
+            it is routed to, and the entry reads it back. Hover a node or a seed to see its
+            state; drag a node or a whole box to move it.
+          </figcaption>
+        </figure>
+
+        <figure class="scene scene-replay">
+          <p class="legend-head">Solve replay</p>
+          <dl class="legend replay-key">
+            <div><dt><span class="replay-swatch r-unseen"></span></dt><dd>Not reached yet.</dd></div>
+            <div><dt><span class="replay-swatch"></span></dt><dd>Evaluated; its value may still be ⊥.</dd></div>
+            <div><dt><span class="replay-swatch r-solving"></span></dt><dd>Being solved: on the solver's call stack.</dd></div>
+            <div><dt><span class="replay-swatch r-current"></span></dt><dd>Solved in this step.</dd></div>
+            <div><dt><span class="replay-swatch r-stable"></span></dt><dd>In the stable set.</dd></div>
+            <div><dt><span class="replay-swatch r-destabilized"></span></dt><dd>Removed from the stable set by the last update: the readers it destabilized.</dd></div>
+            <div><dt><span class="replay-swatch r-wpoint"></span></dt><dd>A widening point.</dd></div>
+            <div><dt><span class="replay-swatch r-edge"></span></dt><dd>The step's query, value or call.</dd></div>
+            <div><dt><span class="replay-swatch r-infl"></span></dt><dd>Influence: the reader re-evaluates when this unknown changes.</dd></div>
+            <div><dt><span class="replay-swatch r-seed"></span></dt><dd>A seed, filled once a call published into it; green when this step changed it.</dd></div>
+          </dl>
+          <figcaption>
+            The replay solves the run again and steps through the solver's events.
           </figcaption>
         </figure>
       </div>

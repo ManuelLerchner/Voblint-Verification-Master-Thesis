@@ -469,6 +469,14 @@
   font-family: Inter, ui-sans-serif, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
+/* A captured figure, such as the solve replay's animation, keeps its own size at most. */
+.scene > img {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  margin-inline: auto;
+}
+
 /* Below the prose column the labels would shrink past reading size, so the figure
    keeps a floor and the frame scrolls, as the timeline axis already does. */
 @media (max-width: 720px) {
@@ -963,11 +971,14 @@
 /* Reading a result                                                           */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * One legend per row, each a heading, its key and a caption, laid out for the full
+ * width: the editor beside its badges, the replay key in two columns.
+ */
 .reading-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
-  align-items: stretch;
   margin-top: 28px;
 }
 
@@ -975,6 +986,35 @@
   display: flex;
   flex-direction: column;
   margin: 0;
+}
+
+@media (min-width: 900px) {
+  .reading-grid .scene-editor {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 32px;
+    align-items: center;
+  }
+
+  .reading-grid .scene-editor .legend {
+    margin: 0;
+  }
+
+  .reading-grid .scene-graph svg {
+    max-width: 640px;
+    margin-inline: 0;
+  }
+
+  .reading-grid .scene-replay .replay-key {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+
+  .reading-grid .legend-head,
+  .reading-grid .scene-editor figcaption,
+  .reading-grid .scene-replay figcaption {
+    grid-column: 1 / -1;
+  }
 }
 
 .mock-editor {
@@ -1140,6 +1180,12 @@
   stroke-dasharray: 5 3;
 }
 
+.gn.seed {
+  fill: var(--warning-soft);
+  stroke: var(--warning);
+  stroke-width: 2;
+}
+
 .gn.entry {
   fill: var(--primary-soft);
   stroke: var(--primary);
@@ -1200,6 +1246,42 @@
   fill: var(--text-muted);
   font: 700 11px var(--mono);
   text-anchor: middle;
+}
+
+.reading-grid .legend-head {
+  margin: 0;
+  color: var(--text-muted);
+  font: 700 11px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+/* A swatch, not a pill: the key shows the node style itself. */
+.replay-key > div {
+  grid-template-columns: 3rem minmax(0, 1fr);
+}
+
+.replay-key dt {
+  display: flex;
+  align-items: center;
+  align-self: center;
+  padding: 0;
+  background: none;
+}
+
+.replay-key .replay-swatch {
+  width: 32px;
+  height: 18px;
+}
+
+.replay-key .replay-swatch.r-seed {
+  width: 16px;
+  height: 16px;
+}
+
+.replay-key .replay-swatch.r-edge,
+.replay-key .replay-swatch.r-infl {
+  height: 0;
 }
 
 @media (max-width: 640px) {

@@ -19,6 +19,7 @@ repeated `Side` writes from destabilising an update rule.
 | `Strategy_Tree_Program.thy` | `strategy_program`, a typed continuation-passing frontend with do-notation: `sp_bind`'s intermediate type need not be the solver carrier `'d`, only the final answer `sp_compile`/`sp_compile_with` encodes does. `sp_lift_tree` embeds an already-built vendor tree by recursing over its constructors directly |
 | `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
 | `TD_Solver_Bridge.thy` | `certified_solver`, the solver contract the pipeline assumes |
+| `Solver_Trace.thy` | `trace_event`, the `solver_event` vocabulary, and alternative code equations for the exported solver (`solve`, `solve_rec_c`, `destab_opt`) that report its steps; each is proved equal to the vendored equation it replaces |
 
 Algorithm correctness lives upstream: `TD.TD_side` proves `partial_correctness`
 and `TD_side_mono`; `part_post_solution` (`TD.Basics_side`) is the certificate

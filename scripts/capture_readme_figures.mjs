@@ -9,6 +9,7 @@
  * editor, inspector and graph of each run into one tight image.
  *
  * Needs `pixi run browser-build` (the wasm analyzer), python3, a Chrome install,
+ * ImageMagick's `magick` for the animated solve-replay figure,
  * and Playwright's core package, which the repository does not depend on. It is
  * installed under the ignored build/ directory, where this script looks for it:
  *
@@ -19,10 +20,11 @@
  */
 
 import { execFileSync } from "node:child_process";
-import { readFileSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync } from "node:fs";
 import { stat } from "node:fs/promises";
 import { createServer } from "node:http";
 import { createRequire } from "node:module";
+import { tmpdir } from "node:os";
 import { dirname, extname, join, normalize } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -319,6 +321,94 @@ const FIGURES = {
     await compose("playground-clamp", [{ image: await shot(page, ".editor-shell"), area: "editor" }], `"editor"`);
   },
 
+  /*
+   * The playground's solve replay, one frame per solver step, as an animated GIF. The
+   * frames are the page's own drawing at each step; ImageMagick joins them.
+   */
+  async "solve-replay"() {
+    const page = await run(
+      programLink("contexts", "--analysis", "interval", "--context", "entry-state"),
+      1180,
+      "contexts.vimp",
+    );
+
+    await page.click("#solve-replay summary");
+    await page.waitForFunction(() => document.querySelector("#solve-replay-graph canvas"), null, {
+      timeout: 60000,
+    });
+    await page.dblclick("#solve-replay-graph", { position: { x: 8, y: 8 } });
+    await page.waitForTimeout(600);
+
+    const steps = Number(await page.$eval("#solve-replay-slider", (slider) => slider.max));
+    const frames = mkdtempSync(join(tmpdir(), "voblint-replay-"));
+    const body = await page.$("#solve-replay-body");
+
+    await body.scrollIntoViewIfNeeded();
+
+    /* The player, the graph and the trace beside it; the cards below stay out. */
+    const clip = await page.evaluate(() => {
+      const top = document.querySelector("#solve-replay-body").getBoundingClientRect();
+      const bottom = document.querySelector(".replay-layout").getBoundingClientRect();
+
+      return { x: top.x, y: top.y, width: top.width, height: bottom.bottom - top.y };
+    });
+
+    for (let step = 0; step <= steps; step++) {
+      await page.$eval(
+        "#solve-replay-slider",
+        (slider, value) => {
+          slider.value = String(value);
+          slider.dispatchEvent(new Event("input"));
+        },
+        step,
+      );
+      await page.screenshot({
+        clip,
+        path: join(frames, `${String(step).padStart(4, "0")}.png`),
+        animations: "disabled",
+        scale: "device",
+      });
+    }
+
+    /*
+     * One small undithered palette for every frame keeps the pixels a step leaves
+     * alone equal, so the GIF stores only what the step changed. The frames are device
+     * pixels; REPLAY_WIDTH (default 1280, about 12 MB) sets the width.
+     */
+    const palette = join(frames, "palette.gif");
+    const width = ["-resize", `${process.env.REPLAY_WIDTH ?? "1280"}x`];
+
+    execFileSync("magick", [
+      join(frames, "*.png"),
+      ...width,
+      "-append",
+      "+dither",
+      "-colors",
+      "32",
+      "-unique-colors",
+      palette,
+    ]);
+    execFileSync("magick", [
+      "-delay",
+      "18",
+      join(frames, "*.png"),
+      "-delay",
+      "300",
+      join(frames, `${String(steps).padStart(4, "0")}.png`),
+      "-loop",
+      "0",
+      ...width,
+      "+dither",
+      "-remap",
+      palette,
+      "-layers",
+      "Optimize",
+      join(OUT, "solve-replay.gif"),
+    ]);
+    rmSync(frames, { recursive: true });
+    await page.close();
+  },
+
   async "playground-division-possible"() {
     const page = await run(programLink("division-possible", "--analysis", "interval"), 1100, "division-possible.vimp");
 
@@ -342,7 +432,7 @@ if (only && !Object.hasOwn(FIGURES, only)) {
   for (const [name, capture] of Object.entries(FIGURES)) {
     if (!only || only === name) {
       await capture();
-      console.log(`captured docs/images/${name}.png`);
+      console.log(`captured ${name} in docs/images`);
     }
   }
 }

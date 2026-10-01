@@ -45,7 +45,8 @@
     content="Voblint: a static analyzer whose soundness is proved in Isabelle/HOL."
   >
   <link rel="sitemap" type="application/xml" href="sitemap.xml">
-  <link rel="icon" type="image/png" href="assets/favicon.png">
+  <link rel="icon" type="image/png" sizes="192x192" href="assets/favicon-192.png">
+  <link rel="icon" type="image/png" sizes="256x256" href="assets/favicon.png">
   <link
     rel="stylesheet"
     href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
@@ -4686,7 +4687,49 @@ fun main() {
           and the <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/tree/main/pages" target="_blank" rel="noreferrer">page and worker</a>.
         </figcaption>
       </figure>
-    
+
+      <div class="prose-block">
+        <h3>Watching the solver work</h3>
+        <p>
+          The playground's <strong>Solver trace</strong> panel, like
+          <code>voblint --trace --verbose</code> on the command line, lists what the solver did:
+          each unknown it solves, each query and the value it returns, each side effect into a
+          seed, each update and the readers it destabilizes, and the context each call is routed
+          to. It writes one line per step in a Goblint-aligned tracing vocabulary, indented by the
+          solver's query depth; the panel colors each line by what the step does and folds a
+          query together with the steps it causes.
+        </p>
+        <p>
+          The solver result is the exported computation of proved equations; its trace calls come
+          from code equations proved equal to the untraced ones. The trace is an unverified
+          observation of that computation, recorded by a hook that returns nothing, swallows
+          exceptions and never touches solver state. The replay is an unverified visualization
+          of the trace.
+        </p>
+        <p>
+          The playground's <strong>Solve replay</strong> section draws the same steps on the
+          graph, with the trace beside it following along. The solver starts at the exit of
+          <code>main</code> and queries backward; each call is routed to a context of its own and
+          publishes its entry state into that context's seed, the circle at the top of the box,
+          and every node fills in with the value the solver holds for it at that step.
+        </p>
+      </div>
+
+      <figure class="scene scene-replay">
+        <img src="assets/solve-replay.gif" width="720" height="440" loading="lazy"
+          alt="The solve replay on the context example: the solver starts at the exit of main, queries backward to its entry, routes each call of bump to its own context, and fills in every node's interval step by step, with the indented trace beside the graph.">
+        <figcaption>
+          The solve replay on the context example, one frame per solver step. Dashed nodes are
+          not reached yet, orange ones are being solved, the thick one is solved now, and dark
+          ones are stable; a seed fills once a call has published into it. Each callee context is
+          first solved while its seed is still ⊥ and once more after the call publishes
+          (<a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/issues/251" target="_blank" rel="noreferrer">#251</a>).
+          The replay folds the run's trace into these states; it visualizes the trace and is
+          outside the proof.
+          <a class="try-link" href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Run it ↗</a>
+        </figcaption>
+      </figure>
+
 
     </section>
 

@@ -74,6 +74,11 @@ export const vimpStreamParser = {
       return "operator";
     }
 
+    /* A name the next bracket applies: a call, or the name a `fun` declares. */
+    if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*(?=\s*\()/)) {
+      return "function";
+    }
+
     if (stream.match(/^[A-Za-z_][A-Za-z0-9_]*/)) {
       return "variableName";
     }

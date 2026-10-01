@@ -15,3 +15,5 @@ session Voblint_Solver in "." = "TD" +
     TD_Solver_Bridge
     (* The global update rule as a value: one solver interpretation for all four. *)
     Globals_Rule
+    (* Alternative code equations that make the exported solver report its steps. *)
+    Solver_Trace

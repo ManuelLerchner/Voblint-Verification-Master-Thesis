@@ -3,7 +3,7 @@ import {
   HighlightStyle,
   StreamLanguage,
   syntaxHighlighting,
-} from "https://esm.sh/@codemirror/language@6.12.4";
+} from "https://esm.sh/@codemirror/language@^6.0.0";
 import {
   EditorState,
   Prec,
@@ -13,7 +13,8 @@ import {
 /*
  * Same semver ranges codemirror@6.0.2 itself imports, so esm.sh resolves them to
  * the one module instance basicSetup uses. A second @codemirror/state instance
- * rejects every extension built from it.
+ * rejects every extension built from it; a second @lezer/highlight instance numbers
+ * its tags on its own, so a style matches the wrong tokens or none.
  */
 import {
   Decoration,
@@ -21,9 +22,11 @@ import {
   keymap,
   WidgetType,
 } from "https://esm.sh/@codemirror/view@^6.0.0";
-import { tags } from "https://esm.sh/@lezer/highlight@1.2.3";
+import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
+import { createSolveReplay } from "./replay.js";
+import { createTraceView } from "./trace-view.js";
 
 function query(selector) {
   const element = document.querySelector(selector);
@@ -80,8 +83,6 @@ const narrowBoundGroup = query("#narrow-bound-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
-const traceSelect = query("#trace-select");
-
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -107,16 +108,8 @@ const graphZoomIn = query("#graph-zoom-in");
 const graphZoomFit = query("#graph-zoom-fit");
 const graphSaveImage = query("#graph-save-image");
 
-const solverGlobals = query("#solver-globals");
-const solverGlobalsCount = query("#solver-globals-count");
-const solverGlobalsList = query("#solver-globals-list");
-
 const solverTrace = query("#solver-trace");
 const solverTraceCount = query("#solver-trace-count");
-const solverTraceText = query("#solver-trace-text");
-const solverTraceCut = query("#solver-trace-cut");
-const solverTraceCutLabel = query("#solver-trace-cut-label");
-const solverTraceAll = query("#solver-trace-all");
 const solverTraceDownload = query("#solver-trace-download");
 const solverTraceDownloadJsonl = query("#solver-trace-download-jsonl");
 const solverTraceDownloadJsonlLabel = query("#solver-trace-download-jsonl-label");
@@ -200,7 +193,11 @@ fun main() {
 /* VIMP syntax highlighting                                                   */
 /* -------------------------------------------------------------------------- */
 
-const vimpLanguage = StreamLanguage.define(vimpStreamParser);
+/* `function` is the tokenizer's own name, not one CodeMirror maps by itself. */
+const vimpLanguage = StreamLanguage.define({
+  ...vimpStreamParser,
+  tokenTable: { function: tags.function(tags.variableName) },
+});
 
 /* Shared by the VIMP editor and the raw JSON views; each language uses its own tags. */
 const codeHighlight = HighlightStyle.define([
@@ -221,6 +218,10 @@ const codeHighlight = HighlightStyle.define([
     tag: tags.comment,
     color: "var(--tok-comment)",
     fontStyle: "italic",
+  },
+  {
+    tag: tags.function(tags.variableName),
+    color: "var(--tok-ctor)",
   },
   {
     tag: tags.standard(tags.variableName),
@@ -1269,14 +1270,13 @@ function inspectCursor(state) {
   }
 }
 
-/* [configuration] and [source] are the run's own; the JSON Lines download solves them again. */
+/* [configuration] and [source] are the run's own; the trace views solve them again. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
-  showSolverGlobals(analysisModel ? result.seeds : null);
-  showSolverTrace(analysisModel ? result.trace : null, configuration, source);
+  offerSolverTrace(analysisModel ? { configuration, source } : null);
 
   const dimmed = analysisModel ? deadLines(analysisModel) : [];
 
@@ -1303,8 +1303,7 @@ function clearAnalysisView() {
   focusedNodeId = null;
   hoveredSpan = null;
 
-  showSolverGlobals(null);
-  showSolverTrace(null);
+  offerSolverTrace(null);
 
   editor.dispatch({ effects: setResultView.of(EMPTY_RESULT_VIEW) });
 
@@ -1787,98 +1786,39 @@ function scrollEditorTo(pos) {
 }
 
 /* -------------------------------------------------------------------------- */
-/* Solver globals                                                             */
-/* -------------------------------------------------------------------------- */
-
-/*
- * One seed per procedure entry per context: the state the calls routed there
- * published, which that entry reads back. A seed that feeds a graph node jumps to it.
- */
-function showSolverGlobals(seeds) {
-  solverGlobalsList.replaceChildren();
-  solverGlobals.hidden = !seeds || seeds.length === 0;
-
-  if (solverGlobals.hidden) {
-    return;
-  }
-
-  const entered = seeds.filter((seed) => seed.reachable).length;
-
-  solverGlobalsCount.textContent = `${seeds.length} seeds \u00b7 ${entered} entered`;
-
-  for (const seed of seeds) {
-    const item = document.createElement("li");
-
-    item.className = seed.reachable ? "solver-global" : "solver-global dead";
-
-    const key = seed.entry ? document.createElement("button") : document.createElement("span");
-
-    key.className = "solver-global-key";
-    key.textContent = seed.key;
-
-    if (seed.entry) {
-      key.type = "button";
-      key.title = "Inspect the procedure entry this seed feeds";
-      key.addEventListener("click", () => {
-        inspectGraphNode(seed.entry);
-        revealGraphNodes([seed.entry]);
-      });
-    }
-
-    item.append(key, seedLines(seed));
-    solverGlobalsList.append(item);
-  }
-}
-
-/* -------------------------------------------------------------------------- */
 /* Solver trace                                                               */
 /* -------------------------------------------------------------------------- */
 
 /*
- * A full trace, or a recursive program under a deep call string, can run to tens of
- * thousands of lines, and laying all of them out at once stalls the page. The panel
- * first lays out only the head; the whole trace is still computed and kept, and
- * "Show all" and the download buttons give all of it.
+ * A run never traces. The text trace, the JSON Lines download and the replay each
+ * solve the shown run again with the trace they need, one at a time; the solver is
+ * deterministic, so every view shows the steps of the run on screen. A request
+ * queued behind a run that a new run or a changed setting retired is dropped.
  */
-const TRACE_PREVIEW_LINES = 400;
+let solveAgainQueue = Promise.resolve();
 
-const TRACE_MODES = new Set(["off", "compact", "verbose"]);
+function solveAgain(configuration, source) {
+  const generation = analysisRunGeneration;
+  const answer = solveAgainQueue.then(() => {
+    if (generation !== analysisRunGeneration) {
+      throw new Error("A new run started.");
+    }
 
-/* The shown trace in full, and the run that produced it. */
+    return runAnalysisInWorker(configuration, source);
+  });
+
+  solveAgainQueue = answer.catch(() => {});
+  return answer;
+}
+
+/* Only the lines on screen are laid out, so even a trace of tens of thousands of lines shows whole. */
+const solverTraceView = createTraceView(query("#solver-trace-text"), { label: "Solver trace" });
+
+/* The finished run the panel offers, the trace shown for it, and the one being loaded. */
+let solverTraceOffered = null;
 let solverTraceContent = "";
 let solverTraceRun = null;
-
-/* The offset just past the first [lines] lines of [text], or its length. */
-function lineBoundary(text, lines) {
-  let offset = 0;
-
-  for (let line = 0; line < lines; line++) {
-    offset = text.indexOf("\n", offset) + 1;
-
-    if (offset === 0) {
-      return text.length;
-    }
-  }
-
-  return offset;
-}
-
-function showSolverTraceHead() {
-  const { lines } = solverTraceRun;
-  const shown = Math.min(TRACE_PREVIEW_LINES, lines);
-
-  solverTraceText.textContent = solverTraceContent.slice(
-    0,
-    lineBoundary(solverTraceContent, shown),
-  );
-  solverTraceCut.hidden = shown >= lines;
-  solverTraceCutLabel.textContent = `Showing the first ${shown} of ${lines} lines.`;
-}
-
-function showSolverTraceAll() {
-  solverTraceText.textContent = solverTraceContent;
-  solverTraceCut.hidden = true;
-}
+let solverTraceLoading = null;
 
 function countLines(text) {
   let lines = text.endsWith("\n") ? 0 : 1;
@@ -1890,25 +1830,62 @@ function countLines(text) {
   return lines;
 }
 
-/* The text of the run's trace mode; null when the run recorded none. */
-function showSolverTrace(trace, configuration, source) {
-  solverTraceContent = typeof trace === "string" ? trace : "";
-  solverTraceRun =
-    solverTraceContent === ""
-      ? null
-      : { configuration, source, lines: countLines(solverTraceContent) };
-  solverTrace.hidden = solverTraceRun === null;
+/* [run] is the finished run's configuration and source; null hides the panel. */
+function offerSolverTrace(run) {
+  solverTraceOffered = run;
+  solverTraceContent = "";
+  solverTraceRun = null;
+  solverTraceLoading = null;
+  solverTraceView.setText("");
+  solverTrace.hidden = run === null;
+  solverTraceCount.textContent = run ? "open to load" : "";
+  loadSolverTrace();
+}
 
-  if (solverTrace.hidden) {
-    solverTraceText.textContent = "";
-    solverTraceCut.hidden = true;
+/* The offered run's full (--verbose) trace, solved when the panel is open. */
+async function loadSolverTrace() {
+  const run = solverTraceOffered;
+
+  if (!run || !solverTrace.open || solverTraceRun?.run === run || solverTraceLoading?.run === run) {
     return;
   }
 
-  const form = configuration.trace === "verbose" ? "full" : "compact";
+  const request = { run };
 
-  solverTraceCount.textContent = `${solverTraceRun.lines} lines · ${form}`;
-  showSolverTraceHead();
+  solverTraceLoading = request;
+  solverTraceCount.textContent = "loading";
+
+  try {
+    const answer = JSON.parse(
+      await solveAgain({ ...run.configuration, trace: "verbose" }, run.source),
+    );
+
+    if (solverTraceLoading !== request) {
+      return;
+    }
+
+    if (typeof answer.trace !== "string" || answer.status !== "ok") {
+      throw new Error(answer.message ?? "the analyzer returned no trace");
+    }
+
+    solverTraceContent = answer.trace;
+    solverTraceRun = { ...request, lines: countLines(answer.trace) };
+    solverTraceCount.textContent = `${solverTraceRun.lines} lines`;
+    solverTraceView.setText(answer.trace);
+  } catch (error) {
+    if (solverTraceLoading === request) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      solverTraceRun = null;
+      solverTraceContent = "";
+      solverTraceView.setText(`The trace could not be produced: ${message}`);
+      solverTraceCount.textContent = "";
+    }
+  } finally {
+    if (solverTraceLoading === request) {
+      solverTraceLoading = null;
+    }
+  }
 }
 
 function downloadBlob(blob, name) {
@@ -1924,20 +1901,16 @@ function downloadSolverTrace() {
   if (solverTraceRun) {
     downloadBlob(
       new Blob([solverTraceContent], { type: "text/plain" }),
-      `voblint-trace-${settingsSlug()}-${solverTraceRun.configuration.trace}.txt`,
+      `voblint-trace-${settingsSlug()}.txt`,
     );
   }
 }
 
-/*
- * The shown run solved again with its JSON Lines trace. The solver is
- * deterministic, so the records are the steps of the run on screen. A new run or
- * a changed setting cancels it like any pending analysis.
- */
+/* The offered run solved again with its JSON Lines trace. */
 async function downloadSolverTraceJsonl() {
-  const shown = solverTraceRun;
+  const shown = solverTraceOffered;
 
-  if (!shown || pendingAnalysis) {
+  if (!shown || solverTraceDownloadJsonl.disabled) {
     return;
   }
 
@@ -1948,21 +1921,21 @@ async function downloadSolverTraceJsonl() {
 
   try {
     const answer = JSON.parse(
-      await runAnalysisInWorker({ ...shown.configuration, trace: "jsonl" }, shown.source),
+      await solveAgain({ ...shown.configuration, trace: "jsonl" }, shown.source),
     );
 
     if (typeof answer.trace !== "string") {
       throw new Error(answer.message ?? "the analyzer returned no trace");
     }
 
-    if (solverTraceRun === shown) {
+    if (solverTraceOffered === shown) {
       downloadBlob(
         new Blob([answer.trace], { type: "application/jsonl" }),
         `voblint-trace-${settingsSlug()}.jsonl`,
       );
     }
   } catch (error) {
-    if (solverTraceRun === shown) {
+    if (solverTraceOffered === shown) {
       const message = error instanceof Error ? error.message : String(error);
 
       showStatus(`The JSON Lines trace could not be produced: ${message}`, "error");
@@ -1972,6 +1945,23 @@ async function downloadSolverTraceJsonl() {
     solverTraceDownloadJsonlLabel.textContent = idle;
   }
 }
+
+/*
+ * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
+ * its graph, from a run solved again with its traces.
+ */
+const solveReplay = createSolveReplay({
+  solve: solveAgain,
+  getGraphLibraries,
+  graphElements,
+  nodeBox,
+  layoutGraph,
+  graphStyle,
+  applyGraphLayout,
+  followRoutesOnDrag,
+  seedId,
+  cssToken,
+});
 
 function inspectGraphNode(id) {
   const node = analysisModel?.nodes.get(id);
@@ -2147,14 +2137,51 @@ function nodeLabelLines(node) {
   ];
 }
 
+/* The size of a node whose label is [lines]. */
+function nodeBox(lines) {
+  const nodeFont = `${NODE_FONT_SIZE}px ${cssToken("--mono")}`;
+  const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
+  const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
+
+  return { width: Math.ceil(width), height: Math.ceil(height) };
+}
+
 /* A node's label names its point and findings; the full state is the hover tooltip. */
+/* The seed node standing for the global unknown a procedure entry reads its state from. */
+const SEED_SIZE = 18;
+
+/*
+ * A seed's label: the formals and globals it holds that say anything, in one line.
+ * [lines] are the section lines the analyzer reports, "interval:" headers with
+ * indented bindings; ⊤ bindings and headers are dropped.
+ */
+function seedLabel(lines) {
+  const said = lines
+    .map((line) => line.trim())
+    .filter((line) => !line.endsWith(":") && line !== "⊤" && !line.endsWith("=⊤"));
+
+  return said.length > 0 ? said.join(", ") : "⊤";
+}
+
+/* The shown graph's seeds by the entry they feed, for their tooltips. */
+let graphSeeds = new Map();
+
+function seedId(entryId) {
+  return `seed-${entryId}`;
+}
+
+/*
+ * Every procedure entry gets its seed: the global unknown the entry reads its state
+ * from and its callers publish theirs into. It sits in the entry's box, a call edge
+ * ends at it, and an edge from it to the entry stands for that read.
+ */
 function graphElements(result) {
-  const mono = cssToken("--mono");
-  const nodeFont = `${NODE_FONT_SIZE}px ${mono}`;
-  const edgeFont = `${EDGE_FONT_SIZE}px ${mono}`;
+  const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
   const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
   const parentOf = new Map();
   const elements = [];
+  const seeded = new Set();
+  const seedOf = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
 
   for (const cluster of result.graph.clusters) {
     elements.push({
@@ -2170,8 +2197,6 @@ function graphElements(result) {
 
   for (const node of nodesById.values()) {
     const lines = nodeLabelLines(node);
-    const width = Math.max(...lines.map((line) => textWidth(line, nodeFont))) + 2 * NODE_PADDING_X;
-    const height = lines.length * NODE_FONT_SIZE * NODE_LINE_HEIGHT + 2 * NODE_PADDING_Y;
     const status = node.status ?? (node.kind === "point" ? "plain" : "boundary");
 
     elements.push({
@@ -2180,11 +2205,35 @@ function graphElements(result) {
         id: node.id,
         parent: parentOf.get(node.id),
         label: lines.join("\n"),
-        width: Math.ceil(width),
-        height: Math.ceil(height),
+        ...nodeBox(lines),
       },
       classes: `point ${status}`,
     });
+
+    if (node.point?.startsWith("entry_")) {
+      const seed = seedOf.get(node.id);
+
+      seeded.add(node.id);
+      elements.push(
+        {
+          group: "nodes",
+          data: {
+            id: seedId(node.id),
+            parent: parentOf.get(node.id),
+            width: SEED_SIZE,
+            height: SEED_SIZE,
+            entry: node.id,
+            label: !seed ? "" : seed.reachable ? seedLabel(seed.lines) : "no call",
+          },
+          classes: seed && !seed.reachable ? "seed unreached" : "seed",
+        },
+        {
+          group: "edges",
+          data: { id: `${seedId(node.id)}-read`, source: seedId(node.id), target: node.id },
+          classes: "seed_read",
+        },
+      );
+    }
   }
 
   result.graph.edges.forEach((edge, index) => {
@@ -2193,13 +2242,15 @@ function graphElements(result) {
     }
 
     const label = edgeLabel(edge);
+    const target =
+      edge.kind === "enter" && seeded.has(edge.target) ? seedId(edge.target) : edge.target;
 
     elements.push({
       group: "edges",
       data: {
         id: `edge-${index}`,
         source: edge.source,
-        target: edge.target,
+        target,
         label,
         labelWidth: textWidth(label, edgeFont),
         /* How far along the edge a label beside its end node is centered. */
@@ -2439,7 +2490,7 @@ async function layoutGraph(elk, elements) {
 
   const local = edges.filter(
     (edge) =>
-      (edge.kind === "intra" || edge.kind === "call_to_return") &&
+      (edge.kind === "intra" || edge.kind === "call_to_return" || edge.kind === "seed_read") &&
       parentOf.get(edge.source) === parentOf.get(edge.target),
   );
   const { back, looping } = loopEdges(
@@ -2593,16 +2644,84 @@ function segmentStyle(points, source, target) {
 }
 
 /*
+ * The route's bend points with its ends following moved endpoints. A route leaves its
+ * source and enters its target along one axis, so the first bend moves with the source
+ * across that axis, and the last with the target: every segment stays horizontal or
+ * vertical, and only the segments at a moved end stretch.
+ */
+function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
+  const moved = points.map((point) => ({ ...point }));
+  const follow = (point, from, delta) => {
+    if (Math.abs(point.x - from.x) < Math.abs(point.y - from.y)) {
+      point.x += delta.x;
+    } else {
+      point.y += delta.y;
+    }
+  };
+
+  follow(moved[0], source, { x: sourceNow.x - source.x, y: sourceNow.y - source.y });
+  follow(moved.at(-1), target, { x: targetNow.x - target.x, y: targetNow.y - target.y });
+  return moved;
+}
+
+/*
+ * A route is stored relative to its endpoints' centers, and each drag event recomputes
+ * the routes of the moved nodes' edges from where both endpoints now are. Endpoints
+ * moved alike, as inside a dragged box, keep the route as it is. Within one box, one
+ * moved endpoint stretches it. A route between boxes runs through bends at both boxes'
+ * ports, which no end bend can follow, so moving either end leaves it behind and the
+ * edge falls back to the plain taxi style. A drag reports every moved node, so this
+ * reads positions rather than the event's target.
+ */
+function followRoutesOnDrag(view) {
+  const offset = (now, then) => ({ x: now.x - then.x, y: now.y - then.y });
+  const still = (delta) => Math.abs(delta.x) < 0.5 && Math.abs(delta.y) < 0.5;
+
+  view.on("drag", "node", (event) => {
+    const moved = event.target.isParent() ? event.target.descendants() : event.target;
+
+    moved.connectedEdges(".routed").forEach((edge) => {
+      const route = edge.scratch("route");
+      const source = edge.source().position();
+      const target = edge.target().position();
+
+      if (!route) {
+        return;
+      }
+
+      const bySource = offset(source, route.source);
+      const byTarget = offset(target, route.target);
+
+      if (still(offset(bySource, byTarget))) {
+        return;
+      }
+
+      const withinBox = edge.source().parent().same(edge.target().parent());
+      const points =
+        withinBox && (still(bySource) || still(byTarget)) && stretchedRoute(route, source, target);
+      const style = points && segmentStyle(points, source, target);
+
+      if (style) {
+        /* The stretched route is the one a later drag of either end starts from. */
+        edge.data(style).scratch("route", { points, source: { ...source }, target: { ...target } });
+      } else {
+        edge.removeClass("routed placed-label");
+      }
+    });
+  });
+}
+
+/*
  * Cytoscape centers an edge label on the edge's midpoint, where a loop's forward and
  * back edges put theirs on top of each other. The inner pass reserves room for each
  * label and places it, so the label keeps that place as an offset from the midpoint.
  */
-function applyGraphLayout({ centers, routes, labels }) {
-  cy.batch(() => {
-    cy.nodes(".point").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
+function applyGraphLayout(view, { centers, routes, labels }) {
+  view.batch(() => {
+    view.nodes(".point, .seed").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
     for (const [id, points] of routes) {
-      const edge = cy.getElementById(id);
+      const edge = view.getElementById(id);
       const style = segmentStyle(
         points,
         centers.get(edge.data("source")),
@@ -2610,14 +2729,21 @@ function applyGraphLayout({ centers, routes, labels }) {
       );
 
       if (style) {
-        edge.addClass("routed").data(style);
+        edge
+          .addClass("routed")
+          .data(style)
+          .scratch("route", {
+            points,
+            source: centers.get(edge.data("source")),
+            target: centers.get(edge.data("target")),
+          });
       }
     }
   });
 
-  cy.batch(() => {
+  view.batch(() => {
     for (const [id, place] of labels) {
-      const edge = cy.getElementById(id);
+      const edge = view.getElementById(id);
       const midpoint = edge.midpoint();
 
       edge
@@ -2695,6 +2821,43 @@ function graphStyle() {
         "underlay-shape": "round-rectangle",
         "transition-property": "underlay-opacity",
         "transition-duration": 300,
+      },
+    },
+    /* A seed: the global unknown an entry reads, drawn as a circle on its call edges. */
+    {
+      selector: "node.seed",
+      style: {
+        shape: "ellipse",
+        width: "data(width)",
+        height: "data(height)",
+        "background-color": cssToken("--warning-soft"),
+        "border-color": cssToken("--warning"),
+        "border-width": 2,
+        "overlay-opacity": 0,
+        label: "data(label)",
+        color: cssToken("--warning"),
+        "font-family": cssToken("--mono"),
+        "font-size": EDGE_FONT_SIZE,
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": 6,
+      },
+    },
+    {
+      selector: "node.seed.unreached",
+      style: {
+        "background-color": cssToken("--surface-muted"),
+        "border-color": cssToken("--text-faint"),
+        "border-style": "dashed",
+      },
+    },
+    {
+      selector: "edge.seed_read",
+      style: {
+        width: 1.4,
+        "line-style": "dotted",
+        "line-color": cssToken("--warning"),
+        "target-arrow-color": cssToken("--warning"),
       },
     },
     {
@@ -3025,6 +3188,21 @@ function placeGraphTooltip(event) {
   graphTooltip.style.top = `${Math.max(4, top)}px`;
 }
 
+/* A seed's tooltip: its global unknown, then the formals and globals it holds. */
+function showSeedTooltip(seed, event) {
+  const title = document.createElement("strong");
+  const body = document.createElement("pre");
+
+  title.textContent = seed.key;
+  body.textContent = !seed.reachable
+    ? "no call enters this context"
+    : seed.lines.join("\n") || "no formals or globals";
+  graphTooltip.replaceChildren(title, body);
+  delete graphTooltip.dataset.node;
+  graphTooltip.hidden = false;
+  placeGraphTooltip(event);
+}
+
 /* A node's tooltip: its point, then its state and findings. */
 function showGraphTooltip(node, event) {
   if (graphTooltip.dataset.node !== node.id) {
@@ -3075,6 +3253,16 @@ function attachGraphInteraction() {
     hideGraphTooltip();
   });
 
+  cy.on("mouseover", "node.seed", (event) => {
+    const seed = graphSeeds.get(event.target.data("entry"));
+
+    if (seed) {
+      showSeedTooltip(seed, event.originalEvent);
+    }
+  });
+  cy.on("mousemove", "node.seed", (event) => placeGraphTooltip(event.originalEvent));
+  cy.on("mouseout", "node.seed", hideGraphTooltip);
+
   cy.on("mouseover", "node.context", () => graph.classList.add("is-over-context"));
   cy.on("mouseout", "node.context", () => graph.classList.remove("is-over-context"));
 
@@ -3091,14 +3279,7 @@ function attachGraphInteraction() {
     hideGraphTooltip();
   });
 
-  cy.on("drag", "node", (event) => {
-    const moved = event.target.isParent() ? event.target.descendants() : event.target;
-
-    moved
-      .connectedEdges(".routed, .placed-label")
-      .filter((edge) => !(moved.contains(edge.source()) && moved.contains(edge.target())))
-      .removeClass("routed placed-label");
-  });
+  followRoutesOnDrag(cy);
 
   cy.on("dragpan pinchzoom scrollzoom", () => {
     graphFitted = false;
@@ -3131,6 +3312,8 @@ async function renderGraph(result, runGeneration) {
     }
 
     const elements = graphElements(result);
+
+    graphSeeds = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
     const layout = await layoutGraph(elk, elements);
 
     if (runGeneration !== analysisRunGeneration) {
@@ -3151,7 +3334,7 @@ async function renderGraph(result, runGeneration) {
       autounselectify: true,
     });
 
-    applyGraphLayout(layout);
+    applyGraphLayout(cy, layout);
     attachGraphInteraction();
     applyGraphSelection();
     fitGraphZoom({ animate: false });
@@ -3299,12 +3482,6 @@ function readConfiguration() {
     throw new Error(`Unknown Int refinement: ${intRefinement}`);
   }
 
-  const trace = traceSelect.value;
-
-  if (!TRACE_MODES.has(trace)) {
-    throw new Error(`Unknown solver trace: ${trace}`);
-  }
-
   return {
     analysis,
     globals,
@@ -3312,7 +3489,6 @@ function readConfiguration() {
     contextDepth,
     narrowBound,
     intRefinement,
-    trace,
   };
 }
 
@@ -3389,6 +3565,7 @@ function failPendingAnalysis(error) {
 }
 
 function clearResults() {
+  solveReplay.clear();
   clearGraph();
   clearTiming();
   clearAnalysisView();
@@ -3521,7 +3698,7 @@ function runAnalysisInWorker(configuration, source) {
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
-        trace: configuration.trace,
+        trace: configuration.trace ?? "off",
         source,
       });
     } catch (error) {
@@ -3546,9 +3723,9 @@ async function run() {
     return;
   }
 
-  /* Only a JSON Lines trace download can be pending here; a new run replaces it. */
+  /* Only a trace for a download or the replay can be pending here; a new run replaces it. */
   if (pendingAnalysis) {
-    retireActiveRun("Trace download cancelled: a new run started.");
+    retireActiveRun("Trace request cancelled: a new run started.");
   }
 
   const runGeneration = ++analysisRunGeneration;
@@ -3621,6 +3798,7 @@ async function run() {
       if (runGeneration === analysisRunGeneration) {
         showStatus(`${configurationLabel(configuration)} · complete`, "ok");
         showDiagnosticsSummary(result);
+        solveReplay.offer({ configuration, source });
       }
     } else {
       /*
@@ -3774,12 +3952,15 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
-  traceSelect,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
 
-solverTraceAll.addEventListener("click", showSolverTraceAll);
+solverTrace.addEventListener("toggle", loadSolverTrace);
+
+/* Cytoscape reports no mouseout when the pointer leaves the graph from a node. */
+graph.addEventListener("mouseleave", hideGraphTooltip);
+
 solverTraceDownload.addEventListener("click", downloadSolverTrace);
 solverTraceDownloadJsonl.addEventListener("click", downloadSolverTraceJsonl);
 
@@ -4166,8 +4347,10 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
-  /* trace=1 is how links named the compact trace before it had a full form. */
-  selectIfOffered(traceSelect, settings.trace === "1" ? "compact" : (settings.trace ?? null));
+  /* A linked trace, in any form older links name, opens the trace panel. */
+  if (settings.trace != null && settings.trace !== "off") {
+    solverTrace.open = true;
+  }
 
   const depth = parseCount(settings.k, MAX_CONTEXT_DEPTH);
 
@@ -4316,7 +4499,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(traceSelect.value !== "off" ? [linkParam("trace", traceSelect.value)] : []),
+    ...(solverTrace.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);
 

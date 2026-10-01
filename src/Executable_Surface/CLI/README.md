@@ -48,6 +48,7 @@ part that really does see all five.
 | `Analysis_Run_Sound.thy` | what a result's check column proves about a run of the program, and the context-free table `mcp_rule_table` |
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `mcp_es_rule_table`, `mcp_cs_rule_table` |
 | `Analysis_Certified.thy` | one soundness statement over every configuration `run_voblint` answers |
+| `Trace_Run.thy` | the solver trace in the exported code: traced code equations for routing and `analysis_result`, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
 
 The soundness statements here are the ones that belong nowhere else: a theorem about
 `run_voblint` cannot live above the theory that defines it, and `run_voblint` is the

@@ -79,6 +79,7 @@ module Generated : sig
   type nat
   val nat_of_integer : Z.t -> nat
   val integer_of_nat : nat -> Z.t
+  type ('a, 'b) sum = Inl of 'a | Inr of 'b
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
     Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp
     | LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
@@ -86,38 +87,61 @@ module Generated : sig
     Or of exp * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
+  type sign
   type call_action = CallEdge of string option * string list * exp list
   type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
   type edge_action = EA_Nop | EA_Assign of string * exp |
     EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
     | EA_Body of string | EA_Ret of exp option * string |
     EA_Check of (nat * nat) * exp
+  type ivl
+  type parity
   type 'a lifted = Bot | Lifted of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type analysis_domain = Sign_Analysis | Interval_Analysis | Parity_Analysis |
     Int_Analysis | Int_Once_Analysis | Int_Never_Analysis | Congruence_Analysis
     | Order_Analysis
+  type congruence
+  type 'a int_dom_ext
   type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
     Seq of com * com | If of exp * com * com | While of exp * com |
     Call of string option * string * exp list | Return of exp option | Restore |
     Unwind
   type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type 'a cfg_ext
+  type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c
+  type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
+    Context_Call_String of cfg_node list
+  type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a
+  type abstract_value
+  type ('a, 'b, 'c, 'd) trace_printers =
+    Trace_Printers of
+      ('a -> abstract_value analysis_context) * ('b -> (cfg_node * 'a) option) *
+        ('c -> ((analysis_domain * abstract_value field_state) list) lifted) *
+        ('c -> ((analysis_domain * abstract_value field_state) list) lifted) *
+        ('d -> ((analysis_domain * abstract_value field_state) list) lifted)
   type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
     Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat
-  type abstract_value
+  type ('a, 'b, 'c) solver_event = Ev_Start of 'a | Ev_Stop |
+    Ev_Query of 'a * 'a * bool * bool | Ev_Query_Wpoint of 'a * bool |
+    Ev_Iterate_From_Query of 'a | Ev_Add_Infl of ('a, 'b) sum * 'a |
+    Ev_Answer of 'a * 'a * 'c | Ev_Query_Global of 'a * 'b |
+    Ev_Answer_Global of 'a * 'b * 'c | Ev_Iterate of 'a * bool * bool * bool |
+    Ev_Eq of 'a | Ev_Rhs of 'a * 'c | Ev_Still_Unstable of 'a |
+    Ev_Widen of 'a * bool | Ev_Sol of 'a * bool * 'c * 'c * 'c |
+    Ev_Wpoint_Remove of 'a * bool | Ev_Wpoint_Clear of 'a * bool |
+    Ev_Update of 'a * bool * bool * 'c * 'c | Ev_Iterate_Changed of 'a |
+    Ev_Side of 'a * 'b * 'c | Ev_Update_Global of 'a * 'b * bool * 'c * 'c |
+    Ev_Destabilize of ('a, 'b) sum | Ev_Stable_Remove of 'a
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type arithmetic_obligation
   type arithmetic_diagnostic
   type result_global_unknown = Global_Shared |
     Global_Seed of string * nat option
-  type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a
   type ('a, 'b) result_global_ext
   type ('a, 'b) result_state_ext
   type 'a result_check_ext
   type 'a call_route_ext
-  type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
-    Context_Call_String of cfg_node list
   type ('a, 'b) run_result_ext
   type 'a analysis_answer = Invalid_Activation | Malformed_Program |
     Analysed of ('a, unit) run_result_ext
@@ -135,6 +159,7 @@ module Generated : sig
   val mk_program :
     (string * unit proc_decl_ext) list ->
       com -> string list -> unit imp_prog_ext
+  val string_of_abstract_value : abstract_value -> string
   val res_diagnostics : ('a, 'b) run_result_ext -> arithmetic_diagnostic list
   val res_contexts : ('a, 'b) run_result_ext -> 'a analysis_context list
   val res_globals : ('a, 'b) run_result_ext -> ('a, unit) result_global_ext list
@@ -4035,6 +4060,8 @@ type 'a cfg_ext =
       (cfg_node * (call_action * (cfg_node * cfg_node))) set * cfg_node *
       (cfg_node * exp) set * 'a;;
 
+type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
+
 type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryL of 'a * ('c -> ('a, 'b, 'c) strategy_tree) |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
@@ -4063,16 +4090,40 @@ type ('a, 'b, 'c, 'd) state_ext =
 
 type location = Local_Location of string | Global_Location of string;;
 
-type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
-  Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
+type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
+  Context_Call_String of cfg_node list;;
 
-type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
+type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a;;
 
 type abstract_value = SignValue of sign | IntervalValue of ivl |
   ParityValue of parity | IntDomValue of unit int_dom_ext |
   IntDomOnceValue of unit int_dom_ext | IntDomNeverValue of unit int_dom_ext |
   CongruenceValue of congruence |
   OrderValue of ((string * string) list) option;;
+
+type ('a, 'b, 'c, 'd) trace_printers =
+  Trace_Printers of
+    ('a -> abstract_value analysis_context) * ('b -> (cfg_node * 'a) option) *
+      ('c -> ((analysis_domain * abstract_value field_state) list) lifted) *
+      ('c -> ((analysis_domain * abstract_value field_state) list) lifted) *
+      ('d -> ((analysis_domain * abstract_value field_state) list) lifted);;
+
+type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
+  Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
+
+type ('a, 'b, 'c) solver_event = Ev_Start of 'a | Ev_Stop |
+  Ev_Query of 'a * 'a * bool * bool | Ev_Query_Wpoint of 'a * bool |
+  Ev_Iterate_From_Query of 'a | Ev_Add_Infl of ('a, 'b) sum * 'a |
+  Ev_Answer of 'a * 'a * 'c | Ev_Query_Global of 'a * 'b |
+  Ev_Answer_Global of 'a * 'b * 'c | Ev_Iterate of 'a * bool * bool * bool |
+  Ev_Eq of 'a | Ev_Rhs of 'a * 'c | Ev_Still_Unstable of 'a |
+  Ev_Widen of 'a * bool | Ev_Sol of 'a * bool * 'c * 'c * 'c |
+  Ev_Wpoint_Remove of 'a * bool | Ev_Wpoint_Clear of 'a * bool |
+  Ev_Update of 'a * bool * bool * 'c * 'c | Ev_Iterate_Changed of 'a |
+  Ev_Side of 'a * 'b * 'c | Ev_Update_Global of 'a * 'b * bool * 'c * 'c |
+  Ev_Destabilize of ('a, 'b) sum | Ev_Stable_Remove of 'a;;
+
+type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
 type 'a call_info_ext =
   Call_info_ext of string option * string * string list * exp list * 'a;;
@@ -4140,8 +4191,6 @@ type arithmetic_diagnostic =
 type result_global_unknown = Global_Shared |
   Global_Seed of string * nat option;;
 
-type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a;;
-
 type ('a, 'b) result_global_ext =
   Result_global_ext of
     result_global_unknown * ((analysis_domain * 'a field_state) list) lifted *
@@ -4159,9 +4208,6 @@ type 'a result_check_ext =
 
 type 'a call_route_ext =
   Call_route_ext of cfg_node * nat * string * nat list * 'a;;
-
-type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
-  Context_Call_String of cfg_node list;;
 
 type ('a, 'b) run_result_ext =
   Run_result_ext of
@@ -10178,12 +10224,15 @@ let rec warrow _A
 
 let rec destab_opt _A _B
   x i s c =
-    destab_iter_opt _A _B (fmlookup_default (equal_sum _A _B) i [] x)
-      (fmdrop (equal_sum _A _B) x i) s c
+    (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Destabilize x) in
+      destab_iter_opt _A _B (fmlookup_default (equal_sum _A _B) i [] x)
+        (fmdrop (equal_sum _A _B) x i) s c)
 and destab_iter_opt _A _B
   x0 i s c = match x0, i, s, c with [], i, s, c -> (i, s)
     | y :: ys, i, s, c ->
-        (let (ia, sa) =
+        (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Stable_Remove y)
+           in
+         let (ia, sa) =
            (if member _A y c then (i, remove _A y s)
              else destab_opt _A _B (Inl y) i (remove _A y s) c)
            in
@@ -10374,98 +10423,188 @@ let rec tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3)
   r t s =
     (match s
       with Q (y, (x, (state, ug_state))) ->
-        bind (if member _A x (called state)
-               then Some (sigma state (Inl x),
-                           (point_update (fun _ -> inserta _A x (point state))
-                              state,
-                             ug_state))
-               else tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                      (I (x, (called_update
-                                (fun _ -> inserta _A x (called state)) state,
-                               ug_state))))
-          (fun (xd, (statea, ug_statea)) ->
-            Some (xd, (infl_update
-                         (fun _ ->
-                           fminsert (equal_sum _A _B) (infl statea) (Inl x) y)
-                         statea,
-                        ug_statea)))
+        (let _ =
+           Solver_trace_hook.emit "solver"
+             (fun _ ->
+               Ev_Query
+                 (y, x, member _A x (stabl state), member _A x (called state)))
+           in
+          bind (if member _A x (called state)
+                 then (let _ =
+                         Solver_trace_hook.emit "solver"
+                           (fun _ ->
+                             Ev_Query_Wpoint (x, member _A x (point state)))
+                         in
+                        Some (sigma state (Inl x),
+                               (point_update
+                                  (fun _ -> inserta _A x (point state)) state,
+                                 ug_state)))
+                 else (let _ =
+                         Solver_trace_hook.emit "solver"
+                           (fun _ -> Ev_Iterate_From_Query x)
+                         in
+                        tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r
+                          t (I (x, (called_update
+                                      (fun _ -> inserta _A x (called state))
+                                      state,
+                                     ug_state)))))
+            (fun (xd, (statea, ug_statea)) ->
+              (let _ =
+                 Solver_trace_hook.emit "solver"
+                   (fun _ -> Ev_Add_Infl (Inl x, y))
+                 in
+               let _ =
+                 Solver_trace_hook.emit "solver" (fun _ -> Ev_Answer (y, x, xd))
+                 in
+                Some (xd, (infl_update
+                             (fun _ ->
+                               fminsert (equal_sum _A _B) (infl statea) (Inl x)
+                                 y)
+                             statea,
+                            ug_statea)))))
       | I (x, (state, ug_state)) ->
-        (if not (member _A x (stabl state))
-          then bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                      (Ra (x, (state, ug_state))))
-                 (fun (d_new, (state1, ug_state1)) ->
-                   (let d_newa =
-                      (if member _A x (point state)
-                        then warrow _C3 (sigma state1 (Inl x)) d_new else d_new)
-                      in
-                     (if eq _C1 (sigma state1 (Inl x)) d_newa
-                       then Some (d_newa,
-                                   (point_update
-                                      (fun _ -> remove _A x (point state1))
-                                      (called_update
-(fun _ -> remove _A x (called state1)) state1),
-                                     ug_state1))
-                       else (let (infl1, stabl1) =
-                               destab_opt _A _B (Inl x) (infl state1)
-                                 (stabl state1) (called state1)
-                               in
-                              tD_side_rule_Interp_solve_rec_c _A _B
-                                (_C1, _C2, _C3) r t
-                                (I (x, (sigma_update
-  (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
-  (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
- ug_state1)))))))
-          else Some (sigma state (Inl x),
-                      (point_update (fun _ -> remove _A x (point state))
-                         (called_update (fun _ -> remove _A x (called state))
-                           state),
-                        ug_state)))
+        (let _ =
+           Solver_trace_hook.emit "solver"
+             (fun _ ->
+               Ev_Iterate
+                 (x, member _A x (called state), member _A x (stabl state),
+                   member _A x (point state)))
+           in
+          (if not (member _A x (stabl state))
+            then bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
+                        (Ra (x, (state, ug_state))))
+                   (fun (d_new, (state1, ug_state1)) ->
+                     (let _ =
+                        Solver_trace_hook.emit "solver"
+                          (fun _ -> Ev_Widen (x, member _A x (point state)))
+                        in
+                      let d_newa =
+                        (if member _A x (point state)
+                          then warrow _C3 (sigma state1 (Inl x)) d_new
+                          else d_new)
+                        in
+                      let _ =
+                        Solver_trace_hook.emit "solver"
+                          (fun _ ->
+                            Ev_Sol
+                              (x, member _A x (point state),
+                                sigma state1 (Inl x), d_new, d_newa))
+                        in
+                       (if eq _C1 (sigma state1 (Inl x)) d_newa
+                         then (let _ =
+                                 Solver_trace_hook.emit "solver"
+                                   (fun _ ->
+                                     Ev_Wpoint_Remove
+                                       (x, member _A x (point state1)))
+                                 in
+                                Some (d_newa,
+                                       (point_update
+  (fun _ -> remove _A x (point state1))
+  (called_update (fun _ -> remove _A x (called state1)) state1),
+ ug_state1)))
+                         else (let _ =
+                                 Solver_trace_hook.emit "solver"
+                                   (fun _ ->
+                                     Ev_Update
+                                       (x, member _A x (point state1),
+ eq _C1 (sigma state1 (Inl x))
+   (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+ sigma state1 (Inl x), d_newa))
+                                 in
+                               let (infl1, stabl1) =
+                                 destab_opt _A _B (Inl x) (infl state1)
+                                   (stabl state1) (called state1)
+                                 in
+                               let _ =
+                                 Solver_trace_hook.emit "solver"
+                                   (fun _ -> Ev_Iterate_Changed x)
+                                 in
+                                tD_side_rule_Interp_solve_rec_c _A _B
+                                  (_C1, _C2, _C3) r t
+                                  (I (x, (sigma_update
+    (fun _ -> fun_upd (equal_sum _A _B) (sigma state1) (Inl x) d_newa)
+    (stabl_update (fun _ -> stabl1) (infl_update (fun _ -> infl1) state1)),
+   ug_state1)))))))
+            else (let _ =
+                    Solver_trace_hook.emit "solver"
+                      (fun _ -> Ev_Wpoint_Clear (x, member _A x (point state)))
+                    in
+                   Some (sigma state (Inl x),
+                          (point_update (fun _ -> remove _A x (point state))
+                             (called_update
+                               (fun _ -> remove _A x (called state)) state),
+                            ug_state)))))
       | Ra (x, (state, ug_state)) ->
-        bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-               (E (x, (t x, ((fun _ ->
-                               bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
-                              (stabl_update
-                                 (fun _ -> inserta _A x (stabl state)) state,
-                                ug_state))))))
-          (fun (xd, (statea, ug_statea)) ->
-            (if member _A x (stabl statea) then Some (xd, (statea, ug_statea))
-              else tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                     (Ra (x, (statea, ug_statea)))))
-      | E (_, (Answer d, (_, (state, ug_state)))) -> Some (d, (state, ug_state))
-      | E (x, (QueryL (y, g), (sides_a_c_c, (state, ug_state)))) ->
+        (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Eq x) in
+          bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
+                 (E (x, (t x, ((fun _ ->
+                                 bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                                (stabl_update
+                                   (fun _ -> inserta _A x (stabl state)) state,
+                                  ug_state))))))
+            (fun (xd, (statea, ug_statea)) ->
+              (if member _A x (stabl statea) then Some (xd, (statea, ug_statea))
+                else (let _ =
+                        Solver_trace_hook.emit "solver"
+                          (fun _ -> Ev_Still_Unstable x)
+                        in
+                       tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
+                         (Ra (x, (statea, ug_statea)))))))
+      | E (x, (Answer d, (_, (state, ug_state)))) ->
+        (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Rhs (x, d)) in
+          Some (d, (state, ug_state)))
+      | E (x, (QueryL (y, g), (sides, (state, ug_state)))) ->
         bind (tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
                (Q (x, (y, (state, ug_state)))))
           (fun (yd, (statea, ug_statea)) ->
             tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-              (E (x, (g yd, (sides_a_c_c, (statea, ug_statea))))))
-      | E (x, (QueryG (y, g), (sides_a_c_c, (state, ug_state)))) ->
-        tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-          (E (x, (g (sigma state (Inr y)),
-                   (sides_a_c_c,
-                     (infl_update
-                        (fun _ ->
-                          fminsert (equal_sum _A _B) (infl state) (Inr y) x)
-                        state,
-                       ug_state)))))
-      | E (x, (Side (y, d, ta), (sides_a_c_c, (state, ug_state)))) ->
-        (let da =
-           sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-             (sides_a_c_c y) d
+              (E (x, (g yd, (sides, (statea, ug_statea))))))
+      | E (x, (QueryG (y, g), (sides, (state, ug_state)))) ->
+        (let _ =
+           Solver_trace_hook.emit "solver" (fun _ -> Ev_Query_Global (x, y)) in
+         let _ =
+           Solver_trace_hook.emit "solver" (fun _ -> Ev_Add_Infl (Inr y, x)) in
+         let _ =
+           Solver_trace_hook.emit "solver"
+             (fun _ -> Ev_Answer_Global (x, y, sigma state (Inr y)))
            in
-         let sides_a_c_ca = fun_upd _B sides_a_c_c y da in
+          tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
+            (E (x, (g (sigma state (Inr y)),
+                     (sides,
+                       (infl_update
+                          (fun _ ->
+                            fminsert (equal_sum _A _B) (infl state) (Inr y) x)
+                          state,
+                         ug_state))))))
+      | E (x, (Side (y, d, ta), (sides, (state, ug_state)))) ->
+        (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Side (x, y, d)) in
+         let da =
+           sup _C2.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+             (sides y) d
+           in
+         let sidesa = fun_upd _B sides y da in
           (match
             update_global_of (_C1, _C2, _C3) _A _B r (sigma state (Inr y)) x y
               da ug_state
             with (None, ug_statea) ->
               tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                (E (x, (ta, (sides_a_c_ca, (state, ug_statea)))))
+                (E (x, (ta, (sidesa, (state, ug_statea)))))
             | (Some db, ug_statea) ->
-              (let (infla, stabla) =
+              (let _ =
+                 Solver_trace_hook.emit "solver"
+                   (fun _ ->
+                     Ev_Update_Global
+                       (x, y,
+                         eq _C1 (sigma state (Inr y))
+                           (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot),
+                         sigma state (Inr y), db))
+                 in
+               let (infla, stabla) =
                  destab_opt _A _B (Inr y) (infl state) (stabl state)
                    (called state)
                  in
                 tD_side_rule_Interp_solve_rec_c _A _B (_C1, _C2, _C3) r t
-                  (E (x, (ta, (sides_a_c_ca,
+                  (E (x, (ta, (sidesa,
                                 (sigma_update
                                    (fun _ ->
                                      fun_upd (equal_sum _A _B) (sigma state)
@@ -10491,13 +10630,27 @@ let rec tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3)
 
 let rec tD_side_rule_Interp_solve _A _B (_C1, _C2, _C3)
   r t x =
-    (match tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3) r t x
-      with None ->
-        failwith "Input not in domain"
-          (fun _ -> tD_side_rule_Interp_solve _A _B (_C1, _C2, _C3) r t x)
-      | Some ra -> ra);;
+    (let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Start x) in
+     let res = tD_side_rule_Interp_solve_c _A _B (_C1, _C2, _C3) r t x in
+     let _ = Solver_trace_hook.emit "solver" (fun _ -> Ev_Stop) in
+      (match res
+        with None ->
+          failwith "Input not in domain"
+            (fun _ -> tD_side_rule_Interp_solve _A _B (_C1, _C2, _C3) r t x)
+        | Some v -> v));;
 
-let rec route_unit u ctx d ca = ();;
+let rec seed_of_global_unknown = function Analysis_Global uu -> None
+                                 | Activation_Seed (n, c) -> Some (n, c);;
+
+let rec seed_of_call_string_gk = function Global -> None
+                                 | Seed (n, c) -> Some (n, c);;
+
+let rec route_unit
+  u ctx d ca =
+    (let c = () in
+     let _ = Solver_trace_hook.emit "route" (fun _ -> Ev_Route ((u, ctx), d, c))
+       in
+      c);;
 
 let rec int_of_char x = comp (fun a -> Int_of_integer a) integer_of_char x;;
 
@@ -10568,87 +10721,110 @@ let rec exec_formals_route _A
 
 let rec mcp_formals_route
   asa g u ctx d ca =
-    Product
-      ((if membera equal_analysis_domain asa Sign_Analysis
-         then exec_formals_route bot_sign g u []
-                (lift_get
-                  (bot_lifted
-                    (semilattice_sup_default_st
-                      bounded_semilattice_sup_bot_sign))
-                  slot1 d)
-                ca
-         else []),
-        Product
-          ((if membera equal_analysis_domain asa Interval_Analysis
-             then exec_formals_route bot_ivl g u []
-                    (lift_get
-                      (bot_lifted
-                        (semilattice_sup_default_st
-                          bounded_semilattice_sup_bot_ivl))
-                      slot2 d)
-                    ca
-             else []),
-            Product
-              ((if membera equal_analysis_domain asa Parity_Analysis
-                 then exec_formals_route bot_parity g u []
-                        (lift_get
-                          (bot_lifted
-                            (semilattice_sup_default_st
-                              bounded_semilattice_sup_bot_parity))
-                          slot3 d)
-                        ca
-                 else []),
-                Product
-                  ((if membera equal_analysis_domain asa Int_Analysis
-                     then exec_formals_route
-                            (bot_int_dom_ext bounded_lattice_unit) g u []
-                            (lift_get
-                              (bot_lifted
-                                (semilattice_sup_default_st
-                                  (bounded_semilattice_sup_bot_int_dom_ext
-                                    bounded_lattice_unit)))
-                              slot4 d)
-                            ca
-                     else []),
-                    Product
-                      ((if membera equal_analysis_domain asa Int_Once_Analysis
-                         then exec_formals_route
-                                (bot_int_dom_ext bounded_lattice_unit) g u []
-                                (lift_get
-                                  (bot_lifted
-                                    (semilattice_sup_default_st
-                                      (bounded_semilattice_sup_bot_int_dom_ext
-bounded_lattice_unit)))
-                                  slot5 d)
-                                ca
-                         else []),
-                        Product
-                          ((if membera equal_analysis_domain asa
-                                 Int_Never_Analysis
-                             then exec_formals_route
-                                    (bot_int_dom_ext bounded_lattice_unit) g u
-                                    [] (lift_get
+    (let c =
+       Product
+         ((if membera equal_analysis_domain asa Sign_Analysis
+            then exec_formals_route bot_sign g u []
+                   (lift_get
+                     (bot_lifted
+                       (semilattice_sup_default_st
+                         bounded_semilattice_sup_bot_sign))
+                     slot1 d)
+                   ca
+            else []),
+           Product
+             ((if membera equal_analysis_domain asa Interval_Analysis
+                then exec_formals_route bot_ivl g u []
+                       (lift_get
+                         (bot_lifted
+                           (semilattice_sup_default_st
+                             bounded_semilattice_sup_bot_ivl))
+                         slot2 d)
+                       ca
+                else []),
+               Product
+                 ((if membera equal_analysis_domain asa Parity_Analysis
+                    then exec_formals_route bot_parity g u []
+                           (lift_get
+                             (bot_lifted
+                               (semilattice_sup_default_st
+                                 bounded_semilattice_sup_bot_parity))
+                             slot3 d)
+                           ca
+                    else []),
+                   Product
+                     ((if membera equal_analysis_domain asa Int_Analysis
+                        then exec_formals_route
+                               (bot_int_dom_ext bounded_lattice_unit) g u []
+                               (lift_get
+                                 (bot_lifted
+                                   (semilattice_sup_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit)))
+                                 slot4 d)
+                               ca
+                        else []),
+                       Product
+                         ((if membera equal_analysis_domain asa
+                                Int_Once_Analysis
+                            then exec_formals_route
+                                   (bot_int_dom_ext bounded_lattice_unit) g u []
+                                   (lift_get
+                                     (bot_lifted
+                                       (semilattice_sup_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                     slot5 d)
+                                   ca
+                            else []),
+                           Product
+                             ((if membera equal_analysis_domain asa
+                                    Int_Never_Analysis
+                                then exec_formals_route
+                                       (bot_int_dom_ext bounded_lattice_unit) g
+                                       u []
+                                       (lift_get
  (bot_lifted
    (semilattice_sup_default_st
      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
  slot6 d)
-                                    ca
-                             else []),
-                            Product
-                              ((if membera equal_analysis_domain asa
-                                     Congruence_Analysis
-                                 then exec_formals_route bot_congruence g u []
-(lift_get
-  (bot_lifted
-    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
-  slot7 d)
-ca
-                                 else []),
-                                (if membera equal_analysis_domain asa
-                                      Order_Analysis
-                                  then [] else []))))))));;
+                                       ca
+                                else []),
+                               Product
+                                 ((if membera equal_analysis_domain asa
+Congruence_Analysis
+                                    then exec_formals_route bot_congruence g u
+   [] (lift_get
+        (bot_lifted
+          (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+        slot7 d)
+   ca
+                                    else []),
+                                   (if membera equal_analysis_domain asa
+ Order_Analysis
+                                     then [] else []))))))))
+       in
+     let _ = Solver_trace_hook.emit "route" (fun _ -> Ev_Route ((u, ctx), d, c))
+       in
+      c);;
 
-let rec cs_route k u ctx d ca = take k (u :: ctx);;
+let rec mcp_trace_printers
+  asa p ctx_view seed_of =
+    (let view =
+       (fun d ->
+         map_lift (mcp_render (activation asa) (program_vars p))
+           (map_lift (mcp_rd (declared_global p))
+             (canonicalize_lift (mcp_emp (activation asa) p) d)))
+       in
+      Trace_Printers
+        (ctx_view, seed_of, (fun d -> view (dg_local d)),
+          (fun d -> view (dg_global d)), view));;
+
+let rec cs_route
+  k u ctx d ca =
+    (let c = take k (u :: ctx) in
+     let _ = Solver_trace_hook.emit "route" (fun _ -> Ev_Route ((u, ctx), d, c))
+       in
+      c);;
 
 let rec mcp_ctx_values asa ctx = maps (fun a -> ctx_values a ctx) asa;;
 
@@ -10947,7 +11123,13 @@ let mcp_root_ctx :
 let rec analysis_result
   asa r x2 p = match asa, r, x2, p with
     asa, r, Ctx_None, p ->
-      (let (t, (shared, (seed_at, (step_at, succ)))) =
+      (let _ =
+         Solver_trace_hook.emit "run"
+           (fun _ ->
+             mcp_trace_printers asa p (fun _ -> Context_Unit)
+               seed_of_global_unknown)
+         in
+       let (t, (shared, (seed_at, (step_at, succ)))) =
          result_with_globals
            ((equal_analysis_product
               (equal_lifted
@@ -11664,7 +11846,15 @@ bounded_semilattice_sup_bot_parity),
           (fun _ -> Key_List []) (fun _ -> Context_Unit) (live_targets succ)
           (mcp_classify (activation asa)) t shared seed_at step_at p)
     | asa, r, Ctx_EntryState, p ->
-        (let (t, (shared, (seed_at, (step_at, succ)))) =
+        (let _ =
+           Solver_trace_hook.emit "run"
+             (fun _ ->
+               mcp_trace_printers asa p
+                 (fun ctx ->
+                   Context_Entry (mcp_ctx_values (activation asa) ctx))
+                 seed_of_global_unknown)
+           in
+         let (t, (shared, (seed_at, (step_at, succ)))) =
            result_with_globals
              ((equal_analysis_product
                 (equal_lifted
@@ -12436,7 +12626,13 @@ bounded_semilattice_sup_bot_parity).semilattice_sup_bounded_semilattice_sup_bot)
             (live_targets succ) (mcp_classify (activation asa)) t shared seed_at
             step_at p)
     | asa, r, Ctx_CallString k, p ->
-        (let (t, (shared, (seed_at, (step_at, succ)))) =
+        (let _ =
+           Solver_trace_hook.emit "run"
+             (fun _ ->
+               mcp_trace_printers asa p (fun a -> Context_Call_String a)
+                 seed_of_call_string_gk)
+           in
+         let (t, (shared, (seed_at, (step_at, succ)))) =
            result_with_globals
              ((equal_analysis_product
                 (equal_lifted

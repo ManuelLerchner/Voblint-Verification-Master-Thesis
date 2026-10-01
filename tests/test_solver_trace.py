@@ -1,12 +1,14 @@
-"""The solver tracer (`voblint --trace`): hooks, option handling, output
-separation, the order of events on the context-sensitive running example, and
-its whole compact, verbose and JSON Lines traces against tests/solver-trace/.
+"""The solver tracer (`voblint --trace`): the trace calls in the exported
+module, option handling, output separation, the order of events on the
+context-sensitive running example, the Goblint-style verbose form, and the whole
+compact, verbose and JSON Lines traces against tests/solver-trace/.
 
 Run after `pixi run cli-build`; a missing executable is a failed prerequisite.
 """
 
 import json
 import os
+import re
 import subprocess
 from pathlib import Path
 
@@ -14,11 +16,6 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = Path(os.environ.get("VOBLINT_BIN", REPO_ROOT / "cli/voblint"))
-PATCHER = Path(
-    os.environ.get(
-        "VOBLINT_PATCHER", REPO_ROOT / "_build/default/cli/patch_generated.exe"
-    )
-)
 GENERATED = REPO_ROOT / "codegen/generated/ml/Voblint_CLI.ml"
 PROGRAM = "docs/readme-figures/contexts.vimp"
 ARGS = ["--analysis", "interval", "--globals", "warrow", "--context", "entry-state"]
@@ -68,7 +65,7 @@ def test_output_file(tmp_path):
     out = tmp_path / "trace.jsonl"
     proc = voblint(*ARGS, "--trace", "--format", "jsonl", "--output", str(out), PROGRAM)
     assert proc.stderr == ""
-    assert out.read_text().startswith('{"event":"run","schema":1')
+    assert out.read_text().startswith('{"event":"run","schema":2')
 
 
 @pytest.mark.parametrize("flag", [["--compact"], ["--verbose"]])
@@ -106,6 +103,93 @@ def test_expected_trace(name, trace_args):
     assert actual == expected.read_text()
 
 
+BOTTOM_PASS = "tests/solver-trace/bottom-pass.vimp"
+
+
+@pytest.mark.parametrize(
+    "name, trace_args",
+    [
+        ("bottom-pass.compact", ["--trace"]),
+        ("bottom-pass.verbose", ["--trace", "--verbose"]),
+    ],
+)
+def test_bottom_pass_trace(name, trace_args):
+    """The whole trace of one call, kept for issue #251: it shows the callee
+    solved with a bottom seed, the seed published, the caller restarted and the
+    callee solved again. Fixing #251 changes these files, which is the point;
+    rewrite them with UPDATE_TRACE_EXPECT=1 and review the diff."""
+    expected = EXPECT_DIR / f"{name}.expected"
+    actual = voblint(*ARGS, *trace_args, BOTTOM_PASS).stderr
+    if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
+        expected.write_text(actual)
+    assert actual == expected.read_text()
+
+
+GOBLINT_LINE = re.compile(r"^( *)%%% (\w+): (.*)$")
+
+
+def verbose_lines(*args):
+    """(indent, subsystem, message) per trace line; a message's continuation
+    lines start at column 0, as Goblint's printtrace writes them."""
+    text = voblint(*args).stderr
+    return [
+        (len(m[1]), m[2], m[3])
+        for m in (GOBLINT_LINE.match(line) for line in text.splitlines())
+        if m
+    ]
+
+
+def test_verbose_is_goblint_trace_format():
+    lines = verbose_lines(*ARGS, "--trace", "--verbose", PROGRAM)
+    assert lines[0] == (0, "multivar", "solving for (exit_main, root)")
+    assert lines[1][1:] == (
+        "iter",
+        "begin iterate (exit_main, root), called: true, stable: false, wpoint: false",
+    )
+    systems = {sys for _, sys, _ in lines}
+    assert {"solver_query", "answer", "iter", "eq", "side", "destab"} <= systems
+
+
+def test_verbose_indents_between_query_and_answer():
+    """Entering a query indents after its line, like Goblint's tracei; the
+    answer is printed at the inner level and outdents, like traceu."""
+    lines = verbose_lines(
+        "--analysis",
+        "interval",
+        "--trace",
+        "--verbose",
+        "docs/readme-figures/while-loop.vimp",
+    )
+    depth = 0
+    for indent, sys, msg in lines:
+        assert indent == depth, (indent, sys, msg)
+        if sys == "solver_query":
+            depth += 2
+        elif sys == "answer":
+            depth -= 2
+    assert depth == 0
+
+
+def test_trace_sys_selects_subsystems():
+    lines = verbose_lines(*ARGS, "--trace-sys", "iter,side", PROGRAM)
+    assert lines and {sys for _, sys, _ in lines} == {"iter", "side"}
+    # An unselected subsystem changes no indentation, as in Goblint.
+    assert {indent for indent, _, _ in lines} == {0}
+
+
+def test_trace_sys_rejects_unknown_subsystem():
+    assert VOBLINT.is_file(), "cli/voblint not built -- run `pixi run cli-build`"
+    proc = subprocess.run(
+        [str(VOBLINT), *ARGS, "--trace-sys", "sol2", PROGRAM],
+        capture_output=True,
+        text=True,
+        cwd=REPO_ROOT,
+        timeout=30,
+    )
+    assert proc.returncode == 1
+    assert "unknown --trace-sys subsystem: sol2" in proc.stderr
+
+
 def test_deterministic():
     runs = [voblint(*ARGS, "--trace", "--format", "jsonl", PROGRAM) for _ in range(2)]
     assert runs[0].stderr == runs[1].stderr
@@ -115,7 +199,7 @@ def test_header_and_steps(events):
     run = events[0]
     assert run == {
         "event": "run",
-        "schema": 1,
+        "schema": 2,
         "analysis": ["interval"],
         "context_policy": "entry-state",
         "update_rule": "warrow",
@@ -179,29 +263,66 @@ def test_compact_names_the_story():
     assert "Trace complete:" in text
 
 
-def test_patch_applies_to_generated_module():
-    assert PATCHER.is_file(), (
-        "patch_generated.exe not built -- run `pixi run cli-build`"
-    )
-    proc = subprocess.run(
-        [str(PATCHER), str(GENERATED)], capture_output=True, text=True, timeout=60
-    )
-    assert proc.returncode == 0, proc.stderr
-    assert proc.stdout.count("Solver_trace_hook.") >= 12
+def test_generated_module_carries_trace_calls():
+    """The trace calls come from the exported code equations: the solver's
+    recursion, the solve, destabilization, routing and the run itself."""
+    text = GENERATED.read_text()
+    assert "Solver_trace_hook.emit" in text
+    solver = text[text.index("let rec tD_side_rule_Interp_solve_rec_c") :]
+    solver = solver[: solver.index(";;")]
+    assert solver.count('Solver_trace_hook.emit "solver"') >= 15
+    for channel in ('"solver"', '"route"', '"run"'):
+        assert f"Solver_trace_hook.emit {channel}" in text
 
 
-def test_patch_fails_loudly_on_missing_anchor(tmp_path):
-    assert PATCHER.is_file(), (
-        "patch_generated.exe not built -- run `pixi run cli-build`"
-    )
-    broken = tmp_path / "Voblint_CLI.ml"
-    broken.write_text(
-        GENERATED.read_text().replace(
-            "E (x, (QueryG (y, g), (sides_a_c_c,", "E (x, (QueryG (y, g), (sides,"
-        )
-    )
-    proc = subprocess.run(
-        [str(PATCHER), str(broken)], capture_output=True, text=True, timeout=60
-    )
-    assert proc.returncode == 2
-    assert 'the anchor for "global query" occurs 0 times' in proc.stderr
+def test_schema2_internal_steps(events):
+    """Queries nest (the replay's stack), every destabilization is followed by
+    its stable removals, and each solve evaluates its right-hand side."""
+    steps = [e for e in events if "step" in e]
+    depth = 0
+    for e in steps:
+        if e["event"] == "query_local":
+            depth += 1
+        elif e["event"] == "value_local":
+            depth -= 1
+        assert depth >= 0
+    assert depth == 0
+    kinds = [e["event"] for e in steps]
+    assert "destabilize" in kinds and "stable_remove" in kinds and "add_infl" in kinds
+    assert kinds.count("eq") >= kinds.count("solve") + kinds.count("resolve")
+    first = kinds.index("iterate")
+    assert kinds[first + 1] == "solve"
+
+
+def test_step_lines_point_into_the_verbose_trace(events):
+    """Every step names the verbose line of the solver event it comes from, so a
+    viewer of the verbose text can show where a step happened."""
+    verbose = voblint(*ARGS, "--trace", "--verbose", PROGRAM).stderr.split("\n")
+    steps = [e for e in events if isinstance(e.get("step"), int)]
+    lines = [step["line"] for step in steps]
+
+    assert lines == sorted(lines)
+    for step in steps:
+        assert verbose[step["line"] - 1].lstrip().startswith("%%% "), step
+
+
+def test_callee_is_solved_once_with_bottom_before_its_seed_is_published():
+    """Pins issue #251. A call site's seed publication is buffered until its
+    right-hand side answers, so each newly entered context is first solved with
+    a ⊥ seed: the exit returns ⊥, the flush changes the seed, the caller
+    restarts and asks again. Fixing #251 changes this test."""
+    lines = voblint(*ARGS, "--trace", PROGRAM).stderr.splitlines()
+    first_query = {}
+    for at, line in enumerate(lines):
+        query = re.match(r"QUERY    (\(.*?\)) asks (\(exit_\w+, .*\))$", line)
+        if query and query.group(2) not in first_query:
+            first_query[query.group(2)] = (at, query.group(1))
+    assert first_query, "the program makes no call"
+
+    for exit_unknown, (at, caller) in first_query.items():
+        procedure, context = re.match(r"\(exit_(\w+), (.*)\)$", exit_unknown).groups()
+        assert lines[at + 2] == f"         {exit_unknown} returns ⊥"
+        assert lines[at + 3].startswith(f"FLUSH    Seed({procedure}, {context}) += ")
+        assert lines[at + 3].endswith("(changed: readers restart)")
+        assert lines[at + 5] == f"RESTART  {caller}"
+        assert lines[at + 7] == f"QUERY    {caller} asks {exit_unknown}"

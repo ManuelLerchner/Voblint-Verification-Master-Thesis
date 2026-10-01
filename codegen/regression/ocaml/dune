@@ -10,7 +10,7 @@
  (name codegen_regression_export)
  (wrapped false)
  (modules Voblint_CLI)
- (libraries str zarith)
+ (libraries voblint_trace_hook str zarith)
  (flags
   (:standard -w -a)))
 
