@@ -369,49 +369,53 @@ function constructorTerm(value) {
   return `(${[tag, ...args].join(" ")})`;
 }
 
+/* One cell of the title's grid, holding [parts]. */
+function callCell(kind, ...parts) {
+  const cell = document.createElement("span");
+
+  cell.className = `raw-call-${kind}`;
+  cell.append(...parts);
+
+  return cell;
+}
+
 /*
  * The panel's title: the call run_voblint received and the outline of its answer --
  * the constructor, then each result field with a list's length in place of the list.
+ * The answer sits under the arguments, the arrow under the function name.
  */
 function renderRawCall(raw) {
   const input = raw?.input;
-  const parts = [callPart("run_voblint", "fn")];
+  const output = raw?.output;
+  const args = input
+    ? [
+        callPart(
+          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+          "arg",
+        ),
+        callPart("p", "program"),
+      ]
+    : [callPart("as rule ctx p", "arg")];
+  let result = [callPart("?", "arg")];
 
-  if (!input) {
-    parts.push(
-      callPart(" as rule ctx p", "arg"),
-      callPart(" \u27f9 ", "arrow"),
-      callPart("?", "arg"),
-    );
-    rawResultCall.replaceChildren(...parts);
-    rawResultCall.title = rawResultCall.textContent;
-    return;
-  }
-
-  parts.push(
-    callPart(
-      ` [${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
-      "arg",
-    ),
-    callPart("p", "program"),
-    callPart(" \u27f9 ", "arrow"),
-  );
-
-  const output = raw.output;
-
-  if (typeof output === "string") {
-    parts.push(callPart(output, "ctor"));
-  } else {
+  if (input && typeof output === "string") {
+    result = [callPart(output, "ctor")];
+  } else if (input) {
     const [tag, record] = Object.entries(output ?? {})[0] ?? ["?", {}];
     const fields = Object.entries(record ?? {}).map(
       ([name, value]) =>
         `${name}: ${Array.isArray(value) ? `[\u2026\u00d7${value.length}]` : "\u2026"}`,
     );
 
-    parts.push(callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields"));
+    result = [callPart(tag, "ctor"), callPart(` {${fields.join(", ")}}`, "fields")];
   }
 
-  rawResultCall.replaceChildren(...parts);
+  rawResultCall.replaceChildren(
+    callCell("head", callPart("run_voblint", "fn")),
+    callCell("body", ...args),
+    callCell("head", callPart("\u27f9", "arrow")),
+    callCell("body", ...result),
+  );
   rawResultCall.title = rawResultCall.textContent;
 }
 

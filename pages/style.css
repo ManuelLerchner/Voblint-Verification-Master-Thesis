@@ -1449,6 +1449,9 @@ kbd {
 
 /* One line: a long answer outline is cut with an ellipsis; the panel holds the whole term. */
 .raw-call {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 2px 0.6em;
   order: 1;
   flex: 1 1 100%;
   min-width: 0;
@@ -1458,6 +1461,14 @@ kbd {
   background: none;
   font-size: 0.72rem;
   overflow-wrap: anywhere;
+}
+
+.raw-call-head {
+  justify-self: end;
+}
+
+.raw-call-body {
+  min-width: 0;
 }
 
 .raw-call-fn {
