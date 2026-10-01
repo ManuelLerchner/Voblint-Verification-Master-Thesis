@@ -2,6 +2,8 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 
+#let _todo(body) = text(fill: vb.unproved)[TODO: #body]
+
 = Tooling and Open-Source Work <ch:tooling>
 
 A formalization of this size needs work around the proof assistant as well as
@@ -189,6 +191,39 @@ were not proposed upstream: renamed constructors and fields, an interface
 theory per solver family that hides generic record field names, the operator
 classes moved out of the update-rule theory, and a build on the HOL-Library
 heap.
+
+== Watching the solve <sec:tracing>
+
+#_todo[Draft skeleton; write once the exported tracer (PR \#246) builds and its
+  gate passes. Until then the tracer paragraph in @sec:pipeline describes the
+  current, patched hooks.]
+
+A post-solution certificate states that the solver's result bounds the
+equations; it does not show how the solver reached it. For explaining a run and
+for debugging an analysis, the order of the solver's steps matters.
+#_todo[one running example: the call of `bump` from @ch:equations, which
+  @tab:eq-trace already shows.]
+
+*Tracing inside the export.* #_todo[`trace_event` is logically `()`; traced code
+  equations are proved equal to the solver's own and replace them for code
+  generation; one `code_printing` entry maps `trace_event` to an OCaml hook that
+  returns unit and raises nothing. State what this adds to the trusted base
+  (@sec:trust-boundary) and that the untraced run executes the same code.]
+
+*Events.* #_todo[the event vocabulary follows Goblint's tracing output and the
+  steps of its top-down solvers; name the subsystems, the deliberate differences
+  and the Goblint events without a counterpart; point to the mapping in the CLI
+  documentation rather than reproducing it.]
+
+*Replay.* #_todo[one reducer over the JSON Lines events rebuilds each step:
+  node values, the solve stack, the stable set, influences and widening points;
+  the playground draws them on the graph. A figure generated from the replay,
+  registered like the other playground figures.]
+
+*What the trace is.* #_todo[three layers in three sentences: the result is
+  proved; the trace is an unverified observation of the run; the replay is an
+  unverified visualization of the trace. Hand off to @ch:equations, where such a
+  trace explains the running example.]
 
 == From sources to the site and the thesis <sec:pipeline>
 
