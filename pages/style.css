@@ -2035,6 +2035,14 @@ button.solver-global-key:hover {
   color: #a7bbc0;
 }
 
+.tr-on {
+  color: #6fcf97;
+}
+
+.tr-off {
+  color: #6c8188;
+}
+
 .tr-value {
   color: #c4a7e7;
 }

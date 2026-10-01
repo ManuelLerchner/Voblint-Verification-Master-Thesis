@@ -129,6 +129,8 @@ const keyTag = tags.propertyName;
 const stepTag = tags.meta;
 const provedTag = tags.inserted;
 const failedTag = tags.deleted;
+const onTag = tags.bool;
+const offTag = tags.atom;
 
 const traceParser = {
   name: "voblint-trace",
@@ -166,6 +168,19 @@ const traceParser = {
       return state.event === "sol" || state.event === "stored" ? state.event : "key";
     }
 
+    /* The solver's flags on an unknown: a set one stands out, a clear one recedes. */
+    if (stream.match(/^(?:called|stable|wpoint|wpx|wp)(?=:? (?:true|false)\b)/)) {
+      return "key";
+    }
+
+    if (stream.match(/^true\b/)) {
+      return "on";
+    }
+
+    if (stream.match(/^false\b/)) {
+      return "off";
+    }
+
     if (stream.match(/^(?:PROVED|DEAD)\b/)) {
       return "proved";
     }
@@ -196,6 +211,8 @@ const traceParser = {
     step: stepTag,
     proved: provedTag,
     failed: failedTag,
+    on: onTag,
+    off: offTag,
   },
 };
 
@@ -207,6 +224,8 @@ const traceHighlight = HighlightStyle.define([
   { tag: stepTag, class: "tr-step" },
   { tag: provedTag, class: "tr-proved" },
   { tag: failedTag, class: "tr-failed" },
+  { tag: onTag, class: "tr-on" },
+  { tag: offTag, class: "tr-off" },
 ]);
 
 /* ---------------------------------------------------------------- folding */
