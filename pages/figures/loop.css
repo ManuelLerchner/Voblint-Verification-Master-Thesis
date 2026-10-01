@@ -113,6 +113,20 @@
   transform: scaleX(0.2083);
 }
 
+/* Steps 1 and 2 are not stored values: the equation's result, and the step plain
+   iteration would take. Outlined so they do not read as the solver's state. */
+.scene-loop:is([data-step="1"], [data-step="2"]) .loop-bar {
+  fill: transparent;
+  stroke: var(--primary);
+  stroke-width: 2px;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+
+:where(.scene-loop) .loop-chips button.ghost {
+  border-style: dashed;
+}
+
 .scene-loop[data-step="3"] .loop-bar {
   transform: scaleX(1);
   fill: var(--accent);

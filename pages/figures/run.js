@@ -6,7 +6,9 @@
    */
   const FRAME_MAIN = "Frame {x = ?} x";
   const FRAME_S2 = "Frame {n = 2, m = 0, r = 0} m";
+  const FRAME_S2b = "Frame {n = 2, m = 1, r = 0} r";
   const FRAME_S1 = "Frame {n = 1, m = 0, r = 0} m";
+  const FRAME_S1b = "Frame {n = 1, m = 0, r = 0} r";
   const RET_MAIN = "(pp10, x, {x = ?})";
   const RET_S2 = "(pp6, m, {n = 2, m = 0, r = 0})";
   const RET_S2b = "(pp7, r, {n = 2, m = 1, r = 0})";
@@ -112,7 +114,7 @@
         false,
         [],
       ),
-      text: "**Source**: a second `Call`, this time binding `2` to `dec`'s `x`, so the frame stack is three deep. **CFG**: the call edge to `entry_dec` and `dec`'s body edge, with `pp6` pushed. **Trace**: a `Call` nested inside the one for `sum(2)`.",
+      text: "**Source**: a second `Call`, this time binding `2` to `dec`'s `x`, so the frame stack is two deep. **CFG**: the call edge to `entry_dec` and `dec`'s body edge, with `pp6` pushed. **Trace**: a new `Call` activation whose caller is the frozen `sum(2)` trace.",
     },
     {
       entry: "x = 2",
@@ -120,11 +122,11 @@
       edges: ["ret_dec"],
       node: "exit_dec",
       store: "x = 2",
-      residual: ["Restore", "r = sum(m)", "return r + n", "Restore", CHECK],
+      residual: ["Unwind", "Restore", "r = sum(m)", "return r + n", "Restore", CHECK],
       frames: [FRAME_S2, FRAME_MAIN],
       rets: [RET_S2, RET_MAIN],
       callers: ["sum(2)", "main"],
-      rules: { source: "Return", graph: "Intra return x - 1", trace: "intra" },
+      rules: { source: "ReturnSome", graph: "Intra return x - 1", trace: "intra" },
       tree: act(
         "main",
         "Root",
@@ -140,7 +142,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Return` leaves `Restore` at the head of the program. **CFG**: the `return x - 1` edge lands on `exit_dec`. **Trace**: the innermost activation's path now ends at its exit. Nothing has popped on any side yet.",
+      text: "**Source**: `ReturnSome` stores the result and leaves `Unwind` at the head, with `Restore` behind it. **CFG**: the `return x - 1` edge lands on `exit_dec`. **Trace**: the innermost activation's path now ends at its exit. Nothing has popped on any side yet.",
     },
     {
       entry: "n = 2, m = 0, r = 0",
@@ -152,7 +154,7 @@
       frames: [FRAME_MAIN],
       rets: [RET_MAIN],
       callers: ["main"],
-      rules: { source: "Restore", graph: "Resume m := dec(n)", trace: "resume" },
+      rules: { source: "UnwindAct", graph: "Resume m := dec(n)", trace: "resume" },
       tree: act(
         "main",
         "Root",
@@ -163,7 +165,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Restore` pops the frame and writes `1` into `m`. **CFG**: the resume edge back to `pp6`, popping the return point. **Trace**: `dec(2)` is finished and kept inside a `Resume`. This is the pop the recursion has not reached yet.",
+      text: "**Source**: `UnwindAct` pops the frame and writes `1` into `m`. **CFG**: the resume edge back to `pp6`, popping the return point. **Trace**: `dec(2)` is finished and kept inside a `Resume`. This is the pop the recursion has not reached yet.",
     },
     {
       entry: "n = 1, m = 0, r = 0",
@@ -181,7 +183,7 @@
         "Restore",
         CHECK,
       ],
-      frames: [FRAME_S2, FRAME_MAIN],
+      frames: [FRAME_S2b, FRAME_MAIN],
       rets: [RET_S2b, RET_MAIN],
       callers: ["sum(2)", "main"],
       rules: { source: "Call", graph: "Call, Intra body(sum)", trace: "call, intra" },
@@ -200,7 +202,7 @@
         false,
         [],
       ),
-      text: "**Source**: the recursive `Call`, binding `1` to a fresh `n`. **CFG**: the call edge into `entry_sum` again, the very same node as the first activation. **Trace**: a `Call` nested inside the `Resume`, so the finished `dec(2)` is still there beneath it.",
+      text: "**Source**: the recursive `Call`, binding `1` to a fresh `n`. **CFG**: the call edge into `entry_sum` again, the very same node as the first activation. **Trace**: a new `Call` whose caller is `sum(2)`'s `Resume`, so the finished `dec(2)` is still reachable from it.",
     },
     {
       entry: "n = 1, m = 0, r = 0",
@@ -217,7 +219,7 @@
         "Restore",
         CHECK,
       ],
-      frames: [FRAME_S2, FRAME_MAIN],
+      frames: [FRAME_S2b, FRAME_MAIN],
       rets: [RET_S2b, RET_MAIN],
       callers: ["sum(2)", "main"],
       rules: { source: "IfFalse", graph: "Intra ¬ n < 1", trace: "intra" },
@@ -245,6 +247,7 @@
       node: "exit_dec",
       store: "x = 1",
       residual: [
+        "Unwind",
         "Restore",
         "r = sum(m)",
         "return r + n",
@@ -253,13 +256,13 @@
         "Restore",
         CHECK,
       ],
-      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      frames: [FRAME_S1, FRAME_S2b, FRAME_MAIN],
       rets: [RET_S1, RET_S2b, RET_MAIN],
       callers: ["sum(1)", "sum(2)", "main"],
       rules: {
-        source: "Call, Return",
+        source: "Call, ReturnSome",
         graph: "Call, Intra body(dec), Intra return",
-        trace: "call, intra",
+        trace: "call, intra, intra",
       },
       tree: act(
         "main",
@@ -292,10 +295,10 @@
       node: "pp6",
       store: "n = 1, m = 0, r = 0",
       residual: ["r = sum(m)", "return r + n", "Restore", "return r + n", "Restore", CHECK],
-      frames: [FRAME_S2, FRAME_MAIN],
+      frames: [FRAME_S2b, FRAME_MAIN],
       rets: [RET_S2b, RET_MAIN],
       callers: ["sum(2)", "main"],
-      rules: { source: "Restore", graph: "Resume m := dec(n)", trace: "resume" },
+      rules: { source: "UnwindAct", graph: "Resume m := dec(n)", trace: "resume" },
       tree: act(
         "main",
         "Root",
@@ -313,7 +316,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Restore` writes `0` into `m` and pops. **CFG**: the resume edge to `pp6`. **Trace**: the second `dec` closes into a `Resume`. Push, pop, push again: a run is not a stack that only grows.",
+      text: "**Source**: `UnwindAct` writes `0` into `m` and pops. **CFG**: the resume edge to `pp6`. **Trace**: the second `dec` closes into a `Resume`. Push, pop, push again: a run is not a stack that only grows.",
     },
     {
       entry: "n = 0, m = 0, r = 0",
@@ -321,8 +324,19 @@
       edges: ["call_sum", "body_sum"],
       node: "pp2",
       store: "n = 0, m = 0, r = 0",
-      residual: ["if (n < 1) …", "return r + n", "Restore", "return r + n", "Restore", CHECK],
-      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      residual: [
+        "if (n < 1) …",
+        "m = dec(n)",
+        "r = sum(m)",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        "return r + n",
+        "Restore",
+        CHECK,
+      ],
+      frames: [FRAME_S1b, FRAME_S2b, FRAME_MAIN],
       rets: [RET_S1b, RET_S2b, RET_MAIN],
       callers: ["sum(1)", "sum(2)", "main"],
       rules: { source: "Call", graph: "Call, Intra body(sum)", trace: "call, intra" },
@@ -348,7 +362,7 @@
         false,
         [],
       ),
-      text: "**Source**: the third `Call` of `sum`, with `n` bound to `0`. **CFG**: the same `entry_sum` and the same body edge as the other two. **Trace**: `Call (Call (Root …) …) …`. The nesting lives in the trace, not in the graph.",
+      text: "**Source**: the third `Call` of `sum`, with `n` bound to `0`. **CFG**: the same `entry_sum` and the same body edge as the other two. **Trace**: `Call (Resume (Resume (Call (Root …) …) …) …) …`: the new activation's caller is `sum(1)`, which already holds the finished `dec(1)`. The nesting lives in the trace, not in the graph.",
     },
     {
       entry: "n = 0, m = 0, r = 0",
@@ -356,19 +370,15 @@
       edges: ["lt", "ret0"],
       node: "exit_sum",
       store: "n = 0, m = 0, r = 0",
-      residual: [
-        "return 0",
-        "Restore",
-        "return r + n",
-        "Restore",
-        "return r + n",
-        "Restore",
-        CHECK,
-      ],
-      frames: [FRAME_S1, FRAME_S2, FRAME_MAIN],
+      residual: ["Unwind", "Restore", "return r + n", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S1b, FRAME_S2b, FRAME_MAIN],
       rets: [RET_S1b, RET_S2b, RET_MAIN],
       callers: ["sum(1)", "sum(2)", "main"],
-      rules: { source: "IfTrue, Return", graph: "Intra n < 1, Intra return 0", trace: "intra" },
+      rules: {
+        source: "IfTrue, ReturnSome, UnwindDead",
+        graph: "Intra n < 1, Intra return 0",
+        trace: "intra",
+      },
       tree: act(
         "main",
         "Root",
@@ -391,7 +401,7 @@
         false,
         [],
       ),
-      text: "**Source**: `IfTrue` this time, and `Return` hands back `0`. **CFG**: the `n < 1` edge to `pp3` and the `return 0` edge to `exit_sum`. **Trace**: this activation's path ends at the exit and the recursion stops growing.",
+      text: "**Source**: `IfTrue` this time, `ReturnSome` hands back `0`, and `UnwindDead` discards the rest of the body. **CFG**: the `n < 1` edge to `pp3` and the `return 0` edge to `exit_sum`. **Trace**: this activation's path ends at the exit and the recursion stops growing.",
     },
     {
       entry: "n = 1, m = 0, r = 0",
@@ -400,10 +410,10 @@
       node: "pp7",
       store: "n = 1, m = 0, r = 0",
       residual: ["return r + n", "Restore", "return r + n", "Restore", CHECK],
-      frames: [FRAME_S2, FRAME_MAIN],
+      frames: [FRAME_S2b, FRAME_MAIN],
       rets: [RET_S2b, RET_MAIN],
       callers: ["sum(2)", "main"],
-      rules: { source: "Restore", graph: "Resume r := sum(m)", trace: "resume" },
+      rules: { source: "UnwindAct", graph: "Resume r := sum(m)", trace: "resume" },
       tree: act(
         "main",
         "Root",
@@ -422,7 +432,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Restore` writes `0` into `r` and pops a frame. **CFG**: the resume edge to `pp7`. **Trace**: `sum(0)` is retained, finished, inside a `Resume`.",
+      text: "**Source**: `UnwindAct` writes `0` into `r` and pops a frame. **CFG**: the resume edge to `pp7`. **Trace**: `sum(0)` is retained, finished, inside a `Resume`.",
     },
     {
       entry: "n = 1, m = 0, r = 0",
@@ -430,11 +440,11 @@
       edges: ["retn"],
       node: "exit_sum",
       store: "n = 1, m = 0, r = 0",
-      residual: ["return r + n", "Restore", "return r + n", "Restore", CHECK],
-      frames: [FRAME_S2, FRAME_MAIN],
+      residual: ["Unwind", "Restore", "return r + n", "Restore", CHECK],
+      frames: [FRAME_S2b, FRAME_MAIN],
       rets: [RET_S2b, RET_MAIN],
       callers: ["sum(2)", "main"],
-      rules: { source: "Return", graph: "Intra return r + n", trace: "intra" },
+      rules: { source: "ReturnSome", graph: "Intra return r + n", trace: "intra" },
       tree: act(
         "main",
         "Root",
@@ -460,7 +470,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Return` evaluates `r + n` to `1`. **CFG**: the `return r + n` edge to `exit_sum`, the same exit all three activations use. **Trace**: the path of `sum(1)` now ends there too.",
+      text: "**Source**: `ReturnSome` evaluates `r + n` to `1`. **CFG**: the `return r + n` edge to `exit_sum`, the same exit all three activations use. **Trace**: the path of `sum(1)` now ends there too.",
     },
     {
       entry: "n = 2, m = 0, r = 0",
@@ -472,7 +482,7 @@
       frames: [FRAME_MAIN],
       rets: [RET_MAIN],
       callers: ["main"],
-      rules: { source: "Restore", graph: "Resume r := sum(m)", trace: "resume" },
+      rules: { source: "UnwindAct", graph: "Resume r := sum(m)", trace: "resume" },
       tree: act(
         "main",
         "Root",
@@ -494,7 +504,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Restore` writes `1` into `r` in `sum(2)` and pops. **CFG**: the resume edge to `pp7`. **Trace**: `sum(1)` closes into a `Resume`, carrying `sum(0)` inside it.",
+      text: "**Source**: `UnwindAct` writes `1` into `r` in `sum(2)` and pops. **CFG**: the resume edge to `pp7`. **Trace**: `sum(1)` closes into a `Resume`, carrying `sum(0)` inside it.",
     },
     {
       entry: "n = 2, m = 0, r = 0",
@@ -502,11 +512,11 @@
       edges: ["retn"],
       node: "exit_sum",
       store: "n = 2, m = 1, r = 1",
-      residual: ["return r + n", "Restore", CHECK],
+      residual: ["Unwind", "Restore", CHECK],
       frames: [FRAME_MAIN],
       rets: [RET_MAIN],
       callers: ["main"],
-      rules: { source: "Return", graph: "Intra return r + n", trace: "intra" },
+      rules: { source: "ReturnSome", graph: "Intra return r + n", trace: "intra" },
       tree: act(
         "main",
         "Root",
@@ -535,7 +545,7 @@
         false,
         [],
       ),
-      text: "**Source**: `Return` evaluates `r + n` to `3`. **CFG**: the `return r + n` edge to `exit_sum`. **Trace**: the outermost `sum` activation reaches its exit.",
+      text: "**Source**: `ReturnSome` evaluates `r + n` to `3`. **CFG**: the `return r + n` edge to `exit_sum`. **Trace**: the outermost `sum` activation reaches its exit.",
     },
     {
       entry: "x = ?",
@@ -547,7 +557,7 @@
       frames: [],
       rets: [],
       callers: [],
-      rules: { source: "Restore", graph: "Resume x := sum(2)", trace: "resume" },
+      rules: { source: "UnwindAct", graph: "Resume x := sum(2)", trace: "resume" },
       tree: act("main", "Resume", ["entry_main", "pp9", "pp10"], null, false, [
         act("sum(2)", "Resume", ["entry_sum", "pp2", "pp5", "pp6", "pp7", "exit_sum"], null, true, [
           act("dec(2)", "Call", ["entry_dec", "pp0", "exit_dec"], null, true, []),
@@ -564,7 +574,7 @@
           ),
         ]),
       ]),
-      text: "**Source**: the last `Restore` pops the final frame and writes `3` into `x`. **CFG**: the resume edge to `pp10`. **Trace**: the whole call tree survives inside the root's `Resume`, and every stack is empty again.",
+      text: "**Source**: the last `UnwindAct` pops the final frame and writes `3` into `x`. **CFG**: the resume edge to `pp10`. **Trace**: the whole call tree survives inside the root's `Resume`, and every stack is empty again.",
     },
     {
       entry: "x = ?",
