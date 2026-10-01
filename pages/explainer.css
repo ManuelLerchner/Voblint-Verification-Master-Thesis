@@ -971,11 +971,14 @@
 /* Reading a result                                                           */
 /* -------------------------------------------------------------------------- */
 
+/*
+ * One legend per row, each laid out for the full width: the editor beside its badges,
+ * the graph legend beside its caption, the replay key in two columns.
+ */
 .reading-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 520px), 1fr));
+  grid-template-columns: minmax(0, 1fr);
   gap: 20px;
-  align-items: stretch;
   margin-top: 28px;
 }
 
@@ -983,6 +986,35 @@
   display: flex;
   flex-direction: column;
   margin: 0;
+}
+
+@media (min-width: 900px) {
+  .reading-grid .scene-editor,
+  .reading-grid .scene-graph {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 12px 32px;
+    align-items: center;
+  }
+
+  .reading-grid .scene-editor .legend,
+  .reading-grid .scene-graph figcaption {
+    margin: 0;
+  }
+
+  .reading-grid .scene-graph svg {
+    max-width: 640px;
+  }
+
+  .reading-grid .scene-replay .replay-key {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 32px;
+  }
+
+  .reading-grid .scene-replay .legend-head,
+  .reading-grid .scene-replay figcaption {
+    grid-column: 1 / -1;
+  }
 }
 
 .mock-editor {
@@ -1225,6 +1257,10 @@
 }
 
 /* A swatch, not a pill: the key shows the node style itself. */
+.replay-key > div {
+  grid-template-columns: 3rem minmax(0, 1fr);
+}
+
 .replay-key dt {
   display: flex;
   align-items: center;

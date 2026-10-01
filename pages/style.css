@@ -1762,6 +1762,10 @@ button.solver-global-key:hover {
 }
 
 @media (max-width: 960px) {
+  .replay-below {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
   .replay-layout {
     grid-template-columns: minmax(0, 1fr);
     grid-template-rows: clamp(380px, 64vh, 760px) 360px;
@@ -1776,7 +1780,7 @@ button.solver-global-key:hover {
  */
 .replay-below {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(min(100%, 300px), 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 14px 20px;
   margin-top: 14px;
 }

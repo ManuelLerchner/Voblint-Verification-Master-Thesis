@@ -587,7 +587,7 @@ export function createSolveReplay(deps) {
         head.className = "replay-route";
         head.textContent = `${point} (${callContext}) → context ${context}`;
         detailText.className = "replay-global-detail";
-        detailText.textContent = `entry ${entry}`;
+        detailText.textContent = `entry ${compactValue(entry)}`;
         row.append(head, detailText);
         return row;
       }),
