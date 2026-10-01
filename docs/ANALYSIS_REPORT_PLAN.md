@@ -13,13 +13,21 @@ facts carry the whole guarantee:
 | --- | --- | --- |
 | `analysis_report_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
 | `analysis_report_checks_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
-| `analysis_report_dead_iff` | `dead(res, v) ⟷ ⟦res⟧ᵥ = ∅` | the report alone |
+| `analysis_report_dead` | `dead(res, v) ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
 
 `PROVED` and `REFUTED` constrain the stores inside `⟦res⟧ᵥ`; `DEAD` says there are
 none. With the first fact, `DEAD` gives `𝒞 v ⊆ ⟦res⟧ᵥ = ∅`. The source-level theorem
 keeps its existential node: a finite `pstep` run reaches some `v` related by `csim`,
 and its store lies in `𝒞 v`. No set of "source stores at `v`" is introduced, since
 the simulation is not functional.
+
+The converse of the third fact does not hold. A `Lifted` entry passed the
+product's emptiness test, which is sound and incomplete: `mcp_empty_v` reports a
+state empty when one active analysis does, so a state with Interval `x = 2` and Parity
+`x odd` passes it although it concretizes to no store. `⟦res⟧ᵥ = ∅` therefore does not
+imply `dead(res, v)`, and `UNKNOWN` does not imply `⟦res⟧ᵥ ≠ ∅`. The `UNKNOWN`
+corollary states what does hold: an `UNKNOWN` check's point is not `dead`, so the
+report makes no unreachability claim there.
 
 ## Why
 
@@ -55,12 +63,12 @@ Avoided: `R` (call-context relation), `r` (internal table), `cfg` (CFG), `A`, `�
 takes one argument. `𝒱` joins the store-set family `𝒞`, `𝒜`; it is defined from
 `Checks(res, v)`: the stores in which every definite verdict at `v` is valid.
 `UNKNOWN` and `DEAD` contribute no constraint to `𝒱`; `DEAD` is handled by
-`analysis_report_dead_iff`.
+`analysis_report_dead`.
 
 The verdicts get one corollary each: `analysis_report_proved` and
 `analysis_report_refuted` restate the second fact for one check, and
-`analysis_report_unknown` states `UNKNOWN ⟹ ⟦res⟧ᵥ ≠ ∅`, the converse half of the
-third fact, so every verdict word has a theorem.
+`analysis_report_unknown` states `UNKNOWN ⟹ ¬ dead(res, v)` (see above for why
+not `⟦res⟧ᵥ ≠ ∅`), so every verdict word has a theorem.
 
 ## Invariants
 
@@ -93,9 +101,13 @@ third fact, so every verdict word has a theorem.
    source-soundness theorem takes it as a premise. The Int reduction loop and the
    query-depth abort remain ways the code can fail to return; neither yields
    `Analysed`.
-4. **Semantic `analysis_report`.** The report stores the configuration, the finite
-   semantic table that `result_with_globals` already builds (no function-valued
-   field), the checks, the diagnostics and the graph metadata clients need.
+4. **Semantic `analysis_report`.** The report reuses the finite shape of
+   `run_result` (context list, states, routes, checks, diagnostics, graph) with a
+   semantic payload: `run_result` gains a state type parameter, the report fills it
+   with `mcp_val` and the presentation with the rendered view. `result_with_globals`
+   yields a set-and-function table, so it is not stored; one bridge lemma relates the
+   report's finite states to `lookup_context` on that table. The report also stores
+   the configuration and the program variables rendering needs.
    `mcp_render` becomes presentation-only and is not part of the theorem object.
    Define `lookup_report`, `⟦res⟧ᵥ`, `verdict_stores`, `report_checks` and a
    structural `dead`; show the existing verdict aggregation computes `dead`.
@@ -113,7 +125,27 @@ third fact, so every verdict word has a theorem.
    changes.
 7. **API tidy.** Nothing above the report theory mentions `mcp_rule.result`. One
    lookup vocabulary, thin public theorem names, and ad-hoc overloading only where
-   one concept has several representations.
+   one concept has several representations. Concretely:
+   - rename the framework's `('ctx, 'a) analysis_result` to `analysis_table`, so
+     table, report and answer read as three layers;
+   - absorb `analysis_surface` (`state_at`, `reach_state_at`, `report`,
+     `report_with_state`) into report projections, or delete what has no consumer;
+   - retire `checks_sound_at`, `table_covers` and `analysis_result_covers` from the
+     public layer; `𝒱(res, v)` and the CAPS corollaries replace them;
+   - keep `Uncovered`/`Covered`, `Bot`/`Lifted` and `Dead` apart below the report:
+     coverage, emptiness and the verdict are different facts, and only the report
+     theorems hide them;
+   - keep the emptiness tests (`is_empty_state`, `val_empty`, `mcp_empty_v`, …) and
+     the executable readbacks (`mcp_rd`, `default_st_to_fun`) as named constants; their
+     exactness differs, and an overloaded name would hide which one a proof uses.
+   - if it falls out cheaply, one contextual classification helper shared by the
+     check column and the arithmetic diagnostics.
+7b. **One registration per analysis.** The generator emits one record of
+   operations per `analysis_domain` (`registration_of`) in place of the parallel
+   functions `local_spec_of`, `part_gamma`, `part_live`, `part_empty`, `val_gamma`,
+   `val_empty`, `val_answer`, `field_of`; the old names become accessors. With
+   `Int_Analysis refine_mode` the mode is then read in one equation. Optional for
+   this branch: it touches only generated theories and their consumers.
 8. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
    README, the notation table, and the site's theorem cards, metro map (result side
    collapses to `⟦res⟧ᵥ` with checks, `DEAD` and SAFE branches) and alignment rows.
