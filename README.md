@@ -89,9 +89,9 @@ restart the caller. `--verbose` lists every step in a Goblint-aligned tracing
 vocabulary (`%%% iter: begin iterate ...`; the mapping table in
 `docs/CLI_DESIGN.md` records every difference), `--trace-sys iter,side` selects
 subsystems, `--format jsonl` emits JSON Lines and `--output FILE` writes to a
-file; standard output stays the same. The playground's **Solver trace** setting
-shows the compact or the full (`--verbose`) trace above the graph, with
-downloads of the whole text and of its JSON Lines form. Three layers: the solver
+file; standard output stays the same. The playground's **Solver trace** panel
+shows the full (`--verbose`) trace below the graph, colored by step and folded
+by query, with downloads of the whole text and of its JSON Lines form. Three layers: the solver
 result is the exported computation of proved equations, and the trace calls
 inside it come from code equations proved equal to the untraced ones; the trace
 is an unverified observation of that computation, through a `code_printing`
@@ -105,11 +105,12 @@ pixi run voblint --analysis interval --context entry-state --trace docs/readme-f
 ```
 
 The playground's **Solve replay** section steps through the same solve on the
-graph: the value each unknown holds, the stack of open queries and the edge each
-query follows backward from the exit, with the stable set, destabilization
-cascades, widening points, influence edges, side effects, routes and counters
-as overlays. One reducer folds the run's JSON Lines trace into every state it
-shows.
+graph, with the verbose trace beside it: the value each unknown holds, the seed
+each call publishes its entry state into, the stack of open queries and the
+edge each query follows backward from the exit, with the stable set,
+destabilization cascades, widening points and influence edges drawn on the
+graph and the routes and counters below it. One reducer folds the run's JSON
+Lines trace into every state it shows.
 `node scripts/capture_readme_figures.mjs solve-replay` regenerates the
 animation below from the playground.
 

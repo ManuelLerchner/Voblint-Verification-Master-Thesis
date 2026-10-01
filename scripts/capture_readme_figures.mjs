@@ -336,11 +336,6 @@ const FIGURES = {
     await page.waitForFunction(() => document.querySelector("#solve-replay-graph canvas"), null, {
       timeout: 60000,
     });
-    /* The figure shows the solver's internals beside the values and the stack. */
-    for (const overlay of ["stable", "destab", "wpoints"]) {
-      await page.check(`[data-replay-overlay="${overlay}"]`);
-    }
-
     await page.dblclick("#solve-replay-graph", { position: { x: 8, y: 8 } });
     await page.waitForTimeout(600);
 
@@ -349,6 +344,14 @@ const FIGURES = {
     const body = await page.$("#solve-replay-body");
 
     await body.scrollIntoViewIfNeeded();
+
+    /* The player, the graph and the trace beside it; the cards below stay out. */
+    const clip = await page.evaluate(() => {
+      const top = document.querySelector("#solve-replay-body").getBoundingClientRect();
+      const bottom = document.querySelector(".replay-layout").getBoundingClientRect();
+
+      return { x: top.x, y: top.y, width: top.width, height: bottom.bottom - top.y };
+    });
 
     for (let step = 0; step <= steps; step++) {
       await page.$eval(
@@ -359,7 +362,8 @@ const FIGURES = {
         },
         step,
       );
-      await body.screenshot({
+      await page.screenshot({
+        clip,
         path: join(frames, `${String(step).padStart(4, "0")}.png`),
         animations: "disabled",
         scale: "device",
@@ -369,7 +373,7 @@ const FIGURES = {
     /*
      * One small undithered palette for every frame keeps the pixels a step leaves
      * alone equal, so the GIF stores only what the step changed. The frames are device
-     * pixels; REPLAY_WIDTH (default 1280, under 10 MB) sets the width.
+     * pixels; REPLAY_WIDTH (default 1280, about 12 MB) sets the width.
      */
     const palette = join(frames, "palette.gif");
     const width = ["-resize", `${process.env.REPLAY_WIDTH ?? "1280"}x`];
