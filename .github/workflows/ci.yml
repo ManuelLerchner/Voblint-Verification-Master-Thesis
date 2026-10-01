@@ -673,8 +673,8 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
-      # The Goblint comparison appendix is generated from the explainer's
-      # alignment rows; the committed JSON must match the page.
+      # The thesis's Goblint comparison counts are generated from the
+      # explainer's alignment rows; the committed JSON must match the page.
       - name: Thesis Goblint comparison matches the explainer (no build needed)
         run: pixi run thesis-alignment
 

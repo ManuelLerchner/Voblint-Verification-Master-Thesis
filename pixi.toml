@@ -160,7 +160,7 @@ thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check"
 thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", description = "Copy the README playground figures and their programs into thesis assets." }
 
 thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check the thesis's Goblint comparison data against the explainer page's alignment rows." }
-thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis appendix." }
+thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis." }
 
 # The locale hierarchy figure is read off the built Voblint_Examples heap by
 # thesis/tools/locale_graph.ML, so it needs `pixi run isabelle-build` first.
