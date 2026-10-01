@@ -33,7 +33,9 @@ definition trace_event :: "String.literal \<Rightarrow> (unit \<Rightarrow> 'e) 
 
 text \<open>
   One event per solver step that Goblint's tracing of its top-down solvers
-  reports (\<open>td_simplified.ml\<close>, \<open>td3.ml\<close>), plus two with no counterpart there:
+  reports (@{url "https://github.com/goblint/analyzer/blob/master/src/solver/td_simplified.ml"},
+  @{url "https://github.com/goblint/analyzer/blob/master/src/solver/td3.ml"}), plus two with
+  no counterpart there:
   \<open>Ev_Rhs\<close>, the value a right-hand side returns, and the start and end of one
   solve, and \<open>Ev_Wpoint_Clear\<close>, an iteration of an already stable unknown
   dropping it from the widening points. A local unknown is \<open>'x\<close>, a global one
