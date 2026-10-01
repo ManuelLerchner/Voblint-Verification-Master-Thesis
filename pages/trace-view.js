@@ -37,12 +37,15 @@ import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 
 /* ---------------------------------------------------------------- event kinds */
 
-/* Every event label of the three forms, by what it does to the solve. */
+/*
+ * Every event label of the three forms, by what it does to the solve. A query's answer
+ * and a solve step's `sol` carry the values the solve computes, so they get kinds of
+ * their own.
+ */
 const KIND_OF = new Map(
   Object.entries({
     query: [
       "solver_query",
-      "answer",
       "eq",
       "iter",
       "multivar",
@@ -50,7 +53,6 @@ const KIND_OF = new Map(
       "QUERY-L",
       "QUERY-G",
       "VALUE-L",
-      "ANSWER",
       "RETURN",
       "EQ",
       "ITERATE",
@@ -58,7 +60,9 @@ const KIND_OF = new Map(
       "RESOLVE",
       "START",
     ],
-    update: ["sol", "rhs", "update", "UPDATE-L", "UPDATE-G"],
+    answer: ["answer", "ANSWER"],
+    sol: ["sol"],
+    update: ["rhs", "update", "UPDATE-L", "UPDATE-G"],
     widen: ["wpoint", "WIDEN", "WPOINT+", "WPOINT-"],
     stable: ["destab", "infl", "DESTAB", "STABLE+", "STABLE-", "UNSTABLE", "INFL+", "RESTART"],
     side: ["side", "SIDE", "FLUSH"],
@@ -67,7 +71,7 @@ const KIND_OF = new Map(
   }).flatMap(([kind, labels]) => labels.map((label) => [label, kind])),
 );
 
-const KINDS = ["query", "update", "widen", "stable", "side", "route", "check"];
+const KINDS = ["query", "answer", "sol", "update", "widen", "stable", "side", "route", "check"];
 
 /* A line that starts an event, and where its label sits; other lines continue one. */
 const HEAD = /^(\[\d+\] )?( *)(?:%%% ([a-z_]+):|([A-Z][A-Z+-]+)(?= ))/;
@@ -89,7 +93,7 @@ function headOf(text) {
 }
 
 /* A query of a procedure's exit unknown asks for that procedure's result: a call. */
-const CALL = /(?:entering query for|asks|->) \(exit_([\w']+), (.*?)\)(?:;|$)/;
+const CALL = /(?:entering query for|asks|->) \(exit_([\w']+), (.*?)\)(?:;| from |$)/;
 const ROOT = /(?:solving for|START) +\(exit_([\w']+), (.*?)\)/;
 
 function callOf(text) {
@@ -108,6 +112,8 @@ function callOf(text) {
 /* Existing tags, one per kind of token, which only the trace's own style below colors. */
 const traceTags = {
   query: tags.controlKeyword,
+  answer: tags.className,
+  sol: tags.typeName,
   update: tags.definitionKeyword,
   widen: tags.operatorKeyword,
   stable: tags.comment,
@@ -148,7 +154,15 @@ const traceParser = {
       }
     }
 
-    if (stream.match(/^(?:Old value|New value|Eqd|answer|value|old|new)(?=:| =)/)) {
+    if (stream.match(/^(?:answer|value)(?=:| =)/)) {
+      return "answer";
+    }
+
+    if (stream.match(/^(?:Old value|New value|Eqd)(?=:)/)) {
+      return "sol";
+    }
+
+    if (stream.match(/^(?:old|new)(?= =)/)) {
       return "key";
     }
 
@@ -228,10 +242,12 @@ const foldByDepth = foldService.of((state, from) => {
 /*
  * The CLI prints an event's value lines (`Old value:`, `answer:`) at column 0; they are
  * drawn under their event instead. In an old/new pair, the components (`x=[0,9]`) one
- * side has and the other lacks are marked, like a diff.
+ * side has and the other lacks are marked, like a diff. The value lines of one event
+ * are padded into columns so the same component sits at the same place on each.
  */
 const OLD_VALUE = /^ *(?:Old value: |old = )/;
 const NEW_VALUE = /^ *(?:New value: |new = )/;
+const VALUE_LINE = /^ *(?:Old value: |Eqd: |New value: |answer: |value = |old = |new = )/;
 const UPDATE = /\(wpx: \w+\): (.*) -> (.*)$/;
 
 function parts(text, offset) {
@@ -277,14 +293,113 @@ function valueAt(line, pattern) {
   return match ? parts(line.text.slice(match[0].length), line.from + match[0].length) : null;
 }
 
+class Pad extends WidgetType {
+  constructor(width) {
+    super();
+    this.width = width;
+  }
+
+  eq(other) {
+    return other.width === this.width;
+  }
+
+  toDOM() {
+    const pad = document.createElement("span");
+
+    pad.textContent = " ".repeat(this.width);
+    return pad;
+  }
+}
+
+/* Padding goes before what it moves, outside any diff mark that starts there. */
+function padAt(at, width) {
+  return Decoration.widget({ widget: new Pad(width), side: -1 }).range(at);
+}
+
+function keyOf(part) {
+  return part.text.split("=")[0];
+}
+
+/* A value line's components, and the column its value starts at. */
+function valueRow(line) {
+  const label = VALUE_LINE.exec(line.text);
+
+  return label
+    ? {
+        column: label[0].length,
+        parts: parts(line.text.slice(label[0].length), line.from + label[0].length),
+      }
+    : null;
+}
+
+/*
+ * Pads a block of value rows into columns: the values first, then each component for
+ * the rows whose components so far have the same names as the longest row's. A row of
+ * one component, such as ⊥, only has its start aligned.
+ */
+function align(block) {
+  const ranges = [];
+  const start = Math.max(...block.map((row) => row.column));
+  const reference = block.reduce((a, b) => (b.parts.length > a.parts.length ? b : a)).parts;
+
+  for (const row of block) {
+    if (row.column < start) {
+      ranges.push(padAt(row.parts[0].from, start - row.column));
+    }
+
+    row.matched =
+      row.parts.length < 2
+        ? 0
+        : row.parts.findIndex((part, k) => keyOf(part) !== keyOf(reference[k] ?? { text: "" }));
+
+    if (row.matched < 0) {
+      row.matched = row.parts.length;
+    }
+  }
+
+  for (let column = 0; column < reference.length; column++) {
+    const rows = block.filter((row) => row.matched > column);
+    const width = Math.max(0, ...rows.map((row) => row.parts[column].text.length));
+
+    for (const row of rows) {
+      const cell = row.parts[column];
+      const next = row.parts[column + 1];
+
+      if (cell.text.length < width && next) {
+        ranges.push(padAt(next.from, width - cell.text.length));
+      }
+    }
+  }
+
+  return ranges;
+}
+
 function layout(doc) {
   const ranges = [];
   let labelAt = 0;
   let old = null;
+  let block = [];
+
+  const endBlock = () => {
+    if (block.length > 1) {
+      ranges.push(...align(block));
+    }
+
+    block = [];
+  };
 
   for (let at = 1; at <= doc.lines; at++) {
     const line = doc.line(at);
     const head = headOf(line.text);
+    const own = /^ */.exec(line.text)[0].length;
+    const shift = !head && own < labelAt ? labelAt + 4 - own : 0;
+    const row = head ? null : valueRow(line);
+
+    if (row) {
+      block.push(row);
+    } else {
+      endBlock();
+    }
 
     if (head) {
       labelAt = head.labelAt;
@@ -303,12 +418,10 @@ function layout(doc) {
       continue;
     }
 
-    const own = /^ */.exec(line.text)[0].length;
-
-    if (own < labelAt) {
+    if (shift > 0) {
       ranges.push(
         Decoration.line({
-          attributes: { style: `padding-left: calc(6px + ${labelAt + 4 - own}ch)` },
+          attributes: { style: `padding-left: calc(6px + ${shift}ch)` },
         }).range(line.from),
       );
     }
@@ -324,6 +437,7 @@ function layout(doc) {
     }
   }
 
+  endBlock();
   return Decoration.set(ranges, true);
 }
 

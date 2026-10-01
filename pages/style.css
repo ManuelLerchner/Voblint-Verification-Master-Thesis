@@ -1884,6 +1884,25 @@ button.solver-global-key:hover {
   font-weight: 700;
 }
 
+/* The value-carrying events: a soft chip that does not move the text. */
+.tr-answer,
+.tr-sol {
+  font-weight: 700;
+  border-radius: 2px;
+}
+
+.tr-answer {
+  color: var(--primary);
+  background: var(--primary-soft);
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+
+.tr-sol {
+  color: var(--caution);
+  background: color-mix(in srgb, var(--caution) 12%, transparent);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--caution) 12%, transparent);
+}
+
 .tr-widen {
   color: var(--accent);
   font-weight: 700;
