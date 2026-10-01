@@ -26,10 +26,10 @@
    produced. See docs/CLI_DESIGN.md. *)
 
 let usage =
-  "\
+  "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
-   join|per-origin|warrow|warrow-per-origin] [--int-refinement \
-   never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+   join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
+   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
@@ -155,7 +155,7 @@ let usage =
    Trust boundary: results are sound for the program this file's unverified\n\
   \  parser actually built, not a guarantee that the parser read your source\n\
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
-  \ "
+  \  machine-checked Isabelle/HOL proof."
 
 module C = Voblint_CLI.Generated
 module A = Result_text
