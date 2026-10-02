@@ -251,9 +251,11 @@ These are grep targets on `src/` outside the theory that owns each name:
   (its traced code equation restates the same three branches), and one proof-side
   elimination of it, `analysis_report_of_sound`; the per-policy semantic spine
   theorems name a policy in their statements and do not dispatch;
-- `Sign_Analysis`, `Interval_Analysis`, … split only in `registration_of`, apart
-  from generated exhaustiveness lemmas; consumers use its selectors, and the old
-  per-capability functions are gone rather than kept as accessors;
+- `Sign_Analysis`, `Interval_Analysis`, … split at runtime only in
+  `registration_of`; consumers use its selectors, and the old per-capability
+  functions are gone rather than kept as accessors. The proof-only
+  concretizations (`part_gamma`, `val_gamma`) and `val_empty` stay functions,
+  since the exported code builds the record and a record field must be executable;
 - no `run_result`, `mcp_render` or `string_of_abstract_value` in
   `Analysis_Run` or `Analysis_Report`;
 - no `analyse_program`; OCaml reaches the generated core only through the
@@ -384,11 +386,13 @@ Phase 5, the `solved_table` rename, landed in the second stacked PR.
 `well_formed_report` (index ranges, unique rows, row verdicts from the row's own
 state, and with consistency the aggregate column from the rows) landed in the third,
 with `run_voblint_well_formed`.
+Phase 6, `registration_of` and its `analysis_registration` record, landed in the
+fourth.
 
 Not done, one stacked PR each:
 
-- phase 6, `registration_of`, and phase 7 (splitting `sound_table`, the shared
-  contextual classification helper, absorbing `analysis_surface`).
+- phase 7 (splitting `sound_table`, the shared contextual classification helper,
+  absorbing `analysis_surface`).
 - the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and
   the entry renamed to `voblint_main.ml`.
 - phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names

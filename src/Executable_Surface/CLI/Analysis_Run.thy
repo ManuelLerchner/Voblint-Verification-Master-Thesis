@@ -314,7 +314,7 @@ text \<open>
 \<close>
 
 definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
-  "mcp_ctx_values as ctx = concat (map (\<lambda>a. ctx_values a ctx) as)"
+  "mcp_ctx_values as ctx = concat (map (\<lambda>a. context_values (registration_of a) ctx) as)"
 
 definition entry_ctx_key :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> order_key" where
   "entry_ctx_key as ctx =

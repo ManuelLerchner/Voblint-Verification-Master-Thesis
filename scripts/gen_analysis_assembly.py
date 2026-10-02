@@ -616,19 +616,68 @@ def render_mcp(doms):
     def per(fn):
         return [fn(k, d) for k, d in enumerate(doms, 1)]
 
+    # One record per analysis: everything the combination reads of an analysis,
+    # selected from the record registration_of builds, so no consumer splits on
+    # the analysis itself.
+    lp, rp = "\\<lparr>", "\\<rparr>"
+    L = "\\<lambda>"
+    reg_fields = [
+        (
+            "field_spec",
+            "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> mcp_st lifted local_spec",
+        ),
+        ("field_live", "mcp_st \\<Rightarrow> bool"),
+        ("field_empty", "vname list \\<Rightarrow> mcp_st \\<Rightarrow> bool"),
+        ("value_answer", "mcp_val \\<Rightarrow> query \\<Rightarrow> answer"),
+        (
+            "value_display",
+            "mcp_val \\<Rightarrow> vname list \\<Rightarrow> abstract_value field_state",
+        ),
+        ("context_values", "mcp_ctx \\<Rightarrow> abstract_value list"),
+    ]
+    out += text_block(
+        wrap_prose(
+            "What the analyzer runs of one analysis: how its field steps, whether"
+            " it is live or empty, how its published value answers a query and is"
+            " displayed, and the values it keys a callee by."
+            " \\<open>registration_of\\<close> is the one function that splits on the"
+            " analysis at runtime. The concretizations are proof-only and are not"
+            " part of it: a record the exported code builds holds executable"
+            " values only, so the emptiness test on published values is proof-only"
+            " as well."
+        )
+    ) + [""]
+    out += ["record analysis_registration ="]
+    out += [f'  {name} :: "{ty}"' for name, ty in reg_fields]
+    out += [""]
+
+    def registration(k, d):
+        values = [
+            (
+                "field_spec",
+                f"{L}{G} p. lens_of (lift_get slot{k}) (lift_put set_slot{k})"
+                f" {arg(d.term('component', G=G, p='p'))}",
+            ),
+            ("field_live", f"{L}r. slot{k} r \\<noteq> \\<bottom>"),
+            ("field_empty", f"{L}gs r. {d.term('empty', gs='gs', f=f'(slot{k} r)')}"),
+            ("value_answer", f"{L}v q. {d.term('answer', v=f'(slot{k} v)', q='q')}"),
+            (
+                "value_display",
+                f"{L}v vars. {d.term('display', v=f'(slot{k} v)', vars='vars')}",
+            ),
+            (
+                "context_values",
+                f"{L}ctx. {d.term('context_values', c=f'(slot{k} ctx)')}",
+            ),
+        ]
+        body = ", ".join(f"{name} = ({term})" for name, term in values)
+        return (f"registration_of {d.constructor}", f"{lp} {body} {rp}")
+
     out += fun_block(
         [
-            "fun local_spec_of ::",
-            '  "(vname \\<Rightarrow> bool) \\<Rightarrow> imp_prog \\<Rightarrow> analysis_domain'
-            ' \\<Rightarrow> mcp_st lifted local_spec" where',
+            'fun registration_of :: "analysis_domain \\<Rightarrow> analysis_registration" where'
         ],
-        per(
-            lambda k, d: (
-                f"local_spec_of {G} p {d.constructor}",
-                f"lens_of (lift_get slot{k}) (lift_put set_slot{k})"
-                f" {arg(d.term('component', G=G, p='p'))}",
-            )
-        ),
+        per(registration),
     )
     out += [""]
     out += fun_block(
@@ -645,54 +694,6 @@ def render_mcp(doms):
     out += [""]
     out += fun_block(
         [
-            'fun part_live :: "analysis_domain \\<Rightarrow> mcp_st \\<Rightarrow> bool" where'
-        ],
-        per(
-            lambda k, d: (
-                f"part_live {d.constructor} r",
-                f"(slot{k} r \\<noteq> \\<bottom>)",
-            )
-        ),
-    )
-    out += [""]
-    out += fun_block(
-        [
-            'fun part_empty :: "vname list \\<Rightarrow> analysis_domain \\<Rightarrow> mcp_st \\<Rightarrow> bool" where'
-        ],
-        per(
-            lambda k, d: (
-                f"part_empty gs {d.constructor} r",
-                d.term("empty", gs="gs", f=f"(slot{k} r)"),
-            )
-        ),
-    )
-    out += [""]
-
-    out += ["subsection \\<open>What each field publishes\\<close>", ""]
-    out += [
-        'definition mcp_rd :: "(vname \\<Rightarrow> bool) \\<Rightarrow> mcp_st \\<Rightarrow> mcp_val" where'
-    ]
-    rd = nest(per(lambda k, d: d.term("read", G=G, f=f"(slot{k} r)")))
-    out += wrap_term(f'"mcp_rd {G} r = {rd}"', 2) + [""]
-    out += fun_block(
-        [
-            'fun val_gamma :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> store set" where'
-        ],
-        per(
-            lambda k, d: (
-                f"val_gamma {d.constructor} v",
-                d.term("published_gamma", v=f"(slot{k} v)"),
-            )
-        ),
-    )
-    out += [""]
-    out += [
-        'definition mcp_gamma_v :: "analysis_domain list \\<Rightarrow> mcp_val \\<Rightarrow> store set" where',
-        '  "mcp_gamma_v as v = (\\<Inter>a \\<in> set as. val_gamma a v)"',
-        "",
-    ]
-    out += fun_block(
-        [
             'fun val_empty :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> bool" where'
         ],
         per(
@@ -705,31 +706,28 @@ def render_mcp(doms):
     out += [""]
     out += fun_block(
         [
-            'fun val_answer :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> query \\<Rightarrow> answer" where'
+            'fun val_gamma :: "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> store set" where'
         ],
         per(
             lambda k, d: (
-                f"val_answer {d.constructor} v q",
-                d.term("answer", v=f"(slot{k} v)", q="q"),
-            )
-        ),
-    )
-    out += [""]
-    out += fun_block(
-        [
-            "fun field_of ::",
-            '  "analysis_domain \\<Rightarrow> mcp_val \\<Rightarrow> vname list'
-            ' \\<Rightarrow> abstract_value field_state" where',
-        ],
-        per(
-            lambda k, d: (
-                f"field_of {d.constructor} v vars",
-                d.term("display", v=f"(slot{k} v)", vars="vars"),
+                f"val_gamma {d.constructor} v",
+                d.term("published_gamma", v=f"(slot{k} v)"),
             )
         ),
     )
     out += [""]
 
+    out += ["subsection \\<open>What each field publishes\\<close>", ""]
+    out += [
+        'definition mcp_rd :: "(vname \\<Rightarrow> bool) \\<Rightarrow> mcp_st \\<Rightarrow> mcp_val" where'
+    ]
+    rd = nest(per(lambda k, d: d.term("read", G=G, f=f"(slot{k} r)")))
+    out += wrap_term(f'"mcp_rd {G} r = {rd}"', 2) + [""]
+    out += [
+        'definition mcp_gamma_v :: "analysis_domain list \\<Rightarrow> mcp_val \\<Rightarrow> store set" where',
+        '  "mcp_gamma_v as v = (\\<Inter>a \\<in> set as. val_gamma a v)"',
+        "",
+    ]
     out += [
         "subsection \\<open>Where each field starts, and what it keys a callee by\\<close>",
         "",
@@ -770,18 +768,6 @@ def render_mcp(doms):
     out += wrap_term(f'"mcp_formals_route as {G} u ctx d ca = {route}"', 2) + [""]
     out += ["definition mcp_root_ctx :: mcp_ctx where"]
     out += wrap_term(f'"mcp_root_ctx = {nest(["[]"] * n)}"', 2) + [""]
-    out += fun_block(
-        [
-            'fun ctx_values :: "analysis_domain \\<Rightarrow> mcp_ctx \\<Rightarrow> abstract_value list" where'
-        ],
-        per(
-            lambda k, d: (
-                f"ctx_values {d.constructor} ctx",
-                d.term("context_values", c=f"(slot{k} ctx)"),
-            )
-        ),
-    )
-    out += [""]
 
     # Listing contexts by their key needs a key injective on every context, not
     # only on the slots the active analyses fill. A slot no analysis keys by holds
@@ -820,16 +806,17 @@ def render_mcp(doms):
         f"field_component_sound[OF {d.field()['component_sound']}]" for d in doms
     )
     out += [
-        "lemma local_spec_of_sound:",
+        "lemma field_spec_sound:",
         '  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)',
-        '     (local_spec_of (declared_global p) p a)"',
-        "  by (cases a rule: analysis_domain_cases; simp only: part_gamma.simps local_spec_of.simps;",
+        '     (field_spec (registration_of a) (declared_global p) p)"',
+        "  by (cases a rule: analysis_domain_cases;",
+        "      simp only: part_gamma.simps registration_of.simps analysis_registration.simps;",
     ]
     out += wrap_term("rule " + comps + ";", 6)
     out += ["      auto simp: less_eq_analysis_product_def)", ""]
     singles = " ".join(dict.fromkeys(d.field()["single_entry"] for d in doms))
     out += [
-        'lemma single_entry_local_spec_of: "single_entry (local_spec_of \\<G> p a)"'
+        'lemma single_entry_field_spec: "single_entry (field_spec (registration_of a) \\<G> p)"'
     ]
     out += wrap_term(
         f"by (cases a rule: analysis_domain_cases) (auto intro!: single_entry_lens_of lift_put_get {singles})",
@@ -837,10 +824,10 @@ def render_mcp(doms):
     )
     out += [""]
     silent = [d.constructor for d in doms if "component" not in d.field_overrides]
-    out += ["lemma local_spec_of_silent:"]
+    out += ["lemma field_spec_silent:"]
     out += wrap_term(f'"a \\<in> {{{", ".join(silent)}}}', 2)
     out += [
-        f'     \\<Longrightarrow> ls_query (local_spec_of {G} p a) A x q = \\<top>"',
+        f'     \\<Longrightarrow> ls_query (field_spec (registration_of a) {G} p) A x q = \\<top>"',
         "  by (cases a rule: analysis_domain_cases)\n    (simp_all add: lens_of_def ask_assign_def exec_local_spec_def)",
         "",
     ]
@@ -864,7 +851,9 @@ def render_mcp(doms):
     out += ["  then show ?thesis by (auto simp: mcp_gamma_v_def)", "qed", ""]
     answers = " ".join(d.field()["answer_sound"] for d in doms)
     out += [
-        'lemma val_answer_sound: "s \\<in> val_gamma a v \\<Longrightarrow> eval_holds q (val_answer a v q) s"',
+        "lemma value_answer_sound:",
+        '  "s \\<in> val_gamma a v',
+        '     \\<Longrightarrow> eval_holds q (value_answer (registration_of a) v q) s"',
         "  by (cases a rule: analysis_domain_cases)",
     ]
     out += wrap_term("(auto split: lifted.splits intro: " + answers + ")", 5)

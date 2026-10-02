@@ -4005,3 +4005,15 @@ result_unknowns
 lookup_context
 lookup_context_result
 contexts_at
+local_spec_of
+part_live
+part_empty
+val_answer
+field_of
+ctx_values
+local_spec_of_sound
+single_entry_local_spec_of
+local_spec_of_silent
+val_answer_sound
+part_empty_rd
+local_spec_of_frame

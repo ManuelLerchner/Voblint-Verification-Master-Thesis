@@ -41,7 +41,7 @@ definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis
 
 definition mcp_render ::
     "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> abstract_value analysis_view" where
-  "mcp_render as vars v = map (\<lambda>a. (a, field_of a v vars)) as"
+  "mcp_render as vars v = map (\<lambda>a. (a, value_display (registration_of a) v vars)) as"
 
 text \<open>
   The printer \<open>show\<close> is a parameter: \<^const>\<open>string_of_abstract_value\<close> for text,
