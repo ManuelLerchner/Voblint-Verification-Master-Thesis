@@ -406,7 +406,11 @@ next
   have cov: "entry_pairs_cover (\<lambda>d. pgam p d (gsol p)) s
       (call_enter (declared_global p) (CallEdge dst pars args) s)
       [entry_alt (declared_global p) p ?ci ?caller (gsol p)]"
-    using entry_cover[OF sin, where ci = ?ci] by simp
+  proof (rule entry_cover[OF solves _ EnterCover(2) sin])
+    show "(cont, ctx) \<in> sol_vars (declared_global p) p"
+      using ctx_vars_cover_live_combineD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)]
+        live_unknowns_sub by blast
+  qed
   obtain c e where ce: "entry_alt (declared_global p) p ?ci ?caller (gsol p) = (c, e)"
     by (cases "entry_alt (declared_global p) p ?ci ?caller (gsol p)")
   have nbE: "?ent \<noteq> Bot"
@@ -672,16 +676,19 @@ proof (rule routed_analysis_from_live_unknowns[OF wf solves])
     using req0 by simp
 next
   fix u ctx dst pars args q cont and s :: store
-  assume "(u, ctx) \<in> live_unknowns p"
-    and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
+  assume uL: "(u, ctx) \<in> live_unknowns p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
     and sin: "s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)"
+  have cont: "(cont, ctx) \<in> sol_vars (declared_global p) p"
+    using ctx_vars_cover_live_combineD[OF live_unknowns_cover[OF wf solves] uL ce]
+      live_unknowns_sub by blast
   show "\<exists>ctx'. admitted_contexts (declared_global p) p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
                  (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
     unfolding admitted_contexts_alt
     by (rule routed_entry_context_rel_total)
-       (use entry_cover[OF sin, where ci = "call_info_of (CallEdge dst pars args) q"]
-         in \<open>simp add: sol_global_def\<close>)
+       (use entry_cover[OF solves cont ce sin]
+         in \<open>simp add: sol_global_def del: declared_global_iff\<close>)
 qed
 
 theorem entry_state_activation_collect_sound_of_terminates:

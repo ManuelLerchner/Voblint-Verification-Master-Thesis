@@ -254,10 +254,9 @@ text \<open>
 
 lemma mcp_routed_dg_analysis:
   fixes analysis_global :: 'k
-    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c"
   assumes "\<And>v ctx. seed v ctx \<noteq> analysis_global"
   shows "dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
-    (mcp_init (activation as)) analysis_global seed route (TD_side_rule_Interp_solve r)
+    (mcp_init (activation as)) analysis_global seed (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)
