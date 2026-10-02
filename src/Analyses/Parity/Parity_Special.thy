@@ -70,6 +70,12 @@ lemma parity_max_combine_mono:
 
 subsection \<open>Special-call dispatch\<close>
 
+text \<open>
+  \<open>special_parity\<close> havocs on \<open>Nondet_Int\<close> and applies \<open>parity_min\<close>/\<open>parity_max\<close>
+  otherwise. \<open>special_parity_eq_transfer\<close> shows it equals the generic transfer of
+  the \<open>mono_minmax_ops\<close> interpretation at \<open>parity_special_ops\<close>.
+\<close>
+
 fun special_parity ::
     "special_call => vname => (vname => parity) => (vname => parity)"
 where

@@ -164,6 +164,12 @@ end
 
 subsection \<open>The unlifted specification\<close>
 
+text \<open>
+  \<open>state_dg_spec\<close> turns the state-level local specification into an
+  equation-system specification via \<open>dg_spec_of\<close>, without the reachability
+  lifting.
+\<close>
+
 definition state_dg_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)

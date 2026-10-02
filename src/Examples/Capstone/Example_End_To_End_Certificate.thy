@@ -53,6 +53,11 @@ abbreviation certificate_config :: analysis_config where
 
 subsection \<open>What the configuration answers\<close>
 
+text \<open>
+  Running \<open>certificate_config\<close> on \<open>certificate_demo_prog\<close> by evaluation: the
+  single check at \<open>Statement 4\<close> comes back \<open>Check_Proved\<close>.
+\<close>
+
 lemma certificate_demo_report:
   "(case run_voblint certificate_config
             certificate_demo_prog of

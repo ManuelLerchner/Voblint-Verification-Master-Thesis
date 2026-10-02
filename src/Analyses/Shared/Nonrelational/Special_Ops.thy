@@ -23,6 +23,11 @@ record 'a special_ops =
   special_min :: "'a => 'a => 'a"
   special_max :: "'a => 'a => 'a"
 
+text \<open>
+  \<open>sound_minmax_ops\<close> asks for a sound evaluator and primitives whose results contain
+  \<open>min\<close>/\<open>max\<close> of any two described integers.
+\<close>
+
 locale sound_minmax_ops = sound_evaluator gamma_state ev
   for ops :: "'a::numeric_domain special_ops"
     and ev  :: "exp => 'a abs_state => 'a" +

@@ -96,6 +96,12 @@ where
 
 subsection \<open>Raw operation laws\<close>
 
+text \<open>
+  Each raw operation applies the matching sign, interval, parity and congruence
+  operation to its own field, so its soundness and monotonicity follow from the
+  four component laws with no interaction between fields.
+\<close>
+
 lemma plus_int_dom_raw_sound:
   assumes "x : gamma_int_dom a"
       and "y : gamma_int_dom b"
@@ -185,6 +191,12 @@ lemma mod_int_dom_raw_mono:
 
 
 subsection \<open>Mode-aware operation laws\<close>
+
+text \<open>
+  The mode-aware operations apply \<open>refine mode\<close> to the raw result. Soundness holds
+  in every mode because refinement preserves the concretization (\<open>refine_exact\<close>);
+  monotonicity needs a mode other than \<open>Refine_Fixpoint\<close> (\<open>refine_nonfixpoint_mono\<close>).
+\<close>
 
 lemma plus_int_dom_sound:
   assumes "x : gamma_int_dom a"

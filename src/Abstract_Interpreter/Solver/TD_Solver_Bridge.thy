@@ -4,6 +4,11 @@ begin
 
 section \<open>The semantic boundary between Voblint and the vendored TD solver\<close>
 
+text \<open>
+  Voblint relies on the vendored TD solver only through the locale below, which
+  packages the solver facts the analysis pipeline uses.
+\<close>
+
 subsection \<open>What a pipeline asks of its solver\<close>
 
 text \<open>

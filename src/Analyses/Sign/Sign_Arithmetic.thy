@@ -237,6 +237,13 @@ lemma sign_tobool_mono:
 
 subsection \<open>Abstract expression evaluation\<close>
 
+text \<open>
+  \<open>aval_sign\<close> evaluates an expression bottom-up with the sign operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
+
 fun aval_sign :: "exp => (vname => sign) => sign" where
     "aval_sign (N n)        \<sigma> = sign_of_int n"
   | "aval_sign (V x)        \<sigma> = \<sigma> x"

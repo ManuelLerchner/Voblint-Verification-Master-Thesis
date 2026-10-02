@@ -125,6 +125,12 @@ proof -
   qed (simp_all add: pp)
 qed
 
+text \<open>
+  \<open>routed_domain_exec\<close> adds call routing to \<open>dg_domain_exec\<close>: seed keys
+  never collide with the analysis global, and routing and callee resolution on
+  the executable state agree with their abstract versions after readback.
+\<close>
+
 locale routed_domain_exec =
   dg_domain_exec \<G> empty_pred tf_st enter_st sk asn sp br bd rt en ev
   for \<G> :: "vname \<Rightarrow> bool"

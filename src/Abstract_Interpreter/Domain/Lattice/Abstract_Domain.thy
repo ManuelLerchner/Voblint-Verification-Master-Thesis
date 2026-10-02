@@ -59,6 +59,12 @@ class executable_domain = warrowing +
   fixes is_empty :: "'a::{bounded_semilattice_sup_bot, order_top} \<Rightarrow> bool"
   fixes to_string :: "'a \<Rightarrow> String.literal"
 
+text \<open>
+  A numeric domain adds a concretization \<open>gamma\<close> to an executable domain:
+  bottom denotes no integer, top every integer, the order is sound for
+  \<open>gamma\<close>, and \<open>is_empty\<close> decides emptiness exactly.
+\<close>
+
 class numeric_domain = executable_domain +
   fixes gamma :: "'a::{bounded_semilattice_sup_bot, order_top} \<Rightarrow> int set" ("\<gamma>")
   assumes gamma_bot[simp]: "\<gamma> \<bottom> = {}"

@@ -131,6 +131,11 @@ definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rig
      (\<forall>es. (v, es) \<in> set (arithmetic_expression_sites g) \<longrightarrow>
        (\<forall>e \<in> set es. \<forall>divisor \<in> expression_divisors e. \<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0))"
 
+text \<open>
+  A solved table \<open>r\<close> covers program \<open>p\<close>: every store the collecting semantics
+  reaches at \<open>v\<close> lies in \<open>gm\<close> of the state \<open>r\<close> holds at \<open>v\<close> in
+  some context, and each point has finitely many contexts.
+\<close>
 locale covered_table =
   fixes p :: imp_prog
     and r :: "('c, 'v) solved_table"
@@ -139,6 +144,10 @@ locale covered_table =
       and covers: "\<And>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
                       \<Longrightarrow> table_covers gm r v s"
 
+text \<open>
+  \<open>classify\<close> is sound for \<open>gm\<close>: \<open>Check_Proved\<close> means the condition holds at
+  every store in \<open>gm d\<close>, \<open>Check_Refuted\<close> that it fails at every one.
+\<close>
 locale sound_classifier =
   fixes classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
     and gm :: "'v \<Rightarrow> store set"
@@ -150,6 +159,10 @@ locale sound_classifier =
 lemma mcp_sound_classifier: "sound_classifier (mcp_classify as) (mcp_gamma_v as)"
   by unfold_locales (fact mcp_classify_proved, fact mcp_classify_refuted)
 
+text \<open>
+  A covered table read through a sound classifier. Inside it, verdicts and
+  diagnostics computed from \<open>r\<close> hold at every collected store.
+\<close>
 locale sound_table = covered_table p r gm + sound_classifier classify gm
   for p :: imp_prog and r :: "('c, 'v) solved_table"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result" and gm :: "'v \<Rightarrow> store set"

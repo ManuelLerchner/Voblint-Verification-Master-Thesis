@@ -90,6 +90,11 @@ declare exec_dg_spec_def [code_unfold]
 
 subsection \<open>Basic equations\<close>
 
+text \<open>
+  Unfolding equations for each field of \<open>exec_dg_spec\<close>: step, entry and
+  combine are the executable transfers lifted over reachability.
+\<close>
+
 lemma dg_spec_step_exec_dg_spec:
   "dg_spec_step (exec_dg_spec \<G> empty_pred tf_st enter_st) a
      = local_transfer (transfer_lift empty_pred (tf_st a))"

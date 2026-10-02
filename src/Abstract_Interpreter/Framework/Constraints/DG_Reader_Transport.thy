@@ -40,6 +40,11 @@ text \<open>
 
 declare dg_state.map_sel [simp]
 
+text \<open>
+  The locale assumes only that both readers preserve \<open>bot\<close> and joins;
+  monotonicity and the commutation with \<open>map_dg_state\<close> follow.
+\<close>
+
 locale dg_reader_commute_gen =
   fixes Floc :: "'a::bounded_semilattice_sup_bot \<Rightarrow> 'a2::bounded_semilattice_sup_bot"
     and Fglob :: "'b::bounded_semilattice_sup_bot \<Rightarrow> 'b2::bounded_semilattice_sup_bot"
@@ -69,6 +74,11 @@ lemma map_dg_state_mono:
   by (auto simp: less_eq_dg_state_def Floc_mono Fglob_mono)
 
 subsubsection \<open>Bundled per-tree transport relation\<close>
+
+text \<open>
+  \<open>dg_tree_st_commute\<close> bundles the three facts one strategy tree must
+  transport: its value, its side effects per key, and its dependencies.
+\<close>
 
 definition dg_tree_st_commute ::
   "('u + 'k \<Rightarrow> ('a,'b) dg_state) \<Rightarrow> ('u, 'k, ('a,'b) dg_state) strategy_tree
@@ -172,6 +182,11 @@ lemma dg_list_commute_dep:
 
 
 subsubsection \<open>Classifier-parametric fold transport\<close>
+
+text \<open>
+  The side-effect folds commute with the readers whenever the folded programs'
+  traversals do, independent of how the fold classifies its contributions.
+\<close>
 
 lemma side_acc_dg_commute:
   assumes

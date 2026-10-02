@@ -45,6 +45,11 @@ qed
 
 subsection \<open>Call string\<close>
 
+text \<open>
+  \<open>mcp_cs_rule_table\<close>: a terminating call-string run yields a
+  \<open>covered_table\<close>, via the activation collecting soundness of \<open>mcp_cs_rule\<close>.
+\<close>
+
 lemma mcp_cs_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_cs_rule.terminates as k r (declared_global p) p"

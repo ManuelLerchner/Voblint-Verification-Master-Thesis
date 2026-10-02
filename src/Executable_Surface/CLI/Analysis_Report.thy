@@ -61,6 +61,10 @@ qed
 
 subsection \<open>Verdicts\<close>
 
+text \<open>
+  \<open>report_checks_at\<close> selects the checks a report records at one program point.
+\<close>
+
 definition report_checks_at :: "analysis_report \<Rightarrow> pp \<Rightarrow> result_check set" where
   "report_checks_at res v = {c \<in> set (report_checks res). check_point c = v}"
 

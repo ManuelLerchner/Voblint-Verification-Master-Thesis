@@ -76,6 +76,11 @@ lemma ov_call_edge:
 
 subsection \<open>The overriding entry transfer\<close>
 
+text \<open>
+  \<open>ov_enter\<close> returns two overlapping alternatives per call, built from
+  \<open>forget_formals\<close> and \<open>forget_var\<close>.
+\<close>
+
 definition forget_formals ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st" where
   "forget_formals \<G> ci s =
@@ -350,6 +355,11 @@ lemma ov_terminates_c:
 
 subsection \<open>1. One call, two contexts\<close>
 
+text \<open>
+  The single call to \<open>p\<close> seeds two callee contexts, \<open>[SPos]\<close> and \<open>[STop]\<close>, one
+  per alternative.
+\<close>
+
 lemma ov_two_contexts:
   "table_contexts ov_result p_entry = {[SPos], [STop]}"
   using ov_solution_snapshot by meson
@@ -365,6 +375,11 @@ lemma ov_caller_root_only:
   using ov_solution_snapshot by blast+
 
 subsection \<open>2. Each seed carries its own alternative's entry\<close>
+
+text \<open>
+  The seed at \<open>[SPos]\<close> holds the exact argument; the seed at \<open>[STop]\<close> holds the
+  forgotten one.
+\<close>
 
 lemma ov_seed_exact:
   "ov_seed [SPos] (STR ''a'') = Lifted SPos"
@@ -383,6 +398,11 @@ lemma ov_entry_reads_seed:
   using ov_solution_snapshot by blast+
 
 subsection \<open>3. Each activation returns what it was entered with, and stays paired\<close>
+
+text \<open>
+  Each callee context returns the sign it was entered with, and each alternative's
+  combine pairs that result with its own continuation.
+\<close>
 
 lemma ov_result_exact:
   "ov_read p_result [SPos] ret_var = Lifted SPos"

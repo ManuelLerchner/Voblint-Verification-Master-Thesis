@@ -404,6 +404,13 @@ qed
 
 subsection \<open>Truncating division\<close>
 
+text \<open>
+  C division truncates toward zero, so \<open>c_div\<close> and \<open>c_mod\<close> differ from HOL's
+  flooring \<open>div\<close>/\<open>mod\<close> on negative operands. These lemmas bound \<open>c_mod\<close> by both
+  operands and show \<open>c_div\<close> monotone in the dividend, the facts interval division
+  rests on.
+\<close>
+
 lemma c_mod_modulus_bound:
   assumes "b \<noteq> 0"
   shows "abs (c_mod a b) < abs b"
@@ -671,6 +678,12 @@ qed
 
 
 subsection \<open>Remainder bounds\<close>
+
+text \<open>
+  \<open>ivl_mod_bound\<close> bounds a remainder by the divisor alone. When the divisor
+  interval excludes zero, \<open>abs (c_mod i j) < abs j\<close> gives a symmetric interval one
+  inside the largest divisor magnitude; otherwise the bound is \<open>ivl_top\<close>.
+\<close>
 
 fun ivl_mod_bound :: "ivl \<Rightarrow> ivl" where
   "ivl_mod_bound (Ivl (Fin l) (Fin u)) =

@@ -125,6 +125,12 @@ lemma int_congruence_int_dom_sip [simp]:
 
 subsection \<open>Concretization\<close>
 
+text \<open>
+  A product value denotes the integers every component admits:
+  \<open>gamma_int_dom\<close> intersects the sign, interval, parity and congruence
+  concretizations.
+\<close>
+
 definition gamma_int_dom :: "'a int_dom_scheme => int set" where
   "gamma_int_dom d =
      gamma_sign (int_sign d) \<inter>
@@ -206,6 +212,13 @@ lemma gamma_intersect_ivl_exact:
   by blast
 
 subsection \<open>Executable interface\<close>
+
+text \<open>
+  Deciding emptiness of the product needs more than the components' own tests,
+  since each can be inhabited while their intersection is empty. Interval and
+  congruence are checked jointly, after restricting the congruence by parity;
+  \<open>is_bottom_int_dom_correct\<close> and \<open>is_top_int_dom_correct_gamma\<close> tie the tests to \<open>gamma_int_dom\<close>.
+\<close>
 
 lemma inter_nonempty_iff:
   "A \<inter> B \<noteq> {} \<longleftrightarrow> (\<exists>x. x \<in> A \<and> x \<in> B)"
@@ -754,6 +767,11 @@ proof -
 qed
 
 subsection \<open>Constants and printing\<close>
+
+text \<open>
+  \<open>int_dom_of_int\<close> pins every component to one integer, so it concretizes
+  to exactly that singleton; the printer follows Goblint's tuple format.
+\<close>
 
 definition int_dom_of_int :: "int => int_dom" where
   "int_dom_of_int n =

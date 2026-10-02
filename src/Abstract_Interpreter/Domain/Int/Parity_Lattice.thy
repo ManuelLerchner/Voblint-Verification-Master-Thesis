@@ -33,6 +33,11 @@ lemma parity_of_int_gamma: "n \<in> gamma_parity (parity_of_int n)" by auto
 
 subsection \<open>Order\<close>
 
+text \<open>
+  The flat order with \<open>PBot\<close> below and \<open>PTop\<close> above the two parities;
+  \<open>gamma_parity_mono\<close> shows concretization respects it.
+\<close>
+
 fun parity_le :: "parity => parity => bool" where
     "parity_le PBot  _     = True"
   | "parity_le _     PTop  = True"
@@ -103,6 +108,11 @@ lemma gamma_parity_top: "gamma_parity top = UNIV"
   unfolding top_parity_def by simp
 
 subsection \<open>Join\<close>
+
+text \<open>
+  Joining two different parities loses all information and yields \<open>PTop\<close>.
+  The lemmas prove \<open>join_parity\<close> is the least upper bound.
+\<close>
 
 fun join_parity :: "parity => parity => parity" where
     "join_parity PBot  b     = b"

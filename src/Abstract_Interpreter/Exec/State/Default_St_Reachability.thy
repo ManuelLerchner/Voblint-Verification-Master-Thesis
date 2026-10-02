@@ -318,6 +318,11 @@ lemma gamma_lift_default_st_gamma_to_fun:
 
 subsection \<open>Incremental dead-code tracking\<close>
 
+text \<open>
+  \<open>live_default_st\<close> states that no location of the readback is empty, the
+  condition under which a transfer result counts as reachable.
+\<close>
+
 
 definition live_default_st ::
   "(vname => bool) => ('a::executable_domain) default_st => bool"

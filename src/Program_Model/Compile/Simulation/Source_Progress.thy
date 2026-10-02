@@ -77,6 +77,11 @@ lemma control_at_wf_source_com:
 
 subsection \<open>The frame-pop phase\<close>
 
+text \<open>
+  A configuration unwinding a finished frame keeps stepping until it is
+  \<open>Unwind\<close> (\<open>unwinding_progress\<close>); a \<open>Returning\<close> one then pops its frame.
+\<close>
+
 lemma unwinding_progress:
   "unwinding u \<Longrightarrow> u \<noteq> Unwind \<Longrightarrow> \<exists>u'. \<G>, \<Pi> \<turnstile> (u, s, frs) \<rightarrow>\<^sub>p (u', s, frs)"
 proof (induction u)

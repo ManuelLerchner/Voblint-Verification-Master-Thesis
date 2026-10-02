@@ -41,6 +41,12 @@ locale sound_intersection =
     and intersect_reductive1[intro]: "intersect a b \<le> a"
     and intersect_reductive2[intro]: "intersect a b \<le> b"
 
+text \<open>
+  Monotone intersection is a separate layer for the same reason as in the forward
+  interfaces: soundness needs only \<open>sound_intersection\<close>, while the solver's
+  least-solution theorem asks \<open>intersect\<close> to preserve the order in both arguments.
+\<close>
+
 locale mono_intersection = sound_intersection +
   assumes intersect_mono[intro]:
     "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"

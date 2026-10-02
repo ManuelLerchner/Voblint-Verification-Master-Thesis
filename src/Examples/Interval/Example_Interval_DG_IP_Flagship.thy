@@ -128,6 +128,12 @@ lemma twice_y_computed:
 
 subsection \<open>Source-level soundness\<close>
 
+text \<open>
+  \<open>twice_source_run_sound\<close>: every store a source run of \<open>twice\<close> reaches lies in the
+  concretization of \<open>twice_at\<close> at the matching CFG node. \<open>twice_wf\<close> discharges
+  the compile-input premise.
+\<close>
+
 lemma twice_main_body [simp]: "main_body twice_pi = twice_main"
   by (simp add: main_body_def prog_main_name_def twice_pi_def twice_program_def
         twice_main_def)

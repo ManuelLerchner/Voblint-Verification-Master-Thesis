@@ -4,6 +4,12 @@ begin
 
 section \<open>Interval widening and narrowing\<close>
 
+text \<open>
+  The interval lattice has infinite ascending chains, so the solver needs widening
+  to terminate and narrowing to recover precision afterwards. This theory defines
+  both and instantiates intervals as a numeric domain.
+\<close>
+
 subsection \<open>Widening\<close>
 
 text \<open>

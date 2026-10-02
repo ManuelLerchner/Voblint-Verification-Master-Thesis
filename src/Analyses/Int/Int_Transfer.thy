@@ -130,6 +130,12 @@ qed
 
 subsection \<open>Special-call dispatch\<close>
 
+text \<open>
+  \<open>special_int_dom\<close> havocs on \<open>Nondet_Int\<close> and applies the mode-aware
+  \<open>int_dom_min\<close>/\<open>int_dom_max\<close> to the evaluated operands. \<open>int_dom_special_ops\<close>
+  packages the pair: sound in every mode, monotone outside \<open>Refine_Fixpoint\<close>.
+\<close>
+
 fun special_int_dom ::
     "refine_mode => special_call => vname => (vname => int_dom) => (vname => int_dom)"
 where

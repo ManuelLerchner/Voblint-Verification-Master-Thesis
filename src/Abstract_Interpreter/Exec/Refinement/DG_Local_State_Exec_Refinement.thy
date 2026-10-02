@@ -67,6 +67,13 @@ lemma dg_reader_commute_gen_lifted_for:
      (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _) (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _)"
   by unfold_locales (simp_all add: map_lift_sup)
 
+text \<open>
+  \<open>dg_domain_exec\<close> relates an executable transfer on \<open>default_st\<close>
+  to the abstract state specification: on live states the step, the entry
+  transfer and the emptiness test agree with their abstract counterparts after
+  readback through \<open>default_st_to_fun\<close>.
+\<close>
+
 locale dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
     and empty_pred :: "'a::numeric_domain default_st \<Rightarrow> bool"

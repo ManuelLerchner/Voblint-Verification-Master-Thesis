@@ -61,6 +61,12 @@ lemma congruence_max_mono:
 
 subsection \<open>Special-call dispatch\<close>
 
+text \<open>
+  \<open>congruence_special_ops\<close> pairs \<open>congruence_min\<close> and \<open>congruence_max\<close>, both the
+  join of their operands. Interpreting \<open>mono_minmax_ops\<close> at this pair makes the
+  generic special-call transfer sound and monotone for congruences.
+\<close>
+
 definition congruence_special_ops :: "congruence special_ops" where
   "congruence_special_ops = (| special_min = congruence_min, special_max = congruence_max |)"
 

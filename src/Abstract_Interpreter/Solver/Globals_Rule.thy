@@ -94,6 +94,12 @@ qed
 
 subsection \<open>The rule as a value\<close>
 
+text \<open>
+  \<open>update_global_of\<close> maps each \<open>globals_rule\<close> to its update rule, so
+  one interpretation of \<open>TD_side_upd_rule\<close> covers every rule a
+  configuration can select.
+\<close>
+
 definition update_global_of ::
     "globals_rule \<Rightarrow> 'd \<Rightarrow> 'x \<Rightarrow> 'g \<Rightarrow> 'd::{bounded_semilattice_sup_bot,warrowing}
        \<Rightarrow> ('x, 'g, 'd) ug_state_with_gas \<Rightarrow> 'd option \<times> ('x, 'g, 'd) ug_state_with_gas" where

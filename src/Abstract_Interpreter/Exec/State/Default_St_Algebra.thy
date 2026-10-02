@@ -70,6 +70,11 @@ lemma eq_default_st_rep_map2:
 
 subsection \<open>Join and semilattice structure\<close>
 
+text \<open>
+  Join is the pointwise join of both dictionaries, which respects extensional
+  equality and so lifts to \<open>default_st\<close> as a bounded join-semilattice.
+\<close>
+
 definition merge_default_st_rep ::
   "('a::bounded_semilattice_sup_bot) default_st_rep =>
    'a default_st_rep => 'a default_st_rep"
@@ -120,6 +125,11 @@ instance default_st ::
   (bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
 subsection \<open>Widening and narrowing\<close>
+
+text \<open>
+  Widening and narrowing act pointwise as well, inheriting the element domain's
+  \<open>warrowing\<close> laws location by location.
+\<close>
 
 definition widen_default_st_rep ::
   "('a::{bounded_semilattice_sup_bot, warrowing}) default_st_rep =>

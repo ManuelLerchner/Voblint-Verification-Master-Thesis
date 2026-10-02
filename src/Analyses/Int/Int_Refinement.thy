@@ -90,6 +90,13 @@ qed
 
 subsection \<open>Refinement facts\<close>
 
+text \<open>
+  Two kinds of fact travel between components: an interval and a congruence.
+  \<open>interval_sign_fact\<close> and \<open>interval_parity_fact\<close> read off the sign and parity an
+  interval implies; the lemmas below show each over-approximates the interval and
+  is monotone.
+\<close>
+
 type_synonym interval_fact = ivl
 type_synonym congruence_fact = congruence
 
@@ -198,6 +205,13 @@ proof -
 qed
 
 subsection \<open>Interval-fact fan-out\<close>
+
+text \<open>
+  \<open>refine_interval\<close> intersects the sign and interval components into one interval
+  fact and meets every interval-readable component with it. The step preserves the
+  concretization, only shrinks the record and is monotone, so it is an
+  \<open>int_reduction_step\<close>.
+\<close>
 
 definition refine_sign_with_interval ::
   "interval_fact => sign => sign" where
@@ -365,6 +379,13 @@ lemma int_reduction_step_refine_interval:
 
 
 subsection \<open>Congruence-fact fan-out\<close>
+
+text \<open>
+  \<open>refine_congruence\<close> first sharpens the congruence by the parity, then uses the
+  result to round the interval bounds to the nearest class members
+  (\<open>congruence_lower_bound\<close>, \<open>congruence_upper_bound\<close>) and to sharpen the parity.
+  Like the interval fan-out it is an \<open>int_reduction_step\<close>.
+\<close>
 
 definition congruence_fact_of_congruence ::
   "congruence => congruence_fact" where

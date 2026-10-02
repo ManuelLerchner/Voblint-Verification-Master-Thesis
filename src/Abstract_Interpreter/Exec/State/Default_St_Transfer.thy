@@ -447,6 +447,11 @@ lemma default_st_to_fun_sup [simp]:
 
 subsection \<open>Frame entry\<close>
 
+text \<open>
+  Entering a frame sets every local to \<open>top_val\<close> and keeps the globals;
+  the lemmas carry this through the quotient and the readback.
+\<close>
+
 definition enter_frame_D_default_st_rep ::
   "'a => ('a::bot) default_st_rep => 'a default_st_rep"
 where

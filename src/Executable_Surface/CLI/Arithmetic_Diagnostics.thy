@@ -114,6 +114,12 @@ end
 
 section \<open>Sites and their solved classifications\<close>
 
+text \<open>
+  \<open>arithmetic_expression_sites\<close> collects the expressions each CFG edge and call
+  evaluates; \<open>arithmetic_sites\<close> turns them into the divisor obligations the
+  solved table then classifies.
+\<close>
+
 fun arithmetic_edge_expressions :: "edge_action \<Rightarrow> exp list" where
   "arithmetic_edge_expressions (EA_Assign x e) = [e]"
 | "arithmetic_edge_expressions (EA_Assume e) = [e]"

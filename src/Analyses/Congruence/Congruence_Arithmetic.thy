@@ -218,6 +218,13 @@ qed
 
 subsection \<open>Monotonicity\<close>
 
+text \<open>
+  Addition, subtraction and multiplication are monotone. At the representation
+  level an ordering \<open>c + m\<int>\<close> below \<open>c' + m'\<int>\<close> is divisibility of the modulus
+  and the offset difference, so \<open>plus_congruence_rep_mono_nonbottom\<close> reduces to
+  \<open>gcd\<close> monotonicity; the lifted \<open>congruence_plus_mono\<close> and its siblings split on bottom.
+\<close>
+
 lemma plus_congruence_rep_mono_nonbottom:
   fixes c1 m1 c2 m2 d1 n1 d2 n2 :: int
   assumes m: "m2 dvd m1" "m2 dvd c1 - c2"
@@ -775,6 +782,13 @@ lemma congruence_mod_mono:
      (auto intro: congruence_mod_fallback_sound congruence_minus_mono congruence_times_mono)
 
 subsection \<open>Abstract expression evaluation\<close>
+
+text \<open>
+  \<open>aval_congruence\<close> evaluates an expression bottom-up with the congruence operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
 
 fun aval_congruence ::
     "exp => (vname => congruence) => congruence"

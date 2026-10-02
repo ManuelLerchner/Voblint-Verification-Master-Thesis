@@ -127,6 +127,12 @@ lemma eint_max_mono:
 
 subsection \<open>Carrier and concretization\<close>
 
+text \<open>
+  An interval \<open>Ivl l u\<close> over extended integers denotes the integers between
+  its bounds; a reversed pair denotes the empty set, so the raw carrier has many
+  empty values.
+\<close>
+
 datatype ivl = Ivl (ivl_lower: eint) (ivl_upper: eint)   \<comment> \<open>@{text "Ivl l u = [l, u]"}\<close>
 
 text \<open>
@@ -148,6 +154,11 @@ definition ivl_of_int :: "int \<Rightarrow> ivl" where
 
 
 subsection \<open>Order\<close>
+
+text \<open>
+  Interval inclusion on the bounds, with \<open>Ivl PlusInf MinInf\<close> as bottom and
+  \<open>ivl_top\<close> as the unbounded interval.
+\<close>
 
 instantiation ivl :: ord begin
 definition less_eq_ivl :: "ivl => ivl => bool" where
@@ -223,6 +234,11 @@ lemma ivl_le_top: "(x::ivl) \<le> ivl_top"
   by (cases x) (simp add: less_eq_ivl_def ivl_top_def)
 
 subsection \<open>Join\<close>
+
+text \<open>
+  The join takes the smaller lower and the larger upper bound; the lemmas prove
+  it is the least upper bound and instantiate \<open>semilattice_sup\<close>.
+\<close>
 
 fun join_ivl :: "ivl => ivl => ivl" where
     "join_ivl (Ivl l1 u1) (Ivl l2 u2) =
@@ -548,6 +564,11 @@ lemma meet_ivl_normalized_breaks_greatest:
   by (simp_all add: less_eq_ivl_def normalize_ivl_def bot_ivl_def)
 
 subsection \<open>Semantic intersection\<close>
+
+text \<open>
+  \<open>intersect_ivl\<close> is the intersection a backward filter uses, distinct from
+  the order's \<open>inf\<close> on this raw carrier.
+\<close>
 
 definition intersect_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   [simp]: "intersect_ivl a b = normalize_ivl (a \<sqinter> b)"

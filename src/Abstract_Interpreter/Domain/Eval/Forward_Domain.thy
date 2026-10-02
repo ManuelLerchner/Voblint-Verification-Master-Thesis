@@ -26,6 +26,11 @@ locale sound_evaluator =
   assumes aval_abs_sound[intro]:
     "s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
 
+text \<open>
+  A truth test answers \<open>Some b\<close> only when every integer the abstract value
+  concretizes to has truthiness \<open>b\<close>; \<open>None\<close> means the value cannot decide.
+\<close>
+
 locale sound_truth_test =
   fixes tobool :: "'a::numeric_domain \<Rightarrow> bool option"
   assumes tobool_sound:
@@ -43,6 +48,11 @@ locale mono_evaluator = sound_evaluator \<gamma>\<^sub>S aval_abs
     and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" +
   assumes aval_abs_mono[intro]:
     "d1 \<le> d2 \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
+
+text \<open>
+  \<open>mono_truth_test\<close> adds \<open>tobool_mono\<close> on top of the sound truth test,
+  the downward monotonicity described above for non-empty values.
+\<close>
 
 locale mono_truth_test = sound_truth_test +
   assumes tobool_mono:

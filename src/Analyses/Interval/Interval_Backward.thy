@@ -5,6 +5,12 @@ begin
 
 section \<open>Interval backward filtering\<close>
 
+text \<open>
+  The interval comparison queries, the evaluator \<open>aval_ivl\<close>, and the inverse
+  operators that narrow interval operands against a guard's outcome, packaged as
+  \<open>ivl_refine_ops\<close> with its refinement certificate.
+\<close>
+
 subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
@@ -144,6 +150,13 @@ proof -
 qed
 
 subsection \<open>Abstract expression evaluation\<close>
+
+text \<open>
+  \<open>aval_ivl\<close> evaluates an expression bottom-up with the interval operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
 
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
     "aval_ivl (N n)        \<sigma> = ivl_of_int n"

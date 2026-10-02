@@ -59,6 +59,12 @@ lemma nv_analysed:
 
 subsection \<open>The premises, discharged\<close>
 
+text \<open>
+  Each premise of the source-level endpoints, proved for \<open>nv_prog\<close>: the zero store is
+  initial, there are no globals, and the source run reaches the first check
+  (\<open>nv_to_check\<close>).
+\<close>
+
 lemma nv_init: "(\<lambda>_. 0) \<in> cinit_stores (declared_global nv_prog)"
   by (simp add: cinit_stores_def)
 
@@ -134,6 +140,12 @@ proof -
 qed
 
 subsection \<open>The endpoints, instantiated\<close>
+
+text \<open>
+  With the premises discharged, \<open>run_voblint_source_sound\<close> and its siblings apply to
+  \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are
+  \<open>Check_Proved\<close> and \<open>Dead\<close>.
+\<close>
 
 theorem nv_source_certified:
   "\<exists>res v stk.
@@ -247,6 +259,11 @@ qed
 
 section \<open>Load-bearing conditions\<close>
 
+text \<open>
+  Each subsection below drops or weakens one condition and exhibits an answer that
+  meets everything else yet misses a concrete execution.
+\<close>
+
 subsection \<open>Soundness alone is cheap\<close>
 
 text \<open>
@@ -341,6 +358,12 @@ proof
 qed
 
 section \<open>The paired-coverage, RETURN and TOTAL counterexamples\<close>
+
+text \<open>
+  Three weakenings of \<open>activation_coverage\<close> fail: RETURN read at the caller's
+  context, TOTAL dropped, and entry coverage without pairing. \<open>ret_prog\<close> calls \<open>f\<close>
+  with \<open>1\<close> and then \<open>5\<close>.
+\<close>
 
 definition ret_prog :: imp_prog where
   "ret_prog = program {

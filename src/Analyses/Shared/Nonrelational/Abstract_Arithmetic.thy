@@ -55,6 +55,13 @@ fun of_bool_option :: "(int \<Rightarrow> 'a::sup) \<Rightarrow> bool option \<R
   "of_bool_option lit (Some b) = lit (if b then 1 else 0)"
 | "of_bool_option lit None = lit 0 \<squnion> lit 1"
 
+text \<open>
+  \<open>sound_arith_ops\<close> pins an evaluator \<open>ev\<close> down by its equations: arithmetic
+  through the supplied operations, comparisons through \<open>lt\<close>/\<open>eqb\<close> and
+  \<open>of_bool_option\<close> behind the emptiness guard. Given sound operations and queries,
+  the locale proves the evaluator sound.
+\<close>
+
 locale sound_arith_ops =
   sound_truth_test tobool + sound_numeric_queries lt eqb
   for ev :: "exp \<Rightarrow> (vname \<Rightarrow> 'a::numeric_domain) \<Rightarrow> 'a"

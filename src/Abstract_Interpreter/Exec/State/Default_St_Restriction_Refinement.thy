@@ -26,6 +26,11 @@ lemma default_st_to_fun_restrict_global_for [simp]:
 
 subsection \<open>The represented function of joins\<close>
 
+text \<open>
+  Readback through \<open>default_st_to_fun\<close> commutes with joins and is monotone
+  under the reachability lifting.
+\<close>
+
 lemma map_lift_default_st_to_fun_sup [simp]:
   "map_lift (default_st_to_fun \<G>) (a \<squnion> b) =
    map_lift (default_st_to_fun \<G>) a \<squnion> map_lift (default_st_to_fun \<G>) b"

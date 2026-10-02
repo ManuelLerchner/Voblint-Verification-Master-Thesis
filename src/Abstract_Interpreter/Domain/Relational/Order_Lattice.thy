@@ -117,6 +117,11 @@ end
 
 subsection \<open>Concretization\<close>
 
+text \<open>
+  A set of pairs denotes the stores satisfying \<open>s x <= s y\<close> for each pair;
+  \<open>RelBot\<close> denotes no store. Concretization is monotone in the order.
+\<close>
+
 fun gamma_relc :: "relc \<Rightarrow> store set" where
   "gamma_relc RelBot = {}"
 | "gamma_relc (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"

@@ -78,6 +78,11 @@ lemma dgEx_terminates: "sign_rule.terminates Globals_Join sign_ex_gs sign_ex_pro
 
 subsection \<open>Well-formedness of the compiled input\<close>
 
+text \<open>
+  \<open>dgEx_wf\<close>: the compiled example meets \<open>wf_compile_input\<close>, the premise the
+  source-level soundness theorem below needs.
+\<close>
+
 lemma dgEx_wf:
   "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"
   by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)

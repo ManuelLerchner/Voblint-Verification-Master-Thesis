@@ -568,6 +568,12 @@ definition mcp_gamma :: "('s \<Rightarrow> store set) list \<Rightarrow> 's \<Ri
 
 section \<open>Soundness of the combination\<close>
 
+text \<open>
+  The combined state is sound for the intersection \<open>mcp_gamma\<close> of the
+  components' concretizations. Step, combine, entry and query folds each stay
+  sound because a component leaves the others' concretizations unchanged.
+\<close>
+
 lemma mcp_gamma_Cons [simp]: "mcp_gamma (g # gs) x = g x \<inter> mcp_gamma gs x"
   by (simp add: mcp_gamma_def)
 

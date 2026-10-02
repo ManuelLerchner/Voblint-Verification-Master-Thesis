@@ -4,6 +4,12 @@ begin
 
 section \<open>Congruence lattice\<close>
 
+text \<open>
+  Goblint's congruence domain as a normalized subtype of \<open>(int * int) option\<close>,
+  with concretization \<open>gamma_congruence\<close>, the lattice order, join
+  and the executable tests the \<open>numeric_domain\<close> instance needs.
+\<close>
+
 subsection \<open>Carrier and concretization\<close>
 
 text \<open>
@@ -594,6 +600,12 @@ qed
 
 subsection \<open>Join\<close>
 
+text \<open>
+  Two classes join to the class modulo the gcd of both moduli and the residue
+  difference, renormalized. The lemmas show the join is an upper bound in
+  \<open>gamma_congruence\<close> and the least one in the order.
+\<close>
+
 fun join_congruence_rep :: "congruence_rep => congruence_rep => congruence_rep" where
   "join_congruence_rep None y = y"
 | "join_congruence_rep x None = x"
@@ -1021,6 +1033,11 @@ instance congruence :: bounded_lattice_bot ..
 
 
 subsection \<open>Executable interface\<close>
+
+text \<open>
+  Executable bottom and top tests, each proved against \<open>gamma_congruence\<close>
+  and checked by \<open>eval\<close> on small regression values.
+\<close>
 
 definition is_bottom_congruence :: "congruence => bool" where
   "is_bottom_congruence a = (a = bot)"

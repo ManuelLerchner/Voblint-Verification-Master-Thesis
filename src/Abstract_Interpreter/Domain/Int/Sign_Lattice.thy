@@ -39,6 +39,11 @@ lemma sign_of_int_gamma: "n : gamma_sign (sign_of_int n)"
 
 subsection \<open>Order\<close>
 
+text \<open>
+  \<open>sign_le\<close> puts \<open>SNeg\<close> and \<open>SZero\<close> below \<open>SNonPos\<close>, and
+  \<open>SZero\<close> and \<open>SPos\<close> below \<open>SNonNeg\<close>; concretization is monotone in it.
+\<close>
+
 fun sign_le :: "sign => sign => bool" where
     "sign_le SBot    _       = True"
   | "sign_le _       STop    = True"
@@ -132,6 +137,11 @@ lemma gamma_sign_top: "gamma_sign top = UNIV"
   unfolding top_sign_def by simp
 
 subsection \<open>Join\<close>
+
+text \<open>
+  \<open>join_sign\<close> returns the least sign covering both arguments, for example
+  \<open>SNeg\<close> and \<open>SZero\<close> join to \<open>SNonPos\<close>.
+\<close>
 
 fun join_sign :: "sign => sign => sign" where
     "join_sign SBot    b       = b"

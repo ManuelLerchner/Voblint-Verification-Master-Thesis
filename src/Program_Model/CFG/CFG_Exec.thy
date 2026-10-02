@@ -46,6 +46,11 @@ inductive_cases cstep_E [elim]: "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
+text \<open>
+  One introduction lemma per edge action, stating the \<open>cstep\<close> it takes and the
+  store it produces.
+\<close>
+
 lemma cstep_nop:
   assumes "(u, EA_Nop, v) \<in> intra g"
   shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"

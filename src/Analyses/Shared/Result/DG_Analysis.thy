@@ -129,6 +129,13 @@ record ('c, 'v) solved_run =
   run_step :: "pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted"
   run_succ :: "cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option"
 
+text \<open>
+  \<open>dg_pipeline\<close> only fixes parameters: the component \<open>comp\<close>, the carrier
+  operations \<open>emp\<close>, \<open>rd\<close> and \<open>init_st\<close>, the context policy \<open>seed\<close>/\<open>route\<close>/
+  \<open>root_ctx\<close>, the solver \<open>solve\<close> with its domain, and the check classifier.
+  The soundness assumptions live in the locales built on it.
+\<close>
+
 locale dg_pipeline =
   fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
@@ -491,6 +498,12 @@ definition admitted_contexts :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_pr
 
 subsection \<open>What the assembly derives, for one program\<close>
 
+text \<open>
+  Fixing one program \<open>p\<close>, this part equates the published table with the solved
+  reader, puts the solver's answer in the routed spine's shape, and states routed
+  soundness for any relation of admitted contexts.
+\<close>
+
 context
   fixes p :: imp_prog
 begin
@@ -746,6 +759,11 @@ lemma routed_analysis_sound_of:
      (blast intro: fwd_ok dest: cover_R)+
 
 subsubsection \<open>The published endpoint, under termination and coverage\<close>
+
+text \<open>
+  Under termination and closure of the solved keys, \<open>activation_collect_sound_of\<close>
+  bounds every admitted activation by the solved table's entry at its context.
+\<close>
 
 lemma cinit_le_init: "cinit_stores pgs \<subseteq> cgam (Lifted init_st)"
   using init_sound[of p] by simp

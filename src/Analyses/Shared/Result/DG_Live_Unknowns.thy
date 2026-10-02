@@ -130,6 +130,12 @@ qed
 
 subsection \<open>Keys of a solve whose activation returned\<close>
 
+text \<open>
+  The solved key set is closed under the equations' reads (\<open>sol_vars_dep_closed\<close>).
+  Walking those reads backwards, \<open>live_unknowns_cover\<close> shows \<open>live_unknowns\<close> closed
+  under intra edges, call continuations and live callee entries.
+\<close>
+
 context dg_analysis
 begin
 
@@ -303,6 +309,12 @@ proof -
 qed
 
 subsection \<open>The entry-state endpoint over the live keys\<close>
+
+text \<open>
+  The routed soundness statement restated over \<open>live_unknowns\<close>, whose coverage
+  needs no premise beyond termination, and carried to the published table and
+  the source-level endpoints under the functional routing policy.
+\<close>
 
 context
   fixes p :: imp_prog
@@ -600,6 +612,12 @@ proof -
 qed
 
 subsection \<open>Entry-state routing\<close>
+
+text \<open>
+  Instantiates the live-key endpoints at \<open>admitted_contexts\<close>, the policy that routes
+  a call by its entered state. Its two policy facts hold by construction, so the
+  results need only termination and a well-formed program.
+\<close>
 
 lemma entry_state_routed_analysis_from_live_unknowns:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"

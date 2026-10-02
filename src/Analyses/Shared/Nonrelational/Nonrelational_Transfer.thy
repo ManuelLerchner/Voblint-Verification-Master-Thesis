@@ -47,6 +47,12 @@ begin
 
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
 
+text \<open>
+  \<open>assign\<close> overwrites the target with the evaluated expression and \<open>ret\<close> does the
+  same for \<open>ret_var\<close>. \<open>skip\<close>, \<open>body\<close> and \<open>event\<close> are the identity. Each
+  operation gets its soundness lemma here.
+\<close>
+
 definition assign :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "assign x a \<sigma> = \<sigma>(x := n_aval ops a \<sigma>)"
 
@@ -333,6 +339,12 @@ lemma enter_for_mono:
 end
 
 subsection \<open>Certifying a bundle from its capability certificates\<close>
+
+text \<open>
+  \<open>sound_nonrelational_opsI\<close> and \<open>mono_nonrelational_opsI\<close> assemble the bundle
+  certificates from the special-call, refinement and check-query certificates, so
+  a domain never unfolds the combined locales itself.
+\<close>
 
 lemma sound_nonrelational_opsI:
   assumes "sound_minmax_ops (n_special ops) (n_aval ops)"
