@@ -1,0 +1,19 @@
+// PARAM: --analysis parity
+// Ported from Example_Parity_Checks_Store_Only.thy (parity_direct_comparisons).
+// A comparison is an int-valued expression. With x Even, x != 1 is decided
+// (true, value 1, Odd), so ne != 0 is PROVED. Parity has no order, so
+// x <= 1, x > 1 and x >= 1 evaluate to Top. Those three UNKNOWNs are sound
+// answers, not regressions: n is unconstrained, so each comparison is true on
+// some runs and false on others.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  le = x <= 1;
+  gt = x > 1;
+  ge = x >= 1;
+  ne = x != 1;
+  __voblint_check(ne != 0); // PROVED
+  __voblint_check(le != 0); // UNKNOWN
+  __voblint_check(gt != 0); // UNKNOWN
+  __voblint_check(ge != 0); // UNKNOWN
+}

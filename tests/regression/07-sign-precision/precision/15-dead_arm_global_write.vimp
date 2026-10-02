@@ -1,0 +1,24 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Sign_Report_Regression (sign_dead_branch_bot_result,
+// sign_flow_sensitive_global_result) and Example_Sign_Unit_Assembly
+// (sign_assembly_demo_report).
+//
+// main writes Gx = 0, then f(5) writes Gx = 1 on its live arm. Sign refutes
+// n < 0 for n Positive, so the Gx = -1 arm is Bottom and never joins into
+// f's exit; and the callee's write reaches main through the local unknown,
+// so Gx = 0 before the call never joins with Gx = 1 after it. Either leak
+// would leave Gx at Top or NonNegative and the check UNKNOWN. The
+// dead-arm-free half of this program is 03-global_write_across_call.vimp.
+global Gx;
+fun f(n) {
+  if (n < 0) {
+    Gx = -1;
+  } else {
+    Gx = 1;
+  }
+}
+fun main() {
+  Gx = 0;
+  f(5);
+  __voblint_check(0 < Gx); // PROVED
+}

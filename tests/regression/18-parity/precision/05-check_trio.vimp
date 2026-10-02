@@ -1,0 +1,15 @@
+// PARAM: --analysis parity --globals join
+// Ported from Example_Parity_Checks_Store_Only.thy (parity_ex_classify_3/4/6,
+// parity_ex_report_eval). y = x * 2 is Even and z = y + 1 is Odd whatever x
+// is, so y != z is PROVED and y == z REFUTED. w is an unconstrained
+// __voblint_nondet_int(); Parity can only refute an equality across differing
+// parities, never confirm one, and y == w is undetermined, so UNKNOWN.
+fun main() {
+  x = __voblint_nondet_int();
+  y = x * 2;
+  z = y + 1;
+  __voblint_check(y != z); // PROVED
+  __voblint_check(y == z); // REFUTED
+  w = __voblint_nondet_int();
+  __voblint_check(y == w); // UNKNOWN
+}

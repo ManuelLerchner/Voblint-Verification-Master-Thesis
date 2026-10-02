@@ -1,0 +1,29 @@
+// PARAM: --analysis int --int-refinement fixpoint
+// Source: Example_Int_Domain (arithmetic_fixpoint_result,
+// arithmetic_evaluator_refines_each_operation) and Example_Int_Backward
+// (int_exact_division_recovers_parity, int_division_remainder_progressive),
+// the Refine_Fixpoint columns. Same program and verdicts as
+// 18-refinement_once_arithmetic.vimp. The theory separates the two modes
+// only in the sum's sign (NonPositive vs Zero), which no check here sees.
+fun main() {
+  x = -1;
+  m = __voblint_nondet_int();
+  y = 2 * m + 1;
+  if (y >= 0) {
+    if (y <= 1) {
+      z = x + y;
+      __voblint_check(z == 0); // PROVED
+      __voblint_check(z <= 0); // PROVED
+    }
+  }
+  n = __voblint_nondet_int();
+  even = (6 * n) / 3;
+  odd = (12 * n + 3) / -3;
+  __voblint_check(even == 1); // REFUTED
+  __voblint_check(odd == 0); // REFUTED
+  if (0 <= n && n <= 20) {
+    r = ((12 * n + 3) / 3) % 4;
+    __voblint_check(r == 1); // PROVED
+    __voblint_check(r > 0); // PROVED
+  }
+}

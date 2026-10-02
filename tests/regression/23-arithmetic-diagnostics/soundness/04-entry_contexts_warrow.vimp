@@ -1,0 +1,13 @@
+// PARAM: --analysis interval --context entry-state
+// EXPECT-ARITHMETIC
+// Ported from Example_Arithmetic_Diagnostics_Regression.thy
+// (arithmetic_mixed_contexts_warn_once). 02-entry_contexts.vimp under the
+// default warrow globals rule: one context divides by zero and one does not,
+// so the source operation gets exactly one possible finding.
+fun f(n) {
+  return 10 / n; // ARITH: WARN division-by-zero
+}
+fun main() {
+  x = f(0);
+  y = f(2);
+}

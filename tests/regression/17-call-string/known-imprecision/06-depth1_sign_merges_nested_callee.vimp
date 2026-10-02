@@ -1,0 +1,18 @@
+// PARAM: --analysis sign --context call-string --context-depth 1
+// Source: Example_Sign_DG_CallString_K1 (sign_nest_1_g_entry_merged), the
+// k = 1 side of Example_Sign_DG_CallString_K2's
+// sign_k2_strictly_more_precise_than_k1_at_g.
+//
+// x = 6 and y = -20 are fixed. At depth 1, g's context records only its own
+// call site inside f, so the two f activations share one g context; g's
+// entry joins Positive with Negative to Top and both results come back Top.
+// ../precision/05-callstring_graph_sign.vimp is the same program at depth 2,
+// where both checks are PROVED.
+fun g(p) { return p + p; }
+fun f(p) { t = g(p); return t; }
+fun main() {
+  x = f(3);
+  y = f(-10);
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(y < 0); // UNKNOWN
+}

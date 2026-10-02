@@ -1,0 +1,33 @@
+// PARAM: --analysis interval --context entry-state
+// Ported from Example_Interval_DG_Ctx_Factorial_Regression (fact_return_ctx_a,
+// _b, _a2, _a1) and Example_Interval_DG_EntryState_Result_Regression
+// (fact_result_base_case_live_ctx). Same program as
+// 03-procedures/precision/06-recursive_factorial_dead_branch_no_bottom_leak.vimp,
+// plus checks pinning each inner activation's returned value.
+//
+// factorial runs under four entry-state contexts, n = [1,1] .. [4,4]. a == 6 and
+// b == 24 pin the [3,3] and [4,4] returns. The three checks after the recursive
+// call pin r, the return of the [n-1,n-1] activation, in each caller context: a
+// check is joined across contexts, so each is written to be decided and true in
+// all of them at once (see 08-global_entry_value_per_context.vimp). The
+// base-case check is live only under n = [1,1].
+fun factorial(n) {
+  __voblint_check(0 < n); // PROVED
+  if (n < 2) {
+    __voblint_check(n == 1); // PROVED
+    return 1;
+  } else {
+    r = factorial(n - 1);
+    __voblint_check(0 < r); // PROVED
+    __voblint_check((n == 2) == (r == 1)); // PROVED
+    __voblint_check((n == 3) == (r == 2)); // PROVED
+    __voblint_check((n == 4) == (r == 6)); // PROVED
+    return n * r;
+  }
+}
+fun main() {
+  a = factorial(3);
+  b = factorial(4);
+  __voblint_check(a == 6); // PROVED
+  __voblint_check(b == 24); // PROVED
+}

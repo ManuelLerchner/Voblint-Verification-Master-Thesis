@@ -1,0 +1,26 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Sign_DG_Custom_Body (bf_entry_node_is_pre_body,
+// bf_stock_keeps_the_formal, bf_caller_unaffected) and
+// Example_Sign_DG_Custom_Combine (cj_agree_before_the_call,
+// cj_stock_keeps_caller_after_the_call, cj_return_assignment_unaffected),
+// the stock-specification halves of both witnesses.
+//
+// mark's formal p stays Positive across the procedure-entry edge and after
+// mark's own first command. mark writes r, a name main also holds; the
+// return combine discards the callee's locals, so main's r is still
+// Positive after the call and z receives the Positive return value.
+// Sign sibling of 03-procedures/precision/03-callee_local_does_not_leak.vimp.
+fun mark(p) {
+  __voblint_check(0 < p); // PROVED
+  r = 0 - 1;
+  __voblint_check(0 < p); // PROVED
+  __voblint_check(r < 0); // PROVED
+  return p;
+}
+fun main() {
+  r = 1;
+  __voblint_check(0 < r); // PROVED
+  z = mark(7);
+  __voblint_check(0 < r); // PROVED
+  __voblint_check(0 < z); // PROVED
+}

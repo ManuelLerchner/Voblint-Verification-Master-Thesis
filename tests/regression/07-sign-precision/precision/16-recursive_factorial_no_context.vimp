@@ -1,0 +1,28 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Sign_Report_Regression (sign_factorial_result).
+//
+// n is 1 or more at every entry of factorial, so 0 < n holds concretely,
+// but Sign answers UNKNOWN: the recursive argument n - 1 is Positive minus
+// Positive, which sign_minus sends to Top, and factorial has one context,
+// so that Top joins into the entry state (measured: n = Top at the check).
+// The theory's prose blames the join of the two call sites' 3 and 4; both
+// are Positive, so the recursive subtraction is the actual cause.
+// Every return value is Positive regardless, so the other three checks hold.
+// Interval sibling with entry-state contexts:
+// 03-procedures/precision/06-recursive_factorial_dead_branch_no_bottom_leak.vimp.
+fun factorial(n) {
+  __voblint_check(0 < n); // UNKNOWN
+  if (n < 2) {
+    return 1;
+  } else {
+    r = factorial(n - 1);
+    __voblint_check(0 < r); // PROVED
+    return n * r;
+  }
+}
+fun main() {
+  a = factorial(3);
+  b = factorial(4);
+  __voblint_check(0 < a); // PROVED
+  __voblint_check(0 < b); // PROVED
+}

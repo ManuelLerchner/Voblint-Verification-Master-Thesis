@@ -1,0 +1,11 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Side_Execute (x1_y_top; x1_computes_x_pos is
+// ../precision/01-straight_line_sign.vimp).
+//
+// cinit_stores fixes only declared globals at 0; a local that main never
+// assigns starts with any value, so 0 < y holds in some runs and fails in
+// others. Sign reports y as Top, and UNKNOWN is the only sound answer.
+fun main() {
+  x = 1;
+  __voblint_check(0 < y); // UNKNOWN
+}

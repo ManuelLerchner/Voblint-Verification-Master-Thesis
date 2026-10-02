@@ -1,0 +1,17 @@
+// PARAM: --analysis int --int-refinement never
+// Source: Example_Int_Backward (bfilter_int_dom_never_congruence_unused).
+//
+// 24-site-figures/precision/02-int_reduction_int.vimp under never. x is
+// 1 (mod 4) and the guards bound the interval to [-2,10]. Only a
+// refinement round moves the interval's bounds onto the class ([1,9]);
+// without it no single component decides the check: the interval still
+// contains -2, 0 and 10, and the class is not a singleton.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 4 * n + 1;
+  if (x >= -2) {
+    if (x <= 10) {
+      __voblint_check(x >= 1 && x <= 9); // UNKNOWN
+    }
+  }
+}

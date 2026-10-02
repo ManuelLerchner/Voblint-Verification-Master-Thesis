@@ -1,0 +1,52 @@
+// PARAM: --analysis congruence
+// Source: Example_Congruence_Arithmetic (congruence_bottom_top_regression,
+// congruence_definite_arithmetic_regression,
+// congruence_modular_arithmetic_regression, aval_congruence_regression,
+// congruence_exact_division_regression) and Example_Congruence_Backward
+// (congruence_division_remainder_regression).
+//
+// Singletons stay singletons under +, - and *, and anything times 0 is 0.
+// With x in 1 (mod 4) and y in 3 (mod 6), x + y and x - y are 0 (mod 2)
+// and x * y is 3 (mod 6), so each guard on an excluded value is dead.
+// Remainder and division keep the class: x % 2 is odd, x % 0 and x / 1
+// are x, 6n / 3 is even, and (6n + 1) / 3 is top, so u == 2 stays live.
+// Division by 0 is 0 under VIMP's totalization.
+fun main() {
+  n = __voblint_nondet_int();
+  a = __voblint_nondet_int();
+  b = __voblint_nondet_int();
+  z = n * 0;
+  __voblint_check(z == 0); // PROVED
+  s1 = -3 + 5;
+  __voblint_check(s1 == 2); // PROVED
+  s2 = 7 - 10;
+  __voblint_check(s2 == -3); // PROVED
+  s3 = -3 * 4;
+  __voblint_check(s3 == -12); // PROVED
+  x = 4 * a + 1;
+  y = 6 * b + 3;
+  p = x + y;
+  if (p == 1) { __voblint_check(false); } // NOWARN
+  m = x - y;
+  if (m == 1) { __voblint_check(false); } // NOWARN
+  t = x * y;
+  if (t == 5) { __voblint_check(false); } // NOWARN
+  if (t == 9) { __voblint_check(true); } // PROVED
+  o = 2 * a + 1;
+  e = o + 1;
+  if (e == 3) { __voblint_check(false); } // NOWARN
+  r1 = -7 % 3;
+  __voblint_check(r1 == -1); // PROVED
+  r2 = x % 2;
+  if (r2 == 0) { __voblint_check(false); } // NOWARN
+  d0 = n / 0;
+  __voblint_check(d0 == 0); // PROVED
+  r0 = x % 0;
+  if (r0 == 3) { __voblint_check(false); } // NOWARN
+  d1 = x / 1;
+  if (d1 == 3) { __voblint_check(false); } // NOWARN
+  h = (6 * n) / 3;
+  if (h == 1) { __voblint_check(false); } // NOWARN
+  u = (6 * n + 1) / 3;
+  if (u == 2) { __voblint_check(true); } // PROVED
+}

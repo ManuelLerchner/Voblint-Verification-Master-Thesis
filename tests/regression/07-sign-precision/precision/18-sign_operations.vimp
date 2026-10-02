@@ -1,0 +1,72 @@
+// PARAM: --analysis sign
+// Source: Example_Sign_Domain_Ops (sign_of_int_regression,
+// sign_arithmetic_regression, join_sign_regression, aval_sign_regression,
+// assign_sign_regression, sign_direct_comparisons,
+// sign_direct_guard_refinement, sign_interface_regression,
+// sign_division_remainder_regression).
+//
+// Each block exercises one sign operation through a check. The UNKNOWN rows
+// are soundness rows: b is -1 or 0, d is 1 or 0, and q is n / d with both
+// positive, so each condition holds in one execution and fails in another.
+// The operations that lose information on fixed values are in
+// ../known-imprecision/02-mixed_signs_lose_sign.vimp.
+fun main() {
+  c = __voblint_nondet_int();
+  n = __voblint_nondet_int();
+  a = -2 * 3;
+  __voblint_check(a < 0); // PROVED
+  b = -2 * -3;
+  __voblint_check(0 < b); // PROVED
+  z = 0 * n;
+  __voblint_check(z == 0); // PROVED
+  x = 1;
+  y = x + x;
+  __voblint_check(0 < x); // PROVED
+  __voblint_check(0 < y); // PROVED
+  if (c) { b = -1; } else { b = 0; }
+  __voblint_check(b <= 0); // PROVED
+  __voblint_check(b < 0); // UNKNOWN
+  if (c) { d = 1; } else { d = 0; }
+  __voblint_check(d >= 0); // PROVED
+  __voblint_check(d > 0); // UNKNOWN
+  m = -1;
+  __voblint_check(0 < (m <= 0)); // PROVED
+  __voblint_check((m > 0) == 0); // PROVED
+  __voblint_check((m >= 0) == 0); // PROVED
+  __voblint_check(0 < (m != 0)); // PROVED
+  if (n > 0) {
+    __voblint_check(0 < n); // PROVED
+  }
+  if (n <= 0) {
+    __voblint_check(n < 1); // PROVED
+  }
+  if (n >= 0) {
+    __voblint_check(n > -1); // PROVED
+  }
+  if (n != 0) {
+    __voblint_check(true); // PROVED
+  } else {
+    __voblint_check(n == 0); // PROVED
+  }
+  if (n >= 0) {
+    if (n <= 0) {
+      __voblint_check(n == 0); // PROVED
+    }
+  }
+  if (n > 0) {
+    if (n < 0) {
+      __voblint_check(false); // NOWARN
+    }
+  }
+  if (n > 0 && c > 0) {
+    q = n / c;
+    __voblint_check(q >= 0); // PROVED
+    __voblint_check(q > 0); // UNKNOWN
+    q = n / 0;
+    __voblint_check(q == 0); // PROVED
+  }
+  if (n < 0) {
+    r = n % 0;
+    __voblint_check(r < 0); // PROVED
+  }
+}

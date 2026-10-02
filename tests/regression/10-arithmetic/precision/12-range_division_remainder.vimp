@@ -1,0 +1,35 @@
+// PARAM: --analysis interval
+// Quotient and remainder bounds over ranges: a positive range by a positive
+// divisor range, its negation, a divisor range that straddles zero, and the
+// remainder of a non-negative and a negative dividend range. Division by the
+// constant 0 is 0 under VIMP's total semantics for any dividend.
+//
+// Ported from Example_Guard_Refinement.thy:
+// interval_division_remainder_regression (its bot cases are domain-internal).
+fun main() {
+  a = __voblint_nondet_int();
+  b = __voblint_nondet_int();
+  c = __voblint_nondet_int();
+  d = __voblint_nondet_int();
+  e = __voblint_nondet_int();
+  if (7 <= a && a <= 9 && 2 <= b && b <= 3 && -1 <= c && c <= 1
+      && 0 <= d && d <= 20 && -20 <= e && e <= -1) {
+    q1 = a / b;
+    __voblint_check(q1 >= 2); // PROVED
+    __voblint_check(q1 <= 4); // PROVED
+    q2 = -a / b;
+    __voblint_check(q2 >= -4); // PROVED
+    __voblint_check(q2 <= -2); // PROVED
+    q3 = a / c;
+    __voblint_check(q3 >= -9); // PROVED
+    __voblint_check(q3 <= 9); // PROVED
+    r1 = d % 3;
+    __voblint_check(r1 >= 0); // PROVED
+    __voblint_check(r1 <= 2); // PROVED
+    r2 = e % 3;
+    __voblint_check(r2 >= -2); // PROVED
+    __voblint_check(r2 <= 0); // PROVED
+  }
+  t = __voblint_nondet_int();
+  __voblint_check(t / 0 == 0); // PROVED
+}

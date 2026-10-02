@@ -1,0 +1,16 @@
+// PARAM: --analysis parity --globals join
+// Ported from Example_Min_Max_Regression.thy (min_max_demo_parity_z_odd,
+// min_max_demo_parity_w_odd). parity_min and parity_max return one of their
+// arguments, so min/max of two Odd values stays Odd rather than Top. Odd vs
+// Even proves z != 0 and refutes z == 2 * x; Top would leave both UNKNOWN.
+// Interval and Sign verdicts on the same program are 01 and 02.
+fun main() {
+  x = 3;
+  y = 0 - 5;
+  z = min(x, y);
+  w = max(x, y);
+  __voblint_check(z != 0); // PROVED
+  __voblint_check(w != 0); // PROVED
+  __voblint_check(z == 2 * x); // REFUTED
+  __voblint_check(w == 2 * y); // REFUTED
+}

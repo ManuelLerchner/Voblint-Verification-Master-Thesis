@@ -1,0 +1,16 @@
+// PARAM: --analysis interval --context call-string --context-depth 3
+// Same program as 02-depth2_separates_shared_callee.vimp at depth 3. The
+// deepest call chain is two calls long, so a third frame separates nothing
+// further: g's two activations keep the contexts pp2 pp5 and pp2 pp6, and
+// both results stay exact.
+//
+// Ported from Example_Interval_Call_String_Generic_Parity.thy:
+// cs_generic_k3_g_entry_first, cs_generic_k3_g_entry_second.
+fun g(p) { return p + p; }
+fun f(p) { t = g(p); return t; }
+fun main() {
+  x = f(3);
+  y = f(10);
+  __voblint_check(x == 6); // PROVED
+  __voblint_check(y == 20); // PROVED
+}

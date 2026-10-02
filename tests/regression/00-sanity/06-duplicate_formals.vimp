@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// Ported from Example_Compile_Regression.thy (duplicate_formals_rejected): two formals share a name.
+// The well-formedness gate rejects the program before any analysis runs.
+fun f(a, a) {
+  a = 1;
+}
+fun main() {
+  f(1, 2);
+}

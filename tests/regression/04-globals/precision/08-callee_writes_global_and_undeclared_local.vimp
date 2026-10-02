@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Declaration, not spelling, decides storage class: p writes both the
+// declared global counter and the undeclared Glocal. combine keeps the
+// caller's locals and adopts the callee's globals, so main sees counter's
+// write and not Glocal's. If Glocal were classified global, Glocal == 1
+// would be REFUTED. One call site, so counter's seed has one origin and
+// needs no widening (contrast known-imprecision/02-counter_widened_by_call.vimp).
+//
+// Ported from Example_Inc_Proc.thy (inc_program_counter_global,
+// inc_program_glocal_not_global, prog_pcompletes_inc_pcall).
+global counter;
+fun p() {
+  counter = counter + 1;
+  Glocal = 7;
+}
+fun main() {
+  Glocal = 1;
+  p();
+  __voblint_check(Glocal == 1); // PROVED
+  __voblint_check(counter == 1); // PROVED
+}

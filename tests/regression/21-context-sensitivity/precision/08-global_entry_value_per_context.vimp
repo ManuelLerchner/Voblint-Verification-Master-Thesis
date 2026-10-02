@@ -1,0 +1,35 @@
+// PARAM: --analysis interval --context entry-state
+// Ported from Example_Interval_DG_Ctx_Globals_Regression (gcall_entry_first,
+// gcall_entry_second, gcall_entry_third, gcall_after_first_return) and
+// Example_Interval_DG_EntryState_Result_Regression (gcall_result_bump_first,
+// _second, _third, gcall_result_after_first_return). Same program as
+// 04-globals/precision/03-global_across_calls_entry_state.vimp, plus checks
+// pinning the declared global g at bump's entry in each of its three contexts
+// ([5,5], [4,4], [19,19]) and in main after the first return.
+//
+// A check inside bump is decided per context and the verdicts are joined, so
+// "g == 10" alone would be UNKNOWN (PROVED in one context, REFUTED in two).
+// "(n == K) == (g == G)" is PROVED only if, in every context, both comparisons
+// are decided and agree: n = [K,K] forces g = [G,G], and any other n forces g
+// to exclude G. An inexact g anywhere leaves one side at [0,1]. Under
+// --context none all three are UNKNOWN.
+global g;
+fun bump(n) {
+  __voblint_check((n == 5) == (g == 10)); // PROVED
+  __voblint_check((n == 4) == (g == 15)); // PROVED
+  __voblint_check((n == 19) == (g == 19)); // PROVED
+  g = g + n;
+  return g;
+}
+fun main() {
+  g = 10;
+  a = bump(5);
+  __voblint_check(g == 15); // PROVED
+  b = bump(4);
+  __voblint_check(a == 15); // PROVED
+  __voblint_check(b == 19); // PROVED
+  __voblint_check(g == 19); // PROVED
+  c = bump(g);
+  __voblint_check(c == 38); // PROVED
+  __voblint_check(g == 38); // PROVED
+}

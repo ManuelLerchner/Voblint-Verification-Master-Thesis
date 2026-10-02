@@ -1,0 +1,6 @@
+// PARAM: --analysis interval
+// Ported from Example_Compile_Regression.thy (unknown_call_rejected): a call names no procedure of the program.
+// The well-formedness gate rejects the program before any analysis runs.
+fun main() {
+  q();
+}

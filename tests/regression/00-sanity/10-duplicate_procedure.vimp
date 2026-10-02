@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// Ported from Example_Compile_Regression.thy (duplicate_procedure_names_rejected): two procedures share a name.
+// The well-formedness gate rejects the program before any analysis runs.
+fun f() {
+  x = 1;
+}
+fun f() {
+  x = 2;
+}
+fun main() {
+  f();
+}

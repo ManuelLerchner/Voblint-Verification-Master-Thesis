@@ -17,10 +17,7 @@
 // narrows sequentially rather than by a join -- a different path through the
 // same operator, and one the gate plays no part in.
 //
-// Example_Guard_Refinement.thy pins the then-branch result on the abstract state
-// (bfilter_or_drops_infeasible_disjunct) and states the join identity
-// (bfilter_or_is_the_gated_join). The conjunctive half of the gate is
-// 05-infeasible_conjunct_dropped.vimp.
+// The conjunctive half of the gate is 05-infeasible_conjunct_dropped.vimp.
 fun main() {
   x = 5;
   y = __voblint_nondet_int();
