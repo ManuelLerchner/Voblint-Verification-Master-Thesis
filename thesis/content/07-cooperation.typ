@@ -271,7 +271,7 @@ Each component runs on its field through a _lens_, a getter and a setter for
 that field (#isaconst("lens_of")), as Goblint's MCP hands each analysis its own
 part of the combined state. A component therefore never changes what another
 field describes. It is a _frame_ for the other fields
-(#isathm("lens_of_frame")), and components on distinct fields are
+(#isathm("field_frame")), and components on distinct fields are
 _independent_ (#isathm("mcp_independent_map")).
 
 The combination should be sound whenever its components are sound and

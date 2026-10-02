@@ -361,9 +361,8 @@ know of. A chain of refinements is at most two rounds long, since Congruence
 never learns from Interval and Parity learns from Interval only at a singleton.
 A guard refines twice, once in its inverse operator and once in the
 intersection, and the bounds of an arithmetic result already agree with its
-congruence. One round and the fixpoint do differ on some operands
-(#isathm("arithmetic_once_result"), #isathm("arithmetic_fixpoint_result")). We
-argue that no stored state has such operands, but this is not checked. No reduction at all differs
+congruence. That the two modes agree on every stored state is our argument, not a
+checked result. No reduction at all differs
 visibly: the regression fixtures
 #fixture(
   "16-composite-domain/precision/12-refinement_never_keeps_guard_facts_apart.vimp",

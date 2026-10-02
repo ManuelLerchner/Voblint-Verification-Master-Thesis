@@ -463,7 +463,7 @@ alike:
 
 Two elements are therefore equal exactly when every lookup agrees
 (#isathm("default_st_eq_iff")). A finite test decides this.
-#isathm("le_default_st_rep_code_raw_iff") shows that comparing the two defaults and
+#isathm("le_default_st_rep_code_iff") shows that comparing the two defaults and
 the finitely many listed names of each dictionary decides the order, and the executable
 equality (#isaconst("equal_default_st")) tests the order in both
 directions. An operation is defined on the finite representation and lifted to

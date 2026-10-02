@@ -271,7 +271,10 @@ context, and the buckets together are the collecting semantics. The unit,
 entry-state and call-string policies discharge them in one theorem each.
 
 An analysed answer also fixes what kind of object the report is
-(#isathm("run_voblint_report_contract")). Structurally it is well formed
+(#isathm("run_voblint_report_contract")). It answers a valid configuration
+(#isaconst("valid_config")) and a well-formed program
+(#isaconst("wf_program_compile_input_exec")), and it is the report for exactly
+that configuration and the program's compiled graph. Structurally it is well formed
 (#isaconst("well_formed_report")): its context indices are in range, a
 point has one row per context, and each row's checks and arithmetic obligations
 are exactly those of its point, each with the verdict of the row's own state.

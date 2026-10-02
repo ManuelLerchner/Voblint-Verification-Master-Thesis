@@ -174,7 +174,7 @@
     },
     "run_voblint_report_contract": {
       "oracles": [],
-      "statement": "run_voblint config p = Analysed res \\<Longrightarrow>\nreport_config res = config\nrun_voblint config p = Analysed res \\<Longrightarrow>\nreport_cfg res = prog_cfg p\nrun_voblint config p = Analysed res \\<Longrightarrow> well_formed_report res\nrun_voblint config p = Analysed res \\<Longrightarrow> sound_report p res",
+      "statement": "run_voblint config p = Analysed res \\<Longrightarrow> valid_config config\nrun_voblint config p = Analysed res \\<Longrightarrow>\nwf_program_compile_input_exec p\nrun_voblint config p = Analysed res \\<Longrightarrow>\nreport_config res = config\nrun_voblint config p = Analysed res \\<Longrightarrow>\nreport_cfg res = prog_cfg p\nrun_voblint config p = Analysed res \\<Longrightarrow> well_formed_report res\nrun_voblint config p = Analysed res \\<Longrightarrow> sound_report p res",
       "theory": "Analysis_Certified",
       "why": "Results chapter: what an analysed answer guarantees about its report."
     },
