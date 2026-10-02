@@ -28,15 +28,15 @@ paper introduces flow-insensitive globals as a choice -- "In principle, the
 values of g and h could be analyzed flow-sensitively. For efficiency, we may
 choose to analyze the values of one or both of them flow-insensitively" --
 and Goblint's own single-threaded path makes the same choice Voblint's CLI
-does: `base.ml` reads globals from local state without publication at all
+makes by default: `base.ml` reads globals from local state without publication at all
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
 The other choice is formalized as a lifter. `ownership_split_lift`
 (`DG_Ownership_Split_Spec.thy`) takes a whole-state specification and puts
 every declared global on the shared channel, proved sound against the
-ownership-split concretization. What is missing is a way to select it from VIMP
-source or a CLI flag; the CLI hardwires the exclusive local routing.
+ownership-split concretization. `--program-globals shared` selects it for the
+analyzer's combined state (`MCP_Split`); the local placement stays the default.
 
 That single site is enough to reproduce the paper's own chain. With the paper's
 three contributions to `g` arriving in the paper's order:

@@ -77,7 +77,9 @@ voblint --help
   live (default `local`). `local` keeps them in every point's own state, so
   they are tracked flow-sensitively like locals. `shared` keeps them in the
   one analysis-wide global unknown, a flow-insensitive value every point reads
-  and every write publishes into. Both placements are covered by
+  and every write publishes into. That holds for the analyses whose state
+  splits by variable; the order analysis relates variables across the split,
+  so its whole state stays in each point's own state. Both placements are covered by
   `run_voblint_source_sound`. Under `shared`, a warrowed global can keep
   destabilizing the points that read it, so `--globals` defaults to
   `bounded-narrowing` there. The playground offers the choice as a control, and

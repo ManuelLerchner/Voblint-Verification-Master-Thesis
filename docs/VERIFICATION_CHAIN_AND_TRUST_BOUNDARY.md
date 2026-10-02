@@ -36,7 +36,9 @@ special calls), and interprets `sound_nonrelational_ops` (`Nonrelational_Transfe
 once, which yields `<impl>_tf.is_sound_nonrelational_transfer`. The `int_dom` product
 interprets it once, parametric in its refinement mode.
 `state_dg_spec_contract` turns that into `analysis_contract` for
-the whole-state specification every shipped domain uses.
+the whole-state specification each shipped domain provides. Under
+shared program globals the analyzer wraps that specification in the
+ownership-split lifter, whose contract is `ownership_split_lift_gen_contract`.
 
 Guards go through `branch_lifted` (`Backward_Domain.thy`): a forward feasibility
 gate ahead of backward narrowing by `bfilter`, with a definite contradiction
