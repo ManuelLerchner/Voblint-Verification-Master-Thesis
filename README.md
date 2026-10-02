@@ -11,7 +11,7 @@
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
 ```math
-\underbrace{\{\, s \mid \text{a source run reaches } v \text{ with store } s \,\}}_{\text{source executions}}
+\underbrace{\mathrm{Reach}_{\mathrm{src}}(v)}_{\text{source executions}}
 \;\subseteq\;
 \underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
 \;\subseteq\;
@@ -20,13 +20,23 @@
 \underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
 ```
 
-Every store a source run reaches at a program point $v$ is described by the
-analyzer's report there, and satisfies every verdict the report gives at $v$.
+Every store reached by a source execution at program point $v$, the set
+$\mathrm{Reach}_{\mathrm{src}}(v)$, is represented by the analyzer's report at
+$v$ and satisfies every definite verdict reported there.
+
+The equality is lossless: context sensitivity splits the collecting semantics
+$\mathcal{C}(v)$ into one bucket $\mathcal{A}(v, c)$ per context, and their union
+recovers it exactly. The inclusions are sound over-approximations. The first
+relates source executions to the compiled program's trace semantics; the second
+is where the abstract analysis loses precision; the third keeps only what the
+definite verdicts require.
+
 Each inclusion is an Isabelle theorem:
 [`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
 [`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
 [`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
-[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy);
+[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy).
+
 [`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 states the whole chain for every run that returns a report.
 
