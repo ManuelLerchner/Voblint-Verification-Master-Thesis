@@ -61,4 +61,250 @@ allow = [
   "inv_exp",           # baseInvariant.ml: backward refinement of a guard
   "of_bool",           # intDomain_intf.ml: truth value to abstract value
   "to_bool",           # intDomain_intf.ml: abstract value to truth value
+
+  # Unused lemmas kept as API: a law of its definition a caller should not have
+  # to reprove. Rule numbers: 1 intro/elim, 2 algebraic law, 3 hides the
+  # representation, 4 completes a family, 5 harder to prove than to use.
+  # rule 2: monotonicity of the public guard transfer
+  "branch_mono",
+  # rule 2: strictness of the public backward transfer branch on empty states
+  "branch_witness_bottom",
+  # rule 4: correctness of the executable is_top_int_dom (used by string_of_int_dom) against gamma
+  "is_top_int_dom_correct_gamma",
+  # rule 1: the elimination from the exact to the sound emptiness contract
+  "exact_emptiness_sound",
+  # rule 2: functor monotonicity of map_lift, named in the Reachability_Lift sort prose
+  "map_lift_mono",
+  # rule 2: binary sibling of transfer_lift_mono with the same normalize/bot_mono interplay
+  "transfer_lift2_mono",
+  # rule 2: monotonicity of the generic transfer combinator under the bot_mono side condition
+  "transfer_lift_mono",
+  # the layer's instance of the shared exact_emptiness notion
+  "exact_emptiness_relc",
+  # the layer's instance of the shared exact_emptiness notion
+  "exact_emptiness_is_empty_state_lift",
+  # the layer's instance of the shared exact_emptiness notion
+  "exact_emptiness_is_empty_state",
+  # rule 2: recombination law combine = restrict_local join restrict_global
+  "combine_default_st_eq_restrict_sup",
+  # Monotonicity of the carrier concretization default_st_gamma
+  "default_st_gamma_mono",
+  # rule 2: commutation of the answer route with classify_check
+  "answer_check_eval_answer",
+  # rule 4: Dead member of the classify_answer_proved/refuted family, both of which are cited
+  "classify_answer_dead",
+  # Global-reader twin of Floc_mono
+  "Fglob_mono",
+  # Monotonicity derived from the dg_reader_commute_gen locale assumptions
+  "Floc_mono",
+  # rule 4: Answer leaf of the dg_tree_st_commute intro family whose
+  "dg_tree_st_commute_answer",
+  # Local-transfer member of the dg_tree_st_commute rule family (local_combine_transfer, QueryL
+  "dg_tree_st_commute_local_transfer",
+  # rule 1: bind intro rule of the dg_tree_st_commute calculus, named by the routed-transport prose
+  "dg_tree_st_commute_seqcomp",
+  # rule 3: a non-asking component's channel is its handler, hiding ask_rec
+  "ls_channel_const",
+  # rule 1: elim rule of sound_local_spec paired with sound_local_specI (fixed by user)
+  "sound_local_specD",
+  # rule 4: frame member of the ask_assign closure family whose sound and single_entry members are
+  "ask_assign_frame",
+  # rule 4: Proved half of the report soundness pair
+  "analyse_report_ctx_proved_sound",
+  # rule 4: Refuted half of the report soundness pair
+  "analyse_report_ctx_refuted_sound",
+  # rule 4: covered-key unreachability headline that routed_analysis advertises
+  "analyse_result_covered_unreachable",
+  # rule 5: node-level unreachability headline of the adapter locale
+  "analyse_result_node_unreachable",
+  # rule 1: intro of wf_solved_table at the adapter
+  "wf_analyse_result",
+  # Covered twin of the kept lookup_coverage_eq_Uncovered_iff
+  "lookup_coverage_eq_Covered_iff",
+  # rule 4: Uncovered sibling of the cited lookup_coverage_eq_Covered_iff
+  "lookup_coverage_eq_Uncovered_iff",
+  # Intro rule of the named predicate result_node_is_bottom
+  "result_node_is_bottomI",
+  # rule 1: the elimination that justifies wf_solved_table's canonicality half
+  "wf_solved_table_gamma_point_eq_empty_iff",
+  # Step member of the lifted_state_dg_spec field equations whose enter and combine members are
+  "dg_spec_step_lifted_state_dg_spec",
+  # Step equation of state_dg_spec
+  "dg_spec_step_state_dg_spec",
+  # Order characterization of the named fold ownership_split_enter_sides
+  "ownership_split_enter_sides_le_iff",
+  # The address-level return obligation that dg_spec_combine_program exists for
+  "combine_sound_program",
+  # rule 2: monotonicity of the abstract return combine combine#
+  "combine_collect_abs_mono",
+  # rule 4: dep sibling of the cited sides_of_program_fold_rhs_program_projected_acc_indep
+  "dep_program_fold_rhs_program_projected_acc_indep",
+  # Fold closure for env_indep_deps
+  "env_indep_deps_fold_rhs_program_projected",
+  # Accumulator monotonicity, completing the pair with the kept fold_acc_projected_env_mono
+  "fold_acc_projected_acc_mono",
+  # Algebraic law: a join-fold depends only on the element set
+  "foldr_sup_set_cong",
+  # rule 2: environment monotonicity of the generic bind sp_lift_tree
+  "traverse_rhs_sp_lift_tree_mono",
+  # Postcondition of the fixpoint mode stated over the public refine_round
+  "refine_fix_option_round_stable",
+  # rule 4: Int's mode-restricted mono_nonrelational_ops certificate
+  "int_dom_mono_ops",
+  # rule 5: ascending-chain stabilisation, the defining law of a widening
+  "widen_ivl_core_terminates",
+  # Commutation of the executable filter with the abstract one through the represented function
+  "afilter_st_commute",
+  # rule 1: per-operation elimination of the mono_nonrelational_ops certificate for call entry
+  "enter_for_mono",
+  # rule 1: per-operation elimination of the mono_nonrelational_ops certificate for a non-identity
+  "ret_mono",
+  # rule 5: the content of mono_minmax_ops
+  "special_transfer_mono",
+  # Entry-state member of the node_collect union pair
+  "entry_state_node_collect_eq_Union",
+  # Documented call-string endpoint (THEOREM_MAP, domain READMEs, blueprint)
+  "fun_route_activation_collect_sound",
+  # rule 3: run_succ (run G p) = live_succ hides solved_run_of/sol_env/ctx_succ
+  "run_succ_run",
+  # rule 4: monovariant member of Context_Space_Finite
+  "compiled_unit_vars_finite",
+  # Identifies the check column with classify_checks_verdicts, the subsection's stated claim
+  "result_checks_of_verdicts",
+  # rule 3: characterizes arithmetic_condition
+  "arithmetic_condition_safe",
+  # rule 4: call twin of the cited arithmetic_expression_sites_intra
+  "arithmetic_expression_sites_call",
+  # rule 1: call-edge intro law of cfg_nodes, paired with intra_endpoints_in_nodes
+  "call_endpoints_in_nodes",
+  # rule 1: intro law of cfg_nodes, the structural invariant the CFG_Def prose states
+  "intra_endpoints_in_nodes",
+  # Cons equation of frames_match beside frames_match_Nil. Note: frames_match itself has no
+  "frames_match_activation",
+  # rule 1: elimination rule of cfg_succ_rel over its four disjuncts
+  "cfg_succ_rel_cases",
+  # rule 4: intro rule for the result-to-continuation disjunct, completing the cited intro family
+  "cfg_succ_rel_comb_result",
+  # rule 4: intro rule for the call-entry disjunct, siblings _intra and _comb_caller are cited
+  "cfg_succ_rel_entry",
+  # rule 1: projection of compiled_at for the fall-through edge
+  "compiled_at_exit",
+  # Completes the pcompletes_* rule family
+  "pcompletes_Call",
+  # rule 4: If-false member of the derived pcompletes rule set
+  "pcompletes_IfFalse",
+  # rule 4: If-true member of the derived pcompletes rule set
+  "pcompletes_IfTrue",
+  # rule 4: Assign member of the derived pcompletes rule set users build concrete completions from
+  "pcompletes_assign",
+  # rule 4: SKIP member of the derived pcompletes rule set
+  "pcompletes_skip",
+  # rule 4: nondet_int special-call member of the derived pcompletes rule set
+  "pcompletes_special_nondet_int",
+
+  # Unused lemmas that pin a deliberate choice the prose next to them explains.
+  # evidence for the adjacent prose that inf on ivl is deliberately left un-normalised
+  "meet_ivl_not_canonical",
+  # evidence for the prose's 'load-bearing consequence'
+  "classify_checks_ctx_positions",
+  # evidence for the adjacent prose pinning the elision at both polarities
+  "side_path_flush_sides_value",
+  # evidence for the eq_false prose that intersect_ivl canonicalizes the same witness to bot
+  "interval_intersect_of_witness_bot",
+  # evidence for the eq_false prose that raw ivl inf of disjoint intervals is non-canonical, not bot
+  "interval_meet_of_witness_not_bot",
+  # satisfiability witness the TOTAL prose explains, evidence
+  "activation_coverage_exists",
+  # evidence for the stable-entry prose that Resume keeps the caller's entry store
+  "entry_store_Resume_caller",
+  # evidence for the same prose: a top-level Return cannot complete
+  "Return_empty_not_pcompletes",
+  # evidence for the prose explaining why a top-level Return must not reach the source
+  "Unwind_not_pcompletes",
+
+  # Unused lemmas the docs cite as results.
+  # named in GOBLINT_ALIGNMENT_REGISTER.md, THESIS_BLUEPRINT.md
+  "branch_le_bfilter",
+  # named in THEOREM_MAP.md
+  "exact_emptiness_is_empty",
+  # named in CORE_REFACTOR_PLAN.md, README.md
+  "pp_st",
+  # named in THEOREM_MAP.md
+  "exact_emptiness_default_st_is_bot_for",
+  # named in THESIS_BLUEPRINT.md
+  "abstract_checks_proven_sound",
+  # named in THEOREM_MAP.md
+  "ctx_vars_cover_of_exec",
+  # named in CALLSTRING_CONTEXT_DESIGN.md
+  "cs_context_below_bound",
+  # named in CALLSTRING_CONTEXT_DESIGN.md
+  "cs_route_below_bound",
+  # named in CALLSTRING_CONTEXT_DESIGN.md
+  "cs_route_k_mono",
+  # named in CALLSTRING_CONTEXT_DESIGN.md, THESIS_BLUEPRINT.md
+  "cs_route_length",
+  # named in THEOREM_MAP.md, index.html
+  "activation_collect_unit_eq_node_collect",
+  # named in THESIS_BLUEPRINT.md
+  "mcp_contract",
+  # named in COOPERATING_ANALYSES_DESIGN.md
+  "sound_local_spec_update",
+  # named in THESIS_BLUEPRINT.md, VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md
+  "state_dg_spec_contract",
+  # named in GOBLINT_ALIGNMENT_REGISTER.md
+  "distinct_side_path_buffer_sides_answers_only",
+  # named in README.md
+  "refinement_round_is_progressive",
+  # named in index.html
+  "entry_state_lookup_sound_of_terminates",
+  # named in THEOREM_MAP.md, GLOSSARY.md
+  "fun_route_report_proved_sound",
+  # named in THEOREM_MAP.md
+  "fun_route_report_refuted_sound",
+  # named in 03-gallery.typ, run.js
+  "source_completes_node_collect_exit",
+  # named in NEXT_STEPS.md
+  "compiled_call_string_gk_finite",
+  # named in NEXT_STEPS.md, THESIS_BLUEPRINT.md
+  "compiled_call_string_vars_finite",
+  # named in RUN_VOBLINT_INTERFACE.md, index.html
+  "run_voblint_arithmetic_intra_safe",
+  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
+  "run_voblint_call_string_chain",
+  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
+  "run_voblint_entry_state_chain",
+  # named in README.md, render_text.ml
+  "run_voblint_labelled_check_sound",
+  # named in README.md, THEOREM_MAP.md
+  "run_voblint_report_contract",
+  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
+  "run_voblint_unit_chain",
+  # named in THEOREM_MAP.md, RUN_VOBLINT_INTERFACE.md
+  "DEAD_not_exact",
+  # named in ANALYSIS_REPORT_PLAN.md, RUN_VOBLINT_INTERFACE.md
+  "analysis_report_unknown",
+  # named in THEOREM_MAP.md, RUN_VOBLINT_INTERFACE.md
+  "sound_emptiness_DEAD",
+  # named in RUN_VOBLINT_INTERFACE.md, THEOREM_MAP.md
+  "well_formed_check_verdict",
+  # named in THEOREM_MAP.md, GLOSSARY.md
+  "mcp_empty_v_not_exact",
+  # named in 04-traces.typ, index.html
+  "node_collect_eq_Union_activation_collect",
+  # named in SESSION_CLEANUP_PLAYBOOK.md
+  "node_collect_witness",
+  # named in CFG_COMPILER_CONTINUATION_REDESIGN.md
+  "compile_Return_ignores_continuation",
+  # named in CFG_COMPILER_CONTINUATION_REDESIGN.md
+  "compile_prog_entry_cfg_reaches_exit",
+  # named in CFG_COMPILER_CONTINUATION_REDESIGN.md
+  "control_at_return_edge",
+  # named in SESSION_CLEANUP_PLAYBOOK.md
+  "csim_witness",
+  # named in THESIS_BLUEPRINT.md
+  "source_progress",
+  # named in SESSION_CLEANUP_PLAYBOOK.md
+  "source_run_has_activation_trace_witness",
+  # named in SESSION_CLEANUP_PLAYBOOK.md
+  "pcompletes_witness",
 ]
