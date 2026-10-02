@@ -11,8 +11,8 @@ python = ">=3.11"
 
 [pypi-dependencies]
 # Source tooling for .thy and ROOT files, configured in isar.toml. From PyPI
-# until conda-forge has 0.5.
-isar-tools = ">=0.5.0,<0.6"
+# until conda-forge has 0.6.
+isar-tools = ">=0.6.0,<0.7"
 
 # AutoCorrode's headless REPL MCP server (scripts/start-ir.sh).
 [feature.ir.dependencies]

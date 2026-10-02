@@ -19,6 +19,20 @@ exclude = [
 max-line-length = 100
 
 [check]
+# `isar check --group unused`: example sessions end in lemmas nothing cites.
+leaf-sessions = [
+  "Voblint_Examples",
+  "Voblint_Examples_CFG",
+  "Voblint_Examples_CLI",
+  "Voblint_Examples_Congruence",
+  "Voblint_Examples_Int",
+  "Voblint_Examples_Interval",
+  "Voblint_Examples_Parity",
+  "Voblint_Examples_Relational",
+  "Voblint_Examples_Sign",
+  "Voblint_Examples_Tooling",
+]
+
 # `isar check --group retired`: names this tree removed on purpose, which must
 # not come back (a deleted constant in an assumption is a free variable).
 retired-file = "scripts/retired_identifiers.txt"
