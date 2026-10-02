@@ -104,15 +104,18 @@ let resolve ~analyses ~refinement ~globals ~context ~depth =
       narrow_bound;
       context;
       depth;
+      program_globals = "local";
     }
   in
   match Analysis_request.resolve request with
-  | Ok { domains; rule; mode } ->
+  | Ok { domains; rule; mode; placement = _ } ->
       Ok (Option.value domains ~default:[], rule, mode)
   | Error (Analysis_request.Unknown_refinement name) ->
       Error ("Unknown int refinement: " ^ name)
   | Error (Analysis_request.Unknown_analysis name) ->
       Error ("Unknown analysis domain: " ^ name)
+  | Error (Analysis_request.Unknown_program_globals name) ->
+      Error ("Unknown program globals placement: " ^ name)
   | Error
       ( Analysis_request.Unknown_globals _
       | Analysis_request.Negative_narrow_bound
@@ -259,7 +262,7 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
           let answer =
             Fun.protect ~finally:stop_live (fun () ->
                 Analysis_request.analyse ~analyses:domains ~globals ~context
-                  program)
+                  ~program_globals:C.Program_Globals_Local program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =

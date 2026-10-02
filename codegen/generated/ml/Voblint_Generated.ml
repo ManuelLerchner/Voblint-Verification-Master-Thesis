@@ -139,8 +139,10 @@ module Generated : sig
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
     Analysed of 'a
+  type program_globals = Program_Globals_Local | Program_Globals_Shared
   type analysis_config =
-    Analysis_Config of analysis_domain list * globals_rule * context_mode
+    Analysis_Config of
+      analysis_domain list * globals_rule * context_mode * program_globals
   type result_global_unknown = Global_Shared |
     Global_Seed of string * nat option
   type 'a imp_prog_ext
@@ -1969,6 +1971,24 @@ let semilattice_sup_relc =
   ({sup_semilattice_sup = sup_relc; order_semilattice_sup = order_relc} :
     relc semilattice_sup);;
 
+let rec split_cmb_relc d g = d;;
+
+let rec split_rl_relc d = d;;
+
+let rec split_rg_relc d = bot_relca;;
+
+type 'a ownership_split =
+  {order_bot_ownership_split : 'a order_bot; split_cmb : 'a -> 'a -> 'a;
+    split_rl : 'a -> 'a; split_rg : 'a -> 'a};;
+let split_cmb _A = _A.split_cmb;;
+let split_rl _A = _A.split_rl;;
+let split_rg _A = _A.split_rg;;
+
+let ownership_split_relc =
+  ({order_bot_ownership_split = order_bot_relc; split_cmb = split_cmb_relc;
+     split_rl = split_rl_relc; split_rg = split_rg_relc}
+    : relc ownership_split);;
+
 let bounded_semilattice_sup_bot_relc =
   ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_relc;
      order_bot_bounded_semilattice_sup_bot = order_bot_relc}
@@ -2902,6 +2922,31 @@ let rec semilattice_sup_lifted _A =
      order_semilattice_sup = (order_lifted _A)}
     : 'a lifted semilattice_sup);;
 
+let rec split_cmb_lifted (_A1, _A2)
+  d g = (match d with Bot -> Bot
+          | Lifted a ->
+            Lifted
+              (split_cmb _A2 a
+                (match g
+                  with Bot -> bot _A2.order_bot_ownership_split.bot_order_bot
+                  | Lifted b -> b)));;
+
+let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
+                    | Lifted a, f -> f a;;
+
+let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
+
+let rec split_rl_lifted (_A1, _A2) = map_lift (split_rl _A2);;
+
+let rec split_rg_lifted (_A1, _A2) = map_lift (split_rg _A2);;
+
+let rec ownership_split_lifted (_A1, _A2) =
+  ({order_bot_ownership_split = (order_bot_lifted _A1);
+     split_cmb = split_cmb_lifted (_A1, _A2);
+     split_rl = split_rl_lifted (_A1, _A2);
+     split_rg = split_rg_lifted (_A1, _A2)}
+    : 'a lifted ownership_split);;
+
 let rec bounded_semilattice_sup_bot_lifted _A =
   ({semilattice_sup_bounded_semilattice_sup_bot = (semilattice_sup_lifted _A);
      order_bot_bounded_semilattice_sup_bot = (order_bot_lifted _A)}
@@ -3073,6 +3118,34 @@ let rec semilattice_sup_default_st _A =
      order_semilattice_sup =
        (order_default_st _A.order_bot_bounded_semilattice_sup_bot)}
     : 'a default_st semilattice_sup);;
+
+let rec combine_default_st_rep _A sc se = (fst sc, snd se);;
+
+let rec combine_default_st _A
+  (Abs_default_st xa) (Abs_default_st x) =
+    Abs_default_st (combine_default_st_rep _A xa x);;
+
+let rec split_cmb_default_st _A = combine_default_st _A.bot_order_bot;;
+
+let rec restrict_local_default_st_rep _A s = (fst s, (bot _A, []));;
+
+let rec restrict_local_default_st _A
+  (Abs_default_st x) = Abs_default_st (restrict_local_default_st_rep _A x);;
+
+let rec split_rl_default_st _A = restrict_local_default_st _A.bot_order_bot;;
+
+let rec restrict_global_default_st_rep _A s = ((bot _A, []), snd s);;
+
+let rec restrict_global_default_st _A
+  (Abs_default_st x) = Abs_default_st (restrict_global_default_st_rep _A x);;
+
+let rec split_rg_default_st _A = restrict_global_default_st _A.bot_order_bot;;
+
+let rec ownership_split_default_st _A =
+  ({order_bot_ownership_split = (order_bot_default_st _A);
+     split_cmb = split_cmb_default_st _A; split_rl = split_rl_default_st _A;
+     split_rg = split_rg_default_st _A}
+    : 'a default_st ownership_split);;
 
 let rec bounded_semilattice_sup_bot_default_st _A =
   ({semilattice_sup_bounded_semilattice_sup_bot =
@@ -4007,6 +4080,26 @@ let rec semilattice_sup_analysis_product _A _B =
          _B.order_semilattice_sup)}
     : ('a, 'b) analysis_product semilattice_sup);;
 
+let rec split_cmb_analysis_product _A _B
+  d g = Product
+          (split_cmb _A (pleft d) (pleft g),
+            split_cmb _B (pright d) (pright g));;
+
+let rec split_rl_analysis_product _A _B
+  d = Product (split_rl _A (pleft d), split_rl _B (pright d));;
+
+let rec split_rg_analysis_product _A _B
+  d = Product (split_rg _A (pleft d), split_rg _B (pright d));;
+
+let rec ownership_split_analysis_product _A _B =
+  ({order_bot_ownership_split =
+      (order_bot_analysis_product _A.order_bot_ownership_split
+        _B.order_bot_ownership_split);
+     split_cmb = split_cmb_analysis_product _A _B;
+     split_rl = split_rl_analysis_product _A _B;
+     split_rg = split_rg_analysis_product _A _B}
+    : ('a, 'b) analysis_product ownership_split);;
+
 let rec bounded_semilattice_sup_bot_analysis_product _A _B =
   ({semilattice_sup_bounded_semilattice_sup_bot =
       (semilattice_sup_analysis_product
@@ -4195,8 +4288,11 @@ type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
   Analysed of 'a;;
 
+type program_globals = Program_Globals_Local | Program_Globals_Shared;;
+
 type analysis_config =
-  Analysis_Config of analysis_domain list * globals_rule * context_mode;;
+  Analysis_Config of
+    analysis_domain list * globals_rule * context_mode * program_globals;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -4958,11 +5054,6 @@ let rec default_st_rep_get _A
 let rec default_st_get _A (Abs_default_st x) = default_st_rep_get _A x;;
 
 let rec default_st_to_fun _A g s x = default_st_get _A s (location_of g x);;
-
-let rec bind_lift x0 f = match x0, f with Bot, f -> Bot
-                    | Lifted a, f -> f a;;
-
-let rec map_lift f x = bind_lift x (fun a -> Lifted (f a));;
 
 let rec mcp_rd
   g r = Product
@@ -6641,12 +6732,6 @@ let rec combine_assign_default_st_rep _A
 let rec combine_assign_default_st _A
   xc xb xa (Abs_default_st x) =
     Abs_default_st (combine_assign_default_st_rep _A xc xb xa x);;
-
-let rec combine_default_st_rep _A sc se = (fst sc, snd se);;
-
-let rec combine_default_st _A
-  (Abs_default_st xa) (Abs_default_st x) =
-    Abs_default_st (combine_default_st_rep _A xa x);;
 
 let rec combine_env_st_lifted _A
   dc de =
@@ -10195,8 +10280,182 @@ let rec solved_run_of (_A1, _A2)
                 else Some (route g u ctx d ca)))),
           ()));;
 
+let rec mcp_place_cmb
+  pg = (match pg with Program_Globals_Local -> (fun _ d _ -> d)
+         | Program_Globals_Shared ->
+           (fun _ ->
+             split_cmb_lifted
+               ((semilattice_sup_analysis_product
+                  (semilattice_sup_lifted
+                    (semilattice_sup_default_st
+                      bounded_semilattice_sup_bot_sign))
+                  (semilattice_sup_analysis_product
+                    (semilattice_sup_lifted
+                      (semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_ivl))
+                    (semilattice_sup_analysis_product
+                      (semilattice_sup_lifted
+                        (semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_parity))
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              bounded_lattice_unit)))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_congruence))
+                              semilattice_sup_relc))))))),
+                 (ownership_split_analysis_product
+                   (ownership_split_lifted
+                     ((semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_sign),
+                       (ownership_split_default_st
+                         bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                   (ownership_split_analysis_product
+                     (ownership_split_lifted
+                       ((semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_ivl),
+                         (ownership_split_default_st
+                           bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                     (ownership_split_analysis_product
+                       (ownership_split_lifted
+                         ((semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_parity),
+                           (ownership_split_default_st
+                             bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)),
+                             (ownership_split_default_st
+                               (bounded_semilattice_sup_bot_int_dom_ext
+                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)),
+                               (ownership_split_default_st
+                                 (bounded_semilattice_sup_bot_int_dom_ext
+                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)),
+                                 (ownership_split_default_st
+                                   (bounded_semilattice_sup_bot_int_dom_ext
+                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_congruence),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                               ownership_split_relc))))))))));;
+
+let rec mcp_place_rl
+  pg = (match pg with Program_Globals_Local -> (fun _ d -> d)
+         | Program_Globals_Shared ->
+           (fun _ ->
+             split_rl_lifted
+               ((semilattice_sup_analysis_product
+                  (semilattice_sup_lifted
+                    (semilattice_sup_default_st
+                      bounded_semilattice_sup_bot_sign))
+                  (semilattice_sup_analysis_product
+                    (semilattice_sup_lifted
+                      (semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_ivl))
+                    (semilattice_sup_analysis_product
+                      (semilattice_sup_lifted
+                        (semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_parity))
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              bounded_lattice_unit)))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_congruence))
+                              semilattice_sup_relc))))))),
+                 (ownership_split_analysis_product
+                   (ownership_split_lifted
+                     ((semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_sign),
+                       (ownership_split_default_st
+                         bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                   (ownership_split_analysis_product
+                     (ownership_split_lifted
+                       ((semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_ivl),
+                         (ownership_split_default_st
+                           bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                     (ownership_split_analysis_product
+                       (ownership_split_lifted
+                         ((semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_parity),
+                           (ownership_split_default_st
+                             bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)),
+                             (ownership_split_default_st
+                               (bounded_semilattice_sup_bot_int_dom_ext
+                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)),
+                               (ownership_split_default_st
+                                 (bounded_semilattice_sup_bot_int_dom_ext
+                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)),
+                                 (ownership_split_default_st
+                                   (bounded_semilattice_sup_bot_int_dom_ext
+                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_congruence),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                               ownership_split_relc))))))))));;
+
 let rec mcp_run_of
-  asa global seed route =
+  asa pg global seed route =
     solved_run_of
       ((equal_analysis_product
          (equal_lifted
@@ -10266,8 +10525,8 @@ let rec mcp_run_of
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route (fun _ d _ -> d)
-      (fun _ d -> d);;
+      (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route (mcp_place_cmb pg)
+      (mcp_place_rl pg);;
 
 let rec activation
   asa = (if null asa then [Int_Analysis Refine_Fixpoint]
@@ -11885,8 +12144,2909 @@ let rec equations (_A1, _A2) _B
       (place_spec g (comp g p)) (prog_cfg p) (Lifted init_st)
       (place_rg g (Lifted init_st));;
 
+let rec man_global
+  (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_global;;
+
+let rec man_sideg
+  (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_sideg;;
+
+let rec ownership_split_combine_transfer_gen _A
+  cmb rg rl t m de =
+    sp_bind (man_global m ())
+      (fun g ->
+        sp_bind
+          (t (man_local_update (fun _ -> cmb (man_local m) g) m) (cmb de g))
+          (fun res ->
+            sp_bind (man_sideg m () (rg res)) (fun _ -> sp_return (rl res))));;
+
+let rec ownership_split_enter_sides _A
+  rg pairs =
+    foldr (fun (cont, entry) ->
+            sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+              (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                (rg cont) (rg entry)))
+      pairs (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
+
+let rec ownership_split_enter_transfer_gen _A
+  cmb rg rl t m =
+    sp_bind (man_global m ())
+      (fun g ->
+        sp_bind (t (man_local_update (fun _ -> cmb (man_local m) g) m))
+          (fun pairs ->
+            sp_bind (man_sideg m () (ownership_split_enter_sides _A rg pairs))
+              (fun _ ->
+                sp_return
+                  (map (fun (cont, entry) -> (rl cont, rl entry)) pairs))));;
+
+let rec ownership_split_transfer_gen _A
+  cmb rg rl t m =
+    sp_bind (man_global m ())
+      (fun g ->
+        sp_bind (t (man_local_update (fun _ -> cmb (man_local m) g) m))
+          (fun res ->
+            sp_bind (man_sideg m () (rg res)) (fun _ -> sp_return (rl res))));;
+
+let rec mcp_place_spec
+  pg = (match pg
+         with Program_Globals_Local ->
+           (fun _ ->
+             dg_spec_of
+               (bot_lifted
+                 (semilattice_sup_analysis_product
+                   (semilattice_sup_lifted
+                     (semilattice_sup_default_st
+                       bounded_semilattice_sup_bot_sign))
+                   (semilattice_sup_analysis_product
+                     (semilattice_sup_lifted
+                       (semilattice_sup_default_st
+                         bounded_semilattice_sup_bot_ivl))
+                     (semilattice_sup_analysis_product
+                       (semilattice_sup_lifted
+                         (semilattice_sup_default_st
+                           bounded_semilattice_sup_bot_parity))
+                       (semilattice_sup_analysis_product
+                         (semilattice_sup_lifted
+                           (semilattice_sup_default_st
+                             (bounded_semilattice_sup_bot_int_dom_ext
+                               bounded_lattice_unit)))
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_default_st
+                               (bounded_semilattice_sup_bot_int_dom_ext
+                                 bounded_lattice_unit)))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_default_st
+                                 (bounded_semilattice_sup_bot_int_dom_ext
+                                   bounded_lattice_unit)))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   bounded_semilattice_sup_bot_congruence))
+                               semilattice_sup_relc)))))))))
+         | Program_Globals_Shared ->
+           (fun _ c ->
+             dgs_combine_assign_update
+               (fun _ ci ->
+                 ownership_split_combine_transfer_gen
+                   (bounded_semilattice_sup_bot_lifted
+                     (semilattice_sup_analysis_product
+                       (semilattice_sup_lifted
+                         (semilattice_sup_default_st
+                           bounded_semilattice_sup_bot_sign))
+                       (semilattice_sup_analysis_product
+                         (semilattice_sup_lifted
+                           (semilattice_sup_default_st
+                             bounded_semilattice_sup_bot_ivl))
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_default_st
+                               bounded_semilattice_sup_bot_parity))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_default_st
+                                 (bounded_semilattice_sup_bot_int_dom_ext
+                                   bounded_lattice_unit)))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   (bounded_semilattice_sup_bot_int_dom_ext
+                                     bounded_lattice_unit)))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit)))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       bounded_semilattice_sup_bot_congruence))
+                                   semilattice_sup_relc))))))))
+                   (split_cmb_lifted
+                     ((semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_sign))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_ivl))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_parity))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_congruence))
+                                    semilattice_sup_relc))))))),
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign),
+                             (ownership_split_default_st
+                               bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)),
+                                   (ownership_split_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_congruence),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                     ownership_split_relc)))))))))
+                   (split_rg_lifted
+                     ((semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_sign))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_ivl))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_parity))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_congruence))
+                                    semilattice_sup_relc))))))),
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign),
+                             (ownership_split_default_st
+                               bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)),
+                                   (ownership_split_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_congruence),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                     ownership_split_relc)))))))))
+                   (split_rl_lifted
+                     ((semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_sign))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_ivl))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_parity))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_congruence))
+                                    semilattice_sup_relc))))))),
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign),
+                             (ownership_split_default_st
+                               bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)),
+                                   (ownership_split_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_congruence),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                     ownership_split_relc)))))))))
+                   (dg_spec_combine_transfer
+                     (dgs_query_update (fun _ -> local_query (ls_channel c))
+                       (dgs_combine_assign_update
+                         (fun _ cia ->
+                           local_combine_transfer
+                             (fun dc de ->
+                               ls_combine_assign c (ls_channel c de) cia dc de))
+                         (dgs_combine_env_update
+                           (fun _ cia ->
+                             local_combine_transfer
+                               (fun dc de ->
+                                 ls_combine_env c (ls_channel c dc)
+                                   (ls_channel c de) cia dc de))
+                           (dgs_event_update
+                             (fun _ ev ->
+                               local_transfer (closed_step c (event_action ev)))
+                             (dgs_enter_update
+                               (fun _ cia ->
+                                 local_enter_transfer
+                                   (fun d ->
+                                     ls_enter c (ls_channel c d) cia (d, d)))
+                               (dgs_return_update
+                                 (fun _ e p ->
+                                   local_transfer
+                                     (closed_step c (EA_Ret (e, p))))
+                                 (dgs_body_update
+                                   (fun _ p ->
+                                     local_transfer (closed_step c (EA_Body p)))
+                                   (dgs_branch_update
+                                     (fun _ b pol ->
+                                       local_transfer
+ (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+                                     (dgs_special_update
+                                       (fun _ sc x ->
+ local_transfer (closed_step c (EA_Special (sc, x))))
+                                       (dgs_assign_update
+ (fun _ x e -> local_transfer (closed_step c (EA_Assign (x, e))))
+ (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+   (Dg_spec_ext
+     (local_transfer id, (fun _ _ -> local_transfer id),
+       (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+       (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+       (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+       (fun _ -> local_transfer id),
+       (fun _ -> local_combine_transfer (fun d _ -> d)),
+       (fun _ -> local_combine_transfer (fun d _ -> d)),
+       (fun _ _ ->
+         sp_return (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+       ())))))))))))))
+                     ci))
+               (dgs_event_update
+                 (fun _ evt ->
+                   ownership_split_transfer_gen
+                     (bounded_semilattice_sup_bot_lifted
+                       (semilattice_sup_analysis_product
+                         (semilattice_sup_lifted
+                           (semilattice_sup_default_st
+                             bounded_semilattice_sup_bot_sign))
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_default_st
+                               bounded_semilattice_sup_bot_ivl))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_default_st
+                                 bounded_semilattice_sup_bot_parity))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   (bounded_semilattice_sup_bot_int_dom_ext
+                                     bounded_lattice_unit)))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit)))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit)))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ bounded_semilattice_sup_bot_congruence))
+                                     semilattice_sup_relc))))))))
+                     (split_cmb_lifted
+                       ((semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+                                      semilattice_sup_relc))))))),
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                       ownership_split_relc)))))))))
+                     (split_rg_lifted
+                       ((semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+                                      semilattice_sup_relc))))))),
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                       ownership_split_relc)))))))))
+                     (split_rl_lifted
+                       ((semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_sign))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_ivl))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_parity))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    (bounded_semilattice_sup_bot_int_dom_ext
+                                      bounded_lattice_unit)))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+                                      semilattice_sup_relc))))))),
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign),
+                               (ownership_split_default_st
+                                 bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)),
+                                     (ownership_split_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                                       ownership_split_relc)))))))))
+                     (dgs_event
+                       (dgs_query_update (fun _ -> local_query (ls_channel c))
+                         (dgs_combine_assign_update
+                           (fun _ ci ->
+                             local_combine_transfer
+                               (fun dc de ->
+                                 ls_combine_assign c (ls_channel c de) ci dc
+                                   de))
+                           (dgs_combine_env_update
+                             (fun _ ci ->
+                               local_combine_transfer
+                                 (fun dc de ->
+                                   ls_combine_env c (ls_channel c dc)
+                                     (ls_channel c de) ci dc de))
+                             (dgs_event_update
+                               (fun _ ev ->
+                                 local_transfer
+                                   (closed_step c (event_action ev)))
+                               (dgs_enter_update
+                                 (fun _ ci ->
+                                   local_enter_transfer
+                                     (fun d ->
+                                       ls_enter c (ls_channel c d) ci (d, d)))
+                                 (dgs_return_update
+                                   (fun _ e p ->
+                                     local_transfer
+                                       (closed_step c (EA_Ret (e, p))))
+                                   (dgs_body_update
+                                     (fun _ p ->
+                                       local_transfer
+ (closed_step c (EA_Body p)))
+                                     (dgs_branch_update
+                                       (fun _ b pol ->
+ local_transfer (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+                                       (dgs_special_update
+ (fun _ sc x -> local_transfer (closed_step c (EA_Special (sc, x))))
+ (dgs_assign_update
+   (fun _ x e -> local_transfer (closed_step c (EA_Assign (x, e))))
+   (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+     (Dg_spec_ext
+       (local_transfer id, (fun _ _ -> local_transfer id),
+         (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+         (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+         (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+         (fun _ -> local_transfer id),
+         (fun _ -> local_combine_transfer (fun d _ -> d)),
+         (fun _ -> local_combine_transfer (fun d _ -> d)),
+         (fun _ _ ->
+           sp_return
+             (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+         ())))))))))))))
+                       evt))
+                 (dgs_enter_update
+                   (fun _ ci ->
+                     ownership_split_enter_transfer_gen
+                       (bounded_semilattice_sup_bot_lifted
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_default_st
+                               bounded_semilattice_sup_bot_sign))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_default_st
+                                 bounded_semilattice_sup_bot_ivl))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   bounded_semilattice_sup_bot_parity))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     (bounded_semilattice_sup_bot_int_dom_ext
+                                       bounded_lattice_unit)))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit)))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+                                       semilattice_sup_relc))))))))
+                       (split_cmb_lifted
+                         ((semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+semilattice_sup_relc))))))),
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+ ownership_split_relc)))))))))
+                       (split_rg_lifted
+                         ((semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+semilattice_sup_relc))))))),
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+ ownership_split_relc)))))))))
+                       (split_rl_lifted
+                         ((semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                bounded_semilattice_sup_bot_sign))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_ivl))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_parity))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      (bounded_semilattice_sup_bot_int_dom_ext
+bounded_lattice_unit)))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+semilattice_sup_relc))))))),
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign),
+                                 (ownership_split_default_st
+                                   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+                                       (ownership_split_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext
+   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+ ownership_split_relc)))))))))
+                       (dgs_enter
+                         (dgs_query_update (fun _ -> local_query (ls_channel c))
+                           (dgs_combine_assign_update
+                             (fun _ cia ->
+                               local_combine_transfer
+                                 (fun dc de ->
+                                   ls_combine_assign c (ls_channel c de) cia dc
+                                     de))
+                             (dgs_combine_env_update
+                               (fun _ cia ->
+                                 local_combine_transfer
+                                   (fun dc de ->
+                                     ls_combine_env c (ls_channel c dc)
+                                       (ls_channel c de) cia dc de))
+                               (dgs_event_update
+                                 (fun _ ev ->
+                                   local_transfer
+                                     (closed_step c (event_action ev)))
+                                 (dgs_enter_update
+                                   (fun _ cia ->
+                                     local_enter_transfer
+                                       (fun d ->
+ ls_enter c (ls_channel c d) cia (d, d)))
+                                   (dgs_return_update
+                                     (fun _ e p ->
+                                       local_transfer
+ (closed_step c (EA_Ret (e, p))))
+                                     (dgs_body_update
+                                       (fun _ p ->
+ local_transfer (closed_step c (EA_Body p)))
+                                       (dgs_branch_update
+ (fun _ b pol ->
+   local_transfer (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+ (dgs_special_update
+   (fun _ sc x -> local_transfer (closed_step c (EA_Special (sc, x))))
+   (dgs_assign_update
+     (fun _ x e -> local_transfer (closed_step c (EA_Assign (x, e))))
+     (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+       (Dg_spec_ext
+         (local_transfer id, (fun _ _ -> local_transfer id),
+           (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+           (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+           (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+           (fun _ -> local_transfer id),
+           (fun _ -> local_combine_transfer (fun d _ -> d)),
+           (fun _ -> local_combine_transfer (fun d _ -> d)),
+           (fun _ _ ->
+             sp_return
+               (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+           ())))))))))))))
+                         ci))
+                   (dgs_return_update
+                     (fun _ e p ->
+                       ownership_split_transfer_gen
+                         (bounded_semilattice_sup_bot_lifted
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_default_st
+                                 bounded_semilattice_sup_bot_sign))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   bounded_semilattice_sup_bot_ivl))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     bounded_semilattice_sup_bot_parity))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       (bounded_semilattice_sup_bot_int_dom_ext
+ bounded_lattice_unit)))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+ semilattice_sup_relc))))))))
+                         (split_cmb_lifted
+                           ((semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+  semilattice_sup_relc))))))),
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+   ownership_split_relc)))))))))
+                         (split_rg_lifted
+                           ((semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+  semilattice_sup_relc))))))),
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+   ownership_split_relc)))))))))
+                         (split_rl_lifted
+                           ((semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_sign))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_ivl))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_parity))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+(bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+  semilattice_sup_relc))))))),
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+ (ownership_split_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext
+     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+   ownership_split_relc)))))))))
+                         (dgs_return
+                           (dgs_query_update
+                             (fun _ -> local_query (ls_channel c))
+                             (dgs_combine_assign_update
+                               (fun _ ci ->
+                                 local_combine_transfer
+                                   (fun dc de ->
+                                     ls_combine_assign c (ls_channel c de) ci dc
+                                       de))
+                               (dgs_combine_env_update
+                                 (fun _ ci ->
+                                   local_combine_transfer
+                                     (fun dc de ->
+                                       ls_combine_env c (ls_channel c dc)
+ (ls_channel c de) ci dc de))
+                                 (dgs_event_update
+                                   (fun _ ev ->
+                                     local_transfer
+                                       (closed_step c (event_action ev)))
+                                   (dgs_enter_update
+                                     (fun _ ci ->
+                                       local_enter_transfer
+ (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+                                     (dgs_return_update
+                                       (fun _ ea pa ->
+ local_transfer (closed_step c (EA_Ret (ea, pa))))
+                                       (dgs_body_update
+ (fun _ pa -> local_transfer (closed_step c (EA_Body pa)))
+ (dgs_branch_update
+   (fun _ b pol ->
+     local_transfer
+       (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+   (dgs_special_update
+     (fun _ sc x -> local_transfer (closed_step c (EA_Special (sc, x))))
+     (dgs_assign_update
+       (fun _ x ea -> local_transfer (closed_step c (EA_Assign (x, ea))))
+       (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+         (Dg_spec_ext
+           (local_transfer id, (fun _ _ -> local_transfer id),
+             (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+             (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+             (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+             (fun _ -> local_transfer id),
+             (fun _ -> local_combine_transfer (fun d _ -> d)),
+             (fun _ -> local_combine_transfer (fun d _ -> d)),
+             (fun _ _ ->
+               sp_return
+                 (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+             ())))))))))))))
+                           e p))
+                     (dgs_body_update
+                       (fun _ p ->
+                         ownership_split_transfer_gen
+                           (bounded_semilattice_sup_bot_lifted
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_default_st
+                                   bounded_semilattice_sup_bot_sign))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     bounded_semilattice_sup_bot_ivl))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       bounded_semilattice_sup_bot_parity))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+ (semilattice_sup_analysis_product
+   (semilattice_sup_lifted
+     (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+   semilattice_sup_relc))))))))
+                           (split_cmb_lifted
+                             ((semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+    semilattice_sup_relc))))))),
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_parity),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+     ownership_split_relc)))))))))
+                           (split_rg_lifted
+                             ((semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+    semilattice_sup_relc))))))),
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_parity),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+     ownership_split_relc)))))))))
+                           (split_rl_lifted
+                             ((semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_sign))
+                                (semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_ivl))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_parity))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st
+  (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+    semilattice_sup_relc))))))),
+                               (ownership_split_analysis_product
+                                 (ownership_split_lifted
+                                   ((semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign),
+                                     (ownership_split_default_st
+                                       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_parity),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+   (ownership_split_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext
+       bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+     ownership_split_relc)))))))))
+                           (dgs_body
+                             (dgs_query_update
+                               (fun _ -> local_query (ls_channel c))
+                               (dgs_combine_assign_update
+                                 (fun _ ci ->
+                                   local_combine_transfer
+                                     (fun dc de ->
+                                       ls_combine_assign c (ls_channel c de) ci
+ dc de))
+                                 (dgs_combine_env_update
+                                   (fun _ ci ->
+                                     local_combine_transfer
+                                       (fun dc de ->
+ ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de))
+                                   (dgs_event_update
+                                     (fun _ ev ->
+                                       local_transfer
+ (closed_step c (event_action ev)))
+                                     (dgs_enter_update
+                                       (fun _ ci ->
+ local_enter_transfer (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+                                       (dgs_return_update
+ (fun _ e pa -> local_transfer (closed_step c (EA_Ret (e, pa))))
+ (dgs_body_update (fun _ pa -> local_transfer (closed_step c (EA_Body pa)))
+   (dgs_branch_update
+     (fun _ b pol ->
+       local_transfer
+         (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+     (dgs_special_update
+       (fun _ sc x -> local_transfer (closed_step c (EA_Special (sc, x))))
+       (dgs_assign_update
+         (fun _ x e -> local_transfer (closed_step c (EA_Assign (x, e))))
+         (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+           (Dg_spec_ext
+             (local_transfer id, (fun _ _ -> local_transfer id),
+               (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+               (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+               (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+               (fun _ -> local_transfer id),
+               (fun _ -> local_combine_transfer (fun d _ -> d)),
+               (fun _ -> local_combine_transfer (fun d _ -> d)),
+               (fun _ _ ->
+                 sp_return
+                   (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+               ())))))))))))))
+                             p))
+                       (dgs_branch_update
+                         (fun _ b pol ->
+                           ownership_split_transfer_gen
+                             (bounded_semilattice_sup_bot_lifted
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_default_st
+                                     bounded_semilattice_sup_bot_sign))
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       bounded_semilattice_sup_bot_ivl))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ bounded_semilattice_sup_bot_parity))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st
+   (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+ (semilattice_sup_analysis_product
+   (semilattice_sup_lifted
+     (semilattice_sup_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+   (semilattice_sup_analysis_product
+     (semilattice_sup_lifted
+       (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+     semilattice_sup_relc))))))))
+                             (split_cmb_lifted
+                               ((semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+      semilattice_sup_relc))))))),
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_ivl),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+           (ownership_split_default_st
+             bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+       ownership_split_relc)))))))))
+                             (split_rg_lifted
+                               ((semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+      semilattice_sup_relc))))))),
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_ivl),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+           (ownership_split_default_st
+             bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+       ownership_split_relc)))))))))
+                             (split_rl_lifted
+                               ((semilattice_sup_analysis_product
+                                  (semilattice_sup_lifted
+                                    (semilattice_sup_default_st
+                                      bounded_semilattice_sup_bot_sign))
+                                  (semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_ivl))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st
+    (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+      semilattice_sup_relc))))))),
+                                 (ownership_split_analysis_product
+                                   (ownership_split_lifted
+                                     ((semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign),
+                                       (ownership_split_default_st
+ bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_ivl),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+     (ownership_split_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext
+         bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+           (ownership_split_default_st
+             bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+       ownership_split_relc)))))))))
+                             (dgs_branch
+                               (dgs_query_update
+                                 (fun _ -> local_query (ls_channel c))
+                                 (dgs_combine_assign_update
+                                   (fun _ ci ->
+                                     local_combine_transfer
+                                       (fun dc de ->
+ ls_combine_assign c (ls_channel c de) ci dc de))
+                                   (dgs_combine_env_update
+                                     (fun _ ci ->
+                                       local_combine_transfer
+ (fun dc de -> ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de))
+                                     (dgs_event_update
+                                       (fun _ ev ->
+ local_transfer (closed_step c (event_action ev)))
+                                       (dgs_enter_update
+ (fun _ ci ->
+   local_enter_transfer (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+ (dgs_return_update
+   (fun _ e p -> local_transfer (closed_step c (EA_Ret (e, p))))
+   (dgs_body_update (fun _ p -> local_transfer (closed_step c (EA_Body p)))
+     (dgs_branch_update
+       (fun _ ba pola ->
+         local_transfer
+           (closed_step c (if pola then EA_Assume ba else EA_AssumeNot ba)))
+       (dgs_special_update
+         (fun _ sc x -> local_transfer (closed_step c (EA_Special (sc, x))))
+         (dgs_assign_update
+           (fun _ x e -> local_transfer (closed_step c (EA_Assign (x, e))))
+           (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+             (Dg_spec_ext
+               (local_transfer id, (fun _ _ -> local_transfer id),
+                 (fun _ _ -> local_transfer id), (fun _ _ -> local_transfer id),
+                 (fun _ -> local_transfer id), (fun _ _ -> local_transfer id),
+                 (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+                 (fun _ -> local_transfer id),
+                 (fun _ -> local_combine_transfer (fun d _ -> d)),
+                 (fun _ -> local_combine_transfer (fun d _ -> d)),
+                 (fun _ _ ->
+                   sp_return
+                     (top_query_lifta
+                       (order_int_dom_ext bounded_lattice_unit))),
+                 ())))))))))))))
+                               b pol))
+                         (dgs_special_update
+                           (fun _ sc x ->
+                             ownership_split_transfer_gen
+                               (bounded_semilattice_sup_bot_lifted
+                                 (semilattice_sup_analysis_product
+                                   (semilattice_sup_lifted
+                                     (semilattice_sup_default_st
+                                       bounded_semilattice_sup_bot_sign))
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ bounded_semilattice_sup_bot_ivl))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st
+     (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+ (semilattice_sup_analysis_product
+   (semilattice_sup_lifted
+     (semilattice_sup_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+   (semilattice_sup_analysis_product
+     (semilattice_sup_lifted
+       (semilattice_sup_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+     (semilattice_sup_analysis_product
+       (semilattice_sup_lifted
+         (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+       semilattice_sup_relc))))))))
+                               (split_cmb_lifted
+                                 ((semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+        semilattice_sup_relc))))))),
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_sign),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+             (ownership_split_default_st
+               bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+         ownership_split_relc)))))))))
+                               (split_rg_lifted
+                                 ((semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+        semilattice_sup_relc))))))),
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_sign),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+             (ownership_split_default_st
+               bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+         ownership_split_relc)))))))))
+                               (split_rl_lifted
+                                 ((semilattice_sup_analysis_product
+                                    (semilattice_sup_lifted
+                                      (semilattice_sup_default_st
+bounded_semilattice_sup_bot_sign))
+                                    (semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st
+      (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+        semilattice_sup_relc))))))),
+                                   (ownership_split_analysis_product
+                                     (ownership_split_lifted
+                                       ((semilattice_sup_default_st
+  bounded_semilattice_sup_bot_sign),
+ (ownership_split_default_st
+   bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+       (ownership_split_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext
+           bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st bounded_semilattice_sup_bot_congruence),
+             (ownership_split_default_st
+               bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+         ownership_split_relc)))))))))
+                               (dgs_special
+                                 (dgs_query_update
+                                   (fun _ -> local_query (ls_channel c))
+                                   (dgs_combine_assign_update
+                                     (fun _ ci ->
+                                       local_combine_transfer
+ (fun dc de -> ls_combine_assign c (ls_channel c de) ci dc de))
+                                     (dgs_combine_env_update
+                                       (fun _ ci ->
+ local_combine_transfer
+   (fun dc de -> ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de))
+                                       (dgs_event_update
+ (fun _ ev -> local_transfer (closed_step c (event_action ev)))
+ (dgs_enter_update
+   (fun _ ci ->
+     local_enter_transfer (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+   (dgs_return_update
+     (fun _ e p -> local_transfer (closed_step c (EA_Ret (e, p))))
+     (dgs_body_update (fun _ p -> local_transfer (closed_step c (EA_Body p)))
+       (dgs_branch_update
+         (fun _ b pol ->
+           local_transfer
+             (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+         (dgs_special_update
+           (fun _ sca xa ->
+             local_transfer (closed_step c (EA_Special (sca, xa))))
+           (dgs_assign_update
+             (fun _ xa e -> local_transfer (closed_step c (EA_Assign (xa, e))))
+             (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+               (Dg_spec_ext
+                 (local_transfer id, (fun _ _ -> local_transfer id),
+                   (fun _ _ -> local_transfer id),
+                   (fun _ _ -> local_transfer id), (fun _ -> local_transfer id),
+                   (fun _ _ -> local_transfer id),
+                   (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+                   (fun _ -> local_transfer id),
+                   (fun _ -> local_combine_transfer (fun d _ -> d)),
+                   (fun _ -> local_combine_transfer (fun d _ -> d)),
+                   (fun _ _ ->
+                     sp_return
+                       (top_query_lifta
+                         (order_int_dom_ext bounded_lattice_unit))),
+                   ())))))))))))))
+                                 sc x))
+                           (dgs_assign_update
+                             (fun _ x e ->
+                               ownership_split_transfer_gen
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (semilattice_sup_analysis_product
+                                     (semilattice_sup_lifted
+                                       (semilattice_sup_default_st
+ bounded_semilattice_sup_bot_sign))
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+ (semilattice_sup_analysis_product
+   (semilattice_sup_lifted
+     (semilattice_sup_default_st
+       (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+   (semilattice_sup_analysis_product
+     (semilattice_sup_lifted
+       (semilattice_sup_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+     (semilattice_sup_analysis_product
+       (semilattice_sup_lifted
+         (semilattice_sup_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+       (semilattice_sup_analysis_product
+         (semilattice_sup_lifted
+           (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+         semilattice_sup_relc))))))))
+                                 (split_cmb_lifted
+                                   ((semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+          semilattice_sup_relc))))))),
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence),
+               (ownership_split_default_st
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+           ownership_split_relc)))))))))
+                                 (split_rg_lifted
+                                   ((semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+          semilattice_sup_relc))))))),
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence),
+               (ownership_split_default_st
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+           ownership_split_relc)))))))))
+                                 (split_rl_lifted
+                                   ((semilattice_sup_analysis_product
+                                      (semilattice_sup_lifted
+(semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+                                      (semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st
+        (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st bounded_semilattice_sup_bot_congruence))
+          semilattice_sup_relc))))))),
+                                     (ownership_split_analysis_product
+                                       (ownership_split_lifted
+ ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+   (ownership_split_default_st
+     bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+         (ownership_split_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext
+             bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence),
+               (ownership_split_default_st
+                 bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+           ownership_split_relc)))))))))
+                                 (dgs_assign
+                                   (dgs_query_update
+                                     (fun _ -> local_query (ls_channel c))
+                                     (dgs_combine_assign_update
+                                       (fun _ ci ->
+ local_combine_transfer
+   (fun dc de -> ls_combine_assign c (ls_channel c de) ci dc de))
+                                       (dgs_combine_env_update
+ (fun _ ci ->
+   local_combine_transfer
+     (fun dc de ->
+       ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de))
+ (dgs_event_update
+   (fun _ ev -> local_transfer (closed_step c (event_action ev)))
+   (dgs_enter_update
+     (fun _ ci ->
+       local_enter_transfer (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+     (dgs_return_update
+       (fun _ ea p -> local_transfer (closed_step c (EA_Ret (ea, p))))
+       (dgs_body_update (fun _ p -> local_transfer (closed_step c (EA_Body p)))
+         (dgs_branch_update
+           (fun _ b pol ->
+             local_transfer
+               (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+           (dgs_special_update
+             (fun _ sc xa ->
+               local_transfer (closed_step c (EA_Special (sc, xa))))
+             (dgs_assign_update
+               (fun _ xa ea ->
+                 local_transfer (closed_step c (EA_Assign (xa, ea))))
+               (dgs_skip_update (fun _ -> local_transfer (closed_step c EA_Nop))
+                 (Dg_spec_ext
+                   (local_transfer id, (fun _ _ -> local_transfer id),
+                     (fun _ _ -> local_transfer id),
+                     (fun _ _ -> local_transfer id),
+                     (fun _ -> local_transfer id),
+                     (fun _ _ -> local_transfer id),
+                     (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+                     (fun _ -> local_transfer id),
+                     (fun _ -> local_combine_transfer (fun d _ -> d)),
+                     (fun _ -> local_combine_transfer (fun d _ -> d)),
+                     (fun _ _ ->
+                       sp_return
+                         (top_query_lifta
+                           (order_int_dom_ext bounded_lattice_unit))),
+                     ())))))))))))))
+                                   x e))
+                             (dgs_skip_update
+                               (fun _ ->
+                                 ownership_split_transfer_gen
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (semilattice_sup_analysis_product
+                                       (semilattice_sup_lifted
+ (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+                                       (semilattice_sup_analysis_product
+ (semilattice_sup_lifted
+   (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+ (semilattice_sup_analysis_product
+   (semilattice_sup_lifted
+     (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+   (semilattice_sup_analysis_product
+     (semilattice_sup_lifted
+       (semilattice_sup_default_st
+         (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+     (semilattice_sup_analysis_product
+       (semilattice_sup_lifted
+         (semilattice_sup_default_st
+           (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+       (semilattice_sup_analysis_product
+         (semilattice_sup_lifted
+           (semilattice_sup_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+         (semilattice_sup_analysis_product
+           (semilattice_sup_lifted
+             (semilattice_sup_default_st
+               bounded_semilattice_sup_bot_congruence))
+           semilattice_sup_relc))))))))
+                                   (split_cmb_lifted
+                                     ((semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+          (semilattice_sup_analysis_product
+            (semilattice_sup_lifted
+              (semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence))
+            semilattice_sup_relc))))))),
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+               (ownership_split_default_st
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+           (ownership_split_analysis_product
+             (ownership_split_lifted
+               ((semilattice_sup_default_st
+                  bounded_semilattice_sup_bot_congruence),
+                 (ownership_split_default_st
+                   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+             ownership_split_relc)))))))))
+                                   (split_rg_lifted
+                                     ((semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+          (semilattice_sup_analysis_product
+            (semilattice_sup_lifted
+              (semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence))
+            semilattice_sup_relc))))))),
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+               (ownership_split_default_st
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+           (ownership_split_analysis_product
+             (ownership_split_lifted
+               ((semilattice_sup_default_st
+                  bounded_semilattice_sup_bot_congruence),
+                 (ownership_split_default_st
+                   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+             ownership_split_relc)))))))))
+                                   (split_rl_lifted
+                                     ((semilattice_sup_analysis_product
+(semilattice_sup_lifted
+  (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+(semilattice_sup_analysis_product
+  (semilattice_sup_lifted
+    (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+  (semilattice_sup_analysis_product
+    (semilattice_sup_lifted
+      (semilattice_sup_default_st bounded_semilattice_sup_bot_parity))
+    (semilattice_sup_analysis_product
+      (semilattice_sup_lifted
+        (semilattice_sup_default_st
+          (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+      (semilattice_sup_analysis_product
+        (semilattice_sup_lifted
+          (semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+        (semilattice_sup_analysis_product
+          (semilattice_sup_lifted
+            (semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)))
+          (semilattice_sup_analysis_product
+            (semilattice_sup_lifted
+              (semilattice_sup_default_st
+                bounded_semilattice_sup_bot_congruence))
+            semilattice_sup_relc))))))),
+                                       (ownership_split_analysis_product
+ (ownership_split_lifted
+   ((semilattice_sup_default_st bounded_semilattice_sup_bot_sign),
+     (ownership_split_default_st
+       bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+ (ownership_split_analysis_product
+   (ownership_split_lifted
+     ((semilattice_sup_default_st bounded_semilattice_sup_bot_ivl),
+       (ownership_split_default_st
+         bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+   (ownership_split_analysis_product
+     (ownership_split_lifted
+       ((semilattice_sup_default_st bounded_semilattice_sup_bot_parity),
+         (ownership_split_default_st
+           bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+     (ownership_split_analysis_product
+       (ownership_split_lifted
+         ((semilattice_sup_default_st
+            (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+           (ownership_split_default_st
+             (bounded_semilattice_sup_bot_int_dom_ext
+               bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+       (ownership_split_analysis_product
+         (ownership_split_lifted
+           ((semilattice_sup_default_st
+              (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+             (ownership_split_default_st
+               (bounded_semilattice_sup_bot_int_dom_ext
+                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+         (ownership_split_analysis_product
+           (ownership_split_lifted
+             ((semilattice_sup_default_st
+                (bounded_semilattice_sup_bot_int_dom_ext bounded_lattice_unit)),
+               (ownership_split_default_st
+                 (bounded_semilattice_sup_bot_int_dom_ext
+                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+           (ownership_split_analysis_product
+             (ownership_split_lifted
+               ((semilattice_sup_default_st
+                  bounded_semilattice_sup_bot_congruence),
+                 (ownership_split_default_st
+                   bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+             ownership_split_relc)))))))))
+                                   (dgs_skip
+                                     (dgs_query_update
+                                       (fun _ -> local_query (ls_channel c))
+                                       (dgs_combine_assign_update
+ (fun _ ci ->
+   local_combine_transfer
+     (fun dc de -> ls_combine_assign c (ls_channel c de) ci dc de))
+ (dgs_combine_env_update
+   (fun _ ci ->
+     local_combine_transfer
+       (fun dc de ->
+         ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de))
+   (dgs_event_update
+     (fun _ ev -> local_transfer (closed_step c (event_action ev)))
+     (dgs_enter_update
+       (fun _ ci ->
+         local_enter_transfer (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+       (dgs_return_update
+         (fun _ e p -> local_transfer (closed_step c (EA_Ret (e, p))))
+         (dgs_body_update
+           (fun _ p -> local_transfer (closed_step c (EA_Body p)))
+           (dgs_branch_update
+             (fun _ b pol ->
+               local_transfer
+                 (closed_step c (if pol then EA_Assume b else EA_AssumeNot b)))
+             (dgs_special_update
+               (fun _ sc x ->
+                 local_transfer (closed_step c (EA_Special (sc, x))))
+               (dgs_assign_update
+                 (fun _ x e ->
+                   local_transfer (closed_step c (EA_Assign (x, e))))
+                 (dgs_skip_update
+                   (fun _ -> local_transfer (closed_step c EA_Nop))
+                   (Dg_spec_ext
+                     (local_transfer id, (fun _ _ -> local_transfer id),
+                       (fun _ _ -> local_transfer id),
+                       (fun _ _ -> local_transfer id),
+                       (fun _ -> local_transfer id),
+                       (fun _ _ -> local_transfer id),
+                       (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+                       (fun _ -> local_transfer id),
+                       (fun _ -> local_combine_transfer (fun d _ -> d)),
+                       (fun _ -> local_combine_transfer (fun d _ -> d)),
+                       (fun _ _ ->
+                         sp_return
+                           (top_query_lifta
+                             (order_int_dom_ext bounded_lattice_unit))),
+                       ())))))))))))))))
+                               (Dg_spec_ext
+                                 (local_transfer id,
+                                   (fun _ _ -> local_transfer id),
+                                   (fun _ _ -> local_transfer id),
+                                   (fun _ _ -> local_transfer id),
+                                   (fun _ -> local_transfer id),
+                                   (fun _ _ -> local_transfer id),
+                                   (fun _ ->
+                                     local_enter_transfer (fun d -> [(d, d)])),
+                                   (fun _ -> local_transfer id),
+                                   (fun _ ->
+                                     local_combine_transfer (fun d _ -> d)),
+                                   (fun _ ->
+                                     local_combine_transfer (fun d _ -> d)),
+                                   (fun _ _ ->
+                                     sp_return
+                                       (top_query_lifta
+ (order_int_dom_ext bounded_lattice_unit))),
+                                   ()))))))))))));;
+
+let rec mcp_place_rg
+  pg = (match pg with Program_Globals_Local -> (fun _ _ -> Bot)
+         | Program_Globals_Shared ->
+           (fun _ ->
+             split_rg_lifted
+               ((semilattice_sup_analysis_product
+                  (semilattice_sup_lifted
+                    (semilattice_sup_default_st
+                      bounded_semilattice_sup_bot_sign))
+                  (semilattice_sup_analysis_product
+                    (semilattice_sup_lifted
+                      (semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_ivl))
+                    (semilattice_sup_analysis_product
+                      (semilattice_sup_lifted
+                        (semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_parity))
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              bounded_lattice_unit)))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_default_st
+                                  bounded_semilattice_sup_bot_congruence))
+                              semilattice_sup_relc))))))),
+                 (ownership_split_analysis_product
+                   (ownership_split_lifted
+                     ((semilattice_sup_default_st
+                        bounded_semilattice_sup_bot_sign),
+                       (ownership_split_default_st
+                         bounded_semilattice_sup_bot_sign.order_bot_bounded_semilattice_sup_bot)))
+                   (ownership_split_analysis_product
+                     (ownership_split_lifted
+                       ((semilattice_sup_default_st
+                          bounded_semilattice_sup_bot_ivl),
+                         (ownership_split_default_st
+                           bounded_semilattice_sup_bot_ivl.order_bot_bounded_semilattice_sup_bot)))
+                     (ownership_split_analysis_product
+                       (ownership_split_lifted
+                         ((semilattice_sup_default_st
+                            bounded_semilattice_sup_bot_parity),
+                           (ownership_split_default_st
+                             bounded_semilattice_sup_bot_parity.order_bot_bounded_semilattice_sup_bot)))
+                       (ownership_split_analysis_product
+                         (ownership_split_lifted
+                           ((semilattice_sup_default_st
+                              (bounded_semilattice_sup_bot_int_dom_ext
+                                bounded_lattice_unit)),
+                             (ownership_split_default_st
+                               (bounded_semilattice_sup_bot_int_dom_ext
+                                 bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                         (ownership_split_analysis_product
+                           (ownership_split_lifted
+                             ((semilattice_sup_default_st
+                                (bounded_semilattice_sup_bot_int_dom_ext
+                                  bounded_lattice_unit)),
+                               (ownership_split_default_st
+                                 (bounded_semilattice_sup_bot_int_dom_ext
+                                   bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                           (ownership_split_analysis_product
+                             (ownership_split_lifted
+                               ((semilattice_sup_default_st
+                                  (bounded_semilattice_sup_bot_int_dom_ext
+                                    bounded_lattice_unit)),
+                                 (ownership_split_default_st
+                                   (bounded_semilattice_sup_bot_int_dom_ext
+                                     bounded_lattice_unit).order_bot_bounded_semilattice_sup_bot)))
+                             (ownership_split_analysis_product
+                               (ownership_split_lifted
+                                 ((semilattice_sup_default_st
+                                    bounded_semilattice_sup_bot_congruence),
+                                   (ownership_split_default_st
+                                     bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
+                               ownership_split_relc))))))))));;
+
 let rec mcp_equations _A
-  asa global seed route =
+  asa pg global seed route =
     equations
       ((equal_analysis_product
          (equal_lifted
@@ -11956,41 +15116,8 @@ let rec mcp_equations _A
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      _A (mcp_comp asa) (mcp_init asa) global seed route
-      (fun _ ->
-        dg_spec_of
-          (bot_lifted
-            (semilattice_sup_analysis_product
-              (semilattice_sup_lifted
-                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
-              (semilattice_sup_analysis_product
-                (semilattice_sup_lifted
-                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
-                (semilattice_sup_analysis_product
-                  (semilattice_sup_lifted
-                    (semilattice_sup_default_st
-                      bounded_semilattice_sup_bot_parity))
-                  (semilattice_sup_analysis_product
-                    (semilattice_sup_lifted
-                      (semilattice_sup_default_st
-                        (bounded_semilattice_sup_bot_int_dom_ext
-                          bounded_lattice_unit)))
-                    (semilattice_sup_analysis_product
-                      (semilattice_sup_lifted
-                        (semilattice_sup_default_st
-                          (bounded_semilattice_sup_bot_int_dom_ext
-                            bounded_lattice_unit)))
-                      (semilattice_sup_analysis_product
-                        (semilattice_sup_lifted
-                          (semilattice_sup_default_st
-                            (bounded_semilattice_sup_bot_int_dom_ext
-                              bounded_lattice_unit)))
-                        (semilattice_sup_analysis_product
-                          (semilattice_sup_lifted
-                            (semilattice_sup_default_st
-                              bounded_semilattice_sup_bot_congruence))
-                          semilattice_sup_relc)))))))))
-      (fun _ _ -> Bot);;
+      _A (mcp_comp asa) (mcp_init asa) global seed route (mcp_place_spec pg)
+      (mcp_place_rg pg);;
 
 let rec entry_ctx_key
   asa ctx =
@@ -12045,7 +15172,7 @@ let mcp_root_ctx :
 
 let rec analysis_report_of
   x0 p = match x0, p with
-    Analysis_Config (asa, r, Ctx_None), p ->
+    Analysis_Config (asa, r, Ctx_None, pg), p ->
       (let _ =
          Solver_trace_hook.emit "run"
            (fun _ ->
@@ -12054,20 +15181,20 @@ let rec analysis_report_of
          in
         map_option
           (fun sol ->
-            report_of equal_unit (Analysis_Config (asa, r, Ctx_None))
+            report_of equal_unit (Analysis_Config (asa, r, Ctx_None, pg))
               (fun _ -> Key_List []) (fun _ -> Report_Unit)
               (mcp_classify (activation asa))
-              (mcp_run_of (activation asa) (Analysis_Global ())
+              (mcp_run_of (activation asa) pg (Analysis_Global ())
                 (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit)
                 (declared_global p) p sol)
               p)
           (mcp_solve_c equal_unit (equal_global_unknown equal_unit equal_unit) r
             (mcp_equations (equal_global_unknown equal_unit equal_unit)
-              (activation asa) (Analysis_Global ())
+              (activation asa) pg (Analysis_Global ())
               (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit)
               (declared_global p) p)
             (cfg_exit (prog_cfg p), ())))
-    | Analysis_Config (asa, r, Ctx_EntryState), p ->
+    | Analysis_Config (asa, r, Ctx_EntryState, pg), p ->
         (let _ =
            Solver_trace_hook.emit "run"
              (fun _ ->
@@ -12091,10 +15218,10 @@ let rec analysis_report_of
                             (equal_analysis_product
                               (equal_list equal_congruence)
                               (equal_list equal_unit))))))))
-                (Analysis_Config (asa, r, Ctx_EntryState))
+                (Analysis_Config (asa, r, Ctx_EntryState, pg))
                 (entry_ctx_key (activation asa)) (fun a -> Report_Entry a)
                 (mcp_classify (activation asa))
-                (mcp_run_of (activation asa) (Analysis_Global ())
+                (mcp_run_of (activation asa) pg (Analysis_Global ())
                   (fun a b -> Activation_Seed (a, b))
                   (mcp_formals_route (activation asa)) (declared_global p) p
                   sol)
@@ -12138,11 +15265,11 @@ let rec analysis_report_of
                                 (equal_analysis_product
                                   (equal_list equal_congruence)
                                   (equal_list equal_unit)))))))))
-                  (activation asa) (Analysis_Global ())
+                  (activation asa) pg (Analysis_Global ())
                   (fun a b -> Activation_Seed (a, b))
                   (mcp_formals_route (activation asa)) (declared_global p) p)
               (cfg_exit (prog_cfg p), mcp_root_ctx)))
-    | Analysis_Config (asa, r, Ctx_CallString k), p ->
+    | Analysis_Config (asa, r, Ctx_CallString k, pg), p ->
         (let _ =
            Solver_trace_hook.emit "run"
              (fun _ ->
@@ -12152,19 +15279,19 @@ let rec analysis_report_of
           map_option
             (fun sol ->
               report_of (equal_list equal_cfg_node)
-                (Analysis_Config (asa, r, Ctx_CallString k))
+                (Analysis_Config (asa, r, Ctx_CallString k, pg))
                 (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))
                 (fun a -> Report_Call_String a) (mcp_classify (activation asa))
-                (mcp_run_of (activation asa) Global (fun a b -> Seed (a, b))
+                (mcp_run_of (activation asa) pg Global (fun a b -> Seed (a, b))
                   (fun _ -> cs_route k) (declared_global p) p sol)
                 p)
             (mcp_solve_c (equal_list equal_cfg_node) equal_call_string_gk r
-              (mcp_equations equal_call_string_gk (activation asa) Global
+              (mcp_equations equal_call_string_gk (activation asa) pg Global
                 (fun a b -> Seed (a, b)) (fun _ -> cs_route k)
                 (declared_global p) p)
               (cfg_exit (prog_cfg p), [])));;
 
-let rec config_analyses (Analysis_Config (x1, x2, x3)) = x1;;
+let rec config_analyses (Analysis_Config (x1, x2, x3, x4)) = x1;;
 
 let rec valid_config
   config =

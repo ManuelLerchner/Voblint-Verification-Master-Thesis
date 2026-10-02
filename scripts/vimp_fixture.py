@@ -49,6 +49,7 @@ SETTING_FLAGS = {
     "--globals": "globals",
     "--int-refinement": "int_refinement",
     "--narrow-bound": "narrow_bound",
+    "--program-globals": "program_globals",
 }
 
 # The bound voblint's bounded-narrowing rule takes when --narrow-bound is absent.

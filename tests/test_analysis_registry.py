@@ -99,18 +99,21 @@ def test_every_domain_is_a_field_of_the_combined_state(generated):
 
 def test_run_surface_passes_the_rule_through():
     """`analysis_report_of` answers every activation list at every context with one
-    equation each, and none of them names a particular rule or domain."""
+    equation each, whatever the program-globals placement, and none of them names a
+    particular rule, domain or placement."""
     text = (ROOT / "src/Executable_Surface/CLI/Analysis_Run.thy").read_text()
     body = text.split("fun analysis_report_of ")[1].split("\nsubsection")[0]
     equations = re.findall(
         r'"analysis_report_of \(Analysis_Config\s+(\w+)\s+(\w+)\s+'
-        r"(\(Ctx_CallString k\)|Ctx_\w+)\)",
+        r"(\(Ctx_CallString k\)|Ctx_\w+)\s+(\w+)\)",
         body,
     )
     assert sorted(equations) == sorted(
-        ("as", "r", ctx) for ctx in ("Ctx_None", "Ctx_EntryState", "(Ctx_CallString k)")
+        ("as", "r", ctx, "pg")
+        for ctx in ("Ctx_None", "Ctx_EntryState", "(Ctx_CallString k)")
     )
     assert not re.search(r"\bGlobals_\w+", body)
+    assert not re.search(r"\bProgram_Globals_\w+", body)
     assert not re.search(r"\b\w+_Analysis\b", body)
 
 

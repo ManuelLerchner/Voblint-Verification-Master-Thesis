@@ -339,7 +339,7 @@ theorem run_voblint_call_string_chain:
       and R_def: "R \<equiv> call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r (Ctx_CallString k)) p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as r (Ctx_CallString k) pg) p = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> R [] g t c
@@ -369,7 +369,7 @@ theorem run_voblint_unit_chain:
       and R_def: "R \<equiv> call_context_rel_of_fun (\<lambda>u c t. ())"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r Ctx_None) p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as r Ctx_None pg) p = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> R () g t c
@@ -396,15 +396,17 @@ text \<open>
 \<close>
 
 lemma run_voblint_entry_state_terminates:
-  assumes "run_voblint (Analysis_Config as r Ctx_EntryState) p = Analysed res"
+  assumes "run_voblint (Analysis_Config as r Ctx_EntryState Program_Globals_Local) p
+             = Analysed res"
   shows "mcp_es_rule.terminates as r (declared_global p) p"
 proof -
-  from assms have "analysis_report_of (Analysis_Config as r Ctx_EntryState) p = Some res"
+  from assms have "analysis_report_of (Analysis_Config as r Ctx_EntryState Program_Globals_Local) p
+                     = Some res"
     by (rule run_voblint_AnalysedE)
   then obtain sol where
     "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
        (mcp_es_rule.root_query p) = Some sol"
-    by (auto simp: dg_pipeline.root_query_def mcp_wrappers)
+    by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
   then show ?thesis by (rule mcp_es_rule.solve_c_run(1))
 qed
 
@@ -418,7 +420,8 @@ theorem run_voblint_entry_state_chain:
       and R_def: "R \<equiv> mcp_es_rule.admitted_contexts as r (declared_global p) p"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-      and ans: "run_voblint (Analysis_Config as r Ctx_EntryState) p = Analysed res"
+      and ans: "run_voblint (Analysis_Config as r Ctx_EntryState Program_Globals_Local) p
+                  = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> R mcp_root_ctx g t c

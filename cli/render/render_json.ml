@@ -634,9 +634,8 @@ let returns_value result =
       (A.intra_edges g)
 
 (* One row per procedure entry per context: the seed a call publishes and the callee
-   entry reads back, named exactly as every other report names it. The analyses
-   run_voblint runs keep every variable in the local state, so the analysis-wide
-   slot is never side-effected and is left out.
+   entry reads back, named exactly as every other report names it. The
+   analysis-wide slot is not a seed and is left out.
 
    A seed holds the whole entered frame, whose other locals the entry has just reset
    to top; only the callee's formals and the program's globals carry information, so

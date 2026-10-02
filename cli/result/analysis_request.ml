@@ -68,8 +68,15 @@ let context_of_name name depth =
   | ("none" | "entry-state"), Some _ -> Error Unexpected_depth
   | _ -> Error Unknown_context
 
-let config ~analyses ~globals ~context =
-  C.Analysis_Config (analyses, globals, context)
+(* Where a program's globals live: in each point's own state, or on the shared
+   channel every point reads. *)
+let program_globals_of_name = function
+  | "local" -> Some C.Program_Globals_Local
+  | "shared" -> Some C.Program_Globals_Shared
+  | _ -> None
+
+let config ~analyses ~globals ~context ~program_globals =
+  C.Analysis_Config (analyses, globals, context, program_globals)
 
 (* A request as either entry receives it: names, not constructors. The native
    CLI reads it off its flags, the browser off the page's selections. *)
@@ -80,6 +87,7 @@ type request = {
   narrow_bound : int option;
   context : string;
   depth : int option;
+  program_globals : string;
 }
 
 type request_error =
@@ -87,6 +95,7 @@ type request_error =
   | Unknown_context_name of string
   | Unknown_globals of string
   | Unknown_analysis of string
+  | Unknown_program_globals of string
   | Refinement_without_int
   | Negative_narrow_bound
   | Narrow_bound_without_rule
@@ -96,6 +105,7 @@ type resolved = {
   domains : C.analysis_domain list option;
   rule : C.globals_rule;
   mode : C.context_mode;
+  placement : C.program_globals;
 }
 
 (* Every check a request needs before a program is read, in the order the CLI
@@ -151,10 +161,17 @@ let resolve (r : request) : (resolved, request_error) result =
   let* mode =
     Result.map_error (fun e -> Context e) (context_of_name r.context r.depth)
   in
-  Ok { domains; rule; mode }
+  let* placement =
+    match program_globals_of_name r.program_globals with
+    | Some placement -> Ok placement
+    | None -> Error (Unknown_program_globals r.program_globals)
+  in
+  Ok { domains; rule; mode; placement }
 
 (* The analysis and its rendering, in sequence: the report run_voblint returns is
    semantic, and the adapters read its rendering. *)
-let analyse ~analyses ~globals ~context program =
+let analyse ~analyses ~globals ~context ~program_globals program =
   Value_symbols.render_answer
-    (C.run_voblint (config ~analyses ~globals ~context) program)
+    (C.run_voblint
+       (config ~analyses ~globals ~context ~program_globals)
+       program)
