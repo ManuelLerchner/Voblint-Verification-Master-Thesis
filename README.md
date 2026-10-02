@@ -26,10 +26,10 @@ there.
 
 The equality is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover
 the collecting semantics, and their union recovers $\mathcal{C}(v)$ exactly. The
-inclusions are sound over-approximations: the collecting semantics of the
-compiled program may admit more stores than source runs exhibit, the report may
-describe more stores than are concretely reachable, and the verdict semantics
-keeps only what the definite verdicts require.
+inclusions are one-way guarantees. For the first, only the source-to-CFG
+direction is proved; whether it is an equality is not part of the present
+contract. The second is where abstract interpretation may add unreachable
+stores, and the third keeps only what the definite verdicts assert.
 
 Each inclusion is an Isabelle theorem:
 [`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
