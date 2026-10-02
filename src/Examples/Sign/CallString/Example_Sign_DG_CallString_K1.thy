@@ -102,7 +102,7 @@ definition sign_nest_empty_pred :: "sign default_st \<Rightarrow> bool" where
   "sign_nest_empty_pred = default_st_is_bot_for (declared_global_vars sign_nest_program)"
 
 lemma sign_nest_exact:
-  "sign_nest_empty_pred s = is_empty_state (default_st_to_fun sign_nest_gs s)"
+  "sign_nest_empty_pred s = is_empty_state (\<rho>\<^bsub>sign_nest_gs\<^esub> s)"
   unfolding sign_nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair every other Sign analysis solves over, at the same

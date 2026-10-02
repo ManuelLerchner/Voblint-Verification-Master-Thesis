@@ -8,8 +8,8 @@ begin
 section \<open>What the initial abstract state describes\<close>
 
 text \<open>
-  Sign's specification, its concretization and the soundness of the one against the
-  other are not restated here: they are \<open>sign_tf.spec_exec\<close>, \<open>sign_tf.spec_gamma\<close>,
+  Sign's specification and its soundness are not restated here:
+  \<open>sign_tf.spec_exec\<close> is sound against \<open>\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<close> by
   \<open>sign_tf.sound_exec\<close> and \<open>sign_tf.entry_cover_exec\<close>, which every non-relational
   bundle gets from \<^locale>\<open>sound_nonrelational_ops\<close>.
 \<close>

@@ -34,6 +34,8 @@ where
   "dg_state_to_fun \<G> d =
     DG (default_st_to_fun \<G> (dg_local d)) (default_st_to_fun \<G> (dg_global d))"
 
+adhoc_overloading readback == dg_state_to_fun
+
 lemma dg_state_to_fun_simps [simp]:
   "dg_local (dg_state_to_fun \<G> d) = default_st_to_fun \<G> (dg_local d)"
   "dg_global (dg_state_to_fun \<G> d) = default_st_to_fun \<G> (dg_global d)"

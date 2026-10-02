@@ -3,6 +3,8 @@ theory Example_Interval_DG_EntryState_Collect
     Example_Interval_DG_EntryState_Ctx
 begin
 
+unbundle default_st_syntax
+
 section \<open>Activation-indexed collecting soundness: one context covers every \<open>__voblint_nondet_int()\<close> draw\<close>
 
 text \<open>
@@ -166,11 +168,8 @@ proof (rule call_action_at_call_site_eq
 qed
 
 lemma rc_context_at_call:
-  assumes sin: "s \<in> ivl_tf.spec_gamma rc_gs
-                  (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
-                     (Inl (Statement 3, []))))
-                  (dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
-                     (Inr (Analysis_Global ()))))"
+  assumes sin: "s \<in> \<lbrakk>\<rho>\<^bsub>rc_gs\<^esub> (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
+                     (Inl (Statement 3, []))))\<rbrakk>"
   shows "interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program
            (Statement 3) []
            (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p''))
@@ -183,12 +182,12 @@ proof -
   let ?entry = "transfer_lift rc_empty_pred (generic_enter_st_for ivl_ops rc_gs ?ci) ?d"
   let ?g = "dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
               (Inr (Analysis_Global ())))"
-  have cov: "entry_pairs_cover (\<lambda>d'. ivl_tf.spec_gamma rc_gs d' ?g)
+  have cov: "entry_pairs_cover (\<lambda>d'. \<lbrakk>\<rho>\<^bsub>rc_gs\<^esub> d'\<rbrakk>)
       s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
       [(?d, ?entry)]"
     using ivl_tf.entry_cover_exec[OF rc_exact sin, where ci = ?ci] by simp
   have ecov: "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-                \<in> ivl_tf.spec_gamma rc_gs ?entry ?g"
+                \<in> \<lbrakk>\<rho>\<^bsub>rc_gs\<^esub> ?entry\<rbrakk>"
     using cov unfolding entry_pairs_cover_def by simp
   have base: "interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program
       (Statement 3) [] ?ci s
@@ -198,7 +197,7 @@ proof -
     unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: ivl_tf.spec_gamma_def gamma_lift_default_st_gamma_to_fun rc_entered
+          \<open>simp_all add: gamma_lift_default_st_gamma_to_fun rc_entered
              rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
@@ -226,12 +225,11 @@ proof -
     by eval
   have covd: "(Statement 3, []) \<in> fst rc_ctx_sol"
     unfolding rc_ctx_sol_def by eval
-  have sin: "s \<in> ivl_tf.spec_gamma rc_gs (dg_local (snd rc_ctx_sol (Inl (Statement 3, []))))
-               (dg_global (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
+  have sin: "s \<in> \<lbrakk>\<rho>\<^bsub>rc_gs\<^esub> (dg_local (snd rc_ctx_sol (Inl (Statement 3, []))))\<rbrakk>"
     using sm covd
-    unfolding ivl_tf.spec_gamma_def interval_es_rule.reader_def
+    unfolding interval_es_rule.reader_def
       interval_es_rule.sol_vars_def interval_es_rule.sol_env_def rc_ctx_sol_def[symmetric]
-    by simp
+    by (simp add: gamma_lift_default_st_gamma_to_fun)
   show ?thesis
     using interval_es_rule.entry_state_routed_context_call[OF rc_routed_hyps
           ce[folded rc_cfg_alt]
@@ -259,5 +257,8 @@ corollary rc_activation_ctx_key:
         \<and> activation_context_rel rc_gs (interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program)
             [] (compile_prog rc_pi rc_procs) t ctx_call}"
   unfolding activation_collect_def by (rule refl)
+
+
+unbundle no default_st_syntax
 
 end

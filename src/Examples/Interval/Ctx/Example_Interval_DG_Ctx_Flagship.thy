@@ -40,7 +40,7 @@ text \<open>The equation system reads the program's own declared globals for its
 definition twice_empty_pred :: "ivl default_st \<Rightarrow> bool" where
   "twice_empty_pred = default_st_is_bot_for (declared_global_vars twice_program)"
 
-lemma twice_exact: "twice_empty_pred s = is_empty_state (default_st_to_fun twice_gs s)"
+lemma twice_exact: "twice_empty_pred s = is_empty_state (\<rho>\<^bsub>twice_gs\<^esub> s)"
   unfolding twice_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>Reading one variable off a lifted whole-state local unknown: an unreachable

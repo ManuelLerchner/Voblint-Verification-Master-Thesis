@@ -4042,3 +4042,4 @@ interval_abs_spec
 interval_gamma
 interval_sound_exec
 interval_entry_cover_exec
+spec_gamma

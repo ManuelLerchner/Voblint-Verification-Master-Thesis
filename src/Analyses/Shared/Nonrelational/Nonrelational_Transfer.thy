@@ -239,8 +239,8 @@ subsection \<open>The specification and its soundness, before any context\<close
 
 text \<open>
   What the bundle supplies to the framework on its own: a whole-state D/G
-  specification over the executable step and entry, a concretization of its local
-  values, and the soundness of the one against the other. None of the three
+  specification over the executable step and entry, and its soundness against the
+  concretization of the read-back local value, \<open>\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<close>. Neither
   mentions a context, a routing function, a seed key or a solver, so every domain
   reads them off its bundle instead of restating them.
 \<close>
@@ -254,16 +254,10 @@ definition spec_exec ::
 lemma dg_spec_wf_spec_exec [intro, simp]: "dg_spec_wf (spec_exec \<G> empty_pred)"
   by (simp add: spec_exec_def)
 
-definition spec_gamma ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
-  "spec_gamma \<G> d g = gamma_lift (default_st_gamma \<G>) d"
-
-lemma spec_gamma_Bot [simp]: "spec_gamma \<G> Bot g = {}"
-  by (simp add: spec_gamma_def)
-
 context
+  includes default_st_syntax
   fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "'a default_st \<Rightarrow> bool"
-  assumes exact: "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
 begin
 
 interpretation dom: dg_domain_exec
@@ -273,23 +267,28 @@ interpretation dom: dg_domain_exec
      (rule tf_st_for_commute[unfolded tf_abs_def], assumption,
       rule enter_st_for_commute, rule exact)
 
-lemma spec_gamma_eq: "spec_gamma \<G> = dom.gamma_exec"
-  by (intro ext) (simp add: spec_gamma_def dom.gamma_exec_def)
+lemma gamma_exec_readback: "dom.gamma_exec = (\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>)"
+  by (intro ext) (simp add: dom.gamma_exec_def gamma_lift_default_st_gamma_to_fun)
 
-theorem sound_exec: "analysis_contract (spec_exec \<G> empty_pred) (spec_gamma \<G>) \<G>"
-  unfolding spec_gamma_eq spec_exec_def
+theorem sound_exec:
+  "analysis_contract (spec_exec \<G> empty_pred) (\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>) \<G>"
+  unfolding gamma_exec_readback [symmetric] spec_exec_def
   by (rule dom.analysis_contract_st[OF is_sound_nonrelational_transfer])
 
 text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this entry answers.\<close>
 
 theorem entry_cover_exec:
-  assumes "s \<in> spec_gamma \<G> d g"
-  shows "entry_pairs_cover (\<lambda>d'. spec_gamma \<G> d' g) s
+  assumes "s \<in> \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>"
+  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d'\<rbrakk>) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (generic_enter_st_for ops \<G> ci) d)]"
-  using assms unfolding spec_gamma_eq dom.gamma_exec_def
-  by (rule dom.entry_pairs_cover_st[OF is_sound_nonrelational_transfer])
+proof -
+  have "s \<in> gamma_lift (default_st_gamma \<G>) d"
+    using assms by (simp add: gamma_lift_default_st_gamma_to_fun)
+  from dom.entry_pairs_cover_st [OF is_sound_nonrelational_transfer this]
+  show ?thesis by (simp add: gamma_lift_default_st_gamma_to_fun)
+qed
 
 end
 

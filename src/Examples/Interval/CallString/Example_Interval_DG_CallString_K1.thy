@@ -101,7 +101,7 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
 definition nest_empty_pred :: "ivl default_st \<Rightarrow> bool" where
   "nest_empty_pred = default_st_is_bot_for (declared_global_vars nest_program)"
 
-lemma nest_exact: "nest_empty_pred s = is_empty_state (default_st_to_fun nest_gs s)"
+lemma nest_exact: "nest_empty_pred s = is_empty_state (\<rho>\<^bsub>nest_gs\<^esub> s)"
   unfolding nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair the context-insensitive and entry-state-keyed interval

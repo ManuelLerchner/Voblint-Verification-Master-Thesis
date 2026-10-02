@@ -75,7 +75,7 @@ definition generic_enter_st_for ::
        'a default_st => 'a default_st" where
   "generic_enter_st_for ops \<G> ci s =
      bind_formals_default_st \<G> (ci_formals ci)
-       (map (\<lambda>e. n_aval ops e (default_st_to_fun \<G> s)) (ci_args ci))
+       (map (\<lambda>e. n_aval ops e (\<rho>\<^bsub>\<G>\<^esub> s)) (ci_args ci))
        (enter_frame_D_default_st top s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
@@ -85,23 +85,23 @@ fun generic_tf_st_for ::
        'a default_st => 'a default_st" where
     "generic_tf_st_for ops \<G> EA_Nop s = s"
   | "generic_tf_st_for ops \<G> (EA_Assign x a) s =
-       s\<langle>location_of \<G> x := n_aval ops a (default_st_to_fun \<G> s)\<rangle>"
+       s\<langle>location_of \<G> x := n_aval ops a (\<rho>\<^bsub>\<G>\<^esub> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Special sc x) s =
        s\<langle>location_of \<G> x :=
          (case sc of
             Nondet_Int => top
           | Min a b => special_min (n_special ops)
-                         (n_aval ops a (default_st_to_fun \<G> s))
-                         (n_aval ops b (default_st_to_fun \<G> s))
+                         (n_aval ops a (\<rho>\<^bsub>\<G>\<^esub> s))
+                         (n_aval ops b (\<rho>\<^bsub>\<G>\<^esub> s))
           | Max a b => special_max (n_special ops)
-                         (n_aval ops a (default_st_to_fun \<G> s))
-                         (n_aval ops b (default_st_to_fun \<G> s)))\<rangle>"
+                         (n_aval ops a (\<rho>\<^bsub>\<G>\<^esub> s))
+                         (n_aval ops b (\<rho>\<^bsub>\<G>\<^esub> s)))\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Assume b) s = n_bfilter ops \<G> b True s"
   | "generic_tf_st_for ops \<G> (EA_AssumeNot b) s = n_bfilter ops \<G> b False s"
   | "generic_tf_st_for ops \<G> (EA_Body p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret None p) s = s"
   | "generic_tf_st_for ops \<G> (EA_Ret (Some a) p) s =
-       s\<langle>location_of \<G> ret_var := n_aval ops a (default_st_to_fun \<G> s)\<rangle>"
+       s\<langle>location_of \<G> ret_var := n_aval ops a (\<rho>\<^bsub>\<G>\<^esub> s)\<rangle>"
   | "generic_tf_st_for ops \<G> (EA_Check l cnd) s = s"
 
 definition generic_tf_abs ::
@@ -145,11 +145,11 @@ text \<open>
 theorem generic_tf_st_for_commute:
   fixes ops :: "'a::executable_domain nonrelational_ops"
   assumes branch:
-    "\<And>b pol. default_st_to_fun \<G> (n_bfilter ops \<G> b pol s) =
-               br b pol (default_st_to_fun \<G> s)"
+    "\<And>b pol. \<rho>\<^bsub>\<G>\<^esub> (n_bfilter ops \<G> b pol s) =
+               br b pol (\<rho>\<^bsub>\<G>\<^esub> s)"
   shows
-    "default_st_to_fun \<G> (generic_tf_st_for ops \<G> a s) =
-     generic_tf_abs ops br a (default_st_to_fun \<G> s)"
+    "\<rho>\<^bsub>\<G>\<^esub> (generic_tf_st_for ops \<G> a s) =
+     generic_tf_abs ops br a (\<rho>\<^bsub>\<G>\<^esub> s)"
 proof (cases a)
   case EA_Nop
   then show ?thesis by simp
