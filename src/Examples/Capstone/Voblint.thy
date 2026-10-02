@@ -25,7 +25,8 @@ theory Voblint
     "Voblint_Analysis_Parity.Parity_Analyses"
     "Voblint_Analysis_Congruence.Congruence_Analyses"
     "Voblint_Analysis_Int.Int_Fixpoint_Analyses"
-    "Voblint_CLI.Analysis_Run_Ctx_Sound"
+    "Voblint_CLI.Analysis_Certified"
+    "Voblint_CLI.Analysis_Render"
     "Voblint_Framework.DG_Constraint_Programs"
     "Voblint_Framework.DG_Spec_Sound"
     "Voblint_Framework.CFG_Enumeration"
@@ -105,31 +106,30 @@ text \<open>
 
   \<^bold>\<open>Where the chain ends.\<close>  At the operation the CLI actually calls and code
   generation actually exports, not at an internal solved system.
-  @{thm [source] run_voblint_certified_source_sound}, in
+  @{thm [source] run_voblint_source_sound}, in
   \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, says: run the source program, stop
   wherever you like, and ask any configuration --- a list of active analyses, a global
-  update rule and a context policy --- for a result. There is a graph node and frame stack for where you
-  stopped, the abstract state filed for that node contains your store, and every check
-  listed there holds of that store, with none there marked unreachable.
+  update rule and a context policy --- for a report. There is a graph node and frame
+  stack for where you stopped, some state the report holds at that node describes your
+  store, and every definite verdict the report gives there holds of that store.
 
-  Under a context policy the table has one entry per point \<^emph>\<open>and\<close> context.  A
-  store reaching a point then sits in the entry filed under at least one context its
+  Under a context policy the report holds one state per point \<^emph>\<open>and\<close> context.  A
+  store reaching a point then lies in the state filed under at least one context its
   own call history is admitted at --- exactly one for a call string, possibly several
   under entry-state routing; quantifying over every covered context would be false,
-  since another activation's entry need not describe this store.
+  since another activation's state need not describe this store.
 
-  What a caller owes is \<open>config_terminates as rule ctx p\<close>: the solve completed.
-  Neither coverage nor well-formedness is a premise, because a terminating solve is
-  closed along its live dependencies and a malformed program answers
-  \<open>Malformed_Program\<close>.  The case split lives in that predicate and in
-  \<open>analysis_result_covers\<close> rather than in the statement, because each context policy
-  keys its table by its own context type.
+  A caller owes nothing beyond the answer itself.  \<^const>\<open>run_voblint\<close> solves with the
+  executable solver, which answers only where the solve terminates, so an analysed
+  answer carries termination; coverage of the solve follows from the solve, and a
+  malformed program answers \<open>Malformed_Program\<close>.  The context policy is read in one
+  function, \<^const>\<open>analysis_report_of\<close>, and its soundness is proved by one case split.
 
   \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> is that theorem
   with nothing left to assume.  It fixes one program at the product domain, a
   call-string context of length one and always-join globals, evaluates
-  the solve's termination and the answer, builds the source run step by step,
-  and reads the listed \<^const>\<open>Check_Proved\<close> check off the conclusion.
+  the answer, builds the source run step by step, and reads the listed
+  \<^const>\<open>Check_Proved\<close> check off the conclusion.
 \<close>
 
 section \<open>Flagship theorems\<close>
@@ -492,12 +492,12 @@ text \<open>
       partial correctness: the caller supplies that the solver
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
     \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
-      every configuration the dispatcher answers with check rows
-      (@{thm [source] run_voblint_certified_source_sound}), and the dead-check
+      every configuration the dispatcher answers with a report
+      (@{thm [source] run_voblint_source_sound}), and the dead-check
       guarantee at the same entry point
       (@{thm [source] run_voblint_dead_check_unreached}).
     \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
-      statement instantiated at one program, with every premise discharged.
+      statement instantiated at one program, with its answer evaluated.
 
   \<^bold>\<open>7. Examples and witnesses.\<close> Executable demos, precision
     witnesses, and tooling. The five domain flagships
@@ -614,31 +614,35 @@ text \<open>
       side-effected global, as a value: one solver interpretation serves all four, and
       every domain registers each context policy once over it.
     \<^item> @{theory Voblint_CLI.Analysis_Run} --- \<^const>\<open>run_voblint\<close>, the one operation
-      code generation exports: a list of analyses, a global update rule and a context
-      policy, all plain values, and a program. Every combination is analysed; the answer is the
-      solved result as data, and every rendering of it is built outside this
-      development. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> pins one program's answer
-      \<^verbatim>\<open>by eval\<close>, and a hand-written OCaml driver under \<open>codegen/regression/\<close>
-      checks the generated module against the same values.
+      code generation exports: a configuration of analyses, a global update rule and a
+      context policy, and a program. Every combination is analysed; the answer is a
+      report of semantic states, and its rendering (@{theory Voblint_CLI.Analysis_Render})
+      is a projection outside the theorems. \<^verbatim>\<open>dispatch_demo_interval_precise\<close> pins one
+      program's answer \<^verbatim>\<open>by eval\<close>, and a hand-written OCaml driver under
+      \<open>codegen/regression/\<close> checks the generated module against the same values.
     \<^item> @{theory Voblint_CLI.Analysis_Run_Sound} and
       @{theory Voblint_CLI.Analysis_Run_Ctx_Sound} --- one soundness table per context
       policy (@{thm [source] mcp_rule_table}, @{thm [source] mcp_es_rule_table},
       @{thm [source] mcp_cs_rule_table}), each stated for an arbitrary activation list
       and update rule, over the registrations of
       \<^theory>\<open>Voblint_CLI.MCP_Analyses\<close>.
-      @{theory Voblint_CLI.Analysis_Certified} dispatches over the tables to state
-      @{thm [source] run_voblint_certified_source_sound} and
+      @{theory Voblint_CLI.Analysis_Report} reads a report through \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>\<close> and
+      \<^const>\<open>verdict_stores\<close> and proves, by one case split over the tables, that
+      every report \<^const>\<open>run_voblint\<close> returns is sound
+      (@{thm [source] analysis_report_of_sound}).
+      @{theory Voblint_CLI.Analysis_Certified} states
+      @{thm [source] run_voblint_source_sound} and
       @{thm [source] run_voblint_check_sound} once for every configuration.
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
       equations of \<^const>\<open>run_voblint\<close> and everything it transitively calls, down to the
       solver itself. It is not proving one function and exporting a different,
       hand-written one: the generated operation is a translation of the same equations
-      @{thm [source] run_voblint_certified_source_sound} is proved about. That theorem is
-      conditional: applying it to a concrete program needs the solve's termination on
-      that program, a genuine per-program fact typically discharged \<^verbatim>\<open>by eval\<close>.
-      \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> discharges it for one
-      program, with no assumption left open.
+      @{thm [source] run_voblint_source_sound} is proved about. That theorem asks for no
+      termination premise: an analysed answer exists only where the executable solve
+      returned. It is partial correctness; nothing proves the solve returns on every
+      program. \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> evaluates
+      the answer for one program and applies the theorem to a concrete run.
 \<close>
 
 text \<open>
