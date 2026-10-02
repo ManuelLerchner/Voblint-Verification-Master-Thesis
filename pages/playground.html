@@ -116,7 +116,9 @@
       <h1 id="analyzer-heading">Analyze VIMP in your browser</h1>
       <p class="hero-lead">
         VIMP is a small IMP-style language with <code>__voblint_check(cond)</code> assertions.
-        The analysis runs locally through the Isabelle-generated core; your source is not
+        The analysis runs locally, in WebAssembly compiled from
+        <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/main/codegen/generated/ml/Voblint_Generated.ml" target="_blank" rel="noreferrer"><code>Voblint_Generated.ml</code></a>,
+        the OCaml Isabelle generated from the verified theories; your source is not
         uploaded. Parsing, rendering and this page sit outside the verified component.
         <a href="index.html">How it works</a> explains every setting and every mark below.
       </p>
@@ -345,10 +347,11 @@
 
           <p class="raw-result-note">
             The call exactly as the Isabelle-generated <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> received
-            it, and the typed answer it returned, serialized field by field with Isabelle's
-            own field and constructor names. Abstract values arrive as strings rendered by
-            <code>run_voblint</code> itself; the presentation layer only replaces ASCII
-            symbol names such as <code>&lt;top&gt;</code> with glyphs such as ⊤. Integers
+            it, and the answer it returned after <a href="Voblint/Voblint_CLI/Analysis_Render.html#Analysis_Render.render_report%7Cconst"><code>render_report</code></a>, the generated
+            projection that turns each state into text, serialized field by field with
+            Isabelle's own field and constructor names. Each abstract value is rendered by
+            its own analysis; the presentation layer only replaces ASCII symbol names such
+            as <code>&lt;top&gt;</code> with glyphs such as ⊤. Integers
             too large for a JSON number appear as strings. The editor annotations, state
             inspector, and graph are drawn from this answer by untrusted presentation code.
           </p>

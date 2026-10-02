@@ -47,18 +47,18 @@ semantic content of a static analyzer lives — the control-flow graph, the
 transfer functions, the interprocedural call protocol, the choice of calling
 context, the split between flow-sensitive local facts and flow-insensitive
 shared facts. Everything between the solver's output and the report is where
-its usefulness lives — the result table, the check verdicts, the dead-code
+its usefulness lives — the analysis report, the check verdicts, the dead-code
 markers. Voblint closes that ring. It is a machine-checked Isabelle/HOL
 development that compiles a small imperative language to a procedure-aware
 CFG, generates a side-effecting equation system in the shape Goblint's `Spec`
-interface prescribes, runs the vendored verified solver on it, publishes a
-result table, and proves that every execution of the source program is
-over-approximated by that table and that every definite verdict in it holds.
+interface prescribes, runs the vendored verified solver on it, returns a
+semantic analysis report, and proves that every execution of the source program
+is over-approximated by that report and that every definite verdict in it holds.
 
 The statement is about the analyzer that ships. `run_voblint` is one Isabelle
 constant; `export_code` emits it as OCaml; the command-line tool and the
 browser playground call the emitted function; and
-`run_voblint_certified_source_sound` is a theorem about that same constant. No
+`run_voblint_source_sound` is a theorem about that same constant. No
 idealized model sits between the theorem and the program people run.
 
 Three design decisions give the thesis its technical spine, and each is worth
@@ -150,7 +150,7 @@ either. 289 `.vimp` regression fixtures across 25 groups: `precision/` (196),
 `known-imprecision/` (54), `soundness/` (10), and 29 outside these directories.
 
 The thesis takes its repository figures from `thesis/shared/generated/stats.json`
-(`pixi run thesis-stats-write` regenerates it, `stat("key")` reads it), never
+(every thesis build regenerates it, `stat("key")` reads it), never
 from this table. The `src/` total, the line counts of `src/Examples` and
 `src/Executable_Surface`, and the solver and OCaml rows match that file; the
 other per-directory figures are not tracked there and may lag.
@@ -246,7 +246,7 @@ discharged once for any routing policy), the check layers, and the result table.
 
 **`Voblint_Exec`.** The gap between what soundness talks about and what the
 solver computes on. `default_st` is a quotient type over
-(local default, global default, override list); `default_st_to_fun gs`
+(local default, global default, override list); the readback `ρ⇘𝒢⇙` (`default_st_to_fun gs`)
 reads it back as an `abs_state`; every executable operation carries a commute
 theorem against its abstract counterpart; `Default_St_Reachability` gives a finite
 dead-state test proved equivalent to the infinite one.
@@ -417,14 +417,15 @@ L7  SOLVER
              │
              v
 L8  EXECUTABLE ↔ MATHEMATICAL
-    default_st (quotient), default_st_to_fun   Default_St_Base, Default_St_Transfer
+    default_st (quotient), readback ρ⇘𝒢⇙ (overloaded:
+      default_st_to_fun, lifted, dg_state_to_fun)  Default_St_Base, Default_St_Transfer
     generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
     dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
     result_value_to_abs, canonicalize_lift            Exec_Result_Abs
              │
              v
 L9  PUBLICATION
-    analysis_result, lookup_context, wf_analysis_result  Analysis_Result
+    solved_table, lookup_table, table_contexts          Solved_Table
     dg_analysis_adapter                                  DG_Analysis_Adapter
     dg_pipeline / dg_analysis              DG_Analysis
     live_unknowns, live_unknowns_cover,
@@ -440,11 +441,16 @@ L10 CHECKS
              │
              v
 L11 THE ANALYZER
-    run_voblint                                     Analysis_Run
-    sound_table, sound_table_of_activation,
-      sound_table.source_sound                      Analysis_Run_Sound,
+    run_voblint, analysis_report, analysis_report_of  Analysis_Run
+    render_report (display projection)              Analysis_Render
+    covered_table, sound_classifier,
+      covered_table_of_activation                   Analysis_Run_Sound,
                                                     Analysis_Run_Ctx_Sound
-    run_voblint_certified_source_sound   ← headline Analysis_Certified
+    report_sem ⟦res⟧⇘v⇙, verdict_stores 𝒱⇘res⇙ v,
+      consistent_report, well_formed_report,
+      analysis_report_of_sound                      Analysis_Report
+    run_voblint_source_sound            ← headline Analysis_Certified
+    run_voblint_spine, run_voblint_report_contract
     run_voblint_check_sound
     run_voblint_dead_check_unreached
     run_voblint_check_sites
@@ -454,24 +460,28 @@ L11 THE ANALYZER
 L12 NON-VACUITY AND EXPORT
     certificate_demo_full_certificate               Example_End_To_End_Certificate
     export_code ... module_name Generated           Voblint_Codegen
+      (file Voblint_Generated.ml; OCaml facade cli/voblint.ml, module Voblint)
 ```
 
 ### 3.1 The headline, in full
 
 ```isabelle
-theorem run_voblint_certified_source_sound:
+theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
-  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
-  shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-               ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
-                         (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers as rule ctx p v s
-               ∧ checks_sound_at res v s"
+  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
+  assumes s0: "s0 ∈ cinit_stores 𝒢"
+      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
+      and ans: "run_voblint config p = Analysed res"
+  shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
+                 ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
+                 ∧ s ∈ ⟦res⟧⇘v⇙
+                 ∧ s ∈ 𝒱⇘res⇙ v"
 ```
+
+There is no termination premise: `run_voblint` solves with the executable
+`solve_c`, and `Analysed res` exists only where that solve returned.
+`run_voblint_spine` states the same chain keeping the activation trace `t` and
+its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v`.
 
 Four things about this statement deserve a paragraph each in the thesis.
 
@@ -483,8 +493,13 @@ records the structural match; `node_collect` picks the reachable witness.
 admitted at several contexts; under call strings at exactly one. A statement
 over *every* solved context would be false.
 
-*Coverage is not a premise.* `live_unknowns_cover` derives it from termination
-plus well-formedness, by reading what the generated equations actually query.
+*Coverage is not a premise.* `live_unknowns_cover` derives it from the returned
+solve plus well-formedness, by reading what the generated equations actually
+query.
+
+*Termination is not a premise.* `run_voblint` answers `Analysed res` only where
+its executable solve returned, and that run gives the solver's domain
+membership. Termination for every program is not proved.
 
 *Well-formedness is not a premise either.* A malformed program answers
 `Malformed_Program`, and the `ans` assumption supplies the contract.
@@ -497,7 +512,7 @@ plus well-formedness, by reading what the generated equations actually query.
 | compilation and forward simulation | Isabelle's code generator |
 | equation generation and the computed post-solution | the OCaml compiler, runtime, Zarith, `wasm_of_ocaml` |
 | the vendored solver's `part_post_solution` | solver termination for an arbitrary program |
-| the result table, check verdicts, arithmetic diagnostics | source positions, rendered graphs, state strings, the playground |
+| the semantic report (`analysis_report`), its check verdicts and arithmetic diagnostics | `render_report` and the state strings, source positions, rendered graphs, the playground |
 | | precision and completeness |
 
 The one seam between Voblint and the vendored solver is
@@ -640,13 +655,14 @@ as stated*, not about the quality of the work.
 
 **Claim.** For every configuration the tool offers — five abstract domains,
 five global update rules, three context policies, call strings at every
-bound — every finite execution of an accepted source program is
-over-approximated by the result table the analyzer returns, and every definite
-verdict in that table holds for that execution. The theorem is about the same
+bound — whenever the analyzer returns a report, every finite execution of the
+source program is over-approximated by that report, and every definite verdict
+in it holds for that execution. The theorem is about the same
 constant that is exported to OCaml and called by the CLI and the browser
 playground.
 
-**Evidence.** `run_voblint_certified_source_sound`, `run_voblint_check_sound`,
+**Evidence.** `run_voblint_source_sound`, `run_voblint_spine`,
+`run_voblint_report_contract`, `run_voblint_check_sound`,
 `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`
 (`Analysis_Certified.thy`); the configuration coverage argument in
 `docs/THEOREM_MAP.md`; `certificate_demo_full_certificate`
@@ -660,9 +676,11 @@ with a context-sensitive interprocedural architecture Verasco does not have.
 Also: Blazy et al.'s value analysis, and the AFP `Abs_Int_ITP2012` line, which
 is intraprocedural and not executable in this sense.
 
-**Confidence.** **High**, provided the language scope and the termination
-premise are stated in the same breath. The premise `config_terminates` is the
-one thing a careless reading could miss.
+**Confidence.** **High**, provided the language scope and partial correctness
+are stated in the same breath. The theorems are about every `Analysed` answer
+and have no termination premise; termination of the solve is not proved for
+every program, so a careless reading could take "no premise" for "always
+answers".
 
 ### C2 — A concrete semantics for calling context
 
@@ -729,8 +747,9 @@ as parameters and asks for two facts about them: `solve_dom x` implies
 `solve_dom x`. Every domain registration (the generated
 `<Domain>_Analyses.thy`) discharges the first with the vendored
 `TD_side_rule_Interp.partial_post_solution` and the second with
-`TD_side_rule_Interp.solve_dom_of_solve_c`; the termination premise of
-`run_voblint`'s theorems is `solve_dom`. The composite
+`TD_side_rule_Interp.solve_dom_of_solve_c`. `run_voblint` runs `solve_c`, so
+a returned answer carries `solve_dom` and its theorems need no termination
+premise. The composite
 `part_post_solution_of_solve_c` is not on this path; only two Sign examples
 cite it. Consequently all four vendored update rules are covered by one
 interpretation, and swapping the solver would not touch the semantic layer.
@@ -800,7 +819,7 @@ are specific and checkable.
 **Claim.** Soundness is stated over `'a abs_state = vname => 'a`, a function on
 an infinite domain. The solver runs on `default_st`, a quotient of
 (local default, global default, override list). Every operation carries a
-commute theorem through `default_st_to_fun gs`, and the finite
+commute theorem through the readback `ρ⇘𝒢⇙` (`default_st_to_fun gs`), and the finite
 dead-state test is proved equivalent to the infinite one. The two defaults are
 forced, not chosen: C-style zero-initialization of globals needs a non-`top`
 default for globals and `top` for locals, and the ownership split needs `bot`
@@ -1056,7 +1075,7 @@ that way.** It is discharged in five named steps, each in a different session:
 | `dg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
 | `routed_context` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
 | `dg_analysis` / `dg_analysis_exec` | the published table and the source bridge | `Voblint_Result` |
-| `sound_table` / `run_voblint_certified_source_sound` | the configuration-level statement | `Voblint_CLI` |
+| `covered_table` + `sound_classifier` / `run_voblint_source_sound` | the configuration-level statement | `Voblint_CLI` |
 
 Chapter 9 therefore *assembles* rather than *proves*, and should say so. Each
 of the four chapters before it ends by discharging its own obligation; the
@@ -1380,7 +1399,7 @@ choice. *Omit* the vendored solver's internals entirely; cite the NFM paper.
 **Ch. 9.** Prerequisite: everything. This chapter is mostly assembly, and its
 job is to be precise about the statement rather than to introduce ideas. The
 one genuinely new idea here is `live_unknowns`: the solved key set is not closed,
-and closing it is derived from termination rather than assumed. The four
+and closing it is derived from the returned solve rather than assumed. The four
 existential/premise subtleties in §9.8 are what a careful examiner will probe.
 
 **Ch. 10.** Prerequisite: Ch. 5, Ch. 6. Use the checklist in §10.1 as the
@@ -1398,8 +1417,8 @@ screenshot of a configuration being varied, and state plainly that the browser
 runs the generated core rather than a reimplementation. §11.5 must also say what
 the artifact *cannot* show. It cannot exhibit the proof. And on a run that never
 finishes it must be precise: nontermination of the generated analysis is
-permitted by the theorem, since termination is a premise (`config_terminates`)
-rather than a proved property, so observing it does not contradict soundness —
+permitted by the theorem, which speaks only about returned reports and does not
+prove termination, so observing it does not contradict soundness —
 but an individual hang could still have an implementation cause, in the exported
 code, the toolchain or the browser, and the artifact cannot tell the two apart. §11.6 is the
 trust boundary, drawn once and referred back to from Ch. 12 and Ch. 14.
@@ -1469,10 +1488,10 @@ thesis section → theories → central definitions → central theorems.
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.Globals_Rule` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `solve_dom_of_solve_c` |
 | 8.4–8.6 | `Voblint_Exec.Default_St_Base`, `Default_St_Algebra`, `Default_St_Transfer`, `Default_St_Reachability`, `Exec_DG_State` | `default_st_rep`, `default_st` (quotient), `location`, `location_of`, `default_st_to_fun`, `default_st_rep_is_bot`, `default_st`, `dg_state_to_fun` | `default_st_is_bot_for_iff`, `generic_tf_st_for_commute`, `branch_st_commute` |
-| 9.1–9.2 | `Voblint_Framework.Analysis_Result`, `Voblint_Result.DG_Live_Unknowns`, `Voblint_CFG.CFG_Prune` | `analysis_result`, `result_unknowns`, `lookup_context`, `wf_analysis_result`, `live_unknowns`, `cfg_succ_rel` | `live_unknowns_cover`, `dg_analysis.fun_route_activation_collect_sound_of_terminates` |
+| 9.1–9.2 | `Voblint_Framework.Solved_Table`, `Voblint_Result.DG_Live_Unknowns`, `Voblint_CFG.CFG_Prune` | `solved_table`, `covered_keys`, `lookup_table`, `wf_solved_table`, `live_unknowns`, `cfg_succ_rel` | `live_unknowns_cover`, `dg_analysis.fun_route_activation_collect_sound_of_terminates` |
 | 9.3–9.4 | `Voblint_Framework.Check_Result`, `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report`; `Voblint_CLI.Arithmetic_Diagnostics` | `check_result`, `contextual_verdict`, `checks_proven`, `classify_checks_verdicts`, `arithmetic_diagnostics` | `abstract_checks_proven_sound` |
 | 9.5–9.6 | `Voblint_Result.DG_Analysis`, `DG_Live_Unknowns`, `Analysis_Surface`, `Source_Activation_Sound`; `Voblint_Framework.DG_Analysis_Adapter` | locale `dg_pipeline`, locale `dg_analysis`, locale `dg_analysis_exec`, locale `analysis_surface`, `state_at`, `report` | `entry_state_activation_collect_sound`, `fun_route_activation_collect_sound`, `entry_state_has_context`, `gamma_reader_eq_lookup`, `source_activation_sound`, `source_sound_from_collecting_cap`, `fun_route_source_sound`, `fun_route_result_node_sound` |
-| 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_result_covers`, `config_terminates`, locale `sound_table` | `run_voblint_certified_source_sound`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
+| 9.7–9.8 | `Voblint_CLI.Analysis_Config`, `MCP_Carrier`, `MCP_Analyses`, `Analysis_Run`, `Analysis_Run_Sound`, `Analysis_Run_Ctx_Sound`, `Analysis_Certified` | `analysis_domain`, `globals_rule`, `context_mode`, `run_voblint`, `analysis_report`, `analysis_report_of`, `report_sem`, `verdict_stores`, locales `covered_table`, `sound_classifier` | `run_voblint_source_sound`, `run_voblint_spine`, `run_voblint_report_contract`, `run_voblint_check_sound`, `run_voblint_check_sites`, `run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`, `sound_table_of_activation`, `sound_table.source_sound` |
 | 10.1 | `Voblint_Nonrelational.Nonrelational_Transfer`, `Nonrelational_Ops`, `Special_Ops`, `Abstract_Arithmetic` | locales `sound_nonrelational_ops`/`mono_nonrelational_ops`, `nonrelational_ops`, `generic_tf_abs`, locale `sound_arith_ops` | `tf_abs_eq_generic`, `aval_dom_sound` |
 | 10.2 | `Voblint_Analysis_Sign.*` | `sign`, `plus_sign`, `sign_lt`, `sign_ops`, `sign_conf_spec`, `sign_classify_check` | `sign_tf_st_for_commute`, `sign_rule.fun_route_source_sound` |
 | 10.3 | `Voblint_Analysis_Interval.*` | `eint`, `ivl`, `ivl_widen`, `ivl_narrow`, `aval_ivl`, `branch_ivl`, `Interval_Point_Digest`'s point abstraction | `interval_rule.fun_route_source_sound` |
@@ -1570,13 +1589,13 @@ Prefer generated over drawn wherever the infrastructure already exists
    `Side` seed → entry read-back → exit read → `combine_env` →
    `combine_assign`, with the Goblint name beside each Voblint name.
 7. **The two representations and their morphism** (Ch. 8): `abs_state` on the
-   left, `default_st` on the right, `default_st_to_fun gs` between,
+   left, `default_st` on the right, the readback `ρ⇘𝒢⇙` between,
    and one commuting square for a transfer.
 8. **The locale hierarchy** (Ch. 6 or Appendix A), generated by
    `tools/locale_graph.ML`.
 9. **The `numeric_domain` / `widening` class hierarchy** (Ch. 5), generated by
    `class_deps`.
-10. **`thm_deps` for `run_voblint_certified_source_sound`** (Ch. 9 or 12) —
+10. **`thm_deps` for `run_voblint_source_sound`** (Ch. 9 or 12) —
     what the headline actually rests on, machine-generated.
 
 **Content figures (generated from the analyzer):**
@@ -1634,12 +1653,12 @@ for the author and supervisors, and records that they were unanswered as of
 Questions (3) and (4) — which open issues strengthen the contributions, and
 what would be defended in a presentation — remain open.
 
-**U4 — How prominently to foreground `config_terminates`.** It is the one
-analyzer-side premise, and it is discharged per program by evaluation. Options:
-state it in the abstract (maximally honest, slightly deflating), state it in
-§1.3 and Ch. 9 only, or give it its own short section in Ch. 9 with the
-`live_unknowns_cover` result that shows how much *else* follows from it.
-Recommendation: the third, and mention it in the abstract in one clause.
+**U4 — How prominently to foreground partial correctness.** Resolved by the
+report refactor: termination is no longer a premise, because `run_voblint` runs
+the executable solver and answers only where it returned. What remains is that
+termination is proved for no program in general. State it in the abstract in
+one clause, and give it its short section in Ch. 9 with the
+`live_unknowns_cover` result that shows how much follows from a returned solve.
 
 **U5 — Artifact reproducibility.** The vendored solver is pinned to a *private*
 fork of `stilscher/td-verification` and CI needs a token. A thesis that claims
@@ -2123,7 +2142,9 @@ the hand-drawn module graph it contradicted.
 
 **`thm_deps` on the headline is the best of the four.** 29 direct
 dependencies, of which 24 are Pure/HOL plumbing and `arity_type_*` instances.
-Filtered, the headline rests on exactly five project facts:
+Filtered, the headline rests on exactly five project facts (measured on the
+theorem as it stood before the report refactor; re-run on
+`run_voblint_source_sound` before drawing the figure):
 
 ```text
 run_voblint_certified_source_sound
@@ -2148,7 +2169,7 @@ needs, and it is not "the proof consists of five facts". Drawing two levels
 would make the point without inviting the misreading, and is worth trying.
 
 **`thm_oracles` gives the claim `tab:oracles` currently transcribes by hand.**
-`Thm_Deps.all_oracles [@{thm run_voblint_certified_source_sound}]` returns
+`Thm_Deps.all_oracles [@{thm run_voblint_source_sound}]` returns
 `[]`. Machine-checked evidence that the headline rests on no oracle and no
 admitted subgoal, and one line to regenerate.
 
@@ -2467,14 +2488,17 @@ that proved it, which would be a true statement about VIMP and not about C.
 3. **The five `activation_coverage` obligations.** They are proved *sufficient*. The
    reviewer's question is whether any one is *vacuous* for the shipped
    instances — particularly `TOTAL`, which is conditional on the claim itself.
-4. **`config_terminates`.** The one analyzer-side premise, discharged per
-   program by evaluation and proved for none.
+4. **Termination.** Not a premise: `run_voblint` runs the executable solver, so
+   every analysed answer comes from a returned solve. Termination is proved for
+   no program in general, and one solve is evaluated inside Isabelle.
 5. **Non-vacuity.** Is a conclusion true because a set is empty? Not
    hypothetical here: the project has a recorded case where a conclusion was
    provably empty for seeded runs, and `Example_End_To_End_Certificate` exists
    precisely to witness that the headline is not.
-6. **`checks_sound_at`.** Does `PROVED` mean what a report reader takes it to
-   mean, and is it clear that `REFUTED` is not a verified counterexample?
+6. **`verdict_stores` (`𝒱⇘res⇙ v`).** Does `PROVED` mean what a report reader
+   takes it to mean, and is it clear that `REFUTED` is not a verified
+   counterexample? And `DEAD` is a sound emptiness test on report points, not an
+   exact one (`DEAD_not_exact`).
 7. **`wf_source_program`.** Every theorem assumes it. What does accepting fewer
    programs buy, and does it exclude anything interesting?
 8. **`csim` is structural and not functional**, so the source-level theorems are
@@ -2506,7 +2530,7 @@ stay one-way. Both a big-step and a small-step semantics exist.
 *Three arguments against re-anchoring.*
 
 - **It would cover strictly fewer executions than the current theorem.**
-  `run_voblint_certified_source_sound` quantifies over *any finite prefix* of a
+  `run_voblint_source_sound` quantifies over *any finite prefix* of a
   run, terminating or not. IMP2's big-step relates only complete terminating
   runs, so anchoring through it weakens the reachable-state claim rather than
   strengthening it. Bridging to `small_steps` instead avoids that, but the thing
