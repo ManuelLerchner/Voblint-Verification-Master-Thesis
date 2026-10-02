@@ -27,8 +27,9 @@ text \<open>
 
   So trimming a root narrows what a client can name and match on, while leaving the
   emitted code the same size. A supported external surface --- one that could rename a
-  constructor, or hide a representation behind an eliminator --- still belongs in a
-  hand-written OCaml facade over this module rather than in the shape of this list.
+  constructor, or hide a representation behind an eliminator --- belongs in the
+  handwritten OCaml facade \<^verbatim>\<open>cli/voblint.ml\<close> rather than in the shape of this
+  list.
 \<close>
 
 text \<open>
@@ -36,9 +37,10 @@ text \<open>
   \<open>cli/\<close>, \<open>codegen/regression/ocaml/\<close> and \<open>tests/property/\<close> actually calls. Everything else
   in the emitted module is serializer-reachable implementation detail, still present and
   still callable --- the signature narrows with the root list, the code does not. So the
-  intent recorded here is not enforced: the generated module \<^emph>\<open>is\<close> the API, with no
-  handwritten re-export layer in between that could reinterpret a constructor or a
-  conversion.
+  intent recorded here is not enforced. Handwritten OCaml names the export through the
+  facade \<^verbatim>\<open>cli/voblint.ml\<close> (module \<open>Voblint\<close>), which re-exports this module's
+  signature unchanged: the root list still decides what the facade can expose, and the
+  facade is the one place a later, narrower surface would be stated.
 
   Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the
   activation list and well-formedness and runs the requested analyses, update rule and
@@ -71,8 +73,8 @@ text \<open>
 
   So the generated internals are monolithic, and this says so directly instead of
   arriving there by remapping every contributing theory onto one name by hand. Modularity,
-  if wanted, belongs in a handwritten OCaml facade over \<open>Generated\<close> --- a layer this
-  project does not currently have.
+  if wanted, belongs in the handwritten facade over \<open>Generated\<close>,
+  \<^verbatim>\<open>cli/voblint.ml\<close>, which today includes it whole.
 
   Two further modules are emitted regardless: \<open>Bit_Shifts\<close> and \<open>Str_Literal\<close> are HOL's
   own runtime support, injected as literal target code rather than generated from
