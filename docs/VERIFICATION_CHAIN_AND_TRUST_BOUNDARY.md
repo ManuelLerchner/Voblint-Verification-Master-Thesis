@@ -21,10 +21,10 @@ one sits in the chain.
  solved table, classified check rows           Voblint_Result, Voblint_CLI
    |  export_code ... module_name Generated    Voblint_Codegen
    v
- codegen/generated/ml/Voblint_CLI.ml
+ codegen/generated/ml/Voblint_Generated.ml
    |  hand-written OCaml, outside the proof
    v
- cli/entry/voblint.ml -> lexer/parser -> Generated.run_voblint -> render_report -> output
+ cli/entry/voblint_main.ml -> lexer/parser -> Voblint.run_voblint -> render_report -> output
 ```
 
 ## 1. Abstract transfer soundness
@@ -121,7 +121,7 @@ root `README.md` states the theorem in full.
 
 One `export_code` declaration (`Voblint_Codegen.thy`) targets OCaml with
 `module_name Generated file_prefix "Voblint_CLI"`, landing at
-`codegen/generated/ml/Voblint_CLI.ml`. Its operation is `run_voblint`; the other
+`codegen/generated/ml/Voblint_Generated.ml`. Its operation is `run_voblint`; the other
 roots are the constructors and selectors a caller needs to build a program, ask
 for a configuration and read the answer. All five domains, the four global
 update rules and the three context modes are reachable through `run_voblint`.
@@ -144,17 +144,17 @@ about code that is not an exported constant.
 
 The lexer and parser (`cli/frontend/vimp_lexer.mll`, `cli/frontend/vimp_parser.mly`, generated
 from `manifests/vimp-grammar.yaml`) carry no soundness theorem; the proved chain starts at
-an already-constructed `imp_prog`. `cli/entry/voblint.ml` calls `Generated.run_voblint`
+an already-constructed `imp_prog`. `cli/entry/voblint_main.ml` calls `Voblint.run_voblint`
 and reads its answer through the exported selectors. A malformed program answers
 `Malformed_Program`, which the CLI reports with exit code 4.
 
 Zarith, the OCaml and `wasm_of_ocaml` toolchains and the browser are trusted the same
-way, and so is the hand-written OCaml between `Generated.run_voblint` and the output:
-`cli/entry/voblint.ml`, `cli/entry/voblint_web.ml`, `cli/render/` and `cli/result/`.
+way, and so is the hand-written OCaml between `Voblint.run_voblint` and the output:
+`cli/entry/voblint_main.ml`, `cli/entry/voblint_web.ml`, `cli/render/` and `cli/result/`.
 
 A row's verdict is a `contextual_verdict = check_result lifted`
 (`Contextual_Check_Report.thy`) computed in HOL; `Bot` is the dead marker, and
-`cli/entry/voblint.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
+`cli/entry/voblint_main.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
 the snapshot and globals strings -- is presentation with no theorem about it.
 
 Each source check carries a label, `Check l e`. Execution ignores it,

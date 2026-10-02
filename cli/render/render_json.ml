@@ -2,7 +2,7 @@
    diagnostics, the drawn graph, and the graph's nodes keyed back to source
    statements, all from one run result. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module A = Result_text
 module G = Context_graph
 

@@ -114,7 +114,7 @@ combined state; `globals_rule` names no domain, so it lives with the solver in
 ## Worked example
 
 `voblint --analysis interval --context entry-state FILE.vimp` names no `--globals`,
-so `cli/entry/voblint.ml` picks `warrow` and calls
+so `cli/entry/voblint_main.ml` picks `warrow` and calls
 `run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState) p`.
 For a well-formed program and a valid activation that is `Analysed res`, the
 report `analysis_report_of` builds; the CLI then renders it with

@@ -1,6 +1,12 @@
 (rule
- (targets Voblint_CLI.ml)
- (deps ../../codegen/generated/ml/Voblint_CLI.ml)
+ (targets Voblint_Generated.ml)
+ (deps ../../codegen/generated/ml/Voblint_Generated.ml)
+ (action
+  (copy %{deps} %{targets})))
+
+(rule
+ (targets voblint.ml)
+ (deps ../../cli/voblint.ml)
  (action
   (copy %{deps} %{targets})))
 
@@ -51,7 +57,7 @@
 (library
  (name ast_driver_grammar)
  (wrapped false)
- (modules Voblint_CLI vimp_parser vimp_lexer)
+ (modules Voblint_Generated voblint vimp_parser vimp_lexer)
  (libraries ast_driver_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))

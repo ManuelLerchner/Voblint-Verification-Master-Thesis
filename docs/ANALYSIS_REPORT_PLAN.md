@@ -325,7 +325,7 @@ These are grep targets on `src/` outside the theory that owns each name:
    exported, and every reader goes through the `render_report` projection, so no
    OCaml code depends on the report's representation. The generated module becomes
    `Voblint_Generated`, and a handwritten facade `cli/voblint.ml` (module `Voblint`)
-   re-exports the configuration constructors, `run_voblint` and `render_report`. The
+   re-exposes the export unchanged (its signature is the export's root list). The
    native entry moves to `cli/entry/voblint_main.ml` with dune
    `public_name voblint`, which frees the module name. Consumers (parser, printer,
    CLI, web entry, regression and build scripts) name `Voblint`, not the generated
@@ -395,10 +395,14 @@ alike. `analysis_surface` stays: the per-domain registrations' `state_at` and
 `report` are its readings, and the domain examples and the entry-state lemmas in
 `DG_Live_Unknowns` read them. The representation locale (`sound_empty`) is not
 introduced; no inventory showed repeated proofs it would remove.
+The `Voblint` facade of phase 8 landed in the sixth: the export is
+`codegen/generated/ml/Voblint_Generated.ml`, `cli/voblint.ml` includes it unchanged,
+every handwritten module, the parser and the printer name `Voblint`, and the native
+entry is `cli/entry/voblint_main.ml` with dune `public_name voblint`. The codegen
+regression driver opens `Voblint_Generated.Generated` directly, since it tests the
+export itself.
 
 Not done, one stacked PR each:
 
-- the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and
-  the entry renamed to `voblint_main.ml`.
 - phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names
   the old theorems.

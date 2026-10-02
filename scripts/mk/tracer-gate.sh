@@ -18,7 +18,7 @@ pixi run codegen
 pixi run codegen-check
 
 step "2. trace calls in the generated module"
-python3 - codegen/generated/ml/Voblint_CLI.ml <<'EOF'
+python3 - codegen/generated/ml/Voblint_Generated.ml <<'EOF'
 import re, sys
 
 text = open(sys.argv[1]).read()

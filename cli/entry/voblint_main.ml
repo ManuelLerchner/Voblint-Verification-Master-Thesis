@@ -5,13 +5,13 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint (Analysis_Config (domains, globals, context))
+       -> Voblint.run_voblint (Analysis_Config (domains, globals, context))
           (Isabelle-generated). One call checks the activation and the program and
           runs the analyses the activation list, global update rule and context
           name. Every well-formed combination is answered. What comes back is a
           semantic analysis_report: states as abstract values per point and
           context, the routes calls take, the check column and diagnostics.
-       -> Voblint_CLI.Generated.render_report (Isabelle-generated, outside the
+       -> Voblint.render_report (Isabelle-generated, outside the
           theorems) with the CLI's value printer (Value_symbols): the displayed
           run_result. Every rendering below (text report, graph, snapshot, HTML)
           is built from that one result, so none can draw from a different solve
@@ -165,7 +165,7 @@ let usage =
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
   \  machine-checked Isabelle/HOL proof."
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module A = Result_text
 
 let print_diagnostics path analysis positions diagnostics =
@@ -415,7 +415,7 @@ let () =
      once every flag is read. *)
   let context_name = ref "none" in
   let context_depth = ref None in
-  let globals = ref Voblint_CLI.Generated.Globals_Warrow in
+  let globals = ref Voblint.Globals_Warrow in
   let narrow_bound = ref None in
   let dot = ref false in
   let graph_snapshot = ref false in

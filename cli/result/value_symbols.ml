@@ -5,7 +5,7 @@
    Decoding them once, on the answer run_voblint returns, gives every rendering
    the same text. A token outside the table stays as written. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 let table =
   [

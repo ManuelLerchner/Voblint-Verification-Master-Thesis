@@ -14,7 +14,7 @@
    intermediate, not a program variable, so it is not shown either -- a combine edge
    names the call whose result it assigns instead. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module A = Result_text
 
 type node_kind = Program_entry | Program_exit | Proc_entry | Proc_exit | Point

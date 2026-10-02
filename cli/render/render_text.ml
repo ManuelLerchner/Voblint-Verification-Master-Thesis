@@ -2,24 +2,24 @@
    assertion checks. A check row carries its own source position as its label; a
    diagnostic is placed through the statement positions the parser recorded. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module A = Result_text
 
 let node_label = A.point_name
 let verdict_label = A.verdict_name
 
 let diagnostic_location positions diagnostic =
-  match Voblint_CLI.Generated.diagnostic_point diagnostic with
-  | Voblint_CLI.Generated.Statement n ->
-      let index = Z.to_int (Voblint_CLI.Generated.integer_of_nat n) in
+  match Voblint.diagnostic_point diagnostic with
+  | Voblint.Statement n ->
+      let index = Z.to_int (Voblint.integer_of_nat n) in
       Option.map
         (fun (line, column, _, _) -> (line, column))
         (List.assoc_opt index positions)
   | _ -> None
 
 let diagnostic_severity diagnostic =
-  match Voblint_CLI.Generated.diagnostic_verdict diagnostic with
-  | Voblint_CLI.Generated.Check_Refuted -> "error"
+  match Voblint.diagnostic_verdict diagnostic with
+  | Voblint.Check_Refuted -> "error"
   | _ -> "warning"
 
 (* A check row names its source check by label: the line and column the parser
@@ -84,7 +84,7 @@ let render_report path analysis positions result =
         in
         [
           location;
-          node_label (Voblint_CLI.Generated.diagnostic_point diagnostic);
+          node_label (Voblint.diagnostic_point diagnostic);
           String.uppercase_ascii (diagnostic_severity diagnostic);
           Result_text.diagnostic_message diagnostic;
         ])

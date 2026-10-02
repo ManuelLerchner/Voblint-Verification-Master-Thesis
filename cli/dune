@@ -5,7 +5,8 @@
 
 (include_subdirs unqualified)
 
-;; The generated module, as exported. Its traced code equations call
+;; The generated module, as exported, and the facade every other module names
+;; it through (voblint.ml). Its traced code equations call
 ;; Solver_trace_hook.emit (trace/), a no-op unless --trace is given.
 
 (library
@@ -14,7 +15,7 @@
  (modules solver_trace_hook))
 
 (rule
- (copy ../codegen/generated/ml/Voblint_CLI.ml Voblint_CLI.ml))
+ (copy ../codegen/generated/ml/Voblint_Generated.ml Voblint_Generated.ml))
 
 (library
  (name voblint_positions)
@@ -29,7 +30,7 @@
 (library
  (name voblint_grammar)
  (wrapped false)
- (modules Voblint_CLI vimp_parser vimp_lexer)
+ (modules Voblint_Generated voblint vimp_parser vimp_lexer)
  (libraries voblint_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))
@@ -59,8 +60,9 @@
  (libraries voblint_frontend voblint_trace_hook))
 
 (executable
- (name voblint)
- (modules voblint)
+ (name voblint_main)
+ (public_name voblint)
+ (modules voblint_main)
  (libraries voblint_frontend voblint_rendering str zarith unix))
 
 (executable

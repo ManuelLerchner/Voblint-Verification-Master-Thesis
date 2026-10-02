@@ -1,4 +1,4 @@
-(* Regression driver for the generated Voblint_CLI OCaml module.
+(* Regression driver for the generated Voblint_Generated OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `run_voblint`
    entry point for every domain, and checks the result against the values
@@ -10,10 +10,10 @@
    This reads the same generated module the CLI itself links against; the
    CFG-inspection constants below are export roots for this driver alone.
 
-   Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
+   Do not hand-edit codegen/generated/ml/Voblint_Generated.ml; regenerate it with
    `pixi run codegen` instead. *)
 
-open Voblint_CLI.Generated
+open Voblint_Generated.Generated
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Analyse_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native

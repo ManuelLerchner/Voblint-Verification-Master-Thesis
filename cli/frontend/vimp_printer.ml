@@ -6,31 +6,31 @@
 
 let paren ctx level text = if level < ctx then "(" ^ text ^ ")" else text
 
-let string_of_int_lit n = Z.to_string (Voblint_CLI.Generated.integer_of_int n)
+let string_of_int_lit n = Z.to_string (Voblint.integer_of_int n)
 
 let rec exp_at ctx = function
-  | Voblint_CLI.Generated.N n -> paren ctx 8 (string_of_int_lit n)
-  | Voblint_CLI.Generated.V x -> x
+  | Voblint.N n -> paren ctx 8 (string_of_int_lit n)
+  | Voblint.V x -> x
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
-  | Voblint_CLI.Generated.Minus (Voblint_CLI.Generated.N z, (Voblint_CLI.Generated.N _ as b)) when Z.equal (Voblint_CLI.Generated.integer_of_int z) Z.zero ->
+  | Voblint.Minus (Voblint.N z, (Voblint.N _ as b)) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 5 ("0 - " ^ exp_at 6 b)
-  | Voblint_CLI.Generated.Minus (Voblint_CLI.Generated.N z, b) when Z.equal (Voblint_CLI.Generated.integer_of_int z) Z.zero ->
+  | Voblint.Minus (Voblint.N z, b) when Z.equal (Voblint.integer_of_int z) Z.zero ->
     paren ctx 7 ("-" ^ exp_at 7 b)
-  | Voblint_CLI.Generated.Plus (a, b) -> paren ctx 5 (exp_at 5 a ^ " + " ^ exp_at 6 b)
-  | Voblint_CLI.Generated.Minus (a, b) -> paren ctx 5 (exp_at 5 a ^ " - " ^ exp_at 6 b)
-  | Voblint_CLI.Generated.Times (a, b) -> paren ctx 6 (exp_at 6 a ^ " * " ^ exp_at 7 b)
-  | Voblint_CLI.Generated.Div (a, b) -> paren ctx 6 (exp_at 6 a ^ " / " ^ exp_at 7 b)
-  | Voblint_CLI.Generated.Mod (a, b) -> paren ctx 6 (exp_at 6 a ^ " % " ^ exp_at 7 b)
-  | Voblint_CLI.Generated.Less (a, b) -> paren ctx 4 (exp_at 5 a ^ " < " ^ exp_at 5 b)
-  | Voblint_CLI.Generated.LessEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " <= " ^ exp_at 5 b)
-  | Voblint_CLI.Generated.Greater (a, b) -> paren ctx 4 (exp_at 5 a ^ " > " ^ exp_at 5 b)
-  | Voblint_CLI.Generated.GreaterEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " >= " ^ exp_at 5 b)
-  | Voblint_CLI.Generated.Eq (a, b) -> paren ctx 3 (exp_at 4 a ^ " == " ^ exp_at 4 b)
-  | Voblint_CLI.Generated.NotEq (a, b) -> paren ctx 3 (exp_at 4 a ^ " != " ^ exp_at 4 b)
-  | Voblint_CLI.Generated.And (a, b) -> paren ctx 2 (exp_at 2 a ^ " && " ^ exp_at 3 b)
-  | Voblint_CLI.Generated.Or (a, b) -> paren ctx 1 (exp_at 1 a ^ " || " ^ exp_at 2 b)
-  | Voblint_CLI.Generated.Not a -> paren ctx 7 ("!" ^ exp_at 7 a)
+  | Voblint.Plus (a, b) -> paren ctx 5 (exp_at 5 a ^ " + " ^ exp_at 6 b)
+  | Voblint.Minus (a, b) -> paren ctx 5 (exp_at 5 a ^ " - " ^ exp_at 6 b)
+  | Voblint.Times (a, b) -> paren ctx 6 (exp_at 6 a ^ " * " ^ exp_at 7 b)
+  | Voblint.Div (a, b) -> paren ctx 6 (exp_at 6 a ^ " / " ^ exp_at 7 b)
+  | Voblint.Mod (a, b) -> paren ctx 6 (exp_at 6 a ^ " % " ^ exp_at 7 b)
+  | Voblint.Less (a, b) -> paren ctx 4 (exp_at 5 a ^ " < " ^ exp_at 5 b)
+  | Voblint.LessEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " <= " ^ exp_at 5 b)
+  | Voblint.Greater (a, b) -> paren ctx 4 (exp_at 5 a ^ " > " ^ exp_at 5 b)
+  | Voblint.GreaterEq (a, b) -> paren ctx 4 (exp_at 5 a ^ " >= " ^ exp_at 5 b)
+  | Voblint.Eq (a, b) -> paren ctx 3 (exp_at 4 a ^ " == " ^ exp_at 4 b)
+  | Voblint.NotEq (a, b) -> paren ctx 3 (exp_at 4 a ^ " != " ^ exp_at 4 b)
+  | Voblint.And (a, b) -> paren ctx 2 (exp_at 2 a ^ " && " ^ exp_at 3 b)
+  | Voblint.Or (a, b) -> paren ctx 1 (exp_at 1 a ^ " || " ^ exp_at 2 b)
+  | Voblint.Not a -> paren ctx 7 ("!" ^ exp_at 7 a)
 
 let string_of_exp e = exp_at 0 e
 
@@ -43,22 +43,22 @@ let indent depth = String.make (2 * depth) ' '
 let rec com_lines depth c =
   let pad = indent depth in
   match c with
-  | Voblint_CLI.Generated.Seq (a, b) -> com_lines depth a @ com_lines depth b
-  | Voblint_CLI.Generated.SKIP -> [pad ^ "skip;"]
-  | Voblint_CLI.Generated.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
-  | Voblint_CLI.Generated.Return None -> [pad ^ "return;"]
-  | Voblint_CLI.Generated.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
-  | Voblint_CLI.Generated.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
-  | Voblint_CLI.Generated.Call (None, f, args) ->
+  | Voblint.Seq (a, b) -> com_lines depth a @ com_lines depth b
+  | Voblint.SKIP -> [pad ^ "skip;"]
+  | Voblint.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
+  | Voblint.Return None -> [pad ^ "return;"]
+  | Voblint.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
+  | Voblint.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
+  | Voblint.Call (None, f, args) ->
     [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | Voblint_CLI.Generated.Call (Some x, f, args) ->
+  | Voblint.Call (Some x, f, args) ->
     [pad ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | Voblint_CLI.Generated.While (b, body) ->
+  | Voblint.While (b, body) ->
     [pad ^ "while (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) body @ [pad ^ "}"]
-  | Voblint_CLI.Generated.If (b, t, e) ->
+  | Voblint.If (b, t, e) ->
     [pad ^ "if (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) t
     @ (match e with
-       | Voblint_CLI.Generated.SKIP -> [pad ^ "}"]
+       | Voblint.SKIP -> [pad ^ "}"]
        | _ -> [pad ^ "} else {"] @ com_lines (depth + 1) e @ [pad ^ "}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
@@ -82,9 +82,9 @@ let string_of_program ~globals ~procs =
 (* The program type is abstract to OCaml; read it through the exported readers. *)
 let string_of_imp_prog p =
   let proc name =
-    match Voblint_CLI.Generated.prog_table p name with
-    | Some (Voblint_CLI.Generated.Proc_decl_ext (formals, body, ())) -> (name, formals, body)
-    | None -> (name, [], Voblint_CLI.Generated.SKIP)
+    match Voblint.prog_table p name with
+    | Some (Voblint.Proc_decl_ext (formals, body, ())) -> (name, formals, body)
+    | None -> (name, [], Voblint.SKIP)
   in
-  string_of_program ~globals:(Voblint_CLI.Generated.declared_global_vars p)
-    ~procs:(("main", [], Voblint_CLI.Generated.prog_main p) :: List.map proc (Voblint_CLI.Generated.prog_procs p))
+  string_of_program ~globals:(Voblint.declared_global_vars p)
+    ~procs:(("main", [], Voblint.prog_main p) :: List.map proc (Voblint.prog_procs p))

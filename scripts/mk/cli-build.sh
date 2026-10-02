@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Builds the voblint CLI: a thin, unverified adapter over the
-# Isabelle-generated Voblint_CLI OCaml module
+# Isabelle-generated Voblint_Generated OCaml module
 # (src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy's export_code
 # block), plus the Menhir/ocamllex frontend generated from
 # manifests/vimp-grammar.yaml (scripts/gen_vimp_menhir.py; only needed if that
@@ -70,11 +70,11 @@ publish_tmp="$(mktemp "$CLI_DIR/.voblint.XXXXXX")"
 trap 'rm -f "$build_out" "$publish_tmp"; rm -rf "$lock"' EXIT
 (
   cd "$CLI_DIR"
-  dune build ./voblint.exe
+  dune build ./voblint_main.exe
   # Publish through a fresh inode. Linux refuses an in-place overwrite while
   # another process still maps the previous executable; rename keeps that
   # process on the old inode and makes the new build visible atomically.
-  cp -p "$REPO_ROOT/_build/default/cli/voblint.exe" "$publish_tmp"
+  cp -p "$REPO_ROOT/_build/default/cli/voblint_main.exe" "$publish_tmp"
   mv -f "$publish_tmp" voblint
 ) >"$build_out"
 if [ -s "$build_out" ]; then

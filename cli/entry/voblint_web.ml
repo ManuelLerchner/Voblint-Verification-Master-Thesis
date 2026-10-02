@@ -51,7 +51,7 @@
 *)
 
 open Js_of_ocaml
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 (* -------------------------------------------------------------------------- *)
 (* Timing                                                                     *)

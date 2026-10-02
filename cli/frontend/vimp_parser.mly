@@ -11,8 +11,8 @@ let record_stmt_pos = Vimp_positions.record
    each check by its own source position. *)
 let source_label p =
   let line, column = Vimp_positions.label p in
-  ( Voblint_CLI.Generated.nat_of_integer (Z.of_int line),
-    Voblint_CLI.Generated.nat_of_integer (Z.of_int column) )
+  ( Voblint.nat_of_integer (Z.of_int line),
+    Voblint.nat_of_integer (Z.of_int column) )
 
 (* A function_decl's action builds (name, formals, body); closing the bucket
    here keeps the name, its header and its positions together without a second
@@ -66,107 +66,107 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %left STAR SLASH PERCENT
 %right NOT UMINUS
 
-%type <Voblint_CLI.Generated.exp> exp
-%type <Voblint_CLI.Generated.com> stmt
-%type <Voblint_CLI.Generated.com> if_stmt
-%type <Voblint_CLI.Generated.com> stmts
-%type <Voblint_CLI.Generated.com> stmts_opt
-%type <Voblint_CLI.Generated.exp list> actuals
+%type <Voblint.exp> exp
+%type <Voblint.com> stmt
+%type <Voblint.com> if_stmt
+%type <Voblint.com> stmts
+%type <Voblint.com> stmts_opt
+%type <Voblint.exp list> actuals
 %type <string list> formals
 %type <string list> ids
 %type <string list> globals_decl
 %type <string list> globals_opt
-%type <string * string list * Voblint_CLI.Generated.com> function_decl
-%type <(string * string list * Voblint_CLI.Generated.com) list> function_decl_star
+%type <string * string list * Voblint.com> function_decl
+%type <(string * string list * Voblint.com) list> function_decl_star
 
-%start <unit Voblint_CLI.Generated.imp_prog_ext> program
+%start <unit Voblint.imp_prog_ext> program
 %%
 
 (* exp: *)
 exp:
   | v0 = IDENT
-      { Voblint_CLI.Generated.V v0 }
+      { Voblint.V v0 }
   | v0 = INT
-      { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer v0) }
+      { Voblint.N (Voblint.Int_of_integer v0) }
   | v0 = MINUS v1 = exp %prec UMINUS
       { match v1 with
-      | Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer z) ->
-        Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.neg z))
+      | Voblint.N (Voblint.Int_of_integer z) ->
+        Voblint.N (Voblint.Int_of_integer (Z.neg z))
       | _ ->
-        Voblint_CLI.Generated.Minus
-          (Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer Z.zero), v1) }
+        Voblint.Minus
+          (Voblint.N (Voblint.Int_of_integer Z.zero), v1) }
   | v0 = exp v1 = PLUS v2 = exp
-      { Voblint_CLI.Generated.Plus (v0, v2) }
+      { Voblint.Plus (v0, v2) }
   | v0 = exp v1 = MINUS v2 = exp
-      { Voblint_CLI.Generated.Minus (v0, v2) }
+      { Voblint.Minus (v0, v2) }
   | v0 = exp v1 = STAR v2 = exp
-      { Voblint_CLI.Generated.Times (v0, v2) }
+      { Voblint.Times (v0, v2) }
   | v0 = exp v1 = SLASH v2 = exp
-      { Voblint_CLI.Generated.Div (v0, v2) }
+      { Voblint.Div (v0, v2) }
   | v0 = exp v1 = PERCENT v2 = exp
-      { Voblint_CLI.Generated.Mod (v0, v2) }
+      { Voblint.Mod (v0, v2) }
   | v0 = BOOL_TRUE
-      { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int 1)) }
+      { Voblint.N (Voblint.Int_of_integer (Z.of_int 1)) }
   | v0 = BOOL_FALSE
-      { Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.of_int 0)) }
+      { Voblint.N (Voblint.Int_of_integer (Z.of_int 0)) }
   | v0 = exp v1 = LT v2 = exp
-      { Voblint_CLI.Generated.Less (v0, v2) }
+      { Voblint.Less (v0, v2) }
   | v0 = exp v1 = LE v2 = exp
-      { Voblint_CLI.Generated.LessEq (v0, v2) }
+      { Voblint.LessEq (v0, v2) }
   | v0 = exp v1 = GT v2 = exp
-      { Voblint_CLI.Generated.Greater (v0, v2) }
+      { Voblint.Greater (v0, v2) }
   | v0 = exp v1 = GE v2 = exp
-      { Voblint_CLI.Generated.GreaterEq (v0, v2) }
+      { Voblint.GreaterEq (v0, v2) }
   | v0 = exp v1 = EQEQ v2 = exp
-      { Voblint_CLI.Generated.Eq (v0, v2) }
+      { Voblint.Eq (v0, v2) }
   | v0 = exp v1 = NEQ v2 = exp
-      { Voblint_CLI.Generated.NotEq (v0, v2) }
+      { Voblint.NotEq (v0, v2) }
   | v0 = NOT v1 = exp
-      { Voblint_CLI.Generated.Not v1 }
+      { Voblint.Not v1 }
   | v0 = exp v1 = AND v2 = exp
-      { Voblint_CLI.Generated.And (v0, v2) }
+      { Voblint.And (v0, v2) }
   | v0 = exp v1 = OR v2 = exp
-      { Voblint_CLI.Generated.Or (v0, v2) }
+      { Voblint.Or (v0, v2) }
   | v0 = LPAREN v1 = exp v2 = RPAREN
       { v1 }
 (* stmt: *)
 stmt:
   | v0 = SKIP v1 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.SKIP) }
+      { record_stmt_pos $startpos $endpos (Voblint.SKIP) }
   | v0 = IDENT v1 = ASSIGN v2 = exp v3 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Assign (v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Assign (v0, v2)) }
   | v0 = RETURN v1 = exp v2 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Return (Some v1)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Return (Some v1)) }
   | v0 = RETURN v1 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Return None) }
+      { record_stmt_pos $startpos $endpos (Voblint.Return None) }
   | v0 = CHECK v1 = LPAREN v2 = exp v3 = RPAREN v4 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Check ((source_label $startpos), v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Check ((source_label $startpos), v2)) }
   | v0 = if_stmt
       { v0 }
   | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.While (v2, v5)) }
+      { record_stmt_pos $startpos $endpos (Voblint.While (v2, v5)) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN v4 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Call (None, v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Call (None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN v6 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.Call ((Some v0), v2, v4)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Call ((Some v0), v2, v4)) }
 (* if_stmt: *)
 if_stmt:
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.If (v2, v5, v9)) }
+      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, v9)) }
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.If (v2, v5, (record_stmt_pos $endpos $endpos (Voblint_CLI.Generated.SKIP)))) }
+      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, (record_stmt_pos $endpos $endpos (Voblint.SKIP)))) }
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = if_stmt
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.If (v2, v5, v8)) }
+      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, v8)) }
 (* stmts: *)
 stmts:
   | x = stmt
       { x }
   | xs = stmts  x = stmt
-      { Voblint_CLI.Generated.Seq (xs, x) }
+      { Voblint.Seq (xs, x) }
 (* stmts_opt: *)
 stmts_opt:
   | (* empty *)
-      { record_stmt_pos $startpos $endpos (Voblint_CLI.Generated.SKIP) }
+      { record_stmt_pos $startpos $endpos (Voblint.SKIP) }
   | cs = stmts
       { cs }
 (* actuals: *)
@@ -210,8 +210,8 @@ program:
           | [] -> failwith "missing 'fun main() { ... }'"
           | _ -> failwith "more than one 'fun main()'"
         in
-        Voblint_CLI.Generated.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Generated.Proc_decl_ext (formals, b, ()))) procs)
+        Voblint.mk_program
+          (List.map (fun (n, formals, b) -> (n, Voblint.Proc_decl_ext (formals, b, ()))) procs)
           main_body g }
 
 globals_opt:

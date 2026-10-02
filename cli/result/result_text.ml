@@ -8,7 +8,7 @@
    snapshot, the HTML report and the browser all read the same result the same
    way. Nothing here can change what the analysis concluded. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 let int_of_nat n = Z.to_int (C.integer_of_nat n)
 

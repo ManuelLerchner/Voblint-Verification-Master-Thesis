@@ -4,7 +4,7 @@
    the report. Each entry keeps its own error messages; the names are decided
    here once. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 let refinement_of_name = function
   | "never" -> Some C.Refine_Never

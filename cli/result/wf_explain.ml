@@ -6,7 +6,7 @@
    finds no fault in still reads as malformed, just without a reason. Keep it in
    step with wf_program_compile_input_exec, wf_proc_decl and wf_source_com. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 (* The generated ret_var; the lexer cannot produce it, but a hand-built AST can. *)
 let ret_var = "#ret"

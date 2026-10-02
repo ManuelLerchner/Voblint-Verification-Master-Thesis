@@ -27,7 +27,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 CORPUS = REPO / "tests" / "regression"
-BIN = Path(os.environ.get("VOBLINT_BIN", REPO / "_build/default/cli/voblint.exe"))
+BIN = Path(os.environ.get("VOBLINT_BIN", REPO / "_build/default/cli/voblint_main.exe"))
 
 
 def params(path: Path) -> list[str]:

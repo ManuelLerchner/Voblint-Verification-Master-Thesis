@@ -1,6 +1,6 @@
 # CLI: `voblint`
 
-Status: **implemented** (`cli/entry/voblint.ml`, `cli/frontend/vimp_frontend.ml`). Source file
+Status: **implemented** (`cli/entry/voblint_main.ml`, `cli/frontend/vimp_frontend.ml`). Source file
 extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
 not here.
 
@@ -69,7 +69,7 @@ voblint --help
   bound as a control from 0 to 100 while that rule is selected, and a link
   carries it as `narrow=N` when it is not 5. Local unknowns are warrowed at widening points
   under every rule. The default is `warrow` for every domain,
-  chosen in `cli/entry/voblint.ml`; Isabelle's `run_voblint` takes the rule as
+  chosen in `cli/entry/voblint_main.ml`; Isabelle's `run_voblint` takes the rule as
   an argument and has no default. Every output mode renders the table the
   chosen rule solved, contextual graphs included.
 - `--parse-only` parses and exits without running any analysis. A
@@ -89,7 +89,7 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Generated.run_voblint domain globals context prog
+Voblint.run_voblint domain globals context prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
@@ -420,7 +420,7 @@ theorem, discharged per program. Interval's carrier has infinite height, and
 the join-based rules (`--globals join`, `per-origin`) have no termination
 guarantee on it. Reproductions during development included process/backend
 crashes, not just long-running computation, so the containment mechanism is a
-killable subprocess (`run_contained` in `cli/entry/voblint.ml`), not an in-process
+killable subprocess (`run_contained` in `cli/entry/voblint_main.ml`), not an in-process
 timeout:
 
 ```text

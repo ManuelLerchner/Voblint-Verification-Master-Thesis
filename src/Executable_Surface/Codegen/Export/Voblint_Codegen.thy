@@ -165,6 +165,6 @@ export_code
   Ev_Stable_Remove
   Ev_Route Trace_Printers string_of_abstract_value Inl Inr
 
-  in OCaml module_name Generated file_prefix "Voblint_CLI"
+  in OCaml module_name Generated file_prefix "Voblint_Generated"
 
 end

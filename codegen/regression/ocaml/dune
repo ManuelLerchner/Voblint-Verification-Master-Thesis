@@ -1,6 +1,6 @@
 (rule
- (targets Voblint_CLI.ml)
- (deps ../../generated/ml/Voblint_CLI.ml)
+ (targets Voblint_Generated.ml)
+ (deps ../../generated/ml/Voblint_Generated.ml)
  (action
   (copy %{deps} %{targets})))
 
@@ -9,7 +9,7 @@
 (library
  (name codegen_regression_export)
  (wrapped false)
- (modules Voblint_CLI)
+ (modules Voblint_Generated)
  (libraries voblint_trace_hook str zarith)
  (flags
   (:standard -w -a)))

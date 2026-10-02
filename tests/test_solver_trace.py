@@ -16,7 +16,7 @@ import pytest
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 VOBLINT = Path(os.environ.get("VOBLINT_BIN", REPO_ROOT / "cli/voblint"))
-GENERATED = REPO_ROOT / "codegen/generated/ml/Voblint_CLI.ml"
+GENERATED = REPO_ROOT / "codegen/generated/ml/Voblint_Generated.ml"
 PROGRAM = "docs/readme-figures/contexts.vimp"
 ARGS = ["--analysis", "interval", "--globals", "warrow", "--context", "entry-state"]
 EXPECT_DIR = REPO_ROOT / "tests/solver-trace"

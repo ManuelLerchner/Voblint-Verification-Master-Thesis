@@ -32,14 +32,14 @@ HEADER = (
 # -- `special: name` productions, keyed by that name (not by production
 # name -- manifests/vimp-grammar.yaml's header comment explains what each covers). ---
 SPECIAL_ACTIONS = {
-    "integer_literal": "Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer v0)",
+    "integer_literal": "Voblint.N (Voblint.Int_of_integer v0)",
     "unary_minus": """\
 match v1 with
-      | Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer z) ->
-        Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer (Z.neg z))
+      | Voblint.N (Voblint.Int_of_integer z) ->
+        Voblint.N (Voblint.Int_of_integer (Z.neg z))
       | _ ->
-        Voblint_CLI.Generated.Minus
-          (Voblint_CLI.Generated.N (Voblint_CLI.Generated.Int_of_integer Z.zero), v1)""",
+        Voblint.Minus
+          (Voblint.N (Voblint.Int_of_integer Z.zero), v1)""",
 }
 
 
@@ -61,7 +61,7 @@ def render_lower_arg(arg: dict) -> str:
     if "literal" in arg:
         return "true" if arg["literal"] else "false"
     if "int" in arg:
-        return f"(Voblint_CLI.Generated.Int_of_integer (Z.of_int {arg['int']}))"
+        return f"(Voblint.Int_of_integer (Z.of_int {arg['int']}))"
     if "source_label" in arg:
         return "(source_label $startpos)"
     raise ValueError(f"unrecognized lower arg shape: {arg}")
@@ -70,7 +70,7 @@ def render_lower_arg(arg: dict) -> str:
 def render_lower(lower: dict) -> str:
     if "tuple" in lower:
         return "(" + ", ".join(f"v{i}" for i in lower["tuple"]) + ")"
-    ctor = f"Voblint_CLI.Generated.{lower['ctor']}"
+    ctor = f"Voblint.{lower['ctor']}"
     args = [render_lower_arg(a) for a in lower.get("args", [])]
     if not args:
         return ctor
@@ -151,18 +151,18 @@ rule token = parse
 # Explicit %type declarations keep the generated interface stable across
 # Dune/Menhir versions; every nonterminal's OCaml type is stated upfront.
 NONTERMINAL_TYPES = {
-    "exp": "Voblint_CLI.Generated.exp",
-    "stmt": "Voblint_CLI.Generated.com",
-    "if_stmt": "Voblint_CLI.Generated.com",
-    "stmts": "Voblint_CLI.Generated.com",
-    "stmts_opt": "Voblint_CLI.Generated.com",
-    "actuals": "Voblint_CLI.Generated.exp list",
+    "exp": "Voblint.exp",
+    "stmt": "Voblint.com",
+    "if_stmt": "Voblint.com",
+    "stmts": "Voblint.com",
+    "stmts_opt": "Voblint.com",
+    "actuals": "Voblint.exp list",
     "formals": "string list",
     "ids": "string list",
     "globals_decl": "string list",
     "globals_opt": "string list",
-    "function_decl": "string * string list * Voblint_CLI.Generated.com",
-    "function_decl_star": "(string * string list * Voblint_CLI.Generated.com) list",
+    "function_decl": "string * string list * Voblint.com",
+    "function_decl_star": "(string * string list * Voblint.com) list",
 }
 
 
@@ -247,7 +247,7 @@ def gen_list_rule(prod: dict) -> str:
         # already-generated non-optional list nonterminal (`stmts`).
         base = prod["result"].removesuffix("_opt")
         empty = prod.get("empty", "[]")
-        empty_action = f"Voblint_CLI.Generated.{empty}" if empty[0].isupper() else empty
+        empty_action = f"Voblint.{empty}" if empty[0].isupper() else empty
         return (
             f"{name}:\n"
             f"  | (* empty *)\n"
@@ -262,7 +262,7 @@ def gen_list_rule(prod: dict) -> str:
         # no separate associativity declaration needed, this is naturally
         # unambiguous LR: each item consumes its own closing punctuation.
         single = f"  | x = {item}\n      {{ x }}"
-        multi = f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ Voblint_CLI.Generated.{ctor} (xs, x) }}"
+        multi = f"  | xs = {name} {prod.get('separator', '')} x = {item}\n      {{ Voblint.{ctor} (xs, x) }}"
         return f"{name}:\n{single}\n{multi}"
 
     # Plain growing list (actuals/formals/ids).
@@ -292,8 +292,8 @@ def gen_program_rule() -> str:
           | [] -> failwith "missing 'fun main() { ... }'"
           | _ -> failwith "more than one 'fun main()'"
         in
-        Voblint_CLI.Generated.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint_CLI.Generated.Proc_decl_ext (formals, b, ()))) procs)
+        Voblint.mk_program
+          (List.map (fun (n, formals, b) -> (n, Voblint.Proc_decl_ext (formals, b, ()))) procs)
           main_body g }
 
 globals_opt:
@@ -365,8 +365,8 @@ let record_stmt_pos = Vimp_positions.record
    each check by its own source position. *)
 let source_label p =
   let line, column = Vimp_positions.label p in
-  ( Voblint_CLI.Generated.nat_of_integer (Z.of_int line),
-    Voblint_CLI.Generated.nat_of_integer (Z.of_int column) )
+  ( Voblint.nat_of_integer (Z.of_int line),
+    Voblint.nat_of_integer (Z.of_int column) )
 
 (* A function_decl's action builds (name, formals, body); closing the bucket
    here keeps the name, its header and its positions together without a second
@@ -383,7 +383,7 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 
 {type_decls()}
 
-%start <unit Voblint_CLI.Generated.imp_prog_ext> program
+%start <unit Voblint.imp_prog_ext> program
 %%
 
 {chr(10).join("(* " + b.split(chr(10))[0] + " *)" + chr(10) + b for b in rule_blocks)}

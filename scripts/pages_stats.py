@@ -37,7 +37,7 @@ from isar_json import (
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 TD_DIR = REPO_ROOT / "vendor" / "td-verification"
-GENERATED_ML = REPO_ROOT / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
+GENERATED_ML = REPO_ROOT / "codegen" / "generated" / "ml" / "Voblint_Generated.ml"
 CLI_DIR = REPO_ROOT / "cli"
 SRC_DIR = REPO_ROOT / "src"
 CORPUS_DIR = REPO_ROOT / "tests" / "regression"
