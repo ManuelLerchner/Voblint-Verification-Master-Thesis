@@ -26,8 +26,11 @@ text \<open>
   canonicalized -- a witness-bottom \<^const>\<open>Lifted\<close> payload collapsed to
   \<^const>\<open>Bot\<close> -- \<^emph>\<open>before\<close> they reach this boundary (every public result
   adapter routes through \<open>canonicalize_lift\<close>), so by the time a value
-  reaches \<open>lookup_table\<close> here, \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already
-  agree with concrete emptiness and non-emptiness respectively.
+  reaches \<open>lookup_table\<close> here, \<^const>\<open>Bot\<close> denotes no store. The converse
+  does not hold: the emptiness test is sound and need not be complete, so a
+  \<^const>\<open>Lifted\<close> state may still denote no store (a product whose interval
+  field says \<open>x = 2\<close> and whose parity field says \<open>x\<close> is odd stays
+  \<^const>\<open>Lifted\<close>).
 \<close>
 
 subsection \<open>Per-point reachability\<close>
@@ -407,9 +410,9 @@ text \<open>
   infinite therefore reports \<^const>\<open>Bot\<close> as its joined state --- reading as
   dead, while \<^const>\<open>node_live_ex\<close>, which never folds, still reports it live.
 
-  Canonicality is what licenses reading \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> as
-  concrete emptiness and non-emptiness rather than as the solver's own
-  structural answer. It is stated against a supplied emptiness predicate, the
+  Canonicality is what licenses reading \<^const>\<open>Bot\<close> as concrete emptiness
+  rather than as the solver's own structural answer. \<^const>\<open>Lifted\<close> gets no
+  such reading: the supplied emptiness predicate is sound, not complete. It is stated against a supplied emptiness predicate, the
   same way the normalization operations upstream are, so this layer keeps its
   freedom from any class constraint on the payload.
 \<close>
