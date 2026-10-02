@@ -28,5 +28,5 @@ Nothing here mentions the compiler: `valid_activation_trace` is the semantics of
 arbitrary CFG, which is what lets the analysis soundness statements be about
 any graph rather than only about compiled ones.
 
-Concrete witness graphs and executable regressions live in
-`src/Examples/CFG/Example_Activation_Trace_Collect_Regression.thy`.
+`src/Examples/Capstone/Example_Non_Vacuity.thy` applies the collecting semantics
+to a compiled program.

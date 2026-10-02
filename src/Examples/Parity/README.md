@@ -12,9 +12,8 @@ second copy of the plumbing would be the negative result.
 | --- | --- | --- |
 | `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine through Parity's unit-context registration at the always-join rule, with no example-local registration, `strategy_tree`, or post-solution transport proofs |
 
-The Parity member of the store-only check trio
-(`Example_Parity_Checks_Store_Only.thy`) lives in `CLI/` alongside Sign's and
-Interval's, so the three read together.
+Parity's verdicts on whole programs are pinned by the regression corpus under
+`tests/regression/18-parity/`.
 
 ## Vocabulary
 
@@ -23,7 +22,7 @@ The theory uses these as given; they are local jargon, not English.
 | Term | Meaning |
 | --- | --- |
 | Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. Every registration of the shared `dg_analysis_exec` assembly builds its equation system in this shape. |
-| ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. No certified analysis uses it; execution-only witnesses such as `Example_Sign_DG_Custom_Combine` exercise it. |
+| ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. No certified analysis uses it. |
 | classifier, `gs` | `vname => bool`, VIMP's own answer to *is this name a declared global*. `parity_gs` is `declared_global parity_program`: the program's `global` declaration decides, never the spelling of the name. |
 | placed state, `default_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot the represented function reads. |
 | local unknown | one solver variable per `(pp, ())`, holding a `parity default_st lifted`. The `lifted` wrapper adds `Bot` for *this point was never reached*. |

@@ -55,10 +55,8 @@ abbreviation int_ex_result where
 subsection \<open>Computed post-solutions for the non-CLI modes\<close>
 
 text \<open>
-  \<open>y + 1 = 3\<close> is the same composite guard as
-  \<open>Example_Int_Backward.bfilter_int_dom_once_plus_eq_exact\<close>, now reached
-  through a real compiled \<open>if\<close> and the vendored solver instead of a direct
-  \<open>bfilter\<close> call. \<open>Statement 1\<close> is the interior node right after
+  \<open>y + 1 = 3\<close> is a composite guard, reached through a real compiled \<open>if\<close> and
+  the vendored solver. \<open>Statement 1\<close> is the interior node right after
   the true branch's guard and before the branches rejoin at \<open>Statement 3\<close>
   (a join would erase the refinement, since the false branch never
   constrains \<open>y\<close>), so that is where \<open>y\<close>'s mode-dependent precision is

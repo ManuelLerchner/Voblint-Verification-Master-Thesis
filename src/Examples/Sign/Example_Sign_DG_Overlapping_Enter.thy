@@ -910,7 +910,7 @@ next
 next
   case IsBotBot show ?case by simp
 next
-  case (IsBotSound d gv) then show ?case by (simp add:)
+  case (IsBotSound d gv) then show ?case by simp
 next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)

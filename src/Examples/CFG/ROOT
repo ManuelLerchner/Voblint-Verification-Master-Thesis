@@ -2,13 +2,7 @@ chapter Voblint
 
 session Voblint_Examples_CFG in "." = "Voblint_Compile" +
   description
-    "Domain-independent compiler and CFG witnesses: the call-free compilation
-     theorem every domain's flagship run reuses, a worked procedure compilation,
-     and the compiler/collecting-semantics regressions"
+    "Domain-independent compiler witness: the call-free compilation theorem every
+     domain's flagship run reuses"
   theories
-    Example_Inc_Proc
     Example_Compile_Call_Free
-    Example_Compile_Regression
-    Example_Control_Simulation_Regression
-    Example_Activation_Trace_Collect_Regression
-    Example_VIMP_Proc_Regression

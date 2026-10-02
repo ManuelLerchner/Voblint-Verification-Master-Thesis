@@ -4,30 +4,15 @@ theory Voblint
   imports
     "Voblint_CLI.Analysis_Render"
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
-    "Voblint_Examples_CLI.Example_Checks_Store_Only"
-    "Voblint_Examples_CLI.Example_Interval_Checks_Store_Only"
-    "Voblint_Examples_CLI.Example_Parity_Checks_Store_Only"
-    "Voblint_Examples_Interval.Exec_Interval_Run"
-    "Voblint_Examples_CLI.Example_Int_Refinement_Mode_Regression"
-    "Voblint_Examples_CLI.Example_Analysis_Result_Regression"
-    "Voblint_Examples_CLI.Example_Arithmetic_Diagnostics_Regression"
     Example_End_To_End_Certificate
-    "Voblint_Examples_Interval.Example_Interval_DG_EntryState_Collect"
-    "Voblint_Examples_Interval.Example_Interval_DG_CallString_K2"
     "Voblint_Examples_Sign.Example_Sign_DG_CallString_K2"
     "Voblint_Examples_Interval.Example_Interval_Source_Ctx"
-    "Voblint_Examples_CFG.Example_Inc_Proc"
-    "Voblint_Examples_Sign.Example_Side_Execute"
-    "Voblint_Examples_Interval.Example_Proc_Call"
-    "Voblint_Examples_Interval.Example_Guard_Refinement"
     "Voblint_Examples_Relational.Example_Relational_DG_Demo"
-    "Voblint_Examples_Tooling.Example_Strategy_Tree"
-    "Voblint_Examples_Tooling.Example_TD_Side_Program"
-    "Voblint_Examples_Tooling.Example_TD_Plain_Program"
     "Voblint_Examples_Parity.Example_Parity_DG_Flagship"
-    "Voblint_Examples_Congruence.Example_Congruence_Arithmetic"
-    "Voblint_Examples_Congruence.Example_Congruence_Backward"
     "Voblint_Examples_Congruence.Example_Congruence_DG_Run"
+    "Voblint_Examples_Int.Exec_Int_DG_Run"
+    "Voblint_Examples_Tooling.Example_Update_Rule_Steps"
+    "Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision"
 begin
 
 text \<open>
@@ -143,9 +128,9 @@ text \<open>
     \<^theory>\<open>Voblint_Examples_Interval.Example_Interval_Source_Ctx\<close> lifts that bound to
     source runs at each activation's own context.
   \<^item> \<^bold>\<open>Call string\<close>, a bounded record of the call sites that led to the activation
-    (FM 2026, Example 7).  @{thm [source] nest_1_activation_collect_sound} and
-    @{thm [source] nest_2_activation_collect_sound} run one \<open>nest\<close> program at \<open>k = 1\<close> and
-    \<open>k = 2\<close>; on Sign, whose computed solution is exact,
+    (FM 2026, Example 7).  @{thm [source] sign_nest_1_activation_collect_sound} and
+    @{thm [source] sign_nest_2_activation_collect_sound} run one \<open>nest\<close> program at
+    \<open>k = 1\<close> and \<open>k = 2\<close>; on Sign, whose computed solution is exact,
     @{thm [source] sign_k2_strictly_more_precise_than_k1_at_g} shows the longer string
     strictly more precise at \<open>g\<close>'s entry.
 \<close>
@@ -153,11 +138,13 @@ text \<open>
 subsection \<open>Checks\<close>
 
 text \<open>
-  \<^theory>\<open>Voblint_Examples_CLI.Example_Checks_Store_Only\<close> discharges compiled
-  \<open>__voblint_check(...)\<close> conditions against a computed Sign post-solution at each check's own
-  node: one proved, one refuted, one unknown.  Its Interval and Parity siblings reuse the
-  shape; @{thm [source] checks_ivl_ex_precision_over_sign} is a bound Interval proves and Sign
-  cannot.
+  A compiled \<open>__voblint_check(...)\<close> condition gets one verdict per report:
+  @{thm [source] run_voblint_proved} and @{thm [source] run_voblint_refuted} state what a
+  \<open>PROVED\<close> and a \<open>REFUTED\<close> verdict guarantee at every reachable store.  The regression
+  corpus pins the verdicts themselves, one proved, one refuted and one unknown check per
+  domain, e.g. \<^verbatim>\<open>tests/regression/05-checks/precision/04-guarded_interval_trio.vimp\<close>,
+  and a bound Interval proves while Sign cannot
+  (\<^verbatim>\<open>07-sign-precision/known-imprecision/03-guard_bound_needs_magnitude.vimp\<close>).
 \<close>
 
 subsection \<open>Activation-trace concrete semantics\<close>
@@ -464,60 +451,15 @@ text \<open>
     (\<open>Example_Interval_DG_Flagship\<close>, \<open>Exec_Sign_DG_Run\<close>,
     \<open>Example_Parity_DG_Flagship\<close>, \<open>Example_Congruence_DG_Run\<close>,
     and \<open>Exec_Int_DG_Run\<close>) are indexed above, together with the
-    context-sensitive \<open>Example_Interval_DG_Ctx_Collect\<close>,
-    \<open>Example_Interval_DG_EntryState_Collect\<close>, and
-    \<open>Example_Interval_Source_Ctx\<close>.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Checks_Store_Only} --- \<open>__voblint_check(...)\<close>
-      discharged against a computed Sign post-solution, node-locally: one check
-      proved, one refuted (a genuine bug, not merely unproven), one unknown.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Parity_Checks_Store_Only} --- the same
-      program, but with a parity domain instead of Sign.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Interval_Checks_Store_Only} --- the Interval
-      counterpart, inside a two-sided bound guard (\<open>0 < x \<and> x < 10\<close>) so the
-      checks exercise Interval's numeric bounds, not just its sign; includes a
-      precision comparison showing a bound Interval proves outright that Sign's
-      \<^term>\<open>SPos\<close> alone classifies \<^term>\<open>Check_Unknown\<close>.
-    \<^item> @{theory Voblint_Examples_Congruence.Example_Congruence_Arithmetic}
-      and @{theory Voblint_Examples_Congruence.Example_Congruence_Backward} ---
-      standalone modular arithmetic and backward filtering, which supplies
-      Congruence's precise inverse.
-    \<^item> @{theory
-      Voblint_Examples_CLI.Example_Int_Refinement_Mode_Regression} --- all three
-      refinement modes pinned at a composite operation. This complements
-      @{theory Voblint_Examples_Int.Exec_Int_DG_Run}, whose two non-CLI modes
-      run through the compiled solver pipeline. In the direct-operation
-      witness, \<^const>\<open>Refine_Once\<close> has not reached the fixpoint.
-    \<^item> @{theory Voblint_Examples_Interval.Exec_Interval_Run} --- the same
-      bounded loop under Kleene iteration, warrowing TD, and every update rule.
-      Interval narrowing and the backward guard filter recover \<open>[0,20]\<close>;
-      the update rule does not affect that bound.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Analysis_Result_Regression} --- the published result
-      table and its per-context lookup surface.
-    \<^item> @{theory Voblint_Examples_CLI.Example_Arithmetic_Diagnostics_Regression} ---
-      arithmetic findings through the public CLI operation: one finding per guard,
-      silence in dead branches, conservative context aggregation, and total Boolean operands.
-    \<^item> @{theory Voblint_Examples_CFG.Example_Inc_Proc} --- shared global-increment procedure witness.
-    \<^item> @{theory Voblint_Examples_Sign.Example_Side_Execute} ---
-      minimal certified Sign interprocedural example with annotated CFG DOT.
-    \<^item> @{theory Voblint_Examples_Interval.Example_Proc_Call} ---
-      concrete-semantics witness for \<^verbatim>\<open>inc\<close> and
-      \<^verbatim>\<open>sqr\<close> communicating through a global, plus their
-      compiled interprocedural CFG. The executable corpus carries the Sign
-      analysis of the same shared-global increment call.
-    \<^item> @{theory
-      Voblint_Examples_Interval.Example_Interval_Loop_Coverage} --- backward
-      guard-refinement precision at a bounded loop's body entry. The certified
-      loop-head bound is carried by @{text "Exec_Interval_Run"}.
-    \<^item> @{theory Voblint_Examples_Interval.Example_Guard_Refinement} ---
-      backward guard-refinement precision witness.
-    \<^item> @{theory Voblint_Examples_Interval.Example_Interval_DG_CallString_K1} --- the \<open>nest\<close> program,
-      computed and certified at a 1-call-string context
-      (\<^verbatim>\<open>nest_1_activation_collect_sound\<close>): \<open>main\<close> calls \<open>f\<close> from two sites and \<open>f\<close>
-      calls \<open>g\<close> from one, so a 1-call-string cannot separate \<open>g\<close>'s two activations.
-    \<^item> @{theory
-      Voblint_Examples_Interval.Example_Interval_DG_CallString_K2} --- the
-      same program at a
-      2-call-string context (\<^verbatim>\<open>nest_2_activation_collect_sound\<close>), which does separate them.
+    context-sensitive \<open>Example_Interval_DG_Ctx_Collect\<close> and
+    \<open>Example_Interval_Source_Ctx\<close>.  Analysis results on concrete programs are pinned
+    by the VIMP regression corpus under \<^verbatim>\<open>tests/regression\<close>, which runs the
+    generated analyzer in seconds.
+    \<^item> @{theory Voblint_Analysis_Int.Int_Refinement_Control} closes with the
+      refinement witnesses: \<^const>\<open>Refine_Once\<close> stops short of the fixpoint
+      (@{thm [source] refinement_once_not_fixpoint}), and refining after
+      \<open>narrow\<close> would break the solver's bracket
+      (@{thm [source] post_narrow_refinement_would_violate_narrow_ge}).
     \<^item> @{theory Voblint_Examples_Sign.Example_Sign_DG_CallString_K1} --- the Sign counterpart of the
       \<open>nest\<close> pair, computed by the plain-join solver (\<^verbatim>\<open>TD_side_always_join_Interp\<close>) rather
       than warrowing: Sign is finite, so no widening is needed and the computed solution is
@@ -553,18 +495,11 @@ text \<open>
       \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node states, and
       \<^verbatim>\<open>11-graph-snapshot\<close> for golden cluster/node/edge snapshots including a
       recursive procedure.
-    \<^item> \<^bold>\<open>Related demo:\<close> @{theory Voblint_Examples_Tooling.Example_Strategy_Tree} ---
-      \<^type>\<open>strategy_tree\<close> as a small dependency/effect language on its own,
-      independent of any abstract domain, built directly from \<^const>\<open>QueryL\<close>/
-      \<^const>\<open>Side\<close>/\<^const>\<open>Answer\<close>.
-    \<^item> \<^bold>\<open>The vendored solver on its own terms:\<close>
-      @{theory Voblint_Examples_Tooling.Example_TD_Side_Program} and
-      @{theory Voblint_Examples_Tooling.Example_TD_Plain_Program} run Tilscher's own
-      running examples --- the lock-set analysis with side effects, and
-      must-be-initialized without them --- through the typed \<^verbatim>\<open>strategy_program\<close>
-      frontend, with no CFG and no abstract domain in play.  They are what shows the
-      solver interface this development builds on is the vendored one, not a
-      reimplementation shaped to fit.
+    \<^item> \<^bold>\<open>Update rules on their own terms:\<close>
+      @{theory Voblint_Examples_Tooling.Example_Update_Rule_Steps} feeds one global the same
+      contributions under each rule, outside any solver run, and
+      @{theory Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision} shows the
+      precision warrowing per origin keeps that warrowing the joined slot loses.
 
   \<^bold>\<open>9. The CLI: configuration and code generation.\<close>
     One public operation over every activation list, update rule and context policy,

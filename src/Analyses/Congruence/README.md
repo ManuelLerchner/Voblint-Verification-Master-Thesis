@@ -74,9 +74,8 @@ forward direction is `Congruence_Arithmetic`. Now suppose a guard establishes
 `z = 7`: `Congruence_Backward` runs the same arithmetic in reverse and narrows `y` to
 `6 (mod 0)`, a singleton. Inside `int_dom` that singleton is then handed to the other
 three components by refinement, which is how a congruence fact sharpens an interval —
-see `Example_Int_Backward` for the composite version, and
-`Example_Congruence_Arithmetic` / `Example_Congruence_Backward` for this component on
-its own.
+see `tests/regression/16-composite-domain/` for the composite version and
+`tests/regression/22-congruence/` for this component on its own.
 
 ## Congruence in the entry-state and call-string runs
 
