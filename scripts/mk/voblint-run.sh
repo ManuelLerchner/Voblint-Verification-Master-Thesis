@@ -83,7 +83,7 @@ fi
 stamp="$REPO_ROOT/codegen/generated/.source-hash"
 current_hash="$("$SCRIPT_DIR/codegen-hash.sh")"
 source_mismatch=0
-if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current_hash" ]; then
+if [ -f "$stamp" ] && [ "$(cat "$stamp")" != "$current_hash" ]; then
   source_mismatch=1
 fi
 

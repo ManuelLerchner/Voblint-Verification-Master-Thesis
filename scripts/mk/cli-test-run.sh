@@ -14,7 +14,7 @@ REPO_ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
 stamp="$REPO_ROOT/codegen/generated/.source-hash"
 current_hash="$("$SCRIPT_DIR/codegen-hash.sh")"
 source_mismatch=0
-if [ ! -f "$stamp" ] || [ "$(cat "$stamp")" != "$current_hash" ]; then
+if [ -f "$stamp" ] && [ "$(cat "$stamp")" != "$current_hash" ]; then
   source_mismatch=1
 fi
 
@@ -29,9 +29,11 @@ if [ "$source_mismatch" -ne 0 ]; then
   cat >&2 <<'EOF'
 cli-test: FAILED although every regression case passed.
 codegen/generated/.source-hash does not match the current theories, so the
-tested OCaml may not be the code the theories export. Regenerate and commit it:
+tested OCaml may not be the code the theories export. Regenerate and commit the export:
   pixi run codegen
   git add codegen/generated/
+A pulled export that is already current also trips this until the next
+regeneration, because the stamp is local.
 EOF
 fi
 exit "$source_mismatch"

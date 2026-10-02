@@ -65,8 +65,9 @@ def export_is_stale() -> bool:
     stale forever after the first such commit.
     """
     stamp = REPO / "codegen" / "generated" / ".source-hash"
+    # The stamp is local; without it, CI's codegen-check is the authority.
     if not stamp.exists():
-        return True
+        return False
     try:
         out = subprocess.run(
             [str(REPO / "scripts" / "mk" / "codegen-hash.sh")],

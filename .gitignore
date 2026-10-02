@@ -49,3 +49,6 @@ codegen/regression/ocaml/regression-ml
 # of truth (the .thy files are)".
 docs/generated/DEFINITIONS_OVERVIEW.md
 cli/.voblint.*
+
+# Local stamp of the sources the export was generated from (codegen-hash.sh)
+codegen/generated/.source-hash
