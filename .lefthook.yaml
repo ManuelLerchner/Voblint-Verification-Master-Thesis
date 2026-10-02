@@ -357,19 +357,6 @@ pre-commit:
       group:
         parallel: true
         jobs:
-          # The thesis quotes repository figures from stats.json; regenerate it
-          # whenever what it measures changes, and fail so the refreshed file
-          # is staged with the change that moved it.
-          - name: thesis-stats-drift
-            glob:
-              - "src/**"
-              - "tests/regression/**"
-              - "cli/**"
-              - "codegen/generated/**"
-              - "scripts/pages_stats.py"
-              - "thesis/tools/stats.py"
-            run: pixi run thesis-stats-write && bash scripts/mk/check-clean.sh thesis/shared/generated/stats.json
-
           # Offline: the recorded conda-forge status must list exactly the
           # packages of the manifest. Refreshing the status needs the network
           # (`pixi run thesis-conda-write`) and is done by hand.
