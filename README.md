@@ -11,8 +11,12 @@
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
 ```math
-\underbrace{\{\, s \mid \text{a source run reaches } v \text{ with store } s \,\}}_{\text{source executions}}
-\;\subseteq\;
+\underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{source run}}
+\;\Longrightarrow\;
+\exists v.\;\;
+(r, s, \mathit{fs}) \approx v
+\;\;\wedge\;\;
+s \in
 \underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
 \;\subseteq\;
 \underbrace{[\![\, \mathit{res} \,]\!]_{v}}_{\text{analyzer report}}
@@ -20,18 +24,20 @@
 \underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
 ```
 
-Every store reached by a source execution at program point $v$ is represented
-by the analyzer's report at $v$ and satisfies every definite verdict reported
-there.
+Every store $s$ a source run from an initial store $s_0$ reaches is collected at
+a CFG node $v$ that
+simulates the run's configuration ($\approx$), is represented by the analyzer's
+report at $v$, and satisfies every definite verdict reported there.
 
-The equality is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover
-the collecting semantics, and their union recovers $\mathcal{C}(v)$ exactly. The
-inclusions are one-way guarantees. For the first, only the source-to-CFG
-direction is proved; whether it is an equality is not part of the present
-contract. The second is where abstract interpretation may add unreachable
-stores, and the third keeps only what the definite verdicts assert.
+The node is existential because the simulation may relate one configuration to
+several nodes, for instance to an uncalled procedure with the same body as the
+running one; the claim holds at a node the run actually reaches. The equality
+is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover the collecting
+semantics, and their union recovers $\mathcal{C}(v)$ exactly. The two inclusions
+are one-way guarantees: the report may describe stores no run reaches, and the
+verdict semantics keeps only what the definite verdicts assert.
 
-Each inclusion is an Isabelle theorem:
+Each step is an Isabelle theorem:
 [`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
 [`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
 [`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
