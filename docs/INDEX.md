@@ -13,7 +13,7 @@ These documents describe the supported architecture and its verification.
   `Session.Theory:theorem` names.
 - [Check-discharge architecture](CHECK_ARCHITECTURE.md) — how a compiled check
   becomes a GraphViz-rendered proof status and a semantic soundness guarantee,
-  and how a contextual `analysis_result` feeds checks, collapsed GraphViz, and
+  and how a contextual `solved_table` feeds checks, collapsed GraphViz, and
   expanded GraphViz from one canonical table.
 - [CLI](CLI_DESIGN.md) — `voblint`'s flags, architecture, and trust boundary.
 - [Per-origin widening](PER_ORIGIN_WIDENING.md) — what the solver's per-origin
@@ -50,6 +50,8 @@ match the tree.
 - [Core refactor plan](CORE_REFACTOR_PLAN.md) — the four-phase split of
   `Voblint_Framework` along Goblint's library boundaries, with the measured
   import evidence and a per-step status table.
+- [Analysis report plan](ANALYSIS_REPORT_PLAN.md) — one semantic report object,
+  no termination premise, typed configuration; phases and invariants.
 - [Roadmap](ROADMAP.md) — stable extension directions and completion criteria.
 - [Next work](NEXT_STEPS.md) — near-term technical directions.
 - [Open problems](OPEN_PROBLEMS.md) — research and engineering boundaries.

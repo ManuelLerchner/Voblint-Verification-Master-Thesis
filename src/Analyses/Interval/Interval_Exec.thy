@@ -5,53 +5,15 @@ theory Interval_Exec
     Interval_Domain
 begin
 
-section \<open>Interval executable transfer mirror\<close>
+section \<open>Interval on the executable carrier\<close>
 
 text \<open>
-  Executable mirror of @{const ivl_tf_abs} on @{typ "ivl default_st"}, following
-  the sign-domain pattern in \<open>Sign_Exec\<close>. Commutation lemmas hook
-  into the generic @{theory Voblint_Exec.Default_St_Restriction_Refinement} transport; the certified
-  end-to-end soundness theory built on this mirror lives in
-  \<open>Interval_Analyses\<close>, mirroring \<open>Sign_Analyses\<close>.
+  The executable step and procedure entry are \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close>'s
+  generic constructions at the bundle, \<open>generic_tf_st_for ivl_ops\<close> and
+  \<open>generic_enter_st_for ivl_ops\<close>, and their agreement with the abstract transfer is
+  \<open>ivl_tf.tf_st_for_commute\<close> and \<open>ivl_tf.enter_st_for_commute\<close>: nothing about them
+  is the domain's to state.
 \<close>
-
-text \<open>
-  The executable guard filter is derived from the bundle's evaluator and
-  refinement operations (\<^const>\<open>n_bfilter\<close>), and its commutation with
-  @{const branch_ivl} through @{const default_st_to_fun} is proved once
-  for every certified bundle, not per domain.
-\<close>
-
-subsection \<open>Executable transfer function and seeds, generic in the classifier\<close>
-
-text \<open>
-  \<open>ivl_ops\<close>, Interval's primitive bundle, is defined beside the abstract transfer
-  in \<^theory>\<open>Voblint_Analysis_Interval.Interval_Transfer\<close>, so both layers read one
-  value. The two constants below are the generic constructions of
-  \<^theory>\<open>Voblint_Nonrelational.Nonrelational_Ops\<close> instantiated at it, not independent
-  definitions.
-\<close>
-
-definition ivl_enter_st_for ::
-  "(vname => bool) => call_info =>
-   ivl default_st => ivl default_st" where
-  "ivl_enter_st_for = generic_enter_st_for ivl_ops"
-
-lemma ivl_enter_st_for_eq [simp]:
-  "ivl_enter_st_for \<G> ci s =
-    bind_formals_default_st \<G> (ci_formals ci)
-      (map (\<lambda>e. aval_ivl e
-        (default_st_to_fun \<G> s)) (ci_args ci))
-      (enter_frame_D_default_st ivl_top s)"
-  by (simp add: ivl_enter_st_for_def generic_enter_st_for_def top_ivl_def)
-
-definition ivl_tf_st_for ::
-  "(vname => bool) => edge_action =>
-   ivl default_st => ivl default_st" where
-  "ivl_tf_st_for = generic_tf_st_for ivl_ops"
-
-lemmas ivl_tf_st_for_simps [simp] =
-  generic_tf_st_for.simps [of ivl_ops, folded ivl_tf_st_for_def]
 
 text \<open>The state a run starts in: a declared global holds \<open>[0,0]\<close>, a local is unbounded.\<close>
 
@@ -76,24 +38,5 @@ proof -
   then show ?thesis
     by (simp add: default_st_is_bot_for_iff[OF globals])
 qed
-
-subsection \<open>Unscoped executable/abstract correspondence, generic in the classifier\<close>
-
-text \<open>Nothing here is Interval's to discharge: \<open>ivl_tf.tf_st_for_commute\<close>
-  settles every action, the guard included, on a live state.\<close>
-
-lemma ivl_tf_st_for_commute:
-  assumes live: "live_default_st \<G> s"
-  shows
-    "default_st_to_fun \<G> (ivl_tf_st_for \<G> a s) =
-     ivl_tf_abs a (default_st_to_fun \<G> s)"
-  unfolding ivl_tf_st_for_def
-  by (rule ivl_tf.tf_st_for_commute[OF live])
-
-lemma ivl_enter_st_for_commute:
-  "default_st_to_fun \<G> (ivl_enter_st_for \<G> ci s) =
-   enter_ivl_ci_for \<G> ci (default_st_to_fun \<G> s)"
-  by (simp add: ivl_tf.op_defs enter_binding_def enter_frame_def)
-
 
 end

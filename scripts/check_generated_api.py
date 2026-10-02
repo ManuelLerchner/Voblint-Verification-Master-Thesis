@@ -16,8 +16,10 @@ the Isabelle build.
 
 Two checks, against the checked-in export:
 
-* qualified uses (``Voblint_CLI.Generated.foo``, or through a ``module C =``
-  alias) must resolve in the signature -- exact, no guessing;
+* qualified uses (``Voblint.foo`` through the facade ``cli/voblint.ml``, which
+  includes the export unchanged, ``Voblint_Generated.Generated.foo``, or through
+  a ``module C =`` alias of either) must resolve in the signature -- exact, no
+  guessing;
 * a consumer that ``open``s the module must not use a name the generated
   implementation defines but the signature withholds. That one is a heuristic:
   it only reports names the export actually has and hides, and it skips
@@ -35,17 +37,17 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
+GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_Generated.ml"
 EXPORT_SOURCE = "src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy"
 
 MODULE = "Generated"
 
 # Handwritten OCaml that links against the export. Generated or copied files
-# are excluded: cli/Voblint_CLI.ml and tests/property/Voblint_CLI.ml are build
+# are excluded: cli/Voblint_Generated.ml and tests/property/Voblint_Generated.ml are build
 # copies of the export itself, and vimp_parser.ml/vimp_lexer.ml come from
 # menhir/ocamllex at build time.
 CONSUMERS = [
-    "cli/entry/voblint.ml",
+    "cli/entry/voblint_main.ml",
     "cli/entry/voblint_web.ml",
     "cli/result/result_text.ml",
     "cli/result/context_graph.ml",
@@ -106,8 +108,10 @@ def implementation_names(impl: str) -> set[str]:
 
 def aliases(text: str) -> list[str]:
     """Module paths a file uses to reach the export, longest first."""
-    found = [f"Voblint_CLI.{MODULE}"]
-    found += re.findall(rf"^module ({CTOR}) = Voblint_CLI\.{MODULE}\s*$", text, re.M)
+    found = [f"Voblint_Generated.{MODULE}", "Voblint"]
+    found += re.findall(
+        rf"^module ({CTOR}) = (?:Voblint_Generated\.{MODULE}|Voblint)\s*$", text, re.M
+    )
     return sorted(found, key=len, reverse=True)
 
 
@@ -181,7 +185,7 @@ def main() -> int:
                     )
                     problems.append((rel, f"{alias}.{name}", why))
 
-        if re.search(rf"^open Voblint_CLI\.{MODULE}\s*$", text, re.M):
+        if re.search(rf"^open (?:Voblint_Generated\.{MODULE}|Voblint)\s*$", text, re.M):
             bound = locally_bound(text)
             for name in sorted(hidden - bound):
                 if re.search(rf"(?<![\w.']){re.escape(name)}(?![\w'])", text):

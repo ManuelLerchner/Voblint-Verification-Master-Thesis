@@ -45,7 +45,7 @@ text \<open>
   Were globals routed through a separate flow-insensitive shared summary, \<open>Gx := 0\<close> and
   \<open>Gx := 1\<close> would both feed it and join to \<open>SNonNeg\<close>, leaving the check \<open>UNKNOWN\<close>. With
   the whole state lifted into \<open>D\<close>, the call's own local answer at the \<open>main\<close> exit carries
-  \<open>Gx\<close>'s value exactly as \<^const>\<open>sign_tf_st_for\<close> and \<^const>\<open>sign_enter_st_for\<close> left it,
+  \<open>Gx\<close>'s value exactly as \<^const>\<open>generic_tf_st_for\<close> and \<^const>\<open>generic_enter_st_for\<close> left it,
   so the check is exact.
 \<close>
 

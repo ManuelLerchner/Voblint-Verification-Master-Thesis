@@ -15,13 +15,15 @@ text \<open>
 
 subsection \<open>Each analysis on its own field\<close>
 
-lemma local_spec_of_frame:
-  "a \<noteq> b \<Longrightarrow> mcp_frame (local_spec_of \<G> p a) (part_gamma \<G> b)"
-  by (cases a; cases b; simp only: part_gamma.simps local_spec_of.simps;
+lemma field_spec_frame:
+  "a \<noteq> b \<Longrightarrow> mcp_frame (field_spec (registration_of a) \<G> p) (part_gamma \<G> b)"
+  by (cases a rule: analysis_domain_cases; cases b rule: analysis_domain_cases;
+      simp only: part_gamma.simps registration_of.simps analysis_registration.simps;
       rule field_frame; simp add: lift_get_put_other)
 
 lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (mcp_rd \<G>) x)"
-  by (cases a; cases x) (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
+  by (cases a rule: analysis_domain_cases; cases x)
+    (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
 
 subsection \<open>Each analysis answers what it knows\<close>
 
@@ -37,23 +39,24 @@ text \<open>
 
 definition part_answer :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> answers"
 where
-  "part_answer \<G> a x q = (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> val_answer a (mcp_rd \<G> r) q)"
+  "part_answer \<G> a x q =
+     (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> value_answer (registration_of a) (mcp_rd \<G> r) q)"
 
 lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> eval_holds q (part_answer \<G> a x q) s"
-  by (cases x) (auto simp: part_answer_def part_gamma_rd intro: val_answer_sound)
+  by (cases x) (auto simp: part_answer_def part_gamma_rd intro: value_answer_sound)
 
 definition mcp_field ::
   "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
-  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (local_spec_of \<G> p a)"
+  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (field_spec (registration_of a) \<G> p)"
 
 lemma mcp_field_sound:
   "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
      (mcp_field (declared_global p) p a)"
   unfolding mcp_field_def
-  by (rule with_qry_sound[OF local_spec_of_sound]) (rule part_answer_sound)
+  by (rule with_qry_sound[OF field_spec_sound]) (rule part_answer_sound)
 
 lemma mcp_field_frame: "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_field \<G> p a) (part_gamma \<G> b)"
-  unfolding mcp_field_def by (rule with_qry_frame[OF local_spec_of_frame])
+  unfolding mcp_field_def by (rule with_qry_frame[OF field_spec_frame])
 
 subsection \<open>The active analyses, run as one\<close>
 
@@ -67,13 +70,16 @@ text \<open>
 
 definition mcp_norm :: "analysis_domain list \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
   "mcp_norm as x =
-     (case x of Bot \<Rightarrow> Bot | Lifted r \<Rightarrow> if list_all (\<lambda>a. part_live a r) as then x else Bot)"
+     (case x of
+        Bot \<Rightarrow> Bot
+      | Lifted r \<Rightarrow> if list_all (\<lambda>a. field_live (registration_of a) r) as then x else Bot)"
 
 lemma part_gamma_Bot [simp]: "part_gamma \<G> a Bot = {}"
-  by (cases a) simp_all
+  by (cases a rule: analysis_domain_cases) simp_all
 
-lemma part_gamma_dead: "\<not> part_live a r \<Longrightarrow> part_gamma \<G> a (Lifted r) = {}"
-  by (cases a) simp_all
+lemma part_gamma_dead:
+  "\<not> field_live (registration_of a) r \<Longrightarrow> part_gamma \<G> a (Lifted r) = {}"
+  by (cases a rule: analysis_domain_cases) simp_all
 
 lemma mcp_gamma_norm:
   "mcp_gamma (map (part_gamma \<G>) as) (mcp_norm as x) = mcp_gamma (map (part_gamma \<G>) as) x"
@@ -104,7 +110,7 @@ qed
 lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp_comp as \<G> p)"
   unfolding mcp_comp_def mcp_field_def
   by (intro single_entry_map_local_spec single_entry_mcp_combine)
-     (auto simp: single_entry_local_spec_of single_entry_with_qry)
+     (auto simp: single_entry_field_spec single_entry_with_qry)
 
 subsection \<open>What the combined state publishes\<close>
 
@@ -122,39 +128,85 @@ lemma mcp_gamma_rd:
 
 lemma mcp_gamma_v_bot: "as \<noteq> [] \<Longrightarrow> mcp_gamma_v as \<bottom> = {}"
 proof -
-  have "val_gamma a \<bottom> = {}" for a by (cases a) simp_all
+  have "val_gamma a \<bottom> = {}" for a by (cases a rule: analysis_domain_cases) simp_all
   then show "as \<noteq> [] \<Longrightarrow> ?thesis" by (auto simp: mcp_gamma_v_def)
 qed
 
 definition mcp_emp :: "analysis_domain list \<Rightarrow> imp_prog \<Rightarrow> mcp_st \<Rightarrow> bool" where
-  "mcp_emp as p r = list_ex (\<lambda>a. part_empty (declared_global_vars p) a r) as"
+  "mcp_emp as p r =
+     list_ex (\<lambda>a. field_empty (registration_of a) (declared_global_vars p) r) as"
 
 definition mcp_empty_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> bool" where
   "mcp_empty_v as v = list_ex (\<lambda>a. val_empty a v) as"
 
-lemma part_empty_rd:
-  "part_empty (declared_global_vars p) a r = val_empty a (mcp_rd (declared_global p) r)"
-  by (cases a)
+lemma field_empty_rd:
+  "field_empty (registration_of a) (declared_global_vars p) r
+     = val_empty a (mcp_rd (declared_global p) r)"
+  by (cases a rule: analysis_domain_cases)
      (simp_all add: mcp_rd_def
         default_st_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
         split: lifted.split)
 
 lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"
-  by (simp add: mcp_emp_def mcp_empty_v_def part_empty_rd)
+  by (simp add: mcp_emp_def mcp_empty_v_def field_empty_rd)
 
 lemma val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
-  by (cases a) (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
+  by (cases a rule: analysis_domain_cases)
+    (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
 
 lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = {}"
   by (auto simp: mcp_empty_v_def mcp_gamma_v_def list_ex_iff dest: val_empty_gamma)
 
+lemma sound_emptiness_mcp: "sound_emptiness (mcp_empty_v as) (mcp_gamma_v as)"
+  by (rule sound_emptinessI) (rule mcp_empty_v_gamma)
+
+text \<open>
+  The combined test is not exact. Interval says \<open>x = 2\<close> and Parity says \<open>x\<close> is odd:
+  neither field is empty, so the test does not fire, yet no store satisfies both.
+\<close>
+
+definition mcp_contradiction :: mcp_val where
+  "mcp_contradiction =
+     set_slot3 (set_slot2 (\<bottom> :: mcp_val) (Lifted ((\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2)))))
+       (Lifted ((\<top> :: parity abs_state)(STR ''x'' := POdd)))"
+
+lemma mcp_contradiction_not_empty:
+  "\<not> mcp_empty_v [Interval_Analysis, Parity_Analysis] mcp_contradiction"
+proof -
+  have "(\<lambda>_. 2) \<in> \<lbrakk>(\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2))\<rbrakk>"
+    by (auto simp: gamma_state_def top_ivl_def gamma_ivl_top)
+  moreover have "(\<lambda>_. 1) \<in> \<lbrakk>(\<top> :: parity abs_state)(STR ''x'' := POdd)\<rbrakk>"
+    by (auto simp: gamma_state_def gamma_parity_top)
+  ultimately show ?thesis
+    by (auto simp: mcp_empty_v_def mcp_contradiction_def is_empty_state_iff_gamma_state_empty)
+qed
+
+lemma mcp_contradiction_no_store:
+  "mcp_gamma_v [Interval_Analysis, Parity_Analysis] mcp_contradiction = {}"
+proof (rule equals0I)
+  fix s
+  assume "s \<in> mcp_gamma_v [Interval_Analysis, Parity_Analysis] mcp_contradiction"
+  then have "s (STR ''x'') \<in> gamma_ivl (Ivl (Fin 2) (Fin 2))"
+    and "s (STR ''x'') \<in> gamma_parity POdd"
+    by (auto simp: mcp_gamma_v_def mcp_contradiction_def gamma_state_def
+             dest: spec[of _ "STR ''x''"])
+  then show False by (simp, presburger)
+qed
+
+lemma mcp_empty_v_not_exact:
+  "\<not> exact_emptiness (mcp_empty_v [Interval_Analysis, Parity_Analysis])
+       (mcp_gamma_v [Interval_Analysis, Parity_Analysis])"
+  using exact_emptinessD [of _ _ mcp_contradiction] mcp_contradiction_not_empty
+    mcp_contradiction_no_store
+  by blast
+
 definition mcp_answer :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
-  "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> val_answer a v q) as \<top>"
+  "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as \<top>"
 
 lemma mcp_answer_fold_sound:
   "\<forall>a \<in> set as. s \<in> val_gamma a v \<Longrightarrow> eval_holds q r s
-   \<Longrightarrow> eval_holds q (fold (\<lambda>a r. r \<sqinter> val_answer a v q) as r) s"
-  by (induction as arbitrary: r) (auto intro: eval_query.inf_sound val_answer_sound)
+   \<Longrightarrow> eval_holds q (fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as r) s"
+  by (induction as arbitrary: r) (auto intro: eval_query.inf_sound value_answer_sound)
 
 lemma mcp_answer_sound: "s \<in> mcp_gamma_v as v \<Longrightarrow> eval_holds q (mcp_answer as v q) s"
   unfolding mcp_answer_def mcp_gamma_v_def by (rule mcp_answer_fold_sound) auto
@@ -179,7 +231,7 @@ text \<open>
 \<close>
 
 definition activation :: "analysis_domain list \<Rightarrow> analysis_domain list" where
-  "activation as = (if as = [] then [Int_Analysis] else remdups as)"
+  "activation as = (if as = [] then [Int_Analysis Refine_Fixpoint] else remdups as)"
 
 lemma activation_ne [simp]: "activation as \<noteq> []"
   by (simp add: activation_def)
@@ -226,7 +278,7 @@ next
 next
   case (EmptyRd p s) show ?case by (rule mcp_emp_rd)
 next
-  case (EmptyVSound v) then show ?case by (rule mcp_empty_v_gamma)
+  case EmptyVSound show ?case by (rule sound_emptiness_mcp)
 next
   case (SeedNe v ctx) show ?case by (rule assms)
 next

@@ -186,6 +186,10 @@ lemma is_empty_state_iff_gamma_state_empty:
   "is_empty_state \<sigma> \<longleftrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
   using is_empty_state_gamma_state_empty gamma_state_empty_is_empty_state by blast
 
+lemma exact_emptiness_is_empty_state:
+  "exact_emptiness is_empty_state (gamma_state :: 'a::numeric_domain abs_state \<Rightarrow> store set)"
+  by (rule exact_emptinessI) (rule is_empty_state_iff_gamma_state_empty)
+
 lemma is_empty_state_bot [simp]:
   "is_empty_state (bot :: 'a::numeric_domain abs_state)"
   unfolding is_empty_state_def bot_fun_def

@@ -408,7 +408,7 @@ next
 next
   case (GammaRd d g') show ?case by simp
 next
-  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_sound)
+  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_soundD)
 next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next
@@ -522,7 +522,7 @@ theorem fun_route_state_at_sound:
 proof -
   have "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> gamma_lift gamma\<^sub>V (lookup_context (result (declared_global p) p) v ctx)"
+        \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
     using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
@@ -668,16 +668,16 @@ corollary entry_state_lookup_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
            root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> gamma_lift gamma\<^sub>V (lookup_context (result (declared_global p) p) v ctx)"
+           \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 
-theorem entry_state_node_collect_eq_Union_of_terminates:
+lemma entry_state_has_context_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
-                       root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
-proof (rule node_collect_eq_Union_activation_of_has_context)
+    and t: "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
+  shows "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
+               root_ctx (prog_cfg p) t c"
+proof -
   interpret live: routed_analysis "analysis_spec (declared_global p) p"
       "\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
@@ -686,13 +686,18 @@ proof (rule node_collect_eq_Union_activation_of_has_context)
       "admitted_contexts (declared_global p) p"
       "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
-  fix t
-  assume "t \<in> \<T>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub>"
-  then show "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
-                   root_ctx (prog_cfg p) t c"
+  from t show ?thesis
     by (rule live.routed_valid_activation_trace_has_context
           [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
 qed
+
+theorem entry_state_node_collect_eq_Union_of_terminates:
+  assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
+  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
+           = (\<Union>ctx. \<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
+                       root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx)"
+  by (rule node_collect_eq_Union_activation_of_has_context)
+     (rule entry_state_has_context_of_terminates[OF wf solves])
 
 end
 

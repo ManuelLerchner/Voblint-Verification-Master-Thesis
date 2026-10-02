@@ -81,7 +81,7 @@ where
   "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_for Refine_Never int_ex_gs) (int_dom_enter_st_for Refine_Never int_ex_gs))
+       (generic_tf_st_for (int_dom_ops Refine_Never) int_ex_gs) (generic_enter_st_for (int_dom_ops Refine_Never) int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_never_result:
@@ -96,7 +96,7 @@ where
   "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
-       (int_tf_st_for Refine_Once int_ex_gs) (int_dom_enter_st_for Refine_Once int_ex_gs))
+       (generic_tf_st_for (int_dom_ops Refine_Once) int_ex_gs) (generic_enter_st_for (int_dom_ops Refine_Once) int_ex_gs))
      gExI (Lifted cinit_int_dom_st) (Lifted cinit_int_dom_st)"
 
 lemma dgExI_once_result:

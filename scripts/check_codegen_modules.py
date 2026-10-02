@@ -29,7 +29,7 @@ import sys
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
-GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_CLI.ml"
+GENERATED = REPO / "codegen" / "generated" / "ml" / "Voblint_Generated.ml"
 EXPORT_SOURCE = (
     REPO / "src" / "Executable_Surface" / "Codegen" / "Export" / "Voblint_Codegen.thy"
 )

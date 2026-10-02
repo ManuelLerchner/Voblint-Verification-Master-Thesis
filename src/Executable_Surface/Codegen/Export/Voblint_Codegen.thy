@@ -1,6 +1,6 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.Analysis_Run"
+    "Voblint_CLI.Analysis_Render"
     "Voblint_CLI.Trace_Run"
 begin
 
@@ -27,8 +27,9 @@ text \<open>
 
   So trimming a root narrows what a client can name and match on, while leaving the
   emitted code the same size. A supported external surface --- one that could rename a
-  constructor, or hide a representation behind an eliminator --- still belongs in a
-  hand-written OCaml facade over this module rather than in the shape of this list.
+  constructor, or hide a representation behind an eliminator --- belongs in the
+  handwritten OCaml facade \<^verbatim>\<open>cli/voblint.ml\<close> rather than in the shape of this
+  list.
 \<close>
 
 text \<open>
@@ -36,9 +37,10 @@ text \<open>
   \<open>cli/\<close>, \<open>codegen/regression/ocaml/\<close> and \<open>tests/property/\<close> actually calls. Everything else
   in the emitted module is serializer-reachable implementation detail, still present and
   still callable --- the signature narrows with the root list, the code does not. So the
-  intent recorded here is not enforced: the generated module \<^emph>\<open>is\<close> the API, with no
-  handwritten re-export layer in between that could reinterpret a constructor or a
-  conversion.
+  intent recorded here is not enforced. Handwritten OCaml names the export through the
+  facade \<^verbatim>\<open>cli/voblint.ml\<close> (module \<open>Voblint\<close>), which re-exports this module's
+  signature unchanged: the root list still decides what the facade can expose, and the
+  facade is the one place a later, narrower surface would be stated.
 
   Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the
   activation list and well-formedness and runs the requested analyses, update rule and
@@ -71,8 +73,8 @@ text \<open>
 
   So the generated internals are monolithic, and this says so directly instead of
   arriving there by remapping every contributing theory onto one name by hand. Modularity,
-  if wanted, belongs in a handwritten OCaml facade over \<open>Generated\<close> --- a layer this
-  project does not currently have.
+  if wanted, belongs in the handwritten facade over \<open>Generated\<close>,
+  \<^verbatim>\<open>cli/voblint.ml\<close>, which today includes it whole.
 
   Two further modules are emitted regardless: \<open>Bit_Shifts\<close> and \<open>Str_Literal\<close> are HOL's
   own runtime support, injected as literal target code rather than generated from
@@ -86,12 +88,14 @@ text \<open>
   \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
-  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s two cases, which a caller must tell apart,
-    and the readers of a successful one: contexts, states, routes, checks, globals and
+  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
+    projection \<^const>\<open>render_report\<close> that turns an analysed report into displayable
+    data, and the readers of that data: contexts, states, routes, checks, globals and
     diagnostics. The records reach OCaml abstract, readable only through their
     selectors, so a field added later cannot break a consumer that matched on field
-    order. \<^const>\<open>map_analysis_answer\<close> is the one rewrite of an answer: the CLI
-    applies it to decode the ASCII symbol tokens in every rendered value.
+    order. A caller maps \<^const>\<open>render_report\<close> over the answer with
+    \<^const>\<open>map_analysis_answer\<close>, passing the value printer it wants: the CLI composes
+    \<^const>\<open>string_of_abstract_value\<close> with its decoding of ASCII symbol tokens.
 
   \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which rule merges
     side-effected globals, which context policy. A caller constructs these, so their
@@ -116,8 +120,10 @@ export_code
   \<comment> \<open>Run\<close>
   run_voblint
 
-  \<comment> \<open>Result: answers, contexts, states, routes, checks, globals, diagnostics\<close>
-  Invalid_Activation Malformed_Program Analysed map_analysis_answer
+  \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
+     diagnostics\<close>
+  Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
+  render_report
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics state_steps
@@ -131,8 +137,9 @@ export_code
   Bot Lifted
   cfg_entry cfg_node_list
 
-  \<comment> \<open>Ask: domain, global update rule, context\<close>
-  Sign_Analysis Interval_Analysis Int_Analysis Int_Once_Analysis Int_Never_Analysis
+  \<comment> \<open>Ask: configuration of domains, global update rule, context\<close>
+  Analysis_Config
+  Sign_Analysis Interval_Analysis Int_Analysis Refine_Fixpoint Refine_Once Refine_Never
   Parity_Analysis Congruence_Analysis Order_Analysis
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin Globals_Bounded_Narrowing
   Ctx_None Ctx_EntryState Ctx_CallString
@@ -160,6 +167,6 @@ export_code
   Ev_Stable_Remove
   Ev_Route Trace_Printers string_of_abstract_value Inl Inr
 
-  in OCaml module_name Generated file_prefix "Voblint_CLI"
+  in OCaml module_name Generated file_prefix "Voblint_Generated"
 
 end

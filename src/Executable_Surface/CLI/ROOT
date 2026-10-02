@@ -22,7 +22,9 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     MCP_Carrier
     MCP_Analyses
     Analysis_Run
+    Analysis_Render
     Analysis_Run_Sound
     Analysis_Run_Ctx_Sound
+    Analysis_Report
     Analysis_Certified
     Trace_Run

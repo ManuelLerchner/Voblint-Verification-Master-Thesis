@@ -214,4 +214,22 @@ declare TD_side_rule_Interp.solve_rec_c.simps [code del]
 declare TD_side_rule_Interp.solve_code_equation [code del]
 declare solve_rec_c_traced [code] solve_traced [code]
 
+text \<open>
+  The same events around the executable solver, for a caller that reads its answer
+  directly. It is \<open>solve_c\<close> in the logic; a traced code equation of that caller
+  names it in place of \<open>solve_c\<close>.
+\<close>
+
+definition solve_c_traced ::
+    "globals_rule \<Rightarrow> ('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT \<Rightarrow> 'x
+       \<Rightarrow> ('x set \<times> ('x + 'g \<Rightarrow> 'd)) option" where
+  "solve_c_traced r T x =
+    (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Start x :: ('x, 'g, 'd) solver_event)) in
+     let res = TD_side_rule_Interp_solve_c r T x in
+     let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Stop :: ('x, 'g, 'd) solver_event)) in
+     res)"
+
+lemma solve_c_traced_eq: "solve_c_traced r T x = TD_side_rule_Interp_solve_c r T x"
+  by (simp add: solve_c_traced_def trace_event_def)
+
 end

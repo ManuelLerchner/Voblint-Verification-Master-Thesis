@@ -7,7 +7,7 @@
    the trace as compact text, Goblint-style verbose text, or JSON Lines. It
    reads a finished run only: nothing here changes a result. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module H = Solver_trace_hook
 module A = Result_text
 

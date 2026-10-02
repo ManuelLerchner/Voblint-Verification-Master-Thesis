@@ -4,6 +4,10 @@ begin
 
 unbundle default_st_syntax
 
+text \<open>A lifted state reads back pointwise under the lift.\<close>
+
+adhoc_overloading readback == "\<lambda>\<G>. map_lift (default_st_to_fun \<G>)"
+
 section \<open>Executable dead-code detection\<close>
 
 text \<open>
@@ -286,6 +290,12 @@ lemma default_st_is_bot_for_gamma_iff:
   by (simp add: default_st_is_bot_for_iff[OF globals] default_st_gamma_def
       is_empty_state_iff_gamma_state_empty)
 
+lemma exact_emptiness_default_st_is_bot_for:
+  assumes globals: "\<And>x. \<G> x = (x \<in> set globals)"
+  shows "exact_emptiness (default_st_is_bot_for globals)
+           (default_st_gamma \<G> :: 'a::numeric_domain default_st \<Rightarrow> store set)"
+  by (rule exact_emptinessI) (rule default_st_is_bot_for_gamma_iff[OF globals])
+
 subsection \<open>The stores a lifted carrier state describes\<close>
 
 text \<open>
@@ -316,11 +326,11 @@ where
 
 lemma live_default_stD:
   assumes "live_default_st \<G> s"
-  shows "~ is_empty (default_st_to_fun \<G> s x)"
+  shows "~ is_empty (\<rho>\<^bsub>\<G>\<^esub> s x)"
   using assms unfolding live_default_st_def is_empty_state_def by blast
 
 text \<open>
-  \<open>is_empty_state\<close> on \<open>default_st_to_fun \<G> s\<close> is an infinite existential over
+  \<open>is_empty_state\<close> on \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close> is an infinite existential over
   \<open>vname\<close>, not executable on a quotient value.  \<open>default_st_set_lift\<close> tracks it
   incrementally instead: given a @{const live_default_st} input and the single
   freshly computed element, the result is witness-bottom iff that element is
@@ -358,13 +368,13 @@ text \<open>
 lemma default_st_set_lift_correct:
   fixes s :: "'a::executable_domain default_st"
   assumes live: "live_default_st \<G> s"
-  shows "map_lift (default_st_to_fun \<G>)
+  shows "map_lift \<rho>\<^bsub>\<G>\<^esub>
            (default_st_set_lift (Lifted s) (location_of \<G> x) a) =
-         normalize_lift is_empty_state ((default_st_to_fun \<G> s)(x := a))"
+         normalize_lift is_empty_state ((\<rho>\<^bsub>\<G>\<^esub> s)(x := a))"
 proof -
   from live have live': "\<not> is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
     unfolding live_default_st_def by simp
-  have upd: "is_empty_state ((default_st_to_fun \<G> s)(x := a)) = is_empty a"
+  have upd: "is_empty_state ((\<rho>\<^bsub>\<G>\<^esub> s)(x := a)) = is_empty a"
     by (rule is_empty_state_fun_upd_iff[OF live'])
   show ?thesis
     by (cases "is_empty a")

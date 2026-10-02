@@ -28,7 +28,7 @@ let position_of (lexbuf : Lexing.lexbuf) : int * int =
    A definition whose two lists disagree in length contributes nothing rather
    than a shifted map: every position after the mismatch would be attributed to
    the wrong command, and a wrong line is worse than a missing one. *)
-let stmt_positions (prog : unit Voblint_CLI.Generated.imp_prog_ext) :
+let stmt_positions (prog : unit Voblint.imp_prog_ext) :
     (int * (int * int * int * int)) list =
   let recorded =
     List.map
@@ -36,8 +36,7 @@ let stmt_positions (prog : unit Voblint_CLI.Generated.imp_prog_ext) :
       (Vimp_positions.definitions ())
   in
   let index_of = function
-    | Voblint_CLI.Generated.Statement k ->
-        Some (Z.to_int (Voblint_CLI.Generated.integer_of_nat k))
+    | Voblint.Statement k -> Some (Z.to_int (Voblint.integer_of_nat k))
     | _ -> None
   in
   List.concat_map
@@ -59,7 +58,7 @@ let stmt_positions (prog : unit Voblint_CLI.Generated.imp_prog_ext) :
                  | None -> [])
                nodes ps)
       | _ -> [])
-    (Voblint_CLI.Generated.prog_stmt_post_order prog)
+    (Voblint.prog_stmt_post_order prog)
 
 (* Each procedure's header span, by name, for the browser's parameter hints. *)
 let header_positions () : (string * (int * int * int * int)) list =
@@ -70,7 +69,7 @@ let header_positions () : (string * (int * int * int * int)) list =
     (Vimp_positions.definitions ())
 
 let program (file : string) (src : string) :
-    unit Voblint_CLI.Generated.imp_prog_ext
+    unit Voblint.imp_prog_ext
     * (int * (int * int * int * int)) list
     * (string * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in

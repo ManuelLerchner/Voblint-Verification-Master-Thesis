@@ -79,16 +79,19 @@ where
      s\<langle>location_of \<G> x\<rangle>"
 
 text \<open>
-  The function a state represents is written \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close>.
+  The function a state represents is its \<^const>\<open>readback\<close>, written
+  \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close>; a lifted state reads back pointwise under the lift.
   The notation joins the carrier notation in the opt-in bundle
   \<open>default_st_syntax\<close>: vendored theories bind \<open>\<rho>\<close> as a
   variable, so it must never be global.
 \<close>
 
+adhoc_overloading readback == default_st_to_fun
+
 bundle default_st_syntax
 begin
 unbundle default_st_carrier_syntax
-notation default_st_to_fun ("\<rho>\<^bsub>_\<^esub>")
+notation readback ("\<rho>\<^bsub>_\<^esub>")
 end
 
 unbundle default_st_syntax

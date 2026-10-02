@@ -1,4 +1,4 @@
-(* Regression driver for the generated Voblint_CLI OCaml module.
+(* Regression driver for the generated Voblint_Generated OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
    (never touching Isabelle), runs it through the exported `run_voblint`
    entry point for every domain, and checks the result against the values
@@ -10,10 +10,10 @@
    This reads the same generated module the CLI itself links against; the
    CFG-inspection constants below are export roots for this driver alone.
 
-   Do not hand-edit codegen/generated/ml/Voblint_CLI.ml; regenerate it with
+   Do not hand-edit codegen/generated/ml/Voblint_Generated.ml; regenerate it with
    `pixi run codegen` instead. *)
 
-open Voblint_CLI.Generated
+open Voblint_Generated.Generated
 
 (* `HOL-Library.Code_Target_Numeral` (imported by Analyse_Dispatch)
    backs Isabelle's `int`/`nat` by the target language's native
@@ -34,9 +34,9 @@ let unlabelled = (mk_nat 0, mk_nat 0)
 let domain_label = function
   | Sign_Analysis -> "Sign_Analysis"
   | Interval_Analysis -> "Interval_Analysis"
-  | Int_Analysis -> "Int_Analysis"
-  | Int_Once_Analysis -> "Int_Once_Analysis"
-  | Int_Never_Analysis -> "Int_Never_Analysis"
+  | Int_Analysis Refine_Fixpoint -> "Int_Analysis"
+  | Int_Analysis Refine_Once -> "Int_Once_Analysis"
+  | Int_Analysis Refine_Never -> "Int_Never_Analysis"
   | Parity_Analysis -> "Parity_Analysis"
   | Congruence_Analysis -> "Congruence_Analysis"
   | Order_Analysis -> "Order_Analysis"
@@ -206,13 +206,23 @@ let rec show_exp_compact = function
    well-formed, so `Malformed_Program` is a defect in the export rather than a
    failed expectation. *)
 let report domain prog =
-  match run_voblint [ domain ] Globals_Warrow Ctx_None prog with
+  match
+    map_analysis_answer
+      (render_report string_of_abstract_value)
+      (run_voblint
+         (Analysis_Config ([ domain ], Globals_Warrow, Ctx_None))
+         prog)
+  with
   | Invalid_Activation ->
       print_endline ("FAIL " ^ domain_label domain ^ ": invalid activation list");
       exit 1
   | Malformed_Program ->
       print_endline
         ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
+      exit 1
+  | No_Answer ->
+      print_endline
+        ("FAIL " ^ domain_label domain ^ ": the solver returned no answer");
       exit 1
   | Analysed res ->
       List.map

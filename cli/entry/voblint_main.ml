@@ -5,17 +5,21 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint_CLI.Generated.run_voblint domains globals context
-          (Isabelle-generated). One call checks the program is well-formed and
-          runs the analyses the activation list, global update rule and context name;
-          every combination is answered. What comes back is data -- states per point and
-          context, the routes calls take, the check column, diagnostics -- with
-          every abstract value already rendered by its own domain. Every
-          rendering below (text report, graph, snapshot, HTML) is built from that
-          one result, so none can draw from a different solve than another.
-       -> proved analysis results, subject to the Isabelle theorem
-          assumptions (solver termination and check reachability -- see
-          Analysis_Certified.thy)
+       -> Voblint.run_voblint (Analysis_Config (domains, globals, context))
+          (Isabelle-generated). One call checks the activation and the program and
+          runs the analyses the activation list, global update rule and context
+          name. Every well-formed combination is answered. What comes back is a
+          semantic analysis_report: states as abstract values per point and
+          context, the routes calls take, the check column and diagnostics.
+       -> Voblint.render_report (Isabelle-generated, outside the
+          theorems) with the CLI's value printer (Value_symbols): the displayed
+          run_result. Every rendering below (text report, graph, snapshot, HTML)
+          is built from that one result, so none can draw from a different solve
+          than another.
+       -> the theorems in Analysis_Certified.thy hold for every Analysed answer
+          with no termination premise: where the solve does not return, no
+          answer exists and nothing is claimed. A PROVED verdict does not
+          assert that its point is reachable.
 
    Trust boundary: soundness applies to the imp_prog the parser produces, not
    to the claim that this imp_prog faithfully represents the text file the
@@ -23,7 +27,9 @@
    frontend is unverified -- parsing was never in the soundness scope of
    either project. A parser bug can change *which* program gets analyzed; it
    cannot invalidate the analyzer's soundness theorem for the AST actually
-   produced. See docs/CLI_DESIGN.md. *)
+   produced. The value printers, render_report, Isabelle code generation and
+   the OCaml toolchain are trusted as well. See docs/CLI_DESIGN.md and
+   docs/RUN_VOBLINT_INTERFACE.md. *)
 
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
@@ -110,6 +116,8 @@ let usage =
    build/report 8080\n\
   \  --html-out DIR             Write that directory to DIR instead. Implies\n\
   \                             --html.\n\
+  \  --json                     Print the result as the browser adapter receives\n\
+  \                             it (analysis time reported as 0).\n\
   \  --graph-snapshot           Emit a deterministic, DOT-free textual snapshot\n\
   \                             of the solved CFG (clusters/nodes/edges), for\n\
   \                             embedding as a regression fixture's expected\n\
@@ -157,7 +165,7 @@ let usage =
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
   \  machine-checked Isabelle/HOL proof."
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 module A = Result_text
 
 let print_diagnostics path analysis positions diagnostics =
@@ -397,29 +405,20 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           in
           wait_loop 0.0005)
 
-(* --context/--context-depth are two independent flags that can arrive in
-   either order, but Ctx_CallString needs the depth at construction time --
-   so parsing collects an intermediate tag + optional depth, and the final
-   immutable context_mode value is assembled once, after parse_args returns,
-   from both together. *)
-type context_kind = CK_None | CK_EntryState | CK_CallString
-
-(* The default of Goblint's solvers.td3.narrow-globs.narrow-gas option. The
-   vendored rule counts differently: 0 still allows the one narrowing step of
-   each switch. *)
-let default_narrow_bound = 5
-
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
   let analysis_names = ref None in
   let int_refinement = ref None in
-  let context_kind = ref CK_None in
+  (* --context and --context-depth can arrive in either order, but a call
+     string needs its depth at construction time, so the policy is assembled
+     once every flag is read. *)
+  let context_name = ref "none" in
   let context_depth = ref None in
-  let globals = ref Voblint_CLI.Generated.Globals_Warrow in
   let narrow_bound = ref None in
   let dot = ref false in
   let graph_snapshot = ref false in
+  let json = ref false in
   let html = ref false in
   (* Generated report output stays under build/; --html-out is the override.
      Taking no argument keeps `--html FILE.vimp` from reading the program as
@@ -444,25 +443,10 @@ let () =
         analysis_names := Some (String.split_on_char ',' v);
         parse_args rest
     | "--int-refinement" :: v :: rest ->
-        (match v with
-        | "never" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Never_Analysis
-        | "once" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Once_Analysis
-        | "fixpoint" ->
-            int_refinement := Some Voblint_CLI.Generated.Int_Analysis
-        | _ ->
-            prerr_endline ("unknown --int-refinement value: " ^ v);
-            exit 1);
+        int_refinement := Some v;
         parse_args rest
     | "--context" :: v :: rest ->
-        (match v with
-        | "none" -> context_kind := CK_None
-        | "entry-state" -> context_kind := CK_EntryState
-        | "call-string" -> context_kind := CK_CallString
-        | _ ->
-            prerr_endline ("unknown --context value: " ^ v);
-            exit 1);
+        context_name := v;
         parse_args rest
     | "--context-depth" :: v :: rest ->
         (try context_depth := Some (int_of_string v)
@@ -472,18 +456,6 @@ let () =
         parse_args rest
     | "--globals" :: v :: rest ->
         globals_name := v;
-        (match v with
-        | "join" -> globals := Voblint_CLI.Generated.Globals_Join
-        | "per-origin" -> globals := Voblint_CLI.Generated.Globals_Per_Origin
-        | "warrow" -> globals := Voblint_CLI.Generated.Globals_Warrow
-        | "warrow-per-origin" ->
-            globals := Voblint_CLI.Generated.Globals_Warrow_Per_Origin
-        (* The bound is filled in once every flag is read, so --narrow-bound
-           may come before or after --globals. *)
-        | "bounded-narrowing" -> ()
-        | _ ->
-            prerr_endline ("unknown --globals value: " ^ v);
-            exit 1);
         parse_args rest
     | "--narrow-bound" :: v :: rest ->
         (try narrow_bound := Some (int_of_string v)
@@ -496,6 +468,9 @@ let () =
         parse_args rest
     | "--graph-snapshot" :: rest ->
         graph_snapshot := true;
+        parse_args rest
+    | "--json" :: rest ->
+        json := true;
         parse_args rest
     | "--html" :: rest ->
         html := true;
@@ -566,67 +541,53 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
-  (* The refinement mode belongs to int, so it is resolved after every flag is
-     read and rejected when no int analysis is named. Each mode is an analysis
-     of its own in the generated carrier; all of them are int to the user. *)
-  let analyses =
-    let kind_of name =
-      match name with
-      | "sign" -> Voblint_CLI.Generated.Sign_Analysis
-      | "interval" -> Voblint_CLI.Generated.Interval_Analysis
-      | "int" ->
-          Option.value !int_refinement
-            ~default:Voblint_CLI.Generated.Int_Analysis
-      | "parity" -> Voblint_CLI.Generated.Parity_Analysis
-      | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
-      | "order" -> Voblint_CLI.Generated.Order_Analysis
-      | _ ->
-          prerr_endline ("unknown --analysis value: " ^ name);
-          exit 1
-    in
-    Option.map (List.map kind_of) !analysis_names
+  (* Every flag is read before any is checked: --context-depth, --narrow-bound
+     and --int-refinement are each judged against another flag that may come
+     later. The checks themselves are shared with the browser entry. *)
+  let request : Analysis_request.request =
+    {
+      analyses = !analysis_names;
+      refinement = !int_refinement;
+      globals = !globals_name;
+      narrow_bound = !narrow_bound;
+      context = !context_name;
+      depth = !context_depth;
+    }
   in
-  (match (!int_refinement, !analysis_names) with
-  | Some _, names when not (List.mem "int" (Option.value names ~default:[])) ->
-      prerr_endline
-        "voblint: --int-refinement is only valid with --analysis int";
-      exit 1
-  | _ -> ());
-  (match (!globals_name, !narrow_bound) with
-  | "bounded-narrowing", Some n when n < 0 ->
-      prerr_endline "voblint: --narrow-bound must not be negative";
-      exit 1
-  | "bounded-narrowing", n ->
-      globals :=
-        Voblint_CLI.Generated.Globals_Bounded_Narrowing
-          (Voblint_CLI.Generated.nat_of_integer
-             (Z.of_int (Option.value n ~default:default_narrow_bound)))
-  | _, Some _ ->
-      prerr_endline
-        "voblint: --narrow-bound is only valid with --globals bounded-narrowing";
-      exit 1
-  | _, None -> ());
-  (* --context-depth is only meaningful paired with --context call-string, so
-     a mismatch between the two flags is rejected here. *)
-  let context =
-    match (!context_kind, !context_depth) with
-    | CK_None, None -> Voblint_CLI.Generated.Ctx_None
-    | CK_EntryState, None -> Voblint_CLI.Generated.Ctx_EntryState
-    | CK_CallString, Some k when k < 0 ->
-        prerr_endline "voblint: --context-depth must not be negative";
-        exit 1
-    | CK_CallString, Some k ->
-        Voblint_CLI.Generated.Ctx_CallString
-          (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
-    | CK_CallString, None ->
-        prerr_endline
-          "voblint: --context call-string requires --context-depth K";
-        exit 1
-    | (CK_None | CK_EntryState), Some _ ->
-        prerr_endline
-          "voblint: --context-depth is only valid with --context call-string";
-        exit 1
+  let fail message =
+    prerr_endline message;
+    exit 1
   in
+  let { Analysis_request.domains = analyses; rule; mode = context } =
+    match Analysis_request.resolve request with
+    | Ok resolved -> resolved
+    | Error (Analysis_request.Unknown_refinement v) ->
+        fail ("unknown --int-refinement value: " ^ v)
+    | Error (Analysis_request.Unknown_context_name v) ->
+        fail ("unknown --context value: " ^ v)
+    | Error (Analysis_request.Unknown_globals v) ->
+        fail ("unknown --globals value: " ^ v)
+    | Error (Analysis_request.Unknown_analysis v) ->
+        fail ("unknown --analysis value: " ^ v)
+    | Error Analysis_request.Refinement_without_int ->
+        fail "voblint: --int-refinement is only valid with --analysis int"
+    | Error Analysis_request.Negative_narrow_bound ->
+        fail "voblint: --narrow-bound must not be negative"
+    | Error Analysis_request.Narrow_bound_without_rule ->
+        fail
+          "voblint: --narrow-bound is only valid with --globals \
+           bounded-narrowing"
+    | Error (Analysis_request.Context Analysis_request.Negative_depth) ->
+        fail "voblint: --context-depth must not be negative"
+    | Error (Analysis_request.Context Analysis_request.Missing_depth) ->
+        fail "voblint: --context call-string requires --context-depth K"
+    | Error
+        (Analysis_request.Context
+           (Analysis_request.Unexpected_depth | Analysis_request.Unknown_context))
+      ->
+        fail "voblint: --context-depth is only valid with --context call-string"
+  in
+  let globals = ref rule in
   let path =
     match !file with
     | Some p -> p
@@ -646,7 +607,7 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, stmt_positions, _ =
+  let prog, stmt_positions, header_positions =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
@@ -669,6 +630,23 @@ let () =
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
      combination to silently resolve. *)
+  if !json then begin
+    let answer =
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
+    in
+    let raw =
+      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
+        answer
+    in
+    (match answer with
+    | C.Analysed result ->
+        print_endline
+          (Render_json.result_json 0. prog ~stmt_positions ~header_positions
+             ~raw result)
+    | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
+        print_endline raw);
+    exit 0
+  end;
   if !html && (!dot || !graph_snapshot) then begin
     prerr_endline
       "voblint: --html cannot be combined with --dot/--graph-snapshot";
@@ -696,10 +674,11 @@ let () =
   in
   let solve () =
     match
-      Value_symbols.decode_answer (C.run_voblint domains !globals context prog)
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
     with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
+    | C.No_Answer -> failwith "voblint: the solver returned no answer"
     | C.Analysed result ->
         if !trace then emit_trace result;
         if !html || !dot || !graph_snapshot then

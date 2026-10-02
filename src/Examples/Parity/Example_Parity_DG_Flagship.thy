@@ -8,8 +8,8 @@ text \<open>
   post-solution transport lemmas.  A VIMP program is compiled to a CFG; the generic
   D/G framework generates the equation system; the \<^emph>\<open>verified\<close> always-join solver
   \<^emph>\<open>computes\<close> a parity solution inside Isabelle (the lattice is finite, so no
-  widening is needed); and the assembly's \<open>source_sound\<close> endpoint lifts that result
-  to actual source runs.
+  widening is needed); and the assembly's source-level soundness theorem lifts that
+  result to actual source runs.
 
   The result is informative: the analysis \<^emph>\<open>discovers\<close> that \<open>x\<close> is even at
   every program point (\<open>x = 0\<close> initially, then \<open>x := x + 2\<close> preserves parity),

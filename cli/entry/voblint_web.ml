@@ -51,7 +51,7 @@
 *)
 
 open Js_of_ocaml
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 (* -------------------------------------------------------------------------- *)
 (* Timing                                                                     *)
@@ -67,69 +67,65 @@ let now_ms () : float =
 (* Configuration                                                              *)
 (* -------------------------------------------------------------------------- *)
 
-(* Each refinement mode is an analysis of its own in the generated carrier. *)
-let int_analysis_of_string = function
-  | "never" -> Some C.Int_Never_Analysis
-  | "once" -> Some C.Int_Once_Analysis
-  | "fixpoint" -> Some C.Int_Analysis
-  | _ -> None
-
-let domain_of_string int_analysis = function
-  | "sign" -> Some C.Sign_Analysis
-  | "interval" -> Some C.Interval_Analysis
-  | "int" -> Some int_analysis
-  | "parity" -> Some C.Parity_Analysis
-  | "congruence" -> Some C.Congruence_Analysis
-  | "order" -> Some C.Order_Analysis
-  | _ -> None
-
-let bounded_narrowing n =
-  Some (C.Globals_Bounded_Narrowing (C.nat_of_integer (Z.of_int n)))
-
-let globals_of_string = function
-  | "join" -> Some C.Globals_Join
-  | "per-origin" -> Some C.Globals_Per_Origin
-  | "warrow" -> Some C.Globals_Warrow
-  | "warrow-per-origin" -> Some C.Globals_Warrow_Per_Origin
-  | "bounded-narrowing" -> bounded_narrowing 5
-  | s -> (
-      match String.split_on_char ':' s with
-      | [ "bounded-narrowing"; n ] -> (
-          match int_of_string_opt n with
-          | Some n when n >= 0 -> bounded_narrowing n
-          | _ -> None)
-      | _ -> None)
+(* The page names a bounded-narrowing rule with its bound, as
+   "bounded-narrowing:N"; without one the rule takes the CLI's default. *)
+let split_globals s =
+  match String.split_on_char ':' s with
+  | [ "bounded-narrowing"; n ] -> (
+      match int_of_string_opt n with
+      | Some n -> Ok ("bounded-narrowing", Some n)
+      | None -> Error ("Unknown globals rule: " ^ s))
+  | _ -> Ok (s, None)
 
 (* The depth arrives as a JavaScript number. Only one that fits a Wasm OCaml
    int would arrive as an int; reading it as a number first turns a fraction
    or a huge value into an error message instead of a trap. *)
-let context_of_string mode (depth : Js.number_t) =
+let depth_of mode (depth : Js.number_t) =
   let depth = Js.to_float depth in
-  match mode with
-  | "none" -> Ok C.Ctx_None
-  | "entry-state" -> Ok C.Ctx_EntryState
-  | "call-string"
-    when Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int
-    ->
-      Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_float depth)))
-  | "call-string" -> Error "Call-string depth must be a non-negative integer"
-  | _ -> Error ("Unknown context mode: " ^ mode)
+  if mode <> "call-string" then Ok None
+  else if Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int
+  then Ok (Some (int_of_float depth))
+  else Error "Call-string depth must be a non-negative integer"
+
+(* The page always sends a refinement; it is a request for int only when int
+   is selected. A comma list is kept exactly as given, and no names at all is
+   the empty list: run_voblint alone decides whether it is a valid
+   activation. The checks are the CLI's, in [Analysis_request.resolve]. *)
+let resolve ~analyses ~refinement ~globals ~context ~depth =
+  let names = if analyses = "" then [] else String.split_on_char ',' analyses in
+  let ( let* ) = Result.bind in
+  let* globals_rule, narrow_bound = split_globals globals in
+  let* depth = depth_of context depth in
+  let request : Analysis_request.request =
+    {
+      analyses = Some names;
+      refinement = (if List.mem "int" names then Some refinement else None);
+      globals = globals_rule;
+      narrow_bound;
+      context;
+      depth;
+    }
+  in
+  match Analysis_request.resolve request with
+  | Ok { domains; rule; mode } ->
+      Ok (Option.value domains ~default:[], rule, mode)
+  | Error (Analysis_request.Unknown_refinement name) ->
+      Error ("Unknown int refinement: " ^ name)
+  | Error (Analysis_request.Unknown_analysis name) ->
+      Error ("Unknown analysis domain: " ^ name)
+  | Error
+      ( Analysis_request.Unknown_globals _
+      | Analysis_request.Negative_narrow_bound
+      | Analysis_request.Narrow_bound_without_rule ) ->
+      Error ("Unknown globals rule: " ^ globals)
+  | Error
+      ( Analysis_request.Unknown_context_name _ | Analysis_request.Context _
+      | Analysis_request.Refinement_without_int ) ->
+      Error ("Unknown context mode: " ^ context)
 
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
 (* -------------------------------------------------------------------------- *)
-
-(* A comma list, kept exactly as given, and no names at all as the empty list:
-   run_voblint alone decides whether it is a valid activation. *)
-let domains_of_string int_analysis names =
-  List.fold_right
-    (fun name acc ->
-      match (domain_of_string int_analysis name, acc) with
-      | Some d, Ok ds -> Ok (d :: ds)
-      | None, _ -> Error ("Unknown analysis domain: " ^ name)
-      | _, (Error _ as e) -> e)
-    (if names = "" then [] else String.split_on_char ',' names)
-    (Ok [])
 
 (* None is tracing off; otherwise the format and whether text is verbose.
    "all" is the verbose text plus JSON Lines of the same recording, for a page
@@ -242,69 +238,62 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
   let answer =
     match
       ( trace,
-        int_analysis_of_string refinement_name,
-        globals_of_string globals_name,
-        context_of_string context_name context_depth )
+        resolve ~analyses:analysis_name ~refinement:refinement_name
+          ~globals:globals_name ~context:context_name ~depth:context_depth )
     with
-    | Error message, _, _, _ -> Render_json.error_json message
-    | _, None, _, _ ->
-        Render_json.error_json ("Unknown int refinement: " ^ refinement_name)
-    | _, _, None, _ ->
-        Render_json.error_json ("Unknown globals rule: " ^ globals_name)
-    | _, _, _, Error message -> Render_json.error_json message
-    | Ok trace, Some int_analysis, Some globals, Ok context -> (
-        match domains_of_string int_analysis analysis_name with
-        | Error message -> Render_json.error_json message
-        | Ok domains -> (
-            try
-              let program, stmt_positions, header_positions =
-                Vimp_frontend.program "browser.vimp" source
-              in
-              (* The call as run_voblint receives it, for a page that cancels the run
+    | Error message, _ | _, Error message -> Render_json.error_json message
+    | Ok trace, Ok (domains, globals, context) -> (
+        try
+          let program, stmt_positions, header_positions =
+            Vimp_frontend.program "browser.vimp" source
+          in
+          (* The call as run_voblint receives it, for a page that cancels the run
                  before an answer exists. *)
-              post "Voblint_run_input"
-                (Render_json.run_voblint_input_json ~domains ~globals
-                   ~ctx:context program);
-              if trace = Some (Solver_trace.Text, true) then
-                stream_live ~source:(source, stmt_positions) ~domains
-                  ~globals:globals_name ~context;
-              let analysis_start = now_ms () in
-              let answer =
-                Fun.protect ~finally:stop_live (fun () ->
-                    Value_symbols.decode_answer
-                      (C.run_voblint domains globals context program))
+          post "Voblint_run_input"
+            (Render_json.run_voblint_input_json ~domains ~globals ~ctx:context
+               program);
+          if trace = Some (Solver_trace.Text, true) then
+            stream_live ~source:(source, stmt_positions) ~domains
+              ~globals:globals_name ~context;
+          let analysis_start = now_ms () in
+          let answer =
+            Fun.protect ~finally:stop_live (fun () ->
+                Analysis_request.analyse ~analyses:domains ~globals ~context
+                  program)
+          in
+          let analysis_ms = now_ms () -. analysis_start in
+          let raw =
+            Render_json.run_voblint_json ~domains ~globals ~ctx:context program
+              answer
+          in
+          match answer with
+          | C.Invalid_Activation ->
+              Render_json.error_json ~raw
+                "Select at least one analysis, each at most once"
+          | C.No_Answer ->
+              Render_json.error_json ~raw "The solver returned no answer"
+          | C.Malformed_Program ->
+              let message =
+                match Wf_explain.explain program with
+                | Some reason -> "Program is not well-formed: " ^ reason
+                | None -> "Program is not well-formed"
               in
-              let analysis_ms = now_ms () -. analysis_start in
-              let raw =
-                Render_json.run_voblint_json ~domains ~globals ~ctx:context
-                  program answer
+              Render_json.error_json ~raw message
+          | C.Analysed result ->
+              let recorded = Solver_trace_hook.recorded () in
+              let render form =
+                trace_text ~recorded form ~source:(source, stmt_positions)
+                  ~domains ~globals:globals_name ~context result
               in
-              match answer with
-              | C.Invalid_Activation ->
-                  Render_json.error_json ~raw
-                    "Select at least one analysis, each at most once"
-              | C.Malformed_Program ->
-                  let message =
-                    match Wf_explain.explain program with
-                    | Some reason -> "Program is not well-formed: " ^ reason
-                    | None -> "Program is not well-formed"
-                  in
-                  Render_json.error_json ~raw message
-              | C.Analysed result ->
-                  let recorded = Solver_trace_hook.recorded () in
-                  let render form =
-                    trace_text ~recorded form ~source:(source, stmt_positions)
-                      ~domains ~globals:globals_name ~context result
-                  in
-                  let trace = Option.map render trace in
-                  let trace_jsonl =
-                    if with_jsonl then Some (render (Solver_trace.Jsonl, false))
-                    else None
-                  in
-                  Render_json.result_json ?trace ?trace_jsonl analysis_ms
-                    program ~stmt_positions ~header_positions ~raw result
-            with Vimp_frontend.Parse_error { line; col; msg; _ } ->
-              Render_json.parse_error_json ~line ~column:col msg))
+              let trace = Option.map render trace in
+              let trace_jsonl =
+                if with_jsonl then Some (render (Solver_trace.Jsonl, false))
+                else None
+              in
+              Render_json.result_json ?trace ?trace_jsonl analysis_ms program
+                ~stmt_positions ~header_positions ~raw result
+        with Vimp_frontend.Parse_error { line; col; msg; _ } ->
+          Render_json.parse_error_json ~line ~column:col msg)
   in
   Js.string answer
 

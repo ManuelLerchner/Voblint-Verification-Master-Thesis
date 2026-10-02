@@ -21,10 +21,10 @@ one sits in the chain.
  solved table, classified check rows           Voblint_Result, Voblint_CLI
    |  export_code ... module_name Generated    Voblint_Codegen
    v
- codegen/generated/ml/Voblint_CLI.ml
+ codegen/generated/ml/Voblint_Generated.ml
    |  hand-written OCaml, outside the proof
    v
- cli/entry/voblint.ml -> lexer/parser -> Generated.run_voblint -> render_report -> output
+ cli/entry/voblint_main.ml -> lexer/parser -> Voblint.run_voblint -> render_report -> output
 ```
 
 ## 1. Abstract transfer soundness
@@ -64,10 +64,11 @@ dictionary entry (`Default_St_Reachability.thy`).
 Every executable operation commutes with its abstract counterpart through that
 conversion. `afilter_st`, `bfilter_st` and `branch_st` with `branch_st_commute`
 are proved once for every `sound_refinement` (`Exec_Backward.thy`). The per-edge
-transfer is `generic_tf_st_for_commute` (`Nonrelational_Ops.thy`), instantiated per
-domain (`sign_tf_st_for_commute` in `Sign_Exec.thy`,
-`congruence_tf_st_for_commute` in `Congruence_Exec.thy`, `int_dom`'s three
-refinement modes as `int_tf_st_never_for_commute`/`_once_`/`_fixpoint_`, ...).
+transfer is `generic_tf_st_for_commute` (`Nonrelational_Ops.thy`), stated once for
+every bundle as `tf_st_for_commute` and `enter_st_for_commute` of
+`sound_nonrelational_ops` and read per domain off its interpretation
+(`sign_tf.tf_st_for_commute`, `congruence_tf.tf_st_for_commute`,
+`int_tf.tf_st_for_commute` at every refinement mode, ...).
 
 ## 4. Solver
 
@@ -106,14 +107,14 @@ solver layer beyond ordinary code-generation trust.
 
 ## 5. Soundness endpoints
 
-The chain ends at `run_voblint_certified_source_sound` (`Analysis_Certified.thy`):
+The chain ends at `run_voblint_source_sound` (`Analysis_Certified.thy`):
 for every activation list, global update rule and context policy, a source run's
-store lies in the analysis result at a genuinely reachable node, and every
-definite verdict listed there holds for that store.
+store lies in the report's semantics `⟦res⟧⇘v⇙` at a genuinely reachable node, and
+every definite verdict listed there holds for that store.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
-point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
-solver run completed -- and nothing proves that in general; it is established per
-program by evaluation. That the run solved enough keys is no premise:
+point is unreachable, at every configuration. The caller owes nothing about termination: `run_voblint`
+solves with the executable `solve_c`, and an analysed answer exists only where it
+returned (`solve_c_run`). Nothing proves the solve returns in general. That the run solved enough keys is no premise:
 `live_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination. The
 root `README.md` states the theorem in full.
 
@@ -121,7 +122,7 @@ root `README.md` states the theorem in full.
 
 One `export_code` declaration (`Voblint_Codegen.thy`) targets OCaml with
 `module_name Generated file_prefix "Voblint_CLI"`, landing at
-`codegen/generated/ml/Voblint_CLI.ml`. Its operation is `run_voblint`; the other
+`codegen/generated/ml/Voblint_Generated.ml`. Its operation is `run_voblint`; the other
 roots are the constructors and selectors a caller needs to build a program, ask
 for a configuration and read the answer. All five domains, the four global
 update rules and the three context modes are reachable through `run_voblint`.
@@ -144,17 +145,17 @@ about code that is not an exported constant.
 
 The lexer and parser (`cli/frontend/vimp_lexer.mll`, `cli/frontend/vimp_parser.mly`, generated
 from `manifests/vimp-grammar.yaml`) carry no soundness theorem; the proved chain starts at
-an already-constructed `imp_prog`. `cli/entry/voblint.ml` calls `Generated.run_voblint`
+an already-constructed `imp_prog`. `cli/entry/voblint_main.ml` calls `Voblint.run_voblint`
 and reads its answer through the exported selectors. A malformed program answers
 `Malformed_Program`, which the CLI reports with exit code 4.
 
 Zarith, the OCaml and `wasm_of_ocaml` toolchains and the browser are trusted the same
-way, and so is the hand-written OCaml between `Generated.run_voblint` and the output:
-`cli/entry/voblint.ml`, `cli/entry/voblint_web.ml`, `cli/render/` and `cli/result/`.
+way, and so is the hand-written OCaml between `Voblint.run_voblint` and the output:
+`cli/entry/voblint_main.ml`, `cli/entry/voblint_web.ml`, `cli/render/` and `cli/result/`.
 
 A row's verdict is a `contextual_verdict = check_result lifted`
 (`Contextual_Check_Report.thy`) computed in HOL; `Bot` is the dead marker, and
-`cli/entry/voblint.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
+`cli/entry/voblint_main.ml` only matches on it. Rendering -- text layout, the GraphViz graph,
 the snapshot and globals strings -- is presentation with no theorem about it.
 
 Each source check carries a label, `Check l e`. Execution ignores it,
@@ -177,7 +178,7 @@ post-order and `prog_stmt_post_order`, and nothing proves that pairing.
 
 Proved, for every configuration `run_voblint` answers (every domain, rule and
 context policy, `docs/THEOREM_MAP.md`):
-if `config_terminates` holds for the program, every modeled source
+if `run_voblint` answers for the program, every modeled source
 execution is over-approximated at a reachable node, and every `PROVED` or
 `REFUTED` row printed there is correct for that execution.
 

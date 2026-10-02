@@ -1,6 +1,6 @@
 theory DG_Result_Construction
   imports
-    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Solved_Table"
     "Voblint_Framework.DG_Analysis_Adapter"
     "Voblint_Framework.Routed_Call_Programs"
     "Voblint_Framework.CFG_Enumeration"
@@ -15,7 +15,7 @@ section \<open>What a solved D/G system publishes\<close>
 text \<open>
   Every analysis, at every context policy and every solver discipline, turns the
   solver's answer -- a covered key set and a map from unknowns to \<open>dg_state\<close>s over
-  its carrier -- into an \<^type>\<open>analysis_result\<close> table of the locals. This
+  its carrier -- into an \<^type>\<open>solved_table\<close> table of the locals. This
   theory states that construction once, over an arbitrary solved pair, so an
   analysis's result table is one application rather than a rewritten body.
 
@@ -24,7 +24,7 @@ text \<open>
   describes no store to \<^const>\<open>Bot\<close>, so a dead point reads as dead; the publication
   map \<open>rd\<close> then turns the carrier into the value the table publishes. Coverage is
   separate from deadness: a key the solver never visited is absent from the
-  table, and \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for it without any
+  table, and \<^const>\<open>lookup_table\<close> answers \<^const>\<open>Bot\<close> for it without any
   claim about the program.
 \<close>
 
@@ -38,13 +38,13 @@ text \<open>
 definition dg_result_for ::
     "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool)
      \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 'g) dg_state)
-     \<Rightarrow> ('c, 'v) analysis_result" where
+     \<Rightarrow> ('c, 'v) solved_table" where
   "dg_result_for rd emp sol =
-     Analysis_Result (fst sol)
+     Solved_Table (fst sol)
        (\<lambda>v ctx. map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx))))))"
 
-lemma result_unknowns_dg_result_for [simp]:
-  "result_unknowns (dg_result_for rd emp sol) = fst sol"
+lemma covered_keys_dg_result_for [simp]:
+  "covered_keys (dg_result_for rd emp sol) = fst sol"
   unfolding dg_result_for_def by simp
 
 text \<open>
@@ -52,12 +52,12 @@ text \<open>
   back the normalized local unknown, an uncovered one answers \<^const>\<open>Bot\<close>.
 \<close>
 
-lemma lookup_context_dg_result_for [simp]:
-  "lookup_context (dg_result_for rd emp sol) v ctx
+lemma lookup_table_dg_result_for [simp]:
+  "lookup_table (dg_result_for rd emp sol) v ctx
      = (if (v, ctx) \<in> fst sol
         then map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx)))))
         else Bot)"
-  unfolding dg_result_for_def lookup_context_def by simp
+  unfolding dg_result_for_def lookup_table_def by simp
 
 text \<open>
   Normalizing before publication agrees with normalizing after it whenever the
@@ -70,9 +70,9 @@ lemma map_lift_canonicalize_lift:
   shows "map_lift rd (canonicalize_lift emp d) = canonicalize_lift empty\<^sub>V (map_lift rd d)"
   by (cases d) (simp_all add: assms normalize_lift_def)
 
-lemma lookup_context_dg_result_for_projected:
+lemma lookup_table_dg_result_for_projected:
   assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
-  shows "lookup_context (dg_result_for rd emp sol) v ctx =
+  shows "lookup_table (dg_result_for rd emp sol) v ctx =
     (if (v, ctx) \<in> fst sol
      then canonicalize_lift empty\<^sub>V (map_lift rd (dg_local (snd sol (Inl (v, ctx)))))
      else Bot)"

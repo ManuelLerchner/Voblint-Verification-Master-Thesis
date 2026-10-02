@@ -157,12 +157,12 @@ describe the expectation syntax.
 
 ## What Voblint proves
 
-For every selection of analyses, globals rule and context policy, the report `run_voblint`
-returns is sound for every execution of the program: whenever an execution
-reaches a program point, the state filed for that point contains its store, and
-every `PROVED` or `REFUTED` verdict there is correct for it. The theorem is stated
-about the same `run_voblint` that is exported to OCaml and runs in the CLI and the
-playground.
+For every selection of analyses, globals rule and context policy, the report
+`run_voblint` returns is sound for every execution of the program: whenever an
+execution reaches a program point, some state the report holds there describes
+its store, and every `PROVED` or `REFUTED` verdict there is correct for it. The
+theorems are stated about the same `run_voblint` that is exported to OCaml and
+runs in the CLI and the playground.
 
 "Every execution" is made precise by an activation-trace collecting semantics.
 A [`valid_activation_trace`](src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy) trace records one
@@ -173,42 +173,47 @@ store such traces hold at each CFG node, adapting thread-modular local traces
 
 ### The headline theorem
 
-[`run_voblint_certified_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy) relates any finite source execution
-to the analysis result:
+[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy) relates any finite source execution
+to the report:
 
 ```isabelle
-theorem run_voblint_certified_source_sound:
+theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
-  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
-  shows "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)
-               ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
-                         (cinit_stores (declared_global p)) v
-               ∧ analysis_result_covers as rule ctx p v s
-               ∧ checks_sound_at res v s"
+  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
+  assumes s0: "s0 ∈ cinit_stores 𝒢"
+      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
+      and ans: "run_voblint config p = Analysed res"
+  shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
+                 ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
+                 ∧ s ∈ ⟦res⟧⇘v⇙
+                 ∧ s ∈ 𝒱⇘res⇙ v"
 ```
 
 | Premise | Meaning |
 | --- | --- |
 | `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
 | `run` | Any finite execution prefix from `main`; the program need not terminate. |
-| `terminates` | The selected solver run terminates on this program, the only analyzer-side obligation. |
-| `ans` | `run_voblint` accepted the program and returned `Analysed res`, which supplies well-formedness. |
+| `ans` | `run_voblint` accepted the configuration and the program, and its solve finished. |
+
+`→⇩p⇧*` is `psteps`, `≈` is `csim`, and `𝒞`, `⟦res⟧` and `𝒱` are `node_collect`,
+`report_sem` and `verdict_stores`; the [notation table](#notation) lists each symbol.
 
 | Conclusion | Guarantee |
 | --- | --- |
-| `csim ... (v, s, stk)` | The compiler's forward simulation relates the source state to CFG node `v`. |
-| `s ∈ node_collect ... v` | A valid activation trace reaches `v` with store `s`. |
-| `analysis_result_covers ... v s` | The abstract state filed for `v`, in an admitted context, contains `s`. |
-| `checks_sound_at res v s` | No check at `v` is `DEAD`, and every `PROVED` or `REFUTED` verdict there holds for `s`. |
+| `Π, g ⊢ … ≈ (v, s, stk)` | The compiler's forward simulation relates the source state to CFG node `v`. |
+| `s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v` | A valid activation trace reaches `v` with store `s`. |
+| `s ∈ ⟦res⟧⇘v⇙` | Some state the report holds at `v`, under one of its contexts, describes `s`. |
+| `s ∈ 𝒱⇘res⇙ v` | Every `PROVED` or `REFUTED` verdict at `v` holds for `s`. |
 
-`as` ranges over nonempty lists of distinct analyses among Sign, Interval, Parity,
-Congruence, Int and Order, run together; `rule` over the four
-globals rules; `ctx` over no contexts, entry states, and call strings of any
-length.
+`config` names a nonempty list of distinct analyses among Sign, Interval, Parity,
+Congruence, Int and Order, run together, one of the globals rules, and one
+context policy: no contexts, entry states, or call strings of any length.
+
+The last two conclusions are two inclusions: `𝒞 v ⊆ ⟦res⟧⇘v⇙`
+needs the run that built the report
+([`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy)), and
+`⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` holds for the report alone
+([`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
 
 <details>
 <summary>Why the node is existential</summary>
@@ -224,16 +229,15 @@ but entry-state routing may admit several contexts.
 
 ### Checks, dead code and arithmetic
 
-Three results in the same theory specialise the guarantee to what the report
-shows:
+Results in the same theory specialise the guarantee to what the report shows:
 
 - [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy): when an execution is about to run a check,
   the report lists a row under that check's label at a node reached with the
   current store, the row is not `DEAD`, and a definite verdict is correct.
   `run_voblint_labelled_check_sound` adds that, when no two rows share a label,
   every row carrying the label is that row.
-- [`run_voblint_dead_check_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy): no execution reaches a `DEAD`
-  check's point.
+- [`run_voblint_dead_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy): no execution reaches a `DEAD`
+  point; `run_voblint_dead_check_unreached` states it for a `DEAD` check row.
 - [`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Analysis_Certified.thy): at a reachable point with no arithmetic
   diagnostic, every divisor in the point's expressions is nonzero in every store
   that reaches it.
@@ -242,39 +246,38 @@ shows:
 <summary>Exact statements</summary>
 
 ```isabelle
-theorem run_voblint_check_sound:
-  fixes p :: imp_prog and s0 s :: store
-  assumes s0: "s0 ∈ cinit_stores (declared_global p)"
-      and run: "star (pstep (declared_global p) (prog_table p))
-                  (main_body (prog_table p), s0, []) (residual, s, frs)"
-      and chk: "next_check residual = Some (l, e)"
-      and terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
-           ∧ s ∈ node_collect (declared_global p) (prog_cfg p)
-                   (cinit_stores (declared_global p)) (check_point c)
-           ∧ check_verdict c ≠ Dead
-           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (aval e s))
-           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (aval e s))"
+theorem run_voblint_report_contract:
+  assumes "run_voblint config p = Analysed res"
+  shows "report_config res = config" "report_cfg res = prog_cfg p"
+    and "well_formed_report res" "sound_report p res"
 ```
 
 ```isabelle
-corollary run_voblint_dead_check_unreached:
-  assumes terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
-      and listed: "chk ∈ set (res_checks res)"
-      and dead: "check_verdict chk = Dead"
-  shows "node_collect (declared_global p) (prog_cfg p)
-           (cinit_stores (declared_global p)) (check_point chk) = {}"
+theorem run_voblint_check_sound:
+  fixes p :: imp_prog and s0 s :: store
+  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
+  assumes s0: "s0 ∈ cinit_stores 𝒢"
+      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
+      and chk: "next_check residual = Some (l, e)"
+      and ans: "run_voblint config p = Analysed res"
+  shows "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e
+           ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ (check_point c)
+           ∧ check_verdict c ≠ Dead
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧⇩e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (⟦e⟧⇩e s))"
+```
+
+```isabelle
+corollary run_voblint_dead_unreached:
+  assumes "run_voblint config p = Analysed res" and "DEAD res v"
+  shows "𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ v = {}"
 ```
 
 ```isabelle
 theorem run_voblint_arithmetic_safe:
-  assumes terminates: "config_terminates as rule ctx p"
-      and ans: "run_voblint as rule ctx p = Analysed res"
-      and mem: "s ∈ node_collect (declared_global p) (prog_cfg p)
-                            (cinit_stores (declared_global p)) v"
-      and absent: "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
+  assumes "run_voblint config p = Analysed res"
+      and "s ∈ 𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ v"
+      and "∀d ∈ set (report_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
 ```
 
@@ -282,23 +285,26 @@ theorem run_voblint_arithmetic_safe:
 
 ### Limits
 
-The result is partial correctness: termination is a premise per program, which a
-single solve can discharge by evaluation, and nothing proves it for every
-program. Neither `PROVED` nor `REFUTED` establishes that its point is reachable,
-so `REFUTED` is not a verified counterexample. `DEAD` is the only reachability
-claim: no covered execution reaches the point.
+The result is partial correctness. `run_voblint` runs the executable solver,
+which answers only where the solve terminates, so the theorems need no
+termination premise; nothing proves that the solve terminates for every program,
+and where it does not, the analyzer gives no answer. Neither `PROVED` nor
+`REFUTED` establishes that its point is reachable, so `REFUTED` is not a verified
+counterexample. `DEAD` is the only reachability claim: no covered execution
+reaches the point. The converse does not hold: a point no execution reaches need
+not be `DEAD`.
 
 | Covered by the proof | Outside the proof |
 | --- | --- |
 | VIMP execution from an already-constructed AST | Solver termination for arbitrary programs |
 | Compilation to the procedure-aware CFG | Lexing and parsing |
 | Equation generation and the computed post-solution | Isabelle code generation, the OCaml compiler and runtime |
-| Abstract states, check rows under their labels, arithmetic safety at quiet points | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
+| The report's states, check rows under their labels, arithmetic safety at quiet points | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
 | | Completeness and precision |
 
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
-discharges every premise for one `Int` program with call-string contexts, so the
-headline theorem is not vacuous. [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md)
+evaluates the headline theorem's answer for one `Int` program with call-string
+contexts, so the theorem is not vacuous. [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md)
 lists the lower-level statements.
 
 ## Notation
@@ -310,24 +316,13 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 
 | Symbol | Reads as | Isabelle | Meaning |
 | --- | --- | --- | --- |
-| γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
-| ⟦e⟧<sub>e</sub> s | the value of _e_ in _s_ | [`aval`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.aval%7Cconst) | the integer expression _e_ evaluates to in store _s_ |
-| ⟦d⟧ | the stores the abstract state _d_ represents | [`gamma_S`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/State_Concretization.html#State_Concretization.gamma_S%7Cconst) | one symbol for every kind of state, selected by the type of _d_: a pointwise state gives the stores _s_ with s x ∈ γ (d x) for every variable _x_, a relational state the stores satisfying its pairs, and a lifted state represents no store when it is Bot |
 | 𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ | [`pstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst) / [`psteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst) | one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure |
-| 𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ in _g_ | [`cstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst) / [`csteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst) | one step of a graph configuration (node, store, frame stack) in control-flow graph _g_; the starred arrow is its reflexive-transitive closure |
 | Π,g ⊢ c ≈ c' | _c_ is matched with _c′_ | [`csim`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst) | the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_ |
-| skip<sup>#</sup> S / assign<sup>#</sup> S / special<sup>#</sup> S / branch<sup>#</sup> S / body<sup>#</sup> S / return<sup>#</sup> S / event<sup>#</sup> S | the _op_ transfer of specification _S_ | [`dgs_skip`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst) / [`dgs_assign`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst) / [`dgs_special`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst) / [`dgs_branch`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst) / [`dgs_body`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst) / [`dgs_return`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst) / [`dgs_event`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst) | the edge transfers of a D/G specification, one field per program construct, each named after the Goblint Spec method it answers to |
-| enter<sup>#</sup> S / combine&#95;env<sup>#</sup> S / combine&#95;assign<sup>#</sup> S | the call-boundary transfers of specification _S_ | [`dgs_enter`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst) / [`dgs_combine_env`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst) / [`dgs_combine_assign`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst) | entry into a callee, answering (continuation, callee entry) pairs, and the two stages of the return: the environment stage and the assignment of the result |
-| combine<sup>#</sup> 𝒢 dst σc σe | the abstract return of _σe_ into _σc_ | [`combine_collect_abs`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst) | the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination |
-| context<sup>#</sup> | the computed callee context | [`route`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale) | the routing policy's abstract context function: the callee context the equations compute from an abstract entry value |
-| a ∇ b / a Δ b | _a_ widened by _b_, _a_ narrowed by _b_ | [`widen`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst) / [`narrow`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst) | the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_ |
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
 | 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
-| 𝒜<sub>𝒢,R,c₀,g,S</sub> v c<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒜 v c | the stores collected at _v_ in context _c_ | [`activation_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst) | the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _c₀_ |
-| carries t c<br>In `activation_coverage`, short for activation&#95;context&#95;rel 𝒢 R c<sub>0</sub> g | _t_ carries context _c_ | [`carries`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | the context relation of the locale's policy, between a valid activation trace and the contexts it may run in |
-| admits u ctx p s es ctx'<br>In `activation_coverage`, short for admits&#95;call&#95;context 𝒢 g R | _ctx′_ is admitted for the call at _u_ | [`admits`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.admits%7Cconst) | some call edge at _u_ to _p_ enters _es_ from _s_, and the context relation admits _ctx′_ for it |
-| cover v ctx<br>In `routed_context`, input only, short for γ<sub>M</sub> (sg (Inl (v, ctx))) | the stores claimed at _v_ in _ctx_ | [`cover`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst) | proof-local shorthand for applying γ<sub>M</sub> to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation |
+| ⟦res⟧<sub>v</sub> | the stores report _res_ describes at _v_ | [`report_sem`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst) | the stores some state the analysis report holds at point _v_, under any of its contexts, describes |
+| 𝒱<sub>res</sub> v | the stores the verdicts of _res_ at _v_ hold in | [`verdict_stores`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst) | the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false |
 
 <!-- notation:end -->
 

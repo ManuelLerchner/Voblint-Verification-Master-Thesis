@@ -195,6 +195,9 @@ proof (cases d)
   with RelC show ?thesis by (auto simp: is_empty_relc_def)
 qed (simp add: is_empty_relc_def)
 
+lemma exact_emptiness_relc: "exact_emptiness (is_empty :: relc \<Rightarrow> bool) gamma_relc"
+  by (rule exact_emptinessI) (rule is_empty_relc_gamma)
+
 lemma to_string_relc_regression:
   "to_string RelBot = STR ''<bottom>''"
   "to_string (RelC {}) = STR ''<top>''"

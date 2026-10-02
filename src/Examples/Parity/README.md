@@ -98,7 +98,7 @@ from the registration's published state at the loop head, the same state
 ```text
 Voblint_Nonrelational
         |
-Voblint_Analysis_Parity        parity_rule, parity_tf_st_for, cinit_parity_st
+Voblint_Analysis_Parity        parity_rule, parity_ops, cinit_parity_st
         |
 Voblint_Examples_Parity        this directory
 ```

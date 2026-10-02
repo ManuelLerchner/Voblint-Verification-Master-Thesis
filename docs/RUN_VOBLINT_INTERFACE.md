@@ -1,12 +1,10 @@
-# `run_voblint`: one verified function, one display wrapper, one public contract
-
-Status: **in progress** on branch `structured-run-voblint` (stacked on PR #190).
+# `run_voblint`: one verified function, one semantic report, one projection
 
 ## Principle
 
 Isabelle exports the semantic information the soundness contract needs, plus
 domain-owned observations of abstract values. Presentation derived from that
-information lives outside Isabelle.
+information lives outside the theorems.
 
 Domain knowledge stays with the domain: how `Ivl (Fin 0) (Fin 1)` reads as `[0,1]`
 is Interval's business. If OCaml printed it, the renderer would pattern-match every
@@ -15,264 +13,220 @@ new domain would touch OCaml.
 
 ## The boundary
 
-All names below are defined in `src/Executable_Surface/CLI/Analysis_Run.thy`.
-
 ```text
-analyse_program : analysis_domain list => globals_rule => context_mode => imp_prog
-               => abstract_value analysis_answer            (typed, verified)
+run_voblint   : analysis_config => imp_prog => analysis_report analysis_answer
+                                                       (Analysis_Run.thy, verified)
+render_report : (abstract_value => 'v) => analysis_report => 'v run_result
+                                                       (Analysis_Render.thy, display only)
 
-run_voblint     = map_analysis_answer string_of_abstract_value o analyse_program
-                                                             (exported, display only)
+datatype analysis_config = Analysis_Config
+  (config_analyses: analysis_domain list) (config_rule: globals_rule)
+  (config_context: context_mode)
 
-datatype 'v analysis_answer =
-  Invalid_Activation | Malformed_Program | Analysed "'v run_result"
+datatype 'r analysis_answer =
+  Invalid_Activation | Malformed_Program | No_Answer | Analysed 'r
 
-valid_activation as <-> as ~= [] /\ distinct as
+valid_config config <-> config_analyses config ~= [] /\ distinct (config_analyses config)
 ```
 
-The first argument is the activation list: the analyses that run together, in the
-order their values are displayed. `analyse_program` checks it before anything
-else. An empty list or one that names an analysis twice answers
-`Invalid_Activation`; a consumer passes the list it was given and lets this
-answer reject it, so no second notion of a valid configuration exists outside
-Isabelle. A valid list runs one solve over the combined state (see
-[One dispatcher](#one-dispatcher)). A state shows each active analysis's part on
-its own, in activation order, as Goblint's report shows each component of its
-combined state: a pointwise analysis as its variables' values (`Field_Store`), an
-analysis whose state relates variables as one value (`Field_Whole`).
+The activation list names the analyses that run together, in the order their values
+are displayed. `run_voblint` checks it before anything else; an empty list or one
+that names an analysis twice answers `Invalid_Activation`. A malformed program
+answers `Malformed_Program`. Otherwise the configuration is solved with the
+executable solver `solve_c`. `No_Answer` represents the logical `None` branch of
+`solve_c`. Where the solve genuinely diverges, the generated code does not return at
+all, so `No_Answer` is not an operational timeout result.
 
-`map_run_result` is an explicit definition rather than a derived BNF map (plain
-`record`s are not BNFs), so the boundary itself spells out what presentation may
-transform: every occurrence of domain data -- state values, global values and the
-abstract values inside entry-state contexts -- and nothing else. Context identity
-stays a `nat`; OCaml never infers identity from displayed text.
-`map_run_result_structure` records that `res_cfg`, the context count, routes,
-checks, diagnostics and the `(point, context)` of every state pass through
-unchanged.
+The adapters call `run_voblint`, then map `render_report` over the answer with the
+value printer they want (`string_of_abstract_value` composed with the CLI's symbol
+decoding).
 
-## Result shape (records, not tuples, at the permanent boundary)
+The report is an opaque token to OCaml. Its selectors are not exported; the only
+reader is `render_report`, so no OCaml code depends on the report's representation.
+`run_voblint_config` and `run_voblint_cfg` state that an analysed report carries the
+configuration it was asked for and the compiled graph of the program.
+
+## The report
 
 ```text
-record 'v run_result =
-  res_cfg         :: cfg
-  res_contexts    :: "'v analysis_context list"   index = identity and order
-  res_states      :: "'v result_state list"
-  res_routes      :: "call_route list"
-  res_checks      :: "result_check list"
-  res_globals     :: "'v result_global list"
-  res_diagnostics :: "arithmetic_diagnostic list"
+record analysis_report =
+  report_config      :: analysis_config
+  report_vars        :: vname list
+  report_cfg         :: cfg
+  report_contexts    :: report_context list        index = identity and order
+  report_states      :: mcp_val result_state list
+  report_routes      :: call_route list
+  report_checks      :: result_check list
+  report_globals     :: mcp_val result_global list
+  report_diagnostics :: arithmetic_diagnostic list
 
-datatype 'v analysis_context =
-  Context_Unit | Context_Entry "'v list" | Context_Call_String "pp list"
-
-datatype 'v field_state = Field_Store "(vname * 'v) list" | Field_Whole 'v
-type_synonym 'v analysis_view = "(analysis_domain * 'v field_state) list"
-
-record 'v result_state   = state_point :: pp, state_context :: nat,
-                           state_value :: "'v analysis_view lifted"   (Bot = unreachable)
-                           state_checks :: "(exp * contextual_verdict) list"
-                           state_diagnostics :: "(arithmetic_obligation * contextual_verdict) list"
-record call_route        = route_point :: pp, route_context :: nat,
-                           route_callee :: pname, route_targets :: "nat list"
-                           ([] = no callee context entered; several = overlapping
-                            enter alternatives)
-record result_check      = check_point :: pp, check_exp :: exp,
-                           check_verdict :: contextual_verdict
-record 'v result_global  = global_unknown :: result_global_unknown,
-                           global_state :: "'v analysis_view lifted"
-datatype result_global_unknown = Global_Shared | Global_Seed pname "nat option"
-                           (None = a procedure no solved context enters)
-datatype arithmetic_diagnostic = Arithmetic_Diagnostic (diagnostic_point :: pp)
-                           (diagnostic_occurrence :: nat)
-                           (diagnostic_obligation :: arithmetic_obligation)
-                           (diagnostic_verdict :: check_result)
+datatype report_context =
+  Report_Unit | Report_Entry mcp_ctx | Report_Call_String "pp list"
 ```
 
-`contextual_verdict` is `check_result lifted`, with `Dead = Bot` and
-`Decided r = Lifted r` (`Contextual_Check_Report.thy`). `arithmetic_diagnostic`
-lives in `Arithmetic_Diagnostics.thy`.
+The states are semantic (`mcp_val`, the combined state the solver computed), and a
+context keeps the policy's own value. No rendered value is part of the report.
+`render_report` maps states through `mcp_render` and the printer, and contexts
+through `render_context`, into the displayed `'v run_result`; it changes neither
+checks, diagnostics, routes nor the graph.
 
-Checks and diagnostics come twice, and both are load-bearing: `res_checks` and
-`res_diagnostics` join every context of a point, which is what a source-level
+`consistent_report` is about verdicts only. `well_formed_report` states what a
+reader of the rows relies on: every context index (of a state, a route and a route
+target) is below `length (report_contexts res)`, each `(point, context)` has one row,
+each row's `state_checks` lists exactly the report's checks at its point, and its
+`state_diagnostics` exactly the graph's arithmetic obligations there
+(`obligations_at`), each with the verdict of its own `state_value`. With a consistent report, a check's aggregate verdict is then the
+aggregate of the rows' verdicts for it (`well_formed_check_verdict`).
+`report_of_well_formed` proves it for every report `report_of` builds, so
+`run_voblint_well_formed` holds for every analysed answer. No soundness theorem
+needs it.
+
+Checks and diagnostics come twice, and both are load-bearing: `report_checks` and
+`report_diagnostics` join every context of a point, which is what a source-level
 report states; `state_checks` and `state_diagnostics` keep each context's own
-verdict, which is what a drawing of one context shows. A diagnostic reaches
-OCaml as its operation and verdict; the sentence a reader sees is written there.
+verdict, which is what a drawing of one context shows.
+
+## Semantic spine
+
+The collecting semantics `𝒞 v` is not a starting point: it is the projection of
+valid activation traces. A finite source run is represented by a valid activation
+trace `t` that ends at some node `v` with the run's store `s`
+(`activation_trace_repr`, from `source_run_has_activation_trace`). The policy assigns
+`t` a context `c` (`activation_context_rel`), so `s ∈ 𝒜(v, c)`
+(`source_store_in_activation_collect`). Under each policy the activation buckets
+together are the collecting semantics (`node_collect_eq_Union_activation_collect`
+and its per-policy instances). Then:
+
+```text
+s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v
+```
+
+`run_voblint_spine` states the chain once, for any context relation `R` and root
+context, given what a policy owes: every valid activation trace carries some context,
+and the buckets together are the collecting semantics.
+`run_voblint_unit_chain`, `run_voblint_entry_state_chain` and
+`run_voblint_call_string_chain` (`Analysis_Certified.thy`) state this chain for a
+source run, one per policy, since the context type is the policy's own. Each keeps
+the witness: the conclusion names the trace `t`, its representation of the run's
+configuration, and the context the policy relates it to. Under call strings and the
+unit policy every valid trace has its context outright; under entry-state routing
+the admitted context exists because the solve returned
+(`run_voblint_entry_state_terminates`). `run_voblint_source_sound` is the
+context-erased form.
 
 ## Public contract
 
-The proved contract lives in `Analysis_Run_Sound.thy` and
-`Analysis_Certified.thy`. Both claims are stated for any value type, so the typed
-result and its displayed form make the same claim (`map_run_result_sound_at`):
+`Analysis_Report.thy` reads a report through two store sets at a point `v`:
 
 ```text
-definition checks_sound_at :: "'v run_result => pp => store => bool" where
-  checks_sound_at res v s <->
-    (ALL chk : set (res_checks res). check_point chk = v -->
-         check_verdict chk ~= Dead
-      /\ (check_verdict chk = Decided Check_Proved --> truthy (aval (check_exp chk) s))
-      /\ (check_verdict chk = Decided Check_Refuted --> ~ truthy (aval (check_exp chk) s)))
-
-definition diagnostics_sound_at :: "'v run_result => imp_prog => pp => store => bool" where
-  diagnostics_sound_at res p v s <->
-    ((ALL d : set (res_diagnostics res). diagnostic_point d ~= v)
-       --> arithmetic_safe_at (prog_cfg p) v s)
-
-lemma run_voblint_sound_at:
-  assumes "config_terminates as rule ctx p"
-      and "run_voblint as rule ctx p = Analysed res"
-      and "s : node_collect (declared_global p) (prog_cfg p) (cinit_stores (declared_global p)) v"
-  shows "analysis_result_covers as rule ctx p v s
-         /\ checks_sound_at res v s /\ diagnostics_sound_at res p v s"
+⟦res⟧⇘v⇙   (report_sem)      the stores some state at v describes
+𝒱⇘res⇙ v  (verdict_stores)  the stores in which every definite verdict at v holds
+DEAD res v                   every state at v is Bot
+HAS_VERDICT res v e r        some check at v on e has the definite verdict r
 ```
 
-`analysis_result_covers` is `table_covers` of the table the configuration's
-registration solved: the store lies in the entry filed at `v` under some context.
-Each context policy discharges the `sound_table` locale (finitely many contexts
-per point, coverage, classifier soundness in both directions) through its
-`mcp_rule_table`, `mcp_es_rule_table` or `mcp_cs_rule_table` lemma, for every
-activation list, and `analysis_result_sound` does the case split once. Well-formedness is not a
-premise: `run_voblint` answers `Analysed` only for a program that passes
-`wf_program_compile_input_exec`.
+`PROVED`, `REFUTED` and `UNKNOWN` abbreviate `HAS_VERDICT` at `Check_Proved`,
+`Check_Refuted` and `Check_Unknown`. What a verdict claims of a store is
+`verdict_holds r e s`: the condition is true, false, or nothing is claimed; `𝒱⇘res⇙ v`
+is the stores in which `verdict_holds` holds for every definite verdict at `v`.
 
-The endpoints built on it, all in `Analysis_Certified.thy`:
+A report is `consistent_report` when every check's verdict is the aggregate of its
+classifier over its own states at the check's point. From that alone:
 
 | Theorem | Claim |
 | --- | --- |
-| `run_voblint_certified_source_sound` | a source run stopped anywhere sits at a node (`csim`) whose collected store the table covers and whose listed checks hold |
-| `run_voblint_check_sound` | a run about to execute `Check e` finds a listed check for `e` at a node it reaches, and its verdict holds |
-| `run_voblint_dead_check_unreached` | a `Dead` check's point collects no store |
+| `analysis_report_verdicts_sound` | `⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` |
+| `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `⟦res⟧⇘v⇙` |
+| `analysis_report_dead`, `sound_emptiness_DEAD` | `DEAD res v ⟹ ⟦res⟧⇘v⇙ = {}`: `DEAD` is a sound emptiness test on points; the converse does not hold: `DEAD_not_exact` gives a report whose point describes no store and is not `DEAD`, its one state being the combined state `mcp_contradiction` that no store satisfies (`mcp_empty_v_not_exact`) |
+| `analysis_report_check_dead` | a `Dead` check row's point is `DEAD` |
+| `analysis_report_unknown` | an `UNKNOWN` check's point is not `DEAD` |
+
+`analysis_report_of_sound` is the one proof that splits on the context policy: a
+report the run builds is consistent, covers the collecting semantics, makes the
+arithmetic diagnostics sound, and lists one row per compiled check. It rests on
+`report_rows_report_of`: the report's states at a point are exactly the table's
+entries there. That needs the context listing to be complete, which
+`ordered_by_key_set` proves for an injective key; the entry-state key breaks ties by
+`mcp_ctx_key`, which is injective on every context.
+
+The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
+
+| Theorem | Claim |
+| --- | --- |
+| `run_voblint_report_contract` | an analysed report is for exactly the configuration asked for and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
+| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧⇘v⇙` |
+| `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱⇘res⇙ v` |
+| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `⟦res⟧⇘v⇙` and `𝒱⇘res⇙ v` |
+| `run_voblint_check_sound` | a run about to execute `Check e` finds a listed check for `e` at a node it reaches, not `Dead`, whose verdict holds |
+| `run_voblint_proved`, `run_voblint_refuted` | a definite verdict holds at every collected store |
+| `run_voblint_dead_unreached`, `run_voblint_dead_check_unreached` | a `DEAD` point collects no store |
 | `run_voblint_arithmetic_safe`, `run_voblint_arithmetic_intra_safe` | no diagnostic at `v` means no collected store at `v` divides by zero |
-| `run_voblint_check_sites` | `res_checks` lists one check per compiled `EA_Check` edge, in graph order |
+| `run_voblint_well_formed` | the report is `well_formed_report`: indices in range, one row per `(point, context)`, row verdicts are their own state's |
+| `run_voblint_check_sites` | `report_checks` lists one check per compiled `EA_Check` edge, in graph order: the rows the verdict theorems speak about are all of the program's checks |
+| `run_voblint_unit_chain`, `run_voblint_entry_state_chain`, `run_voblint_call_string_chain` | the semantic spine above, per policy |
 
 ```text
                   source
                     |  unverified parser
                     v
                  imp_prog
-                    |  analyse_program                          verified semantic contract
+                    |  run_voblint                verified semantic contract
                     v
-    abstract_value run_result
-                    |  map_run_result string_of_abstract_value  deliberately unverified
+             analysis_report
+                    |  render_report             deliberately unverified projection
                     v
-    String.literal run_result                                   run_voblint
+         'v run_result (strings)
                     |  unverified presentation
                     v
          graph / DOT / HTML / JSON
 ```
 
-The contract does not yet speak about `res_states`, `res_routes` or
-`res_globals`. These conjuncts are planned and not stated:
-
-| Conjunct | Meaning |
-| --- | --- |
-| `result_wf` | every context id in states, routes and targets is `< length res_contexts`; `res_contexts` distinct; states unique per `(point, context)`; routes unique per `(point, caller context)`; every route sits at a call edge of `res_cfg` whose callee is `route_callee`; `route_targets` distinct; every state, check and diagnostic point is a node of `res_cfg` |
-| `states_cover` | a store collected at `v` is concretized by the `res_states` entry at some context `v` was solved at |
-| `globals_cover` | each `res_globals` entry concretizes the global unknown its key names |
-| `routes_sound` | `set (route_targets r)` is exactly the set of callee keys the solved equation system uses for that call and caller context -- the routed `dgs_enter` alternatives **after** context selection, not the raw alternatives; target order is serialization only |
-
-`analysis_result_covers` states coverage of the solver's table; `states_cover`
-is the step from that table to the `res_states` list OCaml reads.
-
-## Enumerating contexts without a presentation key
-
-`result_unknowns` is a set, and a domain's value type already spends its `ord`
-instance on the abstraction order, so there is no linear order to list an
-entry-state context set by. `Dispatch_Carrier.thy` supplies a structural
-encoding instead: `order_key` (`Key_Int | Key_Node | Key_List`) derives
-`linorder`, each domain has an injective key into it, and the generated
-`abstract_value_key` (`MCP_Carrier.thy`) maps every abstract value into it,
-proved injective once (`inj_abstract_value_key`). `run_result_of` lists contexts with
-`ordered_by_key`: unit contexts by `Key_List []`, entry-state contexts by
-`Key_List` of their values' keys, call strings by `Key_List (map Key_Node ...)`.
-`string_of_abstract_value` stays out of enumeration and out of
-`analyse_program`. No lemma yet states that `ordered_by_key` lists every
-context of an injectively keyed set; `states_cover` needs it.
+The soundness contract does not speak about `report_routes` or `report_globals`;
+`well_formed_report` bounds their context indices and nothing more. It does not state
+that routes sit at call edges or that seeds name entered contexts.
 
 ## What the theorem does not cover
 
 The theorem is about the semantics of the `imp_prog` Isabelle received. It does not
 cover:
 
-- **parser correctness**: source text to `imp_prog`; a parser bug makes Isabelle
-  verify a different program than the one the user wrote
-- **`string_of_abstract_value` correctness**: abstract value to text
-- **presentation correctness**: structured result to what is displayed; OCaml
-  cannot alter the verified payload, but a bug can misattribute it (for example
-  a state shown at the wrong node)
-
-## What moves to OCaml
-
-- graph construction (`cli/result/context_graph.ml`): clusters per
-  `(procedure, context)`, nodes per `(point, context)`, intra/enter/combine/
-  call-to-return edges from `res_cfg` plus `res_routes`, procedure-scope filtering
-- printing (`cli/result/result_text.ml`, generated `cli/frontend/vimp_printer.ml`):
-  `exp`, `edge_action`, verdicts, diagnostic messages, global rows, and context
-  labels built from rendered context contents
-- rendering (`cli/render/`): text report, DOT, the regression snapshot, HTML node
-  documents and report directory, browser JSON
+- **parser correctness**: source text to `imp_prog`
+- **`string_of_abstract_value` and `render_report`**: abstract value to text, report
+  to displayed rows
+- **presentation correctness**: OCaml cannot alter the verified payload, but a bug
+  can misattribute it (for example a state shown at the wrong node)
+- **termination**: where the solve does not return, there is no answer and no claim
 
 ## One dispatcher
 
-`analyse_program` is the only dispatcher, and it no longer branches on the
-domain. `scripts/gen_analysis_assembly.py` emits one combined state from
-`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with
-one lifted field per listed analysis, each field carrying that analysis's
-per-domain state. `MCP_Analyses.thy` registers this state once per context
-policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for `as k r`.
-`analysis_result` reads the one registration its policy names through
-`result_with_globals`. The activation list, the rule and the call-string bound
-are all parameters, so no combination and no discipline has an instance of its
-own.
+`analysis_report_of` is the one function that reads the context policy.
+`scripts/gen_analysis_assembly.py` emits one combined state from
+`manifests/analyses.yaml` (`generated/MCP_Carrier.thy`): a nested product with one
+lifted field per listed analysis. `MCP_Analyses.thy` registers this state once per
+context policy: `mcp_rule` and `mcp_es_rule` for `as r`, `mcp_cs_rule` for
+`as k r`. Each branch solves its registration's equations with `solve_c` and builds
+the report from the `solved_run` that answer gives (`DG_Analysis.thy`). The
+activation list, the rule and the call-string bound are parameters, so no
+combination has an instance of its own.
 
 A transfer asks the combined state through the query channel. Every active
-analysis answers from its own field, through the answer it publishes for checks
-(`part_answer`, `mcp_field`), and the answers are met. A handler may ask through
-the same channel while it answers: `ask_rec` answers a query already being asked
-with `⊤` and bounds the depth, as Goblint's `MCP.query'` does. Entry and both
-return stages receive the channel too, and the return stages also receive the
-callee's (`f_ask`). The pointwise analyses ask for the value of an assignment's
-right-hand side, and the order analysis asks how an assigned value compares with
-each variable and answers comparisons, so `interval,order` proves checks neither
-proves alone (`coop_demo_needs_both`).
+analysis answers from its own field, and the answers are met. A handler may ask
+through the same channel while it answers: `ask_rec` answers a query already being
+asked with `⊤` and bounds the depth, as Goblint's `MCP.query'` does. Inactive fields
+start at their bottom and stay there. A step whose result makes any active field
+`Bot` makes the whole state `Bot`. A check reads the met answer of every active
+analysis to `EvalInt` of the check's expression, and `answer_check` classifies that
+one answer (`Check_Answer.thy`).
 
-Inactive fields start at their bottom and stay there. A step whose result makes any
-active field `Bot` makes the whole state `Bot`, so one analysis proving a point
-unreachable makes it unreachable for all of them. A check reads the met answer
-of every active analysis to the query `EvalInt` of the check's expression, and
-`answer_check` classifies that one answer (`Check_Answer.thy`); no analysis
-classifies checks on its own. Singleton lists reproduce the verdicts of the
-former per-domain path on every CLI regression case.
+## Enumerating contexts
 
-## Steps
-
-1. Records and `'v run_result`; explicit `map_run_result`;
-   `string_of_abstract_value`; injective context encodings (`order_key`,
-   `abstract_value_key`); `analyse_program` via the one builder `run_result_of`;
-   list-valued routes from `entered_targets` (done).
-2. Soundness over `run_voblint`'s result. Done: `checks_sound_at`,
-   `diagnostics_sound_at`, `run_voblint_sound_at` and the endpoints above.
-   Remaining: `result_wf`, `states_cover`, `globals_cover`, `routes_sound`, and
-   the completeness lemma for `ordered_by_key`.
-3. Fold every dispatcher into `analyse_program`; update the generator (done).
-4. OCaml access over `Generated`: grammar-generated `exp`/program printer
-   (`Vimp_printer`), verdict/diagnostic names (`Result_text`), node status and
-   `is_dead` (`Context_graph`, `Render_xml`) (done).
-5. OCaml graph builder `Context_graph` from `res_cfg`, `res_states`,
-   `res_routes` (done). Remaining: structural tests of the builder; the
-   `.vimp` regression fixtures (`EXPECT-GRAPH` snapshots, DOT output) are its
-   only check.
-6. OCaml layout: `cli/frontend` (parser, printer), `cli/result` (`result_text`,
-   `context_graph`, `value_symbols`), `cli/render` (`render_text`, `render_dot`,
-   `render_snapshot`, `render_json`, `render_xml`, `report_dir`), `cli/entry`
-   (`voblint`, `voblint_web`) (done). Remaining: entry points reduced to
-   argument handling and I/O; `cli/entry/voblint.ml` still assembles the HTML
-   report's check and diagnostic rows.
-7. Delete the Isabelle presentation layer (done). The endpoint theorems quantify
-   over `run_voblint`'s structured result.
-8. Regenerate every `EXPECT-GRAPH` oracle in the snapshot format (done).
-9. Select the side-effect update rule with `--globals` (`globals_rule`, done): it
-   chooses only how a global unknown is updated; loop heads are always widened and
-   narrowed (the `is_point` branch of `TD_side_upd_rule.thy`).
-10. Single-route audit over every domain x globals rule x context.
-11. Website: introduction, domain/globals/context explainers, globals placement,
-    inline editor annotations.
+`covered_keys` is a set, and a domain's value type already spends its `ord`
+instance on the abstraction order. The abstraction order and the listing order are
+unrelated structures; `order_key` exists only to enumerate finite context sets
+deterministically. `Dispatch_Carrier.thy` supplies `order_key`
+(`Key_Int | Key_Node | Key_List`) with a derived `linorder`, and every abstract value
+has an injective key (`inj_abstract_value_key`). `report_of` lists contexts with
+`ordered_by_key`: unit contexts by `Key_List []`, call strings by
+`Key_List (map Key_Node ...)`, entry-state contexts by `entry_ctx_key`, whose first
+component is the active analyses' formal values (the display order) and whose
+second, `mcp_ctx_key`, separates contexts those values do not.

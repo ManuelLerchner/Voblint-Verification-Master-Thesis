@@ -49,7 +49,7 @@ chain: `EntryState_Base` -> `EntryState_Ctx` -> `EntryState_Collect`.
 | `Example_Interval_DG_EntryState_Base.thy` | canonical spine | the compiled base: a call with a `__voblint_nondet_int()` argument |
 | `Example_Interval_DG_EntryState_Ctx.thy` | canonical spine | the production entry-state analysis run on it |
 | `Example_Interval_DG_EntryState_Collect.thy` | canonical spine | activation-indexed collecting soundness as a named instance of `entry_state_activation_collect_sound` |
-| `Example_Interval_DG_EntryState_Result_Regression.thy` | regression | the entry-state result table at Apinis warrowing, the context-sensitive reading of the solution as an `analysis_result`: contexts stay explicit, covered and uncovered contexts answer differently, a dead context reads as `Bot` |
+| `Example_Interval_DG_EntryState_Result_Regression.thy` | regression | the entry-state result table at Apinis warrowing, the context-sensitive reading of the solution as an `solved_table`: contexts stay explicit, covered and uncovered contexts answer differently, a dead context reads as `Bot` |
 | `Example_Interval_DG_EntryState_Dead_Check_Regression.thy` | regression | the three shapes a check node takes once contexts are kept apart: live, dead, and disagreeing across contexts |
 | `Example_Interval_DG_Ctx_Factorial_Regression.thy` | regression | recursive `factorial` at `n=3` and `n=4`, four distinct entry-state contexts |
 

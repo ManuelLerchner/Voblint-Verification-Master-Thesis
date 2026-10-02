@@ -74,7 +74,7 @@ text \<open>The computed Sign environment at an arbitrary node, read out of the
   concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ex_env :: "pp \<Rightarrow> sign abs_state" where
   "checks_ex_env v =
-     (case lookup_context (sign_rule.result Globals_Join checks_ex_gs checks_ex_program) v () of
+     (case lookup_table (sign_rule.result Globals_Join checks_ex_gs checks_ex_program) v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
 text \<open>The compiled edges: the proved check leaves \<open>Statement 1\<close>, \<open>y := 0\<close> runs before the

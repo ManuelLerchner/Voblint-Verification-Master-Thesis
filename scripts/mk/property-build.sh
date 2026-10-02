@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Property-test AST<->printer oracle driver build. Test-only; not part of
-# the shipped voblint CLI. Copies the same Voblint_CLI.ml / vimp_parser.mly
+# the shipped voblint CLI. Copies the same Voblint_Generated.ml, voblint.ml / vimp_parser.mly
 # / vimp_lexer.mll / vimp_frontend.ml sources cli/ (the main CLI) builds
 # from. Dune keeps compiler byproducts under `_build/`.
 set -euo pipefail

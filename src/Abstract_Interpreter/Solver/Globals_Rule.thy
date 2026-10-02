@@ -129,6 +129,7 @@ lemma td_certified_solver:
   by unfold_locales
      (erule TD_side_rule_Interp.partial_post_solution[OF _ surjective_pairing],
       erule TD_side_rule_Interp.finite_stabl_solve,
-      erule TD_side_rule_Interp.solve_dom_of_solve_c)
+      erule TD_side_rule_Interp.solve_dom_of_solve_c,
+      simp add: TD_side_rule_Interp.solve_code_equation)
 
 end

@@ -86,7 +86,7 @@ Findings that decide the phases:
 | `DG_Constraint_Programs -> Exec_St` | the `bounded_warrowing` class, three mentions | move the class |
 | `Context_Refinement -> Constraint_System` | `part_post_solution_iff_se_constraint_holds`, one lemma | move the block |
 | `CFG_Enumeration -> Voblint_Compile.VIMP_Proc_to_CFG` | no compiler name | repoint |
-| `Analysis_Result -> Exec_St` | `normalize_point`, lines 133-250 | move the readback |
+| `Solved_Table -> Exec_St` | `normalize_point`, lines 133-250 | move the readback |
 | `Exec_St -> Constraint_System` | `enter_frame_D`, `combine_env_abs`, `enter_D` | real; exec is below core |
 | `Result_Normalization -> Compile_Invariants` | `prog_cfg` | real; stays after Compile |
 
@@ -129,7 +129,7 @@ until Phase 2 deletes what it holds.
 | --- | --- | --- | --- |
 | `Voblint_Domain` | `goblint.domain` | `Abstract_Domain`, `Reachability_Lift`, `Nonrelational_State`, `Nonrelational_Reachability`, `Backward_Domain`, `Abstract_Numeric_Queries` | `Voblint_VIMP`, `TD` |
 | `Voblint_Solver` | `goblint.constraint`, `goblint.solver` | `Strategy_Tree_Monad` (absorbing `Strategy_Tree_Do`, `Solver_Mono`), `Strategy_Tree_Rhs`, `Strategy_Tree_Relabel`, `Strategy_Tree_Combinators`, `Side_Buffering`, `Post_Solution` (new), `Context_Refinement` | `TD` only |
-| `Voblint_Framework` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Constraint_Programs`, `DG_Ownership_Split_Spec`, `DG_Indexed_Generator`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Local_State_Spec`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Analysis_Result`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
+| `Voblint_Framework` | `Analyses`, `Constraints`, `Control`, `AnalysisResult` | `CFG_Enumeration`, `Constraint_System` (absorbing `Constraint_System_Sound`), `State_Restriction`, `DG_Constraint_Programs`, `DG_Ownership_Split_Spec`, `DG_Indexed_Generator`, `DG_Soundness`, `DG_LTR_Sound`, `Activation_Local_Sound`, `Activation_Backbone`, `DG_Ctx_Activation`, `DG_Transfer_Combinators`, `Routed_Context`, `Routed_Context_Unit`, `DG_Local_State_Spec`, `Call_String_Context`, `Call_String_Collecting_Refinement`, `Call_String_Solver_Projection`, `Solved_Table`, `Checks`, `Abstract_Checks`, `DG_Analysis_Adapter`, `DG_Coverage` | `Voblint_CFG`, `Voblint_Domain`, `Voblint_Solver` -- never `Voblint_Compile` |
 | `Voblint_Exec` (quarantine) | none | `Exec_DG_Refines`, `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`, `DG_Local_State_Exec`, `Routed_Domain_Exec`, `Solver_Side_RG`, `TD_Solver_Menu`, `Result_Normalization` | `Voblint_Framework`, `Voblint_Compile` |
 | into `Voblint_Analysis` | `analyses/base.ml`, `lifters/` | `Abstract_Arithmetic`, `Special_Ops`, `Numeric_Ops`, `Exec_Backward`; `Context_Space_Finite`, `Call_String_Routed_Context`, `Entry_State_Routed_Context` | |
 | into `Voblint_Examples` | none | the hooks route: `sound_dg_hooks` and the hook-parametric section (`DG_Soundness` 968-1508), `sound_dg_hooks_ltr`, `gamma_join`, `ownership_split_dg_spec_placed`, as a `Placement/` group next to the two examples that use them | |
@@ -160,7 +160,7 @@ what a later phase deletes.
 | 0.2 | Move `bounded_widening`, `bounded_narrowing`, `bounded_warrowing` and `instance lifted :: bounded_warrowing` from `Exec_St`'s preamble into `Abstract_Domain`. Drop `DG_Constraint_Programs`'s `Exec_St` and `Exec_Placement` imports. (`bounded_warrowing` has since been folded into `executable_domain`.) | landed |
 | 0.3 | Move the `se_constraint_holds` block (`Constraint_System` 1008-1053: definition, two `[dest]` halves, `part_post_solution_imp_se_constraint_holds`, `part_post_solution_iff_se_constraint_holds`) to a new `Solver/Strategy_Tree/Post_Solution.thy` importing `Strategy_Tree_Rhs`. Repoint `Context_Refinement`. | landed |
 | 0.4 | `CFG_Enumeration`: import `Voblint_CFG.CFG_Transfer` instead of `Voblint_Compile.VIMP_Proc_to_CFG`. The build shows whether a VIMP name rode on the transitive import. | landed |
-| 0.5 | Move `normalize_point` and its lemmas (`Analysis_Result` 133-250) into `Result_Normalization`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
+| 0.5 | Move `normalize_point` and its lemmas (`Solved_Table` 133-250) into `Result_Normalization`. `Abstract_Checks` cites `normalize_point` once; repoint its import for now and resolve in Phase 2. | landed |
 | 0.6 | Delete `td_cfg_side_solver_dg`, `cfg_pkg_dg`, `stabl_at`, `nu_at`, `solve_prod`, `part_post_at`, `least_part_post_at` (`DG_Constraint_Programs` 2365-2470). Then check `threefold_mono` (one remaining user, `Voblint.thy`). | landed |
 | 0.7 | Delete the other zero-use definitions in `DG_Constraint_Programs` and `DG_Soundness` one at a time; keep any the build wants (grep cannot see simp-set uses). | closed: every candidate named here has since been deleted, and `DG_Soundness` with them. Recorded at the time: open -- every candidate has internal users (it is a self-contained cluster with no external consumer, e.g. `pair_of_dg`/`dg_of_pair`/`merge_dg`/`split_dg`, `dgs_enter_pair`, `apply_dg_spec_contribution_at`, `indep_dg_spec`, `dg_trees`/`dg_acc`, `hook_trees`/`hook_acc`, `gamma_ownership_split_lifted`); deciding per cluster is Phase 3 work. `gamma_dg` is closed (2026-09-04 decision entry): it was a self-contained cluster whose five lemmas nothing outside `DG_Soundness` cited, and it is deleted |
 | 0.8 | Run `partition_check.py` with the target assignment: zero violating edges is the exit criterion. | landed |
@@ -194,7 +194,7 @@ Spike before committing to it.
 | 2.2 | If 2.1 fails, record why under "Decisions and corrections", keep `Voblint_Exec` as a permanent session named for what it is, and skip to Phase 3. | not needed: 2.1 succeeded. `Voblint_Exec` stays a permanent session regardless (2.7) |
 | 2.3 | Delete `Exec_DG_Trees`, `Exec_DG_Generator`, `Exec_DG_Bridge`; the transport half of `DG_Local_State_Exec` (keep `routed_dg_domain_exec` and the `local_state_dg_spec_st_for_lifted` commute lemmas it cites); the owner-aware trees and classifier-parametric readback in `Exec_DG_Refines` (keep the `exec_dg_st` lattice instances and `fun_of_dg_st_for`). `Routed_Domain_Exec` stays -- superseded, see decision below. | partly landed (2026-08-31) -- `Exec_DG_Bridge` itself is deleted, zero remaining importers. `Exec_DG_Trees`, `Exec_DG_Generator`, and `Routed_Domain_Exec` are load-bearing and stay (see "Decisions and corrections"); the owner-aware half is now deleted (2026-09-01, G1-G6 of `docs/history/MERGE_SPLIT_GENERALIZATION.md` executed): `merge_split_spec`/`merge_split_spec_exec` generalize the unit/placed skeleton once; `Placement_Policy_Exec` supplies the classifier-split executable projection, `ownership_split_dg_spec_placed_st`, and the `placed_dg_exec_analysis` registration locale; `Example_Sign_Placement` (949 -> 153 lines), `Example_Interval_Placement` (2926 -> 203), and `Example_Interval_Global_Flow_Sensitivity` re-solve on that spine with every value, check, and equation-count regression reproducing unchanged; then `Exec_Placement.thy` (1149 lines) is deleted whole and the owner-aware halves of `Exec_DG_Refines` (863 -> 379), `Exec_DG_Trees` (905 -> 96) and `Exec_DG_Generator` (1719 -> 1009) are removed. `dg_gen_of`, the classifier-parametric readback, the unit executable ops, and the carrier-generic commute engine are what remains. Step closed |
 | 2.4 | `routed_context_hetero` becomes `routed_context_base_hetero` at whichever carrier the instance chooses; delete the restated assumptions. Same for `unit_routed_context_hetero`. | landed: `pure_entry_routed_context` and `call_string_routed_context` (Analysis) are stated at a carrier parameter with `gammaDG`/`gammaM` and sublocale `routed_context_base_hetero`; `routed_context_hetero` and `unit_routed_context_hetero` are deleted, having no interpreter left |
-| 2.5 | `Analysis_Result` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
+| 2.5 | `Solved_Table` holds the quotient; `normalize_point` becomes the single readback at publication, in `DG_Analysis_Adapter`. `Abstract_Checks` reads the published table. | landed in the generic form: `dg_analysis_adapter` extends `routed_context_base_hetero` and takes a readback `rd` with `gammaDG d g = gamma_state_lift (rd d)`; the four abstract-carrier sites pass `rd = id` |
 | 2.6 | Rewrite the twelve `*_Ctx_*_Sound` theories and the four CLI `*_Entry` theories to interpret at the quotient carrier. Expect the transport boilerplate that NEXT_STEPS records as the 23-suffix duplication to shrink. | landed: the four unit-context instances (Sign, Parity, Interval, Int, with their `*_Checks`/`*_Entry` consumers), the three entry-state instances and the two call-string instances are on the executable carrier; the two Interval entry-state examples and `Example_Interval_Source_Ctx` follow the theory; the four CallString examples interpret `call_string_routed_context` at their executable spec and get their headline theorem from `activation_collect_sound`. `Run_Analysis_Sound`'s flat bundles and `Interval_Ctx_Entry_State_Sound`'s hand-rolled Hstep/Henter/Hcomb/Hcont transport lemmas are migrated too (2026-08-31 decision entry); `ectx_abs_spec`/`entry_state_route_abs_gen` stay by design, being the genuine abstract-carrier route witness. What is left on the transport now is only `Example_Sign_Placement`, `Example_Interval_Placement`, and `Result_Normalization` -- tracked under 2.3, not 2.6 |
 | 2.7 | Move `routed_dg_domain_exec`, `Solver_Side_RG`, `TD_Solver_Menu`, `Result_Normalization`, `DG_Coverage` to their final homes (`DG_Local_State_Spec`, Solver, Core); retire `Voblint_Exec` from `ROOTS`. | closed: `Voblint_Exec` is a permanent session of eleven theories (Exec `ROOT`), and `TD_Solver_Menu`, `DG_Coverage` and `Result_Normalization` no longer exist. Recorded at the time: partly landed (2026-09-01, see decision entry): `TD_Solver_Menu` moved to `Voblint_Solver`, `Solver_Side_RG` deleted whole (its one generic fact, `solve_dom_of_solve_c`, folded into `TD_Solver_Menu`; the rest was confirmed dead, not carrier-specific-but-kept). `routed_dg_domain_exec` and most of `Result_Normalization` stay in `Voblint_Exec` -- they are the executable-carrier transport itself, not misplaced generic content, and cannot move before the carrier does. `DG_Coverage` (confirmed fully generic) and the 12x-repeated domain/context solve-bridge boilerplate remain open, deliberately not touched this round |
 
@@ -239,7 +239,7 @@ Spike before committing to it.
   so they became `Voblint_Framework`'s `Result/Seed_Global_Keys.thy`.
   `normalize_point` is the executable readback and stays in `Voblint_Exec` as
   `Exec_Result_Readback.thy`. `dg_globals_for`/`ctx_solved_for`/
-  `fst_ctx_solved_for` build a published `analysis_result` and moved *up* to
+  `fst_ctx_solved_for` build a published `solved_table` and moved *up* to
   `Voblint_Analysis_Base` as `Result/DG_Result_Construction.thy`. Step 2.7's
   "cannot move before the carrier does" was about moving *down* into Core, below
   Exec; moving up into a session whose parent is already `Voblint_Exec` is a
@@ -902,11 +902,11 @@ and mark it `superseded (see below)`.
      `normalize_point_Reachable_map_lift`, all four
      `normalize_point_canonicalize_lift_*`,
      `gamma_point_normalize_point_canonicalize_lift`,
-     `lookup_context_monovariant_analysis_result_for`,
-     `contexts_at_monovariant_analysis_result_for`, `length_dg_globals_for`,
+     `lookup_table_monovariant_solved_table_for`,
+     `table_contexts_monovariant_solved_table_for`, `length_dg_globals_for`,
      `map_fst_dg_globals_for`) -- `normalize_point` itself and its other
      consumers (`dg_globals_for`, `ctx_solved_for`,
-     `monovariant_analysis_result_for`) stayed, still heavily cited.
+     `monovariant_solved_table_for`) stayed, still heavily cited.
      Updated the six files whose prose named a deleted lemma by number
      (`Interval_Checks.thy`, `Sign_Checks.thy`, `Int_Checks.thy`,
      `Sign_Ctx_None_Sound.thy`, `Interval_Ctx_None_Sound.thy`,
@@ -992,7 +992,7 @@ including `assumes`, `lemmas` and `interpretation` positions before removal:
 
 - `gamma_dg` and its five lemmas (`DG_Soundness`) -- closes that name in 0.7.
 - `lookup_joined_with`, `lookup_joined_with_absent`,
-  `lookup_joined_state_eq_with` (`Analysis_Result`): the join-generic lookup was
+  `lookup_joined_state_eq_with` (`Solved_Table`): the join-generic lookup was
   only ever instantiated at `\<squnion>`, which `lookup_joined_state` already is.
 - `analyse_report` (`DG_Analysis_Adapter`) and `verdict_check_result`
   (`Contextual_Check_Report`), its sole consumer.

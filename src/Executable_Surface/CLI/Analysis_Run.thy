@@ -12,34 +12,27 @@ section \<open>Running one configuration once\<close>
 
 text \<open>
   The public analysis operation. A caller hands over the three choices that
-  decide what gets solved and a program, and receives the solve as data: every
-  covered point-and-context state, the contexts each call enters, the check
-  column and the arithmetic diagnostics. One solve stands behind all of them, and
-  every rendering of them --- text, graphs, report pages --- is built outside this
-  development from that one result.
+  decide what gets solved and a program, and receives the solve as a report:
+  every covered point-and-context state, the contexts each call enters, the check
+  column and the arithmetic diagnostics. One solve stands behind all of them. The
+  report holds semantic states, never their rendering; text, graphs and report
+  pages are built from it by a projection outside the theorems.
 
-  Nothing outside this theory decides which analyser runs: every branch below reads
-  the one table its domain, context policy and global update rule name together.
+  Nothing outside this theory decides which analyser runs: the one function below
+  that reads the context policy names the registration that policy solves with.
 \<close>
 
-
-subsection \<open>The result a run hands back, as data\<close>
+subsection \<open>The rows of a report\<close>
 
 text \<open>
-  Everything a consumer reads back from one solve, with no rendering in it. Points
-  are CFG nodes of \<open>res_cfg\<close>, contexts are indices into \<open>res_contexts\<close>, and every
-  abstract value is the type parameter \<open>'v\<close>: \<^typ>\<open>abstract_value\<close> where a theorem
-  reads the result, \<^typ>\<open>String.literal\<close> after \<open>map_run_result\<close> has applied
-  each domain's own rendering. Context identity is the index, never a rendering, so
+  Points are CFG nodes and contexts are indices into the report's context list, so
   a consumer never has to infer which states belong together from displayed text.
+  A row's state is the type parameter \<open>'s\<close>: the semantic state in a report, its
+  rendering after a presentation has been applied.
 
   A route lists every callee context a call enters from one caller context: an
   entry specification may offer several alternatives, and each may land in its own
   context. The empty list is a call the caller context does not take.
-
-  A state is shown one active analysis at a time, in activation order, each as its
-  own \<^typ>\<open>'v field_state\<close>, as Goblint's report shows each component of its
-  combined state.
 
   A state also lists, for every edge leaving its point, that edge's target and what
   the edge's own step makes of the state. Where the target is a join of several
@@ -47,20 +40,13 @@ text \<open>
   the effect of one statement survives.
 \<close>
 
-datatype 'v analysis_context =
-    Context_Unit
-  | Context_Entry "'v list"
-  | Context_Call_String "pp list"
-
-type_synonym 'v analysis_view = "(analysis_domain \<times> 'v field_state) list"
-
-record 'v result_state =
+record 's result_state =
   state_point :: pp
   state_context :: nat
-  state_value :: "'v analysis_view lifted"
+  state_value :: "'s lifted"
   state_checks :: "(exp \<times> contextual_verdict) list"
   state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
-  state_steps :: "(pp \<times> 'v analysis_view lifted) list"
+  state_steps :: "(pp \<times> 's lifted) list"
 
 record call_route =
   route_point :: pp
@@ -84,78 +70,77 @@ datatype result_global_unknown =
     Global_Shared
   | Global_Seed pname "nat option"
 
-record 'v result_global =
+record 's result_global =
   global_unknown :: result_global_unknown
-  global_state :: "'v analysis_view lifted"
+  global_state :: "'s lifted"
 
-record 'v run_result =
-  res_cfg :: cfg
-  res_contexts :: "'v analysis_context list"
-  res_states :: "'v result_state list"
-  res_routes :: "call_route list"
-  res_checks :: "result_check list"
-  res_globals :: "'v result_global list"
-  res_diagnostics :: "arithmetic_diagnostic list"
-
-text \<open>
-  The one transformation presentation may apply to a result, spelled out field by
-  field: every abstract value, wherever it sits, and nothing else. Points, context
-  indices, routes, checks and diagnostics pass through untouched.
-\<close>
-
-fun map_analysis_context :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_context \<Rightarrow> 'w analysis_context"
-where
-  "map_analysis_context f Context_Unit = Context_Unit"
-| "map_analysis_context f (Context_Entry vs) = Context_Entry (map f vs)"
-| "map_analysis_context f (Context_Call_String us) = Context_Call_String us"
-
-definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_view \<Rightarrow> 'w analysis_view" where
-  "map_analysis_view f = map (\<lambda>(a, s). (a, map_field_state f s))"
-
-definition map_result_state :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_state \<Rightarrow> 'w result_state" where
+definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_state \<Rightarrow> 't result_state" where
   "map_result_state f st =
      \<lparr> state_point = state_point st,
        state_context = state_context st,
-       state_value = map_lift (map_analysis_view f) (state_value st),
+       state_value = map_lift f (state_value st),
        state_checks = state_checks st,
        state_diagnostics = state_diagnostics st,
-       state_steps = map (\<lambda>(w, s). (w, map_lift (map_analysis_view f) s)) (state_steps st) \<rparr>"
+       state_steps = map (\<lambda>(w, s). (w, map_lift f s)) (state_steps st) \<rparr>"
 
-definition map_result_global :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v result_global \<Rightarrow> 'w result_global" where
+definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_global \<Rightarrow> 't result_global" where
   "map_result_global f g =
      \<lparr> global_unknown = global_unknown g,
-       global_state = map_lift (map_analysis_view f) (global_state g) \<rparr>"
+       global_state = map_lift f (global_state g) \<rparr>"
 
-definition map_run_result :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v run_result \<Rightarrow> 'w run_result" where
-  "map_run_result f res =
-     \<lparr> res_cfg = res_cfg res,
-       res_contexts = map (map_analysis_context f) (res_contexts res),
-       res_states = map (map_result_state f) (res_states res),
-       res_routes = res_routes res,
-       res_checks = res_checks res,
-       res_globals = map (map_result_global f) (res_globals res),
-       res_diagnostics = res_diagnostics res \<rparr>"
+subsection \<open>The configuration\<close>
 
-lemma map_run_result_structure [simp]:
-  "res_cfg (map_run_result f res) = res_cfg res"
-  "length (res_contexts (map_run_result f res)) = length (res_contexts res)"
-  "res_routes (map_run_result f res) = res_routes res"
-  "res_checks (map_run_result f res) = res_checks res"
-  "res_diagnostics (map_run_result f res) = res_diagnostics res"
-  "map (\<lambda>st. (state_point st, state_context st)) (res_states (map_run_result f res))
-     = map (\<lambda>st. (state_point st, state_context st)) (res_states res)"
-  by (simp_all add: map_run_result_def map_result_state_def comp_def)
+text \<open>
+  A caller's three choices travel together as one value: the analyses that run, the
+  rule for side-effected globals, and the context policy. A configuration is valid
+  when it activates at least one analysis and none twice.
+\<close>
+
+datatype analysis_config = Analysis_Config
+  (config_analyses: "analysis_domain list")
+  (config_rule: globals_rule)
+  (config_context: context_mode)
+
+definition valid_config :: "analysis_config \<Rightarrow> bool" where
+  "valid_config config \<longleftrightarrow> config_analyses config \<noteq> [] \<and> distinct (config_analyses config)"
+
+subsection \<open>The report\<close>
+
+text \<open>
+  A context is kept as the policy's own value, tagged by policy, so one report type
+  serves every policy. The report also keeps the configuration, which names the
+  concretization its states are read through, and the program's variables, which a
+  rendering lists.
+\<close>
+
+datatype report_context =
+    Report_Unit
+  | Report_Entry mcp_ctx
+  | Report_Call_String "pp list"
+
+record analysis_report =
+  report_config :: analysis_config
+  report_vars :: "vname list"
+  report_cfg :: cfg
+  report_contexts :: "report_context list"
+  report_states :: "mcp_val result_state list"
+  report_routes :: "call_route list"
+  report_checks :: "result_check list"
+  report_globals :: "mcp_val result_global list"
+  report_diagnostics :: "arithmetic_diagnostic list"
 
 subsection \<open>One builder for every context policy\<close>
 
 text \<open>
-  A result is built the same way whatever the context policy: list the contexts the
+  A report is built the same way whatever the context policy: list the contexts the
   table covers, file every covered \<open>(point, context)\<close> state under its context's
-  index, ask the policy which contexts each live call enters, and take the check and
-  diagnostic columns off the same table. The policy contributes only three things:
-  how its contexts are ordered (\<open>ctx_key\<close>, injective), how a context reads as data
-  (\<open>ctx_view\<close>), and which contexts a call enters from a caller state
-  (\<open>targets\<close>, the routing the equation system itself applies).
+  index, ask the run which context each live call enters, and take the check and
+  diagnostic columns off the same table. The policy contributes only how its
+  contexts are ordered (\<open>ctx_key\<close>, injective) and tagged (\<open>ctx_tag\<close>).
+
+  Points are listed in graph order. A covered point outside the graph's node list
+  is listed after them, so the rows hold every covered key without a separate
+  argument about which points the solver visits.
 \<close>
 
 fun callee_of_entry :: "cfg_node \<Rightarrow> pname" where
@@ -164,11 +149,6 @@ fun callee_of_entry :: "cfg_node \<Rightarrow> pname" where
 
 definition context_indices :: "(nat \<times> 'c) list \<Rightarrow> 'c \<Rightarrow> nat list" where
   "context_indices indexed ctx = map fst (filter (\<lambda>(i, ctx'). ctx' = ctx) indexed)"
-
-text \<open>
-  A state lists every variable of \<^const>\<open>program_vars\<close>, so no point's state misses
-  a name its own procedure reads.
-\<close>
 
 text \<open>
   Contexts are listed in the order of an injective key, which picks each context back
@@ -214,104 +194,13 @@ text \<open>
 \<close>
 
 definition result_checks_of ::
-    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
+    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
 where
   "result_checks_of g r classify =
      map (\<lambda>(u, a, w).
             \<lparr> check_point = u, check_label = ea_check_label a, check_exp = ea_check_cond a,
-              check_verdict = aggregate_verdicts
-                ((\<lambda>ctx. classify_point classify (ea_check_cond a) (lookup_context r u ctx))
-                   ` contexts_at r u) \<rparr>)
+              check_verdict = point_verdict r classify u (ea_check_cond a) \<rparr>)
        (filter (\<lambda>(u, a, w). is_EA_Check a) (cfg_intra_list g))"
-
-text \<open>
-  The globals column lists the global unknowns of the constraint system rather than
-  the program's global variables, whose values sit in every point's state: the
-  analysis-wide global, then for every procedure the seed of each context its entry
-  was solved at. A procedure entered at no context is listed once, unreachable.
-\<close>
-
-definition run_result_of ::
-    "(vname list \<Rightarrow> 'v \<Rightarrow> abstract_value analysis_view) \<Rightarrow> ('c \<Rightarrow> order_key)
-       \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
-       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list)
-       \<Rightarrow> (exp \<Rightarrow> 'v \<Rightarrow> check_result) \<Rightarrow> ('c, 'v) analysis_result
-       \<Rightarrow> 'v lifted \<Rightarrow> (pname \<Rightarrow> 'c \<Rightarrow> 'v lifted)
-       \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted)
-       \<Rightarrow> imp_prog \<Rightarrow> abstract_value run_result" where
-  "run_result_of render ctx_key ctx_view targets classify r shared seed_at step_at p =
-     (let g = prog_cfg p;
-          vars = program_vars p;
-          view = map_lift (render vars);
-          ctxs = ordered_by_key ctx_key (snd ` result_unknowns r);
-          indexed = enumerate 0 ctxs;
-          nodes = cfg_node_list g;
-          intra = cfg_intra_list g;
-          steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
-          checks = group_by_key (\<lambda>(u, a, w). u)
-            (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
-          obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
-          state_at = (\<lambda>i ctx v.
-            \<lparr> state_point = v, state_context = i,
-              state_value = view (lookup_context r v ctx),
-              state_checks =
-                map (\<lambda>cond. (cond, classify_point classify cond (lookup_context r v ctx)))
-                  (group_lookup checks v),
-              state_diagnostics =
-                map (\<lambda>obligation. (obligation,
-                                     classify_point classify (arithmetic_condition obligation)
-                                       (lookup_context r v ctx)))
-                  (concat (group_lookup obligations v)),
-              state_steps =
-                map (\<lambda>(a, w). (w, view (step_at v ctx a))) (group_lookup steps v)
-            \<rparr>);
-          route_at = (\<lambda>u ca ce i ctx.
-            \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
-              route_targets =
-                (case lookup_context r u ctx of
-                   Bot \<Rightarrow> []
-                 | Lifted _ \<Rightarrow>
-                     remdups (concat (map (context_indices indexed)
-                       (targets u ctx ca (callee_of_entry ce))))) \<rparr>);
-          seeds_of = (\<lambda>f.
-            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> result_unknowns r) indexed of
-               [] \<Rightarrow> [\<lparr> global_unknown = Global_Seed f None, global_state = Bot \<rparr>]
-             | entered \<Rightarrow>
-                 map (\<lambda>(i, ctx). \<lparr> global_unknown = Global_Seed f (Some i),
-                                   global_state = view (seed_at f ctx) \<rparr>)
-                   entered))
-      in \<lparr> res_cfg = g,
-           res_contexts = map ctx_view ctxs,
-           res_states =
-             concat (map (\<lambda>(i, ctx).
-                            map (state_at i ctx)
-                              (filter (\<lambda>v. (v, ctx) \<in> result_unknowns r) nodes))
-                       indexed),
-           res_routes =
-             concat (map (\<lambda>(u, ca, ce, after).
-                            map (\<lambda>(i, ctx). route_at u ca ce i ctx)
-                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_unknowns r) indexed))
-                       (cfg_calls_list g)),
-           res_checks = result_checks_of g r classify,
-           res_globals =
-             \<lparr> global_unknown = Global_Shared, global_state = view shared \<rparr>
-               # concat (map seeds_of (prog_main_name # prog_procs p)),
-           res_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
-
-
-subsection \<open>What the active analyses publish, as data\<close>
-
-text \<open>
-  A state reads as each active analysis's own part of it, in activation order. A context
-  reads as the formal values the active analyses key it by, in the same order.
-\<close>
-
-definition mcp_render ::
-    "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> abstract_value analysis_view" where
-  "mcp_render as vars v = map (\<lambda>a. (a, field_of a v vars)) as"
-
-definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
-  "mcp_ctx_values as ctx = concat (map (\<lambda>a. ctx_values a ctx) as)"
 
 text \<open>
   Which callee contexts a call enters from a caller context: the one the solve itself
@@ -324,76 +213,210 @@ definition live_targets ::
        \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list" where
   "live_targets succ u ctx ca q = (case succ u ctx ca q of None \<Rightarrow> [] | Some ctx' \<Rightarrow> [ctx'])"
 
-subsection \<open>One configuration, one typed result\<close>
-
 text \<open>
-  Each context policy names the one solve the active analyses run under the chosen
-  global update rule, and hands its table and global unknowns to the builder together
-  with how that policy's contexts read.
+  The globals column lists the global unknowns of the constraint system rather than
+  the program's global variables, whose values sit in every point's state: the
+  analysis-wide global, then for every procedure the seed of each context its entry
+  was solved at. A procedure entered at no context is listed once, unreachable.
 \<close>
 
-fun analysis_result ::
-    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> abstract_value run_result" where
-  "analysis_result as r Ctx_None p =
-     (case mcp_rule.result_with_globals as r (declared_global p) p of
-        (t, shared, seed_at, step_at, succ) \<Rightarrow>
-          run_result_of (mcp_render (activation as)) (\<lambda>_. Key_List []) (\<lambda>_. Context_Unit)
-            (live_targets succ)
-            (mcp_classify (activation as)) t shared seed_at step_at p)"
-| "analysis_result as r Ctx_EntryState p =
-     (case mcp_es_rule.result_with_globals as r (declared_global p) p of
-        (t, shared, seed_at, step_at, succ) \<Rightarrow>
-          run_result_of (mcp_render (activation as))
-            (\<lambda>ctx. Key_List (map abstract_value_key (mcp_ctx_values (activation as) ctx)))
-            (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
-            (live_targets succ)
-            (mcp_classify (activation as)) t shared seed_at step_at p)"
-| "analysis_result as r (Ctx_CallString k) p =
-     (case mcp_cs_rule.result_with_globals as k r (declared_global p) p of
-        (t, shared, seed_at, step_at, succ) \<Rightarrow>
-          run_result_of (mcp_render (activation as)) (\<lambda>ctx. Key_List (map Key_Node ctx))
-            Context_Call_String
-            (live_targets succ)
-            (mcp_classify (activation as)) t shared seed_at step_at p)"
+text \<open>
+  One row: the state the table filed at a point under a context, with the verdicts of
+  the checks and arithmetic obligations there and the steps of the edges leaving it.
+  The check, obligation and step lists come grouped by point, built once per report.
+\<close>
+
+definition report_row ::
+    "('c, mcp_val) solved_run \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result)
+       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, arithmetic_obligation list list) rbt
+       \<Rightarrow> (pp, (edge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> mcp_val result_state" where
+  "report_row sr classify conds obls edges i ctx v =
+     (let state = lookup_table (run_table sr) v ctx
+      in \<lparr> state_point = v, state_context = i,
+           state_value = state,
+           state_checks =
+             map (\<lambda>cond. (cond, classify_point classify cond state)) (group_lookup conds v),
+           state_diagnostics =
+             map (\<lambda>obligation. (obligation,
+                                  classify_point classify (arithmetic_condition obligation) state))
+               (concat (group_lookup obls v)),
+           state_steps = map (\<lambda>(a, w). (w, run_step sr v ctx a)) (group_lookup edges v) \<rparr>)"
+
+lemma report_row_simps [simp]:
+  "state_point (report_row sr classify conds obls edges i ctx v) = v"
+  "state_context (report_row sr classify conds obls edges i ctx v) = i"
+  "state_value (report_row sr classify conds obls edges i ctx v)
+     = lookup_table (run_table sr) v ctx"
+  by (simp_all add: report_row_def Let_def)
+
+definition report_of ::
+    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> report_context)
+       \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, mcp_val) solved_run \<Rightarrow> imp_prog
+       \<Rightarrow> analysis_report" where
+  "report_of config ctx_key ctx_tag classify sr p =
+     (let g = prog_cfg p;
+          r = run_table sr;
+          ctxs = ordered_by_key ctx_key (snd ` covered_keys r);
+          indexed = enumerate 0 ctxs;
+          nodes = cfg_node_list g
+            @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list g));
+          intra = cfg_intra_list g;
+          steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
+          checks = group_by_key (\<lambda>(u, a, w). u)
+            (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
+          obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
+          state_at = report_row sr classify checks obligations steps;
+          route_at = (\<lambda>u ca ce i ctx.
+            \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
+              route_targets =
+                (case lookup_table r u ctx of
+                   Bot \<Rightarrow> []
+                 | Lifted _ \<Rightarrow>
+                     remdups (concat (map (context_indices indexed)
+                       (live_targets (run_succ sr) u ctx ca (callee_of_entry ce))))) \<rparr>);
+          seeds_of = (\<lambda>f.
+            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> covered_keys r) indexed of
+               [] \<Rightarrow> [\<lparr> global_unknown = Global_Seed f None, global_state = Bot \<rparr>]
+             | entered \<Rightarrow>
+                 map (\<lambda>(i, ctx). \<lparr> global_unknown = Global_Seed f (Some i),
+                                   global_state = run_seed sr f ctx \<rparr>)
+                   entered))
+      in \<lparr> report_config = config,
+           report_vars = program_vars p,
+           report_cfg = g,
+           report_contexts = map ctx_tag ctxs,
+           report_states =
+             concat (map (\<lambda>(i, ctx).
+                            map (state_at i ctx)
+                              (filter (\<lambda>v. (v, ctx) \<in> covered_keys r) nodes))
+                       indexed),
+           report_routes =
+             concat (map (\<lambda>(u, ca, ce, after).
+                            map (\<lambda>(i, ctx). route_at u ca ce i ctx)
+                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> covered_keys r) indexed))
+                       (cfg_calls_list g)),
+           report_checks = result_checks_of g r classify,
+           report_globals =
+             \<lparr> global_unknown = Global_Shared, global_state = run_shared sr \<rparr>
+               # concat (map seeds_of (prog_main_name # prog_procs p)),
+           report_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
+
+subsection \<open>One configuration, one report\<close>
+
+text \<open>
+  An entry-state context reads as the formal values the active analyses key it by,
+  in activation order, and is listed in the order of those values. Those values
+  alone do not tell every context apart --- they skip the fields of inactive
+  analyses --- so the whole context breaks ties, which makes the key injective and
+  leaves the order of contexts that the values already tell apart unchanged.
+\<close>
+
+definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
+  "mcp_ctx_values as ctx = concat (map (\<lambda>a. context_values (registration_of a) ctx) as)"
+
+definition entry_ctx_key :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> order_key" where
+  "entry_ctx_key as ctx =
+     Key_List [Key_List (map abstract_value_key (mcp_ctx_values as ctx)), mcp_ctx_key ctx]"
+
+lemma entry_ctx_key_inject: "entry_ctx_key as a = entry_ctx_key as b \<Longrightarrow> a = b"
+  by (simp add: entry_ctx_key_def mcp_ctx_key_inject)
+
+text \<open>
+  The one place the context policy is read. Each policy names the registration the
+  active analyses run as under the chosen global update rule, solves its equations
+  with the executable solver from the program exit at the root context, and reads
+  the report off the answer. The logical \<open>None\<close> branch of \<open>solve_c\<close> yields no report.
+  Where the solve diverges, the generated code does not return at all, so that
+  branch is not an operational timeout result.
+\<close>
+text \<open>
+  The executable boundary, specialised once. The registrations are generic in their
+  carrier; these three constants fix it at the combined state and leave only the
+  context and global-key types open. Generated code then builds the carrier's
+  equality and lattice dictionaries inside each constant rather than inline in every
+  branch below.
+\<close>
+
+definition mcp_equations ::
+    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
+       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
+  "mcp_equations as global seed route =
+     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route"
+
+definition mcp_solve_c ::
+    "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
+       \<Rightarrow> ((pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)) option"
+  where
+  "mcp_solve_c = TD_side_rule_Interp_solve_c"
+
+definition mcp_run_of ::
+    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
+       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
+       \<Rightarrow> ('c, mcp_val) solved_run" where
+  "mcp_run_of as global seed route =
+     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route"
+
+lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
+
+
+fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
+  "analysis_report_of (Analysis_Config as r Ctx_None) p =
+     map_option
+       (\<lambda>sol. report_of (Analysis_Config as r Ctx_None) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+          (mcp_classify (activation as))
+          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit)
+             (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+             (\<lambda>_. route_unit) (declared_global p) p)
+          (cfg_exit (prog_cfg p), ()))"
+| "analysis_report_of (Analysis_Config as r Ctx_EntryState) p =
+     map_option
+       (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState)
+          (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
+          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed
+             (mcp_formals_route (activation as)) (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+             (mcp_formals_route (activation as)) (declared_global p) p)
+          (cfg_exit (prog_cfg p), mcp_root_ctx))"
+| "analysis_report_of (Analysis_Config as r (Ctx_CallString k)) p =
+     map_option
+       (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k))
+          (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
+          (mcp_classify (activation as))
+          (mcp_run_of (activation as) Call_String_Context.Global Call_String_Context.Seed
+             (\<lambda>_. cs_route k) (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) Call_String_Context.Global Call_String_Context.Seed
+             (\<lambda>_. cs_route k) (declared_global p) p)
+          (cfg_exit (prog_cfg p), []))"
 
 subsection \<open>The public operation\<close>
 
 text \<open>
-  Three answers: an activation that is empty or names an analysis twice asks for no
-  run, a malformed program was never analysed, and every well-formed one is.
+  Four answers: an invalid configuration asks for no run, a malformed program was
+  never analysed, the logical \<open>None\<close> branch of the executable solve has no report,
+  and every other run hands back its report.
 \<close>
 
-datatype 'v analysis_answer =
+datatype 'r analysis_answer =
     Invalid_Activation
   | Malformed_Program
-  | Analysed "'v run_result"
+  | No_Answer
+  | Analysed 'r
 
-definition valid_activation :: "analysis_domain list \<Rightarrow> bool" where
-  "valid_activation as \<longleftrightarrow> as \<noteq> [] \<and> distinct as"
-
-definition analyse_program ::
-    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> abstract_value analysis_answer" where
-  "analyse_program as rule ctx p =
-     (if \<not> valid_activation as then Invalid_Activation
-      else if wf_program_compile_input_exec p then Analysed (analysis_result as rule ctx p)
-      else Malformed_Program)"
-
-fun map_analysis_answer :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_answer \<Rightarrow> 'w analysis_answer" where
-  "map_analysis_answer f Invalid_Activation = Invalid_Activation"
-| "map_analysis_answer f Malformed_Program = Malformed_Program"
-| "map_analysis_answer f (Analysed res) = Analysed (map_run_result f res)"
-
-text \<open>
-  The operation a consumer outside Isabelle calls: \<^const>\<open>analyse_program\<close>, with each
-  domain's rendering applied to every abstract value and nothing else changed.
-\<close>
-
-definition run_voblint ::
-    "analysis_domain list \<Rightarrow> globals_rule \<Rightarrow> context_mode \<Rightarrow> imp_prog
-       \<Rightarrow> String.literal analysis_answer" where
-  "run_voblint as rule ctx p =
-     map_analysis_answer string_of_abstract_value (analyse_program as rule ctx p)"
+definition run_voblint :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report analysis_answer"
+where
+  "run_voblint config p =
+     (if \<not> valid_config config then Invalid_Activation
+      else if \<not> wf_program_compile_input_exec p then Malformed_Program
+      else case analysis_report_of config p of
+             None \<Rightarrow> No_Answer
+           | Some res \<Rightarrow> Analysed res)"
 
 end

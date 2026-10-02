@@ -11,6 +11,8 @@
 # every policy as a field of the combined state generated into
 # src/Executable_Surface/CLI/generated/MCP_Carrier.thy, so a domain registers the
 # entry-state or call-string policy only where a theory states facts about it.
+# `constructor` makes the analysis one case `{name} {arg}` of a constructor several
+# variants share, taking an argument of `type` (default: its own `<name>_Analysis`).
 # `value_constructor` is its `abstract_value` constructor (default: `<name>Value`),
 # `display_type` the type that constructor carries (default: `value_type`), `key`
 # the injective key that lists it (default: `<value_type>_key`) and `render` its
@@ -40,17 +42,18 @@ domains:
     value_type: parity
     imports: [Parity_Sound, Parity_Classify, Parity_Transfer, Parity_Exec]
 
-  - name: Int
+  - name: Int_Fixpoint
+    dir: Int
+    constructor: {name: Int_Analysis, arg: Refine_Fixpoint, type: refine_mode}
+    ops: {const: int_dom_ops, args: [Refine_Fixpoint]}
     value_type: int_dom
     impl: int
     value_constructor: IntDomValue
     imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
     # Int is registered once per refinement mode, each an analysis of its own
-    # with its own field; the CLI's --int-refinement picks one. Int itself is the
-    # most precise mode.
+    # with its own field, all cases of one constructor `Int_Analysis refine_mode`;
+    # the CLI's --int-refinement picks one. Int_Fixpoint is the most precise mode.
     roles:
-      tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}
-      enter_st: {const: int_dom_enter_st_for, args: [Refine_Fixpoint]}
       init_st: cinit_int_dom_st
       skip: skip_int_dom
       assign: {const: assign_int_dom, args: [Refine_Fixpoint]}
@@ -60,11 +63,14 @@ domains:
       return: {const: return_int_dom, args: [Refine_Fixpoint]}
       enter_ci: {const: enter_int_dom_ci_for, args: [Refine_Fixpoint]}
       event: event_int_dom
+      init_gamma: int_cinit_gamma
       classifier: {const: int_classify_check, args: [Refine_Fixpoint]}
     field:
       answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Fixpoint st $q)'
 
   - name: Int_Once
+    constructor: {name: Int_Analysis, arg: Refine_Once, type: refine_mode}
+    ops: {const: int_dom_ops, args: [Refine_Once]}
     dir: Int
     value_type: int_dom
     impl: int
@@ -72,8 +78,6 @@ domains:
     imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
     # Int with one refinement round after every operation.
     roles:
-      tf_st: {const: int_tf_st_for, args: [Refine_Once]}
-      enter_st: {const: int_dom_enter_st_for, args: [Refine_Once]}
       init_st: cinit_int_dom_st
       skip: skip_int_dom
       assign: {const: assign_int_dom, args: [Refine_Once]}
@@ -89,6 +93,8 @@ domains:
       answer: '(case $v of Bot \<Rightarrow> \<top> | Lifted st \<Rightarrow> int_eval_answer Refine_Once st $q)'
 
   - name: Int_Never
+    constructor: {name: Int_Analysis, arg: Refine_Never, type: refine_mode}
+    ops: {const: int_dom_ops, args: [Refine_Never]}
     dir: Int
     value_type: int_dom
     impl: int
@@ -96,8 +102,6 @@ domains:
     imports: [Int_Sound, Int_Classify, Int_Transfer, Int_Exec]
     # Int with no refinement between its components.
     roles:
-      tf_st: {const: int_tf_st_for, args: [Refine_Never]}
-      enter_st: {const: int_dom_enter_st_for, args: [Refine_Never]}
       init_st: cinit_int_dom_st
       skip: skip_int_dom
       assign: {const: assign_int_dom, args: [Refine_Never]}

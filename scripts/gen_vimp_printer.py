@@ -27,7 +27,7 @@ HEADER = (
     "Do not hand-edit; regenerate instead. *)\n"
 )
 
-G = "Voblint_CLI.Generated"
+G = "Voblint"
 
 
 def operator_table(grammar: dict) -> tuple[list[tuple], list[tuple]]:

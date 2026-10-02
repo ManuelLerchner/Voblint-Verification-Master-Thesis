@@ -13,11 +13,11 @@ text \<open>
 
 definition arithmetic_example_result where
   "arithmetic_example_result p =
-    (case run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState p of
+    (case run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState) p of
        Analysed res \<Rightarrow> Some
          (map (\<lambda>d. (arithmetic_operation (diagnostic_obligation d),
-                      diagnostic_verdict d)) (res_diagnostics res),
-          map check_verdict (res_checks res))
+                      diagnostic_verdict d)) (report_diagnostics res),
+          map check_verdict (report_checks res))
      | _ \<Rightarrow> None)"
 
 subsection \<open>One source guard, one finding, and continued total execution\<close>

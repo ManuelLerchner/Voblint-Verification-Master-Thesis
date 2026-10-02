@@ -10,7 +10,7 @@ text \<open>
   premises hold together on one concrete program, and that the conclusion is then
   informative: the verdict it constrains is \<^const>\<open>Check_Proved\<close> or \<^const>\<open>Dead\<close>, not
   \<^const>\<open>Check_Unknown\<close>. It then shows five conditions to be load-bearing: the
-  verdict clause of \<^const>\<open>checks_sound_at\<close>, the transfer obligation of the
+  definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
   congruence remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
   or weakening each admits an answer that misses a concrete execution.
@@ -38,21 +38,24 @@ definition nv_prog :: imp_prog where
      }
    }"
 
+abbreviation nv_config :: analysis_config where
+  "nv_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState"
+
 lemma nv_report:
-  "(case run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog of
+  "(case run_voblint nv_config nv_prog of
       Analysed res \<Rightarrow>
-        map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
           = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
     | _ \<Rightarrow> False)"
   by eval
 
 lemma nv_analysed:
   obtains res where
-    "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog = Analysed res"
-    "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+    "run_voblint nv_config nv_prog = Analysed res"
+    "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
   using nv_report
-  by (cases "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog") auto
+  by (cases "run_voblint nv_config nv_prog") auto
 
 subsection \<open>The premises, discharged\<close>
 
@@ -130,23 +133,13 @@ proof -
   then show ?thesis unfolding nv_main by (rule psteps_Seq2)
 qed
 
-lemma nv_solve_c:
-  "TD_side_rule_Interp_solve_c Globals_Warrow
-     (mcp_es_rule.equations [Interval_Analysis] (declared_global nv_prog) nv_prog)
-     (mcp_es_rule.root_query nv_prog) \<noteq> None"
-  unfolding mcp_es_rule.root_query_def by eval
-
-lemma nv_terminates:
-  "config_terminates [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog"
-  by (simp add: mcp_es_rule.terminates_of_solve_c [OF nv_solve_c])
-
 subsection \<open>The endpoints, instantiated\<close>
 
 theorem nv_source_certified:
   "\<exists>res v stk.
-     run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
+     run_voblint nv_config nv_prog
        = Analysed res
-   \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+   \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved),
           (Statement 5, Decided Check_Proved)]
    \<and> prog_table nv_prog, prog_cfg nv_prog \<turnstile>
@@ -157,16 +150,15 @@ theorem nv_source_certified:
        (v, nv_final, stk)
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                    cinit_stores (declared_global nv_prog)\<^esub> v
-   \<and> analysis_result_covers
-       [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog v nv_final
-   \<and> checks_sound_at res v nv_final"
+   \<and> nv_final \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
-  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
+  obtain res where ans: "run_voblint nv_config nv_prog
                            = Analysed res"
-    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  from run_voblint_certified_source_sound [OF nv_init nv_to_check nv_terminates ans]
+  from run_voblint_source_sound [OF nv_init nv_to_check ans]
   show ?thesis using ans checks by meson
 qed
 
@@ -176,24 +168,24 @@ text \<open>
 \<close>
 
 theorem nv_check_proved_sound:
-  "\<exists>res. run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog = Analysed res
-     \<and> (\<exists>chk \<in> set (res_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
+  "\<exists>res. run_voblint nv_config nv_prog = Analysed res
+     \<and> (\<exists>chk \<in> set (report_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
           \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                           cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
 proof -
-  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState nv_prog
+  obtain res where ans: "run_voblint nv_config nv_prog
                            = Analysed res"
-    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (res_checks res)
+    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
   have nc: "next_check (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
               (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
     by simp
-  from run_voblint_check_sound [OF nv_init nv_to_check nc nv_terminates ans]
+  from run_voblint_check_sound [OF nv_init nv_to_check nc ans]
   obtain chk
-    where listed: "chk \<in> set (res_checks res)"
+    where listed: "chk \<in> set (report_checks res)"
       and re: "check_exp chk = Eq (V (STR ''a'')) (N 6)"
       and mem: "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                               cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)"
@@ -216,10 +208,13 @@ definition nv_dead_prog :: imp_prog where
      }
    }"
 
+abbreviation nv_dead_config :: analysis_config where
+  "nv_dead_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Join Ctx_None"
+
 lemma nv_dead_report:
-  "(case run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog of
+  "(case run_voblint nv_dead_config nv_dead_prog of
       Analysed res \<Rightarrow>
-        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
           = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
              (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]
     | _ \<Rightarrow> False)"
@@ -227,32 +222,27 @@ lemma nv_dead_report:
 
 lemma nv_dead_analysed:
   obtains res where
-    "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog = Analysed res"
-    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+    "run_voblint nv_dead_config nv_dead_prog = Analysed res"
+    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
        = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
           (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
   using nv_dead_report
-  by (cases "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog") auto
-
-lemma nv_dead_terminates:
-  "config_terminates [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog"
-  by (simp, rule mcp_rule.terminates_of_solve_c)
-     (simp only: mcp_rule.root_query_def, eval)
+  by (cases "run_voblint nv_dead_config nv_dead_prog") auto
 
 theorem nv_dead_unreached:
   "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
      cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
 proof -
-  obtain res where ans: "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog
+  obtain res where ans: "run_voblint nv_dead_config nv_dead_prog
                            = Analysed res"
-    and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+    and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
                    = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
                       (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
     by (rule nv_dead_analysed)
-  then obtain chk where "chk \<in> set (res_checks res)" "check_point chk = Statement 3"
+  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 3"
       "check_verdict chk = Dead"
-    by (cases "res_checks res" rule: remdups_adj.cases) auto
-  with run_voblint_dead_check_unreached [OF nv_dead_terminates ans] show ?thesis by metis
+    by (cases "report_checks res" rule: remdups_adj.cases) auto
+  with run_voblint_dead_check_unreached [OF ans] show ?thesis by metis
 qed
 
 section \<open>Load-bearing conditions\<close>
@@ -260,19 +250,19 @@ section \<open>Load-bearing conditions\<close>
 subsection \<open>Soundness alone is cheap\<close>
 
 text \<open>
-  \<^const>\<open>checks_sound_at\<close> constrains only decided and dead verdicts, so a result
-  that answers \<^const>\<open>Check_Unknown\<close> at every check meets it at every node and
-  store. The endpoint is informative because the verdicts \<^const>\<open>run_voblint\<close>
-  actually returns above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
+  \<^const>\<open>verdict_stores\<close> constrains only definite verdicts, so a report that answers
+  \<^const>\<open>Check_Unknown\<close> at every check admits every store at every node. The
+  endpoint is informative because the verdicts \<^const>\<open>run_voblint\<close> actually returns
+  above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
 \<close>
 
-definition answer_all :: "contextual_verdict \<Rightarrow> 'v run_result \<Rightarrow> 'v run_result" where
+definition answer_all :: "contextual_verdict \<Rightarrow> analysis_report \<Rightarrow> analysis_report" where
   "answer_all vd res =
-     res\<lparr>res_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (res_checks res)\<rparr>"
+     res\<lparr>report_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (report_checks res)\<rparr>"
 
 lemma unknown_everywhere_sound:
-  "checks_sound_at (answer_all (Decided Check_Unknown) res) v s"
-  by (auto simp: checks_sound_at_def answer_all_def)
+  "s \<in> \<V>\<^bsub>answer_all (Decided Check_Unknown) res\<^esub> v"
+  by (auto simp: verdict_stores_def answer_all_def)
 
 text \<open>
   An answer of \<^const>\<open>Check_Proved\<close> everywhere is not sound: the store after
@@ -311,20 +301,21 @@ proof -
 qed
 
 theorem proved_everywhere_unsound:
-  assumes "run_voblint [Interval_Analysis] Globals_Join Ctx_None nv_dead_prog = Analysed res"
-  shows "\<not> checks_sound_at (answer_all (Decided Check_Proved) res) (Statement 1)
-                           ((\<lambda>_. 0)(STR ''x'' := 1))"
+  assumes "run_voblint nv_dead_config nv_dead_prog = Analysed res"
+  shows "(\<lambda>_. 0)(STR ''x'' := 1)
+           \<notin> \<V>\<^bsub>answer_all (Decided Check_Proved) res\<^esub> (Statement 1)"
 proof -
   from nv_dead_report assms
-  have "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (res_checks res)
+  have "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
           = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
              (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
     by simp
-  then obtain chk where "chk \<in> set (res_checks res)" "check_point chk = Statement 1"
+  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 1"
       "check_exp chk = Eq (V (STR ''x'')) (N 0)"
-    by (cases "res_checks res" rule: remdups_adj.cases) auto
+    by (cases "report_checks res" rule: remdups_adj.cases) auto
   then show ?thesis
-    by (auto simp: checks_sound_at_def answer_all_def)
+    by (auto simp: verdict_stores_def answer_all_def
+        intro!: bexI[of _ "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>"])
 qed
 
 subsection \<open>The pre-fix Goblint congruence remainder\<close>

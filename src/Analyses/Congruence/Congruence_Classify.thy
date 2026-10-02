@@ -1,10 +1,9 @@
 theory Congruence_Classify
   imports "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Analysis_Result" Congruence_Exec
+    "Voblint_Framework.Solved_Table" Congruence_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
 
-section \<open>Deciding a check from a map of residue classes\<close>
 section \<open>Deciding a check from a map of residue classes\<close>
 
 text \<open>

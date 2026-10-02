@@ -101,18 +101,18 @@ text \<open>The executable bottom predicate the lifted carrier needs, at this pr
 definition nest_empty_pred :: "ivl default_st \<Rightarrow> bool" where
   "nest_empty_pred = default_st_is_bot_for (declared_global_vars nest_program)"
 
-lemma nest_exact: "nest_empty_pred s = is_empty_state (default_st_to_fun nest_gs s)"
+lemma nest_exact: "nest_empty_pred s = is_empty_state (\<rho>\<^bsub>nest_gs\<^esub> s)"
   unfolding nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair the context-insensitive and entry-state-keyed interval
-  analyses solve over, at the same \<^const>\<open>ivl_tf_st_for\<close>/\<^const>\<open>ivl_enter_st_for\<close>
+  analyses solve over, at the same \<^const>\<open>generic_tf_st_for\<close>/\<^const>\<open>generic_enter_st_for\<close>
   primitives: nothing call-string specific enters the specification.\<close>
 
 definition nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
      unit, ivl default_st lifted, ivl default_st lifted) dg_spec" where
   "nest_S_st = exec_dg_spec nest_gs nest_empty_pred
-                 (ivl_tf_st_for nest_gs) (ivl_enter_st_for nest_gs)"
+                 (generic_tf_st_for ivl_ops nest_gs) (generic_enter_st_for ivl_ops nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
@@ -124,12 +124,12 @@ definition nest_gamma :: "ivl default_st lifted \<Rightarrow> ivl default_st lif
   "nest_gamma d g = gamma_lift (default_st_gamma nest_gs) d"
 
 interpretation nest_domain: dg_domain_exec
-  nest_gs nest_empty_pred "ivl_tf_st_for nest_gs" "ivl_enter_st_for nest_gs"
+  nest_gs nest_empty_pred "generic_tf_st_for ivl_ops nest_gs" "generic_enter_st_for ivl_ops nest_gs"
   skip_ivl assign_ivl special_ivl branch_ivl body_ivl return_ivl
   "enter_ivl_ci_for nest_gs" event_ivl
   by unfold_locales
-     (rule ivl_tf_st_for_commute[unfolded ivl_tf.tf_abs_def], assumption,
-      rule ivl_enter_st_for_commute, rule nest_exact)
+     (rule ivl_tf.tf_st_for_commute[unfolded ivl_tf.tf_abs_def], assumption,
+      rule ivl_tf.enter_st_for_commute, rule nest_exact)
 
 
 lemma nest_gamma_eq: "nest_gamma = nest_domain.gamma_exec"
@@ -340,7 +340,7 @@ next
   let ?caller = "dg_local (snd nest_1_sol (Inl (u, ctx)))"
   have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (dg_global (snd nest_1_sol (Inr Global)))) s
       (call_enter nest_gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
+      [(?caller, transfer_lift nest_empty_pred (generic_enter_st_for ivl_ops nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
             [OF ivl_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)

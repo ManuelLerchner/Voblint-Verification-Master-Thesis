@@ -60,17 +60,18 @@ position Isabelle checks.
 
 Because the proof text is uniform, a domain has to satisfy the shape it cites
 into. Each role has a conventional spelling built from `impl`:
-`<impl>_tf_st_for`, `cinit_<impl>_st`, `<impl>_tf.dg_analysis_execI`, and so on.
-The proof folds `<tf_st>_def` and `<enter_st>_def`, so the two executable
-transfers must be defined as `generic_tf_st_for` and `generic_enter_st_for` at the
-domain's bundle. The classifier and the initial-state fact use the lowercased
+`cinit_<impl>_st`, `<impl>_tf.dg_analysis_execI`, and so on. The executable step
+and entry are not roles: they are always `generic_tf_st_for` and
+`generic_enter_st_for` at the domain's bundle, `ops` (`<impl>_ops` unless the
+manifest names another, as Int's `int_dom_ops` at each refinement mode), so a
+domain defines no executable transfer of its own. The classifier and the initial-state fact use the lowercased
 domain name (`interval_classify_check`, `interval_cinit_gamma`) even where `impl`
 differs (`ivl`).
 
 A role may also be an application `{const, args}` for an operation that takes a
 configuration argument. Int registers once per refinement mode this way:
-`tf_st: {const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise for the
-two entry transfers, assignment, special calls, branch and return; the entries
+`assign: {const: assign_int_dom, args: [Refine_Fixpoint]}`, and likewise for the
+abstract entry, special calls, branch and return; the entries
 `Int_Once` and `Int_Never` repeat it at `Refine_Once` and `Refine_Never`, with
 `dir: Int` so their registrations are generated into Int's session. The renderer quotes the
 application, so the interpretation still receives one argument. A fact takes no
@@ -81,16 +82,21 @@ arguments, so an applied fact role is a registry error.
 `MCP_Carrier.thy` is generated from the same registry, in registry order. It
 holds the `analysis_domain` datatype, one constructor per domain, and the
 combined state `mcp_st`: a nested product with one lifted field per domain,
-each field carrying that domain's `default_st`. Beside it comes the per-domain
-dispatch the combined state needs, one equation per domain each:
-`local_spec_of` (a field's transfer, lensed into the product), the field
-concretization and liveness readers, `val_answer` (a field's answer to a
-query), `value_of` (a field's value for display, wrapped in the domain's
-`value_constructor`), `mcp_init` (active fields start at the domain's initial
-state, inactive ones at `Bot`) and the readers for the formals a context is
-keyed by. The lemmas `local_spec_of_sound`, `mcp_init_sound` and
-`val_answer_sound` are proved by case analysis over the domain, citing only
-facts the domains already export.
+each field carrying that domain's `default_st`. Beside it comes what the combined
+state needs of each domain. Everything the exported analyzer runs is one
+`analysis_registration` record per domain, built by `registration_of`, the one
+function that splits on the domain at runtime: `field_spec` (a field's transfer,
+lensed into the product), `field_live` and `field_empty` (the field's liveness and
+emptiness tests), `value_answer` (a published value's answer to a query),
+`value_display` (a published value for display, wrapped in the domain's
+`value_constructor`) and `context_values` (the values a callee context is keyed
+by). The concretizations `part_gamma` and `val_gamma` and the published-value
+emptiness test `val_empty` are proof-only, so they stay functions of their own: a
+record the exported code builds may hold executable values only. `mcp_init`
+(active fields start at the domain's initial state, inactive ones at `Bot`) and
+the readers for the formals a context is keyed by are built slot by slot. The
+lemmas `field_spec_sound`, `mcp_init_sound` and `value_answer_sound` are proved by
+case analysis over the domain, citing only facts the domains already export.
 
 Each of these lines comes from a field role, a term template in the generator's
 `FIELD_ROLES`. A pointwise domain's roles default to its own unit registration: its
@@ -99,7 +105,7 @@ assignment's right-hand side and assigns the literal when the answer is exact. A
 domain with `contexts: []` has no registration of its own and gives every role in
 the manifest's `field` entry. Order does so: its field is a `relc`, it runs
 `order_spec` (`Rel_Order_Local.thy`), answers comparisons with `relc_qry`, and
-keys no context. The generator also emits `local_spec_of_silent`: every
+keys no context. The generator also emits `field_spec_silent`: every
 pointwise field's own component answers every query with `\<top>`.
 `MCP_Analyses.thy` replaces each field's handler with the answer the field
 publishes for checks (`mcp_field`), so every active analysis answers during the
@@ -120,7 +126,7 @@ is checked against.
 
 ## How the CLI reads them
 
-`analysis_result` in `Analysis_Run` is handwritten and reads only the combined
+`solved_table` in `Analysis_Run` is handwritten and reads only the combined
 registrations: three equations, one per context policy, none naming a domain or
 a rule. The activation list, the rule and the call-string bound are arguments,
 so there is no support table to generate and no default.

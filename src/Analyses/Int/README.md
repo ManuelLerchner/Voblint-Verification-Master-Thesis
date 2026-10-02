@@ -32,7 +32,7 @@ Int_Refinement_Control  the three refine modes
                                                      their commutation, at every mode
   -> Int_Classify                                    check discharge
   -> Int_Sound                                       initial-state facts
-  -> generated/Int_Analyses                          the unit-context registrations at
+  -> generated/Int_Fixpoint_Analyses                 the unit-context registrations at
      generated/Int_Once_Analyses                     Refine_Fixpoint, Refine_Once and
      generated/Int_Never_Analyses                    Refine_Never (generated; see below)
 ```
@@ -41,8 +41,8 @@ Like Interval, Int has a component with infinite ascending chains, so the global
 update rule matters: every registration takes it as a parameter, and the CLI
 defaults to Apinis warrowing (`Globals_Warrow`).
 
-Each mode is registered as an analysis of its own: `Int_Analysis` at
-`Refine_Fixpoint`, `Int_Once_Analysis` and `Int_Never_Analysis`, each with its own
+Each mode is registered as an analysis of its own, `Int_Analysis Refine_Fixpoint`,
+`Int_Analysis Refine_Once` and `Int_Analysis Refine_Never`, each with its own
 field of the combined state. The CLI's `--int-refinement` picks one (default
 `fixpoint`); the facts behind all three are the same mode-generic ones.
 
@@ -103,15 +103,15 @@ choice) would break the solver's `narrow_ge` bracket.
 
 ## Int in the entry-state and call-string runs
 
-`generated/Int_Analyses.thy` is machine-written from `manifests/analyses.yaml`,
+`generated/Int_Fixpoint_Analyses.thy` and its two siblings are machine-written from `manifests/analyses.yaml`,
 so the orientation a reader needs lives here rather than in a header the
 generator owns.
 
 Int's own generated file registers only the context-insensitive run,
-`int_rule`. The entry-state and call-string runs are the CLI's combined
+`int_fixpoint_rule`. The entry-state and call-string runs are the CLI's combined
 registrations, `mcp_es_rule` and `mcp_cs_rule` (`Voblint_CLI.MCP_Analyses`),
 which run every active analysis as fields of one state; Int is one of those
-fields whenever `Int_Analysis` is in the activation list. Neither policy has
+fields whenever an `Int_Analysis mode` is in the activation list. Neither policy has
 a pipeline of its own. Both are interpretations of `dg_analysis`, which
 owns the equation system, the solve, the covered keys, the reader, the result
 table, the contextual report and the activation-indexed soundness endpoint —
@@ -122,14 +122,15 @@ that includes it.
 
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
 discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
-`int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
+`int_tf.tf_st_for_commute`, `int_tf.enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
-manifest registers one analysis per mode by naming the mode-taking operations as
-applied roles (`{const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise at
-`Refine_Once` and `Refine_Never`), because each field needs one concrete choice;
+manifest registers one analysis per mode by naming the bundle at that mode
+(`ops: {const: int_dom_ops, args: [Refine_Fixpoint]}`, and likewise at
+`Refine_Once` and `Refine_Never`) and the mode-taking abstract operations as applied
+roles, because each field needs one concrete choice;
 the facts it cites are the same at every mode.
 
-The global update rule is the second axis. `int_rule` leaves it free as `r`,
+The global update rule is the second axis. `int_fixpoint_rule` leaves it free as `r`,
 and so do the combined `mcp_es_rule` and `mcp_cs_rule` runs, alongside the
 activation list.
 
@@ -141,11 +142,11 @@ its formals hold on entry, and `exec_formals_route` does read that state, so
 admitted-context relation is the one the entry answer induces rather than the
 graph of a function on stores.
 
-`int_rule` is a `global_interpretation` with its runtime data left free
+`int_fixpoint_rule` is a `global_interpretation` with its runtime data left free
 through `for` — `r` at the unit context. `mcp_es_rule` and `mcp_cs_rule` leave
 the activation list free the same way — `as r`, and `as k r` at the call
 string — and none renames the pipeline through `defines`: a caller applies
-`mcp_cs_rule.result as k r gs p` directly, with `Int_Analysis` in `as`.
+`mcp_cs_rule.result as k r gs p` directly, with `Int_Analysis Refine_Fixpoint` in `as`.
 
 Int carries no emptiness predicate of its own. The shared assembly pins the
 bottom test to the program's declaration predicate and proves it agrees with

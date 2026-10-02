@@ -1,6 +1,6 @@
 # CLI: `voblint`
 
-Status: **implemented** (`cli/entry/voblint.ml`, `cli/frontend/vimp_frontend.ml`). Source file
+Status: **implemented** (`cli/entry/voblint_main.ml`, `cli/frontend/vimp_frontend.ml`). Source file
 extension is `.vimp`; the grammar itself is documented in `manifests/vimp-grammar.yaml`,
 not here.
 
@@ -21,8 +21,8 @@ voblint --help
   unless `--parse-only`). `int` is the refining composite Sign x Interval x
   Parity x Congruence domain; `--int-refinement never|once|fixpoint` (default
   `fixpoint`, only valid with `int`) selects how its components refine each
-  other. Each mode is a registered analysis of its own (`Int_Analysis`,
-  `Int_Once_Analysis`, `Int_Never_Analysis`); all of them are `int` in reports.
+  other. Each mode is a registered analysis of its own (`Int_Analysis mode` for
+  each `refine_mode`); all of them are `int` in reports.
   `parity` is the four-element Bot/Even/Odd/Top lattice; it decides equalities
   only by refuting them across differing parities. `congruence` is the residue-class domain, one
   value constrained to `x = r (mod m)`. A comma list runs the named domains
@@ -36,8 +36,8 @@ voblint --help
   entered-argument context; `call-string` splits it by bounded call history
   instead and requires `--context-depth K`. Every domain serves every context
   mode at every `--globals` rule.
-- `run_voblint_certified_source_sound` covers every domain, rule and context
-  mode. Under `entry-state` and `call-string` its table claim is existential in
+- `run_voblint_source_sound` covers every domain, rule and context
+  mode. Under `entry-state` and `call-string` its report claim is existential in
   the context: the store sits in the entry of at least one context its call
   history is admitted at. See [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the
   exact shape.
@@ -69,7 +69,7 @@ voblint --help
   bound as a control from 0 to 100 while that rule is selected, and a link
   carries it as `narrow=N` when it is not 5. Local unknowns are warrowed at widening points
   under every rule. The default is `warrow` for every domain,
-  chosen in `cli/entry/voblint.ml`; Isabelle's `run_voblint` takes the rule as
+  chosen in `cli/entry/voblint_main.ml`; Isabelle's `run_voblint` takes the rule as
   an argument and has no default. Every output mode renders the table the
   chosen rule solved, contextual graphs included.
 - `--parse-only` parses and exits without running any analysis. A
@@ -89,7 +89,7 @@ FILE.vimp text
 imp_prog                              <- the same AST type the proved
     |                                     pipeline starts from
     v
-Voblint_CLI.Generated.run_voblint domain globals context prog
+Voblint.run_voblint domain globals context prog
     |                                  <- Isabelle-generated (Voblint_Codegen
     |                                     session's export_code), the CLI's
     |                                     only analysis entry point: it checks
@@ -132,7 +132,7 @@ exported solver alternative code equations with `trace_event` calls at its steps
 `solve` (start and stop of one solve), `solve_rec_c` (query, iterate, one
 evaluation of the right-hand side, each strategy-tree instruction) and
 `destab_opt`/`destab_iter_opt` (destabilization). `Voblint_CLI.Trace_Run` does
-the same for the three routing policies and for `analysis_result`, which hands
+the same for the three routing policies and for `solved_table`, which hands
 the trace the run's readers for contexts, global unknowns and values before the
 solve. Each equation is proved equal to the vendored or original equation it
 replaces by unfolding `trace_event`, and the originals are removed from code
@@ -420,7 +420,7 @@ theorem, discharged per program. Interval's carrier has infinite height, and
 the join-based rules (`--globals join`, `per-origin`) have no termination
 guarantee on it. Reproductions during development included process/backend
 crashes, not just long-running computation, so the containment mechanism is a
-killable subprocess (`run_contained` in `cli/entry/voblint.ml`), not an in-process
+killable subprocess (`run_contained` in `cli/entry/voblint_main.ml`), not an in-process
 timeout:
 
 ```text

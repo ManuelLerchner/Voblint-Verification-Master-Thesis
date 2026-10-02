@@ -19,10 +19,10 @@ collecting semantics to the CLI:
   termination is the per-run `solve_dom` premise, as for the flat analysis.
 - **Endpoints.** `dg_analysis.entry_state_activation_collect_sound` and
   `fun_route_activation_collect_sound` bound each bucket;
-  `sound_table_of_activation` and `sound_table.source_sound` (`Analysis_Run_Sound`)
-  reach a source run.
+  `covered_table_of_activation` (`Analysis_Run_Sound`) and `report_of_sound`
+  (`Analysis_Report`) reach the report, and `run_voblint_source_sound` a source run.
 - **Checks and rendering.** `classify_checks_verdicts` joins verdicts over the
-  contexts the solved table covers (`contexts_at`), with `Dead` kept apart from
+  contexts the solved table covers (`table_contexts`), with `Dead` kept apart from
   the three check results; the graph draws one node per `(pp, ctx)` pair.
 - **Regressions.** `tests/regression/03-procedures/precision/04-two_call_sites_entry_state.vimp`
   (precision), `tests/regression/03-procedures/soundness/01-entry_state_random_arg.vimp`

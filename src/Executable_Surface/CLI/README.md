@@ -31,7 +31,7 @@ part that really does see all five.
 | flat report | `check_report_entry list` — one verdict per check, no contexts |
 | contextual report | one verdict per (check, context). Needed because a check can be `Dead` in one context and decided in another, which a flat verdict cannot express. |
 | arithmetic diagnostic | a `/` or `%` occurrence whose divisor is classified as definitely or possibly zero, with its source point and occurrence index |
-| run result | what `run_voblint` answers: the compiled graph, the contexts, one state per covered (point, context), the contexts each call enters, the check column and the diagnostics. Everything a renderer reads. |
+| analysis report | what `run_voblint` answers: the compiled graph, the contexts, one semantic state per covered (point, context), the contexts each call enters, the check column and the diagnostics. `render_report` turns it into the run result a renderer reads. |
 | check label | the `check_label` a source `Check l e` carries onto its `EA_Check l e` edge and its result row. The CLI parser sets it to the line and column of the check's keyword, so a renderer prints a row at its own label rather than pairing rows with parser positions by order. |
 
 ## What is here
@@ -44,11 +44,13 @@ part that really does see all five.
 | `generated/MCP_Carrier.thy` | generated from `manifests/analyses.yaml`: `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, publication map, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
 | `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the generated carrier only cites them |
 | `MCP_Analyses.thy` | runs the active fields as one component, proves the combination sound for any distinct, nonempty activation, and registers it at every context policy: `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` |
-| `Analysis_Run.thy` | `analysis_result`, one equation per context policy over the activation- and rule-parametric registrations, and `run_voblint`: one activation and configuration, run once, answering `Invalid_Activation`, `Malformed_Program`, or one structured result from one solve. The constant `export_code` exports. |
-| `Analysis_Run_Sound.thy` | what a result's check column proves about a run of the program, and the context-free table `mcp_rule_table` |
+| `Analysis_Run.thy` | `analysis_config`, the semantic `analysis_report`, its builder `report_of`, `analysis_report_of` (the one function that reads the context policy, solving with the executable `solve_c`), and `run_voblint`: one configuration, run once, answering `Invalid_Activation`, `Malformed_Program`, `No_Answer`, or one report. The constant `export_code` exports. |
+| `Analysis_Render.thy` | `render_report`: the displayed `run_result` the adapters read, a projection no theorem reads |
+| `Analysis_Run_Sound.thy` | what a configuration's table owes its report (`sound_table`), and the context-free table `mcp_rule_table` |
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `mcp_es_rule_table`, `mcp_cs_rule_table` |
-| `Analysis_Certified.thy` | one soundness statement over every configuration `run_voblint` answers |
-| `Trace_Run.thy` | the solver trace in the exported code: traced code equations for routing and `analysis_result`, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
+| `Analysis_Report.thy` | the report semantics `⟦res⟧⇘v⇙`, `verdict_stores`, the CAPS queries and their theorems; `analysis_report_of_sound`, the one proof that splits on the context policy |
+| `Analysis_Certified.thy` | the source-level theorems over every configuration `run_voblint` answers, with no termination premise |
+| `Trace_Run.thy` | the solver trace in the exported code: traced code equations for routing and `analysis_report_of`, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
 
 The soundness statements here are the ones that belong nowhere else: a theorem about
 `run_voblint` cannot live above the theory that defines it, and `run_voblint` is the
@@ -112,17 +114,17 @@ combined state; `globals_rule` names no domain, so it lives with the solver in
 ## Worked example
 
 `voblint --analysis interval --context entry-state FILE.vimp` names no `--globals`,
-so `cli/entry/voblint.ml` picks `warrow` and calls
-`run_voblint [Interval_Analysis] Globals_Warrow Ctx_EntryState p`. For a
-well-formed program and a valid activation that is `Analysed (analysis_result
-[Interval_Analysis] Globals_Warrow Ctx_EntryState p)`, with every abstract
-value rendered to a string. The equation for that cell hands
-`mcp_es_rule.result_with_globals [Interval_Analysis] Globals_Warrow
-(declared_global p) p` to `run_result_of`, which lists one state per covered
+so `cli/entry/voblint_main.ml` picks `warrow` and calls
+`run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState) p`.
+For a well-formed program and a valid activation that is `Analysed res`, the
+report `analysis_report_of` builds; the CLI then renders it with
+`render_report`. The equation for that cell hands
+the solved run of `mcp_es_rule` at `[Interval_Analysis]` and `Globals_Warrow`
+to `report_of`, which lists one state per covered
 (point, entered argument context), the contexts each call enters, the check
 column and the diagnostics. Its soundness is `mcp_es_rule_table` at
 `as = [Interval_Analysis]` and `r = Globals_Warrow`, read through
-`run_voblint_certified_source_sound`. `--globals join` changes only the rule
+`analysis_report_of_sound` and `run_voblint_source_sound`. `--globals join` changes only the rule
 argument, and activating more analyses at once changes only the activation
 list; the equation, the builder and the theorem are the same. Naming no
 analysis, or the same one twice, answers `Invalid_Activation` instead of

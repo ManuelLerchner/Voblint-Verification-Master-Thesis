@@ -40,7 +40,7 @@ definition fo_cfg :: cfg where
 
 definition fo_spec ::
   "(pp \<times> unit, (unit, unit) global_unknown, unit, ivl default_st, ivl default_st) dg_spec" where
-  "fo_spec = ownership_split_dg_spec_st_for fo_gs (ivl_tf_st_for fo_gs) (ivl_enter_st_for fo_gs)"
+  "fo_spec = ownership_split_dg_spec_st_for fo_gs (generic_tf_st_for ivl_ops fo_gs) (generic_enter_st_for ivl_ops fo_gs)"
 
 text \<open>The direct encoding is spelled as the unbuffered routed generator itself, at
   the unit context; the buffered one is the constructor every analysis solves.\<close>

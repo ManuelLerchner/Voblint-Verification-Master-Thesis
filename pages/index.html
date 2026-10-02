@@ -3980,7 +3980,7 @@ fun main() {
           <div class="prov-col new">
             <p class="prov-head">Contributions of this work</p>
             <ul>
-              <li><strong>End-to-end soundness.</strong> The definite verdicts of <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> are correct for every source execution from an initial store with zeroed globals that reaches the check, in every configuration, provided the solve terminates (<a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>).</li>
+              <li><strong>End-to-end soundness.</strong> The definite verdicts of <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.run_voblint%7Cconst"><code>run_voblint</code></a> are correct for every source execution from an initial store with zeroed globals that reaches the check, in every configuration, whenever it answers (<a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>).</li>
               <li><strong>A semantic account of calling contexts.</strong> A context policy is a relation between calls and callee contexts. Under the coverage contract, whose totality condition gives every covered call a context, the per-context collections together equal the context-free one (<a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.node_collect_eq_Union_activation_collect%7Cfact"><code>node_collect_eq_Union_activation_collect</code></a>).</li>
               <li><strong>Compositional soundness.</strong> Domain, context policy and solver are verified separately (<a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>), and so are analyses that exchange queries (<a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_combine_sound%7Cfact"><code>mcp_combine_sound</code></a>).</li>
               <li><strong>Necessity and non-vacuity as theorems.</strong> Counterexample theorems show that dropping or weakening several obligations in the exhibited ways admits unsound results (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.total_dropped_unsound%7Cfact"><code>total_dropped_unsound</code></a>), and evaluated theorems give non-vacuous verdicts (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
@@ -4129,7 +4129,7 @@ fun main() {
 
       <figure class="scene scene-build">
         <svg viewBox="0 0 1100 424" role="img"
-          aria-label="Build lane: Isabelle theories are exported by export_code to Voblint_CLI.ml, linked with handwritten OCaml adapters, and compiled by dune and wasm_of_ocaml into a wasm bundle. Run lane: the page posts source and settings to a web worker, which calls Voblint_run in the wasm bundle and posts the JSON answer back.">
+          aria-label="Build lane: Isabelle theories are exported by export_code to Voblint_Generated.ml, linked with handwritten OCaml adapters, and compiled by dune and wasm_of_ocaml into a wasm bundle. Run lane: the page posts source and settings to a web worker, which calls Voblint_run in the wasm bundle and posts the JSON answer back.">
           <defs>
             <marker id="build-arrow" viewBox="0 0 10 10" refX="9" refY="5"
               markerWidth="7" markerHeight="7" orient="auto-start-reverse">
@@ -4150,7 +4150,7 @@ fun main() {
             <g class="bstage trusted">
               <rect x="290" y="66" width="170" height="76" rx="10"/>
               <circle class="logo-badge" cx="294" cy="68" r="18"/><image href="assets/logos/ocaml.svg" x="279" y="53" width="30" height="30"/>
-              <text class="thm-title mono" x="375" y="98" text-anchor="middle">Voblint_CLI.ml</text>
+              <text class="thm-title mono" x="375" y="98" text-anchor="middle">Voblint_Generated.ml</text>
               <text class="thm-sub link-sub" x="375" y="120" text-anchor="middle">generated · source ↗</text>
             </g>
           </a>
@@ -4424,7 +4424,7 @@ fun main() {
           without context, and into
           <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
           with entry-state contexts;
-          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>, the first
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>, the first
           flagship theorem below, adds link 1. On the executable side, one more step transports the solver's
           association-list states to the function-valued states these sets are stated over.
         </figcaption>
@@ -4487,7 +4487,7 @@ fun main() {
           Click a pillar to remove it.
         </p>
 
-        <figcaption>Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler. It also needs the other half of the simulation, which carries a source run into a valid activation trace. Pillar 2, <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, is what every selectable analysis must prove about its transfers, and pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>, is what its check classifier must satisfy. A numeric domain proves neither by hand. It certifies one bundle of value operations once, in <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale"><code>sound_nonrelational_ops</code></a>, and both pillars follow from that certificate. The order analysis proves pillar 2 directly (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>). Pillar 3, <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>, is discharged by each context policy. Pillar 4 connects to the vendored solver's own theorem, which promises a post-solution only for a solve that terminates. This is why every flagship soundness theorem below assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>.</p>
+        <figcaption>Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler. It also needs the other half of the simulation, which carries a source run into a valid activation trace. Pillar 2, <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, is what every selectable analysis must prove about its transfers, and pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>, is what its check classifier must satisfy. A numeric domain proves neither by hand. It certifies one bundle of value operations once, in <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops%7Clocale"><code>sound_nonrelational_ops</code></a>, and both pillars follow from that certificate. The order analysis proves pillar 2 directly (<a href="Voblint/Voblint_Analysis_Relational/Rel_Order_Local.html#Rel_Order_Local.order_spec_sound%7Cfact"><code>order_spec_sound</code></a>). Pillar 3, <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routed_entry_cover%7Cfact"><code>routed_entry_cover</code></a>, is discharged by each context policy. Pillar 4 connects to the vendored solver's own theorem, which promises a post-solution only for a solve that terminates. The analyzer runs the executable solver, which answers only where the solve terminates, so an answer discharges that condition (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.solve_c_run%7Cfact"><code>solve_c_run</code></a>) and no flagship theorem below takes it as a premise.</p>
           <p>Two more obligations are not drawn: the initial state covers the initial stores, and the executable states read back to the transfers and routes the theorems are stated over. For a numeric domain, the transfer half of the second also follows from the bundle: the executable transfer and the one the proofs use are built from the same operations, and <a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.sound_nonrelational_ops.tf_st_for_commute%7Cfact"><code>tf_st_for_commute</code></a> shows that they agree on every live state. The failures shown are what the obligations rule out; they are not bugs anyone has found in Voblint.</figcaption>
       </figure>
 
@@ -4570,6 +4570,8 @@ fun main() {
           <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid activation traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></td></tr>
           <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a></td></tr>
           <tr><td class="nl-sym">𝒜<sub>𝒢,R,c₀,g,S</sub> v c<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst">𝒜 v c</a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
+          <tr><td class="nl-sym">⟦res⟧<sub>v</sub></td><td>the stores report <em>res</em> describes at <em>v</em></td><td><a href="Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst"><code>report_sem</code></a></td></tr>
+          <tr><td class="nl-sym">𝒱<sub>res</sub> v</td><td>the stores the verdicts of <em>res</em> at <em>v</em> hold in</td><td><a href="Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst"><code>verdict_stores</code></a></td></tr>
           </tbody>
         </table>
         <p class="notation-note">Each name links to its declaration. The <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis#notation">README's notation table</a> also gives the meaning of every symbol and the proof-local shorthands.</p>
@@ -4588,42 +4590,42 @@ fun main() {
         <div class="thm-layout">
         <div class="thm-panels">
           <article class="thm-panel" data-for="source">
-            <h4><code>run_voblint_certified_source_sound</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact">in the formalization ↗</a></h4>
+            <h4><code>run_voblint_source_sound</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact">in the formalization ↗</a></h4>
             <div class="rule" aria-label="Inference rule">
-              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
-              <div class="rule-bar"><span class="rule-name">certified_source_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover">the result at <code>v</code> contains <code>s</code></span><span class="rule-item" tabindex="0" data-ref="checks">checks at <code>v</code> hold, none DEAD</span></div>
+              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
+              <div class="rule-bar"><span class="rule-name">source_sound</span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ⟦res⟧<sub>v</sub></code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱⇘res⇙ v</code></span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
               Run the program from any initial store whose globals start at zero, and stop
-              anywhere. If the configuration's solve terminates and the analyzer answers
-              <code>Analysed res</code>, then a node <code>v</code> of the compiled graph matches
-              where the run stopped, the store is one the program's semantics really reaches at
-              <code>v</code>, some state the result files at <code>v</code> contains it, and every
-              check listed at <code>v</code> holds of it, with none marked DEAD.
+              anywhere. If the analyzer answers <code>Analysed res</code>, then a node
+              <code>v</code> of the compiled graph matches where the run stopped, the store is one
+              the program's semantics really reaches at <code>v</code>, some state the report
+              holds at <code>v</code> describes it, and every definite verdict the report gives at
+              <code>v</code> holds of it. Termination is not a premise: the analyzer runs the
+              executable solver, and an answer means that solve finished.
             </p>
             <details>
               <summary>Isabelle statement</summary>
-<pre>theorem run_voblint_certified_source_sound:
+<pre>theorem run_voblint_source_sound:
   assumes "s0 ∈ cinit_stores (declared_global p)"
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
-      and "config_terminates as rule ctx p"
-      and "run_voblint as rule ctx p = Analysed res"
+      and "run_voblint config p = Analysed res"
   shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
-           ∧ analysis_result_covers as rule ctx p v s
-           ∧ checks_sound_at res v s"</pre>
+           ∧ s ∈ ⟦res⟧<sub>v</sub>
+           ∧ s ∈ 𝒱<sub>res</sub> v"</pre>
             </details>
           </article>
 
           <article class="thm-panel" data-for="check">
             <h4><code>run_voblint_check_sound</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact">in the formalization ↗</a></h4>
             <div class="rule" aria-label="Inference rule">
-              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="next">next: <code>__voblint_check(e)</code></span><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
+              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="next">next: <code>__voblint_check(e)</code></span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
               <div class="rule-bar"><span class="rule-name">check_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="listed">a check for <code>e</code> is listed where <code>s</code> is</span><span class="rule-item" tabindex="0" data-ref="checks">it is not DEAD</span><span class="rule-item" tabindex="0" data-ref="holds">PROVED ⇒ <code>e</code> true in <code>s</code>; REFUTED ⇒ false</span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="listed">a check for <code>e</code> is listed where <code>s</code> is</span><span class="rule-item" tabindex="0" data-ref="notdead">it is not DEAD</span><span class="rule-item" tabindex="0" data-ref="holds">PROVED ⇒ <code>e</code> true in <code>s</code>; REFUTED ⇒ false</span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
@@ -4640,9 +4642,8 @@ fun main() {
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "next_check residual = Some (l, e)"
-      and "config_terminates as rule ctx p"
-      and "run_voblint as rule ctx p = Analysed res"
-  shows "∃c ∈ set (res_checks res). check_label c = l ∧ check_exp c = e
+      and "run_voblint config p = Analysed res"
+  shows "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point c)
            ∧ check_verdict c ≠ Dead
            ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧<sub>e</sub> s))
@@ -4653,7 +4654,7 @@ fun main() {
           <article class="thm-panel" data-for="dead">
             <h4><code>run_voblint_dead_check_unreached</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact">in the formalization ↗</a></h4>
             <div class="rule" aria-label="Inference rule">
-              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="listed2">check <code>chk</code> is listed</span><span class="rule-item" tabindex="0" data-ref="deadv">its verdict is DEAD</span></div>
+              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="listed2">check <code>chk</code> is listed</span><span class="rule-item" tabindex="0" data-ref="deadv">its verdict is DEAD</span></div>
               <div class="rule-bar"><span class="rule-name">dead_check_unreached</span></div>
               <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="empty"><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> at its node <code>= ∅</code></span></div>
             </div>
@@ -4661,16 +4662,15 @@ fun main() {
             <p class="thm-plain">
               If a listed check is DEAD, the collecting semantics at its node is empty: no run
               of the program, starting with its globals at zero, ever reaches that node of the
-              compiled graph. It follows from the same node soundness the other theorems use:
-              a store reaching that node would have to satisfy a check the result marked
-              unreachable, so there is none.
+              compiled graph. A DEAD check means every state the report holds at its node is
+              ⊥, so the report's semantics there is empty, and the collecting semantics lies
+              inside it.
             </p>
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_dead_check_unreached:
-  assumes "config_terminates as rule ctx p"
-      and "run_voblint as rule ctx p = Analysed res"
-      and "chk ∈ set (res_checks res)"
+  assumes "run_voblint config p = Analysed res"
+      and "chk ∈ set (report_checks res)"
       and "check_verdict chk = Dead"
   shows "𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (check_point chk) = {}"</pre>
             </details>
@@ -4679,7 +4679,7 @@ fun main() {
           <article class="thm-panel" data-for="arith">
             <h4><code>run_voblint_arithmetic_safe</code> <a class="isa-link" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact">in the formalization ↗</a></h4>
             <div class="rule" aria-label="Inference rule">
-              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="term">solve terminates</span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="coll2"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="nodiag">no diagnostic listed at <code>v</code></span></div>
+              <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span><span class="rule-item" tabindex="0" data-ref="coll2"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="nodiag">no diagnostic listed at <code>v</code></span></div>
               <div class="rule-bar"><span class="rule-name">arithmetic_safe</span></div>
               <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="div">no divisor at <code>v</code> is 0 in <code>s</code></span></div>
             </div>
@@ -4694,10 +4694,9 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_arithmetic_safe:
-  assumes "config_terminates as rule ctx p"
-      and "run_voblint as rule ctx p = Analysed res"
+  assumes "run_voblint config p = Analysed res"
       and "s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v"
-      and "∀d ∈ set (res_diagnostics res). diagnostic_point d ≠ v"
+      and "∀d ∈ set (report_diagnostics res). diagnostic_point d ≠ v"
   shows "arithmetic_safe_at (prog_cfg p) v s"</pre>
             </details>
           </article>
@@ -4719,8 +4718,8 @@ fun main() {
             <details>
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_check_sites:
-  assumes "run_voblint as rule ctx p = Analysed res"
-  shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (res_checks res)
+  assumes "run_voblint config p = Analysed res"
+  shows "map (λchk. (check_point chk, check_label chk, check_exp chk)) (report_checks res)
            = check_sites (prog_cfg p)"</pre>
             </details>
           </article>
@@ -4846,7 +4845,7 @@ fun main() {
           </div>
         </div>
 
-        <figcaption>Every theorem except the last assumes <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst"><code>config_terminates</code></a>, which states that the solve for that configuration terminates on this program. It is a premise, discharged for each program by evaluation, and not proved in general. The answer alone does not imply it. In HOL every function is total, so the solver, defined by partial recursion, still denotes some value where it does not terminate. On its own, <code>run_voblint … = Analysed res</code> could therefore hold for an unspecified <code>res</code>; the termination premise is what ties <code>res</code> to the solver's actual result.</figcaption>
+        <figcaption>No theorem assumes termination. <code>run_voblint</code> calls the executable solver, a partial function that answers only where the solve terminates, and builds the report from that answer (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.solve_c_run%7Cfact"><code>solve_c_run</code></a>). Termination is still not proved in general: where the solve does not terminate, the analyzer does not answer and no theorem applies. The guarantees are partial correctness.</figcaption>
       </figure>
 
       <div class="prose-block">
@@ -5101,14 +5100,14 @@ qed</code></pre>
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
             <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
               <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact" data-name="run_voblint_sound_at" data-theory="Voblint_CLI.Analysis_Certified" data-info="What run_voblint reports at one node, for every activation list, update rule and context policy. All three terminals are proved from it. It speaks about a node and a store the collecting semantics has there, so DEAD and SAFE need no source run.">
-              <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound_at</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact" data-name="run_voblint_certified_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
-              <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_certified_source_sound</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_covers%7Cfact" data-name="run_voblint_covers" data-theory="Voblint_CLI.Analysis_Certified" data-info="The report run_voblint returns contains, at every node, every store the collecting semantics has there, for every activation list, update rule and context policy. All three terminals are proved from it, so DEAD and SAFE need no source run.">
+              <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_covers</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact" data-name="run_voblint_source_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="Interchange of compiler and result: the function the browser calls covers every source run, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
+              <rect x="949" y="352" width="22" height="56" rx="11"/><text x="960" y="340" text-anchor="middle">run_voblint_source_sound</text></a>
 
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it. It reaches the hub through run_voblint_certified_source_sound, and uses the compiler a second time on top of that: csim_next_check_edge says the check the source is about to run is an edge at the matched node, which no result-line fact can know.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it. It reaches the hub through run_voblint_source_sound, and uses the compiler a second time on top of that: csim_next_check_edge says the check the source is about to run is an edge at the matched node, which no result-line fact can know.">
               <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_sound_at, not through the source bridge: that bridge only says some node matches the run, so it cannot be read backwards into no run reaching a given node.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_covers, not through the source bridge: that bridge only says some node matches the run, so it cannot be read backwards into no run reaching a given node.">
               <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
               <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
@@ -5140,12 +5139,13 @@ qed</code></pre>
         </p>
         <p>
           All three terminals are proved from one hub,
-          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_sound_at%7Cfact"><code>run_voblint_sound_at</code></a>,
-          which speaks about a node of the graph and a store the collecting semantics has there.
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_covers%7Cfact"><code>run_voblint_covers</code></a>,
+          which says that the report's semantics at a node of the graph contains every store the
+          collecting semantics has there.
           That is why the semantics line runs on into the central interchange: DEAD and SAFE are
           stated over <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>
           too. What
-          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_certified_source_sound%7Cfact"><code>run_voblint_certified_source_sound</code></a>
+          <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>
           adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
           purpose: the bridge says only that <em>some</em> node matches the run, so it cannot be
           read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
@@ -5277,8 +5277,8 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Solver termination</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.config_terminates%7Cconst" title="Definition in the formalization">config_terminates</a>
-            <span class="align-note">Termination is a premise of the end-to-end soundness theorem, discharged per program by evaluation; no general termination theorem exists here.</span>
+            <a class="align-voblint" href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.solve_c_run%7Cfact" title="Lemma in the formalization">solve_c_run</a>
+            <span class="align-note">No general termination theorem exists here. The analyzer answers only after the executable solve finished, so the end-to-end theorems need no termination premise; a solve that does not terminate yields no answer.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/util/cilfacade.ml#L110-L119" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Any program CIL accepts</a>

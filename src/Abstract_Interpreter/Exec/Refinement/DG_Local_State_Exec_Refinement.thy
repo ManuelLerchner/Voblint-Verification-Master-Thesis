@@ -33,7 +33,7 @@ lemma default_st_to_fun_combine_assign:
   "default_st_to_fun \<G>
      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_default_st x y))
-   = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
+   = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
   unfolding default_st_to_fun_def
   by (auto simp add: combine_collect_abs_def fun_eq_iff location_of_def
       split: option.splits)
@@ -48,7 +48,7 @@ text \<open>
   citing this theory's packaging theorems verbatim. Nothing in that derivation
   is domain-specific beyond the two primitive commute facts a domain's own
   executable-transfer soundness development already proves
-  (\<open>sign_tf_st_for_commute\<close>, \<open>ivl_tf_st_for_commute\<close>, ...): this locale states
+  (\<open>sign_tf.tf_st_for_commute\<close>, \<open>ivl_tf.tf_st_for_commute\<close>, ...): this locale states
   the derivation once, so a domain interprets it instead of restating it. The
   locale is deliberately free of any routing context (\<open>route\<close>, \<open>Seed\<close>,
   \<open>Global\<close>, a solver): those are context-owned and solver-owned respectively,
@@ -66,7 +66,7 @@ text \<open>
 
 lemma dg_reader_commute_gen_lifted_for:
   "dg_reader_commute_gen
-     (map_lift (default_st_to_fun \<G>)) (map_lift (default_st_to_fun \<G>))"
+     (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _) (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _)"
   by unfold_locales (simp_all add: map_lift_sup)
 
 locale dg_domain_exec =
@@ -84,13 +84,13 @@ locale dg_domain_exec =
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_st_commute:
       "\<And>a s. live_default_st \<G> s \<Longrightarrow>
-         default_st_to_fun \<G> (tf_st a s)
-           = local_spec_step sk asn sp br bd rt ev a (default_st_to_fun \<G> s)"
+         \<rho>\<^bsub>\<G>\<^esub> (tf_st a s)
+           = local_spec_step sk asn sp br bd rt ev a (\<rho>\<^bsub>\<G>\<^esub> s)"
     and enter_st_commute:
-      "\<And>ci s. default_st_to_fun \<G> (enter_st ci s)
-                   = en ci (default_st_to_fun \<G> s)"
+      "\<And>ci s. \<rho>\<^bsub>\<G>\<^esub> (enter_st ci s)
+                   = en ci (\<rho>\<^bsub>\<G>\<^esub> s)"
     and empty_pred_exact:
-      "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
+      "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
 begin
 
 text \<open>With \<open>\<G>\<close> fixed, \<open>\<lbrakk>s\<rbrakk>\<close> is the carrier's concretization, for a plain and
@@ -100,7 +100,7 @@ adhoc_overloading gamma_S == "default_st_gamma \<G>"
 adhoc_overloading gamma_S == "gamma_lift (default_st_gamma \<G>)"
 
 abbreviation reader :: "'a default_st lifted \<Rightarrow> 'a abs_state lifted" where
-  "reader \<equiv> map_lift (default_st_to_fun \<G>)"
+  "reader \<equiv> map_lift \<rho>\<^bsub>\<G>\<^esub>"
 
 text \<open>Each field's equation on the represented function, once. These are the only inputs the tree
   commutes below take: a local-only transfer compiles to a single answer, so
@@ -136,10 +136,10 @@ lemma enter_lift_commute:
   "reader (transfer_lift empty_pred (enter_st ci) d)
      = transfer_lift is_empty_state (en ci) (reader d)"
 proof (rule transfer_lift_commute)
-  show "\<And>s. default_st_to_fun \<G> (enter_st ci s)
-              = en ci (default_st_to_fun \<G> s)"
+  show "\<And>s. \<rho>\<^bsub>\<G>\<^esub> (enter_st ci s)
+              = en ci (\<rho>\<^bsub>\<G>\<^esub> s)"
     by (simp add: enter_st_commute)
-  show "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
+  show "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
     by (rule empty_pred_exact)
 qed
 
@@ -163,9 +163,9 @@ proof (rule transfer_lift2_commute)
   show "\<And>x y. default_st_to_fun \<G>
       (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_default_st x y))
-        = combine\<^sup># \<G> dst (default_st_to_fun \<G> x) (default_st_to_fun \<G> y)"
+        = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
     by (rule default_st_to_fun_combine_assign)
-  show "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
+  show "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
     by (rule empty_pred_exact)
 qed
 

@@ -1,6 +1,6 @@
 theory Sign_Classify
   imports Sign_Numeric_Queries "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Analysis_Result" Sign_Exec
+    "Voblint_Framework.Solved_Table" Sign_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
 

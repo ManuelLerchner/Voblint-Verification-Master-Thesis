@@ -1,6 +1,6 @@
 theory Int_Classify
   imports Int_Exec "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Solved_Table"
     "Voblint_Result.DG_Result_Construction"
 begin
 

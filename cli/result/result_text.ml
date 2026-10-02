@@ -1,13 +1,14 @@
 (* Reading a run result: the readings every renderer shares.
 
-   Voblint_CLI.Generated hands back data -- CFG nodes, edge actions, verdicts,
-   context indices, and values already rendered by their own domain. Naming a
+   A run result is render_report's projection of the analysis report -- CFG
+   nodes, edge actions, verdicts, context indices, and values each domain's
+   printer rendered. Naming a
    point, spelling a verdict, labelling a context and wording an edge action are
    decisions made once here, so the text report, the graph, the regression
    snapshot, the HTML report and the browser all read the same result the same
    way. Nothing here can change what the analysis concluded. *)
 
-module C = Voblint_CLI.Generated
+module C = Voblint
 
 let int_of_nat n = Z.to_int (C.integer_of_nat n)
 
@@ -40,13 +41,7 @@ let diagnostic_message d =
     (C.arithmetic_operation (C.diagnostic_obligation d))
 
 (* The name an analysis goes by on the command line and in every report. *)
-let analysis_label = function
-  | C.Sign_Analysis -> "sign"
-  | C.Interval_Analysis -> "interval"
-  | C.Int_Analysis | C.Int_Once_Analysis | C.Int_Never_Analysis -> "int"
-  | C.Parity_Analysis -> "parity"
-  | C.Congruence_Analysis -> "congruence"
-  | C.Order_Analysis -> "order"
+let analysis_label = Analysis_request.name_of_analysis
 
 (* One active analysis's part of a state, as the run result shows it: a value per
    variable, or one value for a state that relates variables. *)

@@ -14,7 +14,7 @@ subsection \<open>The ownership-split Sign specification at the executable carri
 
 abbreviation mf_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, sign default_st, sign default_st) dg_spec" where
-  "mf_spec \<G> \<equiv> ownership_split_dg_spec_st_for \<G> (sign_tf_st_for \<G>) (sign_enter_st_for \<G>)"
+  "mf_spec \<G> \<equiv> ownership_split_dg_spec_st_for \<G> (generic_tf_st_for sign_ops \<G>) (generic_enter_st_for sign_ops \<G>)"
 
 definition split_gamma ::
   "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st \<Rightarrow> sign default_st \<Rightarrow> store set" where
@@ -34,11 +34,11 @@ lemma combine_self_restrict_global [simp]:
 
 lemma sign_tf_st_sound:
   "edge_collect a (default_st_gamma \<G> s)
-     \<subseteq> default_st_gamma \<G> (sign_tf_st_for \<G> a s)"
+     \<subseteq> default_st_gamma \<G> (generic_tf_st_for sign_ops \<G> a s)"
 proof (cases "live_default_st \<G> s")
   case True
   show ?thesis
-    unfolding default_st_gamma_def sign_tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
+    unfolding default_st_gamma_def sign_tf.tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
     by (rule
       sound_nonrelational_transfer.step_sound_for[OF sign_tf.is_sound_nonrelational_transfer])
 next
@@ -95,7 +95,7 @@ next
   have xy: "combine_default_st ?x ?y = ?x"
     by (rule default_st_eqI) (simp split: location.split)
   have "combine_collect \<G> (ci_dst ci) s t
-      \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) (default_st_to_fun \<G> ?x) (default_st_to_fun \<G> ?y)\<rbrakk>"
+      \<in> \<lbrakk>combine\<^sup># \<G> (ci_dst ci) (\<rho>\<^bsub>\<G>\<^esub> ?x) (\<rho>\<^bsub>\<G>\<^esub> ?y)\<rbrakk>"
     using 4 unfolding split_gamma_def default_st_gamma_def by (intro combine_collect_sound)
   also have "\<dots> = \<lbrakk>default_st_to_fun \<G>
       (combine_assign_default_st \<G> (ci_dst ci) ?y\<langle>location_of \<G> ret_var\<rangle>
@@ -123,7 +123,7 @@ lemma split_gamma_bot:
   shows "split_gamma \<G> bot g = {}"
   unfolding split_gamma_def default_st_gamma_def
 proof (rule is_empty_state_gamma_state_empty, rule is_empty_stateI)
-  show "is_empty (default_st_to_fun \<G> (combine_default_st bot g) x)"
+  show "is_empty (\<rho>\<^bsub>\<G>\<^esub> (combine_default_st bot g) x)"
     using assms by (simp add: combine_env_def is_bottom_sign_def bot_sign_def)
 qed
 
@@ -136,28 +136,28 @@ lemma split_gamma_restrict_local_combine:
 lemma split_gamma_enter:
   assumes "\<forall>f \<in> set (ci_formals ci). \<not> \<G> f"
   shows "split_gamma \<G>
-           (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G
-         = default_st_gamma \<G> (sign_enter_st_for \<G> ci (combine_default_st d G))"
+           (restrict_local_default_st (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))) G
+         = default_st_gamma \<G> (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))"
   unfolding split_gamma_def default_st_gamma_def
 proof (rule arg_cong[where f = gamma_state], rule ext)
   fix x
-  show "default_st_to_fun \<G> (combine_default_st
-            (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G) x
-        = default_st_to_fun \<G> (sign_enter_st_for \<G> ci (combine_default_st d G)) x"
+  show "\<rho>\<^bsub>\<G>\<^esub> (combine_default_st
+            (restrict_local_default_st (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))) G) x
+        = \<rho>\<^bsub>\<G>\<^esub> (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G)) x"
   proof (cases "\<G> x")
     case True
     then have "x \<notin> set (ci_formals ci)" using assms by blast
     with True show ?thesis
-      by (simp add: bind_formals_other combine_env_def enter_frame_def)
-  qed (simp add: combine_env_def)
+      by (simp add: generic_enter_st_for_def bind_formals_other combine_env_def enter_frame_def)
+  qed (simp add: generic_enter_st_for_def combine_env_def)
 qed
 
 lemma sign_call_enter_sound:
   assumes "s \<in> default_st_gamma \<G> D"
   shows "call_enter \<G> (CallEdge dst pars args) s
            \<in> default_st_gamma \<G>
-                (sign_enter_st_for \<G> (call_info_of (CallEdge dst pars args) p) D)"
-  unfolding default_st_gamma_def sign_enter_st_for_commute
+                (generic_enter_st_for sign_ops \<G> (call_info_of (CallEdge dst pars args) p) D)"
+  unfolding default_st_gamma_def sign_tf.enter_st_for_commute
   using sound_nonrelational_transfer.tf_sound_enter_entry_for[OF
     sign_tf.is_sound_nonrelational_transfer assms[unfolded default_st_gamma_def],
       of "call_info_of (CallEdge dst pars args) p"]
@@ -221,9 +221,9 @@ lemma mf_snapshot_raw:
           u = u' \<longrightarrow> (cont, ctx) \<in> fst sol \<and> (ce, ctx) \<in> fst sol)
      \<and> (\<forall>(u, ca, ce, cont) \<in> calls mf_cfg. \<forall>f \<in> set (ce_formals ca). \<not> mf_gs f)
      \<and> (Statement 7, ()) \<in> fst sol
-     \<and> default_st_to_fun mf_gs at7 (STR ''x'') = SPos
-     \<and> default_st_to_fun mf_gs at7 (STR ''y'') = SNonNeg
-     \<and> default_st_to_fun mf_gs G (STR ''Gx'') = SNonNeg)"
+     \<and> \<rho>\<^bsub>mf_gs\<^esub> at7 (STR ''x'') = SPos
+     \<and> \<rho>\<^bsub>mf_gs\<^esub> at7 (STR ''y'') = SNonNeg
+     \<and> \<rho>\<^bsub>mf_gs\<^esub> G (STR ''Gx'') = SNonNeg)"
   unfolding mf_sol_def mf_eqs_def mf_cfg_def mf_program_def by eval
 
 lemma mf_snapshot:
@@ -239,7 +239,7 @@ lemma mf_snapshot:
    \<and> default_st_to_fun mf_gs
        (combine_default_st (dg_local (snd mf_sol (Inl (Statement 7, ())))) mf_G) (STR ''y'')
        = SNonNeg
-   \<and> default_st_to_fun mf_gs mf_G (STR ''Gx'') = SNonNeg"
+   \<and> \<rho>\<^bsub>mf_gs\<^esub> mf_G (STR ''Gx'') = SNonNeg"
   using mf_snapshot_raw unfolding Let_def by fastforce
 
 lemma mf_pp: "part_post_solution mf_eqs (cfg_exit mf_cfg, ()) (snd mf_sol) (fst mf_sol)"
@@ -292,7 +292,7 @@ next
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?d = "dg_local (snd mf_sol (Inl (u, ctx)))"
   let ?D = "combine_default_st ?d mf_G"
-  let ?E = "sign_enter_st_for mf_gs ?ci ?D"
+  let ?E = "generic_enter_st_for sign_ops mf_gs ?ci ?D"
   let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_default_st cont, restrict_local_default_st entry))
                   [(?D, ?E)]"
   have Rr: "\<exists>pub. enter_runs (enter\<^sup># (mf_spec mf_gs) ?ci)

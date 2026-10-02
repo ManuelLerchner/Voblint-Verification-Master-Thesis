@@ -54,7 +54,7 @@ text \<open>
 
 definition min_max_demo_parity_env :: "vname \<Rightarrow> parity" where
   "min_max_demo_parity_env =
-     (case lookup_context
+     (case lookup_table
              (parity_rule.result Globals_Join (declared_global min_max_demo_prog)
                 min_max_demo_prog)
              (cfg_exit (prog_cfg min_max_demo_prog)) () of

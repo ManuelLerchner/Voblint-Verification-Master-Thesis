@@ -10,9 +10,9 @@ text \<open>
   point --- outright for a call string, which is a function of the call site and
   the caller's context, and for entry state from the totality of its context
   relation --- and each bucket is bounded by the entry filed under its context.
-  \<open>sound_table_of_activation\<close> turns that into a \<open>sound_table\<close>, so each
-  configuration below names its registration's three published facts and the
-  soundness of the check consumer, and nothing else. Every registration takes the
+  \<open>covered_table_of_activation\<close> turns that into a \<open>covered_table\<close>, so each
+  configuration below names its registration's three published facts and nothing
+  else. Every registration takes the
   activation list and the global update rule as parameters, so one table per
   context policy covers every activation and every rule.
 \<close>
@@ -22,12 +22,11 @@ subsection \<open>Entry state\<close>
 lemma mcp_es_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_es_rule.terminates as r (declared_global p) p"
-  shows "sound_table p (mcp_es_rule.result as r (declared_global p) p)
-           (mcp_classify (activation as)) (mcp_gamma_v (activation as))"
-proof (rule sound_table_of_activation
+  shows "covered_table p (mcp_es_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
     [where R = "mcp_es_rule.admitted_contexts as r (declared_global p) p"
-       and rc = mcp_root_ctx,
-     OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
+       and rc = mcp_root_ctx], goal_cases)
   case (1 u)
   show ?case
     by (simp add: mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf cov])
@@ -40,7 +39,7 @@ next
   case 3
   show ?case
     using mcp_es_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
         dg_pipeline.sol_vars_def)
 qed
 
@@ -49,11 +48,11 @@ subsection \<open>Call string\<close>
 lemma mcp_cs_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_cs_rule.terminates as k r (declared_global p) p"
-  shows "sound_table p (mcp_cs_rule.result as k r (declared_global p) p)
-           (mcp_classify (activation as)) (mcp_gamma_v (activation as))"
-proof (rule sound_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]",
-     OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
+  shows "covered_table p (mcp_cs_rule.result as k r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
+    [where R = "call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
+    goal_cases)
   case (1 u)
   show ?case
     by (rule equalityD1
@@ -68,7 +67,7 @@ next
   case 3
   show ?case
     using mcp_cs_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
         dg_pipeline.sol_vars_def)
 qed
 

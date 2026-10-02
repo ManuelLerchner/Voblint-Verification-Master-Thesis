@@ -34,7 +34,7 @@ text \<open>
 subsection \<open>At the unit context\<close>
 
 global_interpretation interval_rule: dg_analysis_exec
-    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
@@ -44,8 +44,7 @@ global_interpretation interval_rule: dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule ivl_tf.dg_analysis_execI
-    [folded ivl_tf_st_for_def ivl_enter_st_for_def], goal_cases)
+proof (rule ivl_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by simp
 next
   case (2 v ctx) show ?case by simp
@@ -58,7 +57,7 @@ qed
 subsection \<open>At the entry-state context\<close>
 
 global_interpretation interval_es_rule: dg_analysis_exec
-    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
     "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) global_unknown)
@@ -68,8 +67,7 @@ global_interpretation interval_es_rule: dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. formals_route_lifted_gen"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule ivl_tf.dg_analysis_execI
-    [folded ivl_tf_st_for_def ivl_enter_st_for_def], goal_cases)
+proof (rule ivl_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case
     by (rule exec_formals_route_commute[symmetric])
 next
@@ -83,7 +81,7 @@ qed
 subsection \<open>At the call-string context\<close>
 
 global_interpretation interval_cs_rule: dg_analysis_exec
-    ivl_tf_st_for ivl_enter_st_for cinit_ivl_st
+    "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
     Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
@@ -93,8 +91,7 @@ global_interpretation interval_cs_rule: dg_analysis_exec
     enter_ivl_ci_for event_ivl "\<lambda>_. cs_route k"
     "TD_side_rule_Interp_solve_c r"
   for k r
-proof (rule ivl_tf.dg_analysis_execI
-    [folded ivl_tf_st_for_def ivl_enter_st_for_def], goal_cases)
+proof (rule ivl_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by (rule cs_route_indep_of_data)
 next
   case (2 v ctx) show ?case by simp

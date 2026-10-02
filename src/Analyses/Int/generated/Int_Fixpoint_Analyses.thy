@@ -1,4 +1,4 @@
-theory Int_Analyses
+theory Int_Fixpoint_Analyses
   imports
     Int_Sound
     Int_Classify
@@ -12,7 +12,7 @@ theory Int_Analyses
     "Voblint_VIMP.VIMP_Program"
 begin
 
-section \<open>Registering Int at every context and update rule\<close>
+section \<open>Registering \<open>Int_Fixpoint\<close> at every context and update rule\<close>
 
 text \<open>
   GENERATED FILE. Source: \<^verbatim>\<open>manifests/analyses.yaml\<close>; generator:
@@ -20,19 +20,20 @@ text \<open>
   rather than hand-editing; a drift check compares regenerated output against
   this file.
 
-  Int runs through the shared D/G pipeline at the unit context. The CLI runs it as a
-  field of the combined state of \<open>MCP_Analyses\<close>, whose component and
-  soundness the unit registration supplies. Each registration leaves the rule that
-  merges a value side-effected into a global as a parameter \<open>r\<close>. The
-  equation system, the solve, the result table and every soundness endpoint come from
-  the interpreted locale; this theory only names the domain's own implementation and
-  facts.
+  \<open>Int_Fixpoint\<close> runs through the shared D/G pipeline at the unit
+  context. The CLI runs it as a field of the combined state of
+  \<open>MCP_Analyses\<close>, whose component and soundness the unit registration
+  supplies. Each registration leaves the rule that merges a value side-effected into a
+  global as a parameter \<open>r\<close>. The equation system, the solve, the result
+  table and every soundness endpoint come from the interpreted locale; this theory
+  only names the domain's own implementation and facts.
 \<close>
 
 subsection \<open>At the unit context\<close>
 
-global_interpretation int_rule: dg_analysis_exec
-    "int_tf_st_for Refine_Fixpoint" "int_dom_enter_st_for Refine_Fixpoint" cinit_int_dom_st
+global_interpretation int_fixpoint_rule: dg_analysis_exec
+    "generic_tf_st_for (int_dom_ops Refine_Fixpoint)"
+    "generic_enter_st_for (int_dom_ops Refine_Fixpoint)" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
@@ -43,8 +44,7 @@ global_interpretation int_rule: dg_analysis_exec
     "enter_int_dom_ci_for Refine_Fixpoint" event_int_dom "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule int_tf.dg_analysis_execI
-    [folded int_tf_st_for_def int_dom_enter_st_for_def], goal_cases)
+proof (rule int_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by simp
 next
   case (2 v ctx) show ?case by simp

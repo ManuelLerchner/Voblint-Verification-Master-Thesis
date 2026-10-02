@@ -1,6 +1,6 @@
 theory Analysis_Surface
   imports
-    "Voblint_Framework.Analysis_Result"
+    "Voblint_Framework.Solved_Table"
     "Voblint_Framework.Check_Report"
     "Voblint_Compile.Compile_Invariants"
 begin
@@ -10,7 +10,7 @@ section \<open>The surface a solved table publishes\<close>
 text \<open>
   What every domain, at every solver discipline and context policy, ends up
   publishing about a whole program: the state its solved table (an
-  \<open>analysis_result\<close>) holds at a point under a context, and the check report read
+  \<open>solved_table\<close>) holds at a point under a context, and the check report read
   off those states. \<open>analysis_surface\<close> states both once, generically in the
   domain \<open>'a\<close> and the context type \<open>'c\<close>, so a domain's public API is one
   interpretation rather than a rewritten copy per domain, solver discipline and
@@ -39,14 +39,14 @@ text \<open>
 \<close>
 
 locale analysis_surface =
-  fixes table :: "imp_prog \<Rightarrow> ('c, 'a) analysis_result"
+  fixes table :: "imp_prog \<Rightarrow> ('c, 'a) solved_table"
     and bot_state :: 'a
     and classify :: "exp \<Rightarrow> 'a \<Rightarrow> check_result"
 begin
 
 definition state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'a" where
   "state_at p ctx v =
-     (case lookup_context (table p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
+     (case lookup_table (table p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
 
 definition report :: "imp_prog \<Rightarrow> 'c \<Rightarrow> check_report_entry list" where
   "report p ctx = classify_checks (prog_cfg p) (state_at p ctx) classify"
@@ -55,7 +55,7 @@ text \<open>
   The same table read with its \<^const>\<open>Bot\<close> entries kept visible: \<open>True\<close> marks a
   point whose entry in \<open>table\<close> is \<^const>\<open>Bot\<close>, which a report consumer suppresses
   instead of printing the bottom state's vacuous verdict. Exact for the same reason
-  \<^const>\<open>state_at\<close> is -- it is the \<^const>\<open>lookup_context\<close> case split itself, not a
+  \<^const>\<open>state_at\<close> is -- it is the \<^const>\<open>lookup_table\<close> case split itself, not a
   second test on the raw unknown (\<open>fst_reach_state_at\<close> states exactly that).
 
   The flag is a fact about the table and nothing more. This locale assumes nothing
@@ -66,7 +66,7 @@ text \<open>
 
 definition reach_state_at :: "imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> bool \<times> 'a" where
   "reach_state_at p ctx v =
-     (case lookup_context (table p) v ctx of
+     (case lookup_table (table p) v ctx of
         Bot \<Rightarrow> (True, bot_state) | Lifted st \<Rightarrow> (False, st))"
 
 text \<open>
@@ -77,19 +77,19 @@ text \<open>
 \<close>
 
 lemma state_at_Bot [simp]:
-  "lookup_context (table p) v ctx = Bot \<Longrightarrow> state_at p ctx v = bot_state"
+  "lookup_table (table p) v ctx = Bot \<Longrightarrow> state_at p ctx v = bot_state"
   by (simp add: state_at_def)
 
 lemma state_at_Lifted [simp]:
-  "lookup_context (table p) v ctx = Lifted st \<Longrightarrow> state_at p ctx v = st"
+  "lookup_table (table p) v ctx = Lifted st \<Longrightarrow> state_at p ctx v = st"
   by (simp add: state_at_def)
 
 lemma reach_state_at_Bot [simp]:
-  "lookup_context (table p) v ctx = Bot \<Longrightarrow> reach_state_at p ctx v = (True, bot_state)"
+  "lookup_table (table p) v ctx = Bot \<Longrightarrow> reach_state_at p ctx v = (True, bot_state)"
   by (simp add: reach_state_at_def)
 
 lemma reach_state_at_Lifted [simp]:
-  "lookup_context (table p) v ctx = Lifted st \<Longrightarrow> reach_state_at p ctx v = (False, st)"
+  "lookup_table (table p) v ctx = Lifted st \<Longrightarrow> reach_state_at p ctx v = (False, st)"
   by (simp add: reach_state_at_def)
 
 lemma snd_reach_state_at [simp]:
@@ -97,7 +97,7 @@ lemma snd_reach_state_at [simp]:
   by (simp add: reach_state_at_def state_at_def split: lifted.splits)
 
 lemma fst_reach_state_at [simp]:
-  "fst (reach_state_at p ctx v) = (lookup_context (table p) v ctx = Bot)"
+  "fst (reach_state_at p ctx v) = (lookup_table (table p) v ctx = Bot)"
   by (simp add: reach_state_at_def split: lifted.splits)
 
 definition report_with_state ::
@@ -122,7 +122,7 @@ text \<open>
   A locale constant carries no code equation of its own, so every report reading through
   the surface would drop out of the generated code and out of \<open>by eval\<close> alike. Both
   defining equations are already in executable shape --- \<^const>\<open>classify_checks\<close> over a
-  \<^const>\<open>lookup_context\<close> reading --- so declaring them is all the code generator needs.
+  \<^const>\<open>lookup_table\<close> reading --- so declaring them is all the code generator needs.
 \<close>
 
 declare analysis_surface.state_at_def [code]

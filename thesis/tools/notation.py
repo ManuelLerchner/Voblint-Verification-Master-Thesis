@@ -394,8 +394,15 @@ def within(entry: dict, locale: str, sym: str) -> str:
     return f"Within {locale}, the fixed parameters are omitted: {sym}"
 
 
-def render_readme(data: dict) -> str:
+def render_readme(data: dict, prose: str) -> str:
+    """The README's table, cut to the rows whose declaration the README's own
+    prose (outside the generated block) names; the thesis keeps every row."""
     base = data["base"]
+
+    def mentioned(e):
+        return any(
+            re.search(rf"\b{re.escape(f['const'])}\b", prose) for f in e["forms"]
+        )
 
     def link(f, text=None):
         return f"[`{text or f['const']}`]({base}{f['href']})"
@@ -411,6 +418,8 @@ def render_readme(data: dict) -> str:
         "| --- | --- | --- | --- |",
     ]
     for e in data["entries"]:
+        if not e.get("forms") or not mentioned(e):
+            continue
         if e["group"] == "shorthand":
             # A shorthand is a row of its own: the abbreviation, what it stands
             # for and the locale it is declared in.
@@ -511,7 +520,9 @@ def main() -> int:
         data = build(tomllib.loads(MANIFEST.read_text()), args.lenient)
         outputs = {
             OUT: render_json(data),
-            README: splice(README, render_readme(data)),
+            README: splice(
+                README, render_readme(data, BLOCK.sub("", README.read_text()))
+            ),
             PAGE: splice(PAGE, render_page(data)),
         }
     except NotationError as err:

@@ -45,7 +45,7 @@ lemma x1_wf: "wf_program_compile_input x1_prog"
 
 lemma x1_node_sound:
   "\<C>\<^bsub>x1_gs,prog_cfg x1_prog,cinit_stores x1_gs\<^esub> v
-     \<subseteq> \<lbrakk>case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog) v () of
+     \<subseteq> \<lbrakk>case lookup_table (sign_rule.result Globals_Join x1_gs x1_prog) v () of
             Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk>"
 proof -
   have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
@@ -56,7 +56,7 @@ qed
 
 definition x1_exit_env :: "sign abs_state" where
   "x1_exit_env =
-     (case lookup_context (sign_rule.result Globals_Join x1_gs x1_prog)
+     (case lookup_table (sign_rule.result Globals_Join x1_gs x1_prog)
              (cfg_exit (prog_cfg x1_prog)) () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 

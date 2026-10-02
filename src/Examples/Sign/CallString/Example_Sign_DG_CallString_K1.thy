@@ -102,18 +102,18 @@ definition sign_nest_empty_pred :: "sign default_st \<Rightarrow> bool" where
   "sign_nest_empty_pred = default_st_is_bot_for (declared_global_vars sign_nest_program)"
 
 lemma sign_nest_exact:
-  "sign_nest_empty_pred s = is_empty_state (default_st_to_fun sign_nest_gs s)"
+  "sign_nest_empty_pred s = is_empty_state (\<rho>\<^bsub>sign_nest_gs\<^esub> s)"
   unfolding sign_nest_empty_pred_def by (rule default_st_is_bot_for_iff) simp
 
 text \<open>The same Base-style pair every other Sign analysis solves over, at the same
-  \<^const>\<open>sign_tf_st_for\<close>/\<^const>\<open>sign_enter_st_for\<close> primitives: nothing call-string
+  \<^const>\<open>generic_tf_st_for\<close>/\<^const>\<open>generic_enter_st_for\<close> primitives: nothing call-string
   specific enters the specification.\<close>
 
 definition sign_nest_S_st ::
   "(pp \<times> cfg_node list, call_string_gk,
      unit, sign default_st lifted, sign default_st lifted) dg_spec" where
   "sign_nest_S_st = exec_dg_spec sign_nest_gs sign_nest_empty_pred
-                      (sign_tf_st_for sign_nest_gs) (sign_enter_st_for sign_nest_gs)"
+                      (generic_tf_st_for sign_ops sign_nest_gs) (generic_enter_st_for sign_ops sign_nest_gs)"
 
 subsection \<open>Soundness of the executable specification, once for every bound\<close>
 
@@ -126,13 +126,13 @@ definition sign_nest_gamma ::
   "sign_nest_gamma d g = gamma_lift (default_st_gamma sign_nest_gs) d"
 
 interpretation sign_nest_domain: dg_domain_exec
-  sign_nest_gs sign_nest_empty_pred "sign_tf_st_for sign_nest_gs"
-  "sign_enter_st_for sign_nest_gs"
+  sign_nest_gs sign_nest_empty_pred "generic_tf_st_for sign_ops sign_nest_gs"
+  "generic_enter_st_for sign_ops sign_nest_gs"
   skip_sign assign_sign special_sign branch_sign body_sign return_sign
   "enter_sign_ci_for sign_nest_gs" event_sign
   by unfold_locales
-     (rule sign_tf_st_for_commute[unfolded sign_tf.tf_abs_def], assumption,
-      rule sign_enter_st_for_commute, rule sign_nest_exact)
+     (rule sign_tf.tf_st_for_commute[unfolded sign_tf.tf_abs_def], assumption,
+      rule sign_tf.enter_st_for_commute, rule sign_nest_exact)
 
 lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
   by (intro ext)
@@ -311,7 +311,7 @@ next
   let ?caller = "dg_local (sigma_1 (Inl (u, ctx)))"
   have cov: "entry_pairs_cover (\<lambda>d. sign_nest_gamma d (dg_global (sigma_1 (Inr Global)))) s
       (call_enter sign_nest_gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
+      [(?caller, transfer_lift sign_nest_empty_pred (generic_enter_st_for sign_ops sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
             [OF sign_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
