@@ -41,11 +41,13 @@ lemma solved_local_reader_global [simp]:
   by (simp add: solved_local_reader_def)
 
 text \<open>
-  The two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for hold for
-  this reader by construction, given only that the joint concretization ignores
-  its global argument (which is what \<open>gammaDG_rd\<close> already says) and that the
-  publication map takes \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the
-  context policy, so no instance need prove them again.
+  The reader returns only the local half. The global half enters through the
+  concretization the locale below pairs with it, which publishes each local
+  value together with the solved global at \<open>Inr analysis_global\<close>. Under that
+  pairing the two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for
+  hold by construction, given \<open>gammaDG_rd\<close> and that the publication map takes
+  \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the context policy,
+  so no instance need prove them again.
 \<close>
 
 subsection \<open>The composition locale\<close>
@@ -54,8 +56,9 @@ text \<open>
   Everything a routed analysis needs above its solved system, in one place: the
   domain enters through \<open>S\<close> and \<open>\<gamma>\<^sub>D\<^sub>G\<close>, the context policy through \<open>route\<close>,
   \<open>R\<close> and \<open>seed\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
-  fixed reader is \<^const>\<open>solved_local_reader\<close>, so its two coverage
-  obligations are the one-line lemmas above.
+  fixed reader is \<^const>\<open>solved_local_reader\<close>, and its concretization reads
+  the solved global at \<open>Inr analysis_global\<close> as the second argument of \<open>rd\<close>,
+  so the two coverage obligations are the one-line lemmas above.
 
   An instance is then a single \<^theory_text>\<open>interpretation\<close>, and the theorems below are
   what it gets: a published result table, its per-node soundness, and the
@@ -64,7 +67,8 @@ text \<open>
 
 locale routed_analysis =
   dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0
-    "solved_local_reader vars sigma" seed is_bot "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d)"
+    "solved_local_reader vars sigma" seed is_bot
+    "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (dg_global (sigma (Inr analysis_global))))"
     R rd \<gamma>\<^sub>V empty\<^sub>V classify
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
@@ -79,7 +83,7 @@ locale routed_analysis =
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and R :: "'c call_context_rel"
-    and rd :: "'D \<Rightarrow> 'v lifted"
+    and rd :: "'D \<Rightarrow> 'G \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"

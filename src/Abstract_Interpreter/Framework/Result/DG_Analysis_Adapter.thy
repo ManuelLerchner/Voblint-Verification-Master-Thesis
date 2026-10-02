@@ -2,40 +2,40 @@ theory DG_Analysis_Adapter
   imports Routed_Context Contextual_Check_Report
 begin
 
-section \<open>Public result and check-report adapter for a local-state routed DG analysis\<close>
+section \<open>Public result and check-report adapter for a routed DG analysis\<close>
 
 text \<open>
   Every concrete routed-context analysis needs the same public
   \<^type>\<open>solved_table\<close>/check report/soundness triple, and each one follows
   the identical shape once a routed D/G equation system is solved: read the
-  local unknown at every covered \<open>(node, context)\<close> pair into an
-  \<^type>\<open>solved_table\<close>, classify every compiled check against it via
-  \<^const>\<open>classify_checks_verdicts\<close>, and discharge that report's own soundness
-  from the activation-indexed collecting semantics
+  local unknown at every covered \<open>(node, context)\<close> pair, together with the
+  analysis-wide global unknown, into an \<^type>\<open>solved_table\<close>, classify every
+  compiled check against it via \<^const>\<open>classify_checks_verdicts\<close>, and
+  discharge that report's own soundness from the activation-indexed collecting
+  semantics
   (\<^theory>\<open>Voblint_Framework.Activation_Backbone\<close>) already available once
   EDGE/CALL/COMB are in hand from \<^locale>\<open>routed_context\<close>.
   \<open>dg_analysis_adapter\<close> derives that whole triple once, generic in a domain
   instance (a \<open>classify\<close> function with its own soundness obligations), a
   context instance (an interpretation of \<^locale>\<open>routed_context\<close>),
-  and the published value (a publication map \<open>rd\<close> from the solver's carrier into a
-  value type \<open>'v\<close> with its own concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness
-  test \<open>empty\<^sub>V\<close>; a non-relational analysis publishes its abstract store),
+  and the published value (a publication map \<open>rd\<close> from a local and a global
+  value of the solver's carrier into a value type \<open>'v\<close> with its own
+  concretization \<open>\<gamma>\<^sub>V\<close> and exact emptiness test \<open>empty\<^sub>V\<close>; a
+  non-relational analysis publishes its abstract store),
   leaving solver choice orthogonal: which concrete solver produced
   \<open>sigma\<close>/\<open>sg\<close> is an interpretation-site argument, never a locale parameter,
   matching how Interval's own Warrow/join/per-origin solver choice is already
   orthogonal to its context.
 
-  It is not generic over the D/G split, and \<open>gammaDG_rd\<close> is where that shows:
-  requiring \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d)\<close> for every \<open>g'\<close> says the
-  concretization ignores the global component entirely, so the published table
-  can be read off the local unknown alone. That holds of every analysis
-  currently routed through here, and it is what makes \<open>analyse_result\<close> a
-  function of \<open>sigma\<close> at \<open>Inl\<close> keys only. A concretization that genuinely
-  reads both components --- an ownership split, say --- does not interpret this
-  locale as it stands; admitting one means widening \<open>rd\<close> to
-  \<^typ>\<open>'D \<Rightarrow> 'G \<Rightarrow> 'v lifted\<close> and reading the global unknown at
-  \<open>Inr analysis_global\<close> alongside the local one, which every present instance would
-  instantiate at a constant function.
+  \<open>gammaDG_rd\<close> asks that publishing a local value together with a global one
+  keeps exactly the stores the pair denotes,
+  \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')\<close>. The global value the table
+  pairs with every local one is the solved global unknown at
+  \<open>Inr analysis_global\<close>, the pairing the coverage assumption \<open>sg_cov\<close> of
+  \<^locale>\<open>dg_context_activation\<close> concretizes. A concretization that reads both
+  components, an ownership split say, therefore interprets this locale
+  directly. An analysis whose concretization ignores the global half
+  instantiates \<open>rd\<close> at a function constant in its second argument.
 \<close>
 
 locale dg_analysis_adapter =
@@ -57,11 +57,11 @@ locale dg_analysis_adapter =
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
     and R :: "'c call_context_rel" +
-  fixes rd :: "'D \<Rightarrow> 'v lifted"
+  fixes rd :: "'D \<Rightarrow> 'G \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d)"
+  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')"
     and empty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
     and classify_proved:
     "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
@@ -77,7 +77,8 @@ text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>dg_result_for\<close> builds an
   \<^type>\<open>solved_table\<close> from an already-solved key set and reader.
-  The solved local unknown is published into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
+  The solved local unknown and the solved global at \<open>Inr analysis_global\<close> are
+  published into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
   one collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
   \<open>empty\<^sub>V\<close>, so a \<^const>\<open>Lifted\<close> payload that denotes no store without
   the solver's own \<^const>\<open>Bot\<close> tag reads as \<^const>\<open>Bot\<close> here, matching \<^const>\<open>classify_point\<close>'s
@@ -87,12 +88,14 @@ text \<open>
 
 definition analyse_result :: "('c, 'v) solved_table" where
   "analyse_result = Solved_Table vars
-     (\<lambda>v ctx. canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx))))))"
+     (\<lambda>v ctx. canonicalize_lift empty\<^sub>V
+        (rd (dg_local (sigma (Inl (v, ctx)))) (dg_global (sigma (Inr analysis_global)))))"
 
 lemma lookup_table_analyse_result:
   "lookup_table analyse_result v ctx =
      (if (v, ctx) \<in> vars
-      then canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))
+      then canonicalize_lift empty\<^sub>V
+             (rd (dg_local (sigma (Inl (v, ctx)))) (dg_global (sigma (Inr analysis_global))))
       else Bot)"
   unfolding lookup_table_def analyse_result_def by simp
 
@@ -116,7 +119,7 @@ lemma analyse_result_canonical:
   assumes "lookup_table analyse_result v ctx = Lifted st"  shows "\<not> empty\<^sub>V st"
   using assms
   unfolding lookup_table_analyse_result
-  by (cases "rd (dg_local (sigma (Inl (v, ctx))))")
+  by (cases "rd (dg_local (sigma (Inl (v, ctx)))) (dg_global (sigma (Inr analysis_global)))")
      (auto simp: normalize_lift_def split: if_splits)
 
 theorem wf_analyse_result: "wf_solved_table empty\<^sub>V analyse_result"
@@ -145,7 +148,8 @@ proof -
   have "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, ctx))))
           (dg_global (sigma (Inr analysis_global)))"
     using cov by simp
-  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V
+                        (rd (dg_local (sigma (Inl (v, ctx)))) (dg_global (sigma (Inr analysis_global))))"
     by (rule gammaDG_rd)
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
     using cov unfolding lookup_table_analyse_result by simp

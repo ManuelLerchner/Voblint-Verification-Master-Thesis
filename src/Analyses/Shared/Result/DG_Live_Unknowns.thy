@@ -352,7 +352,7 @@ lemma routed_analysis_from_live_unknowns:
      (\<lambda>d g. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) R
-     (map_lift (rd (declared_global p))) gamma\<^sub>V empty\<^sub>V classify"
+     (\<lambda>d _. map_lift (rd (declared_global p)) d) gamma\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd EmptyExact
     ClProved ClRefuted VarsFin)
@@ -473,7 +473,7 @@ proof -
       "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" R
-      "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
+      "\<lambda>d _. map_lift (rd (declared_global p)) d" gamma\<^sub>V empty\<^sub>V classify
     by (rule routed_analysis_from_live_unknowns[where R = R, OF wf solves cover_R total_R])
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p))
@@ -626,7 +626,7 @@ lemma entry_state_routed_analysis_from_live_unknowns:
      (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st) Bot
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
-     (map_lift (rd (declared_global p))) gamma\<^sub>V empty\<^sub>V classify"
+     (\<lambda>d _. map_lift (rd (declared_global p)) d) gamma\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
@@ -671,7 +671,7 @@ proof -
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
+      "\<lambda>d _. map_lift (rd (declared_global p)) d" gamma\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
@@ -702,7 +702,7 @@ proof -
         "Lifted init_st" Bot
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "map_lift (rd (declared_global p))" gamma\<^sub>V empty\<^sub>V classify
+      "\<lambda>d _. map_lift (rd (declared_global p)) d" gamma\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   from t show ?thesis
     by (rule live.routed_valid_activation_trace_has_context
