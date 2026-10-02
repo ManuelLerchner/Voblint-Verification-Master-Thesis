@@ -514,18 +514,19 @@ next
       by (simp add: Let_def sp_compile_def fun_upd_other[OF knk] del: fun_upd_apply)
     have "combine_collect \<G> dst s t
         \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_rhs ?sub sigma))
-                  (dg_global (sides_of_rhs ?sub sigma (Inr analysis_global)))"
-      using combine_sound[where dc = cont'
+                  (?g \<squnion> dg_global (sides_of_rhs ?sub sigma (Inr analysis_global)))"
+      using unit_combine_sound[OF analysis_contract_axioms, where dc = cont'
           and de = "dg_local (sigma (Inl (FunctionResult p, ?ex_ctx)))"
           and \<tau> = sigma and gk = analysis_global and ci = ?ci, OF ccov tin]
       by simp
     also have "\<dots> = \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program ?alt sigma))
-                            (dg_global (sides_of_program ?alt sigma (Inr analysis_global)))"
+                            (?g \<squnion> dg_global (sides_of_program ?alt sigma (Inr analysis_global)))"
       by (simp only: tr sd)
     also have "\<dots> \<subseteq> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (cont, c1)))) ?g"
-      by (rule gammaDG_mono
-            [OF routed_comb_bound_local[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont Rr mem]
-                routed_comb_bound_global[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont Rr mem]])
+      by (rule unit_gammaDG_mono[OF analysis_contract_axioms
+            routed_comb_bound_local[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont Rr mem]
+            sup_least[OF order_refl
+              routed_comb_bound_global[OF \<open>(cl, c1) \<in> vars\<close> ce sin covV_cont Rr mem]]])
     also have "\<dots> = cover cont c1"
       using covV_cont by simp
     finally show ?thesis .
@@ -577,7 +578,7 @@ proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
     by (rule pp_entry_s0g_bound[OF entry_cov])
   have "\<gamma>\<^sub>D\<^sub>G s0d s0g
         \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
-    by (rule gammaDG_mono[OF le_local le_global])
+    by (rule unit_gammaDG_mono[OF analysis_contract_axioms le_local le_global])
   with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
   thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
     using entry_cov by simp
@@ -630,7 +631,7 @@ proof -
       by (rule pp_entry_s0g_bound[OF entry_cov])
     have "\<gamma>\<^sub>D\<^sub>G s0d s0g
           \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
-      by (rule gammaDG_mono[OF le_local le_global])
+      by (rule unit_gammaDG_mono[OF analysis_contract_axioms le_local le_global])
     with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
     thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
       using entry_cov by simp

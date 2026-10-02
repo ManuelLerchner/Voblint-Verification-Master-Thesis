@@ -275,8 +275,11 @@ lemma gamma_exec_readback: "dom.gamma_exec = (\<lambda>d g. \<lbrakk>\<rho>\<^bs
 
 theorem sound_exec:
   "analysis_contract (spec_exec \<G> empty_pred) (\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>) \<G>"
-  unfolding gamma_exec_readback [symmetric] spec_exec_def
-  by (rule dom.analysis_contract_st[OF is_sound_nonrelational_transfer])
+proof -
+  have "analysis_contract dom.spec_st (\<lambda>d e. dom.gamma_exec d (e ())) \<G>"
+    by (rule dom.analysis_contract_st[OF is_sound_nonrelational_transfer])
+  then show ?thesis by (simp add: gamma_exec_readback spec_exec_def)
+qed
 
 text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
   it separately; the alternative list is the singleton this entry answers.\<close>

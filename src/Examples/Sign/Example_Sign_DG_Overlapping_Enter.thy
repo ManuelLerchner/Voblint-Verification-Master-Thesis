@@ -177,12 +177,12 @@ proof -
   next
     case (2 d d' g g') then show ?case by (rule stock.gammaDG_mono)
   next
-    case (3 a \<tau> src gk)
+    case (3 a \<tau> src key)
     show ?case using stock.step_sound by (simp add: dg_spec_edge_program_def)
   next
-    case (4 s dc \<tau> gk t de ci)
+    case (4 s dc key \<tau> t de ci)
     show ?case using stock.combine_sound[where ci = ci and dc = dc and de = de
-          and \<tau> = \<tau> and gk = gk, OF 4(1) 4(2)]
+          and \<tau> = \<tau> and key = key, OF 4(1) 4(2)]
       by (simp add: dg_spec_combine_transfer_def)
   qed
 qed
@@ -911,7 +911,8 @@ next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF ov_pp_routed])
 next
   case (SgCov v ctx)
-  thus ?case by (simp add: solved_local_reader_def gamma_lift_default_st_gamma_to_fun)
+  thus ?case by (simp add: solved_local_reader_def gamma_lift_default_st_gamma_to_fun
+      declared_global_def[abs_def])
 next
   case (SgUncov v ctx)
   thus ?case by (simp add: solved_local_reader_def)
@@ -945,7 +946,7 @@ next
       and ecov: "call_enter ov_gs (CallEdge dst pars args) s
                    \<in> \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> entry\<rbrakk>"
       and req: "ctx' = exec_formals_route ov_gs u ctx entry (CallEdge dst pars args)"
-    using routed_entry_context_relE[OF Rc] by auto
+    using routed_entry_context_relE[OF Rc] by (auto simp: declared_global_def[abs_def])
   have Rr: "enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
               (snd ov_sol) (ov_enter ov_gs ov_ep ?ci ?d) bot"
     by (simp add: enter_runs_local_enter_transfer_mk_dg_man)

@@ -327,7 +327,7 @@ context
 begin
 
 interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
-    "\<lambda>d g. pgam p d g" "declared_global p"
+    "\<lambda>d e. pgam p d (e ())" "declared_global p"
   by (rule place_contract)
 
 text \<open>
@@ -471,7 +471,7 @@ lemma gamma_live_reader_le:
      \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof (cases "(v, ctx) \<in> live_unknowns p")
   case True
-  then have "(v, ctx) \<in> sol_vars (declared_global p) p" using live_unknowns_sub by blast
+  then have "(v, ctx) \<in> sol_vars (declared_global p) p" by (rule subsetD[OF live_unknowns_sub])
   with True show ?thesis by (simp add: reader_def)
 next
   case False then show ?thesis by (simp add: place_cmb_bot)

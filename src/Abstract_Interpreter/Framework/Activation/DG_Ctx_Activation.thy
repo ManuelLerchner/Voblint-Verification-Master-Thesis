@@ -22,7 +22,7 @@ text \<open>
   to \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against that global.
 \<close>
 
-locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
+locale dg_context_activation = analysis_contract S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G>
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -217,11 +217,13 @@ next
   ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
   hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
       (dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global)) sigma))
-      (dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
+      (?g \<squnion> dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
                 sigma (Inr analysis_global)))"
-    using step_sound[of a sigma "Inl (u, ctx)" analysis_global] by blast
+    using unit_step_sound[OF analysis_contract_axioms, of a sigma "Inl (u, ctx)" analysis_global]
+    by blast
   also have "\<dots> \<subseteq> gamma_at v ctx"
-    by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
+    by (rule unit_gammaDG_mono[OF analysis_contract_axioms edge_bound_local[OF cov_v e]
+          sup_least[OF order_refl edge_bound_global[OF cov_v e]]])
   also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     using cov_v by simp
   finally show ?thesis .

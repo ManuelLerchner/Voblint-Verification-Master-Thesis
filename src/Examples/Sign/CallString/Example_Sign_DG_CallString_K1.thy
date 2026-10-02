@@ -133,7 +133,8 @@ lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
   by (intro ext)
     (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def)
 
-interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
+interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st
+    "\<lambda>d e. sign_nest_gamma d (e ())" sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
   by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_nonrelational_transfer])
 

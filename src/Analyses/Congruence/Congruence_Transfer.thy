@@ -76,7 +76,7 @@ proof -
     show "sound_check_query congruence_lt congruence_eqb gamma_state aval_congruence"
       by (rule congruence_check_domain)
   qed
-qed (simp_all add: special_congruence_eq_transfer fun_eq_iff)
+qed (intro ext, simp add: special_congruence_eq_transfer)
 
 text \<open>
   No fact is renamed. The transfer functions get Congruence-prefixed names above

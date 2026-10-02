@@ -473,8 +473,8 @@ locale dg_analysis =
                   = [(d, comp_entry (declared_global p) p ci d)]"
     and place_contract:
       "\<And>p. analysis_contract (analysis_spec (declared_global p) p)
-               (\<lambda>d g. gamma_lift gamma\<^sub>V
-                        (map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g)))
+               (\<lambda>d e. gamma_lift gamma\<^sub>V
+                        (map_lift (rd (declared_global p)) (place_cmb (declared_global p) d (e ()))))
                (declared_global p)"
     and place_enter_runs:
       "\<And>p ci d \<sigma>. \<exists>pub. enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ci)
@@ -779,7 +779,7 @@ text \<open>
   owes this, so the routed statement below never re-derives it.
 \<close>
 
-interpretation dg_base: analysis_contract "analysis_spec pgs p" "\<lambda>d g. pgam d g" pgs
+interpretation dg_base: analysis_contract "analysis_spec pgs p" "\<lambda>d e. pgam d (e ())" pgs
   by (rule place_contract)
 
 lemma routed_analysis_sound_of_live:
