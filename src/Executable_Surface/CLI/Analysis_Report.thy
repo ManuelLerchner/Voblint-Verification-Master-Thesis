@@ -132,7 +132,7 @@ qed
 
 subsection \<open>What a consistent report claims about its own states\<close>
 
-theorem analysis_report_checks_sound:
+theorem analysis_report_verdicts_sound:
   assumes "consistent_report res"
   shows "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> verdict_stores res v"
 proof
@@ -162,13 +162,13 @@ qed
 corollary analysis_report_proved:
   assumes "consistent_report res" and "PROVED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  using analysis_report_checks_sound[OF assms(1)] assms(2,3)
+  using analysis_report_verdicts_sound[OF assms(1)] assms(2,3)
   unfolding PROVED_def verdict_stores_def by blast
 
 corollary analysis_report_refuted:
   assumes "consistent_report res" and "REFUTED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   shows "\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  using analysis_report_checks_sound[OF assms(1)] assms(2,3)
+  using analysis_report_verdicts_sound[OF assms(1)] assms(2,3)
   unfolding REFUTED_def verdict_stores_def by blast
 
 theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}"

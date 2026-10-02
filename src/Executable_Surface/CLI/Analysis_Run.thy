@@ -327,9 +327,9 @@ text \<open>
   The one place the context policy is read. Each policy names the registration the
   active analyses run as under the chosen global update rule, solves its equations
   with the executable solver from the program exit at the root context, and reads
-  the report off the answer. A solve that does not answer yields no report; the
-  generated code never returns in that case, so the value is reached only in the
-  logic.
+  the report off the answer. The logical \<open>None\<close> branch of \<open>solve_c\<close> yields no report.
+  Where the solve diverges, the generated code does not return at all, so that
+  branch is not an operational timeout result.
 \<close>
 
 fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
@@ -360,8 +360,8 @@ subsection \<open>The public operation\<close>
 
 text \<open>
   Four answers: an invalid configuration asks for no run, a malformed program was
-  never analysed, a solve that did not answer has no report, and every other run
-  hands back its report.
+  never analysed, the logical \<open>None\<close> branch of the executable solve has no report,
+  and every other run hands back its report.
 \<close>
 
 datatype 'r analysis_answer =
