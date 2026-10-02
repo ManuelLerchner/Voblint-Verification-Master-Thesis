@@ -23,7 +23,7 @@ BUNDLE = Path(
 HARNESS = REPO_ROOT / "tests/voblint_web_calls.cjs"
 PROGRAM = REPO_ROOT / "docs/readme-figures/contexts.vimp"
 # The settings of the traces in tests/solver-trace/.
-SETTINGS = ["interval", "warrow", "entry-state", 0, "fixpoint"]
+SETTINGS = ["interval", "warrow", "entry-state", 0, "fixpoint", "flow-sensitive"]
 EXPECT_DIR = REPO_ROOT / "tests/solver-trace"
 
 
@@ -128,7 +128,7 @@ def verdicts(answer):
     ],
 )
 def test_the_narrowing_bound_reaches_the_solver(rule, first):
-    settings = ["interval", rule, "none", 0, "fixpoint"]
+    settings = ["interval", rule, "none", 0, "fixpoint", "flow-sensitive"]
     off, traced = voblint_web("off", "compact", settings=settings, program=TWO_STEPS)
     assert set(verdicts(off)) == {("a <= 2", first), ("b <= 2", "PROVED")}
     assert "trace" in traced
@@ -141,6 +141,30 @@ def test_the_narrowing_bound_reaches_the_solver(rule, first):
     "rule", ["bounded-narrowing:", "bounded-narrowing:-1", "warrow:2"]
 )
 def test_a_malformed_bound_is_an_error(rule):
-    settings = ["interval", rule, "none", 0, "fixpoint"]
+    settings = ["interval", rule, "none", 0, "fixpoint", "flow-sensitive"]
     (answer,) = voblint_web("off", settings=settings, program=TWO_STEPS)
     assert answer == {"status": "error", "message": f"Unknown globals rule: {rule}"}
+
+
+# Two writes to one global: flow-sensitively the check sees the last, on the
+# shared channel it sees their join with the initial zero.
+SHARED_JOIN = (
+    REPO_ROOT
+    / "tests/regression/04-globals/known-imprecision/03-shared_global_joins_writes.vimp"
+)
+
+
+@pytest.mark.parametrize(
+    ("placement", "exact"),
+    [("flow-sensitive", "PROVED"), ("flow-insensitive", "UNKNOWN")],
+)
+def test_the_placement_reaches_the_analyzer(placement, exact):
+    settings = ["interval", "bounded-narrowing", "none", 0, "fixpoint", placement]
+    (answer,) = voblint_web("off", settings=settings, program=SHARED_JOIN)
+    assert set(verdicts(answer)) == {("x == 1", exact), ("0 <= x", "PROVED")}
+    assert ("shared" in answer) == (placement == "flow-insensitive")
+    assert answer["raw"]["input"]["pg"] == (
+        "Program_Globals_Flow_Insensitive"
+        if placement == "flow-insensitive"
+        else "Program_Globals_Flow_Sensitive"
+    )

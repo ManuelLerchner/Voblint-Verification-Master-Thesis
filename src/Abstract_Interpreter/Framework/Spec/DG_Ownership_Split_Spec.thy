@@ -309,22 +309,34 @@ text \<open>
   \<^const>\<open>dg_spec_combine_transfer\<close> of the argument.
 \<close>
 
+definition ownership_split_lift_gen ::
+  "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
+   \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) dg_spec
+   \<Rightarrow> ('x,'k,unit,'d,'d) dg_spec"
+where
+  "ownership_split_lift_gen cmb rg rl S = local_dg_spec_template\<lparr>
+     dgs_skip := ownership_split_transfer_gen cmb rg rl (skip\<^sup># S),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer_gen cmb rg rl (assign\<^sup># S x e)),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer_gen cmb rg rl (special\<^sup># S sc x)),
+     dgs_branch := (\<lambda>b pol. ownership_split_transfer_gen cmb rg rl (branch\<^sup># S b pol)),
+     dgs_body := (\<lambda>p. ownership_split_transfer_gen cmb rg rl (body\<^sup># S p)),
+     dgs_return := (\<lambda>e p. ownership_split_transfer_gen cmb rg rl (return\<^sup># S e p)),
+     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup># S ci)),
+     dgs_event := (\<lambda>evt. ownership_split_transfer_gen cmb rg rl (event\<^sup># S evt)),
+     dgs_combine_assign :=
+       (\<lambda>ci. ownership_split_combine_transfer_gen cmb rg rl (dg_spec_combine_transfer S ci)) \<rparr>"
+
+declare ownership_split_lift_gen_def [code_unfold]
+
+text \<open>The lifter at the pointwise carrier, splitting by the classifier.\<close>
+
 definition ownership_split_lift ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) dg_spec
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
 where
-  "ownership_split_lift \<G> S = local_dg_spec_template\<lparr>
-     dgs_skip := ownership_split_transfer \<G> (skip\<^sup># S),
-     dgs_assign := (\<lambda>x e. ownership_split_transfer \<G> (assign\<^sup># S x e)),
-     dgs_special := (\<lambda>sc x. ownership_split_transfer \<G> (special\<^sup># S sc x)),
-     dgs_branch := (\<lambda>b pol. ownership_split_transfer \<G> (branch\<^sup># S b pol)),
-     dgs_body := (\<lambda>p. ownership_split_transfer \<G> (body\<^sup># S p)),
-     dgs_return := (\<lambda>e p. ownership_split_transfer \<G> (return\<^sup># S e p)),
-     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer \<G> (enter\<^sup># S ci)),
-     dgs_event := (\<lambda>evt. ownership_split_transfer \<G> (event\<^sup># S evt)),
-     dgs_combine_assign :=
-       (\<lambda>ci. ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)) \<rparr>"
+  "ownership_split_lift \<G> =
+     ownership_split_lift_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
 
 declare ownership_split_lift_def [code_unfold]
 
@@ -332,45 +344,69 @@ text \<open>Both eliminate a constructed wrapper specification and expose the
   corresponding transfer wrapper, in a terminating direction, so they fire
   wherever a lifted specification meets the edge or combine dispatch.\<close>
 
+lemma dg_spec_step_ownership_split_lift_gen [simp]:
+  "dg_spec_step (ownership_split_lift_gen cmb rg rl S) a
+     = ownership_split_transfer_gen cmb rg rl (dg_spec_step S a)"
+  unfolding ownership_split_lift_gen_def by (cases a) simp_all
+
+lemma dgs_enter_ownership_split_lift_gen [simp]:
+  "enter\<^sup># (ownership_split_lift_gen cmb rg rl S) ci
+     = ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup># S ci)"
+  unfolding ownership_split_lift_gen_def by simp
+
+lemma dgs_query_ownership_split_lift_gen [simp]:
+  "dgs_query (ownership_split_lift_gen cmb rg rl S) m q = sp_return \<top>"
+  unfolding ownership_split_lift_gen_def by simp
+
+lemma dg_spec_combine_transfer_ownership_split_lift_gen [simp]:
+  "dg_spec_combine_transfer (ownership_split_lift_gen cmb rg rl S) ci
+     = ownership_split_combine_transfer_gen cmb rg rl (dg_spec_combine_transfer S ci)"
+  unfolding dg_spec_combine_transfer_def ownership_split_lift_gen_def
+  by (simp add: local_transfer_def local_combine_transfer_def)
+
 lemma dg_spec_step_ownership_split_lift [simp]:
   "dg_spec_step (ownership_split_lift \<G> S) a = ownership_split_transfer \<G> (dg_spec_step S a)"
-  unfolding ownership_split_lift_def by (cases a) simp_all
+  by (simp add: ownership_split_lift_def ownership_split_transfer_def)
 
 lemma dgs_enter_ownership_split_lift [simp]:
   "enter\<^sup># (ownership_split_lift \<G> S) ci = ownership_split_enter_transfer \<G> (enter\<^sup># S ci)"
-  unfolding ownership_split_lift_def by simp
+  by (simp add: ownership_split_lift_def ownership_split_enter_transfer_def)
 
 lemma dgs_query_ownership_split_lift [simp]:
   "dgs_query (ownership_split_lift \<G> S) m q = sp_return \<top>"
-  unfolding ownership_split_lift_def by simp
+  by (simp add: ownership_split_lift_def)
 
 lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
   "dg_spec_combine_transfer (ownership_split_lift \<G> S) ci
      = ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)"
-  unfolding dg_spec_combine_transfer_def ownership_split_lift_def
-  by (simp add: local_transfer_def local_combine_transfer_def)
+  by (simp add: ownership_split_lift_def ownership_split_combine_transfer_def)
 
 
 text \<open>The lifter preserves well-formedness: it reads the shared slot, runs the
   wrapped transfer at a manager built the same way, publishes once and answers.
   Every step of that is a closure lemma.\<close>
 
-lemma sp_wf_dgs_combine_assign_ownership_split_lift [intro]:
+lemma sp_wf_dgs_combine_assign_ownership_split_lift_gen [intro]:
   assumes "dg_spec_wf S"
-  shows "sp_wf (combine_assign\<^sup># (ownership_split_lift \<G> S) ci (mk_dg_man d unknown_of) ex)"
-  unfolding ownership_split_lift_def
-  by (auto simp: ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
+  shows
+    "sp_wf (combine_assign\<^sup># (ownership_split_lift_gen cmb rg rl S) ci (mk_dg_man d unknown_of) ex)"
+  unfolding ownership_split_lift_gen_def
+  by (auto simp: ownership_split_combine_transfer_gen_def
       intro!: sp_wf_bind dg_spec_wf_combine[OF assms])
+
+lemma dg_spec_wf_ownership_split_lift_gen [intro]:
+  assumes "dg_spec_wf S"
+  shows "dg_spec_wf (ownership_split_lift_gen cmb rg rl S)"
+  unfolding dg_spec_wf_def
+  by (auto simp: ownership_split_transfer_gen_def ownership_split_enter_transfer_gen_def
+      ownership_split_combine_transfer_gen_def
+      intro!: sp_wf_bind dg_spec_wf_step_ask[OF assms] dg_spec_wf_enter[OF assms]
+        dg_spec_wf_combine[OF assms])
 
 lemma dg_spec_wf_ownership_split_lift [intro]:
   assumes "dg_spec_wf S"
   shows "dg_spec_wf (ownership_split_lift \<G> S)"
-  unfolding dg_spec_wf_def
-  by (auto simp: ownership_split_transfer_def ownership_split_transfer_gen_def
-      ownership_split_enter_transfer_def ownership_split_enter_transfer_gen_def
-      ownership_split_combine_transfer_def ownership_split_combine_transfer_gen_def
-      intro!: sp_wf_bind dg_spec_wf_step_ask[OF assms] dg_spec_wf_enter[OF assms]
-        dg_spec_wf_combine[OF assms])
+  unfolding ownership_split_lift_def by (rule dg_spec_wf_ownership_split_lift_gen[OF assms])
 
 section \<open>What a split point means\<close>
 
@@ -438,6 +474,44 @@ next
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
         combine_collect_sound)
+qed
+
+text \<open>
+  The same at any carrier, for any sound component run as a specification. What
+  the carrier owes is that recombining is monotone and that a state recombines
+  from its own two halves: then the published global half and the answered local
+  half together describe at least what the wrapped transfer computed, and the
+  component's own soundness is the rest. A component's queries are answered from
+  its own channel on the merged state, so the lifter's empty query handler is
+  never consulted.
+\<close>
+
+theorem ownership_split_lift_gen_contract:
+  fixes cmb :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
+  assumes sound: "sound_local_spec \<G> gm c"
+    and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
+    and split: "\<And>x. cmb (rl x) (rg x) = x"
+  shows "analysis_contract (ownership_split_lift_gen cmb rg rl (dg_spec_of c))
+           (\<lambda>d g. gm (cmb d g)) \<G>"
+proof (unfold_locales, goal_cases wf mono step comb)
+  case wf
+  show ?case by (rule dg_spec_wf_ownership_split_lift_gen) simp
+next
+  case (mono d d' g g')
+  then show ?case
+    using sound cmb_mono unfolding sound_local_spec_def by metis
+next
+  case (step a \<tau> src gk)
+  show ?case
+    unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_lift_gen
+      dg_spec_step_dg_spec_of
+    by (simp add: split closed_step_sound[OF sound])
+next
+  case (comb s \<tau> src_cc gk t src_ex ci)
+  then show ?case
+    by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
+        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc split
+        closed_combine_sound[OF sound])
 qed
 
 

@@ -47,6 +47,7 @@ def link(
     refinement: str | None = None,
     trace: str | None = None,
     narrow: int | None = None,
+    placement: str | None = None,
 ) -> str:
     settings = [("analysis", analysis), ("globals", globals_rule)]
     # The playground runs bounded-narrowing at the default bound when `narrow` is absent.
@@ -57,6 +58,8 @@ def link(
         settings.append(("k", str(k)))
     if refinement is not None:
         settings.append(("refinement", refinement))
+    if placement is not None and placement != "flow-sensitive":
+        settings.append(("placement", placement))
     if trace is not None:
         settings.append(("trace", trace))
     query = "&".join(f"{key}={quote(value)}" for key, value in settings)
@@ -126,16 +129,21 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
             f"{program}: --narrow-bound is only valid with --globals bounded-narrowing"
         )
 
+    placement = settings.get("program_globals")
+    # voblint's own default rule under shared globals.
+    default_rule = "bounded-narrowing" if placement == "flow-insensitive" else "warrow"
+
     return link(
         vimp_fixture.shown_source(program.read_text()),
         ",".join(settings["analyses"]),
-        settings.get("globals", "warrow"),
+        settings.get("globals", default_rule),
         settings.get("context", "none"),
         settings.get("context_depth"),
         base,
         settings.get("int_refinement"),
         trace,
         settings.get("narrow_bound"),
+        placement,
     )
 
 

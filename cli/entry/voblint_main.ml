@@ -5,7 +5,8 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint.run_voblint (Analysis_Config (domains, globals, context))
+       -> Voblint.run_voblint
+            (Analysis_Config (domains, globals, context, program_globals))
           (Isabelle-generated). One call checks the activation and the program and
           runs the analyses the activation list, global update rule and context
           name. Every well-formed combination is answered. What comes back is a
@@ -90,6 +91,17 @@ let usage =
   \                             origin with narrowing bounded by\n\
   \                             --narrow-bound (default: warrow). Locals\n\
   \                             are warrowed at loop heads under every rule.\n\
+  \  --program-globals flow-sensitive|flow-insensitive\n\
+  \                             Where a program's globals live (default:\n\
+  \                             flow-sensitive). flow-sensitive keeps them\n\
+  \                             in every point's own state; flow-insensitive\n\
+  \                             puts them on one shared value every point\n\
+  \                             reads, for the analyses whose state splits\n\
+  \                             by variable; order relates variables across\n\
+  \                             that split and keeps its whole state per\n\
+  \                             point. Both are proved sound. Under\n\
+  \                             flow-insensitive, --globals defaults to\n\
+  \                             bounded-narrowing.\n\
   \  --narrow-bound N           bounded-narrowing narrows an origin once each\n\
   \                             time it switches from widening to narrowing,\n\
   \                             and keeps narrowing only while it has\n\
@@ -432,7 +444,8 @@ let () =
   let trace_format = ref Solver_trace.Text in
   let trace_systems = ref [] in
   let trace_output = ref None in
-  let globals_name = ref "warrow" in
+  let globals_name = ref None in
+  let program_globals_name = ref "flow-sensitive" in
   let file = ref None in
   let rec parse_args = function
     | [] -> ()
@@ -455,7 +468,10 @@ let () =
            exit 1);
         parse_args rest
     | "--globals" :: v :: rest ->
-        globals_name := v;
+        globals_name := Some v;
+        parse_args rest
+    | "--program-globals" :: v :: rest ->
+        program_globals_name := v;
         parse_args rest
     | "--narrow-bound" :: v :: rest ->
         (try narrow_bound := Some (int_of_string v)
@@ -541,6 +557,15 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
+  (* A shared global is read by every point, so warrowing it can keep
+     destabilizing its readers; bounded narrowing ends that alternation. *)
+  let globals_name =
+    match !globals_name with
+    | Some name -> name
+    | None ->
+        if !program_globals_name = "flow-insensitive" then "bounded-narrowing"
+        else "warrow"
+  in
   (* Every flag is read before any is checked: --context-depth, --narrow-bound
      and --int-refinement are each judged against another flag that may come
      later. The checks themselves are shared with the browser entry. *)
@@ -548,17 +573,18 @@ let () =
     {
       analyses = !analysis_names;
       refinement = !int_refinement;
-      globals = !globals_name;
+      globals = globals_name;
       narrow_bound = !narrow_bound;
       context = !context_name;
       depth = !context_depth;
+      program_globals = !program_globals_name;
     }
   in
   let fail message =
     prerr_endline message;
     exit 1
   in
-  let { Analysis_request.domains = analyses; rule; mode = context } =
+  let { Analysis_request.domains = analyses; rule; mode = context; placement } =
     match Analysis_request.resolve request with
     | Ok resolved -> resolved
     | Error (Analysis_request.Unknown_refinement v) ->
@@ -569,6 +595,8 @@ let () =
         fail ("unknown --globals value: " ^ v)
     | Error (Analysis_request.Unknown_analysis v) ->
         fail ("unknown --analysis value: " ^ v)
+    | Error (Analysis_request.Unknown_program_globals v) ->
+        fail ("unknown --program-globals value: " ^ v)
     | Error Analysis_request.Refinement_without_int ->
         fail "voblint: --int-refinement is only valid with --analysis int"
     | Error Analysis_request.Negative_narrow_bound ->
@@ -632,17 +660,19 @@ let () =
      combination to silently resolve. *)
   if !json then begin
     let answer =
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
+        ~program_globals:placement prog
     in
     let raw =
-      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
-        answer
+      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context
+        ~program_globals:placement prog answer
     in
     (match answer with
     | C.Analysed result ->
         print_endline
-          (Render_json.result_json 0. prog ~stmt_positions ~header_positions
-             ~raw result)
+          (Render_json.result_json
+             ~shared:(placement = C.Program_Globals_Flow_Insensitive)
+             0. prog ~stmt_positions ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
     exit 0
@@ -663,7 +693,7 @@ let () =
         ~source:(src, stmt_positions)
         ~analyses:(List.map A.analysis_label domains)
         ~context:(Solver_trace.context_name context)
-        ~globals:!globals_name ~program:path result;
+        ~globals:globals_name ~program:path result;
       flush out
     in
     match !trace_output with
@@ -674,7 +704,8 @@ let () =
   in
   let solve () =
     match
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
+        ~program_globals:placement prog
     with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)

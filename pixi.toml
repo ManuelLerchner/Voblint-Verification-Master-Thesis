@@ -121,6 +121,9 @@ pages-site-build = { cmd = "bash scripts/mk/pages-site.sh", depends-on = [
 browser-trace-check = { cmd = "python3 -m pytest tests/test_browser_trace.py", depends-on = [
   "browser-build",
 ], description = "Run the WebAssembly analyzer under Node and check the playground's solver trace against the CLI's, and that tracing off changes nothing." }
+browser-corpus-check = { cmd = "python3 -m pytest -q tests/test_browser_corpus.py", depends-on = [
+  "browser-build",
+], description = "Run every regression fixture through the WebAssembly analyzer under Node, tracing, at a browser worker's stack size and within a time budget." }
 pages-site-serve = { cmd = "python3 -m http.server --directory build/github-pages 8000", description = "Serve the assembled Pages site at http://localhost:8000; the playground's module scripts do not load from file://." }
 pages-dev = { cmd = "python3 scripts/pages_dev.py", depends-on = [
   "vendor-init",
@@ -397,6 +400,7 @@ verify = { depends-on = [
   "arithmetic-diagnostics-check",
   "solver-trace-check",
   "browser-trace-check",
+  "browser-corpus-check",
   "property-test",
   "html-report-structure-check",
   "html-report-corpus-audit",

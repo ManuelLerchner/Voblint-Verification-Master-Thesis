@@ -47,12 +47,6 @@ SHOWCASE = [
         "so the outer counter is proved non-negative.",
     ),
     (
-        "16-composite-domain/precision/13-refinement_once_shares_guard_facts.vimp",
-        "Components that teach each other",
-        "Int's refinement hands Congruence's y = 2 to Interval before a join; set "
-        "Int refinement to Never and the check is no longer proved.",
-    ),
-    (
         "07-sign-precision/precision/06-tutorial_negative_join.vimp",
         "Dead code from a sign",
         "Goblint's tutorial in the Sign domain: a guard infeasible on a negative "
@@ -77,34 +71,17 @@ SHOWCASE = [
         "separately recovers the precise bounds.",
     ),
     (
+        "19-paper-examples/precision/07-example1_shared_global_summary.vimp",
+        "A flow-insensitive global",
+        "The FM 2026 paper's Example 1 with program globals flow-insensitive: g's "
+        "writes join to [-17,42], enough for g < 43 but not g == 42. Set Program "
+        "globals to Flow-sensitive and both are proved.",
+    ),
+    (
         "16-composite-domain/precision/09-remainder_reduction.vimp",
         "A reduced product",
         "Int combines Interval's bounds with Congruence's residue to pin a "
         "remainder no component decides alone.",
-    ),
-    (
-        "10-arithmetic/precision/11-remainder_sign_follows_dividend.vimp",
-        "A remainder that goes negative",
-        "x % 6 lands in [-1,5], not [0,5]: C gives a remainder the sign of its "
-        "dividend, and a guard on that sign splits the two feasible values.",
-    ),
-    (
-        "22-congruence/precision/04-crt_narrows_shared_class.vimp",
-        "The Chinese remainder theorem",
-        "Intersecting x = 1 (mod 4) with y = 3 (mod 6) gives 9 (mod 12), which "
-        "proves a branch dead.",
-    ),
-    (
-        "23-arithmetic-diagnostics/precision/04-adc_peripheral.vimp",
-        "A possible division by zero",
-        "A recursive scan of four ADC channels: the average divides by a count "
-        "that may be zero.",
-    ),
-    (
-        "02-control-flow/known-imprecision/02-nonrelational_join.vimp",
-        "A limit of the domains",
-        "a != b holds on every run, but a non-relational join forgets which "
-        "value of a pairs with which b.",
     ),
 ]
 
@@ -115,6 +92,7 @@ PLAYGROUND_KEYS = {
     "globals": "globals",
     "int_refinement": "refinement",
     "narrow_bound": "narrow",
+    "program_globals": "placement",
 }
 
 
@@ -159,6 +137,9 @@ def example(path: Path) -> dict[str, object]:
     playground |= {
         name: settings[key] for key, name in PLAYGROUND_KEYS.items() if key in settings
     }
+    # voblint's own default rule under shared globals, which the page does not infer.
+    if settings.get("program_globals") == "flow-insensitive":
+        playground.setdefault("globals", "bounded-narrowing")
     return {
         "path": relative.as_posix(),
         "name": re.sub(r"^\d+-", "", path.stem).replace("_", " "),

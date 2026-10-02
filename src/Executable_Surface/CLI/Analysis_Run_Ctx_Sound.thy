@@ -76,4 +76,58 @@ next
         dg_pipeline.sol_vars_def)
 qed
 
+subsection \<open>Program globals on the shared channel\<close>
+
+text \<open>The two contextual tables again, at the shared-globals registrations.\<close>
+
+lemma mcp_split_es_rule_table:
+  assumes wf: "wf_program_compile_input p"
+    and cov: "mcp_split_es_rule.terminates as r (declared_global p) p"
+  shows "covered_table p (mcp_split_es_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
+    [where R = "mcp_split_es_rule.admitted_contexts as r (declared_global p) p"
+       and rc = mcp_root_ctx], goal_cases)
+  case (1 u)
+  show ?case
+    by (simp add: mcp_split_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf cov])
+next
+  case (2 u ctx)
+  show ?case
+    using mcp_split_es_rule.entry_state_activation_collect_sound_of_terminates [OF wf cov]
+    unfolding mcp_split_es_rule.gamma_reader_eq_lookup .
+next
+  case 3
+  show ?case
+    using mcp_split_es_rule.vars_finite_of_terminates [OF cov]
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
+        dg_pipeline.sol_vars_def)
+qed
+
+lemma mcp_split_cs_rule_table:
+  assumes wf: "wf_program_compile_input p"
+    and cov: "mcp_split_cs_rule.terminates as k r (declared_global p) p"
+  shows "covered_table p (mcp_split_cs_rule.result as k r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
+    [where R = "call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
+    goal_cases)
+  case (1 u)
+  show ?case
+    by (rule equalityD1
+          [OF mcp_split_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k"]])
+next
+  case (2 u ctx)
+  show ?case
+    using mcp_split_cs_rule.fun_route_activation_collect_sound_of_terminates
+            [OF cs_route_context_agree wf cov]
+    unfolding mcp_split_cs_rule.gamma_reader_eq_lookup by simp
+next
+  case 3
+  show ?case
+    using mcp_split_cs_rule.vars_finite_of_terminates [OF cov]
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
+        dg_pipeline.sol_vars_def)
+qed
+
 end

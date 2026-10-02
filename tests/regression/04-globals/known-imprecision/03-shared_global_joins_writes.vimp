@@ -1,0 +1,13 @@
+// PARAM: --analysis interval --program-globals flow-insensitive
+// The sequence of 06-sequential_global_proved.vimp with program globals on the
+// shared channel. A shared global is one flow-insensitive fact every point
+// reads, so the two writes join with the initial zero, and the default
+// bounded-narrowing rule widens that join: the check at the end sees x in
+// [0,+inf]. The exact check is lost; the range check survives.
+global x;
+fun main() {
+  x = 0;
+  x = 1;
+  __voblint_check(x == 1); // UNKNOWN
+  __voblint_check(0 <= x); // PROVED
+}

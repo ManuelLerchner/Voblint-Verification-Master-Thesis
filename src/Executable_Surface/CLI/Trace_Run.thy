@@ -58,7 +58,10 @@ text \<open>
   hands the trace the functions that read them as the result does: a context
   as the result shows it, a global unknown as the analysis global or the seed
   of a procedure entry in a context, a solver value's local or global part as a
-  state, and an entry value as a state.
+  state, and an entry value as a state. With shared program globals a local value
+  holds its globals at bottom by construction, which the emptiness check would read
+  as unreachable; it is shown without that check and without the globals, and the
+  analysis global shows the globals alone.
 \<close>
 
 datatype ('c, 'g, 'd, 'l) trace_printers = Trace_Printers
@@ -77,14 +80,20 @@ fun seed_of_call_string_gk :: "call_string_gk \<Rightarrow> (cfg_node \<times> c
 | "seed_of_call_string_gk (Call_String_Context.Seed n c) = Some (n, c)"
 
 definition mcp_trace_printers ::
-    "analysis_domain list \<Rightarrow> imp_prog \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
+    "program_globals \<Rightarrow> analysis_domain list \<Rightarrow> imp_prog
+       \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
        \<Rightarrow> ('g \<Rightarrow> (cfg_node \<times> 'c) option)
        \<Rightarrow> ('c, 'g, (mcp_st lifted, mcp_st lifted) dg_state, mcp_st lifted) trace_printers" where
-  "mcp_trace_printers as p ctx_view seed_of =
-     (let view = (\<lambda>d. map_lift (mcp_render (activation as) (program_vars p))
-                    (map_lift (mcp_rd (declared_global p))
-                      (canonicalize_lift (mcp_emp (activation as) p) d)))
-      in Trace_Printers ctx_view seed_of (\<lambda>d. view (dg_local d)) (\<lambda>d. view (dg_global d)) view)"
+  "mcp_trace_printers pg as p ctx_view seed_of =
+     (let raw = (\<lambda>vs d. map_lift (mcp_render (activation as) vs)
+                         (map_lift (mcp_rd (declared_global p)) d));
+          view = (\<lambda>d. raw (program_vars p) (canonicalize_lift (mcp_emp (activation as) p) d));
+          local = (case pg of
+                     Program_Globals_Flow_Sensitive \<Rightarrow> view
+                   | Program_Globals_Flow_Insensitive \<Rightarrow>
+                       raw (filter (\<lambda>x. \<not> declared_global p x) (program_vars p)))
+      in Trace_Printers ctx_view seed_of (\<lambda>d. local (dg_local d))
+           (\<lambda>d. raw (filter (declared_global p) (program_vars p)) (dg_global d)) local)"
 
 lemma trace_run:
   "f = rhs \<Longrightarrow> f = (let _ = trace_event STR ''run'' e in rhs)"
@@ -108,15 +117,15 @@ declare mcp_solve_c_def [code del]
 declare mcp_solve_c_traced [code]
 
 lemmas analysis_report_of_traced =
-  trace_run[OF analysis_report_of.simps(1)[of as r p],
-    of "\<lambda>_. mcp_trace_printers as p (\<lambda>_ :: unit. Context_Unit)
+  trace_run[OF analysis_report_of.simps(1)[of as r pg p],
+    of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>_ :: unit. Context_Unit)
           (seed_of_global_unknown :: (unit, unit) global_unknown \<Rightarrow> _)"]
-  trace_run[OF analysis_report_of.simps(2)[of as r p],
-    of "\<lambda>_. mcp_trace_printers as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
+  trace_run[OF analysis_report_of.simps(2)[of as r pg p],
+    of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
           (seed_of_global_unknown :: (unit, mcp_ctx) global_unknown \<Rightarrow> _)"]
-  trace_run[OF analysis_report_of.simps(3)[of as r k p],
-    of "\<lambda>_. mcp_trace_printers as p Context_Call_String seed_of_call_string_gk"]
-  for as r k p
+  trace_run[OF analysis_report_of.simps(3)[of as r k pg p],
+    of "\<lambda>_. mcp_trace_printers pg as p Context_Call_String seed_of_call_string_gk"]
+  for as r k pg p
 
 declare analysis_report_of.simps [code del]
 declare analysis_report_of_traced [code]

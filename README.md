@@ -119,8 +119,11 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
   <br><sub>Calls, contexts, a relational domain, verdicts and an arithmetic warning in one run. <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval%2Corder&amp;globals=warrow&amp;context=call-string&amp;k=1">Open this run</a>.</sub>
 </p>
 
-`--context none|entry-state|call-string` selects the analysis context and
-`--globals` the update rule for side-effected globals; `pixi run voblint --help`
+`--context none|entry-state|call-string` selects the analysis context,
+`--globals` the update rule for side-effected globals, and
+`--program-globals flow-sensitive|flow-insensitive` whether a program's globals
+travel with each point's state or live in one shared value every point reads;
+both placements carry the same soundness theorem. `pixi run voblint --help`
 lists every flag. `--graph-snapshot` prints the solved graph as deterministic
 text and `--parse-only` checks syntax.
 [`docs/CLI_DESIGN.md`](docs/CLI_DESIGN.md) describes the CLI trust boundary and
@@ -420,14 +423,17 @@ once, for any `dg_spec` with an
 [`analysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
 relating it to concrete stores; see
 [`src/Abstract_Interpreter/Framework/README.md`](src/Abstract_Interpreter/Framework/README.md).
-Specifications that read or publish globals, such as the relational
-`rel_order_spec` and the mixed-flow examples, instantiate `dg_spec` directly.
+Specifications that read or publish globals of their own, such as the relational
+`rel_order_spec`, instantiate `dg_spec` directly.
 
 Every analysis selectable through `run_voblint` enters through a smaller
 interface, a [`local_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
 one transfer per edge kind plus entry and combine, over local state only, with
 the soundness condition `sound_local_spec`. `dg_spec_of` lifts it to a `dg_spec`,
-and `dg_spec_of_contract` supplies the contract.
+and `dg_spec_of_contract` supplies the contract. With flow-insensitive program
+globals, `ownership_split_lift_gen` wraps that specification so the globals are
+read from and published to the shared global unknown, and
+`ownership_split_lift_gen_contract` carries the contract over.
 
 A numeric domain supplies one record of value operations,
 [`nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Ops.thy):

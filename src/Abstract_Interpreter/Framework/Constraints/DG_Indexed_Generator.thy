@@ -753,6 +753,126 @@ proof -
   with pp_buf show ?thesis by simp
 qed
 
+text \<open>
+  The same correspondence without reshaped hooks, for contribution programs that
+  answer nothing on their global half. Such a program may still publish at
+  \<open>analysis_global_at ctx\<close>: the buffered generator keeps that publication as it is
+  and adds only the seed it hoists, which is the unbuffered generator's entry
+  publication. A specification that splits its state and publishes the global
+  half through its manager is of this kind.
+\<close>
+
+lemma routed_node_rhs_buffered_correspondence_answers_local:
+  fixes cmb ::
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+       \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
+                          'h::bounded_semilattice_sup_bot) dg_state,
+            ('d, 'h) dg_state) strategy_program"
+  assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                   extra g ctx w). sp_wf p"
+    and answers_local: "\<And>w p \<tau>. p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                   extra g ctx w) \<Longrightarrow> dg_global (traverse_program p \<tau>) = bot"
+  shows "traverse_rhs
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+             (v, ctx)) \<tau>
+         = traverse_rhs
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+    (is ?T)
+    and "dep_aux \<tau>
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+             (v, ctx))
+         = dep_aux \<tau>
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx))"
+    (is ?D)
+    and "sides_of_rhs
+           (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+             (v, ctx)) \<tau>
+         = sides_of_rhs
+           (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+    (is ?S)
+proof -
+  let ?ps = "routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v"
+  let ?acc0 = "if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot"
+  have glob: "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?ps ?acc0)
+      = dg_global ?acc0"
+  proof -
+    have "foldr (\<lambda>t acc'. dg_global (traverse_program t \<tau>) \<squnion> acc') ?ps bot = bot"
+      by (rule foldr_sup_bot_of_all_bot) (rule answers_local)
+    then show ?thesis
+      by (simp add: dg_global_foldr_generic foldr_join_seed_out[where a = "dg_global ?acc0"])
+  qed
+  show ?T
+  proof -
+    have "traverse_rhs
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+          (v, ctx)) \<tau>
+        = DG (foldr (\<lambda>t acc'. dg_local (traverse_program t \<tau>) \<squnion> acc') ?ps (dg_local ?acc0)) bot"
+      by (simp add: eq_routed_node_rhs_buffered[OF wf] dg_local_foldr_generic)
+    also have "\<dots> = DG (side_acc_dg (dg_local ?acc0) \<tau> ?ps) bot"
+      by (simp add: side_acc_dg_as_foldr_seeded)
+    also have "\<dots> = traverse_rhs
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
+      by (simp add: eq_routed_node_rhs[OF wf])
+    finally show ?thesis .
+  qed
+  show ?D
+    by (simp add: routed_node_rhs_buffered_def routed_node_rhs_def Let_def
+        dep_program_fold_rhs_program_char[OF wf] dep_program_side_rhs_fold_dg_char[OF wf])
+  show ?S
+  proof (rule ext)
+    fix z
+    show "sides_of_rhs
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g
+          (v, ctx)) \<tau> z
+      = sides_of_rhs
+        (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z"
+      using glob
+      by (cases "v = cfg_entry g")
+         (auto simp: routed_node_rhs_buffered_def routed_node_rhs_def Let_def
+            sides_of_program_fold_rhs_program_char[OF wf]
+            sides_of_program_side_rhs_fold_dg_char[OF wf]
+            traverse_fold_rhs_program_char_foldr[OF wf] sup_commute bot_dg_state_def[symmetric])
+  qed
+qed
+
+lemma part_post_solution_routed_node_rhs_buffered_answers_local:
+  fixes cmb ::
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+       \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
+                          'h::bounded_semilattice_sup_bot) dg_state,
+            ('d, 'h) dg_state) strategy_program"
+  assumes wf: "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                     extra g c' w). sp_wf p"
+    and answers_local: "\<And>c' w p \<tau>. p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                   extra g c' w) \<Longrightarrow> dg_global (traverse_program p \<tau>) = bot"
+    and pp_buf: "part_post_solution
+        (routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g)
+        x sigma vars"
+  shows "part_post_solution
+      (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) x sigma vars"
+proof -
+  let ?Tbuf =
+    "routed_node_rhs_buffered pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g"
+  let ?Told =
+    "routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g"
+  have corr: "\<And>u. traverse_rhs (?Tbuf u) sigma = traverse_rhs (?Told u) sigma
+      \<and> dep_aux sigma (?Tbuf u) = dep_aux sigma (?Told u)
+      \<and> sides_of_rhs (?Tbuf u) sigma = sides_of_rhs (?Told u) sigma"
+  proof -
+    fix u :: "pp \<times> 'c"
+    obtain v ctx where u: "u = (v, ctx)" by (cases u) auto
+    show "traverse_rhs (?Tbuf u) sigma = traverse_rhs (?Told u) sigma
+        \<and> dep_aux sigma (?Tbuf u) = dep_aux sigma (?Told u)
+        \<and> sides_of_rhs (?Tbuf u) sigma = sides_of_rhs (?Told u) sigma"
+      unfolding u
+      by (intro conjI routed_node_rhs_buffered_correspondence_answers_local[OF wf])
+         (erule answers_local)+
+  qed
+  have "part_post_solution ?Tbuf x sigma vars = part_post_solution ?Told x sigma vars"
+    by (rule part_post_solution_cong) (use corr in blast)+
+  with pp_buf show ?thesis by simp
+qed
+
 subsection \<open>Threefold monotonicity for an arbitrary generator instance\<close>
 
 text \<open>

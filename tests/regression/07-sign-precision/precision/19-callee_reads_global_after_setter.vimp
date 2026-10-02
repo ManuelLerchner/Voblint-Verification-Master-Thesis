@@ -1,12 +1,12 @@
 // PARAM: --analysis sign --globals join
-// Source: Example_Sign_Mixed_Flow (mf_snapshot, mf_after_calls).
+// Source: Example_Sign_Mixed_Flow (mf_report, mf_checks_hold).
 //
-// set() writes the global, get() reads it back as a return value. The
-// theory solves this program with an ownership-split specification whose
-// globals live in one flow-insensitive slot, where Gx joins its seed 0
-// with 1 and y is only NonNegative (mf_after_calls: 0 < x and 0 <= y). The
-// CLI carries the whole state flow-sensitively, so it proves the stronger
-// 0 < y and 0 < Gx as well (measured: y = Positive).
+// set() writes the global, get() reads it back as a return value. With the
+// default --program-globals flow-sensitive the whole state is carried
+// flow-sensitively, so all four checks are proved (y = Positive). The theory
+// runs the same program with --program-globals flow-insensitive, where Gx joins its
+// seed 0 with 1 and y is only NonNegative; see
+// 21-callee_reads_shared_global_after_setter.vimp.
 global Gx;
 fun set() { Gx = 1; }
 fun get() { return Gx; }

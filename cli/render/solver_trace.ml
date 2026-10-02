@@ -713,11 +713,19 @@ let emit ~out ~format ~verbose:is_verbose ?(systems = []) ?source ?recorded
   | None -> pr "Voblint trace: the run recorded no solve\n"
   | Some printers -> (
       let nm = names_of ?source printers in
+      (* Reversed folds run in constant stack; the browser's WebAssembly
+         stack is too small for a long trace through List.concat or
+         List.combine. *)
       let lined =
-        List.concat
-          (List.map2
-             (fun e line -> List.map (fun s -> (s, line)) (steps_of e))
-             events (verbose_lines nm events))
+        List.rev
+          (List.fold_left
+             (fun acc (e, line) ->
+               List.fold_left (fun acc s -> (s, line) :: acc) acc (steps_of e))
+             []
+             (List.rev
+                (List.rev_map2
+                   (fun e l -> (e, l))
+                   events (verbose_lines nm events))))
       in
       let steps = List.map fst lined in
       let locals, globals_n = counts steps in

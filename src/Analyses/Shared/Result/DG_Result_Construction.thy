@@ -28,29 +28,36 @@ text \<open>
   one solve per table in generated code -- the argument is evaluated once and the
   per-point closure captures it -- which is why no analysis needs a separate
   \<open>[code]\<close> equation with an explicit \<open>let\<close>.
+
+  What a point publishes is read off its local unknown together with the solved
+  global at \<open>Inr gk\<close>: \<open>rc\<close> recombines the two halves into the state the point
+  describes. An analysis that keeps every variable in the local half passes a
+  recombination that ignores the global.
 \<close>
 
 definition dg_result_for ::
-    "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool)
+    "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s lifted \<Rightarrow> 'g \<Rightarrow> 's lifted) \<Rightarrow> 'k
      \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 'g) dg_state)
      \<Rightarrow> ('c, 'v) solved_table" where
-  "dg_result_for rd emp sol =
+  "dg_result_for rd emp rc gk sol =
      Solved_Table (fst sol)
-       (\<lambda>v ctx. map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx))))))"
+       (\<lambda>v ctx. map_lift rd (canonicalize_lift emp
+          (rc (dg_local (snd sol (Inl (v, ctx)))) (dg_global (snd sol (Inr gk))))))"
 
 lemma covered_keys_dg_result_for [simp]:
-  "covered_keys (dg_result_for rd emp sol) = fst sol"
+  "covered_keys (dg_result_for rd emp rc gk sol) = fst sol"
   unfolding dg_result_for_def by simp
 
 text \<open>
   The one fact every soundness bridge needs about the table: a covered key reads
-  back the normalized local unknown, an uncovered one answers \<^const>\<open>Bot\<close>.
+  back the normalized recombined state, an uncovered one answers \<^const>\<open>Bot\<close>.
 \<close>
 
 lemma lookup_table_dg_result_for [simp]:
-  "lookup_table (dg_result_for rd emp sol) v ctx
+  "lookup_table (dg_result_for rd emp rc gk sol) v ctx
      = (if (v, ctx) \<in> fst sol
-        then map_lift rd (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx)))))
+        then map_lift rd (canonicalize_lift emp
+               (rc (dg_local (snd sol (Inl (v, ctx)))) (dg_global (snd sol (Inr gk)))))
         else Bot)"
   unfolding dg_result_for_def lookup_table_def by simp
 

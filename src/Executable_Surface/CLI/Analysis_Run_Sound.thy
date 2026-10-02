@@ -257,4 +257,30 @@ next
         dg_pipeline.sol_vars_def)
 qed
 
+text \<open>The same with program globals on the shared channel.\<close>
+
+lemma mcp_split_rule_table:
+  assumes wf: "wf_program_compile_input p"
+    and cov: "mcp_split_rule.terminates as r (declared_global p) p"
+  shows "covered_table p (mcp_split_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
+    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
+  case (1 u)
+  show ?case
+    by (rule equalityD1
+      [OF mcp_split_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()"]])
+next
+  case (2 u ctx)
+  show ?case
+    using mcp_split_rule.fun_route_activation_collect_sound_of_terminates [OF _ wf cov]
+    unfolding mcp_split_rule.gamma_reader_eq_lookup by (simp add: route_unit_def)
+next
+  case 3
+  show ?case
+    using mcp_split_rule.vars_finite_of_terminates [OF cov]
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
+        dg_pipeline.sol_vars_def)
+qed
+
 end

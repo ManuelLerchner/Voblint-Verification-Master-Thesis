@@ -155,6 +155,23 @@
                 </select>
               </div>
 
+              <div class="control-group">
+                <label for="placement-select">Program globals</label>
+                <select id="placement-select" aria-describedby="placement-help">
+                  <option value="flow-sensitive" selected>Flow-sensitive</option>
+                  <option value="flow-insensitive">Flow-insensitive</option>
+                </select>
+                <span id="placement-help" class="visually-hidden">
+                  Flow-sensitive keeps every global in each point's own state.
+                  Flow-insensitive places globals in one shared value every point
+                  reads, for the analyses whose state splits by variable; the order
+                  analysis relates variables across that split and keeps its whole
+                  state per point. Warrowing the shared value need not settle, so
+                  choosing Flow-insensitive selects bounded narrowing unless a rule
+                  was picked.
+                </span>
+              </div>
+
               <div class="control-group" id="narrow-bound-group" hidden>
                 <label for="narrow-bound">Narrowing bound</label>
                 <input

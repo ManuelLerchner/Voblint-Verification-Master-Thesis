@@ -31,7 +31,8 @@ definition order_asks_prog :: imp_prog where
 
 definition order_asks_verdicts where
   "order_asks_verdicts ds =
-     (case run_voblint (Analysis_Config ds Globals_Warrow Ctx_None) order_asks_prog of
+     (case run_voblint (Analysis_Config ds Globals_Warrow Ctx_None Program_Globals_Flow_Sensitive)
+             order_asks_prog of
         Analysed res \<Rightarrow> Some (map check_verdict (report_checks res))
       | Malformed_Program \<Rightarrow> None)"
 

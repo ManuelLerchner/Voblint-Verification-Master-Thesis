@@ -1,7 +1,7 @@
 theory Analysis_Run
   imports
     Arithmetic_Diagnostics
-    MCP_Analyses
+    MCP_Split
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
@@ -94,10 +94,18 @@ text \<open>
   when it activates at least one analysis and none twice.
 \<close>
 
+text \<open>
+  Where a program's globals live: in every point's own state, flow-sensitively, or
+  on the shared channel, as one flow-insensitive fact every point reads.
+\<close>
+
+datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive
+
 datatype analysis_config = Analysis_Config
   (config_analyses: "analysis_domain list")
   (config_rule: globals_rule)
   (config_context: context_mode)
+  (config_globals: program_globals)
 
 definition valid_config :: "analysis_config \<Rightarrow> bool" where
   "valid_config config \<longleftrightarrow> config_analyses config \<noteq> [] \<and> distinct (config_analyses config)"
@@ -335,13 +343,40 @@ text \<open>
   branch below.
 \<close>
 
+text \<open>
+  The placement the configuration chooses: the component as it is, or wrapped by the
+  ownership-split lifter with a point's state recombined against the solved global.
+\<close>
+
+definition mcp_place_spec :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted local_spec
+    \<Rightarrow> (pp \<times> 'c, 'k, unit, mcp_st lifted, mcp_st lifted) dg_spec" where
+  "mcp_place_spec pg = (case pg of
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
+   | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G> c. ownership_split_lift_gen split_cmb split_rg split_rl (dg_spec_of c)))"
+
+definition mcp_place_cmb ::
+    "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
+  "mcp_place_cmb pg = (case pg of
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d g. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_cmb))"
+
+definition mcp_place_rl :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
+  "mcp_place_rl pg = (case pg of
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rl))"
+
+definition mcp_place_rg :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
+  "mcp_place_rg pg = (case pg of
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. Bot) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rg))"
+
+lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
+
 definition mcp_equations ::
-    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
        \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
        \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
-  "mcp_equations as global seed route =
-     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route"
+  "mcp_equations as pg global seed route =
+     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route
+       (mcp_place_spec pg) (mcp_place_rg pg)"
 
 definition mcp_solve_c ::
     "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
@@ -350,47 +385,48 @@ definition mcp_solve_c ::
   "mcp_solve_c = TD_side_rule_Interp_solve_c"
 
 definition mcp_run_of ::
-    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
        \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
        \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
        \<Rightarrow> ('c, mcp_val) solved_run" where
-  "mcp_run_of as global seed route =
-     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route"
+  "mcp_run_of as pg global seed route =
+     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route
+       (mcp_place_cmb pg) (mcp_place_rl pg)"
 
 lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
 
 
 fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
-  "analysis_report_of (Analysis_Config as r Ctx_None) p =
+  "analysis_report_of (Analysis_Config as r Ctx_None pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_None) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+       (\<lambda>sol. report_of (Analysis_Config as r Ctx_None pg) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
           (mcp_classify (activation as))
-          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit)
+          (mcp_run_of (activation as) pg (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit)
              (declared_global p) p sol) p)
        (mcp_solve_c r
-          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+          (mcp_equations (activation as) pg (Analysis_Global ()) Activation_Seed
              (\<lambda>_. route_unit) (declared_global p) p)
           (cfg_exit (prog_cfg p), ()))"
-| "analysis_report_of (Analysis_Config as r Ctx_EntryState) p =
+| "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState)
+       (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState pg)
           (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
-          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed
+          (mcp_run_of (activation as) pg (Analysis_Global ()) Activation_Seed
              (mcp_formals_route (activation as)) (declared_global p) p sol) p)
        (mcp_solve_c r
-          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+          (mcp_equations (activation as) pg (Analysis_Global ()) Activation_Seed
              (mcp_formals_route (activation as)) (declared_global p) p)
           (cfg_exit (prog_cfg p), mcp_root_ctx))"
-| "analysis_report_of (Analysis_Config as r (Ctx_CallString k)) p =
+| "analysis_report_of (Analysis_Config as r (Ctx_CallString k) pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k))
+       (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k) pg)
           (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
           (mcp_classify (activation as))
-          (mcp_run_of (activation as) Call_String_Context.Global Call_String_Context.Seed
+          (mcp_run_of (activation as) pg Call_String_Context.Global Call_String_Context.Seed
              (\<lambda>_. cs_route k) (declared_global p) p sol) p)
        (mcp_solve_c r
-          (mcp_equations (activation as) Call_String_Context.Global Call_String_Context.Seed
+          (mcp_equations (activation as) pg Call_String_Context.Global Call_String_Context.Seed
              (\<lambda>_. cs_route k) (declared_global p) p)
           (cfg_exit (prog_cfg p), []))"
 

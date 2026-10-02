@@ -74,6 +74,7 @@ const activationControl = {
 };
 const globalsSelect = query("#globals-select");
 const contextSelect = query("#context-select");
+const placementSelect = query("#placement-select");
 
 const contextDepthInput = query("#context-depth");
 const contextDepthGroup = query("#context-depth-group");
@@ -408,12 +409,12 @@ function renderRawCall(raw) {
   const args = input
     ? [
         callPart(
-          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} ${input.pg ? `${constructorTerm(input.pg)} ` : ""}`,
           "arg",
         ),
         callPart("p", "program"),
       ]
-    : [callPart("as rule ctx p", "arg")];
+    : [callPart("as rule ctx pg p", "arg")];
   /* Before any run the title asks for one. */
   let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
@@ -1921,6 +1922,10 @@ function downloadSolverTraceJsonl() {
   }
 }
 
+/* The one global unknown every point reads when program globals are shared. */
+const GLOBAL_ID = "global-shared";
+const GLOBAL_SIZE = 24;
+
 /*
  * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
  * its graph, from the traces the run recorded.
@@ -1934,6 +1939,7 @@ const solveReplay = createSolveReplay({
   applyGraphLayout,
   followRoutesOnDrag,
   seedId,
+  globalId: GLOBAL_ID,
   cssToken,
 });
 
@@ -2208,6 +2214,26 @@ function graphElements(result) {
         },
       );
     }
+  }
+
+  /*
+   * With flow-insensitive program globals, the global unknown stands outside every
+   * context. The ownership-split transfer reads it and publishes to it at every
+   * point, so it gets no edges of its own: edges to every point would say nothing.
+   */
+  const shared = result.shared;
+
+  if ((shared?.globals ?? []).length > 0) {
+    elements.push({
+      group: "nodes",
+      data: {
+        id: GLOBAL_ID,
+        width: GLOBAL_SIZE,
+        height: GLOBAL_SIZE,
+        label: shared.reachable ? `Global  ${seedLabel(shared.lines)}`.trim() : "Global",
+      },
+      classes: shared.reachable ? "global" : "global unreached",
+    });
   }
 
   result.graph.edges.forEach((edge, index) => {
@@ -2694,6 +2720,16 @@ function applyGraphLayout(view, { centers, routes, labels }) {
   view.batch(() => {
     view.nodes(".point, .seed").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
+    /* The global unknown belongs to no context; it sits above the top-left box. */
+    const placed = [...centers.values()];
+
+    if (placed.length > 0) {
+      view.nodes(".global").position({
+        x: Math.min(...placed.map((c) => c.x)),
+        y: Math.min(...placed.map((c) => c.y)) - 90,
+      });
+    }
+
     for (const [id, points] of routes) {
       const edge = view.getElementById(id);
       const style = segmentStyle(
@@ -2816,6 +2852,31 @@ function graphStyle() {
         "text-valign": "center",
         "text-margin-x": 6,
       },
+    },
+    /* The shared global unknown: a diamond, read by points and published to by writes. */
+    {
+      selector: "node.global",
+      style: {
+        shape: "diamond",
+        width: "data(width)",
+        height: "data(height)",
+        "background-color": cssToken("--surface"),
+        "border-color": cssToken("--global-link"),
+        "border-width": 2.5,
+        "overlay-opacity": 0,
+        label: "data(label)",
+        color: cssToken("--global-link"),
+        "font-family": cssToken("--mono"),
+        "font-size": EDGE_FONT_SIZE,
+        "font-weight": "bold",
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": 8,
+      },
+    },
+    {
+      selector: "node.global.unreached",
+      style: { "border-style": "dashed", "border-color": cssToken("--text-faint") },
     },
     {
       selector: "node.seed.unreached",
@@ -3089,6 +3150,10 @@ function settingsSlug() {
 
   if (contextSelect.value === "call-string") {
     settings.push(`k${contextDepthInput.value}`);
+  }
+
+  if (placementSelect.value === "flow-insensitive") {
+    settings.push("flow-insensitive-globals");
   }
 
   if (usesInt()) {
@@ -3373,7 +3438,41 @@ function updateGlobalsControls() {
     "bounded-narrowing": `Widen side-effected values per origin; ${narrowing}.`,
   };
 
-  globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
+  const sharedWarning =
+    placementSelect.value === "flow-insensitive" && globalsSelect.value.startsWith("warrow")
+      ? " Warrowing the shared global need not settle; bounded narrowing ends it."
+      : "";
+
+  globalsHelp.textContent = (descriptions[globalsSelect.value] ?? "") + sharedWarning;
+}
+
+/*
+ * The CLI solves shared program globals with bounded narrowing unless told otherwise,
+ * since warrowing the global every point reads can keep destabilizing its readers.
+ * Switching placements does the same with a rule the reader has not picked, and
+ * switching back undoes it.
+ */
+let globalsPicked = false;
+let globalsSwitchedForShared = false;
+
+function updatePlacementControls() {
+  if (
+    placementSelect.value === "flow-insensitive" &&
+    !globalsPicked &&
+    globalsSelect.value === "warrow"
+  ) {
+    globalsSelect.value = "bounded-narrowing";
+    globalsSwitchedForShared = true;
+  } else if (
+    placementSelect.value === "flow-sensitive" &&
+    globalsSwitchedForShared &&
+    globalsSelect.value === "bounded-narrowing"
+  ) {
+    globalsSelect.value = "warrow";
+    globalsSwitchedForShared = false;
+  }
+
+  updateGlobalsControls();
 }
 
 /*
@@ -3411,6 +3510,12 @@ function readConfiguration() {
   const globals = globalsSelect.value;
 
   const context = contextSelect.value;
+
+  const placement = placementSelect.value;
+
+  if (!new Set(["flow-sensitive", "flow-insensitive"]).has(placement)) {
+    throw new Error(`Unknown program globals placement: ${placement}`);
+  }
 
   const allowedGlobals = new Set([
     "join",
@@ -3463,6 +3568,7 @@ function readConfiguration() {
     contextDepth,
     narrowBound,
     intRefinement,
+    placement,
   };
 }
 
@@ -3481,6 +3587,10 @@ function configurationLabel(configuration) {
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
+  }
+
+  if (configuration.placement === "flow-insensitive") {
+    parts.push("shared globals");
   }
 
   if (usesInt()) {
@@ -3696,6 +3806,7 @@ function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = 
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
+        placement: configuration.placement,
         trace: configuration.trace ?? "off",
         source,
       });
@@ -3960,6 +4071,7 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
+  placementSelect,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
@@ -3985,7 +4097,12 @@ for (const box of analysisChoices) {
   box.addEventListener("change", updateIntRefinementControls);
 }
 
-globalsSelect.addEventListener("change", updateGlobalsControls);
+globalsSelect.addEventListener("change", () => {
+  globalsPicked = true;
+  globalsSwitchedForShared = false;
+  updateGlobalsControls();
+});
+placementSelect.addEventListener("change", updatePlacementControls);
 narrowBoundInput.addEventListener("input", updateGlobalsControls);
 
 graphZoomIn.addEventListener("click", () => cy && zoomGraphIn());
@@ -4361,7 +4478,9 @@ function openProgram({ source, fileName, settings = {} }) {
     activationControl.value = settings.analysis;
   }
   selectIfOffered(globalsSelect, settings.globals);
+  globalsPicked ||= typeof settings.globals === "string";
   selectIfOffered(contextSelect, settings.context);
+  selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
   selectIfOffered(intRefinementSelect, settings.refinement);
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
@@ -4421,7 +4540,16 @@ function selectIfOffered(select, value) {
  * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
-const LINK_SETTINGS = ["analysis", "globals", "narrow", "context", "k", "refinement", "trace"];
+const LINK_SETTINGS = [
+  "analysis",
+  "globals",
+  "narrow",
+  "context",
+  "k",
+  "refinement",
+  "placement",
+  "trace",
+];
 
 const shareButton = query("#share-link");
 const shareLabel = query("#share-link-label");
@@ -4516,6 +4644,9 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
+    ...(placementSelect.value === "flow-insensitive"
+      ? [linkParam("placement", "flow-insensitive")]
+      : []),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);

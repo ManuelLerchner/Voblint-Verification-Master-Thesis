@@ -36,7 +36,9 @@ while [ "$i" -lt "$n" ]; do
   arg="${args[$i]}"
   case "$arg" in
     --help) skip_picker=1; break ;;
-    --analysis | --context | --context-depth | --globals | --timeout) i=$((i + 2)) ;;
+    --analysis | --int-refinement | --context | --context-depth | --globals \
+      | --program-globals | --narrow-bound | --html-out | --trace-sys | --format \
+      | --output | --timeout) i=$((i + 2)) ;;
     --dot | --graph-snapshot | --parse-only) i=$((i + 1)) ;;
     -*) i=$((i + 1)) ;;
     *) has_file=1; break ;;

@@ -248,6 +248,10 @@ export function createSolveReplay(deps) {
 
     /* A seed's node stands beside its procedure's entry in its context. */
     const entryOf = (key) => {
+      if (key === "G:Global") {
+        return keyOf.has(deps.globalId) ? deps.globalId : undefined;
+      }
+
       const [procedure, context] = key.slice(2).split("|");
       const entry = nodeOf.get(`L:entry_${procedure}|${context}`);
 
@@ -262,12 +266,24 @@ export function createSolveReplay(deps) {
       }
     }
 
+    if ((answer.shared?.globals ?? []).length > 0) {
+      keyOf.set(deps.globalId, "G:Global");
+    }
+
     const cache = createCache(events, SNAPSHOT_EVERY);
 
     const { cytoscape, elk } = await deps.getGraphLibraries();
     const elements = deps.graphElements(answer).map((element) => {
       if (element.classes?.startsWith("seed ") || element.classes === "seed") {
         return { ...element, data: { ...element.data, label: "" }, classes: "seed r-unseen" };
+      }
+
+      if (element.classes?.startsWith("global ") || element.classes === "global") {
+        return {
+          ...element,
+          data: { ...element.data, label: "Global" },
+          classes: "global r-unseen",
+        };
       }
 
       if (element.group !== "nodes" || !pointOf.has(element.data.id)) {
@@ -328,13 +344,15 @@ export function createSolveReplay(deps) {
         cy.animate({ fit: { padding: 24 } }, { duration: 260 });
       }
     });
-    cy.on("mouseover", "node.point, node.seed", (event) => {
+    cy.on("mouseover", "node.point, node.seed, node.global", (event) => {
       hovered = event.target.id();
       renderTooltip(replay.cache.stateAt(replay.step));
       placeTooltip(event.originalEvent);
     });
-    cy.on("mousemove", "node.point, node.seed", (event) => placeTooltip(event.originalEvent));
-    cy.on("mouseout", "node.point, node.seed", hideTooltip);
+    cy.on("mousemove", "node.point, node.seed, node.global", (event) =>
+      placeTooltip(event.originalEvent),
+    );
+    cy.on("mouseout", "node.point, node.seed, node.global", hideTooltip);
 
     const edgesBetween = new Map();
 
@@ -454,11 +472,12 @@ export function createSolveReplay(deps) {
         }
       });
 
-      cy.nodes(".seed").forEach((node) => {
+      cy.nodes(".seed, .global").forEach((node) => {
         const key = replay.keyOf.get(node.id());
         const g = state.globals.get(key);
+        const shape = node.hasClass("global") ? "global" : "seed";
         const classes = [
-          "seed",
+          shape,
           !g ? "r-unseen" : g.value === "⊥" ? "r-seen" : "r-seed-set",
           event?.event === "update_global" && globalKey(event.unknown) === key ? "r-changed" : "",
           nodes.includes(node.id()) ? "r-target" : "",
@@ -466,11 +485,12 @@ export function createSolveReplay(deps) {
           .filter(Boolean)
           .join(" ");
 
-        const label = !g
+        const value = !g
           ? ""
           : g.value === "⊥"
             ? "⊥"
             : seedLabelOf(compactValue(g.value).split(", "));
+        const label = shape === "global" ? `Global  ${value}`.trim() : value;
         const last = drawn.get(node.id());
 
         if (last?.classes !== classes || last?.label !== label) {
@@ -921,14 +941,36 @@ function replayStyle(cssToken) {
       style: { "background-color": cssToken("--warning"), "border-color": cssToken("--warning") },
     },
     {
-      selector: "node.seed.r-changed",
+      selector: "node.global.r-unseen",
+      style: {
+        "background-color": cssToken("--surface-muted"),
+        "border-color": cssToken("--text-faint"),
+        "border-style": "dashed",
+      },
+    },
+    {
+      selector: "node.global.r-seen",
+      style: {
+        "background-color": cssToken("--surface"),
+        "border-color": cssToken("--global-link"),
+      },
+    },
+    {
+      selector: "node.global.r-seed-set",
+      style: {
+        "background-color": cssToken("--global-link"),
+        "border-color": cssToken("--global-link"),
+      },
+    },
+    {
+      selector: "node.seed.r-changed, node.global.r-changed",
       style: {
         "border-color": cssToken("--success"),
         "border-width": 4,
       },
     },
     {
-      selector: "node.seed.r-target",
+      selector: "node.seed.r-target, node.global.r-target",
       style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 3 },
     },
     {

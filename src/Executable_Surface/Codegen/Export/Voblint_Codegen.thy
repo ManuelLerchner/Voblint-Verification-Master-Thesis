@@ -136,8 +136,9 @@ export_code
   Bot Lifted
   cfg_entry cfg_node_list
 
-  \<comment> \<open>Ask: configuration of domains, global update rule, context\<close>
+  \<comment> \<open>Ask: configuration of domains, global update rule, context, program globals\<close>
   Analysis_Config
+  Program_Globals_Flow_Sensitive Program_Globals_Flow_Insensitive
   Sign_Analysis Interval_Analysis Int_Analysis Refine_Fixpoint Refine_Once Refine_Never
   Parity_Analysis Congruence_Analysis Order_Analysis
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin Globals_Bounded_Narrowing

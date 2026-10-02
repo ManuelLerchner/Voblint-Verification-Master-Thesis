@@ -467,6 +467,69 @@ lemma routed_call_program_global_free:
       traverse_side_rhs_fold_dg[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
 text \<open>
+  Every hook the routed generator builds from a well-formed specification answers
+  nothing on its global half: an edge answers its transfer's local value, a call
+  answers the folded return values, and a seed answers its local slot. So the
+  buffered generator a solver runs is the unbuffered one the framework is stated
+  over, at every specification, whether or not it publishes at the analysis global.
+\<close>
+
+lemma dg_global_traverse_dg_spec_edge_program:
+  assumes "dg_spec_wf S"
+  shows "dg_global (traverse_program (dg_spec_edge_program S a src unknown_of) \<sigma>) = bot"
+proof -
+  let ?P = "transfer_program_at (\<lambda>m. dg_spec_step S a (outer_man (dgs_query S) m)) src unknown_of"
+  have wf: "sp_wf ?P"
+    unfolding transfer_program_at_def
+    by (intro sp_wf_bind sp_wf_dg_read_at) (rule dg_spec_wf_step[OF assms])
+  have "?P (\<lambda>v. Answer (DG v bot))
+      = sp_lift_tree (?P (\<lambda>v. Answer (DG v bot))) (\<lambda>d. Answer (DG (dg_local d) bot))"
+    using sp_wf_graft[OF wf, where k = "\<lambda>v. Answer (DG v bot)"
+        and h = "\<lambda>d. Answer (DG (dg_local d) bot)"]
+    by simp
+  then have "traverse_rhs (?P (\<lambda>v. Answer (DG v bot))) \<sigma>
+      = DG (dg_local (traverse_rhs (?P (\<lambda>v. Answer (DG v bot))) \<sigma>)) bot"
+    by (metis (no_types, lifting) traverse_rhs.simps(1) traverse_rhs_sp_lift_tree)
+  then show ?thesis
+    by (simp add: dg_spec_edge_program_def transfer_program_def sp_compile_def
+        sp_compile_with_def) (metis dg_state.sel(2))
+qed
+
+theorem pp_routed_of_buffered:
+  assumes wfS: "dg_spec_wf S"
+    and ne: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
+    and pp: "part_post_solution
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+        (routed_call_program S analysis_global seed resolve is_bot)
+        (routed_entry_seed_programs seed)
+        g bot0 s0d s0g)
+     x0 sigma vars"
+  shows "part_post_solution
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route
+        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+        (routed_call_program S analysis_global seed resolve is_bot)
+        (routed_entry_seed_programs seed)
+        g bot0 s0d s0g)
+     x0 sigma vars"
+proof (rule part_post_solution_routed_node_rhs_buffered_answers_local[OF _ _ pp])
+  show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
+           call_site_list route (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+           (routed_call_program S analysis_global seed resolve is_bot)
+           (routed_entry_seed_programs seed) g c' w). sp_wf p"
+    by (rule routed_contribution_programs_wf)
+       (auto intro: sp_wf_dg_spec_edge_program[OF wfS] sp_wf_routed_call_program[OF wfS])
+  show "\<And>c' w p \<tau>. p \<in> set (routed_contribution_programs intra_predecessor_addr_list
+           call_site_list route (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
+           (routed_call_program S analysis_global seed resolve is_bot)
+           (routed_entry_seed_programs seed) g c' w)
+         \<Longrightarrow> dg_global (traverse_program p \<tau>) = bot"
+    by (auto elim!: routed_contribution_programsE
+        simp: routed_call_program_global_free[OF wfS] routed_entry_seed_programs_local_only
+          dg_global_traverse_dg_spec_edge_program[OF wfS])
+qed
+
+text \<open>
   The entry half of the condition is now stated through \<^const>\<open>enter_runs\<close>: an
   entry program publishes nothing at \<open>analysis_global\<close> exactly when the \<open>pub\<close> it runs to is
   \<^const>\<open>bot\<close> there. It has to be stated this way: an entry program answers a
