@@ -16,7 +16,7 @@ text \<open>
   compiled \<open>loop_cfg\<close> this theory imports rather than restates: there it is
   carried to trace-native soundness, here through three fixpoint engines.
 
-  The routed transfer \<open>interval_spec\<close> applies the same forward-gated branch
+  The routed transfer \<open>ivl_tf.spec_exec\<close> applies the same forward-gated branch
   transfer as @{const branch_ivl} on @{const EA_Assume} edges.  Node~2
   therefore reads @{text "[0,19]"} because @{text "x < 20"} refines
   @{text "x"} at the loop head --- not because of widening.

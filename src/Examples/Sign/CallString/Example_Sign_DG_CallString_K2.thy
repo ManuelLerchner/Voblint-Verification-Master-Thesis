@@ -183,7 +183,7 @@ next
   let ?caller = "dg_local (sigma_2 (Inl (u, ctx)))"
   have cov: "entry_pairs_cover (\<lambda>d. sign_nest_gamma d (dg_global (sigma_2 (Inr Global)))) s
       (call_enter sign_nest_gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift sign_nest_empty_pred (sign_enter_st_for sign_nest_gs ?ci)
+      [(?caller, transfer_lift sign_nest_empty_pred (generic_enter_st_for sign_ops sign_nest_gs ?ci)
                    ?caller)]"
     using sign_nest_domain.entry_pairs_cover_st
             [OF sign_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]

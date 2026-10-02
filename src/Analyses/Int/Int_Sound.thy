@@ -11,7 +11,7 @@ text \<open>
   Two reader-commutation facts and an initial-state contract. None of the three
   mentions a context, a routing function, a seed key, or a solver. The
   commutation facts are \<^theory>\<open>Voblint_Analysis_Int.Int_Exec\<close>'s
-  \<open>int_tf_st_for_commute\<close> and \<open>int_dom_enter_st_for_commute\<close>, proved once for
+  \<open>int_tf.tf_st_for_commute\<close> and \<open>int_tf.enter_st_for_commute\<close>, proved once for
   every refinement mode.
 
   Int's specification, its concretization and the soundness of the one against

@@ -212,7 +212,7 @@ next
   let ?caller = "dg_local (snd nest_2_sol (Inl (u, ctx)))"
   have cov: "entry_pairs_cover (\<lambda>d. nest_gamma d (dg_global (snd nest_2_sol (Inr Global)))) s
       (call_enter nest_gs (CallEdge dst pars args) s)
-      [(?caller, transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs ?ci) ?caller)]"
+      [(?caller, transfer_lift nest_empty_pred (generic_enter_st_for ivl_ops nest_gs ?ci) ?caller)]"
     using nest_domain.entry_pairs_cover_st
             [OF ivl_tf.is_sound_nonrelational_transfer, where ci = ?ci and d = ?caller]
       EnterComplete(3)

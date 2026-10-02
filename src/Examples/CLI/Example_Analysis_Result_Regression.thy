@@ -121,8 +121,8 @@ definition result_demo_ivl_sol ::
      TD_side_rule_Interp_solve Globals_Join
        (compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
           (exec_dg_spec (declared_global result_demo_prog) empty_pred
-             (ivl_tf_st_for (declared_global result_demo_prog))
-             (ivl_enter_st_for (declared_global result_demo_prog)))
+             (generic_tf_st_for ivl_ops (declared_global result_demo_prog))
+             (generic_enter_st_for ivl_ops (declared_global result_demo_prog)))
           (prog_cfg result_demo_prog) (Lifted cinit_ivl_st) (Lifted cinit_ivl_st))
        (cfg_exit (prog_cfg result_demo_prog), ())"
 

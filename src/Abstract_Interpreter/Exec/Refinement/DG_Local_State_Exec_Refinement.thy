@@ -48,7 +48,7 @@ text \<open>
   citing this theory's packaging theorems verbatim. Nothing in that derivation
   is domain-specific beyond the two primitive commute facts a domain's own
   executable-transfer soundness development already proves
-  (\<open>sign_tf_st_for_commute\<close>, \<open>ivl_tf_st_for_commute\<close>, ...): this locale states
+  (\<open>sign_tf.tf_st_for_commute\<close>, \<open>ivl_tf.tf_st_for_commute\<close>, ...): this locale states
   the derivation once, so a domain interprets it instead of restating it. The
   locale is deliberately free of any routing context (\<open>route\<close>, \<open>Seed\<close>,
   \<open>Global\<close>, a solver): those are context-owned and solver-owned respectively,

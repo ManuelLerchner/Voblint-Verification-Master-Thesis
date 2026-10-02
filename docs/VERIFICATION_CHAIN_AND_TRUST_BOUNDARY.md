@@ -64,10 +64,11 @@ dictionary entry (`Default_St_Reachability.thy`).
 Every executable operation commutes with its abstract counterpart through that
 conversion. `afilter_st`, `bfilter_st` and `branch_st` with `branch_st_commute`
 are proved once for every `sound_refinement` (`Exec_Backward.thy`). The per-edge
-transfer is `generic_tf_st_for_commute` (`Nonrelational_Ops.thy`), instantiated per
-domain (`sign_tf_st_for_commute` in `Sign_Exec.thy`,
-`congruence_tf_st_for_commute` in `Congruence_Exec.thy`, `int_dom`'s three
-refinement modes as `int_tf_st_never_for_commute`/`_once_`/`_fixpoint_`, ...).
+transfer is `generic_tf_st_for_commute` (`Nonrelational_Ops.thy`), stated once for
+every bundle as `tf_st_for_commute` and `enter_st_for_commute` of
+`sound_nonrelational_ops` and read per domain off its interpretation
+(`sign_tf.tf_st_for_commute`, `congruence_tf.tf_st_for_commute`,
+`int_tf.tf_st_for_commute` at every refinement mode, ...).
 
 ## 4. Solver
 

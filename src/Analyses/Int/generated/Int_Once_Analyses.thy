@@ -32,7 +32,8 @@ text \<open>
 subsection \<open>At the unit context\<close>
 
 global_interpretation int_once_rule: dg_analysis_exec
-    "int_tf_st_for Refine_Once" "int_dom_enter_st_for Refine_Once" cinit_int_dom_st
+    "generic_tf_st_for (int_dom_ops Refine_Once)"
+    "generic_enter_st_for (int_dom_ops Refine_Once)" cinit_int_dom_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
@@ -43,8 +44,7 @@ global_interpretation int_once_rule: dg_analysis_exec
     "enter_int_dom_ci_for Refine_Once" event_int_dom "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule int_tf.dg_analysis_execI
-    [folded int_tf_st_for_def int_dom_enter_st_for_def], goal_cases)
+proof (rule int_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by simp
 next
   case (2 v ctx) show ?case by simp

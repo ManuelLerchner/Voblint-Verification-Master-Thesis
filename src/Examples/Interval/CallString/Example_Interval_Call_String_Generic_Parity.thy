@@ -9,7 +9,7 @@ section \<open>Parity: the runtime-\<open>k\<close> generic pipeline matches the
 text \<open>
   \<^const>\<open>interval_cs_rule.solution\<close> at \<open>Globals_Warrow\<close> and \<open>k = 1\<close>/\<open>k = 2\<close>
   against \<^const>\<open>nest_program\<close> solves the same equation system as
-  \<open>nest_1_eqs\<close>/\<open>nest_2_eqs\<close> --- same \<^const>\<open>interval_spec\<close>, same
+  \<open>nest_1_eqs\<close>/\<open>nest_2_eqs\<close> --- same \<^const>\<open>ivl_tf.spec_exec\<close>, same
   \<^const>\<open>cs_route\<close>, same seeds --- read through the registration that takes \<open>k\<close> as a
   runtime parameter instead of through two hand-instantiated theories.
   These lemmas witness that the generic pipeline reproduces every solved value

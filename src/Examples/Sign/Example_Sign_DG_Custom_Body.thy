@@ -134,7 +134,7 @@ definition bf_stock_eqs ::
         (sign default_st, sign default_st) dg_state) strategy_tree" where
   "bf_stock_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (ownership_split_dg_spec_st_for bf_prog_gs
-        (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
+        (generic_tf_st_for sign_ops bf_prog_gs) (generic_enter_st_for sign_ops bf_prog_gs))
      bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 definition bf_custom_eqs ::
@@ -143,7 +143,7 @@ definition bf_custom_eqs ::
         (sign default_st, sign default_st) dg_state) strategy_tree" where
   "bf_custom_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
      (sign_dg_spec_body_forget bf_prog_gs (STR ''p'')
-        (sign_tf_st_for bf_prog_gs) (sign_enter_st_for bf_prog_gs))
+        (generic_tf_st_for sign_ops bf_prog_gs) (generic_enter_st_for sign_ops bf_prog_gs))
      bf_cfg cinit_sign_st (restrict_global_default_st cinit_sign_st)"
 
 lemma bf_stock_terminates:

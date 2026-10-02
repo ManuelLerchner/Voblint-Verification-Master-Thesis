@@ -5,6 +5,7 @@ theory Nonrelational_Transfer
     "Voblint_Framework.Check_Answer"
     "Voblint_VIMP.VIMP_Globals"
     "Voblint_Result.DG_Analysis"
+    "Voblint_Exec.DG_Local_State_Exec_Refinement"
 begin
 
 section \<open>What each kind of CFG edge does to one abstract value per variable\<close>
@@ -233,6 +234,64 @@ next
     by (rule enter_st_for_commute)
 qed (fact route_agree seed_ne_analysis_global init_sound
        check.classify_check_proved check.classify_check_refuted refl)+
+
+subsection \<open>The specification and its soundness, before any context\<close>
+
+text \<open>
+  What the bundle supplies to the framework on its own: a whole-state D/G
+  specification over the executable step and entry, a concretization of its local
+  values, and the soundness of the one against the other. None of the three
+  mentions a context, a routing function, a seed key or a solver, so every domain
+  reads them off its bundle instead of restating them.
+\<close>
+
+definition spec_exec ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('a default_st \<Rightarrow> bool)
+   \<Rightarrow> ('x, 'k, unit, 'a default_st lifted, 'a default_st lifted) dg_spec" where
+  "spec_exec \<G> empty_pred =
+     exec_dg_spec \<G> empty_pred (generic_tf_st_for ops \<G>) (generic_enter_st_for ops \<G>)"
+
+lemma dg_spec_wf_spec_exec [intro, simp]: "dg_spec_wf (spec_exec \<G> empty_pred)"
+  by (simp add: spec_exec_def)
+
+definition spec_gamma ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
+  "spec_gamma \<G> d g = gamma_lift (default_st_gamma \<G>) d"
+
+lemma spec_gamma_Bot [simp]: "spec_gamma \<G> Bot g = {}"
+  by (simp add: spec_gamma_def)
+
+context
+  fixes \<G> :: "vname \<Rightarrow> bool" and empty_pred :: "'a default_st \<Rightarrow> bool"
+  assumes exact: "\<And>s. empty_pred s = is_empty_state (default_st_to_fun \<G> s)"
+begin
+
+interpretation dom: dg_domain_exec
+  \<G> empty_pred "generic_tf_st_for ops \<G>" "generic_enter_st_for ops \<G>"
+  skip assign special_transfer backward.branch body ret "enter_ci_for \<G>" event
+  by unfold_locales
+     (rule tf_st_for_commute[unfolded tf_abs_def], assumption,
+      rule enter_st_for_commute, rule exact)
+
+lemma spec_gamma_eq: "spec_gamma \<G> = dom.gamma_exec"
+  by (intro ext) (simp add: spec_gamma_def dom.gamma_exec_def)
+
+theorem sound_exec: "analysis_contract (spec_exec \<G> empty_pred) (spec_gamma \<G>) \<G>"
+  unfolding spec_gamma_eq spec_exec_def
+  by (rule dom.analysis_contract_st[OF is_sound_nonrelational_transfer])
+
+text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close>, so a routed instance cites
+  it separately; the alternative list is the singleton this entry answers.\<close>
+
+theorem entry_cover_exec:
+  assumes "s \<in> spec_gamma \<G> d g"
+  shows "entry_pairs_cover (\<lambda>d'. spec_gamma \<G> d' g) s
+           (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
+           [(d, transfer_lift empty_pred (generic_enter_st_for ops \<G> ci) d)]"
+  using assms unfolding spec_gamma_eq dom.gamma_exec_def
+  by (rule dom.entry_pairs_cover_st[OF is_sound_nonrelational_transfer])
+
+end
 
 end
 

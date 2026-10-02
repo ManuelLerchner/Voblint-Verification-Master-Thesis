@@ -32,7 +32,7 @@ text \<open>
 subsection \<open>At the unit context\<close>
 
 global_interpretation parity_rule: dg_analysis_exec
-    parity_tf_st_for parity_enter_st_for cinit_parity_st
+    "generic_tf_st_for parity_ops" "generic_enter_st_for parity_ops" cinit_parity_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
@@ -42,8 +42,7 @@ global_interpretation parity_rule: dg_analysis_exec
     enter_parity_ci_for event_parity "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule parity_tf.dg_analysis_execI
-    [folded parity_tf_st_for_def parity_enter_st_for_def], goal_cases)
+proof (rule parity_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by simp
 next
   case (2 v ctx) show ?case by simp

@@ -32,7 +32,7 @@ text \<open>
 subsection \<open>At the unit context\<close>
 
 global_interpretation congruence_rule: dg_analysis_exec
-    congruence_tf_st_for congruence_enter_st_for cinit_congruence_st
+    "generic_tf_st_for congruence_ops" "generic_enter_st_for congruence_ops" cinit_congruence_st
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
@@ -42,8 +42,7 @@ global_interpretation congruence_rule: dg_analysis_exec
     return_congruence enter_congruence_ci_for event_congruence "\<lambda>_. route_unit"
     "TD_side_rule_Interp_solve_c r"
   for r
-proof (rule congruence_tf.dg_analysis_execI
-    [folded congruence_tf_st_for_def congruence_enter_st_for_def], goal_cases)
+proof (rule congruence_tf.dg_analysis_execI, goal_cases)
   case (1 \<G> u ctx d ca) show ?case by simp
 next
   case (2 v ctx) show ?case by simp

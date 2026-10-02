@@ -26,7 +26,7 @@ Executable witnesses live under
 `generated/Interval_Analyses.thy` is machine-written from
 `manifests/analyses.yaml`, so the orientation a reader needs lives here rather
 than in a header the generator owns. The registry spells Interval's constants
-with the `ivl` prefix (`ivl_tf_st_for`, `cinit_ivl_st`) while the registrations,
+with the `ivl` prefix (`ivl_ops`, `cinit_ivl_st`) while the registrations,
 the classifier and the initial-state fact carry the domain name
 (`interval_rule`, `interval_classify_check`, `interval_cinit_gamma`).
 

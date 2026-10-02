@@ -122,11 +122,12 @@ that includes it.
 
 `mode` is Int's refinement axis. Every obligation asked of Int's field is
 discharged by one of Int's own mode-generic facts — `int_tf.is_sound_nonrelational_transfer`,
-`int_tf_st_for_commute`, `int_dom_enter_st_for_commute`, `int_cinit_gamma`, the
+`int_tf.tf_st_for_commute`, `int_tf.enter_st_for_commute`, `int_cinit_gamma`, the
 two classifier laws — so each would hold at an arbitrary `refine_mode`. The
-manifest registers one analysis per mode by naming the mode-taking operations as
-applied roles (`{const: int_tf_st_for, args: [Refine_Fixpoint]}`, and likewise at
-`Refine_Once` and `Refine_Never`), because each field needs one concrete choice;
+manifest registers one analysis per mode by naming the bundle at that mode
+(`ops: {const: int_dom_ops, args: [Refine_Fixpoint]}`, and likewise at
+`Refine_Once` and `Refine_Never`) and the mode-taking abstract operations as applied
+roles, because each field needs one concrete choice;
 the facts it cites are the same at every mode.
 
 The global update rule is the second axis. `int_fixpoint_rule` leaves it free as `r`,

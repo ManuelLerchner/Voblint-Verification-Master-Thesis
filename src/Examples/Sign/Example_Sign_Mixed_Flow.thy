@@ -14,7 +14,7 @@ subsection \<open>The ownership-split Sign specification at the executable carri
 
 abbreviation mf_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('x, 'k, unit, sign default_st, sign default_st) dg_spec" where
-  "mf_spec \<G> \<equiv> ownership_split_dg_spec_st_for \<G> (sign_tf_st_for \<G>) (sign_enter_st_for \<G>)"
+  "mf_spec \<G> \<equiv> ownership_split_dg_spec_st_for \<G> (generic_tf_st_for sign_ops \<G>) (generic_enter_st_for sign_ops \<G>)"
 
 definition split_gamma ::
   "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st \<Rightarrow> sign default_st \<Rightarrow> store set" where
@@ -34,11 +34,11 @@ lemma combine_self_restrict_global [simp]:
 
 lemma sign_tf_st_sound:
   "edge_collect a (default_st_gamma \<G> s)
-     \<subseteq> default_st_gamma \<G> (sign_tf_st_for \<G> a s)"
+     \<subseteq> default_st_gamma \<G> (generic_tf_st_for sign_ops \<G> a s)"
 proof (cases "live_default_st \<G> s")
   case True
   show ?thesis
-    unfolding default_st_gamma_def sign_tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
+    unfolding default_st_gamma_def sign_tf.tf_st_for_commute[OF True, unfolded sign_tf.tf_abs_def]
     by (rule
       sound_nonrelational_transfer.step_sound_for[OF sign_tf.is_sound_nonrelational_transfer])
 next
@@ -136,28 +136,28 @@ lemma split_gamma_restrict_local_combine:
 lemma split_gamma_enter:
   assumes "\<forall>f \<in> set (ci_formals ci). \<not> \<G> f"
   shows "split_gamma \<G>
-           (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G
-         = default_st_gamma \<G> (sign_enter_st_for \<G> ci (combine_default_st d G))"
+           (restrict_local_default_st (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))) G
+         = default_st_gamma \<G> (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))"
   unfolding split_gamma_def default_st_gamma_def
 proof (rule arg_cong[where f = gamma_state], rule ext)
   fix x
   show "default_st_to_fun \<G> (combine_default_st
-            (restrict_local_default_st (sign_enter_st_for \<G> ci (combine_default_st d G))) G) x
-        = default_st_to_fun \<G> (sign_enter_st_for \<G> ci (combine_default_st d G)) x"
+            (restrict_local_default_st (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G))) G) x
+        = default_st_to_fun \<G> (generic_enter_st_for sign_ops \<G> ci (combine_default_st d G)) x"
   proof (cases "\<G> x")
     case True
     then have "x \<notin> set (ci_formals ci)" using assms by blast
     with True show ?thesis
-      by (simp add: bind_formals_other combine_env_def enter_frame_def)
-  qed (simp add: combine_env_def)
+      by (simp add: generic_enter_st_for_def bind_formals_other combine_env_def enter_frame_def)
+  qed (simp add: generic_enter_st_for_def combine_env_def)
 qed
 
 lemma sign_call_enter_sound:
   assumes "s \<in> default_st_gamma \<G> D"
   shows "call_enter \<G> (CallEdge dst pars args) s
            \<in> default_st_gamma \<G>
-                (sign_enter_st_for \<G> (call_info_of (CallEdge dst pars args) p) D)"
-  unfolding default_st_gamma_def sign_enter_st_for_commute
+                (generic_enter_st_for sign_ops \<G> (call_info_of (CallEdge dst pars args) p) D)"
+  unfolding default_st_gamma_def sign_tf.enter_st_for_commute
   using sound_nonrelational_transfer.tf_sound_enter_entry_for[OF
     sign_tf.is_sound_nonrelational_transfer assms[unfolded default_st_gamma_def],
       of "call_info_of (CallEdge dst pars args) p"]
@@ -292,7 +292,7 @@ next
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?d = "dg_local (snd mf_sol (Inl (u, ctx)))"
   let ?D = "combine_default_st ?d mf_G"
-  let ?E = "sign_enter_st_for mf_gs ?ci ?D"
+  let ?E = "generic_enter_st_for sign_ops mf_gs ?ci ?D"
   let ?pairs = "map (\<lambda>(cont, entry). (restrict_local_default_st cont, restrict_local_default_st entry))
                   [(?D, ?E)]"
   have Rr: "\<exists>pub. enter_runs (enter\<^sup># (mf_spec mf_gs) ?ci)

@@ -72,7 +72,7 @@ definition sj_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
 where
   "sj_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
-     (ownership_split_dg_spec_st_for sj_gs (ivl_tf_st_for sj_gs) (ivl_enter_st_for sj_gs))
+     (ownership_split_dg_spec_st_for sj_gs (generic_tf_st_for ivl_ops sj_gs) (generic_enter_st_for ivl_ops sj_gs))
      sj_cfg cinit_ivl_st (restrict_global_default_st cinit_ivl_st)"
 
 definition sj_sol ::

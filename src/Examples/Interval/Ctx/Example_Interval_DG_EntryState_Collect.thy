@@ -76,15 +76,15 @@ text \<open>The state a call enters its callee with, as the registration's pipel
 lemma rc_entered:
   "dg_pipeline.entry_of
      (\<lambda>\<G> p. exec_local_spec \<G> (default_st_is_bot_for (declared_global_vars p))
-        (ivl_tf_st_for \<G>) (ivl_enter_st_for \<G>))
+        (generic_tf_st_for ivl_ops \<G>) (generic_enter_st_for ivl_ops \<G>))
      rc_gs rc_program ci d
-   = transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ci) d"
+   = transfer_lift rc_empty_pred (generic_enter_st_for ivl_ops rc_gs ci) d"
   by (simp add: dg_pipeline.entry_of_def rc_empty_pred_def)
 
 lemma rc_route_at_call:
   "exec_formals_route rc_gs (Statement 3) []
      (transfer_lift rc_empty_pred
-        (ivl_enter_st_for rc_gs
+        (generic_enter_st_for ivl_ops rc_gs
            (call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')])
              (STR ''p'')))
         (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
@@ -101,7 +101,7 @@ lemma rc_call_fwd_ok:
   shows "(FunctionEntry p,
             exec_formals_route rc_gs u ctx
               (transfer_lift rc_empty_pred
-                 (ivl_enter_st_for rc_gs (call_info_of (CallEdge dst pars args) p))
+                 (generic_enter_st_for ivl_ops rc_gs (call_info_of (CallEdge dst pars args) p))
                  (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                             (Inl (u, ctx)))))
               (CallEdge dst pars args))
@@ -166,7 +166,7 @@ proof (rule call_action_at_call_site_eq
 qed
 
 lemma rc_context_at_call:
-  assumes sin: "s \<in> interval_gamma rc_gs
+  assumes sin: "s \<in> ivl_tf.spec_gamma rc_gs
                   (dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
                      (Inl (Statement 3, []))))
                   (dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
@@ -180,15 +180,15 @@ proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) (STR ''p'')"
   let ?d = "dg_local (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
               (Inl (Statement 3, [])))"
-  let ?entry = "transfer_lift rc_empty_pred (ivl_enter_st_for rc_gs ?ci) ?d"
+  let ?entry = "transfer_lift rc_empty_pred (generic_enter_st_for ivl_ops rc_gs ?ci) ?d"
   let ?g = "dg_global (snd (interval_es_rule.solution Globals_Warrow rc_gs rc_program)
               (Inr (Analysis_Global ())))"
-  have cov: "entry_pairs_cover (\<lambda>d'. interval_gamma rc_gs d' ?g)
+  have cov: "entry_pairs_cover (\<lambda>d'. ivl_tf.spec_gamma rc_gs d' ?g)
       s (call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s)
       [(?d, ?entry)]"
-    using interval_entry_cover_exec[OF rc_exact sin, where ci = ?ci] by simp
+    using ivl_tf.entry_cover_exec[OF rc_exact sin, where ci = ?ci] by simp
   have ecov: "call_enter rc_gs (CallEdge (Some (STR ''y'')) [(STR ''a'')] [V (STR ''x'')]) s
-                \<in> interval_gamma rc_gs ?entry ?g"
+                \<in> ivl_tf.spec_gamma rc_gs ?entry ?g"
     using cov unfolding entry_pairs_cover_def by simp
   have base: "interval_es_rule.admitted_contexts Globals_Warrow rc_gs rc_program
       (Statement 3) [] ?ci s
@@ -198,7 +198,7 @@ proof -
     unfolding rc_entered[symmetric] interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
-          \<open>simp_all add: interval_gamma_def gamma_lift_default_st_gamma_to_fun rc_entered
+          \<open>simp_all add: ivl_tf.spec_gamma_def gamma_lift_default_st_gamma_to_fun rc_entered
              rc_empty_pred_def interval_es_rule.sol_env_def\<close>)
   thus ?thesis
     by (simp add: rc_route_at_call)
@@ -226,10 +226,10 @@ proof -
     by eval
   have covd: "(Statement 3, []) \<in> fst rc_ctx_sol"
     unfolding rc_ctx_sol_def by eval
-  have sin: "s \<in> interval_gamma rc_gs (dg_local (snd rc_ctx_sol (Inl (Statement 3, []))))
+  have sin: "s \<in> ivl_tf.spec_gamma rc_gs (dg_local (snd rc_ctx_sol (Inl (Statement 3, []))))
                (dg_global (snd rc_ctx_sol (Inr (Analysis_Global ()))))"
     using sm covd
-    unfolding interval_gamma_def interval_es_rule.reader_def
+    unfolding ivl_tf.spec_gamma_def interval_es_rule.reader_def
       interval_es_rule.sol_vars_def interval_es_rule.sol_env_def rc_ctx_sol_def[symmetric]
     by simp
   show ?thesis

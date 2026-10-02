@@ -165,6 +165,9 @@ class Domain:
         self.impl = entry.get("impl", self.name.lower())
         self.imports = entry["imports"]
         self.overrides = entry.get("roles", {})
+        # The primitive bundle the executable step and entry are built from: a
+        # constant, or a constant applied to the variant's argument.
+        self.ops = entry.get("ops", f"{self.impl}_ops")
         self.contexts = entry.get("contexts", ["unit"])
         self.prefix = self.name.lower()
         # The analysis's case of `analysis_domain`: its own constructor, or one
@@ -205,8 +208,11 @@ class Domain:
         """The interface roles, spelled the domain's way unless overridden."""
         i = self.impl
         roles = {
-            "tf_st": f"{i}_tf_st_for",
-            "enter_st": f"{i}_enter_st_for",
+            "tf_st": {"const": "generic_tf_st_for", "args": [arg(ops_term(self.ops))]},
+            "enter_st": {
+                "const": "generic_enter_st_for",
+                "args": [arg(ops_term(self.ops))],
+            },
             "init_st": f"cinit_{i}_st",
             "skip": f"skip_{i}",
             "assign": f"assign_{i}",
@@ -272,6 +278,13 @@ def prose_name(name):
     return f"\\<open>{name}\\<close>" if "_" in name else name
 
 
+def ops_term(ops):
+    """A bundle as a term: a constant, or a constant applied to its arguments."""
+    if isinstance(ops, dict):
+        return f"{ops['const']} {' '.join(ops['args'])}"
+    return ops
+
+
 def role_term(role):
     """A role in term position: a bare name, or a quoted application, which
     Isabelle reads as one argument."""
@@ -333,7 +346,7 @@ def registration(dom, ctx):
     vt = dom.value_type
     out = [
         f"global_interpretation {dom.name.lower()}{ctx['suffix']}_rule: dg_analysis_exec",
-        f"    {t['tf_st']} {t['enter_st']} {t['init_st']}",
+        *pack_operands([[t["tf_st"], t["enter_st"], t["init_st"]]]),
         f"    {ctx['keys']}",
     ]
     out += [
@@ -349,10 +362,8 @@ def registration(dom, ctx):
     ]
     out += pack_operands(groups)
     out.append(f"  for {ctx['params']}")
-    folded = " ".join(f"{const_name(r[k])}_def" for k in ["tf_st", "enter_st"])
     out += [
-        f"proof (rule {r['exec_intro']}",
-        f"    [folded {folded}], goal_cases)",
+        f"proof (rule {r['exec_intro']}, goal_cases)",
         *ctx["case_route"],
         "next",
         "  case (2 v ctx) show ?case by simp",

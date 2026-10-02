@@ -5630,9 +5630,6 @@ let rec generic_enter_st_for (_A1, _A2)
         (ci_args ci))
       (enter_frame_D_default_st _A1 (top _A2) s);;
 
-let rec congruence_enter_st_for
-  x = generic_enter_st_for (bot_congruence, top_congruence) congruence_ops x;;
-
 let rec interval_less_false
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     not (less_eq_eint l1 u1) ||
@@ -6451,9 +6448,6 @@ let rec generic_tf_st_for _A
               g s))
     | ops, g, EA_Check (l, cnd), s -> s;;
 
-let rec congruence_tf_st_for
-  x = generic_tf_st_for executable_domain_congruence congruence_ops x;;
-
 let rec combine_assign_default_st_rep _A
   g dst v s =
     (match dst with None -> s
@@ -6776,9 +6770,6 @@ let rec parity_eval_answer
   d (EvalInt e) =
     (if bool_valued e then bool_answer (parity_check_query e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
-
-let rec parity_enter_st_for
-  x = generic_enter_st_for (bot_parity, top_parity) parity_ops x;;
 
 let rec sign_less_true
   a b = equal_signa (fst (inv_less_sign false a b)) SBot ||
@@ -7193,8 +7184,6 @@ let rec sign_eval_answer
   d (EvalInt e) =
     (if bool_valued e then bool_answer (sign_check_query e d)
       else top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
-
-let rec ivl_enter_st_for x = generic_enter_st_for (bot_ivl, top_ivl) ivl_ops x;;
 
 let rec apply_reduction_steps
   x0 d = match x0, d with [], d -> d
@@ -7678,16 +7667,6 @@ let rec int_dom_ops
       (aval_int_dom mode, Query_ops_ext (int_less, int_eq, ()),
         int_refine_ops mode, int_dom_special_ops mode, ());;
 
-let rec int_dom_enter_st_for
-  mode =
-    generic_enter_st_for
-      ((bot_int_dom_ext bounded_lattice_unit),
-        (top_int_dom_ext bounded_lattice_unit))
-      (int_dom_ops mode);;
-
-let rec parity_tf_st_for
-  x = generic_tf_st_for executable_domain_parity parity_ops x;;
-
 let rec int_truthy_query
   mode e d =
     map_option not
@@ -7848,11 +7827,6 @@ let rec order_pairs
                  ((equal_prod equal_literal equal_literal),
                    (linorder_prod linorder_literal linorder_literal))
                  ps));;
-
-let rec sign_enter_st_for
-  x = generic_enter_st_for (bot_sign, top_sign) sign_ops x;;
-
-let rec ivl_tf_st_for x = generic_tf_st_for executable_domain_ivl ivl_ops x;;
 
 let top_relc : relc = RelC bot_set;;
 
@@ -8415,14 +8389,6 @@ let rec program_vars
   p = remdups equal_literal
         (maps (scope_vnames_list p) (prog_main_name :: prog_procs p));;
 
-let rec sign_tf_st_for x = generic_tf_st_for executable_domain_sign sign_ops x;;
-
-let rec int_tf_st_for
-  mode =
-    generic_tf_st_for
-      (executable_domain_int_dom_ext (bounded_lattice_unit, warrowing_unit))
-      (int_dom_ops mode);;
-
 let rec set_slot8
   r v = Product
           (pleft r,
@@ -8564,7 +8530,8 @@ let rec registration_of
                (exec_local_spec bounded_semilattice_sup_bot_sign g
                  (default_st_is_bot_for executable_domain_sign
                    (declared_global_vars p))
-                 (sign_tf_st_for g) (sign_enter_st_for g)))),
+                 (generic_tf_st_for executable_domain_sign sign_ops g)
+                 (generic_enter_st_for (bot_sign, top_sign) sign_ops g)))),
           (fun r ->
             not (equal_lifteda (equal_default_st (equal_sign, order_bot_sign))
                   (slot1 r)
@@ -8640,7 +8607,8 @@ let rec registration_of
                  (exec_local_spec bounded_semilattice_sup_bot_ivl g
                    (default_st_is_bot_for executable_domain_ivl
                      (declared_global_vars p))
-                   (ivl_tf_st_for g) (ivl_enter_st_for g)))),
+                   (generic_tf_st_for executable_domain_ivl ivl_ops g)
+                   (generic_enter_st_for (bot_ivl, top_ivl) ivl_ops g)))),
             (fun r ->
               not (equal_lifteda (equal_default_st (equal_ivl, order_bot_ivl))
                     (slot2 r)
@@ -8718,7 +8686,9 @@ let rec registration_of
                  (exec_local_spec bounded_semilattice_sup_bot_parity g
                    (default_st_is_bot_for executable_domain_parity
                      (declared_global_vars p))
-                   (parity_tf_st_for g) (parity_enter_st_for g)))),
+                   (generic_tf_st_for executable_domain_parity parity_ops g)
+                   (generic_enter_st_for (bot_parity, top_parity) parity_ops
+                     g)))),
             (fun r ->
               not (equal_lifteda
                     (equal_default_st (equal_parity, order_bot_parity))
@@ -8804,8 +8774,14 @@ let rec registration_of
                        (executable_domain_int_dom_ext
                          (bounded_lattice_unit, warrowing_unit))
                        (declared_global_vars p))
-                   (int_tf_st_for Refine_Fixpoint g)
-                   (int_dom_enter_st_for Refine_Fixpoint g)))),
+                   (generic_tf_st_for
+                     (executable_domain_int_dom_ext
+                       (bounded_lattice_unit, warrowing_unit))
+                     (int_dom_ops Refine_Fixpoint) g)
+                   (generic_enter_st_for
+                     ((bot_int_dom_ext bounded_lattice_unit),
+                       (top_int_dom_ext bounded_lattice_unit))
+                     (int_dom_ops Refine_Fixpoint) g)))),
             (fun r ->
               not (equal_lifteda
                     (equal_default_st
@@ -8898,8 +8874,14 @@ let rec registration_of
                        (executable_domain_int_dom_ext
                          (bounded_lattice_unit, warrowing_unit))
                        (declared_global_vars p))
-                   (int_tf_st_for Refine_Once g)
-                   (int_dom_enter_st_for Refine_Once g)))),
+                   (generic_tf_st_for
+                     (executable_domain_int_dom_ext
+                       (bounded_lattice_unit, warrowing_unit))
+                     (int_dom_ops Refine_Once) g)
+                   (generic_enter_st_for
+                     ((bot_int_dom_ext bounded_lattice_unit),
+                       (top_int_dom_ext bounded_lattice_unit))
+                     (int_dom_ops Refine_Once) g)))),
             (fun r ->
               not (equal_lifteda
                     (equal_default_st
@@ -8992,8 +8974,14 @@ let rec registration_of
                        (executable_domain_int_dom_ext
                          (bounded_lattice_unit, warrowing_unit))
                        (declared_global_vars p))
-                   (int_tf_st_for Refine_Never g)
-                   (int_dom_enter_st_for Refine_Never g)))),
+                   (generic_tf_st_for
+                     (executable_domain_int_dom_ext
+                       (bounded_lattice_unit, warrowing_unit))
+                     (int_dom_ops Refine_Never) g)
+                   (generic_enter_st_for
+                     ((bot_int_dom_ext bounded_lattice_unit),
+                       (top_int_dom_ext bounded_lattice_unit))
+                     (int_dom_ops Refine_Never) g)))),
             (fun r ->
               not (equal_lifteda
                     (equal_default_st
@@ -9079,7 +9067,10 @@ let rec registration_of
                  (exec_local_spec bounded_semilattice_sup_bot_congruence g
                    (default_st_is_bot_for executable_domain_congruence
                      (declared_global_vars p))
-                   (congruence_tf_st_for g) (congruence_enter_st_for g)))),
+                   (generic_tf_st_for executable_domain_congruence
+                     congruence_ops g)
+                   (generic_enter_st_for (bot_congruence, top_congruence)
+                     congruence_ops g)))),
             (fun r ->
               not (equal_lifteda
                     (equal_default_st (equal_congruence, order_bot_congruence))

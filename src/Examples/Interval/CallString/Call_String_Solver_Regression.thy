@@ -52,7 +52,7 @@ lemma nest_2_eqs_statement3:
                  (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
                  (Statement 2) (STR ''g'')
                  (dg_local d,
-                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (dg_local d))
+                  transfer_lift nest_empty_pred (generic_enter_st_for ivl_ops nest_gs nest_ci) (dg_local d))
                  (\<lambda>res. Answer (DG (dg_local res) Bot)))"
   unfolding nest_2_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
@@ -71,7 +71,7 @@ lemma nest_1_eqs_statement3:
                  (CallEdge (Some (STR ''t'')) [(STR ''p'')] [VIMP_Syntax.V (STR ''p'')])
                  (Statement 2) (STR ''g'')
                  (dg_local d,
-                  transfer_lift nest_empty_pred (ivl_enter_st_for nest_gs nest_ci) (dg_local d))
+                  transfer_lift nest_empty_pred (generic_enter_st_for ivl_ops nest_gs nest_ci) (dg_local d))
                  (\<lambda>res. Answer (DG (dg_local res) Bot)))"
   unfolding nest_1_eqs_def routed_node_rhs_def routed_contribution_programs_def
     routed_entry_seed_programs_def
