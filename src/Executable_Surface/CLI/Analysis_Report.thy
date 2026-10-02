@@ -423,9 +423,24 @@ subsection \<open>A well-formed report\<close>
 text \<open>
   What a reader of the report relies on beyond its verdicts: every context index
   names a listed context, a point has at most one row per context, and a row's check
-  and obligation verdicts are its own state's, over exactly the checks the report
-  lists at the row's point. No soundness theorem needs this; a renderer does.
+  and obligation columns list exactly the report's checks and the graph's arithmetic
+  obligations at the row's point, each with the verdict of the row's own state. No
+  soundness theorem needs this; a renderer does.
 \<close>
+
+definition obligations_at :: "cfg \<Rightarrow> pp \<Rightarrow> arithmetic_obligation list" where
+  "obligations_at g v = concat (map snd (filter (\<lambda>(u, obs). u = v) (arithmetic_sites g)))"
+
+lemma group_lookup_arithmetic_sites:
+  "concat (group_lookup (group_by_key fst (Some \<circ> snd) (arithmetic_sites g)) v)
+     = obligations_at g v"
+proof -
+  have "List.map_filter (\<lambda>x. if fst x = v then (Some \<circ> snd) x else None) xs
+          = map snd (filter (\<lambda>(u, obs). u = v) xs)"
+    for xs :: "(pp \<times> arithmetic_obligation list) list"
+    by (induction xs) (auto simp: List.map_filter_simps)
+  then show ?thesis unfolding group_lookup_group_by_key obligations_at_def by simp
+qed
 
 definition well_formed_report :: "analysis_report \<Rightarrow> bool" where
   "well_formed_report res \<longleftrightarrow>
@@ -439,9 +454,11 @@ definition well_formed_report :: "analysis_report \<Rightarrow> bool" where
           = map (\<lambda>c. (check_exp c,
                        classify_point (report_classify res) (check_exp c) (state_value st)))
               (filter (\<lambda>c. check_point c = state_point st) (report_checks res))
-      \<and> (\<forall>(ob, verdict) \<in> set (state_diagnostics st).
-           verdict
-             = classify_point (report_classify res) (arithmetic_condition ob) (state_value st)))"
+      \<and> state_diagnostics st
+          = map (\<lambda>ob. (ob,
+                        classify_point (report_classify res) (arithmetic_condition ob)
+                          (state_value st)))
+              (obligations_at (report_cfg res) (state_point st)))"
 
 text \<open>
   With a consistent report, the check column is the aggregate of the rows: a check's
@@ -563,8 +580,10 @@ proof -
   have rows: "state_checks st
                 = map (\<lambda>c. (check_exp c, classify_point classify (check_exp c) (state_value st)))
                     (filter (\<lambda>c. check_point c = state_point st) (report_checks ?res))
-              \<and> (\<forall>(ob, verdict) \<in> set (state_diagnostics st).
-                   verdict = classify_point classify (arithmetic_condition ob) (state_value st))"
+              \<and> state_diagnostics st
+                  = map (\<lambda>ob. (ob, classify_point classify (arithmetic_condition ob)
+                                     (state_value st)))
+                      (obligations_at g (state_point st))"
     if "st \<in> set (report_states ?res)" for st
   proof -
     from that obtain i ctx v where st: "st = report_row sr classify checks obls steps i ctx v"
@@ -582,10 +601,13 @@ proof -
                      = map (\<lambda>cond. (cond, classify_point classify cond (lookup_table r v ctx)))
                          (group_lookup checks v)"
       by simp
-    then show ?thesis unfolding st by (auto simp: report_row_def Let_def r_def)
+    moreover have "concat (group_lookup obls v) = obligations_at g v"
+      unfolding obls_def by (rule group_lookup_arithmetic_sites)
+    ultimately show ?thesis unfolding st by (auto simp: report_row_def Let_def r_def)
   qed
+  have cfg: "report_cfg ?res = g" by (simp add: g_def)
   show ?thesis
-    unfolding well_formed_report_def classify contexts
+    unfolding well_formed_report_def classify contexts cfg
     using in_range distinct routes rows by blast
 qed
 

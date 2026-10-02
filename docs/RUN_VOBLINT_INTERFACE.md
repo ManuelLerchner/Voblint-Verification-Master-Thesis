@@ -73,9 +73,9 @@ checks, diagnostics, routes nor the graph.
 `consistent_report` is about verdicts only. `well_formed_report` states what a
 reader of the rows relies on: every context index (of a state, a route and a route
 target) is below `length (report_contexts res)`, each `(point, context)` has one row,
-each row's `state_checks` lists exactly the report's checks at its point with the
-verdict of its own `state_value`, and each `state_diagnostics` verdict is its own
-state's as well. With a consistent report, a check's aggregate verdict is then the
+each row's `state_checks` lists exactly the report's checks at its point, and its
+`state_diagnostics` exactly the graph's arithmetic obligations there
+(`obligations_at`), each with the verdict of its own `state_value`. With a consistent report, a check's aggregate verdict is then the
 aggregate of the rows' verdicts for it (`well_formed_check_verdict`).
 `report_of_well_formed` proves it for every report `report_of` builds, so
 `run_voblint_well_formed` holds for every analysed answer. No soundness theorem
