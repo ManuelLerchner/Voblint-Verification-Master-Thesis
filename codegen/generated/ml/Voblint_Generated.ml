@@ -12024,33 +12024,33 @@ let rec dg_spec_combine_transfer
 
 let rec sp_map e p = (fun k -> p (fun v -> k (e v)));;
 
-let rec routed_call_alternative_program _C _D
-  s analysis_global seed route is_bot ctx ca cc p alt =
+let rec routed_call_alternative_program _D _E
+  s global_of seed route is_bot ctx ca cc p alt =
     (let (cont, entry) = alt in
       (if is_bot entry
         then sp_map
                (fun d ->
-                 DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                 DG (d, bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                (dg_spec_combine_transfer s (call_info_of ca p)
                  (mk_dg_man
-                   _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
-                   (fun _ -> analysis_global))
-                 (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                   _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot cont
+                   global_of)
+                 (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
         else (let ctxa = route cc ctx entry ca in
                sp_bind
                  (sp_publish (seed (FunctionEntry p) ctxa)
                    (DG (entry,
-                         bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+                         bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
                  (fun _ ->
                    sp_bind (sp_read_local (FunctionResult p, ctxa))
                      (fun callee_state ->
                        sp_map
                          (fun d ->
-                           DG (d, bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+                           DG (d, bot _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
                          (dg_spec_combine_transfer s (call_info_of ca p)
                            (mk_dg_man
-                             _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-                             cont (fun _ -> analysis_global))
+                             _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                             cont global_of)
                            (dg_local callee_state)))))));;
 
 let rec side_rhs_fold_dg _A _B
@@ -12073,27 +12073,27 @@ let rec dgs_enter
       more))
     = dgs_enter;;
 
-let rec routed_callee_call_program _C _D
-  s analysis_global seed route is_bot ctx ca cc caller p =
+let rec routed_callee_call_program _D _E
+  s global_of seed route is_bot ctx ca cc caller p =
     sp_bind
       (dgs_enter s (call_info_of ca p)
-        (mk_dg_man _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
-          (fun _ -> analysis_global)))
+        (mk_dg_man _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot caller
+          global_of))
       (fun pairs ->
-        side_rhs_fold_dg _C _D
-          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_call_alternative_program _C _D s analysis_global seed
-                 route is_bot ctx ca cc p)
+        side_rhs_fold_dg _D _E
+          (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_call_alternative_program _D _E s global_of seed route
+                 is_bot ctx ca cc p)
             pairs));;
 
-let rec routed_call_program _C _D
-  s analysis_global seed resolve is_bot route ctx ca cc v =
+let rec routed_call_program _D _E
+  s global_of seed resolve is_bot route ctx ca cc v =
     sp_bind (sp_read_local (cc, ctx))
       (fun caller_state ->
-        side_rhs_fold_dg _C _D
-          (bot _C.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
-          (map (routed_callee_call_program _C _D s analysis_global seed route
-                 is_bot ctx ca cc (dg_local caller_state))
+        side_rhs_fold_dg _D _E
+          (bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot)
+          (map (routed_callee_call_program _D _E s global_of seed route is_bot
+                 ctx ca cc (dg_local caller_state))
             (resolve v cc ca (dg_local caller_state))));;
 
 let rec dgs_query
@@ -12134,7 +12134,7 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
             _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
             _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
             (fun _ -> global))
-        (routed_call_program _C2 _D s global seed
+        (routed_call_program _C2 _D s (fun _ -> global) seed
           (fun v cc ca _ ->
             map_filter
               (fun x ->
