@@ -12,6 +12,8 @@ exclude = [
   "src/**/generated/**",
   "src/Program_Model/VIMP/VIMP_Grammar_Generated.thy",
   "thesis/shared/generated/**",
+  # Local scratch copies (.git/info/exclude), e.g. regenerated theories.
+  ".scratch/**",
 ]
 
 [fmt]

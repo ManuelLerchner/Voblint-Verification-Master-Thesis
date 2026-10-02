@@ -217,10 +217,6 @@ pre-commit:
             glob: "biome.jsonc"
             run: pixi run pages-lint
 
-          - name: isabelle-ascii
-            glob: "**/*.thy"
-            run: pixi run isabelle-ascii-check -- {staged_files}
-
           # The rendered-HTML anchor check only runs in pages-site, the last CI
           # job. This derives the locale qualification from the theory source
           # instead, which is the part that silently rots: both spellings name a
@@ -231,15 +227,6 @@ pre-commit:
               - "pages/**/*.js"
               - "src/**/*.thy"
             run: pixi run theory-anchors-check
-
-          # ROOT mistakes are cheap to detect and can otherwise make jEdit or
-          # Isabelle fail far away from the actual edit.
-          - name: sessions
-            glob:
-              - "**/ROOT"
-              - "**/ROOTS"
-              - "src/**/*.thy"
-            run: pixi run sessions-check
 
           # The regression linter is intentionally build-free. It checks
           # fixture filenames, PARAM headers, directory classification,
@@ -349,32 +336,19 @@ pre-commit:
           # Isabelle source/API invariants
           # ----------------------------------------------------------------
 
-          - name: theory-prose-check
-            glob:
-              - "src/**/*.thy"
-              - "isar.toml"
-            run: pixi run theory-prose-check
-
-          - name: retired-identifiers-check
-            glob:
-              - "src/**/*.thy"
-              - "scripts/retired_identifiers.txt"
-            run: pixi run retired-identifiers-check
-
-          # ROOT entries, sorry/oops and unclosed proofs, lexical errors, theory
-          # names, and formatting of every theory (isar-tools, isar.toml).
+          # Every isar-tools group (isar.toml), on the whole tree: whether a lemma
+          # is cited or a locale name is free depends on all theories. Fixes that
+          # keep a theory's meaning ((simp add:), redundant imports, tabs, Unicode
+          # symbols) are applied and re-staged; anything else fails the commit.
           - name: isar-check
             glob:
               - "**/ROOT"
-              - "ROOTS"
+              - "**/ROOTS"
               - "isar.toml"
               - "src/**/*.thy"
-            run: pixi run isar-check
-
-          # Whether a locale name is free depends on the complete theory tree.
-          - name: locale-parameters-check
-            glob: "src/**/*.thy"
-            run: pixi run locale-parameters-check
+              - "scripts/retired_identifiers.txt"
+            run: pixi run isar-check-fix
+            stage_fixed: true
 
     # ----------------------------------------------------------------------
     # Thesis: cheap source-level freshness checks
