@@ -429,7 +429,7 @@ locale dg_analysis =
                     ci (d, d)
                   = [(d, entry_of (declared_global p) p ci d)]"
     and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (declared_global p) s)"
-    and empty\<^sub>V_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> gamma\<^sub>V v = {}"
+    and empty\<^sub>V_sound: "sound_emptiness empty\<^sub>V gamma\<^sub>V"
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> gamma\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
@@ -441,11 +441,11 @@ locale dg_analysis =
       "\<And>p. cinit_stores (declared_global p) \<subseteq> gamma\<^sub>V (rd (declared_global p) init_st)"
 begin
 
-text \<open>The published emptiness test is only sound: a product of analyses may describe
-  nothing without any one of them saying so.\<close>
+text \<open>The generic contract asks the published emptiness test only to be sound: a
+  product of analyses may describe nothing without any one of them saying so. A
+  particular instance may still be exact.\<close>
 
-lemma sound_emptiness_V: "sound_emptiness empty\<^sub>V gamma\<^sub>V"
-  using empty\<^sub>V_sound by blast
+lemmas empty\<^sub>V_soundD = sound_emptinessD [OF empty\<^sub>V_sound]
 
 text \<open>
   Termination is a per-program side condition, and this is how a caller decides
@@ -530,7 +530,7 @@ lemma gamma_reader_eq_lookup:
      = gamma_lift gamma\<^sub>V (lookup_table (result pgs p) v ctx)"
 proof -
   have gc: "gamma_lift gamma\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift gamma\<^sub>V x" for x
-    by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_sound)
+    by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_soundD)
   show ?thesis
   proof (cases "(v, ctx) \<in> sol_vars pgs p")
     case True
@@ -713,7 +713,7 @@ next
 next
   case (GammaRd d g') show ?case by simp
 next
-  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_sound)
+  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_soundD)
 next
   case (ClProved c d s) then show ?case by (rule classify_proved)
 next
@@ -1200,7 +1200,8 @@ next
   case (EmptyExact p s)
   then show ?case by (rule default_st_is_bot_for_iff[OF declared_global_iff])
 next
-  case (EmptyVExact v) then show ?case by (rule is_empty_state_gamma_state_empty)
+  case EmptyVExact show ?case
+    by (rule sound_emptinessI) (erule is_empty_state_gamma_state_empty)
 next
   case (SeedNe v ctx) then show ?case by (rule exec_seed_ne_analysis_global)
 next

@@ -165,34 +165,40 @@ text \<open>
   neither field is empty, so the test does not fire, yet no store satisfies both.
 \<close>
 
+definition mcp_contradiction :: mcp_val where
+  "mcp_contradiction =
+     set_slot3 (set_slot2 (\<bottom> :: mcp_val) (Lifted ((\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2)))))
+       (Lifted ((\<top> :: parity abs_state)(STR ''x'' := POdd)))"
+
+lemma mcp_contradiction_not_empty:
+  "\<not> mcp_empty_v [Interval_Analysis, Parity_Analysis] mcp_contradiction"
+proof -
+  have "(\<lambda>_. 2) \<in> \<lbrakk>(\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2))\<rbrakk>"
+    by (auto simp: gamma_state_def top_ivl_def gamma_ivl_top)
+  moreover have "(\<lambda>_. 1) \<in> \<lbrakk>(\<top> :: parity abs_state)(STR ''x'' := POdd)\<rbrakk>"
+    by (auto simp: gamma_state_def gamma_parity_top)
+  ultimately show ?thesis
+    by (auto simp: mcp_empty_v_def mcp_contradiction_def is_empty_state_iff_gamma_state_empty)
+qed
+
+lemma mcp_contradiction_no_store:
+  "mcp_gamma_v [Interval_Analysis, Parity_Analysis] mcp_contradiction = {}"
+proof (rule equals0I)
+  fix s
+  assume "s \<in> mcp_gamma_v [Interval_Analysis, Parity_Analysis] mcp_contradiction"
+  then have "s (STR ''x'') \<in> gamma_ivl (Ivl (Fin 2) (Fin 2))"
+    and "s (STR ''x'') \<in> gamma_parity POdd"
+    by (auto simp: mcp_gamma_v_def mcp_contradiction_def gamma_state_def
+             dest: spec[of _ "STR ''x''"])
+  then show False by (simp, presburger)
+qed
+
 lemma mcp_empty_v_not_exact:
   "\<not> exact_emptiness (mcp_empty_v [Interval_Analysis, Parity_Analysis])
        (mcp_gamma_v [Interval_Analysis, Parity_Analysis])"
-proof
-  define iv :: "ivl abs_state" where "iv = (\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2))"
-  define pv :: "parity abs_state" where "pv = (\<top> :: parity abs_state)(STR ''x'' := POdd)"
-  define v :: mcp_val where "v = set_slot3 (set_slot2 \<bottom> (Lifted iv)) (Lifted pv)"
-  assume exact: "exact_emptiness (mcp_empty_v [Interval_Analysis, Parity_Analysis])
-                   (mcp_gamma_v [Interval_Analysis, Parity_Analysis])"
-  have "(\<lambda>_. 2) \<in> \<lbrakk>iv\<rbrakk>" by (auto simp: iv_def gamma_state_def top_ivl_def gamma_ivl_top)
-  then have iv_ne: "\<not> is_empty_state iv" by (auto simp: is_empty_state_iff_gamma_state_empty)
-  have "(\<lambda>_. 1) \<in> \<lbrakk>pv\<rbrakk>" by (auto simp: pv_def gamma_state_def gamma_parity_top)
-  then have pv_ne: "\<not> is_empty_state pv" by (auto simp: is_empty_state_iff_gamma_state_empty)
-  have not_empty: "\<not> mcp_empty_v [Interval_Analysis, Parity_Analysis] v"
-    using iv_ne pv_ne by (simp add: mcp_empty_v_def v_def)
-  have no_store: "mcp_gamma_v [Interval_Analysis, Parity_Analysis] v = {}"
-  proof (rule equals0I)
-    fix s
-    assume "s \<in> mcp_gamma_v [Interval_Analysis, Parity_Analysis] v"
-    then have "s \<in> \<lbrakk>iv\<rbrakk>" and "s \<in> \<lbrakk>pv\<rbrakk>"
-      by (simp_all add: mcp_gamma_v_def v_def)
-    then have "s (STR ''x'') \<in> gamma_ivl (Ivl (Fin 2) (Fin 2))"
-      and "s (STR ''x'') \<in> gamma_parity POdd"
-      by (auto simp: iv_def pv_def gamma_state_def dest: spec[of _ "STR ''x''"])
-    then show False by (simp, presburger)
-  qed
-  from exact_emptinessD [OF exact, of v] not_empty no_store show False by simp
-qed
+  using exact_emptinessD [of _ _ mcp_contradiction] mcp_contradiction_not_empty
+    mcp_contradiction_no_store
+  by blast
 
 definition mcp_answer :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
   "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as \<top>"
@@ -272,7 +278,7 @@ next
 next
   case (EmptyRd p s) show ?case by (rule mcp_emp_rd)
 next
-  case (EmptyVSound v) then show ?case by (rule mcp_empty_v_gamma)
+  case EmptyVSound show ?case by (rule sound_emptiness_mcp)
 next
   case (SeedNe v ctx) show ?case by (rule assms)
 next

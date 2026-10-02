@@ -195,11 +195,44 @@ corollary analysis_report_refuted:
 theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}"
   unfolding DEAD_def report_sem_def by auto
 
-text \<open>Read as an emptiness test on points, \<open>DEAD\<close> is sound and, since the combined
-  test underneath it is, not exact.\<close>
+text \<open>Read as an emptiness test on points, \<open>DEAD\<close> is sound.\<close>
 
 corollary sound_emptiness_DEAD: "sound_emptiness (DEAD res) (report_sem res)"
   by (rule sound_emptinessI) (rule analysis_report_dead)
+
+text \<open>
+  It is not exact. A report holding one state at a point, the combined state
+  \<^const>\<open>mcp_contradiction\<close> of Interval and Parity, describes no store there, yet
+  that state is not \<^const>\<open>Bot\<close>, so the point is not \<open>DEAD\<close>. The witness is a
+  report, not one a run is shown to return.
+\<close>
+
+definition contradiction_report :: "pp \<Rightarrow> analysis_report" where
+  "contradiction_report v =
+     \<lparr> report_config = Analysis_Config [Interval_Analysis, Parity_Analysis] Globals_Join Ctx_None,
+       report_vars = [], report_cfg = undefined, report_contexts = [Report_Unit],
+       report_states = [\<lparr> state_point = v, state_context = 0, state_value = Lifted mcp_contradiction,
+                          state_checks = [], state_diagnostics = [], state_steps = [] \<rparr>],
+       report_routes = [], report_checks = [], report_globals = [], report_diagnostics = [] \<rparr>"
+
+lemma DEAD_not_exact:
+  "\<not> exact_emptiness (DEAD (contradiction_report v)) (report_sem (contradiction_report v))"
+proof -
+  have rows: "report_rows (contradiction_report v) v = {Lifted mcp_contradiction}"
+    by (auto simp: report_rows_def contradiction_report_def)
+  have live: "\<not> DEAD (contradiction_report v) v"
+    by (simp add: DEAD_def rows)
+  have "report_config (contradiction_report v)
+                   = Analysis_Config [Interval_Analysis, Parity_Analysis] Globals_Join Ctx_None"
+    by (simp add: contradiction_report_def)
+  then have empty: "\<lbrakk>contradiction_report v\<rbrakk>\<^bsub>v\<^esub> = {}"
+    using mcp_contradiction_no_store by (auto simp: rows report_gamma_def activation_id)
+  show ?thesis
+  proof
+    assume "exact_emptiness (DEAD (contradiction_report v)) (report_sem (contradiction_report v))"
+    from exact_emptinessD [OF this, of v] live empty show False by simp
+  qed
+qed
 
 text \<open>A check printed dead is one presentation of a dead point.\<close>
 
