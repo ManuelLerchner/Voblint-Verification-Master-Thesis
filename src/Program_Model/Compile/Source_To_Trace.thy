@@ -294,6 +294,7 @@ theorem source_store_in_activation_collect:
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>
                    \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+                   \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
                    \<and> activation_context_rel \<G> R c\<^sub>0 (compile_prog \<Pi> ps) t c
                    \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
@@ -307,7 +308,7 @@ proof -
   from has_ctx[OF tv] obtain c where tc: "activation_context_rel \<G> R c\<^sub>0 ?g t c" by blast
   have "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,?g,S\<^esub> v c"
     using activation_collect_I[OF tv sn tc] ss by simp
-  then show ?thesis using sim tc by blast
+  then show ?thesis using sim rep tc by blast
 qed
 
 text \<open>A functional policy carries \<^const>\<open>activation_context_of\<close>'s context on every valid activation trace, so it needs no
@@ -317,6 +318,7 @@ corollary source_store_in_activation_collect_of_fun:
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+                   \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
                    \<and> activation_context_of f c\<^sub>0 t = c
                    \<and> s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
@@ -333,7 +335,7 @@ proof -
   have "s \<in> \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,?g,S\<^esub> v
               (activation_context_of f c\<^sub>0 t)"
     using activation_collect_I[OF tv sn tc] ss by simp
-  then show ?thesis using sim by blast
+  then show ?thesis using sim rep by blast
 qed
 
 text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
