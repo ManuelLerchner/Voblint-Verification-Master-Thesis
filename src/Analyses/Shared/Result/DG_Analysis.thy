@@ -56,7 +56,7 @@ definition exec_formals_route ::
   "exec_formals_route \<G> u ctx d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
-          (readback \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (\<rho>\<^bsub>\<G>\<^esub> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 text \<open>
   The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
@@ -1094,11 +1094,11 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
       "\<And>\<G> a s. live_default_st \<G> s
-         \<Longrightarrow> readback \<G> (tf_st \<G> a s)
-               = local_spec_step sk asn spc br bd rt ev a (readback \<G> s)"
+         \<Longrightarrow> \<rho>\<^bsub>\<G>\<^esub> (tf_st \<G> a s)
+               = local_spec_step sk asn spc br bd rt ev a (\<rho>\<^bsub>\<G>\<^esub> s)"
     and enter_commute:
-      "\<And>\<G> ci s. readback \<G> (enter_st \<G> ci s)
-                    = en \<G> ci (readback \<G> s)"
+      "\<And>\<G> ci s. \<rho>\<^bsub>\<G>\<^esub> (enter_st \<G> ci s)
+                    = en \<G> ci (\<rho>\<^bsub>\<G>\<^esub> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
          = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"

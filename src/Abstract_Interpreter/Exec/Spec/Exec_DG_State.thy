@@ -32,18 +32,18 @@ definition dg_state_to_fun ::
    (('a::bot) default_st, ('b::bot) default_st) dg_state => ('a abs_state, 'b abs_state) dg_state"
 where
   "dg_state_to_fun \<G> d =
-    DG (readback \<G> (dg_local d)) (readback \<G> (dg_global d))"
+    DG (\<rho>\<^bsub>\<G>\<^esub> (dg_local d)) (\<rho>\<^bsub>\<G>\<^esub> (dg_global d))"
 
 adhoc_overloading readback == dg_state_to_fun
 
 lemma dg_state_to_fun_simps [simp]:
-  "dg_local (readback \<G> d) = readback \<G> (dg_local d)"
-  "dg_global (readback \<G> d) = readback \<G> (dg_global d)"
-  "readback \<G> (DG a b) = DG (readback \<G> a) (readback \<G> b)"
+  "dg_local (\<rho>\<^bsub>\<G>\<^esub> d) = \<rho>\<^bsub>\<G>\<^esub> (dg_local d)"
+  "dg_global (\<rho>\<^bsub>\<G>\<^esub> d) = \<rho>\<^bsub>\<G>\<^esub> (dg_global d)"
+  "\<rho>\<^bsub>\<G>\<^esub> (DG a b) = DG (\<rho>\<^bsub>\<G>\<^esub> a) (\<rho>\<^bsub>\<G>\<^esub> b)"
   by (simp_all add: dg_state_to_fun_def)
 
 lemma dg_state_to_fun_bot [simp]:
-  "readback \<G> (bot :: ('a::bounded_semilattice_sup_bot default_st,
+  "\<rho>\<^bsub>\<G>\<^esub> (bot :: ('a::bounded_semilattice_sup_bot default_st,
                          'b::bounded_semilattice_sup_bot default_st) dg_state) = bot"
   by (simp add: bot_dg_state_def)
 end

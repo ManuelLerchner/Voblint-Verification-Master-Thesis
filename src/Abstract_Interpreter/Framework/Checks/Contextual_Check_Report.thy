@@ -51,12 +51,12 @@ subsection \<open>Classifying one contextual point\<close>
 
 text \<open>
   The reachability decision is not remade here: it was already made when the
-  raw solved local unknown crossed the result boundary, one layer before
-  \<open>result_value_to_abs\<close>'s own structural relabeling. A witness-bottom
+  raw solved local unknown crossed the result boundary, one layer before the
+  lifted readback relabels it structurally. A witness-bottom
   \<^const>\<open>Lifted\<close> payload is collapsed to \<^const>\<open>Bot\<close> by
-  \<^const>\<open>canonicalize_lift\<close>, so by the time a value reaches
-  \<open>result_value_to_abs\<close> --- as every public result adapter's raw value
-  does --- \<^const>\<open>Bot\<close> already denotes no store. A \<^const>\<open>Lifted\<close> state
+  \<^const>\<open>canonicalize_lift\<close>, so by the time a value is read back --- as
+  every public result adapter's raw value is --- \<^const>\<open>Bot\<close> already
+  denotes no store. A \<^const>\<open>Lifted\<close> state
   may still denote none, since the emptiness test is sound and incomplete, and
   classifying it is then vacuous but harmless. \<open>classify_point\<close> only refuses to
   classify against a state that represents nothing: a covered-but-dead
