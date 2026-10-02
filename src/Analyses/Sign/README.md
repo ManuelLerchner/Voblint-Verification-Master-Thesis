@@ -15,7 +15,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 | `Sign_Transfer.thy` | the `sign_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Sign_Exec.thy` | executable transfer mirror + `tf_st_commute` commutation |
 | `Sign_Sound.thy` | the `dg_spec` Sign supplies, its concretization, and `analysis_contract` — no context, no solver |
-| `Sign_Classify.thy` | consumer-facing names for the derived check classifier, and its executable tests |
+| `Sign_Classify.thy` | consumer-facing names for the derived check classifier; its executable tests live in `src/Examples/Sign/Sign_Regression.thy` |
 | `generated/Sign_Analyses.thy` | one `global_interpretation`, `sign_rule`, taking the global update rule `r` as a parameter: the shared `dg_analysis_exec` at the unit route. Sign's transfer, entry state, solver and classifier go in; the equation system, the solve, the reader, the result table, the report and the soundness endpoints come out |
 
 `generated/Sign_Analyses.thy` is written by `scripts/gen_analysis_assembly.py`

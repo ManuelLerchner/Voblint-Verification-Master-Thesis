@@ -4,3 +4,4 @@ session Voblint_Examples_Congruence in "." = "Voblint_Analysis_Congruence" +
   description "Congruence: the end-to-end D/G witness"
   theories
     Example_Congruence_DG_Run
+    Congruence_Regression

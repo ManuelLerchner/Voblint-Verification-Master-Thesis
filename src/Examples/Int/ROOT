@@ -6,3 +6,4 @@ session Voblint_Examples_Int in "." = "Voblint_Analysis_Int" +
     "Voblint_Examples_CFG"
   theories
     Exec_Int_DG_Run
+    Int_Regression

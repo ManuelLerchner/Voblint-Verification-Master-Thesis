@@ -8,6 +8,7 @@ concrete run to the abstract result.
 | --- | --- | --- |
 | `Exec_Sign_DG_Run.thy` | required support | end-to-end certified run on the Base-style D/G equation system, through Sign's unit-context registration at the always-join rule, with no example-local registration |
 | `Example_Sign_DG_Overlapping_Enter.thy` | canonical spine + witness | one concrete call represented under two contexts at once: `dgs_enter` answers two overlapping (continuation, callee entry) alternatives, and both the solved table and the relational admitted-context relation keep them apart |
+| `Sign_Regression.thy` | regression | build-checked assertions moved out of core: equality narrowing in `inv_eq_sign`, end-to-end `bfilter` narrowing, and the check classifier on fixed states |
 
 `Exec_Sign_DG_Run.thy`'s `gEx` and `dgEx_eqs` are the `gs = sign_ex_gs`,
 `p = sign_ex_prog` instance of the arbitrary-classifier, arbitrary-program chain

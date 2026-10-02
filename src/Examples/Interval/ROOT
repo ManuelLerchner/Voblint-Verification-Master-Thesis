@@ -11,6 +11,7 @@ session Voblint_Examples_Interval in "." = "Voblint_Analysis_Interval" +
   theories
     Example_Interval_DG_Flagship
     Example_Interval_DG_IP_Flagship
+    Interval_Regression
     Example_Interval_DG_Ctx_Flagship
     Example_Interval_DG_Ctx_Collect
     Example_Interval_Source_Ctx

@@ -80,9 +80,4 @@ qed
 
 end
 
-lemma to_string_congruence_regression:
-  "to_string (top :: congruence) = sym_top"
-  "to_string (mk_congruence 1 2) = STR ''1+2<int>''"
-  by eval+
-
 end

@@ -216,11 +216,4 @@ fun string_of_parity :: "parity \<Rightarrow> String.literal" where
   | "string_of_parity POdd  = STR ''1+2'' + sym_int"
   | "string_of_parity PTop  = sym_int"
 
-lemma string_of_parity_regression:
-  "string_of_parity PBot = sym_bottom"
-  "string_of_parity PEven = STR ''2<int>''"
-  "string_of_parity POdd = STR ''1+2<int>''"
-  "string_of_parity PTop = sym_int"
-  by eval+
-
 end

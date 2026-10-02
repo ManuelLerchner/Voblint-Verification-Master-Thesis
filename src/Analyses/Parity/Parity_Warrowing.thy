@@ -43,9 +43,4 @@ next
 qed
 end
 
-lemma to_string_parity_regression:
-  "to_string PTop = sym_top"
-  "to_string POdd = STR ''1+2<int>''"
-  by eval+
-
 end

@@ -417,15 +417,6 @@ fun string_of_ivl :: "ivl \<Rightarrow> String.literal" where
      (if is_bottom_ivl (Ivl l u) then sym_bottom
       else STR ''['' + string_of_eint l + STR '','' + string_of_eint u + STR '']'')"
 
-lemma string_of_ivl_regression:
-  "string_of_ivl (Ivl (Fin (-3)) (Fin 5)) = STR ''[-3,5]''"
-  "string_of_ivl (Ivl MinInf (Fin 0)) = STR ''[-<infinity>,0]''"
-  "string_of_ivl (Ivl MinInf PlusInf) = STR ''[-<infinity>,+<infinity>]''"
-  "string_of_ivl (Ivl (Fin 5) (Fin (-1))) = sym_bottom"
-  "string_of_ivl (Ivl PlusInf PlusInf) = sym_bottom"
-  by eval+
-
-
 subsection \<open>Canonical representatives\<close>
 
 text \<open>

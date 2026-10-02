@@ -119,18 +119,4 @@ qed (simp_all add: inv_conservative_def inv_eq_parity_sound inv_plus_parity_soun
        inf_mono parity_arith.aval_dom_mono inv_eq_parity_mono inv_plus_parity_mono
        inv_minus_parity_mono inv_times_parity_mono parity_tobool_mono le_infI1 le_infI2)
 
-subsection \<open>Executable refinement tests\<close>
-
-text \<open>
-  Evaluated regression cases: an odd sum with an even operand forces the other
-  odd, and an odd product forces both factors odd.
-\<close>
-
-lemma parity_inverse_regression:
-  "inv_plus_parity POdd PTop PEven = (POdd, PEven)"
-  "inv_minus_parity PEven PTop POdd = (POdd, POdd)"
-  "inv_times_parity POdd PTop PTop = (POdd, POdd)"
-  "inv_eq_parity True PTop PEven = (PEven, PEven)"
-  by eval+
-
 end

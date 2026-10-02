@@ -8,6 +8,7 @@ call-string contexts are witnessed on Sign (`../Sign/CallString/`).
 | --- | --- | --- |
 | `Example_Interval_DG_Flagship.thy` | canonical spine | interval analysis of a counting loop, executed and certified on the D/G spine |
 | `Example_Interval_DG_IP_Flagship.thy` | canonical spine | interprocedural: `twice` compiled and analyzed end to end through `FunctionEntry`/`FunctionResult` |
+| `Interval_Regression.thy` | regression | build-checked assertions moved out of core: interval rendering, the check classifier on bounded and precision states, and the boundary witnesses of the numeric queries |
 
 Analysis results on concrete programs (guard refinement, loop bounds, call
 strings, per-context values) are pinned by the VIMP regression corpus under

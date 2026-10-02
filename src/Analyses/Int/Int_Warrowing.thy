@@ -209,14 +209,4 @@ qed
 
 end
 
-lemma to_string_int_dom_regression:
-  "to_string (bot :: int_dom) = sym_bottom"
-  "to_string (top :: int_dom) = sym_top"
-  "to_string (int_dom_sipc STop (Ivl (Fin 5) (Fin 5)) PTop top) = STR ''5''"
-  "to_string (int_dom_sipc SPos (Ivl (Fin 1) (Fin 9)) POdd (mk_congruence 1 2)) =
-     STR ''signs:+; intervals:[1,9]; parities:1+2<int>; congruences:1+2<int>''"
-  "to_string (int_dom_sipc SNonNeg (Ivl (Fin 0) PlusInf) PTop top) =
-     STR ''signs:<ge>0; intervals:[0,+<infinity>]; parities:<int>; congruences:<int>''"
-  by eval+
-
 end

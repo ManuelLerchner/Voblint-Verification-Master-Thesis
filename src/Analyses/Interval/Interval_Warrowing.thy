@@ -239,9 +239,4 @@ next
 qed
 end
 
-lemma to_string_ivl_regression:
-  "to_string (top :: ivl) = sym_top"
-  "to_string (Ivl (Fin 0) PlusInf) = STR ''[0,+<infinity>]''"
-  by eval+
-
 end

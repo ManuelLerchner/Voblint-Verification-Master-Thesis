@@ -349,22 +349,6 @@ lemma refinement_once_not_fixpoint:
   by eval
 
 text \<open>
-  Sign teaches Interval that a range's non-positive half is unreachable, and
-  Congruence teaches Parity: \<open>x \<equiv> 0 (mod 4)\<close> forces \<open>x\<close> even. Neither component
-  derives either fact alone.
-\<close>
-
-lemma sign_interval_positive_narrows:
-  "int_ivl (refine_interval (int_dom_sip SPos (Ivl (Fin (-10)) (Fin 5)) PTop))
-     = Ivl (Fin 1) (Fin 5)"
-  by eval
-
-lemma congruence_parity_mod4_narrows:
-  "int_parity (refine_congruence (int_dom_sipc STop (top :: ivl) PTop (mk_congruence 0 4)))
-     = PEven"
-  by eval
-
-text \<open>
   Why \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> runs no refinement after
   \<open>narrow\<close>. \<open>a\<close> is a widened state (top); \<open>b\<close> a newer, more precise result whose
   components together denote only \<open>0\<close> while Sign has not caught up.

@@ -203,11 +203,4 @@ qed (simp add: is_empty_relc_def)
 lemma exact_emptiness_relc: "exact_emptiness (is_empty :: relc \<Rightarrow> bool) gamma_relc"
   by (rule exact_emptinessI) (rule is_empty_relc_gamma)
 
-lemma to_string_relc_regression:
-  "to_string RelBot = sym_bottom"
-  "to_string (RelC {}) = sym_top"
-  "to_string (RelC {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
-     STR ''{x<le>y <and> y<le>z}''"
-  by eval+
-
 end

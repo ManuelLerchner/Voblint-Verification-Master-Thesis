@@ -6,3 +6,4 @@ session Voblint_Examples_Parity in "." = "Voblint_Analysis_Parity" +
     "Voblint_Examples_CFG"
   theories
     Example_Parity_DG_Flagship
+    Parity_Regression

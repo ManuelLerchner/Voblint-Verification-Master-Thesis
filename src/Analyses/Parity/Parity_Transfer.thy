@@ -86,20 +86,4 @@ text \<open>
   Parity is \<open>parity_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 
-subsection \<open>Executable refinement tests\<close>
-
-definition test_env_parity :: "parity abs_state" where
-  "test_env_parity = (\<lambda>_. PTop)((STR ''y'') := PEven)"
-
-text \<open>\<open>x + 1 == y\<close> with \<open>y\<close> even makes \<open>x\<close> odd.\<close>
-lemma bfilter_parity_plus_narrows:
-  "bfilter_parity (Eq (Plus (V (STR ''x'')) (N 1)) (V (STR ''y''))) True test_env_parity
-     (STR ''x'') = POdd"
-  unfolding test_env_parity_def by eval
-
-text \<open>An order guard says nothing about parity.\<close>
-lemma bfilter_parity_less_identity:
-  "bfilter_parity (Less (V (STR ''x'')) (N 3)) True test_env_parity (STR ''x'') = PTop"
-  unfolding test_env_parity_def by eval
-
 end

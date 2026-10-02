@@ -11,6 +11,7 @@ second copy of the plumbing would be the negative result.
 | File | Role | What |
 | --- | --- | --- |
 | `Example_Parity_DG_Flagship.thy` | canonical spine | parity analysis of an even-step loop, executed and certified on the D/G spine through Parity's unit-context registration at the always-join rule, with no example-local registration, `strategy_tree`, or post-solution transport proofs |
+| `Parity_Regression.thy` | regression | build-checked assertions moved out of core: rendering, backward refinement, guard filters, and the check classifier on fixed states |
 
 Parity's verdicts on whole programs are pinned by the regression corpus under
 `tests/regression/18-parity/`.

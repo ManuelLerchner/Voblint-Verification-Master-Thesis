@@ -64,7 +64,7 @@ and terminates without acceleration.
 | `Congruence_Transfer.thy` | the `congruence_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, the branch, the check classifier and every edge operation |
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
-| `Congruence_Classify.thy` | executable tests of the derived check classifier |
+| `Congruence_Classify.thy` | the derived check classifier; its executable tests live in `src/Examples/Congruence/Congruence_Regression.thy` |
 | `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
