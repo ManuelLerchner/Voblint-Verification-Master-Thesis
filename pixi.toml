@@ -11,8 +11,8 @@ python = ">=3.11"
 
 [pypi-dependencies]
 # Source tooling for .thy and ROOT files, configured in isar.toml. From PyPI
-# until conda-forge has 0.6.
-isar-tools = ">=0.6.0,<0.7"
+# until conda-forge has 0.7.
+isar-tools = ">=0.7.1,<0.8"
 
 # AutoCorrode's headless REPL MCP server (scripts/start-ir.sh).
 [feature.ir.dependencies]
@@ -257,6 +257,7 @@ vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the
 isar-check = { cmd = "isar check .", depends-on = [
   "isar-fmt-check",
 ], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
+isar-fix = { cmd = "isar check . --fix=all", description = "Apply every fix isar-tools has, including rewrites only a build can confirm; build afterwards." }
 isar-fmt = { cmd = "isar fmt", description = "Format Isabelle theories with isar-tools (default: all but generated ones; pass paths to narrow)." }
 isar-fmt-check = { cmd = "isar fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
 
