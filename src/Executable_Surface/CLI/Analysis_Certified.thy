@@ -47,6 +47,19 @@ lemma run_voblint_well_formed:
   "run_voblint config p = Analysed res \<Longrightarrow> well_formed_report res"
   by (auto intro: analysis_report_of_well_formed)
 
+text \<open>
+  The report contract in one statement: an analysed answer is a well-formed, sound
+  report for exactly the configuration asked for and the program's compiled graph.
+  The theorems below are its consequences.
+\<close>
+
+theorem run_voblint_report_contract:
+  assumes "run_voblint config p = Analysed res"
+  shows "report_config res = config" "report_cfg res = prog_cfg p"
+    and "well_formed_report res" "sound_report p res"
+  using assms
+  by (simp_all add: run_voblint_config run_voblint_cfg run_voblint_well_formed run_voblint_sound)
+
 theorem run_voblint_covers:
   assumes "run_voblint config p = Analysed res"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
@@ -60,7 +73,7 @@ text \<open>
 corollary run_voblint_collect_sound:
   assumes "run_voblint config p = Analysed res"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           \<subseteq> verdict_stores res v"
+           \<subseteq> \<V>\<^bsub>res\<^esub> v"
   using run_voblint_covers[OF assms]
     analysis_report_verdicts_sound[OF run_voblint_consistent[OF assms]]
   by blast
@@ -141,7 +154,7 @@ theorem run_voblint_source_sound:
   shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
                  \<and> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-                 \<and> s \<in> verdict_stores res v"
+                 \<and> s \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
   from ans have "wf_program_compile_input_exec p" by (rule run_voblint_AnalysedE)
@@ -182,7 +195,7 @@ proof -
     where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
       and sem: "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
-      and verdicts: "s \<in> verdict_stores res v"
+      and verdicts: "s \<in> \<V>\<^bsub>res\<^esub> v"
     by blast
   from csim_next_check_edge [OF m chk]
   have "(v, l, e) \<in> set (check_sites (prog_cfg p))" by auto
@@ -197,8 +210,14 @@ proof -
     have "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}" using \<open>check_point c = v\<close> analysis_report_dead by blast
     with sem show False by blast
   qed
+  moreover have holds: "verdict_holds r e s" if "check_verdict c = Decided r" for r
+  proof (rule verdict_storesD [OF verdicts])
+    show "HAS_VERDICT res v e r"
+      unfolding HAS_VERDICT_def
+      using c \<open>check_point c = v\<close> \<open>check_exp c = e\<close> that by auto
+  qed
   ultimately show ?thesis
-    using mem verdicts unfolding verdict_stores_def G_def g_def by auto
+    using mem holds [of Check_Proved] holds [of Check_Refuted] unfolding G_def g_def by auto
 qed
 
 text \<open>
@@ -269,6 +288,45 @@ lemma run_voblint_wf:
   "run_voblint config p = Analysed res \<Longrightarrow> wf_program_compile_input p"
   by (blast intro: wf_program_compile_input_exec_sound)
 
+text \<open>
+  The chain for any context policy, given what the policy owes: every valid
+  activation trace carries some context, and the buckets together are the collecting
+  semantics. Each policy below supplies exactly these two facts.
+\<close>
+
+theorem run_voblint_spine:
+  fixes p :: imp_prog and s0 s :: store
+  defines G_def: "\<G> \<equiv> declared_global p"
+      and Pi_def: "\<Pi> \<equiv> prog_table p"
+      and g_def: "g \<equiv> prog_cfg p"
+      and S_def: "S \<equiv> cinit_stores (declared_global p)"
+  assumes s0: "s0 \<in> S"
+      and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+      and ans: "run_voblint config p = Analysed res"
+      and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
+      and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
+  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> activation_trace_repr \<G> g S (v, s, stk) t
+           \<and> activation_context_rel \<G> R c\<^sub>0 g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+proof -
+  have cfg: "g = compile_prog \<Pi> (prog_procs p)"
+    unfolding g_def Pi_def by (rule prog_cfg_def)
+  from source_store_in_activation_collect
+         [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
+  have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> activation_trace_repr \<G> g S (v, s, stk) t
+           \<and> activation_context_rel \<G> R c\<^sub>0 g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
+    unfolding cfg .
+  from witness buckets run_voblint_covers [OF ans]
+       analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
+  show ?thesis unfolding G_def g_def S_def by blast
+qed
+
 theorem run_voblint_call_string_chain:
   fixes p :: imp_prog and s0 s :: store and k :: nat
   defines G_def: "\<G> \<equiv> declared_global p"
@@ -285,26 +343,18 @@ theorem run_voblint_call_string_chain:
            \<and> s \<in> \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> verdict_stores res v"
+           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
-  have cfg: "g = compile_prog \<Pi> (prog_procs p)"
-    unfolding g_def Pi_def by (rule prog_cfg_def)
   have has_ctx: "\<exists>c. activation_context_rel \<G> R [] g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  from source_store_in_activation_collect
-         [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
-  have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R [] g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c"
-    unfolding cfg .
   have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
     unfolding G_def g_def S_def R_def
     by (rule mcp_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k",
           symmetric])
-  from witness buckets run_voblint_covers [OF ans]
-       analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
-  show ?thesis unfolding G_def g_def S_def by blast
+  show ?thesis
+    unfolding G_def Pi_def g_def S_def
+    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
+          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
 qed
 
 theorem run_voblint_unit_chain:
@@ -323,26 +373,18 @@ theorem run_voblint_unit_chain:
            \<and> s \<in> \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> verdict_stores res v"
+           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
-  have cfg: "g = compile_prog \<Pi> (prog_procs p)"
-    unfolding g_def Pi_def by (rule prog_cfg_def)
   have has_ctx: "\<exists>c. activation_context_rel \<G> R () g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  from source_store_in_activation_collect
-         [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
-  have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R () g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c"
-    unfolding cfg .
   have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
     unfolding G_def g_def S_def R_def
     by (rule mcp_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()",
           symmetric])
-  from witness buckets run_voblint_covers [OF ans]
-       analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
-  show ?thesis unfolding G_def g_def S_def by blast
+  show ?thesis
+    unfolding G_def Pi_def g_def S_def
+    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
+          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
 qed
 
 text \<open>
@@ -380,29 +422,21 @@ theorem run_voblint_entry_state_chain:
            \<and> s \<in> \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> verdict_stores res v"
+           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   note wf = run_voblint_wf [OF ans]
   note terminates = run_voblint_entry_state_terminates [OF ans]
-  have cfg: "g = compile_prog \<Pi> (prog_procs p)"
-    unfolding g_def Pi_def by (rule prog_cfg_def)
   have has_ctx: "\<exists>c. activation_context_rel \<G> R mcp_root_ctx g t c"
     if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     using mcp_es_rule.entry_state_has_context_of_terminates [OF wf terminates]
       that unfolding G_def g_def S_def R_def by blast
-  from source_store_in_activation_collect
-         [OF wf [folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
-  have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R mcp_root_ctx g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c"
-    unfolding cfg .
   have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
     unfolding G_def g_def S_def R_def
     using mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf terminates]
     by simp
-  from witness buckets run_voblint_covers [OF ans]
-       analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
-  show ?thesis unfolding G_def g_def S_def by blast
+  show ?thesis
+    unfolding G_def Pi_def g_def S_def
+    by (rule run_voblint_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans
+          has_ctx [unfolded G_def g_def S_def] buckets [unfolded G_def g_def S_def]])
 qed
 end

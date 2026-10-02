@@ -151,7 +151,7 @@ theorem nv_source_certified:
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                    cinit_stores (declared_global nv_prog)\<^esub> v
    \<and> nv_final \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-   \<and> nv_final \<in> verdict_stores res v"
+   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
   obtain res where ans: "run_voblint nv_config nv_prog
                            = Analysed res"
@@ -261,7 +261,7 @@ definition answer_all :: "contextual_verdict \<Rightarrow> analysis_report \<Rig
      res\<lparr>report_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (report_checks res)\<rparr>"
 
 lemma unknown_everywhere_sound:
-  "s \<in> verdict_stores (answer_all (Decided Check_Unknown) res) v"
+  "s \<in> \<V>\<^bsub>answer_all (Decided Check_Unknown) res\<^esub> v"
   by (auto simp: verdict_stores_def answer_all_def)
 
 text \<open>
@@ -303,7 +303,7 @@ qed
 theorem proved_everywhere_unsound:
   assumes "run_voblint nv_dead_config nv_dead_prog = Analysed res"
   shows "(\<lambda>_. 0)(STR ''x'' := 1)
-           \<notin> verdict_stores (answer_all (Decided Check_Proved) res) (Statement 1)"
+           \<notin> \<V>\<^bsub>answer_all (Decided Check_Proved) res\<^esub> (Statement 1)"
 proof -
   from nv_dead_report assms
   have "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)

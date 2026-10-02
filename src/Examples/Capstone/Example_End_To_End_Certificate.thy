@@ -424,7 +424,7 @@ lemma certificate_demo_verdicts_at_check:
                   certificate_demo_prog = Analysed res"
       and mem:
         "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
-  shows "s \<in> verdict_stores res (Statement 4)"
+  shows "s \<in> \<V>\<^bsub>res\<^esub> (Statement 4)"
   using run_voblint_collect_sound [OF ans] mem by blast
 
 theorem certificate_demo_check_semantically_true:
@@ -466,7 +466,7 @@ theorem certificate_demo_full_certificate:
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>res\<rbrakk>\<^bsub>Statement 4\<^esub>"
-    "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> verdict_stores res (Statement 4)"
+    "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> (Statement 4)"
     "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
 proof (cases "run_voblint certificate_config
                 certificate_demo_prog")
@@ -507,7 +507,7 @@ theorem certificate_demo_source_certified:
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-   \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> verdict_stores res v"
+   \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> v"
 proof (cases "run_voblint certificate_config
                 certificate_demo_prog")
   case (Analysed res)

@@ -7,10 +7,10 @@ section \<open>What a report claims\<close>
 text \<open>
   A report is read through three sets of stores at a point \<open>v\<close>. \<open>\<C> v\<close> holds the
   stores the program reaches at \<open>v\<close>. \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>\<close> holds the stores the report's states
-  at \<open>v\<close> describe, over all of its contexts. \<open>\<V>(res, v)\<close> holds the stores in which
+  at \<open>v\<close> describe, over all of its contexts. \<open>\<V>\<^bsub>res\<^esub> v\<close> holds the stores in which
   every definite verdict the report gives at \<open>v\<close> is valid. The report is sound when
 
-    \<open>\<C> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>(res, v)\<close>
+    \<open>\<C> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v\<close>
 
   and a point the report calls dead has \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}\<close>, so no execution reaches it.
   The first inclusion needs the run that built the report; the second and the dead
@@ -68,23 +68,37 @@ lemma mem_report_checks_at [simp]:
   "c \<in> report_checks_at res v \<longleftrightarrow> c \<in> set (report_checks res) \<and> check_point c = v"
   by (simp add: report_checks_at_def)
 
-definition verdict_stores :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" where
-  "verdict_stores res v =
-     {s. \<forall>c \<in> report_checks_at res v.
-           (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s))
-         \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s))}"
+text \<open>
+  What a decided verdict says about a store: \<open>Check_Proved\<close> that the condition
+  holds, \<open>Check_Refuted\<close> that it fails, \<open>Check_Unknown\<close> nothing.
+\<close>
 
-definition PROVED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
-  "PROVED res v e \<longleftrightarrow>
-     (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided Check_Proved)"
+fun verdict_holds :: "check_result \<Rightarrow> exp \<Rightarrow> store \<Rightarrow> bool" where
+  "verdict_holds Check_Proved e s = truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+| "verdict_holds Check_Refuted e s = (\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
+| "verdict_holds Check_Unknown e s = True"
 
-definition REFUTED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
-  "REFUTED res v e \<longleftrightarrow>
-     (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided Check_Refuted)"
+definition verdict_stores :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<V>\<^bsub>_\<^esub>") where
+  "\<V>\<^bsub>res\<^esub> v =
+     {s. \<forall>c \<in> report_checks_at res v. \<forall>r.
+           check_verdict c = Decided r \<longrightarrow> verdict_holds r (check_exp c) s}"
 
-definition UNKNOWN :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
-  "UNKNOWN res v e \<longleftrightarrow>
-     (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided Check_Unknown)"
+definition HAS_VERDICT :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> check_result \<Rightarrow> bool" where
+  "HAS_VERDICT res v e r \<longleftrightarrow>
+     (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided r)"
+
+abbreviation PROVED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+  "PROVED res v e \<equiv> HAS_VERDICT res v e Check_Proved"
+
+abbreviation REFUTED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+  "REFUTED res v e \<equiv> HAS_VERDICT res v e Check_Refuted"
+
+abbreviation UNKNOWN :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+  "UNKNOWN res v e \<equiv> HAS_VERDICT res v e Check_Unknown"
+
+lemma verdict_storesD:
+  "s \<in> \<V>\<^bsub>res\<^esub> v \<Longrightarrow> HAS_VERDICT res v e r \<Longrightarrow> verdict_holds r e s"
+  unfolding verdict_stores_def HAS_VERDICT_def by blast
 
 text \<open>
   \<open>DEAD\<close> is a property of a point, not of a condition: every state the report holds
@@ -134,42 +148,49 @@ subsection \<open>What a consistent report claims about its own states\<close>
 
 theorem analysis_report_verdicts_sound:
   assumes "consistent_report res"
-  shows "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> verdict_stores res v"
+  shows "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof
   fix s
   assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   then obtain d where row: "Lifted d \<in> report_rows res v" and s: "s \<in> report_gamma res d"
     by (rule report_semE)
-  show "s \<in> verdict_stores res v"
+  show "s \<in> \<V>\<^bsub>res\<^esub> v"
     unfolding verdict_stores_def
-  proof (intro CollectI ballI conjI impI)
-    fix c
-    assume c: "c \<in> report_checks_at res v" and pv: "check_verdict c = Decided Check_Proved"
-    from consistent_report_decided[OF assms c pv _ row]
-    have "report_classify res (check_exp c) d = Check_Proved" by simp
-    then show "truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
-      using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_proved)
-  next
-    fix c
-    assume c: "c \<in> report_checks_at res v" and rv: "check_verdict c = Decided Check_Refuted"
-    from consistent_report_decided[OF assms c rv _ row]
-    have "report_classify res (check_exp c) d = Check_Refuted" by simp
-    then show "\<not> truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
-      using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_refuted)
+  proof (intro CollectI ballI allI impI)
+    fix c r
+    assume c: "c \<in> report_checks_at res v" and verdict: "check_verdict c = Decided r"
+    show "verdict_holds r (check_exp c) s"
+    proof (cases r)
+      case Check_Proved
+      with consistent_report_decided[OF assms c verdict _ row]
+      have "report_classify res (check_exp c) d = Check_Proved" by simp
+      then have "truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
+        using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_proved)
+      with Check_Proved show ?thesis by simp
+    next
+      case Check_Refuted
+      with consistent_report_decided[OF assms c verdict _ row]
+      have "report_classify res (check_exp c) d = Check_Refuted" by simp
+      then have "\<not> truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
+        using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_refuted)
+      with Check_Refuted show ?thesis by simp
+    qed simp
   qed
 qed
 
 corollary analysis_report_proved:
   assumes "consistent_report res" and "PROVED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  using analysis_report_verdicts_sound[OF assms(1)] assms(2,3)
-  unfolding PROVED_def verdict_stores_def by blast
+  using verdict_storesD[OF subsetD[OF analysis_report_verdicts_sound[OF assms(1)] assms(3)]
+    assms(2)]
+  by simp
 
 corollary analysis_report_refuted:
   assumes "consistent_report res" and "REFUTED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   shows "\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  using analysis_report_verdicts_sound[OF assms(1)] assms(2,3)
-  unfolding REFUTED_def verdict_stores_def by blast
+  using verdict_storesD[OF subsetD[OF analysis_report_verdicts_sound[OF assms(1)] assms(3)]
+    assms(2)]
+  by simp
 
 theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}"
   unfolding DEAD_def report_sem_def by auto
@@ -204,7 +225,7 @@ proof
   assume dead: "DEAD res v"
   from assms(2) obtain c where c: "c \<in> set (report_checks res)" "check_point c = v"
     and verdict: "check_verdict c = Decided Check_Unknown"
-    unfolding UNKNOWN_def report_checks_at_def by blast
+    unfolding HAS_VERDICT_def report_checks_at_def by blast
   have "\<forall>\<sigma> \<in> report_rows res v. classify_point (report_classify res) (check_exp c) \<sigma> = Dead"
     using dead unfolding DEAD_def by auto
   then have "aggregate_verdicts

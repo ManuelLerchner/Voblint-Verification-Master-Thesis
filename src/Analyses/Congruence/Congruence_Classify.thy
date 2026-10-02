@@ -5,7 +5,6 @@ theory Congruence_Classify
 begin
 
 section \<open>Deciding a check from a map of residue classes\<close>
-section \<open>Deciding a check from a map of residue classes\<close>
 
 text \<open>
   The check classifier is derived from Congruence's bundle: the Boolean recursion
