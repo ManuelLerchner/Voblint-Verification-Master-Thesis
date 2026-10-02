@@ -34,9 +34,9 @@ report and its verdicts to the solver's valuation.
 
 == The chain at one check <sec:chain>
 
-At a CFG node $v$, the argument that a verdict is sound is a chain of
-inclusions between sets of stores, followed by one implication. Each step is a
-theorem:
+The argument that a verdict is sound places a reached store at a CFG node $v$,
+follows a chain of inclusions between sets of stores there, and ends in one
+implication. Each step is a theorem:
 // One relation per row, centred over the fact that proves it, so the relations
 // line up whatever the length of the fact's name.
 #let _step(rel, fact) = stack(dir: ttb, spacing: 2pt, align(center, $#rel$), align(
@@ -48,8 +48,8 @@ theorem:
   column-gutter: 8pt,
   row-gutter: 6pt,
   align: (right + horizon, center + horizon, left + horizon),
-  [stores of source runs at $v$],
-  _step(sym.subset.eq, isathm("source_reaches_node_collect")),
+  [a store $s$ a source run reaches \ #text(size: 8pt)[at some $v$ simulating the run]],
+  _step(sym.in, isathm("source_reaches_node_collect")),
   isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
 
   [],
@@ -64,7 +64,12 @@ theorem:
   _step(sym.subset.eq, isathm("analysis_report_verdicts_sound")),
   isai("\<V>\<^bsub>res\<^esub> v"),
 ))
-The first set is the stores that finite source runs reach at $v$. The node
+The first step places a store that a finite source run reaches: it lies in the
+node collecting semantics at some node $v$ that simulates the run's
+configuration. The node is existential because the simulation is structural,
+not a function: the same residual command may match several compiled nodes, for
+instance in an uncalled procedure with the same body, and membership in
+#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") selects a node the run reaches. The node
 collecting semantics #isaconst("node_collect") splits into the activation
 collecting semantics #isaconst("activation_collect") of the contexts the
 policy's relation $R$ admits, with `main` in the initial context
