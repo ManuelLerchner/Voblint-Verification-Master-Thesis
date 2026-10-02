@@ -42,6 +42,7 @@ done
 # Stamp what source state produced this output -- cli-build.sh compares
 # against it so a .thy fix that never got regenerated fails loudly instead
 # of silently compile-testing stale generated code (see codegen-hash.sh).
+# The stamp is untracked: committing it conflicted on every theory change.
 "$(dirname "$0")/mk/codegen-hash.sh" >codegen/generated/.source-hash
 
 echo "Regenerated codegen/generated/:"
