@@ -483,7 +483,7 @@ text \<open>
 
 lemma normalized_lift_bind:
   assumes "\<And>a. normalized_lift empty_pred (f a)"
-  shows "normalized_lift empty_pred (bind_lift x f)"
+  shows "normalized_lift empty_pred (bind x f)"
   using assms by (cases x) simp_all
 
 text \<open>
@@ -530,7 +530,7 @@ lemma bind_lift_mono2:
   fixes x y :: "'a::semilattice_sup lifted"
   assumes xy: "x \<le> y"
       and fg: "\<And>a b. a \<le> b \<Longrightarrow> f a \<le> (g b :: 'b::semilattice_sup lifted)"
-  shows "bind_lift x f \<le> bind_lift y g"
+  shows "bind x f \<le> bind y g"
   using xy by (cases x; cases y) (auto intro: fg)
 
 subsection \<open>Solver update integration\<close>

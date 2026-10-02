@@ -107,8 +107,7 @@ lemma inv_eq_sign_mono:
   assumes "a1 \<le> (a1' :: sign)"
       and "a2 \<le> a2'"
   shows
-    "fst (inv_eq_sign r a1 a2) \<le> fst (inv_eq_sign r a1' a2') \<and>
-     snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
+    "le_pair (inv_eq_sign r a1 a2) (inv_eq_sign r a1' a2')"
 proof (cases r)
   case True
   then show ?thesis using assms by (simp add: le_infI1 le_infI2)
@@ -161,10 +160,7 @@ lemma inv_less_sign_mono:
   assumes A1: "a1 \<le> (a1' :: sign)"
       and A2: "a2 \<le> a2'"
   shows
-    "fst (inv_less_sign r a1 a2)
-       \<le> fst (inv_less_sign r a1' a2') \<and>
-     snd (inv_less_sign r a1 a2)
-       \<le> snd (inv_less_sign r a1' a2')"
+    "le_pair (inv_less_sign r a1 a2) (inv_less_sign r a1' a2')"
 proof (cases r)
   case True
 

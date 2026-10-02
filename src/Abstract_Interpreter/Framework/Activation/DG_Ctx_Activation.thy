@@ -137,7 +137,7 @@ text \<open>At the entry the generator wraps its fold in one extra \<open>Side\<
   proved against the fold therefore transport to \<^const>\<open>routed_node_rhs\<close> without a separate
   entry case.\<close>
 lemma sides_fold_le_Gen:
-  "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx))) sigma k
+  "(sides_of_program (side_rhs_fold_dg (acc0 v) (contribs v ctx)) sigma) k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
   unfolding routed_node_rhs_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
@@ -182,8 +182,7 @@ lemma edge_bound_global:
 proof -
   have "dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
                  sigma (Inr analysis_global))
-      \<le> dg_global (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx)))
-                   sigma (Inr analysis_global))"
+      \<le> dg_global ((sides_of_program (side_rhs_fold_dg (acc0 v) (contribs v ctx)) sigma) (Inr analysis_global))"
     using sides_le_side_rhs_fold_dg[OF contribs_wf edge_program_mem_contribs[OF e],
         where k = "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)

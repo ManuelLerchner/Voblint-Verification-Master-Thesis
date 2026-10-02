@@ -68,13 +68,13 @@ text \<open>The trace-level objects at the locale's fixed arguments: the collect
   valid activation traces \<open>\<T>\<close>, the context relation \<open>carries\<close>, the buckets \<open>\<A>\<close>, and the
   admitted call contexts \<open>admits\<close>.\<close>
 abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
-  where "\<C> \<equiv> node_collect \<G> g S"
+  where "\<C> \<equiv> \<C>\<^bsub>\<G>,g,S\<^esub>"
 abbreviation traces :: "activation_trace set" ("\<T>")
-  where "\<T> \<equiv> valid_activation_trace \<G> g S"
+  where "\<T> \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
 abbreviation carries :: "activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
   where "carries \<equiv> activation_context_rel \<G> R c\<^sub>0 g"
 abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set" ("\<A>")
-  where "\<A> \<equiv> activation_collect \<G> R c\<^sub>0 g S"
+  where "\<A> \<equiv> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub>"
 abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
   where "admits \<equiv> admits_call_context \<G> g R"
 

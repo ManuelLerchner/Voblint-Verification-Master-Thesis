@@ -405,8 +405,8 @@ lemma string_of_ivl_regression:
   "string_of_ivl (Ivl (Fin (-3)) (Fin 5)) = STR ''[-3,5]''"
   "string_of_ivl (Ivl MinInf (Fin 0)) = STR ''[-<infinity>,0]''"
   "string_of_ivl (Ivl MinInf PlusInf) = STR ''[-<infinity>,+<infinity>]''"
-  "string_of_ivl (Ivl (Fin 5) (Fin (-1))) = STR ''<bottom>''"
-  "string_of_ivl (Ivl PlusInf PlusInf) = STR ''<bottom>''"
+  "string_of_ivl (Ivl (Fin 5) (Fin (-1))) = sym_bottom"
+  "string_of_ivl (Ivl PlusInf PlusInf) = sym_bottom"
   by eval+
 
 

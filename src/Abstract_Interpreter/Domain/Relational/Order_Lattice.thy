@@ -199,8 +199,8 @@ lemma exact_emptiness_relc: "exact_emptiness (is_empty :: relc \<Rightarrow> boo
   by (rule exact_emptinessI) (rule is_empty_relc_gamma)
 
 lemma to_string_relc_regression:
-  "to_string RelBot = STR ''<bottom>''"
-  "to_string (RelC {}) = STR ''<top>''"
+  "to_string RelBot = sym_bottom"
+  "to_string (RelC {}) = sym_top"
   "to_string (RelC {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
      STR ''{x<le>y <and> y<le>z}''"
   by eval+

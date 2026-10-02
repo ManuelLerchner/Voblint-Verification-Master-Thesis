@@ -1064,9 +1064,9 @@ definition string_of_congruence :: "congruence \<Rightarrow> String.literal" whe
              + (if m = 1 then STR '''' else string_of_int m) + sym_int)"
 
 lemma string_of_congruence_regression:
-  "string_of_congruence bottom_congruence = STR ''<bottom>''"
+  "string_of_congruence bottom_congruence = sym_bottom"
   "string_of_congruence (mk_congruence (-7) 0) = STR ''-7''"
-  "string_of_congruence (mk_congruence 0 1) = STR ''<int>''"
+  "string_of_congruence (mk_congruence 0 1) = sym_int"
   "string_of_congruence (mk_congruence 0 3) = STR ''3<int>''"
   "string_of_congruence (mk_congruence 4 3) = STR ''1+3<int>''"
   by eval+

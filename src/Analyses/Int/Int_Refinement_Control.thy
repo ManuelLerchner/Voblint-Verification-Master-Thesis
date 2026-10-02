@@ -376,7 +376,7 @@ text \<open>
 lemma post_narrow_refinement_would_violate_narrow_ge:
   "let a = (top :: int_dom);
        b = int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven (top :: congruence)
-   in b \<le> a \<and> \<not> (b \<le> refine Refine_Once (narrow a b))"
+   in b \<le> a \<and> \<not> (b \<le> refine Refine_Once (a \<Delta> b))"
   by eval
 
 end

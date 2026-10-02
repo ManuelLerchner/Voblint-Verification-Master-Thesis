@@ -22,20 +22,20 @@ instantiation congruence :: warrowing
 begin
 
 definition widen_congruence :: "congruence => congruence => congruence" where
-  "widen (a :: congruence) b = join_congruence a b"
+  "((a :: congruence) \<nabla> b) = join_congruence a b"
 
 definition narrow_congruence :: "congruence => congruence => congruence" where
-  "narrow (a :: congruence) b = narrow_congruence_td a b"
+  "((a :: congruence) \<Delta> b) = narrow_congruence_td a b"
 
 instance proof intro_classes
   fix a b :: congruence
-  show "a <= widen a b"
+  show "a <= (a \<nabla> b)"
     unfolding widen_congruence_def by (rule join_congruence_ub1)
-  show "b <= widen a b"
+  show "b <= (a \<nabla> b)"
     unfolding widen_congruence_def by (rule join_congruence_ub2)
-  show "b <= a \<Longrightarrow> b <= narrow a b"
+  show "b <= a \<Longrightarrow> b <= (a \<Delta> b)"
     unfolding narrow_congruence_def narrow_congruence_td_def by simp
-  show "b <= a \<Longrightarrow> narrow a b <= a"
+  show "b <= a \<Longrightarrow> (a \<Delta> b) <= a"
     unfolding narrow_congruence_def narrow_congruence_td_def by simp
 qed
 
@@ -81,7 +81,7 @@ qed
 end
 
 lemma to_string_congruence_regression:
-  "to_string (top :: congruence) = STR ''<top>''"
+  "to_string (top :: congruence) = sym_top"
   "to_string (mk_congruence 1 2) = STR ''1+2<int>''"
   by eval+
 

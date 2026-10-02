@@ -136,8 +136,8 @@ proof -
     unfolding sound_special_def
   proof (intro allI impI)
     fix A d s sc x t
-    assume "s \<in> gamma_relc d" "t \<in> special_step sc x s"
-    then show "t \<in> gamma_relc (forget_relc x d)" by (cases sc) auto
+    assume "s \<in> \<lbrakk>d :: relc\<rbrakk>" "t \<in> special_step sc x s"
+    then show "t \<in> \<lbrakk>forget_relc x d\<rbrakk>" by (cases sc) auto
   qed
   have base: "sound_local_spec \<G> gamma_relc (conservative_local_spec
        (\<lambda>A x e d. relc_learn A ys x e (forget_relc x d)) (\<lambda>A sc x d. forget_relc x d)

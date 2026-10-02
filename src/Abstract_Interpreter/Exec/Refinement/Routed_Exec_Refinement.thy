@@ -225,13 +225,13 @@ lemma cmb_st_side_free_at_analysis_global:
 theorem pp_st:
   assumes pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
-        intra_st (routed_call_program spec_st analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+        intra_st (cmb_st g)
         (routed_entry_seed_programs seed)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
-        intra_st (routed_call_program spec_st analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+        intra_st (cmb_st g)
         (routed_entry_seed_programs seed)
         g bot0 s0d s0g)
      x0 sigma_st vars"

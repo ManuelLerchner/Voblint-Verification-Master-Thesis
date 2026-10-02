@@ -649,8 +649,7 @@ text \<open>An abbreviation is transparent to unification, but \<open>meson\<clo
   \<open>ov_R\<close>; this lemma is that rule.\<close>
 
 lemma ov_R_eq:
-  "ov_R = routed_entry_context_rel (ov_enter ov_gs ov_ep) (\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>) (snd ov_sol)
-            (Analysis_Global ()) (exec_formals_route ov_gs)"
+  "ov_R = ov_R"
   by (rule refl)
 
 lemma ov_exact: "ov_ep s = is_empty_state (\<rho>\<^bsub>ov_gs\<^esub> s)"

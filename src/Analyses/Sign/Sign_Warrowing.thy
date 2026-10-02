@@ -12,17 +12,17 @@ definition narrow_sign_td :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
   "narrow_sign_td a b = a"
 
 instantiation sign :: warrowing begin
-  definition "widen (a :: sign) b = join_sign a b"
-  definition "narrow (a :: sign) b = narrow_sign_td a b"
+  definition "((a :: sign) \<nabla> b) = join_sign a b"
+  definition "((a :: sign) \<Delta> b) = narrow_sign_td a b"
 instance proof intro_classes
   fix a b :: sign
-  show "a \<le> widen a b"
+  show "a \<le> (a \<nabla> b)"
     unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub1)
-  show "b \<le> widen a b"
+  show "b \<le> (a \<nabla> b)"
     unfolding less_eq_sign_def widen_sign_def by (rule join_sign_ub2)
-  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
+  show "b \<le> a \<Longrightarrow> b \<le> (a \<Delta> b)"
     unfolding narrow_sign_def narrow_sign_td_def by simp
-  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
+  show "b \<le> a \<Longrightarrow> (a \<Delta> b) \<le> a"
     unfolding narrow_sign_def narrow_sign_td_def by simp
 qed
 end

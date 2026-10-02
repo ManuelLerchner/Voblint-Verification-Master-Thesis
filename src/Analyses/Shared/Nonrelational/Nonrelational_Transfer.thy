@@ -190,15 +190,15 @@ text \<open>
 theorem tf_st_for_commute:
   assumes "live_default_st \<G> s"
   shows
-    "default_st_to_fun \<G> (generic_tf_st_for ops \<G> a s) =
-     tf_abs a (default_st_to_fun \<G> s)"
+    "readback \<G> (generic_tf_st_for ops \<G> a s) =
+     tf_abs a (readback \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: backward.branch_st_with_ops [simplified] backward.branch_st_commute[OF assms])
 
 lemma enter_st_for_commute:
-  "default_st_to_fun \<G> (generic_enter_st_for ops \<G> ci s) =
-   enter_ci_for \<G> ci (default_st_to_fun \<G> s)"
+  "readback \<G> (generic_enter_st_for ops \<G> ci s) =
+   enter_ci_for \<G> ci (readback \<G> s)"
   by (simp add: generic_enter_st_for_def op_defs enter_binding_def enter_frame_def)
 
 subsection \<open>Registering the bundle with the pipeline\<close>

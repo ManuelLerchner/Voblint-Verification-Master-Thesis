@@ -31,5 +31,5 @@ fun result_value_to_abs ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('a::bot) default_st lifted \<Rightarrow> 'a abs_state lifted"
 where
   "result_value_to_abs \<G> Bot = Bot"
-| "result_value_to_abs \<G> (Lifted s) = Lifted (default_st_to_fun \<G> s)"
+| "result_value_to_abs \<G> (Lifted s) = Lifted (readback \<G> s)"
 end

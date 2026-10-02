@@ -522,7 +522,7 @@ text \<open>
 fun bfilter_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
     "bfilter_lifted (Not b) res \<sigma> = bfilter_lifted b (\<not> res) \<sigma>"
   | "bfilter_lifted (And b1 b2) True  \<sigma> =
-       bind_lift (bfilter_lifted b2 True \<sigma>) (bfilter_lifted b1 True)"
+       bind (bfilter_lifted b2 True \<sigma>) (bfilter_lifted b1 True)"
   | "bfilter_lifted (And b1 b2) False \<sigma> =
        (if feasible b1 False \<sigma> then bfilter_lifted b1 False \<sigma> else Bot)
        \<squnion> (if feasible b2 False \<sigma> then bfilter_lifted b2 False \<sigma> else Bot)"
@@ -530,7 +530,7 @@ fun bfilter_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
        (if feasible b1 True \<sigma> then bfilter_lifted b1 True \<sigma> else Bot)
        \<squnion> (if feasible b2 True \<sigma> then bfilter_lifted b2 True \<sigma> else Bot)"
   | "bfilter_lifted (Or  b1 b2) False \<sigma> =
-       bind_lift (bfilter_lifted b2 False \<sigma>) (bfilter_lifted b1 False)"
+       bind (bfilter_lifted b2 False \<sigma>) (bfilter_lifted b1 False)"
   | "bfilter_lifted (Eq  e1 e2) res  \<sigma> = normalize_lift is_empty_state (bfilter (Eq e1 e2) res \<sigma>)"
   | "bfilter_lifted e res \<sigma> = normalize_lift is_empty_state (bfilter e res \<sigma>)"
 

@@ -31,7 +31,7 @@ lemma cinit_ivl_st_not_bot_for:
   assumes globals: "\<And>x. \<G> x = (x \<in> set gl)"
   shows "\<not> default_st_is_bot_for gl cinit_ivl_st"
 proof -
-  have "\<not> is_empty_state (default_st_to_fun \<G> cinit_ivl_st)"
+  have "\<not> is_empty_state (readback \<G> cinit_ivl_st)"
     unfolding is_empty_state_def by (auto simp: is_bottom_ivl_def split: if_splits)
   then show ?thesis
     by (simp add: default_st_is_bot_for_iff[OF globals])

@@ -519,7 +519,7 @@ lemma bfilter_lift_bind_step:
                 bfilter_lifted b2 res (\<rho>\<^bsub>\<G>\<^esub> s)"
   shows "map_lift \<rho>\<^bsub>\<G>\<^esub>
            (bfilter_st_lift \<G> b1 res (bfilter_st_lift \<G> b2 res (Lifted s))) =
-         bind_lift (bfilter_lifted b2 res (\<rho>\<^bsub>\<G>\<^esub> s)) (bfilter_lifted b1 res)"
+         bind (bfilter_lifted b2 res (\<rho>\<^bsub>\<G>\<^esub> s)) (bfilter_lifted b1 res)"
 proof (cases "bfilter_st_lift \<G> b2 res (Lifted s)")
   case Bot
   then show ?thesis using IH2 by simp

@@ -28,7 +28,7 @@ text \<open>
 \<close>
 
 lemma default_st_to_fun_combine_assign:
-  "default_st_to_fun \<G>
+  "\<rho>\<^bsub>\<G>\<^esub>
      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_default_st x y))
    = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
@@ -158,7 +158,7 @@ lemma combine_lift_commute:
      = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
-  show "\<And>x y. default_st_to_fun \<G>
+  show "\<And>x y. \<rho>\<^bsub>\<G>\<^esub>
       (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_default_st x y))
         = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"

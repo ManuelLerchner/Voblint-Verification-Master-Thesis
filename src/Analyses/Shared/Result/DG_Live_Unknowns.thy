@@ -101,7 +101,7 @@ lemma dep_L_routed_node_rhs_callee_result:
 proof -
   let ?d = "dg_local (\<tau> (Inl (u, cx)))"
   have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)
-      = dep_aux \<tau> (sp_compile (side_rhs_fold_dg bot
+      = (dep_program \<tau> (side_rhs_fold_dg bot
           (map (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q)
              [(?d, f ?d)])))"
     unfolding routed_callee_call_program_def enter sp_compile_bind

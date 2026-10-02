@@ -376,17 +376,17 @@ text \<open>\<open>f\<close>'s two activations stay separated at their own entry
   unknown, and their join lands at \<open>STop\<close> --- the merge a 2-call-string keeps separated.\<close>
 
 lemma sign_nest_1_f_entry_pos:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
      (STR ''p'') = SPos"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma sign_nest_1_f_entry_neg:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
      (STR ''p'') = SNeg"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma sign_nest_1_g_entry_merged:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
      (STR ''p'') = STop"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 

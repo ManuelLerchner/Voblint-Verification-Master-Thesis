@@ -173,9 +173,9 @@ where
 instance
 proof
   fix a b :: "('a::{bounded_semilattice_sup_bot, warrowing}) default_st"
-  show "a \<le> widen a b"
+  show "a \<le> (a \<nabla> b)"
     by (simp add: le_default_st_iff widen_default_st_def widen_ge1)
-  show "b \<le> widen a b"
+  show "b \<le> (a \<nabla> b)"
     by (simp add: le_default_st_iff widen_default_st_def widen_ge2)
 qed
 end

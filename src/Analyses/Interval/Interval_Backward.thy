@@ -307,8 +307,7 @@ qed
 lemma inv_eq_ivl_mono:
   assumes A1: "a1 \<le> (a1' :: ivl)" and A2: "a2 \<le> a2'"
   shows
-    "fst (inv_eq_ivl r a1 a2) \<le> fst (inv_eq_ivl r a1' a2') \<and>
-     snd (inv_eq_ivl r a1 a2) \<le> snd (inv_eq_ivl r a1' a2')"
+    "le_pair (inv_eq_ivl r a1 a2) (inv_eq_ivl r a1' a2')"
 proof (cases r)
   case True
   have "a1 \<sqinter> a2 \<le> a1' \<sqinter> a2'" by (rule inf_mono[OF A1 A2])
@@ -321,8 +320,7 @@ qed
 
 lemma inv_less_ivl_mono:
   assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
-  shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
-       \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
+  shows "le_pair (inv_less_ivl res a1 a2) (inv_less_ivl res a1' a2')"
 proof -
   obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
   obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
