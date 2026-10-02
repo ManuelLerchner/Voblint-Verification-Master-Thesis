@@ -247,14 +247,17 @@ These are grep targets on `src/` outside the theory that owns each name:
   `result_with_globals`, `table_covers`, `checks_sound_at`,
   `analysis_result_covers`, `gamma_reader_eq_lookup` above `Analysis_Report`;
 - no `config_terminates` premise in any public theorem;
-- `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString` split only in
-  `analysis_report_of` (and its traced code equation);
+- exactly one executable dispatch on the context policy, `analysis_report_of`
+  (its traced code equation restates the same three branches), and one proof-side
+  elimination of it, `analysis_report_of_sound`; the per-policy semantic spine
+  theorems name a policy in their statements and do not dispatch;
 - `Sign_Analysis`, `Interval_Analysis`, … split only in `registration_of`, apart
   from generated exhaustiveness lemmas; consumers use its selectors, and the old
   per-capability functions are gone rather than kept as accessors;
 - no `run_result`, `mcp_render` or `string_of_abstract_value` in
   `Analysis_Run` or `Analysis_Report`;
-- no `analyse_program`, and no `Voblint_CLI.Generated` in the OCaml sources.
+- no `analyse_program`; OCaml reaches the generated core only through the
+  handwritten `Voblint` facade.
 
 ## Invariants
 
@@ -315,11 +318,16 @@ These are grep targets on `src/` outside the theory that owns each name:
    - `sound_empty` / `exact_empty` and a representation locale, only where an
      inventory shows repeated proofs. Candidates: `is_empty_state`, `val_empty`,
      `mcp_empty_v` (sound); `default_st_to_fun`, `mcp_rd` (readbacks).
-8. **Export and docs.** Export `run_voblint`, the report selectors and
-   `render_report`; the adapters handle `No_Answer`. The generated module becomes
-   `codegen/generated/ml/Voblint.ml` with the program at top level (`Voblint.run_voblint`
-   in place of `Voblint_CLI.Generated.run_voblint`), a mechanical change across the
-   parser, printer, CLI, web entry, regression and build scripts. The native and
+8. **Export and docs.** Export `run_voblint` and `render_report`; the adapters
+   handle `No_Answer`. The report is an opaque token to OCaml: its selectors are not
+   exported, and every reader goes through the `render_report` projection, so no
+   OCaml code depends on the report's representation. The generated module becomes
+   `Voblint_Generated`, and a handwritten facade `cli/voblint.ml` (module `Voblint`)
+   re-exports the configuration constructors, `run_voblint` and `render_report`. The
+   native entry moves to `cli/entry/voblint_main.ml` with dune
+   `public_name voblint`, which frees the module name. Consumers (parser, printer,
+   CLI, web entry, regression and build scripts) name `Voblint`, not the generated
+   module. The native and
    browser entries stay separate executables (subprocess containment and files on one
    side, the JavaScript API and worker messages on the other), but share one module,
    `cli/result/analysis_request.ml`: the analysis, globals, context and refinement
@@ -327,7 +335,7 @@ These are grep targets on `src/` outside the theory that owns each name:
    `analyse` wrapping `run_voblint` and `render_report`. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
-8a. **A monomorphic boundary for generated code.** Each policy branch of
+8a. **A carrier-specialized generated-code boundary.** Each policy branch of
    `analysis_report_of` instantiates the generic solver at the MCP product, so the
    generated OCaml rebuilds the product's `equal`, `semilattice_sup`,
    `bounded_semilattice_sup_bot` and `warrowing` dictionaries inline, once per branch.
@@ -368,20 +376,18 @@ diff of all 322 corpus fixtures: text, JSON, graph snapshot and verbose trace):
 - an injective entry-state context key (`mcp_ctx_key`) and the listing lemmas
   (`ordered_by_key_set`, `report_rows_report_of`), which the covering proof needs;
 - phase 8 in part: `render_report` as the adapters' projection, the shared
-  `cli/result/analysis_request.ml`, and phase 8a, the monomorphic boundary
+  `cli/result/analysis_request.ml`, and phase 8a, the carrier-specialized boundary
   (`mcp_equations`, `mcp_solve_c`, `mcp_run_of`);
 - the site's theorem cards, the README and the docs that named the retired theorems.
 
-Not done, for follow-up PRs:
+Not done, one stacked PR each:
 
 - phase 5, the `solved_table` rename: mechanical but touches every framework theory
   that names `analysis_result`; it should land on its own.
 - phase 6, `registration_of`, and phase 7 (splitting `sound_table`, the shared
   contextual classification helper, absorbing `analysis_surface`).
-- the `Voblint.ml` module rename: the generated module cannot be called `Voblint`
-  while the native entry `cli/entry/voblint.ml` is itself the module `Voblint`;
-  renaming the entry changes the executable path every script uses, so it is a
-  separate change.
+- the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and
+  the entry renamed to `voblint_main.ml`.
 - `well_formed_report` (index invariants) and the agreement between per-row and
   aggregate check columns, which hold by construction but are not stated.
 - phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names

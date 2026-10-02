@@ -6,16 +6,20 @@
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
        -> Voblint_CLI.Generated.run_voblint (Analysis_Config (domains, globals, context))
-          (Isabelle-generated). One call checks the program is well-formed and
-          runs the analyses the activation list, global update rule and context name;
-          every combination is answered. What comes back is data -- states per point and
-          context, the routes calls take, the check column, diagnostics -- with
-          every abstract value already rendered by its own domain. Every
-          rendering below (text report, graph, snapshot, HTML) is built from that
-          one result, so none can draw from a different solve than another.
-       -> proved analysis results, subject to the Isabelle theorem
-          assumptions (solver termination and check reachability -- see
-          Analysis_Certified.thy)
+          (Isabelle-generated). One call checks the activation and the program and
+          runs the analyses the activation list, global update rule and context
+          name. Every well-formed combination is answered. What comes back is a
+          semantic analysis_report: states as abstract values per point and
+          context, the routes calls take, the check column and diagnostics.
+       -> Voblint_CLI.Generated.render_report (Isabelle-generated, outside the
+          theorems) with the CLI's value printer (Value_symbols): the displayed
+          run_result. Every rendering below (text report, graph, snapshot, HTML)
+          is built from that one result, so none can draw from a different solve
+          than another.
+       -> the theorems in Analysis_Certified.thy hold for every Analysed answer
+          with no termination premise: where the solve does not return, no
+          answer exists and nothing is claimed. A PROVED verdict does not
+          assert that its point is reachable.
 
    Trust boundary: soundness applies to the imp_prog the parser produces, not
    to the claim that this imp_prog faithfully represents the text file the
@@ -23,7 +27,9 @@
    frontend is unverified -- parsing was never in the soundness scope of
    either project. A parser bug can change *which* program gets analyzed; it
    cannot invalidate the analyzer's soundness theorem for the AST actually
-   produced. See docs/CLI_DESIGN.md. *)
+   produced. The value printers, render_report, Isabelle code generation and
+   the OCaml toolchain are trusted as well. See docs/CLI_DESIGN.md and
+   docs/RUN_VOBLINT_INTERFACE.md. *)
 
 let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \

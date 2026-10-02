@@ -1,7 +1,8 @@
 (* Reading a run result: the readings every renderer shares.
 
-   Voblint_CLI.Generated hands back data -- CFG nodes, edge actions, verdicts,
-   context indices, and values already rendered by their own domain. Naming a
+   A run result is render_report's projection of the analysis report -- CFG
+   nodes, edge actions, verdicts, context indices, and values each domain's
+   printer rendered. Naming a
    point, spelling a verdict, labelling a context and wording an edge action are
    decisions made once here, so the text report, the graph, the regression
    snapshot, the HTML report and the browser all read the same result the same

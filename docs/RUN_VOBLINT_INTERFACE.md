@@ -41,6 +41,11 @@ The adapters call `run_voblint`, then map `render_report` over the answer with t
 value printer they want (`string_of_abstract_value` composed with the CLI's symbol
 decoding).
 
+The report is an opaque token to OCaml. Its selectors are not exported; the only
+reader is `render_report`, so no OCaml code depends on the report's representation.
+`run_voblint_config` and `run_voblint_cfg` state that an analysed report carries the
+configuration it was asked for and the compiled graph of the program.
+
 ## The report
 
 ```text
@@ -78,20 +83,27 @@ verdict, which is what a drawing of one context shows.
 ## Semantic spine
 
 The collecting semantics `𝒞 v` is not a starting point: it is the projection of
-valid activation traces. A finite source run yields a valid activation trace that
-reaches some node `v` with the run's store `s` and carries some context `c`
-(`source_run_has_activation_trace`), so `s ∈ 𝒜(v, c)`. Under each policy the
-activation buckets together are the collecting semantics
-(`node_collect_eq_Union_activation_collect` and its per-policy instances). Then:
+valid activation traces. A finite source run is represented by a valid activation
+trace `t` that ends at some node `v` with the run's store `s`
+(`activation_trace_repr`, from `source_run_has_activation_trace`). The policy assigns
+`t` a context `c` (`activation_context_rel`), so `s ∈ 𝒜(v, c)`
+(`source_store_in_activation_collect`). Under each policy the activation buckets
+together are the collecting semantics (`node_collect_eq_Union_activation_collect`
+and its per-policy instances). Then:
 
 ```text
-s ∈ ⋃c. 𝒜(v, c) = 𝒞 v ⊆ ⟦res⟧_v ⊆ 𝒱(res, v)
+s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧_v ⊆ 𝒱(res, v)
 ```
 
 `run_voblint_unit_chain`, `run_voblint_entry_state_chain` and
 `run_voblint_call_string_chain` (`Analysis_Certified.thy`) state this chain for a
-source run, one per policy, since the context type is the policy's own.
-`run_voblint_source_sound` is the context-erased form.
+source run, one per policy, since the context type is the policy's own. Each keeps
+the witness: the conclusion names the trace `t`, its representation of the run's
+configuration, and the context the policy relates it to. Under call strings and the
+unit policy every valid trace has its context outright; under entry-state routing
+the admitted context exists because the solve returned
+(`run_voblint_entry_state_terminates`). `run_voblint_source_sound` is the
+context-erased form.
 
 ## Public contract
 
