@@ -1,0 +1,19 @@
+// PARAM: --analysis sign --globals join --program-globals shared
+// Source: Example_Sign_Mixed_Flow (mf_report, mf_checks_hold).
+//
+// 19-callee_reads_global_after_setter.vimp with program globals on the
+// shared channel. Gx is one flow-insensitive value every point reads, so
+// its seed 0 joins the write 1 and get() returns only NonNegative: 0 < x and
+// y >= 0 are proved, 0 < y and 0 < Gx are not.
+global Gx;
+fun set() { Gx = 1; }
+fun get() { return Gx; }
+fun main() {
+  x = 1;
+  set();
+  y = get();
+  __voblint_check(0 < x); // PROVED
+  __voblint_check(y >= 0); // PROVED
+  __voblint_check(0 < y); // UNKNOWN
+  __voblint_check(0 < Gx); // UNKNOWN
+}

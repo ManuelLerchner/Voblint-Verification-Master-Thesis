@@ -14,4 +14,6 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     (* The public run_voblint operation and the published result table *)
     Example_Analysis_Dispatch_Regression
     Example_Order_Asks_Interval
+    (* Program globals on the shared channel, through run_voblint *)
+    Example_Sign_Mixed_Flow
 
