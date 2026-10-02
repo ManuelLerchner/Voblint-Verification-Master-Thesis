@@ -43,4 +43,9 @@ let decode s =
   go 0;
   Buffer.contents buf
 
-let decode_answer answer = C.map_analysis_answer decode answer
+(* An analysed answer carries a semantic report; this renders it, with every
+   value printed and its ASCII symbol tokens decoded. *)
+let render_answer answer =
+  C.map_analysis_answer
+    (C.render_report (fun v -> decode (C.string_of_abstract_value v)))
+    answer

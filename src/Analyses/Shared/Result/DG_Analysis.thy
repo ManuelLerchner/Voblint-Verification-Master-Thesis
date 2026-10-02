@@ -122,6 +122,20 @@ text \<open>
   here would demand an executable \<^const>\<open>bot\<close> at a function type.
 \<close>
 
+text \<open>
+  Everything one solve publishes, read back as values: the result table, the
+  analysis-wide global, the seed a call published at a procedure entry under a
+  context, what one edge's local step makes of a point's solved state, and where a
+  call leads when it contributes at all.
+\<close>
+
+record ('c, 'v) solved_run =
+  run_table :: "('c, 'v) analysis_result"
+  run_shared :: "'v lifted"
+  run_seed :: "pname \<Rightarrow> 'c \<Rightarrow> 'v lifted"
+  run_step :: "pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted"
+  run_succ :: "cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option"
+
 locale dg_pipeline =
   fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
@@ -237,47 +251,48 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
 
 
 text \<open>
-  The result table and the global unknowns beside it, off one solve. The second
-  component reads the analysis-wide global, the third reads the seed a call
-  published at a procedure entry under a context. Both are published exactly as a
-  table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
+  The values one solution publishes. The shared global and the seeds are read
+  exactly as a table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
 
-  The fourth is what one edge's local step makes of a point's solved state: the term
+  A step is what one edge's local step makes of a point's solved state: the term
   that edge contributes to its target's equation, re-evaluated on the solution. A
   target with several incoming edges stores only their join, so this is the one
   place the contribution of a single edge can be read. It is the component's own
   step, run with the answers its handler gives on that state, as the edge
   transfer runs it.
 
-  The fifth is \<^const>\<open>live_succ\<close> read off the same solve, so a caller listing where
-  every call leads does not solve the system again for each call.
+  The successor is \<^const>\<open>live_succ\<close> read off the same solution, so a caller
+  listing where every call leads does not solve the system again for each call.
+
+  The solution is an argument, so a caller holding the executable solver's answer
+  reads it without solving again; \<open>run\<close> below reads the specification's solve.
 \<close>
 
-definition result_with_globals :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> ('c, 'v) analysis_result \<times> 'v lifted
-         \<times> (pname \<Rightarrow> 'c \<Rightarrow> 'v lifted)
-         \<times> (pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted)
-         \<times> (cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)" where
-  "result_with_globals \<G> p =
-     (let sol = solution \<G> p;
-          c = comp \<G> p;
+definition solved_run_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+    \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)
+    \<Rightarrow> ('c, 'v) solved_run" where
+  "solved_run_of \<G> p sol =
+     (let c = comp \<G> p;
           read = (\<lambda>d. map_lift (rd \<G>) (canonicalize_lift (emp p) d))
-      in (dg_result_for (rd \<G>) (emp p) sol,
-          read (dg_global (snd sol (Inr analysis_global))),
-          (\<lambda>f ctx. read (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))),
-          (\<lambda>v ctx a. read (let d = dg_local (snd sol (Inl (v, ctx)))
-                            in closed_step c a d)),
-          (\<lambda>u ctx ca q.
+      in \<lparr> run_table = dg_result_for (rd \<G>) (emp p) sol,
+           run_shared = read (dg_global (snd sol (Inr analysis_global))),
+           run_seed = (\<lambda>f ctx. read (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))),
+           run_step = (\<lambda>v ctx a. read (let d = dg_local (snd sol (Inl (v, ctx)))
+                                       in closed_step c a d)),
+           run_succ = (\<lambda>u ctx ca q.
              let d = entry_of \<G> p (call_info_of ca q) (dg_local (snd sol (Inl (u, ctx))))
-             in if d = Bot then None else Some (route \<G> u ctx d ca))))"
+             in if d = Bot then None else Some (route \<G> u ctx d ca)) \<rparr>)"
 
-lemma fst_result_with_globals [simp]: "fst (result_with_globals \<G> p) = result \<G> p"
-  by (simp add: result_with_globals_def result_def Let_def)
+definition run :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('c, 'v) solved_run" where
+  "run \<G> p = solved_run_of \<G> p (solution \<G> p)"
 
-lemma live_succ_result_with_globals:
-  "snd (snd (snd (snd (result_with_globals \<G> p)))) = live_succ \<G> p"
-  by (simp add: result_with_globals_def live_succ_def ctx_succ_def sol_env_def Let_def
+lemma run_table_run [simp]: "run_table (run \<G> p) = result \<G> p"
+  by (simp add: run_def solved_run_of_def result_def Let_def)
+
+lemma run_succ_run: "run_succ (run \<G> p) = live_succ \<G> p"
+  by (simp add: run_def solved_run_of_def live_succ_def ctx_succ_def sol_env_def Let_def
       fun_eq_iff)
+
 text \<open>
   The contextual publication surface: one verdict per context at a check, and
   the aggregate a caller prints. Both are \<^const>\<open>classify_checks_ctx\<close> and
@@ -362,7 +377,8 @@ declare dg_pipeline.reader_def [code]
 declare dg_pipeline.result_def [code]
 declare dg_pipeline.ctx_succ_def [code_unfold]
 declare dg_pipeline.live_succ_def [code_unfold]
-declare dg_pipeline.result_with_globals_def [code]
+declare dg_pipeline.solved_run_of_def [code]
+declare dg_pipeline.run_def [code]
 declare dg_pipeline.check_projection_def [code]
 declare dg_pipeline.verdict_report_def [code]
 declare dg_pipeline.state_at_def [code]
@@ -436,6 +452,17 @@ lemma terminates_of_solve_c:
   assumes "solve_c (equations \<G> p) (root_query p) \<noteq> None"
   shows "terminates \<G> p"
   unfolding terminates_def by (rule dom_of_solve_c[OF assms])
+
+text \<open>
+  An answer of the executable solver is the solve itself, so a run built from that
+  answer is \<^const>\<open>run\<close>, and its program needs no separate termination premise.
+\<close>
+
+lemma solve_c_run:
+  assumes "solve_c (equations \<G> p) (root_query p) = Some sol"
+  shows "terminates \<G> p" and "solved_run_of \<G> p sol = run \<G> p"
+  using assms terminates_of_solve_c solve_of_solve_c[OF assms]
+  by (simp_all add: run_def solution_def)
 
 lemma vars_finite_of_terminates:
   assumes "terminates \<G> p"

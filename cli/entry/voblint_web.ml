@@ -271,7 +271,7 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               let analysis_start = now_ms () in
               let answer =
                 Fun.protect ~finally:stop_live (fun () ->
-                    Value_symbols.decode_answer
+                    Value_symbols.render_answer
                       (C.run_voblint
                          (C.Analysis_Config (domains, globals, context))
                          program))
@@ -285,6 +285,8 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               | C.Invalid_Activation ->
                   Render_json.error_json ~raw
                     "Select at least one analysis, each at most once"
+              | C.No_Answer ->
+                  Render_json.error_json ~raw "The solver returned no answer"
               | C.Malformed_Program ->
                   let message =
                     match Wf_explain.explain program with

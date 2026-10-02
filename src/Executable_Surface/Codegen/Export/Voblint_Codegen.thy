@@ -1,6 +1,6 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.Analysis_Run"
+    "Voblint_CLI.Analysis_Render"
     "Voblint_CLI.Trace_Run"
 begin
 
@@ -86,12 +86,14 @@ text \<open>
   \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
-  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s two cases, which a caller must tell apart,
-    and the readers of a successful one: contexts, states, routes, checks, globals and
+  \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
+    projection \<^const>\<open>render_report\<close> that turns an analysed report into displayable
+    data, and the readers of that data: contexts, states, routes, checks, globals and
     diagnostics. The records reach OCaml abstract, readable only through their
     selectors, so a field added later cannot break a consumer that matched on field
-    order. \<^const>\<open>map_analysis_answer\<close> is the one rewrite of an answer: the CLI
-    applies it to decode the ASCII symbol tokens in every rendered value.
+    order. A caller maps \<^const>\<open>render_report\<close> over the answer with
+    \<^const>\<open>map_analysis_answer\<close>, passing the value printer it wants: the CLI composes
+    \<^const>\<open>string_of_abstract_value\<close> with its decoding of ASCII symbol tokens.
 
   \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which rule merges
     side-effected globals, which context policy. A caller constructs these, so their
@@ -116,8 +118,10 @@ export_code
   \<comment> \<open>Run\<close>
   run_voblint
 
-  \<comment> \<open>Result: answers, contexts, states, routes, checks, globals, diagnostics\<close>
-  Invalid_Activation Malformed_Program Analysed map_analysis_answer
+  \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
+     diagnostics\<close>
+  Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
+  render_report
   res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics state_steps

@@ -7,13 +7,14 @@ section \<open>The semantic boundary between Voblint and the vendored TD solver\
 subsection \<open>What a pipeline asks of its solver\<close>
 
 text \<open>
-  Three facts are everything the analysis pipeline uses about a solver: a solve in
+  Four facts are everything the analysis pipeline uses about a solver: a solve in
   the solver's domain answers a partial post-solution over finitely many keys, and
-  the executable check \<open>solve_c\<close> succeeding places the query in that domain. TD
-  proves all three inside \<^locale>\<open>TD_side_upd_rule\<close>
-  (\<open>partial_post_solution\<close>, \<open>finite_stabl_solve\<close>, \<open>solve_dom_of_solve_c\<close>).
+  an answer of the executable solver \<open>solve_c\<close> places the query in that domain and
+  is the solve itself. TD proves all four inside \<^locale>\<open>TD_side_upd_rule\<close>
+  (\<open>partial_post_solution\<close>, \<open>finite_stabl_solve\<close>, \<open>solve_dom_of_solve_c\<close>,
+  \<open>solve_code_equation\<close>).
   \<open>certified_solver\<close> names that contract once, over any equation system, so a
-  pipeline assumes one locale instead of three facts and a solver discharges it
+  pipeline assumes one locale instead of four facts and a solver discharges it
   once for all of its instances.
 \<close>
 
@@ -27,5 +28,6 @@ locale certified_solver =
          \<Longrightarrow> part_post_solution eqs x (snd (solve eqs x)) (fst (solve eqs x))"
     and solve_fin: "\<And>eqs x. solve_dom eqs x \<Longrightarrow> finite (fst (solve eqs x))"
     and dom_of_solve_c: "\<And>eqs x. solve_c eqs x \<noteq> None \<Longrightarrow> solve_dom eqs x"
+    and solve_of_solve_c: "\<And>eqs x sol. solve_c eqs x = Some sol \<Longrightarrow> solve eqs x = sol"
 
 end

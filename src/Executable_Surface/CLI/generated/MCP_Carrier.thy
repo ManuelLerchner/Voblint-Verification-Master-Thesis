@@ -433,6 +433,25 @@ fun ctx_values :: "analysis_domain \<Rightarrow> mcp_ctx \<Rightarrow> abstract_
 | "ctx_values Order_Analysis ctx =
      []"
 
+text \<open>
+  A key for a whole context, injective on every context: each field's values,
+  field by field. Listing contexts by it drops none.
+\<close>
+
+definition mcp_ctx_key :: "mcp_ctx \<Rightarrow> order_key" where
+  "mcp_ctx_key ctx = Key_List [Key_List (map abstract_value_key (map SignValue (slot1
+    ctx))), Key_List (map abstract_value_key (map IntervalValue (slot2 ctx))), Key_List
+    (map abstract_value_key (map ParityValue (slot3 ctx))), Key_List (map
+    abstract_value_key (map IntDomValue (slot4 ctx))), Key_List (map abstract_value_key
+    (map IntDomOnceValue (slot5 ctx))), Key_List (map abstract_value_key (map
+    IntDomNeverValue (slot6 ctx))), Key_List (map abstract_value_key (map CongruenceValue
+    (slot7 ctx))), Key_List (map (\<lambda>_. Key_List []) (slot8 ctx))]"
+
+lemma mcp_ctx_key_inject: "mcp_ctx_key a = mcp_ctx_key b \<Longrightarrow> a = b"
+  unfolding mcp_ctx_key_def slot1_def slot2_def slot3_def slot4_def slot5_def slot6_def
+    slot7_def slot8_def
+  by (simp add: inj_def; elim conjE; (rule analysis_product.expand; simp)+)
+
 subsection \<open>What each analysis's registration supplies\<close>
 
 lemma local_spec_of_sound:

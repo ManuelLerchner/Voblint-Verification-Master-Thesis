@@ -680,7 +680,7 @@ let () =
      combination to silently resolve. *)
   if !json then begin
     let answer =
-      Value_symbols.decode_answer
+      Value_symbols.render_answer
         (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
     in
     let raw =
@@ -692,7 +692,8 @@ let () =
         print_endline
           (Render_json.result_json 0. prog ~stmt_positions ~header_positions
              ~raw result)
-    | C.Invalid_Activation | C.Malformed_Program -> print_endline raw);
+    | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
+        print_endline raw);
     exit 0
   end;
   if !html && (!dot || !graph_snapshot) then begin
@@ -722,11 +723,12 @@ let () =
   in
   let solve () =
     match
-      Value_symbols.decode_answer
+      Value_symbols.render_answer
         (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
     with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
+    | C.No_Answer -> failwith "voblint: the solver returned no answer"
     | C.Analysed result ->
         if !trace then emit_trace result;
         if !html || !dot || !graph_snapshot then

@@ -2171,7 +2171,6 @@ raw_cfg_export
 raw_cfg_graph_config
 rendered_global
 report_of_solver_checked_payload_default
-report_vars
 set_analysis_global_domain
 set_analysis_local_domain
 set_ordered_by_key
@@ -2424,7 +2423,6 @@ resolver_sign_entrystate_per_origin_invalid
 resolver_sign_entrystate_warrow_invalid
 resolver_sign_warrow_invalid
 run_voblint_analysed_plan
-run_voblint_source_sound
 sign_cs_ctx_succ
 sign_cs_table
 sign_cs_terminates

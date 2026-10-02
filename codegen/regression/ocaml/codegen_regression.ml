@@ -207,7 +207,11 @@ let rec show_exp_compact = function
    failed expectation. *)
 let report domain prog =
   match
-    run_voblint (Analysis_Config ([ domain ], Globals_Warrow, Ctx_None)) prog
+    map_analysis_answer
+      (render_report string_of_abstract_value)
+      (run_voblint
+         (Analysis_Config ([ domain ], Globals_Warrow, Ctx_None))
+         prog)
   with
   | Invalid_Activation ->
       print_endline ("FAIL " ^ domain_label domain ^ ": invalid activation list");
@@ -215,6 +219,10 @@ let report domain prog =
   | Malformed_Program ->
       print_endline
         ("FAIL " ^ domain_label domain ^ ": program is not well-formed");
+      exit 1
+  | No_Answer ->
+      print_endline
+        ("FAIL " ^ domain_label domain ^ ": the solver returned no answer");
       exit 1
   | Analysed res ->
       List.map

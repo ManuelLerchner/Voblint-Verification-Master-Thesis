@@ -783,6 +783,35 @@ def render_mcp(doms):
     )
     out += [""]
 
+    # Listing contexts by their key needs a key injective on every context, not
+    # only on the slots the active analyses fill. A slot no analysis keys by holds
+    # units, so its length is all it carries.
+    def slot_key(k, d):
+        values = d.term("context_values", c=f"(slot{k} ctx)")
+        if values == "[]":
+            return f"Key_List (map (\\<lambda>_. Key_List []) (slot{k} ctx))"
+        return f"Key_List (map abstract_value_key {arg(values)})"
+
+    keys = ", ".join(per(slot_key))
+    slot_defs = " ".join(f"slot{k}_def" for k in range(1, n + 1))
+    out += [
+        "text \\<open>",
+        "  A key for a whole context, injective on every context: each field's values,",
+        "  field by field. Listing contexts by it drops none.",
+        "\\<close>",
+        "",
+        'definition mcp_ctx_key :: "mcp_ctx \\<Rightarrow> order_key" where',
+    ]
+    out += wrap_term(f'"mcp_ctx_key ctx = Key_List [{keys}]"', 2) + [""]
+    out += [
+        'lemma mcp_ctx_key_inject: "mcp_ctx_key a = mcp_ctx_key b \\<Longrightarrow> a = b"',
+    ]
+    out += wrap_term(f"unfolding mcp_ctx_key_def {slot_defs}", 2)
+    out += [
+        "  by (simp add: inj_def; elim conjE; (rule analysis_product.expand; simp)+)",
+        "",
+    ]
+
     out += [
         "subsection \\<open>What each analysis's registration supplies\\<close>",
         "",
