@@ -32,7 +32,7 @@ def body(name):
 # (function, channel, minimum number of emit calls in its body)
 expected = [
     ("tD_side_rule_Interp_solve_rec_c", "solver", 20),  # query, iterate, eq, rhs, side, ...
-    ("tD_side_rule_Interp_solve", "solver", 2),         # start, stop
+    ("solve_c_traced", "solver", 2),                    # start, stop
     ("destab_opt", "solver", 1),                        # destabilize
     ("destab_iter_opt", "solver", 1),                   # stable remove
     ("route_unit", "route", 1),
