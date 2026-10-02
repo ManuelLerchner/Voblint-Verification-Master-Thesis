@@ -95,7 +95,7 @@ definition callee_ctx_of ::
             else Some (formals_context pars entered)))"
 
 lemma exec_formals_route_commute:
-  "formals_route_lifted_gen u ctx (map_lift (default_st_to_fun \<G>) d) ca
+  "formals_route_lifted_gen u ctx (\<rho>\<^bsub>\<G>\<^esub> d) ca
      = exec_formals_route \<G> u ctx d ca"
   by (cases d; cases ca)
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
@@ -1101,7 +1101,7 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
                     = en \<G> ci (\<rho>\<^bsub>\<G>\<^esub> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
-         = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"
+         = route_abs \<G> u ctx (\<rho>\<^bsub>\<G>\<^esub> d) ca"
     and exec_seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and exec_classify_proved:
       "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"

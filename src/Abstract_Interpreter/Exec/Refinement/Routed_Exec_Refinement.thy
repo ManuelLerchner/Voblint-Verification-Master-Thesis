@@ -153,9 +153,9 @@ locale routed_domain_exec =
     and resolve_abs :: "cfg \<Rightarrow> pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'a abs_state lifted \<Rightarrow> pname list"
   assumes seed_ne_analysis_global [simp]: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
       and route_agree: "\<And>u c' d ca. route_st u c' d ca
-                          = route_abs u c' (map_lift (default_st_to_fun \<G>) d) ca"
+                          = route_abs u c' (readback \<G> d) ca"
       and resolve_agree: "\<And>g w cc ca d. resolve_st g w cc ca d
-                          = resolve_abs g w cc ca (map_lift (default_st_to_fun \<G>) d)"
+                          = resolve_abs g w cc ca (readback \<G> d)"
 begin
 
 text \<open>The routed combine tree commutes with the executable-to-abstract reader. \<open>spec_st\<close>
