@@ -10,8 +10,6 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
----
-
 ## What is verified?
 
 Voblint proves an end-to-end soundness result:
