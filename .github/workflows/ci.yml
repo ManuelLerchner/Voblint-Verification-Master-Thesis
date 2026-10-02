@@ -813,6 +813,9 @@ jobs:
       - name: Playground solver trace (WebAssembly analyzer under Node)
         run: pixi run browser-trace-check
 
+      - name: Regression corpus through the WebAssembly analyzer (reduced stack)
+        run: pixi run browser-corpus-check
+
       - name: CLI plumbing smoke tests (exit codes, --help, argument errors)
         run: pixi run cli-smoke
 

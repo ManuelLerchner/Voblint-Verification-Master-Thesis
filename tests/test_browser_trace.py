@@ -144,3 +144,24 @@ def test_a_malformed_bound_is_an_error(rule):
     settings = ["interval", rule, "none", 0, "fixpoint", "local"]
     (answer,) = voblint_web("off", settings=settings, program=TWO_STEPS)
     assert answer == {"status": "error", "message": f"Unknown globals rule: {rule}"}
+
+
+# Two writes to one global: flow-sensitively the check sees the last, on the
+# shared channel it sees their join with the initial zero.
+SHARED_JOIN = (
+    REPO_ROOT
+    / "tests/regression/04-globals/known-imprecision/03-shared_global_joins_writes.vimp"
+)
+
+
+@pytest.mark.parametrize(
+    ("placement", "exact"), [("local", "PROVED"), ("shared", "UNKNOWN")]
+)
+def test_the_placement_reaches_the_analyzer(placement, exact):
+    settings = ["interval", "bounded-narrowing", "none", 0, "fixpoint", placement]
+    (answer,) = voblint_web("off", settings=settings, program=SHARED_JOIN)
+    assert set(verdicts(answer)) == {("x == 1", exact), ("0 <= x", "PROVED")}
+    assert ("shared" in answer) == (placement == "shared")
+    assert answer["raw"]["input"]["pg"] == (
+        "Program_Globals_Shared" if placement == "shared" else "Program_Globals_Local"
+    )
