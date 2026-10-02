@@ -43,6 +43,10 @@ lemma run_voblint_consistent:
   "run_voblint config p = Analysed res \<Longrightarrow> consistent_report res"
   using run_voblint_sound unfolding sound_report_def by blast
 
+lemma run_voblint_well_formed:
+  "run_voblint config p = Analysed res \<Longrightarrow> well_formed_report res"
+  by (auto intro: analysis_report_of_well_formed)
+
 theorem run_voblint_covers:
   assumes "run_voblint config p = Analysed res"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"

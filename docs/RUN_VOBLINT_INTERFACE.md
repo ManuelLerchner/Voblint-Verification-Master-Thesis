@@ -70,10 +70,16 @@ context keeps the policy's own value. No rendered value is part of the report.
 through `render_context`, into the displayed `'v run_result`; it changes neither
 checks, diagnostics, routes nor the graph.
 
-`consistent_report` is about verdicts only. Two invariants are not stated:
-well-formedness of the indices (`result_wf` below), and that each row's
-`state_checks` and `state_diagnostics` agree with the aggregate columns. Both hold by
-construction in `report_of`.
+`consistent_report` is about verdicts only. `well_formed_report` states what a
+reader of the rows relies on: every context index (of a state, a route and a route
+target) is below `length (report_contexts res)`, each `(point, context)` has one row,
+each row's `state_checks` lists exactly the report's checks at its point with the
+verdict of its own `state_value`, and each `state_diagnostics` verdict is its own
+state's as well. With a consistent report, a check's aggregate verdict is then the
+aggregate of the rows' verdicts for it (`well_formed_check_verdict`).
+`report_of_well_formed` proves it for every report `report_of` builds, so
+`run_voblint_well_formed` holds for every analysed answer. No soundness theorem
+needs it.
 
 Checks and diagnostics come twice, and both are load-bearing: `report_checks` and
 `report_diagnostics` join every context of a point, which is what a source-level
@@ -145,6 +151,7 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 | `run_voblint_proved`, `run_voblint_refuted` | a definite verdict holds at every collected store |
 | `run_voblint_dead_unreached`, `run_voblint_dead_check_unreached` | a `DEAD` point collects no store |
 | `run_voblint_arithmetic_safe`, `run_voblint_arithmetic_intra_safe` | no diagnostic at `v` means no collected store at `v` divides by zero |
+| `run_voblint_well_formed` | the report is `well_formed_report`: indices in range, one row per `(point, context)`, row verdicts are their own state's |
 | `run_voblint_check_sites` | `report_checks` lists one check per compiled `EA_Check` edge, in graph order: the rows the verdict theorems speak about are all of the program's checks |
 | `run_voblint_unit_chain`, `run_voblint_entry_state_chain`, `run_voblint_call_string_chain` | the semantic spine above, per policy |
 
@@ -164,9 +171,9 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
          graph / DOT / HTML / JSON
 ```
 
-The contract does not speak about `report_routes` or `report_globals`, and states
-no well-formedness of indices (`result_wf`: context ids in range, states unique per
-`(point, context)`, routes at call edges).
+The soundness contract does not speak about `report_routes` or `report_globals`;
+`well_formed_report` bounds their context indices and nothing more. It does not state
+that routes sit at call edges or that seeds name entered contexts.
 
 ## What the theorem does not cover
 

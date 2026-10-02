@@ -381,6 +381,9 @@ diff of all 322 corpus fixtures: text, JSON, graph snapshot and verbose trace):
 - the site's theorem cards, the README and the docs that named the retired theorems.
 
 Phase 5, the `solved_table` rename, landed in the second stacked PR.
+`well_formed_report` (index ranges, unique rows, row verdicts from the row's own
+state, and with consistency the aggregate column from the rows) landed in the third,
+with `run_voblint_well_formed`.
 
 Not done, one stacked PR each:
 
@@ -388,7 +391,5 @@ Not done, one stacked PR each:
   contextual classification helper, absorbing `analysis_surface`).
 - the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and
   the entry renamed to `voblint_main.ml`.
-- `well_formed_report` (index invariants) and the agreement between per-row and
-  aggregate check columns, which hold by construction but are not stated.
 - phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names
   the old theorems.

@@ -418,4 +418,179 @@ proof (cases config)
   qed
 qed
 
+subsection \<open>A well-formed report\<close>
+
+text \<open>
+  What a reader of the report relies on beyond its verdicts: every context index
+  names a listed context, a point has at most one row per context, and a row's check
+  and obligation verdicts are its own state's, over exactly the checks the report
+  lists at the row's point. No soundness theorem needs this; a renderer does.
+\<close>
+
+definition well_formed_report :: "analysis_report \<Rightarrow> bool" where
+  "well_formed_report res \<longleftrightarrow>
+     (\<forall>st \<in> set (report_states res). state_context st < length (report_contexts res))
+   \<and> distinct (map (\<lambda>st. (state_point st, state_context st)) (report_states res))
+   \<and> (\<forall>rt \<in> set (report_routes res).
+        route_context rt < length (report_contexts res)
+      \<and> (\<forall>i \<in> set (route_targets rt). i < length (report_contexts res)))
+   \<and> (\<forall>st \<in> set (report_states res).
+        state_checks st
+          = map (\<lambda>c. (check_exp c,
+                       classify_point (report_classify res) (check_exp c) (state_value st)))
+              (filter (\<lambda>c. check_point c = state_point st) (report_checks res))
+      \<and> (\<forall>(ob, verdict) \<in> set (state_diagnostics st).
+           verdict
+             = classify_point (report_classify res) (arithmetic_condition ob) (state_value st)))"
+
+text \<open>
+  With a consistent report, the check column is the aggregate of the rows: a check's
+  verdict joins the verdicts the rows at its point give its condition.
+\<close>
+
+lemma well_formed_check_verdict:
+  assumes cons: "consistent_report res" and wf: "well_formed_report res"
+    and c: "c \<in> set (report_checks res)"
+  shows "check_verdict c
+           = aggregate_verdicts
+               {verdict | st verdict. st \<in> set (report_states res)
+                  \<and> state_point st = check_point c \<and> (check_exp c, verdict) \<in> set (state_checks st)}"
+proof -
+  let ?cl = "classify_point (report_classify res) (check_exp c)"
+  have rows: "state_checks st
+                = map (\<lambda>c. (check_exp c, classify_point (report_classify res) (check_exp c)
+                                           (state_value st)))
+                    (filter (\<lambda>c'. check_point c' = state_point st) (report_checks res))"
+    if "st \<in> set (report_states res)" for st
+    using wf that unfolding well_formed_report_def by blast
+  have "{verdict | st verdict. st \<in> set (report_states res)
+           \<and> state_point st = check_point c \<and> (check_exp c, verdict) \<in> set (state_checks st)}
+          = ?cl ` report_rows res (check_point c)"
+  proof (intro equalityI subsetI)
+    fix x
+    assume "x \<in> {verdict | st verdict. st \<in> set (report_states res)
+              \<and> state_point st = check_point c \<and> (check_exp c, verdict) \<in> set (state_checks st)}"
+    then obtain st where st: "st \<in> set (report_states res)" and pt: "state_point st = check_point c"
+      and mem: "(check_exp c, x) \<in> set (state_checks st)" by blast
+    from mem rows[OF st] have "x = ?cl (state_value st)" by auto
+    with st pt show "x \<in> ?cl ` report_rows res (check_point c)"
+      unfolding report_rows_def by blast
+  next
+    fix x
+    assume "x \<in> ?cl ` report_rows res (check_point c)"
+    then obtain st where st: "st \<in> set (report_states res)" and pt: "state_point st = check_point c"
+      and x: "x = ?cl (state_value st)"
+      unfolding report_rows_def by blast
+    have "(check_exp c, x) \<in> set (state_checks st)"
+      unfolding rows[OF st] using c pt x by force
+    with st pt show "x \<in> {verdict | st verdict. st \<in> set (report_states res)
+              \<and> state_point st = check_point c \<and> (check_exp c, verdict) \<in> set (state_checks st)}"
+      by blast
+  qed
+  with cons c show ?thesis unfolding consistent_report_def by simp
+qed
+
+lemma distinct_indexed_rows:
+  "distinct ns
+     \<Longrightarrow> distinct (concat (map (\<lambda>(i, x). map (\<lambda>v. (v, i)) (filter (\<lambda>v. P v x) ns))
+                         (enumerate n xs)))"
+proof (induction xs arbitrary: n)
+  case (Cons x xs)
+  have "n < i" if "(w, i) \<in> set (concat (map (\<lambda>(i, x). map (\<lambda>v. (v, i)) (filter (\<lambda>v. P v x) ns))
+                                  (enumerate (Suc n) xs)))" for w i
+    using that by (auto simp: in_set_enumerate_eq)
+  with Cons.IH[of "Suc n"] Cons.prems show ?case
+    by (fastforce simp: distinct_map inj_on_def)
+qed simp
+
+lemma map_check_exp_result_checks_of:
+  "map check_exp (filter (\<lambda>c. check_point c = v) (result_checks_of g r classify))
+     = group_lookup (group_by_key (\<lambda>(u, a, w). u)
+         (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) (cfg_intra_list g)) v"
+proof -
+  have "map check_exp (filter (\<lambda>c. check_point c = v)
+          (map (\<lambda>(u, a, w). \<lparr> check_point = u, check_label = ea_check_label a,
+                                check_exp = ea_check_cond a, check_verdict = V u a \<rparr>)
+             (filter (\<lambda>(u, a, w). is_EA_Check a) es)))
+        = List.map_filter (\<lambda>x. if (\<lambda>(u, a, w). u) x = v
+                                then (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a)
+                                                  else None) x
+                                else None) es" for es V
+    by (induction es) (auto simp: List.map_filter_simps)
+  then show ?thesis
+    unfolding result_checks_of_def group_lookup_group_by_key .
+qed
+
+lemma report_of_well_formed:
+  assumes cl: "classify = mcp_classify (activation (config_analyses config))"
+  shows "well_formed_report (report_of config ctx_key ctx_tag classify sr p)"
+proof -
+  let ?res = "report_of config ctx_key ctx_tag classify sr p"
+  define r where "r = run_table sr"
+  define g where "g = prog_cfg p"
+  define ctxs where "ctxs = ordered_by_key ctx_key (snd ` covered_keys r)"
+  define nodes where "nodes = cfg_node_list g
+    @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list g))"
+  define checks where "checks = group_by_key (\<lambda>(u, a, w). u)
+    (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) (cfg_intra_list g)"
+  define obls where "obls = group_by_key fst (Some \<circ> snd) (arithmetic_sites g)"
+  define steps where "steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w))
+    (cfg_intra_list g)"
+  have classify: "report_classify ?res = classify"
+    by (simp add: report_classify_def cl)
+  have contexts: "length (report_contexts ?res) = length ctxs"
+    by (simp add: report_of_def Let_def ctxs_def r_def)
+  have states: "report_states ?res
+    = concat (map (\<lambda>(i, ctx). map (report_row sr classify checks obls steps i ctx)
+                                 (filter (\<lambda>v. (v, ctx) \<in> covered_keys r) nodes))
+                (enumerate 0 ctxs))"
+    by (simp add: report_of_def Let_def ctxs_def r_def nodes_def g_def checks_def obls_def
+                  steps_def)
+  have in_range: "state_context st < length ctxs" if "st \<in> set (report_states ?res)" for st
+    using that by (auto simp: states in_set_enumerate_eq)
+  have "distinct (cfg_node_list g)" by (simp add: cfg_node_list_def)
+  then have "distinct nodes"
+    unfolding nodes_def by (cases "finite (fst ` covered_keys r - set (cfg_node_list g))") auto
+  then have distinct:
+    "distinct (map (\<lambda>st. (state_point st, state_context st)) (report_states ?res))"
+    using distinct_indexed_rows[of nodes "\<lambda>v ctx. (v, ctx) \<in> covered_keys r" 0 ctxs]
+    by (simp add: states map_concat case_prod_unfold comp_def)
+  have routes: "route_context rt < length ctxs \<and> (\<forall>i \<in> set (route_targets rt). i < length ctxs)"
+    if "rt \<in> set (report_routes ?res)" for rt
+    using that
+    by (auto simp: report_of_def Let_def ctxs_def r_def context_indices_def in_set_enumerate_eq
+             split: lifted.splits)
+  have rows: "state_checks st
+                = map (\<lambda>c. (check_exp c, classify_point classify (check_exp c) (state_value st)))
+                    (filter (\<lambda>c. check_point c = state_point st) (report_checks ?res))
+              \<and> (\<forall>(ob, verdict) \<in> set (state_diagnostics st).
+                   verdict = classify_point classify (arithmetic_condition ob) (state_value st))"
+    if "st \<in> set (report_states ?res)" for st
+  proof -
+    from that obtain i ctx v where st: "st = report_row sr classify checks obls steps i ctx v"
+      by (auto simp: states)
+    have "map check_exp (filter (\<lambda>c. check_point c = v) (report_checks ?res))
+            = group_lookup checks v" (is "map check_exp ?cs = _")
+      by (simp add: map_check_exp_result_checks_of checks_def g_def)
+    moreover have "map (\<lambda>c. (check_exp c, classify_point classify (check_exp c) (lookup_table r v ctx)))
+                     ?cs
+                   = map (\<lambda>cond. (cond, classify_point classify cond (lookup_table r v ctx)))
+                       (map check_exp ?cs)"
+      by simp
+    ultimately have "map (\<lambda>c. (check_exp c, classify_point classify (check_exp c) (lookup_table r v ctx)))
+                       ?cs
+                     = map (\<lambda>cond. (cond, classify_point classify cond (lookup_table r v ctx)))
+                         (group_lookup checks v)"
+      by simp
+    then show ?thesis unfolding st by (auto simp: report_row_def Let_def r_def)
+  qed
+  show ?thesis
+    unfolding well_formed_report_def classify contexts
+    using in_range distinct routes rows by blast
+qed
+
+lemma analysis_report_of_well_formed:
+  "analysis_report_of config p = Some res \<Longrightarrow> well_formed_report res"
+  by (induct config p rule: analysis_report_of.induct) (auto intro: report_of_well_formed)
+
 end
