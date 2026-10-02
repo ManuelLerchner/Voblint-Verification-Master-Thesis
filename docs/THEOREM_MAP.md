@@ -28,7 +28,7 @@ The *context* axis is not, and the closing note says where it stops.
 | Every report run_voblint returns is sound | [`Voblint_CLI.Analysis_Report:analysis_report_of_sound`](../src/Executable_Surface/CLI/Analysis_Report.thy), [`Voblint_CLI.Analysis_Certified:run_voblint_covers`](../src/Executable_Surface/CLI/Analysis_Certified.thy), [`Voblint_CLI.Analysis_Certified:run_voblint_collect_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | For every activation list, global update rule and context policy, with no termination premise: the report is consistent, `𝒞 v ⊆ ⟦res⟧_v ⊆ 𝒱(res, v)`, and a point without a diagnostic divides by no zero. The first is the one proof that splits on the context policy. |
 | A consistent report's verdicts hold in its own semantics | [`Voblint_CLI.Analysis_Report:analysis_report_verdicts_sound`](../src/Executable_Surface/CLI/Analysis_Report.thy), [`Voblint_CLI.Analysis_Report:analysis_report_dead`](../src/Executable_Surface/CLI/Analysis_Report.thy) | `⟦res⟧_v ⊆ 𝒱(res, v)`, and `DEAD res v ⟹ ⟦res⟧_v = ∅`, from the report alone. The converse of the second does not hold: the product's emptiness test is sound and incomplete. |
 | Every analysed report is well-formed | [`Voblint_CLI.Analysis_Certified:run_voblint_well_formed`](../src/Executable_Surface/CLI/Analysis_Certified.thy), [`Voblint_CLI.Analysis_Report:well_formed_check_verdict`](../src/Executable_Surface/CLI/Analysis_Report.thy) | Context indices in range, one row per `(point, context)`, each row's check and obligation columns exactly the checks and arithmetic obligations at its point, with verdicts computed from its own state; with consistency, a check's verdict aggregates the rows' verdicts. Not needed for soundness. |
-| The same, at a context-sensitive configuration | [`Voblint_CLI.Analysis_Run_Sound:sound_table_of_activation`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy), [`Voblint_CLI.Analysis_Report:report_of_sound`](../src/Executable_Surface/CLI/Analysis_Report.thy) | Stated once over an arbitrary context policy: the first turns a routed bound on every `activation_collect` bucket into a `sound_table`, the second turns a sound table into a sound report; each policy instantiates the first in one `*_table` lemma. The store sits in the table entry filed under at least one context its own call history is admitted at -- exactly one for a call string, possibly several under entry-state routing -- and quantifying over every solved context would be false. |
+| The same, at a context-sensitive configuration | [`Voblint_CLI.Analysis_Run_Sound:covered_table_of_activation`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy), [`Voblint_CLI.Analysis_Report:report_of_sound`](../src/Executable_Surface/CLI/Analysis_Report.thy) | Stated once over an arbitrary context policy: the first turns a routed bound on every `activation_collect` bucket into a `covered_table`, the second turns a covered table and the sound classifier into a sound report; each policy instantiates the first in one `*_table` lemma. The store sits in the table entry filed under at least one context its own call history is admitted at -- exactly one for a call string, possibly several under entry-state routing -- and quantifying over every solved context would be false. |
 | Any accepted configuration's answer over-approximates the concrete run | [`Voblint_CLI.Analysis_Certified:run_voblint_source_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The headline: the configuration is an argument, and every combination is answered. Neither well-formedness nor termination is a premise: a malformed program answers `Malformed_Program`, an invalid list `Invalid_Activation`, and an analysed answer exists only where the executable solve returned. |
 | A run about to execute a check finds a sound listed check for it | [`Voblint_CLI.Analysis_Certified:run_voblint_check_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | The reader-facing form of the headline, with no `csim` in the statement. The check is existential and sits at a node the store reaches; it cannot be unique, since a source state does not determine its node. |
 | The result lists one check per compiled check | [`Voblint_CLI.Analysis_Certified:run_voblint_check_sites`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | At every configuration, the checks' `(check_point, check_exp)` pairs are the `EA_Check` edges of the compiled graph, in graph order. Pairing checks with source positions is done by `cli/render/render_text.ml` and is not proved. |
@@ -49,7 +49,7 @@ identifies with `node_collect` at `()`, and `fun_route_source_sound` places a
 source run's store in the published state `state_at gs p () v`, the table's entry
 at `lookup_table ... v ()`. Under `Ctx_EntryState` and
 `Ctx_CallString` the same reaches a source run through
-`sound_table_of_activation` and `report_of_sound`, which together close
+`covered_table_of_activation` and `report_of_sound`, which together close
 the three gaps the per-context bound left: it names a context the run's own call history is admitted at rather than
 an arbitrary one, reads the published table rather than the solved reader, and
 starts from a source execution. What each policy owes is a termination fact; the
@@ -76,13 +76,14 @@ and the endpoint's check argument applies: every distinct nonempty list over the
 
 Every combination carries the source-level theorem. Each context policy is one
 `*_table` lemma over an arbitrary activation list `as` and rule `r`,
-instantiating `sound_table` through `sound_table_of_activation`: `mcp_rule_table`
+instantiating `covered_table` through `covered_table_of_activation`: `mcp_rule_table`
 in
 [`Voblint_CLI.Analysis_Run_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Sound.thy),
 `mcp_es_rule_table` and `mcp_cs_rule_table` in
 [`Voblint_CLI.Analysis_Run_Ctx_Sound`](../src/Executable_Surface/CLI/Analysis_Run_Ctx_Sound.thy).
 Checks are classified by `mcp_classify`, which is `answer_check` applied to the
-met answer of the active analyses to the check's `EvalInt` query.
+met answer of the active analyses to the check's `EvalInt` query; its soundness,
+`mcp_sound_classifier`, does not depend on the table and is proved once.
 
 ## Dead checks
 

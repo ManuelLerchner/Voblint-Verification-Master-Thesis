@@ -4017,3 +4017,8 @@ local_spec_of_silent
 val_answer_sound
 part_empty_rd
 local_spec_of_frame
+sound_table_of_activation
+arithmetic_site_verdict
+arithmetic_site_verdict_classify
+arithmetic_site_verdict_not_bot
+certificate_demo_sound_table

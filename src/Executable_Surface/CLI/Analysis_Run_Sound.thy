@@ -11,11 +11,13 @@ text \<open>
   \<^const>\<open>arithmetic_diagnostics\<close> over that table. So one argument serves every
   configuration.
 
-  The argument asks two things of the table, bundled as \<open>sound_table\<close>. A store
-  the program reaches at a point lies in the entry the table filed there under
+  The argument asks two things of the table, bundled as \<open>covered_table\<close>. A
+  store the program reaches at a point lies in the entry the table filed there under
   \<^emph>\<open>some\<close> context (\<open>table_covers\<close>), and a point has finitely many contexts.
-  Given those and a sound classifier, the report built from the table is sound;
-  the theory \<open>Analysis_Report\<close> states how. The context-free
+  Of the classifier it asks soundness in both directions (\<open>sound_classifier\<close>),
+  which does not depend on the table and is proved once for the combined state.
+  Given both, the report built from the table is sound; the theory
+  \<open>Analysis_Report\<close> states how. The context-free
   configuration's table is the instance at the end of this theory; the contextual
   ones follow in the theory after it.
 \<close>
@@ -33,6 +35,7 @@ lemma result_checks_of_verdicts:
   "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (result_checks_of g r classify)
      = classify_checks_verdicts g r classify"
   unfolding result_checks_of_def classify_checks_verdicts_def classify_checks_ctx_def
+    point_verdict_def
   by (simp add: comp_def case_prod_beta image_image)
 
 lemma check_in_result_checks_of:
@@ -112,14 +115,15 @@ proof -
   qed
 qed
 
-subsection \<open>The table contract\<close>
+subsection \<open>The table contract and the classifier contract\<close>
 
 text \<open>
   What a configuration's table has to satisfy for its report to be sound. Each
-  configuration below and in the theory after this one is an instance, and owes
-  nothing but these four facts: the table exhausts the reachable stores, over
-  finitely many contexts per point, and its classifier is sound in both
-  directions.
+  configuration below and in the theory after this one is an instance of
+  \<open>covered_table\<close>, and owes nothing but two facts: the table exhausts the
+  reachable stores, over finitely many contexts per point. The classifier owes
+  soundness in both directions (\<open>sound_classifier\<close>); \<open>sound_table\<close> is the two
+  together.
 \<close>
 
 definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
@@ -127,18 +131,28 @@ definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rig
      (\<forall>es. (v, es) \<in> set (arithmetic_expression_sites g) \<longrightarrow>
        (\<forall>e \<in> set es. \<forall>divisor \<in> expression_divisors e. \<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0))"
 
-locale sound_table =
+locale covered_table =
   fixes p :: imp_prog
     and r :: "('c, 'v) solved_table"
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
     and gm :: "'v \<Rightarrow> store set"
   assumes finite_contexts: "\<And>v. finite (table_contexts r v)"
       and covers: "\<And>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
                       \<Longrightarrow> table_covers gm r v s"
-      and proved: "\<And>cnd d t. classify cnd d = Check_Proved \<Longrightarrow> t \<in> gm d
+
+locale sound_classifier =
+  fixes classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+    and gm :: "'v \<Rightarrow> store set"
+  assumes proved: "\<And>cnd d t. classify cnd d = Check_Proved \<Longrightarrow> t \<in> gm d
                       \<Longrightarrow> truthy (\<lbrakk>cnd\<rbrakk>\<^sub>e t)"
       and refuted: "\<And>cnd d t. classify cnd d = Check_Refuted \<Longrightarrow> t \<in> gm d
                       \<Longrightarrow> \<not> truthy (\<lbrakk>cnd\<rbrakk>\<^sub>e t)"
+
+lemma mcp_sound_classifier: "sound_classifier (mcp_classify as) (mcp_gamma_v as)"
+  by unfold_locales (fact mcp_classify_proved, fact mcp_classify_refuted)
+
+locale sound_table = covered_table p r gm + sound_classifier classify gm
+  for p :: imp_prog and r :: "('c, 'v) solved_table"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result" and gm :: "'v \<Rightarrow> store set"
 begin
 
 text \<open>
@@ -166,12 +180,13 @@ proof -
       and ob: "obligation \<in> set obligations"
       and divisor: "arithmetic_divisor obligation = divisor"
       by (rule arithmetic_sites_divisor[OF site expr div])
-    have verdict: "arithmetic_site_verdict r classify v obligation = Lifted Check_Proved"
+    have verdict: "point_verdict r classify v (arithmetic_condition obligation)
+                     = Lifted Check_Proved"
       using arithmetic_diagnostics_absent[OF obs ob absent]
-        arithmetic_site_verdict_not_bot[OF finite_contexts look, of classify obligation]
+        point_verdict_not_dead[OF finite_contexts look, of classify]
       by blast
     have classified: "classify (arithmetic_condition obligation) st = Check_Proved"
-      by (rule arithmetic_site_verdict_classify[OF verdict _ look]) simp
+      by (rule point_verdict_decided[OF verdict _ look]) simp
     from proved[OF classified gst] show "\<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0"
       by (auto simp: arithmetic_condition_def divisor split: if_splits)
   qed
@@ -185,7 +200,7 @@ text \<open>
   is bounded by the entry filed under its context, and the buckets exhaust the point.
 \<close>
 
-lemma sound_table_of_activation:
+lemma covered_table_of_activation:
   fixes r :: "('c, 'v) solved_table"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
                     \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
@@ -194,17 +209,14 @@ lemma sound_table_of_activation:
                               cinit_stores (declared_global p)\<^esub> u ctx
                     \<subseteq> gamma_lift gm (lookup_table r u ctx)"
       and fin: "finite_solved_table r"
-      and proved: "\<And>e d t. classify e d = Check_Proved \<Longrightarrow> t \<in> gm d \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
-      and refuted: "\<And>e d t. classify e d = Check_Refuted \<Longrightarrow> t \<in> gm d
-                        \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
-  shows "sound_table p r classify gm"
-proof (rule sound_table.intro)
+  shows "covered_table p r gm"
+proof (rule covered_table.intro)
   show "finite (table_contexts r v)" for v by (rule finite_table_contexts [OF fin])
   show "table_covers gm r v s"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     for v s
     by (meson lookup_table_covers_of_activation [OF union sound that] table_coversI)
-qed (fact proved, fact refuted)
+qed
 
 subsection \<open>The context-free configuration\<close>
 
@@ -217,11 +229,10 @@ text \<open>
 lemma mcp_rule_table:
   assumes wf: "wf_program_compile_input p"
     and cov: "mcp_rule.terminates as r (declared_global p) p"
-  shows "sound_table p (mcp_rule.result as r (declared_global p) p)
-           (mcp_classify (activation as)) (mcp_gamma_v (activation as))"
-proof (rule sound_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()",
-     OF _ _ _ mcp_classify_proved mcp_classify_refuted], goal_cases)
+  shows "covered_table p (mcp_rule.result as r (declared_global p) p)
+           (mcp_gamma_v (activation as))"
+proof (rule covered_table_of_activation
+    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
   case (1 u)
   show ?case
     by (rule equalityD1

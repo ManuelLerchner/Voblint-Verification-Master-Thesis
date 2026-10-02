@@ -51,7 +51,7 @@ stable gates for assessing a change.
 - the conclusion names its collector: `node_collect` at the unit context, one
   `activation_collect` bucket at a routed one. A routed bound is not a
   source-facing theorem until a source run is placed in one of its buckets,
-  as `sound_table_of_activation`, `report_of_sound` and `run_voblint_source_sound` do together.
+  as `covered_table_of_activation`, `report_of_sound` and `run_voblint_source_sound` do together.
 
 ## Repository checks
 

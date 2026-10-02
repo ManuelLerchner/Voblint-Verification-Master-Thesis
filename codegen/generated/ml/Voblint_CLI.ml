@@ -9349,35 +9349,6 @@ let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
 let rec arithmetic_condition
   obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
 
-let rec aggregate_verdicts
-  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
-
-let rec classify_point
-  classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
-    | classify, c, Lifted st -> Lifted (classify c st);;
-
-let rec covered_keys (Solved_Table (x1, x2)) = x1;;
-
-let rec table_contexts
-  r v = image snd
-          (filter (fun (va, _) -> equal_cfg_nodea va v) (covered_keys r));;
-
-let rec table_at (Solved_Table (x1, x2)) = x2;;
-
-let rec lookup_table _A
-  r v ctx =
-    (if member (equal_prod equal_cfg_node _A) (v, ctx) (covered_keys r)
-      then table_at r v ctx else Bot);;
-
-let rec arithmetic_site_verdict _A
-  r classify v obligation =
-    aggregate_verdicts
-      (image
-        (fun ctx ->
-          classify_point classify (arithmetic_condition obligation)
-            (lookup_table _A r v ctx))
-        (table_contexts r v));;
-
 let rec arithmetic_edge_expressions = function EA_Assign (x, e) -> [e]
                                       | EA_Assume e -> [e]
                                       | EA_AssumeNot e -> [e]
@@ -9439,12 +9410,39 @@ let rec arithmetic_sites
   g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
         (arithmetic_expression_sites g);;
 
+let rec aggregate_verdicts
+  (Set vs) = fold (sup_lifteda semilattice_sup_check_result) vs Bot;;
+
+let rec classify_point
+  classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
+    | classify, c, Lifted st -> Lifted (classify c st);;
+
+let rec covered_keys (Solved_Table (x1, x2)) = x1;;
+
+let rec table_contexts
+  r v = image snd
+          (filter (fun (va, _) -> equal_cfg_nodea va v) (covered_keys r));;
+
+let rec table_at (Solved_Table (x1, x2)) = x2;;
+
+let rec lookup_table _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (covered_keys r)
+      then table_at r v ctx else Bot);;
+
+let rec point_verdict _A
+  r classify v e =
+    aggregate_verdicts
+      (image (fun ctx -> classify_point classify e (lookup_table _A r v ctx))
+        (table_contexts r v));;
+
 let rec arithmetic_diagnostics _A
   g r classify =
     maps (fun (v, obligations) ->
            maps (fun (i, obligation) ->
                   arithmetic_diagnostic_of v i obligation
-                    (arithmetic_site_verdict _A r classify v obligation))
+                    (point_verdict _A r classify v
+                      (arithmetic_condition obligation)))
              (zip (upt zero_nat (size_list obligations)) obligations))
       (arithmetic_sites g);;
 
@@ -9496,13 +9494,7 @@ let rec result_checks_of _A
           then Some (let (u, (a, _)) = x in
                       Result_check_ext
                         (u, ea_check_label a, ea_check_cond a,
-                          aggregate_verdicts
-                            (image
-                              (fun ctx ->
-                                classify_point classify (ea_check_cond a)
-                                  (lookup_table _A r u ctx))
-                              (table_contexts r u)),
-                          ()))
+                          point_verdict _A r classify u (ea_check_cond a), ()))
           else None))
       (cfg_intra_list g);;
 

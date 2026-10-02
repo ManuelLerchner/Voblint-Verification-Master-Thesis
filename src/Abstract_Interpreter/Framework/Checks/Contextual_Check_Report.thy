@@ -344,6 +344,54 @@ proof
 qed
 
 
+subsection \<open>One condition at one point, over its contexts\<close>
+
+text \<open>
+  The verdict a table gives a condition at a point: the classifier's verdict at
+  every context the point was solved at, aggregated. A check and an arithmetic
+  obligation are both read this way.
+\<close>
+
+definition point_verdict ::
+    "('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> pp \<Rightarrow> exp
+       \<Rightarrow> contextual_verdict" where
+  "point_verdict r classify v e =
+     aggregate_verdicts
+       ((\<lambda>ctx. classify_point classify e (lookup_table r v ctx)) ` table_contexts r v)"
+
+text \<open>
+  A decided, non-\<open>Check_Unknown\<close> point verdict is the classifier's own reading at
+  every \<^const>\<open>Lifted\<close> context of the point.
+\<close>
+
+lemma point_verdict_decided:
+  assumes agg: "point_verdict r classify v e = Decided res" and known: "res \<noteq> Check_Unknown"
+    and look: "lookup_table r v ctx = Lifted st"
+  shows "classify e st = res"
+proof -
+  have "classify_point classify e (lookup_table r v ctx)
+          \<in> (\<lambda>c. classify_point classify e (lookup_table r v c)) ` table_contexts r v"
+    using lookup_table_LiftedD[OF look] by blast
+  with aggregate_verdicts_decided_dest[OF agg[unfolded point_verdict_def] known] look
+  show ?thesis by auto
+qed
+
+text \<open>A point with a \<^const>\<open>Lifted\<close> entry among finitely many contexts is not
+  \<open>Dead\<close>.\<close>
+
+lemma point_verdict_not_dead:
+  assumes fin: "finite (table_contexts r v)" and look: "lookup_table r v ctx = Lifted st"
+  shows "point_verdict r classify v e \<noteq> Dead"
+proof
+  assume "point_verdict r classify v e = Dead"
+  with fin have "\<forall>x \<in> (\<lambda>c. classify_point classify e (lookup_table r v c)) ` table_contexts r v.
+                   x = Dead"
+    unfolding point_verdict_def by (simp add: aggregate_verdicts_eq_Dead_iff)
+  then have "classify_point classify e (lookup_table r v ctx) = Dead"
+    using lookup_table_LiftedD[OF look] by blast
+  with look show False by simp
+qed
+
 text \<open>
   The context-indexed report analogue of \<open>classify_checks_proved_sound\<close>/
   \<open>classify_checks_refuted_sound\<close>, stated once for any decided,
@@ -386,18 +434,10 @@ theorem classify_checks_ctx_decided_sound:
     and known: "r \<noteq> Check_Unknown"
   shows "classify c st = r"
 proof -
-  have agg: "aggregate_verdicts
-               ((\<lambda>c'. classify_point classify c (lookup_table ar v c')) ` table_contexts ar v)
-               = Decided r"
-    using classify_checks_verdicts_mem_iff[OF fin, of v c "Decided r" ar classify] mem by simp
-  have covctx: "ctx \<in> table_contexts ar v" using reach by (rule lookup_table_LiftedD)
-  have mem_img: "classify_point classify c (lookup_table ar v ctx)
-          \<in> (\<lambda>c'. classify_point classify c (lookup_table ar v c')) ` table_contexts ar v"
-    using covctx by blast
-  have "classify_point classify c (lookup_table ar v ctx) = Dead
-          \<or> classify_point classify c (lookup_table ar v ctx) = Decided r"
-    using aggregate_verdicts_decided_dest[OF agg known] mem_img by blast
-  with reach show ?thesis by simp
+  have "point_verdict ar classify v c = Decided r"
+    using classify_checks_verdicts_mem_iff[OF fin, of v c "Decided r" ar classify] mem
+    by (simp add: point_verdict_def)
+  then show ?thesis by (rule point_verdict_decided[OF _ known reach])
 qed
 
 theorem classify_checks_ctx_proved_sound:

@@ -199,9 +199,7 @@ where
   "result_checks_of g r classify =
      map (\<lambda>(u, a, w).
             \<lparr> check_point = u, check_label = ea_check_label a, check_exp = ea_check_cond a,
-              check_verdict = aggregate_verdicts
-                ((\<lambda>ctx. classify_point classify (ea_check_cond a) (lookup_table r u ctx))
-                   ` table_contexts r u) \<rparr>)
+              check_verdict = point_verdict r classify u (ea_check_cond a) \<rparr>)
        (filter (\<lambda>(u, a, w). is_EA_Check a) (cfg_intra_list g))"
 
 text \<open>

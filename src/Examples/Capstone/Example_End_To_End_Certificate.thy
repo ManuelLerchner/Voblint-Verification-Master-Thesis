@@ -394,9 +394,9 @@ abbreviation certificate_demo_table where
      mcp_cs_rule.result certificate_analyses 1 Globals_Join (declared_global certificate_demo_prog)
        certificate_demo_prog"
 
-lemma certificate_demo_sound_table:
-  "sound_table certificate_demo_prog certificate_demo_table
-     (mcp_classify (activation certificate_analyses)) (mcp_gamma_v (activation certificate_analyses))"
+lemma certificate_demo_covered_table:
+  "covered_table certificate_demo_prog certificate_demo_table
+     (mcp_gamma_v (activation certificate_analyses))"
   by (rule mcp_cs_rule_table
         [OF wf_program_compile_input_exec_sound [OF certificate_demo_wf]
             certificate_demo_terminates])

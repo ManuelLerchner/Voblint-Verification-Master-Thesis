@@ -318,21 +318,24 @@ definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow>
        = check_sites (prog_cfg p)"
 
 lemma report_of_sound:
-  assumes st: "sound_table p (run_table sr) classify gm"
+  assumes cov: "covered_table p (run_table sr) gm"
     and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
     and cl: "classify = mcp_classify (activation (config_analyses config))"
     and gm: "gm = mcp_gamma_v (activation (config_analyses config))"
   shows "sound_report p (report_of config ctx_key ctx_tag classify sr p)"
 proof -
+  have st: "sound_table p (run_table sr) classify gm"
+    by (rule sound_table.intro [OF cov]) (unfold cl gm, rule mcp_sound_classifier)
   let ?res = "report_of config ctx_key ctx_tag classify sr p"
   note rows = report_rows_report_of[OF fin inj]
   have cons: "consistent_report ?res"
     unfolding consistent_report_def
-    by (auto simp: result_checks_of_def rows report_classify_def cl image_comp comp_def)
+    by (auto simp: result_checks_of_def point_verdict_def rows report_classify_def cl image_comp
+        comp_def)
   have covers: "s \<in> \<lbrakk>?res\<rbrakk>\<^bsub>v\<^esub>"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v" for v s
   proof -
-    from sound_table.covers[OF st that] obtain ctx d
+    from covered_table.covers[OF cov that] obtain ctx d
       where look: "lookup_table (run_table sr) v ctx = Lifted d" and s: "s \<in> gm d"
       unfolding table_covers_def by blast
     then have "Lifted d \<in> report_rows ?res v"

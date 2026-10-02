@@ -147,14 +147,6 @@ datatype arithmetic_diagnostic = Arithmetic_Diagnostic
   (diagnostic_obligation: arithmetic_obligation)
   (diagnostic_verdict: check_result)
 
-definition arithmetic_site_verdict ::
-    "('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> pp \<Rightarrow> arithmetic_obligation \<Rightarrow> contextual_verdict" where
-  "arithmetic_site_verdict r classify v obligation =
-     aggregate_verdicts
-       (image (\<lambda>ctx. classify_point classify (arithmetic_condition obligation)
-         (lookup_table r v ctx)) (table_contexts r v))"
-
 fun arithmetic_diagnostic_of ::
     "pp \<Rightarrow> nat \<Rightarrow> arithmetic_obligation \<Rightarrow> contextual_verdict
        \<Rightarrow> arithmetic_diagnostic list" where
@@ -171,7 +163,7 @@ definition arithmetic_diagnostics ::
      concat (map (\<lambda>(v, obligations).
        concat (map (\<lambda>(i, obligation).
          arithmetic_diagnostic_of v i obligation
-           (arithmetic_site_verdict r classify v obligation))
+           (point_verdict r classify v (arithmetic_condition obligation)))
          (zip [0..<length obligations] obligations))) (arithmetic_sites g))"
 
 lemma arithmetic_expression_sites_intra:
@@ -234,8 +226,8 @@ lemma arithmetic_diagnostics_absent:
   assumes site: "(v, obligations) \<in> set (arithmetic_sites g)"
     and ob: "obligation \<in> set obligations"
     and absent: "\<forall>d \<in> set (arithmetic_diagnostics g r classify). diagnostic_point d \<noteq> v"
-  shows "arithmetic_site_verdict r classify v obligation = Bot \<or>
-    arithmetic_site_verdict r classify v obligation = Lifted Check_Proved"
+  shows "point_verdict r classify v (arithmetic_condition obligation) = Bot \<or>
+    point_verdict r classify v (arithmetic_condition obligation) = Lifted Check_Proved"
 proof -
   have "obligation \<in> set (map snd (zip [0..<length obligations] obligations))"
     using ob by simp
@@ -247,7 +239,7 @@ proof -
   define i where "i = fst pair"
   have indexed: "(i, obligation) \<in> set (zip [0..<length obligations] obligations)"
     using indexed unfolding i_def .
-  let ?verdict = "arithmetic_site_verdict r classify v obligation"
+  let ?verdict = "point_verdict r classify v (arithmetic_condition obligation)"
   have included: "set (arithmetic_diagnostic_of v i obligation ?verdict)
       \<subseteq> set (arithmetic_diagnostics g r classify)"
     using site indexed
@@ -271,54 +263,12 @@ proof -
     using included point absent
     by (meson empty_subsetI set_empty2 subset_antisym subset_iff)
   show ?thesis
-  proof (cases "arithmetic_site_verdict r classify v obligation")
+  proof (cases "point_verdict r classify v (arithmetic_condition obligation)")
     case Bot
     then show ?thesis by simp
   next
     case (Lifted verdict)
     with empty show ?thesis by (cases verdict) auto
-  qed
-qed
-
-lemma arithmetic_site_verdict_classify:
-  assumes agg: "arithmetic_site_verdict r classify v obligation = Lifted verdict"
-    and known: "verdict \<noteq> Check_Unknown"
-    and look: "lookup_table r v ctx = Lifted st"
-  shows "classify (arithmetic_condition obligation) st = verdict"
-proof -
-  have ctx: "ctx \<in> table_contexts r v"
-    using look unfolding lookup_table_def by (auto split: if_splits)
-  have member: "classify_point classify (arithmetic_condition obligation) (lookup_table r v ctx)
-      \<in> image (\<lambda>c. classify_point classify (arithmetic_condition obligation)
-        (lookup_table r v c)) (table_contexts r v)"
-    using ctx by blast
-  from aggregate_verdicts_decided_dest[OF agg[unfolded arithmetic_site_verdict_def] known]
-    member look show ?thesis by auto
-qed
-
-lemma arithmetic_site_verdict_not_bot:
-  assumes fin: "finite (table_contexts r v)"
-    and look: "lookup_table r v ctx = Lifted st"
-  shows "arithmetic_site_verdict r classify v obligation \<noteq> Bot"
-proof -
-  have ctx: "ctx \<in> table_contexts r v"
-    using look unfolding lookup_table_def by (auto split: if_splits)
-  let ?vs = "image (\<lambda>c. classify_point classify (arithmetic_condition obligation)
-    (lookup_table r v c)) (table_contexts r v)"
-  have finite_vs: "finite ?vs" using fin by simp
-  show ?thesis
-  proof
-    assume bottom: "arithmetic_site_verdict r classify v obligation = Bot"
-    have all_bot: "\<forall>x \<in> ?vs. x = Bot"
-      by (rule aggregate_verdicts_eq_Dead_iff[OF finite_vs, THEN iffD1])
-         (use bottom in \<open>simp only: arithmetic_site_verdict_def\<close>)
-    have member: "classify_point classify (arithmetic_condition obligation)
-      (lookup_table r v ctx) \<in> ?vs"
-      by (rule imageI[OF ctx])
-    have "classify_point classify (arithmetic_condition obligation)
-      (lookup_table r v ctx) = Bot"
-      by (rule bspec[OF all_bot member])
-    with look show False by simp
   qed
 qed
 

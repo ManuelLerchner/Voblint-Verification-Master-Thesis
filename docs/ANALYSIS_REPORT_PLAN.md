@@ -387,12 +387,17 @@ Phase 5, the `solved_table` rename, landed in the second stacked PR.
 state, and with consistency the aggregate column from the rows) landed in the third,
 with `run_voblint_well_formed`.
 Phase 6, `registration_of` and its `analysis_registration` record, landed in the
-fourth.
+fourth. Phase 7 landed in the fifth: `sound_table` is `covered_table` (the table's
+obligation, one lemma per policy) plus `sound_classifier` (proved once,
+`mcp_sound_classifier`), and `point_verdict` is the one aggregation of a condition
+over a point's contexts, read by the check column and the arithmetic diagnostics
+alike. `analysis_surface` stays: the per-domain registrations' `state_at` and
+`report` are its readings, and the domain examples and the entry-state lemmas in
+`DG_Live_Unknowns` read them. The representation locale (`sound_empty`) is not
+introduced; no inventory showed repeated proofs it would remove.
 
 Not done, one stacked PR each:
 
-- phase 7 (splitting `sound_table`, the shared contextual classification helper,
-  absorbing `analysis_surface`).
 - the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and
   the entry renamed to `voblint_main.ml`.
 - phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names
