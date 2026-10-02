@@ -274,13 +274,13 @@ mirror with its commute lemmas, the initial-state fact, a check classifier, and
 a *generated* `<Domain>_Analyses.thy` registering it at all three context
 policies with the update rule left as a parameter.
 
-**`src/Executable_Surface/`.** `Analysis_Config` (three closed datatypes),
+**`src/Executable_Surface/`.** `Analysis_Config` (four closed datatypes),
 `Analysis_Run` (`run_voblint`), the soundness theories, and the single
 `export_code` declaration.
 
 ### 2.4 The configuration space
 
-`run_voblint :: analysis_domain list => globals_rule => context_mode => imp_prog =>
+`run_voblint :: analysis_domain list => globals_rule => context_mode => program_globals => imp_prog =>
 String.literal analysis_answer`.
 
 - the activation list, a distinct nonempty list over `analysis_domain` —
@@ -294,6 +294,10 @@ String.literal analysis_answer`.
   `TD_side_rule_Interp` interpretation.
 - `context_mode` — `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString k` for any `k`
   (including `0`).
+- `program_globals` — `Program_Globals_Local` keeps program globals in the
+  flow-sensitive local state; `Program_Globals_Shared` keeps them in the one
+  analysis global through the ownership-split lifter (`mcp_split_rule`,
+  `mcp_split_es_rule`, `mcp_split_cs_rule`).
 
 Every combination is answered, and every combination carries the source-level
 theorem. An empty or repeating activation list answers `Invalid_Activation`,
@@ -2503,9 +2507,11 @@ that proved it, which would be a true statement about VIMP and not about C.
    programs buy, and does it exclude anything interesting?
 8. **`csim` is structural and not functional**, so the source-level theorems are
    existential in their node. Is that existential doing hidden work?
-9. **`gammaDG` ignores its global argument** in `dg_analysis_adapter`, which is
-   what makes the published table readable from the local unknown alone. A
-   documented restriction that no current instance violates.
+9. **The result reader takes the global half.** `rd` in `dg_analysis_adapter`
+   reads a local value together with the solved analysis global through the
+   placement's recombination `place_cmb`. Under `Program_Globals_Local` it
+   ignores the global, so the table is read from the local unknown alone; under
+   `Program_Globals_Shared` it merges the local half with the solved global.
 
 ### 15.4 Should the AFP IMP2 bridge come back?
 
