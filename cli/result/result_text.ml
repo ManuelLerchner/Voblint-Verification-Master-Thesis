@@ -40,13 +40,7 @@ let diagnostic_message d =
     (C.arithmetic_operation (C.diagnostic_obligation d))
 
 (* The name an analysis goes by on the command line and in every report. *)
-let analysis_label = function
-  | C.Sign_Analysis -> "sign"
-  | C.Interval_Analysis -> "interval"
-  | C.Int_Analysis _ -> "int"
-  | C.Parity_Analysis -> "parity"
-  | C.Congruence_Analysis -> "congruence"
-  | C.Order_Analysis -> "order"
+let analysis_label = Analysis_request.name_of_analysis
 
 (* One active analysis's part of a state, as the run result shows it: a value per
    variable, or one value for a state that relates variables. *)

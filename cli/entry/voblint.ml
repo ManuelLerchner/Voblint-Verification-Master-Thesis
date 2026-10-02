@@ -399,24 +399,15 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           in
           wait_loop 0.0005)
 
-(* --context/--context-depth are two independent flags that can arrive in
-   either order, but Ctx_CallString needs the depth at construction time --
-   so parsing collects an intermediate tag + optional depth, and the final
-   immutable context_mode value is assembled once, after parse_args returns,
-   from both together. *)
-type context_kind = CK_None | CK_EntryState | CK_CallString
-
-(* The default of Goblint's solvers.td3.narrow-globs.narrow-gas option. The
-   vendored rule counts differently: 0 still allows the one narrowing step of
-   each switch. *)
-let default_narrow_bound = 5
-
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
   let analysis_names = ref None in
   let int_refinement = ref None in
-  let context_kind = ref CK_None in
+  (* --context and --context-depth can arrive in either order, but a call
+     string needs its depth at construction time, so the policy is assembled
+     once every flag is read. *)
+  let context_name = ref "none" in
   let context_depth = ref None in
   let globals = ref Voblint_CLI.Generated.Globals_Warrow in
   let narrow_bound = ref None in
@@ -447,28 +438,18 @@ let () =
         analysis_names := Some (String.split_on_char ',' v);
         parse_args rest
     | "--int-refinement" :: v :: rest ->
-        (match v with
-        | "never" ->
-            int_refinement :=
-              Some Voblint_CLI.Generated.(Int_Analysis Refine_Never)
-        | "once" ->
-            int_refinement :=
-              Some Voblint_CLI.Generated.(Int_Analysis Refine_Once)
-        | "fixpoint" ->
-            int_refinement :=
-              Some Voblint_CLI.Generated.(Int_Analysis Refine_Fixpoint)
-        | _ ->
+        (match Analysis_request.refinement_of_name v with
+        | Some mode -> int_refinement := Some mode
+        | None ->
             prerr_endline ("unknown --int-refinement value: " ^ v);
             exit 1);
         parse_args rest
     | "--context" :: v :: rest ->
-        (match v with
-        | "none" -> context_kind := CK_None
-        | "entry-state" -> context_kind := CK_EntryState
-        | "call-string" -> context_kind := CK_CallString
-        | _ ->
+        (match Analysis_request.context_of_name v None with
+        | Error Analysis_request.Unknown_context ->
             prerr_endline ("unknown --context value: " ^ v);
-            exit 1);
+            exit 1
+        | _ -> context_name := v);
         parse_args rest
     | "--context-depth" :: v :: rest ->
         (try context_depth := Some (int_of_string v)
@@ -478,16 +459,14 @@ let () =
         parse_args rest
     | "--globals" :: v :: rest ->
         globals_name := v;
-        (match v with
-        | "join" -> globals := Voblint_CLI.Generated.Globals_Join
-        | "per-origin" -> globals := Voblint_CLI.Generated.Globals_Per_Origin
-        | "warrow" -> globals := Voblint_CLI.Generated.Globals_Warrow
-        | "warrow-per-origin" ->
-            globals := Voblint_CLI.Generated.Globals_Warrow_Per_Origin
         (* The bound is filled in once every flag is read, so --narrow-bound
            may come before or after --globals. *)
-        | "bounded-narrowing" -> ()
-        | _ ->
+        (match
+           Analysis_request.globals_of_name
+             ~narrow_bound:Analysis_request.default_narrow_bound v
+         with
+        | Some rule -> globals := rule
+        | None ->
             prerr_endline ("unknown --globals value: " ^ v);
             exit 1);
         parse_args rest
@@ -579,17 +558,13 @@ let () =
      read and rejected when no int analysis is named. Each mode is an analysis
      of its own in the generated carrier; all of them are int to the user. *)
   let analyses =
+    let refinement =
+      Option.value !int_refinement ~default:Analysis_request.default_refinement
+    in
     let kind_of name =
-      match name with
-      | "sign" -> Voblint_CLI.Generated.Sign_Analysis
-      | "interval" -> Voblint_CLI.Generated.Interval_Analysis
-      | "int" ->
-          Option.value !int_refinement
-            ~default:Voblint_CLI.Generated.(Int_Analysis Refine_Fixpoint)
-      | "parity" -> Voblint_CLI.Generated.Parity_Analysis
-      | "congruence" -> Voblint_CLI.Generated.Congruence_Analysis
-      | "order" -> Voblint_CLI.Generated.Order_Analysis
-      | _ ->
+      match Analysis_request.analysis_of_name ~refinement name with
+      | Some analysis -> analysis
+      | None ->
           prerr_endline ("unknown --analysis value: " ^ name);
           exit 1
     in
@@ -607,9 +582,8 @@ let () =
       exit 1
   | "bounded-narrowing", n ->
       globals :=
-        Voblint_CLI.Generated.Globals_Bounded_Narrowing
-          (Voblint_CLI.Generated.nat_of_integer
-             (Z.of_int (Option.value n ~default:default_narrow_bound)))
+        Analysis_request.bounded_narrowing
+          (Option.value n ~default:Analysis_request.default_narrow_bound)
   | _, Some _ ->
       prerr_endline
         "voblint: --narrow-bound is only valid with --globals bounded-narrowing";
@@ -618,20 +592,18 @@ let () =
   (* --context-depth is only meaningful paired with --context call-string, so
      a mismatch between the two flags is rejected here. *)
   let context =
-    match (!context_kind, !context_depth) with
-    | CK_None, None -> Voblint_CLI.Generated.Ctx_None
-    | CK_EntryState, None -> Voblint_CLI.Generated.Ctx_EntryState
-    | CK_CallString, Some k when k < 0 ->
+    match Analysis_request.context_of_name !context_name !context_depth with
+    | Ok context -> context
+    | Error Analysis_request.Negative_depth ->
         prerr_endline "voblint: --context-depth must not be negative";
         exit 1
-    | CK_CallString, Some k ->
-        Voblint_CLI.Generated.Ctx_CallString
-          (Voblint_CLI.Generated.nat_of_integer (Z.of_int k))
-    | CK_CallString, None ->
+    | Error Analysis_request.Missing_depth ->
         prerr_endline
           "voblint: --context call-string requires --context-depth K";
         exit 1
-    | (CK_None | CK_EntryState), Some _ ->
+    | Error
+        (Analysis_request.Unexpected_depth | Analysis_request.Unknown_context)
+      ->
         prerr_endline
           "voblint: --context-depth is only valid with --context call-string";
         exit 1
@@ -680,8 +652,7 @@ let () =
      combination to silently resolve. *)
   if !json then begin
     let answer =
-      Value_symbols.render_answer
-        (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
     in
     let raw =
       Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
@@ -723,8 +694,7 @@ let () =
   in
   let solve () =
     match
-      Value_symbols.render_answer
-        (C.run_voblint (C.Analysis_Config (domains, !globals, context)) prog)
+      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context prog
     with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)

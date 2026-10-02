@@ -45,6 +45,7 @@
  (wrapped false)
  (modules
   value_symbols
+  analysis_request
   result_text
   context_graph
   render_text

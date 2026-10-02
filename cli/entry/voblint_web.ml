@@ -67,53 +67,47 @@ let now_ms () : float =
 (* Configuration                                                              *)
 (* -------------------------------------------------------------------------- *)
 
-(* Each refinement mode is an analysis of its own in the generated carrier. *)
-let int_analysis_of_string = function
-  | "never" -> Some (C.Int_Analysis C.Refine_Never)
-  | "once" -> Some (C.Int_Analysis C.Refine_Once)
-  | "fixpoint" -> Some (C.Int_Analysis C.Refine_Fixpoint)
-  | _ -> None
+let int_analysis_of_string name =
+  Option.map
+    (fun refinement -> C.Int_Analysis refinement)
+    (Analysis_request.refinement_of_name name)
 
 let domain_of_string int_analysis = function
-  | "sign" -> Some C.Sign_Analysis
-  | "interval" -> Some C.Interval_Analysis
   | "int" -> Some int_analysis
-  | "parity" -> Some C.Parity_Analysis
-  | "congruence" -> Some C.Congruence_Analysis
-  | "order" -> Some C.Order_Analysis
-  | _ -> None
+  | name ->
+      Analysis_request.analysis_of_name
+        ~refinement:Analysis_request.default_refinement name
 
-let bounded_narrowing n =
-  Some (C.Globals_Bounded_Narrowing (C.nat_of_integer (Z.of_int n)))
-
-let globals_of_string = function
-  | "join" -> Some C.Globals_Join
-  | "per-origin" -> Some C.Globals_Per_Origin
-  | "warrow" -> Some C.Globals_Warrow
-  | "warrow-per-origin" -> Some C.Globals_Warrow_Per_Origin
-  | "bounded-narrowing" -> bounded_narrowing 5
-  | s -> (
-      match String.split_on_char ':' s with
-      | [ "bounded-narrowing"; n ] -> (
-          match int_of_string_opt n with
-          | Some n when n >= 0 -> bounded_narrowing n
-          | _ -> None)
+(* The page names a bounded-narrowing rule with its bound, as
+   "bounded-narrowing:N"; without one it takes the CLI's default. *)
+let globals_of_string s =
+  match String.split_on_char ':' s with
+  | [ "bounded-narrowing"; n ] -> (
+      match int_of_string_opt n with
+      | Some n when n >= 0 -> Some (Analysis_request.bounded_narrowing n)
       | _ -> None)
+  | _ ->
+      Analysis_request.globals_of_name
+        ~narrow_bound:Analysis_request.default_narrow_bound s
 
 (* The depth arrives as a JavaScript number. Only one that fits a Wasm OCaml
    int would arrive as an int; reading it as a number first turns a fraction
    or a huge value into an error message instead of a trap. *)
 let context_of_string mode (depth : Js.number_t) =
   let depth = Js.to_float depth in
+  let valid =
+    Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int
+  in
   match mode with
-  | "none" -> Ok C.Ctx_None
-  | "entry-state" -> Ok C.Ctx_EntryState
-  | "call-string"
-    when Float.is_integer depth && depth >= 0. && depth <= float_of_int max_int
-    ->
-      Ok (C.Ctx_CallString (C.nat_of_integer (Z.of_float depth)))
-  | "call-string" -> Error "Call-string depth must be a non-negative integer"
-  | _ -> Error ("Unknown context mode: " ^ mode)
+  | "call-string" when not valid ->
+      Error "Call-string depth must be a non-negative integer"
+  | _ -> (
+      let depth =
+        if mode = "call-string" then Some (int_of_float depth) else None
+      in
+      match Analysis_request.context_of_name mode depth with
+      | Ok context -> Ok context
+      | Error _ -> Error ("Unknown context mode: " ^ mode))
 
 (* -------------------------------------------------------------------------- *)
 (* Browser entry point                                                        *)
@@ -271,10 +265,8 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
               let analysis_start = now_ms () in
               let answer =
                 Fun.protect ~finally:stop_live (fun () ->
-                    Value_symbols.render_answer
-                      (C.run_voblint
-                         (C.Analysis_Config (domains, globals, context))
-                         program))
+                    Analysis_request.analyse ~analyses:domains ~globals ~context
+                      program)
               in
               let analysis_ms = now_ms () -. analysis_start in
               let raw =
