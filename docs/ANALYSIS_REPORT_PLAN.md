@@ -6,12 +6,12 @@ Branch `refactor/analysis-report`, from `origin/main`. The thesis and the site f
 ## Goal
 
 The public soundness theorems should speak about one object, the analysis report
-`res` that `analyse_program` returns, and should need no termination premise. Three
+`res` that `run_voblint` returns, and should need no termination premise. Three
 facts carry the whole guarantee:
 
 | Fact | Statement | Uses |
 | --- | --- | --- |
-| `analyse_program_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
+| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
 | `analysis_report_checks_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
 | `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
 
@@ -30,7 +30,7 @@ imply `DEAD res v`, and `UNKNOWN` does not imply `⟦res⟧ᵥ ≠ ∅`.
 ## Why
 
 - `run_voblint as rule ctx p = Analysed res` does not imply termination in HOL:
-  `analyse_program` calls the total specification `solve`, whose value outside its
+  `run_voblint` calls the total specification `solve`, whose value outside its
   domain is unspecified. Hence the premise `config_terminates`. The vendored
   executable form `solve_c` is a `partial_function (option)` that is `None` exactly
   outside the domain, and `solve_dom_of_solve_c` bridges it.
@@ -66,7 +66,7 @@ analysis_report               semantic, exported; theorems read only this
       │
       ├── ⟦res⟧ᵥ, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD
       │
-══════ generated API boundary: analyse_program, report selectors, projections ══════
+══════ generated API boundary: run_voblint, report selectors, projections ══════
       │
       ▼
 OCaml / browser adapters
@@ -76,9 +76,9 @@ OCaml / browser adapters
 
 Rendering is a projection the adapters apply to the report after the call. It is
 defined in Isabelle only so that generated code computes it, and no theorem reads
-it. `run_voblint` (analysis plus rendering in one call) stays until phase 8 as a
-compatibility shim and is then deleted; `analyse_program` is the exported
-operation.
+it. `run_voblint` keeps its name and becomes the semantic operation: it returns
+the report, and the adapters call `render_report` on it. No other public name for
+the analysis exists.
 
 Proofs flow downward only: solver, routing and table facts are consumed by the
 report theorems, and nothing above the report reads them.
@@ -89,8 +89,8 @@ report theorems, and nothing above the report reads them.
 | `Analyses/Shared/Result/DG_Analysis` | `solved_run`, `solved_run_of`, `run`, `solve_c_run` |
 | `Solver/Solver_Trace` | `solve_c_traced` |
 | `CLI/generated/MCP_Carrier` | `registration_of` and its accessors |
-| `CLI/Analysis_Run` | `analysis_config`, `analysis_report`, the one policy dispatch, `analyse_program` |
-| `CLI/Analysis_Render` (new) | `run_result` (rendered), `render_report`, the `run_voblint` shim |
+| `CLI/Analysis_Run` | `analysis_config`, `analysis_report`, the one policy dispatch, `run_voblint` |
+| `CLI/Analysis_Render` (new) | `run_result` (rendered), `render_report` |
 | `CLI/Analysis_Report` (new) | `⟦res⟧ᵥ`, `𝒱`, CAPS queries, the three facts |
 | `CLI/Analysis_Certified` | source-level corollaries |
 
@@ -189,7 +189,7 @@ nothing.
 ## Target theorems
 
 ```text
-analyse_program_covers:        analyse_program config p = Analysed res
+run_voblint_covers:        run_voblint config p = Analysed res
                                ⟹ 𝒞 v ⊆ ⟦res⟧ᵥ
 analysis_report_checks_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
 analysis_report_proved:        PROVED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ truthy ⟦e⟧ s
@@ -197,16 +197,24 @@ analysis_report_refuted:       REFUTED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ ¬ tru
 analysis_report_dead:          DEAD res v ⟹ ⟦res⟧ᵥ = ∅
 analysis_report_unknown:       UNKNOWN res v e ⟹ ¬ DEAD res v          (lemma)
 
-analyse_program_source_sound:
+run_voblint_source_sound:
   s0 ∈ cinit_stores 𝒢
   𝒢, Π ⊢ (main_body Π, s0, []) →p* (c, s, frs)
-  analyse_program config p = Analysed res
-  ⟹ ∃ v stk. Π, g ⊢ (c, s, frs) ≈ (v, s, stk) ∧ s ∈ 𝒞 v ∧ s ∈ ⟦res⟧ᵥ
-analyse_program_check_sound, analyse_program_dead_unreached,
-analyse_program_arithmetic_safe: the existing corollaries, restated over res.
+  run_voblint config p = Analysed res
+  ⟹ ∃ v stk. Π, g ⊢ (c, s, frs) ≈ (v, s, stk)
+             ∧ s ∈ 𝒞 v ∧ s ∈ ⟦res⟧ᵥ ∧ s ∈ 𝒱(res, v)
+run_voblint_check_sound, run_voblint_dead_unreached,
+run_voblint_arithmetic_safe: the existing corollaries, restated over res.
 ```
 
-`analyse_program_covers` needs the run that built the report; the
+Below the point where contexts are erased, one theorem per policy states the full
+chain for a source run: a valid activation trace carrying some context `c`, and
+`s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧ᵥ ⊆ 𝒱(res, v)`. It composes
+`source_run_has_activation_trace`, `node_collect_eq_Union_activation_collect` and
+the report facts; its value is stating the whole spine in one checked statement.
+The context-erased theorem above is the public one.
+
+`run_voblint_covers` needs the run that built the report; the
 `analysis_report_*` facts read the report alone. `analysis_report_unknown` is a
 structural lemma kept at the user's request, not a semantic guarantee: it says the
 report makes no unreachability claim at an `UNKNOWN` check. Termination is internal: `Analysed res` implies the policy's
@@ -227,7 +235,7 @@ report makes no unreachability claim at an `UNKNOWN` check. Termination is inter
 | `config_terminates` premise | `solve_c_run` | internal |
 | `analysis_result_covers`, `table_covers` | `s ∈ ⟦res⟧ᵥ` | retire publicly |
 | `checks_sound_at` | `𝒱(res, v)` | retire publicly |
-| `run_voblint_sound_at`, `run_voblint_certified_source_sound` | report theorems, `analyse_program_source_sound` | replace |
+| `run_voblint_sound_at`, `run_voblint_certified_source_sound` | report theorems, `run_voblint_source_sound` | replace |
 | `sound_table` | `covered_table` + `sound_classifier` | split |
 | parallel carrier functions | `registration_of` | replace |
 
@@ -246,7 +254,7 @@ These are grep targets on `src/` outside the theory that owns each name:
   per-capability functions are gone rather than kept as accessors;
 - no `run_result`, `mcp_render` or `string_of_abstract_value` in
   `Analysis_Run` or `Analysis_Report`;
-- no `run_voblint`.
+- no `analyse_program`, and no `Voblint_CLI.Generated` in the OCaml sources.
 
 ## Invariants
 
@@ -280,9 +288,9 @@ These are grep targets on `src/` outside the theory that owns each name:
      state parameter.
    - `analysis_report_of config p :: analysis_report option`, the one split, each
      branch `map_option (… solved_run_of …) (solve_c …)`.
-   - `analyse_program`: `None` becomes `No_Answer`. In `Analysis_Render`,
-     `render_report` applies `mcp_render` and `string_of_abstract_value`, and the shim
-     `run_voblint = map_analysis_answer render_report ∘ analyse_program`.
+   - `run_voblint`: `None` becomes `No_Answer`. In `Analysis_Render`,
+     `render_report` applies `mcp_render` and `string_of_abstract_value`; the
+     adapters call `run_voblint` and then `render_report`.
    - Obligations: per policy, `analysis_report_of config p = Some res` implies the
      policy's `terminates` and `res` is built from `run`; the rendered output equals
      the old `map_run_result string_of_abstract_value (analysis_result …)` (checked
@@ -307,9 +315,11 @@ These are grep targets on `src/` outside the theory that owns each name:
    - `sound_empty` / `exact_empty` and a representation locale, only where an
      inventory shows repeated proofs. Candidates: `is_empty_state`, `val_empty`,
      `mcp_empty_v` (sound); `default_st_to_fun`, `mcp_rd` (readbacks).
-8. **Export and docs.** Export `analyse_program`, the report selectors and
-   `render_report`; the adapters call them in sequence and handle `No_Answer`;
-   delete `run_voblint`. Docs
+8. **Export and docs.** Export `run_voblint`, the report selectors and
+   `render_report`; the adapters handle `No_Answer`. The generated module becomes
+   `codegen/generated/ml/Voblint.ml` with the program at top level (`Voblint.run_voblint`
+   in place of `Voblint_CLI.Generated.run_voblint`), a mechanical change across the
+   parser, printer, CLI, web entry, regression and build scripts. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
 9. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
