@@ -10,6 +10,26 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
+```math
+\underbrace{\{\, s \mid \text{a source run reaches } v \text{ with store } s \,\}}_{\text{source executions}}
+\;\subseteq\;
+\underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
+\;\subseteq\;
+\underbrace{[\![\, \mathit{res} \,]\!]_{v}}_{\text{analyzer report}}
+\;\subseteq\;
+\underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
+```
+
+Every store a source run reaches at a program point $v$ is described by the
+analyzer's report there, and satisfies every verdict the report gives at $v$.
+Each inclusion is an Isabelle theorem:
+[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
+[`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
+[`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
+[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy);
+[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+states the whole chain for every run that returns a report.
+
 Voblint is a machine-checked Isabelle/HOL framework for building, running and
 verifying interprocedural abstract interpreters, modelled on Goblint's D/G
 architecture. It chains verified CFG compilation, activation-trace operational
