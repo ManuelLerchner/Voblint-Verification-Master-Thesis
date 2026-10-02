@@ -29,9 +29,10 @@ a CFG node $v$ that
 simulates the run's configuration ($\approx$), is represented by the analyzer's
 report at $v$, and satisfies every definite verdict reported there.
 
-The node is existential because the simulation may relate one configuration to
-several nodes, for instance to an uncalled procedure with the same body as the
-running one; the claim holds at a node the run actually reaches. The equality
+The node is existential because the simulation relation is structural rather
+than functional: the same residual source command may match several compiled
+nodes, for instance in an uncalled procedure with the same body. Membership in
+$\mathcal{C}(v)$ selects a node the execution actually reaches. The equality
 is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover the collecting
 semantics, and their union recovers $\mathcal{C}(v)$ exactly. The two inclusions
 are one-way guarantees: the report may describe stores no run reaches, and the
