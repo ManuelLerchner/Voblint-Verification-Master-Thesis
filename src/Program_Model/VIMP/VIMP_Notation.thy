@@ -156,16 +156,37 @@ parse_translation \<open>
 
 subsection \<open>Smoke tests\<close>
 
-text \<open>Four \<open>value\<close> calls: a branch and a check through the generated statement
-  translation, and a program with a global and one with a procedure taking arguments through
-  the whole-program translation hand-written here.  They fail at load time if a translation
-  stops elaborating,
+text \<open>Four translations, each stated as the term it elaborates to: a branch and a check
+  through the generated statement translation, and a program with a global and one with a
+  procedure taking arguments through the whole-program translation hand-written here.  The
+  theory stops loading if a translation stops elaborating or elaborates to something else,
   which no theorem elsewhere would notice -- nothing in the proved pipeline reads concrete
   syntax.\<close>
-value "imp \<lbrakk> if (x < 10) { x = 0; } else { x = 1; } \<rbrakk>"
-value "imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk>"
-value "program { global Gx; fun ping() { Gx = Gx + 1; } fun main() { ping(); } } :: imp_prog"
-value "program { fun add(a, b) { skip; return a + b; } fun main() { r = add(1, 2); } } :: imp_prog"
+lemma "imp \<lbrakk> if (x < 10) { x = 0; } else { x = 1; } \<rbrakk>
+  = com.If (Less (V STR ''x'') (N 10)) (Assign STR ''x'' (N 0))
+    (Assign STR ''x'' (N 1))"
+  by eval
+lemma "imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk>
+  = Check (0, 0) (exp.Not (exp.Eq (V STR ''x'') (N 0)))"
+  by eval
+lemma "(program { global Gx; fun ping() { Gx = Gx + 1; } fun main() { ping(); } } :: imp_prog)
+  = \<lparr>proc_rep =
+    [(STR ''main'', \<lparr>formals = [], body = Call None STR ''ping'' []\<rparr>),
+    (STR ''ping'',
+    \<lparr>formals = [],
+    body = Assign STR ''Gx'' (Plus (V STR ''Gx'') (N 1))\<rparr>)],
+    declared_global_vars = [STR ''Gx'']\<rparr>"
+  by eval
+lemma "(program { fun add(a, b) { skip; return a + b; } fun main() { r = add(1, 2); } } :: imp_prog)
+  = \<lparr>proc_rep =
+    [(STR ''main'',
+    \<lparr>formals = [], body = Call (Some STR ''r'') STR ''add'' [N 1, N 2]\<rparr>),
+    (STR ''add'',
+    \<lparr>formals = [STR ''a'', STR ''b''],
+    body =
+    Seq SKIP (Return (Some (Plus (V STR ''a'') (V STR ''b''))))\<rparr>)],
+    declared_global_vars = []\<rparr>"
+  by eval
 
 lemma notation_if_without_else:
   "imp \<lbrakk> if (x < 0) { x = -x; } \<rbrakk> =
