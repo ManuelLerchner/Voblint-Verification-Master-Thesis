@@ -257,7 +257,7 @@ let run analysis_js globals_js context_js context_depth refinement_js
                  before an answer exists. *)
           post "Voblint_run_input"
             (Render_json.run_voblint_input_json ~domains ~globals ~ctx:context
-               program);
+               ~program_globals:placement program);
           if trace = Some (Solver_trace.Text, true) then
             stream_live ~source:(source, stmt_positions) ~domains
               ~globals:globals_name ~context;
@@ -269,8 +269,8 @@ let run analysis_js globals_js context_js context_depth refinement_js
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
-            Render_json.run_voblint_json ~domains ~globals ~ctx:context program
-              answer
+            Render_json.run_voblint_json ~domains ~globals ~ctx:context
+              ~program_globals:placement program answer
           in
           match answer with
           | C.Invalid_Activation ->
@@ -296,8 +296,10 @@ let run analysis_js globals_js context_js context_depth refinement_js
                 if with_jsonl then Some (render (Solver_trace.Jsonl, false))
                 else None
               in
-              Render_json.result_json ?trace ?trace_jsonl analysis_ms program
-                ~stmt_positions ~header_positions ~raw result
+              Render_json.result_json ?trace ?trace_jsonl
+                ~shared:(placement = C.Program_Globals_Shared)
+                analysis_ms program ~stmt_positions ~header_positions ~raw
+                result
         with Vimp_frontend.Parse_error { line; col; msg; _ } ->
           Render_json.parse_error_json ~line ~column:col msg)
   in

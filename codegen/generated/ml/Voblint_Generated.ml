@@ -10259,7 +10259,7 @@ let rec solved_run_of (_A1, _A2)
      let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
       Solved_run_ext
         (dg_result_for (rd g) (emp p) (place_cmb g) analysis_global sol,
-          read ga,
+          map_lift (rd g) ga,
           (fun f ctx ->
             read (place_cmb g
                     (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))
@@ -11840,16 +11840,27 @@ let rec mcp_render
     map (fun a -> (a, value_display (registration_of a) v vars)) asa;;
 
 let rec mcp_trace_printers
-  asa p ctx_view seed_of =
-    (let view =
+  pg asa p ctx_view seed_of =
+    (let raw =
+       (fun vs d ->
+         map_lift (mcp_render (activation asa) vs)
+           (map_lift (mcp_rd (declared_global p)) d))
+       in
+     let view =
        (fun d ->
-         map_lift (mcp_render (activation asa) (program_vars p))
-           (map_lift (mcp_rd (declared_global p))
-             (canonicalize_lift (mcp_emp (activation asa) p) d)))
+         raw (program_vars p)
+           (canonicalize_lift (mcp_emp (activation asa) p) d))
+       in
+     let local =
+       (match pg with Program_Globals_Local -> view
+         | Program_Globals_Shared ->
+           raw (filtera (fun x -> not (declared_global p x)) (program_vars p)))
        in
       Trace_Printers
-        (ctx_view, seed_of, (fun d -> view (dg_local d)),
-          (fun d -> view (dg_global d)), view));;
+        (ctx_view, seed_of, (fun d -> local (dg_local d)),
+          (fun d ->
+            raw (filtera (declared_global p) (program_vars p)) (dg_global d)),
+          local));;
 
 let rec cs_route
   k u ctx d ca =
@@ -15176,7 +15187,7 @@ let rec analysis_report_of
       (let _ =
          Solver_trace_hook.emit "run"
            (fun _ ->
-             mcp_trace_printers asa p (fun _ -> Context_Unit)
+             mcp_trace_printers pg asa p (fun _ -> Context_Unit)
                seed_of_global_unknown)
          in
         map_option
@@ -15198,7 +15209,7 @@ let rec analysis_report_of
         (let _ =
            Solver_trace_hook.emit "run"
              (fun _ ->
-               mcp_trace_printers asa p
+               mcp_trace_printers pg asa p
                  (fun ctx ->
                    Context_Entry (mcp_ctx_values (activation asa) ctx))
                  seed_of_global_unknown)
@@ -15273,7 +15284,7 @@ let rec analysis_report_of
         (let _ =
            Solver_trace_hook.emit "run"
              (fun _ ->
-               mcp_trace_printers asa p (fun a -> Context_Call_String a)
+               mcp_trace_printers pg asa p (fun a -> Context_Call_String a)
                  seed_of_call_string_gk)
            in
           map_option

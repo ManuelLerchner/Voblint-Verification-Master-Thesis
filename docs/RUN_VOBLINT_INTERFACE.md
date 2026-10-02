@@ -111,8 +111,9 @@ the witness: the conclusion names the trace `t`, its representation of the run's
 configuration, and the context the policy relates it to. Under call strings and the
 unit policy every valid trace has its context outright; under entry-state routing
 the admitted context exists because the solve returned
-(`run_voblint_entry_state_terminates`). `run_voblint_source_sound` is the
-context-erased form.
+(`run_voblint_entry_state_terminates`), read off the registration the placement of
+program globals selects (`mcp_es_admitted`). All three chains hold for both
+placements. `run_voblint_source_sound` is the context-erased form.
 
 ## Public contract
 

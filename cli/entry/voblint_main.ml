@@ -96,7 +96,10 @@ let usage =
   \                             local). local keeps them in every point's\n\
   \                             own state, flow-sensitively; shared puts\n\
   \                             them on one flow-insensitive channel every\n\
-  \                             point reads. Both are proved sound. Under\n\
+  \                             point reads, for the analyses whose state\n\
+  \                             splits by variable; order relates variables\n\
+  \                             across that split and keeps its whole state\n\
+  \                             per point. Both are proved sound. Under\n\
   \                             shared, --globals defaults to\n\
   \                             bounded-narrowing.\n\
   \  --narrow-bound N           bounded-narrowing narrows an origin once each\n\
@@ -661,14 +664,15 @@ let () =
         ~program_globals:placement prog
     in
     let raw =
-      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context prog
-        answer
+      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context
+        ~program_globals:placement prog answer
     in
     (match answer with
     | C.Analysed result ->
         print_endline
-          (Render_json.result_json 0. prog ~stmt_positions ~header_positions
-             ~raw result)
+          (Render_json.result_json
+             ~shared:(placement = C.Program_Globals_Shared)
+             0. prog ~stmt_positions ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
     exit 0

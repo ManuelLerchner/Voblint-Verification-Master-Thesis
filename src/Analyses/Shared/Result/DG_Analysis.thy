@@ -288,8 +288,10 @@ definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rig
 
 
 text \<open>
-  The values one solution publishes. The shared global and the seeds are read
-  exactly as a table entry is, so an unwritten key reads as \<^const>\<open>Bot\<close>.
+  The values one solution publishes. The seeds are read exactly as a table entry is,
+  so an unwritten key reads as \<^const>\<open>Bot\<close>. The shared global is read
+  without that canonicalization: its local half is bottom by construction, which
+  would make every value it holds read as \<^const>\<open>Bot\<close>.
 
   A step is what one edge's local step makes of a point's solved state: the term
   that edge contributes to its target's equation, re-evaluated on the solution. A
@@ -313,7 +315,7 @@ definition solved_run_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
           g = dg_global (snd sol (Inr analysis_global));
           read = (\<lambda>d. map_lift (rd \<G>) (canonicalize_lift (emp p) d))
       in \<lparr> run_table = dg_result_for (rd \<G>) (emp p) (place_cmb \<G>) analysis_global sol,
-           run_shared = read g,
+           run_shared = map_lift (rd \<G>) g,
            run_seed = (\<lambda>f ctx. read (place_cmb \<G>
                          (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx)))) g)),
            run_step = (\<lambda>v ctx a. read (let d = place_cmb \<G> (dg_local (snd sol (Inl (v, ctx)))) g

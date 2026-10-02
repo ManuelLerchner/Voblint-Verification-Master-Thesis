@@ -587,6 +587,10 @@ let context_mode_json = function
   | C.Ctx_EntryState -> tagged "Ctx_EntryState" []
   | C.Ctx_CallString k -> tagged "Ctx_CallString" [ nat_json k ]
 
+let program_globals_json = function
+  | C.Program_Globals_Local -> tagged "Program_Globals_Local" []
+  | C.Program_Globals_Shared -> tagged "Program_Globals_Shared" []
+
 (* A program is read through the export's accessors: main's body, then every other
    procedure's declaration, in the order the program lists them. *)
 let program_json p =
@@ -608,19 +612,22 @@ let program_json p =
       );
     ]
 
-let run_voblint_input_json ~domains ~globals ~ctx program =
+let run_voblint_input_json ~domains ~globals ~ctx ~program_globals program =
   json_object
     [
       ("as", json_list domain_json domains);
       ("rule", globals_rule_json globals);
       ("ctx", context_mode_json ctx);
+      ("pg", program_globals_json program_globals);
       ("p", program_json program);
     ]
 
-let run_voblint_json ~domains ~globals ~ctx program answer =
+let run_voblint_json ~domains ~globals ~ctx ~program_globals program answer =
   json_object
     [
-      ("input", run_voblint_input_json ~domains ~globals ~ctx program);
+      ( "input",
+        run_voblint_input_json ~domains ~globals ~ctx ~program_globals program
+      );
       ("output", analysis_answer_json answer);
     ]
 
@@ -632,6 +639,41 @@ let returns_value result =
       (fun (u, a, _) ->
         match a with C.EA_Ret (Some _, _) -> owner_of u = name | _ -> false)
       (A.intra_edges g)
+
+(* A global unknown's value as section lines, keeping only the bindings [shown]
+   selects; whole-state sections stay as they are. *)
+let global_lines shown = function
+  | C.Bot -> (false, [ "unreachable" ])
+  | C.Lifted view ->
+      ( true,
+        List.concat_map
+          (fun (label, section) ->
+            A.section_lines
+              ( label,
+                match section with
+                | A.Store bs -> A.Store (List.filter (fun (x, _) -> shown x) bs)
+                | whole -> whole ))
+          (A.sections_of view) )
+
+(* The analysis-wide slot, which holds the program's globals when they are
+   shared: their names and what the run knows of them. *)
+let shared_json program result =
+  let globals = C.declared_global_vars program in
+  List.find_map
+    (fun g ->
+      match C.global_unknown g with
+      | C.Global_Shared ->
+          let reachable, lines =
+            global_lines (fun x -> List.mem x globals) (C.global_state g)
+          in
+          Some
+            (Printf.sprintf "{\"reachable\":%b,\"globals\":%s,\"lines\":%s}"
+               reachable
+               (json_list json_string globals)
+               (json_list json_string lines))
+      | C.Global_Seed _ -> None)
+    (C.res_globals result)
+  |> Option.value ~default:"null"
 
 (* One row per procedure entry per context: the seed a call publishes and the callee
    entry reads back, named exactly as every other report names it. The
@@ -665,21 +707,7 @@ let seeds_json program result (graph : G.t) =
     | C.Global_Shared -> None
     | C.Global_Seed (f, i) ->
         let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in
-        let reachable, lines =
-          match C.global_state g with
-          | C.Bot -> (false, [ "unreachable" ])
-          | C.Lifted view ->
-              ( true,
-                List.concat_map
-                  (fun (label, section) ->
-                    A.section_lines
-                      ( label,
-                        match section with
-                        | A.Store bs ->
-                            A.Store (List.filter (fun (x, _) -> shown f x) bs)
-                        | whole -> whole ))
-                  (A.sections_of view) )
-        in
+        let reachable, lines = global_lines (shown f) (C.global_state g) in
         Some
           (Printf.sprintf
              "{\"key\":%s,\"procedure\":%s,\"entry\":%s,\"reachable\":%b,\"lines\":%s}"
@@ -694,9 +722,10 @@ let seeds_json program result (graph : G.t) =
          (List.combine (C.res_globals result) (A.global_rows result)))
   ^ "]"
 
-(* [trace] is the solver trace's text, present only when the run asked for it. *)
-let result_json ?trace ?trace_jsonl analysis_ms program ~stmt_positions
-    ~header_positions ~raw result =
+(* [trace] is the solver trace's text, present only when the run asked for it;
+   [shared] adds the analysis-wide slot for a run with shared program globals. *)
+let result_json ?trace ?trace_jsonl ?(shared = false) analysis_ms program
+    ~stmt_positions ~header_positions ~raw result =
   let checks =
     positioned_checks (C.res_checks result)
     |> List.map (check_json result)
@@ -720,7 +749,7 @@ let result_json ?trace ?trace_jsonl analysis_ms program ~stmt_positions
     ((match trace with
        | Some text -> ",\"trace\":" ^ json_string text
        | None -> "")
-    ^
-    match trace_jsonl with
-    | Some text -> ",\"trace_jsonl\":" ^ json_string text
-    | None -> "")
+    ^ (match trace_jsonl with
+      | Some text -> ",\"trace_jsonl\":" ^ json_string text
+      | None -> "")
+    ^ if shared then ",\"shared\":" ^ shared_json program result else "")
