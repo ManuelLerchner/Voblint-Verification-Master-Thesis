@@ -144,7 +144,7 @@ lemmas twice_routed_hyps =
   twice_ctx_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def,
     folded interval_es_rule.sol_vars_def twice_cfg_alt]
   twice_call_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def twice_empty_pred_def,
-    folded interval_es_rule.entry_of_exec,
+    folded interval_es_rule.entry_of_exec[where r = Globals_Warrow],
     folded interval_es_rule.sol_vars_def interval_es_rule.sol_env_def twice_cfg_alt]
   twice_comb_fwd_ok[unfolded twice_ctx_sol_def twice_cfg_def,
     folded interval_es_rule.sol_vars_def twice_cfg_alt]
@@ -222,13 +222,14 @@ proof -
       (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)
       (exec_formals_route twice_gs (Statement 2) [] ?entry
          (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))"
-    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.entry_of_exec[symmetric]
+    unfolding twice_empty_pred_def twice_ctx_sol_def
+      interval_es_rule.entry_of_exec[where r = Globals_Warrow, symmetric]
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
           \<open>simp_all add: gamma_lift_default_st_gamma_to_fun
              twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
-             interval_es_rule.entry_of_exec\<close>)
+             interval_es_rule.entry_of_exec dg_pipeline.entry_alt_def Let_def\<close>)
   thus ?thesis    by (simp add: twice_route_at_call1)
 qed
 
@@ -259,13 +260,14 @@ proof -
       (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)
       (exec_formals_route twice_gs (Statement 3) [] ?entry
          (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))"
-    unfolding twice_empty_pred_def twice_ctx_sol_def interval_es_rule.entry_of_exec[symmetric]
+    unfolding twice_empty_pred_def twice_ctx_sol_def
+      interval_es_rule.entry_of_exec[where r = Globals_Warrow, symmetric]
       interval_es_rule.sol_env_def[symmetric]
     by (rule interval_es_rule.admitted_contextsI_call)
        (use sin ecov in
           \<open>simp_all add: gamma_lift_default_st_gamma_to_fun
              twice_empty_pred_def twice_ctx_sol_def interval_es_rule.sol_env_def
-             interval_es_rule.entry_of_exec\<close>)
+             interval_es_rule.entry_of_exec dg_pipeline.entry_alt_def Let_def\<close>)
   thus ?thesis    by (simp add: twice_route_at_call2)
 qed
 

@@ -341,7 +341,8 @@ definition mcp_equations ::
        \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
   "mcp_equations as global seed route =
-     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route"
+     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route
+       (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d. Bot)"
 
 definition mcp_solve_c ::
     "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
@@ -356,7 +357,8 @@ definition mcp_run_of ::
        \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
        \<Rightarrow> ('c, mcp_val) solved_run" where
   "mcp_run_of as global seed route =
-     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route"
+     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route
+       (\<lambda>\<G> d g. d) (\<lambda>\<G> d. d)"
 
 lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
 

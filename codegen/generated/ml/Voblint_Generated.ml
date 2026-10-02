@@ -5086,7 +5086,192 @@ let rec int_eq
 let rec length_tailrec x0 n = match x0, n with [], n -> n
                          | x :: xs, n -> length_tailrec xs (suc n);;
 
+let rec dgs_combine_assign_update
+  dgs_combine_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_combine_env_update
+  dgs_combine_enva
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_enva dgs_combine_env,
+          dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_special_update
+  dgs_speciala
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_speciala dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_return_update
+  dgs_returna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
+          dgs_combine_assign, dgs_query, more);;
+
+let rec dgs_branch_update
+  dgs_brancha
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_assign_update
+  dgs_assigna
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_query_update
+  dgs_querya
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_querya dgs_query, more);;
+
+let rec dgs_event_update
+  dgs_eventa
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_enter, dgs_eventa dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_enter_update
+  dgs_entera
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+          dgs_entera dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_skip_update
+  dgs_skipa
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skipa dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec dgs_body_update
+  dgs_bodya
+    (Dg_spec_ext
+      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
+        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
+        more))
+    = Dg_spec_ext
+        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_bodya dgs_body,
+          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
+          dgs_query, more);;
+
+let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
+
+let rec local_enter_transfer f m = sp_return (f (man_local m));;
+
+let rec local_transfer f m = sp_return (f (man_local m));;
+
 let rec ls_channel c x = ask_rec (ls_query c) query_depth bot_set x;;
+
+let rec closed_step c a d = ls_step c (ls_channel c d) a d;;
+
+let rec dg_spec_of _A
+  c = dgs_query_update (fun _ -> local_query (ls_channel c))
+        (dgs_combine_assign_update
+          (fun _ ci ->
+            local_combine_transfer
+              (fun dc de -> ls_combine_assign c (ls_channel c de) ci dc de))
+          (dgs_combine_env_update
+            (fun _ ci ->
+              local_combine_transfer
+                (fun dc de ->
+                  ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc
+                    de))
+            (dgs_event_update
+              (fun _ ev -> local_transfer (closed_step c (event_action ev)))
+              (dgs_enter_update
+                (fun _ ci ->
+                  local_enter_transfer
+                    (fun d -> ls_enter c (ls_channel c d) ci (d, d)))
+                (dgs_return_update
+                  (fun _ e p -> local_transfer (closed_step c (EA_Ret (e, p))))
+                  (dgs_body_update
+                    (fun _ p -> local_transfer (closed_step c (EA_Body p)))
+                    (dgs_branch_update
+                      (fun _ b pol ->
+                        local_transfer
+                          (closed_step c
+                            (if pol then EA_Assume b else EA_AssumeNot b)))
+                      (dgs_special_update
+                        (fun _ sc x ->
+                          local_transfer (closed_step c (EA_Special (sc, x))))
+                        (dgs_assign_update
+                          (fun _ x e ->
+                            local_transfer (closed_step c (EA_Assign (x, e))))
+                          (dgs_skip_update
+                            (fun _ -> local_transfer (closed_step c EA_Nop))
+                            (Dg_spec_ext
+                              (local_transfer id,
+                                (fun _ _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ -> local_transfer id),
+                                (fun _ _ -> local_transfer id),
+                                (fun _ ->
+                                  local_enter_transfer (fun d -> [(d, d)])),
+                                (fun _ -> local_transfer id),
+                                (fun _ ->
+                                  local_combine_transfer (fun d _ -> d)),
+                                (fun _ ->
+                                  local_combine_transfer (fun d _ -> d)),
+                                (fun _ _ ->
+                                  sp_return
+                                    (top_query_lifta
+                                      (order_int_dom_ext
+bounded_lattice_unit))),
+                                ()))))))))))));;
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
@@ -9216,8 +9401,6 @@ bounded_lattice_unit))),
   Order_Analysis
                                       then top_relc else bot_relca))))))));;
 
-let rec closed_step c a d = ls_step c (ls_channel c d) a d;;
-
 let rec mcp_en_from cs a ci p = fold (fun c -> maps (ls_enter c a ci)) cs [p];;
 
 let rec mcp_combine
@@ -9885,8 +10068,6 @@ let rec report_of _A
             maps seeds_of (prog_main_name :: prog_procs p),
           arithmetic_diagnostics _A g r classify, ()));;
 
-let rec local_transfer f m = sp_return (f (man_local m));;
-
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
 let rec sigma (State_ext (called, infl, stabl, sigma, more)) = sigma;;
@@ -9977,33 +10158,38 @@ let rec prog_main p = main_body (prog_table p);;
 let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
 
 let rec dg_result_for
-  rd emp sol =
+  rd emp rc gk sol =
     Solved_Table
       (fst sol,
         (fun v ctx ->
           map_lift rd
-            (canonicalize_lift emp (dg_local (snd sol (Inl (v, ctx)))))));;
+            (canonicalize_lift emp
+              (rc (dg_local (snd sol (Inl (v, ctx))))
+                (dg_global (snd sol (Inr gk)))))));;
 
 let rec solved_run_of (_A1, _A2)
-  comp emp rd analysis_global seed route g p sol =
+  comp emp rd analysis_global seed route place_cmb place_rl g p sol =
     (let c = comp g p in
+     let ga = dg_global (snd sol (Inr analysis_global)) in
      let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
       Solved_run_ext
-        (dg_result_for (rd g) (emp p) sol,
-          read (dg_global (snd sol (Inr analysis_global))),
+        (dg_result_for (rd g) (emp p) (place_cmb g) analysis_global sol,
+          read ga,
           (fun f ctx ->
-            read (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))),
+            read (place_cmb g
+                    (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))
+                   ga)),
           (fun v ctx a ->
-            read (let b = dg_local (snd sol (Inl (v, ctx))) in
+            read (let b = place_cmb g (dg_local (snd sol (Inl (v, ctx)))) ga in
                    closed_step c a b)),
           (fun u ctx ca q ->
             (let d =
-               snd (hd (ls_enter (comp g p)
-                         (ls_channel (comp g p)
-                           (dg_local (snd sol (Inl (u, ctx)))))
-                         (call_info_of ca q)
-                         (dg_local (snd sol (Inl (u, ctx))),
-                           dg_local (snd sol (Inl (u, ctx))))))
+               snd (let w = place_cmb g (dg_local (snd sol (Inl (u, ctx)))) ga
+                      in
+                     (place_rl g w,
+                       place_rl g
+                         (snd (hd (ls_enter (comp g p) (ls_channel (comp g p) w)
+                                    (call_info_of ca q) (w, w))))))
                in
               (if equal_lifteda _A1 d Bot then None
                 else Some (route g u ctx d ca)))),
@@ -10080,7 +10266,8 @@ let rec mcp_run_of
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route;;
+      (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route (fun _ d _ -> d)
+      (fun _ d -> d);;
 
 let rec activation
   asa = (if null asa then [Int_Analysis Refine_Fixpoint]
@@ -11690,200 +11877,13 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
         (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
         initial_global);;
 
-let rec dgs_combine_assign_update
-  dgs_combine_assigna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assigna dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_combine_env_update
-  dgs_combine_enva
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_enva dgs_combine_env,
-          dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_special_update
-  dgs_speciala
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_speciala dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_return_update
-  dgs_returna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_returna dgs_return, dgs_enter, dgs_event, dgs_combine_env,
-          dgs_combine_assign, dgs_query, more);;
-
-let rec dgs_branch_update
-  dgs_brancha
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_brancha dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_assign_update
-  dgs_assigna
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assigna dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_query_update
-  dgs_querya
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_querya dgs_query, more);;
-
-let rec dgs_event_update
-  dgs_eventa
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_enter, dgs_eventa dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_enter_update
-  dgs_entera
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-          dgs_entera dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_skip_update
-  dgs_skipa
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skipa dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec dgs_body_update
-  dgs_bodya
-    (Dg_spec_ext
-      (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_body, dgs_return,
-        dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign, dgs_query,
-        more))
-    = Dg_spec_ext
-        (dgs_skip, dgs_assign, dgs_special, dgs_branch, dgs_bodya dgs_body,
-          dgs_return, dgs_enter, dgs_event, dgs_combine_env, dgs_combine_assign,
-          dgs_query, more);;
-
-let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
-
-let rec local_enter_transfer f m = sp_return (f (man_local m));;
-
 let rec equations (_A1, _A2) _B
-  comp init_st analysis_global seed route g p =
+  comp init_st analysis_global seed route place_spec place_rg g p =
     compiled_routed_eqs_for _B
       ((equal_lifted _A1), (bounded_semilattice_sup_bot_lifted _A2))
       (bounded_semilattice_sup_bot_lifted _A2) analysis_global seed (route g)
-      (dgs_query_update (fun _ -> local_query (ls_channel (comp g p)))
-        (dgs_combine_assign_update
-          (fun _ ci ->
-            local_combine_transfer
-              (fun dc de ->
-                ls_combine_assign (comp g p) (ls_channel (comp g p) de) ci dc
-                  de))
-          (dgs_combine_env_update
-            (fun _ ci ->
-              local_combine_transfer
-                (fun dc de ->
-                  ls_combine_env (comp g p) (ls_channel (comp g p) dc)
-                    (ls_channel (comp g p) de) ci dc de))
-            (dgs_event_update
-              (fun _ ev ->
-                local_transfer (closed_step (comp g p) (event_action ev)))
-              (dgs_enter_update
-                (fun _ ci ->
-                  local_enter_transfer
-                    (fun d ->
-                      ls_enter (comp g p) (ls_channel (comp g p) d) ci (d, d)))
-                (dgs_return_update
-                  (fun _ e pa ->
-                    local_transfer (closed_step (comp g p) (EA_Ret (e, pa))))
-                  (dgs_body_update
-                    (fun _ pa ->
-                      local_transfer (closed_step (comp g p) (EA_Body pa)))
-                    (dgs_branch_update
-                      (fun _ b pol ->
-                        local_transfer
-                          (closed_step (comp g p)
-                            (if pol then EA_Assume b else EA_AssumeNot b)))
-                      (dgs_special_update
-                        (fun _ sc x ->
-                          local_transfer
-                            (closed_step (comp g p) (EA_Special (sc, x))))
-                        (dgs_assign_update
-                          (fun _ x e ->
-                            local_transfer
-                              (closed_step (comp g p) (EA_Assign (x, e))))
-                          (dgs_skip_update
-                            (fun _ ->
-                              local_transfer (closed_step (comp g p) EA_Nop))
-                            (Dg_spec_ext
-                              (local_transfer id,
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ ->
-                                  local_enter_transfer (fun d -> [(d, d)])),
-                                (fun _ -> local_transfer id),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ _ ->
-                                  sp_return
-                                    (top_query_lifta
-                                      (order_int_dom_ext
-bounded_lattice_unit))),
-                                ())))))))))))))
-      (prog_cfg p) (Lifted init_st) (bot_lifteda _A2);;
+      (place_spec g (comp g p)) (prog_cfg p) (Lifted init_st)
+      (place_rg g (Lifted init_st));;
 
 let rec mcp_equations _A
   asa global seed route =
@@ -11956,7 +11956,41 @@ let rec mcp_equations _A
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      _A (mcp_comp asa) (mcp_init asa) global seed route;;
+      _A (mcp_comp asa) (mcp_init asa) global seed route
+      (fun _ ->
+        dg_spec_of
+          (bot_lifted
+            (semilattice_sup_analysis_product
+              (semilattice_sup_lifted
+                (semilattice_sup_default_st bounded_semilattice_sup_bot_sign))
+              (semilattice_sup_analysis_product
+                (semilattice_sup_lifted
+                  (semilattice_sup_default_st bounded_semilattice_sup_bot_ivl))
+                (semilattice_sup_analysis_product
+                  (semilattice_sup_lifted
+                    (semilattice_sup_default_st
+                      bounded_semilattice_sup_bot_parity))
+                  (semilattice_sup_analysis_product
+                    (semilattice_sup_lifted
+                      (semilattice_sup_default_st
+                        (bounded_semilattice_sup_bot_int_dom_ext
+                          bounded_lattice_unit)))
+                    (semilattice_sup_analysis_product
+                      (semilattice_sup_lifted
+                        (semilattice_sup_default_st
+                          (bounded_semilattice_sup_bot_int_dom_ext
+                            bounded_lattice_unit)))
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_default_st
+                            (bounded_semilattice_sup_bot_int_dom_ext
+                              bounded_lattice_unit)))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_default_st
+                              bounded_semilattice_sup_bot_congruence))
+                          semilattice_sup_relc)))))))))
+      (fun _ _ -> Bot);;
 
 let rec entry_ctx_key
   asa ctx =

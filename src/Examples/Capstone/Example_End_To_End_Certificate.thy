@@ -349,6 +349,7 @@ lemma certificate_demo_solve_c:
      (dg_pipeline.equations (mcp_comp (activation certificate_analyses))
         (mcp_init (activation certificate_analyses))
         Call_String_Context.Global Call_String_Context.Seed (\<lambda>_. cs_route 1)
+        (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d. Bot)
         (declared_global certificate_demo_prog) certificate_demo_prog)
      (dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
   unfolding dg_pipeline.root_query_def by eval
