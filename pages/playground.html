@@ -158,13 +158,16 @@
               <div class="control-group">
                 <label for="placement-select">Program globals</label>
                 <select id="placement-select" aria-describedby="placement-help">
-                  <option value="local" selected>Local</option>
+                  <option value="local" selected>Flow-sensitive</option>
                   <option value="shared">Shared</option>
                 </select>
                 <span id="placement-help" class="visually-hidden">
-                  Local keeps every global in each point's own state. Shared keeps
-                  them in one flow-insensitive value every point reads; warrowing it
-                  need not settle, so pair it with bounded narrowing.
+                  Flow-sensitive keeps every global in each point's own state. Shared
+                  places globals in one flow-insensitive value every point reads, for
+                  the analyses whose state splits by variable; the order analysis
+                  relates variables across that split and keeps its whole state per
+                  point. Warrowing the shared value need not settle, so choosing
+                  Shared selects bounded narrowing unless a rule was picked.
                 </span>
               </div>
 

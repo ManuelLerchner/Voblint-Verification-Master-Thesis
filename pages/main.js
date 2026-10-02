@@ -409,12 +409,12 @@ function renderRawCall(raw) {
   const args = input
     ? [
         callPart(
-          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} `,
+          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} ${input.pg ? `${constructorTerm(input.pg)} ` : ""}`,
           "arg",
         ),
         callPart("p", "program"),
       ]
-    : [callPart("as rule ctx p", "arg")];
+    : [callPart("as rule ctx pg p", "arg")];
   /* Before any run the title asks for one. */
   let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
@@ -1922,6 +1922,10 @@ function downloadSolverTraceJsonl() {
   }
 }
 
+/* The one global unknown every point reads when program globals are shared. */
+const GLOBAL_ID = "global-shared";
+const GLOBAL_SIZE = 24;
+
 /*
  * The solve replay draws its own copy of the graph, laid out as the CFG panel lays out
  * its graph, from the traces the run recorded.
@@ -1935,6 +1939,7 @@ const solveReplay = createSolveReplay({
   applyGraphLayout,
   followRoutesOnDrag,
   seedId,
+  globalId: GLOBAL_ID,
   cssToken,
 });
 
@@ -2141,6 +2146,23 @@ function seedLabel(lines) {
 /* The shown graph's seeds by the entry they feed, for their tooltips. */
 let graphSeeds = new Map();
 
+/*
+ * The program globals an edge's statement reads and writes, from its text: an
+ * assignment's target is written, every other name is read.
+ */
+function globalAccess(text, globals) {
+  const assigned = /^([A-Za-z_][A-Za-z0-9_]*) := (.*)$/.exec(text ?? "");
+  const names = (source) => source.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
+  const read = (assigned ? names(assigned[2]) : names(text ?? "")).filter((name) =>
+    globals.has(name),
+  );
+
+  return {
+    reads: read.length > 0,
+    writes: Boolean(assigned && globals.has(assigned[1])),
+  };
+}
+
 function seedId(entryId) {
   return `seed-${entryId}`;
 }
@@ -2209,6 +2231,51 @@ function graphElements(result) {
         },
       );
     }
+  }
+
+  /*
+   * With shared program globals, the global unknown stands outside every context.
+   * A point whose incoming statement writes a global publishes to it, and one whose
+   * statement reads a global reads it: both happen in the target's right-hand side.
+   */
+  const shared = result.shared;
+  const globals = new Set(shared?.globals ?? []);
+
+  if (globals.size > 0) {
+    elements.push({
+      group: "nodes",
+      data: {
+        id: GLOBAL_ID,
+        width: GLOBAL_SIZE,
+        height: GLOBAL_SIZE,
+        label: shared.reachable ? `Global  ${seedLabel(shared.lines)}`.trim() : "Global",
+      },
+      classes: shared.reachable ? "global" : "global unreached",
+    });
+
+    result.graph.edges.forEach((edge, index) => {
+      if (edge.kind !== "intra" || !nodesById.has(edge.target)) {
+        return;
+      }
+
+      const { reads, writes } = globalAccess(edge.text, globals);
+
+      if (reads) {
+        elements.push({
+          group: "edges",
+          data: { id: `global-read-${index}`, source: GLOBAL_ID, target: edge.target },
+          classes: "global_read",
+        });
+      }
+
+      if (writes) {
+        elements.push({
+          group: "edges",
+          data: { id: `global-write-${index}`, source: edge.target, target: GLOBAL_ID },
+          classes: "global_write",
+        });
+      }
+    });
   }
 
   result.graph.edges.forEach((edge, index) => {
@@ -2695,6 +2762,16 @@ function applyGraphLayout(view, { centers, routes, labels }) {
   view.batch(() => {
     view.nodes(".point, .seed").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
+    /* The global unknown belongs to no context; it sits above the top-left box. */
+    const placed = [...centers.values()];
+
+    if (placed.length > 0) {
+      view.nodes(".global").position({
+        x: Math.min(...placed.map((c) => c.x)),
+        y: Math.min(...placed.map((c) => c.y)) - 90,
+      });
+    }
+
     for (const [id, points] of routes) {
       const edge = view.getElementById(id);
       const style = segmentStyle(
@@ -2817,6 +2894,31 @@ function graphStyle() {
         "text-valign": "center",
         "text-margin-x": 6,
       },
+    },
+    /* The shared global unknown: a diamond, read by points and published to by writes. */
+    {
+      selector: "node.global",
+      style: {
+        shape: "diamond",
+        width: "data(width)",
+        height: "data(height)",
+        "background-color": cssToken("--surface"),
+        "border-color": cssToken("--global-link"),
+        "border-width": 2.5,
+        "overlay-opacity": 0,
+        label: "data(label)",
+        color: cssToken("--global-link"),
+        "font-family": cssToken("--mono"),
+        "font-size": EDGE_FONT_SIZE,
+        "font-weight": "bold",
+        "text-halign": "right",
+        "text-valign": "center",
+        "text-margin-x": 8,
+      },
+    },
+    {
+      selector: "node.global.unreached",
+      style: { "border-style": "dashed", "border-color": cssToken("--text-faint") },
     },
     {
       selector: "node.seed.unreached",
@@ -2944,6 +3046,30 @@ function graphStyle() {
         "target-label": "",
         "text-margin-x": "data(labelX)",
         "text-margin-y": "data(labelY)",
+      },
+    },
+    /* After the generic edge rule, which would otherwise restyle them. */
+    {
+      selector: "edge.global_read",
+      style: {
+        width: 1.2,
+        "curve-style": "bezier",
+        "line-style": "dotted",
+        "line-color": cssToken("--global-link"),
+        "target-arrow-color": cssToken("--global-link"),
+        "target-arrow-shape": "triangle",
+        opacity: 0.6,
+      },
+    },
+    {
+      selector: "edge.global_write",
+      style: {
+        width: 1.6,
+        "curve-style": "bezier",
+        "line-style": "dashed",
+        "line-color": cssToken("--global-link"),
+        "target-arrow-color": cssToken("--global-link"),
+        "target-arrow-shape": "triangle-tee",
       },
     },
   ];
@@ -3378,7 +3504,37 @@ function updateGlobalsControls() {
     "bounded-narrowing": `Widen side-effected values per origin; ${narrowing}.`,
   };
 
-  globalsHelp.textContent = descriptions[globalsSelect.value] ?? "";
+  const sharedWarning =
+    placementSelect.value === "shared" && globalsSelect.value.startsWith("warrow")
+      ? " Warrowing the shared global need not settle; bounded narrowing ends it."
+      : "";
+
+  globalsHelp.textContent = (descriptions[globalsSelect.value] ?? "") + sharedWarning;
+}
+
+/*
+ * The CLI solves shared program globals with bounded narrowing unless told otherwise,
+ * since warrowing the global every point reads can keep destabilizing its readers.
+ * Switching placements does the same with a rule the reader has not picked, and
+ * switching back undoes it.
+ */
+let globalsPicked = false;
+let globalsSwitchedForShared = false;
+
+function updatePlacementControls() {
+  if (placementSelect.value === "shared" && !globalsPicked && globalsSelect.value === "warrow") {
+    globalsSelect.value = "bounded-narrowing";
+    globalsSwitchedForShared = true;
+  } else if (
+    placementSelect.value === "local" &&
+    globalsSwitchedForShared &&
+    globalsSelect.value === "bounded-narrowing"
+  ) {
+    globalsSelect.value = "warrow";
+    globalsSwitchedForShared = false;
+  }
+
+  updateGlobalsControls();
 }
 
 /*
@@ -4003,7 +4159,12 @@ for (const box of analysisChoices) {
   box.addEventListener("change", updateIntRefinementControls);
 }
 
-globalsSelect.addEventListener("change", updateGlobalsControls);
+globalsSelect.addEventListener("change", () => {
+  globalsPicked = true;
+  globalsSwitchedForShared = false;
+  updateGlobalsControls();
+});
+placementSelect.addEventListener("change", updatePlacementControls);
 narrowBoundInput.addEventListener("input", updateGlobalsControls);
 
 graphZoomIn.addEventListener("click", () => cy && zoomGraphIn());
@@ -4379,6 +4540,7 @@ function openProgram({ source, fileName, settings = {} }) {
     activationControl.value = settings.analysis;
   }
   selectIfOffered(globalsSelect, settings.globals);
+  globalsPicked ||= typeof settings.globals === "string";
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(placementSelect, settings.placement ?? "local");
   selectIfOffered(intRefinementSelect, settings.refinement);

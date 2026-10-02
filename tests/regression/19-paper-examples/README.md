@@ -17,7 +17,7 @@ the claim it is measured against.
 
 | Paper | Claim | Here |
 | --- | --- | --- |
-| Fig. 1, Example 1 | A flow-insensitive summary of `g` collects 1, -17 and 42, which suffices to falsify the error condition | `precision/01-fig1_sequential_globals.vimp` |
+| Fig. 1, Example 1 | A flow-insensitive summary of `g` collects 1, -17 and 42, which suffices to falsify the error condition | `precision/01-fig1_sequential_globals.vimp`; flow-insensitively, `precision/07-example1_shared_global_summary.vimp` |
 | Example 2 | Widening the accumulated value drives `g` to `[-inf,+inf]`, losing `g <= 42` | `known-imprecision/02-whole_global_widening.vimp` |
 | Example 3 | A flow-insensitive analysis infers `h = [0,+inf]`, unable to tell one execution of line 4 from many | `precision/01-fig1_sequential_globals.vimp` |
 | Example 5 | Fig. 1's side-effecting constraint system: one unknown per program point, plus `[g]` and `[h]` | `precision/01-fig1_sequential_globals.vimp`'s `EXPECT-GRAPH` block |
@@ -46,7 +46,7 @@ flow-insensitively, which the paper presents as a choice: "In principle, the
 values of g and h could be analyzed flow-sensitively. For efficiency, we may
 choose to analyze the values of one or both of them flow-insensitively."
 
-The `voblint` CLI makes the other choice, and so does Goblint on
+The `voblint` CLI makes the other choice by default, and so does Goblint on
 single-threaded code -- `base.ml` reads globals from local state without
 publication at all (`docs/GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction
 and publication timing, source-checked 2026-08-10). A declared global lives
@@ -60,8 +60,9 @@ a procedure's `FunctionEntry` seed, side-effected once per call site, with
 the paper's own three contributions in the paper's order. The result is the
 paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
 
-The flow-insensitive placement itself is formalized, just not selectable from
-VIMP source or a CLI flag, so it has no fixture here. The ownership split
-(`ownership_split_dg_spec_st_for`, `Ownership_Split_Exec.thy`) keeps declared
-globals in a flow-insensitive side slot, and `Example_Interval_DG_Flagship.thy`
-registers through it. See `docs/PER_ORIGIN_WIDENING.md`.
+`--program-globals shared` selects the flow-insensitive placement. Case 07
+runs Example 1 that way on Fig. 1 without `h`. Under `--globals join` the
+contributions to `g` join to `[-17,42]`, which proves `g < 43` and not
+`g == 42`, as the paper says. Under the warrowing rules the summary of `g`
+widens to `[-inf,+inf]` and is not narrowed back, Example 2's loss on a
+program global.

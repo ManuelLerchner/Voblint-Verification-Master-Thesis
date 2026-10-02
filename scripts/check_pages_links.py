@@ -118,12 +118,14 @@ PLAYGROUND_KEYS = {
     "context",
     "k",
     "refinement",
+    "placement",
     "trace",
 }
 PLAYGROUND_SELECTS = {
     "globals": "globals-select",
     "context": "context-select",
     "refinement": "int-refinement-select",
+    "placement": "placement-select",
 }
 # Values a link may carry besides a select's own. The playground shows only the full
 # trace and opens it for any trace= value older links name: 1, compact or verbose.
