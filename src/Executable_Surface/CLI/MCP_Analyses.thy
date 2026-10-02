@@ -157,6 +157,43 @@ lemma val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
 lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = {}"
   by (auto simp: mcp_empty_v_def mcp_gamma_v_def list_ex_iff dest: val_empty_gamma)
 
+lemma sound_emptiness_mcp: "sound_emptiness (mcp_empty_v as) (mcp_gamma_v as)"
+  by (rule sound_emptinessI) (rule mcp_empty_v_gamma)
+
+text \<open>
+  The combined test is not exact. Interval says \<open>x = 2\<close> and Parity says \<open>x\<close> is odd:
+  neither field is empty, so the test does not fire, yet no store satisfies both.
+\<close>
+
+lemma mcp_empty_v_not_exact:
+  "\<not> exact_emptiness (mcp_empty_v [Interval_Analysis, Parity_Analysis])
+       (mcp_gamma_v [Interval_Analysis, Parity_Analysis])"
+proof
+  define iv :: "ivl abs_state" where "iv = (\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2))"
+  define pv :: "parity abs_state" where "pv = (\<top> :: parity abs_state)(STR ''x'' := POdd)"
+  define v :: mcp_val where "v = set_slot3 (set_slot2 \<bottom> (Lifted iv)) (Lifted pv)"
+  assume exact: "exact_emptiness (mcp_empty_v [Interval_Analysis, Parity_Analysis])
+                   (mcp_gamma_v [Interval_Analysis, Parity_Analysis])"
+  have "(\<lambda>_. 2) \<in> \<lbrakk>iv\<rbrakk>" by (auto simp: iv_def gamma_state_def top_ivl_def gamma_ivl_top)
+  then have iv_ne: "\<not> is_empty_state iv" by (auto simp: is_empty_state_iff_gamma_state_empty)
+  have "(\<lambda>_. 1) \<in> \<lbrakk>pv\<rbrakk>" by (auto simp: pv_def gamma_state_def gamma_parity_top)
+  then have pv_ne: "\<not> is_empty_state pv" by (auto simp: is_empty_state_iff_gamma_state_empty)
+  have not_empty: "\<not> mcp_empty_v [Interval_Analysis, Parity_Analysis] v"
+    using iv_ne pv_ne by (simp add: mcp_empty_v_def v_def)
+  have no_store: "mcp_gamma_v [Interval_Analysis, Parity_Analysis] v = {}"
+  proof (rule equals0I)
+    fix s
+    assume "s \<in> mcp_gamma_v [Interval_Analysis, Parity_Analysis] v"
+    then have "s \<in> \<lbrakk>iv\<rbrakk>" and "s \<in> \<lbrakk>pv\<rbrakk>"
+      by (simp_all add: mcp_gamma_v_def v_def)
+    then have "s (STR ''x'') \<in> gamma_ivl (Ivl (Fin 2) (Fin 2))"
+      and "s (STR ''x'') \<in> gamma_parity POdd"
+      by (auto simp: iv_def pv_def gamma_state_def dest: spec[of _ "STR ''x''"])
+    then show False by (simp, presburger)
+  qed
+  from exact_emptinessD [OF exact, of v] not_empty no_store show False by simp
+qed
+
 definition mcp_answer :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
   "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as \<top>"
 

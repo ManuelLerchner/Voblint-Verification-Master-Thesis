@@ -195,6 +195,12 @@ corollary analysis_report_refuted:
 theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}"
   unfolding DEAD_def report_sem_def by auto
 
+text \<open>Read as an emptiness test on points, \<open>DEAD\<close> is sound and, since the combined
+  test underneath it is, not exact.\<close>
+
+corollary sound_emptiness_DEAD: "sound_emptiness (DEAD res) (report_sem res)"
+  by (rule sound_emptinessI) (rule analysis_report_dead)
+
 text \<open>A check printed dead is one presentation of a dead point.\<close>
 
 lemma analysis_report_check_dead:

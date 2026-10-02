@@ -290,6 +290,12 @@ lemma default_st_is_bot_for_gamma_iff:
   by (simp add: default_st_is_bot_for_iff[OF globals] default_st_gamma_def
       is_empty_state_iff_gamma_state_empty)
 
+lemma exact_emptiness_default_st_is_bot_for:
+  assumes globals: "\<And>x. \<G> x = (x \<in> set globals)"
+  shows "exact_emptiness (default_st_is_bot_for globals)
+           (default_st_gamma \<G> :: 'a::numeric_domain default_st \<Rightarrow> store set)"
+  by (rule exact_emptinessI) (rule default_st_is_bot_for_gamma_iff[OF globals])
+
 subsection \<open>The stores a lifted carrier state describes\<close>
 
 text \<open>

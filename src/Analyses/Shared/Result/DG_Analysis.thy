@@ -441,6 +441,12 @@ locale dg_analysis =
       "\<And>p. cinit_stores (declared_global p) \<subseteq> gamma\<^sub>V (rd (declared_global p) init_st)"
 begin
 
+text \<open>The published emptiness test is only sound: a product of analyses may describe
+  nothing without any one of them saying so.\<close>
+
+lemma sound_emptiness_V: "sound_emptiness empty\<^sub>V gamma\<^sub>V"
+  using empty\<^sub>V_sound by blast
+
 text \<open>
   Termination is a per-program side condition, and this is how a caller decides
   it: run the solver's own executable termination check on this program's

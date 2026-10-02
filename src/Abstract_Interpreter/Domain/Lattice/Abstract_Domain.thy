@@ -13,6 +13,38 @@ text \<open>
   Abstract states and control-flow reachability are separate modules.
 \<close>
 
+subsection \<open>Exact and sound emptiness\<close>
+
+text \<open>
+  An emptiness test is \<^emph>\<open>exact\<close> for a concretization when it holds of exactly the
+  values that describe nothing, and \<^emph>\<open>sound\<close> when every value it holds of describes
+  nothing, with no converse. Each layer states which of the two its test is: a single
+  domain's and a single state's test are exact, the combined state's only sound,
+  because two analyses can each describe some value while their intersection is
+  empty.
+\<close>
+
+definition sound_emptiness :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'c set) \<Rightarrow> bool" where
+  "sound_emptiness e \<gamma>' \<longleftrightarrow> (\<forall>x. e x \<longrightarrow> \<gamma>' x = {})"
+
+definition exact_emptiness :: "('s \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> 'c set) \<Rightarrow> bool" where
+  "exact_emptiness e \<gamma>' \<longleftrightarrow> (\<forall>x. e x \<longleftrightarrow> \<gamma>' x = {})"
+
+lemma sound_emptinessI [intro]: "(\<And>x. e x \<Longrightarrow> \<gamma>' x = {}) \<Longrightarrow> sound_emptiness e \<gamma>'"
+  unfolding sound_emptiness_def by blast
+
+lemma sound_emptinessD [dest]: "sound_emptiness e \<gamma>' \<Longrightarrow> e x \<Longrightarrow> \<gamma>' x = {}"
+  unfolding sound_emptiness_def by blast
+
+lemma exact_emptinessI [intro]: "(\<And>x. e x \<longleftrightarrow> \<gamma>' x = {}) \<Longrightarrow> exact_emptiness e \<gamma>'"
+  unfolding exact_emptiness_def by blast
+
+lemma exact_emptinessD: "exact_emptiness e \<gamma>' \<Longrightarrow> e x \<longleftrightarrow> \<gamma>' x = {}"
+  unfolding exact_emptiness_def by blast
+
+lemma exact_emptiness_sound: "exact_emptiness e \<gamma>' \<Longrightarrow> sound_emptiness e \<gamma>'"
+  unfolding exact_emptiness_def sound_emptiness_def by blast
+
 subsection \<open>Executable and sound domains\<close>
 
 text \<open>
@@ -33,6 +65,9 @@ class numeric_domain = executable_domain +
   assumes gamma_top[simp]: "\<gamma> \<top> = UNIV"
   assumes gamma_mono: "a \<le> b \<Longrightarrow> \<gamma> a \<subseteq> \<gamma> b"
   assumes is_empty_correct: "is_empty a \<longleftrightarrow> \<gamma> a = {}"
+
+lemma exact_emptiness_is_empty: "exact_emptiness is_empty (\<gamma> :: 'a::numeric_domain \<Rightarrow> int set)"
+  by (rule exact_emptinessI) (rule is_empty_correct)
 
 text \<open>
   \<open>executable_domain\<close> carries exactly the executable per-element operations a

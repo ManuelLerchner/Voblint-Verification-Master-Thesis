@@ -36,6 +36,11 @@ lemma is_empty_state_lift_iff:
   "is_empty_state_lift s \<longleftrightarrow> \<lbrakk>s\<rbrakk>\<^sub>\<bottom> = {}"
   by (cases s) (simp_all add: is_empty_state_iff_gamma_state_empty)
 
+lemma exact_emptiness_is_empty_state_lift:
+  "exact_emptiness is_empty_state_lift
+     (gamma_lift gamma_state :: 'a::numeric_domain abs_state lifted \<Rightarrow> store set)"
+  by (rule exact_emptinessI) (rule is_empty_state_lift_iff)
+
 text \<open>
   \<open>Reachability_Lift\<close>'s generic \<open>gamma_normalize_lift\<close>/\<open>normalize_lift_mono\<close>/
   \<open>normalized_lift_sup\<close> specialized to \<open>is_empty_state\<close>: each generic side

@@ -137,7 +137,7 @@ classifier over its own states at the check's point. From that alone:
 | --- | --- |
 | `analysis_report_verdicts_sound` | `⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` |
 | `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `⟦res⟧⇘v⇙` |
-| `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧⇘v⇙ = {}`; the converse does not hold, since the product's emptiness test is incomplete |
+| `analysis_report_dead`, `sound_emptiness_DEAD` | `DEAD res v ⟹ ⟦res⟧⇘v⇙ = {}`: `DEAD` is a sound emptiness test on points; the converse does not hold, since the combined state's test is only sound (`mcp_empty_v_not_exact`) |
 | `analysis_report_check_dead` | a `Dead` check row's point is `DEAD` |
 | `analysis_report_unknown` | an `UNKNOWN` check's point is not `DEAD` |
 
