@@ -211,7 +211,7 @@ The last two conclusions are two inclusions: `node_collect … v ⊆ report_sem 
 needs the run that built the report
 ([`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy)), and
 `report_sem res v ⊆ verdict_stores res v` holds for the report alone
-([`analysis_report_checks_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
+([`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
 
 <details>
 <summary>Why the node is existential</summary>

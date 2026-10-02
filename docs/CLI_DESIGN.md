@@ -36,8 +36,8 @@ voblint --help
   entered-argument context; `call-string` splits it by bounded call history
   instead and requires `--context-depth K`. Every domain serves every context
   mode at every `--globals` rule.
-- `run_voblint_certified_source_sound` covers every domain, rule and context
-  mode. Under `entry-state` and `call-string` its table claim is existential in
+- `run_voblint_source_sound` covers every domain, rule and context
+  mode. Under `entry-state` and `call-string` its report claim is existential in
   the context: the store sits in the entry of at least one context its call
   history is admitted at. See [`docs/THEOREM_MAP.md`](THEOREM_MAP.md) for the
   exact shape.

@@ -106,14 +106,14 @@ solver layer beyond ordinary code-generation trust.
 
 ## 5. Soundness endpoints
 
-The chain ends at `run_voblint_certified_source_sound` (`Analysis_Certified.thy`):
+The chain ends at `run_voblint_source_sound` (`Analysis_Certified.thy`):
 for every activation list, global update rule and context policy, a source run's
-store lies in the analysis result at a genuinely reachable node, and every
-definite verdict listed there holds for that store.
+store lies in the report's semantics `⟦res⟧_v` at a genuinely reachable node, and
+every definite verdict listed there holds for that store.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
-point is unreachable, at every configuration. The caller owes `config_terminates as rule ctx p` -- the
-solver run completed -- and nothing proves that in general; it is established per
-program by evaluation. That the run solved enough keys is no premise:
+point is unreachable, at every configuration. The caller owes nothing about termination: `run_voblint`
+solves with the executable `solve_c`, and an analysed answer exists only where it
+returned (`solve_c_run`). Nothing proves the solve returns in general. That the run solved enough keys is no premise:
 `live_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination. The
 root `README.md` states the theorem in full.
 
@@ -177,7 +177,7 @@ post-order and `prog_stmt_post_order`, and nothing proves that pairing.
 
 Proved, for every configuration `run_voblint` answers (every domain, rule and
 context policy, `docs/THEOREM_MAP.md`):
-if `config_terminates` holds for the program, every modeled source
+if `run_voblint` answers for the program, every modeled source
 execution is over-approximated at a reachable node, and every `PROVED` or
 `REFUTED` row printed there is correct for that execution.
 

@@ -262,10 +262,10 @@ alone cannot.
 Every analysis produces one canonical, contextual `analysis_result`: a table
 from `(pp, ctx)` to `Lifted abs_state | Bot`. A context-free run
 (`--context none`) is not a special case -- its table has the single unit
-context. `run_result_of` (`Analysis_Run.thy`) reads that one table, never the
-raw solver map, and publishes it as a structured `run_result`; `run_voblint`
-applies `string_of_abstract_value` to every abstract value in it through
-`map_run_result`. Everything below that line is OCaml:
+context. `report_of` (`Analysis_Run.thy`) reads that one table, never the
+raw solver map, and publishes it as a semantic `analysis_report`; the adapters
+apply `render_report` (`Analysis_Render.thy`), which renders every state with
+`string_of_abstract_value`. Everything below that line is OCaml:
 
 ```text
                        verified solver
@@ -274,7 +274,7 @@ applies `string_of_abstract_value` to every abstract value in it through
                       analysis_result
                (pp, ctx) -> Lifted abs_state | Bot
                              |
-                             |  run_result_of, map_run_result   [Isabelle]
+                             |  report_of, render_report        [Isabelle]
                              v
                    String.literal run_result
      res_cfg  res_contexts  res_states  res_routes
@@ -344,7 +344,7 @@ Goblint's globals pane iterates: `Global_Shared`, the analysis-wide slot, then
 for `main` and every procedure one `Global_Seed f (Some i)` per context index
 `i` its entry was solved at, holding the state calls push into that entry. A
 procedure no solved context enters is listed once as `Global_Seed f None` with
-state `Bot`. Each registration's `result_with_globals` returns the table and
+state `Bot`. Each registration's `solved_run` holds the table and
 these unknowns off one solve. `Result_text.global_rows` names the rows
 (`Global`, `enter f`, `enter f @ <context>`) for the HTML globals pane; the
 browser JSON's `seeds` drops `Global_Shared` and links each seed to its entry

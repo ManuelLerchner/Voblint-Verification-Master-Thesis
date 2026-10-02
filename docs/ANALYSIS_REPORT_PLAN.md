@@ -12,7 +12,7 @@ facts carry the whole guarantee:
 | Fact | Statement | Uses |
 | --- | --- | --- |
 | `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
-| `analysis_report_checks_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
+| `analysis_report_verdicts_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
 | `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
 
 `PROVED` and `REFUTED` constrain the stores inside `⟦res⟧ᵥ`; `DEAD` says there are
@@ -191,7 +191,7 @@ nothing.
 ```text
 run_voblint_covers:        run_voblint config p = Analysed res
                                ⟹ 𝒞 v ⊆ ⟦res⟧ᵥ
-analysis_report_checks_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
+analysis_report_verdicts_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
 analysis_report_proved:        PROVED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ truthy ⟦e⟧ s
 analysis_report_refuted:       REFUTED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ ¬ truthy ⟦e⟧ s
 analysis_report_dead:          DEAD res v ⟹ ⟦res⟧ᵥ = ∅
