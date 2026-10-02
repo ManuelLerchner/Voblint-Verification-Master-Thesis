@@ -1,8 +1,8 @@
 (* The configuration vocabulary the native CLI and the browser entry share: the
    names an analysis, a refinement mode, a globals rule and a context policy go
-   by, in both directions, and the one call that analyses a program and renders
-   the report. Each entry keeps its own error messages; the names are decided
-   here once. *)
+   by, in both directions, the validation of a whole request, and the one call
+   that analyses a program and renders the report. Each entry keeps its own
+   error messages; the names and the checks are decided here once. *)
 
 module C = Voblint
 
@@ -70,6 +70,88 @@ let context_of_name name depth =
 
 let config ~analyses ~globals ~context =
   C.Analysis_Config (analyses, globals, context)
+
+(* A request as either entry receives it: names, not constructors. The native
+   CLI reads it off its flags, the browser off the page's selections. *)
+type request = {
+  analyses : string list option;
+  refinement : string option;
+  globals : string;
+  narrow_bound : int option;
+  context : string;
+  depth : int option;
+}
+
+type request_error =
+  | Unknown_refinement of string
+  | Unknown_context_name of string
+  | Unknown_globals of string
+  | Unknown_analysis of string
+  | Refinement_without_int
+  | Negative_narrow_bound
+  | Narrow_bound_without_rule
+  | Context of context_error
+
+type resolved = {
+  domains : C.analysis_domain list option;
+  rule : C.globals_rule;
+  mode : C.context_mode;
+}
+
+(* Every check a request needs before a program is read, in the order the CLI
+   reports them. Each entry words the errors itself. *)
+let resolve (r : request) : (resolved, request_error) result =
+  let ( let* ) = Result.bind in
+  let* refinement =
+    match r.refinement with
+    | None -> Ok default_refinement
+    | Some name -> (
+        match refinement_of_name name with
+        | Some mode -> Ok mode
+        | None -> Error (Unknown_refinement name))
+  in
+  let* () =
+    match context_of_name r.context None with
+    | Error Unknown_context -> Error (Unknown_context_name r.context)
+    | _ -> Ok ()
+  in
+  let* rule =
+    match globals_of_name ~narrow_bound:default_narrow_bound r.globals with
+    | Some rule -> Ok rule
+    | None -> Error (Unknown_globals r.globals)
+  in
+  let* domains =
+    match r.analyses with
+    | None -> Ok None
+    | Some names ->
+        List.fold_right
+          (fun name acc ->
+            let* ds = acc in
+            match analysis_of_name ~refinement name with
+            | Some d -> Ok (d :: ds)
+            | None -> Error (Unknown_analysis name))
+          names (Ok [])
+        |> Result.map Option.some
+  in
+  let* () =
+    match (r.refinement, r.analyses) with
+    | Some _, names when not (List.mem "int" (Option.value names ~default:[]))
+      ->
+        Error Refinement_without_int
+    | _ -> Ok ()
+  in
+  let* rule =
+    match (r.globals, r.narrow_bound) with
+    | "bounded-narrowing", Some n when n < 0 -> Error Negative_narrow_bound
+    | "bounded-narrowing", n ->
+        Ok (bounded_narrowing (Option.value n ~default:default_narrow_bound))
+    | _, Some _ -> Error Narrow_bound_without_rule
+    | _, None -> Ok rule
+  in
+  let* mode =
+    Result.map_error (fun e -> Context e) (context_of_name r.context r.depth)
+  in
+  Ok { domains; rule; mode }
 
 (* The analysis and its rendering, in sequence: the report run_voblint returns is
    semantic, and the adapters read its rendering. *)

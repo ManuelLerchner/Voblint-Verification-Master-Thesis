@@ -333,8 +333,10 @@ These are grep targets on `src/` outside the theory that owns each name:
    browser entries stay separate executables (subprocess containment and files on one
    side, the JavaScript API and worker messages on the other), but share one module,
    `cli/result/analysis_request.ml`: the analysis, globals, context and refinement
-   names in both directions, `config_of_names` building the typed config, and
-   `analyse` wrapping `run_voblint` and `render_report`. Docs
+   names in both directions, `resolve`, which checks a whole request (unknown
+   names, a refinement without int, a narrow bound without its rule, a call-string
+   depth) with typed errors each entry words itself, and `analyse` wrapping
+   `run_voblint` and `render_report`. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
 8a. **A carrier-specialized generated-code boundary.** Each policy branch of

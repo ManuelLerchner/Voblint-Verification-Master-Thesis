@@ -415,7 +415,6 @@ let () =
      once every flag is read. *)
   let context_name = ref "none" in
   let context_depth = ref None in
-  let globals = ref Voblint.Globals_Warrow in
   let narrow_bound = ref None in
   let dot = ref false in
   let graph_snapshot = ref false in
@@ -444,18 +443,10 @@ let () =
         analysis_names := Some (String.split_on_char ',' v);
         parse_args rest
     | "--int-refinement" :: v :: rest ->
-        (match Analysis_request.refinement_of_name v with
-        | Some mode -> int_refinement := Some mode
-        | None ->
-            prerr_endline ("unknown --int-refinement value: " ^ v);
-            exit 1);
+        int_refinement := Some v;
         parse_args rest
     | "--context" :: v :: rest ->
-        (match Analysis_request.context_of_name v None with
-        | Error Analysis_request.Unknown_context ->
-            prerr_endline ("unknown --context value: " ^ v);
-            exit 1
-        | _ -> context_name := v);
+        context_name := v;
         parse_args rest
     | "--context-depth" :: v :: rest ->
         (try context_depth := Some (int_of_string v)
@@ -465,16 +456,6 @@ let () =
         parse_args rest
     | "--globals" :: v :: rest ->
         globals_name := v;
-        (* The bound is filled in once every flag is read, so --narrow-bound
-           may come before or after --globals. *)
-        (match
-           Analysis_request.globals_of_name
-             ~narrow_bound:Analysis_request.default_narrow_bound v
-         with
-        | Some rule -> globals := rule
-        | None ->
-            prerr_endline ("unknown --globals value: " ^ v);
-            exit 1);
         parse_args rest
     | "--narrow-bound" :: v :: rest ->
         (try narrow_bound := Some (int_of_string v)
@@ -560,60 +541,53 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
-  (* The refinement mode belongs to int, so it is resolved after every flag is
-     read and rejected when no int analysis is named. Each mode is an analysis
-     of its own in the generated carrier; all of them are int to the user. *)
-  let analyses =
-    let refinement =
-      Option.value !int_refinement ~default:Analysis_request.default_refinement
-    in
-    let kind_of name =
-      match Analysis_request.analysis_of_name ~refinement name with
-      | Some analysis -> analysis
-      | None ->
-          prerr_endline ("unknown --analysis value: " ^ name);
-          exit 1
-    in
-    Option.map (List.map kind_of) !analysis_names
+  (* Every flag is read before any is checked: --context-depth, --narrow-bound
+     and --int-refinement are each judged against another flag that may come
+     later. The checks themselves are shared with the browser entry. *)
+  let request : Analysis_request.request =
+    {
+      analyses = !analysis_names;
+      refinement = !int_refinement;
+      globals = !globals_name;
+      narrow_bound = !narrow_bound;
+      context = !context_name;
+      depth = !context_depth;
+    }
   in
-  (match (!int_refinement, !analysis_names) with
-  | Some _, names when not (List.mem "int" (Option.value names ~default:[])) ->
-      prerr_endline
-        "voblint: --int-refinement is only valid with --analysis int";
-      exit 1
-  | _ -> ());
-  (match (!globals_name, !narrow_bound) with
-  | "bounded-narrowing", Some n when n < 0 ->
-      prerr_endline "voblint: --narrow-bound must not be negative";
-      exit 1
-  | "bounded-narrowing", n ->
-      globals :=
-        Analysis_request.bounded_narrowing
-          (Option.value n ~default:Analysis_request.default_narrow_bound)
-  | _, Some _ ->
-      prerr_endline
-        "voblint: --narrow-bound is only valid with --globals bounded-narrowing";
-      exit 1
-  | _, None -> ());
-  (* --context-depth is only meaningful paired with --context call-string, so
-     a mismatch between the two flags is rejected here. *)
-  let context =
-    match Analysis_request.context_of_name !context_name !context_depth with
-    | Ok context -> context
-    | Error Analysis_request.Negative_depth ->
-        prerr_endline "voblint: --context-depth must not be negative";
-        exit 1
-    | Error Analysis_request.Missing_depth ->
-        prerr_endline
-          "voblint: --context call-string requires --context-depth K";
-        exit 1
+  let fail message =
+    prerr_endline message;
+    exit 1
+  in
+  let { Analysis_request.domains = analyses; rule; mode = context } =
+    match Analysis_request.resolve request with
+    | Ok resolved -> resolved
+    | Error (Analysis_request.Unknown_refinement v) ->
+        fail ("unknown --int-refinement value: " ^ v)
+    | Error (Analysis_request.Unknown_context_name v) ->
+        fail ("unknown --context value: " ^ v)
+    | Error (Analysis_request.Unknown_globals v) ->
+        fail ("unknown --globals value: " ^ v)
+    | Error (Analysis_request.Unknown_analysis v) ->
+        fail ("unknown --analysis value: " ^ v)
+    | Error Analysis_request.Refinement_without_int ->
+        fail "voblint: --int-refinement is only valid with --analysis int"
+    | Error Analysis_request.Negative_narrow_bound ->
+        fail "voblint: --narrow-bound must not be negative"
+    | Error Analysis_request.Narrow_bound_without_rule ->
+        fail
+          "voblint: --narrow-bound is only valid with --globals \
+           bounded-narrowing"
+    | Error (Analysis_request.Context Analysis_request.Negative_depth) ->
+        fail "voblint: --context-depth must not be negative"
+    | Error (Analysis_request.Context Analysis_request.Missing_depth) ->
+        fail "voblint: --context call-string requires --context-depth K"
     | Error
-        (Analysis_request.Unexpected_depth | Analysis_request.Unknown_context)
+        (Analysis_request.Context
+           (Analysis_request.Unexpected_depth | Analysis_request.Unknown_context))
       ->
-        prerr_endline
-          "voblint: --context-depth is only valid with --context call-string";
-        exit 1
+        fail "voblint: --context-depth is only valid with --context call-string"
   in
+  let globals = ref rule in
   let path =
     match !file with
     | Some p -> p
