@@ -48,17 +48,20 @@ lemma run_voblint_well_formed:
   by (auto intro: analysis_report_of_well_formed)
 
 text \<open>
-  The report contract in one statement: an analysed answer is a well-formed, sound
-  report for exactly the configuration asked for and the program's compiled graph.
-  The theorems below are its consequences.
+  The report contract in one statement: an analysed answer was given for a valid
+  configuration and a well-formed program, and is a well-formed, sound report for
+  exactly that configuration and the program's compiled graph. The theorems below
+  are its consequences.
 \<close>
 
 theorem run_voblint_report_contract:
   assumes "run_voblint config p = Analysed res"
-  shows "report_config res = config" "report_cfg res = prog_cfg p"
+  shows "valid_config config" "wf_program_compile_input_exec p"
+    and "report_config res = config" "report_cfg res = prog_cfg p"
     and "well_formed_report res" "sound_report p res"
   using assms
-  by (simp_all add: run_voblint_config run_voblint_cfg run_voblint_well_formed run_voblint_sound)
+  by (auto elim: run_voblint_AnalysedE
+      simp: run_voblint_config run_voblint_cfg run_voblint_well_formed run_voblint_sound)
 
 theorem run_voblint_covers:
   assumes "run_voblint config p = Analysed res"
