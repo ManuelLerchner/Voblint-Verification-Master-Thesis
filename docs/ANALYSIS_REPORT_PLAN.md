@@ -327,6 +327,16 @@ These are grep targets on `src/` outside the theory that owns each name:
    `analyse` wrapping `run_voblint` and `render_report`. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
+8a. **A monomorphic boundary for generated code.** Each policy branch of
+   `analysis_report_of` instantiates the generic solver at the MCP product, so the
+   generated OCaml rebuilds the product's `equal`, `semilattice_sup`,
+   `bounded_semilattice_sup_bot` and `warrowing` dictionaries inline, once per branch.
+   Give each policy one concrete constant (`solve_unit`, `solve_entry`,
+   `solve_call_string k`) whose type fixes the carrier, with a code equation that
+   unfolds to the generic solver once; `analysis_report_of` calls those. The proofs
+   keep the type classes; only the export boundary is specialised. Measure the
+   generated file before and after. A record for the nested product is a separate
+   readability question and does not remove the dictionaries.
 9. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
    README, the notation table, the site's theorem cards, metro map and alignment
    rows.
