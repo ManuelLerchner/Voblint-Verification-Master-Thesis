@@ -353,3 +353,36 @@ but it changes the core of MCP composition and needs its own design.
   but wide, and runs as host edits verified by batch build.
 - Byte-identical output constrains phases 3 and 8; the golden diff makes it
   checkable.
+
+## Status at the end of the first PR
+
+Done and verified (batch build of `Voblint_Examples`, codegen regression, golden
+diff of all 322 corpus fixtures: text, JSON, graph snapshot and verbose trace):
+
+- phases 0 to 4: typed configuration, `Int_Analysis refine_mode`, the solver
+  boundary (`solve_of_solve_c`, `solved_run`, `solve_c_run`, `solve_c_traced`), the
+  semantic `analysis_report`, the one policy dispatch `analysis_report_of`, and the
+  report theorems with no termination premise;
+- the per-policy semantic spine (`run_voblint_unit_chain`,
+  `run_voblint_entry_state_chain`, `run_voblint_call_string_chain`);
+- an injective entry-state context key (`mcp_ctx_key`) and the listing lemmas
+  (`ordered_by_key_set`, `report_rows_report_of`), which the covering proof needs;
+- phase 8 in part: `render_report` as the adapters' projection, the shared
+  `cli/result/analysis_request.ml`, and phase 8a, the monomorphic boundary
+  (`mcp_equations`, `mcp_solve_c`, `mcp_run_of`);
+- the site's theorem cards, the README and the docs that named the retired theorems.
+
+Not done, for follow-up PRs:
+
+- phase 5, the `solved_table` rename: mechanical but touches every framework theory
+  that names `analysis_result`; it should land on its own.
+- phase 6, `registration_of`, and phase 7 (splitting `sound_table`, the shared
+  contextual classification helper, absorbing `analysis_surface`).
+- the `Voblint.ml` module rename: the generated module cannot be called `Voblint`
+  while the native entry `cli/entry/voblint.ml` is itself the module `Voblint`;
+  renaming the entry changes the executable path every script uses, so it is a
+  separate change.
+- `well_formed_report` (index invariants) and the agreement between per-row and
+  aggregate check columns, which hold by construction but are not stated.
+- phase 9, the thesis chapters on `writing`; `docs/THESIS_BLUEPRINT.md` still names
+  the old theorems.
