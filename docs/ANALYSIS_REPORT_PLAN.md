@@ -13,7 +13,7 @@ facts carry the whole guarantee:
 | --- | --- | --- |
 | `analysis_report_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
 | `analysis_report_checks_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
-| `analysis_report_dead` | `dead(res, v) ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
+| `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
 
 `PROVED` and `REFUTED` constrain the stores inside `⟦res⟧ᵥ`; `DEAD` says there are
 none. With the first fact, `DEAD` gives `𝒞 v ⊆ ⟦res⟧ᵥ = ∅`. The source-level theorem
@@ -21,13 +21,11 @@ keeps its existential node: a finite `pstep` run reaches some `v` related by `cs
 and its store lies in `𝒞 v`. No set of "source stores at `v`" is introduced, since
 the simulation is not functional.
 
-The converse of the third fact does not hold. A `Lifted` entry passed the
-product's emptiness test, which is sound and incomplete: `mcp_empty_v` reports a
-state empty when one active analysis does, so a state with Interval `x = 2` and Parity
-`x odd` passes it although it concretizes to no store. `⟦res⟧ᵥ = ∅` therefore does not
-imply `dead(res, v)`, and `UNKNOWN` does not imply `⟦res⟧ᵥ ≠ ∅`. The `UNKNOWN`
-corollary states what does hold: an `UNKNOWN` check's point is not `dead`, so the
-report makes no unreachability claim there.
+The third fact is one direction only. A `Lifted` entry passed the product's
+emptiness test, which is sound and incomplete: `mcp_empty_v` reports a state empty
+when one active analysis does, so a state with Interval `x = 2` and Parity `x odd`
+passes it although it concretizes to no store. `⟦res⟧ᵥ = ∅` therefore does not
+imply `DEAD res v`, and `UNKNOWN` does not imply `⟦res⟧ᵥ ≠ ∅`.
 
 ## Why
 
@@ -43,153 +41,249 @@ report makes no unreachability claim there.
 - `analysis_result`, `config_terminates` and `analysis_result_covers` each repeat the
   same three-way split over the context policy (`mcp_rule`, `mcp_es_rule`,
   `mcp_cs_rule`).
-- The configuration travels as loose arguments, and the web entry passes
-  `context_depth` and `int_refinement` as strings.
+- The generated carrier spreads one analysis over parallel functions
+  (`local_spec_of`, `part_gamma`, `part_empty`, `val_answer`, `field_of`, …), each
+  with its own split over `analysis_domain`.
 
-## Names and notation
+## Target architecture
 
-| Concept | Isabelle | Thesis and site |
+```text
+manifests/analyses.yaml
+      │  generator
+      ▼
+registration_of :: analysis_domain ⇒ registration       (one split over analyses)
+      │
+analysis_config  (analyses, globals rule, context policy)
+      │
+      ▼
+analysis_report_of config p                              (one split over the policy)
+      │  per policy: a dg_analysis interpretation, solved by solve_c
+      ▼
+('c, mcp_val) solved_run      solved_table + shared + seeds + steps + successors
+      │  run_result_of: finite rows, contexts erased to indices
+      ▼
+analysis_report               semantic, exported
+      │
+      ├── ⟦res⟧ᵥ, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD   theorems
+      └── render_report ──► rendered run_result ──► OCaml text, JSON, HTML
+```
+
+Proofs flow downward only: solver, routing and table facts are consumed by the
+report theorems, and nothing above the report reads them.
+
+| Theory | Owns |
+| --- | --- |
+| `Framework/Result/Analysis_Result` (renamed `Solved_Table`) | `solved_table`, coverage metadata, `lookup_table` |
+| `Analyses/Shared/Result/DG_Analysis` | `solved_run`, `solved_run_of`, `run`, `solve_c_run` |
+| `Solver/Solver_Trace` | `solve_c_traced` |
+| `CLI/generated/MCP_Carrier` | `registration_of` and its accessors |
+| `CLI/Analysis_Run` | `analysis_config`, `run_result`, `analysis_report`, the one policy dispatch, `analyse_program`, `render_report`, `run_voblint` |
+| `CLI/Analysis_Report` (new) | `⟦res⟧ᵥ`, `𝒱`, CAPS queries, the three facts |
+| `CLI/Analysis_Certified` | source-level corollaries |
+
+## Target types
+
+```isabelle
+datatype analysis_config = Analysis_Config
+  (config_analyses: "analysis_domain list")
+  (config_rule: globals_rule)
+  (config_context: context_mode)
+
+record ('c, 'v) solved_run =
+  run_table :: "('c, 'v) solved_table"
+  run_shared :: "'v lifted"
+  run_seed :: "pname ⇒ 'c ⇒ 'v lifted"
+  run_step :: "pp ⇒ 'c ⇒ edge_action ⇒ 'v lifted"
+  run_succ :: "cfg_node ⇒ 'c ⇒ call_action ⇒ pname ⇒ 'c option"
+
+record 's result_state =            (* 's: the state payload *)
+  state_point :: pp
+  state_context :: nat               (* index into res_contexts *)
+  state_value :: "'s lifted"
+  state_checks, state_diagnostics    (* unchanged *)
+  state_steps :: "(pp × 's lifted) list"
+
+record ('s, 'v) run_result =        (* 'v: context values *)
+  res_cfg, res_routes, res_checks, res_diagnostics   (* unchanged *)
+  res_contexts :: "'v analysis_context list"
+  res_states :: "'s result_state list"
+  res_globals :: "'s result_global list"
+
+record analysis_report = "(mcp_val, abstract_value) run_result" +
+  report_config :: analysis_config
+  report_vars :: "vname list"
+
+datatype 'r analysis_answer =
+  Invalid_Activation | Malformed_Program | No_Answer | Analysed 'r
+```
+
+`analysis_config` is a datatype: a record would export as
+`analysis_config_ext` with a trailing unit field, which every OCaml caller would
+have to build. The selectors give the record reading in Isabelle.
+
+Contexts are erased from the semantics. A row carries a context index; the
+policy's context value survives only as the tagged presentation datum
+`Context_Unit | Context_Entry vs | Context_Call_String us`, which no theorem reads.
+So one report type serves all three policies.
+
+The Int modes are one surface constructor over three registrations:
+`Int_Analysis Refine_Fixpoint`, `Refine_Once` and `Refine_Never` each keep their own
+carrier slot, which is why two modes may run together. Collapsing them to one slot
+would change which configurations are valid.
+
+## Semantic definitions
+
+Write `σ ∈ rows(res, v)` for the `state_value` of a row of `res_states res` at
+point `v`, and `γ = mcp_gamma_v (activation (config_analyses (report_config res)))`.
+
+```text
+⟦res⟧ᵥ      = ⋃ { γ⊥ σ | σ ∈ rows(res, v) }
+Checks(res,v) = the rows of res_checks res with check_point = v
+𝒱(res, v)   = { s | ∀ chk ∈ Checks(res, v).
+                     (verdict = PROVED  ⟶ truthy ⟦e_chk⟧ s)
+                   ∧ (verdict = REFUTED ⟶ ¬ truthy ⟦e_chk⟧ s) }
+PROVED res v e  ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = PROVED
+REFUTED res v e ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = REFUTED
+UNKNOWN res v e ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = UNKNOWN
+DEAD res v      ⟷ ∀ σ ∈ rows(res, v). σ = Bot
+```
+
+`UNKNOWN` and `DEAD` impose no per-store condition in `𝒱`. A check row's `Dead`
+verdict implies `DEAD res v` at its point; that lemma ties the printed column to the
+structural predicate.
+
+`⟦res⟧ᵥ` is the constant `report_sem` with mixfix `⟦_⟧⇩_`. Overloading it under a
+`gamma_at` constant waits for a second representation; with one instance it buys
+nothing.
+
+## Target theorems
+
+```text
+analysis_report_covers:        analyse_program config p = Analysed res
+                               ⟹ 𝒞 v ⊆ ⟦res⟧ᵥ
+analysis_report_checks_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
+analysis_report_proved:        PROVED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ truthy ⟦e⟧ s
+analysis_report_refuted:       REFUTED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ ¬ truthy ⟦e⟧ s
+analysis_report_dead:          DEAD res v ⟹ ⟦res⟧ᵥ = ∅
+analysis_report_unknown:       UNKNOWN res v e ⟹ ¬ DEAD res v          (lemma)
+
+analyse_program_source_sound:
+  s0 ∈ cinit_stores 𝒢
+  𝒢, Π ⊢ (main_body Π, s0, []) →p* (c, s, frs)
+  analyse_program config p = Analysed res
+  ⟹ ∃ v stk. Π, g ⊢ (c, s, frs) ≈ (v, s, stk) ∧ s ∈ 𝒞 v ∧ s ∈ ⟦res⟧ᵥ
+analyse_program_check_sound, analyse_program_dead_unreached,
+analyse_program_arithmetic_safe: the existing corollaries, restated over res.
+```
+
+Only the second to sixth need no execution. `analysis_report_unknown` is a lemma,
+not a headline guarantee: it says the report makes no unreachability claim at an
+`UNKNOWN` check. Termination is internal: `Analysed res` implies the policy's
+`terminates`, through `solve_c_run`.
+
+## Migration
+
+| Old | New | Fate |
 | --- | --- | --- |
-| analysis report | variable `res`, type `analysis_report` | "analysis report", `res` |
-| configuration | datatype `analysis_config`, variable `config` | spelled out |
-| report semantics | `report_sem res v`, syntax `⟦res⟧⇩v` | `⟦res⟧_v` |
-| verdict semantics | `verdict_stores res v` | `𝒱(res, v)` |
-| reported checks at a node | `report_checks res v` | `Checks(res, v)` |
-| emptiness | `dead res v` | `dead(res, v)` |
-| missing result | `No_Answer` | |
+| `Int_Analysis`, `Int_Once_Analysis`, `Int_Never_Analysis` | `Int_Analysis refine_mode` | done |
+| loose `as rule ctx` | `analysis_config` | done |
+| `result_with_globals` (5-tuple) | `solved_run` record, `solved_run_of`, `run` | replace |
+| `('ctx, 'a) analysis_result` | `solved_table` | rename |
+| `result_unknowns`, `result_at` | `covered_keys`, `table_at` | rename |
+| `lookup_context`, `lookup_context_result`, `contexts_at` | `lookup_table`, `lookup_coverage`, `table_contexts` | rename, internal |
+| `analysis_surface` | report projections | absorb or delete |
+| `analysis_result` (CLI, 3-way) | `analysis_report_of` | replace |
+| `config_terminates` premise | `solve_c_run` | internal |
+| `analysis_result_covers`, `table_covers` | `s ∈ ⟦res⟧ᵥ` | retire publicly |
+| `checks_sound_at` | `𝒱(res, v)` | retire publicly |
+| `run_voblint_sound_at`, `run_voblint_certified_source_sound` | report theorems, `analyse_program_source_sound` | replace |
+| `sound_table` | `covered_table` + `sound_classifier` | split |
+| parallel carrier functions | `registration_of` | replace |
 
-Avoided: `R` (call-context relation), `r` (internal table), `cfg` (CFG), `A`, `σ`.
-`⟦res⟧⇩v` is its own constant with mixfix syntax, since the overloaded `gamma_S`
-takes one argument. `𝒱` joins the store-set family `𝒞`, `𝒜`; it is defined from
-`Checks(res, v)`: the stores in which every definite verdict at `v` is valid.
-`UNKNOWN` and `DEAD` contribute no constraint to `𝒱`; `DEAD` is handled by
-`analysis_report_dead`.
+## Done when
 
-The verdicts get one corollary each: `analysis_report_proved` and
-`analysis_report_refuted` restate the second fact for one check, and
-`analysis_report_unknown` states `UNKNOWN ⟹ ¬ dead(res, v)` (see above for why
-not `⟦res⟧ᵥ ≠ ∅`), so every verdict word has a theorem.
+These are grep targets on `src/` outside the theory that owns each name:
+
+- no `mcp_rule.result`, `mcp_es_rule.result`, `mcp_cs_rule.result`,
+  `result_with_globals`, `table_covers`, `checks_sound_at`,
+  `analysis_result_covers`, `gamma_reader_eq_lookup` above `Analysis_Report`;
+- no `config_terminates` premise in any public theorem;
+- `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString` split only in
+  `analysis_report_of` (and its traced code equation);
+- `Sign_Analysis`, `Interval_Analysis`, … split only in `registration_of`.
 
 ## Invariants
 
 - After `analysis_config` is resolved, no theory case-splits on an analysis kind,
-  context policy, refinement mode or update rule. The one split over the context
-  policy sits in the function that builds the report; each policy is a generic
-  locale instance below it, since the three context types differ.
+  context policy, refinement mode or update rule.
 - After a solve becomes an `analysis_report`, no public theorem mentions solver
   tables, context representations or rendering projections.
 - One canonical API per concept: concretization through `γ`/`⟦·⟧` (with `⟦res⟧ᵥ`
   as the located form), solved data through `solved_table`, analyzer output through
   `analysis_report`, verdict truth through `𝒱(res, v)` and the CAPS queries.
-
-- CLI text and JSON stay byte-identical. Phase 0 records the golden output; every
-  later phase reproduces it.
+- CLI text, JSON and the verbose solver trace stay byte-identical (`golden-check`).
 - Each phase ends with the batch build, the codegen regression, the CLI corpus and
   the golden diff green.
 
-## Phases
+## Phases and proof obligations
 
-0. **Guardrails.** Snapshot CLI text and JSON for the regression corpus, the
-   playground fixtures and the registered thesis and site claims.
-1. **Typed configuration.** `analysis_domain` gains `Int_Analysis refine_mode` in
-   place of `Int_Analysis`, `Int_Once_Analysis` and `Int_Never_Analysis` (manifest
-   `constructor` field). The fixpoint registration becomes `Int_Fixpoint`, beside
-   `Int_Once` and `Int_Never`. The existing `context_mode` (`Ctx_None`,
-   `Ctx_EntryState`, `Ctx_CallString nat`) is already typed and stays; renaming it
-   would churn every consumer for no gain. Datatype `analysis_config` with
-   selectors, so the export is one constructor, and one `valid_config`.
-   Validity keeps today's meaning, a non-empty distinct list, so two refinement
-   modes may still be active together. This is a deliberate compatibility choice.
-2. **One context dispatch.** Resolve `analysis_config` once into the
-   policy-specific pipeline (a record of operations or a locale parameter). Prove it
-   equal to the current three-way splits before switching callers. Later phases
-   never inspect the context policy again.
-3. **`solve_c` at the boundary.** `analyse_program` matches on `solve_c`; `None`
-   becomes `No_Answer`, which the generated code never produces. Prove
-   `Analysed res ⟹ config_terminates config p`. `config_terminates` remains
-   available internally as a theorem derived from `Analysed res`, but no public
-   source-soundness theorem takes it as a premise. The Int reduction loop and the
-   query-depth abort remain ways the code can fail to return; neither yields
-   `Analysed`.
-4. **Semantic `analysis_report`.** The report reuses the finite shape of
-   `run_result` (context list, states, routes, checks, diagnostics, graph) with a
-   semantic payload: `run_result` gains a state type parameter, the report fills it
-   with `mcp_val` and the presentation with the rendered view. `result_with_globals`
-   yields a set-and-function table, so it is not stored; one bridge lemma relates the
-   report's finite states to `lookup_context` on that table. The report also stores
-   the configuration and the program variables rendering needs.
-   `mcp_render` becomes presentation-only and is not part of the theorem object.
-   Define `lookup_report`, `⟦res⟧ᵥ`, `verdict_stores`, `report_checks` and a
-   structural `dead`; show the existing verdict aggregation computes `dead`.
-5. **Public theorems.** The three facts above, then the corollaries
-   `analyse_program_source_sound`, `analyse_program_check_sound`,
-   `analyse_program_dead_unreached` and `analyse_program_arithmetic_safe`.
-   Arithmetic safety is a diagnostic guarantee and stays apart from the verdicts.
-   Implementation lemmas (`gamma_reader_eq_lookup`, `table_covers`, …) stay as the
-   proofs underneath.
-6. **Export.** Export `analysis_config`, `analysis_report`, `analyse_program`, and
-   the projection and string helpers as functions the adapters call. Rendering stays
-   outside the theorem object. The OCaml and web adapters build the typed config
-   once; playground URL parameters do not change. The external CLI and JSON text
-   remains byte-identical even though the exported Isabelle function signature
-   changes.
-7. **API tidy.** Nothing above the report theory mentions `mcp_rule.result`. One
-   lookup vocabulary, thin public theorem names, and ad-hoc overloading only where
-   one concept has several representations. Concretely:
-   - rename the framework's `('ctx, 'a) analysis_result` to `analysis_table`, so
-     table, report and answer read as three layers;
-   - absorb `analysis_surface` (`state_at`, `reach_state_at`, `report`,
-     `report_with_state`) into report projections, or delete what has no consumer;
-   - retire `checks_sound_at`, `table_covers` and `analysis_result_covers` from the
-     public layer; `𝒱(res, v)` and the CAPS corollaries replace them;
-   - keep `Uncovered`/`Covered`, `Bot`/`Lifted` and `Dead` apart below the report:
-     coverage, emptiness and the verdict are different facts, and only the report
-     theorems hide them;
-   - keep the emptiness tests (`is_empty_state`, `val_empty`, `mcp_empty_v`, …) and
-     the executable readbacks (`mcp_rd`, `default_st_to_fun`) as named constants; their
-     exactness differs, and an overloaded name would hide which one a proof uses.
-   - if it falls out cheaply, one contextual classification helper shared by the
-     check column and the arithmetic diagnostics.
-7a. **Named solve and split contracts.**
-   - `result_with_globals` returns a record `solved_run` (table, shared global,
-     seeds, steps, successors) in place of a five-tuple; no caller destructures a
-     tuple.
-   - Rename the framework table: `analysis_result` → `solved_table`,
-     `result_unknowns` → `covered_keys`, `result_at` → `table_at`,
-     `lookup_context` → `lookup_table`, `lookup_context_result` →
-     `lookup_coverage`, `contexts_at` → `table_contexts`. This supersedes the
-     `analysis_table` name above.
-   - Split `sound_table` into `covered_table` (finite contexts, coverage) and
-     `sound_classifier` (proved, refuted); the classifier is not a table property.
-   - CAPS queries `PROVED res v e`, `REFUTED res v e`, `UNKNOWN res v e` and
-     `DEAD res v` on the report; clients stop destructuring `check_verdict`.
-   - `⟦res⟧ᵥ` as an overloaded located concretization (`consts gamma_at`), so a
-     later table representation can register under the same notation.
-7b. **One registration per analysis.** The generator emits one record of
-   operations per `analysis_domain` (`registration_of`) in place of the parallel
-   functions `local_spec_of`, `part_gamma`, `part_live`, `part_empty`, `val_gamma`,
-   `val_empty`, `val_answer`, `field_of`; the old names become accessors. With
-   `Int_Analysis refine_mode` the mode is then read in one equation. Optional for
-   this branch: it touches only generated theories and their consumers. The
-   Int modes keep one carrier slot each behind the parameterized constructor, which
-   is why two modes may still run together.
-7c. **Shared contracts where proofs repeat.** `sound_empty` / `exact_empty` locales
-   for the emptiness tests, and a representation locale for executable readbacks
-   that commute with an operation, adopted only where they remove repeated
-   proofs. Exactness stays visible in which locale a test interprets.
+0. **Guardrails.** Golden output for the corpus. Done.
+1. **Typed configuration.** `Int_Analysis refine_mode`, `analysis_config`,
+   `valid_config` (non-empty, distinct). Done.
+2. **Solver boundary and solved run.**
+   - `certified_solver` gains `solve_of_solve_c: solve_c eqs x = Some sol ⟹ solve eqs x = sol`,
+     discharged from TD's `solve_code_equation`.
+   - `solved_run_of 𝒢 p sol`, `run 𝒢 p = solved_run_of 𝒢 p (solution 𝒢 p)`;
+     obligations `run_table (run 𝒢 p) = result 𝒢 p`, `run_succ (run 𝒢 p) = live_succ 𝒢 p`.
+   - `solve_c_run`: `solve_c (equations 𝒢 p) (root_query p) = Some sol ⟹ terminates 𝒢 p ∧ solved_run_of 𝒢 p sol = run 𝒢 p`.
+   - `solve_c_traced`, equal to `solve_c`, so a code equation calling the solver
+     directly keeps the trace's start and stop events.
+3. **Semantic report and one dispatch.**
+   - `run_result` gains the state parameter; `run_result_of` drops `render` and
+     reads a `solved_run`.
+   - `analysis_report_of config p :: analysis_report option`, the one split, each
+     branch `map_option (… solved_run_of …) (solve_c …)`.
+   - `analyse_program`: `None` becomes `No_Answer`. `render_report` applies
+     `mcp_render` and `string_of_abstract_value`; `run_voblint = map_analysis_answer render_report ∘ analyse_program`.
+   - Obligations: per policy, `analysis_report_of config p = Some res` implies the
+     policy's `terminates` and `res` is built from `run`; the rendered output equals
+     the old `map_run_result string_of_abstract_value (analysis_result …)` (checked
+     by the golden diff); row values are `lookup_table` of the run's table.
+4. **Report theorems.** The definitions and theorems above, in
+   `CLI/Analysis_Report`; `Analysis_Certified` restated over `res`; examples and
+   OCaml adapted.
+5. **Solved table rename.** Mechanical: the renames in the migration table, one
+   commit. It lands after the report so the report theories are renamed by the same
+   pass rather than written twice.
+6. **One registration per analysis.** Generator emits `registration_of`; the old
+   functions become accessors. Obligation: each accessor equals the old function
+   (by `cases a rule: analysis_domain_cases`, generated).
+7. **Contracts and classification.**
+   - Split `sound_table` into `covered_table` and `sound_classifier`.
+   - One contextual classification helper shared by the check column and
+     `arithmetic_diagnostics`; arithmetic keeps its own presentation policy
+     (proved and dead emit nothing, refuted an error, unknown a warning).
+   - Absorb `analysis_surface` into report projections, or delete what has no
+     consumer.
+   - `sound_empty` / `exact_empty` and a representation locale, only where an
+     inventory shows repeated proofs. Candidates: `is_empty_state`, `val_empty`,
+     `mcp_empty_v` (sound); `default_st_to_fun`, `mcp_rd` (readbacks).
+8. **Export and docs.** Export list, OCaml and web adapters (`No_Answer`), docs
+   that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
+   `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
+9. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
+   README, the notation table, the site's theorem cards, metro map and alignment
+   rows.
 
 Out of scope: replacing the fixed generated MCP product with a carrier keyed by
 analysis instance. It would remove the slot lenses and per-analysis dispatch,
 but it changes the core of MCP composition and needs its own design.
-8. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
-   README, the notation table, and the site's theorem cards, metro map (result side
-   collapses to `⟦res⟧ᵥ` with checks, `DEAD` and SAFE branches) and alignment rows.
 
 ## Risks
 
-- Phases 1 and 2 carry most of the proof churn: the generator, the three global
-  interpretations and every per-domain registration.
-- The report's table must stay executable; the plan reuses the structure the solver
-  already builds rather than a HOL function field.
-- Byte-identical output constrains phase 6; the golden diff makes it checkable.
-- Without the interactive Isabelle server, every step runs on batch builds.
+- Phase 3 changes the exported result type; OCaml consumers that name
+  `run_result_ext` (`cli/result/context_graph.ml`) follow.
+- Phase 5 touches every framework theory that names the table; it is mechanical
+  but wide, and runs as host edits verified by batch build.
+- Byte-identical output constrains phases 3 and 8; the golden diff makes it
+  checkable.
