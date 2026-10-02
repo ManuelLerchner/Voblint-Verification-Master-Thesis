@@ -28,8 +28,8 @@ clean. The checks that keep the text honest, and what each one reads:
 | `thesis-claims` | quoted analyzer output no longer matches the analyzer |
 | `thesis-figures` | an SVG extracted from the explainer drifted |
 | `thesis-playground` | a README playground figure, its program or its link no longer matches `docs/images` and `docs/readme-figures` (`shared/playground-figures.toml` lists them; `playground-figure(name, caption)` places one) |
-| `thesis-stats` | `shared/generated/stats.json` no longer matches what `scripts/pages_stats.py` measures (`thesis-stats-write` regenerates it), or a line of `content/` naming lines, theories, files, sessions, fixtures, cases or lemmas carries a number outside `stat()` and outside the commented `ALLOW` list in `tools/stats.py` |
-| `thesis-alignment` | `shared/generated/goblint-alignment.json` no longer matches the `align-list` rows of `pages/index.html`, which appendix C renders (`thesis-alignment-write` refreshes it; edit the page, never the JSON) |
+| `thesis-stats` | `scripts/pages_stats.py` cannot measure the repository (every build writes the uncommitted `shared/generated/stats.json` from it), or a line of `content/` naming lines, theories, files, sessions, fixtures, cases or lemmas carries a number outside `stat()` and outside the commented `ALLOW` list in `tools/stats.py` |
+| `thesis-alignment` | the `align-list` rows of `pages/index.html`, which the evaluation counts, do not parse (every build and the refs and links checks write the uncommitted `shared/generated/goblint-alignment.json` from them; edit the page) |
 | `thesis-notation` | `shared/generated/notation.json`, the README's Notation block or the explainer's legend no longer matches the declarations in the theories, a declaration changed shape, or a symbol's anchor is missing from the rendered theories (`thesis-notation-write` refreshes all three; edit `shared/notation.toml` or the theories, never the output) |
 | `thesis-vimp` | a VIMP listing's playground link does not decode to the program it shows, names a setting the playground lacks, is missing from the PDF's link annotations, or runs a claimed or fixture program at other settings; or VIMP code reaches the document outside `listing(lang: "c")` (`thesis-vimp-source` is the no-build part; `thesis-vimp-write` refreshes `shared/generated/vimp-claims.json`) |
 
@@ -188,9 +188,9 @@ element that reads it.
 Do not judge layout from the source. Render the page and look at it:
 
 ```sh
-pdftoppm -r 80 -f 21 -l 21 -png thesis/Voblint_Thesis.pdf /tmp/p
-pdftotext -f 21 -l 21 -bbox-layout thesis/Voblint_Thesis.pdf -   # glyph positions
-pdffonts thesis/Voblint_Thesis.pdf                                 # no Libertinus, no NewCM text
+pdftoppm -r 80 -f 21 -l 21 -png thesis/Lerchner_Master_Thesis.pdf /tmp/p
+pdftotext -f 21 -l 21 -bbox-layout thesis/Lerchner_Master_Thesis.pdf -   # glyph positions
+pdffonts thesis/Lerchner_Master_Thesis.pdf                                 # no Libertinus, no NewCM text
 ```
 
 A build can succeed with the wrong font (Typst falls back silently on missing

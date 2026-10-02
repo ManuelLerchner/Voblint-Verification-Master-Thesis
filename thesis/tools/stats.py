@@ -5,14 +5,13 @@ The thesis cites the size of the development and of the regression corpus.
 ``scripts/pages_stats.py`` already measures both for the site, so this reads
 the same collection and writes its stable part, flattened to dotted keys, to
 ``thesis/shared/generated/stats.json``. Typst reads it through ``stat(key)``
-(``thesis/lib/stats.typ``), which fails the build on an unknown key.
+(``thesis/lib/stats.typ``), which fails the build on an unknown key. The JSON
+is not committed: every thesis build writes it first, so it cannot drift.
 
-``--check`` fails when
-
-  * the committed JSON no longer matches what the repository measures, or
-  * a line of ``thesis/content`` mentions lines, theories, files, sessions,
-    fixtures, cases, lemmas or the like next to a hand-typed number that does
-    not go through ``stat()`` and is not in ``ALLOW`` below.
+``--check`` fails when the repository cannot be measured or when a line of
+``thesis/content`` mentions lines, theories, files, sessions, fixtures, cases,
+lemmas or the like next to a hand-typed number that does not go through
+``stat()`` and is not in ``ALLOW`` below.
 
     python3 thesis/tools/stats.py --write
     python3 thesis/tools/stats.py --check
@@ -129,7 +128,7 @@ def main() -> int:
     )
     mode = parser.add_mutually_exclusive_group(required=True)
     mode.add_argument("--write", action="store_true", help="regenerate stats.json")
-    mode.add_argument("--check", action="store_true", help="fail on drift")
+    mode.add_argument("--check", action="store_true", help="fail on hand-typed figures")
     args = parser.parse_args()
 
     if not (pages_stats.TD_DIR / "ROOT").is_file():
@@ -147,17 +146,8 @@ def main() -> int:
         print(f"thesis stats: wrote {len(stats)} figure(s) to {OUT.relative_to(REPO)}")
         return 0
 
-    committed = (
-        json.loads(OUT.read_text(encoding="utf-8"))["stats"] if OUT.is_file() else {}
-    )
-    drift = [
-        f"{OUT.relative_to(REPO)}: {key} is {committed.get(key)}, "
-        f"repository measures {stats.get(key)}"
-        for key in sorted(stats.keys() | committed.keys())
-        if committed.get(key) != stats.get(key)
-    ]
     typed, used = hand_typed()
-    problems = drift + typed
+    problems = list(typed)
     problems += [
         f"thesis/tools/stats.py: ALLOW entry {key} matches nothing; remove it"
         for key in sorted(ALLOW.keys() - used)
@@ -166,9 +156,6 @@ def main() -> int:
     for problem in problems:
         print(problem)
     print(f"thesis stats: {len(stats)} figure(s), {len(problems)} problem(s)")
-    # Last line, so it stays visible under a long drift list in hook output.
-    if drift:
-        print("thesis stats: stats.json is stale; run `pixi run thesis-stats-write`")
     return 1 if problems else 0
 
 

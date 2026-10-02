@@ -212,9 +212,10 @@ local Claude Code and Codex session logs. Those logs exist only on the author's
 machine, so the script is deliberately not part of `thesis-check`, CI or any
 pixi task; rerun it by hand before a submission build.
 
-The check fails when the committed JSON differs from a fresh measurement
-(`pixi run thesis-stats-write` refreshes it, and `thesis-generated` includes
-it) and when a line in `content/` that names lines, theories, files, sessions,
+The JSON is not committed: `thesis-typst`, `thesis-draft` and `thesis-watch`
+write it first (`thesis-local-data`, which also writes
+`goblint-alignment.json`), so it never drifts. The check fails when the
+measurement fails and when a line in `content/` that names lines, theories, files, sessions,
 fixtures, cases, lemmas or similar holds a numeral with two or more digits
 outside `stat()`, code or math. Numbers that are not statistics, such as a pull
 request number, go in the commented `ALLOW` list in `tools/stats.py`; an entry

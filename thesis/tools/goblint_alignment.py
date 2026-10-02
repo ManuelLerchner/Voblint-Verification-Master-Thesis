@@ -16,7 +16,7 @@ theory page by ``Session.Theory``; the file's ``citations`` list is what
 fails the thesis checks as any hand-written citation would.
 
     python3 thesis/tools/goblint_alignment.py            # write
-    python3 thesis/tools/goblint_alignment.py --check    # fail on drift
+    python3 thesis/tools/goblint_alignment.py --check    # fail on malformed rows
 """
 
 from __future__ import annotations
@@ -181,7 +181,7 @@ def render(data: dict) -> str:
 
 def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    ap.add_argument("--check", action="store_true", help="fail if the JSON is stale")
+    ap.add_argument("--check", action="store_true", help="only validate the rows")
     args = ap.parse_args()
     try:
         text = render(extract(PAGE.read_text()))
@@ -189,15 +189,10 @@ def main() -> int:
         print(f"goblint_alignment: {err}", file=sys.stderr)
         return 1
     rel = OUT.relative_to(REPO)
+    # The JSON is not committed (every build writes it), so there is nothing to
+    # compare against; a check only proves the page's rows parse.
     if args.check:
-        if not OUT.is_file() or OUT.read_text() != text:
-            print(
-                f"goblint_alignment: {rel} is stale against pages/index.html; "
-                "run pixi run thesis-alignment-write",
-                file=sys.stderr,
-            )
-            return 1
-        print(f"goblint_alignment: {rel} matches pages/index.html")
+        print("goblint_alignment: the alignment rows of pages/index.html parse")
         return 0
     OUT.write_text(text)
     print(f"goblint_alignment: wrote {rel}")

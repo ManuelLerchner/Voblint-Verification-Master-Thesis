@@ -245,8 +245,18 @@
 // resolved at build time. Missing formal links fail rendering.
 #let _links = json("/shared/generated/links.json")
 
+// The typed key of a citation. An untyped one ("any": a theorem environment's
+// `isa:`, a `thy` snippet) takes the kind the checker resolved it to.
+#let _key(kind, name) = if kind == "any" {
+  assert(
+    name in _links.names,
+    message: "Missing Isabelle HTML link for " + name + "; run pixi run thesis-links-write",
+  )
+  _links.names.at(name)
+} else { kind + ":" + name }
+
 #let _url(kind, name) = {
-  let key = kind + ":" + name
+  let key = _key(kind, name)
   assert(
     _links.base != "" and key in _links.links,
     message: "Missing Isabelle HTML link for " + key + "; run pixi run thesis-links-write",
@@ -322,13 +332,12 @@
 #let c11(clause) = link("https://port70.net/~nsz/c/c11/n1570.html#" + clause)[§#clause]
 
 // The Isabelle name a theorem environment carries. Its kind is whatever the
-// rendered theories say it is: the checker records the resolved kind under
-// `any:<name>` and the colour follows it.
+// rendered theories say it is: the checker records the typed key it resolved
+// to, and the colour follows that kind.
 #let isaname(name) = {
-  let key = "any:" + name
   let href = _url("any", name)
-  let kind = _links.links.at(key).split("%7C").last()
-  let color = (fact: vb.thm, thm: vb.thm, const: vb.const, type: vb.type, locale: vb.locale).at(
+  let kind = _key("any", name).split(":").first()
+  let color = (thm: vb.thm, const: vb.const, type: vb.type, locale: vb.locale).at(
     kind,
     default: vb.plain,
   )
