@@ -475,8 +475,8 @@ jobs:
       - name: Site repository figures are derived and current
         run: pixi run pages-stats
 
-      # Same measurement, for the thesis: the committed stats.json must match
-      # and no repository figure may be typed into the chapters by hand.
+      # Same measurement, for the thesis: it must succeed, and no repository
+      # figure may be typed into the chapters by hand.
       - name: Thesis repository figures are derived and current
         run: pixi run thesis-stats
 
@@ -673,9 +673,9 @@ jobs:
       - name: Code-export module map (no build needed -- fail fast)
         run: pixi run codegen-modules-check
 
-      # The thesis's Goblint comparison counts are generated from the
-      # explainer's alignment rows; the committed JSON must match the page.
-      - name: Thesis Goblint comparison matches the explainer (no build needed)
+      # The thesis's Goblint comparison is generated from the explainer's
+      # alignment rows at build time; the rows must parse.
+      - name: Thesis Goblint comparison rows parse (no build needed)
         run: pixi run thesis-alignment
 
       # theory-prose-check resolves a cited name against the declarations of
@@ -934,6 +934,18 @@ jobs:
           submodules: false
           persist-credentials: false
 
+      # The build measures the repository figures, the vendored solver included.
+      - name: Trust the checked-out workspace
+        run: git config --global --add safe.directory "$GITHUB_WORKSPACE"
+
+      - name: Initialize td-verification submodule
+        env:
+          SUBMODULES_TOKEN: ${{ secrets.SUBMODULES_TOKEN }}
+        run: |
+          git config --global url."https://x-access-token:${SUBMODULES_TOKEN}@github.com/".insteadOf "https://github.com/"
+          git submodule sync vendor/td-verification
+          git submodule update --init --depth 1 vendor/td-verification
+
       - name: Set up pixi
         uses: prefix-dev/setup-pixi@d3f436a425481402e6a95a1d1fc10331c708cd9e # v0.10.2
 
@@ -951,7 +963,7 @@ jobs:
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: thesis-pdf
-          path: thesis/Voblint_Thesis.pdf
+          path: thesis/Lerchner_Master_Thesis.pdf
           if-no-files-found: error
 
   # Builds the site on every push to main and every manual run, so a branch can
@@ -1014,7 +1026,7 @@ jobs:
         env:
           HTML_SRC: build/isabelle-html
           FORMALIZATION_PDF: build/artifacts/isabelle-pdf/document.pdf
-          THESIS_PDF: build/artifacts/thesis-pdf/Voblint_Thesis.pdf
+          THESIS_PDF: build/artifacts/thesis-pdf/Lerchner_Master_Thesis.pdf
         run: pixi run pages-site-build
 
       - name: Check the assembled site's internal links and theory anchors

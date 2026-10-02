@@ -16,7 +16,7 @@ SITE_DIR="${1:-$REPO_ROOT/build/github-pages}"
 
 HTML_SRC="${HTML_SRC:-$REPO_ROOT/build/isabelle-html}"
 FORMALIZATION_PDF="${FORMALIZATION_PDF:-$REPO_ROOT/output/document.pdf}"
-THESIS_PDF="${THESIS_PDF:-$REPO_ROOT/thesis/Voblint_Thesis.pdf}"
+THESIS_PDF="${THESIS_PDF:-$REPO_ROOT/thesis/Lerchner_Master_Thesis.pdf}"
 BROWSER_DIR="${BROWSER_DIR:-$REPO_ROOT/build/browser}"
 
 for path in "$HTML_SRC" "$FORMALIZATION_PDF" "$THESIS_PDF" "$BROWSER_DIR"; do

@@ -216,7 +216,7 @@ def build_inventory() -> tuple[
             data = json.loads(links.read_text(encoding="utf-8"))
             for key, target in data.get("links", data).items():
                 kind, _, name = key.partition(":")
-                if target.startswith("HOL/") and kind != "any":
+                if target.startswith("HOL/"):
                     kinds[name].add(kind)
 
     # Theory names, so a figure that labels a node with a theory is not

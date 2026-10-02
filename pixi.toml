@@ -137,7 +137,10 @@ pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", descri
 [feature.thesis.dependencies]
 typst = ">=0.15"
 [feature.thesis.tasks]
-thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", description = "Check thesis entity references against Isabelle declarations and sessions." }
+# The refs and links checks also read the citations of goblint-alignment.json.
+thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", depends-on = [
+  "thesis-alignment-write",
+], description = "Check thesis entity references against Isabelle declarations and sessions." }
 
 thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = [
   "cli-build",
@@ -159,7 +162,7 @@ thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", descript
 thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check", description = "Check the thesis's playground figures against docs/images and docs/readme-figures." }
 thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", description = "Copy the README playground figures and their programs into thesis assets." }
 
-thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check the thesis's Goblint comparison data against the explainer page's alignment rows." }
+thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check that the explainer page's Goblint alignment rows parse into thesis data." }
 thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis." }
 
 # The locale hierarchy figure is read off the built Voblint_Examples heap by
@@ -169,7 +172,7 @@ thesis-locale-graph = { cmd = "bash scripts/mk/locale-graph.sh", description = "
 thesis-notation = { cmd = "python3 -m pytest -q tests/test_thesis_notation.py && python3 thesis/tools/notation.py --check --lenient", description = "Check the notation table in the thesis, README and explainer against the theories' declarations and anchors." }
 thesis-notation-write = { cmd = "python3 thesis/tools/notation.py --write", description = "Regenerate the notation table data and its README and explainer blocks from the theories." }
 
-thesis-stats = { cmd = "python3 -m pytest -q tests/test_thesis_stats.py && python3 thesis/tools/stats.py --check", description = "Check the thesis's repository figures against the repository and reject hand-typed statistics." }
+thesis-stats = { cmd = "python3 -m pytest -q tests/test_thesis_stats.py && python3 thesis/tools/stats.py --check", description = "Check that the repository figures can be measured and reject hand-typed statistics." }
 thesis-sketches = { cmd = "python3 -m pytest -q tests/test_thesis_solver_sketch.py", description = "Check that code sketches printed in the thesis compute the results the text states." }
 thesis-stats-write = { cmd = "python3 thesis/tools/stats.py --write", description = "Regenerate the thesis's repository figures from the repository." }
 thesis-conda = { cmd = "python3 thesis/tools/conda_forge.py --check", description = "Check that the recorded conda-forge status describes the OCaml packaging manifest (offline)." }
@@ -178,13 +181,25 @@ thesis-conda-live = { cmd = "python3 thesis/tools/conda_forge.py --live", descri
 
 thesis-vimp = { cmd = "python3 -m pytest -q tests/test_thesis_vimp_listings.py && python3 thesis/tools/vimp_listings.py --check", depends-on = [
   "cli-build",
+  "thesis-local-data",
 ], description = "Check that every VIMP listing links its program and settings to the playground, clickably." }
 thesis-vimp-source = { cmd = "python3 thesis/tools/vimp_listings.py --source", description = "Check VIMP listings at the source level: no unlinked VIMP code, current claim programs, playground defaults." }
 thesis-vimp-write = { cmd = "python3 thesis/tools/vimp_listings.py --write", description = "Extract the programs and settings of thesis claims for linked VIMP listings." }
 
-thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
-thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", description = "Build the thesis PDF while allowing warnings during drafting." }
-thesis-watch = { cmd = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Voblint_Thesis.pdf", description = "Watch thesis sources and rebuild the PDF." }
+# stats.json and goblint-alignment.json are not committed: every build measures them.
+thesis-local-data = { depends-on = [
+  "thesis-stats-write",
+  "thesis-alignment-write",
+], description = "Generate the uncommitted thesis data the build reads." }
+thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", depends-on = [
+  "thesis-local-data",
+], description = "Build the thesis PDF and fail on warnings." }
+thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
+  "thesis-local-data",
+], description = "Build the thesis PDF while allowing warnings during drafting." }
+thesis-watch = { cmd = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Lerchner_Master_Thesis.pdf", depends-on = [
+  "thesis-local-data",
+], description = "Watch thesis sources and rebuild the PDF." }
 thesis-symbols = { cmd = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/lib/isabelle-symbols.typ", description = "Generate the Isabelle symbol table used by the thesis." }
 
 thesis-generated = { depends-on = [
@@ -219,10 +234,18 @@ thesis-check = { depends-on = [
   "thesis-typst",
 ], description = "Run all thesis drift and theorem checks." }
 
-thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Require HTML targets for every citation and check available generated HTML." }
-thesis-links-coverage = { cmd = "python3 scripts/check_thesis_links.py --coverage", description = "Require a stored HTML target for every Isabelle citation, without a local HTML build." }
-thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
-thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }
+thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
+  "thesis-alignment-write",
+], description = "Require HTML targets for every citation and check available generated HTML." }
+thesis-links-coverage = { cmd = "python3 scripts/check_thesis_links.py --coverage", depends-on = [
+  "thesis-alignment-write",
+], description = "Require a stored HTML target for every Isabelle citation, without a local HTML build." }
+thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", depends-on = [
+  "thesis-alignment-write",
+], description = "Strictly check thesis entity links against generated HTML." }
+thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", depends-on = [
+  "thesis-alignment-write",
+], description = "Regenerate the thesis entity link map from generated HTML." }
 thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
 
 [environments]

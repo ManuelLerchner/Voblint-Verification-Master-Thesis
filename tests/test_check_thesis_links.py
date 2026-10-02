@@ -42,8 +42,9 @@ def test_write_and_check_exported_html(tmp_path):
     payload = json.loads((thesis / "shared/generated/links.json").read_text())
     assert payload["links"] == {
         "type:pp": "Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.pp%7Ctype",
-        "any:pp": "Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.pp%7Ctype",
     }
+    # The untyped citation resolves to the typed key of its anchor.
+    assert payload["names"] == {"pp": "type:pp"}
 
 
 def test_citation_coverage_without_html(tmp_path, monkeypatch):
@@ -64,13 +65,21 @@ def test_citation_coverage_without_html(tmp_path, monkeypatch):
     monkeypatch.setattr(checker, "OUT", out)
     links = {
         "thm:sound": "Session/Theory.html#Theory.sound%7Cfact",
-        "any:domain": "Session/Theory.html#Theory.domain%7Clocale",
+        "locale:domain": "Session/Theory.html#Theory.domain%7Clocale",
         "session:Session": "Session/index.html",
         "theory:Session.Theory": "Session/Theory.html",
     }
     for missing in [None, *links]:
         payload = {k: v for k, v in links.items() if k != missing}
-        out.write_text(json.dumps({"base": "https://example.org/", "links": payload}))
+        out.write_text(
+            json.dumps(
+                {
+                    "base": "https://example.org/",
+                    "links": payload,
+                    "names": {"domain": "locale:domain"},
+                }
+            )
+        )
         assert checker.check_coverage() == (0 if missing is None else 1)
 
     # A target without a definition anchor is insufficient for an entity.

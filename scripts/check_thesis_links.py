@@ -58,14 +58,24 @@ KIND_ANCHORS = {
     "const": ("const",),
     "type": ("type",),
     "locale": ("locale",),
-    # A theorem environment's `isa:` name: whatever the theories say it is.
-    # A class or locale also has an internal constant; the declaration comes first.
+    # An untyped citation (a theorem environment's `isa:`, a `thy` snippet):
+    # whatever the theories say it is. A class or locale also has an internal
+    # constant; the declaration comes first. The map records it under the
+    # typed key of the anchor it resolved to, and `names` points there.
     "any": ("fact", "thm", "locale", "const", "type"),
     # A constructor in notation links to its datatype's constant anchor when
     # one exists; notation for things the theories do not define stays plain.
     "ctor": ("const",),
     "session": ("page",),
     "theory": ("page",),
+}
+# The typed key an anchor kind is stored under.
+MACRO_KIND = {
+    "fact": "thm",
+    "thm": "thm",
+    "const": "const",
+    "type": "type",
+    "locale": "locale",
 }
 # `thy:` qualifies a name that several theories define: isaconst("eq", thy: "Basics_side").
 # `display:` changes only the printed text; the link target stays the cited name.
@@ -394,14 +404,35 @@ def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
 
 def resolve(
     index: dict[tuple[str, str], str] | None = None,
-) -> tuple[dict[str, str], list[str]]:
+) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    """The typed link map, the typed key of each untyped citation, and failures."""
     if index is None:
         index = index_anchors()
     links: dict[str, str] = {}
+    names: dict[str, str] = {}
     unresolved: list[str] = []
+
+    def store(
+        path: Path, line: int, kind: str, name: str, target: str, key_name: str
+    ) -> None:
+        if kind != "any":
+            links[f"{kind}:{key_name}"] = target
+            return
+        anchor_kind = target.rsplit("%7C", 1)[-1]
+        key = f"{MACRO_KIND[anchor_kind]}:{key_name}"
+        if links.get(key, target) != target:
+            unresolved.append(
+                f"  {path.relative_to(REPO)}:{line}: {name} resolves to {target}, "
+                f"but {key} already links {links[key]}"
+            )
+            return
+        links[key] = target
+        names[name] = key
+
     for path, line, kind, name in cited():
-        key = f"{kind}:{name}"
-        if key in links:
+        if (name if kind == "any" else f"{kind}:{name}") in (
+            names if kind == "any" else links
+        ):
             continue
         rivals = definitions_of(name, kind)
         home = snippet_theory(name) if kind == "any" else None
@@ -413,7 +444,7 @@ def resolve(
                 if (f"{home}.{name}", anchor_kind) in index
             ]
             if scoped:
-                links[key] = scoped[0]
+                store(path, line, kind, name, scoped[0], f"{home}.{name}")
                 continue
         if len(rivals) > 1:
             unresolved.append(
@@ -429,19 +460,20 @@ def resolve(
         if hits:
             # An untyped theorem-header citation may name a project datatype
             # while HOL has an unrelated constant with the same short name.
-            links[key] = min(
+            target = min(
                 hits,
                 key=lambda hit: (
                     not hit.startswith("Voblint/"),
                     not hit.startswith("Unsorted/TD/"),
                 ),
             )
+            store(path, line, kind, name, target, name)
         elif kind != "ctor":
             unresolved.append(
                 f"  {path.relative_to(REPO)}:{line}: {name} has no "
                 f"{'/'.join(KIND_ANCHORS[kind])} anchor in the rendered theories"
             )
-    return links, unresolved
+    return links, names, unresolved
 
 
 def snippet_theory(name: str) -> str | None:
@@ -488,11 +520,13 @@ def check_coverage() -> int:
         print("check_thesis_links: missing HTTP(S) base URL", file=sys.stderr)
         return 1
     links = data.get("links", {})
+    names = data.get("names", {})
     missing = []
     for path, line, kind, name in cited():
         if kind == "ctor":
             continue
-        target = links.get(f"{kind}:{name}", "")
+        key = names.get(name, "") if kind == "any" else f"{kind}:{name}"
+        target = links.get(key, "")
         page, _, anchor = target.partition("#")
         if not page.endswith(".html") or (
             kind not in ("session", "theory") and not anchor
@@ -623,7 +657,7 @@ def main() -> int:
                 args.lenient,
             )
 
-    links, unresolved = resolve(index)
+    links, names, unresolved = resolve(index)
     if unresolved:
         detail = (
             f"{len(unresolved)} cited entity/entities have no definition "
@@ -635,7 +669,10 @@ def main() -> int:
         return skip_or_fail(detail, False)
 
     payload = (
-        json.dumps({"base": base, "links": links}, indent=2, sort_keys=True) + "\n"
+        json.dumps(
+            {"base": base, "links": links, "names": names}, indent=2, sort_keys=True
+        )
+        + "\n"
     )
 
     if args.list:
