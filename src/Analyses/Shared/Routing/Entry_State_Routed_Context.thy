@@ -42,8 +42,9 @@ text \<open>
 \<close>
 
 locale pure_entry_routed_context =
-  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global route
-    "routed_call_program S analysis_global seed (static_resolve (compile_prog Pi ps)) is_bot"
+  dg_context_activation S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" analysis_global
+    "\<lambda>_. analysis_global" route
+    "routed_call_program S (\<lambda>_. analysis_global) seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
@@ -87,9 +88,10 @@ begin
 
 text \<open>The context relation this instance keys its collecting semantics by.\<close>
 abbreviation entry_context_rel :: "'c call_context_rel" where
-  "entry_context_rel \<equiv> routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma analysis_global route"
+  "entry_context_rel \<equiv> routed_entry_context_rel alts (\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())) sigma (\<lambda>_. analysis_global) route"
 
-sublocale routed: routed_context S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" analysis_global
+sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" analysis_global
+  "\<lambda>_. analysis_global"
   route bot0 s0d s0g sigma vars x0 sg seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M entry_context_rel
 proof unfold_locales
@@ -126,7 +128,7 @@ next
       and ecov: "call_enter \<G> (CallEdge dst pars args) s
                    \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr analysis_global)))"
       and req0: "ctx' = route u ctx entry (CallEdge (ci_dst ?ci) (ci_formals ?ci) (ci_args ?ci))"
-    by (rule routed_entry_context_relE)
+    using Rc by (auto elim: routed_entry_context_relE)
   have req: "route u ctx entry (CallEdge dst pars args) = ctx'" using req0 by simp
   have not_bot: "\<not> is_bot entry"
     using ecov is_bot_sound by fastforce
@@ -138,12 +140,12 @@ next
              enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. analysis_global)) sigma pairs pub
            \<and> enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. analysis_global)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
-           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr analysis_global)))
+           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv (\<lambda>_. analysis_global) sigma ())
            \<and> call_enter \<G> (CallEdge dst pars args) s
-               \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr analysis_global)))
+               \<in> \<gamma>\<^sub>D\<^sub>G entry (genv (\<lambda>_. analysis_global) sigma ())
            \<and> route u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
-    using Rr D mem ccov ecov req call_fwd[OF covV ce mem not_bot] by blast
+    using Rr D mem ccov ecov req call_fwd[OF covV ce mem not_bot] by auto
 next
   fix u ctx dst pars args p cont s
   assume covV: "(u, ctx) \<in> vars"
@@ -152,16 +154,18 @@ next
   show "\<exists>ctx'. entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
                  (call_enter \<G> (CallEdge dst pars args) s) ctx'"
   proof (rule routed_entry_context_rel_total)
-    show "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr analysis_global)))) s
+    show "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (genv (\<lambda>_. analysis_global) sigma ())) s
             (call_enter \<G> (CallEdge dst pars args) s)
             (alts (call_info_of (CallEdge dst pars args) p) (dg_local (sigma (Inl (u, ctx)))))"
-      by (rule enter_cover[OF covV ce sin])
+      using enter_cover[OF covV ce sin[simplified]] by simp
   qed
 next
   fix cl c1 dst pars args p cont
   assume "(cl, c1) \<in> vars"
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
+next
+  show "\<And>p ctx v. seed p ctx \<noteq> analysis_global" by simp
 qed
 
 end

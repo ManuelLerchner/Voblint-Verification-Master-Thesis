@@ -66,15 +66,15 @@ text \<open>
 \<close>
 
 locale routed_analysis =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global route bot0 s0d s0g sigma vars x0
+  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global global_of route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed is_bot
-    "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (dg_global (sigma (Inr analysis_global))))"
+    "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
     R rd \<gamma>\<^sub>V empty\<^sub>V classify
-  for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
+  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g analysis_global
+    and g analysis_global and global_of :: "'n \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
@@ -83,7 +83,7 @@ locale routed_analysis =
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and R :: "'c call_context_rel"
-    and rd :: "'D \<Rightarrow> 'G \<Rightarrow> 'v lifted"
+    and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"

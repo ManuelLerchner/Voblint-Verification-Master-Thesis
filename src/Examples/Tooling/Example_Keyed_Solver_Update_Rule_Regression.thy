@@ -176,7 +176,7 @@ definition w0_resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Righta
 definition w0_program ::
   "(pp \<times> ivl, w0_gk, (ivl, ivl) dg_state, (ivl, ivl) dg_state) strategy_program" where
   "w0_program =
-     routed_call_program w0_spec W0Global W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
+     routed_call_program w0_spec (\<lambda>_. W0Global) W0Seed w0_resolve (\<lambda>d. d = bot) w0_route bot
        (CallEdge None [STR ''p''] []) (Statement 0) (FunctionResult (STR ''f''))"
 
 text \<open>The seed lands at the entered frame's own key, carrying that same frame.\<close>

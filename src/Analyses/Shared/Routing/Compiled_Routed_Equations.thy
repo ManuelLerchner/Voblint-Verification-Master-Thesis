@@ -44,7 +44,7 @@ where
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list
        (\<lambda>_. global) route
        (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
-       (routed_call_program S global seed (static_resolve g) (\<lambda>d. d = bot))
+       (routed_call_program S (\<lambda>_. global) seed (static_resolve g) (\<lambda>d. d = bot))
        (routed_entry_seed_programs seed)
        g bot initial initial_global"
 
@@ -134,7 +134,7 @@ lemma compiled_routed_eqs_for_code [code]:
            (\<lambda>_ v. remdups (map (\<lambda>(c, ca, p). (c, ca)) (group_lookup targets v)))
            (\<lambda>_. global) route
            (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
-           (routed_call_program S global seed
+           (routed_call_program S (\<lambda>_. global) seed
               (\<lambda>v cc ca d. map (\<lambda>(c, a, p). p)
                  (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (group_lookup targets v)))
               (\<lambda>d. d = bot))

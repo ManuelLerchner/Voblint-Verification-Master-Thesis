@@ -309,6 +309,10 @@ text \<open>
 definition genv :: "('v \<Rightarrow> 'k) \<Rightarrow> ('x + 'k \<Rightarrow> ('dl, 'dg) dg_state) \<Rightarrow> 'v \<Rightarrow> 'dg" where
   "genv key \<tau> v = dg_global (\<tau> (Inr (key v)))"
 
+text \<open>Applied to a name, the environment is the lookup it stands for.\<close>
+
+declare genv_def [simp]
+
 text \<open>The contract a specification signs: its concretization is monotone, an edge's program
   over-approximates the concrete edge step, and its combine over-approximates the concrete
   return. Both obligations read the globals from the environment the valuation holds, and
@@ -418,42 +422,5 @@ next
                  (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>)) ())"
     by (rule subsetD[OF mono, rotated 2]) simp_all
 qed
-
-text \<open>The obligations at one global value, as a consumer at a single slot reads them.\<close>
-
-context
-  fixes S :: "('x,'k,unit,'D::bounded_semilattice_sup_bot,
-                'G::bounded_semilattice_sup_bot) dg_spec"
-    and gm :: "'D \<Rightarrow> 'G \<Rightarrow> store set" and \<G> :: "vname \<Rightarrow> bool"
-  assumes contract: "analysis_contract S (\<lambda>d e. gm d (e ())) \<G>"
-begin
-
-lemma unit_gammaDG_mono: "\<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gm d g \<subseteq> gm d' g'"
-  using analysis_contract.gammaDG_mono[OF contract, of d d' "\<lambda>_. g" "\<lambda>_. g'"]
-  by (simp add: le_fun_def)
-
-lemma unit_step_sound:
-  "edge_collect a (gm (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
-     \<subseteq> gm (dg_local (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
-          (dg_global (\<tau> (Inr gk))
-             \<squnion> dg_global (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
-  using analysis_contract.step_sound[OF contract, where key = "\<lambda>_. gk" and a = a and \<tau> = \<tau>
-      and src = src]
-  by (simp add: genv_def)
-
-lemma unit_combine_sound:
-  assumes "s \<in> gm dc (dg_global (\<tau> (Inr gk)))" "t \<in> gm de (dg_global (\<tau> (Inr gk)))"
-  shows "combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
-              (dg_global (\<tau> (Inr gk))
-                 \<squnion> dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                     (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
-  using analysis_contract.combine_sound[OF contract, where key = "\<lambda>_. gk" and \<tau> = \<tau>
-      and dc = dc and de = de and ci = ci] assms
-  by (simp add: genv_def)
-
-end
-
 
 end

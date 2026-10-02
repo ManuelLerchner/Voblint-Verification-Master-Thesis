@@ -55,14 +55,14 @@ theorem pp_dg_spec_of:
     and pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
         (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
-        (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_programs seed)
         g bot0 s0d s0g)
      x0 sigma_st vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st
         (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
-        (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+        (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_programs seed)
         g bot0 s0d s0g)
      x0 sigma_st vars"
@@ -72,7 +72,7 @@ proof -
     for a src \<tau> z
     by (simp add: S dg_spec_edge_program_def)
   have cmb_free: "sides_of_program
-      (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route' ctx' ca cc ex)
+      (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route' ctx' ca cc ex)
       \<tau> (Inr analysis_global) = bot" for route' ctx' ca cc ex \<tau>
     by (rule routed_call_program_side_free_at_analysis_global[OF wf])
        (auto simp: S local_transfer_def local_combine_transfer_def ne
@@ -80,17 +80,17 @@ proof -
   show ?thesis
   proof (rule part_post_solution_routed_node_rhs_buffered
       [where cmb_c =
-        "routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot)"
+        "routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot)"
          and it_c = "\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global)"])
     show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
              call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
-             (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot))
              (routed_entry_seed_programs seed) g c' w). sp_wf p"
       by (rule routed_contribution_programs_wf)
          (auto intro: sp_wf_dg_spec_edge_program[OF wf] sp_wf_routed_call_program[OF wf])
     then show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
              call_site_list route_st (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. analysis_global))
-             (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot))
+             (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot))
              (routed_entry_seed_programs seed) g c' w). sp_wf p" .
     show "\<And>c' src a \<tau>. dg_local (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. analysis_global)) \<tau>
              (Inr ((\<lambda>_. analysis_global) c'))) = bot"
@@ -103,17 +103,17 @@ proof -
              (Inr ((\<lambda>_. analysis_global) c')) = bot"
       by (rule intra_free)
     show "\<And>c' ca cc ex \<tau>. dg_local (sides_of_program
-             (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
              \<tau> (Inr ((\<lambda>_. analysis_global) c'))) = bot"
       by (simp add: cmb_free bot_dg_state_def)
     show "\<And>c' ca cc ex \<tau>. dg_global (traverse_program
-             (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex) \<tau>)
+             (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex) \<tau>)
            = dg_global (sides_of_program
-               (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+               (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
                \<tau> (Inr ((\<lambda>_. analysis_global) c')))"
       by (simp add: routed_call_program_global_free[OF wf] cmb_free bot_dg_state_def)
     show "\<And>c' ca cc ex \<tau>. sides_of_program
-             (routed_call_program S analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
+             (routed_call_program S (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route_st c' ca cc ex)
              \<tau> (Inr ((\<lambda>_. analysis_global) c')) = bot"
       by (rule cmb_free)
     show "\<And>c' w \<tau> z x. x \<in> set (routed_entry_seed_programs seed route_st c' w)
@@ -167,8 +167,8 @@ text \<open>The routed combine tree commutes with the executable-to-abstract rea
 lemma dg_prog_st_commute_routed_call_program:
   "dg_reader_commute_gen.dg_prog_st_commute
      (map_lift (default_st_to_fun \<G>)) (map_lift (default_st_to_fun \<G>)) env
-     (routed_call_program spec_st analysis_global seed (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
-     (routed_call_program spec_abs analysis_global seed (resolve_abs g) (\<lambda>d. d = Bot)
+     (routed_call_program spec_st (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot) route_st ctx ca cc ex)
+     (routed_call_program spec_abs (\<lambda>_. analysis_global) seed (resolve_abs g) (\<lambda>d. d = Bot)
         route_abs ctx ca cc ex)"
   by (rule dg_reader_commute_gen.dg_prog_st_commute_routed_call_program
         [where Floc = "map_lift (default_st_to_fun \<G>)"
@@ -210,7 +210,7 @@ abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a 
    \<Rightarrow> (pp \<times> 'c, 'k, ('a default_st lifted, 'a default_st lifted) dg_state,
         ('a default_st lifted, 'a default_st lifted) dg_state) strategy_program"
 where
-  "cmb_st g \<equiv> routed_call_program spec_st analysis_global seed (resolve_st g) (\<lambda>d. d = Bot)"
+  "cmb_st g \<equiv> routed_call_program spec_st (\<lambda>_. analysis_global) seed (resolve_st g) (\<lambda>d. d = Bot)"
 
 theorem pp_st:
   assumes pp: "part_post_solution
