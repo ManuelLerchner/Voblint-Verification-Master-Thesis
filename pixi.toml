@@ -254,10 +254,17 @@ ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", descripti
 
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
+# Every check group (isar.toml); prose resolves TD names, so the submodule must be there.
 isar-check = { cmd = "isar check .", depends-on = [
+  "vendor-init",
   "isar-fmt-check",
-], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
-isar-fix = { cmd = "isar check . --fix=all", description = "Apply every fix isar-tools has, including rewrites only a build can confirm; build afterwards." }
+], description = "Run every isar-tools check group (isar.toml) and the theory format check." }
+isar-check-fix = { cmd = "isar check . --fix", depends-on = [
+  "vendor-init",
+], description = "Run every isar-tools check group and apply the fixes that keep a theory's meaning (the pre-commit hook)." }
+isar-fix = { cmd = "isar check . --fix=all", depends-on = [
+  "vendor-init",
+], description = "Apply every fix isar-tools has, including rewrites only a build can confirm; build afterwards." }
 isar-fmt = { cmd = "isar fmt", description = "Format Isabelle theories with isar-tools (default: all but generated ones; pass paths to narrow)." }
 isar-fmt-check = { cmd = "isar fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
 

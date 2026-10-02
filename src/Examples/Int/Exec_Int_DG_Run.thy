@@ -43,7 +43,7 @@ text \<open>
 
 abbreviation int_ex_read :: "int_dom default_st lifted => vname => int_dom" where
   "int_ex_read d x ==
-     (case map_lift (default_st_to_fun int_ex_gs) d of
+     (case \<rho>\<^bsub>int_ex_gs\<^esub> d of
         Lifted f => f x | Bot => top)"
 
 abbreviation int_ex_result where

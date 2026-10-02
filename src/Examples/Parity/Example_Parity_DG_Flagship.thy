@@ -84,7 +84,7 @@ text \<open>
 \<close>
 abbreviation parity_lookup :: "parity default_st lifted \<Rightarrow> vname \<Rightarrow> parity" where
   "parity_lookup d x \<equiv>
-     (case map_lift (default_st_to_fun parity_gs) d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
+     (case \<rho>\<^bsub>parity_gs\<^esub> d of Lifted f \<Rightarrow> f x | Bot \<Rightarrow> PTop)"
 
 definition parity_pi :: proc_table where
   "parity_pi = prog_table parity_program"

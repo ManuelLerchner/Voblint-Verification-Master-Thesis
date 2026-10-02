@@ -1,7 +1,7 @@
 chapter Voblint
 
 session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
-  description "Sign witnesses: a certified run and call-string contexts"
+  description "Sign witnesses: a certified run, call-string contexts, and the mixed flow"
   sessions
     "Voblint_Examples_CFG"
   directories
@@ -12,3 +12,4 @@ session Voblint_Examples_Sign in "." = "Voblint_Analysis_Sign" +
     Example_Sign_DG_CallString_K1
     Example_Sign_DG_CallString_K2
     Sign_Regression
+    Example_Sign_Mixed_Flow

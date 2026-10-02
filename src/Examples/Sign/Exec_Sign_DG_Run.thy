@@ -120,7 +120,7 @@ text \<open>The unit registration routes the whole abstract state through the lo
   the solver computed, beside the theorem above that quantifies over every run.\<close>
 
 lemma dgEx_inspect:
-  "map_option (\<lambda>sol. case map_lift (default_st_to_fun sign_ex_gs)
+  "map_option (\<lambda>sol. case \<rho>\<^bsub>sign_ex_gs\<^esub>
                             (dg_local (snd sol (Inl (Statement 2, ()))))
                       of Lifted s \<Rightarrow> Some (s (STR ''x'')) | Bot \<Rightarrow> None)
      (TD_side_rule_Interp_solve_c Globals_Join dgEx_eqs (cfg_exit gEx, ())) = Some (Some SPos)"

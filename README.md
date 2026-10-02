@@ -10,6 +10,36 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
+```math
+\underbrace{\{\, s \mid \text{a source run reaches } v \text{ with store } s \,\}}_{\text{source executions}}
+\;\subseteq\;
+\underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
+\;\subseteq\;
+\underbrace{[\![\, \mathit{res} \,]\!]_{v}}_{\text{analyzer report}}
+\;\subseteq\;
+\underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
+```
+
+Every store reached by a source execution at program point $v$ is represented
+by the analyzer's report at $v$ and satisfies every definite verdict reported
+there.
+
+The equality is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover
+the collecting semantics, and their union recovers $\mathcal{C}(v)$ exactly. The
+inclusions are one-way guarantees. For the first, only the source-to-CFG
+direction is proved; whether it is an equality is not part of the present
+contract. The second is where abstract interpretation may add unreachable
+stores, and the third keeps only what the definite verdicts assert.
+
+Each inclusion is an Isabelle theorem:
+[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
+[`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
+[`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
+[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy).
+
+[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+states the whole chain for every run that returns a report.
+
 Voblint is a machine-checked Isabelle/HOL framework for building, running and
 verifying interprocedural abstract interpreters, modelled on Goblint's D/G
 architecture. It chains verified CFG compilation, activation-trace operational
@@ -246,7 +276,8 @@ Results in the same theory specialise the guarantee to what the report shows:
 ```isabelle
 theorem run_voblint_report_contract:
   assumes "run_voblint config p = Analysed res"
-  shows "report_config res = config" "report_cfg res = prog_cfg p"
+  shows "valid_config config" "wf_program_compile_input_exec p"
+    and "report_config res = config" "report_cfg res = prog_cfg p"
     and "well_formed_report res" "sound_report p res"
 ```
 

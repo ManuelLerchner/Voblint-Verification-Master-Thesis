@@ -537,6 +537,23 @@ lemma restrict_global_default_st_split [simp]:
       restrict_global_default_st B) = restrict_global_default_st B"
   by (rule default_st_eqI) (simp split: location.split)
 
+text \<open>
+  Combining reads only the local half of its first argument and the global half
+  of its second, so a state recombines from its own two projections.
+\<close>
+
+lemma combine_default_st_restrict_split [simp]:
+  "combine_default_st (restrict_local_default_st x) (restrict_global_default_st x) = x"
+  by (rule default_st_eqI) (simp split: location.split)
+
+lemma combine_default_st_restrict_local_left [simp]:
+  "combine_default_st (restrict_local_default_st x) y = combine_default_st x y"
+  by (rule default_st_eqI) (simp split: location.split)
+
+lemma combine_default_st_self_restrict_global [simp]:
+  "combine_default_st x (restrict_global_default_st x) = x"
+  by (rule default_st_eqI) (simp split: location.split)
+
 subsection \<open>The stores a carrier state describes\<close>
 
 text \<open>

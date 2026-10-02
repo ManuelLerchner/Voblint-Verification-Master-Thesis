@@ -2,9 +2,7 @@ theory DG_Result_Construction
   imports
     "Voblint_Framework.DG_Analysis_Adapter"
     "Voblint_VIMP.VIMP_Program"
-    "Voblint_Exec.Exec_Result_Abs"
     "Voblint_Exec.Exec_DG_State"
-    "Voblint_Exec.Default_St_Reachability"
 begin
 
 section \<open>What a solved D/G system publishes\<close>

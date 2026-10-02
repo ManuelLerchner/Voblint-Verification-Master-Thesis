@@ -153,7 +153,7 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 
 | Theorem | Claim |
 | --- | --- |
-| `run_voblint_report_contract` | an analysed report is for exactly the configuration asked for and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
+| `run_voblint_report_contract` | an analysed report answers a valid configuration and a well-formed program, is for exactly that configuration and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
 | `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧⇘v⇙` |
 | `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱⇘res⇙ v` |
 | `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `⟦res⟧⇘v⇙` and `𝒱⇘res⇙ v` |

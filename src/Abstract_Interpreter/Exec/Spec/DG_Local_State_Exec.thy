@@ -1,7 +1,6 @@
 theory DG_Local_State_Exec
   imports
     Ownership_Split_Exec
-    Default_St_Reachability
 begin
 
 unbundle default_st_syntax
