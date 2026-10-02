@@ -72,7 +72,7 @@ SHOWCASE = [
     ),
     (
         "19-paper-examples/precision/07-example1_shared_global_summary.vimp",
-        "One fact per global",
+        "A flow-insensitive global",
         "The FM 2026 paper's Example 1 with program globals flow-insensitive: g's "
         "writes join to [-17,42], enough for g < 43 but not g == 42. Set Program "
         "globals to Flow-sensitive and both are proved.",

@@ -2146,23 +2146,6 @@ function seedLabel(lines) {
 /* The shown graph's seeds by the entry they feed, for their tooltips. */
 let graphSeeds = new Map();
 
-/*
- * The program globals an edge's statement reads and writes, from its text: an
- * assignment's target is written, every other name is read.
- */
-function globalAccess(text, globals) {
-  const assigned = /^([A-Za-z_][A-Za-z0-9_]*) := (.*)$/.exec(text ?? "");
-  const names = (source) => source.match(/[A-Za-z_][A-Za-z0-9_]*/g) ?? [];
-  const read = (assigned ? names(assigned[2]) : names(text ?? "")).filter((name) =>
-    globals.has(name),
-  );
-
-  return {
-    reads: read.length > 0,
-    writes: Boolean(assigned && globals.has(assigned[1])),
-  };
-}
-
 function seedId(entryId) {
   return `seed-${entryId}`;
 }
@@ -2234,14 +2217,13 @@ function graphElements(result) {
   }
 
   /*
-   * With shared program globals, the global unknown stands outside every context.
-   * A point whose incoming statement writes a global publishes to it, and one whose
-   * statement reads a global reads it: both happen in the target's right-hand side.
+   * With flow-insensitive program globals, the global unknown stands outside every
+   * context. The ownership-split transfer reads it and publishes to it at every
+   * point, so it gets no edges of its own: edges to every point would say nothing.
    */
   const shared = result.shared;
-  const globals = new Set(shared?.globals ?? []);
 
-  if (globals.size > 0) {
+  if ((shared?.globals ?? []).length > 0) {
     elements.push({
       group: "nodes",
       data: {
@@ -2251,30 +2233,6 @@ function graphElements(result) {
         label: shared.reachable ? `Global  ${seedLabel(shared.lines)}`.trim() : "Global",
       },
       classes: shared.reachable ? "global" : "global unreached",
-    });
-
-    result.graph.edges.forEach((edge, index) => {
-      if (edge.kind !== "intra" || !nodesById.has(edge.target)) {
-        return;
-      }
-
-      const { reads, writes } = globalAccess(edge.text, globals);
-
-      if (reads) {
-        elements.push({
-          group: "edges",
-          data: { id: `global-read-${index}`, source: GLOBAL_ID, target: edge.target },
-          classes: "global_read",
-        });
-      }
-
-      if (writes) {
-        elements.push({
-          group: "edges",
-          data: { id: `global-write-${index}`, source: edge.target, target: GLOBAL_ID },
-          classes: "global_write",
-        });
-      }
     });
   }
 
@@ -3046,30 +3004,6 @@ function graphStyle() {
         "target-label": "",
         "text-margin-x": "data(labelX)",
         "text-margin-y": "data(labelY)",
-      },
-    },
-    /* After the generic edge rule, which would otherwise restyle them. */
-    {
-      selector: "edge.global_read",
-      style: {
-        width: 1.2,
-        "curve-style": "bezier",
-        "line-style": "dotted",
-        "line-color": cssToken("--global-link"),
-        "target-arrow-color": cssToken("--global-link"),
-        "target-arrow-shape": "triangle",
-        opacity: 0.6,
-      },
-    },
-    {
-      selector: "edge.global_write",
-      style: {
-        width: 1.6,
-        "curve-style": "bezier",
-        "line-style": "dashed",
-        "line-color": cssToken("--global-link"),
-        "target-arrow-color": cssToken("--global-link"),
-        "target-arrow-shape": "triangle-tee",
       },
     },
   ];

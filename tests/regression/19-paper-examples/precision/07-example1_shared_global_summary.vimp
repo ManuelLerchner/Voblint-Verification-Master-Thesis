@@ -7,7 +7,7 @@
 // With program globals on the shared channel, g is one fact every point
 // reads. Its contributions 0 (the default), 1, -17 and 42 join to [-17,42]:
 // the summary still proves g < 43, but not g == 42. With --program-globals
-// local g travels flow-sensitively and both checks are proved.
+// flow-sensitive g travels with each point's state and both checks are proved.
 global g;
 fun f() {
   g = 42;
