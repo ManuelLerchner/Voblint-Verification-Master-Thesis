@@ -60,7 +60,7 @@ a procedure's `FunctionEntry` seed, side-effected once per call site, with
 the paper's own three contributions in the paper's order. The result is the
 paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
 
-`--program-globals shared` selects the flow-insensitive placement. Case 07
+`--program-globals flow-insensitive` selects the flow-insensitive placement. Case 07
 runs Example 1 that way on Fig. 1 without `h`. Under `--globals join` the
 contributions to `g` join to `[-17,42]`, which proves `g < 43` and not
 `g == 42`, as the paper says. Under the warrowing rules the summary of `g`

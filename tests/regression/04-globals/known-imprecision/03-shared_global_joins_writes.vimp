@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --program-globals shared
+// PARAM: --analysis interval --program-globals flow-insensitive
 // The sequence of 06-sequential_global_proved.vimp with program globals on the
 // shared channel. A shared global is one flow-insensitive fact every point
 // reads, so the two writes join with the initial zero, and the default

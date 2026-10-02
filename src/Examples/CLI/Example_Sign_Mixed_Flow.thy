@@ -29,7 +29,7 @@ definition mf_program :: imp_prog where
    }"
 
 abbreviation mf_config :: analysis_config where
-  "mf_config \<equiv> Analysis_Config [Sign_Analysis] Globals_Join Ctx_None Program_Globals_Shared"
+  "mf_config \<equiv> Analysis_Config [Sign_Analysis] Globals_Join Ctx_None Program_Globals_Flow_Insensitive"
 
 lemma mf_report:
   "(case run_voblint mf_config mf_program of

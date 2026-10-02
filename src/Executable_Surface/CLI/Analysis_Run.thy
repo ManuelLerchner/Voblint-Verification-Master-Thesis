@@ -99,7 +99,7 @@ text \<open>
   on the shared channel, as one flow-insensitive fact every point reads.
 \<close>
 
-datatype program_globals = Program_Globals_Local | Program_Globals_Shared
+datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive
 
 datatype analysis_config = Analysis_Config
   (config_analyses: "analysis_domain list")
@@ -351,21 +351,21 @@ text \<open>
 definition mcp_place_spec :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted local_spec
     \<Rightarrow> (pp \<times> 'c, 'k, unit, mcp_st lifted, mcp_st lifted) dg_spec" where
   "mcp_place_spec pg = (case pg of
-     Program_Globals_Local \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
-   | Program_Globals_Shared \<Rightarrow> (\<lambda>\<G> c. ownership_split_lift_gen split_cmb split_rg split_rl (dg_spec_of c)))"
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
+   | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G> c. ownership_split_lift_gen split_cmb split_rg split_rl (dg_spec_of c)))"
 
 definition mcp_place_cmb ::
     "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
   "mcp_place_cmb pg = (case pg of
-     Program_Globals_Local \<Rightarrow> (\<lambda>\<G> d g. d) | Program_Globals_Shared \<Rightarrow> (\<lambda>\<G>. split_cmb))"
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d g. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_cmb))"
 
 definition mcp_place_rl :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
   "mcp_place_rl pg = (case pg of
-     Program_Globals_Local \<Rightarrow> (\<lambda>\<G> d. d) | Program_Globals_Shared \<Rightarrow> (\<lambda>\<G>. split_rl))"
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rl))"
 
 definition mcp_place_rg :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
   "mcp_place_rg pg = (case pg of
-     Program_Globals_Local \<Rightarrow> (\<lambda>\<G> d. Bot) | Program_Globals_Shared \<Rightarrow> (\<lambda>\<G>. split_rg))"
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. Bot) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rg))"
 
 lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
 

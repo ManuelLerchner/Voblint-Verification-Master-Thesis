@@ -402,34 +402,34 @@ text \<open>
 
 definition mcp_es_admitted where
   "mcp_es_admitted pg as r p = (case pg of
-     Program_Globals_Local \<Rightarrow> mcp_es_rule.admitted_contexts as r (declared_global p) p
-   | Program_Globals_Shared \<Rightarrow> mcp_split_es_rule.admitted_contexts as r (declared_global p) p)"
+     Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.admitted_contexts as r (declared_global p) p
+   | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.admitted_contexts as r (declared_global p) p)"
 
 lemma run_voblint_entry_state_terminates:
   assumes "run_voblint (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
   shows "case pg of
-           Program_Globals_Local \<Rightarrow> mcp_es_rule.terminates as r (declared_global p) p
-         | Program_Globals_Shared \<Rightarrow> mcp_split_es_rule.terminates as r (declared_global p) p"
+           Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.terminates as r (declared_global p) p
+         | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.terminates as r (declared_global p) p"
 proof -
   from assms have rep: "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p = Some res"
     by (rule run_voblint_AnalysedE)
   show ?thesis
   proof (cases pg)
-    case Program_Globals_Local
+    case Program_Globals_Flow_Sensitive
     with rep obtain sol where
       "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
          (mcp_es_rule.root_query p) = Some sol"
       by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
     then show ?thesis
-      using Program_Globals_Local by (simp add: mcp_es_rule.solve_c_run(1))
+      using Program_Globals_Flow_Sensitive by (simp add: mcp_es_rule.solve_c_run(1))
   next
-    case Program_Globals_Shared
+    case Program_Globals_Flow_Insensitive
     with rep obtain sol where
       "TD_side_rule_Interp_solve_c r (mcp_split_es_rule.equations as (declared_global p) p)
          (mcp_split_es_rule.root_query p) = Some sol"
       by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
     then show ?thesis
-      using Program_Globals_Shared by (simp add: mcp_split_es_rule.solve_c_run(1))
+      using Program_Globals_Flow_Insensitive by (simp add: mcp_split_es_rule.solve_c_run(1))
   qed
 qed
 
@@ -457,24 +457,24 @@ proof -
   have has_ctx: "\<exists>c. activation_context_rel \<G> R mcp_root_ctx g t c"
     if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
   proof (cases pg)
-    case Program_Globals_Local
+    case Program_Globals_Flow_Sensitive
     with terminates show ?thesis
       using mcp_es_rule.entry_state_has_context_of_terminates [OF wf] that
       unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   next
-    case Program_Globals_Shared
+    case Program_Globals_Flow_Insensitive
     with terminates show ?thesis
       using mcp_split_es_rule.entry_state_has_context_of_terminates [OF wf] that
       unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   qed
   have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
   proof (cases pg)
-    case Program_Globals_Local
+    case Program_Globals_Flow_Sensitive
     with terminates show ?thesis
       using mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
       unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   next
-    case Program_Globals_Shared
+    case Program_Globals_Flow_Insensitive
     with terminates show ?thesis
       using mcp_split_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
       unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp

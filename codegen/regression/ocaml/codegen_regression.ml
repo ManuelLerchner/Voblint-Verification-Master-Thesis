@@ -211,7 +211,10 @@ let report domain prog =
       (render_report string_of_abstract_value)
       (run_voblint
          (Analysis_Config
-            ([ domain ], Globals_Warrow, Ctx_None, Program_Globals_Local))
+            ( [ domain ],
+              Globals_Warrow,
+              Ctx_None,
+              Program_Globals_Flow_Sensitive ))
          prog)
   with
   | Invalid_Activation ->

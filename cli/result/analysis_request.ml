@@ -71,8 +71,8 @@ let context_of_name name depth =
 (* Where a program's globals live: in each point's own state, or on the shared
    channel every point reads. *)
 let program_globals_of_name = function
-  | "local" -> Some C.Program_Globals_Local
-  | "shared" -> Some C.Program_Globals_Shared
+  | "flow-sensitive" -> Some C.Program_Globals_Flow_Sensitive
+  | "flow-insensitive" -> Some C.Program_Globals_Flow_Insensitive
   | _ -> None
 
 let config ~analyses ~globals ~context ~program_globals =

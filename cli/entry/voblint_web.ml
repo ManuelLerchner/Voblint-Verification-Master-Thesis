@@ -297,7 +297,7 @@ let run analysis_js globals_js context_js context_depth refinement_js
                 else None
               in
               Render_json.result_json ?trace ?trace_jsonl
-                ~shared:(placement = C.Program_Globals_Shared)
+                ~shared:(placement = C.Program_Globals_Flow_Insensitive)
                 analysis_ms program ~stmt_positions ~header_positions ~raw
                 result
         with Vimp_frontend.Parse_error { line; col; msg; _ } ->

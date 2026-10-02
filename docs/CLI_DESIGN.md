@@ -12,7 +12,7 @@ voblint --analysis sign|interval|int|parity|congruence[,...]
         [--dot | --graph-snapshot | --html | --html-out DIR]
         [--globals join|per-origin|warrow|warrow-per-origin|bounded-narrowing]
         [--narrow-bound N]
-        [--program-globals local|shared]
+        [--program-globals flow-sensitive|flow-insensitive]
         [--timeout SECONDS] FILE.vimp
 voblint --parse-only FILE.vimp
 voblint --help
@@ -70,20 +70,20 @@ voblint --help
   bound as a control from 0 to 100 while that rule is selected, and a link
   carries it as `narrow=N` when it is not 5. Local unknowns are warrowed at widening points
   under every rule. The default is `warrow` for every domain, and `bounded-narrowing`
-  under `--program-globals shared`, chosen in `cli/entry/voblint_main.ml`; Isabelle's
+  under `--program-globals flow-insensitive`, chosen in `cli/entry/voblint_main.ml`; Isabelle's
   `run_voblint` takes the rule as an argument and has no default. Every output mode renders the table the
   chosen rule solved, contextual graphs included.
-- `--program-globals local|shared` selects where a program's declared globals
-  live (default `local`). `local` keeps them in every point's own state, so
-  they are tracked flow-sensitively like locals. `shared` keeps them in the
+- `--program-globals flow-sensitive|flow-insensitive` selects where a program's declared globals
+  live (default `flow-sensitive`). `flow-sensitive` keeps them in every point's own state, so
+  they are tracked like locals. `flow-insensitive` keeps them in the
   one analysis-wide global unknown, a flow-insensitive value every point reads
   and every write publishes into. That holds for the analyses whose state
   splits by variable; the order analysis relates variables across the split,
   so its whole state stays in each point's own state. Both placements are covered by
-  `run_voblint_source_sound`. Under `shared`, a warrowed global can keep
+  `run_voblint_source_sound`. Under `flow-insensitive`, a warrowed global can keep
   destabilizing the points that read it, so `--globals` defaults to
   `bounded-narrowing` there. The playground offers the choice as a control, and
-  a link carries `placement=shared`.
+  a link carries `placement=flow-insensitive`.
 - `--parse-only` parses and exits without running any analysis. A
   syntactically valid but ill-formed program still exits 0 here; the full run
   rejects it with exit 4.

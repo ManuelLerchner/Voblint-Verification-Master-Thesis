@@ -3218,8 +3218,8 @@ function settingsSlug() {
     settings.push(`k${contextDepthInput.value}`);
   }
 
-  if (placementSelect.value === "shared") {
-    settings.push("shared-globals");
+  if (placementSelect.value === "flow-insensitive") {
+    settings.push("flow-insensitive-globals");
   }
 
   if (usesInt()) {
@@ -3505,7 +3505,7 @@ function updateGlobalsControls() {
   };
 
   const sharedWarning =
-    placementSelect.value === "shared" && globalsSelect.value.startsWith("warrow")
+    placementSelect.value === "flow-insensitive" && globalsSelect.value.startsWith("warrow")
       ? " Warrowing the shared global need not settle; bounded narrowing ends it."
       : "";
 
@@ -3522,11 +3522,15 @@ let globalsPicked = false;
 let globalsSwitchedForShared = false;
 
 function updatePlacementControls() {
-  if (placementSelect.value === "shared" && !globalsPicked && globalsSelect.value === "warrow") {
+  if (
+    placementSelect.value === "flow-insensitive" &&
+    !globalsPicked &&
+    globalsSelect.value === "warrow"
+  ) {
     globalsSelect.value = "bounded-narrowing";
     globalsSwitchedForShared = true;
   } else if (
-    placementSelect.value === "local" &&
+    placementSelect.value === "flow-sensitive" &&
     globalsSwitchedForShared &&
     globalsSelect.value === "bounded-narrowing"
   ) {
@@ -3575,7 +3579,7 @@ function readConfiguration() {
 
   const placement = placementSelect.value;
 
-  if (!new Set(["local", "shared"]).has(placement)) {
+  if (!new Set(["flow-sensitive", "flow-insensitive"]).has(placement)) {
     throw new Error(`Unknown program globals placement: ${placement}`);
   }
 
@@ -3651,7 +3655,7 @@ function configurationLabel(configuration) {
     parts.push(`k=${configuration.contextDepth}`);
   }
 
-  if (configuration.placement === "shared") {
+  if (configuration.placement === "flow-insensitive") {
     parts.push("shared globals");
   }
 
@@ -4542,7 +4546,7 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(globalsSelect, settings.globals);
   globalsPicked ||= typeof settings.globals === "string";
   selectIfOffered(contextSelect, settings.context);
-  selectIfOffered(placementSelect, settings.placement ?? "local");
+  selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
   selectIfOffered(intRefinementSelect, settings.refinement);
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
@@ -4706,7 +4710,9 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
-    ...(placementSelect.value === "shared" ? [linkParam("placement", "shared")] : []),
+    ...(placementSelect.value === "flow-insensitive"
+      ? [linkParam("placement", "flow-insensitive")]
+      : []),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);

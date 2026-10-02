@@ -23,7 +23,7 @@ The theory uses these as given; they are local jargon, not English.
 | Term | Meaning |
 | --- | --- |
 | Base construction | the D/G shape in which one local unknown per program point carries the *whole* abstract state — every VIMP variable, declared global or not — with no separate flow-insensitive `G` slot to reconstruct through. Every registration of the shared `dg_analysis_exec` assembly builds its equation system in this shape. |
-| ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. `--program-globals shared` selects it for the combined state (`MCP_Split`). |
+| ownership split | the other shape (`DG_Ownership_Split_Spec`, executable as `Ownership_Split_Exec`): locals in the local unknown, declared globals in a flow-insensitive side slot, recombined by `combine_env`. `--program-globals flow-insensitive` selects it for the combined state (`MCP_Split`). |
 | classifier, `gs` | `vname => bool`, VIMP's own answer to *is this name a declared global*. `parity_gs` is `declared_global parity_program`: the program's `global` declaration decides, never the spelling of the name. |
 | placed state, `default_st` | the executable carrier. Locations are *tagged*, so one name can occupy a local and a global slot at once; the classifier picks which slot the represented function reads. |
 | local unknown | one solver variable per `(pp, ())`, holding a `parity default_st lifted`. The `lifted` wrapper adds `Bot` for *this point was never reached*. |

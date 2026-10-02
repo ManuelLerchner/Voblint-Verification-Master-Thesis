@@ -139,7 +139,8 @@ module Generated : sig
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
     Analysed of 'a
-  type program_globals = Program_Globals_Local | Program_Globals_Shared
+  type program_globals = Program_Globals_Flow_Sensitive |
+    Program_Globals_Flow_Insensitive
   type analysis_config =
     Analysis_Config of
       analysis_domain list * globals_rule * context_mode * program_globals
@@ -4288,7 +4289,8 @@ type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
   Analysed of 'a;;
 
-type program_globals = Program_Globals_Local | Program_Globals_Shared;;
+type program_globals = Program_Globals_Flow_Sensitive |
+  Program_Globals_Flow_Insensitive;;
 
 type analysis_config =
   Analysis_Config of
@@ -10281,8 +10283,8 @@ let rec solved_run_of (_A1, _A2)
           ()));;
 
 let rec mcp_place_cmb
-  pg = (match pg with Program_Globals_Local -> (fun _ d _ -> d)
-         | Program_Globals_Shared ->
+  pg = (match pg with Program_Globals_Flow_Sensitive -> (fun _ d _ -> d)
+         | Program_Globals_Flow_Insensitive ->
            (fun _ ->
              split_cmb_lifted
                ((semilattice_sup_analysis_product
@@ -10368,8 +10370,8 @@ let rec mcp_place_cmb
                                ownership_split_relc))))))))));;
 
 let rec mcp_place_rl
-  pg = (match pg with Program_Globals_Local -> (fun _ d -> d)
-         | Program_Globals_Shared ->
+  pg = (match pg with Program_Globals_Flow_Sensitive -> (fun _ d -> d)
+         | Program_Globals_Flow_Insensitive ->
            (fun _ ->
              split_rl_lifted
                ((semilattice_sup_analysis_product
@@ -11852,8 +11854,8 @@ let rec mcp_trace_printers
            (canonicalize_lift (mcp_emp (activation asa) p) d))
        in
      let local =
-       (match pg with Program_Globals_Local -> view
-         | Program_Globals_Shared ->
+       (match pg with Program_Globals_Flow_Sensitive -> view
+         | Program_Globals_Flow_Insensitive ->
            raw (filtera (fun x -> not (declared_global p x)) (program_vars p)))
        in
       Trace_Printers
@@ -12199,7 +12201,7 @@ let rec ownership_split_transfer_gen _A
 
 let rec mcp_place_spec
   pg = (match pg
-         with Program_Globals_Local ->
+         with Program_Globals_Flow_Sensitive ->
            (fun _ ->
              dg_spec_of
                (bot_lifted
@@ -12235,7 +12237,7 @@ let rec mcp_place_spec
                                  (semilattice_sup_default_st
                                    bounded_semilattice_sup_bot_congruence))
                                semilattice_sup_relc)))))))))
-         | Program_Globals_Shared ->
+         | Program_Globals_Flow_Insensitive ->
            (fun _ c ->
              dgs_combine_assign_update
                (fun _ ci ->
@@ -14970,8 +14972,8 @@ bounded_semilattice_sup_bot_sign))
                                    ()))))))))))));;
 
 let rec mcp_place_rg
-  pg = (match pg with Program_Globals_Local -> (fun _ _ -> Bot)
-         | Program_Globals_Shared ->
+  pg = (match pg with Program_Globals_Flow_Sensitive -> (fun _ _ -> Bot)
+         | Program_Globals_Flow_Insensitive ->
            (fun _ ->
              split_rg_lifted
                ((semilattice_sup_analysis_product

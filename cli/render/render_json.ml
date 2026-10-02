@@ -588,8 +588,10 @@ let context_mode_json = function
   | C.Ctx_CallString k -> tagged "Ctx_CallString" [ nat_json k ]
 
 let program_globals_json = function
-  | C.Program_Globals_Local -> tagged "Program_Globals_Local" []
-  | C.Program_Globals_Shared -> tagged "Program_Globals_Shared" []
+  | C.Program_Globals_Flow_Sensitive ->
+      tagged "Program_Globals_Flow_Sensitive" []
+  | C.Program_Globals_Flow_Insensitive ->
+      tagged "Program_Globals_Flow_Insensitive" []
 
 (* A program is read through the export's accessors: main's body, then every other
    procedure's declaration, in the order the program lists them. *)

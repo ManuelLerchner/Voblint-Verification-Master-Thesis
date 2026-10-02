@@ -40,7 +40,7 @@ definition nv_prog :: imp_prog where
 
 abbreviation nv_config :: analysis_config where
   "nv_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState
-     Program_Globals_Local"
+     Program_Globals_Flow_Sensitive"
 
 lemma nv_report:
   "(case run_voblint nv_config nv_prog of
@@ -223,7 +223,7 @@ definition nv_dead_prog :: imp_prog where
 
 abbreviation nv_dead_config :: analysis_config where
   "nv_dead_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Join Ctx_None
-     Program_Globals_Local"
+     Program_Globals_Flow_Sensitive"
 
 lemma nv_dead_report:
   "(case run_voblint nv_dead_config nv_dead_prog of

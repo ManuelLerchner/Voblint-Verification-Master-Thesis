@@ -73,9 +73,9 @@ SHOWCASE = [
     (
         "19-paper-examples/precision/07-example1_shared_global_summary.vimp",
         "One fact per global",
-        "The FM 2026 paper's Example 1 with program globals shared: g's writes "
-        "join to [-17,42], enough for g < 43 but not g == 42. Set Program globals "
-        "to Local and both are proved.",
+        "The FM 2026 paper's Example 1 with program globals flow-insensitive: g's "
+        "writes join to [-17,42], enough for g < 43 but not g == 42. Set Program "
+        "globals to Flow-sensitive and both are proved.",
     ),
     (
         "16-composite-domain/precision/09-remainder_reduction.vimp",
@@ -138,7 +138,7 @@ def example(path: Path) -> dict[str, object]:
         name: settings[key] for key, name in PLAYGROUND_KEYS.items() if key in settings
     }
     # voblint's own default rule under shared globals, which the page does not infer.
-    if settings.get("program_globals") == "shared":
+    if settings.get("program_globals") == "flow-insensitive":
         playground.setdefault("globals", "bounded-narrowing")
     return {
         "path": relative.as_posix(),

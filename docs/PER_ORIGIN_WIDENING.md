@@ -35,7 +35,7 @@ source-checked 2026-08-10).
 The other choice is formalized as a lifter. `ownership_split_lift`
 (`DG_Ownership_Split_Spec.thy`) takes a whole-state specification and puts
 every declared global on the shared channel, proved sound against the
-ownership-split concretization. `--program-globals shared` selects it for the
+ownership-split concretization. `--program-globals flow-insensitive` selects it for the
 analyzer's combined state (`MCP_Split`); the local placement stays the default.
 
 That single site is enough to reproduce the paper's own chain. With the paper's

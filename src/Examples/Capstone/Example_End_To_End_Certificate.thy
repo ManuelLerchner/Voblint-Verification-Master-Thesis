@@ -50,7 +50,7 @@ abbreviation certificate_analyses :: "analysis_domain list" where
 
 abbreviation certificate_config :: analysis_config where
   "certificate_config \<equiv> Analysis_Config certificate_analyses Globals_Join (Ctx_CallString 1)
-     Program_Globals_Local"
+     Program_Globals_Flow_Sensitive"
 
 subsection \<open>What the configuration answers\<close>
 

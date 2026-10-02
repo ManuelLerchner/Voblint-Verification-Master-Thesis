@@ -89,8 +89,8 @@ definition mcp_trace_printers ::
                          (map_lift (mcp_rd (declared_global p)) d));
           view = (\<lambda>d. raw (program_vars p) (canonicalize_lift (mcp_emp (activation as) p) d));
           local = (case pg of
-                     Program_Globals_Local \<Rightarrow> view
-                   | Program_Globals_Shared \<Rightarrow>
+                     Program_Globals_Flow_Sensitive \<Rightarrow> view
+                   | Program_Globals_Flow_Insensitive \<Rightarrow>
                        raw (filter (\<lambda>x. \<not> declared_global p x) (program_vars p)))
       in Trace_Printers ctx_view seed_of (\<lambda>d. local (dg_local d))
            (\<lambda>d. raw (filter (declared_global p) (program_vars p)) (dg_global d)) local)"

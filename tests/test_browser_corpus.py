@@ -49,9 +49,9 @@ def web_call(path):
     """The playground's call for a fixture: its PARAM settings, the CLI's
     defaults for the rest."""
     s = analysis_settings(param_args(path) or [])
-    placement = s.get("program_globals", "local")
+    placement = s.get("program_globals", "flow-sensitive")
     globals_rule = s.get(
-        "globals", "bounded-narrowing" if placement == "shared" else "warrow"
+        "globals", "bounded-narrowing" if placement == "flow-insensitive" else "warrow"
     )
     if "narrow_bound" in s:
         globals_rule += f":{s['narrow_bound']}"

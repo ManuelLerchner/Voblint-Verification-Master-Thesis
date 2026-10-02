@@ -1,4 +1,4 @@
-// PARAM: --analysis interval --globals join --program-globals shared
+// PARAM: --analysis interval --globals join --program-globals flow-insensitive
 // Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
 // Engineering Modularity" (FM 2026), Example 1: is a flow-insensitive summary
 // of g enough to rule out the error g > 42? The program is Fig. 1 without h

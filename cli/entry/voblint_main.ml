@@ -91,16 +91,16 @@ let usage =
   \                             origin with narrowing bounded by\n\
   \                             --narrow-bound (default: warrow). Locals\n\
   \                             are warrowed at loop heads under every rule.\n\
-  \  --program-globals local|shared\n\
+  \  --program-globals flow-sensitive|flow-insensitive\n\
   \                             Where a program's globals live (default:\n\
-  \                             local). local keeps them in every point's\n\
-  \                             own state, flow-sensitively; shared puts\n\
-  \                             them on one flow-insensitive channel every\n\
-  \                             point reads, for the analyses whose state\n\
-  \                             splits by variable; order relates variables\n\
-  \                             across that split and keeps its whole state\n\
-  \                             per point. Both are proved sound. Under\n\
-  \                             shared, --globals defaults to\n\
+  \                             flow-sensitive). flow-sensitive keeps them\n\
+  \                             in every point's own state; flow-insensitive\n\
+  \                             puts them on one shared value every point\n\
+  \                             reads, for the analyses whose state splits\n\
+  \                             by variable; order relates variables across\n\
+  \                             that split and keeps its whole state per\n\
+  \                             point. Both are proved sound. Under\n\
+  \                             flow-insensitive, --globals defaults to\n\
   \                             bounded-narrowing.\n\
   \  --narrow-bound N           bounded-narrowing narrows an origin once each\n\
   \                             time it switches from widening to narrowing,\n\
@@ -445,7 +445,7 @@ let () =
   let trace_systems = ref [] in
   let trace_output = ref None in
   let globals_name = ref None in
-  let program_globals_name = ref "local" in
+  let program_globals_name = ref "flow-sensitive" in
   let file = ref None in
   let rec parse_args = function
     | [] -> ()
@@ -563,7 +563,7 @@ let () =
     match !globals_name with
     | Some name -> name
     | None ->
-        if !program_globals_name = "shared" then "bounded-narrowing"
+        if !program_globals_name = "flow-insensitive" then "bounded-narrowing"
         else "warrow"
   in
   (* Every flag is read before any is checked: --context-depth, --narrow-bound
@@ -671,7 +671,7 @@ let () =
     | C.Analysed result ->
         print_endline
           (Render_json.result_json
-             ~shared:(placement = C.Program_Globals_Shared)
+             ~shared:(placement = C.Program_Globals_Flow_Insensitive)
              0. prog ~stmt_positions ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);

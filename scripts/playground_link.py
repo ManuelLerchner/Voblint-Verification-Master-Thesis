@@ -58,7 +58,7 @@ def link(
         settings.append(("k", str(k)))
     if refinement is not None:
         settings.append(("refinement", refinement))
-    if placement is not None and placement != "local":
+    if placement is not None and placement != "flow-sensitive":
         settings.append(("placement", placement))
     if trace is not None:
         settings.append(("trace", trace))
@@ -131,7 +131,7 @@ def program_link(program: Path, flags: list[str], base: str = PLAYGROUND) -> str
 
     placement = settings.get("program_globals")
     # voblint's own default rule under shared globals.
-    default_rule = "bounded-narrowing" if placement == "shared" else "warrow"
+    default_rule = "bounded-narrowing" if placement == "flow-insensitive" else "warrow"
 
     return link(
         vimp_fixture.shown_source(program.read_text()),

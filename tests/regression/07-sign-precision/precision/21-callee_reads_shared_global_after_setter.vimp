@@ -1,4 +1,4 @@
-// PARAM: --analysis sign --globals join --program-globals shared
+// PARAM: --analysis sign --globals join --program-globals flow-insensitive
 // Source: Example_Sign_Mixed_Flow (mf_report, mf_checks_hold).
 //
 // 19-callee_reads_global_after_setter.vimp with program globals on the
