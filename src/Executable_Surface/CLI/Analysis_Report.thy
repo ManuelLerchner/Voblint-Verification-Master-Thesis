@@ -146,6 +146,16 @@ qed
 
 subsection \<open>What a consistent report claims about its own states\<close>
 
+text \<open>
+  A sound classifier's verdict holds at every store its abstract value admits:
+  both directions of \<open>sound_classifier\<close> at once, which is what lets a report
+  vouch for a \<open>Check_Refuted\<close> row as much as for a \<open>Check_Proved\<close> one.
+\<close>
+
+lemma (in sound_classifier) classify_verdict_holds:
+  "t \<in> gm d \<Longrightarrow> verdict_holds (classify cnd d) cnd t"
+  by (cases "classify cnd d") (auto dest: proved refuted)
+
 theorem analysis_report_verdicts_sound:
   assumes "consistent_report res"
   shows "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
@@ -159,21 +169,13 @@ proof
   proof (intro CollectI ballI allI impI)
     fix c r
     assume c: "c \<in> report_checks_at res v" and verdict: "check_verdict c = Decided r"
+    have holds: "verdict_holds (report_classify res (check_exp c) d) (check_exp c) s"
+      using s unfolding report_classify_def report_gamma_def
+      by (rule sound_classifier.classify_verdict_holds [OF mcp_sound_classifier])
     show "verdict_holds r (check_exp c) s"
-    proof (cases r)
-      case Check_Proved
-      with consistent_report_decided[OF assms c verdict _ row]
-      have "report_classify res (check_exp c) d = Check_Proved" by simp
-      then have "truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
-        using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_proved)
-      with Check_Proved show ?thesis by simp
-    next
-      case Check_Refuted
-      with consistent_report_decided[OF assms c verdict _ row]
-      have "report_classify res (check_exp c) d = Check_Refuted" by simp
-      then have "\<not> truthy (\<lbrakk>check_exp c\<rbrakk>\<^sub>e s)"
-        using s unfolding report_classify_def report_gamma_def by (rule mcp_classify_refuted)
-      with Check_Refuted show ?thesis by simp
+    proof (cases "r = Check_Unknown")
+      case False
+      with consistent_report_decided[OF assms c verdict False row] holds show ?thesis by simp
     qed simp
   qed
 qed
