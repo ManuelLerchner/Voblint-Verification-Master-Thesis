@@ -1,12 +1,7 @@
 theory Example_Sign_DG_CallString_K1
   imports
-    "Voblint_Analysis_Sign.Sign_Transfer"
     "Voblint_Analysis_Sign.Sign_Exec"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Routing.Call_String_Routed_Context"
-    "Voblint_Framework.Activation_Backbone"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -235,6 +230,11 @@ lemma covered_ret3_fneg_1: "(Statement 3, [Statement 6]) \<in> fst sign_nest_1_s
 
 section \<open>The solver's post-solution\<close>
 
+text \<open>
+  Termination of \<open>sign_nest_1_eqs\<close> gives a solve domain, and the solver's
+  \<open>partial_post_solution\<close> turns it into \<open>sign_nest_1_pp_st\<close>.
+\<close>
+
 lemma sign_nest_1_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
      TYPE((sign default_st lifted, sign default_st lifted) dg_state)
@@ -257,6 +257,12 @@ abbreviation sigma_1 ::
   "sigma_1 \<equiv> snd sign_nest_1_sol"
 
 section \<open>Activation-indexed collecting soundness for the 1-call-string-routed solution\<close>
+
+text \<open>
+  \<open>sign_ctx_sg_1\<close> reads the solved local state at each key; the interpretation
+  \<open>sign_nest_1_cs\<close> of \<open>call_string_routed_context\<close> at \<open>k = 1\<close> discharges
+  the locale's obligations for this program.
+\<close>
 
 abbreviation sign_ctx_sg_1 ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign default_st lifted" where
@@ -357,6 +363,11 @@ qed
 
 section \<open>The headline theorem: 1-call-string activation collecting soundness\<close>
 
+text \<open>
+  \<open>sign_nest_1_activation_collect_sound\<close>, from the routed interpretation and the
+  initial-store bound \<open>sign_nest_cinit_le_cinit_sign_st\<close>.
+\<close>
+
 lemma sign_nest_cinit_le_cinit_sign_st:
   "cinit_stores sign_nest_gs \<subseteq> sign_nest_gamma (Lifted cinit_sign_st) Bot"
   by (auto simp: sign_nest_gamma_def cinit_stores_def gamma_state_def default_st_gamma_initial)
@@ -381,17 +392,17 @@ text \<open>\<open>f\<close>'s two activations stay separated at their own entry
   unknown, and their join lands at \<open>STop\<close> --- the merge a 2-call-string keeps separated.\<close>
 
 lemma sign_nest_1_f_entry_pos:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''f''), [Statement 5]))))
      (STR ''p'') = SPos"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma sign_nest_1_f_entry_neg:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''f''), [Statement 6]))))
      (STR ''p'') = SNeg"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 
 lemma sign_nest_1_g_entry_merged:
-  "sign_nest_lookup (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+  "sign_nest_lookup (dg_local (sigma_1 (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
      (STR ''p'') = STop"
   unfolding sign_nest_1_sol_def sign_nest_1_eqs_def by eval
 

@@ -214,12 +214,10 @@ text \<open>
   \<^type>\<open>man_combine_transfer\<close> --- by the ownership-split observation
   equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
   \<open>dg_spec_combine_program\<close> is used at a selected specification, by
-  \<open>DG_Ctx_Activation\<close>'s own \<open>dg_ctx_act_comb_covered\<close> downstream, whose two
-  bounds are assumptions about this program at two \<^emph>\<open>solver addresses\<close>.
-  That last part is what the value form cannot express: the caller
-  supplies those bounds from a post-solution at \<open>Inl (cl, c1)\<close> and
-  \<open>Inl (ex, c2)\<close>, so the obligation has to name the addresses, not the values
-  they hold. \<open>combine_program_at\<close> is the one internal step, kept for symmetry
+  \<open>combine_sound_program\<close> below, which restates the return obligation at
+  two \<^emph>\<open>solver addresses\<close>. That is what the value form cannot express: a
+  caller bounding the program from a post-solution reads it at two unknowns,
+  so the obligation has to name the addresses, not the values they hold. \<open>combine_program_at\<close> is the one internal step, kept for symmetry
   with the edge driver rather than for a second consumer.
 \<close>
 
@@ -278,9 +276,8 @@ lemma dep_combine_transfer_program:
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
-text \<open>What the compiled form observes when both stages are local, and the two
-  reads it always makes --- the combine counterparts of the edge-tree facts in
-  \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
+text \<open>What the compiled form observes when both stages are local --- the combine
+  counterparts of the edge-tree facts in \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
 
 lemma traverse_local_combine_program [simp]:
   "traverse_program (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk) \<tau>
@@ -299,14 +296,6 @@ lemma dep_local_combine_program [simp]:
      = {src_cc, src_ex}"
   by (simp add: dep_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
-
-lemma dep_combine_transfer_program_sources:
-  "{src_cc, src_ex} \<subseteq> dep_program \<tau> (combine_transfer_program T src_cc src_ex gk)"
-  by (simp add: dep_combine_transfer_program)
-
-lemma dep_dg_spec_combine_program_sources:
-  "{src_cc, src_ex} \<subseteq> dep_program \<tau> (dg_spec_combine_program S ci src_cc src_ex gk)"
-  unfolding dg_spec_combine_program_def by (rule dep_combine_transfer_program_sources)
 
 subsection \<open>What a manager-native specification owes\<close>
 

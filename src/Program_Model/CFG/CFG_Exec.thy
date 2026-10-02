@@ -46,10 +46,10 @@ inductive_cases cstep_E [elim]: "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
-lemma cstep_nop:
-  assumes "(u, EA_Nop, v) \<in> intra g"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
-  by (rule cstep.Intra[OF assms]) simp
+text \<open>
+  Introduction lemmas for the store-preserving edge actions the simulation steps
+  through: body, assume and assume-not.
+\<close>
 
 lemma cstep_body:
   assumes "(u, EA_Body p, v) \<in> intra g"
@@ -65,12 +65,6 @@ lemma cstep_assume_not:
   assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
   by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
-
-lemma cstep_ret:
-  assumes "(u, EA_Ret e q, v) \<in> intra g"
-  shows "\<G>, g \<turnstile> (u, s, stk)
-     \<rightarrow>\<^sub>c (v, s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)), stk)"
-  by (rule cstep.Intra[OF assms]) simp
 
 subsection \<open>Intra-only paths as stack-preserving runs\<close>
 
@@ -116,12 +110,5 @@ lemma frames_match_activation:
   "frames_match (Frame s d # frs) ((cont, d, s) # stk)
      = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
-
-text \<open>Call entry creates exactly one child activation on top of the preserved caller stack.\<close>
-lemma frames_match_call:
-  "frames_match frs stk \<Longrightarrow>
-   frames_match (Frame caller dst # frs) ((cont, dst, caller) # stk)"
-  by (simp add: frames_match_activation)
-
 
 end

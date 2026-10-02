@@ -10,3 +10,4 @@ session Voblint_Examples_Relational in "." = "Voblint_Analysis_Relational" +
     "Voblint_Framework"
   theories
     Example_Relational_DG_Demo
+    Relational_Regression

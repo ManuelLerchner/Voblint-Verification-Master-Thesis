@@ -61,8 +61,7 @@ its equations through Parity's unit-context registration `parity_rule`
 (`Exec_Sign_DG_Run`) and Interval's `flagship_source_run_sound`. Nothing in that chain is
 Parity-specific except the lattice.
 
-`Example_Parity_Checks_Store_Only` (Examples/CLI, grouped with the other domains'
-members of the same store-only trio) is the check-discharge witness: `y := x * 2` and `z := y + 1` land in
+`tests/regression/18-parity/precision/05-check_trio.vimp` is the check-discharge witness: `y := x * 2` and `z := y + 1` land in
 disjoint parity classes whatever the unconstrained `x` is, so one check is proved and
 one refuted. A third, against another unconstrained value, is unknown — Parity has no
 singleton, so it can never prove a positive equality.

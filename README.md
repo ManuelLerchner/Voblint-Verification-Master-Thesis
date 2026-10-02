@@ -150,10 +150,8 @@ and checks, nested arithmetic included, and both operands of `&&` and `||`. It i
 a diagnostic policy over VIMP's total expressions: execution still uses
 `a / 0 = 0` and `a % 0 = a`. “Possible” means the abstraction cannot exclude
 zero, not that a zero-divisor execution exists; an `error` does not prove its
-point reachable. Executable witnesses live in
-[`Example_Arithmetic_Diagnostics_Regression.thy`](src/Examples/CLI/Example_Arithmetic_Diagnostics_Regression.thy),
-and the [arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md)
-describe the expectation syntax.
+point reachable. The [arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md)
+pin the findings and describe the expectation syntax.
 
 ## What Voblint proves
 

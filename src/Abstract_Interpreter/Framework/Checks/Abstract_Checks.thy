@@ -139,6 +139,11 @@ qed (fastforce+)
 
 subsection \<open>Executable three-way classification\<close>
 
+text \<open>
+  \<open>classify_check\<close> turns the check query into proved, refuted or unknown.
+  A proved check holds in every concretized store and a refuted one fails in each.
+\<close>
+
 definition classify_check :: "exp \<Rightarrow> 'd \<Rightarrow> check_result" where
   "classify_check c d =
      (case check_query c d of

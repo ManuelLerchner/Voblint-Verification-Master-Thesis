@@ -10,8 +10,8 @@
 //
 // once and fixpoint agree here, and on every program we tried: each later
 // operation refines again, which closes the gap one round leaves. That gap is
-// visible on single values (Example_Int_Refinement_Mode_Regression.thy,
-// mode_never_ne_fixpoint and the Sign progression it documents).
+// visible on single values (Int_Refinement_Control.thy,
+// refinement_once_not_fixpoint).
 // Under once, the check is proved.
 fun main() {
   y = __voblint_nondet_int();

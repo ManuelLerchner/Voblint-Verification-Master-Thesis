@@ -1,7 +1,6 @@
 theory Routed_Call_Programs
   imports DG_Spec_Sound DG_Indexed_Generator
     "Voblint_Domain.Nonrelational_State"
-    "Voblint_Solver.Strategy_Tree_Program"
 begin
 
 section \<open>The equations one call action generates\<close>
@@ -352,20 +351,6 @@ proof -
     by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
   finally show ?thesis .
 qed
-
-text \<open>
-  The entry program's own publications survive into the call's, whatever the
-  alternatives turn out to be --- this is the half a specification with an
-  effectful entry needs, and it holds without selecting an alternative at all.
-\<close>
-
-lemma routed_callee_call_program_sides_ge_prefix:
-  assumes R: "enter_runs (enter\<^sup># S (call_info_of ca p))
-                (mk_dg_man caller (\<lambda>_. analysis_global)) \<sigma> pairs pub"
-  shows "pub \<le> sides_of_program
-                 (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc caller p) \<sigma>"
-  unfolding routed_callee_call_program_def
-  by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R])
 
 text \<open>
   One rung further out: one resolved target's contribution survives the fold

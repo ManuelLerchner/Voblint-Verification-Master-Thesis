@@ -1,6 +1,5 @@
 theory Example_Per_Origin_Widening_Precision
   imports
-    "TD.TD_side_Interface"
     "Voblint_Analysis_Interval.Interval_Exec"
 begin
 

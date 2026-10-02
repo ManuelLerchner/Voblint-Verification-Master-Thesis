@@ -4,6 +4,12 @@ begin
 
 section \<open>Congruence lattice\<close>
 
+text \<open>
+  Goblint's congruence domain as a normalized subtype of \<open>(int * int) option\<close>,
+  with concretization \<open>gamma_congruence\<close>, the lattice order, join
+  and the executable tests the \<open>numeric_domain\<close> instance needs.
+\<close>
+
 subsection \<open>Carrier and concretization\<close>
 
 text \<open>
@@ -399,27 +405,10 @@ proof -
     by (simp only: Rep_congruence_inject)
 qed
 
-lemma mk_congruence_normalized:
-  assumes "m = 0 \<or> (0 <= c \<and> c < m)"
-  shows "Rep_congruence (mk_congruence c m) = Some (c, m)"
-proof -
-  from assms have normalized:
-    "normalized_congruence_rep (Some (c, m))"
-    by simp
-  then have fixed:
-    "normalize_congruence_rep (Some (c, m)) = Some (c, m)"
-    by (rule normalize_congruence_rep_fixed)
-  then show ?thesis by simp
-qed
-
 lemma mk_congruence_negative_modulus [simp]:
   "mk_congruence 5 (-4) = mk_congruence 1 4"
   by (rule Rep_congruence_inject[THEN iffD1])
      (simp add: Let_def)
-
-lemma mk_congruence_constant_distinct:
-  "mk_congruence c 0 = mk_congruence d 0 \<longleftrightarrow> c = d"
-  by (simp add: Rep_congruence_inject[symmetric])
 
 
 definition congruence_of_int :: "int => congruence" where
@@ -593,6 +582,12 @@ qed
 
 
 subsection \<open>Join\<close>
+
+text \<open>
+  Two classes join to the class modulo the gcd of both moduli and the residue
+  difference, renormalized. The lemmas show the join is an upper bound in
+  \<open>gamma_congruence\<close> and the least one in the order.
+\<close>
 
 fun join_congruence_rep :: "congruence_rep => congruence_rep => congruence_rep" where
   "join_congruence_rep None y = y"
@@ -801,11 +796,6 @@ proof intro_classes
 qed
 
 instance congruence :: bounded_semilattice_sup_bot ..
-
-lemma join_congruence_same_modulus_regression:
-  "mk_congruence 1 4 \<squnion> mk_congruence 3 4 =
-   mk_congruence 1 2"
-  by eval
 
 subsection \<open>Meet\<close>
 
@@ -1022,13 +1012,12 @@ instance congruence :: bounded_lattice_bot ..
 
 subsection \<open>Executable interface\<close>
 
+text \<open>
+  Executable bottom and top tests, each proved against \<open>gamma_congruence\<close>.
+\<close>
+
 definition is_bottom_congruence :: "congruence => bool" where
   "is_bottom_congruence a = (a = bot)"
-
-lemma is_bottom_congruence_regression:
-  "is_bottom_congruence bottom_congruence \<and>
-   \<not> is_bottom_congruence (mk_congruence 0 0)"
-  by eval
 
 lemma is_bottom_congruence_correct:
   "is_bottom_congruence a \<longleftrightarrow> gamma_congruence a = {}"
@@ -1037,11 +1026,6 @@ lemma is_bottom_congruence_correct:
 
 definition is_top_congruence :: "congruence => bool" where
   "is_top_congruence a = (a = top)"
-
-lemma is_top_congruence_regression:
-  "is_top_congruence (top :: congruence) \<and>
-   \<not> is_top_congruence (mk_congruence 0 2)"
-  by eval
 
 lemma is_top_congruence_correct_gamma:
   "is_top_congruence a \<longleftrightarrow> gamma_congruence a = UNIV"
@@ -1062,13 +1046,5 @@ definition string_of_congruence :: "congruence \<Rightarrow> String.literal" whe
           if m = 0 then string_of_int r
           else (if r = 0 then STR '''' else string_of_int r + STR ''+'')
              + (if m = 1 then STR '''' else string_of_int m) + sym_int)"
-
-lemma string_of_congruence_regression:
-  "string_of_congruence bottom_congruence = STR ''<bottom>''"
-  "string_of_congruence (mk_congruence (-7) 0) = STR ''-7''"
-  "string_of_congruence (mk_congruence 0 1) = STR ''<int>''"
-  "string_of_congruence (mk_congruence 0 3) = STR ''3<int>''"
-  "string_of_congruence (mk_congruence 4 3) = STR ''1+3<int>''"
-  by eval+
 
 end

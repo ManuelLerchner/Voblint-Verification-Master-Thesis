@@ -1,14 +1,7 @@
 theory Example_Relational_DG_Demo
   imports
-    "Voblint_Routing.Compiled_Routed_Equations"
-    "Voblint_Framework.DG_Reader_Transport"
-    "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Relational.Rel_Order_Domain"
-    "Voblint_Analysis_Interval.Interval_Transfer"
     "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Wellformed"
-    "Voblint_CFG.CFG_Prune"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

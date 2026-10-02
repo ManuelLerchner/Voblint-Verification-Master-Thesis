@@ -483,7 +483,7 @@ text \<open>
 
 lemma normalized_lift_bind:
   assumes "\<And>a. normalized_lift empty_pred (f a)"
-  shows "normalized_lift empty_pred (bind_lift x f)"
+  shows "normalized_lift empty_pred (bind x f)"
   using assms by (cases x) simp_all
 
 text \<open>
@@ -530,7 +530,7 @@ lemma bind_lift_mono2:
   fixes x y :: "'a::semilattice_sup lifted"
   assumes xy: "x \<le> y"
       and fg: "\<And>a b. a \<le> b \<Longrightarrow> f a \<le> (g b :: 'b::semilattice_sup lifted)"
-  shows "bind_lift x f \<le> bind_lift y g"
+  shows "bind x f \<le> bind y g"
   using xy by (cases x; cases y) (auto intro: fg)
 
 subsection \<open>Solver update integration\<close>
@@ -567,40 +567,5 @@ lemma transfer_lift2_commute:
   shows "map_lift phi (transfer_lift2 empty_pred f d1 d2) =
            transfer_lift2 empty_pred' F (map_lift phi d1) (map_lift phi d2)"
   by (cases d1; cases d2) (simp_all add: transfer_lift2_def normalize_lift_def commute exact)
-
-subsection \<open>What a report entry reads off a solved unknown\<close>
-
-text \<open>
-  A check report needs two things from the unknown solved at a program point:
-  whether the point is unreachable, and the state to classify its checks
-  against.  A \<open>Bot\<close> unknown is unreachable and offers \<open>bot\<close> to classify with; a
-  \<open>Lifted\<close> one is reachable and offers its own payload.  Every domain's
-  with-state report makes exactly this split, so it has one definition here
-  rather than a copy per domain, and the unreachable flag has a name a
-  correctness argument can cite.
-\<close>
-
-fun report_lifted_state :: "('a::bot) lifted \<Rightarrow> bool \<times> 'a" where
-  "report_lifted_state Bot = (True, bot)"
-| "report_lifted_state (Lifted s) = (False, s)"
-
-lemma report_lifted_state_unreachable_iff:
-  "fst (report_lifted_state s) \<longleftrightarrow> s = Bot"
-  by (cases s) simp_all
-
-lemma report_lifted_state_snd_Lifted [simp]:
-  "snd (report_lifted_state (Lifted s)) = s"
-  by simp
-
-text \<open>
-  Deliberately not \<open>[simp]\<close>: it exists for the places that still spell the
-  split out inline against an explicitly passed bottom value, where a goal has
-  to be brought to one shape before the two sides match. Tagging it would undo
-  the definition everywhere and leave nothing for the flag to be named after.
-\<close>
-
-lemma report_lifted_state_eq_case:
-  "report_lifted_state s = (case s of Bot \<Rightarrow> (True, bot) | Lifted st \<Rightarrow> (False, st))"
-  by (cases s) simp_all
 
 end

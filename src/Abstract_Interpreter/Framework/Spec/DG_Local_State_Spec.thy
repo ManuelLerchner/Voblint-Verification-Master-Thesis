@@ -20,8 +20,10 @@ text \<open>
   \<open>sound_nonrelational_transfer\<close> is the contract those operations owe: every
   concrete transition the collecting semantics allows must land inside the
   concretization of what the corresponding operation computes. A domain discharges
-  it once, by \<open>interpretation\<close>, and both constructions become sound
-  specifications.
+  it once, by \<open>interpretation\<close>, and \<open>state_dg_spec\<close> becomes a sound
+  specification. \<open>lifted_state_dg_spec\<close> is the structural target its
+  executable mirror refines; \<open>DG_Local_State_Exec_Refinement\<close> proves that
+  mirror sound directly.
 
   The call boundary is fixed here rather than supplied. A call answers exactly one
   alternative, whose continuation is the caller value unchanged. That is sound
@@ -164,6 +166,12 @@ end
 
 subsection \<open>The unlifted specification\<close>
 
+text \<open>
+  \<open>state_dg_spec\<close> turns the state-level local specification into an
+  equation-system specification via \<open>dg_spec_of\<close>, without the reachability
+  lifting.
+\<close>
+
 definition state_dg_spec ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('a::numeric_domain abs_state \<Rightarrow> 'a abs_state)
@@ -195,17 +203,13 @@ theorem (in sound_nonrelational_transfer) state_dg_spec_contract:
   unfolding state_dg_spec_def by (rule dg_spec_of_contract[OF state_local_spec_sound])
 
 
-subsection \<open>Transporting soundness through the reachability lift\<close>
+subsection \<open>The reachability-lifted construction\<close>
 
 text \<open>
-  The bottom bookkeeping the lift needs --- \<open>transfer_lift_sound_collect\<close>,
-  \<open>transfer_lift_sound_mem\<close>, \<open>transfer_lift2_sound_mem\<close> --- is proved once in
-  \<^theory>\<open>Voblint_Domain.Nonrelational_Reachability\<close>, beside the
-  concretization it is about, and the commute laws in
-  \<^theory>\<open>Voblint_Domain.Reachability_Lift\<close> beside the lift itself. Neither
-  concerns a \<^type>\<open>dg_spec\<close>; this theory only applies them.
+  The same operations, each wrapped in \<^const>\<open>transfer_lift\<close>: a \<^const>\<open>Bot\<close> input
+  stays \<^const>\<open>Bot\<close>, and a result the supplied emptiness predicate flags
+  collapses to it.
 \<close>
-subsection \<open>The reachability-lifted construction\<close>
 
 definition lifted_state_local_spec ::
   "(vname \<Rightarrow> bool)
@@ -297,60 +301,5 @@ lemma dg_spec_combine_transfer_lifted_state_dg_spec:
      = local_combine_transfer
          (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de)"
   by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
-
-subsection \<open>Soundness of the lifted construction\<close>
-
-text \<open>
-  The meaning of a Base-style equation never depends on the global slot:
-  nothing in \<^const>\<open>lifted_state_dg_spec\<close> ever publishes to or reads
-  from it, so \<open>gamma_dg_local_state\<close> ignores its global argument entirely and the
-  component's obligations are the transported pure facts.
-\<close>
-
-definition gamma_dg_local_state ::
-  "'a::numeric_domain abs_state lifted \<Rightarrow> 'g::bounded_semilattice_sup_bot \<Rightarrow> store set"
-where
-  "gamma_dg_local_state d g = \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
-
-context sound_nonrelational_transfer
-begin
-
-abbreviation lifted_tf_spec ::
-  "('a abs_state \<Rightarrow> bool) \<Rightarrow> 'a abs_state lifted local_spec" where
-  "lifted_tf_spec empty_pred \<equiv>
-     lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev"
-
-theorem lifted_state_local_spec_sound:
-  assumes empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>\<^sub>\<bottom>) (lifted_tf_spec empty_pred)"
-proof -
-  have step: "edge_collect a (\<lbrakk>d\<rbrakk>\<^sub>\<bottom> \<inter> Collect (eval_query.oracle_holds A))
-      \<subseteq> \<lbrakk>ls_step (lifted_tf_spec empty_pred) A a d\<rbrakk>\<^sub>\<bottom>" for a A and d :: "'a abs_state lifted"
-    by (simp only: ls_step_lifted_state_local_spec)
-       (rule subset_trans[OF edge_collect_mono[OF Int_lower1] transfer_lift_sound_collect
-          [OF step_sound_for edge_collect_empty_set empty_pred_sound]])
-  have enter: "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-      \<in> \<lbrakk>transfer_lift empty_pred (en ci) d\<rbrakk>\<^sub>\<bottom>" if "s \<in> \<lbrakk>d\<rbrakk>\<^sub>\<bottom>" for s d ci
-    by (rule transfer_lift_sound_mem[OF _ empty_pred_sound that])
-       (simp add: call_enter_CallEdge tf_sound_enter_entry_for)
-  have comb: "combine_collect \<G> (ci_dst ci) s t
-      \<in> \<lbrakk>transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de\<rbrakk>\<^sub>\<bottom>"
-    if "s \<in> \<lbrakk>dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci
-    by (rule transfer_lift2_sound_mem[OF combine_collect_sound empty_pred_sound that])
-  have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>y\<rbrakk>\<^sub>\<bottom>"
-    by (meson gamma_lift_mono gamma_state_mono)
-  show ?thesis
-    unfolding sound_local_spec_def
-    using mono step enter comb by (auto simp: lifted_state_local_spec_def)
-qed
-
-theorem lifted_state_dg_spec_contract:
-  assumes empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "analysis_contract (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev)
-           gamma_dg_local_state \<G>"
-  unfolding lifted_state_dg_spec_def gamma_dg_local_state_def[abs_def]
-  by (rule dg_spec_of_contract[OF lifted_state_local_spec_sound[OF empty_pred_sound]])
-
-end
 
 end

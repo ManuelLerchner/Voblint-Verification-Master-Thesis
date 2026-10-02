@@ -195,15 +195,6 @@ lemma is_empty_state_bot [simp]:
   unfolding is_empty_state_def bot_fun_def
   using is_empty_correct gamma_bot by blast
 
-text \<open>
-  A concrete witness rules out witness-bottom directly: the generic dispatcher's
-  short-circuit condition can never fire on an abstract state some reachable
-  concrete store still belongs to.
-\<close>
-lemma gamma_state_witness_not_empty:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> \<not> is_empty_state \<sigma>"
-  using is_empty_state_gamma_state_empty by blast
-
 lemma is_empty_state_antimono:
   "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>1"
   for \<sigma>1 \<sigma>2 :: "'a::numeric_domain abs_state"

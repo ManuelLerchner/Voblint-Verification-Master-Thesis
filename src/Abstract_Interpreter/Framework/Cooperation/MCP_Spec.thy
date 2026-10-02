@@ -514,11 +514,6 @@ next
     using assms by (auto simp: eval_query.oracle_holds_def)
 qed
 
-text \<open>A handler that never asks answers through the closed channel as it is.\<close>
-
-lemma ask_rec_const: "ask_rec (\<lambda>A x. h x) (Suc n) {} x = h x"
-  by (simp add: fun_eq_iff)
-
 definition ls_channel :: "'s local_spec \<Rightarrow> 's \<Rightarrow> answers" where
   "ls_channel c x = ask_rec (ls_query c) query_depth {} x"
 
@@ -567,6 +562,12 @@ definition mcp_gamma :: "('s \<Rightarrow> store set) list \<Rightarrow> 's \<Ri
   "mcp_gamma gs x = (\<Inter>g \<in> set gs. g x)"
 
 section \<open>Soundness of the combination\<close>
+
+text \<open>
+  The combined state is sound for the intersection \<open>mcp_gamma\<close> of the
+  components' concretizations. Step, combine, entry and query folds each stay
+  sound because a component leaves the others' concretizations unchanged.
+\<close>
 
 lemma mcp_gamma_Cons [simp]: "mcp_gamma (g # gs) x = g x \<inter> mcp_gamma gs x"
   by (simp add: mcp_gamma_def)
@@ -871,15 +872,6 @@ fun mcp_combine :: "'s local_spec list \<Rightarrow> 's local_spec" where
 | "mcp_combine cs =
      make_local_spec (mcp_qry cs) (mcp_step cs) (mcp_en_from cs) (mcp_comb cs) (\<lambda>B ci dc de. dc)"
 
-text \<open>Components that answer nothing combine to a state that answers nothing.\<close>
-
-lemma mcp_qry_top: "(\<And>c. c \<in> set cs \<Longrightarrow> ls_query c A x q = \<top>) \<Longrightarrow> mcp_qry cs A x q = \<top>"
-  unfolding mcp_qry_def by (induction cs) auto
-
-lemma mcp_combine_qry_top:
-  "(\<And>c. c \<in> set cs \<Longrightarrow> ls_query c A x q = \<top>) \<Longrightarrow> ls_query (mcp_combine cs) A x q = \<top>"
-  by (cases cs rule: mcp_combine.cases) (auto intro!: mcp_qry_top)
-
 definition mcp_spec :: "'s local_spec list \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
   "mcp_spec cs = dg_spec_of (mcp_combine cs)"
 
@@ -971,11 +963,6 @@ proof -
     unfolding sound_local_spec_def get_mc_comb_lens_of[of get put, OF get_put]
     by (simp add: lens_of_def get_put)
 qed
-
-theorem lens_of_frame:
-  assumes "\<And>x v. get2 (put1 x v) = get2 x"
-  shows "mcp_frame (lens_of get1 put1 c) (\<lambda>x. g2 (get2 x))"
-  unfolding mcp_frame_def lens_of_def by (auto simp: assms)
 
 section \<open>Replacing a component's handler\<close>
 

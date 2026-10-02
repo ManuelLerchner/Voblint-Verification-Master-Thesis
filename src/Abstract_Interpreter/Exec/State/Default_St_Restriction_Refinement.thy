@@ -13,18 +13,23 @@ text \<open>
 
 subsection \<open>The represented function of ownership projections\<close>
 lemma default_st_to_fun_restrict_local_for [simp]:
-  "default_st_to_fun \<G> (restrict_local_default_st s) =
-     restrict_local_for \<G> (default_st_to_fun \<G> s)"
+  "readback \<G> (restrict_local_default_st s) =
+     restrict_local_for \<G> (readback \<G> s)"
   unfolding restrict_local_for_def
   by (rule ext) simp
 
 lemma default_st_to_fun_restrict_global_for [simp]:
-  "default_st_to_fun \<G> (restrict_global_default_st s) =
-     restrict_global_for \<G> (default_st_to_fun \<G> s)"
+  "readback \<G> (restrict_global_default_st s) =
+     restrict_global_for \<G> (readback \<G> s)"
   unfolding restrict_global_for_def
   by (rule ext) simp
 
 subsection \<open>The represented function of joins\<close>
+
+text \<open>
+  Readback through \<open>default_st_to_fun\<close> commutes with joins and is monotone
+  under the reachability lifting.
+\<close>
 
 lemma map_lift_default_st_to_fun_sup [simp]:
   "map_lift (default_st_to_fun \<G>) (a \<squnion> b) =

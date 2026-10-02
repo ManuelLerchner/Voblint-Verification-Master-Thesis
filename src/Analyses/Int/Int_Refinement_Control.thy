@@ -195,16 +195,6 @@ next
     unfolding refine_fix_def by simp
 qed
 
-lemma refine_fix_round_stable:
-  assumes result: "refine_fix_option d = Some r"
-  shows "refine_round (refine_fix d) = refine_fix d"
-proof -
-  have "refine_round r = r"
-    by (rule refine_fix_option_round_stable[OF result])
-  with result show ?thesis
-    unfolding refine_fix_def by simp
-qed
-
 lemma refine_never [simp]:
   "refine Refine_Never d = d"
   by (simp add: refine_def)
@@ -324,5 +314,43 @@ next
   case Refine_Fixpoint
   then show ?thesis by simp
 qed
+
+section \<open>Witnesses\<close>
+
+text \<open>
+  Concrete values for the claims above. \<open>progressive_refinement_input\<close> is the raw
+  sum of an odd value in \<open>[-1,-1]\<close> and one in \<open>[0,1]\<close>: its components together
+  denote only \<open>0\<close>, but one round still leaves Sign at \<open>SNonPos\<close>, so a further
+  round makes progress and \<open>Refine_Once\<close> differs from \<open>Refine_Fixpoint\<close>.
+\<close>
+
+definition progressive_refinement_input :: int_dom where
+  "progressive_refinement_input =
+     int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven (top :: congruence)"
+
+lemma refinement_round_is_progressive:
+  "refine_round progressive_refinement_input =
+     int_dom_sipc SNonPos (Ivl (Fin 0) (Fin 0)) PEven (mk_congruence 0 2)"
+  by eval
+
+lemma refinement_once_not_fixpoint:
+  "refine Refine_Once progressive_refinement_input
+     \<noteq> refine Refine_Fixpoint progressive_refinement_input"
+  by eval
+
+text \<open>
+  Why \<^theory>\<open>Voblint_Analysis_Int.Int_Warrowing\<close> runs no refinement after
+  \<open>narrow\<close>. \<open>a\<close> is a widened state (top); \<open>b\<close> a newer, more precise result whose
+  components together denote only \<open>0\<close> while Sign has not caught up.
+  Componentwise narrowing satisfies \<open>b \<le> narrow a b \<le> a\<close>; refining that result
+  lets Sign derive \<open>SNonPos\<close> from the exact Interval bound, strictly below \<open>b\<close>'s
+  \<open>STop\<close>, which breaks the solver's \<open>narrow_ge\<close> bracket.
+\<close>
+
+lemma post_narrow_refinement_would_violate_narrow_ge:
+  "let a = (top :: int_dom);
+       b = int_dom_sipc STop (Ivl (Fin (-1)) (Fin 0)) PEven (top :: congruence)
+   in b \<le> a \<and> \<not> (b \<le> refine Refine_Once (a \<Delta> b))"
+  by eval
 
 end

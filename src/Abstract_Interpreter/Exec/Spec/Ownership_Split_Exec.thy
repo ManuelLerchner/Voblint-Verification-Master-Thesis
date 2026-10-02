@@ -2,8 +2,6 @@ theory Ownership_Split_Exec
   imports
     Exec_DG_State
     "Voblint_Framework.DG_Ownership_Split_Spec"
-    "Voblint_Framework.DG_Spec_Sound"
-    "Voblint_Framework.DG_Indexed_Generator"
     "Voblint_Framework.Routed_Context"
 begin
 
@@ -78,23 +76,6 @@ where
      dgs_event := (\<lambda>ev. case ev of Check_Event l bc
                      \<Rightarrow> ownership_split_transfer_st (local_transfer (tf_st (EA_Check l bc)))),
      dgs_combine_assign := ownership_split_combine_transfer_st \<G> \<rparr>"
-
-lemma dg_spec_step_ownership_split_st_for:
-  "dg_spec_step (ownership_split_dg_spec_st_for \<G> tf_st enter_st) a
-     = ownership_split_transfer_st (local_transfer (tf_st a))"
-  unfolding ownership_split_dg_spec_st_for_def
-  by (cases a) simp_all
-
-lemma dgs_enter_ownership_split_dg_spec_st_for:
-  "enter\<^sup># (ownership_split_dg_spec_st_for \<G> tf_st enter_st) ci
-     = ownership_split_enter_transfer_st (local_enter_transfer (\<lambda>d. [(d, enter_st ci d)]))"
-  unfolding ownership_split_dg_spec_st_for_def by simp
-
-lemma dg_spec_combine_transfer_ownership_split_dg_spec_st_for:
-  "dg_spec_combine_transfer (ownership_split_dg_spec_st_for \<G> tf_st enter_st) ci m de
-     = ownership_split_combine_transfer_st \<G> ci m de"
-  unfolding dg_spec_combine_transfer_def ownership_split_dg_spec_st_for_def
-  by (simp add: local_transfer_def local_combine_transfer_def)
 
 unbundle no default_st_syntax
 

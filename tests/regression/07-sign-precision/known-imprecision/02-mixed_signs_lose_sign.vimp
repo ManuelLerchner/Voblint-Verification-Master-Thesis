@@ -1,0 +1,18 @@
+// PARAM: --analysis sign
+// Source: Example_Sign_Domain_Ops (sign_arithmetic_regression: SNeg + SPos
+// and SPos - SPos are STop; join_sign_regression: SNeg join SPos is STop).
+//
+// Every value here is fixed: s = -2, t = 2, a is -1 or 1. Sign loses all
+// three because the seven-element lattice has no magnitude and no
+// "nonzero" element. sign_plus of Negative and Positive and sign_minus of
+// two Positives can land on either side of zero, so both give Top, and the
+// join of Negative and Positive is Top as well, which cannot exclude 0.
+fun main() {
+  s = -5 + 3;
+  __voblint_check(s < 0); // UNKNOWN
+  t = 5 - 3;
+  __voblint_check(0 < t); // UNKNOWN
+  c = __voblint_nondet_int();
+  if (c) { a = -1; } else { a = 1; }
+  __voblint_check(a != 0); // UNKNOWN
+}

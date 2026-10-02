@@ -1,11 +1,8 @@
 theory Nonrelational_Transfer
   imports
     Nonrelational_Ops
-    "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Check_Answer"
-    "Voblint_VIMP.VIMP_Globals"
     "Voblint_Result.DG_Analysis"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
 begin
 
 section \<open>What each kind of CFG edge does to one abstract value per variable\<close>
@@ -49,6 +46,12 @@ locale sound_nonrelational_ops =
 begin
 
 subsection \<open>Assignment, return, and the operations that do nothing\<close>
+
+text \<open>
+  \<open>assign\<close> overwrites the target with the evaluated expression and \<open>ret\<close> does the
+  same for \<open>ret_var\<close>. \<open>skip\<close>, \<open>body\<close> and \<open>event\<close> are the identity. Each
+  operation gets its soundness lemma here.
+\<close>
 
 definition assign :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
   "assign x a \<sigma> = \<sigma>(x := n_aval ops a \<sigma>)"
@@ -193,15 +196,15 @@ text \<open>
 theorem tf_st_for_commute:
   assumes "live_default_st \<G> s"
   shows
-    "default_st_to_fun \<G> (generic_tf_st_for ops \<G> a s) =
-     tf_abs a (default_st_to_fun \<G> s)"
+    "readback \<G> (generic_tf_st_for ops \<G> a s) =
+     tf_abs a (readback \<G> s)"
   unfolding tf_abs_eq_generic
   by (rule generic_tf_st_for_commute)
      (simp add: backward.branch_st_with_ops [simplified] backward.branch_st_commute[OF assms])
 
 lemma enter_st_for_commute:
-  "default_st_to_fun \<G> (generic_enter_st_for ops \<G> ci s) =
-   enter_ci_for \<G> ci (default_st_to_fun \<G> s)"
+  "readback \<G> (generic_enter_st_for ops \<G> ci s) =
+   enter_ci_for \<G> ci (readback \<G> s)"
   by (simp add: generic_enter_st_for_def op_defs enter_binding_def enter_frame_def)
 
 subsection \<open>Registering the bundle with the pipeline\<close>
@@ -315,15 +318,6 @@ begin
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
   unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
 
-lemma skip_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> skip \<sigma>1 \<le> skip \<sigma>2"
-  by (simp add: skip_def)
-
-lemma body_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> body p \<sigma>1 \<le> body p \<sigma>2"
-  by (simp add: body_def)
-
-lemma event_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> event evt \<sigma>1 \<le> event evt \<sigma>2"
-  by (simp add: event_def)
-
 lemma ret_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ret e p \<sigma>1 \<le> ret e p \<sigma>2"
   by (cases e) (simp_all add: ret_def assign_mono)
 
@@ -336,6 +330,12 @@ lemma enter_for_mono:
 end
 
 subsection \<open>Certifying a bundle from its capability certificates\<close>
+
+text \<open>
+  \<open>sound_nonrelational_opsI\<close> and \<open>mono_nonrelational_opsI\<close> assemble the bundle
+  certificates from the special-call, refinement and check-query certificates, so
+  a domain never unfolds the combined locales itself.
+\<close>
 
 lemma sound_nonrelational_opsI:
   assumes "sound_minmax_ops (n_special ops) (n_aval ops)"

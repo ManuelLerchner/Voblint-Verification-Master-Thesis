@@ -1,9 +1,7 @@
 theory DG_Local_State_Exec_Refinement
   imports
     DG_Local_State_Exec
-    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Framework.DG_Reader_Transport"
-    "Voblint_Framework.MCP_Spec"
 begin
 
 unbundle default_st_syntax
@@ -30,7 +28,7 @@ text \<open>
 \<close>
 
 lemma default_st_to_fun_combine_assign:
-  "default_st_to_fun \<G>
+  "\<rho>\<^bsub>\<G>\<^esub>
      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_default_st x y))
    = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
@@ -68,6 +66,13 @@ lemma dg_reader_commute_gen_lifted_for:
   "dg_reader_commute_gen
      (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _) (\<rho>\<^bsub>\<G>\<^esub> :: _ default_st lifted \<Rightarrow> _)"
   by unfold_locales (simp_all add: map_lift_sup)
+
+text \<open>
+  \<open>dg_domain_exec\<close> relates an executable transfer on \<open>default_st\<close>
+  to the abstract state specification: on live states the step, the entry
+  transfer and the emptiness test agree with their abstract counterparts after
+  readback through \<open>default_st_to_fun\<close>.
+\<close>
 
 locale dg_domain_exec =
   fixes \<G> :: "vname \<Rightarrow> bool"
@@ -160,7 +165,7 @@ lemma combine_lift_commute:
      = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
-  show "\<And>x y. default_st_to_fun \<G>
+  show "\<And>x y. \<rho>\<^bsub>\<G>\<^esub>
       (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_default_st x y))
         = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
@@ -184,15 +189,6 @@ abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) 
 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
   "spec_abs \<equiv> lifted_state_dg_spec \<G> is_empty_state sk asn sp br bd rt en ev"
-
-lemma Hstep_lifted_for:
-  assumes "normalized_lift empty_pred d"
-  shows "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
-     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dg_spec_step_exec_dg_spec dg_spec_step_lifted_state_dg_spec
-  using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-    step_lift_commute[OF assms] by fastforce
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st

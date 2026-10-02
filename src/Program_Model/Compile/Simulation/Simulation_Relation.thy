@@ -50,6 +50,31 @@ text \<open>A lone \<^const>\<open>Unwind\<close> has no source step: only the \
 lemma pstep_Unwind_stuck: "\<not> \<G>, \<Pi> \<turnstile> (Unwind, s, frs) \<rightarrow>\<^sub>p x"
   by auto
 
+text \<open>
+  Why a top-level \<open>Return\<close> must not reach the source: an empty frame stack has
+  nowhere to unwind to, so a run that starts at \<open>Unwind\<close> or \<open>Return\<close> never completes.
+\<close>
+
+lemma Unwind_not_pcompletes: "\<not> pcompletes \<G> \<Pi> Unwind s t"
+proof (rule notI)
+  assume "\<G>, \<Pi> \<turnstile> (Unwind, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  then show False
+    by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
+qed
+
+lemma Return_empty_not_pcompletes: "\<not> pcompletes \<G> \<Pi> (Return e) s t"
+proof (rule notI)
+  assume "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  then obtain y where step: "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p y"
+      and rest: "\<G>, \<Pi> \<turnstile> y \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+    by (cases rule: star.cases) auto
+  from step have "y = (Unwind, ret_store e s, [])"
+    by (cases e) (auto simp: ret_store_def)
+  with rest have "\<G>, \<Pi> \<turnstile> (Unwind, ret_store e s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])" by simp
+  then show False
+    by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
+qed
+
 subsection \<open>The returning (frame-pop) source shapes\<close>
 
 text \<open>

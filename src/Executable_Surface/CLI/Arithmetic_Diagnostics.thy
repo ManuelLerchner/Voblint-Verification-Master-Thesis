@@ -1,6 +1,5 @@
 theory Arithmetic_Diagnostics
   imports "Voblint_Framework.Contextual_Check_Report"
-    "Voblint_Framework.Abstract_Checks"
 begin
 
 section \<open>Division and remainder occurrences\<close>
@@ -93,26 +92,13 @@ lemma arithmetic_condition_safe:
     \<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   by (auto simp: arithmetic_condition_def split: if_splits)
 
-context sound_check_query
-begin
-
-lemma arithmetic_classify_safe:
-  assumes "classify_check (arithmetic_condition obligation) d = Check_Proved"
-    and "s \<in> \<gamma>\<^sub>S d"
-  shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
-  using classify_check_proved[OF assms]
-  by (auto simp: arithmetic_condition_def split: if_splits)
-
-lemma arithmetic_classify_zero:
-  assumes "classify_check (arithmetic_condition obligation) d = Check_Refuted"
-    and "s \<in> \<gamma>\<^sub>S d"
-  shows "\<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s = 0"
-  using classify_check_refuted[OF assms]
-  by (auto simp: arithmetic_condition_def split: if_splits)
-
-end
-
 section \<open>Sites and their solved classifications\<close>
+
+text \<open>
+  \<open>arithmetic_expression_sites\<close> collects the expressions each CFG edge and call
+  evaluates; \<open>arithmetic_sites\<close> turns them into the divisor obligations the
+  solved table then classifies.
+\<close>
 
 fun arithmetic_edge_expressions :: "edge_action \<Rightarrow> exp list" where
   "arithmetic_edge_expressions (EA_Assign x e) = [e]"

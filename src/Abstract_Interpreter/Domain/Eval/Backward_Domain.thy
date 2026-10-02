@@ -41,6 +41,12 @@ locale sound_intersection =
     and intersect_reductive1[intro]: "intersect a b \<le> a"
     and intersect_reductive2[intro]: "intersect a b \<le> b"
 
+text \<open>
+  Monotone intersection is a separate layer for the same reason as in the forward
+  interfaces: soundness needs only \<open>sound_intersection\<close>, while the solver's
+  least-solution theorem asks \<open>intersect\<close> to preserve the order in both arguments.
+\<close>
+
 locale mono_intersection = sound_intersection +
   assumes intersect_mono[intro]:
     "a1 \<le> a2 \<Longrightarrow> b1 \<le> b2 \<Longrightarrow> intersect a1 b1 \<le> intersect a2 b2"
@@ -522,7 +528,7 @@ text \<open>
 fun bfilter_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
     "bfilter_lifted (Not b) res \<sigma> = bfilter_lifted b (\<not> res) \<sigma>"
   | "bfilter_lifted (And b1 b2) True  \<sigma> =
-       bind_lift (bfilter_lifted b2 True \<sigma>) (bfilter_lifted b1 True)"
+       bind (bfilter_lifted b2 True \<sigma>) (bfilter_lifted b1 True)"
   | "bfilter_lifted (And b1 b2) False \<sigma> =
        (if feasible b1 False \<sigma> then bfilter_lifted b1 False \<sigma> else Bot)
        \<squnion> (if feasible b2 False \<sigma> then bfilter_lifted b2 False \<sigma> else Bot)"
@@ -530,7 +536,7 @@ fun bfilter_lifted :: "exp => bool => 'a abs_state => 'a abs_state lifted" where
        (if feasible b1 True \<sigma> then bfilter_lifted b1 True \<sigma> else Bot)
        \<squnion> (if feasible b2 True \<sigma> then bfilter_lifted b2 True \<sigma> else Bot)"
   | "bfilter_lifted (Or  b1 b2) False \<sigma> =
-       bind_lift (bfilter_lifted b2 False \<sigma>) (bfilter_lifted b1 False)"
+       bind (bfilter_lifted b2 False \<sigma>) (bfilter_lifted b1 False)"
   | "bfilter_lifted (Eq  e1 e2) res  \<sigma> = normalize_lift is_empty_state (bfilter (Eq e1 e2) res \<sigma>)"
   | "bfilter_lifted e res \<sigma> = normalize_lift is_empty_state (bfilter e res \<sigma>)"
 
@@ -685,18 +691,12 @@ text \<open>
   either operand of a plus/minus/times from its result) instantiates that
   inverse with this shared no-op: both operands pass through unchanged. The
   first argument is the known result or truth value, so the same no-op serves
-  the arithmetic inverses and the comparison inverses. Any
-  @{class numeric_domain} discharges its soundness for free, so domains share
-  one proof instead of each restating the same trivial obligation.
+  the arithmetic inverses and the comparison inverses. Its soundness
+  obligation unfolds to the operands' own membership, so each instance
+  discharges it with \<open>inv_conservative_def\<close>.
 \<close>
 
 definition inv_conservative :: "'r => 'a => 'a => 'a * 'a" where
   "inv_conservative r a1 a2 = (a1, a2)"
-
-lemma inv_conservative_sound:
-  fixes a1 a2 :: "'a::numeric_domain"
-  assumes "n1 \<in> \<gamma> a1" and "n2 \<in> \<gamma> a2"
-  shows "n1 \<in> \<gamma> (fst (inv_conservative r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_conservative r a1 a2))"
-  using assms by (simp add: inv_conservative_def)
 
 end

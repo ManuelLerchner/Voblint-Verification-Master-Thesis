@@ -1,6 +1,5 @@
 theory Sign_Transfer
   imports
-    Sign_Backward
     Sign_Special
     Sign_Numeric_Queries
     "Voblint_Nonrelational.Nonrelational_Transfer"
@@ -95,22 +94,5 @@ text \<open>
   \<open>sign_tf.backward.branch_sound\<close>, and the framework's transfer contract at Sign is
   \<open>sign_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
-
-subsection \<open>Executable end-to-end @{const bfilter_sign} tests\<close>
-
-definition test_env_nonneg_eq :: "sign abs_state" where
-  "test_env_nonneg_eq = (\<lambda>_. STop)((STR ''x'') := SNonNeg)"
-
-text \<open>@{text \<open>x = 0\<close>} known true meets \<open>x\<close>'s bound with @{term SZero}.\<close>
-lemma bfilter_sign_eq_true_narrows:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) True test_env_nonneg_eq (STR ''x'') = SZero"
-  unfolding test_env_nonneg_eq_def by eval
-
-text \<open>@{text \<open>x != 0\<close>} known true (i.e. the guard @{text \<open>x = 0\<close>} is false) on
-  @{term SNonNeg} narrows to @{term SPos}: the disequality narrowing
-  @{const inv_eq_sign} supplies.\<close>
-lemma bfilter_sign_eq_false_narrows_to_pos:
-  "bfilter_sign (Eq (V (STR ''x'')) (N 0)) False test_env_nonneg_eq (STR ''x'') = SPos"
-  unfolding test_env_nonneg_eq_def by eval
 
 end

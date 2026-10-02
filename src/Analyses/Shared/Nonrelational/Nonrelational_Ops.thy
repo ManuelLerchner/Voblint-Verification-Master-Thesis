@@ -70,6 +70,11 @@ abbreviation n_bfilter ::
 
 subsection \<open>Procedure entry\<close>
 
+text \<open>
+  \<open>generic_enter_st_for\<close> opens a callee frame with every local at \<open>top\<close>, then
+  binds the formals to the arguments evaluated in the caller's store.
+\<close>
+
 definition generic_enter_st_for ::
     "'a::{bot, top} nonrelational_ops => (vname => bool) => call_info =>
        'a default_st => 'a default_st" where
@@ -79,6 +84,12 @@ definition generic_enter_st_for ::
        (enter_frame_D_default_st top s)"
 
 subsection \<open>The per-edge step, on both stores\<close>
+
+text \<open>
+  \<open>generic_tf_st_for\<close> is the executable step on the split local/global store,
+  routing each write through \<open>location_of\<close>. \<open>generic_tf_abs\<close> states the same
+  edge semantics on a plain abstract state via \<open>local_spec_step\<close>.
+\<close>
 
 fun generic_tf_st_for ::
     "'a::executable_domain nonrelational_ops => (vname => bool) => edge_action =>

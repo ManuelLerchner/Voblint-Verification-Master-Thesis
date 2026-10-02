@@ -1,0 +1,24 @@
+// PARAM: --analysis interval --context none --globals join
+// up is entered with 0 from main and with n + 1 from its own body while
+// n < 5, so its FunctionEntry seed receives [0,0] .. [5,5]. The join rule
+// never widens a seed, so the entry reads exactly their join [0,5], and
+// every activation returns 0, so z is exact.
+//
+// Ported from Example_Interval_DG_Seed_Join_Recursion.thy:
+// sj_seed_is_the_join, sj_entry_is_its_seed, sj_result_keeps_the_join,
+// sj_caller_result_exact. 14-recursion_seed_warrow.vimp is the warrow run;
+// 11-bounded_narrowing_recursion.vimp the bounded-narrowing one.
+fun up(n) {
+  __voblint_check(n >= 0); // PROVED
+  __voblint_check(n <= 5); // PROVED
+  if (n < 5) {
+    r = up(n + 1);
+    return 0;
+  } else {
+    return 0;
+  }
+}
+fun main() {
+  z = up(0);
+  __voblint_check(z == 0); // PROVED
+}

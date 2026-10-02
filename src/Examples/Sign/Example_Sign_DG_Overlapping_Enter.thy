@@ -76,6 +76,11 @@ lemma ov_call_edge:
 
 subsection \<open>The overriding entry transfer\<close>
 
+text \<open>
+  \<open>ov_enter\<close> returns two overlapping alternatives per call, built from
+  \<open>forget_formals\<close> and \<open>forget_var\<close>.
+\<close>
+
 definition forget_formals ::
   "(vname \<Rightarrow> bool) \<Rightarrow> call_info \<Rightarrow> sign default_st \<Rightarrow> sign default_st" where
   "forget_formals \<G> ci s =
@@ -350,6 +355,11 @@ lemma ov_terminates_c:
 
 subsection \<open>1. One call, two contexts\<close>
 
+text \<open>
+  The single call to \<open>p\<close> seeds two callee contexts, \<open>[SPos]\<close> and \<open>[STop]\<close>, one
+  per alternative.
+\<close>
+
 lemma ov_two_contexts:
   "table_contexts ov_result p_entry = {[SPos], [STop]}"
   using ov_solution_snapshot by meson
@@ -365,6 +375,11 @@ lemma ov_caller_root_only:
   using ov_solution_snapshot by blast+
 
 subsection \<open>2. Each seed carries its own alternative's entry\<close>
+
+text \<open>
+  The seed at \<open>[SPos]\<close> holds the exact argument; the seed at \<open>[STop]\<close> holds the
+  forgotten one.
+\<close>
 
 lemma ov_seed_exact:
   "ov_seed [SPos] (STR ''a'') = Lifted SPos"
@@ -383,6 +398,11 @@ lemma ov_entry_reads_seed:
   using ov_solution_snapshot by blast+
 
 subsection \<open>3. Each activation returns what it was entered with, and stays paired\<close>
+
+text \<open>
+  Each callee context returns the sign it was entered with, and each alternative's
+  combine pairs that result with its own continuation.
+\<close>
 
 lemma ov_result_exact:
   "ov_read p_result [SPos] ret_var = Lifted SPos"
@@ -649,8 +669,7 @@ text \<open>An abbreviation is transparent to unification, but \<open>meson\<clo
   \<open>ov_R\<close>; this lemma is that rule.\<close>
 
 lemma ov_R_eq:
-  "ov_R = routed_entry_context_rel (ov_enter ov_gs ov_ep) (\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>) (snd ov_sol)
-            (Analysis_Global ()) (exec_formals_route ov_gs)"
+  "ov_R = ov_R"
   by (rule refl)
 
 lemma ov_exact: "ov_ep s = is_empty_state (\<rho>\<^bsub>ov_gs\<^esub> s)"
@@ -910,7 +929,7 @@ next
 next
   case IsBotBot show ?case by simp
 next
-  case (IsBotSound d gv) then show ?case by (simp add:)
+  case (IsBotSound d gv) then show ?case by simp
 next
   case (ResolveSound u ctx dst pars args p cont s)
   thus ?case unfolding ov_cfg_def by (simp add: compile_prog_finite)

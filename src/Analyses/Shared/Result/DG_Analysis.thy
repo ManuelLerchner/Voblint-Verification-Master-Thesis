@@ -2,7 +2,6 @@ theory DG_Analysis
   imports
     DG_Result_Construction
     Analysis_Surface
-    "Voblint_Framework.Contextual_Check_Report"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Exec.Routed_Exec_Refinement"
     Source_Activation_Sound
@@ -57,7 +56,7 @@ definition exec_formals_route ::
   "exec_formals_route \<G> u ctx d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
         formals_context pars
-          (default_st_to_fun \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
+          (readback \<G> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
 
 text \<open>
   The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
@@ -102,12 +101,6 @@ lemma exec_formals_route_commute:
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
         exec_formals_route_def default_st_to_fun_def)
 
-lemma gamma_point_canonicalize:
-  fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "\<lbrakk>canonicalize_lift is_empty_state x\<rbrakk>\<^sub>\<bottom> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
-  by (cases x)
-     (simp_all add: normalize_lift_def is_empty_state_gamma_state_empty)
-
 subsection \<open>The construction\<close>
 
 text \<open>
@@ -135,6 +128,13 @@ record ('c, 'v) solved_run =
   run_seed :: "pname \<Rightarrow> 'c \<Rightarrow> 'v lifted"
   run_step :: "pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted"
   run_succ :: "cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option"
+
+text \<open>
+  \<open>dg_pipeline\<close> only fixes parameters: the component \<open>comp\<close>, the carrier
+  operations \<open>emp\<close>, \<open>rd\<close> and \<open>init_st\<close>, the context policy \<open>seed\<close>/\<open>route\<close>/
+  \<open>root_ctx\<close>, the solver \<open>solve\<close> with its domain, and the check classifier.
+  The soundness assumptions live in the locales built on it.
+\<close>
 
 locale dg_pipeline =
   fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
@@ -308,12 +308,6 @@ definition check_projection :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_pro
 definition verdict_report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "verdict_report \<G> p = classify_checks_verdicts (prog_cfg p) (result \<G> p) classify"
-
-lemma verdict_report_proj:
-  "verdict_report \<G> p
-     = map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (check_projection \<G> p)"
-  unfolding verdict_report_def check_projection_def
-  by (rule classify_checks_verdicts_proj [symmetric])
 
 text \<open>
   The same table read at one context: the state published there, and the check
@@ -497,6 +491,12 @@ definition admitted_contexts :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_pr
        (sol_env \<G> p) analysis_global (route \<G>)"
 
 subsection \<open>What the assembly derives, for one program\<close>
+
+text \<open>
+  Fixing one program \<open>p\<close>, this part equates the published table with the solved
+  reader, puts the solver's answer in the routed spine's shape, and states routed
+  soundness for any relation of admitted contexts.
+\<close>
 
 context
   fixes p :: imp_prog
@@ -754,6 +754,11 @@ lemma routed_analysis_sound_of:
 
 subsubsection \<open>The published endpoint, under termination and coverage\<close>
 
+text \<open>
+  Under termination and closure of the solved keys, \<open>activation_collect_sound_of\<close>
+  bounds every admitted activation by the solved table's entry at its context.
+\<close>
+
 lemma cinit_le_init: "cinit_stores pgs \<subseteq> cgam (Lifted init_st)"
   using init_sound[of p] by simp
 
@@ -945,14 +950,6 @@ interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam 
     entry_context_rel "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
   by (rule entry_state_routed_analysis_sound        [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
 
-text \<open>
-  The routed protocol at one call: the callee entry state published under an
-  admitted context is sound. The interpretation above is local to this context, so
-  this export is what an interpretation of this locale can cite.
-\<close>
-
-lemmas entry_state_routed_context_call = entry.routed_context_call
-
 theorem entry_state_activation_collect_sound:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
@@ -983,37 +980,6 @@ theorem entry_state_node_collect_eq_Union:
      (rule entry_state_has_context [OF entry_cov])
 
 end
-
-text \<open>
-  The same two endpoints, with the four positional coverage assumptions replaced
-  by the one closure premise a caller can state on its own. Nothing is weakened:
-  \<^const>\<open>ctx_succ\<close> names where this solve's routing sends each call, so the
-  closure unfolds to those four assumptions and to nothing else. This is the
-  pair a source-level contextual statement consumes.
-\<close>
-
-theorem entry_state_activation_collect_sound_of_cover:
-  assumes solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> cgam
-                 ((reader pgs p (Inl (v, ctx))))"
-  by (rule entry_state_activation_collect_sound
-        [OF solves ctx_vars_cover_edgeD [OF cover]
-            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
-            ctx_vars_cover_combineD [OF cover]
-            ctx_vars_cover_entryD [OF cover]])
-
-theorem entry_state_node_collect_eq_Union_of_cover:
-  assumes solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-           = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule entry_state_node_collect_eq_Union
-        [OF solves ctx_vars_cover_edgeD [OF cover]
-            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
-            ctx_vars_cover_combineD [OF cover]
-            ctx_vars_cover_entryD [OF cover]])
 
 text \<open>
   A route that never reads the state it is handed is a function of the call site
@@ -1065,43 +1031,15 @@ next
 qed
 
 text \<open>
-  The functional route's counterpart of the entry-state pair, and the reason a
-  source-level statement is available for it too. The union side needs nothing
+  The functional route's counterpart of the entry-state union. It needs nothing
   at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
-  any coverage having been established. Only the per-bucket bound depends on the
-  solve, and it takes the same single closure premise as the entry-state one.
-
-  The closure is stated at \<^const>\<open>ctx_succ\<close>, which applies the route to the
-  state published at the call site, while the bound below quantifies over every
-  state the route might have been handed. For a route that ignores that argument
-  those coincide, which is what \<open>route_const\<close> says and all this proof uses it for.
+  any coverage having been established.
 \<close>
 
 theorem fun_route_node_collect_eq_Union:
   "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
      = (\<Union>ctx. \<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
   by (rule node_collect_eq_Union_activation_of_fun)
-
-theorem fun_route_activation_collect_sound_of_cover:
-  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
-    and solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> cgam
-                 ((reader pgs p (Inl (v, ctx))))"
-proof (rule fun_route_activation_collect_sound
-         [OF route_const solves ctx_vars_cover_edgeD [OF cover] _
-             ctx_vars_cover_combineD [OF cover] ctx_vars_cover_entryD [OF cover]])
-  fix u ctx dst pars args q cont and d :: "'s lifted"
-  assume covV: "(u, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-  have "(FunctionEntry q, ctx_succ pgs p u ctx (CallEdge dst pars args) q) \<in> sol_vars pgs p"
-    by (rule ctx_vars_cover_enterD [OF cover covV ce])
-  then show "(FunctionEntry q, route pgs u ctx d (CallEdge dst pars args)) \<in> sol_vars pgs p"
-    unfolding ctx_succ_def
-    by (simp only: route_const [of u ctx _ _ undefined])
-qed
 
 end
 
@@ -1156,11 +1094,11 @@ locale dg_analysis_exec = certified_solver solve solve_dom solve_c
   assumes tf_sound: "\<And>\<G>. sound_nonrelational_transfer \<G> sk asn spc br bd rt (en \<G>) ev"
     and tf_commute:
       "\<And>\<G> a s. live_default_st \<G> s
-         \<Longrightarrow> default_st_to_fun \<G> (tf_st \<G> a s)
-               = local_spec_step sk asn spc br bd rt ev a (default_st_to_fun \<G> s)"
+         \<Longrightarrow> readback \<G> (tf_st \<G> a s)
+               = local_spec_step sk asn spc br bd rt ev a (readback \<G> s)"
     and enter_commute:
-      "\<And>\<G> ci s. default_st_to_fun \<G> (enter_st \<G> ci s)
-                    = en \<G> ci (default_st_to_fun \<G> s)"
+      "\<And>\<G> ci s. readback \<G> (enter_st \<G> ci s)
+                    = en \<G> ci (readback \<G> s)"
     and route_agree:
       "\<And>\<G> u ctx d ca. route \<G> u ctx d ca
          = route_abs \<G> u ctx (map_lift (default_st_to_fun \<G>) d) ca"

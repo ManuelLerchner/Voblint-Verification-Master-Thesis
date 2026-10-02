@@ -1,0 +1,21 @@
+// PARAM: --analysis interval --globals per-origin
+// up writes the declared global g from its formal, and two call sites feed
+// up's entry seed from distinct origins. Per-origin keeps each origin exact,
+// so the seed's n reads [1,2], and g, adopted from up's exit at combine,
+// reads [1,2] after the second call. Under --globals warrow the same seed
+// widens to [1,+inf] (24-site-figures/known-imprecision/07-two_sites_warrow.vimp),
+// so g <= 2 would be UNKNOWN.
+//
+// Ported from Example_Buffered_Encoding_Flush_Order.thy (fo_program).
+global g;
+fun up(n) {
+  g = n;
+  return 0;
+}
+fun main() {
+  g = 0;
+  a = up(1);
+  b = up(2);
+  __voblint_check(0 < g); // PROVED
+  __voblint_check(g <= 2); // PROVED
+}

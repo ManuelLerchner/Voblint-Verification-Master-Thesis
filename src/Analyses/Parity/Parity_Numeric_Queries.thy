@@ -1,5 +1,5 @@
 theory Parity_Numeric_Queries
-  imports Parity_Domain "Voblint_Domain.Numeric_Queries"
+  imports Parity_Domain
 begin
 
 section \<open>Parity interpretation of the generic numeric-query interface\<close>

@@ -1,10 +1,6 @@
 theory Exec_Sign_DG_Run
   imports
     "Voblint_Analysis_Sign.Sign_Analyses"
-    "Voblint_Analysis_Sign.Sign_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_Compile.Compile_Invariants"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
@@ -81,6 +77,11 @@ lemma dgEx_terminates: "sign_rule.terminates Globals_Join sign_ex_gs sign_ex_pro
   by (simp add: dgEx_eqs_def gEx_prog_cfg)
 
 subsection \<open>Well-formedness of the compiled input\<close>
+
+text \<open>
+  \<open>dgEx_wf\<close>: the compiled example meets \<open>wf_compile_input\<close>, the premise the
+  source-level soundness theorem below needs.
+\<close>
 
 lemma dgEx_wf:
   "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"

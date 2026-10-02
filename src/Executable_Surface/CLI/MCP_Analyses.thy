@@ -293,6 +293,10 @@ qed
 
 subsection \<open>At the unit context\<close>
 
+text \<open>
+  \<open>mcp_rule\<close>: the analysis with one context \<open>()\<close>, routed by \<open>route_unit\<close>.
+\<close>
+
 global_interpretation mcp_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
     "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
@@ -324,6 +328,11 @@ global_interpretation mcp_es_rule: dg_analysis
   by (rule mcp_routed_dg_analysis) simp
 
 subsection \<open>At the call-string context\<close>
+
+text \<open>
+  \<open>mcp_cs_rule\<close>: an activation is keyed by its last \<open>k\<close> call sites, routed by
+  \<open>cs_route k\<close> from the empty root string.
+\<close>
 
 global_interpretation mcp_cs_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"

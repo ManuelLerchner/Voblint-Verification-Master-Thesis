@@ -1,5 +1,5 @@
 theory Analysis_Query
-  imports "Voblint_VIMP.VIMP_Expr" "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice"
+  imports "Voblint_Domain.Query_Lift" "Voblint_Domain.Int_Lattice"
 begin
 
 unbundle lattice_syntax

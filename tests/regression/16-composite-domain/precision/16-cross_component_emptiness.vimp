@@ -1,0 +1,19 @@
+// PARAM: --analysis int --int-refinement never
+// Source: Example_Int_Domain (interval_parity_contradiction,
+// interval_congruence_contradiction).
+//
+// x is odd and 1 (mod 2); the two guards pin the interval to [0,0]. Every
+// component is still inhabited on its own, but no odd integer lies in
+// [0,0], and the composite emptiness test sees that even with refinement
+// off, so the branch is dead. Measured on this source: --analysis interval
+// and --analysis congruence answer REFUTED (branch live), --analysis parity
+// UNKNOWN.
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n + 1;
+  if (x >= 0) {
+    if (x <= 0) {
+      __voblint_check(false); // NOWARN
+    }
+  }
+}

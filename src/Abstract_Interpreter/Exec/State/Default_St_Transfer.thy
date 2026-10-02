@@ -97,7 +97,7 @@ end
 unbundle default_st_syntax
 
 lemma default_st_to_fun_bot [simp]:
-  "default_st_to_fun \<G> (bot :: ('a::order_bot) default_st) = bot"
+  "\<rho>\<^bsub>\<G>\<^esub> (bot :: ('a::order_bot) default_st) = bot"
   by (rule ext) (simp add: default_st_to_fun_def)
 
 text \<open>
@@ -115,13 +115,13 @@ definition initial_default_st :: "'a::bot => 'a => 'a default_st" where
      \<llangle>(local_value, []), (global_value, [])\<rrangle>"
 
 lemma default_st_get_initial [simp]:
-  "default_st_to_fun \<G> (initial_default_st local_value global_value) x =
+  "\<rho>\<^bsub>\<G>\<^esub> (initial_default_st local_value global_value) x =
    (if \<G> x then global_value else local_value)"
   unfolding default_st_to_fun_def initial_default_st_def
   by (auto simp: location_of_def split: if_splits)
 
 lemma default_st_to_fun_initial:
-  "default_st_to_fun \<G> (initial_default_st local_value global_value) =
+  "\<rho>\<^bsub>\<G>\<^esub> (initial_default_st local_value global_value) =
    (\<lambda>x. if \<G> x then global_value else local_value)"
   by (rule ext) simp
 
@@ -135,13 +135,13 @@ text \<open>
 \<close>
 
 lemma default_st_to_fun_rep:
-  "default_st_to_fun \<G> s = default_st_rep_to_fun \<G> (rep_default_st s)"
+  "\<rho>\<^bsub>\<G>\<^esub> s = default_st_rep_to_fun \<G> (rep_default_st s)"
   unfolding default_st_to_fun_def default_st_rep_to_fun_def
   by (rule ext) (simp add: default_st_get_rep)
 
 lemma default_st_to_fun_mono:
   assumes "s \<le> t"
-  shows "default_st_to_fun \<G> s \<le> default_st_to_fun \<G> t"
+  shows "\<rho>\<^bsub>\<G>\<^esub> s \<le> \<rho>\<^bsub>\<G>\<^esub> t"
   using assms
   unfolding default_st_to_fun_def le_fun_def
   by (simp add: le_default_st_iff)
@@ -196,9 +196,9 @@ lemma default_st_rep_to_fun_combine_assign [simp]:
      (simp_all add: combine_assign_default_st_rep_def)
 
 lemma default_st_to_fun_combine_assign [simp]:
-  "default_st_to_fun \<G>
+  "\<rho>\<^bsub>\<G>\<^esub>
       (combine_assign_default_st \<G> dst v s) =
-   combine_assign dst v (default_st_to_fun \<G> s)"
+   combine_assign dst v (\<rho>\<^bsub>\<G>\<^esub> s)"
   unfolding default_st_to_fun_def
   by transfer
      (rule default_st_rep_to_fun_combine_assign[unfolded default_st_rep_to_fun_def])
@@ -263,20 +263,20 @@ lemma default_st_rep_to_fun_bind_formals [simp]:
   by (rule default_st_rep_to_fun_fold_set)
 
 lemma default_st_to_fun_bind_formals [simp]:
-  "default_st_to_fun \<G>
+  "\<rho>\<^bsub>\<G>\<^esub>
       (bind_formals_default_st \<G> xs avs s) =
-   bind_formals xs avs (default_st_to_fun \<G> s)"
+   bind_formals xs avs (\<rho>\<^bsub>\<G>\<^esub> s)"
   unfolding default_st_to_fun_def
   by transfer
      (rule default_st_rep_to_fun_bind_formals[unfolded default_st_rep_to_fun_def])
 
 lemma default_st_to_fun_set [simp]:
-  "default_st_to_fun \<G> s\<langle>location_of \<G> x := a\<rangle> =
-   (default_st_to_fun \<G> s)(x := a)"
+  "\<rho>\<^bsub>\<G>\<^esub> s\<langle>location_of \<G> x := a\<rangle> =
+   (\<rho>\<^bsub>\<G>\<^esub> s)(x := a)"
 proof (rule ext)
   fix y
-  show "default_st_to_fun \<G> s\<langle>location_of \<G> x := a\<rangle> y =
-    ((default_st_to_fun \<G> s)(x := a)) y"
+  show "\<rho>\<^bsub>\<G>\<^esub> s\<langle>location_of \<G> x := a\<rangle> y =
+    ((\<rho>\<^bsub>\<G>\<^esub> s)(x := a)) y"
     unfolding default_st_to_fun_def
     by (cases "x = y"; cases "\<G> x"; cases "\<G> y";
         simp_all add: location_of_def)
@@ -367,14 +367,14 @@ lemma default_st_get_restrict_global [simp]:
   by transfer (rule default_st_rep_get_restrict_global)
 
 lemma default_st_to_fun_restrict_local [simp]:
-  "default_st_to_fun \<G> (restrict_local_default_st s) x =
-     (if \<G> x then bot else default_st_to_fun \<G> s x)"
+  "\<rho>\<^bsub>\<G>\<^esub> (restrict_local_default_st s) x =
+     (if \<G> x then bot else \<rho>\<^bsub>\<G>\<^esub> s x)"
   unfolding default_st_to_fun_def location_of_def
   by (cases "\<G> x") simp_all
 
 lemma default_st_to_fun_restrict_global [simp]:
-  "default_st_to_fun \<G> (restrict_global_default_st s) x =
-     (if \<G> x then default_st_to_fun \<G> s x else bot)"
+  "\<rho>\<^bsub>\<G>\<^esub> (restrict_global_default_st s) x =
+     (if \<G> x then \<rho>\<^bsub>\<G>\<^esub> s x else bot)"
   unfolding default_st_to_fun_def location_of_def
   by (cases "\<G> x") simp_all
 
@@ -426,26 +426,31 @@ proof (rule ext)
 qed
 
 lemma default_st_to_fun_combine [simp]:
-  "default_st_to_fun \<G> (combine_default_st sc se) =
-   combine_env \<G> (default_st_to_fun \<G> sc)
-     (default_st_to_fun \<G> se)"
+  "\<rho>\<^bsub>\<G>\<^esub> (combine_default_st sc se) =
+   combine_env \<G> (\<rho>\<^bsub>\<G>\<^esub> sc)
+     (\<rho>\<^bsub>\<G>\<^esub> se)"
 proof (rule ext)
   fix x
-  show "default_st_to_fun \<G> (combine_default_st sc se) x =
-      combine_env \<G> (default_st_to_fun \<G> sc)
-        (default_st_to_fun \<G> se) x"
+  show "\<rho>\<^bsub>\<G>\<^esub> (combine_default_st sc se) x =
+      combine_env \<G> (\<rho>\<^bsub>\<G>\<^esub> sc)
+        (\<rho>\<^bsub>\<G>\<^esub> se) x"
     unfolding default_st_to_fun_def combine_env_def location_of_def
     by (cases "\<G> x") simp_all
 qed
 
 
 lemma default_st_to_fun_sup [simp]:
-  "default_st_to_fun \<G> (s \<squnion> t) =
-   default_st_to_fun \<G> s \<squnion> default_st_to_fun \<G> t"
+  "\<rho>\<^bsub>\<G>\<^esub> (s \<squnion> t) =
+   \<rho>\<^bsub>\<G>\<^esub> s \<squnion> \<rho>\<^bsub>\<G>\<^esub> t"
   by (rule ext) (simp add: default_st_to_fun_def sup_fun_def)
 
 
 subsection \<open>Frame entry\<close>
+
+text \<open>
+  Entering a frame sets every local to \<open>top_val\<close> and keeps the globals;
+  the lemmas carry this through the quotient and the readback.
+\<close>
 
 definition enter_frame_D_default_st_rep ::
   "'a => ('a::bot) default_st_rep => 'a default_st_rep"
@@ -490,9 +495,9 @@ proof (rule ext)
 qed
 
 lemma default_st_to_fun_enter_frame [simp]:
-  "default_st_to_fun \<G>
+  "\<rho>\<^bsub>\<G>\<^esub>
       (enter_frame_D_default_st top_val s) =
-   enter_frame \<G> top_val (default_st_to_fun \<G> s)"
+   enter_frame \<G> top_val (\<rho>\<^bsub>\<G>\<^esub> s)"
   unfolding default_st_to_fun_def
   by transfer
      (rule default_st_rep_to_fun_enter_frame[unfolded default_st_rep_to_fun_def])

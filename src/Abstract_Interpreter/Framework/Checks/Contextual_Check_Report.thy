@@ -155,8 +155,7 @@ lemma classify_answer_dead:
 subsection \<open>Aggregating the contexts observed at one check\<close>
 
 text \<open>
-  Folding \<^const>\<open>sup\<close> from \<open>Dead\<close> over a finite set of observations, exactly
-  as \<open>join_states_over\<close> folds the state join from \<^const>\<open>Bot\<close>. The
+  Folding \<^const>\<open>sup\<close> from \<open>Dead\<close> over a finite set of observations. The
   fold's unit is the empty-set answer, so a check with no covered context
   needs no separate guard. The \<open>[code]\<close> equation is the usual
   \<open>comp_fun_idem\<close> transfer to a list fold: over an unordered set the value is
@@ -188,20 +187,9 @@ proof -
     unfolding aggregate_verdicts_def using \<open>finite vs\<close> by simp
 qed
 
-text \<open>A check is dead exactly when every context observed at it is dead ---
-  vacuously so when none is observed. Stated over the observations themselves
-  rather than over the aggregate, and then shown to agree with it by
-  \<open>check_dead_iff_aggregate\<close>, so the two readings cannot drift.\<close>
-
 lemma sup_contextual_verdict_eq_Dead_iff [simp]:
   "(x \<squnion> y = Dead) \<longleftrightarrow> x = Dead \<and> y = Dead"
   by (cases x; cases y) simp_all
-
-definition check_dead :: "('ctx \<times> contextual_verdict) set \<Rightarrow> bool" where
-  "check_dead vs = (\<forall>(c, v) \<in> vs. v = Dead)"
-
-lemma check_dead_empty [simp]: "check_dead {}"
-  unfolding check_dead_def by simp
 
 text \<open>The finiteness premise is not bookkeeping: \<^const>\<open>Finite_Set.fold\<close> returns
   its identity on an infinite carrier, so an infinite set of observations
@@ -212,13 +200,6 @@ lemma aggregate_verdicts_eq_Dead_iff:
   assumes "finite vs"
   shows "aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
   using assms by (induction vs rule: finite_induct) simp_all
-
-lemma check_dead_iff_aggregate:
-  assumes "finite vs"
-  shows "check_dead vs \<longleftrightarrow> aggregate_verdicts (snd ` vs) = Dead"
-  unfolding check_dead_def
-  using aggregate_verdicts_eq_Dead_iff[OF finite_imageI[OF assms, of snd]]
-  by auto
 
 text \<open>The opposite direction, for a report that has only one observation per
   check and therefore no dead case to distinguish: every entry is
@@ -401,8 +382,6 @@ text \<open>
   an infinite carrier folds to the identity \<open>Dead\<close>, which a decided,
   non-\<open>Check_Unknown\<close> result already rules out), so no separate finiteness
   assumption on the covered contexts is needed.
-  \<open>classify_checks_ctx_proved_sound\<close>/\<open>classify_checks_ctx_refuted_sound\<close> below
-  are its two instances, kept under their own names for \<open>DG_Analysis_Adapter\<close>.
 \<close>
 
 lemma classify_checks_verdicts_mem_iff:
@@ -439,19 +418,5 @@ proof -
     by (simp add: point_verdict_def)
   then show ?thesis by (rule point_verdict_decided[OF _ known reach])
 qed
-
-theorem classify_checks_ctx_proved_sound:
-  assumes fin: "finite (intra g)"
-    and mem: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g r classify)"
-    and reach: "lookup_table r v ctx = Lifted st"
-  shows "classify c st = Check_Proved"
-  using classify_checks_ctx_decided_sound[OF fin mem reach] by simp
-
-theorem classify_checks_ctx_refuted_sound:
-  assumes fin: "finite (intra g)"
-    and mem: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g r classify)"
-    and reach: "lookup_table r v ctx = Lifted st"
-  shows "classify c st = Check_Refuted"
-  using classify_checks_ctx_decided_sound[OF fin mem reach] by simp
 
 end

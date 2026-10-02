@@ -110,6 +110,12 @@ lemma sign_max_combine_mono:
 
 subsection \<open>Special-call dispatch\<close>
 
+text \<open>
+  \<open>special_sign\<close> havocs on \<open>Nondet_Int\<close> and applies \<open>sign_min\<close>/\<open>sign_max\<close>
+  otherwise. \<open>special_sign_eq_transfer\<close> shows it equals the generic transfer of
+  the \<open>mono_minmax_ops\<close> interpretation at \<open>sign_special_ops\<close>.
+\<close>
+
 fun special_sign ::
     "special_call => vname => (vname => sign) => (vname => sign)"
 where

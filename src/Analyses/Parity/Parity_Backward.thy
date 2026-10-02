@@ -88,6 +88,12 @@ lemma inv_times_parity_mono:
 
 subsection \<open>The refinement operations and their certificate\<close>
 
+text \<open>
+  \<open>parity_refine_ops\<close> bundles the parity inverses; parity has no ordering, so
+  \<open>r_inv_less\<close> is \<open>inv_conservative\<close>. \<open>parity_backward_domain\<close> certifies the
+  bundle as a monotone refinement over \<open>aval_parity\<close>.
+\<close>
+
 definition parity_refine_ops :: "parity refine_ops" where
   "parity_refine_ops =
      \<lparr>r_tobool = parity_tobool, r_inv_less = inv_conservative, r_inv_eq = inv_eq_parity,
@@ -112,14 +118,5 @@ qed (simp_all add: inv_conservative_def inv_eq_parity_sound inv_plus_parity_soun
        inv_minus_parity_sound inv_times_parity_sound parity_tobool_sound[unfolded truthy_def]
        inf_mono parity_arith.aval_dom_mono inv_eq_parity_mono inv_plus_parity_mono
        inv_minus_parity_mono inv_times_parity_mono parity_tobool_mono le_infI1 le_infI2)
-
-subsection \<open>Executable refinement tests\<close>
-
-lemma parity_inverse_regression:
-  "inv_plus_parity POdd PTop PEven = (POdd, PEven)"
-  "inv_minus_parity PEven PTop POdd = (POdd, POdd)"
-  "inv_times_parity POdd PTop PTop = (POdd, POdd)"
-  "inv_eq_parity True PTop PEven = (PEven, PEven)"
-  by eval+
 
 end

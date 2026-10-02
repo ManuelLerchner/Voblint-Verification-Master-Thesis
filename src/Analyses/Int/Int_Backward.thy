@@ -1,13 +1,10 @@
 theory Int_Backward
   imports
     Int_Arithmetic
-    "Voblint_Analysis_Sign.Sign_Backward"
     "Voblint_Analysis_Sign.Sign_Numeric_Queries"
-    "Voblint_Analysis_Interval.Interval_Backward"
     "Voblint_Analysis_Parity.Parity_Backward"
     "Voblint_Analysis_Parity.Parity_Numeric_Queries"
     "Voblint_Analysis_Congruence.Congruence_Backward"
-    "Voblint_Nonrelational.Exec_Backward"
 begin
 
 section \<open>Composite integer-domain backward filtering\<close>
@@ -162,6 +159,13 @@ lemma intersect_int_dom_mode_mono:
 
 subsection \<open>Raw componentwise inverse operators\<close>
 
+text \<open>
+  The raw inverses run each component's backward operator on its own field and
+  reassemble the record. A component with no useful inverse goes through
+  \<open>inv_conservative\<close>, and a true equality intersects both operands with
+  \<open>intersect_int_dom\<close>.
+\<close>
+
 definition inv_less_int_dom_raw ::
     "bool => int_dom => int_dom => int_dom * int_dom"
 where
@@ -228,6 +232,13 @@ where
 
 subsection \<open>Raw soundness\<close>
 
+text \<open>
+  A raw inverse keeps every concrete operand pair consistent with the observed
+  outcome: if \<open>x\<close> and \<open>y\<close> lie in the inputs and produce the comparison result or
+  the value in \<open>r\<close>, they lie in the refined pair. Each proof cites the component
+  soundness lemmas.
+\<close>
+
 lemma inv_less_int_dom_raw_sound:
   assumes "x \<in> gamma_int_dom d1" and "y \<in> gamma_int_dom d2" and "(x < y) = res"
   shows
@@ -288,6 +299,11 @@ lemma inv_times_int_dom_raw_sound:
 
 subsection \<open>Raw monotonicity\<close>
 
+text \<open>
+  The raw inverses are monotone in every argument, stated as \<open>le_pair\<close> on the
+  refined pair and proved from the componentwise monotonicity lemmas.
+\<close>
+
 lemma inv_less_int_dom_raw_mono:
   assumes "d1 \<le> d2" and "e1 \<le> e2"
   shows "le_pair (inv_less_int_dom_raw res d1 e1) (inv_less_int_dom_raw res d2 e2)"
@@ -333,6 +349,12 @@ lemma inv_times_int_dom_raw_mono:
 
 
 subsection \<open>Mode-aware wrappers\<close>
+
+text \<open>
+  \<open>inv_less_int_dom\<close> and its siblings apply \<open>refine mode\<close> to both halves of the
+  raw result, so backward filtering follows the same refinement policy as the
+  forward arithmetic.
+\<close>
 
 definition inv_less_int_dom ::
     "refine_mode => bool => int_dom => int_dom => int_dom * int_dom"

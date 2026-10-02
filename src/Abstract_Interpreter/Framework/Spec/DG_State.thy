@@ -115,12 +115,12 @@ begin
 definition widen_dg_state ::
   "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
 where
-  "widen_dg_state a b = DG (widen (dg_local a) (dg_local b)) (widen (dg_global a) (dg_global b))"
+  "widen_dg_state a b = DG ((dg_local a) \<nabla> (dg_local b)) ((dg_global a) \<nabla> (dg_global b))"
 
 definition narrow_dg_state ::
   "('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state \<Rightarrow> ('a, 'b) dg_state"
 where
-  "narrow_dg_state a b = DG (narrow (dg_local a) (dg_local b)) (narrow (dg_global a) (dg_global b))"
+  "narrow_dg_state a b = DG ((dg_local a) \<Delta> (dg_local b)) ((dg_global a) \<Delta> (dg_global b))"
 
 instance
   by standard

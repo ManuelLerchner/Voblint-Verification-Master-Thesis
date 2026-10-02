@@ -1,5 +1,5 @@
 theory Sign_Numeric_Queries
-  imports Sign_Arithmetic Sign_Backward "Voblint_Domain.Numeric_Queries"
+  imports Sign_Backward
 begin
 
 section \<open>Sign interpretation of the generic numeric-query interface\<close>

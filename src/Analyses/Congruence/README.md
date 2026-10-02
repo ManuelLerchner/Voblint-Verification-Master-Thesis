@@ -64,7 +64,7 @@ and terminates without acceleration.
 | `Congruence_Transfer.thy` | the `congruence_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, the branch, the check classifier and every edge operation |
 | `Congruence_Exec.thy` | the same eight operations on the compact state the solver stores, each shown to agree with its abstract counterpart |
 | `Congruence_Sound.thy` | `congruence_cinit_gamma`: what the abstract state a run starts in describes |
-| `Congruence_Classify.thy` | executable tests of the derived check classifier |
+| `Congruence_Classify.thy` | the derived check classifier; its executable tests live in `src/Examples/Congruence/Congruence_Regression.thy` |
 | `generated/Congruence_Analyses.thy` | generated from `manifests/analyses.yaml`: `congruence_rule`, the interpretation of the shared `dg_analysis_exec` at the unit route, at any global update rule; see below |
 
 ## Worked example
@@ -74,9 +74,8 @@ forward direction is `Congruence_Arithmetic`. Now suppose a guard establishes
 `z = 7`: `Congruence_Backward` runs the same arithmetic in reverse and narrows `y` to
 `6 (mod 0)`, a singleton. Inside `int_dom` that singleton is then handed to the other
 three components by refinement, which is how a congruence fact sharpens an interval —
-see `Example_Int_Backward` for the composite version, and
-`Example_Congruence_Arithmetic` / `Example_Congruence_Backward` for this component on
-its own.
+see `tests/regression/16-composite-domain/` for the composite version and
+`tests/regression/22-congruence/` for this component on its own.
 
 ## Congruence in the entry-state and call-string runs
 

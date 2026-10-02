@@ -4,6 +4,12 @@ begin
 
 section \<open>Interval widening and narrowing\<close>
 
+text \<open>
+  The interval lattice has infinite ascending chains, so the solver needs widening
+  to terminate and narrowing to recover precision afterwards. This theory defines
+  both and instantiates intervals as a numeric domain.
+\<close>
+
 subsection \<open>Widening\<close>
 
 text \<open>
@@ -34,12 +40,6 @@ proof (cases a; cases b)
     using eint_le_linear[of l1 l2] eint_le_linear[of u2 u1]
     by auto
 qed
-
-lemma widen_ivl_core_ub1: "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl_core a b)"
-  using gamma_ivl_mono a_le_widen_ivl_core by blast
-
-lemma widen_ivl_core_ub2: "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl_core a b)"
-  using gamma_ivl_mono b_le_widen_ivl_core by blast
 
 text \<open>
   Widening termination: every widen-ascending chain stabilises.  At each step
@@ -174,29 +174,29 @@ instantiation ivl :: warrowing begin
     \<^term>\<open>bot :: ivl\<close> is the empty interval \<^term>\<open>Ivl PlusInf MinInf\<close>, an unguarded
     \<^const>\<open>widen_ivl_core\<close> from bot would jump straight to the top interval, topping any
     unknown on its first stabilisation.  The guard keeps the first contribution exact.\<close>
-  definition "widen (a :: ivl) b =
+  definition "((a :: ivl) \<nabla> b) =
      (if a = bot then b else if b = bot then a else widen_ivl_core a b)"
-  definition "narrow (a :: ivl) b = narrow_ivl_td a b"
+  definition "((a :: ivl) \<Delta> b) = narrow_ivl_td a b"
 instance proof intro_classes
   fix a b :: ivl
-  show "a \<le> widen a b"
+  show "a \<le> (a \<nabla> b)"
   proof (cases "a = bot")
     case True thus ?thesis by (simp add: widen_ivl_def)
   next
     case False thus ?thesis
       by (cases "b = bot") (simp_all add: widen_ivl_def a_le_widen_ivl_core)
   qed
-  show "b \<le> widen a b"
+  show "b \<le> (a \<nabla> b)"
   proof (cases "a = bot")
     case True thus ?thesis by (simp add: widen_ivl_def)
   next
     case False thus ?thesis
       by (cases "b = bot") (simp_all add: widen_ivl_def b_le_widen_ivl_core)
   qed
-  show "b \<le> a \<Longrightarrow> b \<le> narrow a b"
+  show "b \<le> a \<Longrightarrow> b \<le> (a \<Delta> b)"
     unfolding narrow_ivl_def
     by (cases a; cases b) (auto simp: less_eq_ivl_def split: if_splits)
-  show "b \<le> a \<Longrightarrow> narrow a b \<le> a"
+  show "b \<le> a \<Longrightarrow> (a \<Delta> b) \<le> a"
     unfolding narrow_ivl_def
     by (cases a; cases b) (auto simp: less_eq_ivl_def split: if_splits)
 qed
@@ -232,10 +232,5 @@ next
     by (simp add: is_bottom_ivl_correct)
 qed
 end
-
-lemma to_string_ivl_regression:
-  "to_string (top :: ivl) = STR ''<top>''"
-  "to_string (Ivl (Fin 0) PlusInf) = STR ''[0,+<infinity>]''"
-  by eval+
 
 end

@@ -255,18 +255,6 @@ lemma sides_of_program_fold_rhs_program_projected_mono:
   by (fastforce simp: le_fun_def
         intro: order_trans[OF _ foldr_sup_member_le])
 
-text \<open>A fold of Side-free contributions is Side-free --- the fold's own
-  \<open>Answer\<close> publishes nothing, whatever the accumulator holds.\<close>
-
-lemma sides_of_program_fold_rhs_program_projected_bot:
-  fixes ps :: "('x, 'g, 'd::bounded_semilattice_sup_bot, 'd) strategy_program list"
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and "\<And>p z. p \<in> set ps \<Longrightarrow> sides_of_program p \<sigma> z = bot"
-  shows "sides_of_program (fold_rhs_program_projected prj emb acc ps) \<sigma> = bot"
-  using assms
-  by (auto simp: fun_eq_iff sides_of_program_fold_rhs_program_projected_char[OF wf]
-        intro: foldr_sup_bot_of_all_bot)
-
 lemma sides_of_program_fold_rhs_program_projected_acc_indep:
   fixes ps :: "('x, 'g, 'd::bounded_semilattice_sup_bot, 'd) strategy_program list"
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
@@ -306,16 +294,8 @@ lemma fold_rhs_program_simps [simp, code]:
      do { res \<leftarrow> p; fold_rhs_program (acc \<squnion> res) ps }"
   by (simp_all add: fold_rhs_program_def)
 
-theorem traverse_fold_rhs_program_char:
-  assumes "\<forall>p \<in> set ps. sp_wf p"
-  shows "traverse_program (fold_rhs_program acc ps) \<sigma>
-     = foldl (\<lambda>acc' p. acc' \<squnion> traverse_program p \<sigma>) acc ps"
-  using assms
-  by (induction ps arbitrary: acc)
-     (simp_all add: sp_compile_def sp_compile_with_bind traverse_rhs_sp_wf)
-
-text \<open>The same answer as a right fold. \<open>traverse_fold_rhs_program_char\<close>
-  states the accumulator threading in evaluation order, which is a left fold;
+text \<open>The answer as a right fold. \<^const>\<open>fold_rhs_program\<close> threads the
+  accumulator in evaluation order, which is a left fold;
   proofs about a node's contributions are usually already phrased as a right
   fold, and \<^const>\<open>traverse_rhs\<close> only ever joins, so the two agree.\<close>
 

@@ -1,7 +1,5 @@
 theory Sign_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    Sign_Transfer
     Sign_Exec
 begin
 

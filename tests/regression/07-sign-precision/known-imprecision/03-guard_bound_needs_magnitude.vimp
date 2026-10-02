@@ -1,0 +1,13 @@
+// PARAM: --analysis sign --globals join
+// Ported from Example_Interval_Checks_Store_Only.thy
+// (checks_ivl_ex_precision_over_sign). x is in [1,9] on the then-branch, so
+// x < 11 always holds. Sign keeps x Positive after 0 < x, and x < 10 cannot
+// narrow it further: the lattice has no magnitude. sign_lt has no case
+// comparing Positive against a nonzero constant, so the check stays UNKNOWN.
+// --analysis interval proves it (05-checks/precision/04-guarded_interval_trio.vimp).
+fun main() {
+  x = __voblint_nondet_int();
+  if (0 < x && x < 10) {
+    __voblint_check(x < 11); // UNKNOWN
+  }
+}

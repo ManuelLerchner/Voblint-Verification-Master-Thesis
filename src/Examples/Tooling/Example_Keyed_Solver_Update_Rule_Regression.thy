@@ -1,8 +1,5 @@
 theory Example_Keyed_Solver_Update_Rule_Regression
   imports
-    "Voblint_Framework.DG_Indexed_Generator"
-    "Voblint_Framework.Routed_Context"
-    "Voblint_Solver.TD_Solver_Bridge"
     "Voblint_Analysis_Interval.Interval_Exec"
 begin
 

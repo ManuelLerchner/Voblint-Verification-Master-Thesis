@@ -19,8 +19,6 @@ text \<open>
 theory Example_Interval_DG_Flagship
   imports
     "Voblint_Analysis_Interval.Interval_Analyses"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
@@ -30,10 +28,9 @@ subsection \<open>The VIMP source program\<close>
 text \<open>
   A bounded counting loop: initialise \<open>x\<close> to \<open>0\<close>, increment while \<open>x < 20\<close>.  On
   exit \<open>x = 20\<close>.  No procedures, no globals; \<open>x\<close> is a single flow-sensitive local.
-  The analysis must \<^emph>\<open>discover\<close> the bound, not assume it.
-  \<open>Example_Interval_Loop_Coverage\<close> carries the same loop under the name
-  \<open>loop_prog\<close> and reads it backwards through the guard instead of forwards
-  on the D/G spine.
+  The analysis must \<^emph>\<open>discover\<close> the bound, not assume it.  The regression
+  \<open>tests/regression/02-control-flow/precision/11-bounded_loop_guard_refines_body.vimp\<close>
+  pins the same loop's head, body and exit values through the CLI.
 \<close>
 
 definition flagship_prog :: imp_prog where

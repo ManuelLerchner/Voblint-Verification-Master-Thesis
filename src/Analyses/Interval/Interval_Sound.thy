@@ -1,11 +1,6 @@
 theory Interval_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    Interval_Transfer
     Interval_Exec
-    "Voblint_Result.DG_Result_Construction"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Invariants"
 begin
 
 section \<open>What the initial abstract state describes\<close>

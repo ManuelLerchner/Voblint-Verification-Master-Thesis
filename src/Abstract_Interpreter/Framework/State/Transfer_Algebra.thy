@@ -1,6 +1,5 @@
 theory Transfer_Algebra
   imports "Voblint_CFG.CFG_Transfer" "Voblint_Domain.Nonrelational_State"
-    "Voblint_VIMP.VIMP_Globals" "Voblint_VIMP.VIMP_Expr" "Voblint_VIMP.VIMP_Proc"
 begin
 
 section \<open>The abstract-state algebra a whole-state transfer computes in\<close>

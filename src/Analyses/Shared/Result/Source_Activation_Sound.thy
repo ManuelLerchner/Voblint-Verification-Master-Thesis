@@ -69,6 +69,12 @@ qed
 
 subsection \<open>Backbone corollaries: discharge the five coverage obligations to build the cap\<close>
 
+text \<open>
+  Given entry, edge, call, combine and totality obligations on the abstract map,
+  \<open>activation_coverage\<close> builds the cap and the composition above yields
+  source-level soundness. The node-collect variants restate it per CFG node.
+\<close>
+
 theorem source_activation_sound:
   fixes sg :: "pp \<times> 'c + 'g \<Rightarrow> 'a::numeric_domain abs_state"
     and R :: "'c call_context_rel" and c\<^sub>0 :: 'c

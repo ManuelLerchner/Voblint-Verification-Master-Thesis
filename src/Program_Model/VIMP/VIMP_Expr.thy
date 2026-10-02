@@ -98,16 +98,6 @@ lemma c_div_neg_dividend:
   "c_div (-a) b = - c_div a b"
   by (simp add: c_div_def)
 
-lemma c_div_signed_examples:
-  "map (\<lambda>(a, b). c_div a b) [(7, 3), (-7, 3), (7, -3), (-7, -3)] =
-    [2, -2, -2, 2]"
-  by (simp add: c_div_def)
-
-lemma c_mod_signed_examples:
-  "map (\<lambda>(a, b). c_mod a b) [(7, 3), (-7, 3), (7, -3), (-7, -3)] =
-    [1, -1, 1, -1]"
-  by (simp add: c_mod_def c_div_def)
-
 definition truthy :: "int \<Rightarrow> bool" where
   [simp]: "truthy n \<longleftrightarrow> n \<noteq> 0"
 

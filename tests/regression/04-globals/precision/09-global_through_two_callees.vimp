@@ -1,0 +1,96 @@
+// PARAM: --analysis interval
+// Gx = 4; inc(); sqr(); with inc adding 1 to the declared global and sqr
+// squaring it. The global is analyzed flow-sensitively through both calls
+// (see 02-global_var.vimp), so (4 + 1) * (4 + 1) = 25 reaches the check
+// exactly. The EXPECT-GRAPH block pins the compiled interprocedural CFG:
+// inc at pp0-pp1, sqr at pp2-pp3, main from pp4, calls at pp5 and pp6.
+//
+// Ported from Example_Proc_Call.thy: main_prog_result (the concrete run,
+// here as the analysis result) and main_cfg_full (the layout).
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: inc / unit
+//     inc_pp1_ctx0
+//     inc_exit_inc_ctx0
+//     inc_pp0_ctx0
+//     inc_entry_inc_ctx0
+//   cluster_ctx_1: sqr / unit
+//     sqr_pp3_ctx0
+//     sqr_exit_sqr_ctx0
+//     sqr_pp2_ctx0
+//     sqr_entry_sqr_ctx0
+//   cluster_ctx_2: main / unit
+//     main_pp8_ctx0
+//     main_exit_main_ctx0
+//     main_pp4_ctx0
+//     main_pp5_ctx0
+//     main_pp6_ctx0
+//     main_pp7_ctx0
+//     main_entry_main_ctx0
+//
+// nodes:
+//   inc_pp1_ctx0: pp1
+//       interval:
+//   inc_exit_inc_ctx0: exit_inc
+//       interval:
+//   sqr_pp3_ctx0: pp3
+//       interval:
+//   sqr_exit_sqr_ctx0: exit_sqr
+//       interval:
+//   main_pp8_ctx0: pp8
+//       interval:
+//   main_exit_main_ctx0: exit_main
+//       interval:
+//   inc_pp0_ctx0: pp0
+//       interval:
+//   main_pp4_ctx0: pp4
+//       interval:
+//   sqr_pp2_ctx0: pp2
+//       interval:
+//   main_pp5_ctx0: pp5
+//       interval:
+//   inc_entry_inc_ctx0: entry_inc
+//       interval:
+//   main_pp6_ctx0: pp6
+//       interval:
+//   sqr_entry_sqr_ctx0: entry_sqr
+//       interval:
+//   main_pp7_ctx0: pp7 [proved]
+//       interval:
+//       check Gx == 25
+//   main_entry_main_ctx0: entry_main
+//       interval:
+//
+// edges:
+//   inc_pp0_ctx0 -> inc_pp1_ctx0: Gx := Gx + 1
+//   inc_pp1_ctx0 -> inc_exit_inc_ctx0: return
+//   sqr_pp2_ctx0 -> sqr_pp3_ctx0: Gx := Gx * Gx
+//   sqr_pp3_ctx0 -> sqr_exit_sqr_ctx0: return
+//   main_pp4_ctx0 -> main_pp5_ctx0: Gx := 4
+//   main_pp7_ctx0 -> main_pp8_ctx0: check(Gx == 25)
+//   main_pp8_ctx0 -> main_exit_main_ctx0: return
+//   inc_entry_inc_ctx0 -> inc_pp0_ctx0: body(inc)
+//   main_entry_main_ctx0 -> main_pp4_ctx0: body(main)
+//   sqr_entry_sqr_ctx0 -> sqr_pp2_ctx0: body(sqr)
+//   main_pp5_ctx0 -> inc_entry_inc_ctx0: enter inc()
+//   inc_exit_inc_ctx0 -> main_pp6_ctx0: combine
+//   main_pp5_ctx0 -> main_pp6_ctx0: call-to-return inc
+//   main_pp6_ctx0 -> sqr_entry_sqr_ctx0: enter sqr()
+//   sqr_exit_sqr_ctx0 -> main_pp7_ctx0: combine
+//   main_pp6_ctx0 -> main_pp7_ctx0: call-to-return sqr
+// EXPECT-GRAPH-END
+
+
+global Gx;
+fun inc() {
+  Gx = Gx + 1;
+}
+fun sqr() {
+  Gx = Gx * Gx;
+}
+fun main() {
+  Gx = 4;
+  inc();
+  sqr();
+  __voblint_check(Gx == 25); // PROVED
+}

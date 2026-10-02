@@ -27,12 +27,6 @@ lemma ivl_upper_lower_less:
   using le_less_trans[OF assms(1) less_le_trans[OF assms(2,3)]]
   by (simp add: less_eint_def less_eq_eint_def)
 
-lemma ivl_upper_lower_not_less:
-  assumes "Fin j \<le> u" and "u < l" and "l \<le> Fin i"
-  shows "\<not> i < j"
-  using ivl_upper_lower_less[OF assms]
-  by auto
-
 lemma ivl_upper_lower_less_eq:
   assumes "Fin i \<le> u" and "u \<le> l" and "l \<le> Fin j"
   shows "i \<le> j"
@@ -130,21 +124,6 @@ proof -
     using j_bounds(2) separated i_bounds(1)
     by (rule ivl_upper_lower_not_less_eq)
 qed
-
-text \<open>
-  Permanent regression witnesses for the touching-boundary case: before this
-  file's \<open>u2 < l1\<close> was weakened to \<open>u2 \<le> l1\<close>, \<open>interval_less_false\<close> could not
-  refute \<open>0 < x\<close> for \<open>x = [-inf,0]\<close> (a range entirely \<open>\<le> 0\<close>) because the
-  witnessing bound touches rather than strictly separates.
-\<close>
-
-lemma interval_less_false_witness_touching_boundary:
-  "interval_less_false (Ivl (Fin 0) (Fin 0)) (Ivl MinInf (Fin 0))"
-  by simp
-
-lemma interval_less_false_witness_touching_boundary_finite:
-  "interval_less_false (Ivl (Fin 1) (Fin 1)) (Ivl MinInf (Fin 1))"
-  by simp
 
 fun interval_eq_true :: "ivl \<Rightarrow> ivl \<Rightarrow> bool" where
   "interval_eq_true (Ivl l1 u1) (Ivl l2 u2) =
@@ -273,10 +252,6 @@ text \<open>
   operation because it derives equality from \<open>interval_less_false\<close> in both
   directions.
 \<close>
-
-lemma interval_eq_false_witness_disjoint:
-  "interval_eq_false (Ivl (Fin 1) (Fin 2)) (Ivl (Fin 5) (Fin 6))"
-  by (simp add: less_eint_def)
 
 lemma interval_meet_of_witness_not_bot:
   "Ivl (Fin 1) (Fin 2) \<sqinter> Ivl (Fin 5) (Fin 6) \<noteq> bot"

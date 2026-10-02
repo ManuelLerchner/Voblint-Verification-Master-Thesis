@@ -1,0 +1,36 @@
+// PARAM: --analysis int --int-refinement never
+// Source: Example_Int_Domain (arithmetic_never_is_raw,
+// arithmetic_raw_produces_progressive_input) and Example_Int_Backward
+// (int_exact_division_recovers_parity, int_division_remainder_progressive),
+// the Refine_Never columns.
+//
+// Without refinement each component computes alone. z = -1 + y with y odd
+// in [0,1] is [-1,0], even, sign Top; nothing pins it to 0, so z == 0 is
+// UNKNOWN while z <= 0 follows from the interval. Exact division keeps
+// congruence 0 (mod 2) and 3 (mod 4) but leaves parity Top, and
+// congruence_eqb answers only on singletons, so neither equality is
+// refuted. The remainder stays [0,3] with 1 (mod 4).
+// ../precision/18-refinement_once_arithmetic.vimp is the same program under
+// once, where every check is decided.
+fun main() {
+  x = -1;
+  m = __voblint_nondet_int();
+  y = 2 * m + 1;
+  if (y >= 0) {
+    if (y <= 1) {
+      z = x + y;
+      __voblint_check(z == 0); // UNKNOWN
+      __voblint_check(z <= 0); // PROVED
+    }
+  }
+  n = __voblint_nondet_int();
+  even = (6 * n) / 3;
+  odd = (12 * n + 3) / -3;
+  __voblint_check(even == 1); // UNKNOWN
+  __voblint_check(odd == 0); // UNKNOWN
+  if (0 <= n && n <= 20) {
+    r = ((12 * n + 3) / 3) % 4;
+    __voblint_check(r == 1); // UNKNOWN
+    __voblint_check(r > 0); // UNKNOWN
+  }
+}

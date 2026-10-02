@@ -1,9 +1,6 @@
 theory DG_Result_Construction
   imports
-    "Voblint_Framework.Solved_Table"
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_Framework.Routed_Call_Programs"
-    "Voblint_Framework.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Exec.Exec_Result_Abs"
     "Voblint_Exec.Exec_DG_State"
@@ -69,14 +66,6 @@ lemma map_lift_canonicalize_lift:
   assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
   shows "map_lift rd (canonicalize_lift emp d) = canonicalize_lift empty\<^sub>V (map_lift rd d)"
   by (cases d) (simp_all add: assms normalize_lift_def)
-
-lemma lookup_table_dg_result_for_projected:
-  assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
-  shows "lookup_table (dg_result_for rd emp sol) v ctx =
-    (if (v, ctx) \<in> fst sol
-     then canonicalize_lift empty\<^sub>V (map_lift rd (dg_local (snd sol (Inl (v, ctx)))))
-     else Bot)"
-  using map_lift_canonicalize_lift[of emp "empty\<^sub>V" rd] assms by simp
 
 text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<close> does not change
   what the value denotes.\<close>

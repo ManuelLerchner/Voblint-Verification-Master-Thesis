@@ -1,0 +1,17 @@
+// PARAM: --analysis parity
+// Ported from Example_Parity_Checks_Store_Only.thy
+// (parity_division_remainder_regression). Even % Even stays Even, including
+// divisor zero under VIMP's totalization, so even_rem != 1 is PROVED.
+// Odd % Odd and Odd / Even are Top, and both UNKNOWNs are sound: 1 % 3 = 1
+// but 3 % 3 = 0, and 1 / 2 = 0 but 11 / 2 = 5. Odd % Even is
+// 03-remainder_even_divisor.vimp.
+fun main() {
+  n = __voblint_nondet_int();
+  d = __voblint_nondet_int();
+  even_rem = (2 * n) % (2 * d);
+  __voblint_check(even_rem != 1); // PROVED
+  odd_rem = (2 * n + 1) % (2 * d + 1);
+  __voblint_check(odd_rem != 0); // UNKNOWN
+  quot = (2 * n + 1) / (2 * d);
+  __voblint_check(quot != 0); // UNKNOWN
+}

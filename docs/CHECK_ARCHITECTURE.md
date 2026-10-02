@@ -247,15 +247,13 @@ tables because the generic derivation would be a real precision loss.
 
 ## Worked examples
 
-`Example_Checks_Store_Only.thy` (Sign) and
-`Example_Interval_Checks_Store_Only.thy` (Interval) compile a program,
-run the verified solver, and discharge checks at each check's own node —
-one proved, one refuted, one unknown, plus a `checks_proven` bridge
-exercised on the singleton that is actually true.
-`Example_Parity_Checks_Store_Only.thy` runs the same trio for Parity. The
-Interval example additionally demonstrates a precision gain: a bound Interval proves
-outright (`x < 11` after narrowing `x` to `[1,9]`) that Sign's `SPos`
-alone cannot.
+The regression corpus runs one proved, one refuted and one unknown check per
+domain: `07-sign-precision/precision/20-check_trio.vimp`,
+`05-checks/precision/04-guarded_interval_trio.vimp` and
+`18-parity/precision/05-check_trio.vimp`. The Interval trio also shows a
+precision gain: a bound Interval proves outright (`x < 11` after narrowing `x` to
+`[1,9]`) that Sign's `SPos` alone cannot
+(`07-sign-precision/known-imprecision/03-guard_bound_needs_magnitude.vimp`).
 
 ## Contextual result and GraphViz presentation
 
@@ -368,7 +366,7 @@ worked examples.
 
 ## Known limitations (not yet addressed)
 
-- The three checks compiled from `Example_Interval_Checks_Store_Only.thy`
+- The three checks of `05-checks/precision/04-guarded_interval_trio.vimp`
   generate visible `nop` edges between them: the compiler gives each check
   its own node. The `checks` relation already permits multiple
   checks at one program point (`(pp * bexp) set`, not a function from

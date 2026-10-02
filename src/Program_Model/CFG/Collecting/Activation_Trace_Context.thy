@@ -378,14 +378,6 @@ proof (intro ballI allI impI)
     using activation_context_eq admits_call_context_call_enter_storeD[OF adm] by (intro conjI)
 qed
 
-lemma activation_context_entry_invariant_eq:
-  assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
-  shows "activation_context_of enterc initial_ctx callee
-         = enterc (sink_node caller) (activation_context_of enterc initial_ctx caller) (entry_store callee)"
-  using activation_context_entry_invariant[OF assms(1), THEN bspec, OF callers_refl, rule_format, OF
-    assms(2),
-      THEN conjunct1] .
-
 lemma key_entry_invariant_call_enterD [dest]:
   assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
   shows "call_enter_store \<G> g (sink_node caller) (sink_store caller) (entry_store callee)"

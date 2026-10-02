@@ -1,7 +1,6 @@
 theory MCP_Field
   imports
     "Voblint_Framework.Local_Spec_Product"
-    "Voblint_Framework.MCP_Spec"
     "Voblint_Framework.Oracle_Wrappers"
     "Voblint_Framework.Solved_Table"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"
@@ -21,10 +20,6 @@ lemma pleft_pright_bot [simp]:
   "pleft (\<bottom> :: ('a::order_bot, 'b::order_bot) analysis_product) = \<bottom>"
   "pright (\<bottom> :: ('a::order_bot, 'b::order_bot) analysis_product) = \<bottom>"
   by (simp_all add: bot_analysis_product_def)
-
-lemma pleft_pright_mono:
-  "p \<le> q \<Longrightarrow> pleft p \<le> pleft q" "p \<le> q \<Longrightarrow> pright p \<le> pright q"
-  by (simp_all add: less_eq_analysis_product_def)
 
 lemma field_component_sound:
   fixes f :: "'r::{semilattice_sup, order_bot} \<Rightarrow> 'c::order_bot"

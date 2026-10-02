@@ -1,0 +1,22 @@
+// PARAM: --analysis interval --context none --globals warrow
+// Same program as 13-recursion_seed_join.vimp under the warrow rule, which
+// widens up's FunctionEntry seed while the recursion is discovered. The
+// guard n < 5 bounds the recursive argument, so the narrowing phase brings
+// the seed back to [0,5] and the result matches the join rule's.
+//
+// Ported from Example_Interval_DG_Seed_Join_Recursion.thy:
+// sj_warrowed_seed_agrees.
+fun up(n) {
+  __voblint_check(n >= 0); // PROVED
+  __voblint_check(n <= 5); // PROVED
+  if (n < 5) {
+    r = up(n + 1);
+    return 0;
+  } else {
+    return 0;
+  }
+}
+fun main() {
+  z = up(0);
+  __voblint_check(z == 0); // PROVED
+}

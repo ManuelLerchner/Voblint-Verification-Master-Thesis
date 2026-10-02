@@ -117,6 +117,11 @@ end
 
 subsection \<open>Concretization\<close>
 
+text \<open>
+  A set of pairs denotes the stores satisfying \<open>s x <= s y\<close> for each pair;
+  \<open>RelBot\<close> denotes no store. Concretization is monotone in the order.
+\<close>
+
 fun gamma_relc :: "relc \<Rightarrow> store set" where
   "gamma_relc RelBot = {}"
 | "gamma_relc (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
@@ -197,12 +202,5 @@ qed (simp add: is_empty_relc_def)
 
 lemma exact_emptiness_relc: "exact_emptiness (is_empty :: relc \<Rightarrow> bool) gamma_relc"
   by (rule exact_emptinessI) (rule is_empty_relc_gamma)
-
-lemma to_string_relc_regression:
-  "to_string RelBot = STR ''<bottom>''"
-  "to_string (RelC {}) = STR ''<top>''"
-  "to_string (RelC {(STR ''y'', STR ''z''), (STR ''x'', STR ''y'')}) =
-     STR ''{x<le>y <and> y<le>z}''"
-  by eval+
 
 end

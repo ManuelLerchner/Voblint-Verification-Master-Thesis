@@ -1,0 +1,51 @@
+// PARAM: --analysis interval
+// Backward guard refinement of x = [0,20] against the threshold 10, for each
+// direct comparison and both branch polarities, plus x < 20 and a guard no
+// state in y = [5,9] satisfies, whose arm is dead. x != 10 leaves x = [0,20]
+// on its true arm (an interval cannot exclude an interior point, see
+// known-imprecision/01-no_exclusion_set.vimp) and narrows it to [10,10] on
+// its false arm.
+//
+// Ported from Example_Guard_Refinement.thy: refine_direct_comparisons_true,
+// refine_direct_comparisons_false, refine_x_lt_20,
+// guard_infeasible_canonical_bot.
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  if (0 <= x && x <= 20 && 5 <= y && y <= 9) {
+    if (x <= 10) {
+      __voblint_check(x >= 0); // PROVED
+      __voblint_check(x <= 10); // PROVED
+    } else {
+      __voblint_check(x >= 11); // PROVED
+      __voblint_check(x <= 20); // PROVED
+    }
+    if (x > 10) {
+      __voblint_check(x >= 11); // PROVED
+      __voblint_check(x <= 20); // PROVED
+    } else {
+      __voblint_check(x >= 0); // PROVED
+      __voblint_check(x <= 10); // PROVED
+    }
+    if (x >= 10) {
+      __voblint_check(x >= 10); // PROVED
+      __voblint_check(x <= 20); // PROVED
+    } else {
+      __voblint_check(x >= 0); // PROVED
+      __voblint_check(x <= 9); // PROVED
+    }
+    if (x != 10) {
+      __voblint_check(x >= 0); // PROVED
+      __voblint_check(x <= 20); // PROVED
+    } else {
+      __voblint_check(x == 10); // PROVED
+    }
+    if (x < 20) {
+      __voblint_check(x >= 0); // PROVED
+      __voblint_check(x <= 19); // PROVED
+    }
+    if (y < 0) {
+      __voblint_check(false); // NOWARN (unreachable)
+    }
+  }
+}

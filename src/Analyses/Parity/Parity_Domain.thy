@@ -4,7 +4,17 @@ begin
 
 section \<open>Parity arithmetic and expression evaluation\<close>
 
+text \<open>
+  Parity arithmetic, comparison queries and the evaluator \<open>aval_parity\<close>, with the
+  soundness and monotonicity facts \<open>sound_arith_ops\<close> asks of a domain.
+\<close>
+
 subsection \<open>Abstract arithmetic\<close>
+
+text \<open>
+  Addition and subtraction follow the parity rules of \<open>int\<close>; a product is even
+  as soon as one factor is. Any bottom operand yields \<open>PBot\<close>.
+\<close>
 
 instantiation parity :: plus begin
 fun plus_parity :: "parity => parity => parity" where
@@ -54,6 +64,11 @@ lemma parity_times_sound:
   by (cases a; cases b; auto)
 
 subsection \<open>Monotonicity of arithmetic\<close>
+
+text \<open>
+  Each operation is monotone in each argument by case analysis; the
+  \<open>_combine_mono\<close> lemmas join the two one-sided facts.
+\<close>
 
 lemma parity_plus_mono1: "a1 \<le> a2 \<Longrightarrow> a1 + b \<le> a2 + (b::parity)"
   unfolding less_eq_parity_def by (cases a1; cases a2; cases b; simp)
@@ -156,6 +171,13 @@ lemma parity_mod_mono:
 
 
 subsection \<open>Abstract expression evaluation\<close>
+
+text \<open>
+  \<open>aval_parity\<close> evaluates an expression bottom-up with the parity operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
 
 fun aval_parity :: "exp => (vname => parity) => parity" where
     "aval_parity (N n)       \<sigma> = parity_of_int n"

@@ -68,11 +68,6 @@ lemma ask_assign_step_cases:
 lemma answer_const_top [simp]: "answer_const \<top> = None"
   by (simp add: top_query_lift_def)
 
-lemma ask_assign_top:
-  assumes "\<And>q. A q = \<top>"
-  shows "ls_step (ask_assign c) A a x = ls_step c A a x"
-  by (cases a) (simp_all add: ask_assign_def assign_ask_def assms)
-
 lemma single_entry_ask_assign: "single_entry c \<Longrightarrow> single_entry (ask_assign c)"
   by (simp add: single_entry_def ask_assign_def)
 

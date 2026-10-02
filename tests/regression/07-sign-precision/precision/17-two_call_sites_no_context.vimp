@@ -1,0 +1,18 @@
+// PARAM: --analysis sign --globals join
+// Source: Example_Sign_Report_Regression (sign_two_call_sites_result).
+//
+// One callee, two call sites, no context. Both arguments are Positive, so
+// the shared entry state is Positive and both results are Positive. The
+// Interval analogue loses here
+// (03-procedures/known-imprecision/01-two_call_sites_same_procedure.vimp);
+// 11-graph-snapshot/10-entry_state_sign_own_domain.vimp is the same program
+// under --context entry-state.
+fun square(n) {
+  return n * n;
+}
+fun main() {
+  a = square(3);
+  b = square(4);
+  __voblint_check(0 < a); // PROVED
+  __voblint_check(0 < b); // PROVED
+}

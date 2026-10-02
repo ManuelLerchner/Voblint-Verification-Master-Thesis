@@ -1,7 +1,5 @@
 theory Congruence_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    Congruence_Transfer
     Congruence_Exec
 begin
 

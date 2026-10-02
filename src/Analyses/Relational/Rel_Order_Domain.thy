@@ -31,6 +31,12 @@ lemma gammaDG_relc_mono:
 
 subsection \<open>Refining bare-variable comparisons\<close>
 
+text \<open>
+  Only guards between two bare variables refine a \<open>relc\<close>. On the true branch
+  \<open>assume_step\<close> adds \<open>(x, y)\<close> for a guard implying that \<open>x\<close> is at most \<open>y\<close>;
+  every other guard leaves the state unchanged.
+\<close>
+
 definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
   "assume_step b d =
      (case d of
@@ -281,6 +287,12 @@ declare
 
 subsection \<open>Per-edge soundness\<close>
 
+text \<open>
+  Each edge operation over-approximates the concrete edge semantics on
+  \<open>gammaDG_relc\<close>, the stores both the local and the global component describe.
+  Assignments and special calls forget every pair that mentions the target.
+\<close>
+
 lemma relc_skip_sound[intro]:
   "edge_collect EA_Nop (gammaDG_relc d g) \<subseteq>
      (case relc_skip d g of (g', d') \<Rightarrow> gammaDG_relc d' g')"
@@ -413,6 +425,12 @@ lemma sides_relc_combine [simp]:
         mk_dg_man_def dg_read_at_def dg_read_global_def dg_sideg_def sp_bind_assoc Let_def)
 
 subsection \<open>The interpretation\<close>
+
+text \<open>
+  Interpreting \<open>analysis_contract\<close> at \<open>rel_order_spec\<close> discharges the framework's
+  obligations: a well-formed spec, monotone concretization, and sound edge and
+  combine transfers, each from the per-edge lemmas above.
+\<close>
 
 interpretation rel_order: analysis_contract rel_order_spec gammaDG_relc \<G>
 proof unfold_locales

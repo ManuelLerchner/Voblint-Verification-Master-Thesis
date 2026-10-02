@@ -230,33 +230,6 @@ lemma sides_routed_node_rhs:
         sides_of_program_side_rhs_fold_dg_char[OF wf]
         bot_dg_state_def[symmetric] ac_simps)
 
-text \<open>
-  One call site's own contribution to the node's key, as a bound rather than an
-  equation: what a call site publishes at \<open>analysis_global_at ctx\<close> is below what the whole
-  equation publishes there. A soundness argument that has to place a single
-  publication inside the solution reaches for this, and then for
-  \<^const>\<open>part_post_solution\<close>; it is deliberately directional and untagged.
-\<close>
-
-lemma sides_comb_le_routed_node_rhs:
-  assumes site: "(cc, ca) \<in> set (site_sel g v)"
-    and wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
-                   extra g ctx w). sp_wf p"
-  shows "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
-           \<le> sides_of_rhs (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra
-                 g bot0 s0d s0g (v, ctx)) \<tau> (Inr (analysis_global_at ctx))"
-proof -
-  have "cmb route ctx ca cc v
-          \<in> set (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v)"
-    by (rule routed_contribution_programs_combineI) (rule site)
-  then have "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
-          \<le> foldr (\<lambda>t acc. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc)
-              (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v) bot"
-    using foldr_sup_le_iff[of "\<lambda>t. sides_of_program t \<tau> (Inr (analysis_global_at ctx))"] by blast
-  then show ?thesis
-    unfolding sides_routed_node_rhs[OF wf] by (simp add: le_supI2)
-qed
-
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
 
 text \<open>
@@ -318,7 +291,7 @@ where
           Side (analysis_global_at c) (DG bot (dg_global res)) (Answer (DG (dg_local res) bot)))))"
 
 text \<open>
-  \<open>traverse_fold_rhs_program_char\<close> states the fold in evaluation order (a left
+  \<^const>\<open>fold_rhs_program\<close> threads its accumulator in evaluation order (a left
   fold); the lemmas below need the equivalent right fold, since that is how each of
   their own goals is already phrased. \<^const>\<open>traverse_rhs\<close> only ever joins, so the
   two forms agree by \<open>foldr_sup_seed_swap\<close>.
@@ -358,10 +331,9 @@ proof -
   show ?thesis
   proof (cases "v = cfg_entry g")
     case True
-    have z0: "sides_of_rhs (sp_compile (fold_rhs_program (DG (bot0 \<squnion> s0d) s0g)
+    have z0: "(sides_of_program (fold_rhs_program (DG (bot0 \<squnion> s0d) s0g)
         (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx
-           (cfg_entry g))))
-        \<tau> (Inr (analysis_global_at ctx)) = bot"
+           (cfg_entry g))) \<tau>) (Inr (analysis_global_at ctx)) = bot"
       by (simp only: sides_of_program_fold_rhs_program_char[OF wf]
           foldr_sup_bot_of_all_bot[OF free[where w = "cfg_entry g"]])
     from True show ?thesis
@@ -370,9 +342,8 @@ proof -
           bot_dg_state_def sup_dg_state_def z0)
   next
     case False
-    have z0: "sides_of_rhs (sp_compile (fold_rhs_program (DG bot0 bot)
-        (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)))
-        \<tau> (Inr (analysis_global_at ctx)) = bot"
+    have z0: "(sides_of_program (fold_rhs_program (DG bot0 bot)
+        (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)) \<tau>) (Inr (analysis_global_at ctx)) = bot"
       by (simp only: sides_of_program_fold_rhs_program_char[OF wf]
           foldr_sup_bot_of_all_bot[OF free[where w = v]])
     from False show ?thesis
@@ -870,12 +841,10 @@ proof (unfold mono_sides_def, intro allI)
                        \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_program t s1 \<le> sides_of_program t s2"
       using intra_sides_mono comb_sides_mono extra_sides_mono
       by (auto simp: routed_contribution_programs_def)
-    have fold_le: "\<And>acc w. sides_of_rhs (sp_compile (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))
-                      s1
-                  \<le> sides_of_rhs (sp_compile (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))
-                      s2"
+    have fold_le: "\<And>acc w. (sides_of_program (side_rhs_fold_dg acc
+                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s1)
+                  \<le> (sides_of_program (side_rhs_fold_dg acc
+                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s2)"
       by (rule side_rhs_fold_dg_sides_mono[OF wf tree_sides_mono le])
     show "sides_of_rhs
             (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g x) s1
@@ -914,9 +883,9 @@ proof (unfold mono_deps_def, intro allI)
     have fold_mono: "\<And>acc w. mono_tree_deps (sp_compile (side_rhs_fold_dg acc
                       (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
       by (rule side_rhs_fold_dg_mono_tree_deps[OF wf]) (rule tree_deps_mono)
-    have dsub: "\<And>acc w. dep_aux s1 (sp_compile (side_rhs_fold_dg acc
+    have dsub: "\<And>acc w. (dep_program s1 (side_rhs_fold_dg acc
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))
-                \<subseteq> dep_aux s2 (sp_compile (side_rhs_fold_dg acc
+                \<subseteq> (dep_program s2 (side_rhs_fold_dg acc
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
       using fold_mono[unfolded mono_tree_deps_def] ord by blast
     show "dep (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra g bot0 s0d s0g) s1 x

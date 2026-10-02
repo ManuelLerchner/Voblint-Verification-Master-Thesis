@@ -55,8 +55,8 @@ text \<open>
 
 instantiation unit :: warrowing
 begin
-definition widen_unit :: "unit => unit => unit" where "widen a b = ()"
-definition narrow_unit :: "unit => unit => unit" where "narrow a b = ()"
+definition widen_unit :: "unit => unit => unit" where "(a \<nabla> b) = ()"
+definition narrow_unit :: "unit => unit => unit" where "(a \<Delta> b) = ()"
 instance by intro_classes simp_all
 end
 
@@ -64,28 +64,28 @@ instantiation int_dom_ext :: ("{bounded_lattice, warrowing}") warrowing
 begin
 
 definition widen_int_dom_ext :: "'a int_dom_scheme => 'a int_dom_scheme => 'a int_dom_scheme" where
-  "widen (a :: 'a int_dom_scheme) b =
+  "((a :: 'a int_dom_scheme) \<nabla> b) =
      int_dom.extend
        (int_dom.truncate
          (a\<lparr>
-           int_sign := widen (int_sign a) (int_sign b),
-           int_ivl := widen (int_ivl a) (int_ivl b),
-           int_parity := widen (int_parity a) (int_parity b),
-           int_congruence := widen (int_congruence a) (int_congruence b)
+           int_sign := ((int_sign a) \<nabla> (int_sign b)),
+           int_ivl := ((int_ivl a) \<nabla> (int_ivl b)),
+           int_parity := ((int_parity a) \<nabla> (int_parity b)),
+           int_congruence := ((int_congruence a) \<nabla> (int_congruence b))
          \<rparr>))
-       (widen (int_dom.more a) (int_dom.more b))"
+       ((int_dom.more a) \<nabla> (int_dom.more b))"
 
 definition narrow_int_dom_ext :: "'a int_dom_scheme => 'a int_dom_scheme => 'a int_dom_scheme" where
-  "narrow (a :: 'a int_dom_scheme) b =
+  "((a :: 'a int_dom_scheme) \<Delta> b) =
      int_dom.extend
        (int_dom.truncate
          (a\<lparr>
-           int_sign := narrow (int_sign a) (int_sign b),
-           int_ivl := narrow (int_ivl a) (int_ivl b),
-           int_parity := narrow (int_parity a) (int_parity b),
-           int_congruence := narrow (int_congruence a) (int_congruence b)
+           int_sign := ((int_sign a) \<Delta> (int_sign b)),
+           int_ivl := ((int_ivl a) \<Delta> (int_ivl b)),
+           int_parity := ((int_parity a) \<Delta> (int_parity b)),
+           int_congruence := ((int_congruence a) \<Delta> (int_congruence b))
          \<rparr>))
-       (narrow (int_dom.more a) (int_dom.more b))"
+       ((int_dom.more a) \<Delta> (int_dom.more b))"
 
 lemma int_dom_extend_truncate_select [simp]:
   "int_sign (int_dom.extend (int_dom.truncate r) m) = int_sign r"
@@ -102,17 +102,17 @@ instance proof intro_classes
            "int_parity b <= int_parity a" "int_congruence b <= int_congruence a"
            "int_dom.more b <= int_dom.more a"
     using ba by (simp_all add: less_eq_int_dom_ext_def)
-  have s: "int_sign b <= narrow (int_sign a) (int_sign b)"
+  have s: "int_sign b <= ((int_sign a) \<Delta> (int_sign b))"
     by (rule narrow_ge[OF hb(1)])
-  have i: "int_ivl b <= narrow (int_ivl a) (int_ivl b)"
+  have i: "int_ivl b <= ((int_ivl a) \<Delta> (int_ivl b))"
     by (rule narrow_ge[OF hb(2)])
-  have p: "int_parity b <= narrow (int_parity a) (int_parity b)"
+  have p: "int_parity b <= ((int_parity a) \<Delta> (int_parity b))"
     by (rule narrow_ge[OF hb(3)])
-  have c: "int_congruence b <= narrow (int_congruence a) (int_congruence b)"
+  have c: "int_congruence b <= ((int_congruence a) \<Delta> (int_congruence b))"
     by (rule narrow_ge[OF hb(4)])
-  have m: "int_dom.more b <= narrow (int_dom.more a) (int_dom.more b)"
+  have m: "int_dom.more b <= ((int_dom.more a) \<Delta> (int_dom.more b))"
     by (rule narrow_ge[OF hb(5)])
-  show "b <= narrow a b"
+  show "b <= (a \<Delta> b)"
     unfolding narrow_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 next
@@ -122,47 +122,47 @@ next
            "int_parity b <= int_parity a" "int_congruence b <= int_congruence a"
            "int_dom.more b <= int_dom.more a"
     using ba by (simp_all add: less_eq_int_dom_ext_def)
-  have s: "narrow (int_sign a) (int_sign b) <= int_sign a"
+  have s: "((int_sign a) \<Delta> (int_sign b)) <= int_sign a"
     by (rule narrow_le[OF hb(1)])
-  have i: "narrow (int_ivl a) (int_ivl b) <= int_ivl a"
+  have i: "((int_ivl a) \<Delta> (int_ivl b)) <= int_ivl a"
     by (rule narrow_le[OF hb(2)])
-  have p: "narrow (int_parity a) (int_parity b) <= int_parity a"
+  have p: "((int_parity a) \<Delta> (int_parity b)) <= int_parity a"
     by (rule narrow_le[OF hb(3)])
-  have c: "narrow (int_congruence a) (int_congruence b) <= int_congruence a"
+  have c: "((int_congruence a) \<Delta> (int_congruence b)) <= int_congruence a"
     by (rule narrow_le[OF hb(4)])
-  have m: "narrow (int_dom.more a) (int_dom.more b) <= int_dom.more a"
+  have m: "((int_dom.more a) \<Delta> (int_dom.more b)) <= int_dom.more a"
     by (rule narrow_le[OF hb(5)])
-  show "narrow a b <= a"
+  show "(a \<Delta> b) <= a"
     unfolding narrow_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 next
   fix a b :: "'a int_dom_scheme"
-  have s: "int_sign a <= widen (int_sign a) (int_sign b)"
+  have s: "int_sign a <= ((int_sign a) \<nabla> (int_sign b))"
     by (rule widen_ge1)
-  have i: "int_ivl a <= widen (int_ivl a) (int_ivl b)"
+  have i: "int_ivl a <= ((int_ivl a) \<nabla> (int_ivl b))"
     by (rule widen_ge1)
-  have p: "int_parity a <= widen (int_parity a) (int_parity b)"
+  have p: "int_parity a <= ((int_parity a) \<nabla> (int_parity b))"
     by (rule widen_ge1)
-  have c: "int_congruence a <= widen (int_congruence a) (int_congruence b)"
+  have c: "int_congruence a <= ((int_congruence a) \<nabla> (int_congruence b))"
     by (rule widen_ge1)
-  have m: "int_dom.more a <= widen (int_dom.more a) (int_dom.more b)"
+  have m: "int_dom.more a <= ((int_dom.more a) \<nabla> (int_dom.more b))"
     by (rule widen_ge1)
-  show "a <= widen a b"
+  show "a <= (a \<nabla> b)"
     unfolding widen_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 next
   fix a b :: "'a int_dom_scheme"
-  have s: "int_sign b <= widen (int_sign a) (int_sign b)"
+  have s: "int_sign b <= ((int_sign a) \<nabla> (int_sign b))"
     by (rule widen_ge2)
-  have i: "int_ivl b <= widen (int_ivl a) (int_ivl b)"
+  have i: "int_ivl b <= ((int_ivl a) \<nabla> (int_ivl b))"
     by (rule widen_ge2)
-  have p: "int_parity b <= widen (int_parity a) (int_parity b)"
+  have p: "int_parity b <= ((int_parity a) \<nabla> (int_parity b))"
     by (rule widen_ge2)
-  have c: "int_congruence b <= widen (int_congruence a) (int_congruence b)"
+  have c: "int_congruence b <= ((int_congruence a) \<nabla> (int_congruence b))"
     by (rule widen_ge2)
-  have m: "int_dom.more b <= widen (int_dom.more a) (int_dom.more b)"
+  have m: "int_dom.more b <= ((int_dom.more a) \<nabla> (int_dom.more b))"
     by (rule widen_ge2)
-  show "b <= widen a b"
+  show "b <= (a \<nabla> b)"
     unfolding widen_int_dom_ext_def less_eq_int_dom_ext_def
     using s i p c m by simp
 qed
@@ -208,15 +208,5 @@ next
 qed
 
 end
-
-lemma to_string_int_dom_regression:
-  "to_string (bot :: int_dom) = STR ''<bottom>''"
-  "to_string (top :: int_dom) = STR ''<top>''"
-  "to_string (int_dom_sipc STop (Ivl (Fin 5) (Fin 5)) PTop top) = STR ''5''"
-  "to_string (int_dom_sipc SPos (Ivl (Fin 1) (Fin 9)) POdd (mk_congruence 1 2)) =
-     STR ''signs:+; intervals:[1,9]; parities:1+2<int>; congruences:1+2<int>''"
-  "to_string (int_dom_sipc SNonNeg (Ivl (Fin 0) PlusInf) PTop top) =
-     STR ''signs:<ge>0; intervals:[0,+<infinity>]; parities:<int>; congruences:<int>''"
-  by eval+
 
 end

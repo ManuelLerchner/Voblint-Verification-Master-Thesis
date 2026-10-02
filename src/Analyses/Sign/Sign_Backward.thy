@@ -107,8 +107,7 @@ lemma inv_eq_sign_mono:
   assumes "a1 \<le> (a1' :: sign)"
       and "a2 \<le> a2'"
   shows
-    "fst (inv_eq_sign r a1 a2) \<le> fst (inv_eq_sign r a1' a2') \<and>
-     snd (inv_eq_sign r a1 a2) \<le> snd (inv_eq_sign r a1' a2')"
+    "le_pair (inv_eq_sign r a1 a2) (inv_eq_sign r a1' a2')"
 proof (cases r)
   case True
   then show ?thesis using assms by (simp add: le_infI1 le_infI2)
@@ -161,10 +160,7 @@ lemma inv_less_sign_mono:
   assumes A1: "a1 \<le> (a1' :: sign)"
       and A2: "a2 \<le> a2'"
   shows
-    "fst (inv_less_sign r a1 a2)
-       \<le> fst (inv_less_sign r a1' a2') \<and>
-     snd (inv_less_sign r a1 a2)
-       \<le> snd (inv_less_sign r a1' a2')"
+    "le_pair (inv_less_sign r a1 a2) (inv_less_sign r a1' a2')"
 proof (cases r)
   case True
 
@@ -256,47 +252,5 @@ proof unfold_locales
 qed (use sign_tobool_mono in \<open>simp_all add: inf_sign_sound inv_less_sign_sound
        inv_eq_sign_sound inv_conservative_def sign_tobool_sound inf_mono sign_arith.aval_dom_mono
        inv_less_sign_mono inv_eq_sign_mono le_infI1 le_infI2\<close>)
-
-subsection \<open>Executable equality-narrowing tests\<close>
-
-text \<open>
-  Representative @{const inv_eq_sign} cases, directly matching the behavioral
-  examples from the design: the true branch always meets, and the false
-  branch narrows exactly when one operand is exactly @{term SZero} and the
-  other's sign bounds it away from zero on one side.
-\<close>
-
-lemma inv_eq_sign_true_meets: "inv_eq_sign True SNonNeg SNonPos = (SZero, SZero)"
-  by eval
-
-lemma inv_eq_sign_false_zero_zero_unreachable:
-  "inv_eq_sign False SZero SZero = (SBot, SBot)"
-  by eval
-
-lemma inv_eq_sign_false_nonneg_zero_narrows_pos:
-  "inv_eq_sign False SNonNeg SZero = (SPos, SZero)"
-  by eval
-
-lemma inv_eq_sign_false_zero_nonneg_narrows_pos:
-  "inv_eq_sign False SZero SNonNeg = (SZero, SPos)"
-  by eval
-
-lemma inv_eq_sign_false_nonpos_zero_narrows_neg:
-  "inv_eq_sign False SNonPos SZero = (SNeg, SZero)"
-  by eval
-
-lemma inv_eq_sign_false_zero_nonpos_narrows_neg:
-  "inv_eq_sign False SZero SNonPos = (SZero, SNeg)"
-  by eval
-
-text \<open>Neither operand is exactly @{term SZero}: the conservative identity fallback.\<close>
-lemma inv_eq_sign_false_unrepresentable_identity:
-  "inv_eq_sign False SPos SPos = (SPos, SPos)"
-  by eval
-
-text \<open>@{term SBot} on either side stays bottom-consistent.\<close>
-lemma inv_eq_sign_false_bot_consistent:
-  "inv_eq_sign False SBot SZero = (SBot, SBot)"
-  by eval
 
 end

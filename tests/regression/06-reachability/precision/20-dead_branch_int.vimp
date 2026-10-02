@@ -1,0 +1,17 @@
+// PARAM: --analysis int
+// Ported from Example_Analysis_Result_Regression.thy
+// (result_demo_int_stmt1_reachable, result_demo_int_stmt2_unreachable).
+// x = 5 makes x < 0 infeasible: the then-branch is DEAD and the points around
+// it stay live. 05-unreachable_dead_branch_literal.vimp is the Interval case,
+// 19-dead_branch_sign.vimp the Sign one.
+fun main() {
+  x = 5;
+  __voblint_check(0 < x); // PROVED
+  if (x < 0) {
+    y = 1;
+    __voblint_check(false); // NOWARN
+  } else {
+    y = 2;
+  }
+  __voblint_check(0 < x); // PROVED
+}

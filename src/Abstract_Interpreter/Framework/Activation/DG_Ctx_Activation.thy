@@ -11,9 +11,9 @@ text \<open>
   \<open>dg_context_activation\<close> fixes such a solution over the routed generator, a
   set \<open>vars\<close> of keys whose own equations it bounds, and a reader \<open>sg\<close> that
   answers the empty set off \<open>vars\<close>. The set may contain every key the solver
-  visited or any subset. These facts derive the EDGE and COMB obligations the
-  activation backbone asks for. Entry and callee-seed coverage remain with the
-  concrete analysis.
+  visited or any subset. These facts derive the EDGE obligation the activation
+  backbone asks for; \<open>Routed_Context\<close> derives COMB for the routed call shape.
+  Entry and callee-seed coverage remain with the concrete analysis.
 
   Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
   \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
@@ -137,7 +137,7 @@ text \<open>At the entry the generator wraps its fold in one extra \<open>Side\<
   proved against the fold therefore transport to \<^const>\<open>routed_node_rhs\<close> without a separate
   entry case.\<close>
 lemma sides_fold_le_Gen:
-  "sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx))) sigma k
+  "(sides_of_program (side_rhs_fold_dg (acc0 v) (contribs v ctx)) sigma) k
    \<le> sides_of_rhs (Gen (v, ctx)) sigma k"
   unfolding routed_node_rhs_def Let_def
   by (cases "v = cfg_entry g") (auto simp: Let_def intro: sup.cobounded1)
@@ -182,8 +182,7 @@ lemma edge_bound_global:
 proof -
   have "dg_global (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) (\<lambda>_. analysis_global))
                  sigma (Inr analysis_global))
-      \<le> dg_global (sides_of_rhs (sp_compile (side_rhs_fold_dg (acc0 v) (contribs v ctx)))
-                   sigma (Inr analysis_global))"
+      \<le> dg_global ((sides_of_program (side_rhs_fold_dg (acc0 v) (contribs v ctx)) sigma) (Inr analysis_global))"
     using sides_le_side_rhs_fold_dg[OF contribs_wf edge_program_mem_contribs[OF e],
         where k = "Inr analysis_global"]
     by (simp add: less_eq_dg_state_def)
@@ -225,53 +224,6 @@ next
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e] edge_bound_global[OF cov_v e]])
   also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     using cov_v by simp
-  finally show ?thesis .
-qed
-
-subsection \<open>COMB: the guarded combine transport\<close>
-
-text \<open>The caller, callee-result and continuation slots are transported independently; which
-  caller a return belongs to is settled by the activation-trace semantics, so this layer never has to
-  reconstruct the activation pairing itself.  The two bounds are assumptions because the
-  combine program that establishes them is built by the routed call generator, not here.\<close>
-
-lemma dg_ctx_act_comb_covered:
-  assumes covCl: "(cl, c1) \<in> vars"
-    and covEx: "(ex, c2) \<in> vars"
-    and covV: "(v, cv) \<in> vars"
-    and s: "s \<in> \<gamma>\<^sub>M (sg (Inl (cl, c1)))"
-    and t: "t \<in> \<gamma>\<^sub>M (sg (Inl (ex, c2)))"
-    and bound_local:
-      "dg_local (traverse_program
-                 (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma)
-       \<le> dg_local (sigma (Inl (v, cv)))"
-    and bound_global:
-      "dg_global (sides_of_program
-                (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma
-                (Inr analysis_global))
-       \<le> dg_global (sigma (Inr analysis_global))"
-  shows "combine_collect \<G> (ci_dst ci) s t \<in> \<gamma>\<^sub>M (sg (Inl (v, cv)))"
-proof -
-  let ?Dc = "dg_local (sigma (Inl (cl, c1)))"
-  let ?De = "dg_local (sigma (Inl (ex, c2)))"
-  let ?G = "dg_global (sigma (Inr analysis_global))"
-  have sin: "s \<in> \<gamma>\<^sub>D\<^sub>G ?Dc ?G"
-    using s covCl by simp
-  have tin: "t \<in> \<gamma>\<^sub>D\<^sub>G ?De ?G"
-    using t covEx by simp
-  have "combine_collect \<G> (ci_dst ci) s t
-        \<in> \<gamma>\<^sub>D\<^sub>G
-            (dg_local (traverse_program
-               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma))
-            (dg_global (sides_of_program
-               (dg_spec_combine_program S ci (Inl (cl, c1)) (Inl (ex, c2)) (\<lambda>_. analysis_global)) sigma
-               (Inr analysis_global)))"
-    using combine_sound_program[where \<tau> = sigma and src_cc = "Inl (cl, c1)"
-        and src_ex = "Inl (ex, c2)" and gk = analysis_global and ci = ci, OF sin tin] .
-  also have "\<dots> \<subseteq> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, cv)))) ?G"
-    by (rule gammaDG_mono[OF bound_local bound_global])
-  also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, cv)))"
-    using covV by simp
   finally show ?thesis .
 qed
 

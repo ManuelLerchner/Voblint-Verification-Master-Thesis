@@ -1,5 +1,5 @@
 theory DG_Local_State_Exec
-  imports "Voblint_Framework.DG_Local_State_Spec"
+  imports
     Ownership_Split_Exec
     Default_St_Reachability
 begin
@@ -89,6 +89,11 @@ text \<open>Consumed at code-generation time like every other specification buil
 declare exec_dg_spec_def [code_unfold]
 
 subsection \<open>Basic equations\<close>
+
+text \<open>
+  Unfolding equations for each field of \<open>exec_dg_spec\<close>: step, entry and
+  combine are the executable transfers lifted over reachability.
+\<close>
 
 lemma dg_spec_step_exec_dg_spec:
   "dg_spec_step (exec_dg_spec \<G> empty_pred tf_st enter_st) a

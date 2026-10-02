@@ -75,7 +75,7 @@ candidate. What each mode then does with it:
 `Exec_Int_DG_Run` (Examples/Int) proves the `Refine_Never` and `Refine_Once` results by
 real solver runs and closes with `dgExI_never_ne_once`; the CLI regression pins all
 three modes. That `Once` equals `Fixpoint` here
-is not a general fact: `refinement_round_is_progressive` in `Example_Int_Domain` is a
+is not a general fact: `refinement_round_is_progressive` in `Int_Refinement_Control` is a
 witness where a further round still makes progress.
 
 ## Division and reduction

@@ -113,6 +113,11 @@ lemma covered_ret3_fneg_2: "(Statement 3, [Statement 6]) \<in> fst sign_nest_2_s
 
 section \<open>The solver's post-solution\<close>
 
+text \<open>
+  As at \<open>k = 1\<close>: termination of \<open>sign_nest_2_eqs\<close> gives a solve domain, and the
+  solver's \<open>partial_post_solution\<close> gives \<open>sign_nest_2_pp_st\<close>.
+\<close>
+
 lemma sign_nest_2_solve_dom:
   "TD_side_always_join_Interp.solve_dom TYPE(call_string_gk)
      TYPE((sign default_st lifted, sign default_st lifted) dg_state)
@@ -132,6 +137,11 @@ abbreviation sigma_2 ::
   "sigma_2 \<equiv> snd sign_nest_2_sol"
 
 section \<open>Activation-indexed collecting soundness for the 2-call-string-routed solution\<close>
+
+text \<open>
+  \<open>sign_ctx_sg_2\<close> reads the solved local state at each key; the interpretation
+  \<open>sign_nest_2_cs\<close> instantiates \<open>call_string_routed_context\<close> at \<open>k = 2\<close>.
+\<close>
 
 abbreviation sign_ctx_sg_2 ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign default_st lifted" where
@@ -237,6 +247,11 @@ qed
 
 section \<open>The headline theorem: 2-call-string activation collecting soundness\<close>
 
+text \<open>
+  \<open>sign_nest_2_activation_collect_sound\<close>, from \<open>sign_nest_2_cs\<close> and the
+  initial-store bound shared with \<open>k = 1\<close>.
+\<close>
+
 theorem sign_nest_2_activation_collect_sound:
   "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 2),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
@@ -260,28 +275,28 @@ text \<open>
 
 lemma sign_k2_g_entry_fpos:
   "sign_nest_lookup
-     (dg_local (snd sign_nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
+     (dg_local (sigma_2 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
      (STR ''p'') = SPos"
   unfolding sign_nest_2_sol_def sign_nest_2_eqs_def by eval
 
 lemma sign_k2_g_entry_fneg:
   "sign_nest_lookup
-     (dg_local (snd sign_nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
+     (dg_local (sigma_2 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
      (STR ''p'') = SNeg"
   unfolding sign_nest_2_sol_def sign_nest_2_eqs_def by eval
 
 theorem sign_k2_strictly_more_precise_than_k1_at_g:
   "sign_nest_lookup
-     (dg_local (snd sign_nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
+     (dg_local (sigma_2 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 5]))))
      (STR ''p'')
      < sign_nest_lookup
-         (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+         (dg_local (sigma_1 (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
          (STR ''p'')"
   "sign_nest_lookup
-     (dg_local (snd sign_nest_2_sol (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
+     (dg_local (sigma_2 (Inl (FunctionEntry (STR ''g''), [Statement 2, Statement 6]))))
      (STR ''p'')
      < sign_nest_lookup
-         (dg_local (snd sign_nest_1_sol (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
+         (dg_local (sigma_1 (Inl (FunctionEntry (STR ''g''), [Statement 2]))))
          (STR ''p'')"
   by (simp_all add: sign_nest_1_g_entry_merged sign_k2_g_entry_fpos sign_k2_g_entry_fneg
                     less_sign_def sign_le_refl)

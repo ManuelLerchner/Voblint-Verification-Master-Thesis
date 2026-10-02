@@ -1,0 +1,15 @@
+// PARAM: --analysis sign --globals join
+// Ported from Example_Checks_Store_Only.thy (checks_ex_classify_1/3/5,
+// checks_ex_report_eval). One Sign report carries all three verdicts. y is
+// Positive after y = 5, so 0 < y is PROVED. After y = 0 it is Zero, so the
+// same condition is REFUTED rather than merely unproven. z is an
+// unconstrained __voblint_nondet_int(), so UNKNOWN is the only sound answer
+// for z == 1.
+fun main() {
+  y = 5;
+  __voblint_check(0 < y); // PROVED
+  y = 0;
+  __voblint_check(0 < y); // REFUTED
+  z = __voblint_nondet_int();
+  __voblint_check(z == 1); // UNKNOWN
+}

@@ -1,7 +1,5 @@
 theory Int_Sound
   imports
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    Int_Exec
     Int_Classify
 begin
 

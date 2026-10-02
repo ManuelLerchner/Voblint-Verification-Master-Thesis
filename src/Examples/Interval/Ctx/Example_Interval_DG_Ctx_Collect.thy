@@ -272,6 +272,11 @@ qed
 
 subsection \<open>The concrete store-decoding context, and its agreement with the analysis\<close>
 
+text \<open>
+  \<open>ivl_context\<close> decodes the entered store's formals, and the lemmas below show it
+  agrees with the analysis's routed context at both calls of \<open>twice\<close>.
+\<close>
+
 definition ivl_context :: "cfg_node \<Rightarrow> ivl list \<Rightarrow> store \<Rightarrow> ivl list" where
   "ivl_context = formals_context_sem twice_cfg ivl_decode"
 

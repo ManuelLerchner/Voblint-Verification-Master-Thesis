@@ -1,7 +1,6 @@
 theory Example_Interval_DG_Ctx_Flagship
   imports
     Example_Interval_DG_IP_Flagship
-    "Voblint_Analysis_Interval.Interval_Analyses"
 begin
 
 unbundle default_st_syntax

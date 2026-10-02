@@ -1,5 +1,5 @@
 theory Sign_Arithmetic
-  imports Sign_Warrowing "Voblint_VIMP.VIMP_Expr" "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Sign_Warrowing "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 
 section \<open>What arithmetic does to a known sign\<close>
@@ -236,6 +236,13 @@ lemma sign_tobool_mono:
   by (cases a1; cases a2; auto simp: less_eq_sign_def split: if_splits)
 
 subsection \<open>Abstract expression evaluation\<close>
+
+text \<open>
+  \<open>aval_sign\<close> evaluates an expression bottom-up with the sign operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
 
 fun aval_sign :: "exp => (vname => sign) => sign" where
     "aval_sign (N n)        \<sigma> = sign_of_int n"

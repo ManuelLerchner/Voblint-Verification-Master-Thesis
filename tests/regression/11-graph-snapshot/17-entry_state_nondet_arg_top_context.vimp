@@ -1,0 +1,79 @@
+// PARAM: --analysis interval --context entry-state
+// Ported from Example_Interval_DG_EntryState_Ctx (ctx_call_val,
+// callee_covered_call, callee_not_under_main). x is drawn from
+// __voblint_nondet_int(), so it is top at the call and p's entry-state context
+// is top itself: one cluster covers every concrete argument, and no p cluster
+// exists under the root context. The check is genuinely undetermined (y can be
+// any value); it is here because a case needs a verdict.
+// 03-procedures/soundness/01-entry_state_random_arg.vimp pins the verdict side.
+// EXPECT-GRAPH-BEGIN
+// clusters:
+//   cluster_ctx_0: main / root context
+//     main_pp5_ctx0
+//     main_exit_main_ctx0
+//     main_pp2_ctx0
+//     main_pp3_ctx0
+//     main_pp4_ctx0
+//     main_entry_main_ctx0
+//   cluster_ctx_1: p / ⊤
+//     p_exit_p_ctx0
+//     p_pp0_ctx0
+//     p_entry_p_ctx0
+//
+// nodes:
+//   main_pp5_ctx0: pp5
+//       interval:
+//         x=⊤
+//         y=⊤
+//   main_exit_main_ctx0: exit_main
+//       interval:
+//         x=⊤
+//         y=⊤
+//   main_pp2_ctx0: pp2
+//       interval:
+//         x=⊤
+//         y=⊤
+//   main_pp3_ctx0: pp3
+//       interval:
+//         x=⊤
+//         y=⊤
+//   main_pp4_ctx0: pp4 [unknown]
+//       interval:
+//         x=⊤
+//         y=⊤
+//       check 0 < y
+//   main_entry_main_ctx0: entry_main
+//       interval:
+//         x=⊤
+//         y=⊤
+//   p_exit_p_ctx0: exit_p
+//       interval:
+//         a=⊤
+//   p_pp0_ctx0: pp0
+//       interval:
+//         a=⊤
+//   p_entry_p_ctx0: entry_p
+//       interval:
+//         a=⊤
+//
+// edges:
+//   p_pp0_ctx0 -> p_exit_p_ctx0: return a
+//   main_pp2_ctx0 -> main_pp3_ctx0: x := __voblint_nondet_int()
+//   main_pp4_ctx0 -> main_pp5_ctx0: check(0 < y)
+//   main_pp5_ctx0 -> main_exit_main_ctx0: return
+//   main_entry_main_ctx0 -> main_pp2_ctx0: body(main)
+//   p_entry_p_ctx0 -> p_pp0_ctx0: body(p)
+//   main_pp3_ctx0 -> p_entry_p_ctx0: enter p(x)
+//   p_exit_p_ctx0 -> main_pp4_ctx0: combine y := p(x)
+//   main_pp3_ctx0 -> main_pp4_ctx0: call-to-return p
+// EXPECT-GRAPH-END
+
+
+fun p(a) {
+  return a;
+}
+fun main() {
+  x = __voblint_nondet_int();
+  y = p(x);
+  __voblint_check(0 < y); // UNKNOWN
+}

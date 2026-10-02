@@ -504,9 +504,9 @@ text \<open>
   Goblint's \<open>combine_env\<close> answers the callee exit and its \<open>combine_assign\<close>
   answers \<open>man.local\<close>, so the composed default there ends at the callee's
   value. Both are neutral for their own purpose; this one is neutral for
-  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage --
-  \<open>ownership_split_lift\<close> is the one in this session -- relies on that: were the
-  default to substitute the callee exit first, the wrapper would run against a
+  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage, such as
+  \<open>ownership_split_dg_spec_st_for\<close> in \<open>Ownership_Split_Exec\<close>, relies on
+  that: were the default to substitute the callee exit first, the wrapper would run against a
   continuation the caller never had. Changing the default is therefore an
   audit of every partial override, not a one-line edit.
 \<close>

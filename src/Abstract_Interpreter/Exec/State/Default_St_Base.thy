@@ -151,6 +151,11 @@ qed
 
 subsection \<open>Locations and raw lookup\<close>
 
+text \<open>
+  A \<open>location\<close> names a local or a global variable, and a raw state is a
+  pair of dictionaries read by \<open>default_st_rep_get\<close>.
+\<close>
+
 datatype location =
   Local_Location (location_vname: vname)
 | Global_Location (location_vname: vname)
@@ -169,6 +174,12 @@ fun default_st_rep_get ::
 | "default_st_rep_get (l, g) (Global_Location x) = default_dict_get g x"
 
 subsection \<open>Extensional equality\<close>
+
+text \<open>
+  Two raw states are equal when they agree on every location's lookup, whatever
+  their dictionaries look like; \<open>eq_default_st_rep\<close> is an equivalence.
+\<close>
+
 definition eq_default_st_rep ::
   "('a::bot) default_st_rep => 'a default_st_rep => bool"
 where
@@ -198,20 +209,19 @@ lemma eq_default_st_repD:
 
 subsection \<open>Executable pointwise order\<close>
 
+text \<open>
+  \<open>le_default_st_rep_code\<close> compares both dictionaries with
+  \<open>le_default_dict\<close> and is shown equal to the pointwise order on lookups.
+\<close>
+
 fun le_default_st_rep_code ::
   "('a::order_bot) default_st_rep => 'a default_st_rep => bool"
 where
   "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
      le_default_dict l1 l2 \<and> le_default_dict g1 g2"
 
-lemma le_default_st_rep_code_raw_iff:
-  "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
-    (\<forall>loc. default_st_rep_get (l1, g1) loc \<le>
-      default_st_rep_get (l2, g2) loc)"
-  by (simp add: all_location_iff le_default_dict_iff)
-
 text \<open>
-  The same characterization without the pair pattern, so that quotient-level
+  The characterization avoids the pair pattern, so that quotient-level
   statements can be discharged by \<open>transfer\<close> alone instead of re-opening both
   representatives.
 \<close>
@@ -223,6 +233,12 @@ lemma le_default_st_rep_code_iff:
 
 
 subsection \<open>The extensional quotient, lookup and point update\<close>
+
+text \<open>
+  \<open>default_st\<close> is the quotient of raw states by extensional equality.
+  Lookup and point update lift to it because both respect the equivalence.
+\<close>
+
 quotient_type 'a default_st =
   "('a::bot) default_st_rep" / "eq_default_st_rep"
   morphisms rep_default_st Abs_default_st
@@ -284,13 +300,6 @@ lemma default_st_get_Abs [simp]:
   "(Abs_default_st s)\<langle>loc\<rangle> = default_st_rep_get s loc"
   by transfer simp
 
-lemma default_st_get_mk:
-  "\<llangle>l, g\<rrangle>\<langle>loc\<rangle> =
-     (case loc of
-        Local_Location x => default_dict_get l x
-      | Global_Location x => default_dict_get g x)"
-  by (cases loc) simp_all
-
 lemma Abs_default_st_rep_default_st [simp]:
   "Abs_default_st (rep_default_st s) = s"
   by (fact Lifting.Quotient_abs_rep [OF Quotient_default_st])
@@ -328,6 +337,11 @@ lemma default_st_eqI:
 
 
 subsection \<open>Order, bottom and executable equality\<close>
+
+text \<open>
+  Bottom is the pair of empty dictionaries with bottom defaults; the order lifts
+  \<open>le_default_st_rep_code\<close>, which also yields an executable equality.
+\<close>
 
 instantiation default_st :: (bot) bot
 begin

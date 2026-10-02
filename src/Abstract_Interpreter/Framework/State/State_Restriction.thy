@@ -20,20 +20,6 @@ definition restrict_global_for ::
   "(vname => bool) => 'a::bounded_semilattice_sup_bot abs_state => 'a abs_state" where
   "restrict_global_for \<G> sigma = combine_env \<G> bot sigma"
 
-lemma restrict_local_for_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-     restrict_local_for \<G> (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
-       \<le> restrict_local_for \<G> sigma2"
-  unfolding restrict_local_for_def le_fun_def
-  by (auto dest: le_funD)
-
-lemma restrict_global_for_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow>
-     restrict_global_for \<G> (sigma1 :: 'a::bounded_semilattice_sup_bot abs_state)
-       \<le> restrict_global_for \<G> sigma2"
-  unfolding restrict_global_for_def le_fun_def
-  by (auto dest: le_funD)
-
 lemma restrict_local_for_join [simp]:
   "restrict_local_for \<G> (A \<squnion> B) = restrict_local_for \<G> A \<squnion> restrict_local_for \<G> B"
   unfolding restrict_local_for_def sup_fun_def by (rule ext) simp

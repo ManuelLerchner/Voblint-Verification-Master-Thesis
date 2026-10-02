@@ -1,9 +1,15 @@
 theory Interval_Backward
-  imports Interval_Arithmetic "Voblint_Nonrelational.Exec_Backward" "Voblint_VIMP.VIMP_Expr"
+  imports Interval_Arithmetic "Voblint_Nonrelational.Exec_Backward"
     "Voblint_Nonrelational.Abstract_Arithmetic" Interval_Numeric_Queries
 begin
 
 section \<open>Interval backward filtering\<close>
+
+text \<open>
+  The interval comparison queries, the evaluator \<open>aval_ivl\<close>, and the inverse
+  operators that narrow interval operands against a guard's outcome, packaged as
+  \<open>ivl_refine_ops\<close> with its refinement certificate.
+\<close>
 
 subsection \<open>Comparison and truthiness queries\<close>
 
@@ -144,6 +150,13 @@ proof -
 qed
 
 subsection \<open>Abstract expression evaluation\<close>
+
+text \<open>
+  \<open>aval_ivl\<close> evaluates an expression bottom-up with the interval operations above.
+  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
+  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
+  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
+\<close>
 
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
     "aval_ivl (N n)        \<sigma> = ivl_of_int n"
@@ -307,8 +320,7 @@ qed
 lemma inv_eq_ivl_mono:
   assumes A1: "a1 \<le> (a1' :: ivl)" and A2: "a2 \<le> a2'"
   shows
-    "fst (inv_eq_ivl r a1 a2) \<le> fst (inv_eq_ivl r a1' a2') \<and>
-     snd (inv_eq_ivl r a1 a2) \<le> snd (inv_eq_ivl r a1' a2')"
+    "le_pair (inv_eq_ivl r a1 a2) (inv_eq_ivl r a1' a2')"
 proof (cases r)
   case True
   have "a1 \<sqinter> a2 \<le> a1' \<sqinter> a2'" by (rule inf_mono[OF A1 A2])
@@ -321,8 +333,7 @@ qed
 
 lemma inv_less_ivl_mono:
   assumes a1: "(a1 :: ivl) \<le> a1'" and a2: "(a2 :: ivl) \<le> a2'"
-  shows "fst (inv_less_ivl res a1 a2) \<le> fst (inv_less_ivl res a1' a2')
-       \<and> snd (inv_less_ivl res a1 a2) \<le> snd (inv_less_ivl res a1' a2')"
+  shows "le_pair (inv_less_ivl res a1 a2) (inv_less_ivl res a1' a2')"
 proof -
   obtain l1 u1 where ha1: "a1 = Ivl l1 u1" by (rule ivl_exhaustE)
   obtain l2 u2 where ha2: "a2 = Ivl l2 u2" by (rule ivl_exhaustE)
