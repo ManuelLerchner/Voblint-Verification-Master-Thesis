@@ -93,13 +93,14 @@ def test_the_readme_lists_shorthands_in_its_one_table(tool):
             }
         ],
     }
-    text = tool.render_readme(data)
+    text = tool.render_readme(data, "a claim through `cover`")
     assert text.count("| Symbol |") == 1
     assert "| Shorthand |" not in text
     assert (
         "cover v ctx<br>In `routed_context`, input only, short for γ<sub>M</sub>"
         in text
     )
+    assert "cover v ctx" not in tool.render_readme(data, "no mention here")
 
 
 def _has_notation_command():
