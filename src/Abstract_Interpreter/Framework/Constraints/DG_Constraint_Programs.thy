@@ -299,15 +299,6 @@ lemma sides_of_program_side_rhs_fold_dg_char:
   unfolding side_rhs_fold_dg_def
   by (rule sides_of_program_fold_rhs_program_projected_char[OF wf])
 
-text \<open>
-  Grouping is invisible to a fold. All three observables of \<^const>\<open>side_rhs_fold_dg\<close> ---
-  the local accumulator, the side contribution at one key, and the dependency set --- are
-  sups, respectively unions, over the elements, so replacing a segment by a segment of
-  nested folds with the same underlying elements changes nothing. This is what lets a
-  generator that folds one contribution per call site agree with one that folds one per
-  call-site/callee pair.
-\<close>
-
 lemma side_acc_dg_as_foldr:
   "side_acc_dg acc \<tau> ps = acc \<squnion> foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps bot"
   by (simp add: side_acc_dg_def fold_acc_projected_as_foldr)
@@ -318,23 +309,6 @@ text \<open>The same equation with the accumulator left as the fold's seed, whic
 lemma side_acc_dg_as_foldr_seeded:
   "side_acc_dg acc \<tau> ps = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps acc"
   by (simp only: side_acc_dg_as_foldr foldr_join_seed_out[symmetric])
-
-lemma foldr_sup_dg_local_map_fold:
-  assumes wf: "\<forall>ps \<in> set pss. \<forall>p \<in> set ps. sp_wf p"
-  shows "foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a)
-       (map (\<lambda>ps. side_rhs_fold_dg bot ps) pss) b
-     = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) (concat pss) b"
-  using wf
-  by (induction pss arbitrary: b)
-     (simp_all add: traverse_side_rhs_fold_dg side_acc_dg_as_foldr foldr_sup_acc)
-
-lemma foldr_sup_sides_map_fold:
-  assumes wf: "\<forall>ps \<in> set pss. \<forall>p \<in> set ps. sp_wf p"
-  shows "foldr (\<lambda>p a. sides_of_program p \<tau> z \<squnion> a) (map (\<lambda>ps. side_rhs_fold_dg bot ps) pss) b
-     = foldr (\<lambda>p a. sides_of_program p \<tau> z \<squnion> a) (concat pss) b"
-  using wf
-  by (induction pss arbitrary: b)
-     (simp_all add: sides_of_program_side_rhs_fold_dg_char foldr_sup_acc)
 
 lemma side_rhs_fold_dg_sides_mono:
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"

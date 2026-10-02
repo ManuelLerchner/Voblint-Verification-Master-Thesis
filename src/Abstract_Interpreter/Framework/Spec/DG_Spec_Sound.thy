@@ -276,9 +276,8 @@ lemma dep_combine_transfer_program:
   by (simp add: combine_transfer_program_def combine_program_at_def sp_compile_with_def
       sp_bind_def)
 
-text \<open>What the compiled form observes when both stages are local, and the two
-  reads it always makes --- the combine counterparts of the edge-tree facts in
-  \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
+text \<open>What the compiled form observes when both stages are local --- the combine
+  counterparts of the edge-tree facts in \<^theory>\<open>Voblint_Framework.DG_Spec\<close>.\<close>
 
 lemma traverse_local_combine_program [simp]:
   "traverse_program (combine_transfer_program (local_combine_transfer h) src_cc src_ex gk) \<tau>
@@ -297,10 +296,6 @@ lemma dep_local_combine_program [simp]:
      = {src_cc, src_ex}"
   by (simp add: dep_combine_transfer_program local_combine_transfer_def
       sp_compile_with_def sp_return_def)
-
-lemma dep_combine_transfer_program_sources:
-  "{src_cc, src_ex} \<subseteq> dep_program \<tau> (combine_transfer_program T src_cc src_ex gk)"
-  by (simp add: dep_combine_transfer_program)
 
 subsection \<open>What a manager-native specification owes\<close>
 
