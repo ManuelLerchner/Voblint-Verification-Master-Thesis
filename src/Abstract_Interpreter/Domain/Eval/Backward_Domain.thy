@@ -691,18 +691,12 @@ text \<open>
   either operand of a plus/minus/times from its result) instantiates that
   inverse with this shared no-op: both operands pass through unchanged. The
   first argument is the known result or truth value, so the same no-op serves
-  the arithmetic inverses and the comparison inverses. Any
-  @{class numeric_domain} discharges its soundness for free, so domains share
-  one proof instead of each restating the same trivial obligation.
+  the arithmetic inverses and the comparison inverses. Its soundness
+  obligation unfolds to the operands' own membership, so each instance
+  discharges it with \<open>inv_conservative_def\<close>.
 \<close>
 
 definition inv_conservative :: "'r => 'a => 'a => 'a * 'a" where
   "inv_conservative r a1 a2 = (a1, a2)"
-
-lemma inv_conservative_sound:
-  fixes a1 a2 :: "'a::numeric_domain"
-  assumes "n1 \<in> \<gamma> a1" and "n2 \<in> \<gamma> a2"
-  shows "n1 \<in> \<gamma> (fst (inv_conservative r a1 a2)) \<and> n2 \<in> \<gamma> (snd (inv_conservative r a1 a2))"
-  using assms by (simp add: inv_conservative_def)
 
 end

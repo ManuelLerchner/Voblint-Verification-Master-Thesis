@@ -16,7 +16,7 @@ Executable witnesses live under
 | `Interval_Exec.thy` | executable transfer mirror + commutation |
 | `Interval_Special.thy` | the abstract implementation of the `Min`/`Max` special calls |
 | `Interval_Numeric_Queries.thy` | Interval's instance of `sound_numeric_queries` |
-| `Interval_Point_Digest.thy` | the point abstraction: a slot is a point when it is a singleton interval |
+| `Interval_Point_Digest.thy` | the point abstraction: an integer as its singleton interval |
 | `Interval_Sound.thy` | the `dg_spec` Interval supplies, its concretization, and `analysis_contract` — no context, no solver |
 | `Interval_Classify.thy` | the derived check classifier; its executable tests live in `src/Examples/Interval/Interval_Regression.thy` |
 | `generated/Interval_Analyses.thy` | three `global_interpretation`s, each taking the global update rule `r` as a parameter: `interval_rule`, `interval_es_rule` and `interval_cs_rule`, each of the shared `dg_analysis_exec`, at the unit, entry-state and call-string contexts. Generated from `manifests/analyses.yaml`; see below |

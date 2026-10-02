@@ -272,14 +272,6 @@ lemma set_return_call_action_list [simp]:
   unfolding return_call_action_list_def return_call_actions_def
   by (simp add: set_call_target_list[OF assms])
 
-text \<open>The return list is a map over \<^const>\<open>call_target_list\<close>, so the two carry the same call
-  sites in the same order by construction and that agreement cannot lapse.\<close>
-
-lemma return_call_action_list_eq_call_target_list:
-  "return_call_action_list g v
-     = map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
-  by (simp add: return_call_action_list_def)
-
 subsection \<open>Call sites and the resolver adapter\<close>
 
 text \<open>
@@ -362,18 +354,6 @@ lemma static_resolve_iff [simp]:
            \<longleftrightarrow> (cc, ca, FunctionEntry p, v) \<in> calls g"
   unfolding static_resolve_def by (rule static_targets_iff[OF assms])
 
-text \<open>Resolving each listed site loses nothing: the sites' resolved targets, concatenated,
-  carry exactly the pairs \<^const>\<open>call_target_list\<close> lists.  Order is not preserved --- one
-  site's targets are gathered together --- so this is a set equality.  That is enough for
-  the commutative, idempotent join folds the constraint generator runs over these entries,
-  and only for those; a fold that could observe order or multiplicity would need more.\<close>
-
-lemma set_concat_call_site_static_targets:
-  "set (concat (map (\<lambda>(cc, ca). map (h cc ca) (static_targets g v cc ca))
-                    (call_site_list g v)))
-     = set (map (\<lambda>(c, ca, p). h c ca p) (call_target_list g v))"
-  by (force simp: call_site_list_def static_targets_def image_iff)
-
 section \<open>Which unknowns a run has to have solved\<close>
 
 text \<open>
@@ -450,13 +430,6 @@ definition vars_cover_exec :: "cfg \<Rightarrow> (cfg_node \<times> unit) set \<
    \<and> list_all (\<lambda>(u, a, v). (v, ()) \<in> vars) (cfg_intra_list g)
    \<and> list_all (\<lambda>(c, ca, ce, k). (ce, ()) \<in> vars \<and> (k, ()) \<in> vars) (cfg_calls_list g)"
 
-lemma vars_cover_of_exec:
-  assumes finE: "finite (intra g)" and finC: "finite (calls g)"
-    and cover: "vars_cover_exec g vars"
-  shows "vars_cover g vars"
-  using cover unfolding vars_cover_exec_def vars_cover_def
-  by (auto simp: list_all_iff set_cfg_intra_list[OF finE] set_cfg_calls_list[OF finC])
-
 
 subsection \<open>Coverage when the unknowns carry a context\<close>
 
@@ -523,20 +496,6 @@ lemma ctx_vars_cover_combineD [dest]:
   shows "\<And>u ctx dst fs as q k. (u, ctx) \<in> vars
      \<Longrightarrow> (u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls g \<Longrightarrow> (k, ctx) \<in> vars"
   using cover unfolding ctx_vars_cover_def by blast
-
-text \<open>
-  The unit context is the degenerate instance, and the inclusion runs one way
-  only: \<^const>\<open>vars_cover\<close> covers a successor whether or not the source was
-  covered, which is strictly more than closure asks for.  A context-sensitive
-  system has no such statement to make, so this is a bridge for callers holding
-  the older premise, not a definition of one in terms of the other.
-\<close>
-
-lemma ctx_vars_cover_of_vars_cover:
-  assumes cover: "vars_cover g vars"
-  shows "ctx_vars_cover g (\<lambda>_ _ _ _. ()) () vars"
-  using cover unfolding vars_cover_def
-  by (intro ctx_vars_coverI) (auto simp: unit_eq)
 
 text \<open>
   Contextual coverage is testable the way the unit one is, with one difference

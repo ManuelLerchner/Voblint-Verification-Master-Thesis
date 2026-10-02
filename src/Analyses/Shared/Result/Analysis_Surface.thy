@@ -109,16 +109,6 @@ definition report_with_state ::
 end
 
 text \<open>
-  Unfolds the surface down to the \<^const>\<open>classify_checks\<close> term it stands for. A caller
-  proving one of its own report names equal to the surface needs both equations, and
-  \<^const>\<open>analysis_surface.state_at\<close> in \<open>abs_def\<close> form because \<^const>\<open>analysis_surface.report\<close>
-  passes it partially applied while the definition states it fully applied.
-\<close>
-
-lemmas surface_unfold =
-  analysis_surface.report_def analysis_surface.state_at_def [abs_def]
-
-text \<open>
   A locale constant carries no code equation of its own, so every report reading through
   the surface would drop out of the generated code and out of \<open>by eval\<close> alike. Both
   defining equations are already in executable shape --- \<^const>\<open>classify_checks\<close> over a

@@ -212,22 +212,6 @@ abbreviation cmb_st :: "cfg \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'a 
 where
   "cmb_st g \<equiv> routed_call_program spec_st analysis_global seed (resolve_st g) (\<lambda>d. d = Bot)"
 
-text \<open>The two tree properties that make the identity hooks legitimate: neither the
-  compiled intra edge nor the routed combine publishes at \<open>analysis_global\<close>, and both answer with
-  \<open>bot\<close> on the globals half.\<close>
-
-lemma intra_st_side_free: "sides_of_program (intra_st ctx' src a) \<tau> z = bot"
-  by (simp add: dg_spec_edge_program_def dg_spec_step_exec_dg_spec)
-
-lemma cmb_st_side_free_at_analysis_global:
-  "sides_of_program (cmb_st g route' ctx' ca cc ex) \<tau> (Inr analysis_global) = bot"
-  by (rule routed_call_program_side_free_at_analysis_global
-        [OF dg_spec_wf_exec_dg_spec])
-     (auto simp: dgs_enter_exec_dg_spec
-        dg_spec_combine_transfer_exec_dg_spec
-        local_transfer_def local_combine_transfer_def
-        dest!: enter_runs_local_pub_bot)
-
 theorem pp_st:
   assumes pp: "part_post_solution
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route_st

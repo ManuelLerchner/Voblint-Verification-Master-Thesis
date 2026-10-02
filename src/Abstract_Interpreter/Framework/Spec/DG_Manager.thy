@@ -160,13 +160,6 @@ lemma sp_wf_dg_read_global [intro, simp]: "sp_wf (dg_read_global gk)"
 lemma sp_wf_dg_sideg [intro, simp]: "sp_wf (dg_sideg gk gd)"
   by (simp add: dg_sideg_def)
 
-text \<open>Reading an unknown depends on it, whatever the program does next --- now
-  an instance of the law above rather than its own case analysis.\<close>
-
-lemma dep_aux_dg_read_at_source:
-  "src \<in> dep_aux \<tau> (dg_read_at src K)"
-  by simp
-
 subsection \<open>Constructing a manager\<close>
 
 text \<open>

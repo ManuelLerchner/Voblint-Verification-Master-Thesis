@@ -52,9 +52,6 @@ text \<open>Return-value rehydration at the caller: write the callee's \<open>re
 definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
   "combine_collect \<G> dst s t = combine_assign dst (t ret_var) (combine_env \<G> s t)"
 
-lemma combine_collect_None: "combine_collect \<G> None s t = combine_env \<G> s t"
-  by (simp add: combine_collect_def)
-
 subsection \<open>Call-entry transfer\<close>
 
 text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in the caller store,

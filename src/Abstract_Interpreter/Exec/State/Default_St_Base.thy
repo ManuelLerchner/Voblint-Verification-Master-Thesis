@@ -220,14 +220,8 @@ where
   "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
      le_default_dict l1 l2 \<and> le_default_dict g1 g2"
 
-lemma le_default_st_rep_code_raw_iff:
-  "le_default_st_rep_code (l1, g1) (l2, g2) \<longleftrightarrow>
-    (\<forall>loc. default_st_rep_get (l1, g1) loc \<le>
-      default_st_rep_get (l2, g2) loc)"
-  by (simp add: all_location_iff le_default_dict_iff)
-
 text \<open>
-  The same characterization without the pair pattern, so that quotient-level
+  The characterization avoids the pair pattern, so that quotient-level
   statements can be discharged by \<open>transfer\<close> alone instead of re-opening both
   representatives.
 \<close>
@@ -305,13 +299,6 @@ unbundle default_st_carrier_syntax
 lemma default_st_get_Abs [simp]:
   "(Abs_default_st s)\<langle>loc\<rangle> = default_st_rep_get s loc"
   by transfer simp
-
-lemma default_st_get_mk:
-  "\<llangle>l, g\<rrangle>\<langle>loc\<rangle> =
-     (case loc of
-        Local_Location x => default_dict_get l x
-      | Global_Location x => default_dict_get g x)"
-  by (cases loc) simp_all
 
 lemma Abs_default_st_rep_default_st [simp]:
   "Abs_default_st (rep_default_st s) = s"

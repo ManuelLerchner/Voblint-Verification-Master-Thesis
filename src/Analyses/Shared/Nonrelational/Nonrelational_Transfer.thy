@@ -318,15 +318,6 @@ begin
 lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
   unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
 
-lemma skip_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> skip \<sigma>1 \<le> skip \<sigma>2"
-  by (simp add: skip_def)
-
-lemma body_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> body p \<sigma>1 \<le> body p \<sigma>2"
-  by (simp add: body_def)
-
-lemma event_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> event evt \<sigma>1 \<le> event evt \<sigma>2"
-  by (simp add: event_def)
-
 lemma ret_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ret e p \<sigma>1 \<le> ret e p \<sigma>2"
   by (cases e) (simp_all add: ret_def assign_mono)
 

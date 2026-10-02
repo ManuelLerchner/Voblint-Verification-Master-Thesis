@@ -302,14 +302,9 @@ text \<open>
   Reachability adds no new concretization: a lifted carrier state is read
   through \<^const>\<open>gamma_lift\<close> over \<^const>\<open>default_st_gamma\<close>, as a lifted
   pointwise state is read through \<^const>\<open>gamma_lift\<close> over
-  \<^const>\<open>gamma_state\<close>. The second lemma relates the two through the
+  \<^const>\<open>gamma_state\<close>. The lemma below relates the two through the
   represented function.
 \<close>
-
-lemma gamma_lift_default_st_gamma_mono:
-  fixes x y :: "'a::numeric_domain default_st lifted"
-  shows "x \<le> y \<Longrightarrow> gamma_lift (default_st_gamma \<G>) x \<subseteq> gamma_lift (default_st_gamma \<G>) y"
-  by (rule gamma_lift_mono[OF default_st_gamma_mono])
 
 lemma gamma_lift_default_st_gamma_to_fun:
   "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift \<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<^sub>\<bottom>)"
@@ -328,11 +323,6 @@ definition live_default_st ::
   "(vname => bool) => ('a::executable_domain) default_st => bool"
 where
   "live_default_st \<G> s = (~ is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s))"
-
-lemma live_default_stD:
-  assumes "live_default_st \<G> s"
-  shows "~ is_empty (\<rho>\<^bsub>\<G>\<^esub> s x)"
-  using assms unfolding live_default_st_def is_empty_state_def by blast
 
 text \<open>
   \<open>is_empty_state\<close> on \<open>\<rho>\<^bsub>\<G>\<^esub> s\<close> is an infinite existential over

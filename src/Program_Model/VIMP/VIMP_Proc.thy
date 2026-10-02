@@ -277,14 +277,6 @@ lemma pcompletes_Call:
   by (rule star.step, rule pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals])
      (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
 
-lemma pcompletes_Call_parameterless:
-  assumes p: "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
-      and body: "pcompletes \<G> \<Pi> c (enter_state \<G> s) t'"
-  shows "pcompletes \<G> \<Pi> (Call None p []) s (combine_env \<G> s t')"
-  using pcompletes_Call[where \<Pi> = \<Pi> and p = p and \<G> = \<G> and actuals = "[]" and dst = None
-                          and s = s and t' = t', OF p] body
-  by simp
-
 section \<open>Source-program well-formedness\<close>
 
 text \<open>

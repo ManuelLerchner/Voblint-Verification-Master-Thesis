@@ -179,12 +179,6 @@ lemma side_rhs_fold_dg_simps [simp, code]:
      }"
   by (simp_all add: side_rhs_fold_dg_def)
 
-lemma sp_compile_side_rhs_fold_dg_Cons:
-  assumes "sp_wf p"
-  shows "sp_compile (side_rhs_fold_dg acc (p # ps))
-     = sp_lift_tree (sp_compile p) (\<lambda>v. sp_compile (side_rhs_fold_dg (acc \<squnion> dg_local v) ps))"
-  by (simp add: sp_compile_bind sp_wfD[OF assms])
-
 lemma sp_wf_side_rhs_fold_dg [intro]:
   "\<forall>p \<in> set ps. sp_wf p \<Longrightarrow> sp_wf (side_rhs_fold_dg acc ps)"
   unfolding side_rhs_fold_dg_def by (rule sp_wf_fold_rhs_program_projected)
@@ -210,20 +204,9 @@ lemma traverse_side_rhs_fold_dg:
 
 text \<open>
   \<open>side_rhs_fold_dg\<close>'s accumulator only ever reaches the terminal \<open>Answer\<close>,
-  so both its answer and its dependency set are monotone, respectively
-  independent, in the accumulator alone --- the recursion skeleton over \<open>ps\<close>
-  never branches on \<open>acc\<close>.  These two lemmas isolate that fact so the
-  environment-monotonicity and static-dependency lemmas below do not have to
-  re-derive it.
+  so its dependency set is independent of the accumulator: the recursion
+  skeleton over \<open>ps\<close> never branches on \<open>acc\<close>.
 \<close>
-
-lemma side_rhs_fold_dg_acc_mono:
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-  shows "acc1 \<le> acc2
-   \<Longrightarrow> traverse_program (side_rhs_fold_dg acc1 ps) sigma
-         \<le> traverse_program (side_rhs_fold_dg acc2 ps) sigma"
-  by (simp add: traverse_side_rhs_fold_dg[OF wf] side_acc_dg_def
-        fold_acc_projected_acc_mono)
 
 lemma dep_program_side_rhs_fold_dg_char:
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
@@ -268,27 +251,10 @@ lemma side_rhs_fold_dg_mono:
   by (auto intro!: traverse_fold_rhs_program_projected_mono[OF wf mono_dg_local mono_DG_bot])
 
 text \<open>
-  Static dependencies of the fold, given every folded contribution has static
-  dependencies. The chain at each cons cell relates the two accumulators
-  first by @{thm dep_program_side_rhs_fold_dg_acc_indep} (their dependency sets
-  agree at a fixed environment regardless of the accumulator), then by the
-  induction hypothesis (the tail's dependency set is itself environment
-  independent).
-\<close>
-
-lemma side_rhs_fold_dg_env_indep_deps:
-  assumes wf: "\<forall>p \<in> set ps. sp_wf p"
-    and prog_static: "\<And>p. p \<in> set ps \<Longrightarrow> env_indep_deps (sp_compile p)"
-  shows "env_indep_deps (sp_compile (side_rhs_fold_dg acc ps))"
-  unfolding side_rhs_fold_dg_def
-  by (rule env_indep_deps_fold_rhs_program_projected[OF wf prog_static])
-
-text \<open>
   The vendored solver's own @{const mono_deps} precondition only needs the
   weaker, order-conditional guarantee @{const mono_tree_deps}, not the full
-  equality @{const env_indep_deps} proves above; every current fold satisfies
-  the strong property anyway, so this is a one-line corollary through
-  @{thm env_indep_deps_imp_mono_tree_deps} rather than a separate induction.
+  equality @{const env_indep_deps}; the generic fold already carries it, so
+  this instance is one line.
 \<close>
 
 lemma side_rhs_fold_dg_mono_tree_deps:
@@ -369,41 +335,6 @@ lemma foldr_sup_sides_map_fold:
   using wf
   by (induction pss arbitrary: b)
      (simp_all add: sides_of_program_side_rhs_fold_dg_char foldr_sup_acc)
-
-lemma side_rhs_fold_dg_flat_cong:
-  assumes eq: "set (concat pss) = set us"
-    and wf: "\<forall>ps \<in> set pss. \<forall>p \<in> set ps. sp_wf p"
-    and wf_all: "\<forall>p \<in> set (xs @ map (\<lambda>ps. side_rhs_fold_dg bot ps) pss @ zs). sp_wf p"
-    and wf_us: "\<forall>p \<in> set (xs @ us @ zs). sp_wf p"
-  shows
-    "traverse_program (side_rhs_fold_dg acc
-        (xs @ map (\<lambda>ps. side_rhs_fold_dg bot ps) pss @ zs)) \<tau>
-       = traverse_program (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau>"
-    (is ?T)
-    "sides_of_program (side_rhs_fold_dg acc
-        (xs @ map (\<lambda>ps. side_rhs_fold_dg bot ps) pss @ zs)) \<tau> z
-       = sides_of_program (side_rhs_fold_dg acc (xs @ us @ zs)) \<tau> z"
-    (is ?S)
-    "dep_program \<sigma> (side_rhs_fold_dg acc
-        (xs @ map (\<lambda>ps. side_rhs_fold_dg bot ps) pss @ zs))
-       = dep_program \<sigma> (side_rhs_fold_dg acc (xs @ us @ zs))"
-    (is ?D)
-proof -
-  show ?T
-    by (simp add: traverse_side_rhs_fold_dg[OF wf_all] traverse_side_rhs_fold_dg[OF wf_us]
-          side_acc_dg_as_foldr foldr_sup_dg_local_map_fold[OF wf] foldr_sup_set_cong[OF eq])
-next
-  show ?S
-    by (simp add: sides_of_program_side_rhs_fold_dg_char[OF wf_all]
-          sides_of_program_side_rhs_fold_dg_char[OF wf_us]
-          foldr_sup_sides_map_fold[OF wf] foldr_sup_set_cong[OF eq])
-next
-  show ?D
-    using wf
-    by (auto simp add: dep_program_side_rhs_fold_dg_char[OF wf_all]
-          dep_program_side_rhs_fold_dg_char[OF wf_us]
-          dep_program_side_rhs_fold_dg_char simp flip: eq)
-qed
 
 lemma side_rhs_fold_dg_sides_mono:
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"

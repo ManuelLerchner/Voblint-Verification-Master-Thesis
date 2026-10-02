@@ -7,11 +7,10 @@ section \<open>One route, CALL and COMB discharged once\<close>
 
 text \<open>
   \<^locale>\<open>dg_context_activation\<close> already discharges EDGE (\<open>dg_ctx_act_edge\<close>) generically off the
-  post-solution, independent of \<open>route\<close>/\<open>cmb\<close>/\<open>extra\<close>: intra edges never route. Its COMB
-  analogue (\<open>dg_ctx_act_comb_covered\<close>) is generic in the same sense but still takes the
-  program's contribution as an assumption (\<open>bound\<close>) rather than deriving it, because \<open>cmb\<close> is
-  an unconstrained parameter: a context-sensitive analysis whose entry-seed publication and
-  return combine are hand-written has to rederive that same routing argument itself. This
+  post-solution, independent of \<open>route\<close>/\<open>cmb\<close>/\<open>extra\<close>: intra edges never route. COMB
+  cannot be discharged that generically, because \<open>cmb\<close> is an unconstrained parameter: a
+  context-sensitive analysis whose entry-seed publication and return combine are hand-written
+  has to rederive the routing argument itself. This
   theory fixes \<open>cmb\<close> and \<open>extra\<close> to the one canonical shape \<open>Routed_Call_Programs\<close>
   builds --- parametric only in a routing function \<open>route\<close> and a seed-key injection
   \<open>seed\<close> --- and discharges CALL and COMB as theorems of that shape: a k-call-string
@@ -28,7 +27,7 @@ text \<open>
   in by this locale's \<open>for\<close> clause. \<^locale>\<open>dg_context_activation\<close> itself carries
   no routing-specific content: every fact it supplies (\<open>pp_eq_bound\<close>,
   \<open>pp_sides_bound\<close>, \<open>sides_fold_le_Gen\<close>, \<open>edge_bound_local\<close>/\<open>_global\<close>,
-  \<open>dg_ctx_act_edge\<close>, \<open>dg_ctx_act_comb_covered\<close>) is already generic in
+  \<open>dg_ctx_act_edge\<close>) is already generic in
   \<open>cmb\<close>/\<open>extra\<close>, so instantiating it at \<open>routed_call_program\<close>/\<open>routed_entry_seed_programs\<close>
   reuses those proofs unchanged; only the seed-specific reasoning below, which
   \<open>dg_context_activation\<close> never has since seeding is \<open>routed_call_program\<close>'s own

@@ -27,12 +27,6 @@ lemma ivl_upper_lower_less:
   using le_less_trans[OF assms(1) less_le_trans[OF assms(2,3)]]
   by (simp add: less_eint_def less_eq_eint_def)
 
-lemma ivl_upper_lower_not_less:
-  assumes "Fin j \<le> u" and "u < l" and "l \<le> Fin i"
-  shows "\<not> i < j"
-  using ivl_upper_lower_less[OF assms]
-  by auto
-
 lemma ivl_upper_lower_less_eq:
   assumes "Fin i \<le> u" and "u \<le> l" and "l \<le> Fin j"
   shows "i \<le> j"

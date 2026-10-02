@@ -309,12 +309,6 @@ definition verdict_report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "verdict_report \<G> p = classify_checks_verdicts (prog_cfg p) (result \<G> p) classify"
 
-lemma verdict_report_proj:
-  "verdict_report \<G> p
-     = map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (check_projection \<G> p)"
-  unfolding verdict_report_def check_projection_def
-  by (rule classify_checks_verdicts_proj [symmetric])
-
 text \<open>
   The same table read at one context: the state published there, and the check
   report off those states. These are \<^locale>\<open>analysis_surface\<close>'s readings of this
@@ -956,14 +950,6 @@ interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d g. cgam 
     entry_context_rel "map_lift (rd pgs)" gamma\<^sub>V empty\<^sub>V classify
   by (rule entry_state_routed_analysis_sound        [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
 
-text \<open>
-  The routed protocol at one call: the callee entry state published under an
-  admitted context is sound. The interpretation above is local to this context, so
-  this export is what an interpretation of this locale can cite.
-\<close>
-
-lemmas entry_state_routed_context_call = entry.routed_context_call
-
 theorem entry_state_activation_collect_sound:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
@@ -994,37 +980,6 @@ theorem entry_state_node_collect_eq_Union:
      (rule entry_state_has_context [OF entry_cov])
 
 end
-
-text \<open>
-  The same two endpoints, with the four positional coverage assumptions replaced
-  by the one closure premise a caller can state on its own. Nothing is weakened:
-  \<^const>\<open>ctx_succ\<close> names where this solve's routing sends each call, so the
-  closure unfolds to those four assumptions and to nothing else. This is the
-  pair a source-level contextual statement consumes.
-\<close>
-
-theorem entry_state_activation_collect_sound_of_cover:
-  assumes solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> cgam
-                 ((reader pgs p (Inl (v, ctx))))"
-  by (rule entry_state_activation_collect_sound
-        [OF solves ctx_vars_cover_edgeD [OF cover]
-            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
-            ctx_vars_cover_combineD [OF cover]
-            ctx_vars_cover_entryD [OF cover]])
-
-theorem entry_state_node_collect_eq_Union_of_cover:
-  assumes solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-           = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule entry_state_node_collect_eq_Union
-        [OF solves ctx_vars_cover_edgeD [OF cover]
-            ctx_vars_cover_enterD [OF cover, unfolded ctx_succ_def]
-            ctx_vars_cover_combineD [OF cover]
-            ctx_vars_cover_entryD [OF cover]])
 
 text \<open>
   A route that never reads the state it is handed is a function of the call site
@@ -1076,43 +1031,15 @@ next
 qed
 
 text \<open>
-  The functional route's counterpart of the entry-state pair, and the reason a
-  source-level statement is available for it too. The union side needs nothing
+  The functional route's counterpart of the entry-state union. It needs nothing
   at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
-  any coverage having been established. Only the per-bucket bound depends on the
-  solve, and it takes the same single closure premise as the entry-state one.
-
-  The closure is stated at \<^const>\<open>ctx_succ\<close>, which applies the route to the
-  state published at the call site, while the bound below quantifies over every
-  state the route might have been handed. For a route that ignores that argument
-  those coincide, which is what \<open>route_const\<close> says and all this proof uses it for.
+  any coverage having been established.
 \<close>
 
 theorem fun_route_node_collect_eq_Union:
   "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
      = (\<Union>ctx. \<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
   by (rule node_collect_eq_Union_activation_of_fun)
-
-theorem fun_route_activation_collect_sound_of_cover:
-  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
-    and solves: "terminates pgs p"
-    and cover: "ctx_vars_cover (prog_cfg p) (ctx_succ pgs p) root_ctx (sol_vars pgs p)"
-  shows "\<A>\<^bsub>pgs,call_context_rel_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> cgam
-                 ((reader pgs p (Inl (v, ctx))))"
-proof (rule fun_route_activation_collect_sound
-         [OF route_const solves ctx_vars_cover_edgeD [OF cover] _
-             ctx_vars_cover_combineD [OF cover] ctx_vars_cover_entryD [OF cover]])
-  fix u ctx dst pars args q cont and d :: "'s lifted"
-  assume covV: "(u, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-  have "(FunctionEntry q, ctx_succ pgs p u ctx (CallEdge dst pars args) q) \<in> sol_vars pgs p"
-    by (rule ctx_vars_cover_enterD [OF cover covV ce])
-  then show "(FunctionEntry q, route pgs u ctx d (CallEdge dst pars args)) \<in> sol_vars pgs p"
-    unfolding ctx_succ_def
-    by (simp only: route_const [of u ctx _ _ undefined])
-qed
 
 end
 

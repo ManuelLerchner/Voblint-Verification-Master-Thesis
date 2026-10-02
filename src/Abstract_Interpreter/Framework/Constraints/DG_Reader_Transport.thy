@@ -69,10 +69,6 @@ lemma map_dg_state_sup:
      = map_dg_state Floc Fglob a \<squnion> map_dg_state Floc Fglob b"
   by (simp add: sup_dg_state_def Floc_sup Fglob_sup)
 
-lemma map_dg_state_mono:
-  "(a :: ('a,'b) dg_state) \<le> b \<Longrightarrow> map_dg_state Floc Fglob a \<le> map_dg_state Floc Fglob b"
-  by (auto simp: less_eq_dg_state_def Floc_mono Fglob_mono)
-
 subsubsection \<open>Bundled per-tree transport relation\<close>
 
 text \<open>
@@ -92,22 +88,10 @@ where
      dep_aux \<sigma>_st t_st =
        dep_aux (map_dg_state Floc Fglob \<circ> \<sigma>_st) t_abs"
 
-lemma dg_tree_st_commute_trav:
-  "dg_tree_st_commute \<sigma>_st t_st t_abs
-   \<Longrightarrow> map_dg_state Floc Fglob (traverse_rhs t_st \<sigma>_st) =
-       traverse_rhs t_abs (map_dg_state Floc Fglob \<circ> \<sigma>_st)"
-  by (simp add: dg_tree_st_commute_def)
-
 lemma dg_tree_st_commute_sides:
   "dg_tree_st_commute \<sigma>_st t_st t_abs
    \<Longrightarrow> map_dg_state Floc Fglob (sides_of_rhs t_st \<sigma>_st k) =
        sides_of_rhs t_abs (map_dg_state Floc Fglob \<circ> \<sigma>_st) k"
-  by (simp add: dg_tree_st_commute_def)
-
-lemma dg_tree_st_commute_dep:
-  "dg_tree_st_commute \<sigma>_st t_st t_abs
-   \<Longrightarrow> dep_aux \<sigma>_st t_st =
-       dep_aux (map_dg_state Floc Fglob \<circ> \<sigma>_st) t_abs"
   by (simp add: dg_tree_st_commute_def)
 
 text \<open>
@@ -131,17 +115,6 @@ lemma dg_prog_st_commuteI:
   "\<lbrakk>sp_wf p_st; sp_wf p_abs;
     dg_tree_st_commute \<sigma>_st (sp_compile p_st) (sp_compile p_abs)\<rbrakk>
    \<Longrightarrow> dg_prog_st_commute \<sigma>_st p_st p_abs"
-  by (simp add: dg_prog_st_commute_def)
-
-lemma dg_prog_st_commute_wf_st: "dg_prog_st_commute \<sigma>_st p_st p_abs \<Longrightarrow> sp_wf p_st"
-  by (simp add: dg_prog_st_commute_def)
-
-lemma dg_prog_st_commute_wf_abs: "dg_prog_st_commute \<sigma>_st p_st p_abs \<Longrightarrow> sp_wf p_abs"
-  by (simp add: dg_prog_st_commute_def)
-
-lemma dg_prog_st_commute_tree:
-  "dg_prog_st_commute \<sigma>_st p_st p_abs
-   \<Longrightarrow> dg_tree_st_commute \<sigma>_st (sp_compile p_st) (sp_compile p_abs)"
   by (simp add: dg_prog_st_commute_def)
 
 lemma dg_prog_list_wf_st:
@@ -268,11 +241,10 @@ text \<open>
   (\<^theory>\<open>Voblint_Framework.Routed_Call_Programs\<close>) are the canonical
   heterogeneous routing shape: parametric only in a routing
   function \<open>route\<close> and a seed-key injection \<open>seed\<close>, with the seed payload
-  carried on the \<open>dg_local\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The two lemmas
-  below feed this generic engine's \<open>Hcmb\<close>/\<open>Hextra\<close> obligations directly, so any
-  context-sensitive analysis instantiating \<open>cmb\<close>/\<open>extra\<close> at those constants
-  discharges CALL/COMB transport once here rather than re-deriving its own
-  tree-commute reasoning.
+  carried on the \<open>dg_local\<close> half so \<open>'D\<close>/\<open>'G\<close> stay independent. The lemmas
+  below transport \<^const>\<open>routed_call_program\<close>, so any context-sensitive analysis
+  instantiating \<open>cmb\<close> at that constant discharges CALL/COMB transport once here
+  rather than re-deriving its own tree-commute reasoning.
 
   The specification's own enter and combine appear inside the routed tree as
   compiled sub-trees, so their transport hypotheses are themselves tree commutes.
@@ -291,10 +263,6 @@ lemma dg_tree_st_commute_seqcomp:
 
 lemma dg_tree_st_commute_answer:
   "dg_tree_st_commute \<sigma>_st (Answer d) (Answer (map_dg_state Floc Fglob d))"
-  by (simp add: dg_tree_st_commute_def)
-
-lemma dg_tree_st_commute_read_local:
-  "dg_tree_st_commute \<sigma>_st (QueryL x Answer) (QueryL x Answer)"
   by (simp add: dg_tree_st_commute_def)
 
 text \<open>A local-only transfer compiles to a single answer, so its commute is the
@@ -597,14 +565,6 @@ proof (intro conjI sp_wf_routed_call_program wf_st wf_abs)
     using body
     by (simp add: dg_tree_st_commute_def sp_wf_observes Hresolve[symmetric] comp_def)
 qed
-
-lemma dg_prog_st_commute_routed_entry_seed_programs:
-  shows "list_all2 (dg_prog_st_commute \<sigma>_st)
-           (routed_entry_seed_programs seed route_st ctx v)
-           (routed_entry_seed_programs seed route_abs ctx v)"
-  by (cases v)
-     (auto simp: routed_entry_seed_programs_def dg_prog_st_commute_def
-        dg_tree_st_commute_def sp_compile_def Fglob_bot)
 
 end
 end

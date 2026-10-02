@@ -230,33 +230,6 @@ lemma sides_routed_node_rhs:
         sides_of_program_side_rhs_fold_dg_char[OF wf]
         bot_dg_state_def[symmetric] ac_simps)
 
-text \<open>
-  One call site's own contribution to the node's key, as a bound rather than an
-  equation: what a call site publishes at \<open>analysis_global_at ctx\<close> is below what the whole
-  equation publishes there. A soundness argument that has to place a single
-  publication inside the solution reaches for this, and then for
-  \<^const>\<open>part_post_solution\<close>; it is deliberately directional and untagged.
-\<close>
-
-lemma sides_comb_le_routed_node_rhs:
-  assumes site: "(cc, ca) \<in> set (site_sel g v)"
-    and wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
-                   extra g ctx w). sp_wf p"
-  shows "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
-           \<le> sides_of_rhs (routed_node_rhs pred_sel site_sel analysis_global_at route it cmb extra
-                 g bot0 s0d s0g (v, ctx)) \<tau> (Inr (analysis_global_at ctx))"
-proof -
-  have "cmb route ctx ca cc v
-          \<in> set (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v)"
-    by (rule routed_contribution_programs_combineI) (rule site)
-  then have "sides_of_program (cmb route ctx ca cc v) \<tau> (Inr (analysis_global_at ctx))
-          \<le> foldr (\<lambda>t acc. sides_of_program t \<tau> (Inr (analysis_global_at ctx)) \<squnion> acc)
-              (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v) bot"
-    using foldr_sup_le_iff[of "\<lambda>t. sides_of_program t \<tau> (Inr (analysis_global_at ctx))"] by blast
-  then show ?thesis
-    unfolding sides_routed_node_rhs[OF wf] by (simp add: le_supI2)
-qed
-
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
 
 text \<open>
@@ -318,7 +291,7 @@ where
           Side (analysis_global_at c) (DG bot (dg_global res)) (Answer (DG (dg_local res) bot)))))"
 
 text \<open>
-  \<open>traverse_fold_rhs_program_char\<close> states the fold in evaluation order (a left
+  \<^const>\<open>fold_rhs_program\<close> threads its accumulator in evaluation order (a left
   fold); the lemmas below need the equivalent right fold, since that is how each of
   their own goals is already phrased. \<^const>\<open>traverse_rhs\<close> only ever joins, so the
   two forms agree by \<open>foldr_sup_seed_swap\<close>.

@@ -288,12 +288,6 @@ lemma sp_compile_sp_map [simp]: "sp_compile (sp_map e p) = sp_compile_with e p"
 lemma sp_wf_map [intro, simp]: "sp_wf p \<Longrightarrow> sp_wf (sp_map e p)"
   by (simp add: sp_wf_def)
 
-lemma sp_compile_bind_wf:
-  assumes "sp_wf p"
-  shows "sp_compile (p \<bind> f) = sp_lift_tree (sp_compile p) (\<lambda>v. sp_compile (f v))"
-  using sp_wfD[OF assms, where k = "\<lambda>v. sp_compile (f v)"]
-  by (simp add: sp_bind_def sp_compile_def sp_compile_with_def)
-
 text \<open>
   What a well-formed program answers, publishes and reads, asked of the program
   rather than of a tree. Each is the tree vocabulary applied to its compilation,

@@ -190,15 +190,6 @@ abbreviation spec_st :: "('x,'k,unit,'a default_st lifted,'a default_st lifted) 
 abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) dg_spec" where
   "spec_abs \<equiv> lifted_state_dg_spec \<G> is_empty_state sk asn sp br bd rt en ev"
 
-lemma Hstep_lifted_for:
-  assumes "normalized_lift empty_pred d"
-  shows "dg_reader_commute_gen.dg_tree_st_commute reader reader \<sigma>_st
-     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_st a (mk_dg_man d (\<lambda>_. gk))))
-     (sp_compile_with (\<lambda>x. DG x bot) (dg_spec_step spec_abs a (mk_dg_man (reader d) (\<lambda>_. gk))))"
-  unfolding dg_spec_step_exec_dg_spec dg_spec_step_lifted_state_dg_spec
-  using dg_reader_commute_gen.dg_tree_st_commute_local_transfer dg_reader_commute_gen_lifted_for
-    step_lift_commute[OF assms] by fastforce
-
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
      (enter\<^sup># spec_st ci (mk_dg_man d (\<lambda>_. gk)))

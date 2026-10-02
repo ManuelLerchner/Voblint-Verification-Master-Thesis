@@ -67,14 +67,6 @@ lemma map_lift_canonicalize_lift:
   shows "map_lift rd (canonicalize_lift emp d) = canonicalize_lift empty\<^sub>V (map_lift rd d)"
   by (cases d) (simp_all add: assms normalize_lift_def)
 
-lemma lookup_table_dg_result_for_projected:
-  assumes "\<And>s. emp s = empty\<^sub>V (rd s)"
-  shows "lookup_table (dg_result_for rd emp sol) v ctx =
-    (if (v, ctx) \<in> fst sol
-     then canonicalize_lift empty\<^sub>V (map_lift rd (dg_local (snd sol (Inl (v, ctx)))))
-     else Bot)"
-  using map_lift_canonicalize_lift[of emp "empty\<^sub>V" rd] assms by simp
-
 text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<close> does not change
   what the value denotes.\<close>
 

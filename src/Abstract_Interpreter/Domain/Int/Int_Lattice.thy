@@ -831,19 +831,6 @@ lemma gamma_int_dom_constant_subset:
   unfolding int_dom_constant_def gamma_int_dom_def
   by (auto split: if_splits option.splits)
 
-lemma gamma_int_dom_constant:
-  assumes "int_dom_constant d = Some n"
-    and "\<not> is_bottom_int_dom d"
-  shows "gamma_int_dom d = {n}"
-proof -
-  have "gamma_int_dom d \<subseteq> {n}"
-    using gamma_int_dom_constant_subset[OF assms(1)] .
-  moreover have "gamma_int_dom d \<noteq> {}"
-    using assms(2) is_bottom_int_dom_correct by blast
-  ultimately show ?thesis
-    by blast
-qed
-
 definition string_of_int_dom :: "'a int_dom_scheme \<Rightarrow> String.literal" where
   "string_of_int_dom d =
      (if is_bottom_int_dom d then sym_bottom

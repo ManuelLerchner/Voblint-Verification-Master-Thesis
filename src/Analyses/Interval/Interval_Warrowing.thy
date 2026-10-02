@@ -41,12 +41,6 @@ proof (cases a; cases b)
     by auto
 qed
 
-lemma widen_ivl_core_ub1: "gamma_ivl a \<subseteq> gamma_ivl (widen_ivl_core a b)"
-  using gamma_ivl_mono a_le_widen_ivl_core by blast
-
-lemma widen_ivl_core_ub2: "gamma_ivl b \<subseteq> gamma_ivl (widen_ivl_core a b)"
-  using gamma_ivl_mono b_le_widen_ivl_core by blast
-
 text \<open>
   Widening termination: every widen-ascending chain stabilises.  At each step
   each bound either stays or jumps to @{text MinInf} / @{text PlusInf}, and once

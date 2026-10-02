@@ -405,27 +405,10 @@ proof -
     by (simp only: Rep_congruence_inject)
 qed
 
-lemma mk_congruence_normalized:
-  assumes "m = 0 \<or> (0 <= c \<and> c < m)"
-  shows "Rep_congruence (mk_congruence c m) = Some (c, m)"
-proof -
-  from assms have normalized:
-    "normalized_congruence_rep (Some (c, m))"
-    by simp
-  then have fixed:
-    "normalize_congruence_rep (Some (c, m)) = Some (c, m)"
-    by (rule normalize_congruence_rep_fixed)
-  then show ?thesis by simp
-qed
-
 lemma mk_congruence_negative_modulus [simp]:
   "mk_congruence 5 (-4) = mk_congruence 1 4"
   by (rule Rep_congruence_inject[THEN iffD1])
      (simp add: Let_def)
-
-lemma mk_congruence_constant_distinct:
-  "mk_congruence c 0 = mk_congruence d 0 \<longleftrightarrow> c = d"
-  by (simp add: Rep_congruence_inject[symmetric])
 
 
 definition congruence_of_int :: "int => congruence" where

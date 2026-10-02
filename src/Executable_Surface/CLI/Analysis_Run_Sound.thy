@@ -38,12 +38,6 @@ lemma result_checks_of_verdicts:
     point_verdict_def
   by (simp add: comp_def case_prod_beta image_image)
 
-lemma check_in_result_checks_of:
-  assumes "chk \<in> set (result_checks_of g r classify)"
-  shows "(check_point chk, check_exp chk, check_verdict chk)
-           \<in> set (classify_checks_verdicts g r classify)"
-  using assms unfolding result_checks_of_verdicts [symmetric] by force
-
 text \<open>
   Where a result has checks: one per compiled \<^const>\<open>EA_Check\<close> edge, at that edge's
   source node and with its label and condition, in the order the graph lists its edges.

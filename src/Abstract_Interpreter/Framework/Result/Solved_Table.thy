@@ -39,25 +39,10 @@ text \<open>
   Per-point reachability is \<^typ>\<open>'a lifted\<close> itself
   (\<^theory>\<open>Voblint_Domain.Reachability_Lift\<close>), not a nominal copy of it: the
   reachability reading is fixed below rather than
-  left to the caller, and every operation on it (\<open>is_reachable_point\<close>,
-  \<open>join_point_with\<close>, ...) is stated directly in terms of \<^const>\<open>Bot\<close>/
-  \<^const>\<open>Lifted\<close>.
+  left to the caller, and stated directly in terms of \<^const>\<open>Bot\<close>/
+  \<^const>\<open>Lifted\<close>. \<^const>\<open>map_lift\<close> is the functorial map (payload
+  rewriting that leaves reachability alone).
 \<close>
-
-text \<open>
-  Reachability is read off the constructor, never by comparing against
-  \<^const>\<open>Bot\<close> with \<open>=\<close>: an equality test would force an \<open>equal\<close>
-  instance on the payload, which nothing else about the result table needs.
-  \<^const>\<open>map_lift\<close> (\<^theory>\<open>Voblint_Domain.Reachability_Lift\<close>) is the
-  functorial map (payload rewriting that leaves reachability alone).
-\<close>
-
-fun is_reachable_point :: "'a lifted \<Rightarrow> bool" where
-  "is_reachable_point Bot = False"
-| "is_reachable_point (Lifted _) = True"
-
-lemma is_reachable_point_iff: "is_reachable_point p \<longleftrightarrow> p \<noteq> Bot"
-  by (cases p) simp_all
 
 text \<open>
   A point of an abstract-store table concretizes through the reachability
@@ -79,10 +64,6 @@ text \<open>
   lookup function, defined everywhere but meaningful only on the key set.
   \<open>lookup_table\<close> keeps that distinction explicit rather than trusting
   \<open>table_at\<close> to answer sensibly off the key set.
-
-  \<open>lookup_table\<close> (per context) is canonical. The per-node views ---
-  liveness and the joined state --- are derived projections over the contexts
-  covered at a node, and both live below.
 
   \<^typ>\<open>'ctx\<close> carries no ordering or enumeration constraint: real context
   types include interval-vector and call-string contexts, which have
@@ -221,182 +202,9 @@ proof -
   with eq show ?thesis by simp
 qed
 
-lemma result_node_is_bottom_iff_keys:
-  "result_node_is_bottom r v \<longleftrightarrow>
-     (\<forall>ctx. (v, ctx) \<in> covered_keys r \<longrightarrow> table_at r v ctx = Bot)"
-  unfolding result_node_is_bottom_def
-  by (auto simp: lookup_coverage_eq_Covered_iff)
-
-lemma reported_covered_unreachable_empty_point:
-  assumes lookup: "lookup_coverage r v ctx = Covered Bot"
-    and sound: "C \<subseteq> \<lbrakk>lookup_table r v ctx\<rbrakk>\<^sub>\<bottom>"
-  shows "C = {}"
-  using sound by (rule reported_covered_unreachable_empty[OF lookup])
-
-text \<open>
-  What the report's own flag is worth: with coverage in hand it identifies
-  \<^term>\<open>Covered Bot\<close>, and without it, nothing. This is the intended way to
-  reach @{thm [source] reported_covered_unreachable_empty} from a report entry.
-\<close>
-
-text \<open>
-  For a context-insensitive result there is only one context to quantify over,
-  so the report's own flag already gives the node predicate --- no coverage
-  side condition, because the uncovered case is the vacuous one the predicate
-  permits. This is what connects a printed \<open>unreachable\<close> column to the
-  node-level theorems: the flag is what the CLI computes, and
-  \<^const>\<open>result_node_is_bottom\<close> is what they assume.
-\<close>
-
-lemma report_flag_imp_result_node_is_bottom:
-  fixes r :: "(unit, 'a::bot) solved_table"
-  assumes flag: "fst (report_lifted_state (lookup_table r v ()))"
-  shows "result_node_is_bottom r v"
-proof (rule result_node_is_bottomI)
-  fix ctx :: unit and a
-  assume cov: "lookup_coverage r v ctx = Covered a"
-  then have keys: "(v, ctx) \<in> covered_keys r" and val: "table_at r v ctx = a"
-    by (simp_all add: lookup_coverage_eq_Covered_iff)
-  have unit_bot: "lookup_table r v () = Bot"
-    using flag by (simp add: report_lifted_state_unreachable_iff)
-  then have "lookup_table r v ctx = Bot"
-    by (cases ctx) simp
-  then show "a = Bot"
-    using keys val unfolding lookup_table_def by simp
-qed
-
-lemma report_flag_covered_eq_Covered_Bot:
-  fixes r :: "('ctx, 'a::bot) solved_table"
-  assumes covered: "(v, ctx) \<in> covered_keys r"
-    and flag: "fst (report_lifted_state (lookup_table r v ctx))"
-  shows "lookup_coverage r v ctx = Covered Bot"
-  using covered flag
-  by (simp add: report_lifted_state_unreachable_iff lookup_table_def)
-
 lemma lookup_table_LiftedD [dest]:
   "lookup_table r v ctx = Lifted st \<Longrightarrow> ctx \<in> table_contexts r v"
   using lookup_table_absent by fastforce
-
-text \<open>
-  Liveness of a node needs no join at all: a node is live exactly when some
-  context covered there is reachable. Stated this way it constrains nothing
-  beyond what \<^const>\<open>table_contexts\<close> already needs --- no order, no lattice, and
-  in particular nothing at all about the state payload.
-\<close>
-
-definition node_live_ex :: "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> bool" where
-  "node_live_ex r v =
-     (\<exists>ctx\<in>table_contexts r v. is_reachable_point (lookup_table r v ctx))"
-
-lemma node_live_ex_absent [simp]:
-  "table_contexts r v = {} \<Longrightarrow> \<not> node_live_ex r v"
-  unfolding node_live_ex_def by simp
-
-subsection \<open>Joining the contexts at a node\<close>
-
-text \<open>
-  The per-node view joins the states of every context covered at that node.
-  The join arrives as an explicit function argument rather than through a
-  \<^class>\<open>semilattice_sup\<close> instance on the payload, because the production
-  payload is \<^typ>\<open>'a abs_state\<close>: its \<open>\<le>\<close> quantifies over all of \<^typ>\<open>vname\<close>,
-  so that instance has no executable realization even though the domain
-  \<^typ>\<open>'a\<close> underneath it has one. Passing the join keeps every class
-  constraint that reaches code generation on the domain, never on the state.
-
-  \<^const>\<open>Bot\<close> is the fold's unit, so the empty-context case needs no
-  separate guard: a node the solver never covered folds to \<^const>\<open>Bot\<close>
-  on its own.
-\<close>
-
-fun join_point_with ::
-  "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a lifted \<Rightarrow> 'a lifted \<Rightarrow> 'a lifted"
-where
-  "join_point_with j Bot y = y"
-| "join_point_with j x Bot = x"
-| "join_point_with j (Lifted a) (Lifted b) = Lifted (j a b)"
-
-definition join_abs_state_with ::
-  "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "join_abs_state_with j a b = (\<lambda>x. j (a x) (b x))"
-
-text \<open>
-  Instantiating the join with the domain's own \<open>\<squnion>\<close> recovers exactly the
-  lattice join of the payloads, variable by variable: the explicit argument is
-  a way around the missing dictionary, not a different operation.
-\<close>
-
-lemma join_abs_state_with_sup [simp]:
-  "join_abs_state_with (\<squnion>) a (b :: 'a::semilattice_sup abs_state) = a \<squnion> b"
-  unfolding join_abs_state_with_def by (simp add: sup_fun_def)
-
-lemma join_point_with_sup [simp]:
-  "join_point_with (join_abs_state_with (\<squnion>)) x
-     (y :: 'a::semilattice_sup abs_state lifted) = x \<squnion> y"
-  by (cases x; cases y) simp_all
-
-lemma comp_fun_idem_join_lifted:
-  "comp_fun_idem
-     (\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>))
-              (g ctx :: 'a::semilattice_sup abs_state lifted))"
-  by unfold_locales (auto simp: sup_left_commute)
-
-text \<open>
-  Folding over a context set is the one place code generation needs a concrete
-  join, so it is the one place the domain's \<open>\<squnion>\<close> is baked in. A fold parametric
-  in an arbitrary join has no executable equation at all: over an unordered set
-  the fold's value is only well defined for a commutative idempotent operation,
-  and the fold below is where that instance is supplied, once.
-\<close>
-
-definition join_states_over ::
-  "('ctx \<Rightarrow> 'a::semilattice_sup abs_state lifted) \<Rightarrow> 'ctx set \<Rightarrow>
-   'a abs_state lifted" where
-  "join_states_over g cs =
-     Finite_Set.fold (\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx))
-       Bot cs"
-
-lemma join_states_over_code [code]:
-  "join_states_over g (set cs) =
-     List.fold (\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx)) cs Bot"
-proof -
-  interpret ci: comp_fun_idem
-    "\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx)"
-    by (rule comp_fun_idem_join_lifted)
-  show ?thesis unfolding join_states_over_def by (rule ci.fold_set_fold)
-qed
-
-lemma join_states_over_empty [simp]: "join_states_over g {} = Bot"
-  unfolding join_states_over_def by simp
-
-lemma join_states_over_insert [simp]:
-  assumes "finite cs"
-  shows "join_states_over g (insert ctx cs) = g ctx \<squnion> join_states_over g cs"
-proof -
-  interpret ci: comp_fun_idem
-    "\<lambda>ctx. join_point_with (join_abs_state_with (\<squnion>)) (g ctx)"
-    by (rule comp_fun_idem_join_lifted)
-  show ?thesis unfolding join_states_over_def using assms by simp
-qed
-
-text \<open>Every context folded in sits below the result. This is the property that
-  makes the join a join, and it is exactly what fails on an infinite carrier:
-  \<^const>\<open>Finite_Set.fold\<close> returns its unit there, so an unrestricted key set
-  would let a covered, reachable context sit above the node's own joined
-  state.\<close>
-
-lemma join_states_over_member_le:
-  assumes "finite cs" and "ctx \<in> cs"
-  shows "g ctx \<le> join_states_over g cs"
-  using assms by (induction cs rule: finite_induct) (auto intro: order_trans sup_ge2)
-
-definition lookup_joined_state ::
-  "('ctx, 'a::semilattice_sup abs_state) solved_table \<Rightarrow> pp \<Rightarrow>
-   'a abs_state lifted" where
-  "lookup_joined_state r v = join_states_over (lookup_table r v) (table_contexts r v)"
-
-lemma lookup_joined_state_absent [simp]:
-  "table_contexts r v = {} \<Longrightarrow> lookup_joined_state r v = Bot"
-  unfolding lookup_joined_state_def by simp
 
 subsection \<open>Well-formed results\<close>
 
@@ -405,10 +213,10 @@ text \<open>
   opening text describes are not enforced by the type and have to be stated.
 
   Finiteness is the load-bearing one, and its failure is silent rather than
-  loud: \<^const>\<open>join_states_over\<close> folds with \<^const>\<open>Finite_Set.fold\<close>, which
-  answers with its unit on an infinite carrier. A node whose key set is
-  infinite therefore reports \<^const>\<open>Bot\<close> as its joined state --- reading as
-  dead, while \<^const>\<open>node_live_ex\<close>, which never folds, still reports it live.
+  loud: a per-node aggregate over \<^const>\<open>table_contexts\<close> folds with
+  \<^const>\<open>Finite_Set.fold\<close>, which answers with its unit on an infinite carrier.
+  The contextual check report's verdict aggregate is one such fold: over an
+  infinite key set it reports a check dead whatever its contexts say.
 
   Canonicality is what licenses reading \<^const>\<open>Bot\<close> as concrete emptiness
   rather than as the solver's own structural answer. \<^const>\<open>Lifted\<close> gets no
@@ -440,16 +248,7 @@ lemma finite_table_contexts:
   shows "finite (table_contexts r v)"
   using assms unfolding finite_solved_table_def table_contexts_def by simp
 
-text \<open>What finiteness buys: the per-node view really is an upper bound of the
-  contexts it covers.\<close>
-
-lemma lookup_table_le_lookup_joined_state:
-  assumes fin: "finite_solved_table r" and cov: "ctx \<in> table_contexts r v"
-  shows "lookup_table r v ctx \<le> lookup_joined_state r v"
-  unfolding lookup_joined_state_def
-  by (rule join_states_over_member_le[OF finite_table_contexts[OF fin] cov])
-
-text \<open>And what canonicality buys: on a well-formed result the structural
+text \<open>What canonicality buys: on a well-formed result the structural
   reading and the concrete one coincide, provided the supplied predicate is
   the exact emptiness test its adapters use.\<close>
 

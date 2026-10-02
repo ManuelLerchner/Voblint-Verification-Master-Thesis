@@ -195,16 +195,6 @@ next
     unfolding refine_fix_def by simp
 qed
 
-lemma refine_fix_round_stable:
-  assumes result: "refine_fix_option d = Some r"
-  shows "refine_round (refine_fix d) = refine_fix d"
-proof -
-  have "refine_round r = r"
-    by (rule refine_fix_option_round_stable[OF result])
-  with result show ?thesis
-    unfolding refine_fix_def by simp
-qed
-
 lemma refine_never [simp]:
   "refine Refine_Never d = d"
   by (simp add: refine_def)

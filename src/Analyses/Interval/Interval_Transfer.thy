@@ -87,18 +87,4 @@ text \<open>
   Interval is \<open>ivl_tf.is_sound_nonrelational_transfer\<close>.
 \<close>
 
-text \<open>
-  Reusable simp bundle for post-fixpoint proofs over the interval domain, covering
-  the core evaluation rules every interval example shares. Examples with
-  multiplication also need \<open>times_ivl_def\<close> and \<open>ivl_times_core.simps\<close>; ones with branch
-  edges also need \<open>ivl_tf.backward.bfilter.simps\<close>; examples with procedure
-  calls also need \<open>ivl_tf.op_defs\<close> and \<^const>\<open>combine_env\<close>'s definition.
-\<close>
-
-lemmas ivl_eval_simps =
-  ivl_tf.tf_abs_def ivl_tf.assign_def
-  aval_ivl.simps
-  plus_ivl.simps plus_eint.simps
-  less_eq_ivl_def le_fun_def
-
 end

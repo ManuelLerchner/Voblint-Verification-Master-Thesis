@@ -235,7 +235,7 @@
 # so these re-exports had no consumer left.
 # solely to support bfilter_st_lift's old whole-expression witness-bottom
 # spine is the analysis-facing interface; what survives is the address-
-# split (report_lifted_state, Reachability_Lift.thy); the lifted payload scan
+# split; the lifted payload scan
 # state and compare that generator's post-fixpoint against the generic one.
 # still occurs in a tracked `.thy` file -- in code or in prose. It exists
 # than its presence without an enter edge.
