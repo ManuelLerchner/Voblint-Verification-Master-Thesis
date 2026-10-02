@@ -11,7 +11,7 @@
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
 ```math
-\underbrace{\mathrm{Reach}_{\mathrm{src}}(v)}_{\text{source executions}}
+\underbrace{\{\, s \mid \text{a source run reaches } v \text{ with store } s \,\}}_{\text{source executions}}
 \;\subseteq\;
 \underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
 \;\subseteq\;
@@ -20,16 +20,16 @@
 \underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
 ```
 
-Every store reached by a source execution at program point $v$, the set
-$\mathrm{Reach}_{\mathrm{src}}(v)$, is represented by the analyzer's report at
-$v$ and satisfies every definite verdict reported there.
+Every store reached by a source execution at program point $v$ is represented
+by the analyzer's report at $v$ and satisfies every definite verdict reported
+there.
 
-The equality is lossless: context sensitivity splits the collecting semantics
-$\mathcal{C}(v)$ into one bucket $\mathcal{A}(v, c)$ per context, and their union
-recovers it exactly. The inclusions are sound over-approximations. The first
-relates source executions to the compiled program's trace semantics; the second
-is where the abstract analysis loses precision; the third keeps only what the
-definite verdicts require.
+The equality is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover
+the collecting semantics, and their union recovers $\mathcal{C}(v)$ exactly. The
+inclusions are sound over-approximations: the collecting semantics of the
+compiled program may admit more stores than source runs exhibit, the report may
+describe more stores than are concretely reachable, and the verdict semantics
+keeps only what the definite verdicts require.
 
 Each inclusion is an Isabelle theorem:
 [`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),

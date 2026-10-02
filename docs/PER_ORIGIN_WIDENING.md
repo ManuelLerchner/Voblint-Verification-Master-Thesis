@@ -32,11 +32,11 @@ does: `base.ml` reads globals from local state without publication at all
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
-The other choice is formalized as a lifter. The ownership-split wrappers
-(`DG_Ownership_Split_Spec.thy`, executable as `Ownership_Split_Exec.thy`) wrap
-a whole-state specification and put every declared global on the shared
-channel. No soundness theorem for the split remains, and nothing selects it
-from VIMP source or a CLI flag; the CLI hardwires the exclusive local routing.
+The other choice is formalized as a lifter. `ownership_split_lift`
+(`DG_Ownership_Split_Spec.thy`) takes a whole-state specification and puts
+every declared global on the shared channel, proved sound against the
+ownership-split concretization. What is missing is a way to select it from VIMP
+source or a CLI flag; the CLI hardwires the exclusive local routing.
 
 That single site is enough to reproduce the paper's own chain. With the paper's
 three contributions to `g` arriving in the paper's order:
