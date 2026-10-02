@@ -115,6 +115,7 @@ PLAYGROUND_KEYS = {
     "globals": "globals",
     "int_refinement": "refinement",
     "narrow_bound": "narrow",
+    "program_globals": "placement",
 }
 
 
@@ -159,6 +160,9 @@ def example(path: Path) -> dict[str, object]:
     playground |= {
         name: settings[key] for key, name in PLAYGROUND_KEYS.items() if key in settings
     }
+    # voblint's own default rule under shared globals, which the page does not infer.
+    if settings.get("program_globals") == "shared":
+        playground.setdefault("globals", "bounded-narrowing")
     return {
         "path": relative.as_posix(),
         "name": re.sub(r"^\d+-", "", path.stem).replace("_", " "),

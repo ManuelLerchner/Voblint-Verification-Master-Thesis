@@ -155,6 +155,19 @@
                 </select>
               </div>
 
+              <div class="control-group">
+                <label for="placement-select">Program globals</label>
+                <select id="placement-select" aria-describedby="placement-help">
+                  <option value="local" selected>Local</option>
+                  <option value="shared">Shared</option>
+                </select>
+                <span id="placement-help" class="visually-hidden">
+                  Local keeps every global in each point's own state. Shared keeps
+                  them in one flow-insensitive value every point reads; warrowing it
+                  need not settle, so pair it with bounded narrowing.
+                </span>
+              </div>
+
               <div class="control-group" id="narrow-bound-group" hidden>
                 <label for="narrow-bound">Narrowing bound</label>
                 <input

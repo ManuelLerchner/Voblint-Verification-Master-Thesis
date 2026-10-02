@@ -74,6 +74,7 @@ const activationControl = {
 };
 const globalsSelect = query("#globals-select");
 const contextSelect = query("#context-select");
+const placementSelect = query("#placement-select");
 
 const contextDepthInput = query("#context-depth");
 const contextDepthGroup = query("#context-depth-group");
@@ -3091,6 +3092,10 @@ function settingsSlug() {
     settings.push(`k${contextDepthInput.value}`);
   }
 
+  if (placementSelect.value === "shared") {
+    settings.push("shared-globals");
+  }
+
   if (usesInt()) {
     settings.push(`int-${intRefinementSelect.value}`);
   }
@@ -3412,6 +3417,12 @@ function readConfiguration() {
 
   const context = contextSelect.value;
 
+  const placement = placementSelect.value;
+
+  if (!new Set(["local", "shared"]).has(placement)) {
+    throw new Error(`Unknown program globals placement: ${placement}`);
+  }
+
   const allowedGlobals = new Set([
     "join",
     "per-origin",
@@ -3463,6 +3474,7 @@ function readConfiguration() {
     contextDepth,
     narrowBound,
     intRefinement,
+    placement,
   };
 }
 
@@ -3481,6 +3493,10 @@ function configurationLabel(configuration) {
 
   if (configuration.context === "call-string") {
     parts.push(`k=${configuration.contextDepth}`);
+  }
+
+  if (configuration.placement === "shared") {
+    parts.push("shared globals");
   }
 
   if (usesInt()) {
@@ -3696,6 +3712,7 @@ function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = 
         context: configuration.context,
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
+        placement: configuration.placement,
         trace: configuration.trace ?? "off",
         source,
       });
@@ -3960,6 +3977,7 @@ for (const control of [
   contextSelect,
   contextDepthInput,
   intRefinementSelect,
+  placementSelect,
 ]) {
   control.addEventListener("change", resetForConfigurationChange);
 }
@@ -4362,6 +4380,7 @@ function openProgram({ source, fileName, settings = {} }) {
   }
   selectIfOffered(globalsSelect, settings.globals);
   selectIfOffered(contextSelect, settings.context);
+  selectIfOffered(placementSelect, settings.placement ?? "local");
   selectIfOffered(intRefinementSelect, settings.refinement);
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
@@ -4421,7 +4440,16 @@ function selectIfOffered(select, value) {
  * (?fixture=path), which this page still opens;
  * settings in the query override the ones a named program carries.
  */
-const LINK_SETTINGS = ["analysis", "globals", "narrow", "context", "k", "refinement", "trace"];
+const LINK_SETTINGS = [
+  "analysis",
+  "globals",
+  "narrow",
+  "context",
+  "k",
+  "refinement",
+  "placement",
+  "trace",
+];
 
 const shareButton = query("#share-link");
 const shareLabel = query("#share-link-label");
@@ -4516,6 +4544,7 @@ async function shareLink() {
     linkParam("context", contextSelect.value),
     ...(contextSelect.value === "call-string" ? [linkParam("k", contextDepthInput.value)] : []),
     ...(usesInt() ? [linkParam("refinement", intRefinementSelect.value)] : []),
+    ...(placementSelect.value === "shared" ? [linkParam("placement", "shared")] : []),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
   ];
   const url = new URL(location.href);

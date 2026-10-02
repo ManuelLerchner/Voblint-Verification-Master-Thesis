@@ -91,7 +91,7 @@ let depth_of mode (depth : Js.number_t) =
    is selected. A comma list is kept exactly as given, and no names at all is
    the empty list: run_voblint alone decides whether it is a valid
    activation. The checks are the CLI's, in [Analysis_request.resolve]. *)
-let resolve ~analyses ~refinement ~globals ~context ~depth =
+let resolve ~analyses ~refinement ~globals ~context ~depth ~placement =
   let names = if analyses = "" then [] else String.split_on_char ',' analyses in
   let ( let* ) = Result.bind in
   let* globals_rule, narrow_bound = split_globals globals in
@@ -104,12 +104,12 @@ let resolve ~analyses ~refinement ~globals ~context ~depth =
       narrow_bound;
       context;
       depth;
-      program_globals = "local";
+      program_globals = placement;
     }
   in
   match Analysis_request.resolve request with
-  | Ok { domains; rule; mode; placement = _ } ->
-      Ok (Option.value domains ~default:[], rule, mode)
+  | Ok { domains; rule; mode; placement } ->
+      Ok (Option.value domains ~default:[], rule, mode, placement)
   | Error (Analysis_request.Unknown_refinement name) ->
       Error ("Unknown int refinement: " ^ name)
   | Error (Analysis_request.Unknown_analysis name) ->
@@ -217,8 +217,8 @@ let stop_live () =
   Solver_trace_hook.limit := max_int;
   Solver_trace_hook.listener := fun _ _ -> ()
 
-let run analysis_js globals_js context_js context_depth refinement_js source_js
-    trace_js =
+let run analysis_js globals_js context_js context_depth refinement_js
+    placement_js source_js trace_js =
   let analysis_name = Js.to_string analysis_js in
 
   let refinement_name = Js.to_string refinement_js in
@@ -226,6 +226,8 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
   let globals_name = Js.to_string globals_js in
 
   let context_name = Js.to_string context_js in
+
+  let placement_name = Js.to_string placement_js in
 
   let source = Js.to_string source_js in
 
@@ -242,10 +244,11 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
     match
       ( trace,
         resolve ~analyses:analysis_name ~refinement:refinement_name
-          ~globals:globals_name ~context:context_name ~depth:context_depth )
+          ~globals:globals_name ~context:context_name ~depth:context_depth
+          ~placement:placement_name )
     with
     | Error message, _ | _, Error message -> Render_json.error_json message
-    | Ok trace, Ok (domains, globals, context) -> (
+    | Ok trace, Ok (domains, globals, context, placement) -> (
         try
           let program, stmt_positions, header_positions =
             Vimp_frontend.program "browser.vimp" source
@@ -262,7 +265,7 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
           let answer =
             Fun.protect ~finally:stop_live (fun () ->
                 Analysis_request.analyse ~analyses:domains ~globals ~context
-                  ~program_globals:C.Program_Globals_Local program)
+                  ~program_globals:placement program)
           in
           let analysis_ms = now_ms () -. analysis_start in
           let raw =
@@ -307,4 +310,4 @@ let run analysis_js globals_js context_js context_depth refinement_js source_js
  *)
 let () =
   Js.Unsafe.set Js.Unsafe.global (Js.string "Voblint_run")
-    (Js.Unsafe.callback_with_arity 7 run)
+    (Js.Unsafe.callback_with_arity 8 run)
