@@ -44,8 +44,9 @@ tools call that function:
 
 The first argument is the configuration, an #isatype("analysis_config"): the
 active analyses (a list of #isatype("analysis_domain")), the global update rule
-(#isatype("globals_rule")), and the context policy (#isatype("context_mode"): no
-contexts, entry states, or call strings of a given depth). The second is the
+(#isatype("globals_rule")), the context policy (#isatype("context_mode"): no
+contexts, entry states, or call strings of a given depth), and the placement of
+program globals (#isatype("program_globals"), @sec:mixed-flow). The second is the
 syntax tree, of type #isatype("imp_prog"). The active analyses are solved as one
 combined state whose concretization is the intersection of theirs, and they
 answer one another's queries (@ch:cooperation). The command-line flag
@@ -310,8 +311,8 @@ components, which the theorem does not mention.
   mappings, which send HOL integers to Zarith and HOL strings to OCaml strings.
   The code equations of the development are theorems. The translation to OCaml
   and these mappings are not. Witness theorems proved by `eval`, such as the
-  non-vacuity instances of @sec:nonvacuity and the one-program bound of
-  @sec:mixed-flow, trust the same generator inside Isabelle
+  non-vacuity instances of @sec:nonvacuity, trust the same generator inside
+  Isabelle
   (@tab:oracles-audit).
 - The mapping of #isaconst("trace_event") to the tracer's OCaml hook
   (@sec:tracing). The traced code equations are theorems; the hook must return,

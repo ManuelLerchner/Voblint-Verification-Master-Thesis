@@ -72,22 +72,6 @@
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: independent sound components combine into a sound component."
     },
-    "mf_after_calls": {
-      "oracles": [
-        "Code_Generator.holds_by_evaluation"
-      ],
-      "statement": "s \\<in> \\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub>\n         (Statement 7) \\<Longrightarrow>\n0 < s STR ''x'' \\<and> 0 \\<le> s STR ''y''",
-      "theory": "Example_Sign_Mixed_Flow",
-      "why": "Mixed flow-sensitivity section: the concrete consequence of the solved flow-insensitive global."
-    },
-    "mf_node_collect_sound": {
-      "oracles": [
-        "Code_Generator.holds_by_evaluation"
-      ],
-      "statement": "\\<C>\\<^bsub>mf_gs,mf_cfg,cinit_stores mf_gs\\<^esub> v\n\\<subseteq> mf_gammaM (mf_reader (Inl (v, ())))",
-      "theory": "Example_Sign_Mixed_Flow",
-      "why": "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
-    },
     "node_collect_eq_Union_activation_collect": {
       "oracles": [],
       "statement": "activation_coverage g S cover R c\\<^sub>0 \\<G> \\<Longrightarrow>\n\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v =\n\\<Union> (range (\\<A>\\<^bsub>\\<G>,R,c\\<^sub>0,g,S\\<^esub> v))",

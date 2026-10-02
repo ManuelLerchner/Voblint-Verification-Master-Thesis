@@ -260,10 +260,10 @@ directories, not sessions, so we give no line count for either extension.
 
 _Limits._ Precision depends on how the ingredients combine. Which update
 rule decides a check depends on the program (@fig:rules-programs), and whether
-a call-string depth decides the `down` recursion below depends on widening. In
-every selectable analysis the global unknowns carry only activation seeds.
-Program globals in a flow-insensitive unknown are proved sound end to end for
-one program only (#isathm("mf_node_collect_sound"), @sec:mixed-flow). A component of the
+a call-string depth decides the `down` recursion below depends on widening. Under
+the default placement the global unknowns carry only activation seeds. The
+shared placement keeps all program globals in one further global unknown
+(@sec:mixed-flow). A component of the
 combined state cannot read or publish globals, so an analysis with its own analysis globals cannot join it (@sec:coop-limits).
 
 == Are the obligations necessary, and are the theorems informative? <sec:eval-rq4>
@@ -560,8 +560,8 @@ unknown, where Goblint writes the local entry directly. Under the warrowing
 rules the seed itself can be widened, so widening is placed differently; the
 direction of that difference is unproved, and no equivalence is claimed. All
 program globals share one global unknown, where Goblint keeps one per declared
-global; only the ownership-split example of @sec:mixed-flow places program
-globals there at all. Call targets are resolved statically in every instance.
+global; only the shared placement of @sec:mixed-flow, which is not the
+default, places program globals there at all. Call targets are resolved statically in every instance.
 The activated analyses share one combined state and one query kind, and their
 components use no globals, where Goblint's MCP also passes events, spawns and
 per-analysis globals and supports many query kinds. There are no threads.

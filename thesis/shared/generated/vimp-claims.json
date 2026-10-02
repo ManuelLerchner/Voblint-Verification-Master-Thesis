@@ -354,6 +354,15 @@
       "globals": "warrow"
     }
   },
+  "mixed-flow-sign-shared": {
+    "fixture": "thesis/shared/programs/mixed-flow.vimp",
+    "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",
+    "settings": {
+      "analysis": "sign",
+      "context": "none",
+      "globals": "warrow"
+    }
+  },
   "pg-contexts-entry": {
     "fixture": "docs/readme-figures/contexts.vimp",
     "program": "fun bump(n) {\n  return n + 1;\n}\n\nfun main() {\n  a = bump(5);\n  b = bump(4);\n  __voblint_check(a == 6);\n  __voblint_check(b == 5);\n}",

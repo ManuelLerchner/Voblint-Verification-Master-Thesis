@@ -55,16 +55,6 @@ why = "Non-vacuity section of the evaluation: the endpoint's premises hold for o
 session = "Voblint_Examples"
 theory = "Voblint_Examples.Example_Non_Vacuity"
 
-[facts.mf_node_collect_sound]
-why = "Main-statements appendix: the mixed flow-sensitive example, sound end to end."
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
-
-[facts.mf_after_calls]
-why = "Mixed flow-sensitivity section: the concrete consequence of the solved flow-insensitive global."
-session = "Voblint_Examples_Sign"
-theory = "Voblint_Examples_Sign.Example_Sign_Mixed_Flow"
-
 [facts."pstep.Call"]
 why = "Program-model chapter: the source step rule for a call."
 

@@ -175,8 +175,8 @@ A _program global_ is a variable of the VIMP program, like a global variable in
 C. An analysis global is a fact the analysis keeps flow-insensitively. The two
 are independent: an analysis may track a program global flow-sensitively in its
 local value, and an analysis global need not stand for any program variable.
-The numeric analyses of this thesis keep program globals in the local value and
-need no analysis global (@sec:mixed-flow).
+By default the numeric analyses keep program globals in the local value and need
+no analysis global. @sec:mixed-flow describes the other placement.
 
 === Side-effecting transfers and the manager <sec:manager>
 

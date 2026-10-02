@@ -12,6 +12,8 @@
 
 // A value at `pp7`, after both calls, from the flow-sensitive Sign run.
 #let _mf(var) = snapshot-var("mixed-flow-sign", "main_pp7_ctx0", var)
+// The same value from the run with program globals on the shared channel.
+#let _mfs(var) = snapshot-var("mixed-flow-sign-shared", "main_pp7_ctx0", var)
 
 The shipped analyses keep program globals in the flow-sensitive local value of
 every unknown, next to the locals. Goblint's base analysis makes the same
@@ -52,20 +54,22 @@ the globals of every store reached anywhere.
 For @ch:equations to apply, the lifted specification must meet the analysis
 soundness contract. #isathm("ownership_split_lift_contract") shows this for
 every transfer bundle that satisfies
-#isalocale("sound_nonrelational_transfer"). The solved example above runs the
-executable Sign instance of the split specification
-(#isaconst("ownership_split_dg_spec_st_for")), whose contract is proved
-separately (#isathm("analysis_contract_mf")), and the generator instance fixes
-$kappa$. Its routed obligations of @sec:eq-routing are discharged only for this
-program, under the unit context and the join update rule, from facts evaluated
-on its solved table with the code-generator oracle (@ch:executable). They bound the stores at
-`pp7`, the node after both calls:
+#isalocale("sound_nonrelational_transfer").
+#isathm("ownership_split_lift_gen_contract") generalizes the lifter to any
+carrier with a monotone recombination of a local and a global half that
+recovers every value from its two projections. The combined state of
+@ch:cooperation has these operations field by field: a pointwise field splits
+each name by where it is stored, and the order analysis's relation stays wholly
+local. The routed obligations of @sec:eq-routing are discharged for this
+placement as for the default one, for every program and under all three
+context policies. The placement is therefore a configuration choice of
+#isaconst("run_voblint") (#ctor("Program_Globals_Shared"), @sec:headline), and
+#isathm("run_voblint_source_sound") covers it. The command-line interface
+defaults to bounded narrowing under this placement.
 
-#proved("mf_after_calls")
-
-The bound on `y` is what the flow-insensitive `Gx` leaves. The analysis is not
-selectable in #isaconst("run_voblint"), and no theorem discharges its routed
-obligations for every program.
+On the program above the shared placement leaves `y` at
+#signval(_mfs("y")) after both calls (claim #claim-ref("mixed-flow-sign-shared")).
+This bound is what the flow-insensitive `Gx` leaves.
 
 All program globals share $kappa$ because #isalocale("analysis_contract")
 fixes the type of analysis-global names to `unit` (@sec:sound-core). Several

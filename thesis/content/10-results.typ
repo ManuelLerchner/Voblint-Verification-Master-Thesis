@@ -210,7 +210,7 @@ every definite verdict listed there holds of the store.
 
 One theorem establishes this for the exported analyzer. Its parameters are
 the configuration and the program, the arguments of #isaconst("run_voblint")
-(@sec:codegen). A configuration #isatype("analysis_config") bundles three
+(@sec:codegen). A configuration #isatype("analysis_config") bundles four
 choices:
 - $"as"$, a list of #isatype("analysis_domain") values, the analyses that run
   together as the combined component of @ch:cooperation, for example
@@ -219,9 +219,13 @@ choices:
   unknowns, for example #ctor("Globals_Warrow")\;
 - $"ctx"$, a #isatype("context_mode"), the context policy: #ctor("Ctx_None"),
   #ctor("Ctx_EntryState") or #ctor("Ctx_CallString") $k$;
+- $"pg"$, a #isatype("program_globals"), the placement of program globals: in
+  the flow-sensitive local state (#ctor("Program_Globals_Local")) or in one
+  flow-insensitive global unknown (#ctor("Program_Globals_Shared"),
+  @sec:mixed-flow);
 and the program $p$ is an #isatype("imp_prog"). The run of @fig:chain is
 #isaconst("run_voblint") (#ctor("Analysis_Config") [#ctor("Interval_Analysis")]
-#ctor("Globals_Warrow") #ctor("Ctx_EntryState")) $p$. The variables are
+#ctor("Globals_Warrow") #ctor("Ctx_EntryState") #ctor("Program_Globals_Local")) $p$. The variables are
 universally quantified, so the theorem holds for every configuration, without a
 separate theorem per analysis or policy.
 #proved("run_voblint_source_sound", note: [Source-level soundness of the

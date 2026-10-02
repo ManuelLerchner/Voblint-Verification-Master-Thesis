@@ -408,12 +408,6 @@ why = "The source-level soundness theorem (introduction and results chapter)."
 [snippets.source_run_has_ltr]
 why = "Main-statements appendix: every source run is represented by a valid trace."
 
-[snippets.mf_node_collect_sound]
-why = "Main-statements appendix: a mixed flow-sensitive analysis sound end to end for one program."
-
-[snippets.mf_after_calls]
-why = "Mixed flow-sensitivity section: what the flow-insensitive global still proves after both calls."
-
 [snippets.node_collect_semantic_postfix]
 why = "Figure gallery: the theorem-statement example."
 
