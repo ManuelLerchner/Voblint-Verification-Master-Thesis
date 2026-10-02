@@ -54,7 +54,7 @@ goal, for every domain and context policy, provided the analysis is sound and
 routing agrees with the concrete semantics: every callee context the concrete
 semantics admits for a covered call is one the equations route that call to,
 and every covered call is admitted in some context (@sec:eq-routing). Whether
-a solve terminates is a separate premise (@sec:termination). The running
+a solve terminates is a separate question (@sec:termination). The running
 example is the program of @fig:program-to-equations, repeated in
 @fig:eq-running with the names this chapter gives its calls.
 
@@ -587,8 +587,8 @@ between call-string lengths one and two.
   kind: image,
   placement: none,
   caption: [Procedure copies under four context policies. The running example
-    has no nested call, so this figure uses the playground's default program
-    (@fig:pg-overview): `scale(v)` returns `2 * v`, `wrap(w)`
+    has no nested call, so this figure uses a small program of the explainer:
+    `scale(v)` returns `2 * v`, `wrap(w)`
     returns `scale(w)` from #_site("scale(w)"), and `main` calls `a = wrap(1)`
     at #_site("wrap(1)") and `b = wrap(4)` at #_site("wrap(4)"), then checks
     `a == 2`. Boxes are procedure copies labelled with their contexts as the

@@ -9,13 +9,14 @@
 
 *Can soundness be machine-checked end to end?* Yes, as partial correctness for
 a scalar language with recursive procedures. For every configuration the
-analyzer offers, if the solve terminates and #isaconst("run_voblint") returns a
-result, then every store that a finite source execution reaches from a store
-whose declared globals are zero is covered by the result at a graph node that
-simulates the source configuration, and every definite verdict listed there
-holds for it (#isathm("run_voblint_certified_source_sound"), @sec:headline).
-Termination of the solve is a per-program premise, and termination of the
-analyzed program is not required. The delivered tools additionally trust the
+analyzer offers, if #isaconst("run_voblint") returns a report, then every store
+that a finite source execution reaches from a store whose declared globals are
+zero is described by the report at a graph node that simulates the source
+configuration, and every definite verdict listed there holds for it
+(#isathm("run_voblint_source_sound"), @sec:headline). The theorem has no
+termination premise, since a report exists only where the solve returned;
+termination of the solve is not proved for every program, and termination of
+the analyzed program is not required. The delivered tools additionally trust the
 parser, code generator, compilers, runtimes and presentation code
 (@sec:trust-boundary).
 
@@ -35,8 +36,8 @@ each prove obligations that name no partner (#isathm("mcp_combine_sound")).
 
 *Is the theorem informative?* Partly. Counterexample theorems show that
 dropping selected obligations admits unsound claims. One named program meets
-every premise of the main theorem, with termination and the answer
-established by evaluation. Evaluated precision separations hold on single
+every premise of the main theorem, with the answer established by
+evaluation. Evaluated precision separations hold on single
 programs, between call-string lengths, between update rules, and between a
 combination of analyses and its parts. No general precision result is proved
 (@sec:eval-rq4).
@@ -102,8 +103,9 @@ of them determined the shape of the call interface (@sec:revealed).
 The answers above hold within the following limits, each also stated where it
 arises.
 
-+ *Partial correctness.* Solver termination is a per-program premise.
-  Regression programs exist whose solves do not finish, under entry-state
++ *Partial correctness.* The theorem covers every answer the analyzer returns,
+  and solver termination is not proved. Regression programs exist whose solves
+  do not finish, under entry-state
   contexts on intervals and under the joining update rules (@sec:termination).
   That the Int product's reduction stops in the executable is not proved
   either (@sec:reduced-product).
@@ -240,7 +242,8 @@ obligations and on the trusted base of @sec:trust-boundary.
 The thesis shows that the soundness of a Goblint-style analyzer with contexts,
 side effects and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function, for a scalar language
-with recursive procedures and under a per-program termination premise. The
+with recursive procedures, as partial correctness: for every answer the
+analyzer returns. The
 proof follows one chain. Graph runs simulate source executions, and valid
 activation traces represent graph runs, sorted by the context read
 off each activation into the activation collecting semantics. Context-indexed

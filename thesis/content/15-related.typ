@@ -362,7 +362,7 @@ Contexts also determine how many unknowns a solve creates. The context lifters
 of #cite(<erhard25>, form: "prose") bound the number of contexts on the fly and
 guarantee finitely many contexts whenever the solver updates each unknown
 finitely often #_todo[check claim.]. Voblint's entry-state policy has no such bound, which is one reason the
-termination of the solve stays a per-program premise (@sec:termination).
+termination of the solve is not proved (@sec:termination).
 
 == Unverified analyzers and their testing <sec:rel-testing>
 
@@ -417,8 +417,8 @@ the nature and extent of the unsoundness explicitly.
     treated, and _covered_ means Voblint's theorem includes recursive calls.
     _Combination_ names how domains exchange facts, and _mechanized_ records
     what a proof assistant has checked. _End to end_ means from source
-    executions to the verdicts of the exported function, under a per-program
-    termination premise and with the trusted components of
+    executions to the verdicts of the exported function, for every answer it
+    returns (partial correctness) and with the trusted components of
     @sec:trust-boundary. #_todo[check the IKOS and Pulse-X cells against
       @brat14 and @le22.]],
 ) <tab:production-analyzers>
@@ -437,7 +437,8 @@ programs, but its documentation warns that the default configuration may not
 terminate on them
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/docs/user-guide/running.md")[`running.md`]
 at revision `5320a6b7`). Voblint's theorem covers recursive procedures under
-each policy, with the termination of the solve as a premise.
+each policy, for every answer the analyzer returns; termination of the solve
+is not proved.
 
 Pulse-X, which represents Infer, is the one tool whose whole analysis has a
 soundness theorem. It is proved on paper for a formal model and states that reported errors are real

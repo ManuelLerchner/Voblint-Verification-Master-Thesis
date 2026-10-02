@@ -24,7 +24,7 @@
 Does the domain interface of @ch:domains admit real domains, and what does
 each gain? The interface asks a numeric domain to prove laws about integers
 only, with no reference to contexts, routing or the solver. Five domains prove
-them, and the source-level theorem (#isathm("run_voblint_certified_source_sound"), @sec:headline) covers each under every
+them, and the source-level theorem (#isathm("run_voblint_source_sound"), @sec:headline) covers each under every
 context policy and update rule. Each domain tests a different part of the
 interface. Sign is finite, so
 its join serves as its widening. Interval is infinite and needs widening and
@@ -351,10 +351,9 @@ set (#isathm("refine_exact")) and only moves down in the order
 (#isathm("refine_reductive")). Monotonicity is proved only for the two
 non-fixpoint modes (#isathm("refine_nonfixpoint_mono")). The public analyzer
 runs the fixpoint mode by default, and its option `--int-refinement` selects
-another. Each mode is registered as an analysis of its own
-(#isaconst("Int_Analysis"), #isaconst("Int_Once_Analysis"),
-#isaconst("Int_Never_Analysis")), because the combined state of @ch:cooperation
-keeps one field per analysis. Its soundness needs no monotonicity of reduction,
+another. Each mode is registered as an analysis of its own, one case
+#isaconst("Int_Analysis") $m$ per #isatype("refine_mode") $m$, because the
+combined state of @ch:cooperation keeps one field per analysis. Its soundness needs no monotonicity of reduction,
 because no obligation of @ch:domains asks for monotone transfers.
 
 On programs, one round and the fixpoint give the same results in every case we
@@ -440,7 +439,7 @@ discharges.
 Five domains prove the laws of @ch:domains with facts about integers alone.
 Each supplies its primitives and proves them sound, and
 its generated registration discharges the rest (@sec:instances-supply). The source-level theorem covers it as a field of the combined
-state under every context policy (#isathm("run_voblint_certified_source_sound")). The instances show that the interface admits
+state under every context policy (#isathm("run_voblint_source_sound")). The instances show that the interface admits
 the identity for any inverse operator (Sign and Interval for arithmetic, Parity
 and Congruence for comparisons), needs no monotone reduction (Int in the
 fixpoint mode) and needs no pointwise store (#isaconst("rel_order_spec"),

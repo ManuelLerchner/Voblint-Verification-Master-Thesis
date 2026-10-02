@@ -736,8 +736,8 @@ valuation $sol$, then $S$ contains $x$, is closed under the local reads of its
 right-hand sides, and on $S$ the valuation is a post-solution, side
 contributions included. The theorem needs no monotonicity of the right-hand
 sides and says nothing about unknowns outside $S$. @sec:certificate states it
-precisely, and @sec:termination explains why termination remains a premise of
-Voblint's main theorem.
+precisely, and @sec:termination explains why Voblint's main theorem needs no
+termination premise although termination is not proved.
 
 Voblint instantiates the solver's locale #isalocale("TD_side_upd_rule") with
 its own equation system. The soundness proof meets the solver at
@@ -791,5 +791,5 @@ A _proof by evaluation_ extends the trusted computing base beyond Isabelle's
 inference kernel. The method `eval` compiles a closed proposition to code, runs it, and accepts
 the result through the code generator's evaluation oracle. In 2025, a defect in
 normalization by evaluation, which also extends trust beyond the kernel,
-admitted a proof of `False` @paulson26broken. Witnesses about fixed programs such as #isathm("nv_solve_c") are proved this
+admitted a proof of `False` @paulson26broken. Witnesses about fixed programs such as #isathm("nv_report") are proved this
 way (@tab:oracles-audit).

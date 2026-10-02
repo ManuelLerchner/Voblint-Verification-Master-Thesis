@@ -138,9 +138,10 @@
     callee's entry value and the analysis's shared facts.
   ],
   term("partial-correctness", "partial correctness", _ai, see: <sec:headline>)[
-    Soundness under a termination premise. The source-level theorem assumes
-    that the abstract solve terminates for the given program and configuration;
-    no theorem establishes termination for every program.
+    Soundness of every answer that is returned. The source-level theorem speaks
+    about every report the analyzer returns, which it does only where its
+    solve finished; no theorem establishes that the solve finishes for every
+    program.
   ],
 
   // --------------------------------------------------------------- programs --
@@ -654,13 +655,15 @@
     "carrier",
     "executable carrier",
     _solve,
-    isa: [#isatype("default_st"), #isaconst("default_st_to_fun")],
+    isa: [#isatype("default_st"), #isaconst("readback")],
     see: <ch:solving>,
   )[
     The finite state representation: a local default, a global default and a
     list of overrides indexed by locations (names tagged local or global),
-    quotiented by equal lookups. Readback turns it into a function on names by
-    looking each name up at the location its classification selects.
+    quotiented by equal lookups. Readback, $rho_(cal(G))$, turns it into a
+    function on names by looking each name up at the location its
+    classification selects; the same overloaded readback applies to lifted and
+    D/G states.
   ],
   term(
     "commutation",
@@ -679,28 +682,27 @@
     "run-voblint",
     "public analysis function",
     _res,
-    isa: [#isaconst("run_voblint"), #isatype("run_result")],
+    isa: [#isaconst("run_voblint"), #isatype("analysis_report")],
     see: <sec:codegen>,
   )[
-    The HOL function from a configuration (domain, global update rule, context
-    policy) and a VIMP syntax tree to an answer: #isaconst("Malformed_Program")
-    or #isaconst("Analysed") with the solved result. The source-level theorems
-    and the code export concern this one constant.
+    The HOL function from a configuration (analyses, global update rule,
+    context policy) and a VIMP syntax tree to an answer:
+    #isaconst("Invalid_Activation"), #isaconst("Malformed_Program"),
+    #isaconst("No_Answer") or #isaconst("Analysed") with a semantic report. The
+    source-level theorems and the code export concern this one constant.
   ],
   term(
-    "termination-premise",
-    "termination premise",
+    "report",
+    "analysis report",
     _res,
-    isa: isaconst("config_terminates"),
-    see: <sec:headline>,
+    isa: [#isatype("analysis_report"), #isaconst("report_sem"), #isaconst("verdict_stores")],
+    see: <sec:chain>,
   )[
-    The premise that the solver's recursion is defined on the program's query
-    under the chosen configuration. It concerns the abstract solve and makes
-    the result partial correctness. For a given program it can be discharged
-    inside Isabelle by evaluating the executable solver, as for the witness
-    programs of @sec:nonvacuity. A returning analyzer run performs the same
-    computation outside Isabelle's theorem check, so it establishes the premise
-    only relative to the trusted code generator and toolchain.
+    What an analysed answer carries: one semantic state per solved point and
+    context, the check verdicts and the arithmetic diagnostics. Its semantics at
+    a point $v$ is the set of stores its states there describe; its verdict
+    semantics is the set of stores in which every definite verdict at $v$
+    holds.
   ],
   term("verdict", "verdict", _res, isa: isatype("contextual_verdict"), see: <sec:verdicts>)[
     The classification of a check at a node: the per-context answers joined in
@@ -745,14 +747,14 @@
     "source-theorem",
     "source-level theorem",
     _res,
-    isa: [#isathm("run_voblint_certified_source_sound"), #isaconst("checks_sound_at")],
+    isa: [#isathm("run_voblint_source_sound"), #isathm("run_voblint_spine")],
     see: <sec:headline>,
   )[
-    For every finite source run from an initial store, if the configured solve
-    terminates and the analyzer answers, some node matches where the run
-    stopped, the store is covered there in some context, and every check listed
-    there is true of it: none is `DEAD`, every `PROVED` condition holds and
-    every `REFUTED` condition fails.
+    For every finite source run from an initial store, if the analyzer returns
+    a report, some node matches where the run stopped, the store is collected
+    there, the report describes it there in some context, and every definite
+    verdict listed there holds of it: every `PROVED` condition holds and every
+    `REFUTED` condition fails.
   ],
 
   // ------------------------------------------------------- Isabelle, trust --

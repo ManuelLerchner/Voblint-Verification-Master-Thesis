@@ -219,9 +219,9 @@ name = "activation_collect_dg_sound"
 
 [[anchor]]
 chapter = "ch:results"
-concept = "Result at one node"
+concept = "Report covers the collecting semantics"
 kind = "thm"
-name = "run_voblint_sound_at"
+name = "run_voblint_covers"
 
 [[anchor]]
 chapter = "ch:executable"
@@ -233,7 +233,19 @@ name = "run_voblint"
 chapter = "ch:results"
 concept = "Source-level soundness"
 kind = "thm"
-name = "run_voblint_certified_source_sound"
+name = "run_voblint_source_sound"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Source run to verdicts, with its trace and context"
+kind = "thm"
+name = "run_voblint_spine"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Report contract of an analysed answer"
+kind = "thm"
+name = "run_voblint_report_contract"
 
 [[anchor]]
 chapter = "ch:results"

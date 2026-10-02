@@ -29,10 +29,11 @@ reasoning no theorem checks, and we mark it where a claim rests on one.
 
 Can soundness be machine-checked from source executions to the verdicts of
 the exported executable, and which premises and trusted components remain? It
-can, for partial correctness, with a per-program termination premise and a
-trusted toolchain below the exported constant.
+can, for partial correctness: the theorem covers every report the analyzer
+returns, with no termination premise, and rests on a trusted toolchain below
+the exported constant.
 
-_Evidence: machine-checked._ #isathm("run_voblint_certified_source_sound")
+_Evidence: machine-checked._ #isathm("run_voblint_source_sound")
 (@sec:headline) is stated once for every domain, global update rule and
 context policy that #isaconst("run_voblint") accepts, and about the constant
 that #isacmd("export_code") emits (@sec:codegen). Its chain starts at the
@@ -43,10 +44,10 @@ met together: @sec:nonvacuity instantiates the theorem on concrete programs
 with every premise discharged. The oracle audit below shows which theorems of the
 chain rest on an oracle.
 
-_Limits._ The result is partial correctness. #isaconst("config_terminates") is
-a per-program premise, discharged by evaluation where it is discharged at all:
-#isathm("certificate_demo_full_certificate") does so for one program at one
-configuration, and regression programs exist whose solves do not finish
+_Limits._ The result is partial correctness. The analyzer answers only where
+its solve returns, and termination is not proved for every program:
+#isathm("certificate_demo_full_certificate") evaluates one solve to completion
+inside Isabelle, and regression programs exist whose solves do not finish
 (@sec:termination). The reduction of the Int product is a second place where
 the executable may fail to return: in the fixpoint mode, which the analyzer
 uses, the generated code iterates until the value stops changing, and that it
@@ -83,8 +84,9 @@ Two more figures show how much material a review of definitional adequacy must c
 source semantics over which the theorem's premises quantify is defined in
 #stat("semantics.theories") theories of #stat("semantics.lines") lines, among
 them the #stat("semantics.pstep_rules") rules of #isaconst("pstep")\; the
-conclusion additionally uses the collecting semantics and
-#isaconst("checks_sound_at"), defined elsewhere. The numbers locate the
+conclusion additionally uses the collecting semantics and the report and
+verdict semantics (#isaconst("report_sem"), #isaconst("verdict_stores")),
+defined elsewhere. The numbers locate the
 material and do not measure original proof work. We draw no comparison with other
 projects: reported proof-to-code ratios, such as that of
 #cite(<franceschino21>, form: "prose"), depend on language, automation, and
@@ -235,8 +237,7 @@ proves the laws of its local specification against every channel that holds, and
 (@ch:cooperation). The assembly interprets #isalocale("dg_analysis")
 once per context family for the combination, with the activation list, the
 update rule and the call-string depth as parameters (@fig:assembly), and
-#isathm("run_voblint_certified_source_sound") covers every resulting
-configuration.
+#isathm("run_voblint_source_sound") covers every resulting configuration.
 
 _Evidence: source inspection._ The lattice of the relational carrier
 #isatype("relc") lies beside the numeric value lattices in
@@ -282,8 +283,8 @@ concrete input (@sec:nonvacuity). _Falsification_ evidence removes or weakens
 a condition and shows that its consumer then fails on a concrete execution, so
 the condition is needed.
 
-Soundness alone is easy to satisfy. #isaconst("checks_sound_at") constrains only decided
-and dead verdicts, so an analyzer answering `UNKNOWN` at every check satisfies
+Soundness alone is easy to satisfy. #isaconst("verdict_stores") constrains only
+decided verdicts, so an analyzer answering `UNKNOWN` at every check satisfies
 it at every node and store (#isathm("unknown_everywhere_sound")). Answering
 `PROVED` everywhere violates it at the store $x = 1$, which reaches the check
 `x == 0` (#isathm("proved_everywhere_unsound")). Any abstract remainder that
@@ -384,17 +385,17 @@ executable instance shows that the assumptions can be met together.
 The instance is the two-call program of @fig:program-to-equations under
 Interval, entry-state contexts and warrowing. The theory builds the source run
 that returns from `bump(5)` and `bump(4)` and stops before the first check,
-discharges #isaconst("config_terminates") by evaluating the solve, and computes
-the answer: both checks `PROVED`. #isathm("nv_source_certified") instantiates
-#isathm("run_voblint_certified_source_sound") with every premise discharged,
+and computes the answer by evaluation: both checks `PROVED`.
+#isathm("nv_source_certified") instantiates
+#isathm("run_voblint_source_sound") with every premise discharged,
 and #isathm("nv_check_proved_sound") instantiates
 #isathm("run_voblint_check_sound") at the check `a == 6`. For the reachability
 claim, a second program sets `x = 1` and guards a check by `x < 0`; the
 analyzer marks it `DEAD`, and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to conclude that the collecting
 semantics at that node is empty. The runs and the collecting-semantics facts
-are proved by simplification. The answers and the termination premise are
-proved by `eval` and therefore trust the code generator (@sec:trust-boundary).
+are proved by simplification. The answers are computed by `eval` and therefore
+trust the code generator (@sec:trust-boundary).
 The witnesses are informative because the verdicts they constrain are `PROVED`
 and `DEAD`, which #isathm("unknown_everywhere_sound") shows to be the
 non-trivial ones. Non-vacuity is a property of the premises: the witnesses do

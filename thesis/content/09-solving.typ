@@ -20,7 +20,8 @@ solver, so its algorithm and its update rule (@sec:update-rules) can change
 without touching the proof. The solver runs on an executable representation of
 abstract states, and @sec:represented-function shows that this representation computes the
 same values as the functions over variable names the analyses are specified
-with. Termination of the solve is a premise, checked per program
+with. The analyzer runs the executable form of the solver, so it has a result
+only where the solve returned, and termination for every program is not proved
 (@sec:termination).
 
 Chaining the two results gives the statement @ch:results builds on: whenever
@@ -28,8 +29,8 @@ the executable solver returns for a program, the valuation it returns covers
 every store that reaches each solved unknown in its context. The chapter
 isolates the certificate (@sec:certificate), fixes the two choices needed to
 run the solver, an update rule (@sec:update-rules) and an executable state
-representation (@sec:represented-function), and accounts for the remaining termination
-premise (@sec:termination).
+representation (@sec:represented-function), and explains why termination is
+left unproved (@sec:termination).
 
 == The certificate between solver and semantics <sec:certificate>
 
@@ -242,8 +243,9 @@ executable solver that returns a result lies in that domain
 (#isathm("solve_dom_of_solve_c")). #isathm("td_certified_solver") composes
 these facts into one interpretation of #isalocale("certified_solver") for the
 vendored solver at every update rule, and every registration of an analysis
-with #isalocale("dg_analysis") cites it. Domain membership for the program's query is the
-termination premise of @sec:termination. None of the contracts refers to how
+with #isalocale("dg_analysis") cites it. Domain membership for the program's query
+follows from a returned executable run, the third contract, so no theorem about
+the analyzer assumes it (@sec:termination). None of the contracts refers to how
 the solver computes. Another solver, for instance one with local side effects
 (@sec:outlook-extending), attaches to Voblint by interpreting
 #isalocale("certified_solver").
@@ -476,7 +478,10 @@ same dictionary. The function a state represents, $rho_(cal(G))(d)$
 (#isaconst("default_st_to_fun")), is lookup on every variable: the total
 function on variable names that the specification uses. It looks each name $x$ up at its location $ell(x)$, the
 local or global location that the program's global-variable classifier
-$cal(G)$ (@sec:pstep) assigns to $x$.
+$cal(G)$ (@sec:pstep) assigns to $x$. The same $rho_(cal(G))$ reads back a
+lifted state, pointwise under the lift, and a D/G state, component by
+component: Isabelle declares one overloaded #isaconst("readback") whose instance
+the argument's type selects.
 
 A carrier state means what its represented function means. @sec:nonrel-state concretizes a
 function state $f$ to the stores whose every variable lies in the
@@ -677,9 +682,9 @@ commutes with taking the represented function.
 
 The solver can now compute every operation its interface requires on finite
 carrier values, with the update rule the analyzer selects. The solve is thus
-executable; whether the recursive solve returns is the remaining premise.
+executable; whether the recursive solve returns is the remaining question.
 
-== Why termination stays a premise <sec:termination>
+== Why termination is not proved <sec:termination>
 
 In a proof assistant termination is a question of the logic itself. HOL is a
 logic of total functions, so a recursive definition is admitted only when its
@@ -688,12 +693,15 @@ $0 = 1$ @nipkow14[§2.3.4]. The vendored solver's termination is not known in
 general, so Isabelle defines it with a domain predicate
 (#isaconst("solve_dom", thy: "TD_side_upd_rule")), the arguments on which
 the recursion is well founded, and the certificate of @sec:certificate holds on
-that domain. Outside it the solver still denotes some unspecified value, so the
-premise #isaconst("config_terminates") asks for domain membership of the
-program's query, not for an answer. The generated code runs the executable
-form of the solver, which returns only when the recursion finishes, and
-#isathm("solve_dom_of_solve_c") turns a finished run into domain membership.
-Evaluating the solve for one program therefore discharges the premise.
+that domain. Outside it the solver still denotes some unspecified value. The
+analyzer never assumes domain membership. It runs the executable form of the
+solver, #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when
+the recursion finishes, and #isathm("solve_dom_of_solve_c") turns a returned
+run into domain membership of the query. #isaconst("run_voblint") answers with a
+report only after that run returned, so every report carries the membership the
+certificate needs, and the theorems about the analyzer have no termination
+premise. Where the solve diverges, the generated code does not return, and
+there is no report to make a claim about.
 
 Under the unit context the solved unknowns are finite
 (#isathm("compiled_unit_vars_finite")), and bounded call strings over a
@@ -728,6 +736,6 @@ joins a side effect into its target until one origin increases the target a
 second time, and from then on widens there @seidl21[§9]. The joining update
 rules never widen, so the result does not carry over to them, as the growing
 recursion above shows. Mechanizing such a result for the vendored solver is
-future work. The end-to-end theorem is therefore a
-partial-correctness result with a per-program premise, which @ch:results chains
+future work. The end-to-end theorem is therefore a partial-correctness result:
+it speaks about every report the analyzer returns, and @ch:results chains it
 with equation soundness into the source-level theorem (@sec:headline).

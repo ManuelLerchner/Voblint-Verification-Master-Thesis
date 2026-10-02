@@ -11,8 +11,14 @@ theory = "Voblint_CLI.Analysis_Certified"
 [facts.node_collect_semantic_postfix]
 why = "Connects a semantic post-fixpoint to the compiled-program collecting semantics."
 
-[facts.run_voblint_certified_source_sound]
+[facts.run_voblint_source_sound]
 why = "The introduction states the source-level soundness result with its actual premises."
+
+[facts.run_voblint_spine]
+why = "Results chapter: a source run's trace, its context and the chain to the verdicts, once for every policy."
+
+[facts.run_voblint_report_contract]
+why = "Results chapter: what an analysed answer guarantees about its report."
 
 [facts.run_voblint_check_sound]
 why = "Check-verdict endpoint cited in the introduction."

@@ -62,9 +62,9 @@ the main theorem then covers it. This fixed list of obligations
 also makes the framework a practical target for extension with AI agents,
 which we used to add the order analysis and the query layer.
 
-Because the solve diverges for some configurations, termination is a premise
-for each program, and the guarantee is
-partial correctness. Several components lie outside the verification boundary, such as the
+Because the solve diverges for some configurations, the guarantee is partial
+correctness: it covers every answer the analyzer returns, and termination is
+not proved. Several components lie outside the verification boundary, such as the
 parser, Isabelle's code generator, the OCaml and WebAssembly toolchains, and
 driver and rendering code. Whether VIMP captures the intended language is a
 modeling question that the proof cannot settle, so we document how it differs

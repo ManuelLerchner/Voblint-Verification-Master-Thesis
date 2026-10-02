@@ -185,8 +185,9 @@ lose concrete behavior. The argument therefore follows one store that an
 execution reaches through every representation (@fig:intro-nest). The compiler
 simulation places it at a graph node $v$ (#isathm("csim_star")), the reached graph state is covered by a valid
 activation trace (#isaconst("valid_activation_trace"), #isathm("source_reaches_node_collect")), and under the totality condition that trace falls
-into the activation collecting semantics of some context (#isathm("node_collect_eq_Union_activation_collect")) whose solved value admits the store. A `PROVED` check at
-$v$ holds for every admitted store (#isathm("run_voblint_sound_at")). Each check row of the result carries its source position, which
+into the activation collecting semantics of some context (#isathm("node_collect_eq_Union_activation_collect")). The analyzer's report
+describes every store collected at $v$ (#isathm("run_voblint_covers")), and every definite verdict the report gives at $v$ holds
+for every store it describes (#isathm("analysis_report_verdicts_sound")). Each check row of the report carries its source position, which
 the unverified parser writes (@sec:trust-boundary).
 Each outer set in @fig:intro-nest may add stores that no execution reaches,
 which costs precision. Soundness needs only that it contains the set inside it.
@@ -210,13 +211,13 @@ which costs precision. Soundness needs only that it contains the set inside it.
     ]
     ring(
       vb.proved,
-      [`PROVED` check],
-      [#isaconst("checks_sound_at"): stores satisfying the condition of a `PROVED`
-        check at $v$ (@ch:results)],
+      [Verdicts],
+      [#isaconst("verdict_stores"): stores in which every definite verdict at $v$
+        holds (@ch:results)],
       ring(
         vb.accent,
-        [Abstract result],
-        [#isaconst("analysis_result_covers"): stores the solved values admit at $v$
+        [Report],
+        [#isaconst("report_sem"): stores the report's states at $v$ describe
           (@ch:results)],
         ring(
           vb.cong,
@@ -247,7 +248,7 @@ which costs precision. Soundness needs only that it contains the set inside it.
   kind: image,
   placement: auto,
   caption: [Soundness at a program point $v$ as nested sets. Each inclusion is
-    proved under the premises of the main theorem (#isathm("run_voblint_sound_at"), @ch:results).],
+    proved for every report the analyzer returns (#isathm("run_voblint_source_sound"), @ch:results).],
 ) <fig:intro-nest>
 
 == The verified solver and the open questions <sec:rqs>
@@ -421,8 +422,8 @@ To our knowledge, no prior mechanized analyzer connects a source semantics to
 a side-effecting constraint system, in which right-hand sides contribute to global unknowns, or is proved sound through a verified solver for such
 systems. In Voblint, every call publishes its callee's entry state as a side
 effect to a global unknown (@sec:eq-call), and the
-end-to-end theorem covers this for every accepted program whose solve
-terminates (#isathm("run_voblint_certified_source_sound")). The contributions below address this gap.
+end-to-end theorem covers this for every program the analyzer returns a report
+for (#isathm("run_voblint_source_sound")). The contributions below address this gap.
 
 == Contributions <sec:contributions>
 
@@ -434,9 +435,11 @@ answers one of the questions of @sec:rqs.
   function #isaconst("run_voblint") are correct for every source execution
   from an initial store with zeroed globals (#isaconst("cinit_stores")) that
   reaches the corresponding program point, in every configuration it offers,
-  provided the solve terminates (#isaconst("config_terminates"))
-  (#isathm("run_voblint_certified_source_sound"), @sec:headline). Companion
-  theorems justify `DEAD` and the absence of arithmetic warnings.
+  whenever it returns a report (#isathm("run_voblint_source_sound"),
+  @sec:headline). The theorem has no termination premise: a report exists only
+  where the executable solve finished, and termination for every program is
+  not proved (@sec:termination). Companion theorems justify `DEAD` and the
+  absence of arithmetic warnings.
 - _A concrete semantics of calling contexts._ A context policy is a relation
   between calls and callee contexts (#isatype("call_context_rel")), which
   determines the contexts an activation trace carries. Under the
