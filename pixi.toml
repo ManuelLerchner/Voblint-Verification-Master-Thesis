@@ -3,35 +3,20 @@ name = "voblint"
 channels = ["conda-forge"]
 platforms = ["osx-arm64", "osx-64", "linux-64"]
 
-# Repository orchestration (pixi task list) plus the Python-side tooling
-# each task actually needs, split by real dependency boundary below -- not
-# by task grouping. The OCaml toolchain stays on opam:
-# conda-forge's ocaml-findlib and ocaml-zarith have no osx-arm64 build, so
-# pixi cannot be the sole toolchain manager for those on Apple Silicon.
-# Tasks that call into them (codegen-regression, cli-build, property-test, ...)
-# are plain shell/OCaml invocations that rely on those tools already being
-# on PATH, not on a pixi-managed OCaml environment.
+# Features follow dependency boundaries, not task groups. The OCaml toolchain
+# stays on opam: conda-forge has no osx-arm64 ocaml-findlib or ocaml-zarith.
 
 [dependencies]
 python = ">=3.11"
-# isar-tools: source tooling for the .thy/ROOT files (`isar check`, `isar fmt`,
-# `isar stats`, `isar project extract|names`). Pure Python, no Isabelle or AFP
-# needed; configured in isar.toml.
+# Source tooling for .thy and ROOT files, configured in isar.toml.
 isar-tools = ">=0.4.0,<0.5"
 
-[pypi-dependencies]
-# I/R: AutoCorrode's headless REPL MCP server (scripts/start-ir.sh). Not a
-# lint/test/grammar concern -- its own dependency pair, needed by every
-# environment a contributor would actually install, so it stays composed
-# into default rather than requiring a separate opt-in.
+# AutoCorrode's headless REPL MCP server (scripts/start-ir.sh).
 [feature.ir.dependencies]
 prompt_toolkit = ">=3.0"
 mcp = ">=1.0"
 
-# manifests/vimp-grammar.yaml -> scripts/gen_vimp_isabelle.py / gen_vimp_menhir.py
-# (see AGENTS.md's "VIMP grammar pipeline"), and manifests/analyses.yaml ->
-# scripts/gen_analysis_assembly.py. These three generators are the only
-# things in the repo that parse YAML.
+# The generators reading manifests/*.yaml, the only YAML parsers in the repo.
 [feature.grammar.dependencies]
 pyyaml = "*"
 [feature.grammar.tasks]
@@ -47,20 +32,13 @@ grammar-check = { depends-on = [
   "grammar-printer-check",
 ], description = "Check every generated VIMP frontend and printer for drift." }
 
-# manifests/analyses.yaml -> src/Analyses/<Domain>/generated/<Domain>_Analyses.thy.
-# Registration only: the generated interpretations cite handwritten lemmas, which
-# Isabelle still checks. `--check` diffs regenerated output against the checked-in
-# theories itself, so the drift gate needs neither git nor a toolchain.
 assembly-generate = { cmd = "python3 scripts/gen_analysis_assembly.py", description = "Regenerate analysis assembly theories from manifests/analyses.yaml." }
 assembly-check = { cmd = "python3 scripts/gen_analysis_assembly.py --check", description = "Check generated analysis assembly theories against manifests/analyses.yaml." }
 
-# Hypothesis property-test suite (tests/property/).
 [feature.test.dependencies]
 hypothesis = ">=6.100"
 pytest = ">=8.0"
 [feature.test.tasks]
-# Hand-written support expectations checked against generated output, so a
-# manifest edit that changes what the CLI offers has to be intended.
 analysis-registry-check = { cmd = "python3 -m pytest tests/test_analysis_registry.py", description = "Check generated dispatcher support against the hand-written analysis policy." }
 pages-scripts-check = { cmd = "python3 -m pytest tests/test_vimp_fixture.py tests/test_playground_link.py", description = "Check the fixture header reader, the playground example corpus, and playground link encoding and validation." }
 property-test = { cmd = "python3 -m pytest tests/property", description = "Build the test drivers and run parser, printer, and AST property tests." }
@@ -73,36 +51,22 @@ solver-trace-check = { cmd = "python3 -m pytest tests/test_solver_trace.py", dep
   "cli-build",
 ], description = "Check the --trace hooks, that tracing leaves stdout unchanged, and the event order on the context example." }
 
-# HTML result viewer (`voblint --html`). graphviz supplies `dot`, which
-# renders the CFG the viewer's graph pane loads; the frontend itself is the
-# vendor/g2html submodule, needed when generating a report.
+# `voblint --html`: graphviz renders the CFG the viewer's graph pane loads.
 [feature.report.dependencies]
 graphviz = "*"
 [feature.report.tasks]
 html-report-serve = { cmd = "bash scripts/mk/report.sh", description = "Serve an existing HTML analysis report and open it in a browser." }
-# Pins the emitted directory's shape, which is a contract with a frontend this
-# repository does not own -- see the test module's own docstring.
 html-report-structure-check = { cmd = "python3 -m pytest tests/test_html_report.py tests/test_value_rendering.py", depends-on = [
   "cli-build",
 ], description = "Check the emitted report structure consumed by the g2html frontend, and how abstract values read in every rendering." }
-# Sweeps the whole fixture corpus, each under its own PARAM line, for the
-# faults that only show up on particular programs -- see the script's docstring.
 html-report-corpus-audit = { cmd = "python3 scripts/audit_html_reports.py", depends-on = [
   "cli-build",
 ], description = "Generate reports for the regression corpus and check cross-file invariants." }
-# Sweeps the domain/solver/context space rather than the corpus: a
-# configuration the legality table accepts must have a surface behind it.
 html-report-config-audit = { cmd = "python3 scripts/audit_html_reports.py --combinations", depends-on = [
   "cli-build",
 ], description = "Check report generation across supported domain, solver, and context combinations." }
 
-# Benchmarking (`pixi run voblint-bench`). hyperfine times cli/voblint once per
-# abstract domain over the same fixture so domain/solver cost can be
-# compared in place -- see scripts/mk/bench.sh's header for the sweep and
-# probe behavior. matplotlib backs the --plot whisker-plot rendering
-# (scripts/plot_bench.py): hyperfine only exports JSON, plotting is its
-# documented companion-script pattern. >=3.10 for boxplot's
-# tick_labels/orientation parameters.
+# matplotlib >=3.10 for boxplot's tick_labels/orientation (scripts/plot_bench.py).
 [feature.bench.dependencies]
 hyperfine = "*"
 matplotlib-base = ">=3.10"
@@ -112,7 +76,6 @@ voblint-bench = { cmd = "bash scripts/mk/bench.sh", depends-on = [
 ], description = "Benchmark selected abstract domains over one VIMP program." }
 
 # Git hooks (.lefthook.yaml) and the formatters and linters they gate on.
-# Each tool's own config file excludes generated and vendored sources.
 [feature.lint.dependencies]
 lefthook = "*"
 ruff = ">=0.16"
@@ -128,11 +91,8 @@ taplo = ">=0.10"
 python-format = { cmd = "ruff format", description = "Format tracked Python sources with ruff." }
 python-format-check = { cmd = "ruff format --check", description = "Check that Python sources are formatted with ruff." }
 python-lint = { cmd = "ruff check", description = "Lint Python sources with ruff." }
-# Workflow run blocks are shell too: actionlint checks them with shellcheck.
-# `files` defaults to every tracked script; the pre-commit hook passes its staged ones.
 shell-lint = { cmd = "bash scripts/mk/shell-lint.sh", description = "Lint tracked shell scripts, or the given ones, with shellcheck." }
 actions-lint = { cmd = "actionlint && zizmor --offline .github", description = "Lint GitHub workflows with actionlint and audit them with zizmor." }
-# 100 columns, the line limit the theories follow. The symbol table is generated.
 typst-format = { cmd = "bash scripts/mk/typst-format.sh", description = "Format thesis Typst sources, or the given ones, with typstyle." }
 typst-format-check = { cmd = "typstyle -l 100 --check $(git ls-files '*.typ' ':!thesis/lib/isabelle-symbols.typ')", description = "Check that thesis Typst sources are formatted with typstyle." }
 markdown-lint = { cmd = "markdownlint-cli2", description = "Lint Markdown documentation with markdownlint-cli2." }
@@ -145,10 +105,7 @@ hooks-install = { cmd = "lefthook install", description = "Install the repositor
 # Over every file, `stage_fixed` would stage unrelated worktree edits.
 pre-commit = { cmd = "lefthook run pre-commit --all-files --no-stage-fixed", description = "Run every pre-commit hook against the full repository." }
 
-# GitHub Pages and browser tooling. Binaryen supplies wasm-opt for the
-# wasm_of_ocaml browser build; ripgrep is used by the source-level term-link
-# checker. Keeping both here avoids installing site-only tools in lint, test,
-# thesis, grammar, report, or benchmark environments.
+# wasm-opt for the browser build; ripgrep for the term-link checker.
 [feature.pages.dependencies]
 binaryen = ">=119"
 ripgrep = "*"
@@ -167,7 +124,6 @@ pages-dev = { cmd = "python3 scripts/pages_dev.py", depends-on = [
   "browser-build",
 ], description = "Serve the site from its sources at http://localhost:8000 and reload open tabs when pages/, docs/images or the wasm build change; no pages-site-build needed." }
 
-# Source-level and assembled-site link/metadata checks.
 pages-links = { cmd = "python3 scripts/check_pages_links.py --sources", description = "Check the site pages' internal links against the repository, without building the site." }
 pages-stats = { cmd = "python3 scripts/check_pages_stats.py", description = "Check that the site's repository figures are derived (data-stat) and the sources keep their neutral fallback." }
 pages-terms = { cmd = "python3 scripts/check_pages_terms.py", description = "Check that every Isabelle name the site pages set in code is linked into the theory HTML." }
@@ -179,14 +135,8 @@ pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", descri
 [feature.thesis.dependencies]
 typst = ">=0.15"
 [feature.thesis.tasks]
-# The thesis names constants, lemmas, locales and types that live in the
-# theories. `check_thesis_refs` resolves each one against the command that
-# declares it, so a rename shows up as a build failure rather than as a
-# sentence about something that no longer exists.
 thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", description = "Check thesis entity references against Isabelle declarations and sessions." }
 
-# Figures built from analyzer output are regenerated and diffed, so a thesis
-# claim cannot outlive the behaviour it describes.
 thesis-claims = { cmd = "python3 thesis/tools/claims.py --check", depends-on = [
   "cli-build",
 ], description = "Check thesis analyzer figures against current CLI output." }
@@ -194,30 +144,19 @@ thesis-claims-write = { cmd = "python3 thesis/tools/claims.py --write", depends-
   "cli-build",
 ], description = "Regenerate thesis analyzer figures from current CLI output." }
 
-# Declarations the thesis shows are lifted out of the theories by name, never
-# retyped. Pure text extraction -- no Isabelle needed, so this runs fail-fast.
 thesis-snippets = { cmd = "bash scripts/mk/thesis-snippets.sh --check", description = "Check thesis Isabelle snippets against their source declarations." }
 thesis-snippets-write = { cmd = "bash scripts/mk/thesis-snippets.sh --write", description = "Regenerate thesis Isabelle snippets from their source declarations." }
 thesis-domain-tree = { cmd = "python3 thesis/tools/domain_tree.py", description = "Check that the chapter 5 domain trees list every implementation of a drawn interface." }
 
-# Theorem statements are exported from a built session, which is what gives the
-# Typst template the guarantee LaTeX gets from Isabelle's @{thm} antiquotation.
-# Needs the session in facts.toml to be built.
 thesis-facts = { cmd = "python3 thesis/tools/facts.py --check", description = "Check thesis theorem statements against a built Isabelle session." }
 thesis-facts-write = { cmd = "python3 thesis/tools/facts.py --write", description = "Regenerate thesis theorem statements from a built Isabelle session." }
 
-# Explanatory figures already drawn for the explainer page, lifted into thesis
-# assets with the site palette rewritten. Reads pages/, never writes to it.
 thesis-figures = { cmd = "python3 thesis/tools/explainer_svg.py --check", description = "Check extracted explainer figures against pages/index.html." }
 thesis-figures-write = { cmd = "python3 thesis/tools/explainer_svg.py", description = "Re-extract explainer figures into thesis assets." }
 
-# The README's playground figures, copied under the thesis root with the link
-# that reopens each run derived from the program and settings it shows.
 thesis-playground = { cmd = "python3 thesis/tools/playground_figures.py --check", description = "Check the thesis's playground figures against docs/images and docs/readme-figures." }
 thesis-playground-write = { cmd = "python3 thesis/tools/playground_figures.py", description = "Copy the README playground figures and their programs into thesis assets." }
 
-# The Goblint comparison appendix renders the explainer's alignment rows, so
-# the page stays the one copy. Reads pages/, never writes to it.
 thesis-alignment = { cmd = "python3 -m pytest -q tests/test_goblint_alignment.py && python3 thesis/tools/goblint_alignment.py --check", description = "Check the thesis's Goblint comparison data against the explainer page's alignment rows." }
 thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", description = "Extract the explainer page's Goblint alignment rows for the thesis appendix." }
 
@@ -225,46 +164,27 @@ thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", de
 # thesis/tools/locale_graph.ML, so it needs `pixi run isabelle-build` first.
 thesis-locale-graph = { cmd = "bash scripts/mk/locale-graph.sh", description = "Regenerate the thesis's locale dependency graph from the built Voblint_Examples heap." }
 
-# One notation table, derived from the theories' declarations and rendered in
-# appendix B, the README and the explainer's legend. Checks the rendered anchors
-# when build/isabelle-html exists, and the link map otherwise.
 thesis-notation = { cmd = "python3 -m pytest -q tests/test_thesis_notation.py && python3 thesis/tools/notation.py --check --lenient", description = "Check the notation table in the thesis, README and explainer against the theories' declarations and anchors." }
 thesis-notation-write = { cmd = "python3 thesis/tools/notation.py --write", description = "Regenerate the notation table data and its README and explainer blocks from the theories." }
 
-# Repository figures the thesis cites (line counts, corpus sizes), measured by
-# the same scripts/pages_stats.py collection the site reads. Also fails on a
-# statistic typed into thesis/content instead of going through stat().
 thesis-stats = { cmd = "python3 -m pytest -q tests/test_thesis_stats.py && python3 thesis/tools/stats.py --check", description = "Check the thesis's repository figures against the repository and reject hand-typed statistics." }
 thesis-sketches = { cmd = "python3 -m pytest -q tests/test_thesis_solver_sketch.py", description = "Check that code sketches printed in the thesis compute the results the text states." }
 thesis-stats-write = { cmd = "python3 thesis/tools/stats.py --write", description = "Regenerate the thesis's repository figures from the repository." }
-# The conda-forge status of the OCaml toolchain (manifests/conda-forge-ocaml.toml).
-# Writing asks conda-forge and records the date; checking is offline.
 thesis-conda = { cmd = "python3 thesis/tools/conda_forge.py --check", description = "Check that the recorded conda-forge status describes the OCaml packaging manifest (offline)." }
 thesis-conda-write = { cmd = "python3 thesis/tools/conda_forge.py --write", description = "Ask conda-forge which OCaml packages of the manifest it publishes, and record the answer with its date." }
 thesis-conda-live = { cmd = "python3 thesis/tools/conda_forge.py --live", description = "Ask conda-forge again and fail if the recorded status is outdated (skips when offline)." }
 
-# Every VIMP listing links to the playground with the program it shows. The
-# check compiles the thesis, decodes each link and requires it as a PDF link
-# annotation; claim programs are extracted because Typst cannot read tests/.
 thesis-vimp = { cmd = "python3 -m pytest -q tests/test_thesis_vimp_listings.py && python3 thesis/tools/vimp_listings.py --check", depends-on = [
   "cli-build",
 ], description = "Check that every VIMP listing links its program and settings to the playground, clickably." }
 thesis-vimp-source = { cmd = "python3 thesis/tools/vimp_listings.py --source", description = "Check VIMP listings at the source level: no unlinked VIMP code, current claim programs, playground defaults." }
 thesis-vimp-write = { cmd = "python3 thesis/tools/vimp_listings.py --write", description = "Extract the programs and settings of thesis claims for linked VIMP listings." }
 
-# Warnings are failures; an unresolved reference must not scroll past unread.
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", description = "Build the thesis PDF and fail on warnings." }
-
-# Same build, but warnings do not stop it -- for drafting.
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", description = "Build the thesis PDF while allowing warnings during drafting." }
-
-# Live rebuild while writing.
 thesis-watch = { cmd = "typst watch --root thesis --font-path thesis/assets/fonts thesis/thesis.typ thesis/Voblint_Thesis.pdf", description = "Watch thesis sources and rebuild the PDF." }
-
-# Isabelle's symbol table, turned into the lookup the template decodes with.
 thesis-symbols = { cmd = "python3 thesis/tools/gen_isabelle_symbols.py > thesis/lib/isabelle-symbols.typ", description = "Generate the Isabelle symbol table used by the thesis." }
 
-# Everything the thesis quotes from the formalization or the analyzer.
 thesis-generated = { depends-on = [
   "thesis-snippets-write",
   "thesis-claims-write",
@@ -277,7 +197,6 @@ thesis-generated = { depends-on = [
   "thesis-vimp-write",
 ], description = "Regenerate all thesis artifacts from the current sources and build outputs." }
 
-# Every drift check, in one name.
 thesis-check = { depends-on = [
   "thesis-refs",
   "thesis-snippets",
@@ -296,19 +215,12 @@ thesis-check = { depends-on = [
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
-  "thesis-links",
 ], description = "Run all thesis drift and theorem checks." }
 
-# Entity citations link to their definition in the rendered theories, anchor by
-# anchor. Missing stored targets always fail; local anchor validation can be
-# skipped when HTML is unavailable. Deployment CI checks the published targets.
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", description = "Require HTML targets for every citation and check available generated HTML." }
 thesis-links-coverage = { cmd = "python3 scripts/check_thesis_links.py --coverage", description = "Require a stored HTML target for every Isabelle citation, without a local HTML build." }
 thesis-links-strict = { cmd = "python3 scripts/check_thesis_links.py --check", description = "Strictly check thesis entity links against generated HTML." }
 thesis-links-write = { cmd = "python3 scripts/check_thesis_links.py --write", description = "Regenerate the thesis entity link map from generated HTML." }
-
-# The gate that matters, and the only one that can be honest: it runs against
-# the deployed pages, so it cannot run until GitHub Pages has published them.
 thesis-links-live = { cmd = "python3 scripts/check_thesis_links.py --live", description = "Check thesis links against the published documentation site." }
 
 [environments]
@@ -331,38 +243,20 @@ bench = ["bench"]
 thesis = ["thesis"]
 pages = ["pages"]
 
-# --------------------------------------------------------------------------
-# Repository task graph. Tasks here need only python3/bash/git (top-level
-# `dependencies`, present in every environment) plus Isabelle/OCaml
-# already on PATH -- no feature-specific package, so they stay common
-# rather than living under any one feature. Nontrivial shell (Isabelle
-# build invocations, submodule vendoring, OCaml link steps) lives in
-# small versioned scripts under scripts/mk/ that these tasks call.
-# ISABELLE/AFP/SESSION are honored as env-var overrides, e.g.
-# `AFP=/path/to/afp/thys pixi run isabelle-build`.
-# --------------------------------------------------------------------------
+# Tasks needing no feature package: python3, bash and git, plus Isabelle and
+# OCaml on PATH. Shell logic lives in scripts/mk/. ISABELLE, AFP and SESSION
+# override the defaults, e.g. `AFP=/path/to/afp/thys pixi run isabelle-build`.
 [tasks]
-# OCaml packages remain in opam because conda-forge does not provide the full
-# toolchain on every supported platform. Pixi is the shared installation
-# interface; voblint.opam is the dependency source of truth.
 ocaml-deps-install = { cmd = "opam install . --deps-only --with-test", description = "Install the OCaml build and test dependencies declared in voblint.opam." }
 
-# Vendoring. AutoCorrode is optional developer tooling installed into the
-# ignored vendor/autocorrode/ directory, outside the repository's submodule set.
 vendor-init = { cmd = "bash scripts/mk/vendor.sh", description = "Initialize the pinned td-verification submodule when absent." }
 
-# Source checks and formatting with isar-tools, configured in isar.toml (no AFP
-# needed). `isar-check` runs the project, proofs, and syntax groups: ROOT
-# entries, `sorry`/`oops` and unclosed proofs, lexical errors, and theory names,
-# after `isar-fmt-check`. `isar-fmt` formats the given theories, or all of them
-# but the generated ones; layout only, see isar-tools' docs/FORMATTER.md.
 isar-check = { cmd = "isar check .", depends-on = [
   "isar-fmt-check",
 ], description = "Check ROOT files, unfinished proofs, theory syntax, and theory formatting with isar-tools." }
 isar-fmt = { cmd = "isar fmt", description = "Format Isabelle theories with isar-tools (default: all but generated ones; pass paths to narrow)." }
 isar-fmt-check = { cmd = "isar fmt --check", description = "Check that Isabelle theories are formatted with isar-tools." }
 
-# Isabelle build
 isabelle-bootstrap = { cmd = "bash scripts/mk/bootstrap.sh", depends-on = [
   "vendor-init",
 ], description = "Build foundational Isabelle sessions in topological order on a fresh checkout." }
@@ -379,10 +273,7 @@ isabelle-pdf-full-build = { cmd = "bash scripts/mk/pdf.sh --include-examples", d
   "vendor-init",
 ], description = "Render all theories and example sessions into output/document-full.pdf." }
 isabelle-pdf-selection-check = { cmd = "python3 tests/test_pdf_session.py", description = "Check PDF theory selection, certificate inclusion, and preserved proof imports." }
-# Outside `verify` and outside CI, on purpose: the community linter has never
-# reported a finding on this tree, and it installs itself from the linter's
-# master branch, so what it checks is not pinned to anything here. Run it by
-# hand when the style rules are the question.
+# Unpinned (installs from the linter's master branch), so outside verify and CI.
 isabelle-lint = { cmd = "bash scripts/mk/isabelle-lint.sh", depends-on = [
   "vendor-init",
 ], description = "Run the Isabelle community linter over all project sessions; manual, not part of verify or CI." }
@@ -390,46 +281,20 @@ isabelle-jedit = { cmd = "bash scripts/mk/jedit.sh", depends-on = [
   "vendor-init",
 ], description = "Launch Isabelle/jEdit with the AFP, solver, and project session roots." }
 
-# Codegen (Isabelle export_code -> codegen/generated/)
 codegen = { cmd = "bash scripts/mk/codegen.sh", depends-on = [
   "vendor-init",
 ], description = "Regenerate the checked-in OCaml export from Voblint_Codegen." }
 codegen-check = { cmd = "bash scripts/mk/check-clean.sh codegen/generated/", depends-on = [
   "codegen",
 ], description = "Regenerate the OCaml export and fail if the tracked output changes." }
-# Reads the checked-in export, so it needs no Isabelle and can run in the
-# pre-commit hook alongside the ASCII and grammar-drift guards.
 codegen-modules-check = { cmd = "python3 scripts/check_codegen_modules.py", description = "Check that the OCaml export contains exactly the expected generated modules." }
-# A slashed theory entry in a ROOT fails the whole session at load, so jEdit
-# will not start and the mistake presents as a dead editor rather than as an
-# error in the file that caused it. Needs no Isabelle.
 sessions-check = { cmd = "isar check --group project .", description = "Check session ROOT entries, search paths, and owned-theory reachability." }
-# A session inherits its parent chain's heaps and nothing else: a theory of a
-# library session that is no ancestor is re-elaborated inside every session
-# that imports it. The build stays green; only the clock shows it (19% of a
-# clean build once). This reads an `isabelle build -v` log and holds each
-# library session to a budget of such elaborations; every library session not
-# listed gets 0, so a new one slipping in fails. Budgets:
-#   HOL-Library 0  an ancestor since Voblint_VIMP = "HOL-Library"
-#   TD 8           Framework hoists the expensive ones; Domain keeps two (~8s)
-#   HOL-Computational_Algebra 2  hoisted into Voblint_VIMP
-#   Deriving 8     8 tiny theories, ~3s total, one user
-#   HOL-IMP 1      one theory, under a second
-#   Root_Balanced_Tree 1  Time_Monad, inside TD itself when TD is rebuilt
-# The fix is ancestry, or building the theory into the nearest common
-# ancestor's heap with a qualified `theories` entry. A log that rebuilt nothing
-# proves nothing and passes (--allow-empty); CI's html job does a clean build.
-reelaboration-check = { cmd = "isar stats build {{ log }} --budget HOL-Library=0 --budget TD=8 --budget HOL-Computational_Algebra=2 --budget Deriving=8 --budget HOL-IMP=1 --budget Root_Balanced_Tree=1 --default-budget 0 --project . --allow-empty", args = [
+reelaboration-check = { cmd = "bash scripts/mk/reelaboration-check.sh {{ log }}", args = [
   { arg = "log", default = "build/isabelle-build.log" },
 ], description = "Report what a build log re-elaborated; fail if a library session exceeds its budget. Takes a `isabelle build -v` log." }
-# Everything the export exposes is decided by its root list, and a missing
-# root breaks an OCaml consumer rather than the Isabelle build. Reads the
-# checked-in export too, so it costs a second and needs no toolchain.
 codegen-api-check = { cmd = "python3 scripts/check_generated_api.py", description = "Check handwritten OCaml consumers against the generated public export surface." }
 codegen-regression = { cmd = "bash scripts/mk/codegen-regression.sh", description = "Compile and run the OCaml regression driver against the checked-in export." }
 
-# OCaml formatting. ocamlformat comes from opam like the rest of the toolchain,
-# pinned in .ocamlformat; .ocamlformat-ignore excludes generated sources.
 ocaml-format = { cmd = "bash scripts/mk/ocaml-format.sh", description = "Format handwritten OCaml sources and dune files." }
 ocaml-format-check = { cmd = "bash scripts/mk/ocaml-format.sh --check", description = "Check that handwritten OCaml sources and dune files are formatted." }
 opam-lint = { cmd = "opam lint voblint.opam", description = "Lint the opam package manifest." }
@@ -441,98 +306,46 @@ format = { depends-on = [
   "pages-format",
 ], description = "Format Python, OCaml, dune, Typst, TOML, and site JavaScript and CSS sources." }
 
-# voblint CLI
 cli-build = { cmd = "bash scripts/mk/cli-build.sh", description = "Build the voblint CLI from the checked-in generated OCaml and frontend sources." }
 cli-test = { cmd = "bash scripts/mk/cli-test-run.sh", description = "Build the CLI and run the external VIMP regression corpus." }
 golden-write = { cmd = "python3 scripts/golden_outputs.py --write", description = "Record the CLI text, graph snapshot, solver trace and browser payload of every regression fixture under build/golden." }
 golden-check = { cmd = "python3 scripts/golden_outputs.py --check", description = "Compare the corpus output against build/golden and list every fixture whose output changed." }
-# CLI plumbing (exit codes, --help, argument errors) that isn't expressible
-# as a .vimp fixture's verdict report -- see tests/cli_smoke.py's docstring.
 cli-smoke = { cmd = "python3 tests/cli_smoke.py", description = "Build the CLI and test help, errors, exit codes, and output plumbing." }
 voblint = { cmd = "bash scripts/mk/voblint-run.sh", depends-on = [
   "cli-build",
 ], description = "Build and run the Voblint analyzer, with an optional interactive fixture picker." }
-# Static checks over tests/regression/ fixture source -- no CLI build, no
-# OCaml, so this fails fast before cli-test's build cost. See tests/run.py's
-# lint_case for what it enforces (mirrors AGENTS.md's "Regression discipline").
 regression-lint = { cmd = "python3 tests/run.py --lint", description = "Check regression fixture placement, headers, expectations, and metadata." }
 
-# Documentation coverage over .thy headings and locales. Regenerable index +
-# a lint; deliberately not in `verify` yet -- there is a standing backlog of
-# undocumented headings, and gating on it today would just be a red build.
-# Add it to `verify` once that backlog is cleared.
+# Outside verify until the backlog of undocumented headings is cleared.
 docs-coverage-check = { cmd = "isar check docs src", description = "Check documentation coverage for Isabelle theories, headings, and locales." }
 
-# Prose in .thy comments cites constants and lemmas with plain \<open>name\<close>
-# cartouches, which Isabelle does not resolve -- so a rename leaves the comment
-# describing something that no longer exists. A cited name must resolve to a
-# declaration of the project or the vendored solver, or be listed under
-# `check.allow` in isar.toml; the same group rejects raw `_` in document text,
-# which breaks the LaTeX build. The solver is initialized first: without it,
-# every prose reference to a TD name would read as dangling.
+# Needs the solver: prose may cite TD names.
 theory-prose-check = { cmd = "isar check --group prose src", depends-on = [
   "vendor-init",
 ], description = "Check that identifiers cited in Isabelle prose resolve and that document prose is LaTeX-safe." }
 
-# An identifier removed together with its theory stays legal inside `assumes`,
-# where Isabelle reads it as a free variable -- so a locale keeps building with
-# an assumption that has quietly stopped constraining anything. Only an
-# explicit list of retired names catches that; scripts/retired_identifiers.txt
-# holds it (isar.toml points `isar check --group retired` at it).
 retired-identifiers-check = { cmd = "isar check --group retired src", description = "Check that deliberately retired Isabelle identifiers remain absent." }
 
-# The general form of the same failure: any identifier left free in a locale
-# assumption, whether or not it was ever a constant here. Isabelle generalizes
-# the assumption over it, so the locale keeps building while the assumption
-# stops saying anything.
 locale-parameters-check = { cmd = "isar check locales src", description = "Check locale assumptions for accidentally free identifiers." }
 
 docs-overview-generate = { cmd = "mkdir -p docs/generated && isar project names --format markdown > docs/generated/DEFINITIONS_OVERVIEW.md", description = "Regenerate the local Isabelle definitions and theorem overview." }
 
-# Size and shape of the .thy corpus: lines per session, per theory, and per
-# proof, plus a watchlist of theories past the 1500-line / 100-symbol style
-# limits. Reporting only -- never gates a build, so it stays out of `verify`.
-# Views and formats: `pixi run theory-stats --help`, e.g. `pixi run theory-stats style .`.
+# Reporting only, never a gate.
 theory-stats = { cmd = "isar stats", description = "Report theory, session, proof, and line-length statistics (isar stats; views: summary, sessions, theories, proofs, commands, style)." }
 
-# Pins scripts/gen_vimp_isabelle.py's identifier id_position/markup shape
-# (see the test module's own docstring). Deliberately outside tests/property/
-# and property-test's binary builds: this only imports the generator
-# and manifests/vimp-grammar.yaml directly, no CLI binary needed, so it stays as fast
-# and fail-fast as regression-lint above.
 grammar-id-position-check = { cmd = "python3 -m pytest tests/test_gen_isabelle_id_position.py", description = "Check Isabelle grammar identifier position and markup generation." }
 
-# Fast repository checks used directly by hooks and CI.
 isabelle-ascii-check = { cmd = "isar check --group symbols src", description = "Check Isabelle theory sources for forbidden Unicode syntax." }
-# Takes the artifact name (html, pdf, thesis-facts, codegen). CI reads the
-# cache key from here so the input set of each cached artifact is stated
-# once, in a file that can be read and run locally.
+# CI reads its cache keys from here, so each artifact's inputs are stated once.
 ci-digest = { cmd = "python3 scripts/ci_digest.py", description = "Print the CI cache-key digest for one artifact: html, pdf, thesis-facts or codegen." }
-# The heap caches are the only entries that grow without bound (one per
-# commit, 200 MB each). Left alone they hold the repository at its 10 GB
-# ceiling, where least-recently-used eviction takes the small artifact
-# caches -- the ones whose whole value is surviving between runs.
+# Heap caches (200 MB per commit) would otherwise evict the small artifact caches.
 ci-prune-caches = { cmd = "python3 scripts/prune_ci_caches.py", description = "Delete the heap caches beyond the newest few, which is all a restore can reach." }
 verification-surface-check = { cmd = "python3 scripts/check_verification_surface.py", description = "Check task descriptions, retired task names, and verify/GitHub CI parity." }
 
-# Supported local verification gate. GitHub CI invokes the same named leaf
-# tasks in separately scheduled jobs; verification-surface-check prevents drift.
-# This only resolves from the default environment, which composes every feature.
-# Keep it deliberately fail-fast:
-#
-#   1. pure/static repository checks
-#   2. cheap generated/frontend/CLI checks
-#   3. analyzer/report integration checks
-#   4. Isabelle-dependent work
-#   5. documentation/PDF builds
-#
-# Pixi executes `depends-on` entries in the order listed and stops at the
-# first failure, so ordering here directly controls how quickly `verify`
-# reports inexpensive mistakes.
+# The local gate, cheapest first: pixi stops at the first failure. CI runs the
+# same leaf tasks in separate jobs; verification-surface-check keeps them equal.
 verify = { depends-on = [
-  # ------------------------------------------------------------------------
   # Static / no-build checks
-  # ------------------------------------------------------------------------
   "verification-surface-check",
   "python-format-check",
   "python-lint",
@@ -564,14 +377,10 @@ verify = { depends-on = [
   "retired-identifiers-check",
   "locale-parameters-check",
 
-  # ------------------------------------------------------------------------
   # Cheap standalone builds / generated-code consumers
-  # ------------------------------------------------------------------------
   "codegen-regression",
 
-  # ------------------------------------------------------------------------
   # CLI / analyzer / report checks
-  # ------------------------------------------------------------------------
   "cli-smoke",
   "cli-test",
   "arithmetic-diagnostics-check",
@@ -582,20 +391,13 @@ verify = { depends-on = [
   "html-report-corpus-audit",
   "html-report-config-audit",
 
-  # ------------------------------------------------------------------------
   # Isabelle-dependent checks
-  #
-  # Keep the main build before consumers such as codegen-check so
-  # they can reuse the populated heap store.
-  # ------------------------------------------------------------------------
   "isar-check",
   "isabelle-build",
   "reelaboration-check",
   "codegen-check",
 
-  # ------------------------------------------------------------------------
   # Expensive rendered artifacts
-  # ------------------------------------------------------------------------
   "isabelle-html-build",
   "isabelle-pdf-build",
 ], description = "Run the supported local verification gate, cheapest fail-fast checks first; GitHub CI runs the same leaf checks separately." }
