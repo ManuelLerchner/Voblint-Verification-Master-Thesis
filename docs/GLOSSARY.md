@@ -174,6 +174,6 @@ the table.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `analysis_report` | What `run_voblint` returns for an analysed program: the semantic states per point and context, the check column and the diagnostics. Read through `⟦res⟧_v` (`report_sem`), `𝒱(res, v)` (`verdict_stores`) and `DEAD`. Termination is not a premise of its theorems: `run_voblint` solves with the executable `solve_c`, and an answer exists only where it returned (`solve_c_run`). | `src/Executable_Surface/CLI/Analysis_Report.thy` |
+| `analysis_report` | What `run_voblint` returns for an analysed program: the semantic states per point and context, the check column and the diagnostics. Read through `⟦res⟧⇘v⇙` (`report_sem`), `𝒱⇘res⇙ v` (`verdict_stores`) and `DEAD`. Termination is not a premise of its theorems: `run_voblint` solves with the executable `solve_c`, and an answer exists only where it returned (`solve_c_run`). | `src/Executable_Surface/CLI/Analysis_Report.thy` |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
 | `fun_route_source_sound` | The routed endpoints for a route that is a function of the call site, the unit route among them: a terminating solve bounds every store a source run reaches by the state published at its point under one of its contexts (`fun_route_source_sound`, `fun_route_result_node_sound`, `fun_route_report_proved_sound`). Every domain's unit registration is an instance. | `src/Analyses/Shared/Result/DG_Live_Unknowns.thy` |

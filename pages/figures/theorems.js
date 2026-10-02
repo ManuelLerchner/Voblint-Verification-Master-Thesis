@@ -47,8 +47,7 @@
 
   const RULE_EXPLANATIONS = {
     run: {
-      clause:
-        "s0 ∈ cinit_stores (declared_global p)  ∧  star (pstep …) (main_body …, s0, []) (residual, s, frs)",
+      clause: "s0 ∈ cinit_stores 𝒢  ∧  𝒢, Π ⊢ (main_body Π, s0, []) →p* (residual, s, frs)",
       text: "Start from an initial store (declared globals are `0`, locals arbitrary) with an empty call stack, and let the source semantics take any number of steps. It arrives at the rest of the program `residual`, the store `s` and the call frames `frs`. The run may stop anywhere, even inside a call.",
       link: isaConst("Voblint_VIMP", "VIMP_Proc", "pstep"),
       linkText: "pstep",
@@ -66,25 +65,25 @@
       linkText: "csim",
     },
     coll: {
-      clause: "s ∈ node_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
+      clause: "s ∈ 𝒞 v",
       text: "The graph's collecting semantics reaches node `v` with store `s`: some valid activation trace from an initial store ends there. Every analysis result is judged against this set.",
       link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
       linkText: "node_collect",
     },
     coll2: {
-      clause: "s ∈ node_collect (declared_global p) (prog_cfg p) (cinit_stores …) v",
+      clause: "s ∈ 𝒞 v",
       text: "The graph's collecting semantics reaches node `v` with store `s`. Here it is a premise: the theorem speaks about every store the program can really have at `v`.",
       link: isaConst("Voblint_CFG", "Activation_Trace_Collect", "node_collect"),
       linkText: "node_collect",
     },
     cover: {
-      clause: "s ∈ ⟦res⟧_v",
+      clause: "s ∈ ⟦res⟧ᵥ",
       text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`. Not every context has to: another activation's state need not describe this store.",
       link: isaConst("Voblint_CLI", "Analysis_Report", "report_sem"),
       linkText: "report_sem",
     },
     checks: {
-      clause: "s ∈ verdict_stores res v",
+      clause: "s ∈ 𝒱ᵣₑₛ v",
       text: "Every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
       link: isaConst("Voblint_CLI", "Analysis_Report", "verdict_stores"),
       linkText: "verdict_stores",

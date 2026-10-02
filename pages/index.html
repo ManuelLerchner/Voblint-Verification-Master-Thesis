@@ -4570,6 +4570,8 @@ fun main() {
           <tr><td class="nl-sym">𝒯<sub>𝒢,g,S</sub><span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst">𝒯</a></span></td><td>the valid activation traces of <em>g</em> from <em>S</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></td></tr>
           <tr><td class="nl-sym">𝒞<sub>𝒢,g,S</sub> v<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst">𝒞 v</a></span></td><td>the stores collected at <em>v</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a></td></tr>
           <tr><td class="nl-sym">𝒜<sub>𝒢,R,c₀,g,S</sub> v c<span class="nl-local">Within <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"><code>activation_coverage</code></a>, the fixed parameters are omitted: <a href="Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst">𝒜 v c</a></span></td><td>the stores collected at <em>v</em> in context <em>c</em></td><td><a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a></td></tr>
+          <tr><td class="nl-sym">⟦res⟧<sub>v</sub></td><td>the stores report <em>res</em> describes at <em>v</em></td><td><a href="Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst"><code>report_sem</code></a></td></tr>
+          <tr><td class="nl-sym">𝒱<sub>res</sub> v</td><td>the stores the verdicts of <em>res</em> at <em>v</em> hold in</td><td><a href="Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst"><code>verdict_stores</code></a></td></tr>
           </tbody>
         </table>
         <p class="notation-note">Each name links to its declaration. The <a href="https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis#notation">README's notation table</a> also gives the meaning of every symbol and the proof-local shorthands.</p>
@@ -4592,7 +4594,7 @@ fun main() {
             <div class="rule" aria-label="Inference rule">
               <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
               <div class="rule-bar"><span class="rule-name">source_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ⟦res⟧<sub>v</sub></code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱(res, v)</code></span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ⟦res⟧<sub>v</sub></code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱⇘res⇙ v</code></span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
@@ -4614,7 +4616,7 @@ fun main() {
   shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
            ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
            ∧ s ∈ ⟦res⟧<sub>v</sub>
-           ∧ s ∈ verdict_stores res v"</pre>
+           ∧ s ∈ 𝒱<sub>res</sub> v"</pre>
             </details>
           </article>
 

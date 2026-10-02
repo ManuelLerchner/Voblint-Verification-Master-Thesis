@@ -221,6 +221,18 @@ forms = [
 local = { locale = "activation_coverage", const = "buckets", args = ["v", "c"] }
 
 [[entry]]
+group = "set"
+reads = "the stores report _res_ describes at _v_"
+meaning = "the stores some state the analysis report holds at point _v_, under any of its contexts, describes"
+forms = [{ const = "report_sem", args = ["res", "v"] }]
+
+[[entry]]
+group = "set"
+reads = "the stores the verdicts of _res_ at _v_ hold in"
+meaning = "the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false"
+forms = [{ const = "verdict_stores", args = ["res", "v"] }]
+
+[[entry]]
 group = "shorthand"
 reads = "_t_ carries context _c_"
 meaning = "the context relation of the locale's policy, between a valid activation trace and the contexts it may run in"

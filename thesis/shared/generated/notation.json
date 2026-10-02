@@ -637,6 +637,58 @@
       }
     },
     {
+      "id": "report_sem",
+      "group": "set",
+      "kind": "notation",
+      "reads": "the stores report _res_ describes at _v_",
+      "meaning": "the stores some state the analysis report holds at point _v_, under any of its contexts, describes",
+      "forms": [
+        {
+          "const": "report_sem",
+          "cite": {
+            "kind": "const",
+            "name": "report_sem"
+          },
+          "symbol": "\\<lbrakk>res\\<rbrakk>\\<^bsub>v\\<^esub>",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^bsub>_\\<^esub>",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Analysis_Report",
+          "file": "src/Executable_Surface/CLI/Analysis_Report.thy",
+          "href": "Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst",
+          "session": "Voblint_CLI"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "verdict_stores",
+      "group": "set",
+      "kind": "notation",
+      "reads": "the stores the verdicts of _res_ at _v_ hold in",
+      "meaning": "the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false",
+      "forms": [
+        {
+          "const": "verdict_stores",
+          "cite": {
+            "kind": "const",
+            "name": "verdict_stores"
+          },
+          "symbol": "\\<V>\\<^bsub>res\\<^esub> v",
+          "mixfix": "\\<V>\\<^bsub>_\\<^esub>",
+          "declaration": "definition",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Analysis_Report",
+          "file": "src/Executable_Surface/CLI/Analysis_Report.thy",
+          "href": "Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst",
+          "session": "Voblint_CLI"
+        }
+      ],
+      "local": null
+    },
+    {
       "id": "activation_coverage.carries",
       "group": "shorthand",
       "kind": "locale_abbreviation",
@@ -837,6 +889,14 @@
     {
       "kind": "const",
       "name": "activation_coverage.buckets"
+    },
+    {
+      "kind": "const",
+      "name": "report_sem"
+    },
+    {
+      "kind": "const",
+      "name": "verdict_stores"
     },
     {
       "kind": "const",

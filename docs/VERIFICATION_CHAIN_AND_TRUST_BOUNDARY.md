@@ -108,7 +108,7 @@ solver layer beyond ordinary code-generation trust.
 
 The chain ends at `run_voblint_source_sound` (`Analysis_Certified.thy`):
 for every activation list, global update rule and context policy, a source run's
-store lies in the report's semantics `⟦res⟧_v` at a genuinely reachable node, and
+store lies in the report's semantics `⟦res⟧⇘v⇙` at a genuinely reachable node, and
 every definite verdict listed there holds for that store.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
 point is unreachable, at every configuration. The caller owes nothing about termination: `run_voblint`

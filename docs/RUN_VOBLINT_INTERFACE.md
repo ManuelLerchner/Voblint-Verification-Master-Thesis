@@ -98,9 +98,12 @@ together are the collecting semantics (`node_collect_eq_Union_activation_collect
 and its per-policy instances). Then:
 
 ```text
-s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧_v ⊆ 𝒱(res, v)
+s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v
 ```
 
+`run_voblint_spine` states the chain once, for any context relation `R` and root
+context, given what a policy owes: every valid activation trace carries some context,
+and the buckets together are the collecting semantics.
 `run_voblint_unit_chain`, `run_voblint_entry_state_chain` and
 `run_voblint_call_string_chain` (`Analysis_Certified.thy`) state this chain for a
 source run, one per policy, since the context type is the policy's own. Each keeps
@@ -116,19 +119,25 @@ context-erased form.
 `Analysis_Report.thy` reads a report through two store sets at a point `v`:
 
 ```text
-report_sem res v      ⟦res⟧_v : the stores some state at v describes
-verdict_stores res v  𝒱(res, v): the stores in which every definite verdict at v holds
-DEAD res v            every state at v is Bot
+⟦res⟧⇘v⇙   (report_sem)      the stores some state at v describes
+𝒱⇘res⇙ v  (verdict_stores)  the stores in which every definite verdict at v holds
+DEAD res v                   every state at v is Bot
+HAS_VERDICT res v e r        some check at v on e has the definite verdict r
 ```
+
+`PROVED`, `REFUTED` and `UNKNOWN` abbreviate `HAS_VERDICT` at `Check_Proved`,
+`Check_Refuted` and `Check_Unknown`. What a verdict claims of a store is
+`verdict_holds r e s`: the condition is true, false, or nothing is claimed; `𝒱⇘res⇙ v`
+is the stores in which `verdict_holds` holds for every definite verdict at `v`.
 
 A report is `consistent_report` when every check's verdict is the aggregate of its
 classifier over its own states at the check's point. From that alone:
 
 | Theorem | Claim |
 | --- | --- |
-| `analysis_report_verdicts_sound` | `⟦res⟧_v ⊆ 𝒱(res, v)` |
-| `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `⟦res⟧_v` |
-| `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧_v = {}`; the converse does not hold, since the product's emptiness test is incomplete |
+| `analysis_report_verdicts_sound` | `⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` |
+| `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `⟦res⟧⇘v⇙` |
+| `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧⇘v⇙ = {}`; the converse does not hold, since the product's emptiness test is incomplete |
 | `analysis_report_check_dead` | a `Dead` check row's point is `DEAD` |
 | `analysis_report_unknown` | an `UNKNOWN` check's point is not `DEAD` |
 
@@ -144,9 +153,10 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 
 | Theorem | Claim |
 | --- | --- |
-| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧_v` |
-| `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱(res, v)` |
-| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `⟦res⟧_v` and `𝒱(res, v)` |
+| `run_voblint_report_contract` | an analysed report is for exactly the configuration asked for and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
+| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧⇘v⇙` |
+| `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱⇘res⇙ v` |
+| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `⟦res⟧⇘v⇙` and `𝒱⇘res⇙ v` |
 | `run_voblint_check_sound` | a run about to execute `Check e` finds a listed check for `e` at a node it reaches, not `Dead`, whose verdict holds |
 | `run_voblint_proved`, `run_voblint_refuted` | a definite verdict holds at every collected store |
 | `run_voblint_dead_unreached`, `run_voblint_dead_check_unreached` | a `DEAD` point collects no store |
