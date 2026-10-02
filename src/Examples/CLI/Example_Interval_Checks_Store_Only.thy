@@ -1,10 +1,9 @@
 section \<open>Example: \<open>checks_proven\<close> alone, store-only, Interval\<close>
 
 theory Example_Interval_Checks_Store_Only
-  imports "Voblint_Framework.Checks" "Voblint_Analysis_Interval.Interval_Analyses"
+  imports "Voblint_Analysis_Interval.Interval_Analyses"
           "Voblint_Analysis_Sign.Sign_Classify"
           "Voblint_VIMP.VIMP_Notation"
-          "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 text \<open>

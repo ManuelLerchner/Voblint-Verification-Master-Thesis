@@ -1,13 +1,5 @@
 theory Int_Exec
   imports
-    "Voblint_Exec.Default_St_Restriction_Refinement"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    "Voblint_Nonrelational.Nonrelational_Ops"
-    "Voblint_Result.DG_Result_Construction"
-    "Voblint_Compile.Compile_Invariants"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_VIMP.VIMP_Program"
-    "Voblint_Solver.TD_Solver_Bridge"
     Int_Transfer
 begin
 

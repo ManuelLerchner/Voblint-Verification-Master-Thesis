@@ -1,5 +1,5 @@
 theory VIMP_Proc_to_CFG
-  imports "Voblint_CFG.CFG_Def" "Voblint_VIMP.VIMP_Proc"
+  imports "Voblint_CFG.CFG_Def"
 begin
 
 section \<open>Procedure-aware CFG compilation for \<open>com\<close> programs\<close>

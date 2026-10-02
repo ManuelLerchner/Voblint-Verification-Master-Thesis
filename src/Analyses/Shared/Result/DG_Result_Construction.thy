@@ -1,9 +1,6 @@
 theory DG_Result_Construction
   imports
-    "Voblint_Framework.Solved_Table"
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_Framework.Routed_Call_Programs"
-    "Voblint_Framework.CFG_Enumeration"
     "Voblint_VIMP.VIMP_Program"
     "Voblint_Exec.Exec_Result_Abs"
     "Voblint_Exec.Exec_DG_State"

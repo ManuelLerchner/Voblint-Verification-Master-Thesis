@@ -1,7 +1,5 @@
 theory Sign_Exec
   imports
-    "Voblint_Exec.Default_St_Restriction_Refinement"
-    "Voblint_Nonrelational.Nonrelational_Ops"
     Sign_Transfer
 begin
 

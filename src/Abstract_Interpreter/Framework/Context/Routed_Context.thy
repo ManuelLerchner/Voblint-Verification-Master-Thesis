@@ -1,6 +1,5 @@
 theory Routed_Context
   imports Routed_Call_Programs DG_Ctx_Activation DG_Local_State_Spec
-    "Voblint_CFG.Activation_Trace_Def"
     Activation_Backbone
 begin
 

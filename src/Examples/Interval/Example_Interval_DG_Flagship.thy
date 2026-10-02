@@ -19,8 +19,6 @@ text \<open>
 theory Example_Interval_DG_Flagship
   imports
     "Voblint_Analysis_Interval.Interval_Analyses"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin

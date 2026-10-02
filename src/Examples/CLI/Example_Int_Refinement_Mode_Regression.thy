@@ -1,9 +1,6 @@
 theory Example_Int_Refinement_Mode_Regression
   imports
     "Voblint_Examples_Int.Example_Int_Domain"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
-    "Voblint_Analysis_Int.Int_Exec"
-    "Voblint_VIMP.VIMP_Notation"
     "Voblint_Examples_Int.Exec_Int_DG_Run"
 begin
 

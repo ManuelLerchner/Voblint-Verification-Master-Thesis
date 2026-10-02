@@ -1,13 +1,8 @@
 theory Example_Sign_DG_Custom_Body
   imports
-    "Voblint_Routing.Compiled_Routed_Equations"
-    "Voblint_Framework.DG_Reader_Transport"
-    "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Sign.Sign_Exec"
-    "Voblint_Analysis_Sign.Sign_Transfer"
     "Voblint_Solver.Globals_Rule"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 unbundle default_st_syntax

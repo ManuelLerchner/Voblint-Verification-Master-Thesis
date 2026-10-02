@@ -1,5 +1,5 @@
 theory Interval_Domain
-  imports Interval_Warrowing Interval_Transfer
+  imports Interval_Transfer
 begin
 
 section \<open>Integrated Interval domain\<close>

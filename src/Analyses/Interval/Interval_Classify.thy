@@ -1,8 +1,6 @@
 theory Interval_Classify
-  imports Interval_Numeric_Queries Interval_Backward "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Solved_Table" Interval_Exec "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Invariants"
-    "Voblint_Result.DG_Result_Construction"
+  imports
+    Interval_Exec
 begin
 
 section \<open>Interval instance of the generic check-discharge interface\<close>

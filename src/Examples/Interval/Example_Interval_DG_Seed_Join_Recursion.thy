@@ -1,12 +1,8 @@
 theory Example_Interval_DG_Seed_Join_Recursion
   imports
-    "Voblint_Routing.Compiled_Routed_Equations"
-    "Voblint_Framework.DG_Reader_Transport"
-    "Voblint_Exec.Ownership_Split_Exec"
     "Voblint_Analysis_Interval.Interval_Exec"
     "Voblint_Solver.Globals_Rule"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_VIMP.VIMP_Notation" "Voblint_Compile.Compile_Wellformed"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 unbundle default_st_syntax

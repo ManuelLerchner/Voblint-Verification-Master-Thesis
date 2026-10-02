@@ -1,10 +1,9 @@
 section \<open>Example: \<open>checks_proven\<close> alone, store-only\<close>
 
 theory Example_Checks_Store_Only
-  imports "Voblint_Framework.Checks"
+  imports
           "Voblint_Analysis_Sign.Sign_Analyses"
           "Voblint_VIMP.VIMP_Notation"
-          "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 text \<open>

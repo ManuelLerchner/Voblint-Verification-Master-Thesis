@@ -1,7 +1,6 @@
 theory Routed_Call_Programs
   imports DG_Spec_Sound DG_Indexed_Generator
     "Voblint_Domain.Nonrelational_State"
-    "Voblint_Solver.Strategy_Tree_Program"
 begin
 
 section \<open>The equations one call action generates\<close>

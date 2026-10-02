@@ -1,5 +1,5 @@
 theory Routed_Context_Unit
-  imports Routed_Context "Voblint_CFG.Activation_Trace_Collect"
+  imports Routed_Context
 begin
 
 section \<open>The monovariant context as a routed-context instance\<close>

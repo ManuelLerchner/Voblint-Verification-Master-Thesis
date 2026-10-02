@@ -1,6 +1,5 @@
 theory Voblint_Codegen
   imports
-    "Voblint_CLI.Analysis_Render"
     "Voblint_CLI.Trace_Run"
 begin
 

@@ -1,7 +1,6 @@
 theory MCP_Field
   imports
     "Voblint_Framework.Local_Spec_Product"
-    "Voblint_Framework.MCP_Spec"
     "Voblint_Framework.Oracle_Wrappers"
     "Voblint_Framework.Solved_Table"
     "Voblint_Exec.DG_Local_State_Exec_Refinement"

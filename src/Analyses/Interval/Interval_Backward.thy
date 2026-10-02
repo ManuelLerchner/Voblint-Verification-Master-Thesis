@@ -1,5 +1,5 @@
 theory Interval_Backward
-  imports Interval_Arithmetic "Voblint_Nonrelational.Exec_Backward" "Voblint_VIMP.VIMP_Expr"
+  imports Interval_Arithmetic "Voblint_Nonrelational.Exec_Backward"
     "Voblint_Nonrelational.Abstract_Arithmetic" Interval_Numeric_Queries
 begin
 

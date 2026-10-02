@@ -1,6 +1,5 @@
 theory Interval_Transfer
   imports
-    Interval_Backward
     Interval_Special
     "Voblint_Nonrelational.Nonrelational_Transfer"
 begin

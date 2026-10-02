@@ -28,9 +28,6 @@ text \<open>
 theory Example_Parity_DG_Flagship
   imports
     "Voblint_Analysis_Parity.Parity_Analyses"
-    "Voblint_Analysis_Parity.Parity_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Compile.Compile_Wellformed"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

@@ -1,11 +1,8 @@
 theory Nonrelational_Transfer
   imports
     Nonrelational_Ops
-    "Voblint_Framework.DG_Local_State_Spec"
     "Voblint_Framework.Check_Answer"
-    "Voblint_VIMP.VIMP_Globals"
     "Voblint_Result.DG_Analysis"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
 begin
 
 section \<open>What each kind of CFG edge does to one abstract value per variable\<close>

@@ -1,6 +1,6 @@
 theory Congruence_Exec
-  imports "Voblint_Exec.Default_St_Restriction_Refinement" "Voblint_Nonrelational.Nonrelational_Ops"
-    Congruence_Transfer Congruence_Warrowing
+  imports
+    Congruence_Transfer
 begin
 
 section \<open>Congruence on the executable carrier\<close>

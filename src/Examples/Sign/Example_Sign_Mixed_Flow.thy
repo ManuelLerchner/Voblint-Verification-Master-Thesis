@@ -1,8 +1,6 @@
 theory Example_Sign_Mixed_Flow
   imports
     "Voblint_Analysis_Sign.Sign_Analyses"
-    "Voblint_Exec.Ownership_Split_Exec"
-    "Voblint_Framework.Routed_Context_Unit"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

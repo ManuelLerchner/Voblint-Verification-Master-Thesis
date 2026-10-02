@@ -1,7 +1,5 @@
 theory Interval_Exec
   imports
-    "Voblint_Exec.Default_St_Restriction_Refinement"
-    "Voblint_Nonrelational.Nonrelational_Ops"
     Interval_Domain
 begin
 

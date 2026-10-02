@@ -1,9 +1,8 @@
 section \<open>Example: Parity check-discharge, node-local, store-only\<close>
 
 theory Example_Parity_Checks_Store_Only
-  imports "Voblint_Framework.Checks" "Voblint_Analysis_Parity.Parity_Analyses"
+  imports "Voblint_Analysis_Parity.Parity_Analyses"
           "Voblint_VIMP.VIMP_Notation"
-          "Voblint_Examples_CFG.Example_Compile_Call_Free"
 begin
 
 text \<open>

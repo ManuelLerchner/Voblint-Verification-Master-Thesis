@@ -1,6 +1,5 @@
 theory Sign_Transfer
   imports
-    Sign_Backward
     Sign_Special
     Sign_Numeric_Queries
     "Voblint_Nonrelational.Nonrelational_Transfer"

@@ -2,7 +2,6 @@ theory DG_Analysis
   imports
     DG_Result_Construction
     Analysis_Surface
-    "Voblint_Framework.Contextual_Check_Report"
     "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_Exec.Routed_Exec_Refinement"
     Source_Activation_Sound

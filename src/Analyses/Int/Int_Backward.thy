@@ -1,13 +1,10 @@
 theory Int_Backward
   imports
     Int_Arithmetic
-    "Voblint_Analysis_Sign.Sign_Backward"
     "Voblint_Analysis_Sign.Sign_Numeric_Queries"
-    "Voblint_Analysis_Interval.Interval_Backward"
     "Voblint_Analysis_Parity.Parity_Backward"
     "Voblint_Analysis_Parity.Parity_Numeric_Queries"
     "Voblint_Analysis_Congruence.Congruence_Backward"
-    "Voblint_Nonrelational.Exec_Backward"
 begin
 
 section \<open>Composite integer-domain backward filtering\<close>

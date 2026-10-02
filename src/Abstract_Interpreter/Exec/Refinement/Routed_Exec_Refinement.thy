@@ -1,7 +1,6 @@
 theory Routed_Exec_Refinement
   imports
     DG_Local_State_Exec_Refinement
-    "Voblint_Framework.Routed_Context_Unit"
 begin
 
 section \<open>Routed execution, once for every domain and context policy\<close>

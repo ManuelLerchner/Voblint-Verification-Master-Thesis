@@ -1,6 +1,5 @@
 theory Example_Int_Transfer
   imports
-    Voblint_Analysis_Int.Int_Transfer
     Example_Int_Backward
 begin
 

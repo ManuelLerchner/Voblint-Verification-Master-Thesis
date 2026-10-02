@@ -1,5 +1,5 @@
 theory Activation_Trace_Collect
-  imports Activation_Trace_Def Activation_Trace_Context
+  imports Activation_Trace_Context
 begin
 
 section \<open>Which stores can occur at each node\<close>

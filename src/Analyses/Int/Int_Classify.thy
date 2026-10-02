@@ -1,7 +1,5 @@
 theory Int_Classify
-  imports Int_Exec "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Solved_Table"
-    "Voblint_Result.DG_Result_Construction"
+  imports Int_Exec
 begin
 
 section \<open>Int instance of the generic check-discharge interface\<close>

@@ -1,5 +1,5 @@
 theory Congruence_Arithmetic
-  imports Congruence_Warrowing "Voblint_VIMP.VIMP_Expr"
+  imports Congruence_Warrowing
     "Voblint_Nonrelational.Abstract_Arithmetic"
 begin
 

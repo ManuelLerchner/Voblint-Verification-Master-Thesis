@@ -1,6 +1,5 @@
 theory Example_Int_Warrowing
   imports
-    Voblint_Analysis_Int.Int_Warrowing
     Voblint_Analysis_Int.Int_Refinement_Control
 begin
 

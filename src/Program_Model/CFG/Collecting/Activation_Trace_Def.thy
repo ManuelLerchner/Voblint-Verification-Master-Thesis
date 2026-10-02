@@ -1,5 +1,5 @@
 theory Activation_Trace_Def
-  imports CFG_Def CFG_Transfer
+  imports CFG_Transfer
 begin
 
 section \<open>Activation traces\<close>

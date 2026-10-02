@@ -1,5 +1,5 @@
 theory DG_Analysis_Adapter
-  imports Routed_Context Contextual_Check_Report Solved_Table
+  imports Routed_Context Contextual_Check_Report
 begin
 
 section \<open>Public result and check-report adapter for a local-state routed DG analysis\<close>

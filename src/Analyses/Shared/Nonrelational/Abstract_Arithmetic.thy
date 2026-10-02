@@ -1,5 +1,5 @@
 theory Abstract_Arithmetic
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Expr"
+  imports
     "Voblint_Domain.Three_Valued" "Voblint_Domain.Forward_Domain"
     "Voblint_Domain.Numeric_Queries"
     "Voblint_Domain.Nonrelational_State"

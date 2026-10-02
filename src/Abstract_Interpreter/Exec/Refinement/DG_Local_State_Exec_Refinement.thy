@@ -1,9 +1,7 @@
 theory DG_Local_State_Exec_Refinement
   imports
     DG_Local_State_Exec
-    "Voblint_Framework.CFG_Enumeration"
     "Voblint_Framework.DG_Reader_Transport"
-    "Voblint_Framework.MCP_Spec"
 begin
 
 unbundle default_st_syntax

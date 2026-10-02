@@ -1,6 +1,5 @@
 theory Example_Side_Execute
   imports "Voblint_Analysis_Sign.Sign_Analyses"
-    "Voblint_Result.Source_Activation_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

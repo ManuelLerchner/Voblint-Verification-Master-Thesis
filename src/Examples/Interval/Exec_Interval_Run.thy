@@ -1,7 +1,5 @@
 theory Exec_Interval_Run
   imports "Voblint_Analysis_Interval.Interval_Analyses"
-            "Voblint_CFG.CFG_Prune"
-            "Voblint_VIMP.VIMP_Notation"
             Example_Interval_Loop_Coverage
 begin
 

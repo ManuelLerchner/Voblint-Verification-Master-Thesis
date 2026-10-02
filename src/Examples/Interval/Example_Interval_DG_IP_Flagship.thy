@@ -1,11 +1,5 @@
 theory Example_Interval_DG_IP_Flagship
   imports
-    "Voblint_Analysis_Interval.Interval_Transfer"
-    "Voblint_Analysis_Interval.Interval_Exec"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_CFG.CFG_Prune"
-    "Voblint_Compile.Compile_Wellformed"
-    "Voblint_VIMP.VIMP_Notation"
     Example_Interval_DG_Flagship
 begin
 

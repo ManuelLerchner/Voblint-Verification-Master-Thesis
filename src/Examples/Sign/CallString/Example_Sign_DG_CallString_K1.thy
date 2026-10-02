@@ -1,12 +1,7 @@
 theory Example_Sign_DG_CallString_K1
   imports
-    "Voblint_Analysis_Sign.Sign_Transfer"
     "Voblint_Analysis_Sign.Sign_Exec"
-    "Voblint_Exec.DG_Local_State_Exec_Refinement"
     "Voblint_Routing.Call_String_Routed_Context"
-    "Voblint_Framework.Activation_Backbone"
-    "Voblint_Solver.TD_Solver_Bridge"
-    "Voblint_Framework.Routed_Analysis_Sound"
     "Voblint_VIMP.VIMP_Notation"
 begin
 

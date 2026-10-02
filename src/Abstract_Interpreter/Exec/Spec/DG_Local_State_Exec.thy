@@ -1,5 +1,5 @@
 theory DG_Local_State_Exec
-  imports "Voblint_Framework.DG_Local_State_Spec"
+  imports
     Ownership_Split_Exec
     Default_St_Reachability
 begin
