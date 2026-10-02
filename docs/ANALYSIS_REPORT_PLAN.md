@@ -319,7 +319,12 @@ These are grep targets on `src/` outside the theory that owns each name:
    `render_report`; the adapters handle `No_Answer`. The generated module becomes
    `codegen/generated/ml/Voblint.ml` with the program at top level (`Voblint.run_voblint`
    in place of `Voblint_CLI.Generated.run_voblint`), a mechanical change across the
-   parser, printer, CLI, web entry, regression and build scripts. Docs
+   parser, printer, CLI, web entry, regression and build scripts. The native and
+   browser entries stay separate executables (subprocess containment and files on one
+   side, the JavaScript API and worker messages on the other), but share one module,
+   `cli/result/analysis_request.ml`: the analysis, globals, context and refinement
+   names in both directions, `config_of_names` building the typed config, and
+   `analyse` wrapping `run_voblint` and `render_report`. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
 9. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
