@@ -125,6 +125,29 @@ def test_one_call_trace(name, trace_args):
     assert actual == expected.read_text()
 
 
+SHARED_GLOBAL = "tests/solver-trace/shared-global.vimp"
+SHARED_ARGS = [*ARGS, "--program-globals", "flow-insensitive"]
+
+
+@pytest.mark.parametrize(
+    "name, trace_args",
+    [
+        ("shared-global.compact", ["--trace"]),
+        ("shared-global.verbose", ["--trace", "--verbose"]),
+    ],
+)
+def test_shared_global_trace(name, trace_args):
+    """The whole trace of a program global kept flow-insensitive: every update of
+    the shared global unknown and every point it destabilizes. A change to how
+    globals are keyed or published shows up here as a diff. Rewrite with
+    UPDATE_TRACE_EXPECT=1 and review the diff."""
+    expected = EXPECT_DIR / f"{name}.expected"
+    actual = voblint(*SHARED_ARGS, *trace_args, SHARED_GLOBAL).stderr
+    if os.environ.get("UPDATE_TRACE_EXPECT") == "1":
+        expected.write_text(actual)
+    assert actual == expected.read_text()
+
+
 GOBLINT_LINE = re.compile(r"^( *)%%% (\w+): (.*)$")
 
 
