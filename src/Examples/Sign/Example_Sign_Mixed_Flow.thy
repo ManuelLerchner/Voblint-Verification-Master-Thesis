@@ -31,18 +31,6 @@ definition split_gamma ::
   "(vname \<Rightarrow> bool) \<Rightarrow> sign default_st \<Rightarrow> sign default_st \<Rightarrow> store set" where
   "split_gamma \<G> d g = default_st_gamma \<G> (combine_default_st d g)"
 
-lemma combine_restrict_split [simp]:
-  "combine_default_st (restrict_local_default_st x) (restrict_global_default_st x) = x"
-  by (rule default_st_eqI) (simp split: location.split)
-
-lemma combine_restrict_local_left [simp]:
-  "combine_default_st (restrict_local_default_st x) y = combine_default_st x y"
-  by (rule default_st_eqI) (simp split: location.split)
-
-lemma combine_self_restrict_global [simp]:
-  "combine_default_st x (restrict_global_default_st x) = x"
-  by (rule default_st_eqI) (simp split: location.split)
-
 lemma sign_tf_st_sound:
   "edge_collect a (default_st_gamma \<G> s)
      \<subseteq> default_st_gamma \<G> (generic_tf_st_for sign_ops \<G> a s)"
@@ -117,7 +105,7 @@ next
       ownership_split_combine_transfer_st_def split_gamma_def default_st_gamma_def
     by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
         mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
-        del: default_st_to_fun_combine combine_restrict_local_left)
+        del: default_st_to_fun_combine combine_default_st_restrict_local_left)
 qed
 
 subsection \<open>The call boundary\<close>
