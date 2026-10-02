@@ -1,6 +1,6 @@
 # Analysis report and solver boundary refactor
 
-Branch `refactor/analysis-report`, from `main`. The thesis and the site follow on
+Branch `refactor/analysis-report`, from `origin/main`. The thesis and the site follow on
 `writing` after the merge.
 
 ## Goal
@@ -11,7 +11,7 @@ facts carry the whole guarantee:
 
 | Fact | Statement | Uses |
 | --- | --- | --- |
-| `analysis_report_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
+| `analyse_program_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
 | `analysis_report_checks_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
 | `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
 
@@ -60,13 +60,25 @@ analysis_report_of config p                              (one split over the pol
       │  per policy: a dg_analysis interpretation, solved by solve_c
       ▼
 ('c, mcp_val) solved_run      solved_table + shared + seeds + steps + successors
-      │  run_result_of: finite rows, contexts erased to indices
+      │  report_of: finite rows indexed by context number
       ▼
-analysis_report               semantic, exported
+analysis_report               semantic, exported; theorems read only this
       │
-      ├── ⟦res⟧ᵥ, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD   theorems
-      └── render_report ──► rendered run_result ──► OCaml text, JSON, HTML
+      ├── ⟦res⟧ᵥ, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD
+      │
+══════ generated API boundary: analyse_program, report selectors, projections ══════
+      │
+      ▼
+OCaml / browser adapters
+      ├── render_report (an exported projection: mcp_render, string_of_abstract_value)
+      └── text, JSON, HTML, graphs
 ```
+
+Rendering is a projection the adapters apply to the report after the call. It is
+defined in Isabelle only so that generated code computes it, and no theorem reads
+it. `run_voblint` (analysis plus rendering in one call) stays until phase 8 as a
+compatibility shim and is then deleted; `analyse_program` is the exported
+operation.
 
 Proofs flow downward only: solver, routing and table facts are consumed by the
 report theorems, and nothing above the report reads them.
@@ -77,7 +89,8 @@ report theorems, and nothing above the report reads them.
 | `Analyses/Shared/Result/DG_Analysis` | `solved_run`, `solved_run_of`, `run`, `solve_c_run` |
 | `Solver/Solver_Trace` | `solve_c_traced` |
 | `CLI/generated/MCP_Carrier` | `registration_of` and its accessors |
-| `CLI/Analysis_Run` | `analysis_config`, `run_result`, `analysis_report`, the one policy dispatch, `analyse_program`, `render_report`, `run_voblint` |
+| `CLI/Analysis_Run` | `analysis_config`, `analysis_report`, the one policy dispatch, `analyse_program` |
+| `CLI/Analysis_Render` (new) | `run_result` (rendered), `render_report`, the `run_voblint` shim |
 | `CLI/Analysis_Report` (new) | `⟦res⟧ᵥ`, `𝒱`, CAPS queries, the three facts |
 | `CLI/Analysis_Certified` | source-level corollaries |
 
@@ -96,22 +109,32 @@ record ('c, 'v) solved_run =
   run_step :: "pp ⇒ 'c ⇒ edge_action ⇒ 'v lifted"
   run_succ :: "cfg_node ⇒ 'c ⇒ call_action ⇒ pname ⇒ 'c option"
 
-record 's result_state =            (* 's: the state payload *)
+record 's result_state =            (* 's: semantic or rendered state *)
   state_point :: pp
-  state_context :: nat               (* index into res_contexts *)
+  state_context :: nat               (* index into the context list *)
   state_value :: "'s lifted"
   state_checks, state_diagnostics    (* unchanged *)
   state_steps :: "(pp × 's lifted) list"
 
-record ('s, 'v) run_result =        (* 'v: context values *)
-  res_cfg, res_routes, res_checks, res_diagnostics   (* unchanged *)
-  res_contexts :: "'v analysis_context list"
-  res_states :: "'s result_state list"
-  res_globals :: "'s result_global list"
+datatype report_context =
+  Report_Unit | Report_Entry mcp_ctx | Report_Call_String "pp list"
 
-record analysis_report = "(mcp_val, abstract_value) run_result" +
+record analysis_report =
   report_config :: analysis_config
   report_vars :: "vname list"
+  report_cfg :: cfg
+  report_contexts :: "report_context list"
+  report_states :: "mcp_val result_state list"
+  report_routes :: "call_route list"
+  report_checks :: "result_check list"
+  report_globals :: "mcp_val result_global list"
+  report_diagnostics :: "arithmetic_diagnostic list"
+
+record 'v run_result =              (* rendered, unchanged for OCaml *)
+  res_contexts :: "'v analysis_context list"
+  res_states :: "'v analysis_view result_state list"
+  res_globals :: "'v analysis_view result_global list"
+  res_cfg, res_routes, res_checks, res_diagnostics
 
 datatype 'r analysis_answer =
   Invalid_Activation | Malformed_Program | No_Answer | Analysed 'r
@@ -121,10 +144,11 @@ datatype 'r analysis_answer =
 `analysis_config_ext` with a trailing unit field, which every OCaml caller would
 have to build. The selectors give the record reading in Isabelle.
 
-Contexts are erased from the semantics. A row carries a context index; the
-policy's context value survives only as the tagged presentation datum
-`Context_Unit | Context_Entry vs | Context_Call_String us`, which no theorem reads.
-So one report type serves all three policies.
+Contexts are erased from the semantics. A row carries a context index into
+`report_contexts`, whose entries keep each policy's own context as a tagged semantic
+value (`mcp_ctx` for entry states, the call string for call strings). No theorem
+reads them; rendering maps them to `analysis_context`. So one report type serves all
+three policies, and the report holds no rendered value.
 
 The Int modes are one surface constructor over three registrations:
 `Int_Analysis Refine_Fixpoint`, `Refine_Once` and `Refine_Never` each keep their own
@@ -148,9 +172,15 @@ UNKNOWN res v e ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = UNKNOWN
 DEAD res v      ⟷ ∀ σ ∈ rows(res, v). σ = Bot
 ```
 
-`UNKNOWN` and `DEAD` impose no per-store condition in `𝒱`. A check row's `Dead`
-verdict implies `DEAD res v` at its point; that lemma ties the printed column to the
-structural predicate.
+`UNKNOWN` and `DEAD` impose no per-store condition in `𝒱`.
+
+`DEAD` is a property of the program point, not of a condition, hence its arity. A
+check row's `Dead` verdict is one presentation of it: the row is `Dead` exactly when
+every context at its point is `Bot`, so it implies `DEAD res v`. `DEAD` is
+structural on purpose. The rows are canonical lifted values: the report's table
+collapses a state the emptiness test rejects to `Bot`, and `Bot` denotes no store, so
+`DEAD res v ⟹ ⟦res⟧ᵥ = ∅` is nearly definitional. The converse would need the
+incomplete test to be exact, so `DEAD` does not rerun it.
 
 `⟦res⟧ᵥ` is the constant `report_sem` with mixfix `⟦_⟧⇩_`. Overloading it under a
 `gamma_at` constant waits for a second representation; with one instance it buys
@@ -159,7 +189,7 @@ nothing.
 ## Target theorems
 
 ```text
-analysis_report_covers:        analyse_program config p = Analysed res
+analyse_program_covers:        analyse_program config p = Analysed res
                                ⟹ 𝒞 v ⊆ ⟦res⟧ᵥ
 analysis_report_checks_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
 analysis_report_proved:        PROVED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ truthy ⟦e⟧ s
@@ -176,9 +206,10 @@ analyse_program_check_sound, analyse_program_dead_unreached,
 analyse_program_arithmetic_safe: the existing corollaries, restated over res.
 ```
 
-Only the second to sixth need no execution. `analysis_report_unknown` is a lemma,
-not a headline guarantee: it says the report makes no unreachability claim at an
-`UNKNOWN` check. Termination is internal: `Analysed res` implies the policy's
+`analyse_program_covers` needs the run that built the report; the
+`analysis_report_*` facts read the report alone. `analysis_report_unknown` is a
+structural lemma kept at the user's request, not a semantic guarantee: it says the
+report makes no unreachability claim at an `UNKNOWN` check. Termination is internal: `Analysed res` implies the policy's
 `terminates`, through `solve_c_run`.
 
 ## Migration
@@ -210,7 +241,12 @@ These are grep targets on `src/` outside the theory that owns each name:
 - no `config_terminates` premise in any public theorem;
 - `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString` split only in
   `analysis_report_of` (and its traced code equation);
-- `Sign_Analysis`, `Interval_Analysis`, … split only in `registration_of`.
+- `Sign_Analysis`, `Interval_Analysis`, … split only in `registration_of`, apart
+  from generated exhaustiveness lemmas; consumers use its selectors, and the old
+  per-capability functions are gone rather than kept as accessors;
+- no `run_result`, `mcp_render` or `string_of_abstract_value` in
+  `Analysis_Run` or `Analysis_Report`;
+- no `run_voblint`.
 
 ## Invariants
 
@@ -239,12 +275,14 @@ These are grep targets on `src/` outside the theory that owns each name:
    - `solve_c_traced`, equal to `solve_c`, so a code equation calling the solver
      directly keeps the trace's start and stop events.
 3. **Semantic report and one dispatch.**
-   - `run_result` gains the state parameter; `run_result_of` drops `render` and
-     reads a `solved_run`.
+   - `report_of` builds the semantic report from a `solved_run` (the old
+     `run_result_of` without `render`); `result_state` and `result_global` gain the
+     state parameter.
    - `analysis_report_of config p :: analysis_report option`, the one split, each
      branch `map_option (… solved_run_of …) (solve_c …)`.
-   - `analyse_program`: `None` becomes `No_Answer`. `render_report` applies
-     `mcp_render` and `string_of_abstract_value`; `run_voblint = map_analysis_answer render_report ∘ analyse_program`.
+   - `analyse_program`: `None` becomes `No_Answer`. In `Analysis_Render`,
+     `render_report` applies `mcp_render` and `string_of_abstract_value`, and the shim
+     `run_voblint = map_analysis_answer render_report ∘ analyse_program`.
    - Obligations: per policy, `analysis_report_of config p = Some res` implies the
      policy's `terminates` and `res` is built from `run`; the rendered output equals
      the old `map_run_result string_of_abstract_value (analysis_result …)` (checked
@@ -255,9 +293,10 @@ These are grep targets on `src/` outside the theory that owns each name:
 5. **Solved table rename.** Mechanical: the renames in the migration table, one
    commit. It lands after the report so the report theories are renamed by the same
    pass rather than written twice.
-6. **One registration per analysis.** Generator emits `registration_of`; the old
-   functions become accessors. Obligation: each accessor equals the old function
-   (by `cases a rule: analysis_domain_cases`, generated).
+6. **One registration per analysis.** Generator emits `registration_of` and its
+   record; consumers move to the selectors and the old per-capability functions
+   are deleted. During migration each old function is proved equal to its selector
+   (by `cases a rule: analysis_domain_cases`, generated), then removed.
 7. **Contracts and classification.**
    - Split `sound_table` into `covered_table` and `sound_classifier`.
    - One contextual classification helper shared by the check column and
@@ -268,7 +307,9 @@ These are grep targets on `src/` outside the theory that owns each name:
    - `sound_empty` / `exact_empty` and a representation locale, only where an
      inventory shows repeated proofs. Candidates: `is_empty_state`, `val_empty`,
      `mcp_empty_v` (sound); `default_st_to_fun`, `mcp_rd` (readbacks).
-8. **Export and docs.** Export list, OCaml and web adapters (`No_Answer`), docs
+8. **Export and docs.** Export `analyse_program`, the report selectors and
+   `render_report`; the adapters call them in sequence and handle `No_Answer`;
+   delete `run_voblint`. Docs
    that name the retired constants (`docs/CHECK_ARCHITECTURE.md`,
    `docs/RUN_VOBLINT_INTERFACE.md`, `src/Executable_Surface/CLI/README.md`).
 9. **Consumers, on `writing` after the merge.** Thesis chapters 9, 10 and 12, the
