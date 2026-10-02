@@ -605,11 +605,6 @@ jobs:
       - name: Verification task surface
         run: pixi run verification-surface-check
 
-      # isar-tools (isar.toml): ROOT entries, sorry/oops and unclosed proofs,
-      # lexical errors, theory names, and formatting. No AFP or Isabelle needed.
-      - name: Theory sources (isar-tools)
-        run: pixi run isar-check
-
       - name: Python formatting
         run: pixi run python-format-check
 
@@ -761,6 +756,11 @@ jobs:
       - name: Thesis conda-forge record is current
         if: env.THESIS == 'true'
         run: pixi run thesis-conda-live
+
+      # Every isar-tools group (isar.toml). The prose and locales groups resolve
+      # TD names, so this runs after the submodule is initialized above.
+      - name: Theory sources (isar-tools)
+        run: pixi run isar-check
 
       # Isabelle does not resolve a plain \<open>name\<close> cartouche, so a rename
       # leaves prose describing a constant that no longer exists.
