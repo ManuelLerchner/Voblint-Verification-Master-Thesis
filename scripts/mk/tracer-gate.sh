@@ -38,7 +38,7 @@ expected = [
     ("route_unit", "route", 1),
     ("cs_route", "route", 1),
     ("mcp_formals_route", "route", 1),
-    ("analysis_result", "run", 3),                      # one per context mode
+    ("analysis_report_of", "run", 3),                # one per context mode
 ]
 bad = []
 for name, channel, least in expected:

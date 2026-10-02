@@ -206,12 +206,12 @@ definition ov_sol ::
       \<Rightarrow> (sign default_st lifted, sign default_st lifted) dg_state)" where
   "ov_sol = TD_side_always_join_Interp_solve ov_eqs (cfg_exit ov_cfg, [])"
 
-definition ov_result :: "(sign list, sign abs_state) analysis_result" where
-  "ov_result = Analysis_Result (fst ov_sol)
+definition ov_result :: "(sign list, sign abs_state) solved_table" where
+  "ov_result = Solved_Table (fst ov_sol)
      (\<lambda>v ctx. result_value_to_abs ov_gs (canonicalize_lift ov_ep (dg_local (snd ov_sol (Inl (v, ctx))))))"
 
 abbreviation ov_read :: "cfg_node \<Rightarrow> sign list \<Rightarrow> vname \<Rightarrow> sign lifted" where
-  "ov_read v ctx x \<equiv> map_lift (\<lambda>st. st x) (lookup_context ov_result v ctx)"
+  "ov_read v ctx x \<equiv> map_lift (\<lambda>st. st x) (lookup_table ov_result v ctx)"
 
 abbreviation ov_seed :: "sign list \<Rightarrow> vname \<Rightarrow> sign lifted" where
   "ov_seed ctx x \<equiv> map_lift (\<lambda>s. default_st_to_fun ov_gs s x)
@@ -243,10 +243,10 @@ text \<open>The solver result is evaluated once. Every executable observation be
 
 lemma ov_solution_snapshot_raw:
   "(let sol = ov_sol;
-        result = Analysis_Result (fst sol)
+        result = Solved_Table (fst sol)
           (\<lambda>v ctx. result_value_to_abs ov_gs
             (canonicalize_lift ov_ep (dg_local (snd sol (Inl (v, ctx))))));
-        read = (\<lambda>v ctx x. map_lift (\<lambda>st. st x) (lookup_context result v ctx));
+        read = (\<lambda>v ctx x. map_lift (\<lambda>st. st x) (lookup_table result v ctx));
         seed = (\<lambda>ctx x. map_lift (\<lambda>s. default_st_to_fun ov_gs s x)
           (dg_local (snd sol (Inr (Activation_Seed p_entry ctx)))));
         alt_answer = (\<lambda>i.
@@ -258,8 +258,8 @@ lemma ov_solution_snapshot_raw:
               [] ov_ca (Statement 3) (STR ''p'') (alts ! i))
             (snd sol)))
      in TD_side_always_join_Interp_solve_c ov_eqs (cfg_exit ov_cfg, []) \<noteq> None
-      \<and> contexts_at result p_entry = {[SPos], [STop]}
-      \<and> contexts_at result (Statement 3) = {[]}
+      \<and> table_contexts result p_entry = {[SPos], [STop]}
+      \<and> table_contexts result (Statement 3) = {[]}
       \<and> seed [SPos] (STR ''a'') = Lifted SPos
       \<and> seed [STop] (STR ''a'') = Lifted STop
       \<and> read p_entry [SPos] (STR ''a'') = Lifted SPos
@@ -303,8 +303,8 @@ lemma ov_solution_snapshot_raw:
 
 lemma ov_solution_snapshot:
   "TD_side_always_join_Interp_solve_c ov_eqs (cfg_exit ov_cfg, []) \<noteq> None
-   \<and> contexts_at ov_result p_entry = {[SPos], [STop]}
-   \<and> contexts_at ov_result (Statement 3) = {[]}
+   \<and> table_contexts ov_result p_entry = {[SPos], [STop]}
+   \<and> table_contexts ov_result (Statement 3) = {[]}
    \<and> ov_seed [SPos] (STR ''a'') = Lifted SPos
    \<and> ov_seed [STop] (STR ''a'') = Lifted STop
    \<and> ov_read p_entry [SPos] (STR ''a'') = Lifted SPos
@@ -351,17 +351,17 @@ lemma ov_terminates_c:
 subsection \<open>1. One call, two contexts\<close>
 
 lemma ov_two_contexts:
-  "contexts_at ov_result p_entry = {[SPos], [STop]}"
+  "table_contexts ov_result p_entry = {[SPos], [STop]}"
   using ov_solution_snapshot by meson
 
 lemma ov_two_contexts_card:
-  "card (contexts_at ov_result p_entry) = 2"
+  "card (table_contexts ov_result p_entry) = 2"
   unfolding ov_two_contexts by simp
 
 text \<open>\<open>main\<close> itself runs only under the root context.\<close>
 
 lemma ov_caller_root_only:
-  "contexts_at ov_result (Statement 3) = {[]}"
+  "table_contexts ov_result (Statement 3) = {[]}"
   using ov_solution_snapshot by blast+
 
 subsection \<open>2. Each seed carries its own alternative's entry\<close>

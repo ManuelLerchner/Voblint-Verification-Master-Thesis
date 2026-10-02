@@ -1,5 +1,5 @@
 theory Contextual_Check_Report
-  imports Check_Report Analysis_Result Analysis_Query
+  imports Check_Report Solved_Table Analysis_Query
 begin
 
 section \<open>Contextual check verdicts over a solved result table\<close>
@@ -237,7 +237,7 @@ subsection \<open>Whole-program contextual check report\<close>
 text \<open>
   The context-sensitive sibling of \<^const>\<open>classify_checks\<close>: the same
   \<^const>\<open>EA_Check\<close> traversal in the same \<^const>\<open>cfg_intra_list\<close> order, but
-  reading a \<^typ>\<open>('ctx, 'a) analysis_result\<close> instead of a single
+  reading a \<^typ>\<open>('ctx, 'a) solved_table\<close> instead of a single
   \<^typ>\<open>pp \<Rightarrow> 's\<close> environment, and retaining one verdict per context covered
   at the checked node rather than collapsing them at construction time.
   \<open>classify_checks_ctx_positions\<close> below is the load-bearing consequence: the
@@ -246,23 +246,23 @@ text \<open>
   stays aligned.
 
   The per-check observations are a set, not a list. \<^typ>\<open>'ctx\<close> carries no
-  ordering constraint --- \<^const>\<open>contexts_at\<close> is a set for precisely that
+  ordering constraint --- \<^const>\<open>table_contexts\<close> is a set for precisely that
   reason, and real context types such as interval vectors have no total
   order --- so no canonical list exists to produce. Nothing downstream needs
   one: \<^const>\<open>aggregate_verdicts\<close> is order-independent by construction.
 \<close>
 
 definition classify_checks_ctx ::
-    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
        \<Rightarrow> (pp \<times> exp \<times> ('ctx \<times> contextual_verdict) set) list" where
   "classify_checks_ctx g r classify =
      map (\<lambda>(u, a, v). (u, ea_check_cond a,
-            (\<lambda>ctx. (ctx, classify_point classify (ea_check_cond a) (lookup_context r u ctx)))
-              ` contexts_at r u))
+            (\<lambda>ctx. (ctx, classify_point classify (ea_check_cond a) (lookup_table r u ctx)))
+              ` table_contexts r u))
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
 
 definition classify_checks_verdicts ::
-    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
        \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
   "classify_checks_verdicts g r classify =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (classify_checks_ctx g r classify)"
@@ -286,7 +286,7 @@ lemma classify_checks_ctx_mem_iff:
   assumes "finite (intra g)"
   shows "(v, c, vs) \<in> set (classify_checks_ctx g r classify)
      \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
-         \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_context r v ctx))) ` contexts_at r v"
+         \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_table r v ctx))) ` table_contexts r v"
   unfolding classify_checks_ctx_def set_map set_filter
   using set_cfg_intra_list[OF assms]
   by (auto simp: image_iff split: edge_action.splits)
@@ -362,11 +362,11 @@ lemma classify_checks_verdicts_mem_iff:
   shows "(v, c, vr) \<in> set (classify_checks_verdicts g ar classify)
      \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
          \<and> vr = aggregate_verdicts
-                  ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
+                  ((\<lambda>ctx. classify_point classify c (lookup_table ar v ctx)) ` table_contexts ar v)"
 proof -
-  have img: "snd ` (\<lambda>ctx. (ctx, classify_point classify c (lookup_context ar v ctx)))
-                 ` contexts_at ar v
-           = (\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v"
+  have img: "snd ` (\<lambda>ctx. (ctx, classify_point classify c (lookup_table ar v ctx)))
+                 ` table_contexts ar v
+           = (\<lambda>ctx. classify_point classify c (lookup_table ar v ctx)) ` table_contexts ar v"
     by (simp add: image_comp comp_def)
   have "(v, c, vr) \<in> set (classify_checks_verdicts g ar classify)
       \<longleftrightarrow> (\<exists>vs. (v, c, vs) \<in> set (classify_checks_ctx g ar classify)
@@ -374,7 +374,7 @@ proof -
     unfolding classify_checks_verdicts_def set_map by (force simp: image_iff)
   also have "... \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g)
          \<and> vr = aggregate_verdicts
-                  ((\<lambda>ctx. classify_point classify c (lookup_context ar v ctx)) ` contexts_at ar v)"
+                  ((\<lambda>ctx. classify_point classify c (lookup_table ar v ctx)) ` table_contexts ar v)"
     unfolding classify_checks_ctx_mem_iff[OF assms] using img by auto
   finally show ?thesis .
 qed
@@ -382,20 +382,20 @@ qed
 theorem classify_checks_ctx_decided_sound:
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Decided r) \<in> set (classify_checks_verdicts g ar classify)"
-    and reach: "lookup_context ar v ctx = Lifted st"
+    and reach: "lookup_table ar v ctx = Lifted st"
     and known: "r \<noteq> Check_Unknown"
   shows "classify c st = r"
 proof -
   have agg: "aggregate_verdicts
-               ((\<lambda>c'. classify_point classify c (lookup_context ar v c')) ` contexts_at ar v)
+               ((\<lambda>c'. classify_point classify c (lookup_table ar v c')) ` table_contexts ar v)
                = Decided r"
     using classify_checks_verdicts_mem_iff[OF fin, of v c "Decided r" ar classify] mem by simp
-  have covctx: "ctx \<in> contexts_at ar v" using reach by (rule lookup_context_LiftedD)
-  have mem_img: "classify_point classify c (lookup_context ar v ctx)
-          \<in> (\<lambda>c'. classify_point classify c (lookup_context ar v c')) ` contexts_at ar v"
+  have covctx: "ctx \<in> table_contexts ar v" using reach by (rule lookup_table_LiftedD)
+  have mem_img: "classify_point classify c (lookup_table ar v ctx)
+          \<in> (\<lambda>c'. classify_point classify c (lookup_table ar v c')) ` table_contexts ar v"
     using covctx by blast
-  have "classify_point classify c (lookup_context ar v ctx) = Dead
-          \<or> classify_point classify c (lookup_context ar v ctx) = Decided r"
+  have "classify_point classify c (lookup_table ar v ctx) = Dead
+          \<or> classify_point classify c (lookup_table ar v ctx) = Decided r"
     using aggregate_verdicts_decided_dest[OF agg known] mem_img by blast
   with reach show ?thesis by simp
 qed
@@ -403,14 +403,14 @@ qed
 theorem classify_checks_ctx_proved_sound:
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Decided Check_Proved) \<in> set (classify_checks_verdicts g r classify)"
-    and reach: "lookup_context r v ctx = Lifted st"
+    and reach: "lookup_table r v ctx = Lifted st"
   shows "classify c st = Check_Proved"
   using classify_checks_ctx_decided_sound[OF fin mem reach] by simp
 
 theorem classify_checks_ctx_refuted_sound:
   assumes fin: "finite (intra g)"
     and mem: "(v, c, Decided Check_Refuted) \<in> set (classify_checks_verdicts g r classify)"
-    and reach: "lookup_context r v ctx = Lifted st"
+    and reach: "lookup_table r v ctx = Lifted st"
   shows "classify c st = Check_Refuted"
   using classify_checks_ctx_decided_sound[OF fin mem reach] by simp
 

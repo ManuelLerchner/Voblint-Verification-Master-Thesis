@@ -55,11 +55,11 @@ definition fact_sol ::
   "fact_sol = interval_es_rule.solution Globals_Warrow fact_gs fact_prog"
 
 text \<open>The same solution read through the public result table rather than the solver's
-  own unknown space: \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> off the
+  own unknown space: \<^const>\<open>lookup_table\<close> answers \<^const>\<open>Bot\<close> off the
   covered keys and hands out an \<^typ>\<open>ivl abs_state\<close>, so a value assertion below names
   neither \<^const>\<open>Inl\<close> nor \<^const>\<open>dg_local\<close> nor the resolved-store representation.\<close>
 
-definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
+definition fact_result :: "(ivl list, ivl abs_state) solved_table" where
   "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
 
 lemma fact_terminates:
@@ -94,25 +94,25 @@ text \<open>\<open>#ret\<close> at \<open>FunctionResult\<close> for each contex
   would mean the whole activation is unreachable, not merely an imprecise interval; here
   every context is reachable and exact.\<close>
 lemma fact_return_ctx_a:
-  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a of
+  "(case lookup_table fact_result (FunctionResult (STR ''factorial'')) ctx_a of
       Bot \<Rightarrow> None | Lifted st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 6) (Fin 6))"
   by eval
 
 lemma fact_return_ctx_b:
-  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_b of
+  "(case lookup_table fact_result (FunctionResult (STR ''factorial'')) ctx_b of
       Bot \<Rightarrow> None | Lifted st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 24) (Fin 24))"
   by eval
 
 lemma fact_return_ctx_a2:
-  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a2 of
+  "(case lookup_table fact_result (FunctionResult (STR ''factorial'')) ctx_a2 of
       Bot \<Rightarrow> None | Lifted st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 2) (Fin 2))"
   by eval
 
 lemma fact_return_ctx_a1:
-  "(case lookup_context fact_result (FunctionResult (STR ''factorial'')) ctx_a1 of
+  "(case lookup_table fact_result (FunctionResult (STR ''factorial'')) ctx_a1 of
       Bot \<Rightarrow> None | Lifted st \<Rightarrow> Some (st (STR ''#ret'')))
      = Some (Ivl (Fin 1) (Fin 1))"
   by eval

@@ -10,7 +10,7 @@ text \<open>
   Acceptance witnesses for the entry-state result table
   \<^const>\<open>dg_pipeline.result\<close> of \<open>interval_es_rule\<close> at
   \<^const>\<open>Globals_Warrow\<close>, the context-sensitive reading of the entry-state D/G
-  solution as an \<^type>\<open>analysis_result\<close>. The two programs under test are the ones the
+  solution as an \<^type>\<open>solved_table\<close>. The two programs under test are the ones the
   sibling entry-state regressions already solve: \<^const>\<open>gcall_prog\<close>, whose
   three calls to \<open>bump\<close> keep three activations of one callee apart while a
   declared global crosses each call boundary, and \<^const>\<open>fact_prog\<close>, whose
@@ -24,7 +24,7 @@ text \<open>
   recognize itself.
 \<close>
 
-definition gcall_result :: "(ivl list, ivl abs_state) analysis_result" where
+definition gcall_result :: "(ivl list, ivl abs_state) solved_table" where
   "gcall_result = interval_es_rule.result Globals_Warrow gcall_gs gcall_prog"
 
 abbreviation bump_entry :: cfg_node where
@@ -39,12 +39,12 @@ text \<open>
 \<close>
 
 lemma gcall_result_bump_contexts:
-  "contexts_at gcall_result bump_entry
+  "table_contexts gcall_result bump_entry
      = {gcall_ctx_first, gcall_ctx_second, gcall_ctx_third}"
   by eval
 
 lemma gcall_result_bump_context_count:
-  "card (contexts_at gcall_result bump_entry) = 3"
+  "card (table_contexts gcall_result bump_entry) = 3"
   by eval
 
 subsection \<open>A global crossing a call boundary, per activation\<close>
@@ -59,19 +59,19 @@ text \<open>
 
 lemma gcall_result_bump_first:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_first)
+     (lookup_table gcall_result bump_entry gcall_ctx_first)
    = Lifted (Ivl (Fin 10) (Fin 10), Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma gcall_result_bump_second:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_second)
+     (lookup_table gcall_result bump_entry gcall_ctx_second)
    = Lifted (Ivl (Fin 15) (Fin 15), Ivl (Fin 4) (Fin 4))"
   by eval
 
 lemma gcall_result_bump_third:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''n'')))
-     (lookup_context gcall_result bump_entry gcall_ctx_third)
+     (lookup_table gcall_result bump_entry gcall_ctx_third)
    = Lifted (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
 
@@ -80,13 +80,13 @@ text \<open>The three per-context states are pairwise different, so the contexts
 
 lemma gcall_result_bump_states_distinct:
   "map_lift (\<lambda>st. st (STR ''n''))
-     (lookup_context gcall_result bump_entry gcall_ctx_first)
+     (lookup_table gcall_result bump_entry gcall_ctx_first)
    \<noteq> map_lift (\<lambda>st. st (STR ''n''))
-       (lookup_context gcall_result bump_entry gcall_ctx_second)"
+       (lookup_table gcall_result bump_entry gcall_ctx_second)"
   "map_lift (\<lambda>st. st (STR ''n''))
-     (lookup_context gcall_result bump_entry gcall_ctx_second)
+     (lookup_table gcall_result bump_entry gcall_ctx_second)
    \<noteq> map_lift (\<lambda>st. st (STR ''n''))
-       (lookup_context gcall_result bump_entry gcall_ctx_third)"
+       (lookup_table gcall_result bump_entry gcall_ctx_third)"
   by eval+
 
 subsection \<open>Returned values and the global's final value in the caller\<close>
@@ -100,19 +100,19 @@ text \<open>
 
 lemma gcall_result_after_first_return:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''a'')))
-     (lookup_context gcall_result (Statement 5) [])
+     (lookup_table gcall_result (Statement 5) [])
    = Lifted (Ivl (Fin 15) (Fin 15), Ivl (Fin 15) (Fin 15))"
   by eval
 
 lemma gcall_result_after_second_return:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''b'')))
-     (lookup_context gcall_result (Statement 8) [])
+     (lookup_table gcall_result (Statement 8) [])
    = Lifted (Ivl (Fin 19) (Fin 19), Ivl (Fin 19) (Fin 19))"
   by eval
 
 lemma gcall_result_after_third_return:
   "map_lift (\<lambda>st. (st (STR ''g''), st (STR ''c'')))
-     (lookup_context gcall_result (Statement 10) [])
+     (lookup_table gcall_result (Statement 10) [])
    = Lifted (Ivl (Fin 38) (Fin 38), Ivl (Fin 38) (Fin 38))"
   by eval
 
@@ -131,25 +131,25 @@ text \<open>
   particular activation at it.
 \<close>
 
-definition fact_result :: "(ivl list, ivl abs_state) analysis_result" where
+definition fact_result :: "(ivl list, ivl abs_state) solved_table" where
   "fact_result = interval_es_rule.result Globals_Warrow fact_gs fact_prog"
 
 lemma fact_result_dead_branch_covered:
-  "(Statement 2, ctx_a) \<in> result_unknowns fact_result"
+  "(Statement 2, ctx_a) \<in> covered_keys fact_result"
   by eval
 
 lemma fact_result_dead_branch_not_reachable:
-  "\<not> is_reachable_point (lookup_context fact_result (Statement 2) ctx_a)"
+  "\<not> is_reachable_point (lookup_table fact_result (Statement 2) ctx_a)"
   by eval
 
 lemma fact_result_dead_branch_unreachable:
-  "lookup_context fact_result (Statement 2) ctx_a = Bot"
+  "lookup_table fact_result (Statement 2) ctx_a = Bot"
   using fact_result_dead_branch_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma fact_result_base_case_live_ctx:
   "map_lift (\<lambda>st. st (STR ''n''))
-     (lookup_context fact_result (Statement 2) ctx_a1)
+     (lookup_table fact_result (Statement 2) ctx_a1)
    = Lifted (Ivl (Fin 1) (Fin 1))"
   by eval
 
@@ -161,7 +161,7 @@ subsection \<open>A context the solver never covered\<close>
 
 text \<open>
   A real node queried at a context no activation ever entered under. The
-  membership guard in \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close>;
+  membership guard in \<^const>\<open>lookup_table\<close> answers \<^const>\<open>Bot\<close>;
   no fallback to the seeded default context \<open>[]\<close> takes place, so the answer
   does not silently become some other activation's state.
 \<close>
@@ -170,18 +170,18 @@ definition gcall_ctx_bogus :: "ivl list" where
   "gcall_ctx_bogus = [Ivl (Fin 77) (Fin 77)]"
 
 lemma gcall_result_bogus_absent:
-  "(bump_entry, gcall_ctx_bogus) \<notin> result_unknowns gcall_result"
+  "(bump_entry, gcall_ctx_bogus) \<notin> covered_keys gcall_result"
   by eval
 
 lemma gcall_result_bogus_unreachable:
-  "lookup_context gcall_result bump_entry gcall_ctx_bogus = Bot"
-  by (rule lookup_context_absent[OF gcall_result_bogus_absent])
+  "lookup_table gcall_result bump_entry gcall_ctx_bogus = Bot"
+  by (rule lookup_table_absent[OF gcall_result_bogus_absent])
 
 text \<open>The default context \<open>[]\<close> is likewise uncovered at the callee entry, so
   it is not a hidden answer either.\<close>
 
 lemma gcall_result_bump_default_ctx_absent:
-  "(bump_entry, []) \<notin> result_unknowns gcall_result"
+  "(bump_entry, []) \<notin> covered_keys gcall_result"
   by eval
 
 subsection \<open>The joined per-node view\<close>
@@ -218,7 +218,7 @@ text \<open>
 
 definition gcall_callee_ctx_at :: "pp \<Rightarrow> call_action \<Rightarrow> ivl list option" where
   "gcall_callee_ctx_at u ca =
-     (case lookup_context gcall_result u [] of
+     (case lookup_table gcall_result u [] of
         Bot \<Rightarrow> None
       | Lifted st \<Rightarrow> callee_ctx_of enter_ivl_for gcall_gs ca st)"
 
@@ -252,9 +252,9 @@ lemma gcall_callee_ctx_at_agrees_with_route:
   by eval+
 
 lemma gcall_callee_ctx_at_covered:
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 4) gcall_call_first)) \<in> result_unknowns gcall_result"
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 5) gcall_call_second)) \<in> result_unknowns gcall_result"
-  "(bump_entry, the (gcall_callee_ctx_at (Statement 9) gcall_call_third)) \<in> result_unknowns gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 4) gcall_call_first)) \<in> covered_keys gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 5) gcall_call_second)) \<in> covered_keys gcall_result"
+  "(bump_entry, the (gcall_callee_ctx_at (Statement 9) gcall_call_third)) \<in> covered_keys gcall_result"
   by eval+
 
 text \<open>No call site routes to another call site's context. This is the negative
@@ -293,14 +293,14 @@ definition twin_prog :: imp_prog where
      }
    }"
 
-definition twin_result :: "(ivl list, ivl abs_state) analysis_result" where
+definition twin_result :: "(ivl list, ivl abs_state) solved_table" where
   "twin_result = interval_es_rule.result Globals_Warrow (declared_global twin_prog) twin_prog"
 
 definition twin_call_contexts :: "(pp \<times> pp \<times> ivl list option) list" where
   "twin_call_contexts =
      map (\<lambda>(call, ca, entry, cont).
             (call, cont,
-             case lookup_context twin_result call [] of
+             case lookup_table twin_result call [] of
                Bot \<Rightarrow> None
              | Lifted st \<Rightarrow>
                  callee_ctx_of enter_ivl_for (declared_global twin_prog) ca st))
@@ -327,7 +327,7 @@ text \<open>The callee is materialized once, under that one shared context, and 
   caller's own context stays the root one.\<close>
 
 lemma twin_result_idf_contexts:
-  "contexts_at twin_result (FunctionEntry (STR ''idf'')) = {[Ivl (Fin 5) (Fin 5)]}"
+  "table_contexts twin_result (FunctionEntry (STR ''idf'')) = {[Ivl (Fin 5) (Fin 5)]}"
   by eval
 
 lemma twin_verdict_report:

@@ -3999,3 +3999,9 @@ canonical_location_Global
 default_st_rep_is_bot_defaultI
 default_st_rep_is_botE
 obtain_fresh_location
+analysis_result
+Analysis_Result
+result_unknowns
+lookup_context
+lookup_context_result
+contexts_at

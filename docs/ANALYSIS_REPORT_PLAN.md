@@ -380,10 +380,10 @@ diff of all 322 corpus fixtures: text, JSON, graph snapshot and verbose trace):
   (`mcp_equations`, `mcp_solve_c`, `mcp_run_of`);
 - the site's theorem cards, the README and the docs that named the retired theorems.
 
+Phase 5, the `solved_table` rename, landed in the second stacked PR.
+
 Not done, one stacked PR each:
 
-- phase 5, the `solved_table` rename: mechanical but touches every framework theory
-  that names `analysis_result`; it should land on its own.
 - phase 6, `registration_of`, and phase 7 (splitting `sound_table`, the shared
   contextual classification helper, absorbing `analysis_surface`).
 - the `Voblint` facade of phase 8: `Voblint_Generated`, the handwritten facade and

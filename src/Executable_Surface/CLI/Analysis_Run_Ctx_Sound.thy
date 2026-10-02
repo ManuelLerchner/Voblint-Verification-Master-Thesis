@@ -40,7 +40,7 @@ next
   case 3
   show ?case
     using mcp_es_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
         dg_pipeline.sol_vars_def)
 qed
 
@@ -68,7 +68,7 @@ next
   case 3
   show ?case
     using mcp_cs_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
         dg_pipeline.sol_vars_def)
 qed
 

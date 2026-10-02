@@ -72,11 +72,11 @@ text \<open>
 \<close>
 
 definition table_covers ::
-    "('v \<Rightarrow> store set) \<Rightarrow> ('c, 'v) analysis_result \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
-  "table_covers gm r v s \<longleftrightarrow> (\<exists>ctx st. lookup_context r v ctx = Lifted st \<and> s \<in> gm st)"
+    "('v \<Rightarrow> store set) \<Rightarrow> ('c, 'v) solved_table \<Rightarrow> pp \<Rightarrow> store \<Rightarrow> bool" where
+  "table_covers gm r v s \<longleftrightarrow> (\<exists>ctx st. lookup_table r v ctx = Lifted st \<and> s \<in> gm st)"
 
 lemma table_coversI [intro]:
-  "lookup_context r v ctx = Lifted st \<Longrightarrow> s \<in> gm st \<Longrightarrow> table_covers gm r v s"
+  "lookup_table r v ctx = Lifted st \<Longrightarrow> s \<in> gm st \<Longrightarrow> table_covers gm r v s"
   unfolding table_covers_def by blast
 
 text \<open>
@@ -91,19 +91,19 @@ text \<open>
   found, since it concretizes to no store at all.
 \<close>
 
-lemma lookup_context_covers_of_activation:
-  fixes r :: "('c, 'v) analysis_result"
+lemma lookup_table_covers_of_activation:
+  fixes r :: "('c, 'v) solved_table"
   assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v c)"
       and sound: "\<And>ctx. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx
-                    \<subseteq> gamma_lift gm (lookup_context r v ctx)"
+                    \<subseteq> gamma_lift gm (lookup_table r v ctx)"
       and mem: "s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"
   obtains ctx st where "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx"
-    and "lookup_context r v ctx = Lifted st" and "s \<in> gm st"
+    and "lookup_table r v ctx = Lifted st" and "s \<in> gm st"
 proof -
   from mem union obtain ctx where a: "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx" by blast
-  with sound have g: "s \<in> gamma_lift gm (lookup_context r v ctx)" by blast
+  with sound have g: "s \<in> gamma_lift gm (lookup_table r v ctx)" by blast
   show ?thesis
-  proof (cases "lookup_context r v ctx")
+  proof (cases "lookup_table r v ctx")
     case Bot
     with g show ?thesis by simp
   next
@@ -129,10 +129,10 @@ definition arithmetic_safe_at :: "cfg \<Rightarrow> pp \<Rightarrow> store \<Rig
 
 locale sound_table =
   fixes p :: imp_prog
-    and r :: "('c, 'v) analysis_result"
+    and r :: "('c, 'v) solved_table"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
     and gm :: "'v \<Rightarrow> store set"
-  assumes finite_contexts: "\<And>v. finite (contexts_at r v)"
+  assumes finite_contexts: "\<And>v. finite (table_contexts r v)"
       and covers: "\<And>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
                       \<Longrightarrow> table_covers gm r v s"
       and proved: "\<And>cnd d t. classify cnd d = Check_Proved \<Longrightarrow> t \<in> gm d
@@ -153,7 +153,7 @@ lemma arithmetic_safe:
   shows "arithmetic_safe_at (prog_cfg p) v s"
 proof -
   from covers[OF mem] obtain ctx st where
-    look: "lookup_context r v ctx = Lifted st" and gst: "s \<in> gm st"
+    look: "lookup_table r v ctx = Lifted st" and gst: "s \<in> gm st"
     unfolding table_covers_def by blast
   have safe: "\<And>es e divisor. (v, es) \<in> set (arithmetic_expression_sites (prog_cfg p)) \<Longrightarrow>
       e \<in> set es \<Longrightarrow> divisor \<in> expression_divisors e \<Longrightarrow> \<lbrakk>divisor\<rbrakk>\<^sub>e s \<noteq> 0"
@@ -186,24 +186,24 @@ text \<open>
 \<close>
 
 lemma sound_table_of_activation:
-  fixes r :: "('c, 'v) analysis_result"
+  fixes r :: "('c, 'v) solved_table"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
                     \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
                                 cinit_stores (declared_global p)\<^esub> u c)"
       and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
                               cinit_stores (declared_global p)\<^esub> u ctx
-                    \<subseteq> gamma_lift gm (lookup_context r u ctx)"
-      and fin: "finite_analysis_result r"
+                    \<subseteq> gamma_lift gm (lookup_table r u ctx)"
+      and fin: "finite_solved_table r"
       and proved: "\<And>e d t. classify e d = Check_Proved \<Longrightarrow> t \<in> gm d \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
       and refuted: "\<And>e d t. classify e d = Check_Refuted \<Longrightarrow> t \<in> gm d
                         \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e t)"
   shows "sound_table p r classify gm"
 proof (rule sound_table.intro)
-  show "finite (contexts_at r v)" for v by (rule finite_contexts_at [OF fin])
+  show "finite (table_contexts r v)" for v by (rule finite_table_contexts [OF fin])
   show "table_covers gm r v s"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
     for v s
-    by (meson lookup_context_covers_of_activation [OF union sound that] table_coversI)
+    by (meson lookup_table_covers_of_activation [OF union sound that] table_coversI)
 qed (fact proved, fact refuted)
 
 subsection \<open>The context-free configuration\<close>
@@ -235,7 +235,7 @@ next
   case 3
   show ?case
     using mcp_rule.vars_finite_of_terminates [OF cov]
-    by (simp add: finite_analysis_result_def dg_pipeline.result_def
+    by (simp add: finite_solved_table_def dg_pipeline.result_def
         dg_pipeline.sol_vars_def)
 qed
 

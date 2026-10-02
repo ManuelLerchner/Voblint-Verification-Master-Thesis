@@ -120,7 +120,7 @@ is checked against.
 
 ## How the CLI reads them
 
-`analysis_result` in `Analysis_Run` is handwritten and reads only the combined
+`solved_table` in `Analysis_Run` is handwritten and reads only the combined
 registrations: three equations, one per context policy, none naming a domain or
 a rule. The activation list, the rule and the call-string bound are arguments,
 so there is no support table to generate and no default.

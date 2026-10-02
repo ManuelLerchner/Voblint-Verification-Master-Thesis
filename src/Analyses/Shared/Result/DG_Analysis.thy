@@ -130,7 +130,7 @@ text \<open>
 \<close>
 
 record ('c, 'v) solved_run =
-  run_table :: "('c, 'v) analysis_result"
+  run_table :: "('c, 'v) solved_table"
   run_shared :: "'v lifted"
   run_seed :: "pname \<Rightarrow> 'c \<Rightarrow> 'v lifted"
   run_step :: "pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted"
@@ -220,7 +220,7 @@ definition reader :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
   "reader \<G> p = solved_local_reader (sol_vars \<G> p) (sol_env \<G> p)"
 
 definition result :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> ('c, 'v) analysis_result" where
+    \<Rightarrow> ('c, 'v) solved_table" where
   "result \<G> p = dg_result_for (rd \<G>) (emp p) (solution \<G> p)"
 
 text \<open>
@@ -334,7 +334,7 @@ definition report_with_state :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_pr
 
 lemma state_at_unfold:
   "state_at \<G> p ctx v
-     = (case lookup_context (result \<G> p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
+     = (case lookup_table (result \<G> p) v ctx of Bot \<Rightarrow> bot_state | Lifted st \<Rightarrow> st)"
   by (simp add: state_at_def analysis_surface.state_at_def)
 end
 
@@ -512,7 +512,7 @@ lemma empty_rd_exact: "emp p s = empty\<^sub>V (rd pgs s)"
 
 text \<open>
   The published table and the solved reader describe the same stores at every
-  key. A caller states soundness against \<^const>\<open>lookup_context\<close> of the result
+  key. A caller states soundness against \<^const>\<open>lookup_table\<close> of the result
   table, while the routed endpoints are stated against the reader; this is the
   equation between them, and it needs no coverage premise. At a covered key it
   is publication commuting with the normalization; at an uncovered one it is
@@ -521,7 +521,7 @@ text \<open>
 
 lemma gamma_reader_eq_lookup:
   "cgam (reader pgs p (Inl (v, ctx)))
-     = gamma_lift gamma\<^sub>V (lookup_context (result pgs p) v ctx)"
+     = gamma_lift gamma\<^sub>V (lookup_table (result pgs p) v ctx)"
 proof -
   have gc: "gamma_lift gamma\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift gamma\<^sub>V x" for x
     by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_sound)

@@ -1,15 +1,15 @@
 theory DG_Analysis_Adapter
-  imports Routed_Context Contextual_Check_Report Analysis_Result
+  imports Routed_Context Contextual_Check_Report Solved_Table
 begin
 
 section \<open>Public result and check-report adapter for a local-state routed DG analysis\<close>
 
 text \<open>
   Every concrete routed-context analysis needs the same public
-  \<^type>\<open>analysis_result\<close>/check report/soundness triple, and each one follows
+  \<^type>\<open>solved_table\<close>/check report/soundness triple, and each one follows
   the identical shape once a routed D/G equation system is solved: read the
   local unknown at every covered \<open>(node, context)\<close> pair into an
-  \<^type>\<open>analysis_result\<close>, classify every compiled check against it via
+  \<^type>\<open>solved_table\<close>, classify every compiled check against it via
   \<^const>\<open>classify_checks_verdicts\<close>, and discharge that report's own soundness
   from the activation-indexed collecting semantics
   (\<^theory>\<open>Voblint_Framework.Activation_Backbone\<close>) already available once
@@ -76,7 +76,7 @@ subsection \<open>The public result table\<close>
 text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>dg_result_for\<close> builds an
-  \<^type>\<open>analysis_result\<close> from an already-solved key set and reader.
+  \<^type>\<open>solved_table\<close> from an already-solved key set and reader.
   The solved local unknown is published into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
   one collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
   \<open>empty\<^sub>V\<close>, so a \<^const>\<open>Lifted\<close> payload that denotes no store without
@@ -85,16 +85,16 @@ text \<open>
   off an empty state.
 \<close>
 
-definition analyse_result :: "('c, 'v) analysis_result" where
-  "analyse_result = Analysis_Result vars
+definition analyse_result :: "('c, 'v) solved_table" where
+  "analyse_result = Solved_Table vars
      (\<lambda>v ctx. canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx))))))"
 
-lemma lookup_context_analyse_result:
-  "lookup_context analyse_result v ctx =
+lemma lookup_table_analyse_result:
+  "lookup_table analyse_result v ctx =
      (if (v, ctx) \<in> vars
       then canonicalize_lift empty\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))
       else Bot)"
-  unfolding lookup_context_def analyse_result_def by simp
+  unfolding lookup_table_def analyse_result_def by simp
 
 text \<open>Canonicality holds unconditionally here: \<^const>\<open>canonicalize_lift\<close> is
   exactly what rules out a \<^const>\<open>Lifted\<close> payload that is secretly empty, and
@@ -113,20 +113,20 @@ text \<open>Canonicality holds unconditionally here: \<^const>\<open>canonicaliz
   unbounded.\<close>
 
 lemma analyse_result_canonical:
-  assumes "lookup_context analyse_result v ctx = Lifted st"  shows "\<not> empty\<^sub>V st"
+  assumes "lookup_table analyse_result v ctx = Lifted st"  shows "\<not> empty\<^sub>V st"
   using assms
-  unfolding lookup_context_analyse_result
+  unfolding lookup_table_analyse_result
   by (cases "rd (dg_local (sigma (Inl (v, ctx))))")
      (auto simp: normalize_lift_def split: if_splits)
 
-theorem wf_analyse_result: "wf_analysis_result empty\<^sub>V analyse_result"
-  unfolding wf_analysis_result_def finite_analysis_result_def
+theorem wf_analyse_result: "wf_solved_table empty\<^sub>V analyse_result"
+  unfolding wf_solved_table_def finite_solved_table_def
   using vars_finite analyse_result_canonical by (simp add: analyse_result_def)
 
 text \<open>
   The soundness bridge \<open>\<gamma>\<^sub>M (sg (Inl (v, ctx)))\<close> steps need: a covered
   point's guarded reading agrees exactly with \<open>analyse_result\<close>'s own
-  \<^const>\<open>lookup_context\<close> answer at the same key, \<^const>\<open>Bot\<close>
+  \<^const>\<open>lookup_table\<close> answer at the same key, \<^const>\<open>Bot\<close>
   concretizing to the empty set and \<^const>\<open>Lifted\<close> to \<open>\<gamma>\<^sub>V\<close> of its
   payload.
 \<close>
@@ -138,17 +138,17 @@ lemma gamma_lift_canonicalize [simp]:
   "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x"
   by (cases x) (simp_all add: normalize_lift_def empty_sound)
 
-lemma gammaM_sg_eq_lookup_context:
+lemma gammaM_sg_eq_lookup_table:
   assumes cov: "(v, ctx) \<in> vars"
-  shows "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+  shows "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
 proof -
   have "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, ctx))))
           (dg_global (sigma (Inr analysis_global)))"
     using cov by simp
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (rd (dg_local (sigma (Inl (v, ctx)))))"
     by (rule gammaDG_rd)
-  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
-    using cov unfolding lookup_context_analyse_result by simp
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
+    using cov unfolding lookup_table_analyse_result by simp
   finally show ?thesis .
 qed
 
@@ -159,7 +159,7 @@ text \<open>
   \<open>analyse_report_ctx\<close> (defined below): every activation-collected store at \<open>v\<close> is
   concretized by \<^const>\<open>analyse_result\<close>'s own reading, \<^const>\<open>bot\<close> when
   uncovered or witness-bottom, its \<^const>\<open>Lifted\<close> payload otherwise ---
-  composing \<open>activation_collect_dg_sound\<close> with \<open>gammaM_sg_eq_lookup_context\<close>,
+  composing \<open>activation_collect_dg_sound\<close> with \<open>gammaM_sg_eq_lookup_table\<close>,
   case-split on coverage. A concrete instance whose own public result reads
   through this same \<open>analyse_result\<close> (up to a proved value equality) gets its
   own node-soundness bridge from this lemma directly, instead of re-deriving
@@ -171,27 +171,27 @@ lemma analyse_result_node_sound:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
-           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
 proof -
   have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound])
-  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+  also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
   proof (cases "(v, ctx) \<in> vars")
     case True
-    show ?thesis by (rule gammaM_sg_eq_lookup_context[OF True])
+    show ?thesis by (rule gammaM_sg_eq_lookup_table[OF True])
   next
     case False
     hence "\<gamma>\<^sub>M (sg (Inl (v, ctx))) = {}" by simp
-    moreover from False have "lookup_context analyse_result v ctx = Bot"
-      unfolding lookup_context_analyse_result by simp
+    moreover from False have "lookup_table analyse_result v ctx = Bot"
+      unfolding lookup_table_analyse_result by simp
     ultimately show ?thesis by simp
   qed
   finally show ?thesis by simp
 qed
 
 text \<open>
-  The same bridge in the vocabulary \<^theory>\<open>Voblint_Framework.Analysis_Result\<close>
+  The same bridge in the vocabulary \<^theory>\<open>Voblint_Framework.Solved_Table\<close>
   states its lookup facts in: every covered lookup safely abstracts the
   activation-collected stores at its key.  This is the general statement, with
   no bottom case baked in --- the unreachability reading is one instantiation
@@ -201,7 +201,7 @@ text \<open>
   this locale an \<^emph>\<open>uncovered\<close> key is not merely uninformative, since
   \<^term>\<open>\<gamma>\<^sub>M (sg (Inl (v, ctx)))\<close> is empty off \<^term>\<open>vars\<close> and the collect is
   contained in it either way.  That is a property of a solve satisfying this
-  locale's assumptions, not of \<^const>\<open>lookup_context\<close>, which is why the
+  locale's assumptions, not of \<^const>\<open>lookup_table\<close>, which is why the
   unreachability corollary still demands \<^term>\<open>Covered Bot\<close>: a caller reading a
   result table without these assumptions in hand has no such guarantee.
 \<close>
@@ -211,25 +211,25 @@ lemma analyse_result_lookup_sound:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
-           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
   by (rule analyse_result_node_sound[OF entry_cov s0_sound])
 
 lemma analyse_result_covered_unreachable:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-    and dead: "lookup_context_result analyse_result v ctx = Covered Bot"
+    and dead: "lookup_coverage analyse_result v ctx = Covered Bot"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
 
-lemma result_unknowns_analyse_result [simp]: "result_unknowns analyse_result = vars"
+lemma covered_keys_analyse_result [simp]: "covered_keys analyse_result = vars"
   unfolding analyse_result_def by simp
 
 text \<open>
   The node-level statement, one activation bucket at a time.  A covered context
   is \<^const>\<open>Bot\<close> by the node predicate; an uncovered one reads \<^const>\<open>Bot\<close> from
-  \<^const>\<open>lookup_context\<close> anyway, and here that is not a shrug --- this locale's
+  \<^const>\<open>lookup_table\<close> anyway, and here that is not a shrug --- this locale's
   own soundness already puts the collect inside an empty concretization there.
   So every bucket is empty and so is their union.
 
@@ -251,18 +251,18 @@ lemma analyse_result_node_unreachable:
 proof -
   have bucket: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}" for ctx
   proof -
-    have bot: "lookup_context analyse_result v ctx = Bot"
+    have bot: "lookup_table analyse_result v ctx = Bot"
     proof (cases "(v, ctx) \<in> vars")
       case True
-      have "lookup_context_result analyse_result v ctx = Covered Bot"
+      have "lookup_coverage analyse_result v ctx = Covered Bot"
         using True by (intro result_node_is_bottomD[OF dead]) simp
-      then show ?thesis unfolding lookup_context_eq_or_bot by simp
+      then show ?thesis unfolding lookup_table_eq_or_bot by simp
     next
       case False
-      then show ?thesis unfolding lookup_context_analyse_result by simp
+      then show ?thesis unfolding lookup_table_analyse_result by simp
     qed
     have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
-            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
       by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
     then show ?thesis unfolding bot by simp
   qed
@@ -307,11 +307,11 @@ lemma analyse_report_ctx_decided:
   obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
   have node_sound: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
-      \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_context analyse_result v ctx)"
+      \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound])
-  obtain st where reach: "lookup_context analyse_result v ctx = Lifted st"
+  obtain st where reach: "lookup_table analyse_result v ctx = Lifted st"
     and sst: "s \<in> \<gamma>\<^sub>V st"
-    using smem node_sound by (cases "lookup_context analyse_result v ctx") auto
+    using smem node_sound by (cases "lookup_table analyse_result v ctx") auto
   have "classify c st = r"
     using classify_checks_ctx_decided_sound[OF finE
             mem[unfolded analyse_report_ctx_def] reach known] .

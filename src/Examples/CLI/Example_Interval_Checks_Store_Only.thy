@@ -66,7 +66,7 @@ text \<open>The computed Interval environment at an arbitrary node, read out of 
   always-join report also reads, with an unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition checks_ivl_ex_env :: "pp \<Rightarrow> ivl abs_state" where
   "checks_ivl_ex_env v =
-     (case lookup_context
+     (case lookup_table
        (interval_rule.result Globals_Join checks_ivl_ex_gs checks_ivl_ex_program) v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 

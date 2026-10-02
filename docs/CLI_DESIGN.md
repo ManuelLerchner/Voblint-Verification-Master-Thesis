@@ -132,7 +132,7 @@ exported solver alternative code equations with `trace_event` calls at its steps
 `solve` (start and stop of one solve), `solve_rec_c` (query, iterate, one
 evaluation of the right-hand side, each strategy-tree instruction) and
 `destab_opt`/`destab_iter_opt` (destabilization). `Voblint_CLI.Trace_Run` does
-the same for the three routing policies and for `analysis_result`, which hands
+the same for the three routing policies and for `solved_table`, which hands
 the trace the run's readers for contexts, global unknowns and values before the
 solve. Each equation is proved equal to the vendored or original equation it
 replaces by unfolding `trace_event`, and the originals are removed from code

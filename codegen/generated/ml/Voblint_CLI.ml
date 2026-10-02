@@ -4101,6 +4101,9 @@ type ('a, 'b, 'c, 'd) trace_printers =
 type globals_rule = Globals_Join | Globals_Per_Origin | Globals_Warrow |
   Globals_Warrow_Per_Origin | Globals_Bounded_Narrowing of nat;;
 
+type ('a, 'b) solved_table =
+  Solved_Table of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b lifted);;
+
 type ('a, 'b, 'c) solver_event = Ev_Start of 'a | Ev_Stop |
   Ev_Query of 'a * 'a * bool * bool | Ev_Query_Wpoint of 'a * bool |
   Ev_Iterate_From_Query of 'a | Ev_Add_Infl of ('a, 'b) sum * 'a |
@@ -4195,9 +4198,6 @@ type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
 type analysis_config =
   Analysis_Config of analysis_domain list * globals_rule * context_mode;;
 
-type ('a, 'b) analysis_result =
-  Analysis_Result of (cfg_node * 'a) set * (cfg_node -> 'a -> 'b lifted);;
-
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
 type result_global_unknown = Global_Shared |
@@ -4233,7 +4233,7 @@ type 'a imp_prog_ext =
 
 type ('a, 'b, 'c) solved_run_ext =
   Solved_run_ext of
-    ('a, 'b) analysis_result * 'b lifted * (string -> 'a -> 'b lifted) *
+    ('a, 'b) solved_table * 'b lifted * (string -> 'a -> 'b lifted) *
       (cfg_node -> 'a -> edge_action -> 'b lifted) *
       (cfg_node -> 'a -> call_action -> string -> 'a option) * 'c;;
 
@@ -9163,8 +9163,6 @@ let rec sup_fin _A = function Set [] -> abort_empty_set (sup_fin _A)
 
 let rec sup_fset _A s = sup_fin _A (fset s);;
 
-let rec result_unknowns (Analysis_Result (x1, x2)) = x1;;
-
 let rec arithmetic_diagnostic_of
   v i obligation x3 = match v, i, obligation, x3 with
     v, i, obligation, Lifted Check_Refuted ->
@@ -9186,16 +9184,18 @@ let rec classify_point
   classify c x2 = match classify, c, x2 with classify, c, Bot -> Bot
     | classify, c, Lifted st -> Lifted (classify c st);;
 
-let rec result_at (Analysis_Result (x1, x2)) = x2;;
+let rec covered_keys (Solved_Table (x1, x2)) = x1;;
 
-let rec lookup_context _A
-  r v ctx =
-    (if member (equal_prod equal_cfg_node _A) (v, ctx) (result_unknowns r)
-      then result_at r v ctx else Bot);;
-
-let rec contexts_at
+let rec table_contexts
   r v = image snd
-          (filter (fun (va, _) -> equal_cfg_nodea va v) (result_unknowns r));;
+          (filter (fun (va, _) -> equal_cfg_nodea va v) (covered_keys r));;
+
+let rec table_at (Solved_Table (x1, x2)) = x2;;
+
+let rec lookup_table _A
+  r v ctx =
+    (if member (equal_prod equal_cfg_node _A) (v, ctx) (covered_keys r)
+      then table_at r v ctx else Bot);;
 
 let rec arithmetic_site_verdict _A
   r classify v obligation =
@@ -9203,8 +9203,8 @@ let rec arithmetic_site_verdict _A
       (image
         (fun ctx ->
           classify_point classify (arithmetic_condition obligation)
-            (lookup_context _A r v ctx))
-        (contexts_at r v));;
+            (lookup_table _A r v ctx))
+        (table_contexts r v));;
 
 let rec arithmetic_edge_expressions = function EA_Assign (x, e) -> [e]
                                       | EA_Assume e -> [e]
@@ -9328,8 +9328,8 @@ let rec result_checks_of _A
                             (image
                               (fun ctx ->
                                 classify_point classify (ea_check_cond a)
-                                  (lookup_context _A r u ctx))
-                              (contexts_at r u)),
+                                  (lookup_table _A r u ctx))
+                              (table_contexts r u)),
                           ()))
           else None))
       (cfg_intra_list g);;
@@ -9633,7 +9633,7 @@ let rec run_step
 
 let rec report_row _A
   sr classify conds obls edges i ctx v =
-    (let state = lookup_context _A (run_table sr) v ctx in
+    (let state = lookup_table _A (run_table sr) v ctx in
       Result_state_ext
         (v, i, state,
           map (fun cond -> (cond, classify_point classify cond state))
@@ -9653,13 +9653,13 @@ let rec report_of _A
      let r = run_table sr in
      let ctxs =
        ordered_by_key _A (equal_order_key, linorder_order_key) ctx_key
-         (image snd (result_unknowns r))
+         (image snd (covered_keys r))
        in
      let indexed = enumerate zero_nat ctxs in
      let nodes =
        cfg_node_list g @
          sorted_list_of_set (equal_cfg_node, linorder_cfg_node)
-           (minus_set equal_cfg_node (image fst (result_unknowns r))
+           (minus_set equal_cfg_node (image fst (covered_keys r))
              (Set (cfg_node_list g)))
        in
      let intra = cfg_intra_list g in
@@ -9682,7 +9682,7 @@ let rec report_of _A
        (fun u ca ce i ctx ->
          Call_route_ext
            (u, i, callee_of_entry ce,
-             (match lookup_context _A r u ctx with Bot -> []
+             (match lookup_table _A r u ctx with Bot -> []
                | Lifted _ ->
                  remdups equal_nat
                    (maps (context_indices _A indexed)
@@ -9696,7 +9696,7 @@ let rec report_of _A
            filtera
              (fun (_, ctx) ->
                member (equal_prod equal_cfg_node _A) (FunctionEntry f, ctx)
-                 (result_unknowns r))
+                 (covered_keys r))
              indexed
            with [] -> [Result_global_ext (Global_Seed (f, None), Bot, ())]
            | a :: lista ->
@@ -9711,7 +9711,7 @@ let rec report_of _A
                  map_filter
                    (fun x ->
                      (if member (equal_prod equal_cfg_node _A) (x, ctx)
-                           (result_unknowns r)
+                           (covered_keys r)
                        then Some (state_at i ctx x) else None))
                    nodes)
             indexed,
@@ -9720,7 +9720,7 @@ let rec report_of _A
                    (fun x ->
                      (if (let (_, ctx) = x in
                            member (equal_prod equal_cfg_node _A) (u, ctx)
-                             (result_unknowns r))
+                             (covered_keys r))
                        then Some (let (a, b) = x in route_at u ca ce a b)
                        else None))
                    indexed)
@@ -9837,7 +9837,7 @@ let rec canonicalize_lift empty_pred = transfer_lift empty_pred id;;
 
 let rec dg_result_for
   rd emp sol =
-    Analysis_Result
+    Solved_Table
       (fst sol,
         (fun v ctx ->
           map_lift rd

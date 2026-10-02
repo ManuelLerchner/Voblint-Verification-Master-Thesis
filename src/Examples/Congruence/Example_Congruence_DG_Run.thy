@@ -27,7 +27,7 @@ abbreviation congruence_dg_gs :: "vname \<Rightarrow> bool" where
 
 definition congruence_dg_exit_xy :: "(congruence \<times> congruence) option" where
   "congruence_dg_exit_xy =
-     (case lookup_context
+     (case lookup_table
          (congruence_rule.result Globals_Join congruence_dg_gs congruence_dg_program)
          (cfg_exit (prog_cfg congruence_dg_program)) () of
         Bot \<Rightarrow> None

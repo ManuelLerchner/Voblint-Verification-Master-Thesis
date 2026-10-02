@@ -194,14 +194,14 @@ text \<open>
 \<close>
 
 definition result_checks_of ::
-    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
+    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
 where
   "result_checks_of g r classify =
      map (\<lambda>(u, a, w).
             \<lparr> check_point = u, check_label = ea_check_label a, check_exp = ea_check_cond a,
               check_verdict = aggregate_verdicts
-                ((\<lambda>ctx. classify_point classify (ea_check_cond a) (lookup_context r u ctx))
-                   ` contexts_at r u) \<rparr>)
+                ((\<lambda>ctx. classify_point classify (ea_check_cond a) (lookup_table r u ctx))
+                   ` table_contexts r u) \<rparr>)
        (filter (\<lambda>(u, a, w). is_EA_Check a) (cfg_intra_list g))"
 
 text \<open>
@@ -233,7 +233,7 @@ definition report_row ::
        \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, arithmetic_obligation list list) rbt
        \<Rightarrow> (pp, (edge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> mcp_val result_state" where
   "report_row sr classify conds obls edges i ctx v =
-     (let state = lookup_context (run_table sr) v ctx
+     (let state = lookup_table (run_table sr) v ctx
       in \<lparr> state_point = v, state_context = i,
            state_value = state,
            state_checks =
@@ -248,7 +248,7 @@ lemma report_row_simps [simp]:
   "state_point (report_row sr classify conds obls edges i ctx v) = v"
   "state_context (report_row sr classify conds obls edges i ctx v) = i"
   "state_value (report_row sr classify conds obls edges i ctx v)
-     = lookup_context (run_table sr) v ctx"
+     = lookup_table (run_table sr) v ctx"
   by (simp_all add: report_row_def Let_def)
 
 definition report_of ::
@@ -258,10 +258,10 @@ definition report_of ::
   "report_of config ctx_key ctx_tag classify sr p =
      (let g = prog_cfg p;
           r = run_table sr;
-          ctxs = ordered_by_key ctx_key (snd ` result_unknowns r);
+          ctxs = ordered_by_key ctx_key (snd ` covered_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g
-            @ sorted_list_of_set (fst ` result_unknowns r - set (cfg_node_list g));
+            @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list g));
           intra = cfg_intra_list g;
           steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
           checks = group_by_key (\<lambda>(u, a, w). u)
@@ -271,13 +271,13 @@ definition report_of ::
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
-                (case lookup_context r u ctx of
+                (case lookup_table r u ctx of
                    Bot \<Rightarrow> []
                  | Lifted _ \<Rightarrow>
                      remdups (concat (map (context_indices indexed)
                        (live_targets (run_succ sr) u ctx ca (callee_of_entry ce))))) \<rparr>);
           seeds_of = (\<lambda>f.
-            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> result_unknowns r) indexed of
+            (case filter (\<lambda>(i, ctx). (FunctionEntry f, ctx) \<in> covered_keys r) indexed of
                [] \<Rightarrow> [\<lparr> global_unknown = Global_Seed f None, global_state = Bot \<rparr>]
              | entered \<Rightarrow>
                  map (\<lambda>(i, ctx). \<lparr> global_unknown = Global_Seed f (Some i),
@@ -290,12 +290,12 @@ definition report_of ::
            report_states =
              concat (map (\<lambda>(i, ctx).
                             map (state_at i ctx)
-                              (filter (\<lambda>v. (v, ctx) \<in> result_unknowns r) nodes))
+                              (filter (\<lambda>v. (v, ctx) \<in> covered_keys r) nodes))
                        indexed),
            report_routes =
              concat (map (\<lambda>(u, ca, ce, after).
                             map (\<lambda>(i, ctx). route_at u ca ce i ctx)
-                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> result_unknowns r) indexed))
+                              (filter (\<lambda>(i, ctx). (u, ctx) \<in> covered_keys r) indexed))
                        (cfg_calls_list g)),
            report_checks = result_checks_of g r classify,
            report_globals =

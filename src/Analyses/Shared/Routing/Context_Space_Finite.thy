@@ -6,7 +6,7 @@ section \<open>Which routing policies can have a finite solved key set\<close>
 
 text \<open>
   A published result table is well formed only if its key set is finite
-  (\<open>wf_analysis_result\<close>, in the framework's result layer). A key is a
+  (\<open>wf_solved_table\<close>, in the framework's result layer). A key is a
   \<open>(node, context)\<close> pair, so one way to get there is to exhibit a fixed finite set the
   keys are drawn from and appeal to \<open>finite_subset\<close>. This theory builds that set, one per
   routing policy.

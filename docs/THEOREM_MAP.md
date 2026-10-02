@@ -22,7 +22,7 @@ The *context* axis is not, and the closing note says where it stops.
 | The computed analysis result bounds every modeled source run | [`Voblint_Result.DG_Live_Unknowns:dg_analysis.fun_route_result_node_sound`](../src/Analyses/Shared/Result/DG_Live_Unknowns.thy), [`Voblint_Result.DG_Live_Unknowns:dg_analysis.fun_route_source_sound`](../src/Analyses/Shared/Result/DG_Live_Unknowns.thy) | The endpoints for a route that is a function of the call site, stated once over the published `state_at` at a context; every domain's unit registration is an instance, at the one context `()`. |
 | A routed solve bounds every activation its context policy admits | [`Voblint_Result.DG_Analysis:dg_analysis.entry_state_activation_collect_sound`](../src/Analyses/Shared/Result/DG_Analysis.thy), [`Voblint_Result.DG_Analysis:dg_analysis.fun_route_activation_collect_sound`](../src/Analyses/Shared/Result/DG_Analysis.thy) | The entry-state and call-string endpoints every domain re-exports. Each bounds `activation_collect` at one context, against the solved reader; neither mentions `node_collect` or a source run. |
 | Every valid activation trace carries a context the policy admits | [`Voblint_Result.DG_Analysis:dg_analysis.entry_state_has_context`](../src/Analyses/Shared/Result/DG_Analysis.thy) | Supplies the witness a caller needs before a per-context bound says anything about a given run. |
-| The solved reader and the published result table describe the same stores | [`Voblint_Result.DG_Analysis:dg_analysis.gamma_reader_eq_lookup`](../src/Analyses/Shared/Result/DG_Analysis.thy) | Rewrites a reader-shaped bound into `lookup_context` of the table a caller reads, with no coverage premise. |
+| The solved reader and the published result table describe the same stores | [`Voblint_Result.DG_Analysis:dg_analysis.gamma_reader_eq_lookup`](../src/Analyses/Shared/Result/DG_Analysis.thy) | Rewrites a reader-shaped bound into `lookup_table` of the table a caller reads, with no coverage premise. |
 | The context buckets exhaust the context-insensitive collector | [`Voblint_CFG.Activation_Trace_Collect:node_collect_eq_Union_activation_of_has_context`](../src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy), [`Voblint_CFG.Activation_Trace_Collect:node_collect_eq_Union_activation_of_fun`](../src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy), [`Voblint_CFG.Activation_Trace_Abstract:activation_coverage.node_collect_eq_Union_activation_collect`](../src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy) | Unconditional for a functional route such as call strings; earned from context totality for a relational one. |
 | A per-context bound extends to arbitrary source executions | [`Voblint_Result.Source_Activation_Sound:source_sound_from_collecting_cap`](../src/Analyses/Shared/Result/Source_Activation_Sound.thy) | Domain-free and policy-free: it consumes an `activation_collect` bound and a context witness. `source_activation_sound` in the same theory instantiates it generically, and [`Voblint_Examples_Interval.Example_Interval_Source_Ctx:twice_source_ctx_run_sound`](../src/Examples/Interval/Ctx/Example_Interval_Source_Ctx.thy) for one fixed program. |
 | Every report run_voblint returns is sound | [`Voblint_CLI.Analysis_Report:analysis_report_of_sound`](../src/Executable_Surface/CLI/Analysis_Report.thy), [`Voblint_CLI.Analysis_Certified:run_voblint_covers`](../src/Executable_Surface/CLI/Analysis_Certified.thy), [`Voblint_CLI.Analysis_Certified:run_voblint_collect_sound`](../src/Executable_Surface/CLI/Analysis_Certified.thy) | For every activation list, global update rule and context policy, with no termination premise: the report is consistent, `𝒞 v ⊆ ⟦res⟧_v ⊆ 𝒱(res, v)`, and a point without a diagnostic divides by no zero. The first is the one proof that splits on the context policy. |
@@ -46,7 +46,7 @@ registration of `dg_analysis_exec` at the unit route:
 the activation-indexed collector, which `activation_collect_unit_eq_node_collect`
 identifies with `node_collect` at `()`, and `fun_route_source_sound` places a
 source run's store in the published state `state_at gs p () v`, the table's entry
-at `lookup_context ... v ()`. Under `Ctx_EntryState` and
+at `lookup_table ... v ()`. Under `Ctx_EntryState` and
 `Ctx_CallString` the same reaches a source run through
 `sound_table_of_activation` and `report_of_sound`, which together close
 the three gaps the per-context bound left: it names a context the run's own call history is admitted at rather than
@@ -66,7 +66,7 @@ node was solved at would be false.
 policy. An activation list that is empty or repeats an analysis answers
 `Invalid_Activation`; a program that fails the well-formedness check answers
 `Malformed_Program`. Every other combination is check-producing.
-`analysis_result` hands the table of the combined state's rule-parametric
+`solved_table` hands the table of the combined state's rule-parametric
 registration for the chosen policy (`mcp_rule`, `mcp_es_rule` or `mcp_cs_rule`)
 to `run_result_of`, so `res_checks` is `result_checks_of (classify_checks_verdicts ...)`
 and the endpoint's check argument applies: every distinct nonempty list over the

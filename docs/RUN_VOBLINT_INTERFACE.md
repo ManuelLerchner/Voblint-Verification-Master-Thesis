@@ -203,7 +203,7 @@ one answer (`Check_Answer.thy`).
 
 ## Enumerating contexts
 
-`result_unknowns` is a set, and a domain's value type already spends its `ord`
+`covered_keys` is a set, and a domain's value type already spends its `ord`
 instance on the abstraction order. The abstraction order and the listing order are
 unrelated structures; `order_key` exists only to enumerate finite context sets
 deterministically. `Dispatch_Carrier.thy` supplies `order_key`

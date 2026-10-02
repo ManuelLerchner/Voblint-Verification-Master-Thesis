@@ -1,4 +1,4 @@
-theory Analysis_Result
+theory Solved_Table
   imports "Voblint_Domain.Nonrelational_Reachability" "Voblint_CFG.CFG_Def"
 begin
 
@@ -12,21 +12,21 @@ text \<open>
 
   The datatype constrains neither the key set nor the payloads. What the rest
   of this text describes --- finitely many keys, and canonical payloads --- is
-  \<open>wf_analysis_result\<close>, stated at the end of this theory. Its two halves are
+  \<open>wf_solved_table\<close>, stated at the end of this theory. Its two halves are
   not established alike: an adapter canonicalizes every payload it publishes,
   so canonicality is unconditional, while finiteness holds only for those
   context policies whose whole context space is bounded in advance, and is
   carried as a hypothesis everywhere else.
 
   \<^const>\<open>Bot\<close> means ``the solver's canonical result at this key is an
-  outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>result_unknowns\<close> altogether;
+  outer \<^const>\<open>Bot\<close>'', or the key is absent from \<open>covered_keys\<close> altogether;
   \<open>Lifted a\<close> means ``the canonical result is \<^const>\<open>Lifted\<close>'', with the
   local unknown projected to the abstract state \<open>a\<close>. This is a structural
   reading, not a semantic-emptiness test: raw solver values are
   canonicalized -- a witness-bottom \<^const>\<open>Lifted\<close> payload collapsed to
   \<^const>\<open>Bot\<close> -- \<^emph>\<open>before\<close> they reach this boundary (every public result
   adapter routes through \<open>canonicalize_lift\<close>), so by the time a value
-  reaches \<open>lookup_context\<close> here, \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already
+  reaches \<open>lookup_table\<close> here, \<^const>\<open>Bot\<close> and \<^const>\<open>Lifted\<close> already
   agree with concrete emptiness and non-emptiness respectively.
 \<close>
 
@@ -71,13 +71,13 @@ lemma gamma_state_of_reachable_env [simp]:
 subsection \<open>The result table\<close>
 
 text \<open>
-  \<open>result_unknowns\<close> is the authoritative coverage surface --- the keys the
-  solver actually reached --- while \<open>result_at\<close> is merely a total
+  \<open>covered_keys\<close> is the authoritative coverage surface --- the keys the
+  solver actually reached --- while \<open>table_at\<close> is merely a total
   lookup function, defined everywhere but meaningful only on the key set.
-  \<open>lookup_context\<close> keeps that distinction explicit rather than trusting
-  \<open>result_at\<close> to answer sensibly off the key set.
+  \<open>lookup_table\<close> keeps that distinction explicit rather than trusting
+  \<open>table_at\<close> to answer sensibly off the key set.
 
-  \<open>lookup_context\<close> (per context) is canonical. The per-node views ---
+  \<open>lookup_table\<close> (per context) is canonical. The per-node views ---
   liveness and the joined state --- are derived projections over the contexts
   covered at a node, and both live below.
 
@@ -86,30 +86,30 @@ text \<open>
   neither.
 \<close>
 
-datatype (plugins del: quickcheck_narrowing) ('ctx, 'a) analysis_result =
-  Analysis_Result
-    (result_unknowns: "(pp \<times> 'ctx) set")
-    (result_at: "pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted")
+datatype (plugins del: quickcheck_narrowing) ('ctx, 'a) solved_table =
+  Solved_Table
+    (covered_keys: "(pp \<times> 'ctx) set")
+    (table_at: "pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted")
 
-definition contexts_at :: "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx set" where
-  "contexts_at r v = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (result_unknowns r)"
+definition table_contexts :: "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> 'ctx set" where
+  "table_contexts r v = snd ` Set.filter (\<lambda>(v', ctx). v' = v) (covered_keys r)"
 
-definition lookup_context ::
-  "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted" where
-  "lookup_context r v ctx =
-     (if (v, ctx) \<in> result_unknowns r then result_at r v ctx else Bot)"
+definition lookup_table ::
+  "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a lifted" where
+  "lookup_table r v ctx =
+     (if (v, ctx) \<in> covered_keys r then table_at r v ctx else Bot)"
 
-lemma contexts_at_iff [simp]: "ctx \<in> contexts_at r v \<longleftrightarrow> (v, ctx) \<in> result_unknowns r"
-  unfolding contexts_at_def by force
+lemma table_contexts_iff [simp]: "ctx \<in> table_contexts r v \<longleftrightarrow> (v, ctx) \<in> covered_keys r"
+  unfolding table_contexts_def by force
 
-lemma lookup_context_absent [simp]:
-  "(v, ctx) \<notin> result_unknowns r \<Longrightarrow> lookup_context r v ctx = Bot"
-  unfolding lookup_context_def by simp
+lemma lookup_table_absent [simp]:
+  "(v, ctx) \<notin> covered_keys r \<Longrightarrow> lookup_table r v ctx = Bot"
+  unfolding lookup_table_def by simp
 
 subsection \<open>Telling ``analysed and dead'' from ``never analysed''\<close>
 
 text \<open>
-  \<^const>\<open>lookup_context\<close> answers \<^const>\<open>Bot\<close> for two unrelated reasons: the
+  \<^const>\<open>lookup_table\<close> answers \<^const>\<open>Bot\<close> for two unrelated reasons: the
   solver covered the key and stored \<^const>\<open>Bot\<close> there, or it never covered the
   key at all. The first is a proved statement about the program; the second is
   the absence of one. A reader of the answer alone cannot tell which happened,
@@ -129,32 +129,32 @@ text \<open>
   is a statement about a program.
 \<close>
 
-definition lookup_context_result ::
-  "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a context_result" where
-  "lookup_context_result r v ctx =
-     (if (v, ctx) \<in> result_unknowns r then Covered (result_at r v ctx) else Uncovered)"
+definition lookup_coverage ::
+  "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> 'ctx \<Rightarrow> 'a context_result" where
+  "lookup_coverage r v ctx =
+     (if (v, ctx) \<in> covered_keys r then Covered (table_at r v ctx) else Uncovered)"
 
-lemma lookup_context_result_covered [simp]:
-  "(v, ctx) \<in> result_unknowns r \<Longrightarrow>
-     lookup_context_result r v ctx = Covered (result_at r v ctx)"
-  unfolding lookup_context_result_def by simp
+lemma lookup_coverage_covered [simp]:
+  "(v, ctx) \<in> covered_keys r \<Longrightarrow>
+     lookup_coverage r v ctx = Covered (table_at r v ctx)"
+  unfolding lookup_coverage_def by simp
 
-lemma lookup_context_result_uncovered [simp]:
-  "(v, ctx) \<notin> result_unknowns r \<Longrightarrow> lookup_context_result r v ctx = Uncovered"
-  unfolding lookup_context_result_def by simp
+lemma lookup_coverage_uncovered [simp]:
+  "(v, ctx) \<notin> covered_keys r \<Longrightarrow> lookup_coverage r v ctx = Uncovered"
+  unfolding lookup_coverage_def by simp
 
-lemma lookup_context_result_eq_Uncovered_iff:
-  "lookup_context_result r v ctx = Uncovered \<longleftrightarrow> (v, ctx) \<notin> result_unknowns r"
-  unfolding lookup_context_result_def by simp
+lemma lookup_coverage_eq_Uncovered_iff:
+  "lookup_coverage r v ctx = Uncovered \<longleftrightarrow> (v, ctx) \<notin> covered_keys r"
+  unfolding lookup_coverage_def by simp
 
-lemma lookup_context_result_eq_Covered_iff:
-  "lookup_context_result r v ctx = Covered x \<longleftrightarrow>
-     (v, ctx) \<in> result_unknowns r \<and> result_at r v ctx = x"
-  unfolding lookup_context_result_def by auto
+lemma lookup_coverage_eq_Covered_iff:
+  "lookup_coverage r v ctx = Covered x \<longleftrightarrow>
+     (v, ctx) \<in> covered_keys r \<and> table_at r v ctx = x"
+  unfolding lookup_coverage_def by auto
 
 text \<open>
   Where the information is lost, named so that losing it is a visible step.
-  \<^const>\<open>lookup_context\<close> is exactly this totalization, which is why it is safe
+  \<^const>\<open>lookup_table\<close> is exactly this totalization, which is why it is safe
   to keep for callers that only ever read a covered key -- and why a soundness
   claim may not be stated over it directly.
 \<close>
@@ -163,10 +163,10 @@ fun context_result_or_bot :: "'a context_result \<Rightarrow> 'a lifted" where
   "context_result_or_bot Uncovered = Bot"
 | "context_result_or_bot (Covered x) = x"
 
-lemma lookup_context_eq_or_bot:
-  "lookup_context r v ctx =
-     context_result_or_bot (lookup_context_result r v ctx)"
-  unfolding lookup_context_def lookup_context_result_def by simp
+lemma lookup_table_eq_or_bot:
+  "lookup_table r v ctx =
+     context_result_or_bot (lookup_coverage r v ctx)"
+  unfolding lookup_table_def lookup_coverage_def by simp
 
 text \<open>
   The logical core of every ``the reported point is unreachable'' claim, stated
@@ -175,10 +175,10 @@ text \<open>
 \<close>
 
 lemma reported_covered_unreachable_empty:
-  assumes lookup: "lookup_context_result r v ctx = Covered Bot"
-    and sound: "C \<subseteq> gamma_lift gam (lookup_context r v ctx)"
+  assumes lookup: "lookup_coverage r v ctx = Covered Bot"
+    and sound: "C \<subseteq> gamma_lift gam (lookup_table r v ctx)"
   shows "C = {}"
-  using sound unfolding lookup_context_eq_or_bot lookup by simp
+  using sound unfolding lookup_table_eq_or_bot lookup by simp
 
 text \<open>
   The node-level reading, quantifying over the contexts at \<open>v\<close>. It asks only
@@ -197,36 +197,36 @@ text \<open>
 \<close>
 
 definition result_node_is_bottom ::
-  "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> bool" where
+  "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> bool" where
   "result_node_is_bottom r v \<longleftrightarrow>
-     (\<forall>ctx a. lookup_context_result r v ctx = Covered a \<longrightarrow> a = Bot)"
+     (\<forall>ctx a. lookup_coverage r v ctx = Covered a \<longrightarrow> a = Bot)"
 
 lemma result_node_is_bottomI:
-  assumes "\<And>ctx a. lookup_context_result r v ctx = Covered a \<Longrightarrow> a = Bot"
+  assumes "\<And>ctx a. lookup_coverage r v ctx = Covered a \<Longrightarrow> a = Bot"
   shows "result_node_is_bottom r v"
   unfolding result_node_is_bottom_def using assms by blast
 
 lemma result_node_is_bottomD:
   assumes bot: "result_node_is_bottom r v"
-    and covered: "(v, ctx) \<in> result_unknowns r"
-  shows "lookup_context_result r v ctx = Covered Bot"
+    and covered: "(v, ctx) \<in> covered_keys r"
+  shows "lookup_coverage r v ctx = Covered Bot"
 proof -
-  have eq: "lookup_context_result r v ctx = Covered (result_at r v ctx)"
+  have eq: "lookup_coverage r v ctx = Covered (table_at r v ctx)"
     using covered by simp
-  have "result_at r v ctx = Bot"
+  have "table_at r v ctx = Bot"
     using bot eq unfolding result_node_is_bottom_def by blast
   with eq show ?thesis by simp
 qed
 
 lemma result_node_is_bottom_iff_keys:
   "result_node_is_bottom r v \<longleftrightarrow>
-     (\<forall>ctx. (v, ctx) \<in> result_unknowns r \<longrightarrow> result_at r v ctx = Bot)"
+     (\<forall>ctx. (v, ctx) \<in> covered_keys r \<longrightarrow> table_at r v ctx = Bot)"
   unfolding result_node_is_bottom_def
-  by (auto simp: lookup_context_result_eq_Covered_iff)
+  by (auto simp: lookup_coverage_eq_Covered_iff)
 
 lemma reported_covered_unreachable_empty_point:
-  assumes lookup: "lookup_context_result r v ctx = Covered Bot"
-    and sound: "C \<subseteq> \<lbrakk>lookup_context r v ctx\<rbrakk>\<^sub>\<bottom>"
+  assumes lookup: "lookup_coverage r v ctx = Covered Bot"
+    and sound: "C \<subseteq> \<lbrakk>lookup_table r v ctx\<rbrakk>\<^sub>\<bottom>"
   shows "C = {}"
   using sound by (rule reported_covered_unreachable_empty[OF lookup])
 
@@ -246,47 +246,47 @@ text \<open>
 \<close>
 
 lemma report_flag_imp_result_node_is_bottom:
-  fixes r :: "(unit, 'a::bot) analysis_result"
-  assumes flag: "fst (report_lifted_state (lookup_context r v ()))"
+  fixes r :: "(unit, 'a::bot) solved_table"
+  assumes flag: "fst (report_lifted_state (lookup_table r v ()))"
   shows "result_node_is_bottom r v"
 proof (rule result_node_is_bottomI)
   fix ctx :: unit and a
-  assume cov: "lookup_context_result r v ctx = Covered a"
-  then have keys: "(v, ctx) \<in> result_unknowns r" and val: "result_at r v ctx = a"
-    by (simp_all add: lookup_context_result_eq_Covered_iff)
-  have unit_bot: "lookup_context r v () = Bot"
+  assume cov: "lookup_coverage r v ctx = Covered a"
+  then have keys: "(v, ctx) \<in> covered_keys r" and val: "table_at r v ctx = a"
+    by (simp_all add: lookup_coverage_eq_Covered_iff)
+  have unit_bot: "lookup_table r v () = Bot"
     using flag by (simp add: report_lifted_state_unreachable_iff)
-  then have "lookup_context r v ctx = Bot"
+  then have "lookup_table r v ctx = Bot"
     by (cases ctx) simp
   then show "a = Bot"
-    using keys val unfolding lookup_context_def by simp
+    using keys val unfolding lookup_table_def by simp
 qed
 
 lemma report_flag_covered_eq_Covered_Bot:
-  fixes r :: "('ctx, 'a::bot) analysis_result"
-  assumes covered: "(v, ctx) \<in> result_unknowns r"
-    and flag: "fst (report_lifted_state (lookup_context r v ctx))"
-  shows "lookup_context_result r v ctx = Covered Bot"
+  fixes r :: "('ctx, 'a::bot) solved_table"
+  assumes covered: "(v, ctx) \<in> covered_keys r"
+    and flag: "fst (report_lifted_state (lookup_table r v ctx))"
+  shows "lookup_coverage r v ctx = Covered Bot"
   using covered flag
-  by (simp add: report_lifted_state_unreachable_iff lookup_context_def)
+  by (simp add: report_lifted_state_unreachable_iff lookup_table_def)
 
-lemma lookup_context_LiftedD [dest]:
-  "lookup_context r v ctx = Lifted st \<Longrightarrow> ctx \<in> contexts_at r v"
-  using lookup_context_absent by fastforce
+lemma lookup_table_LiftedD [dest]:
+  "lookup_table r v ctx = Lifted st \<Longrightarrow> ctx \<in> table_contexts r v"
+  using lookup_table_absent by fastforce
 
 text \<open>
   Liveness of a node needs no join at all: a node is live exactly when some
   context covered there is reachable. Stated this way it constrains nothing
-  beyond what \<^const>\<open>contexts_at\<close> already needs --- no order, no lattice, and
+  beyond what \<^const>\<open>table_contexts\<close> already needs --- no order, no lattice, and
   in particular nothing at all about the state payload.
 \<close>
 
-definition node_live_ex :: "('ctx, 'a) analysis_result \<Rightarrow> pp \<Rightarrow> bool" where
+definition node_live_ex :: "('ctx, 'a) solved_table \<Rightarrow> pp \<Rightarrow> bool" where
   "node_live_ex r v =
-     (\<exists>ctx\<in>contexts_at r v. is_reachable_point (lookup_context r v ctx))"
+     (\<exists>ctx\<in>table_contexts r v. is_reachable_point (lookup_table r v ctx))"
 
 lemma node_live_ex_absent [simp]:
-  "contexts_at r v = {} \<Longrightarrow> \<not> node_live_ex r v"
+  "table_contexts r v = {} \<Longrightarrow> \<not> node_live_ex r v"
   unfolding node_live_ex_def by simp
 
 subsection \<open>Joining the contexts at a node\<close>
@@ -387,18 +387,18 @@ lemma join_states_over_member_le:
   using assms by (induction cs rule: finite_induct) (auto intro: order_trans sup_ge2)
 
 definition lookup_joined_state ::
-  "('ctx, 'a::semilattice_sup abs_state) analysis_result \<Rightarrow> pp \<Rightarrow>
+  "('ctx, 'a::semilattice_sup abs_state) solved_table \<Rightarrow> pp \<Rightarrow>
    'a abs_state lifted" where
-  "lookup_joined_state r v = join_states_over (lookup_context r v) (contexts_at r v)"
+  "lookup_joined_state r v = join_states_over (lookup_table r v) (table_contexts r v)"
 
 lemma lookup_joined_state_absent [simp]:
-  "contexts_at r v = {} \<Longrightarrow> lookup_joined_state r v = Bot"
+  "table_contexts r v = {} \<Longrightarrow> lookup_joined_state r v = Bot"
   unfolding lookup_joined_state_def by simp
 
 subsection \<open>Well-formed results\<close>
 
 text \<open>
-  \<^const>\<open>Analysis_Result\<close> is an ordinary constructor, so the two properties the
+  \<^const>\<open>Solved_Table\<close> is an ordinary constructor, so the two properties the
   opening text describes are not enforced by the type and have to be stated.
 
   Finiteness is the load-bearing one, and its failure is silent rather than
@@ -414,49 +414,49 @@ text \<open>
   freedom from any class constraint on the payload.
 \<close>
 
-definition finite_analysis_result :: "('ctx, 'a) analysis_result \<Rightarrow> bool" where
-  "finite_analysis_result r \<longleftrightarrow> finite (result_unknowns r)"
+definition finite_solved_table :: "('ctx, 'a) solved_table \<Rightarrow> bool" where
+  "finite_solved_table r \<longleftrightarrow> finite (covered_keys r)"
 
-definition wf_analysis_result ::
-  "('a \<Rightarrow> bool) \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> bool" where
-  "wf_analysis_result empty_pred r \<longleftrightarrow>
-     finite_analysis_result r
-   \<and> (\<forall>v ctx st. lookup_context r v ctx = Lifted st \<longrightarrow> \<not> empty_pred st)"
+definition wf_solved_table ::
+  "('a \<Rightarrow> bool) \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> bool" where
+  "wf_solved_table empty_pred r \<longleftrightarrow>
+     finite_solved_table r
+   \<and> (\<forall>v ctx st. lookup_table r v ctx = Lifted st \<longrightarrow> \<not> empty_pred st)"
 
-lemma wf_analysis_result_finite [dest]:
-  "wf_analysis_result empty_pred r \<Longrightarrow> finite_analysis_result r"
-  unfolding wf_analysis_result_def by simp
+lemma wf_solved_table_finite [dest]:
+  "wf_solved_table empty_pred r \<Longrightarrow> finite_solved_table r"
+  unfolding wf_solved_table_def by simp
 
-lemma wf_analysis_result_LiftedD [dest]:
-  "\<lbrakk>wf_analysis_result empty_pred r; lookup_context r v ctx = Lifted st\<rbrakk>
+lemma wf_solved_table_LiftedD [dest]:
+  "\<lbrakk>wf_solved_table empty_pred r; lookup_table r v ctx = Lifted st\<rbrakk>
      \<Longrightarrow> \<not> empty_pred st"
-  unfolding wf_analysis_result_def by blast
+  unfolding wf_solved_table_def by blast
 
-lemma finite_contexts_at:
-  assumes "finite_analysis_result r"
-  shows "finite (contexts_at r v)"
-  using assms unfolding finite_analysis_result_def contexts_at_def by simp
+lemma finite_table_contexts:
+  assumes "finite_solved_table r"
+  shows "finite (table_contexts r v)"
+  using assms unfolding finite_solved_table_def table_contexts_def by simp
 
 text \<open>What finiteness buys: the per-node view really is an upper bound of the
   contexts it covers.\<close>
 
-lemma lookup_context_le_lookup_joined_state:
-  assumes fin: "finite_analysis_result r" and cov: "ctx \<in> contexts_at r v"
-  shows "lookup_context r v ctx \<le> lookup_joined_state r v"
+lemma lookup_table_le_lookup_joined_state:
+  assumes fin: "finite_solved_table r" and cov: "ctx \<in> table_contexts r v"
+  shows "lookup_table r v ctx \<le> lookup_joined_state r v"
   unfolding lookup_joined_state_def
-  by (rule join_states_over_member_le[OF finite_contexts_at[OF fin] cov])
+  by (rule join_states_over_member_le[OF finite_table_contexts[OF fin] cov])
 
 text \<open>And what canonicality buys: on a well-formed result the structural
   reading and the concrete one coincide, provided the supplied predicate is
   the exact emptiness test its adapters use.\<close>
 
-lemma wf_analysis_result_gamma_point_eq_empty_iff:
-  fixes r :: "('ctx, 'a::numeric_domain abs_state) analysis_result"
+lemma wf_solved_table_gamma_point_eq_empty_iff:
+  fixes r :: "('ctx, 'a::numeric_domain abs_state) solved_table"
     and empty_pred :: "'a abs_state \<Rightarrow> bool"
-  assumes wf: "wf_analysis_result empty_pred r"
+  assumes wf: "wf_solved_table empty_pred r"
     and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<lbrakk>st\<rbrakk> = {}"
-  shows "\<lbrakk>lookup_context r v ctx\<rbrakk>\<^sub>\<bottom> = {} \<longleftrightarrow> lookup_context r v ctx = Bot"
-proof (cases "lookup_context r v ctx")
+  shows "\<lbrakk>lookup_table r v ctx\<rbrakk>\<^sub>\<bottom> = {} \<longleftrightarrow> lookup_table r v ctx = Bot"
+proof (cases "lookup_table r v ctx")
   case Bot
   then show ?thesis by simp
 next

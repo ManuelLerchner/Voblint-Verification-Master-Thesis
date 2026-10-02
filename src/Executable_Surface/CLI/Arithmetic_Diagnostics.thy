@@ -148,12 +148,12 @@ datatype arithmetic_diagnostic = Arithmetic_Diagnostic
   (diagnostic_verdict: check_result)
 
 definition arithmetic_site_verdict ::
-    "('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+    "('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
        \<Rightarrow> pp \<Rightarrow> arithmetic_obligation \<Rightarrow> contextual_verdict" where
   "arithmetic_site_verdict r classify v obligation =
      aggregate_verdicts
        (image (\<lambda>ctx. classify_point classify (arithmetic_condition obligation)
-         (lookup_context r v ctx)) (contexts_at r v))"
+         (lookup_table r v ctx)) (table_contexts r v))"
 
 fun arithmetic_diagnostic_of ::
     "pp \<Rightarrow> nat \<Rightarrow> arithmetic_obligation \<Rightarrow> contextual_verdict
@@ -165,7 +165,7 @@ fun arithmetic_diagnostic_of ::
 | "arithmetic_diagnostic_of v i obligation _ = []"
 
 definition arithmetic_diagnostics ::
-    "cfg \<Rightarrow> ('ctx, 'a) analysis_result \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
+    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
        \<Rightarrow> arithmetic_diagnostic list" where
   "arithmetic_diagnostics g r classify =
      concat (map (\<lambda>(v, obligations).
@@ -283,28 +283,28 @@ qed
 lemma arithmetic_site_verdict_classify:
   assumes agg: "arithmetic_site_verdict r classify v obligation = Lifted verdict"
     and known: "verdict \<noteq> Check_Unknown"
-    and look: "lookup_context r v ctx = Lifted st"
+    and look: "lookup_table r v ctx = Lifted st"
   shows "classify (arithmetic_condition obligation) st = verdict"
 proof -
-  have ctx: "ctx \<in> contexts_at r v"
-    using look unfolding lookup_context_def by (auto split: if_splits)
-  have member: "classify_point classify (arithmetic_condition obligation) (lookup_context r v ctx)
+  have ctx: "ctx \<in> table_contexts r v"
+    using look unfolding lookup_table_def by (auto split: if_splits)
+  have member: "classify_point classify (arithmetic_condition obligation) (lookup_table r v ctx)
       \<in> image (\<lambda>c. classify_point classify (arithmetic_condition obligation)
-        (lookup_context r v c)) (contexts_at r v)"
+        (lookup_table r v c)) (table_contexts r v)"
     using ctx by blast
   from aggregate_verdicts_decided_dest[OF agg[unfolded arithmetic_site_verdict_def] known]
     member look show ?thesis by auto
 qed
 
 lemma arithmetic_site_verdict_not_bot:
-  assumes fin: "finite (contexts_at r v)"
-    and look: "lookup_context r v ctx = Lifted st"
+  assumes fin: "finite (table_contexts r v)"
+    and look: "lookup_table r v ctx = Lifted st"
   shows "arithmetic_site_verdict r classify v obligation \<noteq> Bot"
 proof -
-  have ctx: "ctx \<in> contexts_at r v"
-    using look unfolding lookup_context_def by (auto split: if_splits)
+  have ctx: "ctx \<in> table_contexts r v"
+    using look unfolding lookup_table_def by (auto split: if_splits)
   let ?vs = "image (\<lambda>c. classify_point classify (arithmetic_condition obligation)
-    (lookup_context r v c)) (contexts_at r v)"
+    (lookup_table r v c)) (table_contexts r v)"
   have finite_vs: "finite ?vs" using fin by simp
   show ?thesis
   proof
@@ -313,10 +313,10 @@ proof -
       by (rule aggregate_verdicts_eq_Dead_iff[OF finite_vs, THEN iffD1])
          (use bottom in \<open>simp only: arithmetic_site_verdict_def\<close>)
     have member: "classify_point classify (arithmetic_condition obligation)
-      (lookup_context r v ctx) \<in> ?vs"
+      (lookup_table r v ctx) \<in> ?vs"
       by (rule imageI[OF ctx])
     have "classify_point classify (arithmetic_condition obligation)
-      (lookup_context r v ctx) = Bot"
+      (lookup_table r v ctx) = Bot"
       by (rule bspec[OF all_bot member])
     with look show False by simp
   qed

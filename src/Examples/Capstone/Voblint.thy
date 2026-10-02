@@ -459,10 +459,10 @@ text \<open>
 
   \<^bold>\<open>5b. Solved results and reports.\<close> What a finished analysis \<^emph>\<open>is\<close>, before anyone
     renders or dispatches it.
-    \<^item> @{theory Voblint_Framework.Analysis_Result} --- the
+    \<^item> @{theory Voblint_Framework.Solved_Table} --- the
       domain-generic table: a covered key set of
       \<^typ>\<open>pp \<times> 'ctx\<close> pairs plus a total lookup.
-      \<^verbatim>\<open>wf_analysis_result\<close> requires finitely many keys and
+      \<^verbatim>\<open>wf_solved_table\<close> requires finitely many keys and
       canonical payloads. Publishing adapters guarantee canonicality;
       finiteness is unconditional only for context spaces bounded in advance.
     \<^item> @{theory Voblint_Framework.Check_Report} and

@@ -5,7 +5,7 @@ begin
 section \<open>Regression: the solved-result table\<close>
 
 text \<open>
-  Acceptance witnesses for \<^theory>\<open>Voblint_Framework.Analysis_Result\<close>'s reachability
+  Acceptance witnesses for \<^theory>\<open>Voblint_Framework.Solved_Table\<close>'s reachability
   reading, in the same \<open>by eval\<close> style as the sibling regressions. The Interval
   adapter carries the detailed four-case coverage; Sign and \<open>int_dom\<close> only
   witness that they reach the same generic abstraction correctly.
@@ -50,15 +50,15 @@ text \<open>
   joining them (\<^const>\<open>Globals_Join\<close>).
 \<close>
 
-abbreviation result_demo_interval :: "(unit, ivl abs_state) analysis_result" where
+abbreviation result_demo_interval :: "(unit, ivl abs_state) solved_table" where
   "result_demo_interval \<equiv>
      interval_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
 
-abbreviation result_demo_sign :: "(unit, sign abs_state) analysis_result" where
+abbreviation result_demo_sign :: "(unit, sign abs_state) solved_table" where
   "result_demo_sign \<equiv>
      sign_rule.result Globals_Join (declared_global result_demo_prog) result_demo_prog"
 
-abbreviation result_demo_int :: "(unit, int_dom abs_state) analysis_result" where
+abbreviation result_demo_int :: "(unit, int_dom abs_state) solved_table" where
   "result_demo_int \<equiv>
      int_fixpoint_rule.result Globals_Warrow (declared_global result_demo_prog) result_demo_prog"
 
@@ -74,12 +74,12 @@ text \<open>
 
 lemma result_demo_interval_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context result_demo_interval (Statement 1) ())
+     (lookup_table result_demo_interval (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_interval_stmt1_contexts:
-  "contexts_at result_demo_interval (Statement 1) = {()}"
+  "table_contexts result_demo_interval (Statement 1) = {()}"
   by eval
 
 lemma result_demo_interval_stmt1_joined:
@@ -103,7 +103,7 @@ text \<open>
   exactly the raw, noncanonical value a result adapter's own
   \<^const>\<open>canonicalize_lift\<close> step exists to catch, using the real
   \<^const>\<open>default_st_is_bot_for\<close> test rather than the solver's own
-  (deliberately disabled, here) one: \<^const>\<open>lookup_context\<close> must still
+  (deliberately disabled, here) one: \<^const>\<open>lookup_table\<close> must still
   report it \<^const>\<open>Bot\<close> --- reading off the raw outer constructor
   alone would call it live.
 \<close>
@@ -126,11 +126,11 @@ definition result_demo_ivl_sol ::
           (prog_cfg result_demo_prog) (Lifted cinit_ivl_st) (Lifted cinit_ivl_st))
        (cfg_exit (prog_cfg result_demo_prog), ())"
 
-definition result_demo_unnormalized :: "(unit, ivl abs_state) analysis_result" where
+definition result_demo_unnormalized :: "(unit, ivl abs_state) solved_table" where
   "result_demo_unnormalized =
      (let sol = result_demo_ivl_sol (\<lambda>_. False);
           gl = declared_global_vars result_demo_prog
-      in Analysis_Result (fst sol)
+      in Solved_Table (fst sol)
            (\<lambda>v ctx. result_value_to_abs (declared_global result_demo_prog)
                       (canonicalize_lift (default_st_is_bot_for gl)
                         (dg_local (snd sol (Inl (v, ctx)))))))"
@@ -142,11 +142,11 @@ lemma result_demo_unnormalized_stmt2_stored_lifted_bottom:
   by eval
 
 lemma result_demo_unnormalized_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context result_demo_unnormalized (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_table result_demo_unnormalized (Statement 2) ())"
   by eval
 
 lemma result_demo_unnormalized_stmt2_unreachable:
-  "lookup_context result_demo_unnormalized (Statement 2) () = Bot"
+  "lookup_table result_demo_unnormalized (Statement 2) () = Bot"
   using result_demo_unnormalized_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
@@ -155,7 +155,7 @@ text \<open>The same table still reports the live nodes live, so the collapse ab
 
 lemma result_demo_unnormalized_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context result_demo_unnormalized (Statement 1) ())
+     (lookup_table result_demo_unnormalized (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
@@ -174,15 +174,15 @@ lemma result_demo_interval_stmt2_stored_bot:
   by eval
 
 lemma result_demo_interval_stmt2_covered:
-  "contexts_at result_demo_interval (Statement 2) = {()}"
+  "table_contexts result_demo_interval (Statement 2) = {()}"
   by eval
 
 lemma result_demo_interval_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context result_demo_interval (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_table result_demo_interval (Statement 2) ())"
   by eval
 
 lemma result_demo_interval_stmt2_unreachable:
-  "lookup_context result_demo_interval (Statement 2) () = Bot"
+  "lookup_table result_demo_interval (Statement 2) () = Bot"
   using result_demo_interval_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
@@ -192,21 +192,21 @@ lemma result_demo_interval_stmt2_not_live:
 
 text \<open>
   Case D --- a key the solver never covered. \<^const>\<open>Statement\<close> \<open>99\<close> is not a
-  node of this program's CFG at all, so it is absent from \<^const>\<open>result_unknowns\<close>
-  rather than present with a bottom value. \<^const>\<open>lookup_context\<close>'s membership
-  guard, not \<^const>\<open>result_at\<close>, is what answers here.
+  node of this program's CFG at all, so it is absent from \<^const>\<open>covered_keys\<close>
+  rather than present with a bottom value. \<^const>\<open>lookup_table\<close>'s membership
+  guard, not \<^const>\<open>table_at\<close>, is what answers here.
 \<close>
 
 lemma result_demo_interval_absent_key:
-  "(Statement 99, ()) \<notin> result_unknowns result_demo_interval"
+  "(Statement 99, ()) \<notin> covered_keys result_demo_interval"
   by eval
 
 lemma result_demo_interval_absent_unreachable:
-  "lookup_context result_demo_interval (Statement 99) () = Bot"
-  by (rule lookup_context_absent[OF result_demo_interval_absent_key])
+  "lookup_table result_demo_interval (Statement 99) () = Bot"
+  by (rule lookup_table_absent[OF result_demo_interval_absent_key])
 
 lemma result_demo_interval_absent_contexts:
-  "contexts_at result_demo_interval (Statement 99) = {}"
+  "table_contexts result_demo_interval (Statement 99) = {}"
   by eval
 
 lemma result_demo_interval_absent_joined:
@@ -219,7 +219,7 @@ lemma result_demo_interval_absent_not_live:
 
 text \<open>
   Together the two cases separate solver coverage from the value stored at a
-  covered key. Case C's node is present in \<^const>\<open>result_unknowns\<close> because the
+  covered key. Case C's node is present in \<^const>\<open>covered_keys\<close> because the
   solver covered it, and reports \<^const>\<open>Bot\<close> because that is what the solver
   stored there -- coverage and reachability are independent. Case D's
   \<^const>\<open>Statement\<close> \<open>99\<close> is absent because no key for it is ever covered; that
@@ -266,20 +266,20 @@ text \<open>
   joined view must run the domain's own \<open>\<squnion>\<close> at least once.
 \<close>
 
-definition result_demo_two :: "(ivl list, ivl abs_state) analysis_result" where
+definition result_demo_two :: "(ivl list, ivl abs_state) solved_table" where
   "result_demo_two =
-     Analysis_Result {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
+     Solved_Table {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
        (\<lambda>v ctx. if ctx = result_demo_ctx1
                 then Lifted (result_demo_state (Ivl (Fin 1) (Fin 1)))
                 else Lifted (result_demo_state (Ivl (Fin 3) (Fin 3))))"
 
 lemma result_demo_two_contexts:
-  "contexts_at result_demo_two (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
+  "table_contexts result_demo_two (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
   by eval
 
 lemma result_demo_two_per_context:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context result_demo_two (Statement 1) result_demo_ctx1)
+     (lookup_table result_demo_two (Statement 1) result_demo_ctx1)
    = Lifted (Ivl (Fin 1) (Fin 1))"
   by eval
 
@@ -299,9 +299,9 @@ text \<open>
   live on the strength of that one context.
 \<close>
 
-definition result_demo_two_half :: "(ivl list, ivl abs_state) analysis_result" where
+definition result_demo_two_half :: "(ivl list, ivl abs_state) solved_table" where
   "result_demo_two_half =
-     Analysis_Result {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
+     Solved_Table {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
        (\<lambda>v ctx. if ctx = result_demo_ctx1 then Bot
                 else Lifted (result_demo_state (Ivl (Fin 3) (Fin 3))))"
 
@@ -321,13 +321,13 @@ text \<open>
   which is a different route to the same answer than the absent-key case above.
 \<close>
 
-definition result_demo_two_dead :: "(ivl list, ivl abs_state) analysis_result" where
+definition result_demo_two_dead :: "(ivl list, ivl abs_state) solved_table" where
   "result_demo_two_dead =
-     Analysis_Result {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
+     Solved_Table {(Statement 1, result_demo_ctx1), (Statement 1, result_demo_ctx2)}
        (\<lambda>v ctx. Bot)"
 
 lemma result_demo_two_dead_contexts:
-  "contexts_at result_demo_two_dead (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
+  "table_contexts result_demo_two_dead (Statement 1) = {result_demo_ctx1, result_demo_ctx2}"
   by eval
 
 lemma result_demo_two_dead_joined:
@@ -344,42 +344,42 @@ subsection \<open>Sign and \<open>int_dom\<close>: the same abstraction, one liv
 text \<open>
   Deliberately lighter than the Interval coverage above: these two only have
   to witness that their adapters feed the same generic
-  \<^const>\<open>result_value_to_abs\<close>/\<^const>\<open>lookup_context\<close> surface, not to re-exercise
+  \<^const>\<open>result_value_to_abs\<close>/\<^const>\<open>lookup_table\<close> surface, not to re-exercise
   the reachability case analysis a third and fourth time.
 \<close>
 
 lemma result_demo_sign_stmt1_reachable:
   "map_lift (\<lambda>st. st (STR ''x''))
-     (lookup_context result_demo_sign (Statement 1) ())
+     (lookup_table result_demo_sign (Statement 1) ())
    = Lifted SPos"
   by eval
 
 lemma result_demo_sign_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context result_demo_sign (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_table result_demo_sign (Statement 2) ())"
   by eval
 
 lemma result_demo_sign_stmt2_unreachable:
-  "lookup_context result_demo_sign (Statement 2) () = Bot"
+  "lookup_table result_demo_sign (Statement 2) () = Bot"
   using result_demo_sign_stmt2_not_reachable
   by (simp add: is_reachable_point_iff)
 
 lemma result_demo_sign_absent_unreachable:
-  "lookup_context result_demo_sign (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
+  "lookup_table result_demo_sign (Statement 99) () = Bot"
+  by (rule lookup_table_absent) eval
 
 lemma result_demo_int_stmt1_reachable:
   "map_lift (\<lambda>st. int_ivl (st (STR ''x'')))
-     (lookup_context result_demo_int (Statement 1) ())
+     (lookup_table result_demo_int (Statement 1) ())
    = Lifted (Ivl (Fin 5) (Fin 5))"
   by eval
 
 lemma result_demo_int_stmt2_not_reachable:
-  "\<not> is_reachable_point (lookup_context result_demo_int (Statement 2) ())"
+  "\<not> is_reachable_point (lookup_table result_demo_int (Statement 2) ())"
   by eval
 
 lemma result_demo_int_absent_unreachable:
-  "lookup_context result_demo_int (Statement 99) () = Bot"
-  by (rule lookup_context_absent) eval
+  "lookup_table result_demo_int (Statement 99) () = Bot"
+  by (rule lookup_table_absent) eval
 
 text \<open>Solver-specific adapter routing is covered by the CLI solver-choice regression group.
   The cases above exercise the solver-independent result API once.\<close>

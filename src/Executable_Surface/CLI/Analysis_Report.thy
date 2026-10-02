@@ -244,18 +244,18 @@ lemma row_in_rows:
   using assms by force
 
 lemma report_rows_report_of:
-  assumes fin: "finite (result_unknowns (run_table sr))" and inj: "inj ctx_key"
+  assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
   shows "report_rows (report_of config ctx_key ctx_tag classify sr p) v
-           = lookup_context (run_table sr) v ` contexts_at (run_table sr) v"
+           = lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
 proof -
   define r where "r = run_table sr"
-  define ctxs where "ctxs = ordered_by_key ctx_key (snd ` result_unknowns r)"
+  define ctxs where "ctxs = ordered_by_key ctx_key (snd ` covered_keys r)"
   define nodes where "nodes = cfg_node_list (prog_cfg p)
-    @ sorted_list_of_set (fst ` result_unknowns r - set (cfg_node_list (prog_cfg p)))"
-  have ctxs: "set ctxs = snd ` result_unknowns r"
+    @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list (prog_cfg p)))"
+  have ctxs: "set ctxs = snd ` covered_keys r"
     unfolding ctxs_def r_def
     by (rule ordered_by_key_set) (use fin inj in \<open>auto intro: inj_on_subset\<close>)
-  have nodes: "w \<in> set nodes" if "(w, ctx) \<in> result_unknowns r" for w ctx
+  have nodes: "w \<in> set nodes" if "(w, ctx) \<in> covered_keys r" for w ctx
   proof (cases "w \<in> set (cfg_node_list (prog_cfg p))")
     case False
     with that fin show ?thesis unfolding nodes_def r_def by (force intro: rev_image_eqI)
@@ -272,14 +272,14 @@ proof -
   proof (intro equalityI subsetI)
     fix \<sigma>
     assume "\<sigma> \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
-    then show "\<sigma> \<in> lookup_context (run_table sr) v ` contexts_at (run_table sr) v"
-      unfolding report_rows_def report_of_def Let_def by (auto simp: contexts_at_iff)
+    then show "\<sigma> \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
+      unfolding report_rows_def report_of_def Let_def by (auto simp: table_contexts_iff)
   next
     fix \<sigma>
-    assume "\<sigma> \<in> lookup_context (run_table sr) v ` contexts_at (run_table sr) v"
-    then obtain ctx where cov: "(v, ctx) \<in> result_unknowns r"
-      and \<sigma>: "\<sigma> = lookup_context r v ctx"
-      by (auto simp: r_def contexts_at_iff)
+    assume "\<sigma> \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
+    then obtain ctx where cov: "(v, ctx) \<in> covered_keys r"
+      and \<sigma>: "\<sigma> = lookup_table r v ctx"
+      by (auto simp: r_def table_contexts_iff)
     from cov ctxs have "ctx \<in> set ctxs" by force
     then obtain i where i: "(i, ctx) \<in> set (enumerate 0 ctxs)" using indexed by blast
     have w: "v \<in> set nodes" using nodes[OF cov] .
@@ -319,7 +319,7 @@ definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow>
 
 lemma report_of_sound:
   assumes st: "sound_table p (run_table sr) classify gm"
-    and fin: "finite (result_unknowns (run_table sr))" and inj: "inj ctx_key"
+    and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
     and cl: "classify = mcp_classify (activation (config_analyses config))"
     and gm: "gm = mcp_gamma_v (activation (config_analyses config))"
   shows "sound_report p (report_of config ctx_key ctx_tag classify sr p)"
@@ -333,10 +333,10 @@ proof -
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v" for v s
   proof -
     from sound_table.covers[OF st that] obtain ctx d
-      where look: "lookup_context (run_table sr) v ctx = Lifted d" and s: "s \<in> gm d"
+      where look: "lookup_table (run_table sr) v ctx = Lifted d" and s: "s \<in> gm d"
       unfolding table_covers_def by blast
     then have "Lifted d \<in> report_rows ?res v"
-      unfolding rows by (metis image_eqI lookup_context_LiftedD)
+      unfolding rows by (metis image_eqI lookup_table_LiftedD)
     with s show ?thesis by (auto simp: report_gamma_def gm)
   qed
   have safe: "arithmetic_safe_at (prog_cfg p) v s"
@@ -381,7 +381,7 @@ proof (cases config)
       unfolding res run(2)
       by (rule report_of_sound[OF _ _ _ _ refl])
          (use mcp_rule_table[OF wf run(1)] mcp_rule.vars_finite_of_terminates[OF run(1)] in
-           \<open>simp_all add: Analysis_Config finite_analysis_result_def dg_pipeline.result_def
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
               dg_pipeline.sol_vars_def inj_def\<close>)
   next
     case Ctx_EntryState
@@ -397,7 +397,7 @@ proof (cases config)
       unfolding res run(2)
       by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
          (use mcp_es_rule_table[OF wf run(1)] mcp_es_rule.vars_finite_of_terminates[OF run(1)] in
-           \<open>simp_all add: Analysis_Config finite_analysis_result_def dg_pipeline.result_def
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
               dg_pipeline.sol_vars_def\<close>)
   next
     case (Ctx_CallString k)
@@ -413,7 +413,7 @@ proof (cases config)
       unfolding res run(2)
       by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
          (use mcp_cs_rule_table[OF wf run(1)] mcp_cs_rule.vars_finite_of_terminates[OF run(1)] in
-           \<open>simp_all add: Analysis_Config finite_analysis_result_def dg_pipeline.result_def
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
               dg_pipeline.sol_vars_def\<close>)
   qed
 qed

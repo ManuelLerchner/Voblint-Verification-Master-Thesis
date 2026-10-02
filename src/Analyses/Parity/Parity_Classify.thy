@@ -1,6 +1,6 @@
 theory Parity_Classify
   imports Parity_Numeric_Queries "Voblint_Framework.Check_Answer"
-    "Voblint_Framework.Analysis_Result" Parity_Exec
+    "Voblint_Framework.Solved_Table" Parity_Exec
     "Voblint_Result.DG_Result_Construction"
 begin
 

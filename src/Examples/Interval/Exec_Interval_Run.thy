@@ -169,7 +169,7 @@ lemma analyse_interval_demo2_terminates:
 
 definition analyse_interval_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_demo2_env =
-     (case lookup_context
+     (case lookup_table
              (interval_rule.result Globals_Join (declared_global analyse_interval_demo2_prog)
                 analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of
@@ -186,7 +186,7 @@ text \<open>
 
 definition analyse_interval_td_demo2_env :: "vname \<Rightarrow> ivl" where
   "analyse_interval_td_demo2_env =
-     (case lookup_context
+     (case lookup_table
              (interval_rule.result Globals_Warrow (declared_global analyse_interval_demo2_prog)
                 analyse_interval_demo2_prog)
              (cfg_exit (prog_cfg analyse_interval_demo2_prog)) () of

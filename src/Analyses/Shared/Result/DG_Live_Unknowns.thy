@@ -522,7 +522,7 @@ theorem fun_route_state_at_sound:
 proof -
   have "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> gamma_lift gamma\<^sub>V (lookup_context (result (declared_global p) p) v ctx)"
+        \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
     using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
@@ -668,7 +668,7 @@ corollary entry_state_lookup_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
            root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> gamma_lift gamma\<^sub>V (lookup_context (result (declared_global p) p) v ctx)"
+           \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 

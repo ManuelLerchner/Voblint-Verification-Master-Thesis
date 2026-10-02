@@ -32,9 +32,9 @@ CFG + checks : (pp * bexp) set     -- zero or more compiled checks per node
     |
     | verified TD solver, per domain (generated <Domain>_Analyses)
     v
-node-indexed analysis_result       -- <d>_rule.result r
+node-indexed solved_table       -- <d>_rule.result r
                                    ::   (vname => bool) -> imp_prog
-                                     -> (unit, 'a abs_state) analysis_result
+                                     -> (unit, 'a abs_state) solved_table
     |
     | domain-specific sound_numeric_queries instance
     v
@@ -68,7 +68,7 @@ frontend and `sound_numeric_queries` instance below that line.
 `Sign_Classify.thy`, `Interval_Classify.thy`, `Parity_Classify.thy`,
 `Congruence_Classify.thy` and `Int_Classify.thy` are thin instantiations of the
 generic layers, not separate implementations of the pipeline. The per-node state
-they classify is the registration's `analysis_result` table, which every
+they classify is the registration's `solved_table` table, which every
 registration reads back at a context through the generic `analysis_surface`
 locale (`state_at`, `report`).
 
@@ -159,7 +159,7 @@ makes the combined state `Bot`, and its checks report `Dead`.
 
 Each domain routes its own transfer functions and executable mirror through
 the shared D/G generator, solves with the vendored `TD_side` solver, and
-exposes the result as an `analysis_result` table indexed by `(node, context)`.
+exposes the result as an `solved_table` table indexed by `(node, context)`.
 
 `DG_Analysis.thy` performs that assembly once, for every context policy.
 `dg_pipeline` is the construction half — equation system, solve,
@@ -259,7 +259,7 @@ alone cannot.
 
 ## Contextual result and GraphViz presentation
 
-Every analysis produces one canonical, contextual `analysis_result`: a table
+Every analysis produces one canonical, contextual `solved_table`: a table
 from `(pp, ctx)` to `Lifted abs_state | Bot`. A context-free run
 (`--context none`) is not a special case -- its table has the single unit
 context. `report_of` (`Analysis_Run.thy`) reads that one table, never the
@@ -271,7 +271,7 @@ apply `render_report` (`Analysis_Render.thy`), which renders every state with
                        verified solver
                              |
                              v
-                      analysis_result
+                      solved_table
                (pp, ctx) -> Lifted abs_state | Bot
                              |
                              |  report_of, render_report        [Isabelle]

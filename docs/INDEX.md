@@ -13,7 +13,7 @@ These documents describe the supported architecture and its verification.
   `Session.Theory:theorem` names.
 - [Check-discharge architecture](CHECK_ARCHITECTURE.md) — how a compiled check
   becomes a GraphViz-rendered proof status and a semantic soundness guarantee,
-  and how a contextual `analysis_result` feeds checks, collapsed GraphViz, and
+  and how a contextual `solved_table` feeds checks, collapsed GraphViz, and
   expanded GraphViz from one canonical table.
 - [CLI](CLI_DESIGN.md) — `voblint`'s flags, architecture, and trust boundary.
 - [Per-origin widening](PER_ORIGIN_WIDENING.md) — what the solver's per-origin

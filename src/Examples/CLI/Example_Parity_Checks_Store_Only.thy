@@ -76,7 +76,7 @@ text \<open>The computed Parity environment at an arbitrary node, read out of th
   report also reads, with an unreachable node concretizing to \<^term>\<open>bot\<close>.\<close>
 definition parity_ex_env :: "pp \<Rightarrow> parity abs_state" where
   "parity_ex_env v =
-     (case lookup_context (parity_rule.result Globals_Join parity_ex_gs parity_ex_program)
+     (case lookup_table (parity_rule.result Globals_Join parity_ex_gs parity_ex_program)
              v () of
         Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st)"
 
