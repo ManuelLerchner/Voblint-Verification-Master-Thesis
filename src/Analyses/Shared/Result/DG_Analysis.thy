@@ -101,12 +101,6 @@ lemma exec_formals_route_commute:
      (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
         exec_formals_route_def default_st_to_fun_def)
 
-lemma gamma_point_canonicalize:
-  fixes x :: "'a::numeric_domain abs_state lifted"
-  shows "\<lbrakk>canonicalize_lift is_empty_state x\<rbrakk>\<^sub>\<bottom> = \<lbrakk>x\<rbrakk>\<^sub>\<bottom>"
-  by (cases x)
-     (simp_all add: normalize_lift_def is_empty_state_gamma_state_empty)
-
 subsection \<open>The construction\<close>
 
 text \<open>

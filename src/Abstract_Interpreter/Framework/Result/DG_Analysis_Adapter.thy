@@ -191,11 +191,11 @@ proof -
 qed
 
 text \<open>
-  The same bridge in the vocabulary \<^theory>\<open>Voblint_Framework.Solved_Table\<close>
-  states its lookup facts in: every covered lookup safely abstracts the
-  activation-collected stores at its key.  This is the general statement, with
-  no bottom case baked in --- the unreachability reading is one instantiation
-  of it, below.
+  \<open>analyse_result_node_sound\<close> is stated in the vocabulary
+  \<^theory>\<open>Voblint_Framework.Solved_Table\<close> states its lookup facts in: every
+  covered lookup safely abstracts the activation-collected stores at its key.  It
+  is the general statement, with no bottom case baked in --- the unreachability
+  reading is one instantiation of it, below.
 
   Note what the coverage case split above establishes and this inherits: inside
   this locale an \<^emph>\<open>uncovered\<close> key is not merely uninformative, since
@@ -206,14 +206,6 @@ text \<open>
   result table without these assumptions in hand has no such guarantee.
 \<close>
 
-lemma analyse_result_lookup_sound:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c
-  assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0g"
-  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
-           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
-  by (rule analyse_result_node_sound[OF entry_cov s0_sound])
-
 lemma analyse_result_covered_unreachable:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
@@ -221,7 +213,7 @@ lemma analyse_result_covered_unreachable:
     and dead: "lookup_coverage analyse_result v ctx = Covered Bot"
   shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty
-      [OF dead analyse_result_lookup_sound[OF entry_cov s0_sound]])
+      [OF dead analyse_result_node_sound[OF entry_cov s0_sound]])
 
 lemma covered_keys_analyse_result [simp]: "covered_keys analyse_result = vars"
   unfolding analyse_result_def by simp
@@ -263,7 +255,7 @@ proof -
     qed
     have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
             \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
-      by (rule analyse_result_lookup_sound[OF entry_cov s0_sound])
+      by (rule analyse_result_node_sound[OF entry_cov s0_sound])
     then show ?thesis unfolding bot by simp
   qed
   show ?thesis unfolding union using bucket by simp
