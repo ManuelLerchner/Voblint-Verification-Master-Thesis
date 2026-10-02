@@ -19,6 +19,25 @@ exclude = [
 max-line-length = 100
 
 [check]
+# Every group: this repository is where isar-tools is tried out, so none is off.
+groups = [
+  "project",
+  "proofs",
+  "syntax",
+  "symbols",
+  "docs",
+  "locales",
+  "notation",
+  "unused",
+  "redundant",
+  "hygiene",
+  "leftovers",
+  "methods",
+  "retired",
+  "prose",
+  "links",
+]
+
 # `isar check --group unused`: example sessions end in lemmas nothing cites.
 leaf-sessions = [
   "Voblint_Examples",
