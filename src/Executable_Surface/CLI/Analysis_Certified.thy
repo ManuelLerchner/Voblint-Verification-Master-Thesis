@@ -323,7 +323,7 @@ proof -
   then obtain sol where
     "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
        (mcp_es_rule.root_query p) = Some sol"
-    by (auto simp: dg_pipeline.root_query_def)
+    by (auto simp: dg_pipeline.root_query_def mcp_wrappers)
   then show ?thesis by (rule mcp_es_rule.solve_c_run(1))
 qed
 

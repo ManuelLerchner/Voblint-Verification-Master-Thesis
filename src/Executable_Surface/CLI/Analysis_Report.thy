@@ -375,7 +375,7 @@ proof (cases config)
       and res: "res = report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
                   (mcp_classify (activation as))
                   (mcp_rule.solved_run_of as (declared_global p) p sol) p"
-      by (auto simp: Analysis_Config Ctx_None dg_pipeline.root_query_def)
+      by (auto simp: Analysis_Config Ctx_None dg_pipeline.root_query_def mcp_wrappers)
     note run = mcp_rule.solve_c_run[OF sol]
     show ?thesis
       unfolding res run(2)
@@ -391,7 +391,7 @@ proof (cases config)
       and res: "res = report_of config (entry_ctx_key (activation as)) Report_Entry
                   (mcp_classify (activation as))
                   (mcp_es_rule.solved_run_of as (declared_global p) p sol) p"
-      by (auto simp: Analysis_Config Ctx_EntryState dg_pipeline.root_query_def)
+      by (auto simp: Analysis_Config Ctx_EntryState dg_pipeline.root_query_def mcp_wrappers)
     note run = mcp_es_rule.solve_c_run[OF sol]
     show ?thesis
       unfolding res run(2)
@@ -407,7 +407,7 @@ proof (cases config)
       and res: "res = report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
                   (mcp_classify (activation as))
                   (mcp_cs_rule.solved_run_of as k (declared_global p) p sol) p"
-      by (auto simp: Analysis_Config Ctx_CallString dg_pipeline.root_query_def)
+      by (auto simp: Analysis_Config Ctx_CallString dg_pipeline.root_query_def mcp_wrappers)
     note run = mcp_cs_rule.solve_c_run[OF sol]
     show ?thesis
       unfolding res run(2)

@@ -97,18 +97,24 @@ text \<open>
 \<close>
 
 text \<open>
-  The solve itself is \<open>solve_c\<close>; its traced form adds the start and stop events
-  around it, and is the same function in the logic.
+  The solve itself is \<^const>\<open>mcp_solve_c\<close>; its traced form adds the start and stop
+  events around it, and is the same function in the logic.
 \<close>
 
+lemma mcp_solve_c_traced: "mcp_solve_c r T x = solve_c_traced r T x"
+  by (simp add: mcp_solve_c_def solve_c_traced_eq)
+
+declare mcp_solve_c_def [code del]
+declare mcp_solve_c_traced [code]
+
 lemmas analysis_report_of_traced =
-  trace_run[OF analysis_report_of.simps(1)[of as r p, folded solve_c_traced_eq],
+  trace_run[OF analysis_report_of.simps(1)[of as r p],
     of "\<lambda>_. mcp_trace_printers as p (\<lambda>_ :: unit. Context_Unit)
           (seed_of_global_unknown :: (unit, unit) global_unknown \<Rightarrow> _)"]
-  trace_run[OF analysis_report_of.simps(2)[of as r p, folded solve_c_traced_eq],
+  trace_run[OF analysis_report_of.simps(2)[of as r p],
     of "\<lambda>_. mcp_trace_printers as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))
           (seed_of_global_unknown :: (unit, mcp_ctx) global_unknown \<Rightarrow> _)"]
-  trace_run[OF analysis_report_of.simps(3)[of as r k p, folded solve_c_traced_eq],
+  trace_run[OF analysis_report_of.simps(3)[of as r k p],
     of "\<lambda>_. mcp_trace_printers as p Context_Call_String seed_of_call_string_gk"]
   for as r k p
 

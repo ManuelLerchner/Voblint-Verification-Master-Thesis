@@ -331,29 +331,71 @@ text \<open>
   Where the solve diverges, the generated code does not return at all, so that
   branch is not an operational timeout result.
 \<close>
+text \<open>
+  The executable boundary, specialised once. The registrations are generic in their
+  carrier; these three constants fix it at the combined state and leave only the
+  context and global-key types open. Generated code then builds the carrier's
+  equality and lattice dictionaries inside each constant rather than inline in every
+  branch below.
+\<close>
+
+definition mcp_equations ::
+    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
+       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
+  "mcp_equations as global seed route =
+     dg_pipeline.equations (mcp_comp as) (mcp_init as) global seed route"
+
+definition mcp_solve_c ::
+    "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
+       \<Rightarrow> ((pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)) option"
+  where
+  "mcp_solve_c = TD_side_rule_Interp_solve_c"
+
+definition mcp_run_of ::
+    "analysis_domain list \<Rightarrow> 'k \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
+       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
+       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+       \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
+       \<Rightarrow> ('c, mcp_val) solved_run" where
+  "mcp_run_of as global seed route =
+     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route"
+
+lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
+
 
 fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
   "analysis_report_of (Analysis_Config as r Ctx_None) p =
      map_option
        (\<lambda>sol. report_of (Analysis_Config as r Ctx_None) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
-          (mcp_classify (activation as)) (mcp_rule.solved_run_of as (declared_global p) p sol)
-          p)
-       (TD_side_rule_Interp_solve_c r (mcp_rule.equations as (declared_global p) p)
+          (mcp_classify (activation as))
+          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed (\<lambda>_. route_unit)
+             (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+             (\<lambda>_. route_unit) (declared_global p) p)
           (cfg_exit (prog_cfg p), ()))"
 | "analysis_report_of (Analysis_Config as r Ctx_EntryState) p =
      map_option
        (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState)
           (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
-          (mcp_es_rule.solved_run_of as (declared_global p) p sol) p)
-       (TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
+          (mcp_run_of (activation as) (Analysis_Global ()) Activation_Seed
+             (mcp_formals_route (activation as)) (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) (Analysis_Global ()) Activation_Seed
+             (mcp_formals_route (activation as)) (declared_global p) p)
           (cfg_exit (prog_cfg p), mcp_root_ctx))"
 | "analysis_report_of (Analysis_Config as r (Ctx_CallString k)) p =
      map_option
        (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k))
           (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
           (mcp_classify (activation as))
-          (mcp_cs_rule.solved_run_of as k (declared_global p) p sol) p)
-       (TD_side_rule_Interp_solve_c r (mcp_cs_rule.equations as k (declared_global p) p)
+          (mcp_run_of (activation as) Call_String_Context.Global Call_String_Context.Seed
+             (\<lambda>_. cs_route k) (declared_global p) p sol) p)
+       (mcp_solve_c r
+          (mcp_equations (activation as) Call_String_Context.Global Call_String_Context.Seed
+             (\<lambda>_. cs_route k) (declared_global p) p)
           (cfg_exit (prog_cfg p), []))"
 
 subsection \<open>The public operation\<close>
