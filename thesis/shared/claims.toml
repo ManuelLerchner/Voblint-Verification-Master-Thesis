@@ -23,16 +23,16 @@ why = "The known-imprecision example: sign tracks total=+ (positive) exactly but
 [claims.pg-overview]
 argv = [
   "--analysis",
-  "interval",
+  "interval,order",
   "--globals",
   "warrow",
   "--context",
   "call-string",
   "--context-depth",
   "1",
-  "tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp",
+  "docs/readme-figures/overview.vimp",
 ]
-why = "The playground's default program at call-string depth 1: PROVED, REFUTED and UNKNOWN checks and one possible-division warning."
+why = "The playground's default program at the overview figure's settings: PROVED, REFUTED and DEAD checks and one possible-division warning."
 
 [claims.pg-contexts-none]
 argv = [

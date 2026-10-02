@@ -1,14 +1,16 @@
-tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp [interval]
+docs/readme-figures/overview.vimp [interval,order]
 
 Arithmetic diagnostics
 Location  Point  Severity  Message
---------  -----  --------  ---------------------------------------
-44:3      pp21   WARNING   possible division by zero: 10 / (a - 2)
+--------  -----  --------  ----------------------------------
+17:3      pp7    WARNING   possible division by zero: 100 / x
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  --------------------
-30:3      pp10   i == 5     PROVED   interval: i=[5,5]
-31:3      pp11   i < 5      REFUTED  interval: i=[5,5]
-35:3      pp14   hits == 8  PROVED   interval: hits=[8,8]
-43:3      pp20   a == 2     UNKNOWN  interval: a=⊤
+--------  -----  ---------  -------  ------------------------------------------------------------------------------
+26:7      pp14   z == 1     PROVED   interval: z=[1,1]; order: {w≤y ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
+27:7      pp15   w == y     PROVED   interval: w=⊤, y=⊤; order: {w≤y ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
+39:3      pp24   u <= v     PROVED   interval: u=[0,20], v=[10,30]; order: {n≤v ∧ u≤v}
+46:3      pp28   i == 3     PROVED   interval: i=[3,3]; order: {i≤n ∧ i≤v ∧ n≤v ∧ u≤v}
+47:3      pp29   n == 7     REFUTED  interval: n=[3,3]; order: {i≤n ∧ i≤v ∧ n≤v ∧ u≤v}
+50:5      pp31   i == 0     DEAD     

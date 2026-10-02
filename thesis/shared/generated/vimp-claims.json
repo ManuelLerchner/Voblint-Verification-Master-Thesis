@@ -454,8 +454,8 @@
     }
   },
   "pg-overview": {
-    "fixture": "tests/regression/17-call-string/known-imprecision/05-playground_demo_depth1.vimp",
-    "program": "global hits;\n\nfun record(amount) {\n  hits = hits + amount;\n}\n\nfun scale(v) {\n  return v * 2;\n}\n\nfun wrap(w) {\n  r = scale(w);\n  return r;\n}\n\nfun main() {\n  i = 0;\n  while (i < 5) {\n    i = i + 1;\n  }\n  __voblint_check(i == 5);\n  __voblint_check(i < 5);\n\n  record(i);\n  record(3);\n  __voblint_check(hits == 8);\n\n  if (hits > 10) {\n    record(100);\n  }\n\n  a = wrap(1);\n  b = wrap(4);\n  __voblint_check(a == 2);\n  share = 10 / (a - 2);\n}",
+    "fixture": "docs/readme-figures/overview.vimp",
+    "program": "fun smaller(a, b) {\n  if (a <= b) {\n    lo = a;\n  } else {\n    lo = b;\n  }\n  return lo;\n}\n\nfun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n\n  q = 100 / x;\n\n  n = smaller(3, 7);\n  smaller(9, 4);\n\n  if (x <= y) {\n    if (y <= x) {\n      z = (x == y);\n      w = x;\n      __voblint_check(z == 1);\n      __voblint_check(w == y);\n    }\n  }\n\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    u = 0;\n    v = 10;\n  } else {\n    u = 20;\n    v = 30;\n  }\n  __voblint_check(u <= v);\n\n  i = 0;\n  while (i < 3) {\n    i = i + 1;\n  }\n\n  __voblint_check(i == 3);\n  __voblint_check(n == 7);\n\n  if (i > 5) {\n    __voblint_check(i == 0);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "call-string",

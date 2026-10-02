@@ -22,11 +22,12 @@ why = "One run in three views: the PROVED check in the source, the state inspect
 
 [figures.overview]
 image = "docs/images/playground-overview.png"
-analysis = "interval"
+program = "docs/readme-figures/overview.vimp"
+analysis = "interval,order"
 globals = "warrow"
 context = "call-string"
 k = 1
-why = "Every verdict kind, an arithmetic warning, and one graph box per procedure and context, in one run."
+why = "PROVED, REFUTED and DEAD checks, an arithmetic warning, and one graph box per procedure and context, in one run."
 
 [figures.division-definite]
 image = "docs/images/playground-division-definite.png"
