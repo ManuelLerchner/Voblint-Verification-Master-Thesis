@@ -130,17 +130,10 @@ const rawStats = {
 };
 
 /*
- * Every editor feature on one screen, at the page's default configuration
- * (Interval, Warrow, call string k=1):
- *
- *   i == 5 and hits == 8 PROVED, i < 5 REFUTED, a == 2 UNKNOWN,
- *   10 / (a - 2) a possible division by zero, record(100) DEAD,
- *   loop hints marked as joins, record's and wrap's parameters keyed by call site.
- *
- * scale is reached from wrap(1) and wrap(4) through one call site, so k=1
- * merges them. Warrowing per origin narrows a to [2,8]; k=2 proves a == 2 and
- * turns the possible division by zero into a definite one. Without context
- * sensitivity, hits == 8 is lost as well.
+ * Every editor feature on one screen. At call strings k=1 with Interval and
+ * Order: four checks PROVED, n == 7 REFUTED, the check under i > 5 DEAD,
+ * 100 / x a possible division by zero, smaller's parameters keyed by call site.
+ * docs/readme-figures/overview.vimp is a copy that the thesis figure links to.
  */
 const initialProgram = `// Move the cursor, hover the badges, click the graph.
 // Then try: globals "Warrow per origin", call-string depth k=2, context None.
