@@ -10,6 +10,11 @@
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
 
+## What is verified?
+
+Voblint proves an end-to-end soundness result:
+whenever `run_voblint` returns a report, every reachable source state is covered by that report, and every definite verdict it gives holds concretely.
+
 ```math
 \underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{source run}}
 \;\Longrightarrow\;
@@ -46,6 +51,8 @@ Each step is an Isabelle theorem:
 
 [`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 states the whole chain for every run that returns a report.
+
+## What is Voblint?
 
 Voblint is a machine-checked Isabelle/HOL framework for building, running and
 verifying interprocedural abstract interpreters, modelled on Goblint's D/G
