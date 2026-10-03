@@ -2839,6 +2839,8 @@ async function layoutGraph(elk, elements) {
   const centers = new Map();
   const routes = new Map();
   const labels = new Map();
+  /* Where a route within a box leaves its source and enters its target, as ELK placed it. */
+  const ends = new Map();
 
   for (const box of outer.children) {
     const layout = inner.get(box.id);
@@ -2852,7 +2854,10 @@ async function layoutGraph(elk, elements) {
 
     for (const edge of layout.edges) {
       if (edge.sections?.[0]) {
-        routes.set(edge.id, routePoints(edge.sections[0], box.x, box.y).slice(1, -1));
+        const points = routePoints(edge.sections[0], box.x, box.y);
+
+        routes.set(edge.id, points.slice(1, -1));
+        ends.set(edge.id, { start: points[0], end: points.at(-1) });
       }
 
       for (const label of edge.labels ?? []) {
@@ -2875,8 +2880,72 @@ async function layoutGraph(elk, elements) {
   }
 
   await placeGlobals(elk, globals, outer.children, centers);
+  spreadSharedEnds(routes, ends);
 
-  return { centers, routes, labels };
+  return { centers, routes, labels, ends };
+}
+
+/* How far apart route ends that ELK put on one point are moved. */
+const END_SPREAD = 12;
+
+/*
+ * ELK ends every edge entering a node at the same point of its side, and starts every
+ * edge leaving it at one point too. Where several share a point, they are spread along
+ * the side, each moving its last vertical leg with it so the route stays right-angled.
+ */
+function spreadSharedEnds(routes, ends) {
+  const groups = new Map();
+
+  for (const [id, { start, end }] of ends) {
+    for (const [which, point] of [
+      ["start", start],
+      ["end", end],
+    ]) {
+      const key = `${Math.round(point.x)},${Math.round(point.y)}`;
+
+      groups.set(key, [...(groups.get(key) ?? []), { id, which }]);
+    }
+  }
+
+  for (const members of groups.values()) {
+    if (members.length < 2) {
+      continue;
+    }
+
+    /* Order by where each edge's route heads, so spread ends do not cross. */
+    const heading = ({ id, which }) => {
+      const points = routes.get(id) ?? [];
+      const next = which === "start" ? points[0] : points.at(-1);
+
+      return next?.x ?? ends.get(id)[which === "start" ? "end" : "start"].x;
+    };
+
+    members
+      .sort((a, b) => heading(a) - heading(b))
+      .forEach(({ id, which }, index) => {
+        const dx = (index - (members.length - 1) / 2) * END_SPREAD;
+        const point = ends.get(id)[which];
+        const points = routes.get(id) ?? [];
+        const neighbour = which === "start" ? points[0] : points.at(-1);
+
+        /* A side entry spreads along the side; the leg next to the end moves with it. */
+        if (
+          neighbour &&
+          Math.abs(neighbour.y - point.y) < 1 &&
+          Math.abs(neighbour.x - point.x) >= 1
+        ) {
+          neighbour.y += dx;
+          point.y += dx;
+          return;
+        }
+
+        if (neighbour && Math.abs(neighbour.x - point.x) < 1) {
+          neighbour.x += dx;
+        }
+
+        point.x += dx;
+      });
+  }
 }
 
 /* Room between the row of global unknowns and the context boxes below it. */
@@ -2949,27 +3018,6 @@ function segmentStyle(points, source, target) {
 }
 
 /*
- * The route's bend points with its ends following moved endpoints. A route leaves its
- * source and enters its target along one axis, so the first bend moves with the source
- * across that axis, and the last with the target: every segment stays horizontal or
- * vertical, and only the segments at a moved end stretch.
- */
-function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
-  const moved = points.map((point) => ({ ...point }));
-  const follow = (point, from, delta) => {
-    if (Math.abs(point.x - from.x) < Math.abs(point.y - from.y)) {
-      point.x += delta.x;
-    } else {
-      point.y += delta.y;
-    }
-  };
-
-  follow(moved[0], source, { x: sourceNow.x - source.x, y: sourceNow.y - source.y });
-  follow(moved.at(-1), target, { x: targetNow.x - target.x, y: targetNow.y - target.y });
-  return moved;
-}
-
-/*
  * A route is stored relative to its endpoints' centers, and each drag event recomputes
  * the routes of the moved nodes' edges from where both endpoints now are. Endpoints
  * moved alike, as inside a dragged box, keep the route as it is. Within one box, one
@@ -3001,19 +3049,155 @@ function followRoutesOnDrag(view) {
         return;
       }
 
-      const withinBox = edge.source().parent().same(edge.target().parent());
-      const points =
-        withinBox && (still(bySource) || still(byTarget)) && stretchedRoute(route, source, target);
-      const style = points && segmentStyle(points, source, target);
-
-      if (style) {
-        /* The stretched route is the one a later drag of either end starts from. */
-        edge.data(style).scratch("route", { points, source: { ...source }, target: { ...target } });
-      } else {
-        edge.removeClass("routed placed-label");
-      }
+      rerouteEdge(edge);
     });
+
+    /* An edge without a laid-out route also gets its own ports and bends. */
+    moved.connectedEdges().not(".routed").forEach(rerouteEdge);
   });
+}
+
+function offsetFrom(point, center) {
+  return { x: point.x - center.x, y: point.y - center.y };
+}
+
+function endpointData(ports) {
+  return {
+    sourceEndpoint: `${ports.source.x}px ${ports.source.y}px`,
+    targetEndpoint: `${ports.target.x}px ${ports.target.y}px`,
+  };
+}
+
+/* Where along a side of [width] the [index]th of [count] edges attaches, from the center. */
+function portOffset(index, count, width) {
+  return count <= 1 ? 0 : ((index + 1) / (count + 1) - 0.5) * width * 0.8;
+}
+
+/*
+ * This edge's place among all edges at one of its ends, in and out alike, ordered by
+ * where their other ends lie: edges in opposite directions between the same nodes get
+ * ports of their own instead of one shared anchor.
+ */
+function portIndex(edge, end) {
+  const node = end === "source" ? edge.source() : edge.target();
+  const otherX = (e) => (e.source().same(node) ? e.target() : e.source()).position().x;
+  const siblings = node
+    .connectedEdges()
+    .toArray()
+    .sort((a, b) => otherX(a) - otherX(b) || a.id().localeCompare(b.id()));
+
+  return { index: siblings.findIndex((e) => e.same(edge)), count: siblings.length };
+}
+
+/*
+ * An edge whose laid-out route no longer fits gets a right-angle route of its own. It
+ * leaves its source's bottom and enters its target's top at a port of its own on
+ * each, so no two edges of a node share an anchor; when the target is not below the
+ * source, the route goes around the right of both nodes instead of through them.
+ */
+function rerouteEdge(edge) {
+  const sourceNode = edge.source();
+  const targetNode = edge.target();
+  const source = sourceNode.position();
+  const target = targetNode.position();
+  const sw = sourceNode.width() / 2;
+  const sh = sourceNode.height() / 2;
+  const tw = targetNode.width() / 2;
+  const th = targetNode.height() / 2;
+  const GAP = 14;
+  const out = portIndex(edge, "source");
+  const into = portIndex(edge, "target");
+  const laid = edge.scratch("ports");
+
+  /* The sides the edge leaves and enters by, from where the two nodes now are. */
+  let leave;
+  let enter;
+
+  if (target.y - th - (source.y + sh) >= 2 * GAP) {
+    leave = { x: 0, y: 1 };
+    enter = { x: 0, y: -1 };
+  } else if (source.y - sh - (target.y + th) >= 2 * GAP) {
+    leave = { x: 0, y: -1 };
+    enter = { x: 0, y: 1 };
+  } else {
+    const right = target.x >= source.x ? 1 : -1;
+
+    leave = { x: right, y: 0 };
+    enter = { x: -right, y: 0 };
+  }
+
+  /* A port on that side: where the layout put it if it used the same side, else spread. */
+  const port = (side, node, half, laidPort, { index, count }) => {
+    const sameSide =
+      laidPort &&
+      Math.sign(side.x ? laidPort.x : laidPort.y) === (side.x || side.y) &&
+      (side.x ? Math.abs(laidPort.x) >= half.w - 1 : Math.abs(laidPort.x) < half.w - 1);
+
+    if (sameSide) {
+      return laidPort;
+    }
+
+    return side.x
+      ? { x: side.x * half.w, y: portOffset(index, count, node.height()) }
+      : { x: portOffset(index, count, node.width()), y: side.y * half.h };
+  };
+  const ports = {
+    source: port(leave, sourceNode, { w: sw, h: sh }, laid?.source, out),
+    target: port(enter, targetNode, { w: tw, h: th }, laid?.target, into),
+  };
+  const start = { x: source.x + ports.source.x, y: source.y + ports.source.y };
+  const end = { x: target.x + ports.target.x, y: target.y + ports.target.y };
+  let points;
+
+  /* Edges joining the same two nodes run apart rather than on top of each other. */
+  const parallel = sourceNode.edgesWith(targetNode).toArray();
+  const lane =
+    parallel.length > 1
+      ? (parallel.findIndex((e) => e.same(edge)) - (parallel.length - 1) / 2) * GAP
+      : 0;
+
+  if (leave.y !== 0) {
+    /* Vertical ends: one horizontal run between them. */
+    const mid = (start.y + end.y) / 2 + lane;
+
+    points =
+      Math.abs(start.x - end.x) < 1
+        ? []
+        : [
+            { x: start.x, y: mid },
+            { x: end.x, y: mid },
+          ];
+  } else {
+    /* Side ends: one vertical run between them. */
+    const mid = (start.x + end.x) / 2 + lane;
+
+    points =
+      Math.abs(start.y - end.y) < 1
+        ? []
+        : [
+            { x: mid, y: start.y },
+            { x: mid, y: end.y },
+          ];
+  }
+
+  const style = segmentStyle(
+    points.length ? points : [{ x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }],
+    source,
+    target,
+  );
+
+  edge.removeClass("placed-label").scratch("route", null);
+
+  if (!style) {
+    edge.removeClass("routed rerouted");
+    return;
+  }
+
+  edge
+    .removeClass("routed")
+    .addClass("rerouted anchored")
+    .data({ ...style, ...endpointData(ports) })
+    .scratch("ports", ports);
 }
 
 /*
@@ -3021,7 +3205,7 @@ function followRoutesOnDrag(view) {
  * back edges put theirs on top of each other. The inner pass reserves room for each
  * label and places it, so the label keeps that place as an offset from the midpoint.
  */
-function applyGraphLayout(view, { centers, routes, labels }) {
+function applyGraphLayout(view, { centers, routes, labels, ends = new Map() }) {
   view.batch(() => {
     view
       .nodes(".point, .seed, .global")
@@ -3044,6 +3228,18 @@ function applyGraphLayout(view, { centers, routes, labels }) {
             source: centers.get(edge.data("source")),
             target: centers.get(edge.data("target")),
           });
+
+        /* Anchor the edge where ELK attached it, so a later re-route keeps those ports. */
+        const end = ends.get(id);
+
+        if (end) {
+          const ports = {
+            source: offsetFrom(end.start, centers.get(edge.data("source"))),
+            target: offsetFrom(end.end, centers.get(edge.data("target"))),
+          };
+
+          edge.addClass("anchored").data(endpointData(ports)).scratch("ports", ports);
+        }
       }
     }
   });
@@ -3269,6 +3465,24 @@ function graphStyle() {
         "line-style": "solid",
         "line-color": cssToken("--global-link"),
         "target-arrow-color": cssToken("--global-link"),
+      },
+    },
+    /* An edge re-routed after a drag: its own bends, leaving and entering at its ports. */
+    {
+      selector: "edge.rerouted",
+      style: {
+        "curve-style": "round-segments",
+        "segment-weights": "data(weights)",
+        "segment-distances": "data(distances)",
+        "segment-radii": 6,
+        "edge-distances": "node-position",
+      },
+    },
+    {
+      selector: "edge.anchored",
+      style: {
+        "source-endpoint": "data(sourceEndpoint)",
+        "target-endpoint": "data(targetEndpoint)",
       },
     },
     {
