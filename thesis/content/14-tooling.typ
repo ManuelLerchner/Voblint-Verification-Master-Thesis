@@ -242,7 +242,8 @@ its statement and source line.
 *Replay.* The playground records the trace in the same solve that computes the
 result shown. It folds the run's events, as JSON Lines, through one reducer
 into the state at every step: node values, the stack of open queries,
-the stable set, influences, widening points and the seeds. It draws that state
+the stable set, influences, widening points and the global unknowns, which are
+the seeds and, under flow-insensitive program globals, one unknown per global. It draws that state
 on the graph beside the verbose trace, and each step names the trace line it
 comes from. @fig:replay-still shows one step; @fig:eq-walk is drawn from the
 same events.

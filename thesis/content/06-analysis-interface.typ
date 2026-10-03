@@ -176,7 +176,8 @@ C. An analysis global is a fact the analysis keeps flow-insensitively. The two
 are independent: an analysis may track a program global flow-sensitively in its
 local value, and an analysis global need not stand for any program variable.
 By default the numeric analyses keep program globals in the local value and need
-no analysis global. @sec:mixed-flow describes the other placement.
+no analysis global. Under the other placement, each program global becomes an
+analysis global named by the variable itself (@sec:mixed-flow).
 
 === Side-effecting transfers and the manager <sec:manager>
 
@@ -254,39 +255,50 @@ obligations of @ch:traces for it, once for every analysis? Most of them form
 one locale, the _analysis soundness contract_
 #isalocale("analysis_contract"). The contract speaks only
 about the analysis's own objects: its record of operations, and a
-concretization $conc_(D G)(d, g)$ that says which stores a local value $d$
-describes, given the value $g$ of the analysis global. It mentions no context
-and no solver. It asks for four things:
+concretization $conc_(D G)(d, e)$ that says which stores a local value $d$
+describes, given an _environment_ $e$ that maps each analysis-global name to
+its value. It mentions no context and no solver. It asks for four things:
 
 + _Monotone meaning._ A larger value describes more stores: $conc_(D G)$ is
-  monotone in both arguments (#isathm("analysis_contract.gammaDG_mono")). This turns the solver's inequalities between
+  monotone in both arguments, the environment ordered pointwise
+  (#isathm("analysis_contract.gammaDG_mono")). This turns the solver's inequalities between
   values into inclusions between sets of stores, as $conc$ does for a domain
   (@ch:domains).
 + _Well-formed programs._ Every transfer hands its result to its continuation
   exactly once (#isaconst("dg_spec_wf")), so what a compiled transfer
   publishes is well defined.
 + _Sound edges_ (#oblig("INTRA")). Take a store before an edge that the
-  source's value covers, together with the current value of the analysis
-  global. Every store the edge can produce must be covered by the value the
-  compiled program answers, together with the value it publishes
+  source's value covers, together with the environment $e$ the transfer reads.
+  Every store the edge can produce must be covered by the value the compiled
+  program answers, together with $e$ joined with what the program publishes
   (#isathm("analysis_contract.step_sound")).
 + _Sound returns_ (#oblig("RETURN")). Take a caller store covered by the
-  resume value and a callee exit store covered by the exit value. The store
-  after the return must be covered by what the two combine stages answer and
-  publish (#isathm("analysis_contract.combine_sound")). This must hold at arbitrary values, because no unknown holds the
+  resume value and a callee exit store covered by the exit value, both against
+  $e$. The store after the return must be covered by what the two combine
+  stages answer, against $e$ joined with what they publish
+  (#isathm("analysis_contract.combine_sound")). This must hold at arbitrary values, because no unknown holds the
   resume value for the solver to bound.
 
 A transfer is thus judged by what its compiled program answers and publishes,
-however its reads and publications are arranged. The solver's certificate
-bounds each analysis global by every publication to it (@sec:certificate), and
-the solved values inherit the coverage.
+however its reads and publications are arranged. A transfer that changes no
+analysis global owes no publication: the environment it read still describes
+the result. The solver's certificate bounds each analysis global by every
+publication to it (@sec:certificate), and the solved values inherit the
+coverage.
 
-The locale fixes the type of analysis-global names to `unit`, so an analysis
-has exactly one global unknown, and $conc_(D G)(d, g)$ takes one value $g$.
-@sec:mixed-flow shows what this single slot costs when several program globals
-share it. Otherwise the contract asks the carriers only for a join semilattice
-with a least element and $conc_(D G)$ only for monotonicity. It never requires
-a map from variables to abstract values (@sec:relational).
+The type `'v` of analysis-global names is a parameter of the locale. A key map
+sends each name to its global unknown, and #isaconst("genv") reads the
+environment off a valuation through that map. The edge and return obligations
+quantify over every key map and every valuation, so the analysis never learns
+how its names are laid out in the solver. An analysis with a single
+global takes `'v` to be `unit`, and #isathm("analysis_contract_unitI") derives
+the contract from obligations stated against that one value. The analyzer
+names analysis globals by program variables. Under flow-sensitive program
+globals it never reads or publishes them, and under flow-insensitive ones each
+variable's global holds that variable's value (@sec:mixed-flow). Otherwise the
+contract asks the carriers only for a join semilattice with a least element
+and $conc_(D G)$ only for monotonicity. It never requires a map from variables
+to abstract values (@sec:relational).
 
 The contract covers #oblig("INTRA") and #oblig("RETURN"), the two obligations
 of @ch:traces that involve no context. @ch:equations derives the other three

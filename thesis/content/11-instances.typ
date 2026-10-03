@@ -115,7 +115,7 @@ derives the contracts of the analysis locale #isalocale("dg_analysis")
 (@sec:cert-param) that concern the component from that proof, and
 #isathm("sound_nonrelational_ops.dg_analysis_execI") discharges all of them at
 once. Six obligations remain: the routing agreement, that the seeds differ from
-the analysis global, the three solver contracts of @sec:cert-param, and
+the node buffer, the three solver contracts of @sec:cert-param, and
 soundness of the initial state. Only the last is a fact about the domain's
 values (for Parity, #isathm("parity_cinit_gamma")). Each numeric domain has a
 generated registration that discharges them at the unit context. Interval is

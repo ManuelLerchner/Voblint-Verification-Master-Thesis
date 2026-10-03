@@ -421,7 +421,8 @@ sound. Nipkow and Klein run their analyzer inside Isabelle.
 To our knowledge, no prior mechanized analyzer connects a source semantics to
 a side-effecting constraint system, in which right-hand sides contribute to global unknowns, or is proved sound through a verified solver for such
 systems. In Voblint, every call publishes its callee's entry state as a side
-effect to a global unknown (@sec:eq-call), and the
+effect to a global unknown (@sec:eq-call), as does every write to a
+flow-insensitive program global (@sec:mixed-flow), and the
 end-to-end theorem covers this for every program the analyzer returns a report
 for (#isathm("run_voblint_source_sound")). The contributions below address this gap.
 

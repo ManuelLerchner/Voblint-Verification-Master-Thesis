@@ -319,10 +319,11 @@ phase ignores contributions below it, so each switch narrows only once. The firs
 contribution; the two per-origin warrowing rules record the old record warrowed
 with the new contribution. Each rule meets the vendored interface
 (#isathm("update_rule_update_global_of")), so the solver is sound for all of
-them at once. In #isaconst("run_voblint") the entry seeds are the
-only global unknowns that receive contributions (@sec:coop-limits). The rule
-therefore decides how a callee's entry state accumulates across call sites
-(@fig:update-rules).
+them at once. In #isaconst("run_voblint") the entry seeds receive
+contributions, and so does the unknown of each program global when program
+globals are flow-insensitive (@sec:mixed-flow). The rule therefore decides how
+a callee's entry state accumulates across call sites (@fig:update-rules), and
+how a flow-insensitive global accumulates its writes.
 
 Per-origin warrowing helps when several origins feed one global, as Seidl et
 al. show on a global that receives one constant per location @seidl26[§1]. A

@@ -108,6 +108,7 @@
   "context": "entry-state",
   "refinement": "fixpoint",
   "trace": "off",
+  "placement": "flow-sensitive",
   "k": 1,
 )
 
@@ -166,9 +167,17 @@
 }
 
 // `ctx` is the playground's `context` parameter; `context` is a Typst keyword.
-#let playground-link(program, analysis: "interval", globals: "warrow", ctx: "call-string", k: 1) = {
+#let playground-link(
+  program,
+  analysis: "interval",
+  globals: "warrow",
+  ctx: "call-string",
+  k: 1,
+  placement: "flow-sensitive",
+) = {
   let query = "?analysis=" + analysis + "&globals=" + globals + "&context=" + ctx
   if ctx == "call-string" { query += "&k=" + str(k) }
+  if placement != "flow-sensitive" { query += "&placement=" + placement }
   playground-base + query + "#code=" + _base64url(_deflate-stored(array(bytes(program))))
 }
 
@@ -189,6 +198,7 @@
   globals: auto,
   ctx: auto,
   k: auto,
+  placement: auto,
 ) = {
   let src = if type(body) == str { body } else { body.text }
   let code = raw(src, lang: lang, block: true)
@@ -201,7 +211,13 @@
   let run = if claim == none { playground-defaults } else {
     playground-defaults + _vimp-claims.at(claim).settings
   }
-  let given = ("analysis": analysis, "globals": globals, "context": ctx, "k": k)
+  let given = (
+    "analysis": analysis,
+    "globals": globals,
+    "context": ctx,
+    "k": k,
+    "placement": placement,
+  )
     .pairs()
     .filter(((_, v)) => v != auto)
     .to-dict()
@@ -217,6 +233,7 @@
     globals: settings.globals,
     ctx: settings.at("context"),
     k: settings.k,
+    placement: settings.placement,
   )
 
   [#metadata((

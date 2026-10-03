@@ -2,7 +2,7 @@
      Figure: strata. Do not edit; edit the manifest or the page.
      The formalization in cross-section: one stratum per session, sized by its proof. -->
 <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
-            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI, code export, and the example sessions at the surface. Thickness grows with line count." xmlns="http://www.w3.org/2000/svg">
+            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI exposing all six analyses including relational Order, code export, and the example sessions at the surface. Thickness grows with line count." xmlns="http://www.w3.org/2000/svg">
 <style>
   .strata-svg { max-width: 1000px; }
   .stratum-part { outline: none; }
@@ -35,7 +35,7 @@
               </g>
               <g class="stratum stratum-d10" data-layer="d10">
                 <text class="stratum-name" x="306" y="123" text-anchor="end">Entry point</text>
-                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Solver" data-info="run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI · five numeric analyses + Order</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
                 <text class="stratum-name" x="306" y="157" text-anchor="end">Int product</text>
@@ -57,9 +57,9 @@
                 <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="320.0" y="252" width="670.0" height="30"></rect><text x="655.0" y="271">Result</text></a>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
-                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and relational analysis</text>
+                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and order analysis</text>
                 <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Relational</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework" data-info="The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Order (relational)</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
                 <text class="stratum-name" x="306" y="327" text-anchor="end">Executable carrier</text>

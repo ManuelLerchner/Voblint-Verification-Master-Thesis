@@ -519,8 +519,11 @@ contract.
 == What the combination leaves out <sec:coop-limits>
 
 Components cannot read or publish analysis globals (@sec:analysis-globals).
-Every fact a selectable analysis keeps therefore lives in its flow-sensitive
-local state, program globals included. The only values published in an analyzer
+Every fact a selectable analysis keeps therefore lives in its local state. The
+one exception applies to the combined state as a whole: when program globals
+are flow-insensitive, a lifter around the combination publishes each program
+global's part of the combined state to that global's unknown
+(@sec:mixed-flow). Apart from those, the only values published in an analyzer
 run are the entry values that calls publish to their callees' seeds
 (@sec:eq-seed-global). An analysis
 with an analysis global, such as #isaconst("rel_order_spec"), is proved sound

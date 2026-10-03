@@ -58,7 +58,9 @@ MAIN = THESIS / "thesis.typ"
 SOURCE_EXEMPT = {"content/03-gallery.typ"}
 
 # The voblint CLI's defaults, which a claim's argv leaves implicit.
-CLI_DEFAULTS = {"globals": "warrow", "context": "none"}
+CLI_DEFAULTS = {"globals": "warrow", "context": "none", "placement": "flow-sensitive"}
+# Under flow-insensitive program globals the CLI's default rule changes.
+CLI_FLOW_INSENSITIVE_GLOBALS = "bounded-narrowing"
 
 VIMP_LANGS = ("c", "vimp")
 VIMP_SHAPE = re.compile(
@@ -72,10 +74,17 @@ VIMP_SHAPE = re.compile(
 def run_settings(args: list[str]) -> dict[str, object]:
     """The playground settings a voblint command line selects."""
     given = vimp_fixture.analysis_settings(args)
+    placement = given.get("program_globals", CLI_DEFAULTS["placement"])
+    default_rule = (
+        CLI_FLOW_INSENSITIVE_GLOBALS
+        if placement == "flow-insensitive"
+        else CLI_DEFAULTS["globals"]
+    )
     settings = {
         "analysis": given["analyses"][0],
-        "globals": given.get("globals", CLI_DEFAULTS["globals"]),
+        "globals": given.get("globals", default_rule),
         "context": given.get("context", CLI_DEFAULTS["context"]),
+        "placement": placement,
     }
     if settings["context"] == "call-string":
         settings["k"] = given["context_depth"]
@@ -170,10 +179,14 @@ def known_runs(
 
 
 def link_settings(settings: dict) -> dict[str, str]:
-    """Settings as the query carries them: k only for call strings."""
+    """Settings as the query carries them: k only for call strings, placement
+    only when it is not the playground's default."""
     out = {key: str(settings[key]) for key in ("analysis", "globals", "context")}
     if settings["context"] == "call-string":
         out["k"] = str(settings["k"])
+    placement = settings.get("placement", CLI_DEFAULTS["placement"])
+    if placement != CLI_DEFAULTS["placement"]:
+        out["placement"] = str(placement)
     return out
 
 

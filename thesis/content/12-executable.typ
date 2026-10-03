@@ -100,7 +100,7 @@ touches the facade alone.
 Because the export is the theorem's own constant, no handwritten entry point
 needs an agreement argument. One exported entry point per domain and context
 policy would need a lemma relating each of them to the theorem's constant. The single
-dispatcher answers every combination of its three configuration arguments, so
+dispatcher answers every combination of its four configuration arguments, so
 the command-line tool never decides which combination is legal.
 
 == Interfaces that separate execution from proof <sec:engineering>
@@ -124,18 +124,24 @@ result need semantic premises. #isalocale("dg_pipeline") fixes the
 executable ingredients and assumes nothing, so its definitions become code
 equations directly. The ingredients are a component, which is one analysis's
 local specification or a combination of several, its emptiness test and
-the result map, the initial state, the global unknowns of the analysis global and of the entry seeds, the routing policy with its initial context, the solver and the check
-classifier. Even the bottom state is a parameter, because a least element
+the result map, the initial state, the placement of program globals, the
+global unknowns, the routing policy with its initial context, the solver and
+the check classifier. The placement is a lifter around the component, the
+recombination of a local value with an environment of global values, and the
+initial value of each global, which the program entry publishes. The global
+unknowns are a node's buffer, a key map from analysis-global names to
+unknowns, and the entry seeds. Even the bottom state is a parameter, because a least element
 taken from a type class would have to be executable at a function type.
 #isalocale("dg_analysis") imports it and adds the contracts, among them
 soundness of the component (#isaconst("sound_local_spec")) and of the initial
 state, an emptiness test on the solver's states that agrees with a sound
 emptiness test on the published values, a single entry pair, seeds distinct from the
-analysis global, the three solver contracts of @sec:cert-param, and
+buffer and from every analysis global, the three solver contracts of @sec:cert-param, and
 correctness of the check classifier. @sec:instances-supply shows how a numeric
 domain discharges them.
 
-The analyzer interprets #isalocale("dg_analysis") once per context family for
+The analyzer interprets #isalocale("dg_analysis") once per context family and
+placement for
 the combination #isaconst("mcp_comp") of any activation list (@fig:assembly),
 and every run inherits the argument of @ch:results from these interpretations.
 The order analysis has no registration: it supplies its local specification

@@ -47,10 +47,13 @@ combination of analyses and its parts. No general precision result is proved
 *Design trade-offs.* A context relation lets entry-state routing read contexts
 off the analysis's result, at the price of the obligation #oblig("TOTAL").
 Functional policies embed as relations and satisfy it directly
-(#isaconst("call_context_rel_of_fun")). Both placements of program
-globals fit a contract with a single global name, because the flow-insensitive
-one keeps all program globals in one unknown. That placement loses precision on the `set`/`get` program
-(@sec:mixed-flow), and the cost of neither placement was measured. Consuming
+(#isaconst("call_context_rel_of_fun")). Stating the contract over an
+environment of analysis globals lets the flow-insensitive placement give each
+program global its own unknown, so a write wakes only the readers of that
+global. The price is a frame obligation on the carrier: a store that agrees on
+the unwritten globals with a covered store is covered by the recombined result
+(@sec:mixed-flow). That placement loses precision on the `set`/`get` program,
+and the cost of neither placement was measured. Consuming
 the solver only through #isaconst("part_post_solution", thy: "Basics_side") makes soundness
 independent of the update rule (@sec:update-rules), but says nothing about
 termination or about which post-solution is returned (@sec:certificate). Exporting one dispatcher makes
@@ -123,10 +126,10 @@ arises.
 + *Running time.* The executable keeps the proofs' list-based data
   representations. It was measured once and is not benchmarked
   (@sec:eval-absent).
-+ *Analysis globals.* The analysis soundness contract admits a single global
-  name (@sec:sound-core). The flow-insensitive placement of program globals is
-  selectable and covered by the source-level theorem, but all program globals
-  share that one global unknown (@sec:mixed-flow).
++ *Analysis globals.* Only the combined state as a whole publishes to analysis
+  globals, through the flow-insensitive placement of program globals
+  (@sec:mixed-flow). Its components cannot, and the update rule is chosen once
+  for every global unknown of a run (@sec:update-rules).
 + *Coverage of the configuration space.* The combined state admits
   only components without globals, so #isaconst("rel_order_spec") is not
   selectable; its local form, the order analysis, is (@sec:relational).
@@ -161,12 +164,9 @@ kind and components without globals (@sec:coop-limits). Further query kinds
 need their own truth relation, and a component with globals needs the
 combination to keep each analysis's globals apart, as Goblint's MCP tags them
 with the analysis they belong to. In the shipped analyzer the global unknowns
-carry activation seeds and, under the shared placement, one store of all program
-globals. One unknown per program global needs a
-concretization over an environment of analysis-global values in place of the
-single global name of the analysis soundness contract. Threads and locks with a
-thread-local trace semantics would then allow the thread-modular uses of
-globals discussed in @sec:mixed-flow.
+carry activation seeds and, under the flow-insensitive placement, one value per
+program global. Threads and locks with a thread-local trace semantics would
+allow thread-modular uses of these global unknowns.
 
 The context relation reads only how an activation was entered. Digests refine
 unknowns by other abstractions of a local trace (@sec:rel-goblint).

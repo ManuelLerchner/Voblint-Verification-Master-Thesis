@@ -220,12 +220,12 @@ choices:
 - $"ctx"$, a #isatype("context_mode"), the context policy: #ctor("Ctx_None"),
   #ctor("Ctx_EntryState") or #ctor("Ctx_CallString") $k$;
 - $"pg"$, a #isatype("program_globals"), the placement of program globals: in
-  the flow-sensitive local state (#ctor("Program_Globals_Local")) or in one
-  flow-insensitive global unknown (#ctor("Program_Globals_Shared"),
-  @sec:mixed-flow);
+  the flow-sensitive local state (#ctor("Program_Globals_Flow_Sensitive")) or
+  each at a flow-insensitive global unknown of its own
+  (#ctor("Program_Globals_Flow_Insensitive"), @sec:mixed-flow);
 and the program $p$ is an #isatype("imp_prog"). The run of @fig:chain is
 #isaconst("run_voblint") (#ctor("Analysis_Config") [#ctor("Interval_Analysis")]
-#ctor("Globals_Warrow") #ctor("Ctx_EntryState") #ctor("Program_Globals_Local")) $p$. The variables are
+#ctor("Globals_Warrow") #ctor("Ctx_EntryState") #ctor("Program_Globals_Flow_Sensitive")) $p$. The variables are
 universally quantified, so the theorem holds for every configuration, without a
 separate theorem per analysis or policy.
 #proved("run_voblint_source_sound", note: [Source-level soundness of the

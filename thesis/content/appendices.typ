@@ -15,8 +15,8 @@
 // The same value from the run with program globals on the shared channel.
 #let _mfs(var) = snapshot-var("mixed-flow-sign-shared", "main_pp7_ctx0", var)
 
-The shipped analyses keep program globals in the flow-sensitive local value of
-every unknown, next to the locals. Goblint's base analysis makes the same
+By default the shipped analyses keep program globals in the flow-sensitive
+local value of every unknown, next to the locals. Goblint's base analysis makes the same
 choice for single-threaded programs: it reads globals from its local state and
 publishes nothing (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml")[`base.ml`]). Seidl et
 al. note that global store widening improves scalability and also helps
@@ -43,51 +43,64 @@ the written 1. Sign can only claim #signval("≥0") for `Gx` and for `y` after
 carries #signval("+") from `set`'s exit into `get`'s entry and derives
 #signval(_mf("y")) for `y` (claim #claim-ref("mixed-flow-sign")).
 
-The lifter #isaconst("ownership_split_lift") adds one global unknown
-$kappa = #isaconst("Analysis_Global") thin ()$ whose value is an abstract
-store for all VIMP globals together. Every lifted transfer reads the globals
-from $kappa$ and publishes the global half of its result there. A solved store
-is read back by merging the local half with $sol(kappa)$
-(#isaconst("gamma_ownership_split")), and soundness makes $sol(kappa)$ cover
-the globals of every store reached anywhere.
+The simplest lifter, #isaconst("ownership_split_lift"), adds one global unknown
+$kappa$ whose value is an abstract store for all VIMP globals together. Every
+lifted transfer reads the globals from $kappa$ and publishes the global half of
+its result there. A solved store is read back by merging the local half with
+$sol(kappa)$ (#isaconst("gamma_ownership_split")), and
+#isathm("ownership_split_lift_contract") shows that the lifted specification
+meets the analysis soundness contract for every transfer bundle that satisfies
+#isalocale("sound_nonrelational_transfer"). The values of different globals
+stay apart inside $kappa$, since joins and widening act on each entry of the
+store, but the solver sees one unknown (@fig:shared-deps-one). A write to `g`
+therefore re-evaluates a node that reads only `h`, and the update rule decides
+between widening and narrowing for the whole store (@sec:update-rules): while
+`g` still grows, $kappa$ is widened, and `h` cannot be narrowed until `g` has
+stabilized. Apinis et al., Seidl et al. and Goblint keep one unknown per global
+@apinis12[§5] @seidl26[§3].
 
-For @ch:equations to apply, the lifted specification must meet the analysis
-soundness contract. #isathm("ownership_split_lift_contract") shows this for
-every transfer bundle that satisfies
-#isalocale("sound_nonrelational_transfer").
-#isathm("ownership_split_lift_gen_contract") generalizes the lifter to any
-carrier with a monotone recombination of a local and a global half that
-recovers every value from its two projections. The combined state of
-@ch:cooperation has these operations field by field: a pointwise field splits
-each name by where it is stored, and the order analysis's relation stays wholly
-local. The routed obligations of @sec:eq-routing are discharged for this
-placement as for the default one, for every program and under all three
-context policies. The placement is therefore a configuration choice of
-#isaconst("run_voblint") (#ctor("Program_Globals_Shared"), @sec:headline), and
-#isathm("run_voblint_source_sound") covers it. The command-line interface
-defaults to bounded narrowing under this placement.
+The analyzer does the same. Its lifter #isaconst("keyed_split_spec") keeps each
+program global $x$ at its own unknown $ctor("Analysis_Global") thin x$
+(@fig:shared-deps-per), so the analysis-global names are the program's
+variable names. A transfer reads only
+the globals its edge mentions (#isaconst("edge_global_reads")) and publishes
+only the globals its edge may assign (#isaconst("edge_global_writes")), each
+cut to the part of the result that describes that global. In place of every
+global it does not read, the wrapped transfer receives a value that claims
+nothing about it. A call reads the globals its arguments mention. The initial
+value of each global is published by the program entry like any other write,
+so the solved value of a global already includes its initialization. For two globals `g` and `h`,
+#isathm("read_g_depends_on_g_only") and #isathm("write_h_publishes_h_only")
+check this shape on one reading and one writing edge.
 
-On the program above the shared placement leaves `y` at
+Skipping the unwritten globals is sound because a concrete step leaves them
+unchanged (#isathm("edge_step_frame")). #isathm("keyed_split_contract")
+turns this into the analysis soundness contract over environments
+(@sec:sound-core) for every sound local specification, given monotone
+operations to recombine a local half with a global environment and to cut out
+one global, and one frame law on the carrier: a store that the result
+describes, and that agrees on every unwritten global with a store the read
+environment describes, is described by the result's local half recombined
+with the published globals and the read environment elsewhere. The combined
+state of @ch:cooperation provides these operations field by field
+(#isathm("mcp_keyed_dg_analysis")): a pointwise field splits each name by
+where it is stored, and the order analysis's relation stays wholly local. The
+routed obligations of @sec:eq-routing are discharged for this placement as for
+the default one, for every program and under all three context policies. The
+placement is therefore a configuration choice of #isaconst("run_voblint")
+(#ctor("Program_Globals_Flow_Insensitive"), @sec:headline), and
+#isathm("run_voblint_source_sound") covers it. The command-line interface and
+the playground default to bounded narrowing under this placement.
+
+On the program above the flow-insensitive placement leaves `y` at
 #signval(_mfs("y")) after both calls (claim #claim-ref("mixed-flow-sign-shared")).
 This bound is what the flow-insensitive `Gx` leaves.
-
-All program globals share $kappa$ because #isalocale("analysis_contract")
-fixes the type of analysis-global names to `unit` (@sec:sound-core). Several
-names would need a concretization over an environment that maps each name to
-its value. The values of different globals stay apart inside $kappa$, since
-joins and widening act on each entry of the store, but the solver sees one
-unknown (@fig:shared-deps). A write to `g` therefore re-evaluates a node that
-reads only `h`. The update rule also decides between widening and narrowing
-for the whole store (@sec:update-rules): while `g` still grows, $kappa$ is
-widened, and `h` cannot be narrowed until `g` has stabilized. Apinis et al.,
-Seidl et al. and Goblint keep one unknown per global @apinis12[§5]
-@seidl26[§3]. The manager is already generic in the name type.
 
 // A straight-line procedure over two flow-insensitive globals g and h: which
 // right-hand sides read (grey) and publish to (double tip) the global unknowns,
 // and which nodes the solver re-evaluates when g = g + 1 publishes (orange).
-// (a) Voblint keeps all analysis globals in one global unknown; (b) one global
-// unknown per global, as Goblint does.
+// (a) one global unknown for all globals (ownership_split_lift); (b) one global
+// unknown per global, as in Voblint's flow-insensitive placement and Goblint.
 #let _deps(split) = {
   set text(size: 8pt)
   let hot = if split { (2,) } else { (2, 3) }
@@ -136,14 +149,14 @@ Seidl et al. and Goblint keep one unknown per global @apinis12[§5]
     flow-insensitive globals `g` and `h` (schematic). Grey arrows are reads
     (#ctor("QueryG")), purple double-tipped arrows publications (#ctor("Side")),
     and orange nodes are re-evaluated when `g = g + 1` enlarges the value of
-    `g`; $u_1$, after `x = x + 1`, depends on no global. Voblint keeps all
-    analysis globals in one global unknown (a), so the write to `g` also
-    re-evaluates $u_3$, which reads only `h`. With one global unknown per global
-    (b), as in Goblint, it does not. In (a) each unknown holds a
-    #isatype("dg_state") (grey).],
+    `g`; $u_1$, after `x = x + 1`, depends on no global. With one global
+    unknown for all globals (a), the write to `g` also re-evaluates $u_3$,
+    which reads only `h`. With one global unknown per global (b), as in
+    Voblint's flow-insensitive placement and in Goblint, it does not. In (a)
+    each unknown holds a #isatype("dg_state") (grey).],
   label: <fig:shared-deps>,
 )
 
-The shipped analyzer publishes only to the activation seeds
-(@sec:eq-seed-global). @ch:related compares the instance with
-earlier mechanizations of mixed flow sensitivity.
+The update rule is chosen once per run, for the seeds and every global
+together (@sec:update-rules). @ch:related compares the instance with earlier mechanizations of
+mixed flow sensitivity.

@@ -262,7 +262,7 @@ _Limits._ Precision depends on how the ingredients combine. Which update
 rule decides a check depends on the program (@fig:rules-programs), and whether
 a call-string depth decides the `down` recursion below depends on widening. Under
 the default placement the global unknowns carry only activation seeds. The
-shared placement keeps all program globals in one further global unknown
+flow-insensitive placement adds one global unknown per program global
 (@sec:mixed-flow). A component of the
 combined state cannot read or publish globals, so an analysis with its own analysis globals cannot join it (@sec:coop-limits).
 
@@ -554,17 +554,17 @@ simplified, and #alignment-count("absent") not modeled. It records
 architectural correspondence; no row claims that the two compute the same
 fixpoint.
 
-Four simplifications affect how the results transfer to Goblint. The callee
+Three simplifications affect how the results transfer to Goblint. The callee
 entry is published to a global seed and read back by the entry's local
 unknown, where Goblint writes the local entry directly. Under the warrowing
 rules the seed itself can be widened, so widening is placed differently; the
-direction of that difference is unproved, and no equivalence is claimed. All
-program globals share one global unknown, where Goblint keeps one per declared
-global; only the shared placement of @sec:mixed-flow, which is not the
-default, places program globals there at all. Call targets are resolved statically in every instance.
-The activated analyses share one combined state and one query kind, and their
+direction of that difference is unproved, and no equivalence is claimed. Call
+targets are resolved statically in every instance. The activated analyses share one combined state and one query kind, and their
 components use no globals, where Goblint's MCP also passes events, spawns and
 per-analysis globals and supports many query kinds. There are no threads.
+The flow-insensitive placement of @sec:mixed-flow keys program globals by name,
+one global unknown per declared global, as Goblint keys its globals; it applies
+to all program globals of a run at once.
 
 No agreement rate between Voblint's verdicts and Goblint's is reported. The
 fixtures adapted from Goblint's regression tests record Goblint's annotations

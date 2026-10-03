@@ -45,9 +45,9 @@ semantics of @sec:contexts: for every node $v$ and context $c$,
 $
   #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
-where $conc_(M)$ is the concretization $conc_(D G)(d, g)$ of @sec:sound-core applied to
-the local half $d$ of $sol(v, c)$ and the global half $g$ of the analysis
-global's unknown (@sec:global-unknowns), and the empty set for unknowns
+where $conc_(M)$ is the concretization $conc_(D G)(d, e)$ of @sec:sound-core applied to
+the local half $d$ of $sol(v, c)$ and the environment $e$ that reads each
+analysis global off its unknown in $sol$ (@sec:global-unknowns), and the empty set for unknowns
 outside the solved set. The main result (#isathm("activation_collect_dg_sound"),
 @sec:eq-discharge) shows that every post-solution of the equations meets this
 goal, for every domain and context policy, provided the analysis is sound and
@@ -678,14 +678,15 @@ concretization of its left side.
 
 In Isabelle the lemma is proved inside the locale
 #isalocale("routed_context"), which carries the analysis and
-routing assumptions. The lemma itself adds only the program entry and the
-initial stores:
+routing assumptions. The lemma itself adds only the program entry, the
+initial stores, and that the initial environment of analysis globals lies
+below the solved one:
 #proved("activation_collect_dg_sound")
 A post-solution bounds the solved set only (#isaconst("post_bounded")), with
 closure a separate premise. The locale's remaining premises hold for every
 compiled program: a sound bottom test, well-formed generated programs,
 finitely many edges, one call edge per call node, and seeds distinct from the
-analysis global. The analyzer reaches the theorem through
+unknowns of the analysis globals. The analyzer reaches the theorem through
 #isathm("dg_spec_of_contract") and, per policy,
 #isathm("fun_route_activation_collect_sound") and
 #isathm("entry_state_activation_collect_sound").
@@ -795,12 +796,14 @@ value, the entry state it passes to the callee.
     table.hline(stroke: 0.5pt),
     [$(v, c)$, local], [the state at $v$ in context $c$], [$(d, lbot)$],
     [#isaconst("Activation_Seed"), global], [an entry value published by a call], [$(e, lbot)$],
-    [#isaconst("Analysis_Global"), global], [a fact an analysis shares], [$(lbot, g)$],
+    [#isaconst("Analysis_Global") $v$, global], [the analysis global $v$], [$(lbot, g)$],
+    [#isaconst("Analysis_Buffer"), global], [a node's own global half], [$(lbot, g)$],
     table.hline(),
   ),
   placement: auto,
   caption: [Which half of #isatype("dg_state") each kind of unknown uses. The
-    global unknowns are named by #isatype("global_unknown").],
+    global unknowns are named by #isatype("global_unknown"). No selectable
+    analysis publishes to #isaconst("Analysis_Buffer").],
 ) <tab:eq-carrier>
 
 Transfers never see the pair or the seeds. The manager hands a transfer the
@@ -816,10 +819,10 @@ lattice structure keeps the Isabelle proofs simple.
 
 === Buffering repeated publications <sec:eq-buffer>
 
-One right-hand side can publish to the same seed twice. The generator already
-folds the node's own publications to the analysis global into one, but two
-call edges that resume at the same node are separate contributions, and when
-both are routed to the same callee context they write the same seed
+One right-hand side can publish to the same global unknown twice. Two edges
+into a node may both assign the flow-insensitive global `g` of @sec:mixed-flow,
+and two call edges that resume at the same node are separate contributions:
+when both are routed to the same callee context they write the same seed
 $ctor("Activation_Seed") thin p space c'$. Declaratively the two writes mean one bound:
 $
   #ctor("Side") (ctor("Activation_Seed") thin p space c', a); #ctor("Side") (ctor("Activation_Seed") thin p space c', b)

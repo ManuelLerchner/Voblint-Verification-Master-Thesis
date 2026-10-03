@@ -801,7 +801,7 @@ argv = [
   "--analysis",
   "sign",
   "--program-globals",
-  "shared",
+  "flow-insensitive",
   "--graph-snapshot",
   "thesis/shared/programs/mixed-flow.vimp",
 ]
