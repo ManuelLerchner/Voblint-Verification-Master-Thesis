@@ -44,7 +44,7 @@
 // Both are text, not math alphabets: the math font's sans and bold ranges
 // are not what a reader expects a keyword or a constructor to look like.
 #let keyw(x) = text(weight: "bold", fill: vb.keyword, x)
-#let ctor(x) = text(font: "Latin Modern Sans", fill: vb.type, x)
+#let ctor(x, thy: none) = text(font: "Latin Modern Sans", fill: vb.type, x)
 #let skipC = keyw("skip")
 #let assign(x, e) = $#x := #e$
 #let pstep = $arrow.r_p$
@@ -73,7 +73,7 @@
 #let tracepath = $italic("path")$
 #let callerof = $italic("caller")$
 #let Root(p) = $ctor("Root") thick #p$
-#let CallT(t, p) = $ctor("Call") thick #t med #p$
+#let CallT(t, p) = $ctor("Call", thy: "Activation_Trace_Def") thick #t med #p$
 #let ResumeT(t, u, p) = $ctor("Resume") thick #t med #u med #p$
 #let extend(t, x) = $#t med dot.c med #x$
 

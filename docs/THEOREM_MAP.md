@@ -66,15 +66,17 @@ node was solved at would be false.
 
 ## Configuration coverage of the source-level endpoint
 
-`run_voblint` takes an activation list, a global update rule and a context
-policy. An activation list that is empty or repeats an analysis answers
+`run_voblint` takes an activation list, a global update rule, a context
+policy and a placement of program globals. An activation list that is empty or repeats an analysis answers
 `Invalid_Activation`; a program that fails the well-formedness check answers
 `Malformed_Program`. Every other combination is check-producing.
 `solved_table` hands the table of the combined state's rule-parametric
-registration for the chosen policy (`mcp_rule`, `mcp_es_rule` or `mcp_cs_rule`)
+registration for the chosen policy and placement (`mcp_rule`, `mcp_es_rule`,
+`mcp_cs_rule`, or their flow-insensitive counterparts `mcp_split_rule`,
+`mcp_split_es_rule`, `mcp_split_cs_rule`)
 to `run_result_of`, so `res_checks` is `result_checks_of (classify_checks_verdicts ...)`
 and the endpoint's check argument applies: every distinct nonempty list over the
-5 domains x 4 rules x 3 context policies, the call string at every bound `k`,
+6 analyses x 5 rules x 3 context policies x 2 placements, the call string at every bound `k`,
 `k = 0` included.
 
 Every combination carries the source-level theorem. Each context policy is one

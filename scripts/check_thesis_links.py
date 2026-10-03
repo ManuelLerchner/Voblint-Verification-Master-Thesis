@@ -19,7 +19,8 @@ to read. A name with no verified anchor is a build failure, not a dead link.
     scripts/check_thesis_links.py --live    fetch the deployed pages and verify
     scripts/check_thesis_links.py --list    show what is linked
 
-`--write` and `--check` read the rendered theories under build/isabelle-html, which a
+`--write` and `--check` read the anchors of the rendered theories under
+build/isabelle-html through `isar project anchors` (isar-tools), which a
 working copy usually does not have (or has stale). `--lenient` turns that from
 a failure into a warning, which is what the local hook and the day-to-day
 `make check` use. Even in lenient mode, every citation must have a stored
@@ -43,7 +44,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
-from urllib.parse import quote
+from urllib.parse import quote, unquote
 
 import tomllib
 
@@ -57,14 +58,24 @@ KIND_ANCHORS = {
     "const": ("const",),
     "type": ("type",),
     "locale": ("locale",),
-    # A theorem environment's `isa:` name: whatever the theories say it is.
-    # A class or locale also has an internal constant; the declaration comes first.
+    # An untyped citation (a theorem environment's `isa:`, a `thy` snippet):
+    # whatever the theories say it is. A class or locale also has an internal
+    # constant; the declaration comes first. The map records it under the
+    # typed key of the anchor it resolved to, and `names` points there.
     "any": ("fact", "thm", "locale", "const", "type"),
     # A constructor in notation links to its datatype's constant anchor when
     # one exists; notation for things the theories do not define stays plain.
     "ctor": ("const",),
     "session": ("page",),
     "theory": ("page",),
+}
+# The typed key an anchor kind is stored under.
+MACRO_KIND = {
+    "fact": "thm",
+    "thm": "thm",
+    "const": "const",
+    "type": "type",
+    "locale": "locale",
 }
 # `thy:` qualifies a name that several theories define: isaconst("eq", thy: "Basics_side").
 # `display:` changes only the printed text; the link target stays the cited name.
@@ -116,63 +127,99 @@ DEFINITIONS: dict[tuple[str, str], set[str]] = {}
 SCOPES: set[str] = set()
 
 
-def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+def _index_rel(index: dict[tuple[str, str], str], rel: str) -> None:
     path = Path(rel)
     if path.name == "index.html":
         index.setdefault((path.parent.name, "page"), rel)
     else:
         index.setdefault((f"{path.parent.name}.{path.stem}", "page"), rel)
+
+
+def _index_page(index: dict[tuple[str, str], str], rel: str, body: str) -> None:
+    """A fetched page's anchors, for the published site, where no build directory exists."""
+    _index_rel(index, rel)
     for m in ANCHOR.finditer(body):
         escaped, kind = m.group(1), m.group(2)
-        qualified = escaped.replace("&lt;", "<").replace("&gt;", ">")
-        if rel.startswith(("Voblint/", "Unsorted/TD/")):
-            # A datatype scopes its constructors as a locale scopes its members,
-            # so two datatypes with an `Answer` make `Answer` ambiguous.
-            if kind in ("locale", "class", "type"):
-                SCOPES.add(qualified)
-            if kind in ("const", "type", "locale"):
-                DEFINITIONS.setdefault((qualified.split(".")[-1], kind), set()).add(
-                    qualified
-                )
-        anchor = quote(f"{qualified}|{kind}", safe="._()'")
-        parts = qualified.split(".")
-        # Every suffix, including the theory-qualified name a `thy:` citation uses.
-        # `Theory.name` also reaches a member of a locale or datatype, which is
-        # how `thy:` qualifies a constructor: ctor("Answer", thy: "Basics_side").
-        keys = [".".join(parts[i:]) for i in range(len(parts))]
-        if len(parts) == 3:
-            keys.append(f"{parts[0]}.{parts[2]}")
-        for dotted in keys:
-            key = (dotted, kind)
-            target = f"{rel}#{anchor}"
+        _index_anchor(
+            index, rel, escaped.replace("&lt;", "<").replace("&gt;", ">"), kind
+        )
 
-            # Keep current project exports ahead of stale/library duplicates.
-            # Per-domain and example sessions interpret the generic locales, so
-            # a copy there is an instance, not the definition.
-            # Among library pages, the HOL session defines what HOL-IMP and
-            # HOL-Library only redefine or interpret (lfp, mono).
-            # A named interpretation (`..._Interp`) copies a locale's facts;
-            # the generic locale entity is the definition a citation means.
-            # The vendored solver's sessions render under Unsorted/, but their
-            # owner pages define what the project cites (widen, narrow).
-            # A name several project theories define is cited with `thy:`
-            # (see definitions_of), so the ranking never has to guess between them.
-            def rank(
-                value: str,
-            ) -> tuple[bool, bool, bool, bool, bool, str]:
-                page, _, entity = value.partition("#")
-                project = page.startswith(("Voblint/", "Unsorted/TD/"))
-                return (
-                    not page.startswith("Voblint/"),
-                    not project,
-                    not (project or page.startswith("HOL/HOL/")),
-                    "_Interp." in entity,
-                    "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
-                    value,
-                )
 
-            if key not in index or rank(target) < rank(index[key]):
-                index[key] = target
+def _index_anchor(
+    index: dict[tuple[str, str], str], rel: str, qualified: str, kind: str
+) -> None:
+    if rel.startswith(("Voblint/", "Unsorted/TD/")):
+        # A datatype scopes its constructors as a locale scopes its members,
+        # so two datatypes with an `Answer` make `Answer` ambiguous.
+        if kind in ("locale", "class", "type"):
+            SCOPES.add(qualified)
+        if kind in ("const", "type", "locale"):
+            DEFINITIONS.setdefault((qualified.split(".")[-1], kind), set()).add(
+                qualified
+            )
+    anchor = quote(f"{qualified}|{kind}", safe="._()'")
+    parts = qualified.split(".")
+    # Every suffix, including the theory-qualified name a `thy:` citation uses.
+    # `Theory.name` also reaches a member of a locale or datatype, which is
+    # how `thy:` qualifies a constructor: ctor("Answer", thy: "Basics_side").
+    keys = [".".join(parts[i:]) for i in range(len(parts))]
+    if len(parts) == 3:
+        keys.append(f"{parts[0]}.{parts[2]}")
+    for dotted in keys:
+        key = (dotted, kind)
+        target = f"{rel}#{anchor}"
+
+        # Keep current project exports ahead of stale/library duplicates.
+        # Per-domain and example sessions interpret the generic locales, so
+        # a copy there is an instance, not the definition.
+        # Among library pages, the HOL session defines what HOL-IMP and
+        # HOL-Library only redefine or interpret (lfp, mono).
+        # A named interpretation (`..._Interp`) copies a locale's facts;
+        # the generic locale entity is the definition a citation means.
+        # The vendored solver's sessions render under Unsorted/, but their
+        # owner pages define what the project cites (widen, narrow).
+        # A name several project theories define is cited with `thy:`
+        # (see definitions_of), so the ranking never has to guess between them.
+        def rank(
+            value: str,
+        ) -> tuple[bool, bool, bool, bool, bool, bool, str]:
+            page, _, entity = value.partition("#")
+            project = page.startswith(("Voblint/", "Unsorted/TD/"))
+            return (
+                not page.startswith("Voblint/"),
+                not project,
+                not (project or page.startswith("HOL/HOL/")),
+                _interpretation_copy(entity),
+                "_Interp." in entity,
+                "/Voblint_Analysis_" in page or "/Voblint_Examples" in page,
+                value,
+            )
+
+        if key not in index or rank(target) < rank(index[key]):
+            index[key] = target
+
+
+def _interpretation_copy(entity: str) -> bool:
+    """Whether an anchor names a fact through an interpretation prefix.
+
+    `interpretation mcp_rule: dg_analysis ...` renders every fact of the locale
+    again as `MCP_Analyses.mcp_rule.<fact>`, on a page that never states it. The
+    declaration's own anchor is qualified by the locale, `DG_Analysis.dg_analysis.
+    <fact>`, so a qualifier that is not a known locale or class marks a copy.
+    """
+    parts = unquote(entity).partition("|")[0].split(".")
+    return len(parts) >= 3 and ".".join(parts[:-1]) not in SCOPES
+
+
+def _collect_scopes(rows: list[tuple[str, str, str]]) -> None:
+    """Record every locale and class before ranking, which reads SCOPES."""
+    for rel, qualified, kind in rows:
+        if rel.startswith(("Voblint/", "Unsorted/TD/")) and kind in (
+            "locale",
+            "class",
+            "type",
+        ):
+            SCOPES.add(qualified)
 
 
 def index_live(
@@ -194,12 +241,12 @@ def index_live(
         if sessions in m.group(1)
     ]
     index: dict[tuple[str, str], str] = {}
-    pages = 0
+    fetched: list[tuple[str, str]] = []
     for session in sorted(names):
         listing = fetch(f"{base}Voblint/{session}/index.html", retries)
         if listing is None:
             continue
-        _index_page(index, f"Voblint/{session}/index.html", listing)
+        fetched.append((f"Voblint/{session}/index.html", listing))
         for m in re.finditer(r'href="([^"/]+\.html)"', listing):
             page = m.group(1)
             # A session that elaborates another session's theory presents a
@@ -210,8 +257,18 @@ def index_live(
             body = fetch(base + rel, retries)
             if body is None:
                 continue
-            _index_page(index, rel, body)
-            pages += 1
+            fetched.append((rel, body))
+    # Ranking reads SCOPES, so every page's locales are known before any is indexed.
+    _collect_scopes(
+        [
+            (rel, m.group(1).replace("&lt;", "<").replace("&gt;", ">"), m.group(2))
+            for rel, body in fetched
+            for m in ANCHOR.finditer(body)
+        ]
+    )
+    for rel, body in fetched:
+        _index_page(index, rel, body)
+    pages = sum(not rel.endswith("/index.html") for rel, _ in fetched)
     print(
         f"check_thesis_links: indexed {len(index)} anchor(s) from {pages} "
         f"published page(s)",
@@ -221,10 +278,34 @@ def index_live(
 
 
 def index_anchors() -> dict[tuple[str, str], str]:
-    """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html."""
+    """Map (entity name, anchor kind) -> path#anchor, relative to build/isabelle-html.
+
+    `isar project anchors` reads the build's anchors, HOL and library sessions
+    included, and leaves out the copy a session presents of another session's
+    theory (`<Owner>.<Theory>.html`), so a citation reaches the owner's page.
+    """
+    listing = json.loads(
+        subprocess.run(
+            [
+                sys.executable,
+                "-m",
+                "isar_tools",
+                "project",
+                "anchors",
+                "--browser-info",
+                str(HTML),
+                "--format",
+                "json",
+            ],
+            capture_output=True,
+            text=True,
+            check=True,
+        ).stdout
+    )
     index: dict[tuple[str, str], str] = {}
-    # Prefer this project's definitions over identically named HOL examples.
-    # Old ungrouped exports may also coexist with the current Voblint group.
+    # Session and theory pages are cited as pages; an index page carries no anchor.
+    # The first page indexed under a name wins: this project's current export
+    # before old ungrouped exports that may coexist with it.
     for path in sorted(
         HTML.rglob("*.html"),
         key=lambda p: (
@@ -233,12 +314,15 @@ def index_anchors() -> dict[tuple[str, str], str]:
             p.as_posix(),
         ),
     ):
-        # A session that elaborates another session's theory presents a copy
-        # named `<Owner>.<Theory>.html`; cite the owner's page instead.
-        if "." in path.stem:
-            continue
-        rel = path.relative_to(HTML).as_posix()
-        _index_page(index, rel, path.read_text(errors="ignore"))
+        if "." not in path.stem:
+            _index_rel(index, path.relative_to(HTML).as_posix())
+    rows = [
+        (row["url"].partition("#")[0], row["anchor"].rpartition("|")[0], row["kind"])
+        for row in listing["anchors"]
+    ]
+    _collect_scopes(rows)
+    for rel, qualified, kind in rows:
+        _index_anchor(index, rel, qualified, kind)
     return index
 
 
@@ -320,14 +404,35 @@ def manifest_citations(shared: Path) -> list[tuple[Path, int, str, str]]:
 
 def resolve(
     index: dict[tuple[str, str], str] | None = None,
-) -> tuple[dict[str, str], list[str]]:
+) -> tuple[dict[str, str], dict[str, str], list[str]]:
+    """The typed link map, the typed key of each untyped citation, and failures."""
     if index is None:
         index = index_anchors()
     links: dict[str, str] = {}
+    names: dict[str, str] = {}
     unresolved: list[str] = []
+
+    def store(
+        path: Path, line: int, kind: str, name: str, target: str, key_name: str
+    ) -> None:
+        if kind != "any":
+            links[f"{kind}:{key_name}"] = target
+            return
+        anchor_kind = target.rsplit("%7C", 1)[-1]
+        key = f"{MACRO_KIND[anchor_kind]}:{key_name}"
+        if links.get(key, target) != target:
+            unresolved.append(
+                f"  {path.relative_to(REPO)}:{line}: {name} resolves to {target}, "
+                f"but {key} already links {links[key]}"
+            )
+            return
+        links[key] = target
+        names[name] = key
+
     for path, line, kind, name in cited():
-        key = f"{kind}:{name}"
-        if key in links:
+        if (name if kind == "any" else f"{kind}:{name}") in (
+            names if kind == "any" else links
+        ):
             continue
         rivals = definitions_of(name, kind)
         home = snippet_theory(name) if kind == "any" else None
@@ -339,7 +444,7 @@ def resolve(
                 if (f"{home}.{name}", anchor_kind) in index
             ]
             if scoped:
-                links[key] = scoped[0]
+                store(path, line, kind, name, scoped[0], f"{home}.{name}")
                 continue
         if len(rivals) > 1:
             unresolved.append(
@@ -355,19 +460,20 @@ def resolve(
         if hits:
             # An untyped theorem-header citation may name a project datatype
             # while HOL has an unrelated constant with the same short name.
-            links[key] = min(
+            target = min(
                 hits,
                 key=lambda hit: (
                     not hit.startswith("Voblint/"),
                     not hit.startswith("Unsorted/TD/"),
                 ),
             )
+            store(path, line, kind, name, target, name)
         elif kind != "ctor":
             unresolved.append(
                 f"  {path.relative_to(REPO)}:{line}: {name} has no "
                 f"{'/'.join(KIND_ANCHORS[kind])} anchor in the rendered theories"
             )
-    return links, unresolved
+    return links, names, unresolved
 
 
 def snippet_theory(name: str) -> str | None:
@@ -414,11 +520,13 @@ def check_coverage() -> int:
         print("check_thesis_links: missing HTTP(S) base URL", file=sys.stderr)
         return 1
     links = data.get("links", {})
+    names = data.get("names", {})
     missing = []
     for path, line, kind, name in cited():
         if kind == "ctor":
             continue
-        target = links.get(f"{kind}:{name}", "")
+        key = names.get(name, "") if kind == "any" else f"{kind}:{name}"
+        target = links.get(key, "")
         page, _, anchor = target.partition("#")
         if not page.endswith(".html") or (
             kind not in ("session", "theory") and not anchor
@@ -549,7 +657,7 @@ def main() -> int:
                 args.lenient,
             )
 
-    links, unresolved = resolve(index)
+    links, names, unresolved = resolve(index)
     if unresolved:
         detail = (
             f"{len(unresolved)} cited entity/entities have no definition "
@@ -561,7 +669,10 @@ def main() -> int:
         return skip_or_fail(detail, False)
 
     payload = (
-        json.dumps({"base": base, "links": links}, indent=2, sort_keys=True) + "\n"
+        json.dumps(
+            {"base": base, "links": links, "names": names}, indent=2, sort_keys=True
+        )
+        + "\n"
     )
 
     if args.list:

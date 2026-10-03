@@ -78,9 +78,13 @@ The D/G interface separates flow-sensitive local facts (`D`) from shared
 side-effect information (`G`). A sound instance supplies local transfer,
 callee-entry, return-combine, publication, and read obligations.
 
-The shipped domains use the whole-state specification: the local unknown carries
-the entire abstract state, VIMP globals included, and the global channel stays
-inert. `Rel_Order_Domain` instantiates the same interface at a relational
+By default the shipped domains use the whole-state specification: the local
+unknown carries the entire abstract state, VIMP globals included, and the global
+channel stays inert. Under flow-insensitive program globals the keyed lifter
+(`keyed_split_spec`) keeps each declared global at its own global unknown; the
+contract is stated over an environment of global values, so an edge reads only
+the globals it mentions and publishes only those it may assign
+(`keyed_split_contract`). `Rel_Order_Domain` instantiates the same interface at a relational
 carrier. Context-sensitive
 instances index local facts by activation keys while routing shared information
 through the analysis-defined global interface.

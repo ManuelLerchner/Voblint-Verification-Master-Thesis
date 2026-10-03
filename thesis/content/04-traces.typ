@@ -128,7 +128,7 @@ first two and #isathm("source_run_has_activation_trace") relates the second to t
 An _activation-local trace_ is one activation of one procedure, together with
 the activation that called it and the calls it has already finished.
 
-#definition(name: [Activation-local trace], isa: "activation_trace")[
+#definition(name: [Activation-local trace], isa: "activation_trace", cmd: "datatype")[
   A trace $tau$ is one of
   #set enum(numbering: "(i)")
   + $#Root($pi$)$ — the initial activation of the program, with local path $pi$;
@@ -153,12 +153,12 @@ execution is therefore not a single object here. It is a family of traces linked
 by those fields, and the one that is "currently running" is the one whose path is
 being extended.
 
-*The caller is stored, not searched for.* Because a $ctor("Call")$ carries the
+*The caller is stored, not searched for.* Because a $ctor("Call", thy: "Activation_Trace_Def")$ carries the
 exact caller value — frozen at the moment of the call, with its path ending at
 the call node — a completed callee can be composed back into precisely the
 activation that spawned it. Nothing has to scan a stack for a compatible frame.
 
-#definition(name: [Creating caller], isa: "caller_of")[
+#definition(name: [Creating caller], isa: "caller_of", cmd: "fun")[
   $
                       #callerof (#Root($pi$)) & = bot \
               #callerof (#CallT($tau$, $pi$)) & = tau \
@@ -222,7 +222,7 @@ semantics without redefining it.
   caption: [One activation-local trace for the recursive factorial
     program below, after the inner call to #raw("f(1)") has returned. The
     running activation is the outermost $ctor("Resume")$; the blue chain is
-    #callerof, which descends through the $ctor("Resume")$ to the $ctor("Call")$
+    #callerof, which descends through the $ctor("Resume")$ to the $ctor("Call", thy: "Activation_Trace_Def")$
     that created the activation and on to $ctor("Root")$, while the finished
     callee hangs off to the right. A path through the CFG would be a single
     line. This is a tree, and the difference is exactly what lets the semantics
@@ -236,7 +236,7 @@ Not every term of the shape above describes an execution. Validity is the
 inductive set of traces that the graph can actually produce, with one rule per
 phenomenon the graph has.
 
-#definition(name: [Valid traces], isa: "valid_activation_trace")[
+#definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
   For a global classifier $italic("gs")$, a graph $cfg$ and a set $S$ of initial stores,
   $#validltr$ is the least set closed under the four rules of
   @fig:valid-rules.
@@ -261,7 +261,7 @@ phenomenon the graph has.
     )),
     prooftree(rule(
       name: [Call],
-      $ctor("Call") thick tau thick [(ctor("Entry") thin p, e)] in cal(V)$,
+      $ctor("Call", thy: "Activation_Trace_Def") thick tau thick [(ctor("Entry") thin p, e)] in cal(V)$,
       $tau in cal(V)$,
       $italic("node")(tau) attach(arrow.r.dashed, t: a) ctor("Entry") thin p$,
       $e = italic("enter")(a, italic("state")(tau))$,
@@ -369,7 +369,7 @@ callee's own structure.
 
 With validity fixed, the set an analysis must over-approximate is immediate.
 
-#definition(name: [Collecting semantics], isa: "node_collect")[
+#definition(name: [Collecting semantics], isa: "node_collect", cmd: "definition")[
   $ #ltrcollect (v) = #setcomp($#sinkstore (tau)$, $tau in #validltr ", " #sinknode (tau) = v$) $
 ]
 
@@ -407,7 +407,7 @@ to its own context (@ch:analysis-interface), so one concrete call can legitimate
 be admitted at more than one context. A function cannot express that; a relation
 can.
 
-#definition(name: [Call-context relation], isa: "call_context_rel")[
+#definition(name: [Call-context relation], isa: "call_context_rel", cmd: "type_synonym")[
   A call-context relation $#ctxrel$ takes a call node, the caller's context, the
   call's static information, the caller's store, the entered store, and a
   candidate callee context, and says whether that candidate is admissible.
@@ -416,7 +416,7 @@ can.
   (#isaconst("call_context_rel_of_fun")).
 ]
 
-#definition(name: [Admissible context of a call], isa: "admits_call_context")[
+#definition(name: [Admissible context of a call], isa: "admits_call_context", cmd: "definition")[
   $#admits (u, c, p, s, e, c')$ holds when some
   #isaconst("calls") edge of $cfg$ leaves $u$, enters $p$, produces exactly the
   entry store $e = #callenter (a, s)$, and $#ctxrel$ admits $c'$ for it.
@@ -428,7 +428,7 @@ about that, exactly as the Return rule of @fig:valid-rules does.
 
 A trace's context is then read off its structure.
 
-#definition(name: [Context of a trace], isa: "activation_context_rel")[
+#definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
   $#tracectx (tau, c)$ — "$tau$ may carry $c$" — is
   inductively defined by
   #set enum(numbering: "(i)")
@@ -444,7 +444,11 @@ context of an activation is therefore fixed when the activation is created and
 unchanged by every call it later makes and returns from — _activation-stable_,
 in the terminology of @ch:equations.
 
-#definition(name: [Context-indexed collecting semantics], isa: "activation_collect")[
+#definition(
+  name: [Context-indexed collecting semantics],
+  isa: "activation_collect",
+  cmd: "definition",
+)[
   $
     #actcollect (v, c) = #setcomp($#sinkstore (tau)$, $tau in #validltr ", " #sinknode (tau) = v ", " #tracectx (tau, c)$)
   $
@@ -477,7 +481,7 @@ Covering is not automatic. An empty relation admits nothing, so every
 $#actcollect (v, c)$ would be empty — vacuously safe and useless. The
 condition that rules this out is:
 
-#definition(name: [Conditional totality], isa: "call_context_total_on")[
+#definition(name: [Conditional totality], isa: "call_context_total_on", cmd: "definition")[
   $#ctxtotal$ holds when, at every call edge of $cfg$,
   every store that $#cover$ admits at the call site has _some_ admissible callee
   context.
@@ -498,7 +502,7 @@ Five local conditions suffice. They are local in the strong sense: each mentions
 one step of the concrete semantics, none mentions a trace, and none mentions how
 $#cover$ was computed.
 
-#definition(name: [Coverage contract], isa: "activation_coverage")[
+#definition(name: [Coverage contract], isa: "activation_coverage", cmd: "locale")[
   #set enum(numbering: "1.")
   + #oblig("INIT"). Every initial store is covered at the entry node in the initial
     context.

@@ -2,7 +2,6 @@ section \<open>Voblint: a verified abstract interpreter for VIMP\<close>
 
 theory Voblint
   imports
-    "Voblint_CLI.Analysis_Render"
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
     Example_End_To_End_Certificate
     "Voblint_Examples_Sign.Example_Sign_DG_CallString_K2"
@@ -54,15 +53,18 @@ text \<open>
   @{thm [source] run_voblint_source_sound}, in
   \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, says: run the source program, stop
   wherever you like, and ask any configuration --- a list of active analyses, a global
-  update rule and a context policy --- for a report. There is a graph node and frame
-  stack for where you stopped, some state the report holds at that node describes your
-  store, and every definite verdict the report gives there holds of that store.
+  update rule, a context policy and a placement of program globals --- for a report.
+  There is a graph node and frame stack for where you stopped, some state the report
+  holds at that node describes your store, and every definite verdict the report gives
+  there holds of that store.
 
   Under a context policy the report holds one state per point \<^emph>\<open>and\<close> context.  A
   store reaching a point then lies in the state filed under at least one context its
   own call history is admitted at --- exactly one for a call string, possibly several
   under entry-state routing; quantifying over every covered context would be false,
-  since another activation's state need not describe this store.
+  since another activation's state need not describe this store. Joining the states
+  of all contexts at the node gives one state that does describe it
+  (@{thm [source] run_voblint_source_sound_joined}), at the price of precision.
 
   A caller owes nothing beyond the answer itself.  \<^const>\<open>run_voblint\<close> solves with the
   executable solver, which answers only where the solve terminates, so an analysed

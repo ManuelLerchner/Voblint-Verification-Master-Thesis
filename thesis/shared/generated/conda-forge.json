@@ -1,0 +1,480 @@
+{
+  "date": "2026-09-27",
+  "platforms": [
+    "osx-arm64",
+    "osx-64",
+    "linux-64"
+  ],
+  "packages": {
+    "ocaml": {
+      "opam": "ocaml",
+      "version": "5.4.0",
+      "tier": 0,
+      "deps": [],
+      "for": [
+        "native",
+        "browser",
+        "format"
+      ],
+      "via": null,
+      "available": true,
+      "newest": "5.4.0",
+      "missing": []
+    },
+    "gmp": {
+      "opam": "conf-gmp",
+      "version": "6.3.0",
+      "tier": 0,
+      "deps": [],
+      "for": [
+        "native"
+      ],
+      "via": null,
+      "available": true,
+      "newest": "6.3.0",
+      "missing": []
+    },
+    "binaryen": {
+      "opam": "binaryen",
+      "version": "119",
+      "tier": 0,
+      "deps": [],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": true,
+      "newest": "121",
+      "missing": []
+    },
+    "ocaml-dune": {
+      "opam": "dune",
+      "version": "3.22.0",
+      "tier": 1,
+      "deps": [
+        "ocaml"
+      ],
+      "for": [
+        "native",
+        "browser",
+        "format"
+      ],
+      "via": null,
+      "available": true,
+      "newest": "3.24.2",
+      "missing": []
+    },
+    "ocaml-findlib": {
+      "opam": "ocamlfind",
+      "version": "1.9.8",
+      "tier": 1,
+      "deps": [
+        "ocaml"
+      ],
+      "for": [
+        "native"
+      ],
+      "via": "update of ocaml-findlib-feedstock",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-menhir": {
+      "opam": "menhir",
+      "version": "20250912",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "native",
+        "browser",
+        "format"
+      ],
+      "via": null,
+      "available": true,
+      "newest": "20250912",
+      "missing": []
+    },
+    "ocaml-zarith": {
+      "opam": "zarith",
+      "version": "1.14",
+      "tier": 2,
+      "deps": [
+        "ocaml-findlib",
+        "gmp"
+      ],
+      "for": [
+        "native"
+      ],
+      "via": "update of ocaml-zarith-feedstock",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-zarith-stubs-js": {
+      "opam": "zarith_stubs_js",
+      "version": "0.17.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "needs an upstream release with the wasm runtime",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-dune-build-info": {
+      "opam": "dune-build-info",
+      "version": "3.22.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "format"
+      ],
+      "via": "new output of ocaml-dune-feedstock",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-csexp": {
+      "opam": "csexp",
+      "version": "1.5.2",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "format"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-re": {
+      "opam": "re",
+      "version": "1.14.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "format"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-cmdliner": {
+      "opam": "cmdliner",
+      "version": "2.1.1",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser",
+        "format"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-yojson": {
+      "opam": "yojson",
+      "version": "3.0.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-seq": {
+      "opam": "seq",
+      "version": "0.3.1",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-sexplib0": {
+      "opam": "sexplib0",
+      "version": "0.17.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-stdlib-shims": {
+      "opam": "stdlib-shims",
+      "version": "0.3.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-ppx-derivers": {
+      "opam": "ppx_derivers",
+      "version": "1.2.1",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-compiler-libs": {
+      "opam": "ocaml-compiler-libs",
+      "version": "0.17.0",
+      "tier": 2,
+      "deps": [
+        "ocaml-dune"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-gen": {
+      "opam": "gen",
+      "version": "1.1",
+      "tier": 3,
+      "deps": [
+        "ocaml-seq"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": "conda-forge/staged-recipes#34872",
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-ppxlib": {
+      "opam": "ppxlib",
+      "version": "0.38.0",
+      "tier": 3,
+      "deps": [
+        "ocaml-sexplib0",
+        "ocaml-stdlib-shims",
+        "ocaml-ppx-derivers",
+        "ocaml-compiler-libs"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-sedlex": {
+      "opam": "sedlex",
+      "version": "3.7",
+      "tier": 4,
+      "deps": [
+        "ocaml-ppxlib",
+        "ocaml-gen"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocamlformat": {
+      "opam": "ocamlformat",
+      "version": "0.29.0",
+      "tier": 5,
+      "deps": [
+        "ocaml-csexp",
+        "ocaml-cmdliner",
+        "ocaml-re",
+        "ocaml-menhir",
+        "ocaml-dune-build-info"
+      ],
+      "for": [
+        "format"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-js-of-ocaml-compiler": {
+      "opam": "js_of_ocaml-compiler",
+      "version": "6.4.1",
+      "tier": 5,
+      "deps": [
+        "ocaml-cmdliner",
+        "ocaml-ppxlib",
+        "ocaml-sedlex",
+        "ocaml-yojson",
+        "ocaml-menhir"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-js-of-ocaml": {
+      "opam": "js_of_ocaml",
+      "version": "6.4.1",
+      "tier": 6,
+      "deps": [
+        "ocaml-js-of-ocaml-compiler"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    },
+    "ocaml-wasm-of-ocaml-compiler": {
+      "opam": "wasm_of_ocaml-compiler",
+      "version": "6.4.1",
+      "tier": 6,
+      "deps": [
+        "ocaml-js-of-ocaml-compiler",
+        "binaryen"
+      ],
+      "for": [
+        "browser"
+      ],
+      "via": null,
+      "available": false,
+      "newest": null,
+      "missing": [
+        "osx-arm64",
+        "osx-64",
+        "linux-64"
+      ]
+    }
+  }
+}

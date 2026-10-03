@@ -543,7 +543,7 @@
         "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
         "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst",
         "session": "Voblint_CFG",
-        "expands": "valid_activation_trace \\<G> g S",
+        "expands": "\\<T>\\<^bsub>\\<G>,g,S\\<^esub>",
         "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
         "shorthand_for": "valid_activation_trace"
       }
@@ -587,7 +587,7 @@
         "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
         "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst",
         "session": "Voblint_CFG",
-        "expands": "node_collect \\<G> g S",
+        "expands": "\\<C>\\<^bsub>\\<G>,g,S\\<^esub>",
         "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
         "shorthand_for": "node_collect"
       }
@@ -631,7 +631,7 @@
         "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
         "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst",
         "session": "Voblint_CFG",
-        "expands": "activation_collect \\<G> R c\\<^sub>0 g S",
+        "expands": "\\<A>\\<^bsub>\\<G>,R,c\\<^sub>0,g,S\\<^esub>",
         "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
         "shorthand_for": "activation_collect"
       }

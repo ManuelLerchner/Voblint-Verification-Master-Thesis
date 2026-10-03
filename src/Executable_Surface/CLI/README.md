@@ -25,9 +25,10 @@ part that really does see all five.
 
 | Term | Meaning |
 | --- | --- |
-| registration | an interpretation of `dg_analysis` at one context policy: its solve, result table and report paired with their soundness endpoints, over an arbitrary `imp_prog`. Each domain owns one context-free registration in its own session, parametric in the global update rule (`sign_rule`, and so on; Interval also keeps its own entry-state and call-string registrations for its example theories). The registrations `run_voblint` actually reads -- `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` -- run every active analysis at once and are owned here, parametric in the activation list besides. |
-| configuration | what a caller chooses: an activation (a nonempty, distinct `analysis_domain list`), a `globals_rule` and a `context_mode`. Every well-formed combination is analysed; an empty activation or one naming an analysis twice is refused (`Invalid_Activation`). |
-| global update rule | how the solver merges a value side-effected into a global unknown: joined, joined per origin, warrowed, or warrowed per origin (`globals_rule`). Local unknowns are warrowed at widening points under every rule. |
+| registration | an interpretation of `dg_analysis` at one context policy: its solve, result table and report paired with their soundness endpoints, over an arbitrary `imp_prog`. Each domain owns one context-free registration in its own session, parametric in the global update rule (`sign_rule`, and so on; Interval also keeps its own entry-state and call-string registrations for its example theories). The registrations `run_voblint` actually reads -- `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule`, and with flow-insensitive program globals `mcp_split_rule`, `mcp_split_es_rule`, `mcp_split_cs_rule` -- run every active analysis at once and are owned here, parametric in the activation list besides. |
+| configuration | what a caller chooses: an activation (a nonempty, distinct `analysis_domain list`), a `globals_rule`, a `context_mode` and a `program_globals` placement. Every well-formed combination is analysed; an empty activation or one naming an analysis twice is refused (`Invalid_Activation`). |
+| global update rule | how the solver merges a value side-effected into a global unknown: joined, joined per origin, warrowed, warrowed per origin, or warrowed per origin with bounded narrowing (`globals_rule`). Local unknowns are warrowed at widening points under every rule. |
+| program globals placement | where a program's declared globals live (`program_globals`): flow-sensitively in each point's own state, or flow-insensitively, each at its own global unknown `Analysis_Global x`, read only by the edges that mention it and published only by the edges that may assign it (`keyed_split_spec`). |
 | flat report | `check_report_entry list` — one verdict per check, no contexts |
 | contextual report | one verdict per (check, context). Needed because a check can be `Dead` in one context and decided in another, which a flat verdict cannot express. |
 | arithmetic diagnostic | a `/` or `%` occurrence whose divisor is classified as definitely or possibly zero, with its source point and occurrence index |
@@ -44,6 +45,7 @@ part that really does see all five.
 | `generated/MCP_Carrier.thy` | generated from `manifests/analyses.yaml`: `analysis_domain`, one field per registered analysis in the combined state, and each analysis's own component, publication map, query and entry-state cases; proves nothing beyond citing each analysis's own registration |
 | `MCP_Field.thy` | the two lemmas that turn one analysis's soundness on its own field of the combined state into soundness of that field, and show it leaves every other field alone -- stated once for any field, so the generated carrier only cites them |
 | `MCP_Analyses.thy` | runs the active fields as one component, proves the combination sound for any distinct, nonempty activation, and registers it at every context policy: `mcp_rule`, `mcp_es_rule`, `mcp_cs_rule` |
+| `MCP_Split.thy` | the carrier laws that let the combined state split by global name, field by field (`ownership_split`), and the flow-insensitive registrations at every context policy: `mcp_split_rule`, `mcp_split_es_rule`, `mcp_split_cs_rule`, all from `mcp_keyed_dg_analysis` |
 | `Analysis_Run.thy` | `analysis_config`, the semantic `analysis_report`, its builder `report_of`, `analysis_report_of` (the one function that reads the context policy, solving with the executable `solve_c`), and `run_voblint`: one configuration, run once, answering `Invalid_Activation`, `Malformed_Program`, `No_Answer`, or one report. The constant `export_code` exports. |
 | `Analysis_Render.thy` | `render_report`: the displayed `run_result` the adapters read, a projection no theorem reads |
 | `Analysis_Run_Sound.thy` | what a configuration's table owes its report (`sound_table`), and the context-free table `mcp_rule_table` |
@@ -115,7 +117,7 @@ combined state; `globals_rule` names no domain, so it lives with the solver in
 
 `voblint --analysis interval --context entry-state FILE.vimp` names no `--globals`,
 so `cli/entry/voblint_main.ml` picks `warrow` and calls
-`run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState) p`.
+`run_voblint (Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState Program_Globals_Flow_Sensitive) p`.
 For a well-formed program and a valid activation that is `Analysed res`, the
 report `analysis_report_of` builds; the CLI then renders it with
 `render_report`. The equation for that cell hands

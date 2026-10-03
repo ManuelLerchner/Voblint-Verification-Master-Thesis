@@ -32,11 +32,14 @@ makes by default: `base.ml` reads globals from local state without publication a
 (`GOBLINT_ALIGNMENT_REGISTER.md`, D/G reconstruction and publication timing,
 source-checked 2026-08-10).
 
-The other choice is formalized as a lifter. `ownership_split_lift`
-(`DG_Ownership_Split_Spec.thy`) takes a whole-state specification and puts
-every declared global on the shared channel, proved sound against the
-ownership-split concretization. `--program-globals flow-insensitive` selects it for the
-analyzer's combined state (`MCP_Split`); the local placement stays the default.
+The other choice is formalized as a lifter. `keyed_split_spec`
+(`DG_Keyed_Split_Spec.thy`) takes a whole-state specification and keeps each
+declared global at its own global unknown, read where an edge mentions it and
+published where an edge may assign it, proved sound by `keyed_split_contract`.
+`--program-globals flow-insensitive` selects it for the analyzer's combined
+state (`MCP_Split`); the flow-sensitive placement stays the default.
+`ownership_split_lift` (`DG_Ownership_Split_Spec.thy`), which keeps all globals
+in one unknown, remains as the simpler lifter for non-relational bundles.
 
 That single site is enough to reproduce the paper's own chain. With the paper's
 three contributions to `g` arriving in the paper's order:
@@ -55,10 +58,14 @@ the solver level by the four `two_writer_slot_*` lemmas in
 `src/Examples/Tooling/Example_Per_Origin_Widening_Precision.thy`, which evaluate
 one slot under each of the four update rules.
 
-Voblint answers the paper's Fig. 1 itself exactly -- `g == 42`, `h == 1` --
-because it never widens a global. That beats both the paper's Example 2 result
-and its recovered `[-17,42]`, and it is a difference in what is analyzed
-flow-insensitively, not a better widening operator.
+Under the default flow-sensitive placement Voblint answers the paper's Fig. 1
+itself exactly -- `g == 42`, `h == 1` -- because it never widens a global
+there. That beats both the paper's Example 2 result and its recovered
+`[-17,42]`, and it is a difference in what is analyzed flow-insensitively, not a
+better widening operator. With `--program-globals flow-insensitive`
+(`19-paper-examples/precision/07-fig1_flow_insensitive_globals.vimp`) `g` has
+its own unknown and ends at `[-17,42]` under `--globals warrow`: the trace
+widens it to `[-inf,+inf]` and warrowing narrows it back.
 
 ## Where it does not help: recursive globals
 

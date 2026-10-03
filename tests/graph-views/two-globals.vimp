@@ -1,0 +1,6 @@
+global g, h;
+fun main() {
+  x = 1;
+  g = g + 1;
+  y = h;
+}

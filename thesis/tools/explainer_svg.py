@@ -218,6 +218,10 @@ LITERAL_MAP = {
     "#d99a2b": "trusted",
     "#fdf8f0": "bg",
     "#fffbea": "bg",
+    # Hex forms of the page's rgb(... / alpha) tints, after flatten_rgb: the
+    # site teal (its primary), and the dark stroke between strata.
+    "#174b57": "accent",
+    "#281e14": "neutral",
 }
 
 # Colours this tool produces.  Without them the literal pass re-examines its
@@ -279,6 +283,9 @@ class Figure:
     out: str
     aria_prefix: str | None
     svg_class: str | None
+    scene: str | None
+    viewbox: str | None
+    colours: tuple[tuple[str, str], ...]
     drop_classes: tuple[str, ...]
     css: tuple[str, ...]
     why: str
@@ -324,8 +331,26 @@ def svg_blocks(html: str) -> list[tuple[int, str]]:
         i = j
 
 
-def select(fig: Figure, blocks: list[tuple[int, str]]) -> str:
-    """The one block ``fig`` names.  Zero or several matches are both errors."""
+def enclosing_figure_classes(html: str, offset: int) -> set[str]:
+    """Classes of the innermost ``<figure>`` still open at ``offset``."""
+    opened = [m for m in re.finditer(r"<figure\b[^>]*>", html[:offset])]
+    closed = html[:offset].count("</figure>")
+    if len(opened) <= closed:
+        return set()
+    m = re.search(r'class="([^"]*)"', opened[-1].group(0))
+    return set(m.group(1).split()) if m else set()
+
+
+def select(fig: Figure, html: str, blocks: list[tuple[int, str]]) -> str:
+    """The one block ``fig`` names.  Zero or several matches are both errors.
+
+    ``scene`` narrows the search to the ``<figure>`` whose class it names, for
+    a graph the page draws twice with the same label and class.
+    """
+    if fig.scene:
+        blocks = [
+            (o, b) for o, b in blocks if fig.scene in enclosing_figure_classes(html, o)
+        ]
     if fig.aria_prefix:
         what = f'aria-label prefix "{fig.aria_prefix}"'
         hits = [
@@ -451,9 +476,13 @@ def rescope(selector: str, present: set[str]) -> str | None:
     i = 0
     while i < len(compounds):
         cls = classes(compounds[i])
-        if cls and not cls <= present:
+        if cls and cls.isdisjoint(present):
             i += 1  # an outside scope; drop it
             continue
+        # A compound that names a present class together with an absent one
+        # (`.stratum.is-current`) is a run-time state of this figure.
+        if cls and not cls <= present:
+            return None
         break
     kept = compounds[i:]
     if not kept:
@@ -504,16 +533,25 @@ def applicable(
 # --------------------------------------------------------------------------
 
 
-def recolour(text: str, variables: dict[str, str], unmapped: set[str]) -> str:
+def recolour(
+    text: str,
+    variables: dict[str, str],
+    unmapped: set[str],
+    override: dict[str, str] | None = None,
+) -> str:
     """Rewrite the site palette into the thesis one.
 
     Literals are resolved before custom properties, so the pass never inspects
     a colour it produced itself; ``EMITTED`` keeps that true for values a
-    figure happens to share with the thesis palette.
+    figure happens to share with the thesis palette.  ``override`` is a
+    figure's own entries, for a colour whose meaning differs in that figure.
     """
+    override = override or {}
 
     def lit_sub(m: re.Match[str]) -> str:
         value = m.group(0).lower()
+        if value in override:
+            return THEME[override[value]]
         if value in LITERAL_MAP:
             return THEME[LITERAL_MAP[value]]
         if value.upper() in EMITTED or value in EMITTED:
@@ -525,6 +563,8 @@ def recolour(text: str, variables: dict[str, str], unmapped: set[str]) -> str:
 
     def var_sub(m: re.Match[str]) -> str:
         name = m.group(1)
+        if name in override:
+            return THEME[override[name]]
         if name in VAR_MAP:
             return THEME[VAR_MAP[name]]
         if name in STRATA_MAP:
@@ -537,10 +577,74 @@ def recolour(text: str, variables: dict[str, str], unmapped: set[str]) -> str:
     return re.sub(r"var\(\s*(--[A-Za-z0-9-]+)\s*(?:,[^)]*)?\)", var_sub, text)
 
 
+# Typst's SVG renderer (usvg) parses neither CSS Color 4 `rgb(r g b / a)` nor
+# an alpha channel inside a CSS declaration it inlines; it paints the element
+# black instead.  Every functional colour therefore becomes a hex colour plus
+# the matching `*-opacity`, and the hex then goes through the palette like any
+# other literal.
+_NUM = r"\s*([\d.]+%?)\s*"
+FUNC_RGB = re.compile(rf"rgba?\({_NUM}[\s,]{_NUM}[\s,]{_NUM}(?:[/,]{_NUM})?\)", re.I)
+OPACITY_OF = {
+    "fill": "fill-opacity",
+    "stroke": "stroke-opacity",
+    "stop-color": "stop-opacity",
+}
+
+
+def _channel(v: str) -> int:
+    return round(float(v[:-1]) * 2.55) if v.endswith("%") else round(float(v))
+
+
+def _alpha(v: str | None) -> str | None:
+    if v is None:
+        return None
+    a = float(v[:-1]) / 100 if v.endswith("%") else float(v)
+    return None if a >= 1 else f"{a:g}"
+
+
+def _hex(m: re.Match[str]) -> str:
+    return "#" + "".join(f"{_channel(m[i]):02x}" for i in (1, 2, 3))
+
+
+def flatten_rgb(text: str) -> str:
+    """Rewrite functional colours as hex plus an opacity property."""
+
+    def decl(m: re.Match[str]) -> str:
+        prop, colour, imp = m["prop"], FUNC_RGB.match(m["val"]), m["imp"] or ""
+        a = _alpha(colour[4])
+        out = f"{prop}: {_hex(colour)}{imp}"
+        if a is not None:
+            out += f"; {OPACITY_OF[prop]}: {a}{imp}"
+        return out
+
+    text = re.sub(
+        r"(?P<prop>fill|stroke|stop-color)\s*:\s*(?P<val>rgba?\([^)]*\))(?P<imp>\s*!important)?",
+        decl,
+        text,
+    )
+
+    def attr(m: re.Match[str]) -> str:
+        prop, colour = m["prop"], FUNC_RGB.match(m["val"])
+        a = _alpha(colour[4])
+        out = f'{prop}="{_hex(colour)}"'
+        if a is not None:
+            out += f' {OPACITY_OF[prop]}="{a}"'
+        return out
+
+    return re.sub(
+        r'(?P<prop>fill|stroke|stop-color)="(?P<val>rgba?\([^)]*\))"', attr, text
+    )
+
+
+UNRENDERABLE = re.compile(
+    r"\b(rgba?|hsla?|hwb|lab|lch|oklab|oklch|color-mix|color)\(", re.I
+)
+
+
 def retype(body: str) -> str:
     body = re.sub(r'"Iowan Old Style"[^;]*?serif', FONT_MAP["serif"], body)
     body = re.sub(r"var\(--mono\)", FONT_MAP["mono"], body)
-    return body
+    return flatten_rgb(body)
 
 
 def clean_body(body: str) -> str:
@@ -624,7 +728,7 @@ def xml_safe(markup: str) -> str:
 
 
 def build(fig: Figure, html: str, site_css: str, unmapped: set[str]) -> str:
-    svg = select(fig, svg_blocks(html))
+    svg = select(fig, html, svg_blocks(html))
 
     open_tag_end_ = open_tag_end(svg)
     open_tag = svg[:open_tag_end_]
@@ -657,6 +761,9 @@ def build(fig: Figure, html: str, site_css: str, unmapped: set[str]) -> str:
 
     open_tag_end_ = open_tag_end(svg)
     open_tag = svg[:open_tag_end_]
+    if fig.viewbox:
+        # Labels the page lets overflow its box would be clipped in print.
+        open_tag = re.sub(r'viewBox="[^"]*"', f'viewBox="{fig.viewbox}"', open_tag)
 
     if not DRAWABLE.search(svg[open_tag_end_:]):
         raise ExtractError(
@@ -681,7 +788,9 @@ def build(fig: Figure, html: str, site_css: str, unmapped: set[str]) -> str:
     seen: set[tuple[str, str]] = set()
     for sheet in sheets:
         for compound, body in applicable(sheet, present, guarded):
-            body = clean_body(recolour(retype(body), variables, unmapped))
+            body = clean_body(
+                recolour(retype(body), variables, unmapped, dict(fig.colours))
+            )
             if not body:
                 continue
             key = (compound, body)
@@ -696,7 +805,9 @@ def build(fig: Figure, html: str, site_css: str, unmapped: set[str]) -> str:
             "Either `css` names the wrong module, or the figure's styling moved."
         )
 
-    body_markup = recolour(retype(svg[open_tag_end_:]), variables, unmapped)
+    body_markup = recolour(
+        retype(svg[open_tag_end_:]), variables, unmapped, dict(fig.colours)
+    )
     if "xmlns=" not in open_tag:
         open_tag = open_tag[:-1] + ' xmlns="http://www.w3.org/2000/svg">'
 
@@ -717,6 +828,13 @@ def build(fig: Figure, html: str, site_css: str, unmapped: set[str]) -> str:
         + f"     {why} -->\n"
     )
     style = "<style>\n" + "\n".join(collected) + "\n</style>\n"
+    leftover = UNRENDERABLE.search(style + body_markup)
+    if leftover:
+        raise ExtractError(
+            f"[{fig.name}] a colour function Typst cannot render survives: "
+            f"{(style + body_markup)[leftover.start() : leftover.start() + 40]!r}"
+        )
+
     return header + open_tag + "\n" + style + body_markup.lstrip("\n")
 
 
@@ -752,12 +870,24 @@ def load_manifest() -> list[Figure]:
                 out=spec.get("out", f"{name}.svg"),
                 aria_prefix=spec.get("aria_prefix"),
                 svg_class=spec.get("svg_class"),
+                scene=spec.get("scene"),
+                viewbox=spec.get("viewbox"),
+                colours=tuple(
+                    (k.lower() if k.startswith("#") else k, v)
+                    for k, v in spec.get("colours", {}).items()
+                ),
                 drop_classes=tuple(spec.get("drop_classes", ())),
                 css=tuple(spec.get("css", ())),
                 why=spec.get("why", ""),
                 chapter=spec.get("chapter", ""),
             )
         )
+    for fig in figures:
+        bad = [v for _, v in fig.colours if v not in THEME]
+        if bad:
+            raise ExtractError(
+                f"[{fig.name}] colours names {', '.join(bad)}, which is not a thesis colour"
+            )
     if not figures:
         raise ExtractError("the manifest declares no figures")
     return figures

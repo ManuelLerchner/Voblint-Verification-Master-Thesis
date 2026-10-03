@@ -1,5 +1,5 @@
 theory Analysis_Report
-  imports Analysis_Run_Ctx_Sound
+  imports Analysis_Run_Ctx_Sound Analysis_Render
 begin
 
 section \<open>What a report claims\<close>
@@ -57,6 +57,46 @@ proof -
   from assms obtain \<sigma> where "\<sigma> \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) \<sigma>"
     unfolding report_sem_def by blast
   then show ?thesis by (cases \<sigma>) (auto intro: that)
+qed
+
+subsection \<open>One state per point\<close>
+
+text \<open>
+  \<^const>\<open>report_point_join\<close> joins the states a report holds at a point over its
+  contexts. Every store the report describes at the point, the joined state describes,
+  since each component's concretization is monotone.
+\<close>
+
+lemma gamma_lift_state_mono: "x \<le> y \<Longrightarrow> \<lbrakk>x\<rbrakk> \<subseteq> \<lbrakk>y :: _ abs_state lifted\<rbrakk>"
+  by (rule gamma_lift_mono[where gam = gamma_state]) (use gamma_state_mono in blast)
+
+lemma val_gamma_mono: "v \<le> v' \<Longrightarrow> val_gamma a v \<subseteq> val_gamma a v'"
+  by (cases "(a, v)" rule: val_gamma.cases)
+    (auto simp: less_eq_analysis_product_def
+      intro: gamma_lift_state_mono[THEN subsetD] gamma_relc_mono[THEN subsetD])
+
+lemma mcp_gamma_v_mono: "v \<le> v' \<Longrightarrow> mcp_gamma_v as v \<subseteq> mcp_gamma_v as v'"
+  unfolding mcp_gamma_v_def using val_gamma_mono by blast
+
+lemma fold_sup_ge: "x \<in> set xs \<or> x \<le> acc \<Longrightarrow> x \<le> fold (\<squnion>) xs (acc :: 'a::semilattice_sup)"
+  by (induction xs arbitrary: acc) (auto intro: le_supI1 le_supI2)
+
+lemma report_rows_le_point_join: "\<sigma> \<in> report_rows res v \<Longrightarrow> \<sigma> \<le> report_point_join res v"
+  unfolding report_rows_def report_point_join_sup by (auto intro!: fold_sup_ge)
+
+text \<open>Every store the report describes at a point, the joined state describes.\<close>
+
+theorem report_sem_point_join:
+  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> gamma_lift (report_gamma res) (report_point_join res v)"
+proof
+  fix s assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  then obtain d where row: "Lifted d \<in> report_rows res v" and s: "s \<in> report_gamma res d"
+    by blast
+  have "gamma_lift (report_gamma res) (Lifted d)
+          \<subseteq> gamma_lift (report_gamma res) (report_point_join res v)"
+    by (rule gamma_lift_mono[OF _ report_rows_le_point_join[OF row]])
+      (simp add: report_gamma_def mcp_gamma_v_mono)
+  with s show "s \<in> gamma_lift (report_gamma res) (report_point_join res v)" by auto
 qed
 
 subsection \<open>Verdicts\<close>

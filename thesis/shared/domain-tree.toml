@@ -1,0 +1,63 @@
+# Layout of the domain inheritance trees in chapter 5, one table per figure.
+# The nodes, members and arrows are read from the lifted declarations, starting
+# at `roots` and following each declaration's parents; the build fails when a
+# declaration reached that way has no position here, or a position names none.
+#
+# `refs` names declarations another figure introduces: they are drawn by name
+# only, and their parents are not followed.
+#
+# `bends` gives the degrees by which a node's dashed edges to its constraining
+# class bend, and `parent-bends` those of single arrows to a parent, where a
+# straight edge would cross another node.
+#
+# `rows` has one table per row, from the most general declaration down to the
+# most derived; each value is the node's horizontal centre as a fraction of the
+# text width. Row heights are measured.
+
+# fig:domain-carrier: what a domain supplies for evaluation, refinement and checks.
+[carrier]
+roots = ["numeric_domain", "sound_nonrelational_ops"]
+refs = []
+bends = {}
+parent-bends = { sound_check_query = { sound_numeric_queries = 32 } }
+# Vertical gap between rows, in points; chosen so the figure fills one page.
+row-gap = 10.0
+# Box widths as a fraction of the text width, for nodes sharing a row whose
+# statements should wrap later than the default 0.3.
+widths = { sound_inverse_ops = 0.34, sound_intersection = 0.4, sound_truth_test = 0.42, sound_evaluator = 0.32, sound_numeric_queries = 0.45, sound_minmax_ops = 0.31 }
+# Interfaces whose operations have a monotone strengthening, marked M: the
+# strengthening locale, which `domain_tree.py` checks extends the node.
+mono = { sound_evaluator = "mono_evaluator", sound_truth_test = "mono_truth_test", sound_intersection = "mono_intersection", sound_refinement = "mono_refinement", sound_minmax_ops = "mono_minmax_ops" }
+# The instances listed at the most derived node each reaches, as snippet
+# names: a class instantiation, a certificate lemma for a final locale, or an
+# interpretation of it or of a strengthening that extends it.
+interpreted = { executable_domain = [
+  "relc_executable_domain",
+], numeric_domain = [
+  "sign_numeric_domain",
+  "ivl_numeric_domain",
+  "parity_numeric_domain",
+  "congruence_numeric_domain",
+  "int_dom_ext_numeric_domain",
+], sound_nonrelational_ops = [
+  "sign_tf",
+  "ivl_tf",
+  "parity_tf",
+  "congruence_tf",
+  "int_tf",
+] }
+rows = [
+  { ord = 0.36 },
+  { preorder = 0.36 },
+  { bot = 0.048, top = 0.17, order = 0.37, sup = 0.6 },
+  { order_bot = 0.058, order_top = 0.205, widening = 0.82 },
+  { semilattice_sup = 0.42, narrowing = 0.68 },
+  { bounded_semilattice_sup_bot = 0.11, warrowing = 0.8 },
+  { executable_domain = 0.32 },
+  { numeric_domain = 0.42, sound_intersection = 0.82 },
+  { sound_numeric_queries = 0.21, sound_truth_test = 0.617 },
+  { sound_evaluator = 0.42 },
+  { sound_inverse_ops = 0.82 },
+  { sound_minmax_ops = 0.16, sound_check_query = 0.42, sound_refinement = 0.617 },
+  { sound_nonrelational_ops = 0.42 },
+]

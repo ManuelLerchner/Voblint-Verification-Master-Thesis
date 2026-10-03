@@ -1,0 +1,52 @@
+// Move the cursor, hover the badges, click the graph.
+// Then try: globals "Warrow per origin", call-string depth k=2, context None.
+
+fun smaller(a, b) {
+  if (a <= b) {
+    lo = a;
+  } else {
+    lo = b;
+  }
+  return lo;
+}
+
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+
+  q = 100 / x;
+
+  n = smaller(3, 7);
+  smaller(9, 4);
+
+  if (x <= y) {
+    if (y <= x) {
+      z = (x == y);
+      w = x;
+      __voblint_check(z == 1); // PROVED
+      __voblint_check(w == y); // PROVED
+    }
+  }
+
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    u = 0;
+    v = 10;
+  } else {
+    u = 20;
+    v = 30;
+  }
+  __voblint_check(u <= v); // PROVED
+
+  i = 0;
+  while (i < 3) {
+    i = i + 1;
+  }
+
+  __voblint_check(i == 3); // PROVED
+  __voblint_check(n == 7); // REFUTED
+
+  if (i > 5) {
+    __voblint_check(i == 0); // NOWARN
+  }
+}

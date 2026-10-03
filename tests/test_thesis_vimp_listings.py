@@ -137,7 +137,7 @@ def test_claim_settings_win_and_overrides_are_flagged(context):
 
 def test_a_fixture_shown_at_other_settings_is_flagged(context):
     claims = context[0]
-    program = claims["chain-factorial-entry"]["program"]
+    program = claims["chain-split-entry"]["program"]
     url = playground_link.link(program, "interval", "warrow", "call-string", 1)
     problems = vl.check_listing(listing(program, url), *context)
     assert any("other settings" in p for p in problems), problems

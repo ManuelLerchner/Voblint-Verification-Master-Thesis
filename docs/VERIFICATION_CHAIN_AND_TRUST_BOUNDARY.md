@@ -37,8 +37,10 @@ once, which yields `<impl>_tf.is_sound_nonrelational_transfer`. The `int_dom` pr
 interprets it once, parametric in its refinement mode.
 `state_dg_spec_contract` turns that into `analysis_contract` for
 the whole-state specification each shipped domain provides. Under
-shared program globals the analyzer wraps that specification in the
-ownership-split lifter, whose contract is `ownership_split_lift_gen_contract`.
+flow-insensitive program globals the analyzer wraps the combined state's
+specification in the keyed lifter `keyed_split_spec`, one global unknown per
+declared global, whose contract is `keyed_split_contract`; `mcp_keyed_dg_analysis`
+discharges its carrier laws for the combined state.
 
 Guards go through `branch_lifted` (`Backward_Domain.thy`): a forward feasibility
 gate ahead of backward narrowing by `bfilter`, with a definite contradiction

@@ -52,3 +52,7 @@ cli/.voblint.*
 
 # Local stamp of the sources the export was generated from (codegen-hash.sh)
 codegen/generated/.source-hash
+
+# Thesis data every build regenerates (pixi run thesis-local-data)
+thesis/shared/generated/stats.json
+thesis/shared/generated/goblint-alignment.json

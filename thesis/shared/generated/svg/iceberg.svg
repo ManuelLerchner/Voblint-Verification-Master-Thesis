@@ -7,7 +7,7 @@
   .muted { color: #78909C; }
   .mono { font-family: "Isabelle DejaVu Sans Mono", "DejaVu Sans Mono", monospace; }
   .berg-tip { fill: #ffffff; stroke: #78909C; stroke-width: 2; }
-  .berg-body { fill: rgb(255 255 255 / 0.55); stroke: #78909C; stroke-width: 2; }
+  .berg-body { fill: #ffffff; fill-opacity: 0.55; stroke: #78909C; stroke-width: 2; }
   .wave { fill: none; stroke: #78909C; stroke-width: 2; }
   .berg-label text { fill: #37474F !important; font-size: 14px !important; }
   .berg-label .big { fill: #1565C0 !important; font:

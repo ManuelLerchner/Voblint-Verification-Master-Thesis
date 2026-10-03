@@ -25,6 +25,7 @@ import {
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
+import { cfgView, DIVISION_ICON, globalDependencies } from "./graph-views.js";
 import { createSolveReplay, seedLabelOf } from "./replay.js";
 import { sharedGlobalValues, sharedWriteHint } from "./shared-hints.js";
 import { createTraceView } from "./trace-view.js";
@@ -100,6 +101,26 @@ const timingValue = query("#analysis-timing-value");
 const stateInspector = query("#state-inspector");
 const inspectorLocation = query("#state-inspector-location");
 const inspectorBody = query("#state-inspector-body");
+const inspectorClose = query("#state-inspector-close");
+
+/*
+ * The inspector opens only when a graph node is clicked and stays until closed. A
+ * control-flow node also hands it the state run_voblint joins over its contexts.
+ */
+let inspectorOpen = false;
+let inspectorJoined = null;
+
+function closeInspector() {
+  inspectorOpen = false;
+  renderInspector();
+}
+
+inspectorClose.addEventListener("click", closeInspector);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && inspectorOpen) {
+    closeInspector();
+  }
+});
 const valueHintsToggle = query("#value-hints-toggle");
 
 const graphPanel = query("#analysis-graph-panel");
@@ -130,17 +151,10 @@ const rawStats = {
 };
 
 /*
- * Every editor feature on one screen, at the page's default configuration
- * (Interval, Warrow, call string k=1):
- *
- *   i == 5 and hits == 8 PROVED, i < 5 REFUTED, a == 2 UNKNOWN,
- *   10 / (a - 2) a possible division by zero, record(100) DEAD,
- *   loop hints marked as joins, record's and wrap's parameters keyed by call site.
- *
- * scale is reached from wrap(1) and wrap(4) through one call site, so k=1
- * merges them. Warrowing per origin narrows a to [2,8]; k=2 proves a == 2 and
- * turns the possible division by zero into a definite one. Without context
- * sensitivity, hits == 8 is lost as well.
+ * Every editor feature on one screen. At call strings k=1 with Interval and
+ * Order: four checks PROVED, n == 7 REFUTED, the check under i > 5 DEAD,
+ * 100 / x a possible division by zero, smaller's parameters keyed by call site.
+ * docs/readme-figures/overview.vimp is a copy that the thesis figure links to.
  */
 const initialProgram = `// Move the cursor, hover the badges, click the graph.
 // Then try: globals "Warrow per origin", call-string depth k=2, context None.
@@ -742,8 +756,35 @@ function buildAnalysisModel(result, doc) {
       nodes: nodesByPoint.get(s.point) ?? [],
     }));
 
+  /*
+   * One node per program point, holding the state run_voblint joins over the point's
+   * contexts and what its steps make of it. The editor's value hints read these, so a
+   * hint shows one value rather than one per context.
+   */
+  const joinedNodes = new Map(
+    (result.cfg?.nodes ?? [])
+      .filter((node) => Array.isArray(node.next))
+      .map((node) => [
+        node.id,
+        {
+          id: node.id,
+          point: node.point,
+          context_key: "",
+          status: node.joined === null ? "unreachable" : null,
+          sections: node.joined ?? [],
+          globals: node.globals ?? [],
+          ret: node.ret ?? [],
+          next: node.next ?? [],
+          enters: node.enters ?? [],
+          findings: [],
+        },
+      ]),
+  );
+
   return {
     nodes,
+    joinedNodes,
+    joinedByPoint: new Map([...joinedNodes.values()].map((node) => [node.point, node])),
     procedureByEntry: new Map(headers.map((procedure) => [procedure.entry, procedure])),
     seedByEntry: new Map(
       (result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed]),
@@ -855,6 +896,8 @@ function formatHint(label, samples) {
  */
 function valueHints(model) {
   const hints = [];
+  const joined = model.joinedNodes.size > 0;
+  const nodeById = (id) => (joined ? model.joinedNodes : model.nodes).get(id);
 
   for (const statement of model.statements) {
     const written = new Map();
@@ -872,7 +915,12 @@ function valueHints(model) {
 
     const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${name}: `);
 
-    for (const node of statement.nodes.filter(isLive)) {
+    const nodes =
+      joined && model.joinedByPoint.has(statement.point)
+        ? [model.joinedByPoint.get(statement.point)]
+        : statement.nodes;
+
+    for (const node of nodes.filter(isLive)) {
       if (statement.formals) {
         for (const name of statement.formals) {
           const value = slotValue(node, name);
@@ -888,7 +936,7 @@ function valueHints(model) {
       const assignsResult = node.next.some((step) => step.writes);
 
       for (const enter of node.enters) {
-        const entry = model.nodes.get(enter.id);
+        const entry = nodeById(enter.id);
         const callee = entry ? model.procedureByEntry.get(entry.point) : null;
 
         for (const name of callee && isLive(entry) ? callee.formals : []) {
@@ -899,7 +947,7 @@ function valueHints(model) {
           }
         }
 
-        const exit = enter.exit ? model.nodes.get(enter.exit) : null;
+        const exit = enter.exit ? nodeById(enter.exit) : null;
 
         const returned = exit && isLive(exit) ? joinValues(exit.ret) : undefined;
 
@@ -934,12 +982,12 @@ function valueHints(model) {
             value ?? "unavailable",
             false,
             undefined,
-            "Final reported shared global value; no per-write contribution is available for this call continuation.",
+            "Final reported value of the flow-insensitive global; no per-write contribution is available for this call continuation.",
           );
           continue;
         }
 
-        const after = model.nodes.get(step.id);
+        const after = nodeById(step.id);
         const value = after && isLive(after) ? slotValue(after, step.writes) : undefined;
 
         if (value !== undefined) {
@@ -1313,6 +1361,7 @@ function statementAt(model, doc, pos) {
 
 function inspectStatement(statement) {
   inspection = statement ? { statement, nodes: statement.nodes } : null;
+  inspectorJoined = null;
 
   if (!inspection?.nodes.some((node) => node.id === focusedNodeId)) {
     focusedNodeId = null;
@@ -1332,6 +1381,8 @@ function inspectCursor(state) {
 /* [configuration] and [source] are the run's own; the trace views show the traces it recorded. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
+
+  inspectorOpen = false;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
@@ -1528,9 +1579,10 @@ function statementExcerpt(statement) {
 /* Before a run there are no states to inspect, so the panel waits with the graph. */
 function renderInspector() {
   inspectorLocation.replaceChildren();
-  stateInspector.hidden = !analysisModel;
+  stateInspector.querySelector(".inspector-joined")?.remove();
+  stateInspector.hidden = !analysisModel || !inspectorOpen;
 
-  if (!analysisModel) {
+  if (stateInspector.hidden) {
     return;
   }
 
@@ -1540,7 +1592,7 @@ function renderInspector() {
   }
 
   if (!inspection) {
-    inspectorMessage("Place the cursor on a statement to see its abstract state in every context.");
+    inspectorMessage("Click a node in the graph to see its abstract state in every context.");
     return;
   }
 
@@ -1565,6 +1617,17 @@ function renderInspector() {
   }
 
   inspectorBody.replaceChildren(...nodes.map(renderInspectorContext));
+
+  if (inspectorJoined !== null) {
+    const joined = document.createElement("pre");
+    const title = document.createElement("span");
+
+    joined.className = "inspector-joined";
+    title.className = "inspector-joined-title";
+    title.textContent = "Joined over all contexts (report_point_join)";
+    joined.append(title, sectionLines(inspectorJoined).join("\n") || "no bindings");
+    inspectorBody.before(joined);
+  }
 }
 
 function statusChip(status) {
@@ -1774,8 +1837,84 @@ function renderStateTable(node) {
 /* The drawing, while one is shown; a message or an empty panel has none. */
 let cy = null;
 
+/*
+ * Which graph the panel draws. The control-flow view shows the compiled CFG, each
+ * program point once with every context's state listed at it; the analysis view shows
+ * one node per point and context, with the solver's global unknowns. Both are drawn
+ * from the same run, so switching never reruns the analyzer.
+ */
+const GRAPH_VIEWS = ["cfg", "analysis"];
+let graphView = "cfg";
+
+/* The run the panel draws, with its generation, so a switch can redraw it. */
+let graphRun = null;
+
+const graphViewButtons = [...document.querySelectorAll("[data-graph-view]")];
+const graphPanelLead = document.querySelector("#graph-panel-lead");
+const GRAPH_VIEW_TEXT = {
+  cfg: {
+    lead: "The compiled control-flow graph: each program point once, with every context's state listed at it.",
+    label: "Control-flow graph",
+  },
+  analysis: {
+    lead: "The analysis graph: one node per program point and context, with the solver's global unknowns.",
+    label: "Analysis graph",
+  },
+};
+
+/* Shows [view]; redraws the run already analysed, without running it again. */
+function setGraphView(view, { redraw = true } = {}) {
+  if (!GRAPH_VIEWS.includes(view)) {
+    return;
+  }
+
+  graphView = view;
+
+  for (const button of graphViewButtons) {
+    button.setAttribute("aria-checked", String(button.dataset.graphView === view));
+  }
+
+  for (const item of document.querySelectorAll("[data-graph-legend]")) {
+    item.hidden = item.dataset.graphLegend !== view;
+  }
+
+  if (graphPanelLead) {
+    graphPanelLead.textContent = GRAPH_VIEW_TEXT[view].lead;
+  }
+
+  graph.setAttribute(
+    "aria-label",
+    `${GRAPH_VIEW_TEXT[view].label}. Arrow keys pan, plus and minus zoom, 0 fits.`,
+  );
+
+  if (redraw && graphRun) {
+    hideGraphTooltip();
+    renderGraph(graphRun.result, graphRun.runGeneration).catch(() => {});
+  }
+}
+
+for (const button of graphViewButtons) {
+  button.addEventListener("click", () => setGraphView(button.dataset.graphView));
+}
+
+setGraphView(graphView, { redraw: false });
+
+/* In the control-flow view, the drawn CFG node of each analysis node at its point. */
+let drawnIdOf = new Map();
+
+/* The control-flow view's nodes by id, with the analysis nodes listed at each. */
+let cfgNodes = new Map();
+
+function drawnId(id) {
+  return drawnIdOf.get(id) ?? id;
+}
+
 function graphElementsById(ids) {
-  return cy.collection(ids.map((id) => cy.getElementById(id)).filter((ele) => ele.nonempty()));
+  return cy.collection(
+    [...new Set(ids.map(drawnId))]
+      .map((id) => cy.getElementById(id))
+      .filter((ele) => ele.nonempty()),
+  );
 }
 
 function applyGraphSelection() {
@@ -1791,7 +1930,7 @@ function applyGraphSelection() {
     }
 
     for (const node of inspection.nodes) {
-      const element = cy.getElementById(node.id);
+      const element = cy.getElementById(drawnId(node.id));
 
       element.addClass("graph-node-selected");
 
@@ -1983,6 +2122,8 @@ function inspectGraphNode(id) {
     return;
   }
 
+  inspectorOpen = true;
+
   const statement = analysisModel.statementByPoint.get(node.point);
 
   focusedNodeId = id;
@@ -1999,6 +2140,36 @@ function inspectGraphNode(id) {
   editor.dispatch({ selection: { anchor: statement.from } });
   inspectStatement(statement);
   scrollEditorTo(statement.from);
+}
+
+/* Clicking a CFG node inspects every context's state at its point. */
+function inspectCfgNode(id) {
+  const point = cfgNodes.get(id);
+
+  if (!point || !analysisModel || analysisModel.stale) {
+    return;
+  }
+
+  const statement = analysisModel.statementByPoint.get(point.point);
+
+  focusedNodeId = null;
+  inspectorOpen = true;
+
+  if (!statement) {
+    inspection = {
+      statement: null,
+      nodes: point.rows.map((row) => analysisModel.nodes.get(row)).filter(Boolean),
+    };
+  } else {
+    editor.dispatch({ selection: { anchor: statement.from } });
+    inspectStatement(statement);
+    scrollEditorTo(statement.from);
+  }
+
+  inspectorJoined = point.joined;
+  renderInspector();
+  applyGraphSelection();
+  scheduleHighlights();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2135,7 +2306,6 @@ function taxiTurn(index) {
  * its message left to the tooltip: an expression-length line would widen the node
  * and, through it, the whole column of the layout.
  */
-const DIVISION_ICON = { definite: "\u26d4", possible: "\u26a0\ufe0f" };
 
 function nodeLabelLines(node) {
   const divisions = node.divisions ?? [];
@@ -2188,7 +2358,7 @@ function seedId(entryId) {
  * from and its callers publish theirs into. It sits in the entry's box, a call edge
  * ends at it, and an edge from it to the entry stands for that read.
  */
-function graphElements(result) {
+function graphElements(result, { withGlobalEdges = false } = {}) {
   const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
   const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
   const parentOf = new Map();
@@ -2270,6 +2440,16 @@ function graphElements(result) {
     });
   }
 
+  if (withGlobalEdges) {
+    elements.push(
+      ...globalDependencies(result, globalId).map(({ id, source, target, kind }) => ({
+        group: "edges",
+        data: { id, source, target },
+        classes: kind,
+      })),
+    );
+  }
+
   result.graph.edges.forEach((edge, index) => {
     if (!nodesById.has(edge.source) || !nodesById.has(edge.target)) {
       return;
@@ -2296,6 +2476,47 @@ function graphElements(result) {
   });
 
   return elements;
+}
+
+/* The compiled CFG as drawn elements; [cfgView] decides what each node says. */
+function cfgElements(result) {
+  const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
+  const view = cfgView(result);
+
+  return [
+    ...view.procedures.map((procedure) => ({
+      group: "nodes",
+      data: { id: procedure.id, label: procedure.label },
+      classes: "context",
+    })),
+    ...view.nodes.map((node) => ({
+      group: "nodes",
+      data: {
+        id: node.id,
+        parent: node.parent,
+        label: node.lines.join("\n"),
+        ...nodeBox(node.lines),
+      },
+      classes: `point ${node.status}`,
+    })),
+    ...view.edges.map((edge, index) => {
+      const label = edgeLabel(edge);
+
+      return {
+        group: "edges",
+        data: {
+          id: `cfg-edge-${index}`,
+          source: edge.source,
+          target: edge.target,
+          label,
+          labelWidth: textWidth(label, edgeFont),
+          labelOffset: textWidth(label, edgeFont) / 2 + 10,
+          turn: taxiTurn(index),
+        },
+        classes: edge.kind,
+      };
+    }),
+  ];
 }
 
 /*
@@ -2437,8 +2658,14 @@ function callOrder(inner, crossing, parentOf) {
 
   const seen = new Set();
   const order = [];
+  const entered = new Set([...callees.values()].flat());
+  /* Walk from the boxes no call enters, main among them, so callers come first. */
+  const roots = [
+    ...[...inner.keys()].filter((id) => !entered.has(id)),
+    ...[...inner.keys()].filter((id) => entered.has(id)),
+  ];
 
-  for (const root of inner.keys()) {
+  for (const root of roots) {
     if (seen.has(root)) {
       continue;
     }
@@ -2612,6 +2839,8 @@ async function layoutGraph(elk, elements) {
   const centers = new Map();
   const routes = new Map();
   const labels = new Map();
+  /* Where a route within a box leaves its source and enters its target, as ELK placed it. */
+  const ends = new Map();
 
   for (const box of outer.children) {
     const layout = inner.get(box.id);
@@ -2625,7 +2854,10 @@ async function layoutGraph(elk, elements) {
 
     for (const edge of layout.edges) {
       if (edge.sections?.[0]) {
-        routes.set(edge.id, routePoints(edge.sections[0], box.x, box.y).slice(1, -1));
+        const points = routePoints(edge.sections[0], box.x, box.y);
+
+        routes.set(edge.id, points.slice(1, -1));
+        ends.set(edge.id, { start: points[0], end: points.at(-1) });
       }
 
       for (const label of edge.labels ?? []) {
@@ -2648,8 +2880,88 @@ async function layoutGraph(elk, elements) {
   }
 
   await placeGlobals(elk, globals, outer.children, centers);
+  spreadSharedEnds(routes, ends);
 
-  return { centers, routes, labels };
+  return { centers, routes, labels, ends };
+}
+
+/* How far apart route ends that ELK put on one point are moved. */
+const END_SPREAD = 12;
+
+/*
+ * ELK ends every edge entering a node at the same point of its side, and starts every
+ * edge leaving it at one point too. Where several share a point, they are spread along
+ * the side, each moving its last vertical leg with it so the route stays right-angled.
+ */
+function spreadSharedEnds(routes, ends) {
+  const groups = new Map();
+
+  for (const [id, { start, end }] of ends) {
+    for (const [which, point] of [
+      ["start", start],
+      ["end", end],
+    ]) {
+      const key = `${Math.round(point.x)},${Math.round(point.y)}`;
+
+      groups.set(key, [...(groups.get(key) ?? []), { id, which }]);
+    }
+  }
+
+  for (const members of groups.values()) {
+    if (members.length < 2) {
+      continue;
+    }
+
+    /*
+     * Order by which way each route turns once it leaves the shared point, so spread
+     * ends do not cross. The bend right after the point is often straight below it,
+     * so the first point off its vertical decides, and a straight edge's other end.
+     */
+    const heading = ({ id, which }) => {
+      const point = ends.get(id)[which];
+      const other = ends.get(id)[which === "start" ? "end" : "start"];
+      const points = routes.get(id) ?? [];
+      const path = which === "start" ? [...points, other] : [...points].reverse().concat(other);
+
+      return (path.find((next) => Math.abs(next.x - point.x) >= 1) ?? point).x - point.x;
+    };
+
+    members
+      .sort((a, b) => heading(a) - heading(b))
+      .forEach(({ id, which }, index) => {
+        const dx = (index - (members.length - 1) / 2) * END_SPREAD;
+        const point = ends.get(id)[which];
+        const other = ends.get(id)[which === "start" ? "end" : "start"];
+        const points = routes.get(id) ?? [];
+        const neighbour = which === "start" ? points[0] : points.at(-1);
+
+        /* A side entry spreads along the side; the leg next to the end moves with it. */
+        if (
+          neighbour &&
+          Math.abs(neighbour.y - point.y) < 1 &&
+          Math.abs(neighbour.x - point.x) >= 1
+        ) {
+          neighbour.y += dx;
+          point.y += dx;
+          return;
+        }
+
+        if (neighbour && Math.abs(neighbour.x - point.x) < 1) {
+          neighbour.x += dx;
+        }
+
+        /* A straight vertical edge has no leg to move; it jogs halfway instead of slanting. */
+        if (dx && !neighbour && routes.has(id) && Math.abs(other.x - point.x) < 1) {
+          const middle = (point.y + other.y) / 2;
+          const moved = { x: point.x + dx, y: middle };
+          const kept = { x: other.x, y: middle };
+
+          routes.set(id, which === "start" ? [moved, kept] : [kept, moved]);
+        }
+
+        point.x += dx;
+      });
+  }
 }
 
 /* Room between the row of global unknowns and the context boxes below it. */
@@ -2722,27 +3034,6 @@ function segmentStyle(points, source, target) {
 }
 
 /*
- * The route's bend points with its ends following moved endpoints. A route leaves its
- * source and enters its target along one axis, so the first bend moves with the source
- * across that axis, and the last with the target: every segment stays horizontal or
- * vertical, and only the segments at a moved end stretch.
- */
-function stretchedRoute({ points, source, target }, sourceNow, targetNow) {
-  const moved = points.map((point) => ({ ...point }));
-  const follow = (point, from, delta) => {
-    if (Math.abs(point.x - from.x) < Math.abs(point.y - from.y)) {
-      point.x += delta.x;
-    } else {
-      point.y += delta.y;
-    }
-  };
-
-  follow(moved[0], source, { x: sourceNow.x - source.x, y: sourceNow.y - source.y });
-  follow(moved.at(-1), target, { x: targetNow.x - target.x, y: targetNow.y - target.y });
-  return moved;
-}
-
-/*
  * A route is stored relative to its endpoints' centers, and each drag event recomputes
  * the routes of the moved nodes' edges from where both endpoints now are. Endpoints
  * moved alike, as inside a dragged box, keep the route as it is. Within one box, one
@@ -2774,19 +3065,191 @@ function followRoutesOnDrag(view) {
         return;
       }
 
-      const withinBox = edge.source().parent().same(edge.target().parent());
-      const points =
-        withinBox && (still(bySource) || still(byTarget)) && stretchedRoute(route, source, target);
-      const style = points && segmentStyle(points, source, target);
-
-      if (style) {
-        /* The stretched route is the one a later drag of either end starts from. */
-        edge.data(style).scratch("route", { points, source: { ...source }, target: { ...target } });
-      } else {
-        edge.removeClass("routed placed-label");
-      }
+      rerouteEdge(edge);
     });
+
+    /* An edge without a laid-out route also gets its own ports and bends; a global's
+       dependency stays a curve. */
+    moved.connectedEdges().not(".routed, .global_read, .global_write").forEach(rerouteEdge);
   });
+}
+
+function offsetFrom(point, center) {
+  return { x: point.x - center.x, y: point.y - center.y };
+}
+
+function endpointData(ports) {
+  return {
+    sourceEndpoint: `${ports.source.x}px ${ports.source.y}px`,
+    targetEndpoint: `${ports.target.x}px ${ports.target.y}px`,
+  };
+}
+
+/* Room a re-routed edge keeps between its nodes, and the least run a vertical route needs. */
+const GAP = 14;
+const MIN_RUN = 4;
+
+/*
+ * Which way an edge's ports send it: out of the source's bottom into the target's top,
+ * the reverse, or side to side. Ports on any other pair of sides fit none of the three.
+ */
+function routeMode(ports, { sw, sh, tw, th }) {
+  const side = (port, w, h) =>
+    Math.abs(port.y) >= h - 2
+      ? Math.sign(port.y) > 0
+        ? "bottom"
+        : "top"
+      : Math.abs(port.x) >= w - 2
+        ? "flank"
+        : null;
+  const from = side(ports.source, sw, sh);
+  const to = side(ports.target, tw, th);
+
+  if (from === "bottom" && to === "top") {
+    return "down";
+  }
+
+  if (from === "top" && to === "bottom") {
+    return "up";
+  }
+
+  return from === "flank" &&
+    to === "flank" &&
+    Math.sign(ports.source.x) !== Math.sign(ports.target.x)
+    ? "side"
+    : null;
+}
+
+/* Where along a side of [width] the [index]th of [count] edges attaches, from the center. */
+function portOffset(index, count, width) {
+  return count <= 1 ? 0 : ((index + 1) / (count + 1) - 0.5) * width * 0.8;
+}
+
+/*
+ * This edge's place among all edges at one of its ends, in and out alike, ordered by
+ * where their other ends lie: edges in opposite directions between the same nodes get
+ * ports of their own instead of one shared anchor.
+ */
+function portIndex(edge, end) {
+  const node = end === "source" ? edge.source() : edge.target();
+  const otherX = (e) => (e.source().same(node) ? e.target() : e.source()).position().x;
+  const siblings = node
+    .connectedEdges()
+    .toArray()
+    .sort((a, b) => otherX(a) - otherX(b) || a.id().localeCompare(b.id()));
+
+  return { index: siblings.findIndex((e) => e.same(edge)), count: siblings.length };
+}
+
+/*
+ * An edge whose laid-out route no longer fits gets a right-angle route of its own. It
+ * leaves its source's bottom and enters its target's top at a port of its own on
+ * each, so no two edges of a node share an anchor; when the target is not below the
+ * source, the route goes around the right of both nodes instead of through them.
+ */
+function rerouteEdge(edge) {
+  const sourceNode = edge.source();
+  const targetNode = edge.target();
+  const source = sourceNode.position();
+  const target = targetNode.position();
+  const sw = sourceNode.width() / 2;
+  const sh = sourceNode.height() / 2;
+  const tw = targetNode.width() / 2;
+  const th = targetNode.height() / 2;
+  const laid = edge.scratch("ports");
+
+  /*
+   * The edge keeps the sides, and the exact ports, it has until the nodes' places rule
+   * them out. A vertical route needs room between the nodes; a side route gives way to
+   * a vertical one only once there is clearly room again, so an edge does not flip
+   * between the two while a node is dragged across the boundary.
+   */
+  const gapDown = target.y - th - (source.y + sh);
+  const gapUp = source.y - sh - (target.y + th);
+  const right = target.x >= source.x ? 1 : -1;
+  const kept = laid && routeMode(laid, { sw, sh, tw, th });
+  let mode = kept;
+
+  if (
+    (mode === "down" && gapDown < MIN_RUN) ||
+    (mode === "up" && gapUp < MIN_RUN) ||
+    (mode === "side" &&
+      (Math.sign(laid.source.x) !== right || gapDown > 2 * GAP || gapUp > 2 * GAP))
+  ) {
+    mode = null;
+  }
+
+  const keep = mode != null;
+
+  mode ??= gapDown > GAP ? "down" : gapUp > GAP ? "up" : "side";
+
+  const leave =
+    mode === "down" ? { x: 0, y: 1 } : mode === "up" ? { x: 0, y: -1 } : { x: right, y: 0 };
+  const enter = { x: -leave.x, y: -leave.y };
+  const spread = (side, node, half, { index, count }) =>
+    side.x
+      ? { x: side.x * half.w, y: portOffset(index, count, node.height()) }
+      : { x: portOffset(index, count, node.width()), y: side.y * half.h };
+  /* New ports are ordered by where the other ends are now, once, when the sides change. */
+  const ports = keep
+    ? laid
+    : {
+        source: spread(leave, sourceNode, { w: sw, h: sh }, portIndex(edge, "source")),
+        target: spread(enter, targetNode, { w: tw, h: th }, portIndex(edge, "target")),
+      };
+  const start = { x: source.x + ports.source.x, y: source.y + ports.source.y };
+  const end = { x: target.x + ports.target.x, y: target.y + ports.target.y };
+  let points;
+
+  /* Edges joining the same two nodes run apart rather than on top of each other. */
+  const parallel = sourceNode.edgesWith(targetNode).toArray();
+  const lane =
+    parallel.length > 1
+      ? (parallel.findIndex((e) => e.same(edge)) - (parallel.length - 1) / 2) * GAP
+      : 0;
+
+  if (leave.y !== 0) {
+    /* Vertical ends: one horizontal run between them. */
+    const mid = (start.y + end.y) / 2 + lane;
+
+    points =
+      Math.abs(start.x - end.x) < 1
+        ? []
+        : [
+            { x: start.x, y: mid },
+            { x: end.x, y: mid },
+          ];
+  } else {
+    /* Side ends: one vertical run between them. */
+    const mid = (start.x + end.x) / 2 + lane;
+
+    points =
+      Math.abs(start.y - end.y) < 1
+        ? []
+        : [
+            { x: mid, y: start.y },
+            { x: mid, y: end.y },
+          ];
+  }
+
+  const style = segmentStyle(
+    points.length ? points : [{ x: (start.x + end.x) / 2, y: (start.y + end.y) / 2 }],
+    source,
+    target,
+  );
+
+  edge.removeClass("placed-label").scratch("route", null);
+
+  if (!style) {
+    edge.removeClass("routed rerouted");
+    return;
+  }
+
+  edge
+    .removeClass("routed")
+    .addClass("rerouted anchored")
+    .data({ ...style, ...endpointData(ports) })
+    .scratch("ports", ports);
 }
 
 /*
@@ -2794,7 +3257,7 @@ function followRoutesOnDrag(view) {
  * back edges put theirs on top of each other. The inner pass reserves room for each
  * label and places it, so the label keeps that place as an offset from the midpoint.
  */
-function applyGraphLayout(view, { centers, routes, labels }) {
+function applyGraphLayout(view, { centers, routes, labels, ends = new Map() }) {
   view.batch(() => {
     view
       .nodes(".point, .seed, .global")
@@ -2817,6 +3280,35 @@ function applyGraphLayout(view, { centers, routes, labels }) {
             source: centers.get(edge.data("source")),
             target: centers.get(edge.data("target")),
           });
+      }
+
+      /*
+       * Anchor the edge where ELK attached it, straight ones included, so the first
+       * drag starts from the ports the reader sees and a re-route keeps them.
+       */
+      const end = ends.get(id);
+      const source = centers.get(edge.data("source"));
+      const target = centers.get(edge.data("target"));
+      /*
+       * A route between boxes has no laid-out ends: its first and last bends sit
+       * level with its nodes, fanned apart on the box side. It leaves and enters on
+       * the side facing those bends, at their height, so the end runs stay level.
+       */
+      const level = (node, center, bend) => {
+        const half = { w: node.width() / 2, h: node.height() / 2 };
+        const dy = Math.max(-half.h + 2, Math.min(half.h - 2, bend.y - center.y));
+
+        return { x: Math.sign(bend.x - center.x || 1) * half.w, y: dy };
+      };
+      const ports = end
+        ? { source: offsetFrom(end.start, source), target: offsetFrom(end.end, target) }
+        : points.length > 0 && {
+            source: level(edge.source(), source, points[0]),
+            target: level(edge.target(), target, points.at(-1)),
+          };
+
+      if (ports) {
+        edge.addClass("anchored").data(endpointData(ports)).scratch("ports", ports);
       }
     }
   });
@@ -2923,7 +3415,7 @@ function graphStyle() {
         "text-margin-x": 6,
       },
     },
-    /* The shared global unknown: a diamond, read by points and published to by writes. */
+    /* A flow-insensitive global's unknown: a diamond, read by points and published to by writes. */
     {
       selector: "node.global",
       style: {
@@ -3021,6 +3513,45 @@ function graphStyle() {
         "text-background-opacity": 0.9,
         "text-background-padding": 2,
         "text-rotation": "none",
+      },
+    },
+    /* What a flow-insensitive global's unknown is read by and published to, from the trace. */
+    {
+      selector: "edge.global_read, edge.global_write",
+      style: {
+        "curve-style": "bezier",
+        label: "",
+        "line-style": "dashed",
+        "line-dash-pattern": [4, 4],
+        "line-color": cssToken("--text-faint"),
+        "target-arrow-color": cssToken("--text-faint"),
+      },
+    },
+    {
+      selector: "edge.global_write",
+      style: {
+        width: 1.8,
+        "line-style": "solid",
+        "line-color": cssToken("--global-link"),
+        "target-arrow-color": cssToken("--global-link"),
+      },
+    },
+    /* An edge re-routed after a drag: its own bends, leaving and entering at its ports. */
+    {
+      selector: "edge.rerouted",
+      style: {
+        "curve-style": "round-segments",
+        "segment-weights": "data(weights)",
+        "segment-distances": "data(distances)",
+        "segment-radii": 6,
+        "edge-distances": "node-position",
+      },
+    },
+    {
+      selector: "edge.anchored",
+      style: {
+        "source-endpoint": "data(sourceEndpoint)",
+        "target-endpoint": "data(targetEndpoint)",
       },
     },
     {
@@ -3312,6 +3843,36 @@ function showSeedTooltip(seed, event) {
   placeGraphTooltip(event);
 }
 
+/*
+ * A CFG node's tooltip: its point and the state run_voblint joins over its contexts.
+ * Each context's own state is one click away, in the inspector.
+ */
+function showCfgTooltip(point, event) {
+  if (graphTooltip.dataset.node !== point.id) {
+    const title = document.createElement("strong");
+    title.textContent = point.point;
+
+    const contexts = point.rows.length;
+    const body = document.createElement("pre");
+    body.textContent =
+      point.joined === null
+        ? "no context reaches this point"
+        : [
+            ...(sectionLines(point.joined).length ? sectionLines(point.joined) : ["no bindings"]),
+            "",
+            contexts > 1
+              ? `joined over ${contexts} contexts · click to see each`
+              : "click to inspect",
+          ].join("\n");
+
+    graphTooltip.replaceChildren(title, body);
+    graphTooltip.dataset.node = point.id;
+  }
+
+  graphTooltip.hidden = false;
+  placeGraphTooltip(event);
+}
+
 /* A node's tooltip: its point, then its state and findings. */
 function showGraphTooltip(node, event) {
   if (graphTooltip.dataset.node !== node.id) {
@@ -3338,6 +3899,16 @@ function showGraphTooltip(node, event) {
  */
 function attachGraphInteraction() {
   cy.on("mouseover", "node.point", (event) => {
+    const point = cfgNodes.get(event.target.id());
+
+    if (point) {
+      graph.classList.add("is-over-node");
+      hoveredSpan = analysisModel?.statementByPoint.get(point.point) ?? null;
+      scheduleHighlights();
+      showCfgTooltip(point, event.originalEvent);
+      return;
+    }
+
     const node = analysisModel?.nodes.get(event.target.id());
 
     graph.classList.add("is-over-node");
@@ -3375,7 +3946,11 @@ function attachGraphInteraction() {
   cy.on("mouseover", "node.context", () => graph.classList.add("is-over-context"));
   cy.on("mouseout", "node.context", () => graph.classList.remove("is-over-context"));
 
-  cy.on("tap", "node.point", (event) => inspectGraphNode(event.target.id()));
+  cy.on("tap", "node.point", (event) =>
+    cfgNodes.has(event.target.id())
+      ? inspectCfgNode(event.target.id())
+      : inspectGraphNode(event.target.id()),
+  );
 
   cy.on("dbltap", (event) => {
     if (event.target === cy) {
@@ -3408,10 +3983,16 @@ async function renderGraph(result, runGeneration) {
   }
 
   if (!Array.isArray(result.graph?.clusters) || !Array.isArray(result.graph?.edges)) {
-    throw new Error("Internal error: successful analysis returned no control-flow graph.");
+    throw new Error("Internal error: successful analysis returned no graph.");
   }
 
-  showGraphMessage("Rendering control-flow graph...");
+  graphRun = { result, runGeneration };
+
+  const view = result.cfg ? graphView : "analysis";
+
+  showGraphMessage(
+    view === "cfg" ? "Rendering control-flow graph..." : "Rendering analysis graph...",
+  );
 
   try {
     const { cytoscape, elk } = await getGraphLibraries();
@@ -3420,8 +4001,14 @@ async function renderGraph(result, runGeneration) {
       return;
     }
 
-    const elements = graphElements(result);
+    const elements =
+      view === "cfg" ? cfgElements(result) : graphElements(result, { withGlobalEdges: true });
 
+    cfgNodes =
+      view === "cfg" ? new Map(result.cfg.nodes.map((node) => [node.id, node])) : new Map();
+    drawnIdOf = new Map(
+      [...cfgNodes.values()].flatMap((node) => node.rows.map((row) => [row, node.id])),
+    );
     graphSeeds = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
     const layout = await layoutGraph(elk, elements);
 
@@ -3510,7 +4097,7 @@ function updateGlobalsControls() {
 
   const sharedWarning =
     placementSelect.value === "flow-insensitive" && globalsSelect.value.startsWith("warrow")
-      ? " Warrowing the shared global need not settle; bounded narrowing ends it."
+      ? " Warrowing a flow-insensitive global need not settle; bounded narrowing ends it."
       : "";
 
   globalsHelp.textContent = (descriptions[globalsSelect.value] ?? "") + sharedWarning;
@@ -3660,7 +4247,7 @@ function configurationLabel(configuration) {
   }
 
   if (configuration.placement === "flow-insensitive") {
-    parts.push("shared globals");
+    parts.push("flow-insensitive globals");
   }
 
   if (usesInt()) {
@@ -4551,6 +5138,7 @@ function openProgram({ source, fileName, settings = {} }) {
   globalsPicked ||= typeof settings.globals === "string";
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
+  setGraphView(GRAPH_VIEWS.includes(settings.graph) ? settings.graph : graphView);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
@@ -4611,6 +5199,7 @@ function selectIfOffered(select, value) {
  * settings in the query override the ones a named program carries.
  */
 const LINK_SETTINGS = [
+  "graph",
   "analysis",
   "globals",
   "narrow",
@@ -4718,6 +5307,7 @@ async function shareLink() {
       ? [linkParam("placement", "flow-insensitive")]
       : []),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
+    ...(graphView !== "cfg" ? [linkParam("graph", graphView)] : []),
   ];
   const url = new URL(location.href);
 

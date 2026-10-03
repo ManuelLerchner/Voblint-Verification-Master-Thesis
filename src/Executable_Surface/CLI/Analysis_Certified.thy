@@ -173,6 +173,25 @@ proof -
 qed
 
 text \<open>
+  The same endpoint without contexts: the state the report holds at the node, joined
+  over its contexts, describes the store too.
+\<close>
+
+corollary run_voblint_source_sound_joined:
+  fixes p :: imp_prog and s0 s :: store
+  defines G_def: "\<G> \<equiv> declared_global p"
+      and Pi_def: "\<Pi> \<equiv> prog_table p"
+      and g_def: "g \<equiv> prog_cfg p"
+  assumes s0: "s0 \<in> cinit_stores \<G>"
+      and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+      and ans: "run_voblint config p = Analysed res"
+  shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+                 \<and> s \<in> gamma_lift (report_gamma res) (report_point_join res v)"
+  using run_voblint_source_sound[OF s0[unfolded G_def] run[unfolded G_def Pi_def] ans]
+    report_sem_point_join
+  unfolding Pi_def g_def by blast
+
+text \<open>
   The same endpoint, read at a check. A run about to execute \<open>Check l e\<close> finds a
   check labelled \<open>l\<close> for \<open>e\<close> in the report, listed at a node this very store
   reaches, and that check's verdict holds of the store.

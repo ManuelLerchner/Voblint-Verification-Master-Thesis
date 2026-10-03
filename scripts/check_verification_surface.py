@@ -3,8 +3,7 @@
 
 ``verify`` is the supported local aggregate. GitHub Actions schedules its
 dependencies separately, but must invoke the same named tasks. Thesis tasks
-run only for the ``writing`` branch, whose thesis/ they check, so they sit in
-``thesis-check`` instead of ``verify``. This check also keeps task
+sit in ``thesis-check`` instead of ``verify``. This check also keeps task
 descriptions complete and rejects references to retired task names.
 """
 

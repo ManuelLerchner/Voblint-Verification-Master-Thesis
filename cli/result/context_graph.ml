@@ -3,8 +3,9 @@
    A node is a (point, context) pair the solver covered. Within one context, intra
    edges follow the CFG. A call enters every callee context the result routes it to,
    and the callee's exit resumes the caller at the call's continuation in the
-   caller's own context. The route is the result's, never re-derived: which context
-   a call enters is a decision of the verified analysis, and this file only draws it.
+   caller's own context. The edges are run_voblint's own (analysis_graph_of in
+   Analysis_Render), never re-derived: which unknowns exist and which depend on which
+   is decided in Isabelle, and this file only words and draws them.
 
    A node state shows each active analysis's part on its own, in activation order, as
    Goblint's report shows each component of its combined state: a pointwise analysis
@@ -63,7 +64,16 @@ type cluster = {
   members : string list;
 }
 
-type t = { clusters : cluster list; nodes : node list; edges : edge list }
+(* A flow-insensitive program global's unknown read or written by a local unknown. *)
+type access = Read | Write
+type global_dep = { global : string; node : string; access : access }
+
+type t = {
+  clusters : cluster list;
+  nodes : node list;
+  edges : edge list;
+  global_deps : global_dep list;
+}
 
 let ret_var = "#ret"
 let main_name = "main"
@@ -190,14 +200,6 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
   let globals = C.declared_global_vars prog in
   let contexts = Array.of_list (C.res_contexts result) in
   let states = C.res_states result in
-  let covered = Hashtbl.create 64 in
-  List.iter
-    (fun st ->
-      Hashtbl.replace covered
-        (C.state_point st, A.int_of_nat (C.state_context st))
-        ())
-    states;
-  let is_covered p c = Hashtbl.mem covered (p, c) in
   (* A context's number within its owner, in the order the result lists states, so
      an identifier does not move when another procedure gains or loses a context. *)
   let local_index = Hashtbl.create 16 in
@@ -290,91 +292,99 @@ let build prog (result : (string, unit) C.run_result_ext) : t =
         })
       (List.rev !order)
   in
-  let intra =
-    List.concat_map
-      (fun (u, a, v) ->
-        List.filter_map
-          (fun st ->
-            let c = A.int_of_nat (C.state_context st) in
-            if C.state_point st = u && is_covered v c then
-              Some
-                {
-                  src = id_of u c;
-                  dst = id_of v c;
-                  kind = Intra;
-                  text = A.action_text a;
-                  writes =
-                    (match a with
-                    | C.EA_Ret (Some _, _) -> Some ret_var
-                    | _ -> A.action_writes a);
-                }
-            else None)
-          states)
-      (A.intra_edges g)
+  let callee_at = function
+    | C.FunctionEntry f | C.FunctionResult f -> f
+    | C.Statement _ -> ""
   in
-  let calls =
-    List.concat_map
-      (fun (u, ca, entry, after) ->
-        List.concat_map
-          (fun st ->
-            let c = A.int_of_nat (C.state_context st) in
-            if C.state_point st <> u then []
-            else
-              let callee =
-                match entry with C.FunctionEntry p -> p | _ -> ""
-              in
-              let routed =
-                Option.value ~default:[] (Hashtbl.find_opt targets (u, c))
-              in
-              let result_node = C.FunctionResult callee in
-              let enters =
-                List.concat_map
-                  (fun t ->
-                    (if is_covered entry t then
-                       [
-                         {
-                           src = id_of u c;
-                           dst = id_of entry t;
-                           kind = Enter;
-                           text = A.call_text callee ca;
-                           writes = None;
-                         };
-                       ]
-                     else [])
-                    @
-                    if is_covered result_node t && is_covered after c then
-                      let (C.CallEdge (dst, _, _)) = ca in
-                      [
-                        {
-                          src = id_of result_node t;
-                          dst = id_of after c;
-                          kind = Combine;
-                          text =
-                            Option.fold ~none:""
-                              ~some:(fun x ->
-                                x ^ " := " ^ A.call_text callee ca)
-                              dst;
-                          writes = None;
-                        };
-                      ]
-                    else [])
-                  routed
-              in
-              enters
-              @
-              if is_covered after c then
-                let (C.CallEdge (dst, _, _)) = ca in
-                [
-                  {
-                    src = id_of u c;
-                    dst = id_of after c;
-                    kind = Call_to_return;
-                    text = callee;
-                    writes = dst;
-                  };
-                ]
-              else [])
-          states)
-      (A.call_edges g)
+  (* A continuation edge names only its two points; the call it continues says which
+     procedure it calls. *)
+  let callee_of_call u ca after =
+    Option.value ~default:""
+      (List.find_map
+         (fun (u', ca', entry, after') ->
+           if u' = u && ca' = ca && after' = after then Some (callee_at entry)
+           else None)
+         (A.call_edges g))
   in
-  { clusters; nodes; edges = intra @ calls }
+  let local p c = id_of p (A.int_of_nat c) in
+  let seen = Hashtbl.create 16 in
+  let global_dep global node access =
+    if Hashtbl.mem seen (global, node, access) then []
+    else begin
+      Hashtbl.replace seen (global, node, access) ();
+      [ { global; node; access } ]
+    end
+  in
+  let edges, global_deps =
+    List.split
+      (List.map
+         (fun (src, (dep, dst)) ->
+           match (src, dep, dst) with
+           | C.Local_Node (u, c), C.Intra_Dep a, C.Local_Node (v, _) ->
+               ( [
+                   {
+                     src = local u c;
+                     dst = local v c;
+                     kind = Intra;
+                     text = A.action_text a;
+                     writes =
+                       (match a with
+                       | C.EA_Ret (Some _, _) -> Some ret_var
+                       | _ -> A.action_writes a);
+                   };
+                 ],
+                 [] )
+           | C.Local_Node (u, c), C.Enter_Dep ca, C.Local_Node (entry, t) ->
+               ( [
+                   {
+                     src = local u c;
+                     dst = local entry t;
+                     kind = Enter;
+                     text = A.call_text (callee_at entry) ca;
+                     writes = None;
+                   };
+                 ],
+                 [] )
+           | ( C.Local_Node (result_node, t),
+               C.Combine_Dep (C.CallEdge (dst, _, _) as ca),
+               C.Local_Node (after, c) ) ->
+               ( [
+                   {
+                     src = local result_node t;
+                     dst = local after c;
+                     kind = Combine;
+                     text =
+                       Option.fold ~none:""
+                         ~some:(fun x ->
+                           x ^ " := " ^ A.call_text (callee_at result_node) ca)
+                         dst;
+                     writes = None;
+                   };
+                 ],
+                 [] )
+           | ( C.Local_Node (u, c),
+               C.Continue_Dep (C.CallEdge (dst, _, _) as ca),
+               C.Local_Node (after, _) ) ->
+               ( [
+                   {
+                     src = local u c;
+                     dst = local after c;
+                     kind = Call_to_return;
+                     text = callee_of_call u ca after;
+                     writes = dst;
+                   };
+                 ],
+                 [] )
+           | C.Global_Node x, C.Global_Read, C.Local_Node (v, c) ->
+               ([], global_dep x (local v c) Read)
+           | C.Local_Node (v, c), C.Global_Write, C.Global_Node x ->
+               ([], global_dep x (local v c) Write)
+           | _ -> ([], []))
+         (C.graph_edges (C.res_graph result)))
+  in
+  {
+    clusters;
+    nodes;
+    edges = List.concat edges;
+    global_deps = List.concat global_deps;
+  }

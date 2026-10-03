@@ -1,0 +1,425 @@
+clusters:
+  cluster_ctx_0: main / root context
+    main_exit_main_ctx0
+    main_pp20_ctx0
+    main_pp21_ctx0
+    main_pp22_ctx0
+    main_pp23_ctx0
+    main_entry_main_ctx0
+  cluster_ctx_1: w / ⊤
+    w_pp6_ctx0
+    w_pp10_ctx0
+    w_exit_w_ctx0
+    w_pp5_ctx0
+    w_pp7_ctx0
+    w_pp8_ctx0
+    w_entry_w_ctx0
+  cluster_ctx_2: h / [0,0]
+    h_exit_h_ctx0
+    h_pp0_ctx0
+    h_entry_h_ctx0
+  cluster_ctx_3: f / [0,0]
+    f_exit_f_ctx0
+    f_pp12_ctx0
+    f_pp13_ctx0
+    f_pp14_ctx0
+    f_pp16_ctx0
+    f_pp17_ctx0
+    f_pp18_ctx0
+    f_entry_f_ctx0
+  cluster_ctx_4: g / [0,0], [0,0]
+    g_exit_g_ctx0
+    g_pp2_ctx0
+    g_pp3_ctx0
+    g_entry_g_ctx0
+  cluster_ctx_5: h / [1,1]
+    h_exit_h_ctx1
+    h_pp0_ctx1
+    h_entry_h_ctx1
+  cluster_ctx_6: f / [1,1]
+    f_exit_f_ctx1
+    f_pp12_ctx1
+    f_pp13_ctx1
+    f_pp14_ctx1
+    f_pp16_ctx1
+    f_pp17_ctx1
+    f_pp18_ctx1
+    f_entry_f_ctx1
+  cluster_ctx_7: g / [1,1], [0,0]
+    g_exit_g_ctx1
+    g_pp2_ctx1
+    g_pp3_ctx1
+    g_entry_g_ctx1
+  cluster_ctx_8: f / [2,2]
+    f_exit_f_ctx2
+    f_pp12_ctx2
+    f_pp13_ctx2
+    f_pp14_ctx2
+    f_pp16_ctx2
+    f_pp17_ctx2
+    f_pp18_ctx2
+    f_entry_f_ctx2
+  cluster_ctx_9: f / [3,3]
+    f_exit_f_ctx3
+    f_pp12_ctx3
+    f_pp13_ctx3
+    f_pp14_ctx3
+    f_pp16_ctx3
+    f_pp17_ctx3
+    f_pp18_ctx3
+    f_entry_f_ctx3
+
+nodes:
+  main_exit_main_ctx0: exit_main
+      interval:
+        q=⊤
+        r=[5,5]
+        s=[0,0]
+  main_pp20_ctx0: pp20
+      interval:
+        q=⊤
+        r=⊤
+        s=⊤
+  main_pp21_ctx0: pp21
+      interval:
+        q=⊤
+        r=⊤
+        s=⊤
+  main_pp22_ctx0: pp22
+      interval:
+        q=⊤
+        r=⊤
+        s=[0,0]
+  main_pp23_ctx0: pp23
+      interval:
+        q=⊤
+        r=[5,5]
+        s=[0,0]
+  main_entry_main_ctx0: entry_main
+      interval:
+        q=⊤
+        r=⊤
+        s=⊤
+  w_pp6_ctx0: pp6
+      interval:
+        x=[1,+∞]
+        r=⊤
+        y=⊤
+  w_pp10_ctx0: pp10
+      interval:
+        x=[-∞,0]
+        r=⊤
+        y=⊤
+  w_exit_w_ctx0: exit_w
+      interval:
+        x=⊤
+        r=⊤
+        y=⊤
+  w_pp5_ctx0: pp5
+      interval:
+        x=⊤
+        r=⊤
+        y=⊤
+  w_pp7_ctx0: pp7
+      interval:
+        x=[1,+∞]
+        r=⊤
+        y=⊤
+  w_pp8_ctx0: pp8
+      interval:
+        x=[1,+∞]
+        r=[0,0]
+        y=⊤
+  w_entry_w_ctx0: entry_w
+      interval:
+        x=⊤
+        r=⊤
+        y=⊤
+  h_exit_h_ctx0: exit_h
+      interval:
+        z=[0,0]
+  f_exit_f_ctx0: exit_f
+      interval:
+        n=[0,0]
+        a=⊤
+        b=⊤
+        r=[1,1]
+  f_pp12_ctx0: pp12
+      interval:
+        n=[0,0]
+        a=⊤
+        b=⊤
+        r=⊤
+  h_pp0_ctx0: pp0
+      interval:
+        z=[0,0]
+  h_entry_h_ctx0: entry_h
+      interval:
+        z=[0,0]
+  f_pp13_ctx0: pp13
+      interval:
+        n=[0,0]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp14_ctx0: pp14
+      interval:
+        n=[0,0]
+        a=⊤
+        b=⊤
+        r=[1,1]
+  f_pp16_ctx0: pp16 [unreachable]
+      unreachable
+  f_pp17_ctx0: pp17 [unreachable]
+      unreachable
+  f_pp18_ctx0: pp18 [unreachable]
+      unreachable
+  f_entry_f_ctx0: entry_f
+      interval:
+        n=[0,0]
+        a=⊤
+        b=⊤
+        r=⊤
+  g_exit_g_ctx0: exit_g
+      interval:
+        u=[0,0]
+        v=[0,0]
+        r=[1,1]
+  g_pp2_ctx0: pp2
+      interval:
+        u=[0,0]
+        v=[0,0]
+        r=⊤
+  g_pp3_ctx0: pp3
+      interval:
+        u=[0,0]
+        v=[0,0]
+        r=[1,1]
+  g_entry_g_ctx0: entry_g
+      interval:
+        u=[0,0]
+        v=[0,0]
+        r=⊤
+  h_exit_h_ctx1: exit_h
+      interval:
+        z=[1,1]
+  f_exit_f_ctx1: exit_f
+      interval:
+        n=[1,1]
+        a=⊤
+        b=⊤
+        r=[2,2]
+  f_pp12_ctx1: pp12
+      interval:
+        n=[1,1]
+        a=⊤
+        b=⊤
+        r=⊤
+  h_pp0_ctx1: pp0
+      interval:
+        z=[1,1]
+  h_entry_h_ctx1: entry_h
+      interval:
+        z=[1,1]
+  f_pp13_ctx1: pp13
+      interval:
+        n=[1,1]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp14_ctx1: pp14
+      interval:
+        n=[1,1]
+        a=⊤
+        b=⊤
+        r=[2,2]
+  f_pp16_ctx1: pp16 [unreachable]
+      unreachable
+  f_pp17_ctx1: pp17 [unreachable]
+      unreachable
+  f_pp18_ctx1: pp18 [unreachable]
+      unreachable
+  f_entry_f_ctx1: entry_f
+      interval:
+        n=[1,1]
+        a=⊤
+        b=⊤
+        r=⊤
+  g_exit_g_ctx1: exit_g
+      interval:
+        u=[1,1]
+        v=[0,0]
+        r=[2,2]
+  g_pp2_ctx1: pp2
+      interval:
+        u=[1,1]
+        v=[0,0]
+        r=⊤
+  g_pp3_ctx1: pp3
+      interval:
+        u=[1,1]
+        v=[0,0]
+        r=[2,2]
+  g_entry_g_ctx1: entry_g
+      interval:
+        u=[1,1]
+        v=[0,0]
+        r=⊤
+  f_exit_f_ctx2: exit_f
+      interval:
+        n=[2,2]
+        a=[2,2]
+        b=[1,1]
+        r=⊤
+  f_pp12_ctx2: pp12
+      interval:
+        n=[2,2]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp13_ctx2: pp13 [unreachable]
+      unreachable
+  f_pp14_ctx2: pp14 [unreachable]
+      unreachable
+  f_pp16_ctx2: pp16
+      interval:
+        n=[2,2]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp17_ctx2: pp17
+      interval:
+        n=[2,2]
+        a=[2,2]
+        b=⊤
+        r=⊤
+  f_pp18_ctx2: pp18
+      interval:
+        n=[2,2]
+        a=[2,2]
+        b=[1,1]
+        r=⊤
+  f_entry_f_ctx2: entry_f
+      interval:
+        n=[2,2]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_exit_f_ctx3: exit_f
+      interval:
+        n=[3,3]
+        a=[3,3]
+        b=[2,2]
+        r=⊤
+  f_pp12_ctx3: pp12
+      interval:
+        n=[3,3]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp13_ctx3: pp13 [unreachable]
+      unreachable
+  f_pp14_ctx3: pp14 [unreachable]
+      unreachable
+  f_pp16_ctx3: pp16
+      interval:
+        n=[3,3]
+        a=⊤
+        b=⊤
+        r=⊤
+  f_pp17_ctx3: pp17
+      interval:
+        n=[3,3]
+        a=[3,3]
+        b=⊤
+        r=⊤
+  f_pp18_ctx3: pp18
+      interval:
+        n=[3,3]
+        a=[3,3]
+        b=[2,2]
+        r=⊤
+  f_entry_f_ctx3: entry_f
+      interval:
+        n=[3,3]
+        a=⊤
+        b=⊤
+        r=⊤
+
+edges:
+  h_pp0_ctx0 -> h_exit_h_ctx0: return z + 1
+  h_pp0_ctx1 -> h_exit_h_ctx1: return z + 1
+  g_pp3_ctx0 -> g_exit_g_ctx0: return r + v
+  g_pp3_ctx1 -> g_exit_g_ctx1: return r + v
+  w_pp5_ctx0 -> w_pp6_ctx0: [x > 0]
+  w_pp5_ctx0 -> w_pp10_ctx0: ![x > 0]
+  w_pp6_ctx0 -> w_pp7_ctx0: y := __voblint_nondet_int()
+  w_pp8_ctx0 -> w_exit_w_ctx0: return r
+  w_pp10_ctx0 -> w_exit_w_ctx0: return 0
+  f_pp12_ctx0 -> f_pp13_ctx0: [n < 2]
+  f_pp12_ctx1 -> f_pp13_ctx1: [n < 2]
+  f_pp12_ctx2 -> f_pp13_ctx2: [n < 2]
+  f_pp12_ctx3 -> f_pp13_ctx3: [n < 2]
+  f_pp12_ctx0 -> f_pp16_ctx0: ![n < 2]
+  f_pp12_ctx1 -> f_pp16_ctx1: ![n < 2]
+  f_pp12_ctx2 -> f_pp16_ctx2: ![n < 2]
+  f_pp12_ctx3 -> f_pp16_ctx3: ![n < 2]
+  f_pp14_ctx0 -> f_exit_f_ctx0: return r
+  f_pp14_ctx1 -> f_exit_f_ctx1: return r
+  f_pp14_ctx2 -> f_exit_f_ctx2: return r
+  f_pp14_ctx3 -> f_exit_f_ctx3: return r
+  f_pp18_ctx0 -> f_exit_f_ctx0: return a + b
+  f_pp18_ctx1 -> f_exit_f_ctx1: return a + b
+  f_pp18_ctx2 -> f_exit_f_ctx2: return a + b
+  f_pp18_ctx3 -> f_exit_f_ctx3: return a + b
+  main_pp20_ctx0 -> main_pp21_ctx0: q := __voblint_nondet_int()
+  main_pp23_ctx0 -> main_exit_main_ctx0: return
+  f_entry_f_ctx0 -> f_pp12_ctx0: body(f)
+  f_entry_f_ctx1 -> f_pp12_ctx1: body(f)
+  f_entry_f_ctx2 -> f_pp12_ctx2: body(f)
+  f_entry_f_ctx3 -> f_pp12_ctx3: body(f)
+  g_entry_g_ctx0 -> g_pp2_ctx0: body(g)
+  g_entry_g_ctx1 -> g_pp2_ctx1: body(g)
+  h_entry_h_ctx0 -> h_pp0_ctx0: body(h)
+  h_entry_h_ctx1 -> h_pp0_ctx1: body(h)
+  main_entry_main_ctx0 -> main_pp20_ctx0: body(main)
+  w_entry_w_ctx0 -> w_pp5_ctx0: body(w)
+  g_pp2_ctx0 -> h_entry_h_ctx0: enter h(u)
+  h_exit_h_ctx0 -> g_pp3_ctx0: combine r := h(u)
+  g_pp2_ctx0 -> g_pp3_ctx0: call-to-return h
+  g_pp2_ctx1 -> h_entry_h_ctx1: enter h(u)
+  h_exit_h_ctx1 -> g_pp3_ctx1: combine r := h(u)
+  g_pp2_ctx1 -> g_pp3_ctx1: call-to-return h
+  w_pp7_ctx0 -> w_entry_w_ctx0: enter w(y)
+  w_exit_w_ctx0 -> w_pp8_ctx0: combine r := w(y)
+  w_pp7_ctx0 -> w_pp8_ctx0: call-to-return w
+  f_pp13_ctx0 -> g_entry_g_ctx0: enter g(n, 0)
+  g_exit_g_ctx0 -> f_pp14_ctx0: combine r := g(n, 0)
+  f_pp13_ctx0 -> f_pp14_ctx0: call-to-return g
+  f_pp13_ctx1 -> g_entry_g_ctx1: enter g(n, 0)
+  g_exit_g_ctx1 -> f_pp14_ctx1: combine r := g(n, 0)
+  f_pp13_ctx1 -> f_pp14_ctx1: call-to-return g
+  f_pp13_ctx2 -> f_pp14_ctx2: call-to-return g
+  f_pp13_ctx3 -> f_pp14_ctx3: call-to-return g
+  f_pp16_ctx0 -> f_pp17_ctx0: call-to-return f
+  f_pp16_ctx1 -> f_pp17_ctx1: call-to-return f
+  f_pp16_ctx2 -> f_entry_f_ctx1: enter f(n - 1)
+  f_exit_f_ctx1 -> f_pp17_ctx2: combine a := f(n - 1)
+  f_pp16_ctx2 -> f_pp17_ctx2: call-to-return f
+  f_pp16_ctx3 -> f_entry_f_ctx2: enter f(n - 1)
+  f_exit_f_ctx2 -> f_pp17_ctx3: combine a := f(n - 1)
+  f_pp16_ctx3 -> f_pp17_ctx3: call-to-return f
+  f_pp17_ctx0 -> f_pp18_ctx0: call-to-return f
+  f_pp17_ctx1 -> f_pp18_ctx1: call-to-return f
+  f_pp17_ctx2 -> f_entry_f_ctx0: enter f(n - 2)
+  f_exit_f_ctx0 -> f_pp18_ctx2: combine b := f(n - 2)
+  f_pp17_ctx2 -> f_pp18_ctx2: call-to-return f
+  f_pp17_ctx3 -> f_entry_f_ctx1: enter f(n - 2)
+  f_exit_f_ctx1 -> f_pp18_ctx3: combine b := f(n - 2)
+  f_pp17_ctx3 -> f_pp18_ctx3: call-to-return f
+  main_pp21_ctx0 -> w_entry_w_ctx0: enter w(q)
+  w_exit_w_ctx0 -> main_pp22_ctx0: combine s := w(q)
+  main_pp21_ctx0 -> main_pp22_ctx0: call-to-return w
+  main_pp22_ctx0 -> f_entry_f_ctx3: enter f(3)
+  f_exit_f_ctx3 -> main_pp23_ctx0: combine r := f(3)
+  main_pp22_ctx0 -> main_pp23_ctx0: call-to-return f

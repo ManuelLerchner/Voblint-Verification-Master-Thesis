@@ -557,8 +557,9 @@ let () =
         exit 1
   in
   parse_args (List.tl (Array.to_list Sys.argv));
-  (* A shared global is read by every point, so warrowing it can keep
-     destabilizing its readers; bounded narrowing ends that alternation. *)
+  (* Warrowing a flow-insensitive global can keep switching between widening
+     and narrowing as its writers re-run; bounded narrowing ends that
+     alternation. *)
   let globals_name =
     match !globals_name with
     | Some name -> name

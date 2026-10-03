@@ -3,6 +3,7 @@
 #import "@preview/commute:0.3.0" as commute
 #import "@preview/subpar:0.2.2"
 #import "theme.typ": vb
+#import "code.typ": listing
 
 // Reusable figure vocabulary. Same principle as the LaTeX style file: a CFG
 // node looks the same everywhere, and restyling all of them is one edit.
@@ -427,8 +428,15 @@
   )
 }
 
-// The program a playground figure was run on, as a listing.
+// The program a playground figure was run on, as a listing linked to that run.
 #let playground-program(name) = {
   let r = _playground.at(name)
-  raw(read("/shared/generated/playground/" + r.program), lang: "c", block: true)
+  listing(
+    read("/shared/generated/playground/" + r.program),
+    lang: "c",
+    analysis: r.analysis,
+    globals: r.globals,
+    ctx: r.context,
+    k: if "k" in r { int(r.k) } else { auto },
+  )
 }

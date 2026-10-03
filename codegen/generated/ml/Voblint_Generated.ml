@@ -140,6 +140,7 @@ module Generated : sig
     Ev_Destabilize of ('a, 'b) sum | Ev_Stable_Remove of 'a
   type report_context
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
+  type unknown_node = Local_Node of cfg_node * nat | Global_Node of string
   type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
     Analysed of 'a
   type program_globals = Program_Globals_Flow_Sensitive |
@@ -147,10 +148,14 @@ module Generated : sig
   type analysis_config =
     Analysis_Config of
       analysis_domain list * globals_rule * context_mode * program_globals
+  type analysis_edge = Intra_Dep of edge_action | Enter_Dep of call_action |
+    Combine_Dep of call_action | Continue_Dep of call_action | Global_Read |
+    Global_Write
   type result_global_unknown = Global_Named of string |
     Global_Seed of string * nat option
   type 'a imp_prog_ext
   type 'a call_route_ext
+  type 'a analysis_graph_ext
   type arithmetic_obligation
   type arithmetic_diagnostic
   type ('a, 'b) result_global_ext
@@ -176,32 +181,39 @@ module Generated : sig
   val run_voblint :
     analysis_config ->
       unit imp_prog_ext -> unit analysis_report_ext analysis_answer
+  val route_targets : 'a call_route_ext -> nat list
+  val route_context : 'a call_route_ext -> nat
+  val route_point : 'a call_route_ext -> cfg_node
+  val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
+  val state_point : ('a, 'b) result_state_ext -> cfg_node
+  val state_value : ('a, 'b) result_state_ext -> 'a lifted
   val global_unknown : ('a, 'b) result_global_ext -> result_global_unknown
+  val state_context : ('a, 'b) result_state_ext -> nat
   val global_state : ('a, 'b) result_global_ext -> 'a lifted
   val state_diagnostics :
     ('a, 'b) result_state_ext ->
       (arithmetic_obligation * check_result lifted) list
-  val state_context : ('a, 'b) result_state_ext -> nat
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
-  val state_value : ('a, 'b) result_state_ext -> 'a lifted
-  val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
-  val state_point : ('a, 'b) result_state_ext -> cfg_node
   val render_report :
     (abstract_value -> 'a) ->
       unit analysis_report_ext -> ('a, unit) run_result_ext
   val res_cfg : ('a, 'b) run_result_ext -> unit cfg_ext
-  val route_point : 'a call_route_ext -> cfg_node
   val check_exp : 'a result_check_ext -> exp
+  val res_graph : ('a, 'b) run_result_ext -> unit analysis_graph_ext
   val route_callee : 'a call_route_ext -> string
   val string_of_abstract_value : abstract_value -> string
   val res_checks : ('a, 'b) run_result_ext -> unit result_check_ext list
+  val res_joined :
+    ('a, 'b) run_result_ext ->
+      (cfg_node *
+        (((analysis_domain * 'a field_state) list) lifted *
+          (cfg_node *
+            ((analysis_domain * 'a field_state) list) lifted) list)) list
   val res_routes : ('a, 'b) run_result_ext -> unit call_route_ext list
   val res_states :
     ('a, 'b) run_result_ext ->
       (((analysis_domain * 'a field_state) list), unit) result_state_ext list
-  val route_context : 'a call_route_ext -> nat
-  val route_targets : 'a call_route_ext -> nat list
   val check_label : 'a result_check_ext -> nat * nat
   val check_point : 'a result_check_ext -> cfg_node
   val res_globals :
@@ -210,6 +222,10 @@ module Generated : sig
   val res_contexts : ('a, 'b) run_result_ext -> 'a analysis_context list
   val check_verdict : 'a result_check_ext -> check_result lifted
   val prog_stmt_post_order : unit imp_prog_ext -> (string * cfg_node list) list
+  val graph_edges :
+    'a analysis_graph_ext ->
+      (unknown_node * (analysis_edge * unknown_node)) list
+  val graph_nodes : 'a analysis_graph_ext -> unknown_node list
   val res_diagnostics : ('a, 'b) run_result_ext -> arithmetic_diagnostic list
   val map_analysis_answer :
     ('a -> 'b) -> 'a analysis_answer -> 'b analysis_answer
@@ -219,6 +235,27 @@ module Generated : sig
   val diagnostic_obligation : arithmetic_diagnostic -> arithmetic_obligation
   val diagnostic_occurrence : arithmetic_diagnostic -> nat
 end = struct
+
+type 'a sup = {sup : 'a -> 'a -> 'a};;
+let sup _A = _A.sup;;
+
+type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
+let less_eq _A = _A.less_eq;;
+let less _A = _A.less;;
+
+type 'a preorder = {ord_preorder : 'a ord};;
+
+type 'a order = {preorder_order : 'a preorder};;
+
+type 'a semilattice_sup =
+  {sup_semilattice_sup : 'a sup; order_semilattice_sup : 'a order};;
+
+let rec vjoin_fun _B f g = (fun x -> sup _B.sup_semilattice_sup (f x) (g x));;
+
+type 'a join_val = {vjoin : 'a -> 'a -> 'a};;
+let vjoin _A = _A.vjoin;;
+
+let rec join_val_fun _B = ({vjoin = vjoin_fun _B} : ('a -> 'b) join_val);;
 
 type int = Int_of_integer of Z.t;;
 
@@ -838,15 +875,7 @@ let modulo_int =
 
 let rec less_eq_int k l = Z.leq (integer_of_int k) (integer_of_int l);;
 
-type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
-let less_eq _A = _A.less_eq;;
-let less _A = _A.less;;
-
 let ord_int = ({less_eq = less_eq_int; less = less_int} : int ord);;
-
-type 'a preorder = {ord_preorder : 'a ord};;
-
-type 'a order = {preorder_order : 'a preorder};;
 
 let preorder_int = ({ord_preorder = ord_int} : int preorder);;
 
@@ -1402,12 +1431,6 @@ let rec equal_dg_state _A _B =
 let rec dg_global (DG (x1, x2)) = x2;;
 
 let rec dg_local (DG (x1, x2)) = x1;;
-
-type 'a sup = {sup : 'a -> 'a -> 'a};;
-let sup _A = _A.sup;;
-
-type 'a semilattice_sup =
-  {sup_semilattice_sup : 'a sup; order_semilattice_sup : 'a order};;
 
 let rec sup_dg_statea _A _B
   d1 d2 =
@@ -1970,6 +1993,10 @@ let narrowing_relc =
 let warrowing_relc =
   ({narrowing_warrowing = narrowing_relc; widening_warrowing = widening_relc} :
     relc warrowing);;
+
+let rec vjoin_relc x = sup_relca x;;
+
+let join_val_relc = ({vjoin = vjoin_relc} : relc join_val);;
 
 let semilattice_sup_relc =
   ({sup_semilattice_sup = sup_relc; order_semilattice_sup = order_relc} :
@@ -2928,6 +2955,12 @@ let rec warrowing_lifted (_A1, _A2) =
          (_A1.semilattice_sup_bounded_semilattice_sup_bot,
            _A2.widening_warrowing))}
     : 'a lifted warrowing);;
+
+let rec vjoin_lifted _A x0 y = match x0, y with Bot, y -> y
+                          | Lifted x, Bot -> Lifted x
+                          | Lifted x, Lifted y -> Lifted (vjoin _A x y);;
+
+let rec join_val_lifted _A = ({vjoin = vjoin_lifted _A} : 'a lifted join_val);;
 
 let rec semilattice_sup_lifted _A =
   ({sup_semilattice_sup = (sup_lifted _A);
@@ -4116,6 +4149,13 @@ let rec warrowing_analysis_product (_A1, _A2) (_B1, _B2) =
      widening_warrowing = (widening_analysis_product (_A1, _A2) (_B1, _B2))}
     : ('a, 'b) analysis_product warrowing);;
 
+let rec vjoin_analysis_product _A _B
+  p q = Product (vjoin _A (pleft p) (pleft q), vjoin _B (pright p) (pright q));;
+
+let rec join_val_analysis_product _A _B =
+  ({vjoin = vjoin_analysis_product _A _B} :
+    ('a, 'b) analysis_product join_val);;
+
 let rec semilattice_sup_analysis_product _A _B =
   ({sup_semilattice_sup = (sup_analysis_product _A _B);
      order_semilattice_sup =
@@ -4344,6 +4384,8 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
 
 type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 
+type unknown_node = Local_Node of cfg_node * nat | Global_Node of string;;
+
 type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
   Analysed of 'a;;
 
@@ -4353,6 +4395,10 @@ type program_globals = Program_Globals_Flow_Sensitive |
 type analysis_config =
   Analysis_Config of
     analysis_domain list * globals_rule * context_mode * program_globals;;
+
+type analysis_edge = Intra_Dep of edge_action | Enter_Dep of call_action |
+  Combine_Dep of call_action | Continue_Dep of call_action | Global_Read |
+  Global_Write;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -4406,6 +4452,11 @@ type ('a, 'b) refine_ops_ext =
 type ('a, 'b) special_ops_ext =
   Special_ops_ext of ('a -> 'a -> 'a) * ('a -> 'a -> 'a) * 'b;;
 
+type 'a analysis_graph_ext =
+  Analysis_graph_ext of
+    unknown_node list * (unknown_node * (analysis_edge * unknown_node)) list *
+      'a;;
+
 type arithmetic_obligation = Arithmetic_Obligation of exp * exp;;
 
 type arithmetic_diagnostic =
@@ -4428,9 +4479,13 @@ type ('a, 'b) run_result_ext =
   Run_result_ext of
     unit cfg_ext * 'a analysis_context list *
       (((analysis_domain * 'a field_state) list), unit) result_state_ext list *
+      (cfg_node *
+        (((analysis_domain * 'a field_state) list) lifted *
+          (cfg_node *
+            ((analysis_domain * 'a field_state) list) lifted) list)) list *
       unit call_route_ext list * unit result_check_ext list *
       (((analysis_domain * 'a field_state) list), unit) result_global_ext list *
-      arithmetic_diagnostic list * 'b;;
+      arithmetic_diagnostic list * unit analysis_graph_ext * 'b;;
 
 type ('a, 'b) query_ops_ext =
   Query_ops_ext of ('a -> 'a -> bool option) * ('a -> 'a -> bool option) * 'b;;
@@ -13617,6 +13672,92 @@ let rec run_voblint
              else (match analysis_report_of config p with None -> No_Answer
                     | Some a -> Analysed a)));;
 
+let rec report_routes
+  (Analysis_report_ext
+    (report_config, report_vars, report_cfg, report_contexts, report_states,
+      report_routes, report_checks, report_globals, report_diagnostics, more))
+    = report_routes;;
+
+let rec route_targets
+  (Call_route_ext
+    (route_point, route_context, route_callee, route_targets, more))
+    = route_targets;;
+
+let rec route_context
+  (Call_route_ext
+    (route_point, route_context, route_callee, route_targets, more))
+    = route_context;;
+
+let rec route_point
+  (Call_route_ext
+    (route_point, route_context, route_callee, route_targets, more))
+    = route_point;;
+
+let rec report_route_targets
+  res u c =
+    concat
+      (map_filter
+        (fun x ->
+          (if equal_cfg_nodea (route_point x) u &&
+                equal_nata (route_context x) c
+            then Some (route_targets x) else None))
+        (report_routes res));;
+
+let rec callee_of
+  entry =
+    (match entry with Statement _ -> "" | FunctionEntry f -> f
+      | FunctionResult f -> f);;
+
+let rec call_deps
+  res g rows u c e =
+    (let (ua, (ca, (entry, after))) = e in
+      (if not (equal_cfg_nodea ua u) then []
+        else (let targets = report_route_targets res u c in
+              let result = FunctionResult (callee_of entry) in
+               maps (fun t ->
+                      (if membera (equal_prod equal_cfg_node equal_nat) rows
+                            (entry, t)
+                        then [(Local_Node (u, c),
+                                (Enter_Dep ca, Local_Node (entry, t)))]
+                        else []) @
+                        (if membera (equal_prod equal_cfg_node equal_nat) rows
+                              (result, t) &&
+                              membera (equal_prod equal_cfg_node equal_nat) rows
+                                (after, c)
+                          then [(Local_Node (result, t),
+                                  (Combine_Dep ca, Local_Node (after, c)))]
+                          else []))
+                 targets @
+                 (if membera (equal_prod equal_cfg_node equal_nat) rows
+                       (after, c)
+                   then (Local_Node (u, c),
+                          (Continue_Dep ca, Local_Node (after, c))) ::
+                          (let CallEdge (dst, pars, args) = ca in
+                            map (fun x ->
+                                  (Global_Node x,
+                                    (Global_Read, Local_Node (after, c))))
+                              (call_global_reads g args) @
+                              map (fun x ->
+                                    (Local_Node (after, c),
+                                      (Global_Write, Global_Node x)))
+                                (global_names_in g
+                                  ((match dst with None -> [] | Some x -> [x]) @
+                                    pars)))
+                   else []))));;
+
+let rec intra_deps
+  g rows u c e =
+    (let (ua, (a, v)) = e in
+      (if equal_cfg_nodea ua u &&
+            membera (equal_prod equal_cfg_node equal_nat) rows (v, c)
+        then (Local_Node (u, c), (Intra_Dep a, Local_Node (v, c))) ::
+               map (fun x -> (Global_Node x, (Global_Read, Local_Node (v, c))))
+                 (edge_global_reads g a) @
+                 map (fun x ->
+                       (Local_Node (v, c), (Global_Write, Global_Node x)))
+                   (edge_global_writes g a)
+        else []));;
+
 let rec report_diagnostics
   (Analysis_report_ext
     (report_config, report_vars, report_cfg, report_contexts, report_states,
@@ -13640,12 +13781,6 @@ let rec report_states
     (report_config, report_vars, report_cfg, report_contexts, report_states,
       report_routes, report_checks, report_globals, report_diagnostics, more))
     = report_states;;
-
-let rec report_routes
-  (Analysis_report_ext
-    (report_config, report_vars, report_cfg, report_contexts, report_states,
-      report_routes, report_checks, report_globals, report_diagnostics, more))
-    = report_routes;;
 
 let rec report_config
   (Analysis_report_ext
@@ -13671,6 +13806,97 @@ let rec report_cfg
       report_routes, report_checks, report_globals, report_diagnostics, more))
     = report_cfg;;
 
+let rec state_steps
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_steps;;
+
+let rec state_point
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_point;;
+
+let rec report_steps_join
+  res v =
+    (match
+      map_filter
+        (fun x ->
+          (if equal_cfg_nodea (state_point x) v then Some (state_steps x)
+            else None))
+        (report_states res)
+      with [] -> []
+      | s :: ss ->
+        fold (fun xs ys ->
+               map (fun (a, b) ->
+                     (let (w, aa) = a in
+                       (fun (_, ba) ->
+                         (w, vjoin_lifted
+                               (join_val_analysis_product
+                                 (join_val_lifted
+                                   (join_val_fun semilattice_sup_sign))
+                                 (join_val_analysis_product
+                                   (join_val_lifted
+                                     (join_val_fun semilattice_sup_ivl))
+                                   (join_val_analysis_product
+                                     (join_val_lifted
+                                       (join_val_fun semilattice_sup_parity))
+                                     (join_val_analysis_product
+                                       (join_val_lifted
+ (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                                       (join_val_analysis_product
+ (join_val_lifted
+   (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+ (join_val_analysis_product
+   (join_val_lifted
+     (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+   (join_val_analysis_product
+     (join_val_lifted (join_val_fun semilattice_sup_congruence))
+     join_val_relc)))))))
+                               aa ba)))
+                       b)
+                 (zip xs ys))
+          ss s);;
+
+let rec state_value
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_value;;
+
+let rec report_point_join
+  res v =
+    fold (vjoin_lifted
+           (join_val_analysis_product
+             (join_val_lifted (join_val_fun semilattice_sup_sign))
+             (join_val_analysis_product
+               (join_val_lifted (join_val_fun semilattice_sup_ivl))
+               (join_val_analysis_product
+                 (join_val_lifted (join_val_fun semilattice_sup_parity))
+                 (join_val_analysis_product
+                   (join_val_lifted
+                     (join_val_fun
+                       (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                   (join_val_analysis_product
+                     (join_val_lifted
+                       (join_val_fun
+                         (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                     (join_val_analysis_product
+                       (join_val_lifted
+                         (join_val_fun
+                           (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                       (join_val_analysis_product
+                         (join_val_lifted
+                           (join_val_fun semilattice_sup_congruence))
+                         join_val_relc))))))))
+      (map_filter
+        (fun x ->
+          (if equal_cfg_nodea (state_point x) v then Some (state_value x)
+            else None))
+        (report_states res))
+      Bot;;
+
 let rec map_field_state
   f x1 = match f, x1 with
     f, Field_Store bs -> Field_Store (map (fun (x, v) -> (x, f v)) bs)
@@ -13680,6 +13906,44 @@ let rec map_analysis_view f = map (fun (a, s) -> (a, map_field_state f s));;
 
 let rec global_unknown
   (Result_global_ext (global_unknown, global_state, more)) = global_unknown;;
+
+let rec report_global_names
+  res = maps (fun g ->
+               (match global_unknown g with Global_Named x -> [x]
+                 | Global_Seed (_, _) -> []))
+          (report_globals res);;
+
+let rec state_context
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_context;;
+
+let rec report_rows_of
+  res = map (fun st -> (state_point st, state_context st)) (report_states res);;
+
+let rec analysis_graph_of
+  res = (let g = report_cfg res in
+         let rows = report_rows_of res in
+         let names = report_global_names res in
+         let ga = membera equal_literal names in
+          Analysis_graph_ext
+            (map (fun (a, b) -> Local_Node (a, b)) rows @
+               map (fun a -> Global_Node a) names,
+              maps (fun e -> maps (fun (u, c) -> intra_deps ga rows u c e) rows)
+                (cfg_intra_list g) @
+                maps (fun e ->
+                       maps (fun (u, c) -> call_deps res ga rows u c e) rows)
+                  (cfg_calls_list g) @
+                  maps (fun (u, c) ->
+                         (if equal_cfg_nodea u (cfg_entry g)
+                           then map (fun x ->
+                                      (Local_Node (u, c),
+(Global_Write, Global_Node x)))
+                                  names
+                           else []))
+                    rows,
+              ()));;
 
 let rec global_state
   (Result_global_ext (global_unknown, global_state, more)) = global_state;;
@@ -13699,35 +13963,11 @@ let rec state_diagnostics
       state_steps, more))
     = state_diagnostics;;
 
-let rec state_context
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_context;;
-
 let rec state_checks
   (Result_state_ext
     (state_point, state_context, state_value, state_checks, state_diagnostics,
       state_steps, more))
     = state_checks;;
-
-let rec state_value
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_value;;
-
-let rec state_steps
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_steps;;
-
-let rec state_point
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_point;;
 
 let rec map_result_state
   f st =
@@ -13743,9 +13983,15 @@ let rec render_report
        comp (map_analysis_view show) (mcp_render asa (report_vars res)) in
       Run_result_ext
         (report_cfg res, map (render_context show asa) (report_contexts res),
-          map (map_result_state state) (report_states res), report_routes res,
-          report_checks res, map (map_result_global state) (report_globals res),
-          report_diagnostics res, ()));;
+          map (map_result_state state) (report_states res),
+          map (fun v ->
+                (v, (map_lift state (report_point_join res v),
+                      map (fun (w, s) -> (w, map_lift state s))
+                        (report_steps_join res v))))
+            (cfg_node_list (report_cfg res)),
+          report_routes res, report_checks res,
+          map (map_result_global state) (report_globals res),
+          report_diagnostics res, analysis_graph_of res, ()));;
 
 let rec string_of_pairs
   = function [] -> ""
@@ -13756,8 +14002,8 @@ let rec string_of_pairs
 
 let rec res_cfg
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_cfg;;
 
 let rec procs_stmt_next
@@ -13783,14 +14029,15 @@ let rec to_string_relc
 let rec order_view_string
   v = to_string_relc (match v with None -> RelBot | Some ps -> RelC (Set ps));;
 
-let rec route_point
-  (Call_route_ext
-    (route_point, route_context, route_callee, route_targets, more))
-    = route_point;;
-
 let rec check_exp
   (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
     = check_exp;;
+
+let rec res_graph
+  (Run_result_ext
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
+    = res_graph;;
 
 let rec route_callee
   (Call_route_ext
@@ -13812,31 +14059,27 @@ let rec string_of_abstract_value
 
 let rec res_checks
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_checks;;
+
+let rec res_joined
+  (Run_result_ext
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
+    = res_joined;;
 
 let rec res_routes
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_routes;;
 
 let rec res_states
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_states;;
-
-let rec route_context
-  (Call_route_ext
-    (route_point, route_context, route_callee, route_targets, more))
-    = route_context;;
-
-let rec route_targets
-  (Call_route_ext
-    (route_point, route_context, route_callee, route_targets, more))
-    = route_targets;;
 
 let rec check_label
   (Result_check_ext (check_point, check_label, check_exp, check_verdict, more))
@@ -13848,8 +14091,8 @@ let rec check_point
 
 let rec res_globals
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_globals;;
 
 let rec com_stmt_post_order
@@ -13870,8 +14113,8 @@ let rec com_stmt_post_order
 
 let rec res_contexts
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_contexts;;
 
 let rec check_verdict
@@ -13894,10 +14137,16 @@ let rec prog_stmt_post_order
              (procs_stmt_next (prog_table p) (prog_procs p) zero_nat)
              (prog_main p))];;
 
+let rec graph_edges
+  (Analysis_graph_ext (graph_nodes, graph_edges, more)) = graph_edges;;
+
+let rec graph_nodes
+  (Analysis_graph_ext (graph_nodes, graph_edges, more)) = graph_nodes;;
+
 let rec res_diagnostics
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, res_graph, more))
     = res_diagnostics;;
 
 let rec map_analysis_answer

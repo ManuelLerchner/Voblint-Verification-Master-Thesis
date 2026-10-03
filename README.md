@@ -52,6 +52,14 @@ Each step is an Isabelle theorem:
 [`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 states the whole chain for every run that returns a report.
 
+The report's states at $v$ can also be joined over their contexts. Every store
+the report describes at $v$ lies in the concretization of that join,
+$[\![\, \mathit{res} \,]\!]_{v} \subseteq \gamma\big(\bigsqcup_{c} \mathit{res}(v, c)\big)$
+([`report_sem_point_join`](src/Executable_Surface/CLI/Analysis_Report.thy)),
+so [`run_voblint_source_sound_joined`](src/Executable_Surface/CLI/Analysis_Certified.thy)
+gives the same guarantee for the one state per point that the playground's
+control-flow view shows. The join can lose precision but not reached stores.
+
 ## What is Voblint?
 
 Voblint is a machine-checked Isabelle/HOL framework for building, running and
@@ -363,6 +371,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 
 | Symbol | Reads as | Isabelle | Meaning |
 | --- | --- | --- | --- |
+| γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
 | 𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ | [`pstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst) / [`psteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst) | one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure |
 | Π,g ⊢ c ≈ c' | _c_ is matched with _c′_ | [`csim`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst) | the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_ |
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
@@ -370,6 +379,8 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
 | ⟦res⟧<sub>v</sub> | the stores report _res_ describes at _v_ | [`report_sem`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst) | the stores some state the analysis report holds at point _v_, under any of its contexts, describes |
 | 𝒱<sub>res</sub> v | the stores the verdicts of _res_ at _v_ hold in | [`verdict_stores`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst) | the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false |
+| carries t c<br>In `activation_coverage`, short for activation&#95;context&#95;rel 𝒢 R c<sub>0</sub> g | _t_ carries context _c_ | [`carries`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | the context relation of the locale's policy, between a valid activation trace and the contexts it may run in |
+| cover v ctx<br>In `routed_context`, input only, short for γ<sub>M</sub> (sg (Inl (v, ctx))) | the stores claimed at _v_ in _ctx_ | [`cover`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst) | proof-local shorthand for applying γ<sub>M</sub> to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation |
 
 <!-- notation:end -->
 
@@ -478,14 +489,6 @@ with the same `AFP` setting.
 `pixi run isar-check` checks ROOT entries, unfinished proofs, theory syntax and
 formatting with isar-tools, without Isabelle or the AFP. `pixi task list` lists
 everything else.
-
-The thesis is written on the `writing` branch, which differs from `main` only in
-`thesis/`; every other change reaches `main` first. `main` keeps an older copy of
-`thesis/` that the thesis checks no longer describe, so they run only for
-`writing`. CI steps compare `github.ref`, `github.head_ref` and `github.base_ref`
-with it, the Lefthook groups `thesis-checks` and `thesis-current` run on that
-branch only, and `pixi run thesis-check` gathers the tasks that `pixi run verify`
-leaves out.
 
 > The vendored solver is pinned to a private fork of
 > [stilscher/td-verification](https://github.com/stilscher/td-verification); CI

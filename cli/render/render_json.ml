@@ -55,7 +55,8 @@ let check_json result (check, position) =
     (json_string state) (location_fields position)
 
 let diagnostic_json stmt_positions diagnostic =
-  Printf.sprintf "{\"severity\":%s,\"message\":%s%s}"
+  Printf.sprintf "{\"point\":%s,\"severity\":%s,\"message\":%s%s}"
+    (json_string (A.point_name (C.diagnostic_point diagnostic)))
     (json_string (Render_text.diagnostic_severity diagnostic))
     (json_string (A.diagnostic_message diagnostic))
     (location_fields
@@ -314,8 +315,9 @@ let nodes_json result (graph : G.t) context_key =
        divisions)
     graph.nodes
 
-(* The drawing's structure: which nodes share a context box, and every edge with its
-   role. The browser lays it out and styles it; the DOT rendering stays the CLI's. *)
+(* The drawing's structure: which nodes share a context box, every edge with its
+   role, and which local unknowns read and write each flow-insensitive global. The
+   browser lays it out and styles it; the DOT rendering stays the CLI's. *)
 let edge_kind_name = function
   | G.Intra -> "intra"
   | G.Enter -> "enter"
@@ -335,9 +337,199 @@ let graph_json (graph : G.t) =
       (json_string (edge_kind_name e.kind))
       (json_string e.text)
   in
-  Printf.sprintf "{\"clusters\":%s,\"edges\":%s}"
+  let global_dep (d : G.global_dep) =
+    Printf.sprintf "{\"global\":%s,\"node\":%s,\"kind\":%s}"
+      (json_string d.global) (json_string d.node)
+      (json_string
+         (match d.access with
+         | G.Read -> "global_read"
+         | G.Write -> "global_write"))
+  in
+  Printf.sprintf "{\"clusters\":%s,\"edges\":%s,\"global_deps\":%s}"
     (json_list cluster graph.clusters)
     (json_list edge graph.edges)
+    (json_list global_dep graph.global_deps)
+
+(* The compiled CFG itself, as res_cfg holds it: one node per program point, in no
+   context, boxed by the procedure that owns it. [rows] lists the drawn analysis
+   nodes at the same point, one per context, so a view of the CFG can show every
+   reported state at its point without combining any of them. *)
+let cfg_view_json prog result (graph : G.t) =
+  let g = C.res_cfg result in
+  let owner_of = A.owners g in
+  let names_of = Context_graph.scope prog g owner_of in
+  let id p = "cfg_" ^ A.point_name p in
+  let points = C.cfg_node_list g in
+  (* The program's own procedure first, then the others as the CFG lists them. *)
+  let owners =
+    List.fold_left
+      (fun acc p ->
+        let o = owner_of p in
+        if List.mem o acc then acc else acc @ [ o ])
+      [ owner_of (C.cfg_entry g) ]
+      points
+  in
+  let procedure owner =
+    Printf.sprintf "{\"id\":%s,\"label\":%s,\"members\":%s}"
+      (json_string ("cfg_proc_" ^ owner))
+      (json_string owner)
+      (json_list
+         (fun p -> json_string (id p))
+         (List.filter (fun p -> owner_of p = owner) points))
+  in
+  (* The state run_voblint joins over the point's contexts (report_point_join) and
+     what each outgoing step makes of it (report_steps_join), shaped like a drawn
+     node's fields so the page reads both the same way. *)
+  let joined_of p =
+    match List.assoc_opt p (C.res_joined result) with
+    | Some (state, steps) -> (state, steps)
+    | None -> (C.Bot, [])
+  in
+  let scoped p view =
+    List.map
+      (fun (label, section) ->
+        match section with
+        | A.Store bindings ->
+            ( label,
+              A.Store (Context_graph.pick (names_of (owner_of p)) bindings) )
+        | A.Whole _ -> (label, section))
+      (A.sections_of view)
+  in
+  let stores names view =
+    List.filter_map
+      (fun (label, section) ->
+        match section with
+        | A.Store bindings -> Some (label, Context_graph.pick names bindings)
+        | A.Whole _ -> None)
+      (A.sections_of view)
+  in
+  let globals = C.declared_global_vars prog in
+  let count edges =
+    let table = Hashtbl.create 16 in
+    List.iter
+      (fun v ->
+        Hashtbl.replace table v
+          (1 + Option.value ~default:0 (Hashtbl.find_opt table v)))
+      edges;
+    fun v -> Option.value ~default:0 (Hashtbl.find_opt table v) > 1
+  in
+  let joins_at =
+    count
+      (List.map (fun (_, _, v) -> v) (A.intra_edges g)
+      @ List.map (fun (_, _, _, after) -> after) (A.call_edges g))
+  in
+  let entered_twice =
+    count (List.map (fun (_, _, entry, _) -> entry) (A.call_edges g))
+  in
+  let joined_fields p =
+    let state, steps = joined_of p in
+    let next_intra =
+      let edges = List.filter (fun (u, _, _) -> u = p) (A.intra_edges g) in
+      if List.length edges <> List.length steps then []
+      else
+        List.map2
+          (fun (_, a, v) (_, s) ->
+            Printf.sprintf
+              "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b,\"state\":%s}"
+              (json_string (id v))
+              (json_string (A.action_text a))
+              (json_option json_string
+                 (match a with
+                 | C.EA_Ret (Some _, _) -> Some Context_graph.ret_var
+                 | _ -> A.action_writes a))
+              (joins_at v)
+              (match s with
+              | C.Lifted view -> json_list section_json (A.sections_of view)
+              | C.Bot -> "null"))
+          edges steps
+    in
+    let calls = List.filter (fun (u, _, _, _) -> u = p) (A.call_edges g) in
+    let next_calls =
+      List.map
+        (fun (_, C.CallEdge (dst, _, _), entry, after) ->
+          let callee = match entry with C.FunctionEntry f -> f | _ -> "" in
+          Printf.sprintf "{\"id\":%s,\"action\":%s,\"writes\":%s,\"join\":%b}"
+            (json_string (id after))
+            (json_string ("after call " ^ callee))
+            (json_option json_string dst)
+            (joins_at after))
+        calls
+    in
+    let enters =
+      List.map
+        (fun (_, _, entry, _) ->
+          let callee = match entry with C.FunctionEntry f -> f | _ -> "" in
+          Printf.sprintf "{\"id\":%s,\"exit\":%s,\"join\":%b}"
+            (json_string (id entry))
+            (json_string (id (C.FunctionResult callee)))
+            (entered_twice entry))
+        calls
+    in
+    match state with
+    | C.Bot ->
+        Printf.sprintf
+          "\"joined\":null,\"globals\":[],\"ret\":[],\"next\":[%s],\"enters\":[%s]"
+          (String.concat "," (next_intra @ next_calls))
+          (String.concat "," enters)
+    | C.Lifted view ->
+        Printf.sprintf
+          "\"joined\":%s,\"globals\":%s,\"ret\":%s,\"next\":[%s],\"enters\":[%s]"
+          (json_list section_json (scoped p view))
+          (json_list
+             (fun (l, bs) -> section_json (l, A.Store bs))
+             (stores globals view))
+          (json_list binding_json
+             (List.filter_map
+                (fun (label, bindings) ->
+                  Option.map
+                    (fun v -> (label, v))
+                    (List.assoc_opt Context_graph.ret_var bindings))
+                (stores [ Context_graph.ret_var ] view)))
+          (String.concat "," (next_intra @ next_calls))
+          (String.concat "," enters)
+  in
+  let node p =
+    Printf.sprintf
+      "{\"id\":%s,\"point\":%s,\"owner\":%s,\"kind\":%s,%s,\"rows\":%s}"
+      (json_string (id p))
+      (json_string (A.point_name p))
+      (json_string (owner_of p))
+      (json_string (kind_name (Context_graph.kind_of g p)))
+      (joined_fields p)
+      (json_list json_string
+         (List.filter_map
+            (fun (n : G.node) -> if n.point = p then Some n.id else None)
+            graph.nodes))
+  in
+  let edge src dst kind text =
+    Printf.sprintf "{\"source\":%s,\"target\":%s,\"kind\":%s,\"text\":%s}"
+      (json_string (id src))
+      (json_string (id dst))
+      (json_string kind) (json_string text)
+  in
+  let intra =
+    List.map
+      (fun (u, a, v) -> edge u v "intra" (A.action_text a))
+      (A.intra_edges g)
+  in
+  let calls =
+    List.concat_map
+      (fun (u, (C.CallEdge (dst, _, _) as ca), entry, after) ->
+        let callee = match entry with C.FunctionEntry f -> f | _ -> "" in
+        [
+          edge u entry "enter" (A.call_text callee ca);
+          edge (C.FunctionResult callee) after "combine"
+            (Option.fold ~none:""
+               ~some:(fun x -> x ^ " := " ^ A.call_text callee ca)
+               dst);
+          edge u after "call_to_return" callee;
+        ])
+      (A.call_edges g)
+  in
+  Printf.sprintf "{\"procedures\":%s,\"nodes\":%s,\"edges\":[%s]}"
+    (json_list procedure owners)
+    (json_list node points)
+    (String.concat "," (intra @ calls))
 
 (* -------------------------------------------------------------------------- *)
 (* The run_voblint call, as data                                              *)
@@ -741,13 +933,14 @@ let result_json ?trace ?trace_jsonl ?(shared = false) analysis_ms program
   let graph = Context_graph.build program result in
   let contexts = Array.of_list (C.res_contexts result) in
   Printf.sprintf
-    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"seeds\":%s,\"raw\":%s,\"graph\":%s%s}"
+    "{\"status\":\"ok\",\"timing\":{\"analysis_ms\":%.3f},\"checks\":[%s],\"diagnostics\":[%s],\"statements\":%s,\"procedures\":%s,\"nodes\":%s,\"seeds\":%s,\"raw\":%s,\"graph\":%s,\"cfg\":%s%s}"
     analysis_ms checks diagnostics
     (json_list statement_json stmt_positions)
     (json_list (procedure_json program (returns_value result)) header_positions)
     (nodes_json result graph (context_key contexts stmt_positions))
     (seeds_json program result graph)
     raw (graph_json graph)
+    (cfg_view_json program result graph)
     ((match trace with
        | Some text -> ",\"trace\":" ^ json_string text
        | None -> "")
