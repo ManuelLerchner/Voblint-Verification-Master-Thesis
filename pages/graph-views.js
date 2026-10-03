@@ -1,10 +1,10 @@
 /*
  * The two graphs the playground draws from one run, as data. Neither runs the analyzer
- * again, and neither combines two states: the control-flow view lists each context's
- * state at its point, and the analysis view's global edges are what the solver trace
- * recorded. The page lays both out; this module only decides what they contain.
+ * again, and this module joins no states: the control-flow view shows the state
+ * run_voblint joined at each point beside each context's own, and the analysis view's
+ * edges are run_voblint's analysis graph. The page lays both out; this module only
+ * picks what each view shows.
  */
-import { globalKey, localKey, parseEvents } from "./replay_state.js";
 
 /* A zero divisor beside a point's name: definite before possible. */
 export const DIVISION_ICON = { definite: "⛔", possible: "⚠️" };
@@ -124,39 +124,15 @@ export function cfgView(result) {
 }
 
 /*
- * The reads and writes of each flow-insensitive global, as the run's own solver trace
- * recorded them: a point whose right-hand side queried the global's unknown, and one
- * that published to it. Each pair is listed once, however often the solver repeated it.
+ * The reads and writes of each flow-insensitive global, as run_voblint's analysis graph
+ * lists them (analysis_graph_of): the footprints the keyed lifter itself reads and
+ * publishes, independent of the order the solver happened to evaluate them in.
  */
 export function globalDependencies(result, globalId) {
-  if (typeof result.trace_jsonl !== "string" || !(result.shared?.unknowns ?? []).length) {
-    return [];
-  }
+  return (result.graph?.global_deps ?? []).map(({ global, node, kind }) => {
+    const [source, target] =
+      kind === "global_read" ? [globalId(global), node] : [node, globalId(global)];
 
-  const nodeOfKey = new Map(
-    (result.nodes ?? []).map((node) => [`L:${node.point}|${contextOf(node)}`, node.id]),
-  );
-  const seen = new Set();
-  const edges = [];
-
-  for (const event of parseEvents(result.trace_jsonl)) {
-    const read = event.event === "query_global";
-
-    if ((!read && event.event !== "side") || event.target?.kind !== "program_global") {
-      continue;
-    }
-
-    const local = nodeOfKey.get(localKey(event.current));
-    const global = globalId(globalKey(event.target).slice(3));
-    const [source, target] = read ? [global, local] : [local, global];
-    const kind = read ? "global_read" : "global_write";
-    const id = `${kind}-${source}-${target}`;
-
-    if (local && !seen.has(id)) {
-      seen.add(id);
-      edges.push({ id, source, target, kind });
-    }
-  }
-
-  return edges;
+    return { id: `${kind}-${source}-${target}`, source, target, kind };
+  });
 }

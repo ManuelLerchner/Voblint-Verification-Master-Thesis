@@ -315,8 +315,9 @@ let nodes_json result (graph : G.t) context_key =
        divisions)
     graph.nodes
 
-(* The drawing's structure: which nodes share a context box, and every edge with its
-   role. The browser lays it out and styles it; the DOT rendering stays the CLI's. *)
+(* The drawing's structure: which nodes share a context box, every edge with its
+   role, and which local unknowns read and write each flow-insensitive global. The
+   browser lays it out and styles it; the DOT rendering stays the CLI's. *)
 let edge_kind_name = function
   | G.Intra -> "intra"
   | G.Enter -> "enter"
@@ -336,9 +337,18 @@ let graph_json (graph : G.t) =
       (json_string (edge_kind_name e.kind))
       (json_string e.text)
   in
-  Printf.sprintf "{\"clusters\":%s,\"edges\":%s}"
+  let global_dep (d : G.global_dep) =
+    Printf.sprintf "{\"global\":%s,\"node\":%s,\"kind\":%s}"
+      (json_string d.global) (json_string d.node)
+      (json_string
+         (match d.access with
+         | G.Read -> "global_read"
+         | G.Write -> "global_write"))
+  in
+  Printf.sprintf "{\"clusters\":%s,\"edges\":%s,\"global_deps\":%s}"
     (json_list cluster graph.clusters)
     (json_list edge graph.edges)
+    (json_list global_dep graph.global_deps)
 
 (* The compiled CFG itself, as res_cfg holds it: one node per program point, in no
    context, boxed by the procedure that owns it. [rows] lists the drawn analysis

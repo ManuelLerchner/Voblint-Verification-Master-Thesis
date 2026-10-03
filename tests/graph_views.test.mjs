@@ -62,7 +62,7 @@ test("the CFG node shows run_voblint's joined state and keeps every context's", 
   assert.deepEqual(values.sort(), ["[2,2]", "[3,3]"]);
 });
 
-test("keyed globals: solver unknowns only in the analysis graph, with recorded edges", () => {
+test("keyed globals: solver unknowns only in the analysis graph, with edges from analysis_graph_of", () => {
   const result = payload(TWO_GLOBALS, [
     "--analysis", "interval", "--context", "none", "--program-globals", "flow-insensitive",
   ]);
