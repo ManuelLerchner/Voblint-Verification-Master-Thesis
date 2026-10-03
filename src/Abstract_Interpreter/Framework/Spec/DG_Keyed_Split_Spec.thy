@@ -249,18 +249,17 @@ text \<open>
   A return reads nothing and may assign its destination. The return pipeline is
   wrapped once, as in the ownership split.
 
-  A call reads every declared global \<open>xs\<close> and recombines exactly as a point's
-  state is recombined. The context a call enters is computed from that state,
-  and the analyzer recomputes the same context outside the solver from the
-  solved global environment, so the two must agree.
+  A call reads the globals its actuals mention and passes every other global as
+  \<open>free\<close>. The context a call enters is computed from that state, and the analyzer
+  recomputes it outside the solver from the same view of the solved environment.
 \<close>
 
 definition keyed_split_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
+  "(vname \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
    \<Rightarrow> (vname list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
    \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) dg_spec"
 where
-  "keyed_split_spec \<G> xs cmb rl rg free c =
+  "keyed_split_spec \<G> cmb rl rg free c =
      (let step = (\<lambda>a. keyed_transfer cmb rl rg free (edge_global_reads \<G> a)
                         (edge_global_writes \<G> a) (closed_step c a))
       in local_dg_spec_template\<lparr>
@@ -270,8 +269,8 @@ where
          dgs_branch := (\<lambda>b pol. step (if pol then EA_Assume b else EA_AssumeNot b)),
          dgs_body := (\<lambda>p. step (EA_Body p)),
          dgs_return := (\<lambda>e p. step (EA_Ret e p)),
-         dgs_enter := (\<lambda>ci. keyed_enter_transfer cmb rl rg (\<lambda>_. bot)
-            xs (global_names_in \<G> (ci_formals ci))
+         dgs_enter := (\<lambda>ci. keyed_enter_transfer cmb rl rg free
+            (call_global_reads \<G> (ci_args ci)) (global_names_in \<G> (ci_formals ci))
             (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))),
          dgs_event := (\<lambda>ev. step (event_action ev)),
          dgs_combine_assign := (\<lambda>ci. keyed_combine_transfer cmb rl rg free
@@ -281,30 +280,30 @@ where
 declare keyed_split_spec_def [code_unfold]
 
 lemma dg_spec_step_keyed_split_spec [simp]:
-  "dg_spec_step (keyed_split_spec \<G> xs cmb rl rg free c) a
+  "dg_spec_step (keyed_split_spec \<G> cmb rl rg free c) a
      = keyed_transfer cmb rl rg free (edge_global_reads \<G> a) (edge_global_writes \<G> a)
          (closed_step c a)"
   unfolding keyed_split_spec_def Let_def by (cases a) simp_all
 
 lemma dgs_enter_keyed_split_spec [simp]:
-  "enter\<^sup># (keyed_split_spec \<G> xs cmb rl rg free c) ci
-     = keyed_enter_transfer cmb rl rg (\<lambda>_. bot) xs
+  "enter\<^sup># (keyed_split_spec \<G> cmb rl rg free c) ci
+     = keyed_enter_transfer cmb rl rg free (call_global_reads \<G> (ci_args ci))
          (global_names_in \<G> (ci_formals ci)) (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))"
   unfolding keyed_split_spec_def Let_def by simp
 
 lemma dgs_query_keyed_split_spec [simp]:
-  "dgs_query (keyed_split_spec \<G> xs cmb rl rg free c) m q = sp_return \<top>"
+  "dgs_query (keyed_split_spec \<G> cmb rl rg free c) m q = sp_return \<top>"
   unfolding keyed_split_spec_def Let_def by simp
 
 lemma dg_spec_combine_transfer_keyed_split_spec [simp]:
-  "dg_spec_combine_transfer (keyed_split_spec \<G> xs cmb rl rg free c) ci
+  "dg_spec_combine_transfer (keyed_split_spec \<G> cmb rl rg free c) ci
      = keyed_combine_transfer cmb rl rg free (global_names_in \<G> (case_option [] (\<lambda>x. [x]) (ci_dst ci)))
          (\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)"
   unfolding dg_spec_combine_transfer_def keyed_split_spec_def Let_def
   by (simp add: local_combine_transfer_def fun_eq_iff)
 
 lemma dg_spec_wf_keyed_split_spec [intro, simp]:
-  "dg_spec_wf (keyed_split_spec \<G> xs cmb rl rg free c)"
+  "dg_spec_wf (keyed_split_spec \<G> cmb rl rg free c)"
   unfolding dg_spec_wf_def
   by (auto simp: keyed_transfer_def keyed_enter_transfer_def keyed_combine_transfer_def
       intro!: sp_wf_bind)
@@ -332,7 +331,7 @@ theorem keyed_split_contract:
     and mix: "\<And>l0 e r s s' W. s \<in> gm (cmb l0 (full_view rg xs e)) \<Longrightarrow> s' \<in> gm r
         \<Longrightarrow> (\<forall>x. \<G> x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x)
         \<Longrightarrow> s' \<in> gm (cmb (rl r) (full_view rg xs (\<lambda>x. if x \<in> set W then rg x r else e x)))"
-  shows "analysis_contract (keyed_split_spec \<G> xs cmb rl rg free c)
+  shows "analysis_contract (keyed_split_spec \<G> cmb rl rg free c)
            (\<lambda>d e. gm (cmb d (full_view rg xs e))) \<G>"
 proof -
   have gm_mono_all: "\<forall>x y. x \<le> y \<longrightarrow> gm x \<subseteq> gm y"
@@ -373,11 +372,11 @@ proof -
     let ?g = "view_of rg ?R ?e (free ?R)"
     let ?r = "closed_step c a (cmb ?d ?g)"
     have loc: "dg_local (traverse_program
-        (dg_spec_edge_program (keyed_split_spec \<G> xs cmb rl rg free c) a src key) \<tau>) = rl ?r"
+        (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>) = rl ?r"
       by (simp add: dg_spec_edge_program_def traverse_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def)
     have sides: "sides_of_program
-        (dg_spec_edge_program (keyed_split_spec \<G> xs cmb rl rg free c) a src key) \<tau>
+        (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>
         = bot \<squnion> pub_sides key rg ?W ?r"
       by (simp add: dg_spec_edge_program_def sides_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def bot_fun_def[symmetric])
@@ -397,9 +396,9 @@ proof -
       also have "\<dots> \<subseteq> gm (cmb (rl ?r) (full_view rg xs (?e \<squnion> genv key (bot \<squnion> pub_sides key rg ?W ?r))))"
         by (rule env_mono[OF order_refl], rule out, erule pub)
       finally show "s' \<in> gm (cmb (dg_local (traverse_program
-          (dg_spec_edge_program (keyed_split_spec \<G> xs cmb rl rg free c) a src key) \<tau>))
+          (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>))
           (full_view rg xs (genv key \<tau> \<squnion> genv key (sides_of_program
-            (dg_spec_edge_program (keyed_split_spec \<G> xs cmb rl rg free c) a src key) \<tau>))))"
+            (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>))))"
         unfolding loc sides .
     qed
   next

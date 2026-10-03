@@ -139,15 +139,17 @@ text \<open>
   placement of program state between the two halves of a solver unknown.
   The soundness assumptions live in the locales built on it.
 
-  The placement is five operations. \<open>place_spec\<close> builds the D/G specification
+  The placement is six operations. \<open>place_spec\<close> builds the D/G specification
   the equations run, from the component. \<open>place_cmb\<close> recombines a local value
   with the solved global environment into the state a point describes, and
   \<open>place_rl\<close> and \<open>place_rg\<close> project a state onto the part each half keeps.
-  \<open>place_inits\<close> lists the initial value of each global name, which the root
-  unknown publishes at that name's key \<open>global_of n\<close>. An analysis that keeps all
-  of its state in the local half builds the specification with
-  \<^const>\<open>dg_spec_of\<close>, recombines by ignoring the environment, keeps every state
-  locally, publishes \<^const>\<open>Bot\<close> and lists no initial values.
+  \<open>place_inits\<close> lists the initial value of each global name, which the program
+  entry publishes at that name's key \<open>global_of n\<close>. \<open>place_enter\<close> is the caller
+  state a call enters from: it may describe more than \<open>place_cmb\<close>, so a call reads
+  only the globals it needs. An analysis that keeps all of its state in the local
+  half builds the specification with \<^const>\<open>dg_spec_of\<close>, recombines by ignoring
+  the environment, keeps every state locally, publishes \<^const>\<open>Bot\<close>, lists no
+  initial values and enters from the caller's state as it is.
 \<close>
 
 locale dg_pipeline =
@@ -172,6 +174,7 @@ locale dg_pipeline =
     and place_rl :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
     and place_rg :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
     and place_inits :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('n \<times> 's lifted) list"
+    and place_enter :: "imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
 begin
 
 definition analysis_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
@@ -190,14 +193,14 @@ definition comp_entry :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Ri
 
 text \<open>
   The alternative a call enters its callee with, as the solver stores it: the
-  component enters from the recombined caller state, and each half of the answer
-  keeps its local part.
+  component enters from the caller state \<open>place_enter\<close> recombines, and each
+  half of the answer keeps its local part.
 \<close>
 
 definition entry_alt :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted
     \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted \<times> 's lifted" where
   "entry_alt \<G> p ci d g =
-     (let w = place_cmb p d g in (place_rl \<G> w, place_rl \<G> (comp_entry \<G> p ci w)))"
+     (let w = place_enter p ci d g in (place_rl \<G> w, place_rl \<G> (comp_entry \<G> p ci w)))"
 
 text \<open>The state a call enters its callee with.\<close>
 
@@ -472,7 +475,7 @@ text \<open>
 
 locale dg_analysis =
   dg_pipeline comp emp rd init_st buffer_key global_of seed route root_ctx solve solve_dom
-    bot_state classify place_spec place_cmb place_rl place_rg place_inits
+    bot_state classify place_spec place_cmb place_rl place_rg place_inits place_enter
   + certified_solver solve solve_dom solve_c
   for comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
@@ -497,7 +500,8 @@ locale dg_analysis =
     and place_cmb :: "imp_prog \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
     and place_rl :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
     and place_rg :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
-    and place_inits :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('n \<times> 's lifted) list" +
+    and place_inits :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('n \<times> 's lifted) list"
+    and place_enter :: "imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted" +
   assumes comp_sound:
       "\<And>p. sound_local_spec (declared_global p)
                (\<lambda>d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d))
@@ -1361,7 +1365,8 @@ theorem dg_analysis_whole_stateI:
     and seed_ne_global: "\<And>v ctx n. seed v ctx \<noteq> global_of n"
   shows "dg_analysis comp emp rd init_st buffer_key global_of seed
            solve solve_dom bot_state classify gamma\<^sub>V empty\<^sub>V solve_c
-           (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d e. d) (\<lambda>\<G> d. d) (\<lambda>\<G> d. Bot) (\<lambda>\<G> p. [])"
+           (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d e. d) (\<lambda>\<G> d. d) (\<lambda>\<G> d. Bot) (\<lambda>\<G> p. [])
+           (\<lambda>p ci d e. d)"
 proof (rule dg_analysis.intro[OF solver dg_analysis_axioms.intro], goal_cases CompSound
     EnterSingle Contract Runs Deps EntrySound CmbBot Init EmptyRd EmptyV SeedNe SeedNeGlobal
     ClProved ClRefuted BotState InitSound)
@@ -1474,9 +1479,11 @@ theorem dg_analysis_keyedI:
       "\<And>p. cinit_stores (declared_global p) \<subseteq> gamma\<^sub>V (rd (declared_global p) init_st)"
   shows "dg_analysis comp emp rd init_st buffer_key global_of seed
            solve solve_dom bot_state classify gamma\<^sub>V empty\<^sub>V solve_c
-           (\<lambda>p c. keyed_split_spec (declared_global p) (declared_global_vars p) cmb rl rg free c)
+           (\<lambda>p c. keyed_split_spec (declared_global p) cmb rl rg free c)
            (\<lambda>p d e. cmb d (full_view rg (declared_global_vars p) e)) (\<lambda>\<G>. rl) (\<lambda>\<G> d. Bot)
-           (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (declared_global_vars p))"
+           (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (declared_global_vars p))
+           (\<lambda>p ci d e. cmb d (view_of rg (call_global_reads (declared_global p) (ci_args ci)) e
+              (free (call_global_reads (declared_global p) (ci_args ci)))))"
 proof -
   let ?gm = "\<lambda>p d. gamma_lift gamma\<^sub>V (map_lift (rd (declared_global p)) d)"
   have gm_mono: "\<And>p x y. x \<le> y \<Longrightarrow> ?gm p x \<subseteq> ?gm p y"
@@ -1495,38 +1502,42 @@ proof -
       by (rule keyed_split_contract)
   next
     case (Runs p ci d \<sigma>) show ?case
-      using enter_runs_keyed_enter_transfer[of cmb rl rg "\<lambda>_. bot" "declared_global_vars p"
+      using enter_runs_keyed_enter_transfer[of cmb rl rg free
+          "call_global_reads (declared_global p) (ci_args ci)"
           "global_names_in (declared_global p) (ci_formals ci)"
           "\<lambda>d. ls_enter (comp (declared_global p) p) (ls_channel (comp (declared_global p) p) d)
              ci (d, d)" d global_of \<sigma>]
-      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single
-          full_view_def Let_def)
+      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
   next
     case (Deps p ci d \<sigma>) show ?case
-      using enter_deps_keyed_enter_transfer[of cmb rl rg "\<lambda>_. bot" "declared_global_vars p"
+      using enter_deps_keyed_enter_transfer[of cmb rl rg free
+          "call_global_reads (declared_global p) (ci_args ci)"
           "global_names_in (declared_global p) (ci_formals ci)"
           "\<lambda>d. ls_enter (comp (declared_global p) p) (ls_channel (comp (declared_global p) p) d)
              ci (d, d)" d global_of \<sigma>]
-      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single
-          full_view_def Let_def)
+      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
   next
     case (EntrySound p ci d \<sigma> pub s)
     let ?\<G> = "declared_global p" and ?xs = "declared_global_vars p"
     let ?c = "comp ?\<G> p"
     let ?e = "genv global_of \<sigma>"
-    let ?w = "cmb d (full_view rg ?xs ?e)"
+    let ?R = "call_global_reads ?\<G> (ci_args ci)"
+    let ?v = "view_of rg ?R ?e (free ?R)"
+    let ?w = "cmb d ?v"
     let ?E = "dg_pipeline.comp_entry comp ?\<G> p ci ?w"
     let ?W = "global_names_in ?\<G> (ci_formals ci)"
     let ?ce = "call_enter ?\<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"
-    have alt: "dg_pipeline.entry_alt comp (\<lambda>p d e. cmb d (full_view rg (declared_global_vars p) e))
-        (\<lambda>\<G>. rl) ?\<G> p ci d ?e = (rl ?w, rl ?E)"
+    have alt: "dg_pipeline.entry_alt comp (\<lambda>\<G>. rl)
+        (\<lambda>p ci d e. cmb d (view_of rg (call_global_reads (declared_global p) (ci_args ci)) e
+           (free (call_global_reads (declared_global p) (ci_args ci)))))
+        ?\<G> p ci d ?e = (rl ?w, rl ?E)"
       by (simp add: dg_pipeline.entry_alt_def Let_def)
     have R0: "enter_runs (enter\<^sup># (dg_pipeline.analysis_spec comp
-          (\<lambda>p. keyed_split_spec (declared_global p) (declared_global_vars p) cmb rl rg free) ?\<G> p) ci)
+          (\<lambda>p. keyed_split_spec (declared_global p) cmb rl rg free) ?\<G> p) ci)
         (mk_dg_man d global_of) \<sigma> [(rl ?w, rl ?E)] (pub_sides global_of rg ?W (?E \<squnion> bot))"
-      using enter_runs_keyed_enter_transfer[of cmb rl rg "\<lambda>_. bot" ?xs ?W
+      using enter_runs_keyed_enter_transfer[of cmb rl rg free ?R ?W
           "\<lambda>d. ls_enter ?c (ls_channel ?c d) ci (d, d)" d global_of \<sigma>]
-      by (simp add: dg_pipeline.analysis_spec_def enter_single full_view_def)
+      by (simp add: dg_pipeline.analysis_spec_def enter_single)
     have pub: "pub = pub_sides global_of rg ?W (?E \<squnion> bot)"
       using enter_runsD_sides[OF EntrySound(1)[unfolded alt], of "\<lambda>_. Answer bot"]
         enter_runsD_sides[OF R0, of "\<lambda>_. Answer bot"]
@@ -1540,7 +1551,21 @@ proof -
       also have "\<dots> \<le> ?e x" using EntrySound(2) by (simp add: le_fun_def)
       finally show ?thesis .
     qed
-    have sw: "s \<in> ?gm p ?w" using EntrySound(3) by simp
+    have view_ge: "full_view rg ?xs ?e \<le> ?v"
+      unfolding full_view_def
+    proof (rule view_of_le)
+      fix x assume "x \<in> set ?xs"
+      show "rg x (?e x) \<le> ?v"
+      proof (cases "x \<in> set ?R")
+        case True then show ?thesis by (rule view_of_ge_mem)
+      next
+        case False
+        then show ?thesis using rg_free view_of_ge_acc by (blast intro: order_trans)
+      qed
+    qed simp
+    have s0: "s \<in> ?gm p (cmb d (full_view rg ?xs ?e))" using EntrySound(3) by simp
+    have sw: "s \<in> ?gm p ?w"
+      using s0 gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
     have sE: "?ce s \<in> ?gm p ?E"
     proof -
       obtain q where "q \<in> set (ls_enter ?c (ls_channel ?c ?w) ci (?w, ?w))" "?ce s \<in> ?gm p (snd q)"
@@ -1551,7 +1576,7 @@ proof -
     have fr: "\<forall>x. ?\<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> ?ce s x = s x"
       by (auto intro: call_enter_frame)
     have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x)))"
-      by (rule mix[OF sw sE fr])
+      by (rule mix[OF s0 sE fr])
     moreover have "cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x))
         \<le> cmb (rl ?E) (full_view rg ?xs ?e)"
     proof (intro cmb_mono order_refl full_view_mono[OF rg_mono])
@@ -1562,7 +1587,7 @@ proof -
     ultimately have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs ?e))"
       using gm_mono by blast
     moreover have "s \<in> ?gm p (cmb (rl ?w) (full_view rg ?xs ?e))"
-      using sw by (simp add: rl_cmb cmb_rl)
+      using s0 by (simp add: rl_cmb cmb_rl)
     ultimately show ?case by (simp add: alt)
   next
     case (CmbBot p g) show ?case by (simp add: cmb_bot)
@@ -1681,7 +1706,7 @@ sublocale dg_analysis_exec \<subseteq> dg_analysis
     default_st_to_fun init_st buffer_key global_of seed route root_ctx
       solve solve_dom bot_state classify
     gamma_state is_empty_state solve_c "\<lambda>\<G> c. dg_spec_of c" "\<lambda>\<G> d e. d" "\<lambda>\<G> d. d"
-      "\<lambda>\<G> d. Bot" "\<lambda>\<G> p. []"
+      "\<lambda>\<G> d. Bot" "\<lambda>\<G> p. []" "\<lambda>p ci d e. d"
 proof (rule dg_analysis_whole_stateI[OF certified_solver_axioms],
     goal_cases CompSound EnterSingle EmptyExact EmptyVExact SeedNe ClProved ClRefuted BotState
     Init SeedNeGlobal)
