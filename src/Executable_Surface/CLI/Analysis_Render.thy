@@ -166,4 +166,170 @@ lemma render_report_columns [simp]:
   "res_routes (render_report show res) = report_routes res"
   by (simp_all add: render_report_def Let_def)
 
+section \<open>The analysis graph\<close>
+
+text \<open>
+  The report's states are filed by point \<^emph>\<open>and\<close> context, so the graph a reader sees of
+  them has a node per such pair, where the CFG has one per point. A flow-insensitive
+  program global adds a node of its own. The edges are the dependencies the equations
+  have between those unknowns: a step within a context, a call entering the contexts
+  the report routes it to, the callee's result resuming the caller, the call's
+  continuation, and the reads and writes of each global, by the same footprints the
+  keyed lifter reads and publishes (\<^const>\<open>edge_global_reads\<close>,
+  \<^const>\<open>edge_global_writes\<close>, \<^const>\<open>call_global_reads\<close>). It is a projection of the
+  report, as the rendering above is, and no theorem reads it.
+\<close>
+
+datatype unknown_node = Local_Node pp nat | Global_Node vname
+
+datatype analysis_edge =
+    Intra_Dep edge_action
+  | Enter_Dep call_action
+  | Combine_Dep call_action
+  | Continue_Dep call_action
+  | Global_Read
+  | Global_Write
+
+record analysis_graph =
+  graph_nodes :: "unknown_node list"
+  graph_edges :: "(unknown_node \<times> analysis_edge \<times> unknown_node) list"
+
+text \<open>The program globals the report keeps at unknowns of their own.\<close>
+
+definition report_global_names :: "analysis_report \<Rightarrow> vname list" where
+  "report_global_names res =
+     concat (map (\<lambda>g. case global_unknown g of Global_Named x \<Rightarrow> [x] | _ \<Rightarrow> []) (report_globals res))"
+
+definition report_rows_of :: "analysis_report \<Rightarrow> (pp \<times> nat) list" where
+  "report_rows_of res = map (\<lambda>st. (state_point st, state_context st)) (report_states res)"
+
+definition report_route_targets :: "analysis_report \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> nat list" where
+  "report_route_targets res u c =
+     concat (map route_targets
+       (filter (\<lambda>r. route_point r = u \<and> route_context r = c) (report_routes res)))"
+
+definition callee_of :: "pp \<Rightarrow> pname" where
+  "callee_of entry = (case entry of FunctionEntry f \<Rightarrow> f | FunctionResult f \<Rightarrow> f | Statement _ \<Rightarrow> STR '''')"
+
+text \<open>What a step within one context adds: the step, and the globals it reads and writes.\<close>
+
+definition intra_deps ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> pp \<times> edge_action \<times> pp
+     \<Rightarrow> (unknown_node \<times> analysis_edge \<times> unknown_node) list" where
+  "intra_deps G rows u c e =
+     (case e of (u', a, v) \<Rightarrow>
+        if u' = u \<and> (v, c) \<in> set rows
+        then (Local_Node u c, Intra_Dep a, Local_Node v c)
+             # map (\<lambda>x. (Global_Node x, Global_Read, Local_Node v c)) (edge_global_reads G a)
+             @ map (\<lambda>x. (Local_Node v c, Global_Write, Global_Node x)) (edge_global_writes G a)
+        else [])"
+
+text \<open>
+  What a call adds: an entry into every context the report routes it to, the callee's
+  result resuming the caller from each, and the continuation. The continuation's
+  equation evaluates the call, so it reads the globals the arguments mention and
+  writes a global destination or formal.
+\<close>
+
+definition call_deps ::
+    "analysis_report \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat
+     \<Rightarrow> pp \<times> call_action \<times> pp \<times> pp \<Rightarrow> (unknown_node \<times> analysis_edge \<times> unknown_node) list" where
+  "call_deps res G rows u c e =
+     (case e of (u', ca, entry, after) \<Rightarrow>
+        if u' \<noteq> u then []
+        else
+          (let targets = report_route_targets res u c;
+               result = FunctionResult (callee_of entry)
+           in concat (map (\<lambda>t.
+                (if (entry, t) \<in> set rows then [(Local_Node u c, Enter_Dep ca, Local_Node entry t)] else [])
+                @ (if (result, t) \<in> set rows \<and> (after, c) \<in> set rows
+                   then [(Local_Node result t, Combine_Dep ca, Local_Node after c)] else []))
+                targets)
+              @ (if (after, c) \<in> set rows
+                 then (Local_Node u c, Continue_Dep ca, Local_Node after c)
+                      # (case ca of CallEdge dst pars args \<Rightarrow>
+                           map (\<lambda>x. (Global_Node x, Global_Read, Local_Node after c))
+                             (call_global_reads G args)
+                           @ map (\<lambda>x. (Local_Node after c, Global_Write, Global_Node x))
+                               (global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)))
+                 else [])))"
+
+definition analysis_graph_of :: "analysis_report \<Rightarrow> analysis_graph" where
+  "analysis_graph_of res =
+     (let g = report_cfg res;
+          rows = report_rows_of res;
+          names = report_global_names res;
+          G = (\<lambda>x. x \<in> set names)
+      in \<lparr> graph_nodes = map (\<lambda>(v, c). Local_Node v c) rows @ map Global_Node names,
+           graph_edges =
+             concat (map (\<lambda>(u, c).
+                 concat (map (intra_deps G rows u c) (cfg_intra_list g))
+                 @ concat (map (call_deps res G rows u c) (cfg_calls_list g))
+                 @ (if u = cfg_entry g
+                    then map (\<lambda>x. (Local_Node u c, Global_Write, Global_Node x)) names else []))
+               rows) \<rparr>)"
+
+subsection \<open>What the graph contains\<close>
+
+text \<open>
+  The graph's nodes are exactly the report's unknowns, and a step between two reported
+  points of one context carries the global reads and writes its footprint names.
+\<close>
+
+lemma local_node_in_analysis_graph:
+  "Local_Node v c \<in> set (graph_nodes (analysis_graph_of res))
+     \<longleftrightarrow> (\<exists>st \<in> set (report_states res). state_point st = v \<and> state_context st = c)"
+  by (auto simp: analysis_graph_of_def report_rows_of_def Let_def)
+
+lemma global_node_in_analysis_graph:
+  "Global_Node x \<in> set (graph_nodes (analysis_graph_of res))
+     \<longleftrightarrow> (\<exists>gl \<in> set (report_globals res). global_unknown gl = Global_Named x)"
+proof -
+  have "x \<in> set (report_global_names res)
+          \<longleftrightarrow> (\<exists>gl \<in> set (report_globals res). global_unknown gl = Global_Named x)"
+    by (force simp: report_global_names_def split: result_global_unknown.splits)
+  then show ?thesis by (auto simp: analysis_graph_of_def Let_def)
+qed
+
+text \<open>A step of a reported context contributes all its dependencies to the graph.\<close>
+
+lemma intra_deps_in_analysis_graph:
+  assumes "(u, c) \<in> set (report_rows_of res)" and "e \<in> set (cfg_intra_list (report_cfg res))"
+  shows "set (intra_deps (\<lambda>y. y \<in> set (report_global_names res)) (report_rows_of res) u c e)
+           \<subseteq> set (graph_edges (analysis_graph_of res))"
+  using assms unfolding analysis_graph_of_def Let_def
+  by (auto intro!: bexI[where x = "(u, c)"] bexI[where x = e])
+
+text \<open>
+  A step both of whose points the report holds in a context reads and writes, in the
+  graph, the globals its footprint names.
+\<close>
+
+lemma global_deps_in_analysis_graph:
+  fixes res defines "G \<equiv> (\<lambda>y. y \<in> set (report_global_names res))"
+  assumes e: "(u, a, v) \<in> set (cfg_intra_list (report_cfg res))"
+    and u: "(u, c) \<in> set (report_rows_of res)" and v: "(v, c) \<in> set (report_rows_of res)"
+  shows "x \<in> set (edge_global_reads G a)
+           \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of res))"
+    and "x \<in> set (edge_global_writes G a)
+           \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of res))"
+proof -
+  have deps: "set (intra_deps G (report_rows_of res) u c (u, a, v))
+                \<subseteq> set (graph_edges (analysis_graph_of res))"
+    unfolding G_def by (rule intra_deps_in_analysis_graph[OF u e])
+  show "x \<in> set (edge_global_reads G a)
+          \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of res))"
+    using deps v by (auto simp: intra_deps_def)
+  show "x \<in> set (edge_global_writes G a)
+          \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of res))"
+    using deps v by (auto simp: intra_deps_def)
+qed
+
+text \<open>
+  So the graph is read off the report alone: its local nodes are the reported rows
+  (@{thm [source] local_node_in_analysis_graph}), its global nodes the keyed program
+  globals (@{thm [source] global_node_in_analysis_graph}), and its global edges the
+  footprints of the keyed lifter (@{thm [source] global_deps_in_analysis_graph}).
+\<close>
+
 end
