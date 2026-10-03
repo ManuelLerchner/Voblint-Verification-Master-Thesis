@@ -1,0 +1,9 @@
+tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------------
+10:5      pp2    x < 4      UNKNOWN  interval: x=⊤

@@ -1,0 +1,9 @@
+tests/regression/07-sign-precision/precision/13-query_combines_less_and_eq.vimp [sign]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition         Verdict  State
+--------  -----  ----------------  -------  -----------------
+11:7      pp4    x <= y && y != 0  PROVED   sign: x=≤0, y=+

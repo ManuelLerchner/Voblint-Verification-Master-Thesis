@@ -143,7 +143,7 @@ Expressions are integer-valued, in the C manner: there is no separate Boolean
 type, comparisons and logical operators evaluate to $0$ or $1$, and a condition
 is true when it is non-zero.
 
-#definition(name: [Expressions], isa: "exp")[
+#definition(name: [Expressions], isa: "exp", cmd: "datatype")[
   $
     e ::= n | x | e + e | e - e | e * e | e "/" e | e % e
     | e < e | e <= e | e = e | e != e | not e | e and e | e or e
@@ -161,7 +161,7 @@ and cannot fail, a transfer function may re-evaluate it freely — which is what
 lets the backward filtering of @ch:domains narrow a state against a condition
 that has already been tested.
 
-#definition(name: [Commands], isa: "com")[
+#definition(name: [Commands], isa: "com", cmd: "datatype")[
   $
     c ::= & #skipC | x := e | #keyw("check") (e) | c";" c
             | #keyw("if") (e) {c} #keyw("else") {c} | #keyw("while") (e) {c} \
@@ -183,7 +183,7 @@ procedure is an ordinary declaration named `main`, not a separate field.
 
 === Configurations and frames <sec:pstep>
 
-#definition(name: [Source configuration], isa: "pstep")[
+#definition(name: [Source configuration], isa: "pstep", cmd: "inductive")[
   A configuration is a triple $#config($c$, $s$, $#frstack$)$ of the command
   that remains to run, a store $s : #Var -> #Val$, and a stack #frstack of
   suspended activations. Each frame records the caller's store and the variable,
@@ -319,7 +319,7 @@ records its own continuation.
 
 === Nodes, edges, and the two relations <sec:cfg>
 
-#definition(name: [Control-flow graph], isa: "cfg")[
+#definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
   A graph #cfg consists of
   #set enum(numbering: "(i)")
   + a set #isaconst("intra") of _local edges_ $(u, a, v)$, each labelled by an
@@ -502,7 +502,7 @@ matters more than it may seem: because #isaconst("cstep") is defined for an
 _arbitrary_ graph, every soundness result in @ch:traces and after holds for any
 graph, not only for one this compiler produced.
 
-#definition(name: [Graph execution], isa: "cstep")[
+#definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
   A graph configuration is a triple of a node, a store, and a stack of suspended
   callers, each recording where to resume, which variable receives the result,
   and the caller's store. #isaconst("cstep") has three rules:
@@ -553,7 +553,7 @@ reproduces this exactly.
 
 === Relating source and graph configurations <sec:csim>
 
-#definition(name: [Simulation relation], isa: "csim")[
+#definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
   #isaconst("csim") relates a source configuration $#config($c$, $s$, $#frstack$)$
   to a graph configuration $(v, s, italic("stk"))$ _holding the very same store_.
   It has three constructors: $sans("Base")$ relates a single activation with

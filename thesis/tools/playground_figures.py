@@ -8,7 +8,7 @@ the same place -- but Typst reads only below its root, and a figure whose link
 was typed by hand can quietly stop matching the program it shows.
 
 This tool reads ``thesis/shared/playground-figures.toml`` and, for each figure,
-copies the image and the program under ``thesis/shared/generated/playground/``
+copies the image (if any) and the program under ``thesis/shared/generated/playground/``
 and writes ``playground.json`` with the link that opens that program at those
 settings, built by the same encoder the README and the playground's Share
 button use. ``--check`` fails when a copy or a link no longer matches the
@@ -43,17 +43,19 @@ def build() -> tuple[dict[str, dict[str, str]], dict[Path, bytes]]:
     index: dict[str, dict[str, str]] = {}
     files: dict[Path, bytes] = {}
     for name, entry in manifest["figures"].items():
-        image = REPO / entry["image"]
-        if not image.is_file():
-            sys.exit(f"playground_figures: {name}: no such image {entry['image']}")
-        files[OUT_DIR / f"{name}.png"] = image.read_bytes()
         record = {
-            "image": f"{name}.png",
             "analysis": entry["analysis"],
             "globals": entry.get("globals", "warrow"),
             "context": entry.get("context", "none"),
             "why": entry["why"],
         }
+        # An entry without an image places only its program as a listing.
+        if "image" in entry:
+            image = REPO / entry["image"]
+            if not image.is_file():
+                sys.exit(f"playground_figures: {name}: no such image {entry['image']}")
+            files[OUT_DIR / f"{name}.png"] = image.read_bytes()
+            record["image"] = f"{name}.png"
         if "k" in entry:
             record["k"] = str(entry["k"])
         if "program" in entry:

@@ -282,7 +282,15 @@ def build(manifest: dict, lenient: bool) -> tuple[dict, list[str]]:
             row = rows[f"{n}.local"]
             decl = _decl(row)
             head = decl.get("expands", "").split()[0] if decl.get("expands") else ""
-            if head != entry["forms"][0]["const"]:
+            target = entry["forms"][0]
+            # The expansion may use the global form's own notation, as the
+            # theories write it: its mixfix up to the first argument slot.
+            symbol_head = re.split(r"\\<\^bsub>|_", target["mixfix"] or "", maxsplit=1)[
+                0
+            ]
+            if head != target["const"] and not (
+                symbol_head and head.startswith(symbol_head)
+            ):
                 raise NotationError(
                     f"{loc['locale']}.{loc['const']}: abbreviates {head}, "
                     f"not {entry['forms'][0]['const']} ({decl['site']})"

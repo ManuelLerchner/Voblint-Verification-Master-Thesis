@@ -1,0 +1,11 @@
+tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp [congruence]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+21:7      pp6    0          DEAD     
+23:7      pp7    1          PROVED   
+26:5      pp8    1          PROVED   

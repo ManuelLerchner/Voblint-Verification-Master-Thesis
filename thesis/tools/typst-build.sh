@@ -8,7 +8,7 @@
 set -eu
 
 root=$(CDPATH='' cd -- "$(dirname -- "$0")/.." && pwd)
-out="$root/Voblint_Thesis.pdf"
+out="$root/Lerchner_Master_Thesis.pdf"
 strict=1
 [ "${1:-}" = "--allow-warnings" ] && strict=0
 

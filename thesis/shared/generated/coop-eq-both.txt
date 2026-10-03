@@ -1,0 +1,9 @@
+tests/regression/25-cooperation/precision/03-equality_asked_of_order.vimp [interval,order]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -------------------------------------------
+16:7      pp5    z == 1     PROVED   interval: z=[1,1]; order: {x≤y ∧ y≤x}

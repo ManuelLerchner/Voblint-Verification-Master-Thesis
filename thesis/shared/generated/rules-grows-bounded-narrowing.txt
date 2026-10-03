@@ -1,0 +1,9 @@
+tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------
+56:3      pp0    x >= 0     PROVED   interval: x=[0,+∞]

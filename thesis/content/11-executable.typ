@@ -49,7 +49,7 @@ interface exposes is chosen to match what the theorems talk about.
   #isaconst("Int_Analysis")), the global update rule, and the context policy
   with its call-string depth. These are the arguments of
   #isaconst("run_voblint"), so every configuration the page can produce is one
-  #isathm("run_voblint_certified_source_sound") covers.
+  #isathm("run_voblint_source_sound") covers.
 - *The result at the granularity the theorems state it.* Verdicts and value
   hints appear in the source; the statement under the cursor shows its abstract
   state in every context it was solved at; the graph draws one box per
@@ -165,9 +165,9 @@ development, and the page has no way to show it. Nor can it certify a single
 run: the theorem's conclusion is available only through the theorem.
 
 It cannot distinguish two reasons for a run that never finishes. Termination of
-the generated analysis is a premise of every endpoint, #isaconst("config_terminates"),
-not a proved property, so a program on which the solver does not stop
-contradicts nothing. But a hang in the page may also come from the exported
+the generated analysis is not a proved property: every endpoint assumes that
+#isaconst("run_voblint") returned a report (#isaconst("Analysed")), so a program
+on which the solver does not stop contradicts nothing. But a hang in the page may also come from the exported
 code, the toolchain or the browser, and the artifact cannot tell which. The
 honest reading of a run that does not return is that the theorem's premise was
 not established for it, and nothing more.

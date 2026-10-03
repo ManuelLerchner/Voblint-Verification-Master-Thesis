@@ -1,0 +1,9 @@
+tests/regression/18-parity/precision/04-contradictory_equalities_dead.vimp [parity]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  -----
+12:5      pp3    x == 5     DEAD     

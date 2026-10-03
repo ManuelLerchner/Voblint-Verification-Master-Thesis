@@ -1,0 +1,9 @@
+tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ---------------
+12:3      pp1    m == 2     UNKNOWN  interval: m=⊤
