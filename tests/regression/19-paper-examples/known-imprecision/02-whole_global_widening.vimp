@@ -12,12 +12,12 @@
 //
 // so the paper fails to deduce g <= 42 and cannot rule out the error call.
 //
-// Voblint analyzes declared globals flow-sensitively (19-paper-examples/
-// precision/01-fig1_sequential_globals.vimp answers Fig. 1 exactly), so the
-// loss cannot be staged on a `global`. It is reproduced here on the one
-// unknown Voblint does treat flow-insensitively with several contributing
-// origins: a procedure's FunctionEntry seed, side-effected once per call
-// site. Three call sites contribute the paper's own three values, in the
+// By default Voblint analyzes declared globals flow-sensitively (19-paper-
+// examples/precision/01-fig1_sequential_globals.vimp answers Fig. 1 exactly).
+// Flow-insensitively (precision/07-fig1_flow_insensitive_globals.vimp) g
+// starts from its initial 0, not 1, and warrowing narrows it back to
+// [-17,42]. The chain is therefore staged on a procedure's FunctionEntry
+// seed, side-effected once per call site. Three call sites contribute the paper's own three values, in the
 // paper's order, and Apinis warrowing walks the identical chain to
 // [-inf,+inf] -- so x < 43 comes back UNKNOWN even though x is concretely
 // one of 1, -17, 42.

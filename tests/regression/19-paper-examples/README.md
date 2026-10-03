@@ -60,9 +60,11 @@ a procedure's `FunctionEntry` seed, side-effected once per call site, with
 the paper's own three contributions in the paper's order. The result is the
 paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
 
-`--program-globals flow-insensitive` selects the flow-insensitive placement. Case 07
-runs Example 1 that way on Fig. 1 without `h`. Under `--globals join` the
-contributions to `g` join to `[-17,42]`, which proves `g < 43` and not
-`g == 42`, as the paper says. Under the warrowing rules the summary of `g`
-widens to `[-inf,+inf]` and is not narrowed back, Example 2's loss on a
-program global.
+`--program-globals flow-insensitive` selects the flow-insensitive placement:
+`g` and `h` each get their own global unknown, Example 5's `[g]` and `[h]`.
+Case 07 runs Fig. 1 that way. The summary of `g` ends at `[-17,42]`, which
+proves `g < 43` and not `g == 42`, as Example 1 says, and `h` widens to
+`[0,+inf]`, as Example 3 says. Example 2's loss does not survive there: under
+`--globals warrow` the trace shows `g` widened to `[-inf,+inf]` on the way,
+after which warrowing narrows it back to `[-17,42]`. Under the joining rules
+`h` keeps growing and the solve does not finish within the time limit.
