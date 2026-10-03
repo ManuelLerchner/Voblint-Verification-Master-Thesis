@@ -139,6 +139,7 @@ lemma twice_main_body [simp]: "main_body twice_pi = twice_main"
         twice_main_def)
 
 lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs"
+  unfolding wf_compile_input_def
   by (auto simp: wf_compile_input_simps
       twice_pi_def twice_procs_def twice_main_def twice_program_def
       split: if_splits option.splits)

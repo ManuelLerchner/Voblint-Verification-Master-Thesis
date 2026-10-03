@@ -124,6 +124,7 @@ text \<open>
 
 lemma flagship_wf:
   "wf_compile_input flagship_gs flagship_pi (prog_procs flagship_prog)"
+  unfolding wf_compile_input_def
   by (auto simp: wf_compile_input_simps flagship_pi_def flagship_prog_def split: if_splits)
 
 theorem flagship_source_run_sound:

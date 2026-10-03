@@ -85,6 +85,7 @@ text \<open>
 
 lemma dgEx_wf:
   "wf_compile_input sign_ex_gs sign_ex_pi (prog_procs sign_ex_prog)"
+  unfolding wf_compile_input_def
   by (auto simp: wf_compile_input_simps sign_ex_pi_def sign_ex_prog_def split: if_splits)
 
 subsection \<open>Collecting-semantics over-approximation from the computed result\<close>
