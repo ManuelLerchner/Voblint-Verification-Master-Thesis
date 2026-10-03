@@ -111,11 +111,6 @@
 #include "content/15-related.typ"
 #include "content/16-conclusion.typ"
 
-// Appendices retain stable labels while using a separate alphabetic counter.
-#set heading(numbering: "A.1.")
-#counter(heading).update(0)
-#include "content/appendices.typ"
-
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
 

@@ -130,9 +130,11 @@ Consequences:
 - Give encoding material one home: chapter 8's encoding section owns how the
   equation construction maps to the TD solver; chapter 2 owns the generic
   solver notions; chapter 9 owns the certificate. Other chapters point there.
-- Side results, extensions and limitations leave the main construction: an
-  appendix (mixed-flow globals), the termination section (finite context
-  spaces), or the chapter's closing limitations section.
+- Side results, extensions and limitations leave the main construction: the
+  termination section (finite context spaces) or the chapter's closing
+  limitations section. Flow-insensitive program globals are selectable and
+  covered by the headline theorem, so they close chapter 6 rather than sit in
+  an appendix.
 - End a chapter on its result or the handoff to the next chapter, never on an
   implementation caveat.
 - Prefer a few figures that carry the architecture (state space, protocol,
