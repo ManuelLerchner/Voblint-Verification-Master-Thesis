@@ -29,8 +29,9 @@ collecting semantics to the CLI:
   (one wide context), `tests/regression/13-full-state-dot/02-entry_state_contexts.vimp`
   (one cluster per entry-state context).
 
-Arbitrary `gs`/`--flow-insensitive` stays out of scope; `declared_global p` is
-the classifier everywhere.
+A user-chosen set of flow-insensitive variables stays out of scope;
+`declared_global p` is the classifier everywhere, and
+`--program-globals flow-insensitive` applies to every declared global at once.
 
 ### Open: context bounding
 

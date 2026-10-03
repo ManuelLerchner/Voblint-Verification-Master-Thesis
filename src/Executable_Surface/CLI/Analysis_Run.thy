@@ -97,7 +97,8 @@ text \<open>
 
 text \<open>
   Where a program's globals live: in every point's own state, flow-sensitively, or
-  on the shared channel, as one flow-insensitive fact every point reads.
+  each at its own global unknown, as a flow-insensitive value read only by the
+  edges that mention it.
 \<close>
 
 datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive

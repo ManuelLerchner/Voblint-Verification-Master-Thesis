@@ -356,7 +356,7 @@ below also carries `"line":n` after its `event`.
 {"event":"end","local_unknowns":n,"global_unknowns":n}
 
 L = {"kind":"local","node":"pp3"|"entry_f"|"exit_f","context":C}
-G = {"kind":"activation_seed","procedure":f,"context":C} | {"kind":"analysis_global"}
+G = {"kind":"activation_seed","procedure":f,"context":C} | {"kind":"program_global","name":x} | {"kind":"buffer"}
 C = {"kind":"unit"} | {"kind":"entry_state","values":[..]} | {"kind":"call_string","sites":[..]}
 V = the value as the text report prints it, "⊥" for bottom
 B = true | false

@@ -290,14 +290,17 @@ String.literal analysis_answer`.
   (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule`). A check is classified by
   `answer_check` over the met `EvalInt` answer of the active analyses.
 - `globals_rule` — always-join, per-origin, Apinis warrowing,
-  warrowing-per-origin. All four are vendored rules under one
+  warrowing-per-origin, bounded narrowing. All five are vendored rules under one
   `TD_side_rule_Interp` interpretation.
 - `context_mode` — `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString k` for any `k`
   (including `0`).
-- `program_globals` — `Program_Globals_Local` keeps program globals in the
-  flow-sensitive local state; `Program_Globals_Shared` keeps them in the one
-  analysis global through the ownership-split lifter (`mcp_split_rule`,
-  `mcp_split_es_rule`, `mcp_split_cs_rule`).
+- `program_globals` — `Program_Globals_Flow_Sensitive` keeps program globals in
+  the flow-sensitive local state; `Program_Globals_Flow_Insensitive` keeps each
+  declared global at its own global unknown `Analysis_Global x` through the
+  keyed lifter `keyed_split_spec` (`mcp_split_rule`, `mcp_split_es_rule`,
+  `mcp_split_cs_rule`, all from `mcp_keyed_dg_analysis`). The analysis contract
+  is stated over an environment of global values (`genv`), so a transfer reads
+  only the globals its edge mentions and publishes only those it may assign.
 
 Every combination is answered, and every combination carries the source-level
 theorem. An empty or repeating activation list answers `Invalid_Activation`,
@@ -1484,7 +1487,7 @@ thesis section → theories → central definitions → central theorems.
 | 5.4–5.5 | `Voblint_Domain.Backward_Domain`, `Numeric_Queries`, `Backward_Numeric_Queries` | locale `sound_refinement`, `afilter`, `bfilter`, `branch_lifted`, locale `sound_numeric_queries`, `less`, `eq` | `branch_sound`, `bfilter_sound`, `branch_le_bfilter` |
 | 6.2–6.4 | `Voblint_Framework.DG_State`, `DG_Manager`, `DG_Spec` | `dg_state`, `man`, `man_local`, `man_global`, `man_sideg`, `mk_dg_man`, `dg_spec` (ten fields), `analysis_event` | — |
 | 6.5–6.6 | `Voblint_Framework.DG_Spec_Sound`, `DG_Local_State_Spec`, `Transfer_Algebra` | locale `analysis_contract`, `sound_local_spec`, `sound_nonrelational_transfer`, `state_dg_spec`, `_lifted`, `combine_collect_abs` | `state_dg_spec_contract`, `combine_sound_program` |
-| 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction` | `ownership_split_transfer_gen`, `ownership_split_enter_transfer_gen`, `ownership_split_combine_transfer_gen`, `restrict_local`, `restrict_global` | `enter_runs_ownership_split_enter_transfer_gen` |
+| 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction`, `DG_Keyed_Split_Spec`, `Voblint_CLI.MCP_Split` | `ownership_split_transfer_gen`, `ownership_split_enter_transfer_gen`, `ownership_split_combine_transfer_gen`, `restrict_local`, `restrict_global`, `keyed_split_spec`, `keyed_transfer`, `edge_global_reads`, `edge_global_writes` | `enter_runs_ownership_split_enter_transfer_gen`, `keyed_split_contract`, `mcp_keyed_dg_analysis`, `edge_step_frame` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Indexed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `global_unknown` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
 | 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_node_collect`, `cs_route_context_agree`, `cs_route_length` |
@@ -2507,11 +2510,13 @@ that proved it, which would be a true statement about VIMP and not about C.
    programs buy, and does it exclude anything interesting?
 8. **`csim` is structural and not functional**, so the source-level theorems are
    existential in their node. Is that existential doing hidden work?
-9. **The result reader takes the global half.** `rd` in `dg_analysis_adapter`
-   reads a local value together with the solved analysis global through the
-   placement's recombination `place_cmb`. Under `Program_Globals_Local` it
-   ignores the global, so the table is read from the local unknown alone; under
-   `Program_Globals_Shared` it merges the local half with the solved global.
+9. **The result reader takes the global environment.** `rd` in
+   `dg_analysis_adapter` reads a local value together with the solved global
+   environment (`genv global_of`) through the placement's recombination
+   `place_cmb`. Under `Program_Globals_Flow_Sensitive` it ignores the
+   environment, so the table is read from the local unknown alone; under
+   `Program_Globals_Flow_Insensitive` it merges the local half with each
+   global's solved value.
 
 ### 15.4 Should the AFP IMP2 bridge come back?
 

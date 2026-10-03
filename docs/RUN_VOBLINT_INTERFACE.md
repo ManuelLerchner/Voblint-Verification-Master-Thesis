@@ -21,7 +21,7 @@ render_report : (abstract_value => 'v) => analysis_report => 'v run_result
 
 datatype analysis_config = Analysis_Config
   (config_analyses: analysis_domain list) (config_rule: globals_rule)
-  (config_context: context_mode)
+  (config_context: context_mode) (config_globals: program_globals)
 
 datatype 'r analysis_answer =
   Invalid_Activation | Malformed_Program | No_Answer | Analysed 'r
