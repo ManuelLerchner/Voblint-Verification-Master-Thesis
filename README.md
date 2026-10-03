@@ -54,7 +54,8 @@ states the whole chain for every run that returns a report.
 
 The report's states at $v$ can also be joined over their contexts. Every store
 the report describes at $v$ lies in the concretization of that join,
-$[\![\, \mathit{res} \,]\!]_{v} \subseteq \gamma\big(\bigsqcup_{c} \mathit{res}(v, c)\big)$
+$`[\![\, \mathit{res} \,]\!]_{v}
+\subseteq \gamma\big(\bigsqcup_{c} \mathit{res}(v,c)\big)`$
 ([`report_sem_point_join`](src/Executable_Surface/CLI/Analysis_Report.thy)),
 so [`run_voblint_source_sound_joined`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 gives the same guarantee for the one state per point that the playground's
