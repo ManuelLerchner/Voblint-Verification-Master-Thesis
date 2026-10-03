@@ -2912,12 +2912,18 @@ function spreadSharedEnds(routes, ends) {
       continue;
     }
 
-    /* Order by where each edge's route heads, so spread ends do not cross. */
+    /*
+     * Order by which way each route turns once it leaves the shared point, so spread
+     * ends do not cross. The bend right after the point is often straight below it,
+     * so the first point off its vertical decides, and a straight edge's other end.
+     */
     const heading = ({ id, which }) => {
+      const point = ends.get(id)[which];
+      const other = ends.get(id)[which === "start" ? "end" : "start"];
       const points = routes.get(id) ?? [];
-      const next = which === "start" ? points[0] : points.at(-1);
+      const path = which === "start" ? [...points, other] : [...points].reverse().concat(other);
 
-      return next?.x ?? ends.get(id)[which === "start" ? "end" : "start"].x;
+      return (path.find((next) => Math.abs(next.x - point.x) >= 1) ?? point).x - point.x;
     };
 
     members
@@ -2925,6 +2931,7 @@ function spreadSharedEnds(routes, ends) {
       .forEach(({ id, which }, index) => {
         const dx = (index - (members.length - 1) / 2) * END_SPREAD;
         const point = ends.get(id)[which];
+        const other = ends.get(id)[which === "start" ? "end" : "start"];
         const points = routes.get(id) ?? [];
         const neighbour = which === "start" ? points[0] : points.at(-1);
 
@@ -2941,6 +2948,15 @@ function spreadSharedEnds(routes, ends) {
 
         if (neighbour && Math.abs(neighbour.x - point.x) < 1) {
           neighbour.x += dx;
+        }
+
+        /* A straight vertical edge has no leg to move; it jogs halfway instead of slanting. */
+        if (dx && !neighbour && routes.has(id) && Math.abs(other.x - point.x) < 1) {
+          const middle = (point.y + other.y) / 2;
+          const moved = { x: point.x + dx, y: middle };
+          const kept = { x: other.x, y: middle };
+
+          routes.set(id, which === "start" ? [moved, kept] : [kept, moved]);
         }
 
         point.x += dx;
