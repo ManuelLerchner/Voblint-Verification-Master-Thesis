@@ -1,6 +1,6 @@
 // The playground's two graphs, built from real analyzer payloads: the compiled CFG
 // (each point once, every context's state listed at it) and the analysis graph (one
-// node per point and context, with trace-recorded global dependencies).
+// node per point and context, with run_voblint's global dependencies).
 // pixi run graph-views-check (builds the CLI first)
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
@@ -10,14 +10,9 @@ import { cfgView, globalDependencies } from "../pages/graph-views.js";
 const CLI = "cli/voblint";
 const globalId = (name) => `global-${name}`;
 
-/* What the playground receives: the browser payload, with the run's trace attached. */
+/* What the playground receives: the browser payload. */
 function payload(file, args) {
-  const result = JSON.parse(execFileSync(CLI, ["--json", ...args, file], { encoding: "utf8" }));
-  const trace = execFileSync(CLI, ["--format", "jsonl", "--output", "/dev/stdout", ...args, file], {
-    encoding: "utf8",
-  });
-
-  return { ...result, trace_jsonl: trace.split("\n").filter((l) => l.startsWith("{")).join("\n") };
+  return JSON.parse(execFileSync(CLI, ["--json", ...args, file], { encoding: "utf8" }));
 }
 
 const TWO_CALLS = "tests/graph-views/two-calls.vimp";
