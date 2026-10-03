@@ -1127,6 +1127,11 @@ added, removed or reordered. Headings that changed:
 - Ch. 4: "Three views of one run" (`sec:three-views`) and the closing summary
   (`sec:closing`) were cut; the notation it summarized is appendix B's table.
 - Ch. 6: the "Two combine stages" subsection folded into "The call boundary".
+- Appendix A → Ch. 6 (2026-10-03): "Program globals as flow-insensitive
+  unknowns" (`sec:mixed-flow`) became the last section of Ch. 6. Since the
+  keyed-globals change the placement is a configuration of `run_voblint`
+  covered by the source-level theorem, so it is no longer a side result, and it
+  is the first instance of the environment-valued contract of 6.5.
 - Ch. 6 → Ch. 7: the ownership-split lifter (planned 6.7) moved to a new 7.8
   "Program globals as flow-insensitive unknowns" (`sec:mixed-flow`). Its
   explanation needs the `(v, c)` unknowns, side-effect trees and seeds of
