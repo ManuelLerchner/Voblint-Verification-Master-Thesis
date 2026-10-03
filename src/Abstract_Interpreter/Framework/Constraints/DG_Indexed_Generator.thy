@@ -1025,6 +1025,114 @@ text \<open>
   \<open>extra\<close>.
 \<close>
 
+
+subsection \<open>Initial global values as side effects\<close>
+
+text \<open>
+  A program global starts with a value before any statement runs. Goblint makes that
+  value a side effect into the global's unknown, so the solved unknown contains it.
+  \<open>with_init init T\<close> does the same for any equation system: the right-hand side of an
+  unknown \<open>x\<close> first publishes every pair of \<open>init x\<close>, then continues as \<open>T x\<close>. An
+  instance that publishes no initial values passes \<open>\<lambda>_. []\<close>, and the system is \<open>T\<close>.
+\<close>
+
+definition init_sides :: "('g \<times> 'd) list \<Rightarrow> ('x, 'g, 'd) strategy_tree \<Rightarrow> ('x, 'g, 'd) strategy_tree"
+where
+  "init_sides xs t = foldr (\<lambda>(k, d) t. Side k d t) xs t"
+
+definition with_init :: "('x \<Rightarrow> ('g \<times> 'd) list) \<Rightarrow> ('x, 'g, 'd) eqsT \<Rightarrow> ('x, 'g, 'd) eqsT"
+where
+  "with_init init T = (\<lambda>x. init_sides (init x) (T x))"
+
+lemma with_init_Nil [simp]: "with_init (\<lambda>_. []) T = T"
+  by (simp add: with_init_def init_sides_def)
+
+lemma init_sides_Cons [simp]: "init_sides ((k, d) # xs) t = Side k d (init_sides xs t)"
+  by (simp add: init_sides_def)
+
+lemma init_sides_Nil [simp]: "init_sides [] t = t"
+  by (simp add: init_sides_def)
+
+lemma traverse_rhs_init_sides [simp]: "traverse_rhs (init_sides xs t) \<sigma> = traverse_rhs t \<sigma>"
+proof (induction xs)
+  case (Cons p xs) then show ?case by (cases p) simp
+qed simp
+
+lemma dep_aux_init_sides [simp]: "dep_aux \<sigma> (init_sides xs t) = dep_aux \<sigma> t"
+proof (induction xs)
+  case (Cons p xs) then show ?case by (cases p) simp
+qed simp
+
+lemma sides_of_rhs_init_sides_ge:
+  "sides_of_rhs t \<sigma> \<le> sides_of_rhs (init_sides xs (t :: ('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree)) \<sigma>"
+proof (induction xs)
+  case (Cons p xs)
+  obtain k d where p: "p = (k, d)" by (cases p)
+  have "sides_of_rhs (init_sides xs t) \<sigma>
+          \<le> sides_of_rhs (init_sides (p # xs) t) \<sigma>"
+    unfolding p le_fun_def by (simp add: Let_def)
+  with Cons.IH show ?case by (rule order_trans)
+qed simp
+
+lemma sides_of_rhs_init_sides_at:
+  "(k, d) \<in> set xs
+   \<Longrightarrow> d \<le> sides_of_rhs (init_sides xs (t :: ('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree)) \<sigma> (Inr k)"
+proof (induction xs)
+  case (Cons p xs)
+  obtain k' d' where p: "p = (k', d')" by (cases p)
+  show ?case
+  proof (cases "(k, d) = p")
+    case True
+    with p show ?thesis by (simp add: Let_def)
+  next
+    case False
+    with Cons.prems have "d \<le> sides_of_rhs (init_sides xs t) \<sigma> (Inr k)"
+      by (intro Cons.IH) simp
+    also have "\<dots> \<le> sides_of_rhs (init_sides (p # xs) t) \<sigma> (Inr k)"
+      unfolding p by (simp add: Let_def)
+    finally show ?thesis .
+  qed
+qed simp
+
+text \<open>
+  A post-solution of the wrapped system bounds the wrapped system's own equations, since
+  the wrapper only adds side effects, and covers every initial value at its key.
+\<close>
+
+lemma tree_covered_at_init_sides:
+  "tree_covered_at (init_sides xs (t :: ('x, 'g, 'd::bounded_semilattice_sup_bot) strategy_tree)) \<sigma> u
+   \<Longrightarrow> tree_covered_at t \<sigma> u"
+  unfolding tree_covered_at_def
+  by simp (meson order_trans sides_of_rhs_init_sides_ge)
+
+lemma dep_with_init [simp]: "dep (with_init init T) \<sigma> x = dep T \<sigma> x"
+  by (simp add: dep_def with_init_def)
+
+lemma post_bounded_with_init_at:
+  assumes
+    "post_bounded (with_init init (T :: ('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT)) x \<sigma> vars"
+    and "u \<in> vars" and "(k, d) \<in> set (init u)"
+  shows "d \<le> \<sigma> (Inr k)"
+proof -
+  have "sides_of_rhs (init_sides (init u) (T u)) \<sigma> \<le> \<sigma>"
+    using post_boundedD[OF assms(1,2)] by (simp add: with_init_def tree_covered_at_def)
+  then have "sides_of_rhs (init_sides (init u) (T u)) \<sigma> (Inr k) \<le> \<sigma> (Inr k)"
+    by (rule le_funD)
+  with sides_of_rhs_init_sides_at[OF assms(3)] show ?thesis by (rule order_trans)
+qed
+
+lemma part_post_solution_with_init:
+  "part_post_solution (with_init init (T :: ('x, 'g, 'd::bounded_semilattice_sup_bot) eqsT)) x \<sigma> vars
+   \<Longrightarrow> part_post_solution T x \<sigma> vars"
+  unfolding part_post_solution_iff_tree_covered_at
+proof (intro conjI ballI; elim conjE)
+  assume all: "\<forall>u\<in>vars. dep\<^sub>L (with_init init T) \<sigma> u \<subseteq> vars
+                 \<and> tree_covered_at (with_init init T u) \<sigma> u"
+  fix u assume u: "u \<in> vars"
+  show "dep\<^sub>L T \<sigma> u \<subseteq> vars" using all u by (simp add: dep\<^sub>L_def)
+  show "tree_covered_at (T u) \<sigma> u"
+    using all u by (simp add: with_init_def) (blast intro: tree_covered_at_init_sides)
+qed
 end
 
 end

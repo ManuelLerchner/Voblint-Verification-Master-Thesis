@@ -224,7 +224,9 @@ theorem dg_analysis_execI:
     and seed_ne_analysis_global: "\<And>v ctx. seed v ctx \<noteq> analysis_global"
     and solver: "certified_solver solve solve_dom solve_c"
     and init_sound: "\<And>\<G>. cinit_stores \<G> \<subseteq> default_st_gamma \<G> init_st"
-  shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st analysis_global seed
+    and own_key: "\<And>n. global_of n = analysis_global"
+  shows "dg_analysis_exec (generic_tf_st_for ops) (generic_enter_st_for ops) init_st analysis_global
+           global_of seed
            route solve solve_dom bot check.classify_check
            skip assign special_transfer backward.branch body ret enter_ci_for event route_abs solve_c"
 proof (rule dg_analysis_exec.intro[OF solver dg_analysis_exec_axioms.intro], goal_cases)
@@ -235,7 +237,7 @@ next
 next
   case (3 \<G> ci s) show ?case
     by (rule enter_st_for_commute)
-qed (fact route_agree seed_ne_analysis_global init_sound
+qed (fact route_agree seed_ne_analysis_global init_sound own_key
        check.classify_check_proved check.classify_check_refuted refl)+
 
 subsection \<open>The specification and its soundness, before any context\<close>

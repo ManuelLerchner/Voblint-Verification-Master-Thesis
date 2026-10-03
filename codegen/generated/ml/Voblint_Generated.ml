@@ -4329,11 +4329,11 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 type 'a imp_prog_ext =
   Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
 
-type ('a, 'b, 'c) solved_run_ext =
+type ('a, 'b, 'c, 'd) solved_run_ext =
   Solved_run_ext of
-    ('a, 'b) solved_table * 'b lifted * (string -> 'a -> 'b lifted) *
-      (cfg_node -> 'a -> edge_action -> 'b lifted) *
-      (cfg_node -> 'a -> call_action -> string -> 'a option) * 'c;;
+    ('a, 'c) solved_table * ('b -> 'c lifted) * (string -> 'a -> 'c lifted) *
+      (cfg_node -> 'a -> edge_action -> 'c lifted) *
+      (cfg_node -> 'a -> call_action -> string -> 'a option) * 'd;;
 
 type 'a call_route_ext =
   Call_route_ext of cfg_node * nat * string * nat list * 'a;;
@@ -5043,6 +5043,8 @@ let rec ls_query_update
 let rec with_qry h c = ls_query_update (fun _ -> h) c;;
 
 let ret_var : string = "#ret";;
+
+let rec genv key tau v = dg_global (tau (Inr (key v)));;
 
 let fmempty : ('a, 'b) fmap = Fmap_of_list [];;
 
@@ -10151,7 +10153,7 @@ let rec report_of _A
                    indexed)
             (cfg_calls_list g),
           result_checks_of _A g r classify,
-          Result_global_ext (Global_Shared, run_shared sr, ()) ::
+          Result_global_ext (Global_Shared, run_shared sr (), ()) ::
             maps seeds_of (prog_main_name :: prog_procs p),
           arithmetic_diagnostics _A g r classify, ()));;
 
@@ -10251,17 +10253,16 @@ let rec dg_result_for
         (fun v ctx ->
           map_lift rd
             (canonicalize_lift emp
-              (rc (dg_local (snd sol (Inl (v, ctx))))
-                (dg_global (snd sol (Inr gk)))))));;
+              (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol))))));;
 
 let rec solved_run_of (_A1, _A2)
-  comp emp rd analysis_global seed route place_cmb place_rl g p sol =
+  comp emp rd global_of seed route place_cmb place_rl g p sol =
     (let c = comp g p in
-     let ga = dg_global (snd sol (Inr analysis_global)) in
+     let ga = genv global_of (snd sol) in
      let read = (fun d -> map_lift (rd g) (canonicalize_lift (emp p) d)) in
       Solved_run_ext
-        (dg_result_for (rd g) (emp p) (place_cmb g) analysis_global sol,
-          map_lift (rd g) ga,
+        (dg_result_for (rd g) (emp p) (place_cmb g) global_of sol,
+          (fun n -> map_lift (rd g) (ga n)),
           (fun f ctx ->
             read (place_cmb g
                     (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx))))
@@ -10285,7 +10286,7 @@ let rec solved_run_of (_A1, _A2)
 let rec mcp_place_cmb
   pg = (match pg with Program_Globals_Flow_Sensitive -> (fun _ d _ -> d)
          | Program_Globals_Flow_Insensitive ->
-           (fun _ ->
+           (fun _ d e ->
              split_cmb_lifted
                ((semilattice_sup_analysis_product
                   (semilattice_sup_lifted
@@ -10367,7 +10368,8 @@ let rec mcp_place_cmb
                                     bounded_semilattice_sup_bot_congruence),
                                    (ownership_split_default_st
                                      bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
-                               ownership_split_relc))))))))));;
+                               ownership_split_relc))))))))
+               d (e ())));;
 
 let rec mcp_place_rl
   pg = (match pg with Program_Globals_Flow_Sensitive -> (fun _ d -> d)
@@ -10527,8 +10529,8 @@ let rec mcp_run_of
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route (mcp_place_cmb pg)
-      (mcp_place_rl pg);;
+      (mcp_comp asa) (mcp_emp asa) mcp_rd (fun _ -> global) seed route
+      (mcp_place_cmb pg) (mcp_place_rl pg);;
 
 let rec activation
   asa = (if null asa then [Int_Analysis Refine_Fixpoint]
@@ -12116,11 +12118,11 @@ let rec dg_spec_edge_program _D _E
     transfer_program _D _E
       (fun m -> dg_spec_step s a (outer_man (dgs_query s) m)) src unknown_of;;
 
-let rec compiled_routed_eqs_for _A (_C1, _C2) _D
-  global seed route s g initial initial_global =
+let rec compiled_routed_eqs_for _A (_D1, _D2) _E
+  global global_of seed route s g initial initial_global =
     (let preds = intra_predecessor_index g in
      let targets = call_target_index g in
-      routed_node_rhs_buffered _A _C2 _D
+      routed_node_rhs_buffered _A _D2 _E
         (fun _ v ctx ->
           map (fun (u, a) -> (Inl (u, ctx), a))
             (group_lookup linorder_cfg_node preds v))
@@ -12131,10 +12133,10 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
         (fun _ -> global) route
         (fun _ src a ->
           dg_spec_edge_program
-            _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
-            _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
-            (fun _ -> global))
-        (routed_call_program _C2 _D s (fun _ -> global) seed
+            _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+            _E.order_bot_bounded_semilattice_sup_bot.bot_order_bot s a src
+            global_of)
+        (routed_call_program _D2 _E s global_of seed
           (fun v cc ca _ ->
             map_filter
               (fun x ->
@@ -12143,19 +12145,31 @@ let rec compiled_routed_eqs_for _A (_C1, _C2) _D
                   then Some (let (_, (_, p)) = x in p) else None))
               (group_lookup linorder_cfg_node targets v))
           (fun d ->
-            eq _C1 d
-              (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
-        (routed_entry_seed_programs _C2 _D seed) g
-        (bot _C2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
+            eq _D1 d
+              (bot _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+        (routed_entry_seed_programs _D2 _E seed) g
+        (bot _D2.order_bot_bounded_semilattice_sup_bot.bot_order_bot) initial
         initial_global);;
 
-let rec equations (_A1, _A2) _B
-  comp init_st analysis_global seed route place_spec place_rg g p =
-    compiled_routed_eqs_for _B
-      ((equal_lifted _A1), (bounded_semilattice_sup_bot_lifted _A2))
-      (bounded_semilattice_sup_bot_lifted _A2) analysis_global seed (route g)
-      (place_spec g (comp g p)) (prog_cfg p) (Lifted init_st)
-      (place_rg g (Lifted init_st));;
+let rec init_publications _C _D
+  global_of root_ctx place_inits g p x =
+    (if equal_proda equal_cfg_node _C x (cfg_exit (prog_cfg p), root_ctx)
+      then map (fun (n, d) -> (global_of n, DG (Bot, d))) (place_inits g p)
+      else []);;
+
+let rec init_sides xs t = foldr (fun (a, b) -> (fun c -> Side (a, b, c))) xs t;;
+
+let rec with_init init t = (fun x -> init_sides (init x) (t x));;
+
+let rec equations (_A1, _A2) _B _D
+  comp init_st analysis_global global_of seed route root_ctx place_spec place_rg
+    place_inits g p =
+    with_init (init_publications _D _A2 global_of root_ctx place_inits g p)
+      (compiled_routed_eqs_for _B
+        ((equal_lifted _A1), (bounded_semilattice_sup_bot_lifted _A2))
+        (bounded_semilattice_sup_bot_lifted _A2) analysis_global global_of seed
+        (route g) (place_spec g (comp g p)) (prog_cfg p) (Lifted init_st)
+        (place_rg g (Lifted init_st)));;
 
 let rec man_global
   (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_global;;
@@ -15058,8 +15072,8 @@ let rec mcp_place_rg
                                      bounded_semilattice_sup_bot_congruence.order_bot_bounded_semilattice_sup_bot)))
                                ownership_split_relc))))))))));;
 
-let rec mcp_equations _A
-  asa pg global seed route =
+let rec mcp_equations _A _B
+  asa pg global seed route root =
     equations
       ((equal_analysis_product
          (equal_lifted
@@ -15129,8 +15143,8 @@ let rec mcp_equations _A
                         (semilattice_sup_default_st
                           bounded_semilattice_sup_bot_congruence))
                       semilattice_sup_relc))))))))
-      _A (mcp_comp asa) (mcp_init asa) global seed route (mcp_place_spec pg)
-      (mcp_place_rg pg);;
+      _A _B (mcp_comp asa) (mcp_init asa) global (fun _ -> global) seed route
+      root (mcp_place_spec pg) (mcp_place_rg pg) (fun _ _ -> []);;
 
 let rec entry_ctx_key
   asa ctx =
@@ -15203,8 +15217,8 @@ let rec analysis_report_of
               p)
           (mcp_solve_c equal_unit (equal_global_unknown equal_unit equal_unit) r
             (mcp_equations (equal_global_unknown equal_unit equal_unit)
-              (activation asa) pg (Analysis_Global ())
-              (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit)
+              equal_unit (activation asa) pg (Analysis_Global ())
+              (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit) ()
               (declared_global p) p)
             (cfg_exit (prog_cfg p), ())))
     | Analysis_Config (asa, r, Ctx_EntryState, pg), p ->
@@ -15278,9 +15292,22 @@ let rec analysis_report_of
                                 (equal_analysis_product
                                   (equal_list equal_congruence)
                                   (equal_list equal_unit)))))))))
+                  (equal_analysis_product (equal_list equal_sign)
+                    (equal_analysis_product (equal_list equal_ivl)
+                      (equal_analysis_product (equal_list equal_parity)
+                        (equal_analysis_product
+                          (equal_list (equal_int_dom_ext equal_unit))
+                          (equal_analysis_product
+                            (equal_list (equal_int_dom_ext equal_unit))
+                            (equal_analysis_product
+                              (equal_list (equal_int_dom_ext equal_unit))
+                              (equal_analysis_product
+                                (equal_list equal_congruence)
+                                (equal_list equal_unit))))))))
                   (activation asa) pg (Analysis_Global ())
                   (fun a b -> Activation_Seed (a, b))
-                  (mcp_formals_route (activation asa)) (declared_global p) p)
+                  (mcp_formals_route (activation asa)) mcp_root_ctx
+                  (declared_global p) p)
               (cfg_exit (prog_cfg p), mcp_root_ctx)))
     | Analysis_Config (asa, r, Ctx_CallString k, pg), p ->
         (let _ =
@@ -15299,9 +15326,9 @@ let rec analysis_report_of
                   (fun _ -> cs_route k) (declared_global p) p sol)
                 p)
             (mcp_solve_c (equal_list equal_cfg_node) equal_call_string_gk r
-              (mcp_equations equal_call_string_gk (activation asa) pg Global
-                (fun a b -> Seed (a, b)) (fun _ -> cs_route k)
-                (declared_global p) p)
+              (mcp_equations equal_call_string_gk (equal_list equal_cfg_node)
+                (activation asa) pg Global (fun a b -> Seed (a, b))
+                (fun _ -> cs_route k) [] (declared_global p) p)
               (cfg_exit (prog_cfg p), [])));;
 
 let rec config_analyses (Analysis_Config (x1, x2, x3, x4)) = x1;;

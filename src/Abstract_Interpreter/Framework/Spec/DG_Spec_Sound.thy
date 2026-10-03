@@ -313,6 +313,11 @@ text \<open>Applied to a name, the environment is the lookup it stands for.\<clo
 
 declare genv_def [simp]
 
+text \<open>Every name at one key reads one value: the environment of a single slot.\<close>
+
+lemma genv_const [simp]: "genv (\<lambda>_. k) \<tau> = (\<lambda>_. dg_global (\<tau> (Inr k)))"
+  by (simp add: fun_eq_iff)
+
 text \<open>The contract a specification signs: its concretization is monotone, an edge's program
   over-approximates the concrete edge step, and its combine over-approximates the concrete
   return. Both obligations read the globals from the environment the valuation holds, and
