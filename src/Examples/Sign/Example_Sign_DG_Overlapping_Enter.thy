@@ -461,11 +461,10 @@ text \<open>What the missing obligation would let through. With \<open>enter\<^s
 
 definition ov_empty_spec ::
   "(pp \<times> sign list, (unit, sign list) global_unknown, unit,
-    sign default_st lifted, sign default_st lifted) dg_spec" where
+    sign default_st lifted, sign default_st lifted) dg_spec" where [code_unfold]:
   "ov_empty_spec = (sign_tf.spec_exec ov_gs ov_ep)
      \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. [])) \<rparr>"
 
-declare ov_empty_spec_def [code_unfold]
 
 definition ov_empty_eqs ::
   "(pp \<times> sign list, (unit, sign list) global_unknown,

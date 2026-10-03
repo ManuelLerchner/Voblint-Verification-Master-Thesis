@@ -22,18 +22,17 @@ type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
 
 inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) for \<G> and g where
-  Intra:
+  Intra [intro]:
     "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
      \<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s', stk)"
-| Call:
+| Call [intro]:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
      \<G>, g \<turnstile> (u, s, stk)
        \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
-| Return:
+| Return [intro]:
     "\<G>, g \<turnstile> (FunctionResult q, t, (cont, dst, caller) # stk)
        \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller t, stk)"
 
-declare cstep.intros [intro]
 
 abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)

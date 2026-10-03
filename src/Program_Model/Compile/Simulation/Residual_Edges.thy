@@ -568,19 +568,18 @@ text \<open>\<open>intra_step\<close> is the fragment of \<^const>\<open>pstep\<
 
 inductive intra_step ::
   "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
-  IAssign: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
-| ISpecial: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
+  IAssign [intro]: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
+| ISpecial [intro]: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
              special_result sc s v \<Longrightarrow>
              intra_step \<Pi> (Call (Some x) q actuals, s, frs) (SKIP, s(x := v), frs)"
-| ICheck:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) (SKIP, s, frs)"
-| ISeq1:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
-| ISeq2:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
+| ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) (SKIP, s, frs)"
+| ISeq1 [intro]:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
+| ISeq2 [intro]:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
-| IIfTrue: "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IIfFalse:"\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
-| IWhile:  "intra_step \<Pi> (While b c, s, frs) (If b (Seq c (While b c)) SKIP, s, frs)"
+| IIfTrue [intro]: "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
+| IIfFalse [intro]:"\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
+| IWhile [intro]:  "intra_step \<Pi> (While b c, s, frs) (If b (Seq c (While b c)) SKIP, s, frs)"
 
-declare intra_step.intros [intro]
 
 inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> (SKIP, s, frs) y"
 inductive_cases intra_AssignE [elim!]: "intra_step \<Pi> (Assign x a, s, frs) y"
