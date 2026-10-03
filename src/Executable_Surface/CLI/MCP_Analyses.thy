@@ -263,7 +263,7 @@ lemma mcp_routed_dg_analysis:
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)
     (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d e. d) (\<lambda>\<G> d. d) (\<lambda>\<G> d. Bot)
-    (\<lambda>\<G> p. [])"
+    (\<lambda>\<G> p. []) (\<lambda>p ci d e. d)"
 proof (rule dg_analysis_whole_stateI[OF td_certified_solver],
     goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe ClProved ClRefuted BotState
     Init SeedNeGlobal)
@@ -314,7 +314,7 @@ global_interpretation mcp_rule: dg_analysis
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
     "\<lambda>\<G> c. dg_spec_of c" "\<lambda>\<G> d e. d" "\<lambda>\<G> d. d" "\<lambda>\<G> d. Bot"
-    "\<lambda>\<G> p. []"
+    "\<lambda>\<G> p. []" "\<lambda>p ci d e. d"
   for as r
   by (rule mcp_routed_dg_analysis) simp_all
 
@@ -336,7 +336,7 @@ global_interpretation mcp_es_rule: dg_analysis
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
     "\<lambda>\<G> c. dg_spec_of c" "\<lambda>\<G> d e. d" "\<lambda>\<G> d. d" "\<lambda>\<G> d. Bot"
-    "\<lambda>\<G> p. []"
+    "\<lambda>\<G> p. []" "\<lambda>p ci d e. d"
   for as r
   by (rule mcp_routed_dg_analysis) simp_all
 
@@ -356,7 +356,7 @@ global_interpretation mcp_cs_rule: dg_analysis
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
     "\<lambda>\<G> c. dg_spec_of c" "\<lambda>\<G> d e. d" "\<lambda>\<G> d. d" "\<lambda>\<G> d. Bot"
-    "\<lambda>\<G> p. []"
+    "\<lambda>\<G> p. []" "\<lambda>p ci d e. d"
   for as k r
   by (rule mcp_routed_dg_analysis) simp_all
 

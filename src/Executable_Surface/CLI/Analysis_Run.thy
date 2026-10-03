@@ -360,7 +360,7 @@ definition mcp_place_spec :: "program_globals \<Rightarrow> imp_prog \<Rightarro
   "mcp_place_spec pg = (case pg of
      Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
    | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>p c. keyed_split_spec (declared_global p)
-       (declared_global_vars p) split_cmb split_rl split_global_at split_free c))"
+       split_cmb split_rl split_global_at split_free c))"
 
 definition mcp_place_cmb ::
     "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
@@ -384,8 +384,17 @@ definition mcp_place_inits :: "program_globals \<Rightarrow> analysis_domain lis
    | Program_Globals_Flow_Insensitive \<Rightarrow>
        (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init as)))) (declared_global_vars p)))"
 
+definition mcp_place_enter ::
+    "program_globals \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
+       \<Rightarrow> mcp_st lifted" where
+  "mcp_place_enter pg = (case pg of
+     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>p ci d e. d)
+   | Program_Globals_Flow_Insensitive \<Rightarrow>
+       (\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
+          (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))))"
+
 lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
-  mcp_place_inits_def
+  mcp_place_inits_def mcp_place_enter_def
 
 definition mcp_equations ::
     "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> 'k \<Rightarrow> (vname \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
@@ -410,7 +419,7 @@ definition mcp_run_of ::
        \<Rightarrow> ('c, vname, mcp_val) solved_run" where
   "mcp_run_of as pg global seed route =
      dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route
-       (mcp_place_cmb pg) (mcp_place_rl pg)"
+       (mcp_place_cmb pg) (mcp_place_rl pg) (mcp_place_enter pg)"
 
 lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
 

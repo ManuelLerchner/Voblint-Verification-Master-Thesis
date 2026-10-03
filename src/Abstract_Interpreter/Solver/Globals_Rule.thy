@@ -31,7 +31,22 @@ text \<open>
   runs on its contribution part and leaves the counter unchanged. Every
   \<^locale>\<open>update_rule\<close> obligation speaks about the contributions alone, so the
   lifted rule inherits them.
+
+  The lifted rule also reports no change when the merged value equals the old one.
+  The two warrowing rules answer with a new value whenever an origin's contribution
+  changes, even when the merge over all origins stays the same, and the solver
+  destabilizes every reader of a global it is handed a value for. Recording the
+  contribution and reporting nothing keeps those readers stable.
 \<close>
+
+definition changed :: "'d \<Rightarrow> 'd option \<Rightarrow> 'd option" where
+  "changed d res = (case res of Some d'' \<Rightarrow> if d'' = d then None else Some d'' | None \<Rightarrow> None)"
+
+lemma changed_SomeD: "changed d res = Some d'' \<Longrightarrow> res = Some d''"
+  by (cases res) (auto simp: changed_def split: if_splits)
+
+lemma changed_NoneD: "changed d res = None \<Longrightarrow> res = None \<or> res = Some d"
+  by (cases res) (auto simp: changed_def split: if_splits)
 
 definition lift_basic_rule ::
     "('d \<Rightarrow> 'x \<Rightarrow> 'g \<Rightarrow> 'd \<Rightarrow> ('x, 'g, 'd) ug_state \<Rightarrow> 'd option \<times> ('x, 'g, 'd) ug_state)
@@ -39,12 +54,12 @@ definition lift_basic_rule ::
      \<Rightarrow> 'd option \<times> ('x, 'g, 'd) ug_state_with_gas" where
   "lift_basic_rule f d orig g d' state =
      (let (res, st) = f d orig g d' (ug_state.truncate state)
-      in (res, ug_state.\<rho>_update (\<lambda>_. ug_state.\<rho> st) state))"
+      in (changed d res, ug_state.\<rho>_update (\<lambda>_. ug_state.\<rho> st) state))"
 
 lemma lift_basic_ruleE:
   assumes "(res, state') = lift_basic_rule f d orig g d' state"
-  obtains st where "(res, st) = f d orig g d' (ug_state.truncate state)"
-    and "ug_state.\<rho> state' = ug_state.\<rho> st"
+  obtains res0 st where "(res0, st) = f d orig g d' (ug_state.truncate state)"
+    and "res = changed d res0" and "ug_state.\<rho> state' = ug_state.\<rho> st"
   using assms by (auto simp: lift_basic_rule_def split: prod.splits)
 
 lemma update_rule_lift_basic_rule:
@@ -56,21 +71,21 @@ proof
 next
   fix res state' d orig g d' state g' orig'
   assume step: "(res, state') = lift_basic_rule f d orig g d' state" and ne: "g' \<noteq> g"
-  from step obtain st where e: "(res, st) = f d orig g d' (ug_state.truncate state)"
+  from step obtain res0 st where e: "(res0, st) = f d orig g d' (ug_state.truncate state)"
     and r: "ug_state.\<rho> state' = ug_state.\<rho> st" by (rule lift_basic_ruleE)
   show "rho_lookup (ug_state.\<rho> state') g' orig' = rho_lookup (ug_state.\<rho> state) g' orig'"
     using update_rule.update_global_untouched(1)[OF f e ne] by (simp add: r)
 next
   fix res state' d orig g d' state g' orig'
   assume step: "(res, state') = lift_basic_rule f d orig g d' state" and ne: "orig' \<noteq> orig"
-  from step obtain st where e: "(res, st) = f d orig g d' (ug_state.truncate state)"
+  from step obtain res0 st where e: "(res0, st) = f d orig g d' (ug_state.truncate state)"
     and r: "ug_state.\<rho> state' = ug_state.\<rho> st" by (rule lift_basic_ruleE)
   show "rho_lookup (ug_state.\<rho> state') g' orig' = rho_lookup (ug_state.\<rho> state) g' orig'"
     using update_rule.update_global_untouched(2)[OF f e ne] by (simp add: r)
 next
   fix res state' d orig g d' state
   assume step: "(res, state') = lift_basic_rule f d orig g d' state"
-  from step obtain st where e: "(res, st) = f d orig g d' (ug_state.truncate state)"
+  from step obtain res0 st where e: "(res0, st) = f d orig g d' (ug_state.truncate state)"
     and r: "ug_state.\<rho> state' = ug_state.\<rho> st" by (rule lift_basic_ruleE)
   show "d' \<le> rho_lookup (ug_state.\<rho> state') g orig"
     using update_rule.update_global_recorded_in_rho[OF f e] by (simp add: r)
@@ -78,18 +93,29 @@ next
   fix state' d orig g d' state
   assume step: "(None, state') = lift_basic_rule f d orig g d' state"
     and inv: "\<forall>orig. rho_lookup (ug_state.\<rho> state) g orig \<le> d"
-  from step obtain st where e: "(None, st) = f d orig g d' (ug_state.truncate state)"
-    and r: "ug_state.\<rho> state' = ug_state.\<rho> st" by (rule lift_basic_ruleE)
-  show "rho_lookup (ug_state.\<rho> state') g orig \<le> d"
-    using update_rule.update_global_preserves_rho_invariant(1)[OF f e] inv by (simp add: r)
+  from step obtain res0 st where e: "(res0, st) = f d orig g d' (ug_state.truncate state)"
+    and c: "None = changed d res0" and r: "ug_state.\<rho> state' = ug_state.\<rho> st"
+    by (rule lift_basic_ruleE)
+  from changed_NoneD[OF c[symmetric]] show "rho_lookup (ug_state.\<rho> state') g orig \<le> d"
+  proof
+    assume "res0 = None"
+    then show ?thesis
+      using update_rule.update_global_preserves_rho_invariant(1)[OF f] e inv by (simp add: r)
+  next
+    assume "res0 = Some d"
+    then show ?thesis
+      using update_rule.update_global_preserves_rho_invariant(2)[OF f] e inv by (simp add: r)
+  qed
 next
   fix d'' state' d orig g d' state orig'
   assume step: "(Some d'', state') = lift_basic_rule f d orig g d' state"
     and inv: "\<forall>orig. rho_lookup (ug_state.\<rho> state) g orig \<le> d"
-  from step obtain st where e: "(Some d'', st) = f d orig g d' (ug_state.truncate state)"
-    and r: "ug_state.\<rho> state' = ug_state.\<rho> st" by (rule lift_basic_ruleE)
-  show "rho_lookup (ug_state.\<rho> state') g orig' \<le> d''"
-    using update_rule.update_global_preserves_rho_invariant(2)[OF f e] inv by (simp add: r)
+  from step obtain res0 st where e: "(res0, st) = f d orig g d' (ug_state.truncate state)"
+    and c: "Some d'' = changed d res0" and r: "ug_state.\<rho> state' = ug_state.\<rho> st"
+    by (rule lift_basic_ruleE)
+  have "res0 = Some d''" by (rule changed_SomeD) (use c in simp)
+  then show "rho_lookup (ug_state.\<rho> state') g orig' \<le> d''"
+    using update_rule.update_global_preserves_rho_invariant(2)[OF f] e inv by (simp add: r)
 qed
 
 subsection \<open>The rule as a value\<close>

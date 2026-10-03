@@ -503,12 +503,13 @@ lemma mcp_keyed_dg_analysis:
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
     (mcp_empty_v (activation as)) (TD_side_rule_Interp_solve_c r)
-    (\<lambda>p c. keyed_split_spec (declared_global p) (declared_global_vars p)
-       split_cmb split_rl split_global_at split_free c)
+    (\<lambda>p c. keyed_split_spec (declared_global p) split_cmb split_rl split_global_at split_free c)
     (\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e))
     (\<lambda>\<G>. split_rl) (\<lambda>\<G> d. Bot)
     (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init (activation as)))))
-       (declared_global_vars p))"
+       (declared_global_vars p))
+    (\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
+       (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci)))))"
 proof (rule dg_analysis_keyedI[OF td_certified_solver],
     goal_cases CompSound EnterSingle CmbMono CmbRl RlCmb CmbBot RgMono RgFree Mix InitView
     EmptyRd EmptyVSound SeedNe SeedNeGlobal ClProved ClRefuted BotState Init)
@@ -579,12 +580,13 @@ global_interpretation mcp_split_rule: dg_analysis
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. keyed_split_spec (declared_global p) (declared_global_vars p)
-       split_cmb split_rl split_global_at split_free c"
+    "\<lambda>p c. keyed_split_spec (declared_global p) split_cmb split_rl split_global_at split_free c"
     "\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e)"
     "\<lambda>\<G>. split_rl" "\<lambda>\<G> d. Bot"
     "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init (activation as)))))
        (declared_global_vars p)"
+    "\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
+       (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))"
   for as r
   by (rule mcp_keyed_dg_analysis) simp_all
 
@@ -597,12 +599,13 @@ global_interpretation mcp_split_es_rule: dg_analysis
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. keyed_split_spec (declared_global p) (declared_global_vars p)
-       split_cmb split_rl split_global_at split_free c"
+    "\<lambda>p c. keyed_split_spec (declared_global p) split_cmb split_rl split_global_at split_free c"
     "\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e)"
     "\<lambda>\<G>. split_rl" "\<lambda>\<G> d. Bot"
     "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init (activation as)))))
        (declared_global_vars p)"
+    "\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
+       (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))"
   for as r
   by (rule mcp_keyed_dg_analysis) simp_all
 
@@ -614,12 +617,13 @@ global_interpretation mcp_split_cs_rule: dg_analysis
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. keyed_split_spec (declared_global p) (declared_global_vars p)
-       split_cmb split_rl split_global_at split_free c"
+    "\<lambda>p c. keyed_split_spec (declared_global p) split_cmb split_rl split_global_at split_free c"
     "\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e)"
     "\<lambda>\<G>. split_rl" "\<lambda>\<G> d. Bot"
     "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init (activation as)))))
        (declared_global_vars p)"
+    "\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
+       (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))"
   for as k r
   by (rule mcp_keyed_dg_analysis) simp_all
 
