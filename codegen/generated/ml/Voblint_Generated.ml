@@ -5356,6 +5356,22 @@ let rec local_combine_transfer f m exit = sp_return (f (man_local m) exit);;
 
 let rec local_enter_transfer f m = sp_return (f (man_local m));;
 
+let local_dg_spec_template : ('a, 'b, 'c, 'd, 'e, unit) dg_spec_ext
+  = Dg_spec_ext
+      ((fun m -> sp_return (id (man_local m))),
+        (fun _ _ m -> sp_return (id (man_local m))),
+        (fun _ _ m -> sp_return (id (man_local m))),
+        (fun _ _ m -> sp_return (id (man_local m))),
+        (fun _ m -> sp_return (id (man_local m))),
+        (fun _ _ m -> sp_return (id (man_local m))),
+        (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
+        (fun _ m -> sp_return (id (man_local m))),
+        (fun _ -> local_combine_transfer (fun d _ -> d)),
+        (fun _ -> local_combine_transfer (fun d _ -> d)),
+        (fun _ _ ->
+          sp_return (top_query_lifta (order_int_dom_ext bounded_lattice_unit))),
+        ());;
+
 let rec local_transfer f m = sp_return (f (man_local m));;
 
 let rec ls_channel c x = ask_rec (ls_query c) query_depth bot_set x;;
@@ -5397,26 +5413,7 @@ let rec dg_spec_of _A
                             local_transfer (closed_step c (EA_Assign (x, e))))
                           (dgs_skip_update
                             (fun _ -> local_transfer (closed_step c EA_Nop))
-                            (Dg_spec_ext
-                              (local_transfer id,
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ -> local_transfer id),
-                                (fun _ _ -> local_transfer id),
-                                (fun _ ->
-                                  local_enter_transfer (fun d -> [(d, d)])),
-                                (fun _ -> local_transfer id),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ ->
-                                  local_combine_transfer (fun d _ -> d)),
-                                (fun _ _ ->
-                                  sp_return
-                                    (top_query_lifta
-                                      (order_int_dom_ext
-bounded_lattice_unit))),
-                                ()))))))))))));;
+                            local_dg_spec_template))))))))));;
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
@@ -10304,6 +10301,19 @@ let rec dg_result_for
             (canonicalize_lift emp
               (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol))))));;
 
+let rec comp_entry _A
+  comp g p ci w =
+    snd (hd (ls_enter (comp g p) (ls_channel (comp g p) w) ci (w, w)));;
+
+let rec entry_alt _A
+  comp place_rl place_enter ga p ci d g =
+    (let w = place_enter p ci d g in
+      (place_rl ga w, place_rl ga (comp_entry _A comp ga p ci w)));;
+
+let rec entry_of _A
+  comp place_rl place_enter ga p ci d g =
+    snd (entry_alt _A comp place_rl place_enter ga p ci d g);;
+
 let rec solved_run_of (_A1, _A2)
   comp emp rd global_of seed route place_cmb place_rl place_enter g p sol =
     (let c = comp g p in
@@ -10321,15 +10331,8 @@ let rec solved_run_of (_A1, _A2)
                    closed_step c a b)),
           (fun u ctx ca q ->
             (let d =
-               snd (let w =
-                      place_enter p (call_info_of ca q)
-                        (dg_local (snd sol (Inl (u, ctx))))
-                        ga
-                      in
-                     (place_rl g w,
-                       place_rl g
-                         (snd (hd (ls_enter (comp g p) (ls_channel (comp g p) w)
-                                    (call_info_of ca q) (w, w))))))
+               entry_of _A2 comp place_rl place_enter g p (call_info_of ca q)
+                 (dg_local (snd sol (Inl (u, ctx)))) ga
                in
               (if equal_lifteda _A1 d Bot then None
                 else Some (route g u ctx d ca)))),
@@ -12685,6 +12688,8 @@ let rec init_publications _C _D
       then map (fun (n, d) -> (global_of n, DG (Bot, d))) (place_inits g p)
       else []);;
 
+let rec analysis_spec _A comp place_spec g p = place_spec p (comp g p);;
+
 let rec init_sides xs t = foldr (fun (a, b) -> (fun c -> Side (a, b, c))) xs t;;
 
 let rec with_init init t = (fun x -> init_sides (init x) (t x));;
@@ -12696,8 +12701,8 @@ let rec equations (_A1, _A2) _B _D
       (compiled_routed_eqs_for _B
         ((equal_lifted _A1), (bounded_semilattice_sup_bot_lifted _A2))
         (bounded_semilattice_sup_bot_lifted _A2) buffer_key global_of seed
-        (route g) (place_spec p (comp g p)) (prog_cfg p) (Lifted init_st)
-        (place_rg g (Lifted init_st)));;
+        (route g) (analysis_spec _A2 comp place_spec g p) (prog_cfg p)
+        (Lifted init_st) (place_rg g (Lifted init_st)));;
 
 let rec mcp_place_inits
   pg asa =
@@ -12889,21 +12894,7 @@ let rec keyed_split_spec _A
                   (dgs_special_update (fun _ sc x -> step (EA_Special (sc, x)))
                     (dgs_assign_update (fun _ x e -> step (EA_Assign (x, e)))
                       (dgs_skip_update (fun _ -> step EA_Nop)
-                        (Dg_spec_ext
-                          (local_transfer id, (fun _ _ -> local_transfer id),
-                            (fun _ _ -> local_transfer id),
-                            (fun _ _ -> local_transfer id),
-                            (fun _ -> local_transfer id),
-                            (fun _ _ -> local_transfer id),
-                            (fun _ -> local_enter_transfer (fun d -> [(d, d)])),
-                            (fun _ -> local_transfer id),
-                            (fun _ -> local_combine_transfer (fun d _ -> d)),
-                            (fun _ -> local_combine_transfer (fun d _ -> d)),
-                            (fun _ _ ->
-                              sp_return
-                                (top_query_lifta
-                                  (order_int_dom_ext bounded_lattice_unit))),
-                            ())))))))))));;
+                        local_dg_spec_template)))))))));;
 
 let rec mcp_place_spec
   pg = (match pg

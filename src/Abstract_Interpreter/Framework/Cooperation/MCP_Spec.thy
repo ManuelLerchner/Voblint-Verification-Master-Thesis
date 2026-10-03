@@ -776,7 +776,6 @@ definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_s
         (\<lambda>dc de. ls_combine_assign c (ls_channel c de) ci dc de)),
      dgs_query := local_query (ls_channel c) \<rparr>"
 
-declare dg_spec_of_def [code_unfold]
 
 lemma dg_spec_of_simps [simp]:
   "skip\<^sup># (dg_spec_of c) = local_transfer (closed_step c EA_Nop)"

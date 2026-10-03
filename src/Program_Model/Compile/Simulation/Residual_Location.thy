@@ -33,52 +33,51 @@ inductive control_at ::
   "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> bool"
   for \<Pi> :: proc_table and p :: pname
 where
-  Skip:
+  Skip [intro]:
     "control_at \<Pi> p SKIP k n SKIP (Statement n)"
-| Assign:
+| Assign [intro]:
     "control_at \<Pi> p (Assign x a) k n (Assign x a) (Statement n)"
-| AssignDone:
+| AssignDone [intro]:
     "control_at \<Pi> p (Assign x a) k n SKIP k"
-| Check:
+| Check [intro]:
     "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n (VIMP_Proc.com.Check l c) (Statement n)"
-| CheckDone:
+| CheckDone [intro]:
     "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n SKIP k"
-| SeqLeft:
+| SeqLeft [intro]:
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
-| SeqRight:
+| SeqRight [intro]:
     "falls_through c1 \<Longrightarrow>
      control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n r v"
-| IfHead:
+| IfHead [intro]:
     "control_at \<Pi> p (If b c1 c2) k n (If b c1 c2) (Statement n)"
-| IfLeft:
+| IfLeft [intro]:
     "control_at \<Pi> p c1 k (Suc n) r v \<Longrightarrow> c1 \<noteq> SKIP \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
-| IfRight:
+| IfRight [intro]:
     "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow> c2 \<noteq> SKIP \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
-| IfDone:
+| IfDone [intro]:
     "falls_through (If b c1 c2) \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n SKIP k"
-| WhileHead:
+| WhileHead [intro]:
     "control_at \<Pi> p (While b c) k n (While b c) (Statement n)"
-| WhileUnfolded:
+| WhileUnfolded [intro]:
     "control_at \<Pi> p (While b c) k n
        (If b (Seq c (While b c)) SKIP) (Statement n)"
-| WhileBody:
+| WhileBody [intro]:
     "control_at \<Pi> p c (Statement n) (Suc n) r v \<Longrightarrow>
      control_at \<Pi> p (While b c) k n (Seq r (While b c)) v"
-| WhileDone:
+| WhileDone [intro]:
     "control_at \<Pi> p (While b c) k n SKIP k"
-| CallHead:
+| CallHead [intro]:
     "control_at \<Pi> p (Call dst q actuals) k n (Call dst q actuals) (Statement n)"
-| CallDone:
+| CallDone [intro]:
     "control_at \<Pi> p (Call dst q actuals) k n SKIP k"
-| ReturnHead:
+| ReturnHead [intro]:
     "control_at \<Pi> p (Return e) k n (Return e) (Statement n)"
 
-declare control_at.intros [intro]
 
 text \<open>Inversion by the shape of the fragment \<open>c0\<close>, which is what every consumer knows and
   cases on.  \<^const>\<open>Seq\<close>, \<^const>\<open>If\<close> and \<^const>\<open>While\<close> stay plain \<open>[elim]\<close> because their

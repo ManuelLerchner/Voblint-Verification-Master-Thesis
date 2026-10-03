@@ -25,12 +25,14 @@ text \<open>
 
 datatype ('x, 'l, 'c) route_event = Ev_Route 'x 'l 'c
 
-lemma route_unit_traced:
+declare route_unit_def [code del] cs_route_def [code del] mcp_formals_route_def [code del]
+
+lemma route_unit_traced [code]:
   "route_unit u ctx d ca =
     (let c = (); _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
   by (simp add: trace_event_def Let_def)
 
-lemma cs_route_traced:
+lemma cs_route_traced [code]:
   "cs_route k u ctx d ca =
     (let c = take k (u # ctx); _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
   by (simp add: cs_route_def trace_event_def Let_def)
@@ -45,11 +47,8 @@ lemma trace_route:
     (let c = route_rhs u ctx d ca; _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
   using assms by (simp add: trace_event_def Let_def)
 
-lemmas mcp_formals_route_traced =
+lemmas mcp_formals_route_traced [code] =
   trace_route[where route = "mcp_formals_route as G", OF mcp_formals_route_def] for as G
-
-declare route_unit_def [code del] cs_route_def [code del] mcp_formals_route_def [code del]
-declare route_unit_traced [code] cs_route_traced [code] mcp_formals_route_traced [code]
 
 subsection \<open>Reading unknowns and values back\<close>
 
@@ -113,13 +112,14 @@ text \<open>
   events around it, and is the same function in the logic.
 \<close>
 
-lemma mcp_solve_c_traced: "mcp_solve_c r T x = solve_c_traced r T x"
+declare mcp_solve_c_def [code del]
+
+lemma mcp_solve_c_traced [code]: "mcp_solve_c r T x = solve_c_traced r T x"
   by (simp add: mcp_solve_c_def solve_c_traced_eq)
 
-declare mcp_solve_c_def [code del]
-declare mcp_solve_c_traced [code]
+declare analysis_report_of.simps [code del]
 
-lemmas analysis_report_of_traced =
+lemmas analysis_report_of_traced [code] =
   trace_run[OF analysis_report_of.simps(1)[of as r pg p],
     of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>_ :: unit. Context_Unit)"]
   trace_run[OF analysis_report_of.simps(2)[of as r pg p],
@@ -127,9 +127,6 @@ lemmas analysis_report_of_traced =
   trace_run[OF analysis_report_of.simps(3)[of as r k pg p],
     of "\<lambda>_. mcp_trace_printers pg as p Context_Call_String"]
   for as r k pg p
-
-declare analysis_report_of.simps [code del]
-declare analysis_report_of_traced [code]
 
 subsection \<open>The hook\<close>
 

@@ -326,7 +326,6 @@ where
      dgs_combine_assign :=
        (\<lambda>ci. ownership_split_combine_transfer_gen cmb rg rl (dg_spec_combine_transfer S ci)) \<rparr>"
 
-declare ownership_split_lift_gen_def [code_unfold]
 
 text \<open>The lifter at the pointwise carrier, splitting by the classifier.\<close>
 
@@ -338,7 +337,6 @@ where
   "ownership_split_lift \<G> =
      ownership_split_lift_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
 
-declare ownership_split_lift_def [code_unfold]
 
 text \<open>Both eliminate a constructed wrapper specification and expose the
   corresponding transfer wrapper, in a terminating direction, so they fire

@@ -114,7 +114,8 @@ definition ov_spec ::
   "ov_spec \<G> ep = (sign_tf.spec_exec \<G> ep)
      \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (ov_enter \<G> ep ci)) \<rparr>"
 
-declare ov_spec_def [code_unfold] sign_tf.spec_exec_def [code_unfold]
+
+lemmas [code] = ov_spec_def[unfolded sign_tf.spec_exec_def]
 
 text \<open>Only the entry differs; every other field is \<^const>\<open>sign_tf.spec_exec\<close>'s.\<close>
 
@@ -465,7 +466,8 @@ definition ov_empty_spec ::
   "ov_empty_spec = (sign_tf.spec_exec ov_gs ov_ep)
      \<lparr> dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. [])) \<rparr>"
 
-declare ov_empty_spec_def [code_unfold]
+
+lemmas [code] = ov_empty_spec_def[unfolded sign_tf.spec_exec_def]
 
 definition ov_empty_eqs ::
   "(pp \<times> sign list, (unit, sign list) global_unknown,
@@ -493,7 +495,7 @@ lemma ov_empty_solution_snapshot_raw:
      in TD_side_always_join_Interp_solve_c ov_empty_eqs (cfg_exit ov_cfg, []) \<noteq> None
       \<and> (\<forall>(v, ctx) \<in> fst sol. v \<noteq> p_entry)
       \<and> dg_local (snd sol (Inl (Statement 4, []))) = Bot)"
-  unfolding ov_empty_unfold
+  unfolding ov_empty_unfold sign_tf.spec_exec_def
   by eval
 
 lemma ov_empty_solution_snapshot:

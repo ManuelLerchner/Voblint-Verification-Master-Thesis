@@ -23,14 +23,13 @@ text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in
   \<open>sink_store c = caller\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
   whose callee \<^term>\<open>FunctionEntry p\<close> equals the child's (path-invariant) entry node.\<close>
 inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> activation_trace \<Rightarrow> bool" for g where
-  empty: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
-| frame: "caller_of t = Some c \<Longrightarrow> sink_store c = caller
+  empty [intro]: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
+| frame [intro]: "caller_of t = Some c \<Longrightarrow> sink_store c = caller
           \<Longrightarrow> fst (hd (path_of t)) = FunctionEntry p
           \<Longrightarrow> (sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
           \<Longrightarrow> stack_repr g stk c
           \<Longrightarrow> stack_repr g ((cont, dst, caller) # stk) t"
 
-declare stack_repr.intros [intro]
 
 text \<open>Inversion by the shape of the runtime stack.  A frame's clause recurses on the shorter
   stack, so it stays plain \<open>[elim]\<close>; an empty stack has only one clause and is \<open>[elim!]\<close>.\<close>

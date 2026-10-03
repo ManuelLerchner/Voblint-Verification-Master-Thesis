@@ -408,56 +408,33 @@ lemma state_at_unfold:
   by (simp add: state_at_def analysis_surface.state_at_def)
 end
 
-subsection \<open>Executability of the derived objects\<close>
+text \<open>Register the exported locale equations for direct calls to the generic pipeline.
+  Attributes inside the locale apply through interpretation; code generation here also
+  needs equations for the constants with their locale parameters left abstract.\<close>
 
-text \<open>
-  A locale constant carries no code equation of its own, so every object the
-  pipeline derives would drop out of the generated code and out of
-  \<^theory_text>\<open>eval\<close> alike. Each defining equation is already in executable shape, so
-  declaring them is all the code generator needs.
-
-  \<open>analysis_spec\<close> is the exception, and it is the project's standing rule for a
-  named \<^type>\<open>dg_spec\<close>: its unknown and global-key types occur only inside its
-  transfer programs, never in an argument that builds it, so it has no most
-  general ML type. Unfolding it at code-generation time is what keeps it out of
-  the emitted program.
-\<close>
-
-declare dg_pipeline.analysis_spec_def [code_unfold]
-declare dg_pipeline.comp_entry_def [code_unfold]
-declare dg_pipeline.entry_alt_def [code_unfold]
-declare dg_pipeline.entry_of_def [code_unfold]
-declare dg_pipeline.sol_global_def [code_unfold]
-
-text \<open>
-  \<^const>\<open>dg_pipeline.root_query\<close> gets its code equation restated with HOL
-  equality rather than declared from its defining meta-equation: a locale
-  definition whose body is a pair, not a function, is not in the shape the code
-  generator accepts, and the rejection is a warning rather than an error --- the
-  equation is simply absent, and the first \<^theory_text>\<open>eval\<close> that reaches a solve fails
-  with "no code equations" naming a constant nobody wrote. A registration that
-  renames the pipeline's constants through \<^theory_text>\<open>defines\<close> never notices, because
-  each renamed constant carries its own equation; one that applies them directly
-  does.
-\<close>
-
-declare dg_pipeline.init_publications_def [code]
-declare dg_pipeline.equations_def [code]
-declare dg_pipeline.solution_code [code]
-declare dg_pipeline.terminates_code [code]
-declare dg_pipeline.sol_vars_def [code]
-declare dg_pipeline.sol_env_def [code]
-declare dg_pipeline.reader_def [code]
-declare dg_pipeline.result_def [code]
-declare dg_pipeline.ctx_succ_def [code_unfold]
-declare dg_pipeline.live_succ_def [code_unfold]
-declare dg_pipeline.solved_run_of_def [code]
-declare dg_pipeline.run_def [code]
-declare dg_pipeline.check_projection_def [code]
-declare dg_pipeline.verdict_report_def [code]
-declare dg_pipeline.state_at_def [code]
-declare dg_pipeline.report_def [code]
-declare dg_pipeline.report_with_state_def [code]
+declare
+  dg_pipeline.analysis_spec_def [code]
+  dg_pipeline.comp_entry_def [code]
+  dg_pipeline.entry_alt_def [code]
+  dg_pipeline.entry_of_def [code]
+  dg_pipeline.sol_global_def [code]
+  dg_pipeline.init_publications_def [code]
+  dg_pipeline.equations_def [code]
+  dg_pipeline.solution_code [code]
+  dg_pipeline.terminates_code [code]
+  dg_pipeline.sol_vars_def [code]
+  dg_pipeline.sol_env_def [code]
+  dg_pipeline.reader_def [code]
+  dg_pipeline.result_def [code]
+  dg_pipeline.ctx_succ_def [code]
+  dg_pipeline.live_succ_def [code]
+  dg_pipeline.solved_run_of_def [code]
+  dg_pipeline.run_def [code]
+  dg_pipeline.check_projection_def [code]
+  dg_pipeline.verdict_report_def [code]
+  dg_pipeline.state_at_def [code]
+  dg_pipeline.report_def [code]
+  dg_pipeline.report_with_state_def [code]
 
 subsection \<open>The contracts\<close>
 

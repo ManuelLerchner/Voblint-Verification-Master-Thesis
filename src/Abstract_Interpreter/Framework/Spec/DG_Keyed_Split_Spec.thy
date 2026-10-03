@@ -277,7 +277,6 @@ where
             (global_names_in \<G> (case_option [] (\<lambda>x. [x]) (ci_dst ci)))
             (\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)) \<rparr>)"
 
-declare keyed_split_spec_def [code_unfold]
 
 lemma dg_spec_step_keyed_split_spec [simp]:
   "dg_spec_step (keyed_split_spec \<G> cmb rl rg free c) a

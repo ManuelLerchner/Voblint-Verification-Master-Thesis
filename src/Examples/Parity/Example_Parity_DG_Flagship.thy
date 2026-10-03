@@ -116,6 +116,7 @@ lemma parity_cfg_prog_cfg: "parity_cfg = prog_cfg parity_program"
   by (simp add: parity_cfg_def parity_pi_def prog_cfg_def parity_program_def)
 
 lemma parity_wf: "wf_compile_input parity_gs parity_pi []"
+  unfolding wf_compile_input_def
   by (auto simp: wf_compile_input_simps parity_pi_def parity_prog_def parity_program_def
       split: if_splits)
 

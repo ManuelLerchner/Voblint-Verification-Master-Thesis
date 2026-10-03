@@ -109,15 +109,14 @@ definition report_with_state ::
 end
 
 text \<open>
-  A locale constant carries no code equation of its own, so every report reading through
-  the surface would drop out of the generated code and out of \<open>by eval\<close> alike. Both
-  defining equations are already in executable shape --- \<^const>\<open>classify_checks\<close> over a
-  \<^const>\<open>lookup_table\<close> reading --- so declaring them is all the code generator needs.
+  Register the generic surface equations outside the locale so code generation can
+  call them directly with the table, bottom state and classifier as parameters.
 \<close>
 
-declare analysis_surface.state_at_def [code]
-declare analysis_surface.report_def [code]
-declare analysis_surface.reach_state_at_def [code]
-declare analysis_surface.report_with_state_def [code]
+declare
+  analysis_surface.state_at_def [code]
+  analysis_surface.report_def [code]
+  analysis_surface.reach_state_at_def [code]
+  analysis_surface.report_with_state_def [code]
 
 end

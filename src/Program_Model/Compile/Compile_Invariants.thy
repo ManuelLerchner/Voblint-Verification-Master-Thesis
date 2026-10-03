@@ -34,8 +34,6 @@ definition wf_compile_input ::
      prog_main_name \<notin> set ps \<and>
      wf_source_program \<G> \<Pi>"
 
-declare wf_compile_input_def [wf_compile_input_simps]
-
 text \<open>The leaf definitions an executable instance unfolds to decide the contract.  No
   abstract proof unfolds them, so they only ever fire under \<open>unfolding wf_compile_input_simps\<close>.\<close>
 declare
@@ -51,10 +49,6 @@ declare
   prog_main_name_def [wf_compile_input_simps]
   main_body_def [wf_compile_input_simps]
 
-lemma wf_compile_input_source_program:
-  "wf_compile_input \<G> \<Pi> ps \<Longrightarrow> wf_source_program \<G> \<Pi>"
-  by (simp add: wf_compile_input_def)
-
 lemma wf_compile_inputD:
   assumes "wf_compile_input \<G> \<Pi> ps"
   shows "reserved_ret_var \<G>" and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = (main_body \<Pi>)\<rparr>"
@@ -64,8 +58,8 @@ lemma wf_compile_inputD:
     and "source_pi \<Pi>" and "source_com (main_body \<Pi>)"
     and "distinct ps" and "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
     and "prog_main_name \<notin> set ps"
-  using wf_source_programD[OF wf_compile_input_source_program[OF assms]]
-    assms[unfolded wf_compile_input_def] by blast+
+  using wf_source_programD
+    assms[unfolded wf_compile_input_def] by auto
 
 lemmas wf_compile_input_reserved_ret_var [dest] = wf_compile_inputD(1)
 
