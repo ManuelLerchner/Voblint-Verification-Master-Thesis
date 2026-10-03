@@ -46,10 +46,16 @@ export function localKey(unknown) {
   return `L:${unknown.node}|${contextLabel(unknown.context)}`;
 }
 
+/* A seed is keyed by procedure and context, a program global by name after "@". */
 export function globalKey(unknown) {
-  return unknown.kind === "activation_seed"
-    ? `G:${unknown.procedure}|${contextLabel(unknown.context)}`
-    : "G:Global";
+  switch (unknown.kind) {
+    case "activation_seed":
+      return `G:${unknown.procedure}|${contextLabel(unknown.context)}`;
+    case "program_global":
+      return `G:@${unknown.name}`;
+    default:
+      return "G:#buffer";
+  }
 }
 
 export function unknownKey(unknown) {
@@ -335,9 +341,14 @@ function traceLocal(unknown) {
 }
 
 function traceGlobal(unknown) {
-  return unknown.kind === "activation_seed"
-    ? `Seed(${unknown.procedure}, ${traceContext(unknown.context)})`
-    : "Global";
+  switch (unknown.kind) {
+    case "activation_seed":
+      return `Seed(${unknown.procedure}, ${traceContext(unknown.context)})`;
+    case "program_global":
+      return `Global ${unknown.name}`;
+    default:
+      return "Buffer";
+  }
 }
 
 function traceUnknown(unknown) {

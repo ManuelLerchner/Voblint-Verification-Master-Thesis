@@ -1955,8 +1955,8 @@ function downloadSolverTraceJsonl() {
   }
 }
 
-/* The one global unknown every point reads when program globals are shared. */
-const GLOBAL_ID = "global-shared";
+/* The unknown of one program global when program globals are shared. */
+const globalId = (name) => `global-${name}`;
 const GLOBAL_SIZE = 24;
 
 /*
@@ -1972,7 +1972,7 @@ const solveReplay = createSolveReplay({
   applyGraphLayout,
   followRoutesOnDrag,
   seedId,
-  globalId: GLOBAL_ID,
+  globalId,
   cssToken,
 });
 
@@ -2250,22 +2250,23 @@ function graphElements(result) {
   }
 
   /*
-   * With flow-insensitive program globals, the global unknown stands outside every
-   * context. The ownership-split transfer reads it and publishes to it at every
-   * point, so it gets no edges of its own: edges to every point would say nothing.
+   * With flow-insensitive program globals, each declared global has its own unknown
+   * outside every context. Which points read and write it shows in the solve replay,
+   * which draws the solver's own queries and side effects.
    */
-  const shared = result.shared;
-
-  if ((shared?.globals ?? []).length > 0) {
+  for (const unknown of result.shared?.unknowns ?? []) {
     elements.push({
       group: "nodes",
       data: {
-        id: GLOBAL_ID,
+        id: globalId(unknown.name),
+        name: unknown.name,
         width: GLOBAL_SIZE,
         height: GLOBAL_SIZE,
-        label: shared.reachable ? `Global  ${seedLabel(shared.lines)}`.trim() : "Global",
+        label: unknown.reachable
+          ? `${unknown.name}  ${seedLabel(unknown.lines)}`.trim()
+          : unknown.name,
       },
-      classes: shared.reachable ? "global" : "global unreached",
+      classes: unknown.reachable ? "global" : "global unreached",
     });
   }
 
@@ -2507,10 +2508,13 @@ async function layoutGraph(elk, elements) {
   const clusters = new Map();
   const parentOf = new Map();
   const edges = [];
+  const globals = [];
 
   for (const { group, classes, data } of elements) {
     if (classes === "context") {
       clusters.set(data.id, { id: data.id, layoutOptions: INNER_LAYOUT, children: [], edges: [] });
+    } else if (group === "nodes" && classes?.startsWith("global")) {
+      globals.push(data);
     } else if (group === "nodes") {
       parentOf.set(data.id, data.parent);
       clusters
@@ -2643,7 +2647,48 @@ async function layoutGraph(elk, elements) {
     }
   }
 
+  await placeGlobals(elk, globals, outer.children, centers);
+
   return { centers, routes, labels };
+}
+
+/* Room between the row of global unknowns and the context boxes below it. */
+const GLOBALS_GAP = 48;
+
+/*
+ * The global unknowns belong to no context. ELK packs them, each with room for its
+ * label, into one row that sits above the context boxes, so no two overlap however
+ * many globals a program declares.
+ */
+async function placeGlobals(elk, globals, boxes, centers) {
+  if (globals.length === 0 || boxes.length === 0) {
+    return;
+  }
+
+  const font = `bold ${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
+  const strip = await elk.layout({
+    id: "globals",
+    layoutOptions: {
+      "elk.algorithm": "box",
+      "elk.aspectRatio": "1000",
+      "elk.spacing.nodeNode": "28",
+      "elk.padding": "[top=0,left=0,bottom=0,right=0]",
+    },
+    children: globals.map((data) => ({
+      id: data.id,
+      width: data.width + 8 + textWidth(data.label ?? "", font),
+      height: data.height,
+    })),
+  });
+  const left = Math.min(...boxes.map((box) => box.x));
+  const top = Math.min(...boxes.map((box) => box.y)) - GLOBALS_GAP - strip.height;
+  const sizeOf = new Map(globals.map((data) => [data.id, data]));
+
+  for (const node of strip.children) {
+    const { width, height } = sizeOf.get(node.id);
+
+    centers.set(node.id, { x: left + node.x + width / 2, y: top + node.y + height / 2 });
+  }
 }
 
 /*
@@ -2751,17 +2796,9 @@ function followRoutesOnDrag(view) {
  */
 function applyGraphLayout(view, { centers, routes, labels }) {
   view.batch(() => {
-    view.nodes(".point, .seed").positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
-
-    /* The global unknown belongs to no context; it sits above the top-left box. */
-    const placed = [...centers.values()];
-
-    if (placed.length > 0) {
-      view.nodes(".global").position({
-        x: Math.min(...placed.map((c) => c.x)),
-        y: Math.min(...placed.map((c) => c.y)) - 90,
-      });
-    }
+    view
+      .nodes(".point, .seed, .global")
+      .positions((node) => centers.get(node.id()) ?? { x: 0, y: 0 });
 
     for (const [id, points] of routes) {
       const edge = view.getElementById(id);

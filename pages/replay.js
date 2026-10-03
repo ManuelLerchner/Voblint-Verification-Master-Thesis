@@ -36,8 +36,12 @@ function query(selector) {
 
 /* A global unknown as the page's seed list names it. */
 function globalName(key) {
-  if (key === "G:Global") {
-    return "Global";
+  if (key.startsWith("G:@")) {
+    return `global ${key.slice(3)}`;
+  }
+
+  if (key === "G:#buffer") {
+    return "buffer";
   }
 
   const [procedure, context] = key.slice(2).split("|");
@@ -249,8 +253,15 @@ export function createSolveReplay(deps) {
 
     /* A seed's node stands beside its procedure's entry in its context. */
     const entryOf = (key) => {
-      if (key === "G:Global") {
-        return keyOf.has(deps.globalId) ? deps.globalId : undefined;
+      if (key.startsWith("G:@")) {
+        const id = deps.globalId(key.slice(3));
+
+        return keyOf.has(id) ? id : undefined;
+      }
+
+      /* The node-owned buffer holds no program global and is not drawn. */
+      if (key === "G:#buffer") {
+        return undefined;
       }
 
       const [procedure, context] = key.slice(2).split("|");
@@ -267,8 +278,8 @@ export function createSolveReplay(deps) {
       }
     }
 
-    if ((answer.shared?.globals ?? []).length > 0) {
-      keyOf.set(deps.globalId, "G:Global");
+    for (const unknown of answer.shared?.unknowns ?? []) {
+      keyOf.set(deps.globalId(unknown.name), `G:@${unknown.name}`);
     }
 
     const cache = createCache(events, SNAPSHOT_EVERY);
@@ -282,7 +293,7 @@ export function createSolveReplay(deps) {
       if (element.classes?.startsWith("global ") || element.classes === "global") {
         return {
           ...element,
-          data: { ...element.data, label: "Global" },
+          data: { ...element.data, label: element.data.name },
           classes: "global r-unseen",
         };
       }
