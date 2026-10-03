@@ -176,6 +176,9 @@ module Generated : sig
   val run_voblint :
     analysis_config ->
       unit imp_prog_ext -> unit analysis_report_ext analysis_answer
+  val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
+  val state_point : ('a, 'b) result_state_ext -> cfg_node
+  val state_value : ('a, 'b) result_state_ext -> 'a lifted
   val global_unknown : ('a, 'b) result_global_ext -> result_global_unknown
   val global_state : ('a, 'b) result_global_ext -> 'a lifted
   val state_diagnostics :
@@ -184,9 +187,6 @@ module Generated : sig
   val state_context : ('a, 'b) result_state_ext -> nat
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
-  val state_value : ('a, 'b) result_state_ext -> 'a lifted
-  val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
-  val state_point : ('a, 'b) result_state_ext -> cfg_node
   val render_report :
     (abstract_value -> 'a) ->
       unit analysis_report_ext -> ('a, unit) run_result_ext
@@ -196,6 +196,12 @@ module Generated : sig
   val route_callee : 'a call_route_ext -> string
   val string_of_abstract_value : abstract_value -> string
   val res_checks : ('a, 'b) run_result_ext -> unit result_check_ext list
+  val res_joined :
+    ('a, 'b) run_result_ext ->
+      (cfg_node *
+        (((analysis_domain * 'a field_state) list) lifted *
+          (cfg_node *
+            ((analysis_domain * 'a field_state) list) lifted) list)) list
   val res_routes : ('a, 'b) run_result_ext -> unit call_route_ext list
   val res_states :
     ('a, 'b) run_result_ext ->
@@ -219,6 +225,27 @@ module Generated : sig
   val diagnostic_obligation : arithmetic_diagnostic -> arithmetic_obligation
   val diagnostic_occurrence : arithmetic_diagnostic -> nat
 end = struct
+
+type 'a sup = {sup : 'a -> 'a -> 'a};;
+let sup _A = _A.sup;;
+
+type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
+let less_eq _A = _A.less_eq;;
+let less _A = _A.less;;
+
+type 'a preorder = {ord_preorder : 'a ord};;
+
+type 'a order = {preorder_order : 'a preorder};;
+
+type 'a semilattice_sup =
+  {sup_semilattice_sup : 'a sup; order_semilattice_sup : 'a order};;
+
+let rec vjoin_fun _B f g = (fun x -> sup _B.sup_semilattice_sup (f x) (g x));;
+
+type 'a join_val = {vjoin : 'a -> 'a -> 'a};;
+let vjoin _A = _A.vjoin;;
+
+let rec join_val_fun _B = ({vjoin = vjoin_fun _B} : ('a -> 'b) join_val);;
 
 type int = Int_of_integer of Z.t;;
 
@@ -838,15 +865,7 @@ let modulo_int =
 
 let rec less_eq_int k l = Z.leq (integer_of_int k) (integer_of_int l);;
 
-type 'a ord = {less_eq : 'a -> 'a -> bool; less : 'a -> 'a -> bool};;
-let less_eq _A = _A.less_eq;;
-let less _A = _A.less;;
-
 let ord_int = ({less_eq = less_eq_int; less = less_int} : int ord);;
-
-type 'a preorder = {ord_preorder : 'a ord};;
-
-type 'a order = {preorder_order : 'a preorder};;
 
 let preorder_int = ({ord_preorder = ord_int} : int preorder);;
 
@@ -1402,12 +1421,6 @@ let rec equal_dg_state _A _B =
 let rec dg_global (DG (x1, x2)) = x2;;
 
 let rec dg_local (DG (x1, x2)) = x1;;
-
-type 'a sup = {sup : 'a -> 'a -> 'a};;
-let sup _A = _A.sup;;
-
-type 'a semilattice_sup =
-  {sup_semilattice_sup : 'a sup; order_semilattice_sup : 'a order};;
 
 let rec sup_dg_statea _A _B
   d1 d2 =
@@ -1970,6 +1983,10 @@ let narrowing_relc =
 let warrowing_relc =
   ({narrowing_warrowing = narrowing_relc; widening_warrowing = widening_relc} :
     relc warrowing);;
+
+let rec vjoin_relc x = sup_relca x;;
+
+let join_val_relc = ({vjoin = vjoin_relc} : relc join_val);;
 
 let semilattice_sup_relc =
   ({sup_semilattice_sup = sup_relc; order_semilattice_sup = order_relc} :
@@ -2928,6 +2945,12 @@ let rec warrowing_lifted (_A1, _A2) =
          (_A1.semilattice_sup_bounded_semilattice_sup_bot,
            _A2.widening_warrowing))}
     : 'a lifted warrowing);;
+
+let rec vjoin_lifted _A x0 y = match x0, y with Bot, y -> y
+                          | Lifted x, Bot -> Lifted x
+                          | Lifted x, Lifted y -> Lifted (vjoin _A x y);;
+
+let rec join_val_lifted _A = ({vjoin = vjoin_lifted _A} : 'a lifted join_val);;
 
 let rec semilattice_sup_lifted _A =
   ({sup_semilattice_sup = (sup_lifted _A);
@@ -4116,6 +4139,13 @@ let rec warrowing_analysis_product (_A1, _A2) (_B1, _B2) =
      widening_warrowing = (widening_analysis_product (_A1, _A2) (_B1, _B2))}
     : ('a, 'b) analysis_product warrowing);;
 
+let rec vjoin_analysis_product _A _B
+  p q = Product (vjoin _A (pleft p) (pleft q), vjoin _B (pright p) (pright q));;
+
+let rec join_val_analysis_product _A _B =
+  ({vjoin = vjoin_analysis_product _A _B} :
+    ('a, 'b) analysis_product join_val);;
+
 let rec semilattice_sup_analysis_product _A _B =
   ({sup_semilattice_sup = (sup_analysis_product _A _B);
      order_semilattice_sup =
@@ -4428,6 +4458,10 @@ type ('a, 'b) run_result_ext =
   Run_result_ext of
     unit cfg_ext * 'a analysis_context list *
       (((analysis_domain * 'a field_state) list), unit) result_state_ext list *
+      (cfg_node *
+        (((analysis_domain * 'a field_state) list) lifted *
+          (cfg_node *
+            ((analysis_domain * 'a field_state) list) lifted) list)) list *
       unit call_route_ext list * unit result_check_ext list *
       (((analysis_domain * 'a field_state) list), unit) result_global_ext list *
       arithmetic_diagnostic list * 'b;;
@@ -13671,6 +13705,97 @@ let rec report_cfg
       report_routes, report_checks, report_globals, report_diagnostics, more))
     = report_cfg;;
 
+let rec state_steps
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_steps;;
+
+let rec state_point
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_point;;
+
+let rec report_steps_join
+  res v =
+    (match
+      map_filter
+        (fun x ->
+          (if equal_cfg_nodea (state_point x) v then Some (state_steps x)
+            else None))
+        (report_states res)
+      with [] -> []
+      | s :: ss ->
+        fold (fun xs ys ->
+               map (fun (a, b) ->
+                     (let (w, aa) = a in
+                       (fun (_, ba) ->
+                         (w, vjoin_lifted
+                               (join_val_analysis_product
+                                 (join_val_lifted
+                                   (join_val_fun semilattice_sup_sign))
+                                 (join_val_analysis_product
+                                   (join_val_lifted
+                                     (join_val_fun semilattice_sup_ivl))
+                                   (join_val_analysis_product
+                                     (join_val_lifted
+                                       (join_val_fun semilattice_sup_parity))
+                                     (join_val_analysis_product
+                                       (join_val_lifted
+ (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                                       (join_val_analysis_product
+ (join_val_lifted
+   (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+ (join_val_analysis_product
+   (join_val_lifted
+     (join_val_fun (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+   (join_val_analysis_product
+     (join_val_lifted (join_val_fun semilattice_sup_congruence))
+     join_val_relc)))))))
+                               aa ba)))
+                       b)
+                 (zip xs ys))
+          ss s);;
+
+let rec state_value
+  (Result_state_ext
+    (state_point, state_context, state_value, state_checks, state_diagnostics,
+      state_steps, more))
+    = state_value;;
+
+let rec report_point_join
+  res v =
+    fold (vjoin_lifted
+           (join_val_analysis_product
+             (join_val_lifted (join_val_fun semilattice_sup_sign))
+             (join_val_analysis_product
+               (join_val_lifted (join_val_fun semilattice_sup_ivl))
+               (join_val_analysis_product
+                 (join_val_lifted (join_val_fun semilattice_sup_parity))
+                 (join_val_analysis_product
+                   (join_val_lifted
+                     (join_val_fun
+                       (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                   (join_val_analysis_product
+                     (join_val_lifted
+                       (join_val_fun
+                         (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                     (join_val_analysis_product
+                       (join_val_lifted
+                         (join_val_fun
+                           (semilattice_sup_int_dom_ext bounded_lattice_unit)))
+                       (join_val_analysis_product
+                         (join_val_lifted
+                           (join_val_fun semilattice_sup_congruence))
+                         join_val_relc))))))))
+      (map_filter
+        (fun x ->
+          (if equal_cfg_nodea (state_point x) v then Some (state_value x)
+            else None))
+        (report_states res))
+      Bot;;
+
 let rec map_field_state
   f x1 = match f, x1 with
     f, Field_Store bs -> Field_Store (map (fun (x, v) -> (x, f v)) bs)
@@ -13711,24 +13836,6 @@ let rec state_checks
       state_steps, more))
     = state_checks;;
 
-let rec state_value
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_value;;
-
-let rec state_steps
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_steps;;
-
-let rec state_point
-  (Result_state_ext
-    (state_point, state_context, state_value, state_checks, state_diagnostics,
-      state_steps, more))
-    = state_point;;
-
 let rec map_result_state
   f st =
     Result_state_ext
@@ -13743,8 +13850,14 @@ let rec render_report
        comp (map_analysis_view show) (mcp_render asa (report_vars res)) in
       Run_result_ext
         (report_cfg res, map (render_context show asa) (report_contexts res),
-          map (map_result_state state) (report_states res), report_routes res,
-          report_checks res, map (map_result_global state) (report_globals res),
+          map (map_result_state state) (report_states res),
+          map (fun v ->
+                (v, (map_lift state (report_point_join res v),
+                      map (fun (w, s) -> (w, map_lift state s))
+                        (report_steps_join res v))))
+            (cfg_node_list (report_cfg res)),
+          report_routes res, report_checks res,
+          map (map_result_global state) (report_globals res),
           report_diagnostics res, ()));;
 
 let rec string_of_pairs
@@ -13756,8 +13869,8 @@ let rec string_of_pairs
 
 let rec res_cfg
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_cfg;;
 
 let rec procs_stmt_next
@@ -13812,20 +13925,26 @@ let rec string_of_abstract_value
 
 let rec res_checks
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_checks;;
+
+let rec res_joined
+  (Run_result_ext
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
+    = res_joined;;
 
 let rec res_routes
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_routes;;
 
 let rec res_states
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_states;;
 
 let rec route_context
@@ -13848,8 +13967,8 @@ let rec check_point
 
 let rec res_globals
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_globals;;
 
 let rec com_stmt_post_order
@@ -13870,8 +13989,8 @@ let rec com_stmt_post_order
 
 let rec res_contexts
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_contexts;;
 
 let rec check_verdict
@@ -13896,8 +14015,8 @@ let rec prog_stmt_post_order
 
 let rec res_diagnostics
   (Run_result_ext
-    (res_cfg, res_contexts, res_states, res_routes, res_checks, res_globals,
-      res_diagnostics, more))
+    (res_cfg, res_contexts, res_states, res_joined, res_routes, res_checks,
+      res_globals, res_diagnostics, more))
     = res_diagnostics;;
 
 let rec map_analysis_answer

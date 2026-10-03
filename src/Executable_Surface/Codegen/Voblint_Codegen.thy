@@ -141,7 +141,7 @@ export_code
      diagnostics\<close>
   Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
   render_report
-  res_cfg res_contexts res_states res_routes res_checks res_globals res_diagnostics
+  res_cfg res_contexts res_states res_joined res_routes res_checks res_globals res_diagnostics
   Context_Unit Context_Entry Context_Call_String
   state_point state_context state_value state_checks state_diagnostics state_steps
   Field_Store Field_Whole
