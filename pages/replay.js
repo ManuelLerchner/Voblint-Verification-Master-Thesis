@@ -506,10 +506,15 @@ export function createSolveReplay(deps) {
       for (const edge of edges) {
         edge.addClass("r-active");
       }
-
-      drawInfluence(state);
-      drawEventEdges(state);
     });
+
+    /*
+     * The overlays reuse their ids every step. A batch restyles its touched elements as
+     * one collection, which keeps one element per id: a replacement added in the batch
+     * that restyled its predecessor was dropped and drew with no style at all.
+     */
+    drawInfluence(state);
+    drawEventEdges(state);
 
     const current = finished ? null : replay.nodeOf.get(state.stack.at(-1));
 
