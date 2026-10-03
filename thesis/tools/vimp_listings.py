@@ -81,13 +81,15 @@ def run_settings(args: list[str]) -> dict[str, object]:
         else CLI_DEFAULTS["globals"]
     )
     settings = {
-        "analysis": given["analyses"][0],
+        "analysis": ",".join(given["analyses"]),
         "globals": given.get("globals", default_rule),
         "context": given.get("context", CLI_DEFAULTS["context"]),
         "placement": placement,
     }
     if settings["context"] == "call-string":
         settings["k"] = given["context_depth"]
+    if "int_refinement" in given:
+        settings["refinement"] = given["int_refinement"]
     return settings
 
 

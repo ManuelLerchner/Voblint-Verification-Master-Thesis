@@ -2,17 +2,20 @@
 // states analyzer output reads it here, from the file `tools/claims.py`
 // regenerates and diffs, so no verdict, state or count is typed by hand.
 
+#import "code.typ": claim-playground
+
 #let claim-text(name) = read("/shared/generated/" + name + ".txt")
 
-// A claim named in prose, linked to its stored output (a pattern such as
-// `dom-stride2-*` links to the declarations instead). The outputs live on the
-// thesis branch until it is merged.
+// A claim named in prose, linked to the playground running its program at its
+// settings. A pattern such as `dom-stride2-*`, and a claim the playground cannot
+// replay (one stopped by a timeout, say), link to the declarations instead.
 #let claim-blob = "https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/blob/writing/thesis/shared/"
-#let claim-ref(name) = if name.contains("*") {
+#let _replayable = json("/shared/generated/vimp-claims.json")
+#let claim-ref(name) = if name.contains("*") or name not in _replayable {
   link(claim-blob + "claims.toml", raw(name))
 } else {
   let _ = claim-text(name)
-  link(claim-blob + "generated/" + name + ".txt", raw(name))
+  link(claim-playground(name), raw(name))
 }
 
 // The run was stopped by `--timeout`: the report is the CLI's rejection line.
