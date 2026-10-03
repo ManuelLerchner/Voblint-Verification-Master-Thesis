@@ -168,7 +168,7 @@
                   Flow-insensitive gives each global its own unknown, read by the points
                   that mention it, for the analyses whose state splits by variable; the
                   order analysis relates variables across that split and keeps its whole
-                  state per point. Warrowing a shared global need not settle, so
+                  state per point. Warrowing a flow-insensitive global need not settle, so
                   choosing Flow-insensitive selects bounded narrowing unless a rule
                   was picked.
                 </span>
@@ -328,7 +328,7 @@
             <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
           </div>
           <div class="legend-row" aria-label="Value hints">
-            <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return; <code>⇢</code> a shared-global write contribution, <code>final</code> its final shared value</span>
+            <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return; <code>⇢</code> a write to a flow-insensitive global, <code>final</code> that global's final value</span>
             <span><span class="lg-badge hint merge">⊔ i: [0,5]</span>paths meet, so the value covers more than this step</span>
           </div>
         </div>

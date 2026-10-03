@@ -73,6 +73,7 @@
   <link rel="stylesheet" href="figures/context.css">
   <link rel="stylesheet" href="figures/cost.css">
   <link rel="stylesheet" href="figures/recursion-spiral.css">
+  <link rel="stylesheet" href="figures/placement.css">
   <link rel="stylesheet" href="figures/editor.css">
   <link rel="stylesheet" href="figures/graph.css">
   <link rel="stylesheet" href="figures/bug.css">
@@ -3523,7 +3524,7 @@ fun main() {
       </div>
 
       <h3 class="setting-title">Where the writes meet</h3>
-      <p class="setting-copy">In the playground this is the <strong>Globals</strong> setting. “Globals” there means the solver's global unknowns, not VIMP's <code>global</code> declarations. The two meet at one point: a program's globals are part of the state a call publishes, so they cross a call through a solver global. This is the channel drawn as a dashed arrow in the previous section, where a call site writes the callee's entry key and the callee's entry equation reads it back. The rest of this section is about those entry keys, and this setting decides what happens when several writes reach one of them.</p>
+      <p class="setting-copy">In the playground this is the <strong>Globals</strong> setting. “Globals” there means the solver's global unknowns, not VIMP's <code>global</code> declarations. Under the default placement the two meet at one point: a program's globals are part of the state a call publishes, so they cross a call through a solver global. Under the other placement each program global has a solver global of its own, which <a href="#program-globals">the end of this section</a> describes. This is the channel drawn as a dashed arrow in the previous section, where a call site writes the callee's entry key and the callee's entry equation reads it back. The rest of this section is about those entry keys, and this setting decides what happens when several writes reach one of them.</p>
 
       <div class="prose-block">
         <p>
@@ -3941,6 +3942,62 @@ fun main() {
           <a class="try-link spiral-try" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
         </figcaption>
       </figure>
+
+      <h3 class="setting-title" id="program-globals">Program globals: carried along, or one unknown each</h3>
+      <p class="setting-copy">So far a VIMP <code>global</code> has behaved like a local that every procedure can see. It travels inside each point's state: into a callee with the caller's state, and back out through <code>combine</code>. The playground's <strong>Program globals</strong> setting (<code>--program-globals</code> on the command line, <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.program_globals%7Ctype"><code>program_globals</code></a> in the theories) offers a second placement, the one the <a href="#ref-seidl-2026">FM 2026 tutorial</a> calls flow-insensitive.</p>
+      <p class="setting-copy">Under <strong>Flow-insensitive</strong>, each declared global gets a global unknown of its own, and the points stop carrying it. An edge that assigns <code>g</code> publishes the new value of <code>g</code> to that unknown, an edge whose expressions mention <code>g</code> reads it, and a call reads only the globals its arguments mention. A point that touches no global depends on none, and a write to <code>g</code> re-runs only the points that read <code>g</code> (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Global_Footprint.html#Example_Keyed_Global_Footprint.read_g_depends_on_g_only%7Cfact"><code>read_g_depends_on_g_only</code></a> and <a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Global_Footprint.html#Example_Keyed_Global_Footprint.write_h_publishes_h_only%7Cfact"><code>write_h_publishes_h_only</code></a> check this on one reading and one writing edge). The initial value 0 is published by the program's entry like any other write.</p>
+      <p class="setting-copy">The price is precision. One value has to cover everything the global ever holds, at every point. Take <code>set()</code> writing <code>Gx = 1</code> and <code>get()</code> returning <code>Gx</code>, called in that order from <code>main</code>. Flow-sensitively, Sign carries <code>Gx = +</code> from <code>set</code>'s exit into <code>get</code> and proves <code>0 &lt; y</code>. Flow-insensitively, the unknown of <code>Gx</code> joins the initial 0 with the written 1, Sign can only say <code>Gx &#8805; 0</code>, and <code>0 &lt; y</code> stays UNKNOWN. Run it <a href="playground.html?fixture=07-sign-precision/precision/19-callee_reads_global_after_setter.vimp&amp;analysis=sign&amp;globals=join">flow-sensitively</a> and <a href="playground.html?fixture=07-sign-precision/precision/21-callee_reads_shared_global_after_setter.vimp&amp;analysis=sign&amp;globals=join&amp;placement=flow-insensitive">flow-insensitively</a> to compare.</p>
+      <figure class="scene scene-placement">
+        <svg viewBox="0 0 860 350" role="img"
+          aria-label="The set and get program under both placements. Flow-sensitive: Gx travels in each point's state, so set's write of 1 reaches get as positive and 0 &lt; y is proved. Flow-insensitive: the program entry publishes Gx's initial 0 and set publishes 1 to one Gx unknown, which holds at least zero; get reads it, so y is only known to be at least zero and 0 &lt; y stays unknown.">
+          <defs>
+            <marker id="pl-arrow-flow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="pl-head-flow"/></marker>
+            <marker id="pl-arrow-pub" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="pl-head-pub"/></marker>
+            <marker id="pl-arrow-read" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10 z" class="pl-head-read"/></marker>
+          </defs>
+          <text class="pl-title" x="30" y="30">Flow-sensitive</text>
+          <g class="pl-node"><rect x="40" y="60" width="170" height="30" rx="13"/><text x="125" y="79">main entry, x = 1</text></g>
+          <g class="pl-node"><rect x="40" y="130" width="170" height="30" rx="13"/><text x="125" y="149">set(): Gx = 1</text></g>
+          <g class="pl-node"><rect x="40" y="200" width="170" height="30" rx="13"/><text x="125" y="219">get(): return Gx</text></g>
+          <g class="pl-node"><rect x="40" y="270" width="170" height="30" rx="13"/><text x="125" y="289">main: after y = get()</text></g>
+          <line class="pl-flow" x1="125" y1="90" x2="125" y2="128" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-carried" x="136" y="114">Gx = 0</text>
+          <line class="pl-flow" x1="125" y1="160" x2="125" y2="198" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-carried" x="136" y="184">Gx = +</text>
+          <line class="pl-flow" x1="125" y1="230" x2="125" y2="268" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-carried" x="136" y="254">Gx = +, y = +</text>
+          <text class="pl-verdict proved" x="40" y="332">0 &lt; y   PROVED</text>
+          <line class="pl-divider" x1="430" y1="16" x2="430" y2="342"/>
+          <text class="pl-title" x="450" y="30">Flow-insensitive</text>
+          <g class="pl-node"><rect x="460" y="60" width="170" height="30" rx="13"/><text x="545" y="79">main entry, x = 1</text></g>
+          <g class="pl-node"><rect x="460" y="130" width="170" height="30" rx="13"/><text x="545" y="149">set(): Gx = 1</text></g>
+          <g class="pl-node"><rect x="460" y="200" width="170" height="30" rx="13"/><text x="545" y="219">get(): return Gx</text></g>
+          <g class="pl-node"><rect x="460" y="270" width="170" height="30" rx="13"/><text x="545" y="289">main: after y = get()</text></g>
+          <line class="pl-flow" x1="545" y1="90" x2="545" y2="128" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-local" x="556" y="114">no Gx</text>
+          <line class="pl-flow" x1="545" y1="160" x2="545" y2="198" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-local" x="556" y="184">no Gx</text>
+          <line class="pl-flow" x1="545" y1="230" x2="545" y2="268" marker-end="url(#pl-arrow-flow)"/>
+          <text class="pl-local" x="556" y="254">y = ≥0</text>
+          <path class="pl-global" d="M770 146 L804 180 L770 214 L736 180 Z"/>
+          <text class="pl-global-label" x="770" y="178">Gx</text>
+          <text class="pl-global-label" x="770" y="193">≥0</text>
+          <path class="pl-pub" d="M630 75 C 690 75, 750 120, 756 156" marker-end="url(#pl-arrow-pub)"/>
+          <text class="pl-edge-label" x="662" y="68">publishes 0 (initial)</text>
+          <path class="pl-pub" d="M630 145 C 680 145, 720 174, 734 178" marker-end="url(#pl-arrow-pub)"/>
+          <text class="pl-edge-label" x="648" y="138">publishes 1</text>
+          <path class="pl-read" d="M750 202 C 720 220, 680 215, 634 215" marker-end="url(#pl-arrow-read)"/>
+          <text class="pl-read-label" x="654" y="242">reads Gx</text>
+          <text class="pl-verdict unknown" x="460" y="332">0 &lt; y   UNKNOWN</text>
+        </svg>
+        <figcaption>
+          The program <code>set()</code> then <code>y = get()</code> under Sign, drawn as the four points the value of <code>Gx</code> passes. Left, <code>Gx</code> rides in each point's state (orange), so the write of 1 reaches <code>get</code> as <code>+</code>. Right, the points carry only locals; the program entry and <code>set</code> publish to one unknown for <code>Gx</code> (purple), which must cover both 0 and 1, and <code>get</code> reads it back (dashed). Values as the analyzer reports them; callee entry and exit points are omitted.
+          <a class="try-link" href="playground.html?fixture=07-sign-precision/precision/21-callee_reads_shared_global_after_setter.vimp&amp;analysis=sign&amp;globals=join&amp;placement=flow-insensitive">Run the flow-insensitive side ↗</a>
+        </figcaption>
+      </figure>
+
+      <p class="setting-copy">Both placements carry the same end-to-end theorem, <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>, because the setting is an argument of the analysis function it is stated about. The flow-insensitive one comes from a lifter, <a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_spec%7Cconst"><code>keyed_split_spec</code></a>, that wraps the active analyses. Its soundness proof (<a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_contract%7Cfact"><code>keyed_split_contract</code></a>) rests on a fact about the concrete semantics: a step leaves every global it does not assign unchanged (<a href="Voblint/Voblint_CFG/CFG_Transfer.html#CFG_Transfer.edge_step_frame%7Cfact"><code>edge_step_frame</code></a>), so skipping the publication of an unwritten global loses nothing. Only per-variable state splits this way. The order analysis relates variables to each other and keeps its whole state at the points.</p>
+      <p class="setting-copy">The global unknowns are side-effected, so the Globals setting above decides how their writes merge. Choosing Flow-insensitive switches it to <strong>Bounded narrowing</strong> unless you picked a rule yourself, because under plain warrowing a global's unknown that is widened and narrowed in turn need not settle.</p>
 
     </section>
 
@@ -5194,7 +5251,13 @@ qed</code></pre>
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L170-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">D / G lattices</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
             <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" title="Definition in the formalization">'dl / 'dg carriers</a>
-            <span class="align-note">The local/global split exists, but the shipped domains keep their whole state local.</span>
+            <span class="align-note">The local/global split exists. The shipped domains keep their whole state local unless program globals are flow-insensitive; then a lifter publishes each global's part of the combined state.</span>
+          </li>
+          <li class="align-row simplified">
+            <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L171-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Globals keyed by V</a>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_spec%7Cconst" title="Definition in the formalization">One unknown per program global</a>
+            <span class="align-note">With flow-insensitive program globals, each declared global is a global unknown of its own, read only where an edge mentions it and published only where an edge may assign it. The names are the program's variables, and the combined analysis has no globals per component.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3.ml#L1-L50" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">TD3 solver</a>

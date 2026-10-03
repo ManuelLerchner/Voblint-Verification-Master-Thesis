@@ -1,4 +1,4 @@
-/* Each shared global's unknown reports analysis headers followed by indented
+/* Each flow-insensitive global's unknown reports analysis headers followed by indented
  * name=value lines. Keep that global's own binding as the analyzer printed it. */
 function unknownValue({ name, reachable, lines }) {
   if (!reachable) {
@@ -39,6 +39,6 @@ export function sharedWriteHint(contribution, name, values) {
   return {
     text: `⇢ ${contribution} · final ${name}: ${values.get(name) ?? "unavailable"}`,
     title:
-      "Write contribution evaluated from the final analysis state; final is the reported shared global value. This is not an individual solver trace event or a flow-sensitive value after the statement.",
+      "Write contribution evaluated from the final analysis state; final is the global's reported value. This is not an individual solver trace event or a flow-sensitive value after the statement.",
   };
 }

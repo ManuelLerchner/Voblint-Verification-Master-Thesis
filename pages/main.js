@@ -927,7 +927,7 @@ function valueHints(model) {
             value ?? "unavailable",
             false,
             undefined,
-            "Final reported shared global value; no per-write contribution is available for this call continuation.",
+            "Final reported value of the flow-insensitive global; no per-write contribution is available for this call continuation.",
           );
           continue;
         }
@@ -2916,7 +2916,7 @@ function graphStyle() {
         "text-margin-x": 6,
       },
     },
-    /* The shared global unknown: a diamond, read by points and published to by writes. */
+    /* A flow-insensitive global's unknown: a diamond, read by points and published to by writes. */
     {
       selector: "node.global",
       style: {
@@ -3503,7 +3503,7 @@ function updateGlobalsControls() {
 
   const sharedWarning =
     placementSelect.value === "flow-insensitive" && globalsSelect.value.startsWith("warrow")
-      ? " Warrowing the shared global need not settle; bounded narrowing ends it."
+      ? " Warrowing a flow-insensitive global need not settle; bounded narrowing ends it."
       : "";
 
   globalsHelp.textContent = (descriptions[globalsSelect.value] ?? "") + sharedWarning;
@@ -3653,7 +3653,7 @@ function configurationLabel(configuration) {
   }
 
   if (configuration.placement === "flow-insensitive") {
-    parts.push("shared globals");
+    parts.push("flow-insensitive globals");
   }
 
   if (usesInt()) {
