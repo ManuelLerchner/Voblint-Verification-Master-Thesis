@@ -5532,11 +5532,12 @@ qed</code></pre>
 
       <h3 class="setting-title">The formalization in cross-section</h3>
       <p class="setting-copy">The iceberg shows the size of the development; this figure shows its structure. Every Isabelle session is a rock layer, placed just above the highest session it builds on, from the logic at the bottom to the examples at the surface. Hover over a session, and the layers it rests on light up. A layer's thickness grows with its line count, so the core sample also shows where most of the material is.</p>
+      <p class="setting-copy">The CLI and browser expose all six analyses: Sign, Interval, Parity, Congruence, Int and relational Order. Order sits lower because it supplies its local specification directly, without the non-relational builder. Hover over CLI to see the dependencies of their shared entry point.</p>
 
       <figure class="scene scene-strata">
         <div class="strata-layout">
           <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
-            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI, code export, and the example sessions at the surface. Thickness grows with line count.">
+            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI exposing all six analyses including relational Order, code export, and the example sessions at the surface. Thickness grows with line count.">
               <g class="stratum stratum-examples" data-layer="examples">
                 <text class="stratum-name" x="306" y="52" text-anchor="end">Examples and regressions</text>
                 <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="68"></rect><text x="655.0" y="52">Example sessions</text></a>
@@ -5547,7 +5548,7 @@ qed</code></pre>
               </g>
               <g class="stratum stratum-d10" data-layer="d10">
                 <text class="stratum-name" x="306" y="123" text-anchor="end">Entry point</text>
-                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_Framework Voblint_Solver" data-info="run_voblint, the function the browser calls, and the flagship theorems about it."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Solver" data-info="run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI · five numeric analyses + Order</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
                 <text class="stratum-name" x="306" y="157" text-anchor="end">Int product</text>
@@ -5569,9 +5570,9 @@ qed</code></pre>
                 <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="320.0" y="252" width="670.0" height="30"></rect><text x="655.0" y="271">Result</text></a>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
-                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and relational analysis</text>
+                <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and order analysis</text>
                 <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Exec Voblint_Framework" data-info="A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Relational</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework" data-info="The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Order (relational)</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
                 <text class="stratum-name" x="306" y="327" text-anchor="end">Executable carrier</text>
@@ -5601,10 +5602,10 @@ qed</code></pre>
 
           <div class="strata-info" aria-live="polite">
             <p class="td-panel-title">Core sample</p>
-            <p class="strata-info-name"><code>Voblint_Framework</code></p>
+            <p class="strata-info-name"><code>Voblint_CLI</code></p>
             <p class="strata-info-meta">—</p>
-            <p class="strata-info-rests">Rests directly on <code>TD</code>, <code>CFG</code>, <code>Domain</code>, <code>Solver</code>, <code>VIMP</code>, and transitively on 1 more: <code>Isabelle/HOL</code>.</p>
-            <p class="strata-info-text">The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain.</p>
+            <p class="strata-info-rests">Includes <code>Sign</code>, <code>Interval</code>, <code>Parity</code>, <code>Congruence</code>, <code>Int</code> and <code>Relational</code>.</p>
+            <p class="strata-info-text">run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results.</p>
             <p class="strata-info-hint">Hover a layer to take a sample: the sessions it rests on light up. Click to open the session.</p>
           </div>
         </div>

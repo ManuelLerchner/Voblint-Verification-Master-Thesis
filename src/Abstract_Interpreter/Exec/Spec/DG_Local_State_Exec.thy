@@ -81,12 +81,6 @@ where
   "exec_dg_spec \<G> empty_pred tf_st enter_st
      = dg_spec_of (exec_local_spec \<G> empty_pred tf_st enter_st)"
 
-text \<open>Consumed at code-generation time like every other specification builder
-  (see \<^theory>\<open>Voblint_Framework.DG_Spec\<close>): the executable carrier changes what a
-  transfer computes, not whether the specification can be exported.\<close>
-
-declare exec_dg_spec_def [code_unfold]
-
 subsection \<open>Basic equations\<close>
 
 text \<open>

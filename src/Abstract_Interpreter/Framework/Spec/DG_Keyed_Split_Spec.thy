@@ -258,7 +258,7 @@ definition keyed_split_spec ::
   "(vname \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
    \<Rightarrow> (vname list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
    \<Rightarrow> ('x,'k,vname,'d::bounded_semilattice_sup_bot,'d) dg_spec"
-where [code_unfold]:
+where
   "keyed_split_spec \<G> cmb rl rg free c =
      (let step = (\<lambda>a. keyed_transfer cmb rl rg free (edge_global_reads \<G> a)
                         (edge_global_writes \<G> a) (closed_step c a))

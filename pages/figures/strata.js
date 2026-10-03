@@ -27,7 +27,7 @@
     Voblint_Routing:
       "Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework.",
     Voblint_Analysis_Relational:
-      "A relational order domain, once as a full analysis meeting the framework's contract and once as a local specification that runs beside the other analyses. It is parented on Voblint_Exec, below the Routing/Result/Nonrelational chain, so the per-variable machinery is unavailable to it.",
+      "The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly.",
     Voblint_Result:
       "The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound.",
     Voblint_Nonrelational:
@@ -42,7 +42,8 @@
       "The congruence domain, its bundle of value operations, and the certificate the shared machinery builds on.",
     Voblint_Analysis_Int:
       "The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them.",
-    Voblint_CLI: "run_voblint, the function the browser calls, and the flagship theorems about it.",
+    Voblint_CLI:
+      "run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results.",
     Voblint_Codegen:
       "The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS.",
   };
@@ -58,7 +59,7 @@
     Voblint_Framework: "framework",
     Voblint_Exec: "executable carrier",
     Voblint_Routing: "routing",
-    Voblint_Analysis_Relational: "relational analysis",
+    Voblint_Analysis_Relational: "order analysis",
     Voblint_Result: "result",
     Voblint_Nonrelational: "non-relational analysis builder",
     Voblint_Analysis_Sign: "value domains (operation bundles)",
@@ -142,7 +143,12 @@
         title: roleTitle(names.map((s) => s.name)),
         parts: names.map((s) => ({
           name: s.name,
-          label: strataLabel(s.name),
+          label:
+            s.name === "Voblint_CLI"
+              ? "CLI · five numeric analyses + Order"
+              : s.name === "Voblint_Analysis_Relational"
+                ? "Order (relational)"
+                : strataLabel(s.name),
           href: s.name === "TD" ? "Unsorted/TD/index.html" : `Voblint/${s.name}/index.html`,
           lines: s.lines,
           meta: `${plural(s.theories, "theory", "theories")} · ${strataCount(s.lines)} lines · ${plural(s.proofs, "lemma", "lemmas")}`,
@@ -277,6 +283,6 @@
       part.addEventListener("focus", () => show(part));
     }
 
-    show(parts.find((p) => p.dataset.name === "Voblint_Framework") ?? examples ?? parts[0]);
+    show(parts.find((p) => p.dataset.name === "Voblint_CLI") ?? examples ?? parts[0]);
   }
 }

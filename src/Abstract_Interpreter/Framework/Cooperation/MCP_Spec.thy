@@ -759,7 +759,7 @@ text \<open>The step a component takes on an edge, with its own channel.\<close>
 definition closed_step :: "'s local_spec \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
   "closed_step c a d = ls_step c (ls_channel c d) a d"
 
-definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where [code_unfold]:
+definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
   "dg_spec_of c = local_dg_spec_template\<lparr>
      dgs_skip := local_transfer (closed_step c EA_Nop),
      dgs_assign := (\<lambda>x e. local_transfer (closed_step c (EA_Assign x e))),

@@ -526,6 +526,12 @@ definition local_dg_spec_template :: "('x,'k,'v,'D,'G) dg_spec" where
      dgs_combine_assign = (\<lambda>ci. local_combine_transfer (\<lambda>d de. d)),
      dgs_query = (\<lambda>m q. sp_return \<top>) \<rparr>"
 
+text \<open>The argument-free template must generalize in generated ML. Expanding the
+  local transfer makes its skip field a function value, avoiding the value restriction
+  on the application \<open>local_transfer id\<close> while keeping the template itself named.\<close>
+
+lemmas [code] = local_dg_spec_template_def[unfolded local_transfer_def]
+
 lemma local_dg_spec_template_simps [simp]:
   "skip\<^sup># local_dg_spec_template = local_transfer id"
   "assign\<^sup># local_dg_spec_template x e = local_transfer id"
@@ -565,37 +571,5 @@ where
 
 fun event_action :: "analysis_event \<Rightarrow> edge_action" where
   "event_action (Check_Event l cnd) = EA_Check l cnd"
-
-subsection \<open>Specifications are consumed, not exported\<close>
-
-text \<open>
-  A specification's unknown and global-key types occur only inside its transfer
-  programs, never in an argument that builds it, so a specification value is
-  polymorphic in types nothing at runtime witnesses. That is fine logically and
-  impossible to export: the generated code would bind an application whose
-  result type it cannot generalize.
-
-  The resolution is that a specification is a description consumed when the
-  equation system is built, not an independent runtime object -- the same status
-  Goblint's \<open>Spec\<close> has, where the constraint system is constructed from the
-  module rather than the module being passed around. Unfolding these builders
-  during code preprocessing is what enforces that: the record reaches the
-  generated program already inlined into an equation whose types are ground.
-\<close>
-
-declare local_dg_spec_template_def [code_unfold]
-
-text \<open>
-  This applies to every named specification, not only to the builders here. A
-  concrete one --- \<open>sign_tf.spec_exec\<close>, \<open>rel_order_spec\<close>, a domain's own --- has the
-  same shape: its unknown and global-key types appear only inside its transfer
-  programs, so it has no most general ML type either. Whether it survives into
-  the generated program depends on whether the definition it was built from
-  happens to unfold first, which is not a property worth relying on. So the
-  rule is the simple one: a named \<^type>\<open>dg_spec\<close> that can reach code
-  generation declares its own \<open>_def\<close> \<open>[code_unfold]\<close>, next to the definition.
-  A redundant declaration costs nothing; a missing one fails in generated ML,
-  far from the theory that caused it.
-\<close>
 
 end

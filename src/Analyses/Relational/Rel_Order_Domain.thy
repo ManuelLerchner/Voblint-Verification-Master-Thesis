@@ -236,11 +236,12 @@ definition rel_order_spec :: "('x,'k,unit,relc,relc) dg_spec" where
      dgs_combine_env := (\<lambda>ci. relc_combine_transfer (relc_combine_env ci))
    \<rparr>"
 
-text \<open>The unknown and global-key types occur only inside this specification's transfer
-  programs, never in an argument that builds it, so it has no most general ML type and
-  cannot be a generated value. It is a construction-time description, unfolded where it
-  is used.\<close>
-declare rel_order_spec_def [code_unfold]
+text \<open>Expand the template and transfer in this code equation so the argument-free
+  specification is a record of functions in generated ML. This avoids the value
+  restriction on record updates without inlining the specification into its callers.\<close>
+
+lemmas [code] =
+  rel_order_spec_def[unfolded local_dg_spec_template_def relc_transfer_def, simplified]
 
 text \<open>Every field reads the shared slot, publishes once and answers, so the
   specification runs its continuation once wherever the generator runs it.\<close>

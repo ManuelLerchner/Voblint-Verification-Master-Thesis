@@ -313,7 +313,7 @@ definition ownership_split_lift_gen ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd)
    \<Rightarrow> ('x,'k,unit,'d::bounded_semilattice_sup_bot,'d) dg_spec
    \<Rightarrow> ('x,'k,unit,'d,'d) dg_spec"
-where [code_unfold]:
+where
   "ownership_split_lift_gen cmb rg rl S = local_dg_spec_template\<lparr>
      dgs_skip := ownership_split_transfer_gen cmb rg rl (skip\<^sup># S),
      dgs_assign := (\<lambda>x e. ownership_split_transfer_gen cmb rg rl (assign\<^sup># S x e)),
@@ -333,7 +333,7 @@ definition ownership_split_lift ::
   "(vname \<Rightarrow> bool)
    \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) dg_spec
    \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
-where [code_unfold]:
+where
   "ownership_split_lift \<G> =
      ownership_split_lift_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
 

@@ -74,7 +74,9 @@ text \<open>
   stable set and continues through each one not currently being solved.
 \<close>
 
-lemma destab_iter_opt_traced:
+declare destab_iter_opt.simps [code del] destab_opt.simps [code del]
+
+lemma destab_iter_opt_traced [code]:
   fixes i :: "('x + 'g, 'x list) fmap"
   shows
     "destab_iter_opt [] i s c = (i, s)"
@@ -85,7 +87,7 @@ lemma destab_iter_opt_traced:
        destab_iter_opt ys i s c)"
   by (simp_all only: destab_iter_opt.simps trace_event_def Let_def)
 
-lemma destab_opt_traced:
+lemma destab_opt_traced [code]:
   fixes x :: "'x + 'g"
   shows
     "destab_opt x i s c =
@@ -93,9 +95,6 @@ lemma destab_opt_traced:
                  (\<lambda>_. (Ev_Destabilize x :: ('x, 'g, unit) solver_event)) in
        destab_iter_opt (fmlookup_default i [] x) (fmdrop x i) s c)"
   by (simp only: destab_opt.simps trace_event_def Let_def)
-
-declare destab_iter_opt.simps [code del] destab_opt.simps [code del]
-declare destab_iter_opt_traced [code] destab_opt_traced [code]
 
 text \<open>
   The solver. The equation below is the vendored \<open>solve_rec_c\<close> equation with
@@ -105,7 +104,9 @@ text \<open>
 
 unbundle lattice_syntax
 
-lemma solve_rec_c_traced:
+declare TD_side_rule_Interp.solve_rec_c.simps [code del]
+
+lemma solve_rec_c_traced [code]:
   fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
   shows "TD_side_rule_Interp_solve_rec_c r T s = (case s of
     TD_side_upd_rule.func_state.Q (y, x, state, ug_state) \<Rightarrow>
@@ -199,7 +200,9 @@ lemma solve_rec_c_traced:
 
 text \<open>One solve, from its root unknown to its result, between a start and a stop event.\<close>
 
-lemma solve_traced:
+declare TD_side_rule_Interp.solve_code_equation [code del]
+
+lemma solve_traced [code]:
   fixes T :: "('x, 'g, 'd::{bounded_semilattice_sup_bot,warrowing}) eqsT"
   shows "TD_side_rule_Interp_solve r T x =
     (let _ = trace_event STR ''solver'' (\<lambda>_. (Ev_Start x :: ('x, 'g, 'd) solver_event)) in
@@ -209,10 +212,6 @@ lemma solve_traced:
      | None \<Rightarrow> Code.abort (STR ''Input not in domain'') (\<lambda>_. TD_side_rule_Interp_solve r T x))"
   by (rule trans[OF TD_side_rule_Interp.solve_code_equation])
      (simp only: trace_event_def Let_def)
-
-declare TD_side_rule_Interp.solve_rec_c.simps [code del]
-declare TD_side_rule_Interp.solve_code_equation [code del]
-declare solve_rec_c_traced [code] solve_traced [code]
 
 text \<open>
   The same events around the executable solver, for a caller that reads its answer

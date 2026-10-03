@@ -6,6 +6,24 @@ begin
 section "Code export surface"
 
 text \<open>
+  Top-level definitions normally supply their own code equations. Locale definitions
+  need care: an inline \<open>[code]\<close> attribute is applied through interpretation and
+  does not register the generic constant for direct calls with abstract locale
+  parameters. Register those equations after the defining locale's \<open>end\<close>, in the
+  theory that owns them, as the grouped \<open>declare ... [code]\<close> in
+  \<^theory>\<open>Voblint_Result.DG_Analysis\<close> does. Keep this export theory focused on roots.
+
+  If a locale theorem still has assumptions, it is not an unconditional code
+  equation. Discharge them through an interpretation or derive a code equation for
+  the concrete caller. A successful attribute declaration alone does not establish
+  executability: check its warnings, export the actual roots, and compile the OCaml.
+
+  Use \<open>[code]\<close> to retain a named function. \<open>[code_unfold]\<close> rewrites its uses during
+  preprocessing and can duplicate its body in generated callers; it is not a
+  substitute for a missing code equation.
+\<close>
+
+text \<open>
   This session owns executable exports; the examples session proves and demonstrates the
   exported definitions without materializing generated code.
 

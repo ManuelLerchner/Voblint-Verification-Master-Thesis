@@ -183,10 +183,9 @@ definition state_dg_spec ::
    \<Rightarrow> (call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state,'g::bounded_semilattice_sup_bot) dg_spec"
-where [code_unfold]:
+where
   "state_dg_spec \<G> sk asn sp br bd rt en ev
      = dg_spec_of (state_local_spec \<G> sk asn sp br bd rt en ev)"
-
 
 lemma dg_spec_step_state_dg_spec:
   "dg_spec_step (state_dg_spec \<G> sk asn sp br bd rt en ev) a
@@ -249,7 +248,7 @@ definition lifted_state_dg_spec ::
    \<Rightarrow> (call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> (analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
    \<Rightarrow> ('x,'k,unit,'a abs_state lifted,'g::bounded_semilattice_sup_bot) dg_spec"
-where [code_unfold]:
+where
   "lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev
      = dg_spec_of (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev)"
 
