@@ -355,23 +355,43 @@ def _run(tmp_path, *args):
     return out
 
 
-def test_globals_pane_shows_the_constraint_systems_global_unknowns(tmp_path):
-    """The globals button opened an empty pane.
-
-    goblint's pane is GHT.iter over every GVar -- the global constraint system's
-    unknowns, not C globals, whose values live in the local state. Ours holds the
-    two kinds a routed D/G system side-effects: the shared slot, and one seed per
-    callee entry carrying the state a call pushes into that callee.
-    """
-    out = _run(tmp_path, "--analysis", "interval", str(GLOBALS_FIXTURE))
+def test_globals_pane_shows_routing_unknowns_in_flow_sensitive_mode(tmp_path):
+    out = _run(
+        tmp_path,
+        "--analysis",
+        "interval",
+        "--program-globals",
+        "flow-sensitive",
+        str(GLOBALS_FIXTURE),
+    )
     root = ET.parse(out / "nodes" / "globals.xml").getroot()
     assert root.tag == "globs"
 
     keys = [g.find("key").text for g in root.findall("glob")]
-    assert "Global" in keys, f"shared slot missing: {keys}"
-    assert any(k.startswith("enter ") for k in keys), f"no callee-entry seed: {keys}"
-    # One seed per procedure, main included -- it is compiled through the same
-    # wrapper, and a procedure nothing calls is listed as unreachable, not omitted.
+
+    assert any(k.startswith("enter ") for k in keys), keys
+    assert "enter main" in keys, keys
+    assert not any(k.startswith("Global ") for k in keys), keys
+
+
+def test_globals_pane_shows_keyed_program_globals_in_flow_insensitive_mode(tmp_path):
+    out = _run(
+        tmp_path,
+        "--analysis",
+        "interval",
+        "--program-globals",
+        "flow-insensitive",
+        str(GLOBALS_FIXTURE),
+    )
+    root = ET.parse(out / "nodes" / "globals.xml").getroot()
+    assert root.tag == "globs"
+
+    keys = [g.find("key").text for g in root.findall("glob")]
+
+    # Use the actual declared name from the fixture.
+    assert "global g" in keys, keys
+
+    assert any(k.startswith("enter ") for k in keys), keys
     assert "enter main" in keys, keys
 
 
