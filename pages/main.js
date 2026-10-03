@@ -3179,7 +3179,7 @@ function rerouteEdge(edge) {
     mode = null;
   }
 
-  const keep = mode !== null;
+  const keep = mode != null;
 
   mode ??= gapDown > GAP ? "down" : gapUp > GAP ? "up" : "side";
 
@@ -3287,13 +3287,27 @@ function applyGraphLayout(view, { centers, routes, labels, ends = new Map() }) {
        * drag starts from the ports the reader sees and a re-route keeps them.
        */
       const end = ends.get(id);
+      const source = centers.get(edge.data("source"));
+      const target = centers.get(edge.data("target"));
+      /*
+       * A route between boxes has no laid-out ends: its first and last bends sit
+       * level with its nodes, fanned apart on the box side. It leaves and enters on
+       * the side facing those bends, at their height, so the end runs stay level.
+       */
+      const level = (node, center, bend) => {
+        const half = { w: node.width() / 2, h: node.height() / 2 };
+        const dy = Math.max(-half.h + 2, Math.min(half.h - 2, bend.y - center.y));
 
-      if (end) {
-        const ports = {
-          source: offsetFrom(end.start, centers.get(edge.data("source"))),
-          target: offsetFrom(end.end, centers.get(edge.data("target"))),
-        };
+        return { x: Math.sign(bend.x - center.x || 1) * half.w, y: dy };
+      };
+      const ports = end
+        ? { source: offsetFrom(end.start, source), target: offsetFrom(end.end, target) }
+        : points.length > 0 && {
+            source: level(edge.source(), source, points[0]),
+            target: level(edge.target(), target, points.at(-1)),
+          };
 
+      if (ports) {
         edge.addClass("anchored").data(endpointData(ports)).scratch("ports", ports);
       }
     }
