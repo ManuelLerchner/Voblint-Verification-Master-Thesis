@@ -16,3 +16,6 @@ session Voblint_Examples_Tooling in "." = "Voblint_Analysis_Interval" +
     (* One global fed the same contributions under each update rule, outside
        any solver run: the values each rule computes step by step. *)
     Example_Update_Rule_Steps
+    (* Keyed globals: an edge depends only on the globals it reads and
+       publishes only at the globals it writes. *)
+    Example_Keyed_Global_Footprint

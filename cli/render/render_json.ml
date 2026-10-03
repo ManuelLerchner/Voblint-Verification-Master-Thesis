@@ -535,7 +535,7 @@ let result_check_json c =
     ]
 
 let result_global_unknown_json = function
-  | C.Global_Shared -> tagged "Global_Shared" []
+  | C.Global_Named x -> tagged "Global_Named" [ json_string x ]
   | C.Global_Seed (f, i) ->
       tagged "Global_Seed" [ json_string f; json_option nat_json i ]
 
@@ -657,25 +657,25 @@ let global_lines shown = function
                 | whole -> whole ))
           (A.sections_of view) )
 
-(* The analysis-wide slot, which holds the program's globals when they are
-   shared: their names and what the run knows of them. *)
+(* The program globals when they are shared: one unknown per declared global,
+   each with what the run knows of that global alone. *)
 let shared_json program result =
   let globals = C.declared_global_vars program in
-  List.find_map
-    (fun g ->
-      match C.global_unknown g with
-      | C.Global_Shared ->
-          let reachable, lines =
-            global_lines (fun x -> List.mem x globals) (C.global_state g)
-          in
-          Some
-            (Printf.sprintf "{\"reachable\":%b,\"globals\":%s,\"lines\":%s}"
-               reachable
-               (json_list json_string globals)
-               (json_list json_string lines))
-      | C.Global_Seed _ -> None)
-    (C.res_globals result)
-  |> Option.value ~default:"null"
+  let unknown g =
+    match C.global_unknown g with
+    | C.Global_Named x ->
+        let reachable, lines =
+          global_lines (fun y -> y = x) (C.global_state g)
+        in
+        Some
+          (Printf.sprintf "{\"name\":%s,\"reachable\":%b,\"lines\":%s}"
+             (json_string x) reachable
+             (json_list json_string lines))
+    | C.Global_Seed _ -> None
+  in
+  Printf.sprintf "{\"globals\":%s,\"unknowns\":[%s]}"
+    (json_list json_string globals)
+    (String.concat "," (List.filter_map unknown (C.res_globals result)))
 
 (* One row per procedure entry per context: the seed a call publishes and the callee
    entry reads back, named exactly as every other report names it. The
@@ -706,7 +706,7 @@ let seeds_json program result (graph : G.t) =
   in
   let seed (g, (key, _)) =
     match C.global_unknown g with
-    | C.Global_Shared -> None
+    | C.Global_Named _ -> None
     | C.Global_Seed (f, i) ->
         let entry = Option.bind i (fun i -> entry_of f (A.int_of_nat i)) in
         let reachable, lines = global_lines (shown f) (C.global_state g) in

@@ -55,6 +55,15 @@ text \<open>Formal binding is the same fold over the concrete store and over eve
 abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
   "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
+lemma bind_formals_other:
+  "x \<notin> set xs \<Longrightarrow> bind_formals xs vs s x = s x"
+proof (induction xs arbitrary: vs s)
+  case Nil then show ?case by simp
+next
+  case (Cons y ys)
+  then show ?case by (cases vs) simp_all
+qed
+
 text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
   value, keep the globals, then bind the formals to the actuals evaluated in the
   caller's own state. Which state and which evaluator is all that separates the
@@ -288,24 +297,6 @@ text \<open>
 
 subsection \<open>Finite syntactic variable sets\<close>
 
-fun exp_vnames :: "exp \<Rightarrow> vname set" where
-  "exp_vnames (N _) = {}"
-| "exp_vnames (V x) = {x}"
-| "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Minus a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Times a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Div a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Mod a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Less a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (LessEq a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Greater a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (GreaterEq a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (NotEq a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Eq a b) = exp_vnames a \<union> exp_vnames b"
-| "exp_vnames (Not b) = exp_vnames b"
-| "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
-| "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
-
 fun com_vnames :: "com \<Rightarrow> vname set" where
   "com_vnames SKIP = {}"
 | "com_vnames (Assign x a) = insert x (exp_vnames a)"
@@ -320,9 +311,6 @@ fun com_vnames :: "com \<Rightarrow> vname set" where
 | "com_vnames (Return e) = (case e of None \<Rightarrow> {} | Some a \<Rightarrow> exp_vnames a)"
 | "com_vnames Restore = {}"
 | "com_vnames Unwind = {}"
-
-lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
-  by (induction a) auto
 
 lemma finite_com_vnames [simp]: "finite (com_vnames c)"
   by (induction c) (auto split: option.splits)

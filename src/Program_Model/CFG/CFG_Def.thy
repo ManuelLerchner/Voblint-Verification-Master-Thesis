@@ -368,4 +368,16 @@ lemma finite_nodes [simp]: "finite (cfg_nodes g)"
 
 end
 
+text \<open>Expressions observed by an edge, shared by diagnostics and transfer footprints.\<close>
+
+fun edge_expressions :: "edge_action \<Rightarrow> exp list" where
+  "edge_expressions (EA_Assign x e) = [e]"
+| "edge_expressions (EA_Assume e) = [e]"
+| "edge_expressions (EA_AssumeNot e) = [e]"
+| "edge_expressions (EA_Check l e) = [e]"
+| "edge_expressions (EA_Ret (Some e) p) = [e]"
+| "edge_expressions (EA_Special (Min a b) x) = [a, b]"
+| "edge_expressions (EA_Special (Max a b) x) = [a, b]"
+| "edge_expressions _ = []"
+
 end

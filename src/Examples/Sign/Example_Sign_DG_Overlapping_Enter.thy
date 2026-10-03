@@ -722,7 +722,7 @@ lemma dg_spec_combine_transfer_ov_spec [simp]:
 lemma ov_cmb_side_free_at_analysis_global:
   "sides_of_program (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
       (static_resolve ov_cfg) (\<lambda>d. d = Bot) route ctx ca cc v) sigma (Inr (Analysis_Global ())) = bot"
-proof (rule routed_call_program_side_free_at_analysis_global[OF dg_spec_wf_ov_spec])
+proof (rule routed_call_program_side_free_at_buffer_key[OF dg_spec_wf_ov_spec])
   show "\<And>ci d pairs pub. enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ci)
           (mk_dg_man d (\<lambda>_. Analysis_Global ())) sigma pairs pub \<Longrightarrow> pub (Inr (Analysis_Global ())) = bot"
     unfolding dgs_enter_ov_spec

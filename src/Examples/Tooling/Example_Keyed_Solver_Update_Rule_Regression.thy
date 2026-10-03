@@ -91,7 +91,7 @@ text \<open>
   exactly the shape \<open>FunctionResult factorial\<close> has in the real factorial
   regression (two incoming intra edges, one per branch). \<open>merge_step\<close>
   answers fixed constants at \<open>EA_Nop\<close>/\<open>EA_Assign\<close> regardless of the incoming
-  local/global state, so the solved global value at \<open>analysis_global_at ()\<close> is exactly
+  local/global state, so the solved global value at \<open>buffer_key_at ()\<close> is exactly
   the join of the two edges' own contributions, not a self-referential
   fixpoint -- letting the check below assert that join directly.
 \<close>

@@ -18,7 +18,7 @@ text \<open>
   Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
   \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
   \<open>abs_state\<close> therefore instantiates this locale directly. The generator
-  buffers its writes at \<open>Inr analysis_global\<close>; \<open>global_of\<close> names the key each global
+  buffers its writes at \<open>Inr buffer_key\<close>; \<open>global_of\<close> names the key each global
   name is read from, and \<open>sg_cov\<close> ties the reader at a covered key to
   \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against the environment \<^term>\<open>genv global_of sigma\<close>.
 \<close>
@@ -28,7 +28,7 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool" +
-  fixes g :: cfg and analysis_global :: 'k and global_of :: "'v \<Rightarrow> 'k"
+  fixes g :: cfg and buffer_key :: 'k and global_of :: "'v \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
@@ -44,7 +44,7 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
     and extra_wf: "\<And>c v q. q \<in> set (extra route c v) \<Longrightarrow> sp_wf q"
     and finE: "finite (intra g)"
     and pp: "post_bounded
-               (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global)
+               (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key)
                   route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 s0d s0g)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
@@ -59,7 +59,7 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
-  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global)
+  "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key)
            route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 s0d s0g"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
@@ -104,13 +104,13 @@ lemma pp_sides_bound:
 
 lemma pp_entry_s0g_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0g \<le> dg_global (sigma (Inr analysis_global))"
+  shows "s0g \<le> dg_global (sigma (Inr buffer_key))"
 proof -
-  have "s0g \<le> dg_global (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr analysis_global))"
+  have "s0g \<le> dg_global (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr buffer_key))"
     unfolding routed_node_rhs_def Let_def
     by (simp add: Let_def sup_dg_state_def)
-  also have "\<dots> \<le> dg_global (sigma (Inr analysis_global))"
-    using pp_sides_bound[OF cov, THEN le_funD, of "Inr analysis_global"]
+  also have "\<dots> \<le> dg_global (sigma (Inr buffer_key))"
+    using pp_sides_bound[OF cov, THEN le_funD, of "Inr buffer_key"]
     by (simp add: less_eq_dg_state_def)
   finally show ?thesis .
 qed

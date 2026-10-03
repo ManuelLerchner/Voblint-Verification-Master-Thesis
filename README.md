@@ -122,7 +122,8 @@ pixi run voblint --analysis interval --context entry-state my_program.vimp --pla
 `--context none|entry-state|call-string` selects the analysis context,
 `--globals` the update rule for side-effected globals, and
 `--program-globals flow-sensitive|flow-insensitive` whether a program's globals
-travel with each point's state or live in one shared value every point reads;
+travel with each point's state or each live at its own global unknown, read only by
+the points that mention it;
 both placements carry the same soundness theorem. `pixi run voblint --help`
 lists every flag. `--graph-snapshot` prints the solved graph as deterministic
 text and `--parse-only` checks syntax.
@@ -431,9 +432,10 @@ interface, a [`local_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_S
 one transfer per edge kind plus entry and combine, over local state only, with
 the soundness condition `sound_local_spec`. `dg_spec_of` lifts it to a `dg_spec`,
 and `dg_spec_of_contract` supplies the contract. With flow-insensitive program
-globals, `ownership_split_lift_gen` wraps that specification so the globals are
-read from and published to the shared global unknown, and
-`ownership_split_lift_gen_contract` carries the contract over.
+globals, [`keyed_split_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Keyed_Split_Spec.thy)
+wraps that specification so each edge reads only the globals its expressions
+mention and publishes only the globals it may assign, each at its own unknown,
+and `keyed_split_contract` carries the contract over.
 
 A numeric domain supplies one record of value operations,
 [`nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Ops.thy):

@@ -31,18 +31,19 @@ text \<open>
 subsection \<open>The routed key space\<close>
 
 datatype ('v,'c) global_unknown =
-  Analysis_Global 'v
+  Analysis_Buffer
+| Analysis_Global 'v
 | Activation_Seed (seed_pp: pp) (seed_ctx: 'c)
 
 text \<open>
-  What the solver's global unknowns are, once an analysis is routed. Two kinds,
-  and they belong to different owners. \<^const>\<open>Analysis_Global\<close> wraps a name of
+  The solver's global unknowns have three owners. The generator uses
+  \<^const>\<open>Analysis_Buffer\<close> for a node's buffered global answer. \<^const>\<open>Analysis_Global\<close> wraps a name of
   the analysis's own type \<open>'v\<close> --- Goblint's \<open>V\<close> --- and is the only kind an
   analysis can reach, through \<^const>\<open>man_global\<close>/\<^const>\<open>man_sideg\<close>.
   \<^const>\<open>Activation_Seed\<close> holds the entry state published at a callee's
   activation, keyed by the callee entry point and the routed context.
 
-  The two names record who owns which. \<open>Analysis_Global\<close> embeds this
+  The remaining constructors separate analysis effects from activation routing. \<open>Analysis_Global\<close> embeds this
   development's analogue of Goblint's \<open>Spec.V\<close> into the solver's global-key
   space --- the namespace itself is \<open>'v\<close>, and this constructor is the address
   around it. Goblint's own Base analysis supplies a non-trivial one
@@ -78,9 +79,9 @@ text \<open>
   second component, after \<open>enter\<^sup>#\<close> has run --- and the exact matched
   \<^typ>\<open>call_action\<close> (from \<^const>\<open>return_call_action_list\<close>, never re-derived from
   the call site's outgoing edges). The spec's own enter and combine transfers run as
-  compiled manager programs over the caller value, so whether the global slot \<open>analysis_global\<close>
+  compiled manager programs over the caller value, so whether the global slot \<open>buffer_key\<close>
   is read or published at all is the specification's business: a Base-style spec's
-  transfers touch no global and the routed program then carries no \<open>analysis_global\<close> effect either,
+  transfers touch no global and the routed program then carries no \<open>buffer_key\<close> effect either,
   while an effectful spec's own \<open>man_global\<close>/\<open>man_sideg\<close> calls ride inside the
   compiled subtrees.
 
@@ -113,7 +114,7 @@ text \<open>
   key is reached through \<open>Inl\<close> (a \<open>(pp, 'c)\<close> local unknown) or \<open>Inr\<close> (a \<open>'k\<close>
   global unknown): \<open>dg_local\<close>/\<open>dg_global\<close> are call-site conventions, not something
   \<^const>\<open>QueryL\<close>/\<^const>\<open>QueryG\<close> themselves enforce. Since \<open>seed p ctx\<close> is
-  always distinct from \<open>analysis_global\<close> (\<open>seed_ne_analysis_global\<close>) and no other equation ever
+  always distinct from \<open>buffer_key\<close> (\<open>seed_ne_buffer_key\<close>) and no other equation ever
   publishes to a seed key, nothing else reads or writes that key's \<open>dg_local\<close> half.
 \<close>
 
@@ -443,13 +444,13 @@ text \<open>
 
   \<^item> Its answer always carries \<open>bot\<close> on the globals half: the per-call-site fold
     accumulates only \<open>dg_local\<close>.
-  \<^item> It publishes nothing at \<open>analysis_global\<close> as soon as the spec's own enter and combine
+  \<^item> It publishes nothing at \<open>buffer_key\<close> as soon as the spec's own enter and combine
     sub-programs publish nothing there --- the only side the routed program adds is
-    the seed, and a seed key is never \<open>analysis_global\<close>.
+    the seed, and a seed key is never \<open>buffer_key\<close>.
 
   A program with both properties is already its own contribution analogue, so the
   buffered generator's \<open>cmb_c\<close> hook can be the program itself. A spec whose transfers
-  do publish at \<open>analysis_global\<close> fails the second and must supply a reshaped hook instead.
+  do publish at \<open>buffer_key\<close> fails the second and must supply a reshaped hook instead.
 \<close>
 
 lemma sides_side_rhs_fold_dg_bot:
@@ -497,16 +498,16 @@ qed
 
 theorem pp_routed_of_buffered:
   assumes wfS: "dg_spec_wf S"
-    and ne: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
+    and ne: "\<And>p ctx. seed p ctx \<noteq> buffer_key"
     and pp: "part_post_solution
-     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route
+     (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route
         (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
         (routed_call_program S global_of seed resolve is_bot)
         (routed_entry_seed_programs seed)
         g bot0 s0d s0g)
      x0 sigma vars"
   shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global) route
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route
         (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
         (routed_call_program S global_of seed resolve is_bot)
         (routed_entry_seed_programs seed)
@@ -531,23 +532,23 @@ qed
 
 text \<open>
   The entry half of the condition is now stated through \<^const>\<open>enter_runs\<close>: an
-  entry program publishes nothing at \<open>analysis_global\<close> exactly when the \<open>pub\<close> it runs to is
+  entry program publishes nothing at \<open>buffer_key\<close> exactly when the \<open>pub\<close> it runs to is
   \<^const>\<open>bot\<close> there. It has to be stated this way: an entry program answers a
   list of alternatives, not the solver's value type, so it has no compiled tree
   of its own to observe.
 \<close>
 
-lemma routed_callee_call_program_side_free_at_analysis_global:
+lemma routed_callee_call_program_side_free_at_buffer_key:
   assumes wfS: "dg_spec_wf S"
     and enter_free: "\<And>ci d pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr analysis_global) = bot"
+        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
         enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d global_of) de)) \<sigma> z = bot"
-    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> analysis_global"
+    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> buffer_key"
   shows "sides_of_program
-           (routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
+           (routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p) \<sigma> (Inr buffer_key)
          = bot"
 proof -
   obtain pairs pub
@@ -556,23 +557,23 @@ proof -
     using enter_runs_ex by blast
   have alts: "\<And>t. t \<in> set (map (routed_call_alternative_program S global_of seed route is_bot ctx
                                   ca cc p) pairs)
-                 \<Longrightarrow> sides_of_program t \<sigma> (Inr analysis_global) = bot"
+                 \<Longrightarrow> sides_of_program t \<sigma> (Inr buffer_key) = bot"
     by (auto simp: routed_call_alternative_program_def Let_def sp_compile_def
         comb_free ne[THEN not_sym] split: if_splits)
   have "sides_of_program
-          (routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p) \<sigma> (Inr analysis_global)
-        = pub (Inr analysis_global)
+          (routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p) \<sigma> (Inr buffer_key)
+        = pub (Inr buffer_key)
           \<squnion> sides_of_program (side_rhs_fold_dg bot
                 (map (routed_call_alternative_program S global_of seed route is_bot ctx ca cc p)
                   pairs))
-              \<sigma> (Inr analysis_global)"
+              \<sigma> (Inr buffer_key)"
     unfolding routed_callee_call_program_def
     by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
   also have "\<dots> = bot"
   proof -
     have "sides_of_program (side_rhs_fold_dg bot
             (map (routed_call_alternative_program S global_of seed route is_bot ctx ca cc p) pairs))
-            \<sigma> (Inr analysis_global) = bot"
+            \<sigma> (Inr buffer_key) = bot"
       by (rule sides_side_rhs_fold_dg_bot[OF sp_wf_routed_call_alternative_programs[OF wfS]])
          (rule alts)
     then show ?thesis using enter_free[OF R] by simp
@@ -580,27 +581,27 @@ proof -
   finally show ?thesis .
 qed
 
-lemma routed_call_program_side_free_at_analysis_global:
+lemma routed_call_program_side_free_at_buffer_key:
   assumes wfS: "dg_spec_wf S"
     and enter_free: "\<And>ci d pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr analysis_global) = bot"
+        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
         enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d global_of) de)) \<sigma> z = bot"
-    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> analysis_global"
+    and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> buffer_key"
   shows "sides_of_program (routed_call_program S global_of seed resolve is_bot route ctx ca cc v)
-           \<sigma> (Inr analysis_global) = bot"
+           \<sigma> (Inr buffer_key) = bot"
 proof -
   have at_free: "\<And>caller p.
       sides_of_program (routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p)
-        \<sigma> (Inr analysis_global) = bot"
-    by (rule routed_callee_call_program_side_free_at_analysis_global[OF wfS])
+        \<sigma> (Inr buffer_key) = bot"
+    by (rule routed_callee_call_program_side_free_at_buffer_key[OF wfS])
        (rule enter_free enter_runs_ex comb_free ne, assumption?)+
   have "sides_of_program (side_rhs_fold_dg bot
           (map (routed_callee_call_program S global_of seed route is_bot ctx ca cc
                   (dg_local (\<sigma> (Inl (cc, ctx)))))
-             (resolve v cc ca (dg_local (\<sigma> (Inl (cc, ctx))))))) \<sigma> (Inr analysis_global) = bot"
+             (resolve v cc ca (dg_local (\<sigma> (Inl (cc, ctx))))))) \<sigma> (Inr buffer_key) = bot"
     by (rule sides_side_rhs_fold_dg_bot[OF sp_wf_routed_callee_call_programs[OF wfS]])
        (auto simp: at_free)
   then show ?thesis by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes)
