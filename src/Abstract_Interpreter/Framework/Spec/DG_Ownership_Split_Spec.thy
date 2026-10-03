@@ -452,8 +452,8 @@ text \<open>
 theorem (in sound_nonrelational_transfer) ownership_split_lift_contract:
   "analysis_contract
      (ownership_split_lift \<G> (state_dg_spec \<G> sk asn sp br bd rt en ev))
-     (gamma_ownership_split \<G>) \<G>"
-proof (unfold_locales, goal_cases)
+     (\<lambda>d e. gamma_ownership_split \<G> d (e ())) \<G>"
+proof (rule analysis_contract_unitI, goal_cases)
   case 1
   show ?case by (rule dg_spec_wf_ownership_split_lift) simp
 next
@@ -492,8 +492,8 @@ theorem ownership_split_lift_gen_contract:
     and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
     and split: "\<And>x. cmb (rl x) (rg x) = x"
   shows "analysis_contract (ownership_split_lift_gen cmb rg rl (dg_spec_of c))
-           (\<lambda>d g. gm (cmb d g)) \<G>"
-proof (unfold_locales, goal_cases wf mono step comb)
+           (\<lambda>d e. gm (cmb d (e ()))) \<G>"
+proof (rule analysis_contract_unitI, goal_cases wf mono step comb)
   case wf
   show ?case by (rule dg_spec_wf_ownership_split_lift_gen) simp
 next

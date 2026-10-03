@@ -232,7 +232,7 @@ global_interpretation int_tf: sound_nonrelational_ops "int_dom_ops mode"
     and int_classify_check = int_tf.check.classify_check
     and int_eval_answer = int_tf.check.eval_answer
     and int_checks_proven = int_tf.check.abstract_checks_proven
-  by (rule int_dom_sound_ops) (simp_all add: special_int_dom_eq_transfer fun_eq_iff)
+  by (rule int_dom_sound_ops) (intro ext, simp add: special_int_dom_eq_transfer)
 
 
 text \<open>

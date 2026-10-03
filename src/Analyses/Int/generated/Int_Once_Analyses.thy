@@ -34,7 +34,7 @@ subsection \<open>At the unit context\<close>
 global_interpretation int_once_rule: dg_analysis_exec
     "generic_tf_st_for (int_dom_ops Refine_Once)"
     "generic_enter_st_for (int_dom_ops Refine_Once)" cinit_int_dom_st
-    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
+    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((int_dom default_st lifted, int_dom default_st lifted) dg_state) r"
@@ -52,6 +52,8 @@ next
   case 3 show ?case by (rule td_certified_solver)
 next
   case (4 \<G>) show ?case by (rule int_cinit_gamma)
+next
+  case (5 n) show ?case by simp
 qed
 
 end

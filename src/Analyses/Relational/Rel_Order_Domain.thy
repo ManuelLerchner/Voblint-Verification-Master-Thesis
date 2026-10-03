@@ -23,12 +23,6 @@ definition gammaDG_relc :: "relc \<Rightarrow> relc \<Rightarrow> store set" whe
 lemma gammaDG_relc_top [simp]: "gammaDG_relc \<top> \<top> = UNIV"
   unfolding gammaDG_relc_def by simp
 
-lemma gammaDG_relc_mono:
-  assumes "d \<le> d'" "g \<le> g'"
-  shows "gammaDG_relc d g \<subseteq> gammaDG_relc d' g'"
-  using gamma_relc_mono[OF assms(1)] gamma_relc_mono[OF assms(2)]
-  unfolding gammaDG_relc_def by blast
-
 subsection \<open>Refining bare-variable comparisons\<close>
 
 text \<open>
@@ -432,13 +426,14 @@ text \<open>
   combine transfers, each from the per-edge lemmas above.
 \<close>
 
-interpretation rel_order: analysis_contract rel_order_spec gammaDG_relc \<G>
-proof unfold_locales
+interpretation rel_order: analysis_contract rel_order_spec "\<lambda>d e. gammaDG_relc d (e ())" \<G>
+proof (rule analysis_contract_unitI)
   show "dg_spec_wf rel_order_spec" by (rule dg_spec_wf_rel_order_spec)
 next
   fix d d' :: relc and g g' :: relc
-  show "d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> gammaDG_relc d g \<subseteq> gammaDG_relc d' g'"
-    by (rule gammaDG_relc_mono)
+  assume "d \<le> d'" "g \<le> g'"
+  then show "gammaDG_relc d g \<subseteq> gammaDG_relc d' g'"
+    using gamma_relc_mono unfolding gammaDG_relc_def by blast
 next
   fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
   show "edge_collect a (gammaDG_relc (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))

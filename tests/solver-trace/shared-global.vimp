@@ -1,0 +1,13 @@
+// One global written by two calls and read once, solved with program globals
+// flow-insensitive: the trace records how often the shared global unknown
+// changes and how many points each change destabilizes.
+global total;
+fun inc(n) {
+  total = total + n;
+}
+fun main() {
+  total = 0;
+  inc(3);
+  inc(4);
+  __voblint_check(0 < total);
+}

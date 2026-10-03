@@ -43,7 +43,7 @@ definition call_string_eqs_for ::
 where
   "call_string_eqs_for k S g initial =
      compiled_routed_eqs_for Call_String_Context.Global
-       Call_String_Context.Seed (cs_route k) S g initial bot"
+       (\<lambda>_. Call_String_Context.Global) Call_String_Context.Seed (cs_route k) S g initial bot"
 
 text \<open>
   The constructor fixes the call-string routing, global and seed keys,
@@ -52,8 +52,9 @@ text \<open>
 \<close>
 
 locale call_string_routed_context =
-  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global "cs_route k"
-    "routed_call_program S Global Seed (static_resolve (compile_prog Pi ps)) is_bot"
+  dg_context_activation S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global "\<lambda>_. Global"
+    "cs_route k"
+    "routed_call_program S (\<lambda>_. Global) Seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs Seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
@@ -96,7 +97,8 @@ locale call_string_routed_context =
        \<Longrightarrow> (cont, c1) \<in> vars"
 begin
 
-sublocale routed: routed_context S \<gamma>\<^sub>D\<^sub>G \<G> "compile_prog Pi ps" Global
+sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global
+  "\<lambda>_. Global"
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "call_context_rel_of_fun (cs_context k)"
 proof unfold_locales
@@ -136,7 +138,7 @@ next
                 (man_at u ctx) sigma pairs deps"
       and P: "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
                 (call_enter \<G> (CallEdge dst pars args) s) pairs"
-    using enter_complete[OF covV ce sin] by blast
+    using enter_complete[OF covV ce sin[simplified]] by blast
   from P obtain cont' entry
     where mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr Global)))"
@@ -153,12 +155,12 @@ next
            \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
                (man_at u ctx) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
-           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (dg_global (sigma (Inr Global)))
+           \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv (\<lambda>_. Global) sigma ())
            \<and> call_enter \<G> (CallEdge dst pars args) s
-               \<in> \<gamma>\<^sub>D\<^sub>G entry (dg_global (sigma (Inr Global)))
+               \<in> \<gamma>\<^sub>D\<^sub>G entry (genv (\<lambda>_. Global) sigma ())
            \<and> cs_route k u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
-    using R D mem ccov ecov req covE by blast
+    using R D mem ccov ecov req covE by auto
 next
   fix u ctx dst pars args p cont s
   show "\<exists>ctx'. call_context_rel_of_fun (cs_context k) u ctx
@@ -171,6 +173,8 @@ next
     and "(cl, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls (compile_prog Pi ps)"
   then show "(cont, c1) \<in> vars" by (rule comb_fwd)
+next
+  show "\<And>p ctx v. Seed p ctx \<noteq> Global" by simp
 qed
 
 end

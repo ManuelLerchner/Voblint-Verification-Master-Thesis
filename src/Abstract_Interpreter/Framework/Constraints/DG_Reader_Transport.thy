@@ -389,26 +389,26 @@ lemma dg_prog_st_commute_routed_call_alternative_program:
     and wf_abs: "dg_spec_wf S_abs"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. analysis_global)) de))
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d global_of) de))
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. analysis_global)) (Floc de)))"
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) global_of) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_prog_st_commute \<sigma>_st
-           (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st ctx ca cc p alt)
-           (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc p
+           (routed_call_alternative_program S_st global_of seed route_st is_bot_st ctx ca cc p alt)
+           (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs ctx ca cc p
               (map_prod Floc Floc alt))"
 proof (rule dg_prog_st_commuteI)
-  show "sp_wf (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st
+  show "sp_wf (routed_call_alternative_program S_st global_of seed route_st is_bot_st
                  ctx ca cc p alt)"
     by (rule sp_wf_routed_call_alternative_program[OF wf_st])
-  show "sp_wf (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc p
+  show "sp_wf (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs ctx ca cc p
                 (map_prod Floc Floc alt))"
     by (rule sp_wf_routed_call_alternative_program[OF wf_abs])
   show "dg_tree_st_commute \<sigma>_st
-          (sp_compile (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st
+          (sp_compile (routed_call_alternative_program S_st global_of seed route_st is_bot_st
              ctx ca cc p alt))
-          (sp_compile (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs
+          (sp_compile (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs
              ctx ca cc p (map_prod Floc Floc alt)))"
   proof (cases alt)
     case (Pair cont entry)
@@ -418,10 +418,10 @@ proof (rule dg_prog_st_commuteI)
       then have abs: "is_bot_abs (Floc entry)" by (simp add: Hbot)
     have cb: "dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st (call_info_of ca p) (mk_dg_man cont (\<lambda>_. analysis_global)) bot))
+           (dg_spec_combine_transfer S_st (call_info_of ca p) (mk_dg_man cont global_of) bot))
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_abs (call_info_of ca p)
-              (mk_dg_man (Floc cont) (\<lambda>_. analysis_global)) bot))"
+              (mk_dg_man (Floc cont) global_of) bot))"
       using Hcomb[of "call_info_of ca p" cont bot] by (simp add: Floc_bot)
       show ?thesis
         unfolding Pair using cb by (simp add: True abs sp_compile_def)
@@ -431,20 +431,20 @@ proof (rule dg_prog_st_commuteI)
       have r: "route_abs cc ctx (Floc entry) ca = route_st cc ctx entry ca"
         by (rule Hroute[symmetric])
     have eq_st: "sp_compile (routed_call_alternative_program
-        S_st analysis_global seed route_st is_bot_st ctx ca cc p (cont, entry))
+        S_st global_of seed route_st is_bot_st ctx ca cc p (cont, entry))
         = Side (seed (FunctionEntry p) (route_st cc ctx entry ca)) (DG entry bot)
             (QueryL (FunctionResult p, route_st cc ctx entry ca)
                (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
                   (dg_spec_combine_transfer S_st (call_info_of ca p)
-                     (mk_dg_man cont (\<lambda>_. analysis_global)) (dg_local cs))))"
+                     (mk_dg_man cont global_of) (dg_local cs))))"
       using False by (simp add: sp_compile_def)
-    have eq_abs: "sp_compile (routed_call_alternative_program S_abs analysis_global seed route_abs
+    have eq_abs: "sp_compile (routed_call_alternative_program S_abs global_of seed route_abs
             is_bot_abs ctx ca cc p (Floc cont, Floc entry))
         = Side (seed (FunctionEntry p) (route_st cc ctx entry ca)) (DG (Floc entry) bot)
             (QueryL (FunctionResult p, route_st cc ctx entry ca)
                (\<lambda>cs. sp_compile_with (\<lambda>x. DG x bot)
                   (dg_spec_combine_transfer S_abs (call_info_of ca p)
-                     (mk_dg_man (Floc cont) (\<lambda>_. analysis_global)) (dg_local cs))))"
+                     (mk_dg_man (Floc cont) global_of) (dg_local cs))))"
       using abs by (simp add: r sp_compile_def)
       show ?thesis
         unfolding Pair map_prod_simp fst_conv snd_conv eq_st eq_abs
@@ -461,46 +461,46 @@ lemma dg_prog_st_commute_routed_callee_call_program:
   assumes wf_st: "dg_spec_wf S_st"
     and wf_abs: "dg_spec_wf S_abs"
     and Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
-        (enter\<^sup># S_st ci (mk_dg_man d (\<lambda>_. analysis_global)))
-        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) (\<lambda>_. analysis_global)))"
+        (enter\<^sup># S_st ci (mk_dg_man d global_of))
+        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) global_of))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. analysis_global)) de))
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d global_of) de))
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. analysis_global)) (Floc de)))"
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) global_of) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
   shows "dg_prog_st_commute \<sigma>_st
-           (routed_callee_call_program S_st analysis_global seed route_st is_bot_st ctx ca cc caller p)
-           (routed_callee_call_program S_abs analysis_global seed route_abs is_bot_abs
+           (routed_callee_call_program S_st global_of seed route_st is_bot_st ctx ca cc caller p)
+           (routed_callee_call_program S_abs global_of seed route_abs is_bot_abs
              ctx ca cc (Floc caller) p)"
   unfolding dg_prog_st_commute_def
 proof (intro conjI sp_wf_routed_callee_call_program wf_st wf_abs)
   have alt: "\<And>x. dg_prog_st_commute \<sigma>_st
-      (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st ctx ca cc p x)
-      (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc p
+      (routed_call_alternative_program S_st global_of seed route_st is_bot_st ctx ca cc p x)
+      (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs ctx ca cc p
          (map_prod Floc Floc x))"
     using wf_st wf_abs Hcomb Hroute Hbot
     by (rule dg_prog_st_commute_routed_call_alternative_program)
   show "dg_tree_st_commute \<sigma>_st
-      (sp_compile (routed_callee_call_program S_st analysis_global seed route_st is_bot_st
+      (sp_compile (routed_callee_call_program S_st global_of seed route_st is_bot_st
          ctx ca cc caller p))
-      (sp_compile (routed_callee_call_program S_abs analysis_global seed route_abs is_bot_abs
+      (sp_compile (routed_callee_call_program S_abs global_of seed route_abs is_bot_abs
          ctx ca cc (Floc caller) p))"
     unfolding routed_callee_call_program_def sp_compile_bind
   proof (rule dg_enter_st_commuteD[OF Henter])
     fix ps :: "'a enter_result list"
     have la: "list_all2 (dg_prog_st_commute \<sigma>_st)
-        (map (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st ctx ca cc p) ps)
-        (map (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc p)
+        (map (routed_call_alternative_program S_st global_of seed route_st is_bot_st ctx ca cc p) ps)
+        (map (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs ctx ca cc p)
           (map (map_prod Floc Floc) ps))"
       by (simp add: list_all2_conv_all_nth alt)
     show "dg_tree_st_commute \<sigma>_st
         (sp_compile (side_rhs_fold_dg bot
-          (map (routed_call_alternative_program S_st analysis_global seed route_st is_bot_st ctx ca cc p)
+          (map (routed_call_alternative_program S_st global_of seed route_st is_bot_st ctx ca cc p)
             ps)))
         (sp_compile (side_rhs_fold_dg bot
-          (map (routed_call_alternative_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc p)
+          (map (routed_call_alternative_program S_abs global_of seed route_abs is_bot_abs ctx ca cc p)
             (map (map_prod Floc Floc) ps))))"
       using dg_prog_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
       by (simp add: Floc_bot dg_prog_st_commute_def)
@@ -516,50 +516,50 @@ lemma dg_prog_st_commute_routed_call_program:
   assumes wf_st: "dg_spec_wf S_st"
     and wf_abs: "dg_spec_wf S_abs"
     and Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
-        (enter\<^sup># S_st ci (mk_dg_man d (\<lambda>_. analysis_global)))
-        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) (\<lambda>_. analysis_global)))"
+        (enter\<^sup># S_st ci (mk_dg_man d global_of))
+        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) global_of))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_st ci (mk_dg_man d (\<lambda>_. analysis_global)) de))
+           (dg_spec_combine_transfer S_st ci (mk_dg_man d global_of) de))
         (sp_compile_with (\<lambda>x. DG x bot)
-           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) (\<lambda>_. analysis_global)) (Floc de)))"
+           (dg_spec_combine_transfer S_abs ci (mk_dg_man (Floc d) global_of) (Floc de)))"
     and Hroute: "\<And>u c' d ca'. route_st u c' d ca' = route_abs u c' (Floc d) ca'"
     and Hbot: "\<And>d. is_bot_abs (Floc d) = is_bot_st d"
     and Hresolve: "\<And>w cc' ca' d. resolve_st w cc' ca' d = resolve_abs w cc' ca' (Floc d)"
   shows "dg_prog_st_commute \<sigma>_st
-           (routed_call_program S_st analysis_global seed resolve_st is_bot_st route_st ctx ca cc v)
-           (routed_call_program S_abs analysis_global seed resolve_abs is_bot_abs route_abs ctx ca cc v)"
+           (routed_call_program S_st global_of seed resolve_st is_bot_st route_st ctx ca cc v)
+           (routed_call_program S_abs global_of seed resolve_abs is_bot_abs route_abs ctx ca cc v)"
   unfolding dg_prog_st_commute_def
 proof (intro conjI sp_wf_routed_call_program wf_st wf_abs)
   let ?caller = "dg_local (\<sigma>_st (Inl (cc, ctx)))"
   have at: "\<And>p. dg_prog_st_commute \<sigma>_st
-      (routed_callee_call_program S_st analysis_global seed route_st is_bot_st ctx ca cc ?caller p)
-      (routed_callee_call_program S_abs analysis_global seed route_abs is_bot_abs ctx ca cc
+      (routed_callee_call_program S_st global_of seed route_st is_bot_st ctx ca cc ?caller p)
+      (routed_callee_call_program S_abs global_of seed route_abs is_bot_abs ctx ca cc
          (Floc ?caller) p)"
     using wf_st wf_abs Henter Hcomb Hroute Hbot
     by (rule dg_prog_st_commute_routed_callee_call_program)
   have la: "list_all2 (dg_prog_st_commute \<sigma>_st)
-      (map (routed_callee_call_program S_st analysis_global seed route_st is_bot_st ctx ca cc ?caller)
+      (map (routed_callee_call_program S_st global_of seed route_st is_bot_st ctx ca cc ?caller)
         (resolve_st v cc ca ?caller))
       (map
-        (routed_callee_call_program S_abs analysis_global seed route_abs is_bot_abs
+        (routed_callee_call_program S_abs global_of seed route_abs is_bot_abs
           ctx ca cc (Floc ?caller))
         (resolve_st v cc ca ?caller))"
     by (simp add: list_all2_conv_all_nth at)
   have body: "dg_tree_st_commute \<sigma>_st
       (sp_compile (side_rhs_fold_dg bot
-        (map (routed_callee_call_program S_st analysis_global seed route_st is_bot_st ctx ca cc ?caller)
+        (map (routed_callee_call_program S_st global_of seed route_st is_bot_st ctx ca cc ?caller)
           (resolve_st v cc ca ?caller))))
       (sp_compile (side_rhs_fold_dg bot
         (map
-          (routed_callee_call_program S_abs analysis_global seed route_abs is_bot_abs
+          (routed_callee_call_program S_abs global_of seed route_abs is_bot_abs
             ctx ca cc (Floc ?caller))
           (resolve_st v cc ca ?caller))))"
     using dg_prog_st_commute_side_rhs_fold_dg[OF la, where acc_st = bot]
     by (simp add: Floc_bot dg_prog_st_commute_def)
   show "dg_tree_st_commute \<sigma>_st
-      (sp_compile (routed_call_program S_st analysis_global seed resolve_st is_bot_st route_st ctx ca cc v))
-      (sp_compile (routed_call_program S_abs analysis_global seed resolve_abs is_bot_abs route_abs
+      (sp_compile (routed_call_program S_st global_of seed resolve_st is_bot_st route_st ctx ca cc v))
+      (sp_compile (routed_call_program S_abs global_of seed resolve_abs is_bot_abs route_abs
          ctx ca cc v))"
     unfolding routed_call_program_def sp_compile_bind
     using body

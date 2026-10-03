@@ -27,7 +27,7 @@ definition sign_nest_2_eqs ::
   "sign_nest_2_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 2)
        (\<lambda>ctx' src a. dg_spec_edge_program sign_nest_S_st a src (\<lambda>_. Global))
-       (routed_call_program sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
+       (routed_call_program sign_nest_S_st (\<lambda>_. Global) Seed (static_resolve sign_nest_cfg)
           (\<lambda>d. d = Bot))
        (routed_entry_seed_programs Seed)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
@@ -259,6 +259,7 @@ theorem sign_nest_2_activation_collect_sound:
            (sign_ctx_sg_2 (Inl (v, ctx)))"
   by (rule sign_nest_2_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_2 sign_nest_cinit_le_cinit_sign_st])
+     (simp add: le_fun_def)
 
 
 section \<open>The precision comparison: k=2 keeps \<open>g\<close>'s two activations separated where k=1 merges them\<close>

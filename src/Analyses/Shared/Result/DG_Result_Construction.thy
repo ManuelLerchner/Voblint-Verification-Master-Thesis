@@ -30,19 +30,19 @@ text \<open>
   \<open>[code]\<close> equation with an explicit \<open>let\<close>.
 
   What a point publishes is read off its local unknown together with the solved
-  global at \<open>Inr gk\<close>: \<open>rc\<close> recombines the two halves into the state the point
-  describes. An analysis that keeps every variable in the local half passes a
+  global environment, each name read at its key \<open>Inr (gk n)\<close>: \<open>rc\<close> recombines
+  the local half with that environment into the state the point describes. An analysis that keeps every variable in the local half passes a
   recombination that ignores the global.
 \<close>
 
 definition dg_result_for ::
-    "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s lifted \<Rightarrow> 'g \<Rightarrow> 's lifted) \<Rightarrow> 'k
+    "('s \<Rightarrow> 'v) \<Rightarrow> ('s \<Rightarrow> bool) \<Rightarrow> ('s lifted \<Rightarrow> ('n \<Rightarrow> 'g) \<Rightarrow> 's lifted) \<Rightarrow> ('n \<Rightarrow> 'k)
      \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 'g) dg_state)
      \<Rightarrow> ('c, 'v) solved_table" where
   "dg_result_for rd emp rc gk sol =
      Solved_Table (fst sol)
        (\<lambda>v ctx. map_lift rd (canonicalize_lift emp
-          (rc (dg_local (snd sol (Inl (v, ctx)))) (dg_global (snd sol (Inr gk))))))"
+          (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol)))))"
 
 lemma covered_keys_dg_result_for [simp]:
   "covered_keys (dg_result_for rd emp rc gk sol) = fst sol"
@@ -57,7 +57,7 @@ lemma lookup_table_dg_result_for [simp]:
   "lookup_table (dg_result_for rd emp rc gk sol) v ctx
      = (if (v, ctx) \<in> fst sol
         then map_lift rd (canonicalize_lift emp
-               (rc (dg_local (snd sol (Inl (v, ctx)))) (dg_global (snd sol (Inr gk)))))
+               (rc (dg_local (snd sol (Inl (v, ctx)))) (genv gk (snd sol))))
         else Bot)"
   unfolding dg_result_for_def lookup_table_def by simp
 

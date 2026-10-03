@@ -133,7 +133,8 @@ lemma sign_nest_gamma_eq: "sign_nest_gamma = sign_nest_domain.gamma_exec"
   by (intro ext)
     (simp add: sign_nest_gamma_def sign_nest_domain.gamma_exec_def)
 
-interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st sign_nest_gamma sign_nest_gs
+interpretation sign_nest_dg_sound: analysis_contract sign_nest_S_st
+    "\<lambda>d e. sign_nest_gamma d (e ())" sign_nest_gs
   unfolding sign_nest_gamma_eq sign_nest_S_st_def
   by (rule sign_nest_domain.analysis_contract_st[OF sign_tf.is_sound_nonrelational_transfer])
 
@@ -149,7 +150,7 @@ definition sign_nest_1_eqs ::
   "sign_nest_1_eqs =
      routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Global) (cs_route 1)
        (\<lambda>ctx' src a. dg_spec_edge_program sign_nest_S_st a src (\<lambda>_. Global))
-       (routed_call_program sign_nest_S_st Global Seed (static_resolve sign_nest_cfg)
+       (routed_call_program sign_nest_S_st (\<lambda>_. Global) Seed (static_resolve sign_nest_cfg)
           (\<lambda>d. d = Bot))
        (routed_entry_seed_programs Seed)
        sign_nest_cfg Bot (Lifted cinit_sign_st) Bot"
@@ -383,6 +384,7 @@ theorem sign_nest_1_activation_collect_sound:
            (sign_ctx_sg_1 (Inl (v, ctx)))"
   by (rule sign_nest_1_cs.routed.activation_collect_dg_sound[unfolded sign_nest_cfg_compile,
             OF entry_covered_1 sign_nest_cinit_le_cinit_sign_st])
+     (simp add: le_fun_def)
 
 section \<open>What the 1-call-string context actually computes\<close>
 

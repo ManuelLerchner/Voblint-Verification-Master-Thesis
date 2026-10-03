@@ -83,7 +83,7 @@ proof -
     show "sound_check_query sign_less sign_eq gamma_state aval_sign"
       by (rule sign_check_domain)
   qed
-qed (simp_all add: special_sign_eq_transfer fun_eq_iff top_sign_def)
+qed (simp add: top_sign_def, intro ext, simp add: special_sign_eq_transfer)
 
 text \<open>
   No fact is renamed here. The transfer functions get Sign-prefixed names above

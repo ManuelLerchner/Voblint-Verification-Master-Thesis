@@ -177,12 +177,12 @@ proof -
   next
     case (2 d d' g g') then show ?case by (rule stock.gammaDG_mono)
   next
-    case (3 a \<tau> src gk)
+    case (3 a \<tau> src key)
     show ?case using stock.step_sound by (simp add: dg_spec_edge_program_def)
   next
-    case (4 s dc \<tau> gk t de ci)
+    case (4 s dc key \<tau> t de ci)
     show ?case using stock.combine_sound[where ci = ci and dc = dc and de = de
-          and \<tau> = \<tau> and gk = gk, OF 4(1) 4(2)]
+          and \<tau> = \<tau> and key = key, OF 4(1) 4(2)]
       by (simp add: dg_spec_combine_transfer_def)
   qed
 qed
@@ -200,7 +200,7 @@ definition ov_eqs ::
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
        (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+       (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
           (static_resolve ov_cfg) (\<lambda>d. d = Bot))
        (routed_entry_seed_programs Activation_Seed)
        ov_cfg Bot (Lifted cinit_sign_st) Bot"
@@ -230,7 +230,7 @@ definition ov_alt_answer :: "nat \<Rightarrow> sign default_st lifted" where
      (let caller = dg_local (snd ov_sol (Inl (Statement 3, [])));
           alts = ov_enter ov_gs ov_ep (call_info_of ov_ca (STR ''p'')) caller
       in dg_local (traverse_program
-           (routed_call_alternative_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
+           (routed_call_alternative_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ()))
               Activation_Seed (exec_formals_route ov_gs) (\<lambda>d. d = Bot)
               [] ov_ca (Statement 3) (STR ''p'') (alts ! i))
            (snd ov_sol)))"
@@ -258,7 +258,7 @@ lemma ov_solution_snapshot_raw:
           let caller = dg_local (snd sol (Inl (Statement 3, [])));
               alts = ov_enter ov_gs ov_ep (call_info_of ov_ca (STR ''p'')) caller
           in dg_local (traverse_program
-            (routed_call_alternative_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
+            (routed_call_alternative_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ()))
               Activation_Seed (exec_formals_route ov_gs) (\<lambda>d. d = Bot)
               [] ov_ca (Statement 3) (STR ''p'') (alts ! i))
             (snd sol)))
@@ -474,7 +474,7 @@ definition ov_empty_eqs ::
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
        (exec_formals_route ov_gs)
        (\<lambda>ctx' src a. dg_spec_edge_program ov_empty_spec a src (\<lambda>_. Analysis_Global ()))
-       (routed_call_program ov_empty_spec (Analysis_Global ()) Activation_Seed
+       (routed_call_program ov_empty_spec (\<lambda>_. (Analysis_Global ())) Activation_Seed
           (static_resolve ov_cfg) (\<lambda>d. d = Bot))
        (routed_entry_seed_programs Activation_Seed)
        ov_cfg Bot (Lifted cinit_sign_st) Bot"
@@ -662,7 +662,7 @@ text \<open>
 
 abbreviation ov_R :: "sign list call_context_rel" where
   "ov_R \<equiv> routed_entry_context_rel (ov_enter ov_gs ov_ep) (\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>) (snd ov_sol)
-            (Analysis_Global ()) (exec_formals_route ov_gs)"
+            (\<lambda>_::unit. Analysis_Global ()) (exec_formals_route ov_gs)"
 
 text \<open>An abbreviation is transparent to unification, but \<open>meson\<close> needs an explicit
   rewrite rule to fold a fully applied \<open>routed_entry_context_rel\<close> instance back into
@@ -720,7 +720,7 @@ lemma dg_spec_combine_transfer_ov_spec [simp]:
   by (simp add: dg_spec_combine_transfer_def)
 
 lemma ov_cmb_side_free_at_analysis_global:
-  "sides_of_program (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+  "sides_of_program (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
       (static_resolve ov_cfg) (\<lambda>d. d = Bot) route ctx ca cc v) sigma (Inr (Analysis_Global ())) = bot"
 proof (rule routed_call_program_side_free_at_analysis_global[OF dg_spec_wf_ov_spec])
   show "\<And>ci d pairs pub. enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ci)
@@ -754,7 +754,7 @@ lemma ov_pp_routed:
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. Analysis_Global ())
         (exec_formals_route ov_gs)
         (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()))
-        (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+        (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
            (static_resolve ov_cfg) (\<lambda>d. d = Bot))
         (routed_entry_seed_programs Activation_Seed)
         ov_cfg Bot (Lifted cinit_sign_st) Bot)
@@ -764,13 +764,13 @@ proof (rule part_post_solution_routed_node_rhs_buffered
       "\<lambda>ctx' src a.
         dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
           (\<lambda>_. Analysis_Global ())"
-       and cmb_c = "routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+       and cmb_c = "routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
                       (static_resolve ov_cfg) (\<lambda>d. d = Bot)"])
   show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs
            intra_predecessor_addr_list call_site_list (exec_formals_route ov_gs)
            (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
               (\<lambda>_. Analysis_Global ()))
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot))
            (routed_entry_seed_programs Activation_Seed) ov_cfg c' w). sp_wf p"
     by (rule routed_contribution_programs_wf)
@@ -781,7 +781,7 @@ next
            intra_predecessor_addr_list call_site_list (exec_formals_route ov_gs)
            (\<lambda>ctx' src a. dg_spec_edge_program (ov_spec ov_gs ov_ep) a src
               (\<lambda>_. Analysis_Global ()))
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot))
            (routed_entry_seed_programs Activation_Seed) ov_cfg c' w). sp_wf p"
     by (rule routed_contribution_programs_wf)
@@ -827,50 +827,50 @@ next
     by (rule refl)
 next
   show "\<And>c' ca cc ex \<tau>. dg_local (traverse_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)
          = dg_local (traverse_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)"
     by (rule refl)
 next
   show "\<And>c' ca cc ex \<tau>. dg_local (sides_of_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ()))) = bot"
-    by (simp add: ov_cmb_side_free_at_analysis_global bot_dg_state_def)
+    by (simp add: ov_cmb_side_free_at_analysis_global bot_dg_state_def del: unit_abs_eta_conv)
 next
   show "\<And>c' ca cc ex \<tau>. dg_global (traverse_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>)
          = dg_global (sides_of_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ())))"
     by (simp add: routed_call_program_global_free ov_cmb_side_free_at_analysis_global
-      bot_dg_state_def)
+      bot_dg_state_def del: unit_abs_eta_conv)
 next
   show "\<And>c' ca cc ex \<tau>. sides_of_program
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau>
            (Inr (Analysis_Global ())) = bot"
     by (rule ov_cmb_side_free_at_analysis_global)
 next
   show "\<And>c' ca cc ex \<tau> z. z \<noteq> Inr (Analysis_Global ()) \<Longrightarrow>
          sides_of_program
-             (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+             (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau> z
            = sides_of_program
-               (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ())
+               (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ()))
                  Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex) \<tau> z"
     by (rule refl)
 next
   show "\<And>c' ca cc ex \<tau>. dep_program \<tau>
-           (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+           (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex)
          = dep_program \<tau>
-             (routed_call_program (ov_spec ov_gs ov_ep) (Analysis_Global ()) Activation_Seed
+             (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
               (static_resolve ov_cfg) (\<lambda>d. d = Bot) (exec_formals_route ov_gs) c' ca cc ex)"
     by (rule refl)
 next
@@ -893,7 +893,7 @@ text \<open>The routed context locale, fully interpreted: every alternative's co
 
 interpretation ov_routed: routed_context
   "ov_spec ov_gs ov_ep" "(\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>)" ov_gs ov_cfg "Analysis_Global ()"
-  "exec_formals_route ov_gs" Bot "Lifted cinit_sign_st" Bot
+  "\<lambda>_. Analysis_Global ()" "exec_formals_route ov_gs" Bot "Lifted cinit_sign_st" Bot
   "snd ov_sol" "fst ov_sol" "(cfg_exit ov_cfg, [])"
   "solved_local_reader (fst ov_sol) (snd ov_sol)" Activation_Seed
   "static_resolve ov_cfg" "\<lambda>d. d = Bot"
@@ -901,7 +901,7 @@ interpretation ov_routed: routed_context
 proof (rule routed_context.intro
     [OF dg_context_activation.intro[OF analysis_contract_ov_spec[OF ov_exact]]],
   unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
+    SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
@@ -911,7 +911,8 @@ next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF ov_pp_routed])
 next
   case (SgCov v ctx)
-  thus ?case by (simp add: solved_local_reader_def gamma_lift_default_st_gamma_to_fun)
+  thus ?case by (simp add: solved_local_reader_def gamma_lift_default_st_gamma_to_fun
+      declared_global_def[abs_def])
 next
   case (SgUncov v ctx)
   thus ?case by (simp add: solved_local_reader_def)
@@ -926,6 +927,8 @@ next
     by blast
 next
   case (SeedUnknown p ctx) show ?case by simp
+next
+  case (SeedNeGlobal p ctx v) show ?case by simp
 next
   case IsBotBot show ?case by simp
 next
@@ -945,7 +948,7 @@ next
       and ecov: "call_enter ov_gs (CallEdge dst pars args) s
                    \<in> \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> entry\<rbrakk>"
       and req: "ctx' = exec_formals_route ov_gs u ctx entry (CallEdge dst pars args)"
-    using routed_entry_context_relE[OF Rc] by auto
+    using routed_entry_context_relE[OF Rc] by (auto simp: declared_global_def[abs_def])
   have Rr: "enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
               (snd ov_sol) (ov_enter ov_gs ov_ep ?ci ?d) bot"
     by (simp add: enter_runs_local_enter_transfer_mk_dg_man)
@@ -999,7 +1002,7 @@ proof -
   show ?thesis
     using routed_entry_context_relI[
             where alts = "ov_enter ov_gs ov_ep" and \<gamma>\<^sub>D\<^sub>G = "(\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>)"
-              and sigma = "snd ov_sol"
+              and sigma = "snd ov_sol" and global_of = "\<lambda>_::unit. Analysis_Global ()"
               and route = "exec_formals_route ov_gs" and u = "Statement 3" and ctx = "[]",
             OF mem
               ov_caller_store_covered
@@ -1027,7 +1030,7 @@ proof -
   show ?thesis
     using routed_entry_context_relI[
             where alts = "ov_enter ov_gs ov_ep" and \<gamma>\<^sub>D\<^sub>G = "(\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>)"
-              and sigma = "snd ov_sol"
+              and sigma = "snd ov_sol" and global_of = "\<lambda>_::unit. Analysis_Global ()"
               and route = "exec_formals_route ov_gs" and u = "Statement 3" and ctx = "[]",
             OF mem
               ov_cont2_covered

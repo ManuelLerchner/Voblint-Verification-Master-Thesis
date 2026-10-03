@@ -8,14 +8,15 @@ begin
 section \<open>Executable routed equations for a compiled program\<close>
 
 text \<open>
-  A routed configuration chooses a global key, a seed-key constructor, a
+  A routed configuration chooses the key a node buffers its own global part at,
+  the key each global name is read and published at, a seed-key constructor, a
   routing function, a D/G specification, an initial local state and an initial
   global state. The remaining equation-system wiring is fixed: predecessor
   enumeration, edge execution, static call resolution, seed publication, and
   bottom initialization of every other unknown.
 
   A context-insensitive analysis is this constructor at the unit context:
-  \<open>Analysis_Global ()\<close> as the global key, \<open>Activation_Seed\<close> as the seed
+  \<open>Analysis_Global ()\<close> as the only global key, \<open>Activation_Seed\<close> as the seed
   constructor and \<open>route_unit\<close> as the routing function. There is no second
   unit-context generator.
 
@@ -31,20 +32,21 @@ text \<open>
 
 definition compiled_routed_eqs_for ::
     "'K
+      \<Rightarrow> ('N \<Rightarrow> 'K)
       \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'K)
       \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'C)
-      \<Rightarrow> (pp \<times> 'C, 'K, unit,
+      \<Rightarrow> (pp \<times> 'C, 'K, 'N,
            'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
       \<Rightarrow> cfg
       \<Rightarrow> 'D
       \<Rightarrow> 'G
       \<Rightarrow> (pp \<times> 'C, 'K, ('D, 'G) dg_state) eqsT"
 where
-  "compiled_routed_eqs_for global seed route S g initial initial_global =
+  "compiled_routed_eqs_for global global_of seed route S g initial initial_global =
      routed_node_rhs_buffered intra_predecessor_addr_list call_site_list
        (\<lambda>_. global) route
-       (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
-       (routed_call_program S global seed (static_resolve g) (\<lambda>d. d = bot))
+       (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
+       (routed_call_program S global_of seed (static_resolve g) (\<lambda>d. d = bot))
        (routed_entry_seed_programs seed)
        g bot initial initial_global"
 
@@ -127,14 +129,14 @@ text \<open>
 \<close>
 
 lemma compiled_routed_eqs_for_code [code]:
-  "compiled_routed_eqs_for global seed route S g initial initial_global =
+  "compiled_routed_eqs_for global global_of seed route S g initial initial_global =
      (let preds = intra_predecessor_index g; targets = call_target_index g
       in routed_node_rhs_buffered
            (\<lambda>_ v ctx. map (\<lambda>(u, a). (Inl (u, ctx), a)) (group_lookup preds v))
            (\<lambda>_ v. remdups (map (\<lambda>(c, ca, p). (c, ca)) (group_lookup targets v)))
            (\<lambda>_. global) route
-           (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. global))
-           (routed_call_program S global seed
+           (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
+           (routed_call_program S global_of seed
               (\<lambda>v cc ca d. map (\<lambda>(c, a, p). p)
                  (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (group_lookup targets v)))
               (\<lambda>d. d = bot))

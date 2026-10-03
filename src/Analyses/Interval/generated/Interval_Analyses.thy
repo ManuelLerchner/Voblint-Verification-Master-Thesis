@@ -35,7 +35,7 @@ subsection \<open>At the unit context\<close>
 
 global_interpretation interval_rule: dg_analysis_exec
     "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    "Analysis_Global ()" Activation_Seed "\<lambda>_. route_unit" "()"
+    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
@@ -52,13 +52,15 @@ next
   case 3 show ?case by (rule td_certified_solver)
 next
   case (4 \<G>) show ?case by (rule interval_cinit_gamma)
+next
+  case (5 n) show ?case by simp
 qed
 
 subsection \<open>At the entry-state context\<close>
 
 global_interpretation interval_es_rule: dg_analysis_exec
     "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    "Analysis_Global ()" Activation_Seed exec_formals_route "[]"
+    "Analysis_Global ()" Analysis_Global Activation_Seed exec_formals_route "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, ivl list) global_unknown)
        TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
@@ -76,13 +78,16 @@ next
   case 3 show ?case by (rule td_certified_solver)
 next
   case (4 \<G>) show ?case by (rule interval_cinit_gamma)
+next
+  case (5 n) show ?case by simp
 qed
 
 subsection \<open>At the call-string context\<close>
 
 global_interpretation interval_cs_rule: dg_analysis_exec
     "generic_tf_st_for ivl_ops" "generic_enter_st_for ivl_ops" cinit_ivl_st
-    Call_String_Context.Global Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    Call_String_Context.Global "\<lambda>_. Call_String_Context.Global"
+    Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
        TYPE((ivl default_st lifted, ivl default_st lifted) dg_state) r"
@@ -99,6 +104,8 @@ next
   case 3 show ?case by (rule td_certified_solver)
 next
   case (4 \<G>) show ?case by (rule interval_cinit_gamma)
+next
+  case (5 n) show ?case by simp
 qed
 
 end

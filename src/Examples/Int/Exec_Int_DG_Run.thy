@@ -73,7 +73,7 @@ definition dgExI_never_eqs ::
     "pp * unit => (pp * unit, (unit, unit) global_unknown,
        (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+  "dgExI_never_eqs = compiled_routed_eqs_for (Analysis_Global ()) (\<lambda>_. Analysis_Global ()) Activation_Seed route_unit
      (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (generic_tf_st_for (int_dom_ops Refine_Never) int_ex_gs) (generic_enter_st_for (int_dom_ops Refine_Never) int_ex_gs))
@@ -88,7 +88,7 @@ definition dgExI_once_eqs ::
     "pp * unit => (pp * unit, (unit, unit) global_unknown,
        (int_dom default_st lifted, int_dom default_st lifted) dg_state) strategy_tree"
 where
-  "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+  "dgExI_once_eqs = compiled_routed_eqs_for (Analysis_Global ()) (\<lambda>_. Analysis_Global ()) Activation_Seed route_unit
      (exec_dg_spec int_ex_gs
        (default_st_is_bot_for (declared_global_vars int_ex_prog))
        (generic_tf_st_for (int_dom_ops Refine_Once) int_ex_gs) (generic_enter_st_for (int_dom_ops Refine_Once) int_ex_gs))

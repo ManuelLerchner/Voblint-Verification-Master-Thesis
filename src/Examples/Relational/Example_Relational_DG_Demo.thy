@@ -75,7 +75,7 @@ definition demo_ivl_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (ivl default_st, ivl default_st) dg_state) strategy_tree"
     where
   "demo_ivl_eqs =
-     compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+     compiled_routed_eqs_for (Analysis_Global ()) (\<lambda>_. Analysis_Global ()) Activation_Seed route_unit
        (ownership_split_dg_spec_st_for demo_gs (generic_tf_st_for ivl_ops demo_gs) (generic_enter_st_for ivl_ops demo_gs))
        demo_cfg (initial_default_st ivl_top ivl_top)
        (restrict_global_default_st (initial_default_st ivl_top ivl_top))"
@@ -98,7 +98,7 @@ text \<open>\<open>rel_order_spec\<close> is already both the sound \<^emph>\<op
 
 definition demo_rel_eqs ::
   "pp \<times> unit \<Rightarrow> (pp \<times> unit, (unit, unit) global_unknown, (relc, relc) dg_state) strategy_tree" where
-  "demo_rel_eqs = compiled_routed_eqs_for (Analysis_Global ()) Activation_Seed route_unit
+  "demo_rel_eqs = compiled_routed_eqs_for (Analysis_Global ()) (\<lambda>_. Analysis_Global ()) Activation_Seed route_unit
      rel_order_spec demo_cfg \<top> \<top>"
 
 definition demo_rel_sol ::

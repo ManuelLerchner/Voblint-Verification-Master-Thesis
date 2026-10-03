@@ -300,7 +300,7 @@ qed
 
 theorem analysis_contract_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "analysis_contract spec_st gamma_exec \<G>"
+  shows "analysis_contract spec_st (\<lambda>d e. gamma_exec d (e ())) \<G>"
   unfolding exec_dg_spec_def gamma_exec_def[abs_def]
   by (rule dg_spec_of_contract[OF exec_local_spec_sound[OF tf_sound]])
 

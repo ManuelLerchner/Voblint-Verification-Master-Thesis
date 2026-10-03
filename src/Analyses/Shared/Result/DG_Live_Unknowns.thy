@@ -50,19 +50,19 @@ qed
 
 lemma dep_program_routed_call_program:
   assumes wfS: "dg_spec_wf S"
-  shows "dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route ctx ca cc v)
+  shows "dep_program \<tau> (routed_call_program S global_of seed resolve is_bot route ctx ca cc v)
      = insert (Inl (cc, ctx))
          (\<Union>q\<in>set (resolve v cc ca (dg_local (\<tau> (Inl (cc, ctx))))).
-            dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot ctx ca cc
+            dep_program \<tau> (routed_callee_call_program S global_of seed route is_bot ctx ca cc
                         (dg_local (\<tau> (Inl (cc, ctx)))) q))"
   by (simp add: routed_call_program_def sp_compile_bind sp_wf_observes
       dep_program_side_rhs_fold_dg_char[OF sp_wf_routed_callee_call_programs[OF wfS]])
 
 lemma routed_call_program_mem:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-  shows "routed_call_program S analysis_global seed resolve is_bot route cx ca u k
+  shows "routed_call_program S global_of seed resolve is_bot route cx ca u k
            \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                    (routed_call_program S analysis_global seed resolve is_bot) extra g cx k)"
+                    (routed_call_program S global_of seed resolve is_bot) extra g cx k)"
 proof -
   have "(u, ca) \<in> set (call_site_list g k)" using e fin by auto
   then show ?thesis by (rule routed_contribution_programs_combineI)
@@ -72,45 +72,45 @@ lemma dep_L_routed_node_rhs_call_site:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S global_of seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-            (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+            (routed_call_program S global_of seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   have "Inl (u, cx)
-          \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
+          \<in> dep_program \<tau> (routed_call_program S global_of seed resolve is_bot route cx ca u k)"
     by (simp add: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S global_of seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
 lemma dep_L_routed_node_rhs_callee_result:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
     and deps: "enter_deps (enter\<^sup># S (call_info_of ca q))
-                 (mk_dg_man (dg_local (\<tau> (Inl (u, cx)))) (\<lambda>_. analysis_global)) \<tau> pairs D"
+                 (mk_dg_man (dg_local (\<tau> (Inl (u, cx)))) global_of) \<tau> pairs D"
     and mem: "(c, ent) \<in> set pairs"
     and res: "q \<in> set (resolve k u ca (dg_local (\<tau> (Inl (u, cx)))))"
     and nb: "\<not> is_bot ent"
     and wfS: "dg_spec_wf S"
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
-                     (routed_call_program S analysis_global seed resolve is_bot) extra g cx w). sp_wf q"
+                     (routed_call_program S global_of seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(FunctionResult q, route u cx ent ca)
            \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list analysis_global_at route it
-                (routed_call_program S analysis_global seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+                (routed_call_program S global_of seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
 proof -
   let ?d = "dg_local (\<tau> (Inl (u, cx)))"
-  have callee: "dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)
+  have callee: "dep_program \<tau> (routed_callee_call_program S global_of seed route is_bot cx ca u ?d q)
       = D \<union> dep_program \<tau> (side_rhs_fold_dg bot
-          (map (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q) pairs))"
+          (map (routed_call_alternative_program S global_of seed route is_bot cx ca u q) pairs))"
     unfolding routed_callee_call_program_def sp_compile_bind
     by (rule enter_depsD[OF deps, simplified])
   have "Inl (FunctionResult q, route u cx ent ca)
-          \<in> dep_program \<tau> (routed_callee_call_program S analysis_global seed route is_bot cx ca u ?d q)"
+          \<in> dep_program \<tau> (routed_callee_call_program S global_of seed route is_bot cx ca u ?d q)"
   proof -
     have "Inl (FunctionResult q, route u cx ent ca)
-            \<in> dep_program \<tau> (routed_call_alternative_program S analysis_global seed route is_bot cx ca u q
+            \<in> dep_program \<tau> (routed_call_alternative_program S global_of seed route is_bot cx ca u q
                            (c, ent))"
       using nb by (simp add: routed_call_alternative_program_def Let_def)
     then show ?thesis
@@ -119,12 +119,12 @@ proof -
       using mem by auto
   qed
   then have "Inl (FunctionResult q, route u cx ent ca)
-               \<in> dep_program \<tau> (routed_call_program S analysis_global seed resolve is_bot route cx ca u k)"
+               \<in> dep_program \<tau> (routed_call_program S global_of seed resolve is_bot route cx ca u k)"
     using res by (auto simp: dep_program_routed_call_program[OF wfS])
   then show ?thesis
     unfolding dep\<^sub>L_def dep_def
     using routed_call_program_mem
-            [OF fin e, of S analysis_global seed resolve is_bot route cx pred_sel it extra]
+            [OF fin e, of S global_of seed resolve is_bot route cx pred_sel it extra]
     by (auto simp: dep_aux_routed_node_rhs[OF wf])
 qed
 
@@ -143,8 +143,8 @@ lemma analysis_contribs_wf [simp]:
   "\<forall>q \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list
        (route (declared_global p))
        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src
-          (\<lambda>_. analysis_global))
-       (routed_call_program (analysis_spec (declared_global p) p) analysis_global seed rsv
+          global_of)
+       (routed_call_program (analysis_spec (declared_global p) p) global_of seed rsv
           (\<lambda>d. d = Bot))
        (routed_entry_seed_programs seed) cfg cx w). sp_wf q"
   by (rule routed_contribution_programs_wf) auto
@@ -155,8 +155,8 @@ lemma sol_vars_dep_closed:
     and y: "y \<in> dep\<^sub>L
        (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. analysis_global)
           (route (declared_global p))
-          (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src (\<lambda>_. analysis_global))
-          (routed_call_program (analysis_spec (declared_global p) p) analysis_global seed
+          (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec (declared_global p) p) a src global_of)
+          (routed_call_program (analysis_spec (declared_global p) p) global_of seed
              (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
           (routed_entry_seed_programs seed)
           (prog_cfg p) Bot (Lifted init_st) (place_rg (declared_global p) (Lifted init_st)))
@@ -199,7 +199,7 @@ proof -
   have res: "q \<in> set (static_resolve (prog_cfg p) k u ca ?d)"
     using e prog_cfg_finite(2) by simp
   obtain D where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) (call_info_of ca q))
-      (mk_dg_man ?d (\<lambda>_. analysis_global)) (sol_env (declared_global p) p) [?alt] D"
+      (mk_dg_man ?d global_of) (sol_env (declared_global p) p) [?alt] D"
     using place_enter_deps unfolding sol_global_def by blast
   have mem: "(fst ?alt, snd ?alt) \<in> set [?alt]" by simp
   show ?thesis
@@ -327,7 +327,7 @@ context
 begin
 
 interpretation dg_base: analysis_contract "analysis_spec (declared_global p) p"
-    "\<lambda>d g. pgam p d g" "declared_global p"
+    "\<lambda>d e. pgam p d e" "declared_global p"
   by (rule place_contract)
 
 text \<open>
@@ -354,15 +354,16 @@ lemma routed_analysis_from_live_unknowns:
         \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)
         \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
                       (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
-  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d g. pgam p d g)
-     (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st)
+  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d e. pgam p d e)
+     (declared_global p) (prog_cfg p) analysis_global global_of
+     (route (declared_global p)) Bot (Lifted init_st)
      (place_rg (declared_global p) (Lifted init_st))
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) R
-     (\<lambda>d g. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g))
+     (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d e))
      gamma\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedUnknown IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd EmptyExact
-    ClProved ClRefuted VarsFin)
+    SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+    EmptyExact ClProved ClRefuted VarsFin)
   case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
@@ -389,7 +390,8 @@ next
 next
   case (SeedUnknown q ctx) show ?case by (rule seed_ne_analysis_global)
 next
-  case IsBotBot show ?case by simp
+  case (SeedNeGlobal q ctx v) show ?case by (rule seed_ne_global_of)
+next  case IsBotBot show ?case by simp
 next
   case (IsBotSound d g') then show ?case by simp
 next
@@ -399,7 +401,7 @@ next
   case (EnterCover u ctx dst pars args q cont s ctx')
   let ?ci = "call_info_of (CallEdge dst pars args) q"
   let ?caller = "dg_local (sol_env (declared_global p) p (Inl (u, ctx)))"
-  let ?g = "dg_global (sol_env (declared_global p) p (Inr analysis_global))"
+  let ?g = "genv global_of (sol_env (declared_global p) p)"
   let ?ent = "entered p ?ci ?caller"
   have sin: "s \<in> pgam p ?caller (gsol p)"
     using EnterCover(3) by (simp add: sol_global_def)
@@ -424,11 +426,11 @@ next
     by (rule ctx_vars_cover_live_enterD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)])
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
   obtain pub where runs: "enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
-      (mk_dg_man ?caller (\<lambda>_. analysis_global)) (sol_env (declared_global p) p)
+      (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] pub"
     using place_enter_runs by blast
   obtain deps where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
-      (mk_dg_man ?caller (\<lambda>_. analysis_global)) (sol_env (declared_global p) p)
+      (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] deps"
     using place_enter_deps by blast
   have ce': "entry_alt (declared_global p) p ?ci ?caller ?g = (c, e)"
@@ -471,7 +473,7 @@ lemma gamma_live_reader_le:
      \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof (cases "(v, ctx) \<in> live_unknowns p")
   case True
-  then have "(v, ctx) \<in> sol_vars (declared_global p) p" using live_unknowns_sub by blast
+  then have "(v, ctx) \<in> sol_vars (declared_global p) p" by (rule subsetD[OF live_unknowns_sub])
   with True show ?thesis by (simp add: reader_def)
 next
   case False then show ?thesis by (simp add: place_cmb_bot)
@@ -496,19 +498,25 @@ theorem activation_collect_sound_live_unknowns:
   shows "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d g. pgam p d g"
-      "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
+  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
+      "declared_global p" "prog_cfg p" analysis_global global_of
+      "route (declared_global p)" Bot
         "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" R
-      "\<lambda>d g. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g)"
+      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d e)"
       gamma\<^sub>V empty\<^sub>V classify
     by (rule routed_analysis_from_live_unknowns[where R = R, OF wf solves cover_R total_R])
+  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+    by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
+  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    using init_env_le_sol[OF solves live.pp_entry_s0g_bound[OF entry_cov]]
+    by (simp add: sol_global_def)
   have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
              (gsol p)"
-    unfolding sol_global_def
-    by (rule live.activation_collect_dg_sound
-          [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
+    using live.activation_collect_dg_sound
+        [OF entry_cov _ s0e_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+    by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
 
@@ -649,12 +657,13 @@ text \<open>
 
 lemma entry_state_routed_analysis_from_live_unknowns:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d g. pgam p d g)
-     (declared_global p) (prog_cfg p) analysis_global (route (declared_global p)) Bot (Lifted init_st)
+  shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d e. pgam p d e)
+     (declared_global p) (prog_cfg p) analysis_global global_of
+     (route (declared_global p)) Bot (Lifted init_st)
      (place_rg (declared_global p) (Lifted init_st))
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
-     (\<lambda>d g. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g))
+     (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d e))
      gamma\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
@@ -697,21 +706,27 @@ theorem entry_state_activation_collect_sound_of_terminates:
            root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d g. pgam p d g"
-      "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
+  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
+      "declared_global p" "prog_cfg p" analysis_global global_of
+      "route (declared_global p)" Bot
         "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "\<lambda>d g. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g)"
+      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d e)"
       gamma\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
+  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+    by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
+  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    using init_env_le_sol[OF solves live.pp_entry_s0g_bound[OF entry_cov]]
+    by (simp add: sol_global_def)
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
              (gsol p)"
-    unfolding sol_global_def
-    by (rule live.activation_collect_dg_sound
-          [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
+    using live.activation_collect_dg_sound
+        [OF entry_cov _ s0e_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+    by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
 
@@ -729,17 +744,23 @@ lemma entry_state_has_context_of_terminates:
   shows "\<exists>c. activation_context_rel (declared_global p) (admitted_contexts (declared_global p) p)
                root_ctx (prog_cfg p) t c"
 proof -
-  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d g. pgam p d g"
-      "declared_global p" "prog_cfg p" analysis_global "route (declared_global p)" Bot
+  interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
+      "declared_global p" "prog_cfg p" analysis_global global_of
+      "route (declared_global p)" Bot
         "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
-      "\<lambda>d g. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d g)"
+      "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb (declared_global p) d e)"
       gamma\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
-  from t show ?thesis
-    by (rule live.routed_valid_activation_trace_has_context
-          [OF ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]] cinit_le_init])
+  have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
+    by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
+  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+    using init_env_le_sol[OF solves live.pp_entry_s0g_bound[OF entry_cov]]
+    by (simp add: sol_global_def)
+  show ?thesis
+    using live.routed_valid_activation_trace_has_context[OF entry_cov _ s0e_le t] cinit_le_init
+    by simp
 qed
 
 theorem entry_state_node_collect_eq_Union_of_terminates:

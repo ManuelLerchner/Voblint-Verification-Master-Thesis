@@ -117,7 +117,7 @@ CONTEXTS = [
         "suffix": "",
         "title": "the unit context",
         "gk": lambda vt: "(unit, unit) global_unknown",
-        "keys": '"Analysis_Global ()" Activation_Seed "\\<lambda>_. route_unit" "()"',
+        "keys": '"Analysis_Global ()" Analysis_Global Activation_Seed "\\<lambda>_. route_unit" "()"',
         "route_abs": '"\\<lambda>_. route_unit"',
         "params": "r",
         "case_route": ["  case (1 \\<G> u ctx d ca) show ?case by simp"],
@@ -127,7 +127,7 @@ CONTEXTS = [
         "suffix": "_es",
         "title": "the entry-state context",
         "gk": lambda vt: f"(unit, {vt} list) global_unknown",
-        "keys": '"Analysis_Global ()" Activation_Seed exec_formals_route "[]"',
+        "keys": '"Analysis_Global ()" Analysis_Global Activation_Seed exec_formals_route "[]"',
         "route_abs": '"\\<lambda>_. formals_route_lifted_gen"',
         "params": "r",
         "case_route": [
@@ -141,8 +141,8 @@ CONTEXTS = [
         "title": "the call-string context",
         "gk": lambda vt: "call_string_gk",
         "keys": (
-            "Call_String_Context.Global Call_String_Context.Seed"
-            ' "\\<lambda>_. cs_route k" "[]"'
+            'Call_String_Context.Global "\\<lambda>_. Call_String_Context.Global"\n'
+            '    Call_String_Context.Seed "\\<lambda>_. cs_route k" "[]"'
         ),
         "route_abs": '"\\<lambda>_. cs_route k"',
         "params": "k r",
@@ -371,6 +371,8 @@ def registration(dom, ctx):
         f"  case 3 show ?case by (rule {CERTIFIED})",
         "next",
         f"  case (4 \\<G>) show ?case by (rule {r['init_gamma']})",
+        "next",
+        "  case (5 n) show ?case by simp",
         "qed",
     ]
     return out
