@@ -26,6 +26,7 @@ import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
 import { createSolveReplay, seedLabelOf } from "./replay.js";
+import { sharedGlobalValues, sharedWriteHint } from "./shared-hints.js";
 import { createTraceView } from "./trace-view.js";
 
 function query(selector) {
@@ -747,6 +748,7 @@ function buildAnalysisModel(result, doc) {
     seedByEntry: new Map(
       (result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed]),
     ),
+    sharedGlobals: sharedGlobalValues(result.shared),
     statements,
     statementByPoint: new Map(statements.map((s) => [s.point, s])),
     stale: false,
@@ -858,11 +860,13 @@ function valueHints(model) {
     const written = new Map();
     const relations = new Map();
 
-    const sample = (label, key, value, merge) => {
+    const sample = (label, key, value, merge, sharedName, title) => {
       const entry = written.get(label) ?? { samples: [], merge: false };
 
       entry.samples.push({ key, value });
       entry.merge ||= merge;
+      entry.sharedName = sharedName;
+      entry.title = title;
       written.set(label, entry);
     };
 
@@ -909,9 +913,29 @@ function valueHints(model) {
           const value = step.state ? sectionValue(step.state, step.writes) : undefined;
 
           if (value !== undefined) {
-            sample(writeLabel(step.writes), node.context_key, value, false);
+            sample(
+              writeLabel(step.writes),
+              node.context_key,
+              value,
+              false,
+              model.sharedGlobals.has(step.writes) ? step.writes : undefined,
+            );
           }
 
+          continue;
+        }
+
+        // A call continuation supplies no per-write transfer result.
+        if (model.sharedGlobals.has(step.writes)) {
+          const value = model.sharedGlobals.get(step.writes);
+          sample(
+            `final ${step.writes}: `,
+            "",
+            value ?? "unavailable",
+            false,
+            undefined,
+            "Final reported shared global value; no per-write contribution is available for this call continuation.",
+          );
           continue;
         }
 
@@ -945,7 +969,12 @@ function valueHints(model) {
     }
 
     for (const [name, entry] of written) {
-      hints.push({ pos: statement.to, text: formatHint(name, entry.samples), merge: entry.merge });
+      const text = formatHint(name, entry.samples);
+      const shared =
+        entry.sharedName === undefined
+          ? null
+          : sharedWriteHint(text, entry.sharedName, model.sharedGlobals);
+      hints.push({ pos: statement.to, text, merge: entry.merge, title: entry.title, ...shared });
     }
 
     /* A guard's effect belongs on the guard's own line, not after its block. */
@@ -1063,15 +1092,16 @@ class AnnotationBadge extends WidgetType {
 }
 
 class ValueHint extends WidgetType {
-  constructor(text, merge) {
+  constructor(text, merge, title) {
     super();
 
     this.text = text;
     this.merge = merge;
+    this.title = title;
   }
 
   eq(other) {
-    return other.text === this.text && other.merge === this.merge;
+    return other.text === this.text && other.merge === this.merge && other.title === this.title;
   }
 
   toDOM() {
@@ -1079,9 +1109,11 @@ class ValueHint extends WidgetType {
 
     hint.className = this.merge ? "cm-value-hint merge" : "cm-value-hint";
     hint.textContent = this.merge ? `⊔ ${this.text}` : this.text;
-    hint.title = this.merge
-      ? "Value where several paths meet: a join that includes more than this step."
-      : "Value after this statement.";
+    hint.title =
+      this.title ??
+      (this.merge
+        ? "Value where several paths meet: a join that includes more than this step."
+        : "Value after this statement.");
 
     return hint;
   }
@@ -1149,9 +1181,10 @@ function resultDecorations(doc, view, showHints) {
   if (showHints) {
     for (const hint of view.hints) {
       ranges.push(
-        Decoration.widget({ widget: new ValueHint(hint.text, hint.merge), side: 1 }).range(
-          hint.pos,
-        ),
+        Decoration.widget({
+          widget: new ValueHint(hint.text, hint.merge, hint.title),
+          side: 1,
+        }).range(hint.pos),
       );
     }
   }

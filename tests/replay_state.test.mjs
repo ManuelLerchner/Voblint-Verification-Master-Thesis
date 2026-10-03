@@ -4,8 +4,11 @@
 import assert from "node:assert/strict";
 import { test } from "node:test";
 
+import { sharedGlobalValues, sharedWriteHint } from "../pages/shared-hints.js";
+
 import {
   checkAgainstResult,
+  copyState,
   createCache,
   emptyState,
   localKey,
@@ -116,6 +119,75 @@ test("globals keep their contributions and the last change", () => {
   assert.equal(g.contributions.length, 1);
 });
 
+test("entry initialization draws the recorded side even after a bottom seed answer", () => {
+  const seed = { kind: "activation_seed", procedure: "main", context: unit };
+  const before = fold([
+    { event: "query_global", current: L("entry_main"), target: seed, value: "⊥" },
+  ]);
+  const after = reduce(before, {
+    event: "side", current: L("entry_main"), target: G, value: "interval: g=[0,0]",
+  });
+
+  assert.deepEqual(after.eventEdges, [
+    { from: key("entry_main"), to: "G:Global", kind: "side" },
+  ]);
+  assert.deepEqual(before.eventEdges, [
+    { from: "G:main|unit", to: key("entry_main"), kind: "read" },
+  ]);
+  assert.equal(after.globals.get("G:Global").value, "⊥");
+});
+
+test("destabilization fans out only to currently recorded readers", () => {
+  let state = fold([
+    { event: "add_infl", unknown: G, reader: L("old_reader") },
+    { event: "destabilize", unknown: G },
+    { event: "add_infl", unknown: G, reader: L("pp1") },
+    { event: "add_infl", unknown: G, reader: L("pp1") },
+    { event: "add_infl", unknown: G, reader: L("pp2") },
+    { event: "add_infl", unknown: L("pp1"), reader: L("exit_main") },
+    { event: "stable_add", unknown: L("pp1") },
+    { event: "update_global", unknown: G, old: "⊥", new: "interval: g=[0,0]" },
+  ]);
+
+  // An update alone must not invent a write or fan-out.
+  assert.deepEqual(state.eventEdges, []);
+  state = reduce(state, { event: "destabilize", unknown: G });
+  assert.deepEqual(state.eventEdges, [
+    { from: "G:Global", to: key("pp1"), kind: "destabilize" },
+    { from: "G:Global", to: key("pp2"), kind: "destabilize" },
+  ]);
+  assert.equal(state.infl.has("G:Global"), false);
+  assert.equal(state.stable.has(key("pp1")), true);
+
+  state = reduce(state, { event: "stable_remove", unknown: L("pp1") });
+  assert.deepEqual(state.eventEdges, []);
+  assert.equal(state.stable.has(key("pp1")), false);
+  state = reduce(state, { event: "destabilize", unknown: L("pp1") });
+  assert.deepEqual(state.eventEdges, [
+    { from: key("pp1"), to: key("exit_main"), kind: "destabilize" },
+  ]);
+  assert.deepEqual(reduce(state, { event: "destabilize", unknown: G }).eventEdges, []);
+});
+
+test("event arrows agree when seeking across snapshots and disappear on other events", () => {
+  const events = [
+    { event: "side", current: L("entry_main"), target: G, value: "0" },
+    { event: "add_infl", unknown: G, reader: L("pp1") },
+    { event: "add_infl", unknown: G, reader: L("pp2") },
+    { event: "destabilize", unknown: G },
+    { event: "stable_remove", unknown: L("pp1") },
+    { event: "destabilize", unknown: G },
+  ];
+  const cache = createCache(events, 2);
+
+  for (const n of [4, 0, 1, 6, 4, 5]) {
+    assert.deepEqual(cache.stateAt(n).eventEdges, fold(events.slice(0, n)).eventEdges);
+  }
+  const copy = copyState(cache.stateAt(4));
+  copy.eventEdges[0].to = "unrelated";
+  assert.equal(cache.stateAt(4).eventEdges[0].to, key("pp1"));
+});
+
 test("the snapshot cache agrees with a plain fold at every step", () => {
   const cache = createCache(stream, 4);
 
@@ -138,4 +210,25 @@ test("the replay matches the result it came with", () => {
       .length > 0,
     true,
   );
+});
+
+// Shared-global hints distinguish a write's reported effect from the shared result.
+
+test("shared write hints keep contribution and final value separate", () => {
+  const values = sharedGlobalValues({reachable: true, globals: ["g"],
+    lines: ["interval:", "  g=[42,42]", "  local=[9,9]"]});
+  assert.deepEqual([...values], [["g", "[42,42]"]]);
+  const hint = sharedWriteHint("g: [17,17]", "g", values);
+  assert.equal(hint.text, "⇢ g: [17,17] · final g: [42,42]");
+  assert.match(hint.title, /not an individual solver trace event/);
+});
+
+test("shared values retain analysis labels and unknown values", () => {
+  const values = sharedGlobalValues({reachable: true, globals: ["g", "h"],
+    lines: ["interval:", "  g=⊤", "sign:", "  g=+", "order:", "  h ≤ g"]});
+  assert.equal(values.get("g"), "interval ⊤ · sign +");
+  assert.equal(values.get("h"), undefined);
+  assert.equal(sharedWriteHint("h: 17", "h", values).text, "⇢ h: 17 · final h: unavailable");
+  assert.equal(sharedGlobalValues({reachable: false, globals: ["g"], lines: []}).get("g"), "⊥");
+  assert.equal(sharedGlobalValues(null).size, 0);
 });

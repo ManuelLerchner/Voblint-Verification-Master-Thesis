@@ -507,6 +507,7 @@ export function createSolveReplay(deps) {
       }
 
       drawInfluence(state);
+      drawEventEdges(state);
     });
 
     const current = finished ? null : replay.nodeOf.get(state.stack.at(-1));
@@ -543,6 +544,28 @@ export function createSolveReplay(deps) {
             classes: "r-infl",
           });
         }
+      }
+    }
+
+    cy.add(edges);
+  }
+
+  /* Transient arrows only for the event being replayed, never from final values or CFG guesses. */
+  function drawEventEdges(state) {
+    cy.remove("edge.r-event");
+    const nodeFor = (key) => (key.startsWith("L:") ? replay.nodeOf.get(key) : replay.entryOf(key));
+    const edges = [];
+
+    for (const [index, { from, to, kind }] of state.eventEdges.entries()) {
+      const source = nodeFor(from);
+      const target = nodeFor(to);
+
+      if (source && target) {
+        edges.push({
+          group: "edges",
+          data: { id: `event:${index}`, source, target, label: kind },
+          classes: "r-event r-active",
+        });
       }
     }
 
@@ -974,7 +997,7 @@ function replayStyle(cssToken) {
       style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 3 },
     },
     {
-      selector: "edge.r-infl",
+      selector: "edge.r-infl, edge.r-event",
       style: {
         width: 1.5,
         "line-style": "dotted",
