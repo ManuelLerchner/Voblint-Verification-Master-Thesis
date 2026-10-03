@@ -3052,8 +3052,9 @@ function followRoutesOnDrag(view) {
       rerouteEdge(edge);
     });
 
-    /* An edge without a laid-out route also gets its own ports and bends. */
-    moved.connectedEdges().not(".routed").forEach(rerouteEdge);
+    /* An edge without a laid-out route also gets its own ports and bends; a global's
+       dependency stays a curve. */
+    moved.connectedEdges().not(".routed, .global_read, .global_write").forEach(rerouteEdge);
   });
 }
 
@@ -3066,6 +3067,41 @@ function endpointData(ports) {
     sourceEndpoint: `${ports.source.x}px ${ports.source.y}px`,
     targetEndpoint: `${ports.target.x}px ${ports.target.y}px`,
   };
+}
+
+/* Room a re-routed edge keeps between its nodes, and the least run a vertical route needs. */
+const GAP = 14;
+const MIN_RUN = 4;
+
+/*
+ * Which way an edge's ports send it: out of the source's bottom into the target's top,
+ * the reverse, or side to side. Ports on any other pair of sides fit none of the three.
+ */
+function routeMode(ports, { sw, sh, tw, th }) {
+  const side = (port, w, h) =>
+    Math.abs(port.y) >= h - 2
+      ? Math.sign(port.y) > 0
+        ? "bottom"
+        : "top"
+      : Math.abs(port.x) >= w - 2
+        ? "flank"
+        : null;
+  const from = side(ports.source, sw, sh);
+  const to = side(ports.target, tw, th);
+
+  if (from === "bottom" && to === "top") {
+    return "down";
+  }
+
+  if (from === "top" && to === "bottom") {
+    return "up";
+  }
+
+  return from === "flank" &&
+    to === "flank" &&
+    Math.sign(ports.source.x) !== Math.sign(ports.target.x)
+    ? "side"
+    : null;
 }
 
 /* Where along a side of [width] the [index]th of [count] edges attaches, from the center. */
@@ -3104,47 +3140,47 @@ function rerouteEdge(edge) {
   const sh = sourceNode.height() / 2;
   const tw = targetNode.width() / 2;
   const th = targetNode.height() / 2;
-  const GAP = 14;
-  const out = portIndex(edge, "source");
-  const into = portIndex(edge, "target");
   const laid = edge.scratch("ports");
 
-  /* The sides the edge leaves and enters by, from where the two nodes now are. */
-  let leave;
-  let enter;
+  /*
+   * The edge keeps the sides, and the exact ports, it has until the nodes' places rule
+   * them out. A vertical route needs room between the nodes; a side route gives way to
+   * a vertical one only once there is clearly room again, so an edge does not flip
+   * between the two while a node is dragged across the boundary.
+   */
+  const gapDown = target.y - th - (source.y + sh);
+  const gapUp = source.y - sh - (target.y + th);
+  const right = target.x >= source.x ? 1 : -1;
+  const kept = laid && routeMode(laid, { sw, sh, tw, th });
+  let mode = kept;
 
-  if (target.y - th - (source.y + sh) >= 2 * GAP) {
-    leave = { x: 0, y: 1 };
-    enter = { x: 0, y: -1 };
-  } else if (source.y - sh - (target.y + th) >= 2 * GAP) {
-    leave = { x: 0, y: -1 };
-    enter = { x: 0, y: 1 };
-  } else {
-    const right = target.x >= source.x ? 1 : -1;
-
-    leave = { x: right, y: 0 };
-    enter = { x: -right, y: 0 };
+  if (
+    (mode === "down" && gapDown < MIN_RUN) ||
+    (mode === "up" && gapUp < MIN_RUN) ||
+    (mode === "side" &&
+      (Math.sign(laid.source.x) !== right || gapDown > 2 * GAP || gapUp > 2 * GAP))
+  ) {
+    mode = null;
   }
 
-  /* A port on that side: where the layout put it if it used the same side, else spread. */
-  const port = (side, node, half, laidPort, { index, count }) => {
-    const sameSide =
-      laidPort &&
-      Math.sign(side.x ? laidPort.x : laidPort.y) === (side.x || side.y) &&
-      (side.x ? Math.abs(laidPort.x) >= half.w - 1 : Math.abs(laidPort.x) < half.w - 1);
+  const keep = mode !== null;
 
-    if (sameSide) {
-      return laidPort;
-    }
+  mode ??= gapDown > GAP ? "down" : gapUp > GAP ? "up" : "side";
 
-    return side.x
+  const leave =
+    mode === "down" ? { x: 0, y: 1 } : mode === "up" ? { x: 0, y: -1 } : { x: right, y: 0 };
+  const enter = { x: -leave.x, y: -leave.y };
+  const spread = (side, node, half, { index, count }) =>
+    side.x
       ? { x: side.x * half.w, y: portOffset(index, count, node.height()) }
       : { x: portOffset(index, count, node.width()), y: side.y * half.h };
-  };
-  const ports = {
-    source: port(leave, sourceNode, { w: sw, h: sh }, laid?.source, out),
-    target: port(enter, targetNode, { w: tw, h: th }, laid?.target, into),
-  };
+  /* New ports are ordered by where the other ends are now, once, when the sides change. */
+  const ports = keep
+    ? laid
+    : {
+        source: spread(leave, sourceNode, { w: sw, h: sh }, portIndex(edge, "source")),
+        target: spread(enter, targetNode, { w: tw, h: th }, portIndex(edge, "target")),
+      };
   const start = { x: source.x + ports.source.x, y: source.y + ports.source.y };
   const end = { x: target.x + ports.target.x, y: target.y + ports.target.y };
   let points;
@@ -3228,18 +3264,21 @@ function applyGraphLayout(view, { centers, routes, labels, ends = new Map() }) {
             source: centers.get(edge.data("source")),
             target: centers.get(edge.data("target")),
           });
+      }
 
-        /* Anchor the edge where ELK attached it, so a later re-route keeps those ports. */
-        const end = ends.get(id);
+      /*
+       * Anchor the edge where ELK attached it, straight ones included, so the first
+       * drag starts from the ports the reader sees and a re-route keeps them.
+       */
+      const end = ends.get(id);
 
-        if (end) {
-          const ports = {
-            source: offsetFrom(end.start, centers.get(edge.data("source"))),
-            target: offsetFrom(end.end, centers.get(edge.data("target"))),
-          };
+      if (end) {
+        const ports = {
+          source: offsetFrom(end.start, centers.get(edge.data("source"))),
+          target: offsetFrom(end.end, centers.get(edge.data("target"))),
+        };
 
-          edge.addClass("anchored").data(endpointData(ports)).scratch("ports", ports);
-        }
+        edge.addClass("anchored").data(endpointData(ports)).scratch("ports", ports);
       }
     }
   });
