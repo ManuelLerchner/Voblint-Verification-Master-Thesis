@@ -485,7 +485,7 @@ text \<open>
 
   \<^bold>\<open>8. Tooling.\<close> Theories outside the core proof spine.
     \<^item> \<^bold>\<open>Named global unknowns\<close> --- a keyed global family is the routed D/G
-      context's own \<open>analysis_global_at\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge
+      context's own \<open>buffer_key_at\<close>, and \<^const>\<open>dep_aux\<close> pins what a per-edge
       program reads: @{thm dep_dg_edge_program_at} names the source address and the
       one global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml

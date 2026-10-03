@@ -102,7 +102,7 @@ let proc_of = function
   | C.FunctionEntry p | C.FunctionResult p -> p
   | n -> node_name n
 
-type global = Analysis_global | Seed of C.cfg_node * Obj.t
+type global = Buffer | Program_global of string | Seed of C.cfg_node * Obj.t
 
 (* Everything that reads a run's unknowns and values, from its printers. *)
 type names = {
@@ -144,10 +144,13 @@ let source_point (text, positions) =
     | _ -> node_name n
 
 let names_of ?source
-    (C.Trace_Printers (ctx, seed_of, local, shared, entry) : printers) =
+    (C.Trace_Printers (ctx, key_of, local, shared, entry) : printers) =
   let read f o = try view_text (f o) with _ -> "?" in
   let global g =
-    match seed_of g with None -> Analysis_global | Some (n, c) -> Seed (n, c)
+    match key_of g with
+    | C.Trace_Buffer -> Buffer
+    | C.Trace_Global x -> Program_global x
+    | C.Trace_Seed (n, c) -> Seed (n, c)
   in
   {
     point = Option.fold ~none:node_name ~some:source_point source;
@@ -157,7 +160,8 @@ let names_of ?source
     global_value =
       (fun g d ->
         match global g with
-        | Analysis_global -> read shared d
+        | Buffer -> read (shared None) d
+        | Program_global x -> read (shared (Some x)) d
         | Seed _ -> read local d);
     entry_value = read entry;
   }
@@ -167,7 +171,8 @@ let local_text nm ((n, c) : x) =
 
 let global_text nm g =
   match nm.global g with
-  | Analysis_global -> "Global"
+  | Buffer -> "Buffer"
+  | Program_global x -> "Global " ^ x
   | Seed (n, c) ->
       Printf.sprintf "Seed(%s, %s)" (proc_of n) (context_label (nm.context c))
 
@@ -260,7 +265,9 @@ let json_local nm ((n, c) : x) =
 
 let json_global nm g =
   match nm.global g with
-  | Analysis_global -> {|{"kind":"analysis_global"}|}
+  | Buffer -> {|{"kind":"buffer"}|}
+  | Program_global x ->
+      Printf.sprintf {|{"kind":"program_global","name":%s}|} (json_string x)
   | Seed (n, c) ->
       Printf.sprintf {|{"kind":"activation_seed","procedure":%s,"context":%s}|}
         (json_string (proc_of n))

@@ -129,7 +129,7 @@ export_code
   Field_Store Field_Whole
   route_point route_context route_callee route_targets
   check_point check_label check_exp check_verdict
-  global_unknown global_state Global_Shared Global_Seed
+  global_unknown global_state Global_Named Global_Seed
   diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
   arithmetic_operation arithmetic_divisor
   Check_Proved Check_Refuted Check_Unknown
@@ -165,7 +165,7 @@ export_code
   Ev_Wpoint_Remove Ev_Wpoint_Clear Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global
     Ev_Destabilize
   Ev_Stable_Remove
-  Ev_Route Trace_Printers string_of_abstract_value Inl Inr
+  Ev_Route Trace_Printers Trace_Buffer Trace_Global Trace_Seed string_of_abstract_value Inl Inr
 
   in OCaml module_name Generated file_prefix "Voblint_Generated"
 

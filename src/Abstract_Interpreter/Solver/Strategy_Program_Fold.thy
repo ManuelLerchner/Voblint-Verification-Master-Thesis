@@ -85,10 +85,17 @@ lemma foldr_sup_member_le [intro]:
   using assms by (induction xs) (auto intro: le_supI2)
 
 lemma foldr_sup_mono:
-  fixes f g :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
+  fixes f g :: "'a \<Rightarrow> 'b::{bot, semilattice_sup}"
   assumes "\<And>x. x \<in> set xs \<Longrightarrow> f x \<le> g x"
   shows "foldr (\<lambda>t a. f t \<squnion> a) xs bot \<le> foldr (\<lambda>t a. g t \<squnion> a) xs bot"
-  using assms by (auto intro: order_trans[OF _ foldr_sup_member_le])
+  using assms
+proof (induction xs)
+  case Nil then show ?case by simp
+next
+  case (Cons x xs)
+  show ?case
+    by (simp only: foldr.simps o_apply, rule sup_mono) (use Cons in auto)
+qed
 
 lemma foldr_sup_set_cong:
   fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"

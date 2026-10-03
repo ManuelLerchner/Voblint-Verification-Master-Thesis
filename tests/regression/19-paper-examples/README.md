@@ -17,10 +17,10 @@ the claim it is measured against.
 
 | Paper | Claim | Here |
 | --- | --- | --- |
-| Fig. 1, Example 1 | A flow-insensitive summary of `g` collects 1, -17 and 42, which suffices to falsify the error condition | `precision/01-fig1_sequential_globals.vimp`; flow-insensitively, `precision/07-example1_shared_global_summary.vimp` |
+| Fig. 1, Example 1 | A flow-insensitive summary of `g` collects 1, -17 and 42, which suffices to falsify the error condition | `precision/01-fig1_sequential_globals.vimp`; flow-insensitively, `precision/07-fig1_flow_insensitive_globals.vimp` |
 | Example 2 | Widening the accumulated value drives `g` to `[-inf,+inf]`, losing `g <= 42` | `known-imprecision/02-whole_global_widening.vimp` |
-| Example 3 | A flow-insensitive analysis infers `h = [0,+inf]`, unable to tell one execution of line 4 from many | `precision/01-fig1_sequential_globals.vimp` |
-| Example 5 | Fig. 1's side-effecting constraint system: one unknown per program point, plus `[g]` and `[h]` | `precision/01-fig1_sequential_globals.vimp`'s `EXPECT-GRAPH` block |
+| Example 3 | A flow-insensitive analysis infers `h = [0,+inf]`, unable to tell one execution of line 4 from many | flow-sensitively exact in `precision/01-fig1_sequential_globals.vimp`; reproduced in `precision/07-fig1_flow_insensitive_globals.vimp` |
+| Example 5 | Fig. 1's side-effecting constraint system: one unknown per program point, plus `[g]` and `[h]` | `precision/01-fig1_sequential_globals.vimp`'s `EXPECT-GRAPH` block; the `[g]` and `[h]` unknowns in `precision/07-fig1_flow_insensitive_globals.vimp` |
 | Sect. 3 close | Contexts, by callstring or by tabulation, considerably increase precision | `known-imprecision/04-context_insensitive_calls.vimp` (the baseline they improve on) |
 | Example 7 | 1-callstring: the context is the call site, `context(u,f,args) _ _ = u` | `precision/05-example7_one_callstring.vimp` |
 | Example 8 | Partial tabulation: the context is the entered state, `C = D[start_f]` | `precision/06-example8_partial_tabulation.vimp` |

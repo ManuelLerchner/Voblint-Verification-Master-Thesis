@@ -43,7 +43,7 @@ lemma solved_local_reader_global [simp]:
 text \<open>
   The reader returns only the local half. The global half enters through the
   concretization the locale below pairs with it, which publishes each local
-  value together with the solved global at \<open>Inr analysis_global\<close>. Under that
+  value together with the solved global at \<open>Inr buffer_key\<close>. Under that
   pairing the two coverage obligations \<^locale>\<open>dg_context_activation\<close> asks for
   hold by construction, given \<open>gammaDG_rd\<close> and that the publication map takes
   \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the context policy,
@@ -57,7 +57,7 @@ text \<open>
   domain enters through \<open>S\<close> and \<open>\<gamma>\<^sub>D\<^sub>G\<close>, the context policy through \<open>route\<close>,
   \<open>R\<close> and \<open>seed\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
   fixed reader is \<^const>\<open>solved_local_reader\<close>, and its concretization reads
-  the solved global at \<open>Inr analysis_global\<close> as the second argument of \<open>rd\<close>,
+  the solved global at \<open>Inr buffer_key\<close> as the second argument of \<open>rd\<close>,
   so the two coverage obligations are the one-line lemmas above.
 
   An instance is then a single \<^theory_text>\<open>interpretation\<close>, and the theorems below are
@@ -66,7 +66,7 @@ text \<open>
 \<close>
 
 locale routed_analysis =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global global_of route bot0 s0d s0g sigma vars x0
+  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed is_bot
     "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
     R rd \<gamma>\<^sub>V empty\<^sub>V classify
@@ -74,7 +74,7 @@ locale routed_analysis =
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g analysis_global and global_of :: "'n \<Rightarrow> 'k"
+    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"

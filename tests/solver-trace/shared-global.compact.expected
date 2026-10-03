@@ -4,131 +4,24 @@ Voblint trace
   globals:  warrow
   program:  tests/solver-trace/shared-global.vimp
 
+FLUSH    Global total += interval: total=[0,0]  (changed)
          (entry_main, root) reads Seed(main, root) = ⊥
-FLUSH    Global += interval: total=[0,0]  (changed)
-FLUSH    Global += interval: total=[0,0]  (changed)
-FLUSH    Global += interval: total=[0,0]  (no change)
-FLUSH    Global += interval: total=[0,0]  (changed)
-FLUSH    Global += interval: total=[0,0]  (no change)
-FLUSH    Global += interval: total=[0,0]  (no change)
+FLUSH    Global total += interval: total=[0,0]  (no change)
 ROUTE    call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-FLUSH    Global += interval: total=[0,0]  (changed)
 FLUSH    Seed(inc, [[3,3]]) += interval: #ret=⊤, n=[3,3]  (changed)
 QUERY    (pp4 "inc(4);" L11, root) asks (exit_inc, [[3,3]])
          (entry_inc, [[3,3]]) reads Seed(inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,0]  (changed)
-FLUSH    Global += interval: total=[0,0]  (no change)
-FLUSH    Global += interval: total=[3,3]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
+FLUSH    Global total += interval: total=[3,3]  (changed)
+FLUSH    Global total += interval: total=[3,+∞]  (no change)
          (exit_inc, [[3,3]]) returns interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-RETURN   (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,0]  (no change)
-ROUTE    call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[3,3]]) += interval: #ret=⊤, n=[3,3]  (no change)
-QUERY    (pp4 "inc(4);" L11, root) asks (exit_inc, [[3,3]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[3,3]]) returns interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
 RETURN   (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
 ROUTE    call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-FLUSH    Global += interval: total=[0,+∞]  (changed)
 FLUSH    Seed(inc, [[4,4]]) += interval: #ret=⊤, n=[4,4]  (changed)
 QUERY    (pp5 "__voblint_check(0 < total);" L12, root) asks (exit_inc, [[4,4]])
          (entry_inc, [[4,4]]) reads Seed(inc, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[4,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[4,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[4,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
+FLUSH    Global total += interval: total=[4,+∞]  (no change)
          (exit_inc, [[4,4]]) returns interval: #ret=⊤, n=[4,4]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
 RETURN   (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,0]  (no change)
-ROUTE    call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[3,3]]) += interval: #ret=⊤, n=[3,3]  (no change)
-QUERY    (pp4 "inc(4);" L11, root) asks (exit_inc, [[3,3]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[3,3]]) returns interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-ROUTE    call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[4,4]]) += interval: #ret=⊤, n=[4,4]  (no change)
-QUERY    (pp5 "__voblint_check(0 < total);" L12, root) asks (exit_inc, [[4,4]])
-         (exit_inc, [[4,4]]) returns interval: #ret=⊤, n=[4,4]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,0]  (no change)
-ROUTE    call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[3,3]]) += interval: #ret=⊤, n=[3,3]  (no change)
-QUERY    (pp4 "inc(4);" L11, root) asks (exit_inc, [[3,3]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[3,3]]) returns interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-ROUTE    call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[4,4]]) += interval: #ret=⊤, n=[4,4]  (no change)
-QUERY    (pp5 "__voblint_check(0 < total);" L12, root) asks (exit_inc, [[4,4]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[4,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[4,4]]) returns interval: #ret=⊤, n=[4,4]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (changed)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,0]  (no change)
-ROUTE    call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[3,3]]) += interval: #ret=⊤, n=[3,3]  (no change)
-QUERY    (pp4 "inc(4);" L11, root) asks (exit_inc, [[3,3]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[3,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[3,3]]) returns interval: #ret=⊤, n=[3,3]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-ROUTE    call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Seed(inc, [[4,4]]) += interval: #ret=⊤, n=[4,4]  (no change)
-QUERY    (pp5 "__voblint_check(0 < total);" L12, root) asks (exit_inc, [[4,4]])
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[4,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-         (exit_inc, [[4,4]]) returns interval: #ret=⊤, n=[4,4]
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-RETURN   (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-FLUSH    Global += interval: total=[0,+∞]  (no change)
-FLUSH    Global += interval: total=[0,+∞]  (no change)
 
 CHECK    0 < total at pp5: UNKNOWN
 

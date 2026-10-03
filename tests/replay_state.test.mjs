@@ -17,7 +17,7 @@ import {
 
 const unit = { kind: "unit" };
 const L = (node) => ({ kind: "local", node, context: unit });
-const G = { kind: "analysis_global" };
+const G = { kind: "program_global", name: "g" };
 const key = (node) => localKey(L(node));
 
 // exit queries a loop head that queries itself (a widening point), then the loop head
@@ -107,12 +107,12 @@ test("counters", () => {
   assert.equal(counters.evaluations.get(key("pp1")), 2);
   assert.equal(counters.evaluations.get(key("exit_main")), 1);
   assert.equal(counters.updates.get(key("pp1")), 1);
-  assert.equal(counters.updates.get("G:Global"), 1);
+  assert.equal(counters.updates.get("G:@g"), 1);
   assert.equal(counters.destabilizations.get(key("pp1")), 1);
 });
 
 test("globals keep their contributions and the last change", () => {
-  const g = fold(stream).globals.get("G:Global");
+  const g = fold(stream).globals.get("G:@g");
 
   assert.equal(g.value, "1");
   assert.deepEqual(g.last, { old: "⊥", new: "1" });
@@ -129,12 +129,12 @@ test("entry initialization draws the recorded side even after a bottom seed answ
   });
 
   assert.deepEqual(after.eventEdges, [
-    { from: key("entry_main"), to: "G:Global", kind: "side" },
+    { from: key("entry_main"), to: "G:@g", kind: "side" },
   ]);
   assert.deepEqual(before.eventEdges, [
     { from: "G:main|unit", to: key("entry_main"), kind: "read" },
   ]);
-  assert.equal(after.globals.get("G:Global").value, "⊥");
+  assert.equal(after.globals.get("G:@g").value, "⊥");
 });
 
 test("destabilization fans out only to currently recorded readers", () => {
@@ -153,10 +153,10 @@ test("destabilization fans out only to currently recorded readers", () => {
   assert.deepEqual(state.eventEdges, []);
   state = reduce(state, { event: "destabilize", unknown: G });
   assert.deepEqual(state.eventEdges, [
-    { from: "G:Global", to: key("pp1"), kind: "destabilize" },
-    { from: "G:Global", to: key("pp2"), kind: "destabilize" },
+    { from: "G:@g", to: key("pp1"), kind: "destabilize" },
+    { from: "G:@g", to: key("pp2"), kind: "destabilize" },
   ]);
-  assert.equal(state.infl.has("G:Global"), false);
+  assert.equal(state.infl.has("G:@g"), false);
   assert.equal(state.stable.has(key("pp1")), true);
 
   state = reduce(state, { event: "stable_remove", unknown: L("pp1") });
@@ -215,20 +215,22 @@ test("the replay matches the result it came with", () => {
 // Shared-global hints distinguish a write's reported effect from the shared result.
 
 test("shared write hints keep contribution and final value separate", () => {
-  const values = sharedGlobalValues({reachable: true, globals: ["g"],
-    lines: ["interval:", "  g=[42,42]", "  local=[9,9]"]});
+  const values = sharedGlobalValues({globals: ["g"], unknowns: [
+    {name: "g", reachable: true, lines: ["interval:", "  g=[42,42]"]}]});
   assert.deepEqual([...values], [["g", "[42,42]"]]);
   const hint = sharedWriteHint("g: [17,17]", "g", values);
   assert.equal(hint.text, "⇢ g: [17,17] · final g: [42,42]");
   assert.match(hint.title, /not an individual solver trace event/);
 });
 
-test("shared values retain analysis labels and unknown values", () => {
-  const values = sharedGlobalValues({reachable: true, globals: ["g", "h"],
-    lines: ["interval:", "  g=⊤", "sign:", "  g=+", "order:", "  h ≤ g"]});
+test("shared values read each global from its own unknown", () => {
+  const values = sharedGlobalValues({globals: ["g", "h", "k"], unknowns: [
+    {name: "g", reachable: true, lines: ["interval:", "  g=⊤", "sign:", "  g=+"]},
+    {name: "h", reachable: true, lines: ["order:", "  h ≤ g"]},
+    {name: "k", reachable: false, lines: []}]});
   assert.equal(values.get("g"), "interval ⊤ · sign +");
   assert.equal(values.get("h"), undefined);
+  assert.equal(values.get("k"), "⊥");
   assert.equal(sharedWriteHint("h: 17", "h", values).text, "⇢ h: 17 · final h: unavailable");
-  assert.equal(sharedGlobalValues({reachable: false, globals: ["g"], lines: []}).get("g"), "⊥");
   assert.equal(sharedGlobalValues(null).size, 0);
 });

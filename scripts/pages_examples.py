@@ -71,11 +71,11 @@ SHOWCASE = [
         "separately recovers the precise bounds.",
     ),
     (
-        "19-paper-examples/precision/07-example1_shared_global_summary.vimp",
-        "A flow-insensitive global",
-        "The FM 2026 paper's Example 1 with program globals flow-insensitive: g's "
-        "writes join to [-17,42], enough for g < 43 but not g == 42. Set Program "
-        "globals to Flow-sensitive and both are proved.",
+        "19-paper-examples/precision/07-fig1_flow_insensitive_globals.vimp",
+        "Flow-insensitive globals",
+        "The FM 2026 paper's Fig. 1 with g and h each at its own unknown: g's "
+        "writes join to [-17,42], enough for g < 43 but not g == 42, and h widens "
+        "to [0,+inf]. Set Program globals to Flow-sensitive and every check is proved.",
     ),
     (
         "16-composite-domain/precision/09-remainder_reduction.vimp",

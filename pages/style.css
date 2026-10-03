@@ -2981,9 +2981,10 @@ a:focus-visible {
 }
 
 .example-card {
-  display: grid;
-  align-content: start;
+  display: flex;
+  flex-direction: column;
   gap: 6px;
+  min-width: 0;
   padding: 10px 12px;
   color: var(--text);
   text-align: left;
@@ -3016,7 +3017,9 @@ a:focus-visible {
   font-size: 0.92rem;
 }
 
+/* Pinned to the card's bottom, so paths line up across a row of cards. */
 .example-path {
+  margin-top: auto;
   overflow: hidden;
   color: var(--text-faint);
   font-size: 0.68rem;

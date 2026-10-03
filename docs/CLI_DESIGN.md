@@ -75,9 +75,9 @@ voblint --help
   chosen rule solved, contextual graphs included.
 - `--program-globals flow-sensitive|flow-insensitive` selects where a program's declared globals
   live (default `flow-sensitive`). `flow-sensitive` keeps them in every point's own state, so
-  they are tracked like locals. `flow-insensitive` keeps them in the
-  one analysis-wide global unknown, a flow-insensitive value every point reads
-  and to which every lifted transfer publishes the global half of its result. That holds for the analyses whose state
+  they are tracked like locals. `flow-insensitive` keeps each declared global at its
+  own global unknown, a flow-insensitive value read only by the points whose edges
+  mention it and published only by the edges that may assign it. That holds for the analyses whose state
   splits by variable; the order analysis relates variables across the split,
   so its whole state stays in each point's own state. Both placements are covered by
   `run_voblint_source_sound`. Under `flow-insensitive`, a warrowed global can keep

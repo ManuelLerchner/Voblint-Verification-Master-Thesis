@@ -1,0 +1,33 @@
+// PARAM: --analysis interval --globals warrow --program-globals flow-insensitive
+// Seidl, Vojdani, Erhard, Schwarz, "Mixed Flow-Sensitive Static Analysis:
+// Engineering Modularity" (FM 2026), Fig. 1 with both globals analyzed
+// flow-insensitively -- the paper's Examples 1, 3 and 5 in one run. The
+// program is 01-fig1_sequential_globals.vimp, which answers every check
+// exactly because there g and h travel flow-sensitively.
+//
+//   Example 5: the constraint system has one unknown per program point plus
+//   one per global, [g] and [h]. Each point reads only the globals its
+//   statement mentions and side-effects only the global it assigns.
+//   Example 1: [g] collects 1, -17 and 42 and joins them to [-17,42]. The
+//   summary still proves g < 43, which rules out the error, but not g == 42.
+//   Example 3: [h] collects 0 and h + 1. A flow-insensitive analysis cannot
+//   tell how often f's first line runs, so h widens to [0,+inf]: 0 <= h
+//   holds, h == 1 is lost.
+//
+// With --globals join or per-origin, [h] keeps growing by one and the solve
+// does not terminate; a widening rule is needed (cases 02 and 03).
+global g, h;
+fun f() {
+  h = h + 1;
+  g = 42;
+}
+fun main() {
+  g = 1;
+  h = 0;
+  g = -17;
+  f();
+  __voblint_check(g == 42);   // UNKNOWN
+  __voblint_check(h == 1);    // UNKNOWN
+  __voblint_check(g < 43);    // PROVED
+  __voblint_check(0 <= h);    // PROVED
+}

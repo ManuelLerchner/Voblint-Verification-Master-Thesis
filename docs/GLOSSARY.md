@@ -145,8 +145,8 @@ different objects, not naming duplication:
 | `sg` | The reader an analysis publishes over the same unknowns (`sg :: pp \<times> 'c + 'k => 'M`), read as stores through `gammaM`. |
 
 The locale assumption `sg_cov` ties them: at a covered key,
-`gammaM (sg (Inl (v, c)))` is `gammaDG` of `sigma`'s local slot against its one
-shared global slot `Inr analysis_global`, and `sg_uncov` makes it empty off the solved keys.
+`gammaM (sg (Inl (v, c)))` is `gammaDG` of `sigma`'s local slot against the global
+environment `genv global_of sigma`, and `sg_uncov` makes it empty off the solved keys.
 Unifying the two names would make a proof step that needs both
 indistinguishable.
 

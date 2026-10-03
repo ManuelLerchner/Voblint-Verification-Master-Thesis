@@ -1,31 +1,38 @@
-/* The shared report uses analysis headers followed by indented name=value lines.
- * Keep only declared names and preserve the values printed by the analyzer. */
-export function sharedGlobalValues(shared) {
-  const values = new Map((shared?.globals ?? []).map((name) => [name, []]));
+/* Each shared global's unknown reports analysis headers followed by indented
+ * name=value lines. Keep that global's own binding as the analyzer printed it. */
+function unknownValue({ name, reachable, lines }) {
+  if (!reachable) {
+    return "⊥";
+  }
+
+  const samples = [];
   let analysis = null;
 
-  for (const line of shared?.reachable ? shared.lines : []) {
+  for (const line of lines) {
     if (!line.startsWith(" ") && line.endsWith(":")) {
       analysis = line.slice(0, -1);
       continue;
     }
     const binding = /^ {2}([^=]+)=(.*)$/.exec(line);
-    if (analysis && binding && values.has(binding[1])) {
-      values.get(binding[1]).push([analysis, binding[2]]);
+    if (analysis && binding && binding[1] === name) {
+      samples.push([analysis, binding[2]]);
     }
   }
-  return new Map(
-    [...values].map(([name, samples]) => [
-      name,
-      !shared.reachable
-        ? "⊥"
-        : samples.length === 0
-          ? undefined
-          : samples.length === 1
-            ? samples[0][1]
-            : samples.map(([label, value]) => `${label} ${value}`).join(" · "),
-    ]),
-  );
+
+  return samples.length === 0
+    ? undefined
+    : samples.length === 1
+      ? samples[0][1]
+      : samples.map(([label, value]) => `${label} ${value}`).join(" · ");
+}
+
+export function sharedGlobalValues(shared) {
+  const values = new Map((shared?.globals ?? []).map((name) => [name, undefined]));
+
+  for (const unknown of shared?.unknowns ?? []) {
+    values.set(unknown.name, unknownValue(unknown));
+  }
+  return values;
 }
 
 export function sharedWriteHint(contribution, name, values) {

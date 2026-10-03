@@ -476,43 +476,4 @@ next
         combine_collect_sound)
 qed
 
-text \<open>
-  The same at any carrier, for any sound component run as a specification. What
-  the carrier owes is that recombining is monotone and that a state recombines
-  from its own two halves: then the published global half and the answered local
-  half together describe at least what the wrapped transfer computed, and the
-  component's own soundness is the rest. A component's queries are answered from
-  its own channel on the merged state, so the lifter's empty query handler is
-  never consulted.
-\<close>
-
-theorem ownership_split_lift_gen_contract:
-  fixes cmb :: "'d::bounded_semilattice_sup_bot \<Rightarrow> 'd \<Rightarrow> 'd"
-  assumes sound: "sound_local_spec \<G> gm c"
-    and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
-    and split: "\<And>x. cmb (rl x) (rg x) = x"
-  shows "analysis_contract (ownership_split_lift_gen cmb rg rl (dg_spec_of c))
-           (\<lambda>d e. gm (cmb d (e ()))) \<G>"
-proof (rule analysis_contract_unitI, goal_cases wf mono step comb)
-  case wf
-  show ?case by (rule dg_spec_wf_ownership_split_lift_gen) simp
-next
-  case (mono d d' g g')
-  then show ?case
-    using sound cmb_mono unfolding sound_local_spec_def by metis
-next
-  case (step a \<tau> src gk)
-  show ?case
-    unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_lift_gen
-      dg_spec_step_dg_spec_of
-    by (simp add: split closed_step_sound[OF sound])
-next
-  case (comb s \<tau> src_cc gk t src_ex ci)
-  then show ?case
-    by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc split
-        closed_combine_sound[OF sound])
-qed
-
-
 end

@@ -31,12 +31,12 @@ Voblint trace
             %%% iter: iterate called from query
             %%% iter: begin iterate (entry_main, root), called: true, stable: false, wpoint: false
             %%% eq: eq (entry_main, root)
+            %%% side: side to Global total from (entry_main, root); value: interval: total=[0,0]
+            %%% destab: destabilize Global total
             %%% solver_query: entering query for Seed(main, root) from (entry_main, root)
               %%% infl: add_infl Seed(main, root) (entry_main, root)
               %%% answer: exiting query for Seed(main, root) from (entry_main, root)
 answer: ⊥
-            %%% side: side to Global from (entry_main, root); value: interval: total=[0,0]
-            %%% destab: destabilize Global
             %%% rhs: (entry_main, root) = interval: #ret=⊤, n=⊤
             %%% sol: Var: (entry_main, root) (wp: false)
 Old value: ⊥
@@ -48,28 +48,6 @@ New value: interval: #ret=⊤, n=⊤
             %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
             %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
 answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,0]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,0]
-          %%% update: side to Global from (pp2 "total = 0;" L9, root) new: interval: total=[0,0]
-          %%% destab: destabilize Global
-          %%% destab: stable remove (pp2 "total = 0;" L9, root)
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% iter: iterate still unstable (pp2 "total = 0;" L9, root)
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,0]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,0]
           %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
           %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
 Old value: ⊥
@@ -81,48 +59,7 @@ New value: interval: #ret=⊤, n=⊤
           %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
           %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
 answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,0]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
-        %%% update: side to Global from (pp3 "inc(3);" L10, root) new: interval: total=[0,0]
-        %%% destab: destabilize Global
-        %%% destab: stable remove (pp3 "inc(3);" L10, root)
-        %%% destab: stable remove (pp2 "total = 0;" L9, root)
-        %%% destab: destabilize (pp2 "total = 0;" L9, root)
-        %%% destab: stable remove (pp3 "inc(3);" L10, root)
-        %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
-        %%% iter: iterate still unstable (pp3 "inc(3);" L10, root)
-        %%% eq: eq (pp3 "inc(3);" L10, root)
-        %%% solver_query: entering query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "total = 0;" L9, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,0]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,0]
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-          %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
-answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,0]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
+        %%% side: side to Global total from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
         %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
         %%% sol: Var: (pp3 "inc(3);" L10, root) (wp: false)
 Old value: ⊥
@@ -134,22 +71,7 @@ New value: interval: #ret=⊤, n=⊤
         %%% infl: add_infl (pp3 "inc(3);" L10, root) (pp4 "inc(4);" L11, root)
         %%% answer: exiting query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root)
 answer: interval: #ret=⊤, n=⊤
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,0]
       %%% route: call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,0]
-      %%% update: side to Global from (pp4 "inc(4);" L11, root) new: interval: total=[0,0]
-      %%% destab: destabilize Global
-      %%% destab: stable remove (pp4 "inc(4);" L11, root)
-      %%% destab: stable remove (pp3 "inc(3);" L10, root)
-      %%% destab: destabilize (pp3 "inc(3);" L10, root)
-      %%% destab: stable remove (pp4 "inc(4);" L11, root)
-      %%% destab: stable remove (pp2 "total = 0;" L9, root)
-      %%% destab: destabilize (pp2 "total = 0;" L9, root)
-      %%% destab: stable remove (pp3 "inc(3);" L10, root)
-      %%% destab: destabilize (pp3 "inc(3);" L10, root)
       %%% side: side to Seed(inc, [[3,3]]) from (pp4 "inc(4);" L11, root); value: interval: #ret=⊤, n=[3,3]
       %%% destab: destabilize Seed(inc, [[3,3]])
       %%% solver_query: entering query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root); stable false; called false
@@ -183,28 +105,6 @@ New value: interval: #ret=⊤, n=[3,3]
               %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
               %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
 answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,0]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,0]
-            %%% update: side to Global from (pp0 "total = total + n;" L6, [[3,3]]) new: interval: total=[0,0]
-            %%% destab: destabilize Global
-            %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% iter: iterate still unstable (pp0 "total = total + n;" L6, [[3,3]])
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,0]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,0]
             %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
             %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
 Old value: ⊥
@@ -216,102 +116,28 @@ New value: interval: #ret=⊤, n=[3,3]
             %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
             %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
 answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
+          %%% solver_query: entering query for Global total from (pp1, [[3,3]])
+            %%% infl: add_infl Global total (pp1, [[3,3]])
+            %%% answer: exiting query for Global total from (pp1, [[3,3]])
 answer: interval: total=[0,0]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,3]
-          %%% update: side to Global from (pp1, [[3,3]]) new: interval: total=[0,+∞]
-          %%% destab: destabilize Global
-          %%% destab: stable remove (pp1, [[3,3]])
-          %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-          %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
+          %%% side: side to Global total from (pp1, [[3,3]]); value: interval: total=[3,3]
+          %%% update: side to Global total from (pp1, [[3,3]]) new: interval: total=[0,+∞]
+          %%% destab: destabilize Global total
           %%% destab: stable remove (pp1, [[3,3]])
           %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
           %%% iter: iterate still unstable (pp1, [[3,3]])
           %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
+          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable true; called false
             %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% update: side to Global from (pp0 "total = total + n;" L6, [[3,3]]) new: interval: total=[0,+∞]
-            %%% destab: destabilize Global
-            %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% iter: iterate still unstable (pp0 "total = total + n;" L6, [[3,3]])
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
+            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: true, wpoint: false
             %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
             %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
 answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
+          %%% solver_query: entering query for Global total from (pp1, [[3,3]])
+            %%% infl: add_infl Global total (pp1, [[3,3]])
+            %%% answer: exiting query for Global total from (pp1, [[3,3]])
 answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% update: side to Global from (pp1, [[3,3]]) new: interval: total=[0,+∞]
-          %%% destab: destabilize Global
-          %%% destab: stable remove (pp1, [[3,3]])
-          %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-          %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-          %%% destab: stable remove (pp1, [[3,3]])
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% iter: iterate still unstable (pp1, [[3,3]])
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
+          %%% side: side to Global total from (pp1, [[3,3]]); value: interval: total=[3,+∞]
           %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
           %%% sol: Var: (pp1, [[3,3]]) (wp: false)
 Old value: ⊥
@@ -323,69 +149,6 @@ New value: interval: #ret=⊤, n=[3,3]
           %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
           %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
 answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
-        %%% update: side to Global from (exit_inc, [[3,3]]) new: interval: total=[0,+∞]
-        %%% destab: destabilize Global
-        %%% destab: stable remove (exit_inc, [[3,3]])
-        %%% destab: stable remove (pp1, [[3,3]])
-        %%% destab: destabilize (pp1, [[3,3]])
-        %%% destab: stable remove (exit_inc, [[3,3]])
-        %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-        %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-        %%% destab: stable remove (pp1, [[3,3]])
-        %%% destab: destabilize (pp1, [[3,3]])
-        %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-        %%% iter: iterate still unstable (exit_inc, [[3,3]])
-        %%% eq: eq (exit_inc, [[3,3]])
-        %%% solver_query: entering query for (pp1, [[3,3]]) from (exit_inc, [[3,3]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp1, [[3,3]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% sol: Var: (pp1, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-          %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
-          %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
         %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
         %%% sol: Var: (exit_inc, [[3,3]]) (wp: false)
 Old value: ⊥
@@ -397,154 +160,6 @@ New value: interval: #ret=⊤, n=[3,3]
         %%% infl: add_infl (exit_inc, [[3,3]]) (pp4 "inc(4);" L11, root)
         %%% answer: exiting query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root)
 answer: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% update: side to Global from (pp4 "inc(4);" L11, root) new: interval: total=[0,+∞]
-      %%% destab: destabilize Global
-      %%% destab: stable remove (pp4 "inc(4);" L11, root)
-      %%% destab: stable remove (exit_inc, [[3,3]])
-      %%% destab: destabilize (exit_inc, [[3,3]])
-      %%% destab: stable remove (pp4 "inc(4);" L11, root)
-      %%% destab: stable remove (pp1, [[3,3]])
-      %%% destab: destabilize (pp1, [[3,3]])
-      %%% destab: stable remove (exit_inc, [[3,3]])
-      %%% destab: destabilize (exit_inc, [[3,3]])
-      %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-      %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-      %%% destab: stable remove (pp1, [[3,3]])
-      %%% destab: destabilize (pp1, [[3,3]])
-      %%% rhs: (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-      %%% iter: iterate still unstable (pp4 "inc(4);" L11, root)
-      %%% eq: eq (pp4 "inc(4);" L11, root)
-      %%% solver_query: entering query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3 "inc(3);" L10, root), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp3 "inc(3);" L10, root)
-        %%% solver_query: entering query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "total = 0;" L9, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,+∞]
-          %%% update: side to Global from (pp2 "total = 0;" L9, root) new: interval: total=[0,+∞]
-          %%% destab: destabilize Global
-          %%% destab: stable remove (pp2 "total = 0;" L9, root)
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% iter: iterate still unstable (pp2 "total = 0;" L9, root)
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,+∞]
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-          %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
-answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
-        %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
-        %%% sol: Var: (pp3 "inc(3);" L10, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-        %%% infl: add_infl (pp3 "inc(3);" L10, root) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=⊤
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% route: call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% side: side to Seed(inc, [[3,3]]) from (pp4 "inc(4);" L11, root); value: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (exit_inc, [[3,3]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (exit_inc, [[3,3]])
-        %%% solver_query: entering query for (pp1, [[3,3]]) from (exit_inc, [[3,3]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp1, [[3,3]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% sol: Var: (pp1, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-          %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
-          %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
-        %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-        %%% sol: Var: (exit_inc, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-        %%% infl: add_infl (exit_inc, [[3,3]]) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
       %%% rhs: (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
       %%% sol: Var: (pp4 "inc(4);" L11, root) (wp: false)
 Old value: ⊥
@@ -556,40 +171,7 @@ New value: interval: #ret=⊤, n=⊤
       %%% infl: add_infl (pp4 "inc(4);" L11, root) (pp5 "__voblint_check(0 < total);" L12, root)
       %%% answer: exiting query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root)
 answer: interval: #ret=⊤, n=⊤
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
     %%% route: call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% update: side to Global from (pp5 "__voblint_check(0 < total);" L12, root) new: interval: total=[0,+∞]
-    %%% destab: destabilize Global
-    %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% destab: stable remove (pp4 "inc(4);" L11, root)
-    %%% destab: destabilize (pp4 "inc(4);" L11, root)
-    %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% destab: stable remove (exit_inc, [[3,3]])
-    %%% destab: destabilize (exit_inc, [[3,3]])
-    %%% destab: stable remove (pp4 "inc(4);" L11, root)
-    %%% destab: destabilize (pp4 "inc(4);" L11, root)
-    %%% destab: stable remove (pp1, [[3,3]])
-    %%% destab: destabilize (pp1, [[3,3]])
-    %%% destab: stable remove (exit_inc, [[3,3]])
-    %%% destab: destabilize (exit_inc, [[3,3]])
-    %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-    %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-    %%% destab: stable remove (pp1, [[3,3]])
-    %%% destab: destabilize (pp1, [[3,3]])
-    %%% destab: stable remove (pp4 "inc(4);" L11, root)
-    %%% destab: destabilize (pp4 "inc(4);" L11, root)
-    %%% destab: stable remove (pp3 "inc(3);" L10, root)
-    %%% destab: destabilize (pp3 "inc(3);" L10, root)
-    %%% destab: stable remove (pp4 "inc(4);" L11, root)
-    %%% destab: destabilize (pp4 "inc(4);" L11, root)
-    %%% destab: stable remove (pp2 "total = 0;" L9, root)
-    %%% destab: destabilize (pp2 "total = 0;" L9, root)
-    %%% destab: stable remove (pp3 "inc(3);" L10, root)
-    %%% destab: destabilize (pp3 "inc(3);" L10, root)
     %%% side: side to Seed(inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: #ret=⊤, n=[4,4]
     %%% destab: destabilize Seed(inc, [[4,4]])
     %%% solver_query: entering query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
@@ -623,28 +205,6 @@ New value: interval: #ret=⊤, n=[4,4]
             %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
             %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
 answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
-          %%% update: side to Global from (pp0 "total = total + n;" L6, [[4,4]]) new: interval: total=[0,+∞]
-          %%% destab: destabilize Global
-          %%% destab: stable remove (pp0 "total = total + n;" L6, [[4,4]])
-          %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-          %%% iter: iterate still unstable (pp0 "total = total + n;" L6, [[4,4]])
-          %%% eq: eq (pp0 "total = total + n;" L6, [[4,4]])
-          %%% solver_query: entering query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]]); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_inc, [[4,4]]), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
           %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
           %%% sol: Var: (pp0 "total = total + n;" L6, [[4,4]]) (wp: false)
 Old value: ⊥
@@ -656,48 +216,11 @@ New value: interval: #ret=⊤, n=[4,4]
           %%% infl: add_infl (pp0 "total = total + n;" L6, [[4,4]]) (pp1, [[4,4]])
           %%% answer: exiting query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]])
 answer: interval: #ret=⊤, n=[4,4]
-        %%% solver_query: entering query for Global from (pp1, [[4,4]])
-          %%% infl: add_infl Global (pp1, [[4,4]])
-          %%% answer: exiting query for Global from (pp1, [[4,4]])
+        %%% solver_query: entering query for Global total from (pp1, [[4,4]])
+          %%% infl: add_infl Global total (pp1, [[4,4]])
+          %%% answer: exiting query for Global total from (pp1, [[4,4]])
 answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp1, [[4,4]]); value: interval: total=[4,+∞]
-        %%% update: side to Global from (pp1, [[4,4]]) new: interval: total=[0,+∞]
-        %%% destab: destabilize Global
-        %%% destab: stable remove (pp1, [[4,4]])
-        %%% destab: stable remove (pp0 "total = total + n;" L6, [[4,4]])
-        %%% destab: destabilize (pp0 "total = total + n;" L6, [[4,4]])
-        %%% destab: stable remove (pp1, [[4,4]])
-        %%% rhs: (pp1, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-        %%% iter: iterate still unstable (pp1, [[4,4]])
-        %%% eq: eq (pp1, [[4,4]])
-        %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp0 "total = total + n;" L6, [[4,4]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp0 "total = total + n;" L6, [[4,4]])
-          %%% solver_query: entering query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]]); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_inc, [[4,4]]), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
-          %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-          %%% sol: Var: (pp0 "total = total + n;" L6, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-          %%% infl: add_infl (pp0 "total = total + n;" L6, [[4,4]]) (pp1, [[4,4]])
-          %%% answer: exiting query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-        %%% solver_query: entering query for Global from (pp1, [[4,4]])
-          %%% infl: add_infl Global (pp1, [[4,4]])
-          %%% answer: exiting query for Global from (pp1, [[4,4]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp1, [[4,4]]); value: interval: total=[4,+∞]
+        %%% side: side to Global total from (pp1, [[4,4]]); value: interval: total=[4,+∞]
         %%% rhs: (pp1, [[4,4]]) = interval: #ret=⊤, n=[4,4]
         %%% sol: Var: (pp1, [[4,4]]) (wp: false)
 Old value: ⊥
@@ -709,69 +232,6 @@ New value: interval: #ret=⊤, n=[4,4]
         %%% infl: add_infl (pp1, [[4,4]]) (exit_inc, [[4,4]])
         %%% answer: exiting query for (pp1, [[4,4]]) from (exit_inc, [[4,4]])
 answer: interval: #ret=⊤, n=[4,4]
-      %%% solver_query: entering query for Global from (exit_inc, [[4,4]])
-        %%% infl: add_infl Global (exit_inc, [[4,4]])
-        %%% answer: exiting query for Global from (exit_inc, [[4,4]])
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (exit_inc, [[4,4]]); value: interval: total=[0,+∞]
-      %%% update: side to Global from (exit_inc, [[4,4]]) new: interval: total=[0,+∞]
-      %%% destab: destabilize Global
-      %%% destab: stable remove (exit_inc, [[4,4]])
-      %%% destab: stable remove (pp1, [[4,4]])
-      %%% destab: destabilize (pp1, [[4,4]])
-      %%% destab: stable remove (exit_inc, [[4,4]])
-      %%% destab: stable remove (pp0 "total = total + n;" L6, [[4,4]])
-      %%% destab: destabilize (pp0 "total = total + n;" L6, [[4,4]])
-      %%% destab: stable remove (pp1, [[4,4]])
-      %%% destab: destabilize (pp1, [[4,4]])
-      %%% rhs: (exit_inc, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-      %%% iter: iterate still unstable (exit_inc, [[4,4]])
-      %%% eq: eq (exit_inc, [[4,4]])
-      %%% solver_query: entering query for (pp1, [[4,4]]) from (exit_inc, [[4,4]]); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp1, [[4,4]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp1, [[4,4]])
-        %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp0 "total = total + n;" L6, [[4,4]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp0 "total = total + n;" L6, [[4,4]])
-          %%% solver_query: entering query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]]); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_inc, [[4,4]]), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
-          %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-          %%% sol: Var: (pp0 "total = total + n;" L6, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-          %%% infl: add_infl (pp0 "total = total + n;" L6, [[4,4]]) (pp1, [[4,4]])
-          %%% answer: exiting query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-        %%% solver_query: entering query for Global from (pp1, [[4,4]])
-          %%% infl: add_infl Global (pp1, [[4,4]])
-          %%% answer: exiting query for Global from (pp1, [[4,4]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp1, [[4,4]]); value: interval: total=[4,+∞]
-        %%% rhs: (pp1, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-        %%% sol: Var: (pp1, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-        %%% infl: add_infl (pp1, [[4,4]]) (exit_inc, [[4,4]])
-        %%% answer: exiting query for (pp1, [[4,4]]) from (exit_inc, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-      %%% solver_query: entering query for Global from (exit_inc, [[4,4]])
-        %%% infl: add_infl Global (exit_inc, [[4,4]])
-        %%% answer: exiting query for Global from (exit_inc, [[4,4]])
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (exit_inc, [[4,4]]); value: interval: total=[0,+∞]
       %%% rhs: (exit_inc, [[4,4]]) = interval: #ret=⊤, n=[4,4]
       %%% sol: Var: (exit_inc, [[4,4]]) (wp: false)
 Old value: ⊥
@@ -783,153 +243,6 @@ New value: interval: #ret=⊤, n=[4,4]
       %%% infl: add_infl (exit_inc, [[4,4]]) (pp5 "__voblint_check(0 < total);" L12, root)
       %%% answer: exiting query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root)
 answer: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% rhs: (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-    %%% iter: iterate still unstable (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% eq: eq (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% solver_query: entering query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (pp4 "inc(4);" L11, root), called: true, stable: false, wpoint: false
-      %%% eq: eq (pp4 "inc(4);" L11, root)
-      %%% solver_query: entering query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3 "inc(3);" L10, root), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp3 "inc(3);" L10, root)
-        %%% solver_query: entering query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "total = 0;" L9, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,+∞]
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-          %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
-answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
-        %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
-        %%% sol: Var: (pp3 "inc(3);" L10, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-        %%% infl: add_infl (pp3 "inc(3);" L10, root) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=⊤
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% route: call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% side: side to Seed(inc, [[3,3]]) from (pp4 "inc(4);" L11, root); value: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (exit_inc, [[3,3]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (exit_inc, [[3,3]])
-        %%% solver_query: entering query for (pp1, [[3,3]]) from (exit_inc, [[3,3]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp1, [[3,3]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% sol: Var: (pp1, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-          %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
-          %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
-        %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-        %%% sol: Var: (exit_inc, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-        %%% infl: add_infl (exit_inc, [[3,3]]) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% rhs: (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-      %%% sol: Var: (pp4 "inc(4);" L11, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-      %%% infl: add_infl (pp4 "inc(4);" L11, root) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=⊤
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% route: call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% side: side to Seed(inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); stable true; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (exit_inc, [[4,4]]), called: true, stable: true, wpoint: false
-      %%% infl: add_infl (exit_inc, [[4,4]]) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
     %%% rhs: (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
     %%% sol: Var: (pp5 "__voblint_check(0 < total);" L12, root) (wp: false)
 Old value: ⊥
@@ -941,271 +254,10 @@ New value: interval: #ret=⊤, n=⊤
     %%% infl: add_infl (pp5 "__voblint_check(0 < total);" L12, root) (pp6, root)
     %%% answer: exiting query for (pp5 "__voblint_check(0 < total);" L12, root) from (pp6, root)
 answer: interval: #ret=⊤, n=⊤
-  %%% solver_query: entering query for Global from (pp6, root)
-    %%% infl: add_infl Global (pp6, root)
-    %%% answer: exiting query for Global from (pp6, root)
+  %%% solver_query: entering query for Global total from (pp6, root)
+    %%% infl: add_infl Global total (pp6, root)
+    %%% answer: exiting query for Global total from (pp6, root)
 answer: interval: total=[0,+∞]
-  %%% side: side to Global from (pp6, root); value: interval: total=[0,+∞]
-  %%% update: side to Global from (pp6, root) new: interval: total=[0,+∞]
-  %%% destab: destabilize Global
-  %%% destab: stable remove (pp6, root)
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (pp6, root)
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (pp4 "inc(4);" L11, root)
-  %%% destab: destabilize (pp4 "inc(4);" L11, root)
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (exit_inc, [[3,3]])
-  %%% destab: destabilize (exit_inc, [[3,3]])
-  %%% destab: stable remove (pp4 "inc(4);" L11, root)
-  %%% destab: destabilize (pp4 "inc(4);" L11, root)
-  %%% destab: stable remove (pp1, [[3,3]])
-  %%% destab: destabilize (pp1, [[3,3]])
-  %%% destab: stable remove (exit_inc, [[3,3]])
-  %%% destab: destabilize (exit_inc, [[3,3]])
-  %%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-  %%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-  %%% destab: stable remove (pp1, [[3,3]])
-  %%% destab: destabilize (pp1, [[3,3]])
-  %%% destab: stable remove (pp4 "inc(4);" L11, root)
-  %%% destab: destabilize (pp4 "inc(4);" L11, root)
-  %%% destab: stable remove (pp3 "inc(3);" L10, root)
-  %%% destab: destabilize (pp3 "inc(3);" L10, root)
-  %%% destab: stable remove (pp4 "inc(4);" L11, root)
-  %%% destab: destabilize (pp4 "inc(4);" L11, root)
-  %%% destab: stable remove (pp2 "total = 0;" L9, root)
-  %%% destab: destabilize (pp2 "total = 0;" L9, root)
-  %%% destab: stable remove (pp3 "inc(3);" L10, root)
-  %%% destab: destabilize (pp3 "inc(3);" L10, root)
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (exit_inc, [[4,4]])
-  %%% destab: destabilize (exit_inc, [[4,4]])
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-  %%% destab: stable remove (pp1, [[4,4]])
-  %%% destab: destabilize (pp1, [[4,4]])
-  %%% destab: stable remove (exit_inc, [[4,4]])
-  %%% destab: destabilize (exit_inc, [[4,4]])
-  %%% destab: stable remove (pp0 "total = total + n;" L6, [[4,4]])
-  %%% destab: destabilize (pp0 "total = total + n;" L6, [[4,4]])
-  %%% destab: stable remove (pp1, [[4,4]])
-  %%% destab: destabilize (pp1, [[4,4]])
-  %%% rhs: (pp6, root) = interval: #ret=⊤, n=⊤
-  %%% iter: iterate still unstable (pp6, root)
-  %%% eq: eq (pp6, root)
-  %%% solver_query: entering query for (pp5 "__voblint_check(0 < total);" L12, root) from (pp6, root); stable false; called false
-    %%% iter: iterate called from query
-    %%% iter: begin iterate (pp5 "__voblint_check(0 < total);" L12, root), called: true, stable: false, wpoint: false
-    %%% eq: eq (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% solver_query: entering query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (pp4 "inc(4);" L11, root), called: true, stable: false, wpoint: false
-      %%% eq: eq (pp4 "inc(4);" L11, root)
-      %%% solver_query: entering query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3 "inc(3);" L10, root), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp3 "inc(3);" L10, root)
-        %%% solver_query: entering query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "total = 0;" L9, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,+∞]
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-          %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
-answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
-        %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
-        %%% sol: Var: (pp3 "inc(3);" L10, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-        %%% infl: add_infl (pp3 "inc(3);" L10, root) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=⊤
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% route: call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% side: side to Seed(inc, [[3,3]]) from (pp4 "inc(4);" L11, root); value: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (exit_inc, [[3,3]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (exit_inc, [[3,3]])
-        %%% solver_query: entering query for (pp1, [[3,3]]) from (exit_inc, [[3,3]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp1, [[3,3]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% sol: Var: (pp1, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-          %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
-          %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
-        %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-        %%% sol: Var: (exit_inc, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-        %%% infl: add_infl (exit_inc, [[3,3]]) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% rhs: (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-      %%% sol: Var: (pp4 "inc(4);" L11, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-      %%% infl: add_infl (pp4 "inc(4);" L11, root) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=⊤
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% route: call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% side: side to Seed(inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (exit_inc, [[4,4]]), called: true, stable: false, wpoint: false
-      %%% eq: eq (exit_inc, [[4,4]])
-      %%% solver_query: entering query for (pp1, [[4,4]]) from (exit_inc, [[4,4]]); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp1, [[4,4]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp1, [[4,4]])
-        %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp0 "total = total + n;" L6, [[4,4]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp0 "total = total + n;" L6, [[4,4]])
-          %%% solver_query: entering query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]]); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_inc, [[4,4]]), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
-          %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-          %%% sol: Var: (pp0 "total = total + n;" L6, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-          %%% infl: add_infl (pp0 "total = total + n;" L6, [[4,4]]) (pp1, [[4,4]])
-          %%% answer: exiting query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-        %%% solver_query: entering query for Global from (pp1, [[4,4]])
-          %%% infl: add_infl Global (pp1, [[4,4]])
-          %%% answer: exiting query for Global from (pp1, [[4,4]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp1, [[4,4]]); value: interval: total=[4,+∞]
-        %%% rhs: (pp1, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-        %%% sol: Var: (pp1, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-        %%% infl: add_infl (pp1, [[4,4]]) (exit_inc, [[4,4]])
-        %%% answer: exiting query for (pp1, [[4,4]]) from (exit_inc, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-      %%% solver_query: entering query for Global from (exit_inc, [[4,4]])
-        %%% infl: add_infl Global (exit_inc, [[4,4]])
-        %%% answer: exiting query for Global from (exit_inc, [[4,4]])
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (exit_inc, [[4,4]]); value: interval: total=[0,+∞]
-      %%% rhs: (exit_inc, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-      %%% sol: Var: (exit_inc, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-      %%% infl: add_infl (exit_inc, [[4,4]]) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% rhs: (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-    %%% sol: Var: (pp5 "__voblint_check(0 < total);" L12, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-    %%% infl: add_infl (pp5 "__voblint_check(0 < total);" L12, root) (pp6, root)
-    %%% answer: exiting query for (pp5 "__voblint_check(0 < total);" L12, root) from (pp6, root)
-answer: interval: #ret=⊤, n=⊤
-  %%% solver_query: entering query for Global from (pp6, root)
-    %%% infl: add_infl Global (pp6, root)
-    %%% answer: exiting query for Global from (pp6, root)
-answer: interval: total=[0,+∞]
-  %%% side: side to Global from (pp6, root); value: interval: total=[0,+∞]
   %%% rhs: (pp6, root) = interval: #ret=⊤, n=⊤
   %%% sol: Var: (pp6, root) (wp: false)
 Old value: ⊥
@@ -1217,288 +269,6 @@ New value: interval: #ret=⊤, n=⊤
   %%% infl: add_infl (pp6, root) (exit_main, root)
   %%% answer: exiting query for (pp6, root) from (exit_main, root)
 answer: interval: #ret=⊤, n=⊤
-%%% solver_query: entering query for Global from (exit_main, root)
-  %%% infl: add_infl Global (exit_main, root)
-  %%% answer: exiting query for Global from (exit_main, root)
-answer: interval: total=[0,+∞]
-%%% side: side to Global from (exit_main, root); value: interval: total=[0,+∞]
-%%% update: side to Global from (exit_main, root) new: interval: total=[0,+∞]
-%%% destab: destabilize Global
-%%% destab: stable remove (exit_main, root)
-%%% destab: stable remove (pp6, root)
-%%% destab: destabilize (pp6, root)
-%%% destab: stable remove (exit_main, root)
-%%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: stable remove (pp6, root)
-%%% destab: destabilize (pp6, root)
-%%% destab: stable remove (exit_inc, [[4,4]])
-%%% destab: destabilize (exit_inc, [[4,4]])
-%%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: stable remove (pp1, [[4,4]])
-%%% destab: destabilize (pp1, [[4,4]])
-%%% destab: stable remove (exit_inc, [[4,4]])
-%%% destab: destabilize (exit_inc, [[4,4]])
-%%% destab: stable remove (pp0 "total = total + n;" L6, [[4,4]])
-%%% destab: destabilize (pp0 "total = total + n;" L6, [[4,4]])
-%%% destab: stable remove (pp1, [[4,4]])
-%%% destab: destabilize (pp1, [[4,4]])
-%%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: stable remove (pp4 "inc(4);" L11, root)
-%%% destab: destabilize (pp4 "inc(4);" L11, root)
-%%% destab: stable remove (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: destabilize (pp5 "__voblint_check(0 < total);" L12, root)
-%%% destab: stable remove (exit_inc, [[3,3]])
-%%% destab: destabilize (exit_inc, [[3,3]])
-%%% destab: stable remove (pp4 "inc(4);" L11, root)
-%%% destab: destabilize (pp4 "inc(4);" L11, root)
-%%% destab: stable remove (pp1, [[3,3]])
-%%% destab: destabilize (pp1, [[3,3]])
-%%% destab: stable remove (exit_inc, [[3,3]])
-%%% destab: destabilize (exit_inc, [[3,3]])
-%%% destab: stable remove (pp0 "total = total + n;" L6, [[3,3]])
-%%% destab: destabilize (pp0 "total = total + n;" L6, [[3,3]])
-%%% destab: stable remove (pp1, [[3,3]])
-%%% destab: destabilize (pp1, [[3,3]])
-%%% destab: stable remove (pp4 "inc(4);" L11, root)
-%%% destab: destabilize (pp4 "inc(4);" L11, root)
-%%% destab: stable remove (pp3 "inc(3);" L10, root)
-%%% destab: destabilize (pp3 "inc(3);" L10, root)
-%%% destab: stable remove (pp4 "inc(4);" L11, root)
-%%% destab: destabilize (pp4 "inc(4);" L11, root)
-%%% destab: stable remove (pp2 "total = 0;" L9, root)
-%%% destab: destabilize (pp2 "total = 0;" L9, root)
-%%% destab: stable remove (pp3 "inc(3);" L10, root)
-%%% destab: destabilize (pp3 "inc(3);" L10, root)
-%%% rhs: (exit_main, root) = interval: #ret=⊤, n=⊤
-%%% iter: iterate still unstable (exit_main, root)
-%%% eq: eq (exit_main, root)
-%%% solver_query: entering query for (pp6, root) from (exit_main, root); stable false; called false
-  %%% iter: iterate called from query
-  %%% iter: begin iterate (pp6, root), called: true, stable: false, wpoint: false
-  %%% eq: eq (pp6, root)
-  %%% solver_query: entering query for (pp5 "__voblint_check(0 < total);" L12, root) from (pp6, root); stable false; called false
-    %%% iter: iterate called from query
-    %%% iter: begin iterate (pp5 "__voblint_check(0 < total);" L12, root), called: true, stable: false, wpoint: false
-    %%% eq: eq (pp5 "__voblint_check(0 < total);" L12, root)
-    %%% solver_query: entering query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (pp4 "inc(4);" L11, root), called: true, stable: false, wpoint: false
-      %%% eq: eq (pp4 "inc(4);" L11, root)
-      %%% solver_query: entering query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp3 "inc(3);" L10, root), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp3 "inc(3);" L10, root)
-        %%% solver_query: entering query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp2 "total = 0;" L9, root), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp2 "total = 0;" L9, root)
-          %%% solver_query: entering query for (entry_main, root) from (pp2 "total = 0;" L9, root); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_main, root), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_main, root) (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for (entry_main, root) from (pp2 "total = 0;" L9, root)
-answer: interval: #ret=⊤, n=⊤
-          %%% solver_query: entering query for Global from (pp2 "total = 0;" L9, root)
-            %%% infl: add_infl Global (pp2 "total = 0;" L9, root)
-            %%% answer: exiting query for Global from (pp2 "total = 0;" L9, root)
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp2 "total = 0;" L9, root); value: interval: total=[0,+∞]
-          %%% rhs: (pp2 "total = 0;" L9, root) = interval: #ret=⊤, n=⊤
-          %%% sol: Var: (pp2 "total = 0;" L9, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-          %%% infl: add_infl (pp2 "total = 0;" L9, root) (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for (pp2 "total = 0;" L9, root) from (pp3 "inc(3);" L10, root)
-answer: interval: #ret=⊤, n=⊤
-        %%% solver_query: entering query for Global from (pp3 "inc(3);" L10, root)
-          %%% infl: add_infl Global (pp3 "inc(3);" L10, root)
-          %%% answer: exiting query for Global from (pp3 "inc(3);" L10, root)
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp3 "inc(3);" L10, root); value: interval: total=[0,0]
-        %%% rhs: (pp3 "inc(3);" L10, root) = interval: #ret=⊤, n=⊤
-        %%% sol: Var: (pp3 "inc(3);" L10, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-        %%% infl: add_infl (pp3 "inc(3);" L10, root) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (pp3 "inc(3);" L10, root) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=⊤
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% route: call at (pp3 "inc(3);" L10, root): entry interval: #ret=⊤, n=[3,3] -> context [[3,3]]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% side: side to Seed(inc, [[3,3]]) from (pp4 "inc(4);" L11, root); value: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (exit_inc, [[3,3]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (exit_inc, [[3,3]])
-        %%% solver_query: entering query for (pp1, [[3,3]]) from (exit_inc, [[3,3]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp1, [[3,3]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp1, [[3,3]])
-          %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]]); stable false; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (pp0 "total = total + n;" L6, [[3,3]]), called: true, stable: false, wpoint: false
-            %%% eq: eq (pp0 "total = total + n;" L6, [[3,3]])
-            %%% solver_query: entering query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]]); stable true; called false
-              %%% iter: iterate called from query
-              %%% iter: begin iterate (entry_inc, [[3,3]]), called: true, stable: true, wpoint: false
-              %%% infl: add_infl (entry_inc, [[3,3]]) (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for (entry_inc, [[3,3]]) from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-            %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-              %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[3,3]])
-              %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[3,3]])
-answer: interval: total=[0,+∞]
-            %%% side: side to Global from (pp0 "total = total + n;" L6, [[3,3]]); value: interval: total=[0,+∞]
-            %%% rhs: (pp0 "total = total + n;" L6, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-            %%% sol: Var: (pp0 "total = total + n;" L6, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-            %%% infl: add_infl (pp0 "total = total + n;" L6, [[3,3]]) (pp1, [[3,3]])
-            %%% answer: exiting query for (pp0 "total = total + n;" L6, [[3,3]]) from (pp1, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-          %%% solver_query: entering query for Global from (pp1, [[3,3]])
-            %%% infl: add_infl Global (pp1, [[3,3]])
-            %%% answer: exiting query for Global from (pp1, [[3,3]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp1, [[3,3]]); value: interval: total=[3,+∞]
-          %%% rhs: (pp1, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-          %%% sol: Var: (pp1, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-          %%% infl: add_infl (pp1, [[3,3]]) (exit_inc, [[3,3]])
-          %%% answer: exiting query for (pp1, [[3,3]]) from (exit_inc, [[3,3]])
-answer: interval: #ret=⊤, n=[3,3]
-        %%% solver_query: entering query for Global from (exit_inc, [[3,3]])
-          %%% infl: add_infl Global (exit_inc, [[3,3]])
-          %%% answer: exiting query for Global from (exit_inc, [[3,3]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (exit_inc, [[3,3]]); value: interval: total=[0,+∞]
-        %%% rhs: (exit_inc, [[3,3]]) = interval: #ret=⊤, n=[3,3]
-        %%% sol: Var: (exit_inc, [[3,3]]) (wp: false)
-Old value: interval: #ret=⊤, n=[3,3]
-Eqd: interval: #ret=⊤, n=[3,3]
-New value: interval: #ret=⊤, n=[3,3]
-        %%% infl: add_infl (exit_inc, [[3,3]]) (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for (exit_inc, [[3,3]]) from (pp4 "inc(4);" L11, root)
-answer: interval: #ret=⊤, n=[3,3]
-      %%% solver_query: entering query for Global from (pp4 "inc(4);" L11, root)
-        %%% infl: add_infl Global (pp4 "inc(4);" L11, root)
-        %%% answer: exiting query for Global from (pp4 "inc(4);" L11, root)
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (pp4 "inc(4);" L11, root); value: interval: total=[0,+∞]
-      %%% rhs: (pp4 "inc(4);" L11, root) = interval: #ret=⊤, n=⊤
-      %%% sol: Var: (pp4 "inc(4);" L11, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-      %%% infl: add_infl (pp4 "inc(4);" L11, root) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (pp4 "inc(4);" L11, root) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=⊤
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% route: call at (pp4 "inc(4);" L11, root): entry interval: #ret=⊤, n=[4,4] -> context [[4,4]]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% side: side to Seed(inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root); stable false; called false
-      %%% iter: iterate called from query
-      %%% iter: begin iterate (exit_inc, [[4,4]]), called: true, stable: false, wpoint: false
-      %%% eq: eq (exit_inc, [[4,4]])
-      %%% solver_query: entering query for (pp1, [[4,4]]) from (exit_inc, [[4,4]]); stable false; called false
-        %%% iter: iterate called from query
-        %%% iter: begin iterate (pp1, [[4,4]]), called: true, stable: false, wpoint: false
-        %%% eq: eq (pp1, [[4,4]])
-        %%% solver_query: entering query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]]); stable false; called false
-          %%% iter: iterate called from query
-          %%% iter: begin iterate (pp0 "total = total + n;" L6, [[4,4]]), called: true, stable: false, wpoint: false
-          %%% eq: eq (pp0 "total = total + n;" L6, [[4,4]])
-          %%% solver_query: entering query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]]); stable true; called false
-            %%% iter: iterate called from query
-            %%% iter: begin iterate (entry_inc, [[4,4]]), called: true, stable: true, wpoint: false
-            %%% infl: add_infl (entry_inc, [[4,4]]) (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for (entry_inc, [[4,4]]) from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-          %%% solver_query: entering query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-            %%% infl: add_infl Global (pp0 "total = total + n;" L6, [[4,4]])
-            %%% answer: exiting query for Global from (pp0 "total = total + n;" L6, [[4,4]])
-answer: interval: total=[0,+∞]
-          %%% side: side to Global from (pp0 "total = total + n;" L6, [[4,4]]); value: interval: total=[0,+∞]
-          %%% rhs: (pp0 "total = total + n;" L6, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-          %%% sol: Var: (pp0 "total = total + n;" L6, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-          %%% infl: add_infl (pp0 "total = total + n;" L6, [[4,4]]) (pp1, [[4,4]])
-          %%% answer: exiting query for (pp0 "total = total + n;" L6, [[4,4]]) from (pp1, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-        %%% solver_query: entering query for Global from (pp1, [[4,4]])
-          %%% infl: add_infl Global (pp1, [[4,4]])
-          %%% answer: exiting query for Global from (pp1, [[4,4]])
-answer: interval: total=[0,+∞]
-        %%% side: side to Global from (pp1, [[4,4]]); value: interval: total=[4,+∞]
-        %%% rhs: (pp1, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-        %%% sol: Var: (pp1, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-        %%% infl: add_infl (pp1, [[4,4]]) (exit_inc, [[4,4]])
-        %%% answer: exiting query for (pp1, [[4,4]]) from (exit_inc, [[4,4]])
-answer: interval: #ret=⊤, n=[4,4]
-      %%% solver_query: entering query for Global from (exit_inc, [[4,4]])
-        %%% infl: add_infl Global (exit_inc, [[4,4]])
-        %%% answer: exiting query for Global from (exit_inc, [[4,4]])
-answer: interval: total=[0,+∞]
-      %%% side: side to Global from (exit_inc, [[4,4]]); value: interval: total=[0,+∞]
-      %%% rhs: (exit_inc, [[4,4]]) = interval: #ret=⊤, n=[4,4]
-      %%% sol: Var: (exit_inc, [[4,4]]) (wp: false)
-Old value: interval: #ret=⊤, n=[4,4]
-Eqd: interval: #ret=⊤, n=[4,4]
-New value: interval: #ret=⊤, n=[4,4]
-      %%% infl: add_infl (exit_inc, [[4,4]]) (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for (exit_inc, [[4,4]]) from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: #ret=⊤, n=[4,4]
-    %%% solver_query: entering query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% infl: add_infl Global (pp5 "__voblint_check(0 < total);" L12, root)
-      %%% answer: exiting query for Global from (pp5 "__voblint_check(0 < total);" L12, root)
-answer: interval: total=[0,+∞]
-    %%% side: side to Global from (pp5 "__voblint_check(0 < total);" L12, root); value: interval: total=[0,+∞]
-    %%% rhs: (pp5 "__voblint_check(0 < total);" L12, root) = interval: #ret=⊤, n=⊤
-    %%% sol: Var: (pp5 "__voblint_check(0 < total);" L12, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-    %%% infl: add_infl (pp5 "__voblint_check(0 < total);" L12, root) (pp6, root)
-    %%% answer: exiting query for (pp5 "__voblint_check(0 < total);" L12, root) from (pp6, root)
-answer: interval: #ret=⊤, n=⊤
-  %%% solver_query: entering query for Global from (pp6, root)
-    %%% infl: add_infl Global (pp6, root)
-    %%% answer: exiting query for Global from (pp6, root)
-answer: interval: total=[0,+∞]
-  %%% side: side to Global from (pp6, root); value: interval: total=[0,+∞]
-  %%% rhs: (pp6, root) = interval: #ret=⊤, n=⊤
-  %%% sol: Var: (pp6, root) (wp: false)
-Old value: interval: #ret=⊤, n=⊤
-Eqd: interval: #ret=⊤, n=⊤
-New value: interval: #ret=⊤, n=⊤
-  %%% infl: add_infl (pp6, root) (exit_main, root)
-  %%% answer: exiting query for (pp6, root) from (exit_main, root)
-answer: interval: #ret=⊤, n=⊤
-%%% solver_query: entering query for Global from (exit_main, root)
-  %%% infl: add_infl Global (exit_main, root)
-  %%% answer: exiting query for Global from (exit_main, root)
-answer: interval: total=[0,+∞]
-%%% side: side to Global from (exit_main, root); value: interval: total=[0,+∞]
 %%% rhs: (exit_main, root) = interval: #ret=⊤, n=⊤
 %%% sol: Var: (exit_main, root) (wp: false)
 Old value: ⊥
