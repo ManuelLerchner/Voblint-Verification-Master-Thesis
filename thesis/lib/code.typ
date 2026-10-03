@@ -174,10 +174,12 @@
   ctx: "call-string",
   k: 1,
   placement: "flow-sensitive",
+  refinement: "fixpoint",
 ) = {
   let query = "?analysis=" + analysis + "&globals=" + globals + "&context=" + ctx
   if ctx == "call-string" { query += "&k=" + str(k) }
   if placement != "flow-sensitive" { query += "&placement=" + placement }
+  if refinement != "fixpoint" { query += "&refinement=" + refinement }
   playground-base + query + "#code=" + _base64url(_deflate-stored(array(bytes(program))))
 }
 
@@ -187,7 +189,7 @@
 // the claim's settings.
 // `program` is the whole program a listing split across panes is part of.
 // Otherwise the link opens the text shown, at the given or the playground's
-// settings.
+// settings. Further named arguments, such as `highlights`, go to codly.
 #let listing(
   body,
   lang: none,
@@ -199,6 +201,7 @@
   ctx: auto,
   k: auto,
   placement: auto,
+  ..codly-args,
 ) = {
   let src = if type(body) == str { body } else { body.text }
   let code = raw(src, lang: lang, block: true)
@@ -234,6 +237,7 @@
     ctx: settings.at("context"),
     k: settings.k,
     placement: settings.placement,
+    refinement: settings.refinement,
   )
 
   [#metadata((
@@ -246,9 +250,13 @@
     settings: settings,
   )) <vimp-listing>]
   // A program split by a page break is hard to read; VIMP listings are short.
-  block(above: 0.9em, below: 0.9em, breakable: false, codly-local(code, languages: (
-    c: (name: link(url)[VIMP #sym.arrow.tr], color: vb.keyword),
-  )))
+  block(above: 0.9em, below: 0.9em, breakable: false, codly-local(
+    code,
+    ..codly-args.named(),
+    languages: (
+      c: (name: link(url)[VIMP #sym.arrow.tr], color: vb.keyword),
+    ),
+  ))
 }
 
 // References to entities that exist in the formalization. The typographic
@@ -424,5 +432,20 @@
     stroke: none,
     inset: (x: 6pt, y: 3.5pt),
     ..names.map(cell).flatten(),
+  )
+}
+
+// A registered claim opened in the playground: its program at the settings the
+// claim runs with, so the reader sees the analyzer output the thesis quotes.
+#let claim-playground(name) = {
+  let run = playground-defaults + _vimp-claims.at(name).settings
+  playground-link(
+    _vimp-claims.at(name).program,
+    analysis: run.analysis,
+    globals: run.globals,
+    ctx: run.at("context"),
+    k: run.k,
+    placement: run.placement,
+    refinement: run.refinement,
   )
 }

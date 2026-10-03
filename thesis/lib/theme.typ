@@ -30,6 +30,11 @@
   frame: rgb("#CFD8DC"),
   bg: rgb("#FAFAFA"),
 
+  // where a declaration comes from
+  hol: rgb("#8D8D8D"), // Isabelle's HOL library
+  solver: rgb("#EF6C00"), // the vendored TD solver
+  voblint: rgb("#1E88E5"), // this formalization
+
   // domains
   sign: rgb("#00695C"),
   ivl: rgb("#1565C0"),

@@ -54,8 +54,19 @@ NUMBER = re.compile(r"(?<![\w.,-])(?:\d{1,3}(?:,\d{3})+|\d{2,}|\d+%)(?![\w,]|\.\
 # Keyed by (file, literal); each entry says what the number is. An entry that
 # no longer matches anything is reported, so the list cannot outlive its text.
 ALLOW: dict[tuple[str, str], str] = {
-    # Hand-typed numbers in the chapters that are not repository counts, with the
-    # reason; none yet.
+    # Goblint pull request and issue numbers, not counts.
+    ("13-evaluation.typ", "1161"): "Goblint pull request number",
+    ("01-introduction.typ", "1161"): "Goblint pull request number",
+    # Figures quoted from cited external work, not repository counts.
+    ("01-introduction.typ", "85,000"): "line count reported by bryant26munkres",
+    ("01-introduction.typ", "132,000"): "program size reported by blanchet03",
+    ("15-related.typ", "132,000"): "program size reported by blanchet03",
+    # Drawing coordinates of a figure, not a count.
+    ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
+    # Colour lightening in cetz figure code, whose `line` calls trip the heuristic.
+    ("09-solving.typ", "90"): "fill lightening in fig:cert-forward",
+    ("10-results.typ", "30"): "bar lightening in fig:chain",
+    ("10-results.typ", "60"): "bar lightening in fig:chain",
 }
 
 

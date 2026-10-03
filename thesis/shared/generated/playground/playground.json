@@ -1,4 +1,13 @@
 {
+  "clamp": {
+    "analysis": "interval",
+    "context": "none",
+    "globals": "warrow",
+    "image": "clamp.png",
+    "program": "clamp.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=dY_NCoMwEITveYo5SaSBxkNPmr5KUKsYqjFIFKH47t0afy71Ena_mZ3s1qNF2ead47NA2ws0JsaHAaYGn5ERCz0wVH4cLIGU2uWwPI-Rw9KY3bKBOWULYzX91eXG8mD3UNB66ovWWK9tb1-V11Ty-DftSA2LeQEpkEi58nOibKryzSUyReYoooeqK5ujPa81pfAIWo41Q-IO4jckKy1O6tLt8j1xO_1vaMhc6Pgv",
+    "why": "Every answer kind in one run of a clamp function, each shown inline at its line: Figure 1.2."
+  },
   "contexts": {
     "analysis": "interval",
     "context": "entry-state",
@@ -6,7 +15,7 @@
     "image": "contexts.png",
     "program": "contexts.vimp",
     "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
-    "why": "The same two calls without and with entry-state contexts: UNKNOWN twice, then PROVED twice with one box per argument."
+    "why": "The running example without and with entry-state contexts: per-context values inline and one graph box per context of bump; also the program listing of the program-to-equations figure."
   },
   "division-definite": {
     "analysis": "interval",
@@ -36,13 +45,23 @@
     "why": "The product domain proving y == 2 where sign, interval and parity each answer UNKNOWN."
   },
   "overview": {
-    "analysis": "interval",
+    "analysis": "interval,order",
     "context": "call-string",
     "globals": "warrow",
     "image": "overview.png",
     "k": "1",
-    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=call-string&k=1",
-    "why": "Every verdict kind, an arithmetic warning, and one graph box per procedure and context, in one run."
+    "program": "overview.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval%2Corder&globals=warrow&context=call-string&k=1#code=fVFNT-MwEL3nVzxxSrWBpJQVgtCVVoK9bUEVC8fKSd3EqrGL47Qpq_53xknNR_g4JPK8efPmzUwc469ec9iSI69NpU2EkgDTIhmbF7yKkEuRL1ukMGxVHgVxjNuSK1izPUchdcZkhYN7ZozeYEXV2ohCqAMqZVIeVtYIVWDOV7bEcnxMsFaWNxYTrfhRECxqheqBqNyELEI2wP8AEAuEDBdjHwNSYwyW0nsHLiv-Fs5amD7DbW0UgWmw66QfmFBhp9EQczZb60wKZWdKqzm3M3qGA1e-_SZL6UdKD5MEMZo2VhR726MIp62GB84inHRlbo7GzbH1czhk65DGI8ATiRFt7GjpHtsQ1vjg1Vhe8nwZPjnucJCCrnEzvb67uvyCuNmL9oi7dl_0y7_difOa4AK5t1oTPelMrduFfLiHYxy_oYwSf5u-tdotYf3OmmvpO2xKITlCQe1HL7ujpMAPDFPvvy8q3Lyj3rx9knKk0440vfrz73bfeuHa_cJP3-5T8aSrm1zf_55OWhu74Bk",
+    "why": "PROVED, REFUTED and DEAD checks, an arithmetic warning, and one graph box per procedure and context, in one run."
+  },
+  "solve-replay-still": {
+    "analysis": "interval",
+    "context": "entry-state",
+    "globals": "warrow",
+    "image": "solve-replay-still.png",
+    "program": "solve-replay-still.vimp",
+    "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKklgsA",
+    "why": "One step of the solve replay: the first call into a context reads its callee's seed, with the graph and the trace line beside it."
   },
   "while-loop": {
     "analysis": "interval",
@@ -51,6 +70,6 @@
     "image": "while-loop.png",
     "program": "while-loop.vimp",
     "url": "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&globals=warrow&context=none#code=SyvNU8hNzMzT0FSo5lJQqFCwVTCwBjLKMzJzUhU0KhRsFAwNIHIQ2QoFbQVDkIpaII6PL8tPysnMK4lPzkhNztYwACqv0LTmquUCAA",
-    "why": "The running example: a PROVED check in the source, its state, and the solved graph."
+    "why": "One run in three views: the PROVED check in the source, the state inspector at the check, and the solved graph."
   }
 }

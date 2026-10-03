@@ -381,9 +381,9 @@ argv = [
   "--context",
   "entry-state",
   "--graph-snapshot",
-  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
+  "thesis/shared/programs/chain-split.vimp",
 ]
-why = "Soundness chain figure: f gets the contexts {n=[1,1]} (m=[2,2], check proved) and {n=[1,3]} (m=[2,6], check unknown), so the node verdict is unknown."
+why = "Soundness chain figure: f gets the contexts {n=[1,1]} (m=[2,2]) and {n=[1,3]} (m=[2,6]); m >= 2 is proved in both, while m == 2 is proved in the first and unknown in the second, so its node verdict is unknown."
 
 [claims.chain-split-none]
 argv = [
@@ -391,7 +391,7 @@ argv = [
   "interval",
   "--context",
   "none",
-  "tests/regression/21-context-sensitivity/soundness/01-two_contexts_split_verdict.vimp",
+  "thesis/shared/programs/chain-split.vimp",
 ]
 why = "Without contexts the one entry of f widens to n=[1,+∞] and the check m == 2 is UNKNOWN at m=⊤."
 
@@ -409,6 +409,44 @@ argv = [
 ]
 why = "Introduction, one answer of each kind on a clamp function: the range check PROVED, p > 100 REFUTED and p == 50 UNKNOWN at p=[0,100], p == 0 DEAD under p > 100, a possible-division warning at 1000 / p and none at 1000 / (p + 1)."
 
+[claims.int-reduction-never]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "--int-refinement",
+  "never",
+  "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
+]
+why = "Reduced product, Section 11.3: without reduction x is [-2,10] and 1+4Z at the check, and x >= 1 && x <= 9 is UNKNOWN."
+
+[claims.int-reduction-fixpoint]
+argv = [
+  "--analysis",
+  "int",
+  "--context",
+  "none",
+  "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
+]
+why = "Reduced product, Section 11.3: reduction trims the interval to [1,9] and makes the sign positive, so x >= 1 && x <= 9 is PROVED."
+
+[claims.order-alone-order]
+argv = [
+  "--analysis",
+  "order",
+  "tests/regression/25-cooperation/precision/08-order_alone_records_one_pair.vimp",
+]
+why = "Order example, Section 11.4: under x < y the order analysis records x <= y and proves it; x <= z stays UNKNOWN (no transitivity) and the pair is forgotten after y = y + 1."
+
+[claims.order-alone-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/25-cooperation/precision/08-order_alone_records_one_pair.vimp",
+]
+why = "Order example, Section 11.4: Interval tracks each variable separately and leaves x <= y UNKNOWN."
+
 [claims.verdicts-proved-unreachable]
 argv = [
   "--analysis",
@@ -417,36 +455,13 @@ argv = [
 ]
 why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
 
-[claims.verdicts-mult3-interval]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "--graph-snapshot",
-  "tests/regression/24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp",
-]
-why = "Verdict figure: the interval at the unreached check x == 1 is [1,2], so it is UNKNOWN; the check x == 6 is DEAD."
-
-[claims.verdicts-mult3-interval-checks]
-argv = [
-  "--analysis",
-  "interval",
-  "--context",
-  "none",
-  "tests/regression/24-site-figures/known-imprecision/06-multiples_of_three_interval.vimp",
-]
-why = "Verdict figure: under Interval the unreached check x == 1 is UNKNOWN and x == 6 is DEAD."
-
-[claims.verdicts-mult3-int]
+[claims.verdicts-proved-unreachable-int]
 argv = [
   "--analysis",
   "int",
-  "--context",
-  "none",
-  "tests/regression/24-site-figures/precision/06-multiples_of_three_int.vimp",
+  "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "Verdict figure: the Int product, tracking x = 0 (mod 3), marks both checks DEAD."
+why = "The Int product also tracks x = 0 (mod 3), so it marks the same unreached check DEAD."
 
 # Figures redrawn from the explainer (Chapters 7, 8 and 12): context policies on the
 # playground demo, the counting loop solved, the update-rule table, and the

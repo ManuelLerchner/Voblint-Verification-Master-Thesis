@@ -1,0 +1,11 @@
+tests/regression/25-cooperation/precision/08-order_alone_records_one_pair.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------------------
+12:5      pp4    x <= y     UNKNOWN  interval: x=⊤, y=⊤
+14:7      pp6    x <= z     UNKNOWN  interval: x=⊤, z=⊤
+17:5      pp9    x <= y     UNKNOWN  interval: x=⊤, y=⊤

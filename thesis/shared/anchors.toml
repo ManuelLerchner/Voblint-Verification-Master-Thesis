@@ -1,0 +1,272 @@
+# The formalization anchor index (appendix B): one row per concept the thesis
+# explains, with the Isabelle item that defines or proves it. Only the concept
+# is typed here. The theory column is read from the verified link map, so it
+# cannot name a theory the item has left; `thesis-refs` checks that each item
+# exists with the stated kind and `thesis-links` that it has an anchor.
+#
+# [[anchor]]
+#   chapter  label of the chapter that explains the concept
+#   concept  what a reader looks the item up by
+#   kind     const | thm | type | locale
+#   name     the Isabelle name
+#   thy      its theory, when several theories define the name
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "VIMP expressions"
+kind = "type"
+name = "exp"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Expression evaluation"
+kind = "const"
+name = "aval"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "VIMP commands"
+kind = "type"
+name = "com"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Source small-step semantics"
+kind = "const"
+name = "pstep"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Well-formed source program"
+kind = "const"
+name = "wf_source_program"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Procedure-aware control-flow graph"
+kind = "type"
+name = "cfg"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Graph execution"
+kind = "const"
+name = "cstep"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Compiler"
+kind = "const"
+name = "compile_prog"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Simulation relation"
+kind = "const"
+name = "csim"
+
+[[anchor]]
+chapter = "ch:program-model"
+concept = "Simulation of source runs"
+kind = "thm"
+name = "csim_star"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Activation trace"
+kind = "type"
+name = "activation_trace"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Valid traces"
+kind = "const"
+name = "valid_activation_trace"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Collecting semantics"
+kind = "const"
+name = "node_collect"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Context-indexed collecting semantics"
+kind = "const"
+name = "activation_collect"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Soundness contract"
+kind = "locale"
+name = "activation_coverage"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Source runs have valid traces"
+kind = "thm"
+name = "source_run_has_activation_trace"
+
+[[anchor]]
+chapter = "ch:traces"
+concept = "Source runs reach the collecting semantics"
+kind = "thm"
+name = "source_reaches_node_collect"
+
+[[anchor]]
+chapter = "ch:domains"
+concept = "Abstract domain interface"
+kind = "locale"
+name = "numeric_domain"
+
+[[anchor]]
+chapter = "ch:domains"
+concept = "State concretization"
+kind = "const"
+name = "gamma_state"
+
+[[anchor]]
+chapter = "ch:domains"
+concept = "Backward refinement"
+kind = "locale"
+name = "sound_refinement"
+
+[[anchor]]
+chapter = "ch:domains"
+concept = "Sound transfer functions"
+kind = "locale"
+name = "sound_nonrelational_transfer"
+
+[[anchor]]
+chapter = "ch:analysis-interface"
+concept = "D/G analysis specification"
+kind = "type"
+name = "dg_spec"
+
+[[anchor]]
+chapter = "ch:analysis-interface"
+concept = "Local and shared state pair"
+kind = "type"
+name = "dg_state"
+
+[[anchor]]
+chapter = "ch:analysis-interface"
+concept = "Specification soundness obligations"
+kind = "locale"
+name = "analysis_contract"
+
+[[anchor]]
+chapter = "ch:equations"
+concept = "Global unknowns"
+kind = "type"
+name = "global_unknown"
+
+[[anchor]]
+chapter = "ch:equations"
+concept = "Node right-hand side"
+kind = "const"
+name = "routed_node_rhs"
+
+[[anchor]]
+chapter = "ch:equations"
+concept = "Call-boundary program"
+kind = "const"
+name = "routed_call_program"
+
+[[anchor]]
+chapter = "ch:equations"
+concept = "Routed context proof locale"
+kind = "locale"
+name = "routed_context"
+
+[[anchor]]
+chapter = "ch:solving"
+concept = "Strategy trees"
+kind = "type"
+name = "strategy_tree"
+thy = "Basics_side"
+
+[[anchor]]
+chapter = "ch:solving"
+concept = "Partial post-solution"
+kind = "const"
+name = "part_post_solution"
+thy = "Basics_side"
+
+[[anchor]]
+chapter = "ch:solving"
+concept = "Solver certificate"
+kind = "thm"
+name = "part_post_solution_of_solve_c"
+
+[[anchor]]
+chapter = "ch:solving"
+concept = "Executable state carrier"
+kind = "type"
+name = "default_st"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Coverage from the local obligations"
+kind = "thm"
+name = "activation_collect_sound"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Coverage from a solved D/G table"
+kind = "thm"
+name = "activation_collect_dg_sound"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Report covers the collecting semantics"
+kind = "thm"
+name = "run_voblint_covers"
+
+[[anchor]]
+chapter = "ch:executable"
+concept = "Public analysis function"
+kind = "const"
+name = "run_voblint"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Source-level soundness"
+kind = "thm"
+name = "run_voblint_source_sound"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Source run to verdicts, with its trace and context"
+kind = "thm"
+name = "run_voblint_spine"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Report contract of an analysed answer"
+kind = "thm"
+name = "run_voblint_report_contract"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Check verdicts"
+kind = "thm"
+name = "run_voblint_check_sound"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Dead checks"
+kind = "thm"
+name = "run_voblint_dead_check_unreached"
+
+[[anchor]]
+chapter = "ch:results"
+concept = "Arithmetic safety"
+kind = "thm"
+name = "run_voblint_arithmetic_safe"
+
+[[anchor]]
+chapter = "ch:evaluation"
+concept = "Non-vacuity on one program"
+kind = "thm"
+name = "nv_source_certified"

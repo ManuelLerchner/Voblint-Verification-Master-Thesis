@@ -1,33 +1,35 @@
 clusters:
   cluster_ctx_0: main / root context
-    main_pp6_ctx0
     main_pp7_ctx0
-    main_exit_main_ctx0
-    main_pp4_ctx0
-    main_pp5_ctx0
     main_pp8_ctx0
-    main_pp11_ctx0
+    main_exit_main_ctx0
+    main_pp5_ctx0
+    main_pp6_ctx0
+    main_pp9_ctx0
+    main_pp12_ctx0
     main_entry_main_ctx0
   cluster_ctx_1: f / [1,1]
     f_pp1_ctx0
     f_pp2_ctx0
+    f_pp3_ctx0
     f_exit_f_ctx0
     f_pp0_ctx0
     f_entry_f_ctx0
   cluster_ctx_2: f / [1,3]
     f_pp1_ctx1
     f_pp2_ctx1
+    f_pp3_ctx1
     f_exit_f_ctx1
     f_pp0_ctx1
     f_entry_f_ctx1
 
 nodes:
-  main_pp6_ctx0: pp6
+  main_pp7_ctx0: pp7
       interval:
         a=[2,2]
         b=⊤
         x=⊤
-  main_pp7_ctx0: pp7
+  main_pp8_ctx0: pp8
       interval:
         a=[2,2]
         b=⊤
@@ -37,22 +39,22 @@ nodes:
         a=[2,2]
         b=⊤
         x=⊤
-  main_pp4_ctx0: pp4
+  main_pp5_ctx0: pp5
       interval:
         a=⊤
         b=⊤
         x=⊤
-  main_pp5_ctx0: pp5
+  main_pp6_ctx0: pp6
       interval:
         a=[2,2]
         b=⊤
         x=⊤
-  main_pp8_ctx0: pp8
+  main_pp9_ctx0: pp9
       interval:
         a=[2,2]
         b=⊤
         x=[1,3]
-  main_pp11_ctx0: pp11
+  main_pp12_ctx0: pp12
       interval:
         a=[2,2]
         b=⊤
@@ -66,8 +68,13 @@ nodes:
       interval:
         n=[1,1]
         m=[2,2]
+      check m >= 2
+  f_pp2_ctx0: pp2 [proved]
+      interval:
+        n=[1,1]
+        m=[2,2]
       check m == 2
-  f_pp2_ctx0: pp2
+  f_pp3_ctx0: pp3
       interval:
         n=[1,1]
         m=[2,2]
@@ -83,12 +90,17 @@ nodes:
       interval:
         n=[1,1]
         m=⊤
-  f_pp1_ctx1: pp1 [unknown]
+  f_pp1_ctx1: pp1 [proved]
+      interval:
+        n=[1,3]
+        m=[2,6]
+      check m >= 2
+  f_pp2_ctx1: pp2 [unknown]
       interval:
         n=[1,3]
         m=[2,6]
       check m == 2
-  f_pp2_ctx1: pp2
+  f_pp3_ctx1: pp3
       interval:
         n=[1,3]
         m=[2,6]
@@ -108,22 +120,24 @@ nodes:
 edges:
   f_pp0_ctx0 -> f_pp1_ctx0: m := 2 * n
   f_pp0_ctx1 -> f_pp1_ctx1: m := 2 * n
-  f_pp1_ctx0 -> f_pp2_ctx0: check(m == 2)
-  f_pp1_ctx1 -> f_pp2_ctx1: check(m == 2)
-  f_pp2_ctx0 -> f_exit_f_ctx0: return m
-  f_pp2_ctx1 -> f_exit_f_ctx1: return m
-  main_pp5_ctx0 -> main_pp6_ctx0: x := __voblint_nondet_int()
-  main_pp6_ctx0 -> main_pp7_ctx0: [0 < x]
-  main_pp6_ctx0 -> main_pp11_ctx0: ![0 < x]
-  main_pp7_ctx0 -> main_pp8_ctx0: [x < 4]
-  main_pp7_ctx0 -> main_pp11_ctx0: ![x < 4]
-  main_pp11_ctx0 -> main_exit_main_ctx0: return
+  f_pp1_ctx0 -> f_pp2_ctx0: check(m >= 2)
+  f_pp1_ctx1 -> f_pp2_ctx1: check(m >= 2)
+  f_pp2_ctx0 -> f_pp3_ctx0: check(m == 2)
+  f_pp2_ctx1 -> f_pp3_ctx1: check(m == 2)
+  f_pp3_ctx0 -> f_exit_f_ctx0: return m
+  f_pp3_ctx1 -> f_exit_f_ctx1: return m
+  main_pp6_ctx0 -> main_pp7_ctx0: x := __voblint_nondet_int()
+  main_pp7_ctx0 -> main_pp8_ctx0: [0 < x]
+  main_pp7_ctx0 -> main_pp12_ctx0: ![0 < x]
+  main_pp8_ctx0 -> main_pp9_ctx0: [x < 4]
+  main_pp8_ctx0 -> main_pp12_ctx0: ![x < 4]
+  main_pp12_ctx0 -> main_exit_main_ctx0: return
   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
   f_entry_f_ctx1 -> f_pp0_ctx1: body(f)
-  main_entry_main_ctx0 -> main_pp4_ctx0: body(main)
-  main_pp4_ctx0 -> f_entry_f_ctx0: enter f(1)
-  f_exit_f_ctx0 -> main_pp5_ctx0: combine a := f(1)
-  main_pp4_ctx0 -> main_pp5_ctx0: call-to-return f
-  main_pp8_ctx0 -> f_entry_f_ctx1: enter f(x)
-  f_exit_f_ctx1 -> main_pp11_ctx0: combine b := f(x)
-  main_pp8_ctx0 -> main_pp11_ctx0: call-to-return f
+  main_entry_main_ctx0 -> main_pp5_ctx0: body(main)
+  main_pp5_ctx0 -> f_entry_f_ctx0: enter f(1)
+  f_exit_f_ctx0 -> main_pp6_ctx0: combine a := f(1)
+  main_pp5_ctx0 -> main_pp6_ctx0: call-to-return f
+  main_pp9_ctx0 -> f_entry_f_ctx1: enter f(x)
+  f_exit_f_ctx1 -> main_pp12_ctx0: combine b := f(x)
+  main_pp9_ctx0 -> main_pp12_ctx0: call-to-return f

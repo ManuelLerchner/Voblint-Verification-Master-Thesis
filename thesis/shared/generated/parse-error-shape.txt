@@ -1,1 +1,0 @@
-tests/regression/00-sanity/02-malformed.vimp:7:3: parse error: syntax error
