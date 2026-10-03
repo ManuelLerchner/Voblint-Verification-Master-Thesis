@@ -25,6 +25,7 @@ import {
 import { tags } from "https://esm.sh/@lezer/highlight@^1.0.0";
 import { basicSetup, EditorView } from "https://esm.sh/codemirror@6.0.2";
 import { vimpStreamParser } from "./code-tokens.js";
+import { cfgView, DIVISION_ICON, globalDependencies } from "./graph-views.js";
 import { createSolveReplay, seedLabelOf } from "./replay.js";
 import { sharedGlobalValues, sharedWriteHint } from "./shared-hints.js";
 import { createTraceView } from "./trace-view.js";
@@ -100,6 +101,26 @@ const timingValue = query("#analysis-timing-value");
 const stateInspector = query("#state-inspector");
 const inspectorLocation = query("#state-inspector-location");
 const inspectorBody = query("#state-inspector-body");
+const inspectorClose = query("#state-inspector-close");
+
+/*
+ * The inspector opens only when a graph node is clicked and stays until closed. A
+ * control-flow node also hands it the state run_voblint joins over its contexts.
+ */
+let inspectorOpen = false;
+let inspectorJoined = null;
+
+function closeInspector() {
+  inspectorOpen = false;
+  renderInspector();
+}
+
+inspectorClose.addEventListener("click", closeInspector);
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && inspectorOpen) {
+    closeInspector();
+  }
+});
 const valueHintsToggle = query("#value-hints-toggle");
 
 const graphPanel = query("#analysis-graph-panel");
@@ -735,8 +756,35 @@ function buildAnalysisModel(result, doc) {
       nodes: nodesByPoint.get(s.point) ?? [],
     }));
 
+  /*
+   * One node per program point, holding the state run_voblint joins over the point's
+   * contexts and what its steps make of it. The editor's value hints read these, so a
+   * hint shows one value rather than one per context.
+   */
+  const joinedNodes = new Map(
+    (result.cfg?.nodes ?? [])
+      .filter((node) => Array.isArray(node.next))
+      .map((node) => [
+        node.id,
+        {
+          id: node.id,
+          point: node.point,
+          context_key: "",
+          status: node.joined === null ? "unreachable" : null,
+          sections: node.joined ?? [],
+          globals: node.globals ?? [],
+          ret: node.ret ?? [],
+          next: node.next ?? [],
+          enters: node.enters ?? [],
+          findings: [],
+        },
+      ]),
+  );
+
   return {
     nodes,
+    joinedNodes,
+    joinedByPoint: new Map([...joinedNodes.values()].map((node) => [node.point, node])),
     procedureByEntry: new Map(headers.map((procedure) => [procedure.entry, procedure])),
     seedByEntry: new Map(
       (result.seeds ?? []).filter((seed) => seed.entry).map((seed) => [seed.entry, seed]),
@@ -848,6 +896,8 @@ function formatHint(label, samples) {
  */
 function valueHints(model) {
   const hints = [];
+  const joined = model.joinedNodes.size > 0;
+  const nodeById = (id) => (joined ? model.joinedNodes : model.nodes).get(id);
 
   for (const statement of model.statements) {
     const written = new Map();
@@ -865,7 +915,12 @@ function valueHints(model) {
 
     const writeLabel = (name) => (name === RETURN_SLOT ? "\u21a9 " : `${name}: `);
 
-    for (const node of statement.nodes.filter(isLive)) {
+    const nodes =
+      joined && model.joinedByPoint.has(statement.point)
+        ? [model.joinedByPoint.get(statement.point)]
+        : statement.nodes;
+
+    for (const node of nodes.filter(isLive)) {
       if (statement.formals) {
         for (const name of statement.formals) {
           const value = slotValue(node, name);
@@ -881,7 +936,7 @@ function valueHints(model) {
       const assignsResult = node.next.some((step) => step.writes);
 
       for (const enter of node.enters) {
-        const entry = model.nodes.get(enter.id);
+        const entry = nodeById(enter.id);
         const callee = entry ? model.procedureByEntry.get(entry.point) : null;
 
         for (const name of callee && isLive(entry) ? callee.formals : []) {
@@ -892,7 +947,7 @@ function valueHints(model) {
           }
         }
 
-        const exit = enter.exit ? model.nodes.get(enter.exit) : null;
+        const exit = enter.exit ? nodeById(enter.exit) : null;
 
         const returned = exit && isLive(exit) ? joinValues(exit.ret) : undefined;
 
@@ -932,7 +987,7 @@ function valueHints(model) {
           continue;
         }
 
-        const after = model.nodes.get(step.id);
+        const after = nodeById(step.id);
         const value = after && isLive(after) ? slotValue(after, step.writes) : undefined;
 
         if (value !== undefined) {
@@ -1306,6 +1361,7 @@ function statementAt(model, doc, pos) {
 
 function inspectStatement(statement) {
   inspection = statement ? { statement, nodes: statement.nodes } : null;
+  inspectorJoined = null;
 
   if (!inspection?.nodes.some((node) => node.id === focusedNodeId)) {
     focusedNodeId = null;
@@ -1325,6 +1381,8 @@ function inspectCursor(state) {
 /* [configuration] and [source] are the run's own; the trace views show the traces it recorded. */
 function showAnalysisView(result, configuration, source) {
   const doc = editor.state.doc;
+
+  inspectorOpen = false;
 
   analysisModel = result.status === "ok" ? buildAnalysisModel(result, doc) : null;
 
@@ -1521,9 +1579,10 @@ function statementExcerpt(statement) {
 /* Before a run there are no states to inspect, so the panel waits with the graph. */
 function renderInspector() {
   inspectorLocation.replaceChildren();
-  stateInspector.hidden = !analysisModel;
+  stateInspector.querySelector(".inspector-joined")?.remove();
+  stateInspector.hidden = !analysisModel || !inspectorOpen;
 
-  if (!analysisModel) {
+  if (stateInspector.hidden) {
     return;
   }
 
@@ -1533,7 +1592,7 @@ function renderInspector() {
   }
 
   if (!inspection) {
-    inspectorMessage("Place the cursor on a statement to see its abstract state in every context.");
+    inspectorMessage("Click a node in the graph to see its abstract state in every context.");
     return;
   }
 
@@ -1558,6 +1617,17 @@ function renderInspector() {
   }
 
   inspectorBody.replaceChildren(...nodes.map(renderInspectorContext));
+
+  if (inspectorJoined !== null) {
+    const joined = document.createElement("pre");
+    const title = document.createElement("span");
+
+    joined.className = "inspector-joined";
+    title.className = "inspector-joined-title";
+    title.textContent = "Joined over all contexts (report_point_join)";
+    joined.append(title, sectionLines(inspectorJoined).join("\n") || "no bindings");
+    inspectorBody.before(joined);
+  }
 }
 
 function statusChip(status) {
@@ -1767,8 +1837,84 @@ function renderStateTable(node) {
 /* The drawing, while one is shown; a message or an empty panel has none. */
 let cy = null;
 
+/*
+ * Which graph the panel draws. The control-flow view shows the compiled CFG, each
+ * program point once with every context's state listed at it; the analysis view shows
+ * one node per point and context, with the solver's global unknowns. Both are drawn
+ * from the same run, so switching never reruns the analyzer.
+ */
+const GRAPH_VIEWS = ["cfg", "analysis"];
+let graphView = "cfg";
+
+/* The run the panel draws, with its generation, so a switch can redraw it. */
+let graphRun = null;
+
+const graphViewButtons = [...document.querySelectorAll("[data-graph-view]")];
+const graphPanelLead = document.querySelector("#graph-panel-lead");
+const GRAPH_VIEW_TEXT = {
+  cfg: {
+    lead: "The compiled control-flow graph: each program point once, with every context's state listed at it.",
+    label: "Control-flow graph",
+  },
+  analysis: {
+    lead: "The analysis graph: one node per program point and context, with the solver's global unknowns.",
+    label: "Analysis graph",
+  },
+};
+
+/* Shows [view]; redraws the run already analysed, without running it again. */
+function setGraphView(view, { redraw = true } = {}) {
+  if (!GRAPH_VIEWS.includes(view)) {
+    return;
+  }
+
+  graphView = view;
+
+  for (const button of graphViewButtons) {
+    button.setAttribute("aria-checked", String(button.dataset.graphView === view));
+  }
+
+  for (const item of document.querySelectorAll("[data-graph-legend]")) {
+    item.hidden = item.dataset.graphLegend !== view;
+  }
+
+  if (graphPanelLead) {
+    graphPanelLead.textContent = GRAPH_VIEW_TEXT[view].lead;
+  }
+
+  graph.setAttribute(
+    "aria-label",
+    `${GRAPH_VIEW_TEXT[view].label}. Arrow keys pan, plus and minus zoom, 0 fits.`,
+  );
+
+  if (redraw && graphRun) {
+    hideGraphTooltip();
+    renderGraph(graphRun.result, graphRun.runGeneration).catch(() => {});
+  }
+}
+
+for (const button of graphViewButtons) {
+  button.addEventListener("click", () => setGraphView(button.dataset.graphView));
+}
+
+setGraphView(graphView, { redraw: false });
+
+/* In the control-flow view, the drawn CFG node of each analysis node at its point. */
+let drawnIdOf = new Map();
+
+/* The control-flow view's nodes by id, with the analysis nodes listed at each. */
+let cfgNodes = new Map();
+
+function drawnId(id) {
+  return drawnIdOf.get(id) ?? id;
+}
+
 function graphElementsById(ids) {
-  return cy.collection(ids.map((id) => cy.getElementById(id)).filter((ele) => ele.nonempty()));
+  return cy.collection(
+    [...new Set(ids.map(drawnId))]
+      .map((id) => cy.getElementById(id))
+      .filter((ele) => ele.nonempty()),
+  );
 }
 
 function applyGraphSelection() {
@@ -1784,7 +1930,7 @@ function applyGraphSelection() {
     }
 
     for (const node of inspection.nodes) {
-      const element = cy.getElementById(node.id);
+      const element = cy.getElementById(drawnId(node.id));
 
       element.addClass("graph-node-selected");
 
@@ -1976,6 +2122,8 @@ function inspectGraphNode(id) {
     return;
   }
 
+  inspectorOpen = true;
+
   const statement = analysisModel.statementByPoint.get(node.point);
 
   focusedNodeId = id;
@@ -1992,6 +2140,36 @@ function inspectGraphNode(id) {
   editor.dispatch({ selection: { anchor: statement.from } });
   inspectStatement(statement);
   scrollEditorTo(statement.from);
+}
+
+/* Clicking a CFG node inspects every context's state at its point. */
+function inspectCfgNode(id) {
+  const point = cfgNodes.get(id);
+
+  if (!point || !analysisModel || analysisModel.stale) {
+    return;
+  }
+
+  const statement = analysisModel.statementByPoint.get(point.point);
+
+  focusedNodeId = null;
+  inspectorOpen = true;
+
+  if (!statement) {
+    inspection = {
+      statement: null,
+      nodes: point.rows.map((row) => analysisModel.nodes.get(row)).filter(Boolean),
+    };
+  } else {
+    editor.dispatch({ selection: { anchor: statement.from } });
+    inspectStatement(statement);
+    scrollEditorTo(statement.from);
+  }
+
+  inspectorJoined = point.joined;
+  renderInspector();
+  applyGraphSelection();
+  scheduleHighlights();
 }
 
 /* -------------------------------------------------------------------------- */
@@ -2128,7 +2306,6 @@ function taxiTurn(index) {
  * its message left to the tooltip: an expression-length line would widen the node
  * and, through it, the whole column of the layout.
  */
-const DIVISION_ICON = { definite: "\u26d4", possible: "\u26a0\ufe0f" };
 
 function nodeLabelLines(node) {
   const divisions = node.divisions ?? [];
@@ -2181,7 +2358,7 @@ function seedId(entryId) {
  * from and its callers publish theirs into. It sits in the entry's box, a call edge
  * ends at it, and an edge from it to the entry stands for that read.
  */
-function graphElements(result) {
+function graphElements(result, { withGlobalEdges = false } = {}) {
   const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
   const nodesById = new Map((result.nodes ?? []).map((node) => [node.id, node]));
   const parentOf = new Map();
@@ -2263,6 +2440,16 @@ function graphElements(result) {
     });
   }
 
+  if (withGlobalEdges) {
+    elements.push(
+      ...globalDependencies(result, globalId).map(({ id, source, target, kind }) => ({
+        group: "edges",
+        data: { id, source, target },
+        classes: kind,
+      })),
+    );
+  }
+
   result.graph.edges.forEach((edge, index) => {
     if (!nodesById.has(edge.source) || !nodesById.has(edge.target)) {
       return;
@@ -2289,6 +2476,47 @@ function graphElements(result) {
   });
 
   return elements;
+}
+
+/* The compiled CFG as drawn elements; [cfgView] decides what each node says. */
+function cfgElements(result) {
+  const edgeFont = `${EDGE_FONT_SIZE}px ${cssToken("--mono")}`;
+  const view = cfgView(result);
+
+  return [
+    ...view.procedures.map((procedure) => ({
+      group: "nodes",
+      data: { id: procedure.id, label: procedure.label },
+      classes: "context",
+    })),
+    ...view.nodes.map((node) => ({
+      group: "nodes",
+      data: {
+        id: node.id,
+        parent: node.parent,
+        label: node.lines.join("\n"),
+        ...nodeBox(node.lines),
+      },
+      classes: `point ${node.status}`,
+    })),
+    ...view.edges.map((edge, index) => {
+      const label = edgeLabel(edge);
+
+      return {
+        group: "edges",
+        data: {
+          id: `cfg-edge-${index}`,
+          source: edge.source,
+          target: edge.target,
+          label,
+          labelWidth: textWidth(label, edgeFont),
+          labelOffset: textWidth(label, edgeFont) / 2 + 10,
+          turn: taxiTurn(index),
+        },
+        classes: edge.kind,
+      };
+    }),
+  ];
 }
 
 /*
@@ -2430,8 +2658,14 @@ function callOrder(inner, crossing, parentOf) {
 
   const seen = new Set();
   const order = [];
+  const entered = new Set([...callees.values()].flat());
+  /* Walk from the boxes no call enters, main among them, so callers come first. */
+  const roots = [
+    ...[...inner.keys()].filter((id) => !entered.has(id)),
+    ...[...inner.keys()].filter((id) => entered.has(id)),
+  ];
 
-  for (const root of inner.keys()) {
+  for (const root of roots) {
     if (seen.has(root)) {
       continue;
     }
@@ -3016,6 +3250,27 @@ function graphStyle() {
         "text-rotation": "none",
       },
     },
+    /* What a flow-insensitive global's unknown is read by and published to, from the trace. */
+    {
+      selector: "edge.global_read, edge.global_write",
+      style: {
+        "curve-style": "bezier",
+        label: "",
+        "line-style": "dashed",
+        "line-dash-pattern": [4, 4],
+        "line-color": cssToken("--text-faint"),
+        "target-arrow-color": cssToken("--text-faint"),
+      },
+    },
+    {
+      selector: "edge.global_write",
+      style: {
+        width: 1.8,
+        "line-style": "solid",
+        "line-color": cssToken("--global-link"),
+        "target-arrow-color": cssToken("--global-link"),
+      },
+    },
     {
       selector: "edge.routed",
       style: {
@@ -3305,6 +3560,36 @@ function showSeedTooltip(seed, event) {
   placeGraphTooltip(event);
 }
 
+/*
+ * A CFG node's tooltip: its point and the state run_voblint joins over its contexts.
+ * Each context's own state is one click away, in the inspector.
+ */
+function showCfgTooltip(point, event) {
+  if (graphTooltip.dataset.node !== point.id) {
+    const title = document.createElement("strong");
+    title.textContent = point.point;
+
+    const contexts = point.rows.length;
+    const body = document.createElement("pre");
+    body.textContent =
+      point.joined === null
+        ? "no context reaches this point"
+        : [
+            ...(sectionLines(point.joined).length ? sectionLines(point.joined) : ["no bindings"]),
+            "",
+            contexts > 1
+              ? `joined over ${contexts} contexts · click to see each`
+              : "click to inspect",
+          ].join("\n");
+
+    graphTooltip.replaceChildren(title, body);
+    graphTooltip.dataset.node = point.id;
+  }
+
+  graphTooltip.hidden = false;
+  placeGraphTooltip(event);
+}
+
 /* A node's tooltip: its point, then its state and findings. */
 function showGraphTooltip(node, event) {
   if (graphTooltip.dataset.node !== node.id) {
@@ -3331,6 +3616,16 @@ function showGraphTooltip(node, event) {
  */
 function attachGraphInteraction() {
   cy.on("mouseover", "node.point", (event) => {
+    const point = cfgNodes.get(event.target.id());
+
+    if (point) {
+      graph.classList.add("is-over-node");
+      hoveredSpan = analysisModel?.statementByPoint.get(point.point) ?? null;
+      scheduleHighlights();
+      showCfgTooltip(point, event.originalEvent);
+      return;
+    }
+
     const node = analysisModel?.nodes.get(event.target.id());
 
     graph.classList.add("is-over-node");
@@ -3368,7 +3663,11 @@ function attachGraphInteraction() {
   cy.on("mouseover", "node.context", () => graph.classList.add("is-over-context"));
   cy.on("mouseout", "node.context", () => graph.classList.remove("is-over-context"));
 
-  cy.on("tap", "node.point", (event) => inspectGraphNode(event.target.id()));
+  cy.on("tap", "node.point", (event) =>
+    cfgNodes.has(event.target.id())
+      ? inspectCfgNode(event.target.id())
+      : inspectGraphNode(event.target.id()),
+  );
 
   cy.on("dbltap", (event) => {
     if (event.target === cy) {
@@ -3401,10 +3700,16 @@ async function renderGraph(result, runGeneration) {
   }
 
   if (!Array.isArray(result.graph?.clusters) || !Array.isArray(result.graph?.edges)) {
-    throw new Error("Internal error: successful analysis returned no control-flow graph.");
+    throw new Error("Internal error: successful analysis returned no graph.");
   }
 
-  showGraphMessage("Rendering control-flow graph...");
+  graphRun = { result, runGeneration };
+
+  const view = result.cfg ? graphView : "analysis";
+
+  showGraphMessage(
+    view === "cfg" ? "Rendering control-flow graph..." : "Rendering analysis graph...",
+  );
 
   try {
     const { cytoscape, elk } = await getGraphLibraries();
@@ -3413,8 +3718,14 @@ async function renderGraph(result, runGeneration) {
       return;
     }
 
-    const elements = graphElements(result);
+    const elements =
+      view === "cfg" ? cfgElements(result) : graphElements(result, { withGlobalEdges: true });
 
+    cfgNodes =
+      view === "cfg" ? new Map(result.cfg.nodes.map((node) => [node.id, node])) : new Map();
+    drawnIdOf = new Map(
+      [...cfgNodes.values()].flatMap((node) => node.rows.map((row) => [row, node.id])),
+    );
     graphSeeds = new Map((result.seeds ?? []).map((seed) => [seed.entry, seed]));
     const layout = await layoutGraph(elk, elements);
 
@@ -4544,6 +4855,7 @@ function openProgram({ source, fileName, settings = {} }) {
   globalsPicked ||= typeof settings.globals === "string";
   selectIfOffered(contextSelect, settings.context);
   selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
+  setGraphView(GRAPH_VIEWS.includes(settings.graph) ? settings.graph : graphView);
   selectIfOffered(intRefinementSelect, settings.refinement);
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
@@ -4604,6 +4916,7 @@ function selectIfOffered(select, value) {
  * settings in the query override the ones a named program carries.
  */
 const LINK_SETTINGS = [
+  "graph",
   "analysis",
   "globals",
   "narrow",
@@ -4711,6 +5024,7 @@ async function shareLink() {
       ? [linkParam("placement", "flow-insensitive")]
       : []),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
+    ...(graphView !== "cfg" ? [linkParam("graph", graphView)] : []),
   ];
   const url = new URL(location.href);
 

@@ -789,6 +789,9 @@ jobs:
       - name: Solver trace hooks and output separation
         run: pixi run solver-trace-check
 
+      - name: Playground control-flow and analysis graphs
+        run: pixi run graph-views-check
+
       # Node comes with the runner image; the playground's wasm build runs in it.
       - name: Playground solver trace (WebAssembly analyzer under Node)
         run: pixi run browser-trace-check

@@ -428,11 +428,19 @@
           id="state-inspector"
           class="state-inspector"
           hidden
+          role="dialog"
           aria-labelledby="state-inspector-heading"
         >
           <div class="state-inspector-header">
             <p class="eyebrow" id="state-inspector-heading">State inspector</p>
             <span id="state-inspector-location" class="state-inspector-location"></span>
+            <button
+              id="state-inspector-close"
+              class="state-inspector-close"
+              type="button"
+              title="Close (Esc)"
+              aria-label="Close the state inspector"
+            >×</button>
           </div>
 
           <div id="state-inspector-body" class="state-inspector-body"></div>
@@ -444,8 +452,8 @@
           hidden
         >
           <summary>
-            <h2 id="analysis-graph-heading" class="eyebrow">Control-flow graph</h2>
-            <span class="panel-lead">One node per program point and context; hover a node to see its state.</span>
+            <h2 id="analysis-graph-heading" class="eyebrow">Graph</h2>
+            <span id="graph-panel-lead" class="panel-lead">The compiled control-flow graph: each program point once, with every context's state listed at it.</span>
             <span class="expand-hint" aria-hidden="true">
               <span class="expand-hint-closed">Click to expand</span>
               <span class="expand-hint-open">Click to collapse</span>
@@ -454,6 +462,22 @@
           </summary>
 
           <div class="analysis-graph-header">
+            <div class="graph-view-toggle" role="radiogroup" aria-label="Graph view">
+              <button
+                type="button"
+                role="radio"
+                data-graph-view="cfg"
+                aria-checked="true"
+                title="The compiled CFG. Each program point is shown once; context-sensitive analysis results are grouped at that point."
+              >Control-flow</button>
+              <button
+                type="button"
+                role="radio"
+                data-graph-view="analysis"
+                aria-checked="false"
+                title="The context-expanded analysis graph. A program point may appear once per analysis context, together with global analysis dependencies."
+              >Analysis</button>
+            </div>
             <div class="analysis-graph-tools">
               <span class="graph-hint">Drag a node or context box to move it · drag the background or two-finger scroll to pan · pinch or <kbd>⌘</kbd>/<kbd>Ctrl</kbd> + scroll to zoom · double-click or <kbd>0</kbd> to fit</span>
 
@@ -502,20 +526,21 @@
             <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="gn dead" x="1" y="1" width="32" height="16" rx="4"/></svg>unreachable</span>
             <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="gn plain" x="1" y="1" width="32" height="16" rx="4"/></svg>program point</span>
             <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="gn entry" x="1" y="1" width="32" height="16" rx="4"/><rect class="gn entry-inner" x="4" y="4" width="26" height="10" rx="3"/></svg>entry or exit</span>
-            <span><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><circle class="gn seed" cx="9" cy="9" r="7"/></svg>seed: the state calls publish</span>
-            <span><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path class="gn global" d="M9 1 L17 9 L9 17 L1 9 Z"/></svg>flow-insensitive global: its own unknown, with its solved value</span>
+            <span data-graph-legend="analysis"><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><circle class="gn seed" cx="9" cy="9" r="7"/></svg>seed: the state calls publish</span>
+            <span data-graph-legend="analysis"><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path class="gn global" d="M9 1 L17 9 L9 17 L1 9 Z"/></svg>flow-insensitive global: its own unknown, with its solved value; dashed: read by, purple: written by</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge step" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-step)"/></svg>a step, labelled by its statement</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge call" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-call)"/></svg>call</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge resume" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-resume)"/></svg>resume after the call</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge cont" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-cont)"/></svg>continuation</span>
-            <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="g-cluster" x="1" y="1" width="32" height="16" rx="5"/></svg>box: one procedure in one context</span>
+            <span data-graph-legend="analysis"><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="g-cluster" x="1" y="1" width="32" height="16" rx="5"/></svg>box: one procedure in one context</span>
+            <span data-graph-legend="cfg"><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="g-cluster" x="1" y="1" width="32" height="16" rx="5"/></svg>box: one procedure; a row per context it is analysed in</span>
           </div>
 
           <div
             id="analysis-graph"
             class="analysis-graph"
             tabindex="0"
-            aria-label="Solved control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
+            aria-label="Control-flow graph. Arrow keys pan, plus and minus zoom, 0 fits."
           ></div>
         </details>
 

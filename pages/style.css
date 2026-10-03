@@ -876,11 +876,55 @@ main {
   accent-color: #8bd5ca;
 }
 
+/* Opened by a click on a graph node, it floats over the page until closed. */
 .state-inspector {
+  position: fixed;
+  z-index: 40;
+  right: 16px;
+  bottom: 16px;
+  width: min(560px, calc(100vw - 32px));
+  max-height: min(70vh, 640px);
+  overflow: auto;
   padding: 14px 16px;
   background: var(--surface-muted);
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-sm);
+  box-shadow: var(--shadow-hover);
+}
+
+.state-inspector-close {
+  margin-left: auto;
+  padding: 0 6px;
+  color: var(--text-muted);
+  background: none;
+  border: 0;
+  font-size: 1.3rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.state-inspector-close:hover {
+  color: var(--text);
+}
+
+/* The state run_voblint joins over every context, shown before each context's own. */
+.inspector-joined {
+  margin: 10px 0 0;
+  padding: 8px 10px;
+  background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  white-space: pre-wrap;
+}
+
+.inspector-joined-title {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 0.75rem;
 }
 
 .state-inspector-header {
@@ -2158,6 +2202,40 @@ button.solver-global-key:hover {
 
 .analysis-graph-header {
   margin: 10px 0 12px;
+}
+
+/* Control-flow or analysis graph: two halves of one pill, the shown one filled. */
+.graph-view-toggle {
+  display: inline-flex;
+  margin-bottom: 10px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+}
+
+.graph-view-toggle button {
+  padding: 5px 14px;
+  color: var(--primary);
+  background: var(--surface);
+  border: 0;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.graph-view-toggle button + button {
+  border-left: 1px solid var(--border-strong);
+}
+
+.graph-view-toggle button[aria-checked="true"] {
+  color: var(--surface);
+  background: var(--primary);
+}
+
+.graph-view-toggle button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: -2px;
 }
 
 .analysis-graph-tools {

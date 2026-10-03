@@ -45,6 +45,9 @@ arithmetic-diagnostics-check = { cmd = "python3 -m pytest tests/test_regression_
   "cli-build",
 ], description = "Check arithmetic warnings, source annotations, and HTML findings." }
 tracer-gate = { cmd = "bash scripts/mk/tracer-gate.sh", description = "The exported tracer's gate, run alone: codegen, trace calls in the generated OCaml, traced equals untraced on the corpus, trace and replay tests, wasm build." }
+graph-views-check = { cmd = "node --test tests/graph_views.test.mjs", depends-on = [
+  "cli-build",
+], description = "Check the playground's control-flow and analysis graphs against analyzer payloads: one CFG node per point, every context's state kept, global edges from the trace." }
 replay-state-check = { cmd = "node --test tests/replay_state.test.mjs", description = "Unit-test the solve replay's reducer on hand-written event streams; needs no build." }
 solver-trace-check = { cmd = "python3 -m pytest tests/test_solver_trace.py", depends-on = [
   "cli-build",
@@ -418,6 +421,7 @@ verify = { depends-on = [
   "cli-test",
   "arithmetic-diagnostics-check",
   "solver-trace-check",
+  "graph-views-check",
   "browser-trace-check",
   "browser-corpus-check",
   "property-test",

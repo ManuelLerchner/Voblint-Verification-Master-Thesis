@@ -112,6 +112,7 @@ def collected() -> dict[str, set[str]]:
 
 PLAYGROUND_KEYS = {
     "fixture",
+    "graph",
     "analysis",
     "globals",
     "narrow",
@@ -129,7 +130,11 @@ PLAYGROUND_SELECTS = {
 }
 # Values a link may carry besides a select's own. The playground shows only the full
 # trace and opens it for any trace= value older links name: 1, compact or verbose.
-PLAYGROUND_ALIASES = {"trace": {"1", "compact", "verbose"}}
+PLAYGROUND_ALIASES = {
+    "trace": {"1", "compact", "verbose"},
+    # The graph view is a toggle, not a select.
+    "graph": {"cfg", "analysis"},
+}
 MARKDOWN_PLAYGROUND = re.compile(
     r"(?:https?://[^\s\"'<>()]*/)?playground\.html[^\s\"'<>()]*"
 )
