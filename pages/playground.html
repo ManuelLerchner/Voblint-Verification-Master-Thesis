@@ -326,7 +326,7 @@
             <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
           </div>
           <div class="legend-row" aria-label="Value hints">
-            <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return</span>
+            <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return; <code>⇢</code> a shared-global write contribution, <code>final</code> its final shared value</span>
             <span><span class="lg-badge hint merge">⊔ i: [0,5]</span>paths meet, so the value covers more than this step</span>
           </div>
         </div>
@@ -584,7 +584,7 @@
               <span><span class="replay-swatch r-stable"></span>in the stable set</span>
               <span><span class="replay-swatch r-destabilized"></span>destabilized by the last update</span>
               <span><span class="replay-swatch r-wpoint"></span>widening point</span>
-              <span><span class="replay-swatch r-edge"></span>the step's query, value or call</span>
+              <span><span class="replay-swatch r-edge"></span>the step's query, value, call, side effect or destabilization</span>
               <span><span class="replay-swatch r-infl"></span>influence: re-evaluated when this changes</span>
               <span><span class="replay-swatch r-seed"></span>seed, filled once a call published; green when this step changed it</span>
             </div>
