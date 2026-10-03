@@ -3,7 +3,7 @@
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": *
 #import "../lib/code.typ": *
-#import "../lib/sources.typ": thy
+#import "../lib/sources.typ": proved, thy
 
 // A row of a registered CLI claim (shared/claims.toml), so a verdict or state
 // quoted in prose is read from the checked output rather than typed.
@@ -37,198 +37,59 @@ trusted components remain.
 
 == Code generation and the public interface <sec:codegen>
 
-The source-level theorem is stated about one HOL function, and the delivered
-tools call that function:
+The theorems of @ch:results are about a HOL function, but a user runs an OCaml
+program. Voblint closes this gap by exporting the theorem's own constant: the
+command-line tool and the playground call the generated code of
+#isaconst("run_voblint"), so the theorems speak about the function they run,
+up to the code generator and the OCaml toolchain (@sec:trust-boundary).
 
 #thy("run_voblint")
 
-The first argument is the configuration, an #isatype("analysis_config"): the
-active analyses (a list of #isatype("analysis_domain")), the global update rule
-(#isatype("globals_rule")), the context policy (#isatype("context_mode"): no
-contexts, entry states, or call strings of a given depth), and the placement of
-program globals (#isatype("program_globals"), @sec:mixed-flow). The second is the
-syntax tree, of type #isatype("imp_prog"). The active analyses are solved as one
-combined state whose concretization is the intersection of theirs, and they
-answer one another's queries (@ch:cooperation). The command-line flag
-`--analysis interval,order` names such a list, and the playground offers the
-same choice. #isaconst("run_voblint") returns #isaconst("Invalid_Activation")
-unless the list is non-empty and has no duplicates (#isaconst("valid_config")).
-It then checks the structural conditions compilation requires
-(#isaconst("wf_program_compile_input_exec")) and returns
-#isaconst("Malformed_Program") on failure. Otherwise it solves with the
-executable solver of @sec:termination. #isaconst("No_Answer") is the logical
-case in which that solver returns nothing; where the solve diverges, the
-generated code simply does not return. #isaconst("Analysed") carries an
-#isatype("analysis_report"): the configuration, the CFG, the contexts, one
-state per solved point and context with its verdicts and arithmetic
-diagnostics, the call routes, the check rows, the solved global unknowns, and
-the program's arithmetic diagnostics, which #isathm("run_voblint_arithmetic_safe")
-reads. One function, #isaconst("analysis_report_of"), reads the context
-policy; every other part of the pipeline is the same for all three.
+Without a report, the result says why: #isaconst("Invalid_Activation") for an
+empty or duplicated list of analyses, #isaconst("Malformed_Program") for a
+program that fails the structural conditions of compilation, and
+#isaconst("No_Answer"), the logical case in which the solver returns nothing.
+#isaconst("Analysed") carries an #isatype("analysis_report") of semantic
+values, one combined state per solved point and context with its verdicts.
+#isaconst("render_report") turns them into strings, which no theorem reads.
 
-The report holds semantic values. Each state is a value of the combined state
-the solver computed, not a string, so the theorems of @ch:results speak about
-what the analysis computed. Text comes later. #isaconst("render_report") maps
-each state through its analysis's own display function and
-#isaconst("string_of_abstract_value") into the displayed
-#isatype("run_result"), a projection no theorem reads. Rendering a value is the
-analysis's business: a Congruence value is a residue class behind a type
-definition, which OCaml could not look inside, and a new analysis changes no
-OCaml. No theorem constrains the strings.
+For a user, the most direct guarantee concerns one check. Suppose
+#isaconst("run_voblint") returns a report for a program and a source run of
+`main` from an initial store reaches a check. Then the report lists that check
+at a node where the run's store is collected, its verdict is not `DEAD`, a
+`PROVED` condition holds in the store, and a `REFUTED` one fails:
 
-Export requires executable code equations for the whole dependency closure. Two
-objects of the soundness argument have none, and @ch:solving replaces both. The
-semantic state, a function on an infinite set of variables, becomes the finite
-carrier #isatype("default_st"). The solver specification, a recursion whose
-termination is not known in general, gets the vendored solver's executable
-version as its code equation, which the vendored library proves from their
-agreement wherever the specification is defined @tilscher26. Outside that
-domain the generated solve does not return. Both replacements are proved, and
-neither proves termination (@sec:termination). One #isacmd("export_code")
-declaration then emits #isaconst("run_voblint"), #isaconst("render_report") and
-the constructors a caller needs as the OCaml module `Generated` of the file
-`Voblint_Generated.ml`. It also exports a few program-inspection functions
-(#isaconst("prog_table"), #isaconst("declared_global_vars"),
-#isaconst("cfg_intra_list")) that the renderer calls outside
-#isaconst("run_voblint"). The report's own fields are not exported:
-#isaconst("render_report") is their only reader, so no OCaml code depends on
-the report's representation. Handwritten OCaml names the export through a thin
-facade, the module `Voblint`, which re-exports its signature unchanged; the
-export's root list still decides what can be named, and a change of packaging
-touches the facade alone.
+#proved("run_voblint_check_sound", note: [What a reported verdict guarantees.])
 
-Because the export is the theorem's own constant, no handwritten entry point
-needs an agreement argument. One exported entry point per domain and context
-policy would need a lemma relating each of them to the theorem's constant. The single
-dispatcher answers every combination of its four configuration arguments, so
-the command-line tool never decides which combination is legal.
+#isathm("run_voblint_dead_check_unreached") gives the reading of `DEAD`, and
+#isathm("run_voblint_arithmetic_safe") the reading of a node without an
+arithmetic diagnostic. All three are derived from the source-level theorem
+#isathm("run_voblint_source_sound") (@sec:headline).
 
-== Interfaces that separate execution from proof <sec:engineering>
+Export needs code equations for everything #isaconst("run_voblint") uses.
+Two objects of the soundness argument have none, and @ch:solving replaces
+both: the semantic state by the finite carrier #isatype("default_st"), and the
+solver specification by the vendored solver's executable version
+@tilscher26. One #isacmd("export_code") declaration emits
+#isaconst("run_voblint"), #isaconst("render_report") and the constructors a
+caller needs into
+#link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
+Handwritten OCaml reaches it only through the facade
+#link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`]. One entry point for
+every configuration also means no handwritten code chooses between analyses or
+policies.
 
-Two requirements of code generation shape the interfaces between execution and
-proof. First, a type-class constraint becomes a dictionary of operations passed
-at run time. A class holding both the operations of a domain and its
-concretization would put the concretization into every dictionary, and a
-function into sets of integers, such as the residue class of a congruence, has
-no executable code equation in general. The domain classes therefore split
-(@fig:domain-carrier): #isalocale("executable_domain") holds the runtime
-operations and #isalocale("numeric_domain") adds the concretization and its
-laws. The executable analysis mentions only the former. The solver asks for
-less: #isalocale("bounded_semilattice_sup_bot") and #isalocale("warrowing"),
-both of which #isalocale("executable_domain") extends. A type has at most one
-instance of each class, while transfer functions, routing policy and solver
-vary over one carrier. They are therefore locale parameters.
-
-Second, code generation needs unconditional equations, and theorems about the
-result need semantic premises. #isalocale("dg_pipeline") fixes the
-executable ingredients and assumes nothing, so its definitions become code
-equations directly. The ingredients are a component, which is one analysis's
-local specification or a combination of several, its emptiness test and
-the result map, the initial state, the placement of program globals, the
-global unknowns, the routing policy with its initial context, the solver and
-the check classifier. The placement is a lifter around the component, the
-recombination of a local value with an environment of global values, and the
-initial value of each global, which the program entry publishes. The global
-unknowns are a node's buffer, a key map from analysis-global names to
-unknowns, and the entry seeds. Even the bottom state is a parameter, because a least element
-taken from a type class would have to be executable at a function type.
-#isalocale("dg_analysis") imports it and adds the contracts, among them
-soundness of the component (#isaconst("sound_local_spec")) and of the initial
-state, an emptiness test on the solver's states that agrees with a sound
-emptiness test on the published values, a single entry pair, seeds distinct from the
-buffer and from every analysis global, the three solver contracts of @sec:cert-param, and
-correctness of the check classifier. @sec:instances-supply shows how a numeric
-domain discharges them.
-
-The analyzer interprets #isalocale("dg_analysis") once per context family and
-placement for
-the combination #isaconst("mcp_comp") of any activation list (@fig:assembly),
-and every run inherits the argument of @ch:results from these interpretations.
-The order analysis has no registration: it supplies its local specification
-#isaconst("order_spec") directly, with #isathm("order_spec_sound"). For a new
-analysis, the analysis manifest generates its registration and its field of
-the combined state. Everything the analyzer runs of one analysis is one record
-(#isatype("analysis_registration")), built by #isaconst("registration_of"), the
-one function that dispatches on the analysis at runtime. A few tables are still
-edited by hand (@sec:pipeline).
-
-#figure(
-  {
-    set text(size: 8pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let loc(pos, name, note, color: vb.neutral) = node(
-      pos,
-      align(center)[#name \ #text(size: 7.5pt, fill: vb.muted, note)],
-      stroke: 0.8pt + color,
-      fill: color.lighten(93%),
-      corner-radius: 2pt,
-      inset: 5pt,
-    )
-    let inst(pos, body) = node(
-      pos,
-      align(center, text(size: 7.5pt, body)),
-      stroke: (paint: vb.proved, thickness: 0.7pt, dash: "dotted"),
-      corner-radius: 2pt,
-      inset: 4pt,
-    )
-    let lab(body) = text(size: 7pt, fill: vb.muted, body)
-    diagram(
-      spacing: (9mm, 8mm),
-      loc((1, 0), isalocale("dg_pipeline"), [a component and the other \
-        executable ingredients; no assumptions]),
-      loc(
-        (1, 1),
-        isalocale("dg_analysis"),
-        [adds the contracts, among them \
-          #isaconst("sound_local_spec")],
-        color: vb.proved,
-      ),
-      loc(
-        (2.4, 1),
-        isalocale("dg_analysis_exec"),
-        [derives the component contracts \
-          of a numeric domain],
-        color: vb.proved,
-      ),
-      inst((0.4, 2), [#isaconst("mcp_comp") of any activation list \ three context families]),
-      inst((2.4, 2), [one registration per numeric \ domain, at the unit context]),
-      loc(
-        (2.4, 3),
-        isalocale("sound_nonrelational_ops"),
-        [a domain's primitives, \ proved sound],
-        color: vb.proved,
-      ),
-      loc((0.4, 3), isaconst("order_spec"), [the order analysis's \ local specification]),
-      import-edge((1, 0), (1, 1), label: lab[extends], label-side: left),
-      sublocale-edge((2.4, 1), (1, 1), label: lab[sublocale]),
-      interp-edge((1, 1), (0.4, 2)),
-      interp-edge((2.4, 1), (2.4, 2)),
-      edge((2.4, 2), (0.4, 2), "->", stroke: 0.6pt + vb.muted, label: lab[field soundness]),
-      edge(
-        (2.4, 3),
-        (2.4, 2),
-        "->",
-        stroke: 0.6pt + vb.muted,
-        label: lab[soundness discharges contracts],
-        label-side: right,
-      ),
-      edge(
-        (0.4, 3),
-        (0.4, 2),
-        "->",
-        stroke: 0.6pt + vb.muted,
-        label: lab[field, proved directly],
-        label-side: left,
-      ),
-    )
-  },
-  kind: image,
-  caption: [The analysis assembly. Solid arrows are locale extension, the dashed
-    arrow a sublocale proof, dotted arrows global interpretations, and thin grey
-    arrows name what one object supplies to another. The interpretations of
-    the combined component take the activation list, the global update rule
-    and, for call strings, the depth $k$ as parameters.],
-) <fig:assembly>
+The same constraint splits the interfaces. A concretization into sets of
+integers has no code equation, so it must stay out of the generated code. The
+domain classes therefore separate the runtime operations
+(#isalocale("executable_domain")) from the concretization and its laws
+(#isalocale("numeric_domain"), @fig:domain-carrier). Likewise
+#isalocale("dg_pipeline") fixes the executable ingredients without
+assumptions, so its definitions become code equations, and
+#isalocale("dg_analysis") adds the soundness contracts (@sec:cert-param). The
+analyzer interprets #isalocale("dg_analysis") once per context family and
+placement of program globals, for any activation list, so every run inherits
+the argument of @ch:results.
 
 == The frontend and the browser artifact <sec:ocaml-boundary>
 
@@ -246,7 +107,7 @@ test. Integers in the export are arbitrary-precision Zarith integers, matching
 VIMP's mathematical integers (@sec:vimp-vs-c).
 
 The command-line tool and the browser adapter link the same generated module
-and frontend (@sec:pipeline), and they check a request the same way: one
+and frontend, and they check a request the same way: one
 function turns analysis, update-rule and context names into a configuration,
 and each entry words its own error messages. The two stay separate programs,
 because the command-line tool runs each analysis in a killable subprocess and
@@ -281,6 +142,76 @@ same generated core, registered as claims and re-executed by the build.
     `q = 100 / x`. The run's graph pane and state inspector are omitted.
     Settings #playground-settings("overview")],
 ) <fig:pg-overview>
+
+== Watching the solve <sec:tracing>
+
+A post-solution certificate states that the solver's result bounds the
+equations; it says nothing about how the solver reached it. For explaining a
+run and for debugging an analysis, the order of the steps matters: which
+unknown is queried when, which update destabilizes whom, where widening sets
+in. @tab:eq-trace shows such a sequence for the calls of `bump` in
+@ch:equations, where each call publishes its entry state to the callee's seed
+before the callee is read.
+
+*Tracing inside the export.* The executable solver reports its steps through
+one constant, #isaconst("trace_event"), which takes a channel name and a
+suspended event and is $()$ in the logic. Alternative code equations for the
+solver call it at each step, and because it is $()$, each is proved equal to
+the vendored equation it replaces by unfolding it
+(#isathm("solve_rec_c_traced")); the routing policies and the reading of the
+result are traced the same way (#isathm("trace_route"), #isathm("trace_run")). Code export
+uses the traced equations and drops the originals, so the vendored definitions
+and proofs stay untouched, and a traced and an untraced run execute the same
+generated code. The only addition to the trusted base (@sec:trust-boundary) is
+the target-language mapping that sends #isaconst("trace_event") to an OCaml
+hook. Like every other such mapping, the hook must return, raise nothing and
+leave the solver's values alone; it forces the suspended event only when
+tracing is on. Evaluation inside Isabelle has no mapping and runs the
+equation, so proofs by evaluation see no hook. A gate checks after each code
+export that the trace calls survive in the generated module and that traced
+and untraced runs print the same result on the regression corpus.
+
+*Events.* The events (#isatype("solver_event")) follow the steps Goblint's
+tracing of its top-down solvers reports: queries and their answers, iterations,
+evaluations of a right-hand side, updates with their widening, side effects,
+influences and destabilizations. A few have no counterpart there, among them
+the value a right-hand side returns and the start and end of a solve. The
+verbose output prints them in Goblint's tracing format, indented by query
+depth; the CLI documentation maps each line to its Goblint counterpart. As in
+Goblint, a query names the unknown that asks it, and a program point carries
+its statement and source line.
+
+*Replay.* The playground records the trace in the same solve that computes the
+result shown. It folds the run's events, as JSON Lines, through one reducer
+into the state at every step: node values, the stack of open queries,
+the stable set, influences, widening points and the global unknowns, which are
+the seeds and, under flow-insensitive program globals, one unknown per global. It draws that state
+on the graph beside the verbose trace, and each step names the trace line it
+comes from. @fig:replay-still shows one step; @fig:eq-walk is drawn from the
+same events.
+
+#playground-figure(
+  "solve-replay-still",
+  width: 100%,
+  placement: auto,
+  [One step of the solve replay on the example of @tab:eq-trace: the first call
+    of `bump` asks for the callee's result, and the callee's entry reads its
+    seed. The
+    graph shows each unknown's value at this step, and the trace beside it marks
+    the step's line under a banner naming the call. Captured from the
+    playground; the project site shows the whole replay as an animation
+    (#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#verified")[site]).
+    Settings #playground-settings("solve-replay-still")],
+) <fig:replay-still>
+
+*What the trace is.* The result is the exported computation of proved
+equations. The trace is an unverified observation of that computation, and
+the replay an unverified visualization of the trace. Neither feeds back into a
+result.
+
+The command-line tool records the same trace (#raw("voblint --trace", lang: "sh")),
+as text or as JSON Lines. @tab:eq-trace and @fig:eq-walk are generated from
+such a trace, registered as a claim.
 
 == What remains outside the proof <sec:trust-boundary>
 
@@ -318,8 +249,7 @@ components, which the theorem does not mention.
   The code equations of the development are theorems. The translation to OCaml
   and these mappings are not. Witness theorems proved by `eval`, such as the
   non-vacuity instances of @sec:nonvacuity, trust the same generator inside
-  Isabelle
-  (@tab:oracles-audit).
+  Isabelle.
 - The mapping of #isaconst("trace_event") to the tracer's OCaml hook
   (@sec:tracing). The traced code equations are theorems; the hook must return,
   raise nothing and leave the solver's values alone, like every other target

@@ -1156,6 +1156,35 @@ added, removed or reordered. Headings that changed:
   are discharged once in Ch. 7, per policy by instantiation); the corpus index
   merged into "Main Statements and Regression Corpus".
 
+**Conclusion merge (2026-10-04, author decision).** The conclusion opens with
+the former closing summary instead of answers to the research questions. Its
+discussion and limitations are prose, and the limitations absorb the
+evaluation's "Evidence not supplied" section (`sec:eval-absent`, removed). The
+evaluation's findings section is prose as well.
+
+**Tooling chapter cut (2026-10-04, author decision).** The packaging section
+(`sec:packaging`, conda-forge) and the pipeline section (`sec:pipeline`) were
+removed. A new first section describes the published Voblint repository; it
+keeps, in one paragraph, the regenerate-and-compare checks and the analysis
+manifest that other chapters refer to. "Watching the solve" (`sec:tracing`)
+moved to the executable chapter, after the browser artifact. The solver
+section now lists the four upstream pull requests (td-verification 13-16).
+
+**Restructure (2026-10-04, author decision).** The evaluation chapter no
+longer follows the research questions section by section. It runs: what the
+theorem covers (`sec:eval-scope`, merging the former RQ1-RQ3 sections), how
+strong it is (`sec:eval-strength`: non-vacuity, falsification, PR 1161),
+precision on concrete programs (`sec:eval-precision`), the unverified parts
+(`sec:eval-unverified`: size and tests), then Goblint, absent evidence and
+findings as before. The oracle-audit table was removed.
+
+**Cut (2026-10-04, author decision).** The section "Interfaces that separate
+execution from proof" (`sec:engineering`) and its assembly figure were deleted
+as too detailed for the thesis. Its one design point, that the concretization
+has no code equation and so the domain classes and the analysis locales split
+into an executable part and a proof part, is a paragraph of the
+code-generation section (`sec:codegen`).
+
 **Cut pass (2026-09-22, author decision).** The engineering chapter (Ch. 11)
 was folded into the executable chapter as the section "Interfaces that separate
 execution from proof" (`sec:engineering`); its other content duplicated

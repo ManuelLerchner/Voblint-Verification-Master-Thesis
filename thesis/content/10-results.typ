@@ -1,8 +1,9 @@
+#import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/sources.typ": proved
 #import "../lib/theme.typ": vb
 #import "../lib/math.typ": ctor, sem
-#import "../lib/figures.typ": check-row, int-axis, int-strip, printed-set, snapshot-var
+#import "../lib/figures.typ": check-row, snapshot-var
 #import "../lib/claims.typ": claim-snapshot, snapshot-cluster-of, snapshot-verdict
 
 // One check row of a registered CLI claim (shared/claims.toml), so a verdict
@@ -23,7 +24,8 @@ executions of the source program. The solver of @ch:solving returns a valuation
 of the unknowns it solved, each a pair of a CFG node and a context, and the
 previous chapters show that this valuation covers every execution: the compiler
 simulation, the trace semantics, equation soundness and the solver certificate,
-closed forward over every unknown an execution visits (@sec:cert-forward). The
+on a set of solved unknowns that contains every unknown an execution visits
+(@sec:cert-forward). The
 client reads neither the valuation nor its contexts. It reads the report the
 analyzer returns: one state per node and context, and one verdict per check.
 A verdict needs a precise meaning, since a check that no execution reaches
@@ -87,12 +89,13 @@ Soundness requires only that it contains the set before it.
 
 The program below calls `f` twice. The first call passes $1$; the second
 passes an input $x$ with $1 <= x <= 3$, if the input is in that range. So `m` is
-$2$, $4$ or $6$ at the check, and `m == 2` holds in some runs and fails in
-others.
+$2$, $4$ or $6$ at the checks: `m >= 2` holds in every run, and `m == 2` holds
+in some runs and fails in others.
 
 #listing(lang: "c", claim: "chain-split-entry", ```
 fun f(n) {
   m = 2 * n;
+  __voblint_check(m >= 2);
   __voblint_check(m == 2);
   return m;
 }
@@ -117,74 +120,76 @@ fun main() {
 }
 #let _m1 = snapshot-var("chain-split-entry", "f_pp1_ctx0", "m")
 #let _m2 = snapshot-var("chain-split-entry", "f_pp1_ctx1", "m")
-#let _v1 = upper(_snap.nodes.at("f_pp1_ctx0").status)
-#let _v2 = upper(_snap.nodes.at("f_pp1_ctx1").status)
+#let _v1 = upper(_snap.nodes.at("f_pp2_ctx0").status)
+#let _v2 = upper(_snap.nodes.at("f_pp2_ctx1").status)
 #let _vnode = snapshot-verdict(_snap, "m == 2")
+#let _vge = snapshot-verdict(_snap, "m >= 2")
 #let _none = cli-row("chain-split-none", "m == 2")
 
 #figure(
-  {
-    set text(size: 9pt)
-    let values = range(0, 8)
-    let cell(kind) = box(
-      width: 6.2mm,
-      height: 4.2mm,
-      radius: 1pt,
-      stroke: 0.5pt + vb.frame,
-      fill: if kind == "run" { vb.proved.lighten(25%) } else if kind == "extra" {
-        vb.accent.lighten(72%)
-      } else if kind == "cond" { vb.neutral.lighten(55%) } else { none },
+  cetz.canvas(length: 1cm, {
+    import cetz.draw: *
+    // m runs along x; one row per set, each contained in the rows below it.
+    let (lo, hi, u) = (-1, 8, 0.72)
+    let X(m) = (m - lo) * u
+    let (r1, r2) = (_range(_m1), _range(_m2))
+    let rows = (
+      ([#isai("\<A>") $v$ #raw(_ctx("f_pp1_ctx0"))], "dots", (2,), vb.called),
+      ([#isai("\<A>") $v$ #raw(_ctx("f_pp1_ctx1"))], "dots", (2, 4, 6), vb.called),
+      ([$#isai("\<C>") v = union.big_c #isai("\<A>") v c$, reached], "dots", (2, 4, 6), vb.proved),
+      (
+        [#isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"), the report],
+        "bar",
+        (calc.min(r1.at(0), r2.at(0)), calc.max(r1.at(1), r2.at(1))),
+        vb.accent,
+      ),
+      ([#isai("\<V>\<^bsub>res\<^esub> v"), verdict #raw(_vge)], "from", 2, vb.neutral),
     )
-    // `runs` are the values some execution has; the rest of `range` is extra.
-    // A concrete row fills only `runs`; an abstract row also marks the rest of
-    // `range` as admitted.
-    let strip(range, runs, kind: "abstract") = values.map(x => {
-      let inside = range.at(0) <= x and x <= range.at(1)
-      cell(if not inside { "none" } else if kind == "cond" { kind } else if x in runs {
-        "run"
-      } else if kind == "abstract" { "extra" } else { "none" })
-    })
-    let label-col(n, body) = align(left + horizon)[#text(fill: vb.muted)[#n] #h(3pt) #body]
-    let A(c) = [#isai("\<A>") $v$ #raw(c)]
-    table(
-      columns: (auto,) + (auto,) * values.len() + (auto,),
-      stroke: none,
-      inset: (x: 1.2pt, y: 1.5pt),
-      align: center + horizon,
-      [], ..values.map(x => [$#x$]), [*verdict*],
-      label-col(1, [stores of source runs at the check]), ..strip(
-        (2, 6),
-        (2, 4, 6),
-        kind: "concrete",
-      ), [],
-      label-col(2, [#isai("\<C>") $v$]), ..strip((2, 6), (2, 4, 6), kind: "concrete"), [],
-      label-col(3, A(_ctx("f_pp1_ctx0"))), ..strip((2, 2), (2,), kind: "concrete"), [],
-      label-col(4, A(_ctx("f_pp1_ctx1"))), ..strip((2, 6), (2, 4, 6), kind: "concrete"), [],
-      label-col(5, [$sem(dot)$ in context #raw(_ctx("f_pp1_ctx0")), #raw(_m1)]),
-      ..strip(_range(_m1), (2,)),
-      raw(_v1),
-
-      label-col(6, [$sem(dot)$ in context #raw(_ctx("f_pp1_ctx1")), #raw(_m2)]),
-      ..strip(_range(_m2), (2, 4, 6)),
-      raw(_v2),
-
-      table.hline(stroke: 0.4pt + vb.frame),
-      label-col([], [stores where `m == 2` holds]), ..strip((2, 2), (), kind: "cond"), [],
-    )
-  },
-  caption: [The soundness chain at the check `m == 2`, projected on $m$, with
-    Interval and entry-state contexts. Green: values some run has there; blue:
-    values admitted although no run has them. Rows 1 to 4 are derived by hand;
-    rows 5 and 6 and the verdicts are analyzer output (claim
-    `chain-split-entry`). Each context row lies inside the abstract row of the
-    same context. The node verdict joins the two contexts to #raw(_vnode).],
+    for (k, (name, kind, vals, col)) in rows.enumerate() {
+      let y = -0.55 * k
+      content((-0.3, y), text(size: 7.5pt, name), anchor: "east")
+      line((X(lo), y), (X(hi), y), stroke: 0.3pt + vb.frame)
+      if kind == "dots" {
+        for m in vals { circle((X(m), y), radius: 0.09, fill: col, stroke: none) }
+      } else if kind == "bar" {
+        line((X(vals.at(0)), y), (X(vals.at(1)), y), stroke: 3.2pt + col.lighten(30%))
+        for m in range(vals.at(0), vals.at(1) + 1) {
+          circle((X(m), y), radius: 0.09, fill: col, stroke: none)
+        }
+      } else {
+        // Every m from `vals` upwards: the set is unbounded.
+        line((X(vals), y), (X(hi), y), stroke: 3.2pt + col.lighten(60%), mark: (
+          end: ">",
+          fill: col.lighten(60%),
+        ))
+        circle((X(vals), y), radius: 0.09, fill: col, stroke: none)
+      }
+    }
+    let ya = -0.55 * rows.len() + 0.05
+    for m in range(lo + 1, hi) {
+      line((X(m), ya + 0.08), (X(m), ya - 0.04), stroke: 0.4pt + vb.muted)
+      content((X(m), ya - 0.22), text(size: 7pt)[$#m$])
+    }
+    content((X(hi) + 0.2, ya - 0.22), text(size: 7pt)[$m$], anchor: "west")
+  }),
+  caption: [The chain at the check `m >= 2` of the program above, projected on
+    the value of $m$, with Interval and entry-state contexts. Each row is a set
+    of stores and lies inside the rows below it. Runs reach $m in {2, 4, 6}$,
+    in two overlapping contexts. The report admits every $m$ in $[2, 6]$, also
+    $3$ and $5$, which no run has. The verdict #raw(_vge) holds exactly of the
+    stores with $m >= 2$, an unbounded set. The report and verdict are analyzer
+    output (claim `chain-split-entry`); the first three rows are derived by
+    hand.],
   kind: image,
   placement: none,
 ) <fig:chain>
 
-@fig:chain draws the chain. `f` is analyzed in two contexts, one per entry
-state. The first call enters with $n = 1$, and in its context the check holds
-for every admitted store: #raw(_v1). The second call enters with
+@fig:chain draws the chain at the check `m >= 2`. `f` is analyzed in two
+contexts, one per entry state, and in both the check holds for every admitted
+store, so the verdict is #raw(_vge). The check `m == 2` on the next line sees
+the same sets, but there the contexts disagree. The first call enters with
+$n = 1$, and in its context the check holds for every admitted store:
+#raw(_v1). The second call enters with
 $n in {1, 2, 3}$, abstracted to the interval $[1, 3]$. Its state
 #raw(_m2) admits the odd values $3$ and $5$, which no run has, and the check is
 #raw(_v2) there, as it must be, since the runs with $x = 2$ and $x = 3$ violate
@@ -296,56 +301,16 @@ on the first.
 
 == Verdicts <sec:verdicts>
 
-The chain ends in a report that holds one abstract state per node and context.
-The analyzer prints one word per check. This section explains how the word is
-computed and what it may claim.
+The analyzer prints one word per check: `PROVED`, `REFUTED`, `UNKNOWN` or
+`DEAD`. The chain of @sec:chain guarantees less than a word might suggest. It
+places each reached store in the report's states at its node, in _some_
+context, and those states may admit stores that no run reaches. This section
+states what each word may claim under that guarantee, and how the analyzer
+computes it.
 
-*From the solver's valuation to the report.* #isaconst("report_of") builds the
-report from the table of solved unknowns: its states at a node are exactly the
-table's entries there, one per context solved at that node
-(#isathm("report_rows_report_of")), and an entry describes the same stores as
-the solver's valuation (#isathm("gamma_reader_eq_lookup")). A pair the solver
-never solved has no row. This loses no execution, because every unknown an
-execution visits is solved (@sec:cert-forward). What the report guarantees for
-a store $s$ that reaches $v$ is coverage in _some_ context: some state $A$ the
-report holds at $v$ has $s in sem(A)$, which is
-#isai("s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>").
-The quantifier cannot become universal. In @fig:chain the store with $m = 4$
-lies in the context #raw(_ctx("f_pp1_ctx1")) only. The context
-#raw(_ctx("f_pp1_ctx0")) holds #raw(_m1), which excludes it, and rightly so,
-since no activation in that context has $m = 4$.
-
-*One verdict per context.* #isaconst("classify_point") classifies the check
-at each context separately, and each row of the report keeps its own verdicts. The state #ctor("Bot") describes no store and
-gives #ctor("Dead"). A state $A$ gives a decided verdict: the check asks every
-active analysis for the truth value of its condition (@sec:coop-examples), and
-#isaconst("answer_check") reads the meet of the answers. An exact $1$ gives
-#ctor("Check_Proved"), an exact $0$ gives #ctor("Check_Refuted"), and any other
-answer gives #ctor("Check_Unknown"). A definite answer holds in every store
-$A$ describes, so the two definite verdicts are sound for those stores
-(#isathm("mcp_classify_proved"), #isathm("mcp_classify_refuted")). Only
-#ctor("Bot") yields #ctor("Dead")\; a state that admits stores never does.
-
-*One verdict per check.* #isaconst("aggregate_verdicts") joins the
-per-context verdicts into the report's check column, the one a source-level
-statement reads; with a well-formed report the column is the join of its rows'
-verdicts (#isathm("well_formed_check_verdict")). Their type #isatype("contextual_verdict") is
-#isatype("check_result") lifted by a bottom element, which is #ctor("Dead").
-On decided verdicts the order is flat with #ctor("Check_Unknown") on top: two
-equal verdicts join to themselves, and two different ones to unknown. The
-existential coverage forces this join. The theorem does not say which context
-covers a reached store, so the node verdict may claim only what every
-context with a non-#ctor("Bot") state claims. In @fig:chain, #raw(_v1) and
-#raw(_v2) join to #raw(_vnode). #ctor("Dead") is the unit of the join, so a
-context that describes no store does not weaken the others, and a node is
-`DEAD` exactly when every state the report holds there is #ctor("Bot"). The
-join ranges over the contexts solved at the node, a finite set because a
-terminating solve returns finitely many unknowns (#isathm("finite_stabl_solve"),
-@sec:cert-param).
-
-*What the four verdicts mean.* Each meaning holds for a report
+*What the four verdicts mean.* Each meaning holds for a report that
 #isaconst("run_voblint") returned, (P3). The verdicts speak about _covered
-executions_, finite source executions of `main` from an initial store in
+executions_: finite source executions of `main` from an initial store in
 #isaconst("cinit_stores"), stopped at any point.
 - `PROVED`: whenever a covered execution reaches the check, the condition
   holds (#isathm("run_voblint_check_sound")).
@@ -354,34 +319,50 @@ executions_, finite source executions of `main` from an initial store in
   counterexample. The state admits stores no run has, so a condition that
   fails at every admitted store does not show that any store is reached.
 - `UNKNOWN`: the analysis decides neither.
-- `DEAD`: the node collecting semantics at the check's node is empty, so no
-  covered execution reaches that node
+- `DEAD`: no covered execution reaches the check's node
   (#isathm("run_voblint_dead_check_unreached")).
 The first three constrain each store at the node and hold vacuously when there
-is none. Only `DEAD` constrains the set itself, so it is the one verdict that
-makes a claim about reachability.
+is none. Only `DEAD` makes a claim about reachability.
 
-`DEAD` reads an emptiness test, and only one direction of it holds. An
-emptiness test is _exact_ when it holds of exactly the states that describe no
-store, and _sound_ when every state it holds of describes none. The test on a
-single domain's value and on a single analysis's state is exact
-(#isathm("exact_emptiness_is_empty_state")). The test on the combined state of
-several analyses is only sound: Interval may hold $x = 2$ and Parity $x$ odd,
-neither of them empty, while no store satisfies both
-(#isathm("mcp_empty_v_not_exact")). A report state is #ctor("Bot") only when
-the test fired, so `DEAD` is a sound test on report points and not an exact one
-(#isathm("sound_emptiness_DEAD"), #isathm("DEAD_not_exact")). The second fact
-is shown on a constructed report, not on one a run is proved to return. A point
-no execution reaches therefore need not be `DEAD`.
+*How a verdict is computed.* At each node the report holds one state per
+context the solver solved there. A pair the solver never solved has no row,
+which loses no execution (@sec:cert-forward). Each state gives its own verdict.
+The state #ctor("Bot") describes no store and gives `DEAD`. Any other state
+asks every active analysis for the truth value of the condition
+(@sec:coop-examples): an exact $1$ gives `PROVED`, an exact $0$ gives
+`REFUTED`, and anything else `UNKNOWN`. A definite answer holds in every store
+the state describes. The node's verdict joins the verdicts of its contexts:
+equal verdicts stay, different ones become `UNKNOWN`, and `DEAD` changes
+nothing. The join is forced by the chain, which does not say which context
+covers a reached store. In @fig:chain the store with $m = 4$ lies only in the
+second context's set, so the first context's #raw(_v1) cannot speak for it, and
+#raw(_v1) and #raw(_v2) join to #raw(_vnode). A node is therefore `DEAD`
+exactly when every state the report holds there is #ctor("Bot").
+
+In Isabelle, #isaconst("report_of") builds the report from the table of solved
+unknowns, one row per context solved at a node
+(#isathm("report_rows_report_of")), and each entry describes the same stores as
+the solver's valuation (#isathm("gamma_reader_eq_lookup")).
+#isaconst("classify_point") classifies each row, and #isaconst("answer_check")
+reads the meet of the analyses' answers; #isathm("mcp_classify_proved") and
+#isathm("mcp_classify_refuted") show the definite verdicts sound.
+#isaconst("aggregate_verdicts") joins the rows in the order of
+#isatype("contextual_verdict"), #isatype("check_result") lifted by #ctor("Dead")
+as bottom, flat with #ctor("Check_Unknown") on top
+(#isathm("well_formed_check_verdict")). The join ranges over finitely many
+contexts, because a terminating solve returns finitely many unknowns
+(#isathm("finite_stabl_solve"), @sec:cert-param).
 
 #let _pu = check-row("verdicts-proved-unreachable", cond: "x > 0")
+#let _pu-int = check-row("verdicts-proved-unreachable-int", cond: "x > 0")
 
-*Truth and reachability are separate.* A check no run reaches can still be
-`PROVED`. In the program below, $x = 3n$ is never $1$ or $2$, so no run
-reaches the check. The interval analysis cannot see this and keeps
-#raw(_pu.state) there, where `x > 0` holds, so it reports #raw(_pu.verdict).
-The verdict is sound: it claims only that `x > 0` holds whenever a run reaches
-the check.
+*Truth and reachability are separate.* In the program below, $x = 3n$ is
+never $1$ or $2$, so no run reaches the check. Interval cannot see this. It
+keeps #raw(_pu.state) there, where `x > 0` holds, and reports
+#raw(_pu.verdict). The verdict is sound, since it only claims that `x > 0`
+holds whenever a run reaches the check. The Int product also tracks
+$x equiv 0 med (mod 3)$, finds the state empty, and reports
+#raw(_pu-int.verdict).
 
 #listing(lang: "c", claim: "verdicts-proved-unreachable", ```
 fun main() {
@@ -395,83 +376,17 @@ fun main() {
 }
 ```)
 
-Whether an unreached check is reported `DEAD` depends on the precision of the
-analysis. In the next program no run reaches either check. Interval reports
-only the second `DEAD`; the Int product, which also knows $x equiv 0 med
-(mod 3)$, reports both (@fig:verdict-regions). Conditions are evaluated in the
-VIMP semantics, so a verdict can also depend on its convention for division by
-zero (@sec:vimp-vs-c).
-
-#listing(lang: "c", claim: "verdicts-mult3-interval", ```
-fun main() {
-  n = __voblint_nondet_int();
-  x = 3 * n;
-  if (x > 0) {
-    if (x < 3) {
-      __voblint_check(x == 1);
-    }
-  } else {
-    if (x > 5) {
-      __voblint_check(x == 6);
-    }
-  }
-}
-```)
-
-#figure(
-  {
-    set text(size: 8.5pt)
-    set par(first-line-indent: 0pt, justify: false)
-    let (lo, hi) = (-7, 7)
-    let snap(node) = snapshot-var("verdicts-mult3-interval", "main_" + node + "_ctx0", "x")
-    let int-verdict(cond) = raw(check-row("verdicts-mult3-int", cond: cond).verdict)
-    let ivl-verdict(cond) = raw(check-row("verdicts-mult3-interval-checks", cond: cond).verdict)
-    // reach(x): whether some run has this x at the node; runs have x = 3n.
-    let row(node, path, reach, verdicts) = {
-      let v = snap(node)
-      let inside = printed-set(v)
-      let kind(x) = if inside(x) and calc.rem-euclid(x, 3) == 0 and reach(x) {
-        "run"
-      } else if inside(
-        x,
-      ) { "extra" } else { none }
-      (raw(node), path, ..int-strip(lo, hi, kind), raw(v), ..verdicts)
-    }
-    let dash = text(fill: vb.muted)[–]
-    table(
-      columns: (auto, auto) + (auto,) * (hi - lo + 3) + (auto, auto, auto),
-      column-gutter: (3pt, 3pt) + (0pt,) * (hi - lo + 2) + (3pt, 4pt, 5pt),
-      stroke: none,
-      inset: (x: 0.9pt, y: 1.6pt),
-      align: center + horizon,
-      table.hline(stroke: 0.5pt),
-      [*node*], [*reached after*], table.cell(colspan: hi - lo + 3)[$x$],
-      [*state*], table.cell(colspan: 2)[*verdict*],
-      [], [], ..int-axis(lo, hi), text(size: 7pt)[Interval], text(size: 7pt)[Interval],
-      text(size: 7pt)[Int],
-      table.hline(stroke: 0.4pt),
-      ..row("pp3", [`x > 0`], x => x > 0, (dash, dash)),
-      ..row("pp4", [`x > 0`, `x < 3`], x => false, (ivl-verdict("x == 1"), int-verdict("x == 1"))),
-      ..row("pp6", [`!(x > 0)`], x => x <= 0, (dash, dash)),
-      ..row(
-        "pp7",
-        [`!(x > 0)`, `x > 5`],
-        x => false,
-        (ivl-verdict("x == 6"), int-verdict("x == 6")),
-      ),
-      table.hline(stroke: 0.5pt),
-    )
-  },
-  kind: image,
-  placement: auto,
-  caption: [Verdicts on the program of this section, projected on $x = 3n$. Green: values
-    some run has at the node (by hand); blue: values the interval admits
-    although no run has them. States and verdicts are analyzer output (claims
-    `verdicts-mult3-*`, without contexts). At `pp4` the interval $[1, 2]$ admits
-    values no run has, so the check is `UNKNOWN` although no run reaches it. At
-    `pp7` the guard contradicts $[-infinity, 0]$ and the check is `DEAD`. The
-    Int product also tracks $x equiv 0 med (mod 3)$ and marks both `DEAD`.],
-) <fig:verdict-regions>
+So an unreached check need not be `DEAD`. `DEAD` rests on an emptiness test,
+which is _sound_ if every state it accepts describes no store and _exact_ if
+it accepts exactly those states. The test on a single analysis's state is
+exact (#isathm("exact_emptiness_is_empty_state")). On the combined state of
+several analyses it is only sound: Interval may hold $x = 2$ and Parity $x$
+odd, neither of them empty, while no store satisfies both
+(#isathm("mcp_empty_v_not_exact")). `DEAD` on report points is therefore sound
+and not exact (#isathm("sound_emptiness_DEAD"), #isathm("DEAD_not_exact"); the
+second is shown on a constructed report, not on one a run is proved to return).
+Conditions are evaluated in the VIMP semantics, so a verdict can also depend on
+its convention for division by zero (@sec:vimp-vs-c).
 
 *From check rows to source positions.* The theorems speak about the checks the
 report lists, each at a CFG node. For a source run about to execute a check,

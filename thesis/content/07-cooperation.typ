@@ -537,4 +537,4 @@ concrete store here, because soundness is stated only for the composed combine.
 Since the order analysis keeps no facts across calls, it is coarse there
 (#fixture("25-cooperation/known-imprecision/04-order_forgotten_at_return.vimp", label: "04-order_forgotten_at_return")).
 No theorem says that the combination is more precise than its parts. The two
-runs of @sec:coop-examples witness it for one program each (@sec:eval-rq4).
+runs of @sec:coop-examples witness it for one program each (@sec:eval-precision).

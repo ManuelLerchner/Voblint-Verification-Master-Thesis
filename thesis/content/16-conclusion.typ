@@ -5,46 +5,28 @@
 
 = Conclusion <ch:conclusion>
 
-== Answers to the questions
-
-*Can soundness be machine-checked end to end?* Yes, as partial correctness for
-a scalar language with recursive procedures. For every configuration the
-analyzer offers, if #isaconst("run_voblint") returns a report, then every store
-that a finite source execution reaches from a store whose declared globals are
-zero is described by the report at a graph node that simulates the source
-configuration, and every definite verdict listed there holds for it
-(#isathm("run_voblint_source_sound"), @sec:headline). The theorem has no
-termination premise, since a report exists only where the solve returned;
-termination of the solve is not proved for every program, and termination of
-the analyzed program is not required. The delivered tools additionally trust the
-parser, code generator, compilers, runtimes and presentation code
-(@sec:trust-boundary).
-
-*What does a calling context denote?* A property of an activation trace,
-read off how the activation was entered (@sec:contexts). When every covered
-call admits some callee context (#isaconst("call_context_total_on")), the
-activation collecting semantics of all contexts jointly equals the node
-collecting semantics
-(#isathm("node_collect_eq_Union_activation_collect"), @sec:eval-rq2).
-
-*Can the ingredients be verified separately?* Yes. Domains, context policies
-and the solver prove their obligations without each other. One theorem
-discharges the coverage contract in every domain, for every policy that proves
-its routing adequacy and totality (#isathm("activation_collect_dg_sound"),
-@sec:eval-rq3). Cooperating analyses
-each prove obligations that name no partner (#isathm("mcp_combine_sound")).
-
-*Is the theorem informative?* Partly. Counterexample theorems show that
-dropping selected obligations admits unsound claims. One named program meets
-every premise of the main theorem, with the answer established by
-evaluation. Evaluated precision separations hold on single
-programs, between call-string lengths, between update rules, and between a
-combination of analyses and its parts. No general precision result is proved
-(@sec:eval-rq4).
+The thesis shows that the soundness of a Goblint-style analyzer with contexts,
+side effects and a verified solver can be machine-checked from source
+executions to the verdicts of the exported function, for a scalar language
+with recursive procedures, as partial correctness: for every answer the
+analyzer returns. The
+proof follows one chain. Graph runs simulate source executions, and valid
+activation traces represent graph runs, sorted by the context read
+off each activation into the activation collecting semantics. Context-indexed
+equations with routed calls cover it at every context, provided the analysis and the context policy meet their
+separate obligations. The solver enters only through a post-solution
+certificate, and the source-level theorem reads the verdicts off its result. A
+non-relational domain supplies only primitives proved sound, from which
+a generic builder in the style of Nipkow and Klein derives its analysis.
+Analyses that answer one another's queries combine under the same theorem, each
+proving one obligation that names no partner.
+The evidence for this, its strength and its gaps are assessed in
+@ch:evaluation. This chapter discusses the design, collects the limitations in
+one place, and outlines future work.
 
 == Discussion <sec:discussion>
 
-*Design trade-offs.* A context relation lets entry-state routing read contexts
+Several design choices trade one cost for another. A context relation lets entry-state routing read contexts
 off the analysis's result, at the price of the obligation #oblig("TOTAL").
 Functional policies embed as relations and satisfy it directly
 (#isaconst("call_context_rel_of_fun")). Stating the contract over an
@@ -59,7 +41,7 @@ independent of the update rule (@sec:update-rules), but says nothing about
 termination or about which post-solution is returned (@sec:certificate). Exporting one dispatcher makes
 the constant of the theorem the one the tools run (@sec:codegen).
 
-*Generalizability.* Goblint analyzes C after CIL normalization, with pointers,
+How far the results carry beyond VIMP depends on the layer. Goblint analyzes C after CIL normalization, with pointers,
 a heap, threads, machine integers and further update rules. The certificate is
 stated over right-hand sides and unknowns and mentions no VIMP construct. The
 coverage contract has one obligation per rule of #isaconst("valid_activation_trace") and
@@ -93,7 +75,7 @@ rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
 boundary unless verified.
 
-*Lessons for verified analyzers.* The development suggests an order of work. State
+For other verified analyzers, the development suggests an order of work. State
 soundness against a context-free trace semantics and read contexts off traces,
 so that policies are proved against one fixed semantics. Consume the solver
 through a certificate that also bounds side contributions and closes the
@@ -103,60 +85,62 @@ of them determined the shape of the call interface (@sec:revealed).
 
 == Limitations <sec:limitations>
 
-The answers above hold within the following limits, each also stated where it
-arises.
+The first limits concern what the theorem covers. It is a partial-correctness
+result: it covers every answer the analyzer returns, and termination is proved
+neither for the solve nor for the reduction of the Int product, so regression
+programs exist whose solves do not finish (@sec:termination,
+@sec:reduced-product). It concerns VIMP, a scalar language without pointers,
+heap or memory model, with unbounded integers, defined division by zero and
+zero-initialized callee locals, so a verdict about a VIMP program does not
+transfer to a C program with the same text (@sec:vimp-vs-c). That
+#isaconst("pstep") models the intended language is argued, not proved, and the
+simulation from source runs to graph runs and the representation of graph runs
+by valid traces are proved in the forward direction only (@sec:csim,
+@sec:valid). Within the analyzer, only the combined state as a whole publishes
+to analysis globals, so #isaconst("rel_order_spec") is selectable only in its
+local form, and one update rule serves every global unknown of a run
+(@sec:mixed-flow, @sec:relational, @sec:update-rules).
 
-+ *Partial correctness.* The theorem covers every answer the analyzer returns,
-  and solver termination is not proved. Regression programs exist whose solves
-  do not finish, under entry-state
-  contexts on intervals and under the joining update rules (@sec:termination).
-  That the Int product's reduction stops in the executable is not proved
-  either (@sec:reduced-product).
-+ *Source language.* VIMP is scalar, without pointers, heap or memory model.
-  Its integers are unbounded, division by zero is defined, and a callee's
-  locals start at zero, so a verdict about a VIMP program does not transfer
-  to a C program with the same text (@sec:vimp-vs-c).
-+ *Adequacy and converse directions.* That #isaconst("pstep") models the
-  intended language is argued, not proved. The simulation from source runs to
-  graph runs and the representation of graph runs by valid traces are proved
-  in the forward direction only (@sec:csim, @sec:valid).
-+ *Trust.* The delivered tools rest on the trusted components of
-  @sec:trust-boundary, and every witness proved by evaluation trusts the code
-  generator (@tab:oracles-audit).
-+ *Running time.* The executable keeps the proofs' list-based data
-  representations. It was measured once and is not benchmarked
-  (@sec:eval-absent).
-+ *Analysis globals.* Only the combined state as a whole publishes to analysis
-  globals, through the flow-insensitive placement of program globals
-  (@sec:mixed-flow). Its components cannot, and the update rule is chosen once
-  for every global unknown of a run (@sec:update-rules).
-+ *Coverage of the configuration space.* The combined state admits
-  only components without globals, so #isaconst("rel_order_spec") is not
-  selectable; its local form, the order analysis, is (@sec:relational).
-+ *Necessity.* Each counterexample theorem weakens one selected condition
-  on one program. None shows that the contract as a whole is minimal
-  (@sec:falsification).
-+ *Precision.* No general precision, optimality or completeness theorem is
-  proved. Each precision witness concerns one program at fixed configurations
-  (@sec:eval-rq4).
-+ *Evaluation.* The corpus is small and written for this work, and its
-  expected behaviour is the author's reading of each program
-  (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run, and
-  the comparison with prior work rests on a targeted search rather than a
-  systematic review (@ch:related).
-+ *Goblint.* The correspondence is architectural. No theorem transfers to Goblint's OCaml implementation, and no agreement
-  rate between the two analyzers is measured (@sec:eval-goblint).
+The delivered tools rest on the trusted components of @sec:trust-boundary, and
+every witness proved by evaluation trusts the code generator. No test runs VIMP
+programs concretely, since the development has no executable form of
+#isaconst("pstep"). No time or memory measurement is reported. The executable
+keeps the data representations of the proofs: finite sets are unordered lists
+and the solver's value table is a function, so membership, insertion and lookup
+take linear time @haftmann10 #_todo[check that the cited work states this.].
+Measured once on one machine, each doubling of a chain of assignments
+multiplied the running time by about 7, close to the cubic factor of 8, mostly
+from the list unions in #isaconst("compile")
+#_todo[register the command, input and data.]. A data refinement to red-black
+trees, which Isabelle's library and the Isabelle Collections Framework provide
+with refinement proofs @lammich26collections[§1.1]
+#_todo[check locator.], would remove this cost. It would change the state of
+the vendored solver and require its proof to be redone, while the rest of the
+chain uses the solver only through its certificate (@sec:certificate).
+
+The evidence beyond the theorem is narrow. Each counterexample theorem weakens
+one selected condition on one program, and none shows that the contract as a
+whole is minimal (@sec:falsification). No general precision, optimality or
+completeness theorem is proved, and each precision witness concerns one program
+at fixed configurations (@sec:eval-precision). The regression corpus is small
+and written for this work, and its expected behaviour is the author's reading
+of each program (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was
+not re-run, and the playground is illustrative; no study measures whether it
+helps a reader. The correspondence with Goblint is architectural: no theorem
+transfers to its OCaml implementation, and no agreement rate between the two
+analyzers is measured (@sec:eval-goblint). The comparison with prior work rests
+on a targeted search rather than a systematic review (@ch:related).
 
 == Outlook and future work <sec:outlook>
 
 === Extending Voblint <sec:outlook-extending>
 
-*Semantics.* A richer source language, up to a subset of C, needs the new
+A richer source language, up to a subset of C, needs the new
 obligations that @sec:discussion names for machine integers, pointers, a heap
 and threads, and a semantics and a preservation argument per construct at
 every layer.
 
-*Analyses.* The order analysis drops the pairs of an assigned variable before
+On the analysis side, the order analysis drops the pairs of an assigned variable before
 relearning some by asking, and it keeps nothing across calls. A useful relational domain needs its own transfer proofs, and
 through the query channel it could answer the numeric analyses at branches as
 well as at assignments (@sec:relational). The combined state admits one query
@@ -174,7 +158,7 @@ Generalizing #isaconst("activation_context_rel") to such abstractions over
 activation traces would allow path- or history-sensitive unknowns, each
 with its own admissibility conditions.
 
-*Solver.* Voblint adapts its equations to the interface of the vendored solver
+Voblint adapts its equations to the interface of the vendored solver
 (@sec:eq-encoding). A version of the solver that side-effects local unknowns
 and joins the writes of one evaluation per target, as Goblint's solvers do,
 would let callers publish into callee entries directly and make activation
@@ -182,7 +166,7 @@ seeds and buffering unnecessary. It would need its partial-correctness proof
 redone for local side effects. The rest of the chain consumes the solver only
 through the post-solution certificate (@sec:certificate).
 
-*Guarantees.* A termination theorem would remove the per-program premise. The
+A termination theorem would remove the per-program premise. The
 total-correctness result of #cite(<tilscher26jar>, form: "prose") covers the
 top-down solver without side effects, with finitely many unknowns and a
 widening that stabilizes ascending chains
@@ -199,7 +183,7 @@ trusted base: the code generator, the target toolchain or the handwritten
 OCaml, and the parser if the evaluator reads the source independently. Comparing its runs with a
 C compiler on the common subset would test the adequacy argument itself.
 
-A faster executable needs the data refinement of @sec:eval-absent.
+A faster executable needs the data refinement of @sec:limitations.
 
 === Voblint and Goblint <sec:outlook-goblint>
 
@@ -217,7 +201,7 @@ counterpart.
 
 From Voblint to Goblint, a verified component exported as OCaml could replace
 its unverified counterpart in Goblint. That needs more than the export: the
-data refinement above (@sec:eval-absent), a correspondence between the
+data refinement of @sec:limitations, a correspondence between the
 component's interface and Goblint's, and soundness for C's integers, since the
 component's proofs assume VIMP's unbounded ones (@sec:vimp-vs-c).
 
@@ -234,21 +218,3 @@ This is the experience of one author on one extension, not a measured result.
 An agent that delivers an analysis with its proof against these obligations
 need not be trusted. The guarantee still rests on the adequacy of the
 obligations and on the trusted base of @sec:trust-boundary.
-
-== Summary
-
-The thesis shows that the soundness of a Goblint-style analyzer with contexts,
-side effects and a verified solver can be machine-checked from source
-executions to the verdicts of the exported function, for a scalar language
-with recursive procedures, as partial correctness: for every answer the
-analyzer returns. The
-proof follows one chain. Graph runs simulate source executions, and valid
-activation traces represent graph runs, sorted by the context read
-off each activation into the activation collecting semantics. Context-indexed
-equations with routed calls cover it at every context, provided the analysis and the context policy meet their
-separate obligations. The solver enters only through a post-solution
-certificate, and the source-level theorem reads the verdicts off its result. A
-non-relational domain supplies only primitives proved sound, from which
-a generic builder in the style of Nipkow and Klein derives its analysis.
-Analyses that answer one another's queries combine under the same theorem, each
-proving one obligation that names no partner.

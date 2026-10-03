@@ -500,7 +500,7 @@ The policy still affects precision, because it decides which calls share an
 unknown (@fig:eq-policies). A call string of length one separates the two
 calls of `wrap` but merges them again in `scale`, where both arrive from the
 same call site. Length two and entry-state routing keep them apart through
-`scale`. @sec:eval-rq4 gives an evaluated strict separation of this kind
+`scale`. @sec:eval-precision gives an evaluated strict separation of this kind
 between call-string lengths one and two.
 
 #let _policy(name, title) = {

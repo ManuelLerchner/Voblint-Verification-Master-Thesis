@@ -466,7 +466,7 @@ answers one of the questions of @sec:rqs.
   unsound results (#isathm("total_dropped_unsound")), and theorems proved by
   evaluation give non-vacuous verdicts (#isathm("nv_check_proved_sound")) and
   a strict precision separation on a concrete program
-  (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-rq4).
+  (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-precision).
 
 The solver, side-effecting constraint systems, local traces, Goblint's
 analysis architecture and the derivation of transfer functions from sound
@@ -489,8 +489,8 @@ interface (@ch:analysis-interface), the combination of cooperating analyses
 solver (@ch:solving), and @ch:results composes
 them into the source-level theorem. #partref(<part:instances>) instantiates it for five domains and an order
 analysis (@ch:instances), follows #isaconst("run_voblint") to the delivered tools and the
-trust boundary (@ch:executable), assesses the evidence for each question
-(@ch:evaluation), and describes the tooling built around the formalization
+trust boundary (@ch:executable), evaluates how much the theorem covers, how
+strong and how precise it is, and what lies outside it (@ch:evaluation), and describes the tooling built around the formalization
 (@ch:tooling). #partref(<part:assessment>) compares the work with prior systems (@ch:related)
 and answers the questions (@ch:conclusion). @fig:intro-nest names the chapter
 that defines each set of the soundness chain.

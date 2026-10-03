@@ -188,8 +188,7 @@ facts for that component and its initial state.
 ) <fig:instance-chain>
 
 Every domain refines guards with the same generic filter, so the domains'
-guard precision differs only in which refinement operations are precise
-(@fig:refine-profile). An inverse that a domain cannot sharpen returns its
+guard precision differs only in which refinement operations are precise. An inverse that a domain cannot sharpen returns its
 operands unchanged, as #isaconst("inv_conservative") does, and the interface
 admits this for every operator.
 Sign and Interval refine comparisons and equalities and leave the operands of
@@ -202,31 +201,6 @@ factors are odd (#isaconst("inv_times_parity")). Int refines through its
 components: its arithmetic inverses are those of its Parity and Congruence
 components, followed by reduction in the chosen mode (@sec:reduced-product).
 
-#figure(
-  {
-    set text(size: 8.5pt)
-    let r = [refines]
-    let i = [identity]
-    table(
-      columns: 6,
-      align: (left,) + (center,) * 5,
-      stroke: none,
-      table.hline(),
-      [*domain*], [`<`], [`==`], [`+`], [`-`], [`*`],
-      table.hline(stroke: 0.5pt),
-      [Sign], r, r, i, i, i,
-      [Interval], r, r, i, i, i,
-      [Parity], i, r, r, r, r,
-      [Congruence], i, r, r, r, r,
-      [Int], r, r, r, r, r,
-      table.hline(),
-    )
-  },
-  placement: auto,
-  caption: [Which inverse operator of each domain can shrink an operand
-    ("refines") and which returns its operands unchanged ("identity"). Read
-    from the refinement operations in the theories.],
-) <fig:refine-profile>
 
 == One loop, five answers <sec:stride2>
 
@@ -302,7 +276,7 @@ Parity records only evenness. For `x = 2 * n; y = 2 * n + 1` with `n`
 unconstrained, Interval answers #verdict("dom-even-odd-interval", "20:3") on
 `x != y`, while Parity derives #state("dom-even-odd-parity", "20:3") and
 answers #verdict("dom-even-odd-parity", "20:3"). Parity also refines guards
-through the generic filter (@fig:refine-profile). On `x + 1 == y` with `y` even,
+through the generic filter. On `x + 1 == y` with `y` even,
 the inverse of `+` (#isaconst("inv_plus_parity")) makes `x` odd, which
 #isathm("bfilter_parity_plus_narrows") checks by evaluation. Interval, whose
 inverse of `+` is the identity, learns nothing about `x` there. Under the guard
@@ -329,15 +303,66 @@ is unreachable. Parity knows only that both are odd and answers
 == The reduced product <sec:reduced-product>
 
 Combined, the four domains should prove facts that none proves alone. The
-carrier
-#isatype("int_dom") holds a Sign, an Interval, a Parity and a Congruence value
-and denotes the intersection of their meanings. Running the four side by side
-is sound but does not prove `v == 51`: the exit tuple holds
-$ivl(51, 52)$ and "odd", which no component decides alone, although together
-they denote exactly $setof(51)$. A _reduction_ lets components tighten each
-other, as in the reduced product @cousot79 @rival20[§5.1.2]: the oddness moves
-the upper bound from 52 to 51, and the product reports #_s("int", "25:3") and
-#_v("int", "25:3").
+carrier #isatype("int_dom") holds a Sign, an Interval, a Parity and a
+Congruence value and denotes the intersection of their meanings. Running the
+four side by side is sound but wastes this. In the program below, $x$ lies in
+$ivl(-2, 10)$ at the check by the guards and is $1$ modulo $4$ by its
+definition. Together these allow only $1$, $5$ and $9$, yet neither component
+alone decides `x >= 1 && x <= 9`. A _reduction_ lets components tighten each
+other, as in the reduced product @cousot79 @rival20[§5.1.2]. The residue class
+moves the interval's bounds onto values that are $1$ modulo $4$, giving
+$ivl(1, 9)$, and the positive interval then makes the sign positive. The
+reduced value denotes the same integers and decides the check
+(@tab:reduction).
+
+#listing(lang: "c", claim: "int-reduction-fixpoint", ```
+fun main() {
+  n = __voblint_nondet_int();
+  x = 4 * n + 1;
+  if (x >= -2) {
+    if (x <= 10) {
+      __voblint_check(x >= 1 && x <= 9);
+    }
+  }
+}
+```)
+
+#let _red(mode) = {
+  let row = claim-row("int-reduction-" + mode, "68:7")
+  let comps = row.state.split("x=").at(1).split("; ").map(c => c.split(":").at(1))
+  (comps, row.verdict)
+}
+#figure(
+  {
+    let (never, v-never) = _red("never")
+    let (fix, v-fix) = _red("fixpoint")
+    table(
+      columns: 3,
+      align: (left, center, center),
+      stroke: none,
+      table.hline(),
+      [*component of* $x$], [*without reduction*], [*with reduction*],
+      table.hline(stroke: 0.5pt),
+      ..("Sign", "Interval", "Parity", "Congruence")
+        .enumerate()
+        .map(((i, n)) => ([#n], raw(never.at(i)), raw(fix.at(i))))
+        .flatten(),
+      table.hline(stroke: 0.5pt),
+      [verdict of the check], raw(v-never), raw(v-fix),
+      table.hline(),
+    )
+  },
+  placement: auto,
+  caption: [The value of $x$ at the check of the program above, without
+    reduction and with the default reduction (claims `int-reduction-never` and
+    `int-reduction-fixpoint`). Both rows describe the integers $1$, $5$ and $9$
+    in the guard's range; only the reduced one decides the check.],
+) <tab:reduction>
+
+The same reduction proves `v == 51` in the loop of @sec:stride2. The exit tuple
+holds $ivl(51, 52)$ and "odd", which no component decides alone; the oddness
+moves the upper bound from 52 to 51, and the product reports
+#_s("int", "25:3") and #_v("int", "25:3").
 
 The reduction is partial. One round applies #isaconst("refine_interval"),
 which tightens Sign, Interval and Parity from the interval bounds, and then
@@ -401,33 +426,61 @@ transfers and filters.
 
 == A relational carrier <sec:relational>
 
-Every domain so far is pointwise. The relational state #isatype("relc") of
-@sec:rel-state tests whether a relational local state needs any change to the
-generic interface.
+Every domain so far is pointwise: it describes each variable on its own and
+cannot express that $x lt.eq y$. In the program below, the guard `x < y` says
+nothing about either variable alone, so Interval keeps
+#state("order-alone-interval", "12:5") and reports
+#verdict("order-alone-interval", "12:5") at the first check. The order
+analysis records the pair instead, holds #state("order-alone-order", "12:5")
+there, and reports #verdict("order-alone-order", "12:5").
 
-The specification #isaconst("rel_order_spec") discharges the analysis soundness
-contract #isalocale("analysis_contract") of the numeric analyses without any
-change to the framework, because the contract already ranges over arbitrary
-local and shared carriers with a joint concretization (@ch:analysis-interface).
-On `if (x < y) { z = 1; } else { z = 0; }` with $x$ and $y$ unconstrained,
+#listing(lang: "c", claim: "order-alone-order", ```
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  z = __voblint_nondet_int();
+  if (x < y) {
+    __voblint_check(x <= y);
+    if (y <= z) {
+      __voblint_check(x <= z);
+    }
+    y = y + 1;
+    __voblint_check(x <= y);
+  }
+}
+```)
+
+Its state is a set of variable pairs $(x, y)$, each meaning $x lt.eq y$: the
+relational state #isatype("relc") of @sec:rel-state. It asks whether the
+generic interface admits a local state that is not a map from variables to
+values. It does, without any change to the framework. The specification
+#isaconst("rel_order_spec") discharges the analysis soundness contract
+#isalocale("analysis_contract") of the numeric analyses, because the contract
+already ranges over arbitrary local and shared carriers with a joint
+concretization (@ch:analysis-interface). On
+`if (x < y) { z = 1; } else { z = 0; }` with $x$ and $y$ unconstrained,
 Interval learns nothing at the true branch (#isathm("demo_ivl_x_at_branch")),
 while the relational carrier records $(x, y)$ there
 (#isathm("demo_rel_learns_xy")); both facts are proved by evaluating the
-generated solver inside Isabelle. The analysis forgets a variable on
-assignment and everything across calls, and its carrier does not close its
-pairs under transitivity, so it is not a useful analysis. It only shows that the proved
-interface admits a relational local state.
+generated solver inside Isabelle.
 
-The specification #isaconst("rel_order_spec") reads and publishes an analysis
-global, so it cannot join the combined state of @ch:cooperation. The analyzer
-runs the same carrier in a local form, the order analysis
-(#isaconst("order_spec"), @sec:coop-catalogue). Alone it proves little, since
-it cannot compare a variable with a constant. Its use is as a partner of
-Interval (@sec:coop-examples). Its session
-#isasession("Voblint_Analysis_Relational") builds on
-#isasession("Voblint_Exec") and does not import
-#isasession("Voblint_Nonrelational"), which holds the pointwise transfer
-theories the numeric domains share.
+The carrier is deliberately simple, and the other two checks show its limits.
+It does not close its pairs under transitivity: under `y <= z` it holds
+#state("order-alone-order", "14:7") and still reports
+#verdict("order-alone-order", "14:7") for `x <= z`. It forgets a variable on
+assignment, so after `y = y + 1` it holds #state("order-alone-order", "17:5")
+and reports #verdict("order-alone-order", "17:5"), and it forgets everything
+across calls. Alone it also cannot compare a variable with a constant. It shows
+that the proved interface admits a relational local state, and its use is as a
+partner of Interval (@sec:coop-examples).
+
+#isaconst("rel_order_spec") reads and publishes an analysis global, so it
+cannot join the combined state of @ch:cooperation. The analyzer runs the same
+carrier in a local form, the order analysis (#isaconst("order_spec"),
+@sec:coop-catalogue), which produced the verdicts above. Its session
+#isasession("Voblint_Analysis_Relational") builds on #isasession("Voblint_Exec")
+and does not import #isasession("Voblint_Nonrelational"), which holds the
+pointwise transfer theories the numeric domains share.
 
 All five domains also have monotone operations
 (#isalocale("mono_nonrelational_ops"), for Int without fixpoint iteration,

@@ -135,7 +135,7 @@ responsible for the claims, framing, and treatment of related work.
 
 Every theorem in the development is accepted by Isabelle/HOL. Proofs by
 evaluation, used for some facts about fixed programs, additionally rely on
-Isabelle's code generator (@tab:oracles-audit). This establishes the stated
+Isabelle's code generator (@sec:trust-boundary). This establishes the stated
 propositions relative to their definitions and assumptions, but not that those
 definitions capture the intended language or analysis. Definitions and theorem
 statements were therefore also checked against example programs, the

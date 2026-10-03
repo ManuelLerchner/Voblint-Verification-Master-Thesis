@@ -298,7 +298,7 @@ by relaxing the Galois-connection hypotheses @cousot92jlc[§§7, 9]. Voblint fol
 and proves them sound against $conc$ @mine17[§2.4]. Its soundness theorem
 claims coverage and says nothing about optimal precision, so no proof needs a
 best abstraction. The concretization of an integer domain is in general infinite, so
-only the proofs use it (@sec:engineering).
+only the proofs use it (@sec:codegen).
 
 For a concrete operation $f : C -> C$ and an abstract operation, or transfer
 function, $sh(f) : A -> A$, the required local property @cousot77[§6] @mine17[Def. 2.15] is
@@ -792,4 +792,4 @@ inference kernel. The method `eval` compiles a closed proposition to code, runs 
 the result through the code generator's evaluation oracle. In 2025, a defect in
 normalization by evaluation, which also extends trust beyond the kernel,
 admitted a proof of `False` @paulson26broken. Witnesses about fixed programs such as #isathm("nv_report") are proved this
-way (@tab:oracles-audit).
+way.
