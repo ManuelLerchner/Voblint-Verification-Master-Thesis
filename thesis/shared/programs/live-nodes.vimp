@@ -1,0 +1,10 @@
+fun f(b) {
+  return b;
+  if (b < 0) {
+    return 1;
+  }
+  b = 2;
+}
+fun main() {
+  a = f(0);
+}

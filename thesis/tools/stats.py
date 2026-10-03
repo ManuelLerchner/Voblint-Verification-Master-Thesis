@@ -63,6 +63,10 @@ ALLOW: dict[tuple[str, str], str] = {
     ("15-related.typ", "132,000"): "program size reported by blanchet03",
     # Drawing coordinates of a figure, not a count.
     ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
+    # Colour lightening in cetz figure code, whose `line` calls trip the heuristic.
+    ("09-solving.typ", "90"): "fill lightening in fig:cert-forward",
+    ("10-results.typ", "30"): "bar lightening in fig:chain",
+    ("10-results.typ", "60"): "bar lightening in fig:chain",
 }
 
 

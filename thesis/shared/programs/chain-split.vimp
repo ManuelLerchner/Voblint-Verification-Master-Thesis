@@ -1,0 +1,16 @@
+fun f(n) {
+  m = 2 * n;
+  __voblint_check(m >= 2);
+  __voblint_check(m == 2);
+  return m;
+}
+
+fun main() {
+  a = f(1);
+  x = __voblint_nondet_int();
+  if (0 < x) {
+    if (x < 4) {
+      b = f(x);
+    }
+  }
+}

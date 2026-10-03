@@ -1,0 +1,19 @@
+// PARAM: --analysis order
+// The order analysis on its own. Under x < y it records the pair x <= y and
+// proves x <= y, which Interval, tracking each variable separately, cannot.
+// It does not close pairs under transitivity, so x <= z stays UNKNOWN under
+// y <= z, and an assignment to y forgets every pair with y. Backs the order
+// example of the thesis (Section 11.4).
+fun main() {
+  x = __voblint_nondet_int();
+  y = __voblint_nondet_int();
+  z = __voblint_nondet_int();
+  if (x < y) {
+    __voblint_check(x <= y); // PROVED
+    if (y <= z) {
+      __voblint_check(x <= z); // UNKNOWN
+    }
+    y = y + 1;
+    __voblint_check(x <= y); // UNKNOWN
+  }
+}
