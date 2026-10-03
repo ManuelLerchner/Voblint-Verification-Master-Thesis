@@ -14,6 +14,7 @@
  */
 
 import { contextLabel, createCache, globalKey, localKey, parseEvents } from "./replay_state.js";
+import { replayStyle } from "./replay-style.js";
 import { createTraceView } from "./trace-view.js";
 
 /* Replay states kept for jumps: stepping back or dragging the slider replays at most this many events. */
@@ -505,9 +506,15 @@ export function createSolveReplay(deps) {
       for (const edge of edges) {
         edge.addClass("r-active");
       }
-
-      drawInfluence(state);
     });
+
+    /*
+     * The overlays reuse their ids every step. A batch restyles its touched elements as
+     * one collection, which keeps one element per id: a replacement added in the batch
+     * that restyled its predecessor was dropped and drew with no style at all.
+     */
+    drawInfluence(state);
+    drawEventEdges(state);
 
     const current = finished ? null : replay.nodeOf.get(state.stack.at(-1));
 
@@ -543,6 +550,28 @@ export function createSolveReplay(deps) {
             classes: "r-infl",
           });
         }
+      }
+    }
+
+    cy.add(edges);
+  }
+
+  /* Transient arrows only for the event being replayed, never from final values or CFG guesses. */
+  function drawEventEdges(state) {
+    cy.remove("edge.r-event");
+    const nodeFor = (key) => (key.startsWith("L:") ? replay.nodeOf.get(key) : replay.entryOf(key));
+    const edges = [];
+
+    for (const [index, { from, to, kind }] of state.eventEdges.entries()) {
+      const source = nodeFor(from);
+      const target = nodeFor(to);
+
+      if (source && target) {
+        edges.push({
+          group: "edges",
+          data: { id: `event:${index}`, source, target, label: kind },
+          classes: "r-event r-active",
+        });
       }
     }
 
@@ -853,147 +882,4 @@ export function createSolveReplay(deps) {
   });
 
   return { offer, clear };
-}
-
-/* The four states, the current unknown and the step's edges, on top of the CFG's own style. */
-function replayStyle(cssToken) {
-  return [
-    /* A step replaces the previous step's marks at once; a fade would blend the two. */
-    { selector: "node.point", style: { "transition-duration": 0 } },
-    {
-      selector: "node.point.r-unseen",
-      style: {
-        "border-style": "dashed",
-        "border-width": 1,
-        "border-color": cssToken("--text-faint"),
-        "background-color": cssToken("--surface-muted"),
-        color: cssToken("--text-faint"),
-      },
-    },
-    {
-      selector: "node.point.r-seen",
-      style: {
-        "border-width": 1,
-        "border-color": cssToken("--border-strong"),
-        "background-color": cssToken("--surface"),
-      },
-    },
-    {
-      selector: "node.point.r-stable",
-      style: {
-        "border-width": 2,
-        "border-color": cssToken("--primary"),
-        "background-color": cssToken("--primary-soft"),
-      },
-    },
-    {
-      selector: "node.point.r-solving",
-      style: {
-        "border-width": 2,
-        "border-color": cssToken("--accent"),
-        "background-color": cssToken("--accent-soft"),
-        "underlay-opacity": 0.25,
-      },
-    },
-    {
-      selector: "node.point.r-current",
-      style: {
-        "border-width": 4,
-        "border-color": cssToken("--accent"),
-        "background-color": cssToken("--accent-soft"),
-        "underlay-opacity": 0.25,
-      },
-    },
-    {
-      selector: "node.point.r-destabilized",
-      style: { "border-style": "dotted", "border-width": 2 },
-    },
-    {
-      selector: "node.point.r-target",
-      style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 3 },
-    },
-    {
-      selector: "node.point.r-changed",
-      style: { "underlay-color": cssToken("--success"), "underlay-opacity": 0.35 },
-    },
-    {
-      selector: "node.point.r-wpoint",
-      style: { "border-style": "double", "border-width": 4 },
-    },
-    {
-      selector: "node.point.r-widened",
-      style: { "underlay-color": cssToken("--accent"), "underlay-opacity": 0.35 },
-    },
-    {
-      selector: "node.seed.r-unseen",
-      style: {
-        "background-color": cssToken("--surface-muted"),
-        "border-color": cssToken("--text-faint"),
-        "border-style": "dashed",
-      },
-    },
-    {
-      selector: "node.seed.r-seen",
-      style: { "background-color": cssToken("--surface"), "border-color": cssToken("--warning") },
-    },
-    {
-      selector: "node.seed.r-seed-set",
-      style: { "background-color": cssToken("--warning"), "border-color": cssToken("--warning") },
-    },
-    {
-      selector: "node.global.r-unseen",
-      style: {
-        "background-color": cssToken("--surface-muted"),
-        "border-color": cssToken("--text-faint"),
-        "border-style": "dashed",
-      },
-    },
-    {
-      selector: "node.global.r-seen",
-      style: {
-        "background-color": cssToken("--surface"),
-        "border-color": cssToken("--global-link"),
-      },
-    },
-    {
-      selector: "node.global.r-seed-set",
-      style: {
-        "background-color": cssToken("--global-link"),
-        "border-color": cssToken("--global-link"),
-      },
-    },
-    {
-      selector: "node.seed.r-changed, node.global.r-changed",
-      style: {
-        "border-color": cssToken("--success"),
-        "border-width": 4,
-      },
-    },
-    {
-      selector: "node.seed.r-target, node.global.r-target",
-      style: { "outline-color": cssToken("--primary"), "outline-width": 3, "outline-offset": 3 },
-    },
-    {
-      selector: "edge.r-infl",
-      style: {
-        width: 1.5,
-        "line-style": "dotted",
-        "curve-style": "unbundled-bezier",
-        "line-color": cssToken("--text-faint"),
-        "target-arrow-shape": "triangle",
-        "target-arrow-color": cssToken("--text-faint"),
-        "z-index": 5,
-      },
-    },
-    {
-      selector: "edge.r-active",
-      style: {
-        width: 4,
-        "line-style": "solid",
-        "line-color": cssToken("--accent"),
-        "target-arrow-color": cssToken("--accent"),
-        "z-index": 10,
-      },
-    },
-  ];
 }

@@ -80,6 +80,8 @@ export function emptyState() {
     cascade: new Set(),
     /* The step's own marks. */
     widened: null,
+    /* Directed relations used by this event, from its payload or recorded influence. */
+    eventEdges: [],
     event: null,
     /* Consistency problems found while folding; empty for a well-formed trace. */
     problems: [],
@@ -109,6 +111,7 @@ export function copyState(state) {
     },
     cascade: new Set(state.cascade),
     widened: state.widened,
+    eventEdges: state.eventEdges.map((edge) => ({ ...edge })),
     event: state.event,
     problems: [...state.problems],
   };
@@ -133,6 +136,7 @@ function global(state, key) {
 export function applyInPlace(state, event) {
   state.event = event;
   state.widened = null;
+  state.eventEdges = [];
 
   switch (event.event) {
     case "start": {
@@ -196,9 +200,19 @@ export function applyInPlace(state, event) {
       state.infl.set(key, readers);
       break;
     }
-    case "destabilize":
-      state.infl.delete(unknownKey(event.unknown));
+    case "destabilize": {
+      const from = unknownKey(event.unknown);
+
+      // Capture the logged dependencies before this event consumes them. A value
+      // change alone supplies neither these readers nor a destabilization event.
+      state.eventEdges = [...(state.infl.get(from) ?? [])].map((to) => ({
+        from,
+        to,
+        kind: "destabilize",
+      }));
+      state.infl.delete(from);
       break;
+    }
     case "update_local": {
       const key = localKey(event.unknown);
 
@@ -213,11 +227,21 @@ export function applyInPlace(state, event) {
     }
     case "query_global":
       global(state, globalKey(event.target)).value = event.value;
+      state.eventEdges.push({
+        from: globalKey(event.target),
+        to: localKey(event.current),
+        kind: "read",
+      });
       break;
     case "side":
       global(state, globalKey(event.target)).contributions.push({
         from: localKey(event.current),
         value: event.value,
+      });
+      state.eventEdges.push({
+        from: localKey(event.current),
+        to: globalKey(event.target),
+        kind: "side",
       });
       break;
     case "update_global": {

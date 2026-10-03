@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # Builds the voblint CLI: a thin, unverified adapter over the
 # Isabelle-generated Voblint_Generated OCaml module
-# (src/Executable_Surface/Codegen/Export/Voblint_Codegen.thy's export_code
+# (src/Executable_Surface/Codegen/Voblint_Codegen.thy's export_code
 # block), plus the Menhir/ocamllex frontend generated from
 # manifests/vimp-grammar.yaml (scripts/gen_vimp_menhir.py; only needed if that
 # changed -- cli/frontend/vimp_parser.mly and cli/frontend/vimp_lexer.mll are committed).
