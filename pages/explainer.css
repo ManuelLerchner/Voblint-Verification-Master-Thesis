@@ -1132,6 +1132,12 @@
   stroke-width: 2;
 }
 
+.gn.global {
+  fill: var(--surface);
+  stroke: var(--global-link);
+  stroke-width: 2;
+}
+
 .gn.entry {
   fill: var(--primary-soft);
   stroke: var(--primary);

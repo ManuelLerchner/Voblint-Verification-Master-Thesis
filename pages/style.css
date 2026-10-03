@@ -1931,6 +1931,16 @@ button.solver-global-key:hover {
   border-radius: 50%;
 }
 
+/* A diamond, as the replay draws a flow-insensitive global's unknown. */
+.replay-swatch.r-global {
+  width: 11px;
+  height: 11px;
+  margin-inline: 2px;
+  background: var(--global-link);
+  border: 2px solid var(--global-link);
+  transform: rotate(45deg);
+}
+
 .replay-swatch.r-infl {
   height: 0;
   border: 0;

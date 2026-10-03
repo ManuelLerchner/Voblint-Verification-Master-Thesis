@@ -503,6 +503,7 @@
             <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="gn plain" x="1" y="1" width="32" height="16" rx="4"/></svg>program point</span>
             <span><svg viewBox="0 0 34 18" width="34" height="18" aria-hidden="true"><rect class="gn entry" x="1" y="1" width="32" height="16" rx="4"/><rect class="gn entry-inner" x="4" y="4" width="26" height="10" rx="3"/></svg>entry or exit</span>
             <span><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><circle class="gn seed" cx="9" cy="9" r="7"/></svg>seed: the state calls publish</span>
+            <span><svg viewBox="0 0 18 18" width="18" height="18" aria-hidden="true"><path class="gn global" d="M9 1 L17 9 L9 17 L1 9 Z"/></svg>flow-insensitive global: its own unknown, with its solved value</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge step" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-step)"/></svg>a step, labelled by its statement</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge call" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-call)"/></svg>call</span>
             <span><svg viewBox="0 0 40 10" width="40" height="10" aria-hidden="true"><line class="ge resume" x1="1" y1="5" x2="34" y2="5" marker-end="url(#g-arrow-resume)"/></svg>resume after the call</span>
@@ -590,6 +591,7 @@
               <span><span class="replay-swatch r-edge"></span>the step's query, value, call, side effect or destabilization</span>
               <span><span class="replay-swatch r-infl"></span>influence: re-evaluated when this changes</span>
               <span><span class="replay-swatch r-seed"></span>seed, filled once a call published; green when this step changed it</span>
+              <span><span class="replay-swatch r-global"></span>flow-insensitive global, filled once written; green when this step changed it</span>
             </div>
 
 
