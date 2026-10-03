@@ -42,6 +42,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Routed_Context
     Routed_Context_Unit
     DG_Local_State_Spec
+    DG_Keyed_Split_Spec
     (* Analyses composed as a product, answering each other's queries. *)
     Analysis_Query
     Local_Spec_Product

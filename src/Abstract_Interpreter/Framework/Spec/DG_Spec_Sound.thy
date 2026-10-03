@@ -5,27 +5,17 @@ begin
 section \<open>What a manager-native specification owes a concretization\<close>
 
 text \<open>
-  Soundness of a manager-native \<open>dg_spec\<close> is stated against the edge and
-  combine programs' own observations: an assumption's input is what the
-  program reads (\<open>\<tau>\<close> at the source and the routed slot), its output is the
-  returned local value together with the contribution the program actually
-  publishes at that slot. There is no reconstructed \<open>'dg \<times> 'dl\<close> pair anywhere: a transfer
-  that publishes nothing is judged against \<open>bot\<close>, and a concretization
-  that ignores its global argument (every Base-style domain) discharges
-  that side vacuously. \<open>dg_spec_of_contract\<close> in \<open>MCP_Spec\<close> is exactly
-  that collapse: for a specification built from a component, all
-  global obligations vanish and what remains are the component's own laws.
-\<close>
+  Soundness of a manager-native \<open>dg_spec\<close> relates its returned local value
+  to an environment of analysis-visible globals. The manager maps each global
+  name to a solver key; \<open>genv\<close> reads the global component at those keys.
 
-text \<open>
-  This locale is stated for a \<^emph>\<open>single\<close> global: \<open>\<gamma>\<^sub>D\<^sub>G\<close> takes one \<open>'G\<close>, read at
-  the one slot \<open>Inr gk\<close>, so a specification publishing at two distinct global
-  names would have contributions this concretization never sees. The global-name
-  type is therefore pinned at \<^typ>\<open>unit\<close> here and the manager is built from the
-  constant embedding, rather than stating an obligation over a namespace the
-  conclusion cannot account for. Every analysis in this development has one global, so
-  nothing is lost today; a second global needs \<open>\<gamma>\<^sub>D\<^sub>G\<close> over a global
-  \<^emph>\<open>environment\<close> first, and that is what would generalize this locale.
+  A transfer starts in the input environment and establishes its result in
+  that environment joined pointwise with its publications. Unchanged globals
+  therefore retain their meaning without being republished. A specification
+  may read and publish several names, all interpreted by the same environment.
+  Concretizations that ignore globals discharge the global obligations
+  vacuously. The unit-name compatibility lemma retains the older sufficient
+  condition that publications alone describe the resulting global state.
 \<close>
 
 text \<open>

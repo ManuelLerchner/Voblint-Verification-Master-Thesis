@@ -54,7 +54,7 @@ text \<open>
 \<close>
 
 locale routed_context =
-  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global global_of route
+  dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route
     "routed_call_program S global_of seed resolve is_bot"
       "routed_entry_seed_programs seed"
     bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
@@ -62,7 +62,7 @@ locale routed_context =
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g analysis_global and global_of :: "'v \<Rightarrow> 'k"
+    and g buffer_key and global_of :: "'v \<Rightarrow> 'k"
     and route ("context\<^sup>#")
     and bot0 s0d s0g sigma vars x0 sg
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
@@ -72,7 +72,7 @@ locale routed_context =
   fixes R :: "'c call_context_rel"
   assumes finC: "finite (calls g)"
     and calls_unique: "calls_source_unique g"
-    and seed_ne_analysis_global[simp]: "\<And>p ctx. seed p ctx \<noteq> analysis_global"
+    and seed_ne_buffer_key[simp]: "\<And>p ctx. seed p ctx \<noteq> buffer_key"
     and seed_ne_global_of[simp]: "\<And>p ctx v. seed p ctx \<noteq> global_of v"
     and is_bot_bot[simp]: "is_bot bot"
     and is_bot_sound: "\<And>d g. is_bot d \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d g = {}"

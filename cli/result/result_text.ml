@@ -85,7 +85,7 @@ let global_sections result =
     (fun g ->
       let key =
         match C.global_unknown g with
-        | C.Global_Shared -> "Global"
+        | C.Global_Named x -> "global " ^ x
         | C.Global_Seed (f, None) -> "enter " ^ f
         | C.Global_Seed (f, Some i) -> (
             match contexts.(int_of_nat i) with

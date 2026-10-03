@@ -76,4 +76,73 @@ lemma call_enter_Nil [simp]:
   "call_enter \<G> (CallEdge dst [] []) s = enter_state \<G> s"
   by (simp add: call_enter_CallEdge)
 
+subsection \<open>What an edge reads and what it may change\<close>
+
+text \<open>An edge reads the variables of its expressions. It may change only the
+  variable it assigns, and a return only its result slot.\<close>
+
+definition edge_reads :: "edge_action \<Rightarrow> vname list" where
+  "edge_reads a = sorted_list_of_set (\<Union> (exp_vnames ` set (edge_expressions a)))"
+
+fun edge_writes :: "edge_action \<Rightarrow> vname list" where
+  "edge_writes (EA_Assign x a) = [x]"
+| "edge_writes (EA_Special sc x) = [x]"
+| "edge_writes (EA_Ret e p) = [ret_var]"
+| "edge_writes _ = []"
+
+text \<open>The frame each concrete step respects: a name outside its write set keeps
+  its value. A call entry may only bind its formals, and a return takes every
+  global from the callee except the destination it assigns.\<close>
+
+lemma edge_step_frame:
+  "t \<in> edge_step a s \<Longrightarrow> x \<notin> set (edge_writes a) \<Longrightarrow> t x = s x"
+  by (cases a) (auto split: if_splits)
+
+lemma call_enter_frame:
+  "\<G> x \<Longrightarrow> x \<notin> set pars \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s x = s x"
+  by (simp add: call_enter_CallEdge bind_formals_other enter_state_def)
+
+lemma combine_collect_frame:
+  "\<G> x \<Longrightarrow> dst \<noteq> Some x \<Longrightarrow> combine_collect \<G> dst s t x = t x"
+  by (cases dst) (auto simp: combine_collect_def)
+
+subsection \<open>Finite global footprints\<close>
+
+text \<open>The declared globals among those names, as duplicate-free lists a
+  transfer folds over to read or publish them.\<close>
+
+definition global_names_in :: "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> vname list" where
+  "global_names_in G xs = remdups (filter G xs)"
+
+lemma set_global_names_in [simp]:
+  "set (global_names_in G xs) = {x \<in> set xs. G x}"
+  by (simp add: global_names_in_def)
+
+lemma distinct_global_names_in [simp]: "distinct (global_names_in G xs)"
+  by (simp add: global_names_in_def)
+
+definition globals_in_exp :: "(vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> vname list" where
+  "globals_in_exp G e = global_names_in G (sorted_list_of_set (exp_vnames e))"
+
+definition edge_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
+  "edge_global_reads G a = global_names_in G (edge_reads a)"
+
+definition edge_global_writes :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
+  "edge_global_writes G a = global_names_in G (edge_writes a)"
+
+definition call_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> exp list \<Rightarrow> vname list" where
+  "call_global_reads G es = global_names_in G (sorted_list_of_set (\<Union> (exp_vnames ` set es)))"
+
+lemma set_edge_global_writes [simp]:
+  "set (edge_global_writes G a) = {x \<in> set (edge_writes a). G x}"
+  by (simp add: edge_global_writes_def)
+
+lemma distinct_global_footprints [simp]:
+  "distinct (globals_in_exp G e)"
+  "distinct (edge_global_reads G a)"
+  "distinct (edge_global_writes G a)"
+  "distinct (call_global_reads G es)"
+  by (simp_all add: globals_in_exp_def edge_global_reads_def edge_global_writes_def
+    call_global_reads_def)
+
 end

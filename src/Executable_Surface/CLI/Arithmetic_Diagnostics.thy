@@ -100,15 +100,6 @@ text \<open>
   solved table then classifies.
 \<close>
 
-fun arithmetic_edge_expressions :: "edge_action \<Rightarrow> exp list" where
-  "arithmetic_edge_expressions (EA_Assign x e) = [e]"
-| "arithmetic_edge_expressions (EA_Assume e) = [e]"
-| "arithmetic_edge_expressions (EA_AssumeNot e) = [e]"
-| "arithmetic_edge_expressions (EA_Check l e) = [e]"
-| "arithmetic_edge_expressions (EA_Ret (Some e) p) = [e]"
-| "arithmetic_edge_expressions (EA_Special (Min a b) x) = [a, b]"
-| "arithmetic_edge_expressions (EA_Special (Max a b) x) = [a, b]"
-| "arithmetic_edge_expressions _ = []"
 
 text \<open>Only suppress a negative guard edge when the same point has a matching
   positive guard edge. All other expression-bearing edges remain in the report.\<close>
@@ -116,7 +107,7 @@ text \<open>Only suppress a negative guard edge when the same point has a matchi
 definition arithmetic_expression_sites :: "cfg \<Rightarrow> (pp \<times> exp list) list" where
   "arithmetic_expression_sites g =
      (let edges = cfg_intra_list g
-      in map (\<lambda>(u, a, v). (u, arithmetic_edge_expressions a))
+      in map (\<lambda>(u, a, v). (u, edge_expressions a))
            (filter (\<lambda>(u, a, v). case a of EA_AssumeNot e \<Rightarrow>
              \<not> list_ex (\<lambda>(u', a', v'). u = u' \<and> a' = EA_Assume e) edges
              | _ \<Rightarrow> True) edges)) @
@@ -154,7 +145,7 @@ definition arithmetic_diagnostics ::
 
 lemma arithmetic_expression_sites_intra:
   assumes "finite (intra g)" and "(v, a, w) \<in> intra g"
-  shows "(v, arithmetic_edge_expressions a) \<in> set (arithmetic_expression_sites g)"
+  shows "(v, edge_expressions a) \<in> set (arithmetic_expression_sites g)"
 proof -
   let ?edges = "cfg_intra_list g"
   have mem: "(v, a, w) \<in> set ?edges" using assms by simp
@@ -162,7 +153,7 @@ proof -
       (case b of EA_AssumeNot e \<Rightarrow>
         \<not> list_ex (\<lambda>(u', a', v'). v = u' \<and> a' = EA_Assume e) ?edges
         | _ \<Rightarrow> True) \<Longrightarrow>
-      (v, arithmetic_edge_expressions b) \<in> set (arithmetic_expression_sites g)"
+      (v, edge_expressions b) \<in> set (arithmetic_expression_sites g)"
     unfolding arithmetic_expression_sites_def
     by (force simp: Let_def image_iff)
   show ?thesis

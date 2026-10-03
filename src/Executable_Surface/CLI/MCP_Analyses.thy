@@ -253,11 +253,11 @@ text \<open>
 \<close>
 
 lemma mcp_routed_dg_analysis:
-  fixes analysis_global :: 'k and global_of :: "unit \<Rightarrow> 'k"
-  assumes "\<And>v ctx. seed v ctx \<noteq> analysis_global"
-    and own_key: "\<And>n. global_of n = analysis_global"
+  fixes buffer_key :: 'k and global_of :: "'n \<Rightarrow> 'k"
+  assumes seed_ne: "\<And>v ctx. seed v ctx \<noteq> buffer_key"
+    and seed_ne_global: "\<And>v ctx n. seed v ctx \<noteq> global_of n"
   shows "dg_analysis (mcp_comp (activation as)) (mcp_emp (activation as)) mcp_rd
-    (mcp_init (activation as)) analysis_global global_of seed
+    (mcp_init (activation as)) buffer_key global_of seed
     (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE('k) TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
     \<bottom> (mcp_classify (activation as)) (mcp_gamma_v (activation as))
@@ -266,7 +266,7 @@ lemma mcp_routed_dg_analysis:
     (\<lambda>\<G> p. [])"
 proof (rule dg_analysis_whole_stateI[OF td_certified_solver],
     goal_cases CompSound EnterSingle EmptyRd EmptyVSound SeedNe ClProved ClRefuted BotState
-    Init OwnKey)
+    Init SeedNeGlobal)
   case (CompSound p)
   have eq: "mcp_gamma (map (part_gamma (declared_global p)) (activation as))
       = (\<lambda>d. gamma_lift (mcp_gamma_v (activation as)) (map_lift (mcp_rd (declared_global p)) d))"
@@ -284,7 +284,7 @@ next
 next
   case EmptyVSound show ?case by (rule sound_emptiness_mcp)
 next
-  case (SeedNe v ctx) show ?case by (rule assms)
+  case (SeedNe v ctx) show ?case by (rule seed_ne)
 next
   case (ClProved e d s) then show ?case by (rule mcp_classify_proved)
 next
@@ -294,20 +294,22 @@ next
 next
   case (Init p) show ?case by (rule mcp_init_sound)
 next
-  case (OwnKey n) show ?case by (rule own_key)
+  case (SeedNeGlobal v ctx n) show ?case by (rule seed_ne_global)
 qed
 
 subsection \<open>At the unit context\<close>
 
 text \<open>
-  \<open>mcp_rule\<close>: the analysis with one context \<open>()\<close>, routed by \<open>route_unit\<close>.
+  \<open>mcp_rule\<close>: the analysis with one context \<open>()\<close>, routed by \<open>route_unit\<close>. Each
+  registration names a solver key per program global, which this placement
+  never publishes at: every global lives in a point's own state.
 \<close>
 
 global_interpretation mcp_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
+    Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. route_unit" "()"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
+    "TD_side_rule_Interp.solve_dom TYPE((vname, unit) global_unknown)
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
@@ -326,10 +328,10 @@ text \<open>
 
 global_interpretation mcp_es_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "mcp_formals_route (activation as)"
+    Analysis_Buffer Analysis_Global Activation_Seed "mcp_formals_route (activation as)"
       mcp_root_ctx
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, mcp_ctx) global_unknown)
+    "TD_side_rule_Interp.solve_dom TYPE((vname, mcp_ctx) global_unknown)
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"
@@ -347,10 +349,9 @@ text \<open>
 
 global_interpretation mcp_cs_rule: dg_analysis
     "mcp_comp (activation as)" "mcp_emp (activation as)" mcp_rd "mcp_init (activation as)"
-    Call_String_Context.Global "\<lambda>_::unit. Call_String_Context.Global"
-    Call_String_Context.Seed "\<lambda>_. cs_route k" "[]"
+    Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE(call_string_gk)
+    "TD_side_rule_Interp.solve_dom TYPE((vname, cfg_node list) global_unknown)
        TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
     \<bottom> "mcp_classify (activation as)" "mcp_gamma_v (activation as)"
     "mcp_empty_v (activation as)" "TD_side_rule_Interp_solve_c r"

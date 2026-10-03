@@ -161,4 +161,31 @@ lemma truthy_aval_Or [simp]:
   "truthy (\<lbrakk>Or b1 b2\<rbrakk>\<^sub>e s) \<longleftrightarrow> truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s)"
   by simp
 
+subsection \<open>Finite expression footprints\<close>
+
+text \<open>The variables an expression mentions. A transfer that evaluates the
+  expression needs no other variable, which is what lets a keyed analysis read
+  only the globals an edge mentions.\<close>
+
+fun exp_vnames :: "exp \<Rightarrow> vname set" where
+  "exp_vnames (N _) = {}"
+| "exp_vnames (V x) = {x}"
+| "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Minus a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Times a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Div a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Mod a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Less a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (LessEq a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Greater a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (GreaterEq a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (NotEq a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Eq a b) = exp_vnames a \<union> exp_vnames b"
+| "exp_vnames (Not b) = exp_vnames b"
+| "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
+| "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
+
+lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
+  by (induction a) auto
+
 end

@@ -31,7 +31,7 @@ text \<open>
   keeps exactly the stores the pair denotes,
   \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')\<close>. The global value the table
   pairs with every local one is the solved global unknown at
-  \<open>Inr analysis_global\<close>, the pairing the coverage assumption \<open>sg_cov\<close> of
+  \<open>Inr buffer_key\<close>, the pairing the coverage assumption \<open>sg_cov\<close> of
   \<^locale>\<open>dg_context_activation\<close> concretizes. A concretization that reads both
   components, an ownership split say, therefore interprets this locale
   directly. An analysis whose concretization ignores the global half
@@ -39,14 +39,14 @@ text \<open>
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g analysis_global global_of route bot0 s0d s0g sigma vars x0 sg
+  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0 sg
     seed
     "static_resolve g" is_bot \<gamma>\<^sub>M R
   for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
-    and g analysis_global and global_of :: "'n \<Rightarrow> 'k"
+    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
     and bot0 s0d :: 'D and s0g :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
@@ -77,7 +77,7 @@ text \<open>
   Built from the locale's own solved \<open>vars\<close>/\<open>sigma\<close> pair, mirroring how
   \<open>dg_result_for\<close> builds an
   \<^type>\<open>solved_table\<close> from an already-solved key set and reader.
-  The solved local unknown and the solved global at \<open>Inr analysis_global\<close> are
+  The solved local unknown and the solved global at \<open>Inr buffer_key\<close> are
   published into \<^typ>\<open>'v lifted\<close> by \<open>rd\<close>, and the
   one collapse this table then needs is \<^const>\<open>canonicalize_lift\<close> against
   \<open>empty\<^sub>V\<close>, so a \<^const>\<open>Lifted\<close> payload that denotes no store without
