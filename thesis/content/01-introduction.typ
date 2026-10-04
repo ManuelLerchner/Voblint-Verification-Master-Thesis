@@ -588,7 +588,7 @@ Apinis et al. @apinis12, and the local/global analysis architecture
 from Goblint. Widening, narrowing and the reduced product are well studied
 @cousot77 @cousot79. The derivation of transfer functions from sound value operations follows
 Nipkow and Klein
-@nipkow14[Sects. 13.5--13.7]. The activation traces adapt the local traces of
+@nipkow14[Sects. 13.5, 13.7]. The activation traces adapt the local traces of
 Schwarz et al. @schwarz21 to procedure activations. Isabelle's code generator
 @haftmann10 produces the OCaml code the tools run.
 
