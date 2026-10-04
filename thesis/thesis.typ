@@ -12,7 +12,6 @@
 
 #show: thesis.with(
   title: "Voblint: Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL",
-  title-de: "Voblint: Hin zu einer verifizierten Analyse-Pipeline im Stil von Goblint in Isabelle/HOL",
   doctype: "Master's Thesis",
   study-program: "Informatics",
   author: "Manuel Lerchner",
