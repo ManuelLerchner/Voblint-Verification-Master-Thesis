@@ -369,7 +369,7 @@ verdict semantics (#isaconst("report_sem"), #isaconst("verdict_stores")),
 defined elsewhere. The numbers locate the
 material and do not measure original proof work. We draw no comparison with other
 projects: reported proof-to-code ratios, such as that of
-#cite(<franceschino21>, form: "prose"), depend on language, automation, and
+Franceschino et al. @franceschino21, depend on language, automation, and
 scope.
 
 === Tests of the unverified parts <sec:eval-corpus>

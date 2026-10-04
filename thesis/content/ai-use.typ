@@ -13,7 +13,7 @@ that recommendation.
 Substantial parts of this work were carried out with generative AI tools,
 primarily Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor, under the
 author's direction and review. These tools contributed a large share of the
-implementation-level material. The author chose the research questions,
+implementation-level material. The author chose the research direction,
 selected and revised the designs, and approved the definitions and theorem
 statements.
 

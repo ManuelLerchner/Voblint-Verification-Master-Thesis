@@ -593,7 +593,7 @@ least element #isaconst("bot_default_st").
 
 Different pairs of dictionaries can describe the same state: overrides of
 distinct names may appear in any order, and an override equal to its default
-changes nothing. A _quotient type_ (@sec:isabelle) makes these descriptions one
+changes nothing. A _quotient type_ (@sec:isabelle) makes these representations one
 value. Its elements are the classes of representations that answer every lookup
 alike:
 
@@ -605,7 +605,7 @@ Two elements are therefore equal exactly when every lookup agrees
 the finitely many listed names of each dictionary decides the order, and the executable
 equality (#isaconst("equal_default_st")) tests the order in both
 directions. An operation is defined on the finite representation and lifted to
-the quotient once it is shown to give equal results on equal descriptions.
+the quotient once it is shown to give equal results on representations of the same element.
 
 Such an element is used like a map. Looking up a variable reads the dictionary
 of its partition: the variable's override if there is one, the dictionary's

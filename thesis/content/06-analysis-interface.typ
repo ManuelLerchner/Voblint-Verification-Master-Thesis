@@ -13,11 +13,11 @@
 = What an Analysis Supplies <ch:analysis-interface>
 
 @ch:traces reduced soundness to five obligations over sets of stores, and
-@ch:domains supplied finite descriptions of such sets. An analysis connects
+@ch:domains supplied finite abstract values that represent such sets. An analysis connects
 the two, but only part of an abstract interpreter is specific to it. Some parts
 are the same for every analysis: the control-flow graph, the equations built
 from it, the calling contexts and the solver. Others are what makes Sign differ
-from Interval: what an assignment does to a description, what a guard reveals
+from Interval: what an assignment does to an abstract state, what a guard reveals
 about the current state, and what a call passes to its callee. Goblint keeps
 the two apart @seidl26[§5], and so does Voblint. An analysis is a plug-in that answers the
 questions the program constructs pose, and the framework does the rest. The
@@ -27,7 +27,7 @@ operations covers the corresponding concrete behaviour.
 
 This chapter describes the plug-in: which questions it answers and what it has
 to prove. The simplest plug-in would be one function per ordinary edge, from
-the description before the edge to the one after it. Two things in the program semantics need more. A call
+the abstract state before the edge to the one after it. Two things in the program semantics need more. A call
 cannot be handled as an ordinary edge transfer: after it returns, the caller's
 own variables are the ones from before the call, and only the globals and the
 result come from the callee, so the return must see both sides (@sec:calls).

@@ -5,7 +5,11 @@
 #import "theme.typ": tint, vb
 #import "code.typ": isaconst, isalink, isalocale, isathm, isatype
 
-#let alignment = json("/shared/generated/goblint-alignment.json")
+// Not committed (every build extracts it), so a diffle review, which renders
+// committed files alone and says so through `sys.inputs.diffle`, sees no rows.
+#let alignment = if "diffle" in sys.inputs {
+  (revision: "0" * 40, rows: ())
+} else { json("/shared/generated/goblint-alignment.json") }
 
 // Shape carries the status in greyscale; colour repeats it.
 #let alignment-status = (

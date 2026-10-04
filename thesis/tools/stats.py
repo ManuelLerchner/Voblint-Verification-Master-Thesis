@@ -56,11 +56,9 @@ NUMBER = re.compile(r"(?<![\w.,-])(?:\d{1,3}(?:,\d{3})+|\d{2,}|\d+%)(?![\w,]|\.\
 ALLOW: dict[tuple[str, str], str] = {
     # Goblint pull request and issue numbers, not counts.
     ("13-evaluation.typ", "1161"): "Goblint pull request number",
-    ("01-introduction.typ", "1161"): "Goblint pull request number",
     # Figures quoted from cited external work, not repository counts.
     ("01-introduction.typ", "85,000"): "line count reported by bryant26munkres",
     ("01-introduction.typ", "132,000"): "program size reported by blanchet03",
-    ("15-related.typ", "132,000"): "program size reported by blanchet03",
     # Drawing coordinates of a figure, not a count.
     ("02-background.typ", "11"): "tick range of the number line in fig:concretization",
     # Colour lightening in cetz figure code, whose `line` calls trip the heuristic.

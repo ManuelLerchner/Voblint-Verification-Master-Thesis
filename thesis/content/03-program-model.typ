@@ -862,6 +862,9 @@ counterpart (@tab:cfg-edges), so calls and returns are represented by
 corresponding kinds of CFG edges. The local/global split lives in the call and
 return transfers. No translation from C to VIMP is formalized.
 
-*No second semantics.* No external semantics cross-checks #isaconst("pstep");
-IMP2 and Simpl would each need a translation and its own adequacy argument
-(@ch:related).
+*No second semantics.* No external semantics cross-checks #isaconst("pstep").
+For C, Isabelle offers the C parser of AutoCorres2 @brecknell24autocorres2,
+which translates a subset of C into Simpl programs @schirmer08simpl, and Coq
+has the Clight semantics of CompCert @leroy09. Relating VIMP to either of
+them, or to IMP2 or Simpl directly, would need a translation and its own
+adequacy argument (@ch:related).

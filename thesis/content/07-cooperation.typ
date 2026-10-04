@@ -510,7 +510,7 @@ contract.
     contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
     proves its primitives sound once, which yields one rule
-    per operation; these rules make its executed local specification sound.
+    per operation, as Voblint proves once for every domain. These rules make its executed local specification sound.
     The order analysis is a sound local specification by its own proof. Every
     sound local specification meets the contract through
     #isaconst("dg_spec_of"). The order analysis with an analysis global is not a local specification and interprets the contract itself.],

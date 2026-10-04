@@ -106,8 +106,8 @@ computed from the same primitives and agree on every live store
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"),
 #isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
 transfers from sound value operations follows Nipkow and Klein
-@nipkow14[Sect. 13.5, 13.7]. TODO: check Nipkow and Klein §13.6 before
-calling the executable counterpart new. @fig:instance-chain shows the chain.
+@nipkow14[Sects. 13.5, 13.7], who also make their abstract states executable
+by a data refinement @nipkow14[§13.6]. @fig:instance-chain shows the chain.
 
 This soundness proof makes the domain a sound field of the combined state of
 @ch:cooperation. For a numeric domain, the locale #isalocale("dg_analysis_exec")

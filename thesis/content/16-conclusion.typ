@@ -69,7 +69,7 @@ semantics for this case. A heap adds a store
 component that caller and callee share, so #oblig("RETURN"), the entry pairs
 and one value per variable in the domains (@sec:vimp) would all change. Threads
 interleave activations, which #isaconst("valid_activation_trace") cannot express. The local
-traces of #cite(<schwarz21>, form: "prose") handle them, but the interface
+traces of Schwarz et al. @schwarz21 handle them, but the interface
 would also need synchronization, which it lacks. A new update
 rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
@@ -167,7 +167,7 @@ redone for local side effects. The rest of the chain consumes the solver only
 through the post-solution certificate (@sec:certificate).
 
 A termination theorem would remove the per-program premise. The
-total-correctness result of #cite(<tilscher26jar>, form: "prose") covers the
+total-correctness result of Tilscher et al. @tilscher26jar covers the
 top-down solver without side effects, with finitely many unknowns and a
 widening that stabilizes ascending chains
 #_todo[check the assumptions against the paper.]. The vendored class

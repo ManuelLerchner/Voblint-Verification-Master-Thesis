@@ -129,10 +129,10 @@
 
 This chapter introduces the order-theoretic, semantic and Isabelle/HOL notions
 that later chapters assume, each only as far as they use it. An analysis
-computes, for every program point, a description of the states that can occur
-there. Descriptions are ordered by precision, and the analysis is expressed as a
+computes, for every program point, an abstract state that represents the states
+that can occur there. Abstract states are ordered by precision, and the analysis is expressed as a
 system of equations over them whose solutions are fixpoints or post-fixpoints
-(@sec:lattices). Abstract interpretation gives each description a meaning, a
+(@sec:lattices). Abstract interpretation gives each abstract state a meaning, a
 set of concrete states, and states soundness as inclusion in that set
 (@sec:abs-int). A program's equations are read off its control-flow
 graph (@sec:constraints), and widening is used to force convergence on domains
@@ -174,15 +174,15 @@ counting loop runs from `start` to $h$, around the cycle through $b$ and $t$
 back to $h$ five times, and then to $e$. A loop thus becomes a cycle, and the
 loop head is the node at which the cycle is entered and left. Execution reaches
 $h$ once before the first iteration and again after each run of the body, and
-$i$ takes exactly the values $0, 1, dots, 5$ there. An analysis attaches a
-description to $h$ that must cover the states of every path reaching it
-(@sec:side-effects discusses facts that do not depend on the node). The following sections compute that description.
+$i$ takes exactly the values $0, 1, dots, 5$ there. An analysis attaches an
+abstract state to $h$ that must cover the states of every path reaching it
+(@sec:side-effects discusses facts that do not depend on the node). The following sections compute that abstract state.
 
 == Lattices and fixpoints <sec:lattices>
 
-An analysis needs to compare descriptions by precision and to name the
-description a loop's equations determine. An ordered set $(lat(D), lle)$, Isabelle's
-class #isalocale("order"), orders descriptions by precision: $a lle b$
+An analysis needs to compare abstract states by precision and to name the
+abstract state a loop's equations determine. An ordered set $(lat(D), lle)$, Isabelle's
+class #isalocale("order"), orders them by precision: $a lle b$
 means that $a$ is at least as precise as $b$. For sets of concrete states the
 order is inclusion. The least element $lbot$ describes no states, the top
 $ltop$, when present, all states, and the join $a ljoin b$ is the least upper
