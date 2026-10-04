@@ -94,7 +94,7 @@ intraprocedural. Its interpreter is parametric in a domain of abstract values:
 the domain supplies abstract operations and inverse operations with their
 soundness laws, and the interpreter derives forward evaluation, the backward
 filtering of guards and the step of each command generically
-@nipkow14[Sects. 13.5--13.7] #_todo[check locator.]. Voblint's non-relational domains follow this
+@nipkow14[Sects. 13.5--13.7]. Voblint's non-relational domains follow this
 pattern. Each supplies one record of primitives
 (#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
 derives the transfer, branch, entry and check classifier from it and proves

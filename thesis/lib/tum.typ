@@ -381,9 +381,10 @@
 
   // --------------------------------------------------------- title page ---
   head-block(logo-top: 102pt - margin-top)
-  place(top + center, dy: 395pt - margin-top, block(width: 100%, {
-    set par(justify: false, leading: leading-for(17.3pt, 17.28pt))
-    text(font: serif-12, size: 17.28pt, weight: "bold", title)
+  // Same size as the cover title, so both opening pages match.
+  place(top + center, dy: 404pt - margin-top, block(width: 100%, {
+    set par(justify: false, leading: leading-for(25pt, 20.74pt))
+    text(font: serif-12, size: 20.74pt, weight: "bold", title)
   }))
   place(top + center, dy: 456pt - margin-top, block(width: 100%, {
     set par(justify: false, leading: leading-for(17.3pt, 17.28pt))

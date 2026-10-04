@@ -1,5 +1,4 @@
 #import "../lib/stats.typ": _grouped as _n
-#import "../lib/code.typ": isathm
 
 // Aggregates only, written by tools/ai_use_stats.py from local session logs.
 #let _ai = json("/shared/generated/ai-use-stats.json")
@@ -11,79 +10,72 @@ that authors transparently disclose the automated tools they use, including
 large language models and proof assistants @leiden26. This section follows
 that recommendation.
 
-Substantial parts of this work were done with generative AI tools, mainly
-Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor, under the author's
-direction and review. The tools produced a large share of the
+Substantial parts of this work were carried out with generative AI tools,
+primarily Anthropic's Claude, OpenAI's ChatGPT and Codex, and Cursor, under the
+author's direction and review. These tools contributed a large share of the
 implementation-level material. The author chose the research questions,
 selected and revised the designs, and approved the definitions and theorem
 statements.
 
-In the Isabelle development, the tools generated many of the proofs, carried out
-refactorings across the theories, and turned tactic-style proofs and
-Sledgehammer output into structured Isar. They proposed designs and wrote the
-planning documents preceding larger changes. They also worked on the
-executable tooling around the formalization: the command-line interface, the
-website, the regression suite with its ports of Goblint's regression tests,
-and the checks that keep this thesis consistent with the sources. For the
-thesis itself, they searched the literature, checked citations and claims
-against the cited sources, and drafted and revised the chapter plan, the text
-and the figures. Most of this
-work ran in agent sessions with shell access.
+In the Isabelle development, the tools generated many proofs, carried out
+refactorings across theories, and transformed tactic-style proofs and
+Sledgehammer output into structured Isar. They proposed designs and drafted
+planning documents for larger changes. They also contributed to the executable
+tooling around the formalization: the command-line interface, the website, the
+regression suite and its ports of Goblint regression tests, and the checks that
+keep this thesis consistent with the sources. For the thesis itself, they
+assisted with literature searches, checked citations and claims against cited
+sources, and drafted and revised the chapter structure, text, and figures.
 
-Separately, Grammarly was used to check spelling and grammar of the thesis
+Separately, Grammarly was used to check spelling and grammar in the thesis
 text. The Isabelle interfaces of AutoCorrode @autocorrode, used following the
-human-guided workflow of #cite(<kappelmann26>, form: "prose"), served as
-proof-development tooling. They are not generative AI systems.
+human-guided workflow of Kappelmann et al. @kappelmann26, served as
+proof-development infrastructure.
 
-The assistance extended to design. The supervisors suggested replacing the state-based concrete semantics with a
-trace-based semantics, using the local traces of
-#cite(<schwarz21>, form: "prose") as inspiration. The author and supervisors
-adopted this change because the work set out to formalize calling contexts,
-and the state-based collecting semantics used in the prototype records the
-stores reaching a node but not which activation holds each store
-(@sec:why-traces). The requirements for the activation traces of
-@sec:activation-trace were then developed interactively with language models: the
-operations generating the trace set, that a callee trace starts only at a
-call, that a trace keeps its call history, and that a calling context is read
-from the trace.
+The assistance also extended to design. The concrete semantics is based on traces instead of states,
+inspired by the local traces of Schwarz et al. @schwarz21, because the work
+set out to formalize calling contexts, whereas the state-based collecting
+semantics used in the prototype records the stores reaching a node but not
+which procedure activation contains each store (@sec:why-traces).
+Language models helped adapt the thread-local setting of that work to
+procedure activations. The requirements for the activation traces of
+@sec:activation-trace were refined interactively with them: how traces are
+generated, that a callee trace begins only at a call, that a trace retains its
+call history, and that calling contexts are derived from traces.
 
-For the analysis framework, agents read Goblint's OCaml sources to find the
-interfaces that the formalization could approximate: the split into local and
+For the analysis framework, agents inspected Goblint's OCaml sources to
+identify interfaces the formalization could approximate, such as local and
 global unknowns, unknowns indexed by node and context, and the enter/combine
-protocol at calls (@sec:eval-goblint). Goblint offered a working architecture whose parts correspond to standard
-constructions of abstract interpretation. @sec:eval-1161 discusses one
-implementation defect found during this work. The source language, its compiler to the control-flow graph, the traces, the
-coverage contract and the proofs have no counterpart in Goblint. The solver
-and its partial-correctness proof are taken from #cite(<tilscher26>, form: "prose") and were not written for this work.
+protocol at calls (@sec:eval-goblint). The source language and its compilation, the activation traces, the coverage
+contract, and the corresponding proofs have no direct counterpart in Goblint
+and were developed for this work. Goblint's top-down solver is reused together with its partial-correctness proof
+by Tilscher et al. @tilscher26.
 
 A major part of the development effort concerned finding suitable definitions,
-interfaces, invariants and locale boundaries rather than individual proof
-steps. In the first weeks, a small prototype mirrored Goblint's
-structure with unproved placeholders (`sorry`). Once the definitions and locale boundaries were settled, most
-remaining proof obligations were short and were discharged with substantial
-agent assistance. Some proofs remain
-long, among them #isathm("routed_node_rhs_buffered_correspondence"),
-#isathm("intra_step_simulation") and
-#isathm("refine_ivl_with_congruence_mono").
+interfaces, invariants, and locale boundaries rather than discharging
+individual proof steps. During the first weeks, a small prototype mirrored
+Goblint's structure while leaving proof obligations as `sorry`. Once the
+definitions and locale boundaries had stabilized, many of the remaining proof
+obligations were short and were discharged with substantial agent assistance.
 
-The assistants' output was not reliable on its own. Agents stated wrong
-lemmas. They also added a premise to the end-to-end theorem that no program
-satisfied, which made the theorem vacuous until the solver run was redesigned. Audits of the theorem statements and full
-batch builds found these errors, and the non-vacuity witnesses of
-@sec:nonvacuity now show that the premises of the main theorems can be met.
+The assistants' output was not reliable on its own. Agents proposed incorrect
+lemmas and, in one case, introduced a premise into the end-to-end theorem that
+no program satisfied, making the theorem vacuous until the solver run was
+redesigned. Audits of theorem statements and full batch builds exposed these
+errors. The non-vacuity witnesses of @sec:nonvacuity now demonstrate that the
+premises of the main theorems can in fact be satisfied.
 
-Much of the deterministic tooling around the formalization was itself written
-by agents: the drift checks that regenerate theorem statements, snippets and
-analyzer output and fail on a difference, the link and reference checks, and
-the solver tracer (@ch:tooling). These checks turned out to be the most useful
-form of assistance. They replaced review of each change by a condition every
-change had to meet, and they found errors that reading had missed. This, too,
-is the experience of one project, not a measured result.
+Agents also wrote much of the supporting tooling around the formalization,
+including the checks that keep the theories, the generated material, the
+analyzer, the website and this thesis in sync (@sec:voblint-repo). These checks
+proved especially useful because they replaced repeated manual inspection with
+conditions that every change had to satisfy, and they exposed errors that
+manual reading had missed.
 
-The table below quantifies the recorded part of the assistance, following the
-session-log analysis of #cite(<bryant26munkres>, form: "prose", supplement: [Section 5]).
-The counts measure interaction with the tools, not authorship or the share of
-the work that the tools produced.
+The table below quantifies the recorded part of this assistance, following the
+session-log analysis of Bryant et al. @bryant26munkres[Section 5].
+The counts measure interaction with the tools, not authorship or the proportion
+of the work attributable to them.
 
 #let _cc = _ai.claude_code
 #let _cx = _ai.codex
@@ -127,19 +119,18 @@ the work that the tools produced.
 ]
 #v(0.8em)
 
-The author set the research direction, revised and settled the requirements,
-chose among the designs that the assistants proposed, approved the definitions
-and theorem statements, interpreted the results, and reviewed the development
-and thesis text. The author is solely
-responsible for the claims, framing, and treatment of related work.
-
 Every theorem in the development is accepted by Isabelle/HOL. Proofs by
 evaluation, used for some facts about fixed programs, additionally rely on
 Isabelle's code generator (@sec:trust-boundary). This establishes the stated
-propositions relative to their definitions and assumptions, but not that those
-definitions capture the intended language or analysis. Definitions and theorem
-statements were therefore also checked against example programs, the
-regression suite, and the documented differences between VIMP and C11. Claims
-attributed to related work were checked against the cited sources. Agents
-performed much of this checking, but the author reviewed and remains
-responsible for the resulting claims.
+propositions relative to their definitions and assumptions, but does not
+establish that those definitions faithfully capture the intended language or
+analysis. Definitions and theorem statements were therefore also checked
+against example programs, the regression suite, and the documented differences
+between VIMP and C11. Related-work claims were checked against the cited sources, often with agent
+assistance and subsequent author review.
+
+Throughout the project, the author set the research direction and
+requirements, chose among proposed designs, approved every definition and
+theorem statement, and reviewed the resulting development and text.
+Responsibility for the final claims, framing, and treatment of related work
+lies with the author alone.
