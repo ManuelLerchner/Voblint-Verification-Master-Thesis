@@ -214,7 +214,9 @@ pixi task; rerun it by hand before a submission build.
 
 The JSON is not committed: `thesis-typst`, `thesis-draft` and `thesis-watch`
 write it first (`thesis-local-data`, which also writes
-`goblint-alignment.json`), so it never drifts. The check fails when the
+`goblint-alignment.json`), so it never drifts. A render that sets
+`--input diffle=1`, as a diffle review of a revision does, has neither file:
+every figure prints as a grey `#` and the alignment list is empty. The check fails when the
 measurement fails and when a line in `content/` that names lines, theories, files, sessions,
 fixtures, cases, lemmas or similar holds a numeral with two or more digits
 outside `stat()`, code or math. Numbers that are not statistics, such as a pull
