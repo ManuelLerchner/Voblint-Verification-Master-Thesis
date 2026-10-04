@@ -36,6 +36,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import html
 import json
 import re
 import subprocess
@@ -590,8 +591,8 @@ def check_live(base_override: str | None, retries: int) -> int:
             if not anchor:
                 continue
             # The stored anchor is percent-encoded for the URL; the page holds
-            # the raw id.
-            raw = anchor.replace("%7C", "|")
+            # the id HTML-escaped (dep\&lt;^sub&gt;L).
+            raw = html.escape(unquote(anchor), quote=False)
             if f'id="{raw}"' not in body:
                 broken.append(f"  {key}: {url} has no anchor {raw}")
 
