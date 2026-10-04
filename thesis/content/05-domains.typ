@@ -25,12 +25,12 @@
 
 
 @ch:traces reduced soundness to five obligations over arbitrary sets of stores.
-An analyzer computes with finite descriptions instead, and its solver
+An analyzer computes with finite abstract values instead, and its solver
 (@ch:solving) compares, joins, widens and narrows them without knowing what
 they mean. Recall from @sec:abs-int that an abstract value $a$ denotes a set
 $conc(a)$ of concrete values. For the numeric domains of this chapter,
 $conc(a) subset.eq ZZ$, and @sec:domain-states lifts this meaning pointwise to
-stores. An arbitrary lattice of descriptions is not enough, for two reasons.
+stores. An arbitrary lattice of abstract values is not enough, for two reasons.
 First, the order must agree with the meaning. The solver only proves
 inequalities $a lle b$ in the abstract order, while the obligations of
 @ch:traces are inclusions between sets. The class law

@@ -131,7 +131,7 @@ lexically and is therefore a heuristic.
 == Changes to the verified solver <sec:upstream-td>
 
 Voblint vendors the top-down solver formalization of
-#cite(<tilscher26>, form: "prose") as a submodule. Using it as a library
+Tilscher et al. @tilscher26 as a submodule. Using it as a library
 exposed several things that every downstream user would have to work around,
 and four changes made for this thesis were proposed upstream.
 
