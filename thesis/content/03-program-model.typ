@@ -304,7 +304,7 @@ body.
 ) <fig:vimp-ast>
 
 The theorems must exclude programs whose calls cannot step or whose results
-are undefined. The static contract #isaconst("wf_source_program") does this in
+are undefined. The source contract #isaconst("wf_source_program") does this in
 several parts. Every call names either a declared procedure with matching arity or a
 library function with suitable arguments and a destination. Formals are
 distinct valid locals. `main` takes no arguments
@@ -378,11 +378,11 @@ back are pointwise selections by name. Formal binding, the environment merge
 and the write of the result are polymorphic in the value type
 (#isaconst("enter_binding"), #isaconst("combine_env"),
 #isaconst("combine_assign")). Therefore the analyses of
-@ch:analysis-interface reuse the concrete definitions at their abstract value
+@ch:analysis-interface reuse the concrete definitions at their abstract state
 types, with $top$ in place of the reset value $0$.
 
 The root activation has no #ctor("Restore"), and a bare #ctor("Unwind") has no
-step (#isathm("pstep_Unwind_stuck")). For this reason the contract rejects
+step (#isathm("pstep_Unwind_stuck")). For this reason the source contract rejects
 #keyw("return") in `main` (#isaconst("no_return")). The simulation of
 @sec:csim carries a runtime form of this condition, #isaconst("return_safe").
 
@@ -580,13 +580,13 @@ of `main` (#isathm("cfg_entry_compile_prog")). Its edge sets are finite
 (#isathm("compile_prog_finite")).
 
 The compiler reads the program as a table $Pi$ and a callee list $italic("ps")$,
-the declared procedures other than `main`. The contract
+the declared procedures other than `main`. The source contract
 #isaconst("wf_compile_input") $cal(G)$ $Pi$ $italic("ps")$ is
 #isaconst("wf_source_program") plus the condition that $italic("ps")$ lists
 exactly those procedures, without repetition. #isaconst("run_voblint") analyzes
-a program only after a sufficient executable form of this contract holds
+a program only after a sufficient executable form of this source contract holds
 (#isaconst("wf_program_compile_input_exec")). The source-level theorems
-therefore discharge the contract from the analyzer's own answer.
+therefore discharge the source contract from the analyzer's own answer.
 
 #figure(
   {
@@ -845,7 +845,7 @@ step:
 #proved("source_progress")
 
 The theorem is about the source alone; its premise mentions no compiled graph.
-The contract rules out the structural reasons why a call rule can fail: an
+The source contract rules out the structural reasons why a call rule can fail: an
 undeclared callee, an arity mismatch, repeated formals, and a library call with
 unsuitable arguments or without a destination.
 Every classified library call has a result (#isathm("special_result_ex")). The

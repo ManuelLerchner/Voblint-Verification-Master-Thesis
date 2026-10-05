@@ -111,7 +111,7 @@
   }
   lbl((-0.3, 3.2), [least fixpoint $[0, 5]$], anchor: "east", fill: vb.proved)
   if extrapolate {
-    lbl((1.45, 6.3), [$[0, infinity]$])
+    lbl((1.45, 6.3), [$[0, +infinity]$])
     if mode == "warrow" {
       lbl((2.3, 2.75), [warrowing $widen narrow$], fill: wcol)
     } else {
@@ -210,10 +210,15 @@ suffices.
 
 == Abstract interpretation <sec:abs-int>
 
-Correctness of an abstract result needs a meaning for abstract values. Let $C$ be a set of concrete states and $A$ an
-_abstract domain_, an ordered set of abstract values. Later chapters call the
-underlying set of such a domain its _carrier_. A
-concretization $conc : A -> cal(P)(C)$ gives each abstract value its meaning.
+Correctness of an abstract result needs a meaning for its elements. Let $C$ be
+a set of concrete objects, such as integers or stores, and $A$ an _abstract
+domain_, an ordered set of _domain elements_. Later chapters call the
+underlying set of such a domain its _carrier_. A domain element is an
+_abstract value_ when it describes the values of one variable, such as an
+interval for one integer, and an _abstract state_ when it describes stores. A
+concretization $conc : A -> cal(P)(C)$ gives each domain element its meaning.
+It is monotone, so a less precise element admits at least the same objects:
+$a lle b$ implies $conc(a) subset.eq conc(b)$ (#isathm("gamma_mono")).
 Soundness of an abstract result $a$ for a collecting set $R$ means
 $ R subset.eq conc(a), $
 the consistency requirement between an abstract and a concrete interpretation
@@ -221,7 +226,7 @@ in @cousot77[§6] @mine17[Def. 2.11].
 
 The running example uses the _interval domain_ @cousot77[§9.2] @mine17[§4.5]. Its elements are
 $lbot$ and the intervals $[l, u]$ with $l in ZZ union {-infinity}$,
-$u in ZZ union {infinity}$ and $l <= u$, and an interval denotes the integers
+$u in ZZ union {+infinity}$ and $l <= u$, and an interval denotes the integers
 between its bounds:
 $ conc([l, u]) = {n in ZZ | l <= n <= u}, quad conc(lbot) = emptyset. $
 The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
@@ -308,14 +313,19 @@ instance for an assignment as #isathm("tf_sound_assign_for"). The loop body's
 increment has the interval transfer $[l, u] |-> [l + 1, u + 1]$, the addition
 #isaconst("plus_ivl") with $[1, 1]$, which satisfies this property. A nondeterministic operation must include every
 permitted successor. The property composes along paths @mine17[Thm. 2.6], and at control-flow
-joins the upper-bound laws of join and monotonicity of concretization
-(#isathm("gamma_mono"), giving #isathm("gamma_sup_ub1") and #isathm("gamma_sup_ub2")) keep the states from both predecessors.
+joins the upper-bound laws of join and monotonicity of concretization keep
+the states from both predecessors (#isathm("gamma_sup_ub1"),
+#isathm("gamma_sup_ub2")).
 
 A post-fixpoint $a$ of a sound abstract transfer $sh(f)$ therefore suffices
-@mine17[Thm. 2.8]. Let $F(X) = I union f(X)$ be the concrete transfer on sets of states, with
-initial states $I$, so that $lfp F$ is the set of reachable states. If
-$I subset.eq conc(a)$, $sh(f)$ is sound, $conc$ is monotone and
-$sh(f)(a) lle a$, then
+@mine17[Thm. 2.8]. A program's steps form a relation $->$ on $C$, which
+may allow several successors of one state. Let
+$"post"(X) = setcomp(s', exists s in X. s -> s')$ collect the successors of a
+set of states and $F(X) = I union "post"(X)$ add the initial states $I$, so
+that $lfp F$ is the set of states reachable from $I$. If
+$I subset.eq conc(a)$, $sh(f)$ covers every step from $conc(a)$, so
+$s in conc(a)$ and $s -> s'$ imply $s' in conc(sh(f)(a))$, and
+$sh(f)(a) lle a$, then monotonicity of $conc$ gives
 $F(conc(a)) subset.eq I union conc(sh(f)(a)) subset.eq conc(a)$, so
 $conc(a)$ is a post-fixpoint of $F$ and, by Knaster–Tarski, contains
 $lfp F$. In the counting loop, $I = conc([0, 0])$, the states that `i = 0` produces.
@@ -324,8 +334,14 @@ $lfp F$. In the counting loop, $I = conc([0, 0])$, the states that `i = 0` produ
 
 A collecting semantics associates a set of reachable stores, the concrete
 states of VIMP, with every program point @cousot77[§4] @mine17[§3.4] (#isaconst("node_collect") in @ch:traces), here the stores with $i in {0, dots, 5}$ at the loop head, and its abstract
-counterpart associates an abstract state. A non-relational abstract state maps each variable to an abstract value and concretizes to the
-stores whose variables lie in the respective values.
+counterpart associates an abstract state. Soundness relates three levels:
+individual executions, the collecting semantics that gathers the states they
+reach, and the abstract semantics that over-approximates it (@fig:intro-nest).
+A non-relational abstract state is represented pointwise: it maps each
+variable independently to an abstract value and concretizes to the
+stores whose variables lie in the respective values. A relational state
+instead describes variables jointly and can express relations such as
+$x <= y$ (@sec:rel-state).
 An analysis states its result as a system of constraints over unknowns. An
 intraprocedural analysis takes one unknown per program point, and
 interprocedural systems commonly refine a program-point unknown by a calling
@@ -335,7 +351,7 @@ in intervals of $i$. Each unknown must cover what the edges entering its point
 produce:
 $
   h & gt.eq [0, 0] ljoin t, & quad b & gt.eq h lmeet [-infinity, 4], \
-  t & gt.eq b sh(+) [1, 1], & quad e & gt.eq h lmeet [5, infinity].
+  t & gt.eq b sh(+) [1, 1], & quad e & gt.eq h lmeet [5, +infinity].
 $
 The assignment `i = 0` contributes $[0, 0]$ to $h$, the condition `i < 5`
 restricts the branch into the body, and its negation restricts the exit.
@@ -348,6 +364,8 @@ two. Both bound the collecting semantics, the widened one of @sec:widening less
 precisely at $h$ and $e$, so a solution need not be least.
 
 In general, let $Unk$ be a set of unknowns and $sol : Unk -> A$ a valuation.
+Valuations are ordered pointwise: $sol lle sol'$ if $sol(x) lle sol'(x)$ for
+every unknown $x$.
 Each unknown $x$ has a right-hand side $rhs(x)$, a function of the valuation,
 and $sol$ is a _post-solution_ if
 $ rhs(x)(sol) lle sol(x) quad "for every unknown" x $
@@ -371,10 +389,10 @@ unknowns it has solved (@sec:td).
 #subfigures(
   figure(
     _loop-cfg((
-      h: ($[0, 5]$, $[0, infinity]$),
+      h: ($[0, 5]$, $[0, +infinity]$),
       b: ($[0, 4]$, none),
       t: ($[1, 5]$, none),
-      e: ($[5, 5]$, $[5, infinity]$),
+      e: ($[5, 5]$, $[5, +infinity]$),
     )),
     caption: [two solutions on the graph],
   ),
@@ -409,12 +427,12 @@ classical widening also stabilizes the corresponding iteration sequences
 @cousot77[§9.1.3] @cousot92plilp[§4]. The upper-bound law alone gives
 soundness and does not ensure termination. A common strategy widens at selected loop heads, and
 the top-down solver TD extrapolates where a read closes a cycle (@sec:td). The standard interval
-widening replaces a growing bound by infinity @cousot77[§9.2] @mine17[§4.5.2] (#isaconst("widen_ivl_core")),
+widening replaces a growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.2] (#isaconst("widen_ivl_core")),
 so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
-$[0, infinity]$ at once. This value is a post-fixpoint without the bound $5$,
+$[0, +infinity]$ at once. This value is a post-fixpoint without the bound $5$,
 which the program states in the loop condition `i < 5`. The branch into the body refines the head's value against the
 condition, a backward step from the guard to the stores that pass it
-(#isalocale("sound_refinement"), @sec:branches), and restricts $[0, infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
+(#isalocale("sound_refinement"), @sec:branches), and restricts $[0, +infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
 The body yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$ (@fig:widening).
 
@@ -432,7 +450,7 @@ $[0, 0] ljoin [1, 5] = [0, 5]$ (@fig:widening).
   columns: (1fr, 1fr),
   placement: auto,
   caption: [Extrapolation on the lattice of @fig:lattice-fixpoints. (a) Widening
-    jumps from $[0, 0]$ to the post-fixpoint $[0, infinity]$, and narrowing then
+    jumps from $[0, 0]$ to the post-fixpoint $[0, +infinity]$, and narrowing then
     recovers the least fixpoint $[0, 5]$. (b) Warrowing applies one operator
     that widens or narrows depending on whether the candidate lies below the
     current value. Here both reach $[0, 5]$.],
@@ -470,12 +488,12 @@ holds whenever execution is at that point. A _flow-insensitive_ analysis associa
 value with an aspect of the state independently of the current program point,
 for example one range for a global variable across the program. Mixed analyses
 choose per aspect of the state @seidl26. Such a fact is an unknown without a
-program point, and every point that changes it must contribute to it.
-Side-effecting systems let a right-hand side make such contributions to other
-unknowns during its evaluation @apinis12. If evaluating the right-hand side for $x$ returns $d$ and emits
+program point, and every point that changes it must publish a contribution to it.
+Side-effecting constraint systems let a right-hand side publish such contributions to other
+unknowns as side effects of its evaluation @apinis12. If evaluating the right-hand side for $x$ returns $d$ and publishes
 contributions $(y_i, d_i)$, a post-solution must bound all of them:
-$ d lle sol(x), quad d_i lle sol(y_i) " for every emitted contribution". $
-If the assignments `g = 5` and `g = 4` contribute $[5, 5]$ and $[4, 4]$ to
+$ d lle sol(x), quad d_i lle sol(y_i) " for every published contribution". $
+If the assignments `g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to
 the unknown of a flow-insensitive global `g`, that unknown must bound their
 join $[4, 5]$.
 The _certificate_ property established for the solver's result,
@@ -501,24 +519,26 @@ widening @bourdoncle93, or locally, on demand from a query, as the solver RLD
 TD starts from a query unknown and evaluates right-hand sides on demand. When
 the right-hand side of $x$ reads an unknown $y$, TD first solves $y$ and
 records that $x$ depends on $y$. When the value of $y$ changes later, every
-unknown that read it is marked unstable (destabilized) and evaluated again. At unknowns where
-a read closes a cycle, TD combines the old and the new value with warrowing
-instead of replacing it (@fig:td-trace). Side contributions to a global are
+unknown that read it is marked unstable (destabilized) and evaluated again. The unknowns at which
+a read closes a cycle are the solver's _widening points_, which the vendored solver's
+theories also call widening/narrowing points. A widening point is not a loop
+head: TD finds it during the solve. At a widening point TD combines the old and
+the new value with warrowing instead of replacing it (@fig:td-trace). Contributions published to a global unknown are
 merged into its value by an update rule (#isalocale("update_rule"),
 @sec:update-rules), which keeps one record per _origin_, the unknown whose
 right-hand side published the contribution. The run ends once the
-discovered dependency closure of the query is stable, and it returns the set $S$ of stable unknowns together
+discovered dependency closure of the query is stable, and it returns its _stable set_ $V$ together
 with the valuation $sol$.
 
 #let _td = (
-  // (evaluating, event, pp0, pp1, pp2, pp3, being computed, loop points),
+  // (evaluating, event, pp0, pp1, pp2, pp3, being computed, widening points),
   // transcribed from query/iterate of TD_side_upd_rule for this system.
   ("pp3", [put on $c$; its equation reads `pp1`], "⊥", "⊥", "⊥", "⊥", "pp3", ""),
   ("pp1", [not on $c$: computed now; reads `pp0`, then `pp2`], "⊥", "⊥", "⊥", "⊥", "pp3 pp1", ""),
   ("pp0", [reads nothing; stable at once], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", ""),
   (
     "pp2",
-    [reads `pp1`, which is on $c$: gets its current value; `pp1` becomes a loop point],
+    [reads `pp1`, which is on $c$: gets its current value; `pp1` becomes a widening point],
     "⊤",
     "⊥",
     "⊥",
@@ -529,7 +549,7 @@ with the valuation $sol$.
   ("pp2", [evaluates to its current value; done], "⊤", "⊥", "⊥", "⊥", "pp3 pp1", "pp1"),
   (
     "pp1",
-    [evaluates to `[0,0]`; the round began before the loop point was found, so no widening; `pp2` is destabilized],
+    [evaluates to `[0,0]`; the round began before the widening point was found, so no widening; `pp2` is destabilized],
     "⊤",
     "[0,0]",
     "⊥",
@@ -540,7 +560,7 @@ with the valuation $sol$.
   ("pp2", [recomputed from `pp1`], "⊤", "[0,0]", "[0,0]", "⊥", "pp3 pp1", "pp1"),
   (
     "pp1",
-    [equation gives `[0,1]`; a loop point that grew is widened],
+    [equation gives `[0,1]`; a widening point that grew is widened],
     "⊤",
     "[0,+∞]",
     "[0,0]",
@@ -607,7 +627,7 @@ with the valuation $sol$.
       [*`pp2`*],
       [*`pp3`*],
       [*on $c$*],
-      [*loop pts*],
+      [*widening pts*],
       table.hline(stroke: 0.4pt),
       .._td
         .enumerate()
@@ -630,10 +650,10 @@ with the valuation $sol$.
       row-gutter: 4pt,
       align: (right, left),
       text(fill: vb.muted)[post-solution:],
-      $[i := 0] top union.sq [i := i + 1] [0, 4] = [0, 5] subset.eq.sq sigma(#raw("pp1"))$,
+      $[i := 0] top union.sq [i := i + 1] [0, 4] = [0, 5] lle sigma(#raw("pp1"))$,
 
-      [], $"assume"(i < 5) [0, 5] = [0, 4] subset.eq.sq sigma(#raw("pp2"))$,
-      [], $"assume"(i >= 5) [0, 5] = [5, 5] subset.eq.sq sigma(#raw("pp3"))$,
+      [], $"assume"(i < 5) [0, 5] = [0, 4] lle sigma(#raw("pp2"))$,
+      [], $"assume"(i >= 5) [0, 5] = [5, 5] lle sigma(#raw("pp3"))$,
     ))
   },
   kind: image,
@@ -643,99 +663,43 @@ with the valuation $sol$.
     #raw("pp2"), #raw("pp3") are $h$, $b$, $e$, simplified to four local unknowns without contexts or side effects. Each row
     is one evaluation of a right-hand side, numbered in run order (six
     intermediate evaluations are omitted), with the values $sigma$ after it,
-    the unknowns being computed ($c$, in call order) and the loop points, as in
-    the vendored solver. A loop point is warrowed: widened while it
+    the unknowns being computed ($c$, in call order) and the widening points, as in
+    the vendored solver. A widening point is warrowed: widened while it
     grows, narrowed once it shrinks. Transcribed by hand; the final values are
     checked against the analyzer and form a post-solution (last line).],
 ) <fig:td-trace>
 
 The formalization splits the unknowns into _local_ unknowns $Unk$, which have a
-right-hand side, and _global unknowns_ $G$, which receive only side contributions. A global unknown is not a global variable of the program. A
-right-hand side is a _strategy tree_ (#isatype("strategy_tree", thy: "Basics_side")), which
-exposes every read and every side effect to the solver:
+right-hand side, and _global unknowns_ $Unk_G$, which receive only published contributions. A global unknown is not a global variable of the program. A
+right-hand side may choose its next read from a value it has already read, so
+the solver receives it as a _strategy tree_
+(#isatype("strategy_tree", thy: "Basics_side")), which exposes every read and
+every side effect:
 $
   tau ::= ctor("Answer", thy: "Basics_side")(d) | ctor("QueryL")(y, k) | ctor("QueryG")(g, k)
   | ctor("Side")(g, d, tau)
 $
-with a local unknown $y in Unk$, a global $g in G$, an abstract value $d in A$
+with a local unknown $y in Unk$, a global unknown $g in Unk_G$, a domain element $d in A$
 and a continuation $k : A -> tau$ that receives the value read. $ctor("Answer", thy: "Basics_side")(d)$
 returns $d$ as the value of the right-hand side, $ctor("QueryL")$ and
 $ctor("QueryG")$ read a local or a global unknown, and $ctor("Side")(g, d, tau)$
-contributes $d$ to $g$ before continuing with $tau$. Evaluating $tau$ against
-$sol$ follows the queries and yields the value
-$#isaconst("traverse_rhs", thy: "Basics_side") med tau med sol$ of the
-$ctor("Answer", thy: "Basics_side")$ it ends in, the join
-$#isaconst("sides_of_rhs") med tau med sol$ of its side contributions per
-global, and the local unknowns it reads. Isabelle defines the last per
-unknown: for an equation system $T$ that maps each local unknown $u$ to its
-tree, $#isaconst("dep\<^sub>L") med T med sol med u$ is the set of local
-unknowns that $T med u$ reads. @fig:strategy-trees shows two right-hand sides
-in both forms.
+publishes $d$ to $g$ before continuing with $tau$. The loop head's
+right-hand side $[0, 0] ljoin sol(t)$, for instance, is $ctor("QueryL")(t, k)$
+with $k(v) = ctor("Answer", thy: "Basics_side")([0, 0] ljoin v)$.
+@sec:eq-trees shows why a procedure call needs a read that depends on an
+earlier one, and @sec:cert-def defines the value, the contributions and
+the reads of a tree.
 
-#let _tree(steps) = {
-  set text(size: 8pt)
-  diagram(
-    spacing: (6mm, 7mm),
-    node-stroke: 0.6pt + vb.neutral,
-    node-corner-radius: 2pt,
-    node-inset: 4pt,
-    ..steps.enumerate().map(((i, s)) => node((0, i), s.at(0))),
-    ..range(steps.len() - 1).map(i => edge(
-      (0, i),
-      (0, i + 1),
-      "-|>",
-      steps.at(i).at(1),
-      label-side: left,
-    )),
-  )
-}
-#subfigures(
-  figure(
-    grid(
-      rows: (auto, auto),
-      row-gutter: 5mm,
-      align: center,
-      $rhs(h)(sol) = [0, 0] ljoin sol(t)$,
-      _tree((
-        ($ctor("QueryL")(t)$, $v$),
-        ($ctor("Answer", thy: "Basics_side")([0, 0] ljoin v)$, none),
-      )),
-    ),
-    caption: [the loop head $h$],
-  ),
-  <fig:tree-loop>,
-  figure(
-    grid(
-      rows: (auto, auto),
-      row-gutter: 5mm,
-      align: center,
-      [read $u$, publish $[5, 5]$ to $g$, \ then answer the value read],
-      _tree((
-        ($ctor("QueryL")(u)$, $v$),
-        ($ctor("Side")(g, [5, 5])$, none),
-        ($ctor("Answer", thy: "Basics_side")(v)$, none),
-      )),
-    ),
-    caption: [a flow-insensitive `g = 5` after $u$],
-  ),
-  <fig:tree-call>,
-  columns: (1fr, 1fr),
-  align: bottom,
-  caption: [Right-hand sides and their strategy trees. Each query names the
-    unknown it reads and passes the value on, and $ctor("Side")$ records a
-    contribution to a global. @sec:eq-encoding gives the tree of a procedure
-    call, which reads the caller's value, publishes the callee's entry value and
-    reads the callee's result.],
-  label: <fig:strategy-trees>,
-)
-
-The solver is defined without a termination proof. Its main theorem,
+HOL admits only terminating recursion, so Isabelle defines the solver on the
+arguments where its recursion terminates, without proving which these are
+(@sec:termination). Its main theorem,
 #isathm("partial_post_solution"), states partial correctness: if the recursion
-terminates on the query $x$ and returns the set $S$ of _solved unknowns_ and the
-valuation $sol$, then $S$ contains $x$, is closed under the local reads of its
-right-hand sides, and on $S$ the valuation is a post-solution, side
+terminates on the query $x$ and returns its stable set $V$ and the
+valuation $sol$, then $V$ contains $x$, is closed under the local reads of its
+right-hand sides, and on $V$ the valuation is a post-solution, published
 contributions included. The theorem needs no monotonicity of the right-hand
-sides and says nothing about unknowns outside $S$. @sec:certificate states it
+sides and says nothing about unknowns outside $V$. Later chapters call the set
+on which this certificate holds the _solved set_. @sec:certificate states it
 precisely, and @sec:termination explains why Voblint's main theorem needs no
 termination premise although termination is not proved.
 
@@ -753,6 +717,15 @@ theorem shows that a terminating run provides one (@sec:certificate).
 The formalization uses a few mechanisms of Isabelle/HOL @nipkow14 that recur in
 later chapters.
 
+HOL is a typed logic of total functions. We write $x :: tau$ for "$x$ has type
+$tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
+#isai("'a") for a type variable, and $lambda x. t$ for the function that maps
+$x$ to $t$. A _datatype_ declares a type by its constructors and comes with
+case distinction and structural induction. VIMP's commands
+#isatype("com") are one (@sec:vimp). A _record_ is a tuple with named fields.
+The analysis interface #isatype("dg_spec") is a record with one field per
+operation (@sec:spec-record).
+
 A _type class_ collects operations and laws that an instance proves once for a
 carrier @haftmann07. The solver's class #isalocale("widening") fixes the
 operator $widen$ and assumes that it bounds both operands:
@@ -766,14 +739,32 @@ class, a locale can be interpreted several times for one type.
 that it keeps every value both operands admit and lies below both:
 #thy("sound_intersection")
 
-An _inductive definition_ is the least relation closed under its rules and
-comes with rule induction, and #isacmd("inductive_set") defines a set the same
-way. The solver's verification defines the unknowns on which a query $x$
+An _inductive definition_ is the least relation closed under its rules, and
+#isacmd("inductive_set") defines a set the same way. Its _rule induction_
+proves a property of every element by one case per rule: the property holds
+for the rule's conclusion if it holds for the rule's premises.
+The solver's verification defines the unknowns on which a query $x$
 transitively depends, #isaconst("reach"), by two rules:
 #thy("reach")
 Source execution #isaconst("pstep") (@fig:pstep), graph execution
 #isaconst("cstep") (@fig:cstep) and the valid activation traces
-#isaconst("valid_activation_trace") are defined by rules as well.
+#isaconst("valid_activation_trace") are defined by rules as well. So is the
+reflexive–transitive closure $scripts(->)^*$ of a step relation $->$, which relates two
+states connected by zero or more steps. A source run is written
+$scripts(->)_p^*$ (#isaconst("psteps")).
+
+A theorem lists its premises after #isai("assumes") and its conclusion after
+#isai("shows"). #isai("fixes") declares variables with their types, and
+#isai("defines") introduces abbreviations local to the statement. Inside a
+proposition, $A ==> B$ is implication and $exists$, $and$, $or$ are the usual
+connectives. Subscripts, superscripts and symbols such as $tack.r$ are
+notation for a constant applied to its arguments, and the text names the
+constant at first use. The source-level theorem
+#isathm("run_voblint_source_sound") (@sec:headline), for instance, fixes a
+program $p :: #isatype("imp_prog")$, assumes a source run
+$(dots) scripts(->)_p^* (dots)$ and an answer of the analyzer, and shows that the
+reached store lies in the state the answer reports at a corresponding graph
+node.
 
 A _quotient type_ identifies representations up to an equivalence
 @huffman13. @ch:solving identifies finite executable abstract states that read

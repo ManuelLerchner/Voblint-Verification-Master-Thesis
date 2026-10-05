@@ -28,7 +28,7 @@
 
 What does a user actually run, and where does the proof stop? The theorems of
 @ch:results are about #isaconst("run_voblint"), a HOL function from a VIMP
-syntax tree and a configuration to an analysis answer. A user has source text
+syntax tree and an analysis configuration to an analysis answer. A user has source text
 and wants a report. Code generation, a compiler, a parser, and a renderer lie
 between the two, and the theorem covers none of them. The delivered tools run
 the constant the theorem is about, which gives the executable half of the
@@ -76,7 +76,7 @@ caller needs into
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
 Handwritten OCaml reaches it only through the facade
 #link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`]. One entry point for
-every configuration also means no handwritten code chooses between analyses or
+every analysis configuration also means no handwritten code chooses between analyses or
 policies.
 
 The same constraint splits the interfaces. A concretization into sets of
@@ -108,7 +108,7 @@ VIMP's mathematical integers (@sec:vimp-vs-c).
 
 The command-line tool and the browser adapter link the same generated module
 and frontend, and they check a request the same way: one
-function turns analysis, update-rule and context names into a configuration,
+function turns analysis, update-rule and context names into an analysis configuration,
 and each entry words its own error messages. The two stay separate programs,
 because the command-line tool runs each analysis in a killable subprocess and
 writes report directories, while the adapter is a WebAssembly worker that talks
@@ -121,7 +121,7 @@ The playground,
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[`manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html`],
 is a static page that runs this adapter in the reader's browser. Its toolbar
 selects exactly the arguments of #isaconst("run_voblint"), so every selectable
-run lies within the configurations covered by
+run lies within the analysis configurations covered by
 #isathm("run_voblint_source_sound"), subject to its input premises.
 @fig:pg-overview shows the default program, analyzed with Interval and the
 order analysis under call strings of depth one. It contains a
@@ -158,7 +158,7 @@ one constant, #isaconst("trace_event"), which takes a channel name and a
 suspended event and is $()$ in the logic. Alternative code equations for the
 solver call it at each step, and because it is $()$, each is proved equal to
 the vendored equation it replaces by unfolding it
-(#isathm("solve_rec_c_traced")); the routing policies and the reading of the
+(#isathm("solve_rec_c_traced")); the context policies and the reading of the
 result are traced the same way (#isathm("trace_route"), #isathm("trace_run")). Code export
 uses the traced equations and drops the originals, so the vendored definitions
 and proofs stay untouched, and a traced and an untraced run execute the same
@@ -289,7 +289,7 @@ contradicts nothing, since the theorem speaks only about returned reports. A
 timeout establishes only
 that the run did not finish within its budget. It yields no verdict and does
 not show that the solver diverges. A hang may come from the solve, from the
-fixpoint reduction of the Int product (@ch:instances), or from the toolchain
+fixpoint reduction of Int (@ch:instances), or from the toolchain
 and the browser. An abort branch of a code equation, such as the query
 recursion exceeding #isaconst("query_depth") (@sec:coop-channel), raises an
 exception and yields no answer.

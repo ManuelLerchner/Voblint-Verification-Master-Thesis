@@ -20,7 +20,7 @@ Isabelle theorem and holds for every input its statement ranges over, under its
 premises. An _evaluated_ result is an Isabelle lemma proved by `eval`, which
 runs the generated code of a concrete solve: Isabelle checks it, but it trusts
 the code generator and concerns one input. An _executable_ result records that
-one program, run at one configuration, produces one answer, and it also
+one program, run with fixed analysis settings, produces one answer, and it also
 exercises the parser and renderer outside the theorem (@sec:trust-boundary). An
 _illustrative_ result, such as a screenshot, lets a reader inspect the others
 and adds no guarantee. A _repository measurement_ supports statements about
@@ -31,7 +31,7 @@ reasoning no theorem checks, and we mark it where a claim rests on one.
 
 _Evidence: machine-checked._ #isathm("run_voblint_source_sound")
 (@sec:headline) connects source executions to the verdicts of the exported
-analyzer. It holds for every configuration #isaconst("run_voblint") accepts,
+analyzer. It holds for every analysis configuration #isaconst("run_voblint") accepts,
 and it is stated about the constant #isacmd("export_code") emits
 (@sec:codegen). Its chain runs from the forward simulation #isathm("csim_star")
 to the verdict semantics of @sec:verdicts.
@@ -59,8 +59,8 @@ the analysis manifest (@ch:tooling). No theory of the framework or of the
 numeric domains refers to it outside document text.
 
 _Limits._ The result is partial correctness. Termination is not proved,
-neither for the solve (@sec:termination) nor for the fixpoint reduction of the
-Int product (@sec:reduced-product), so the analyzer answers only where both
+neither for the solve (@sec:termination) nor for the fixpoint reduction of
+Int (@sec:reduced-product), so the analyzer answers only where both
 return. That every valid trace arises from a graph run is not proved
 (@sec:valid); soundness needs only the forward direction. The delivered tool
 trusts the parser, the code generator, the compilers, runtimes and renderer
@@ -83,7 +83,7 @@ replayed Goblint defect shows one obligation excluding a real unsoundness.
 === Non-vacuity <sec:nonvacuity>
 
 _Evidence: machine-checked, with the concrete solves evaluated._ A theorem
-whose premises no configuration meets holds vacuously. The end-to-end
+whose premises are unsatisfiable holds vacuously. The end-to-end
 theorem assumes an initial store, a source run, a terminating solve and an
 #isaconst("Analysed") answer. As in
 #cite(<marmsoler26stark>, form: "prose", supplement: [§9])
@@ -143,7 +143,7 @@ unknown, and the second check, `c % 2 == -1`, as not yet provable.
 
 Our fixture transliterates the test into VIMP, whose remainder also truncates
 toward zero. @fig:goblint-1161 shows the result. Congruence alone knows only
-$c in 1 + 2ZZ$ and decides neither check. The Int product also knows that $c$
+$c in 1 + 2ZZ$ and decides neither check. Int also knows that $c$
 lies in $[-7, -5]$, refutes the first check, and proves the second.
 
 #figure(
@@ -171,7 +171,7 @@ lies in $[-7, -5]$, refutes the first check, and proves the second.
         columns: (auto, auto, auto),
         inset: (x: 4pt, y: 3pt),
         table.hline(stroke: 0.5pt),
-        [*check*], [*Congruence*], [*Int product*],
+        [*check*], [*Congruence*], [*Int*],
         table.hline(stroke: 0.4pt),
         ..conds
           .map(c => (
@@ -218,7 +218,7 @@ strict separation on one program: the Sign value of a parameter at a procedure
 entry is strictly lower under call strings of length 2 than under length 1,
 with the component values computed by `eval`. The witness uses Sign because
 its widening is its join and its narrowing returns the current value, so the
-difference cannot come from widening. On one pair of configurations, the gain
+difference cannot come from widening. On one pair of analysis settings, the gain
 from contexts is not proportional to their cost. `down(100)` recurses to `down(0)`, so `n >= 0`
 holds at every call. Call strings of length 100 give
 #_k100.clusters.len() procedure copies, and the check is
@@ -307,7 +307,7 @@ its default bound 5, reaches the verdicts of per-origin warrowing on all four
 programs.
 
 
-*The product.* _Evidence: executable._ In @fig:stride2 the reduced product
+*The product.* _Evidence: executable._ In @fig:stride2 Int
 decides a check that none of its components decides alone.
 
 *Cooperation.* _Evidence: machine-checked by evaluation, and executable._
@@ -330,9 +330,9 @@ stores lose relations between variables (@sec:relational). The order analysis
 recovers some of them, within the limits of @sec:coop-limits. A call string of
 length $k$ merges paths deeper than $k$, as in `down` above.
 
-_Limits._ Every precision witness concerns one program at fixed configurations, and the evaluated ones trust the code generator. The
+_Limits._ Every precision witness concerns one program with fixed analysis settings, and the evaluated ones trust the code generator. The
 development proves no general precision or optimality theorem, and a
-separation shown on one program does not order two configurations on all
+separation shown on one program does not order two analysis settings on all
 programs. The concrete behaviour a fixture header states is the author's
 reading of the program, and the corpus is tested, not proved.
 

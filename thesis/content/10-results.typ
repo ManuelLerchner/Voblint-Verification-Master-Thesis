@@ -68,7 +68,7 @@ implication. Each step is a theorem:
 ))
 The first step places a store that a finite source run reaches: it lies in the
 node collecting semantics at some node $v$ that simulates the run's
-configuration. The node is existential because the simulation is structural,
+execution configuration. The node is existential because the simulation is structural,
 not a function: the same residual command may match several compiled nodes, for
 instance in an uncalled procedure with the same body, and membership in
 #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") selects a node the run reaches. The node
@@ -214,8 +214,8 @@ every definite verdict listed there holds of the store.
 == The source-level theorem <sec:headline>
 
 One theorem establishes this for the exported analyzer. Its parameters are
-the configuration and the program, the arguments of #isaconst("run_voblint")
-(@sec:codegen). A configuration #isatype("analysis_config") bundles four
+the analysis configuration and the program, the arguments of #isaconst("run_voblint")
+(@sec:codegen). An analysis configuration #isatype("analysis_config") bundles four
 choices:
 - $"as"$, a list of #isatype("analysis_domain") values, the analyses that run
   together as the combined component of @ch:cooperation, for example
@@ -231,7 +231,7 @@ choices:
 and the program $p$ is an #isatype("imp_prog"). The run of @fig:chain is
 #isaconst("run_voblint") (#ctor("Analysis_Config") [#ctor("Interval_Analysis")]
 #ctor("Globals_Warrow") #ctor("Ctx_EntryState") #ctor("Program_Globals_Flow_Sensitive")) $p$. The variables are
-universally quantified, so the theorem holds for every configuration, without a
+universally quantified, so the theorem holds for every analysis configuration, without a
 separate theorem per analysis or policy.
 #proved("run_voblint_source_sound", note: [Source-level soundness of the
   analyzer.])
@@ -250,7 +250,7 @@ compiled graph #isaconst("prog_cfg") $p$. The theorem assumes three premises:
     to a configuration with store $s$. Any stopping point is allowed, so
     nonterminating programs are covered through their prefixes.
   + #isaconst("run_voblint") $"config"$ $p$ $=$ #ctor("Analysed") $"res"$: the
-    analyzer returned a report. It returns one only for a valid configuration
+    analyzer returned a report. It returns one only for a valid analysis configuration
     and a well-formed program, and only where its executable solver returned,
     so neither well-formedness nor termination is a separate premise.
 ]
@@ -285,10 +285,10 @@ context, and the buckets together are the collecting semantics. The unit,
 entry-state and call-string policies discharge them in one theorem each.
 
 An analysed answer also fixes what kind of object the report is
-(#isathm("run_voblint_report_contract")). It answers a valid configuration
+(#isathm("run_voblint_report_contract")). It answers a valid analysis configuration
 (#isaconst("valid_config")) and a well-formed program
 (#isaconst("wf_program_compile_input_exec")), and it is the report for exactly
-that configuration and the program's compiled graph. Structurally it is well formed
+that analysis configuration and the program's compiled graph. Structurally it is well formed
 (#isaconst("well_formed_report")): its context indices are in range, a
 point has one row per context, and each row's checks and arithmetic obligations
 are exactly those of its point, each with the verdict of the row's own state.
@@ -360,7 +360,7 @@ contexts, because a terminating solve returns finitely many unknowns
 never $1$ or $2$, so no run reaches the check. Interval cannot see this. It
 keeps #raw(_pu.state) there, where `x > 0` holds, and reports
 #raw(_pu.verdict). The verdict is sound, since it only claims that `x > 0`
-holds whenever a run reaches the check. The Int product also tracks
+holds whenever a run reaches the check. Int also tracks
 $x equiv 0 med (mod 3)$, finds the state empty, and reports
 #raw(_pu-int.verdict).
 
@@ -416,7 +416,7 @@ a premise: #isaconst("run_voblint") returns a report only where its executable
 solver returned, and where the solve diverges there is no report and no claim.
 Termination is not proved for every program (@sec:termination), so the theorem
 is a partial-correctness result, and the analyzed program need not terminate. #isathm("certificate_demo_source_certified") discharges every
-premise by evaluation for one program and configuration, a non-vacuity witness.
+premise by evaluation for one program and analysis configuration, a non-vacuity witness.
 @ch:instances compares what the shipped domains can prove under the theorem,
 and @ch:executable draws the boundary between #isaconst("run_voblint") and the
 delivered tool.

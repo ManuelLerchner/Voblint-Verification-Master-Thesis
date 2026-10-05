@@ -2,7 +2,7 @@
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing
 #import "../lib/sources.typ": thy, update-rule-steps
-#import "../lib/math.typ": conc, ctor, ineq, lbot, lle, ltop, sem, setcomp, sh, sol
+#import "../lib/math.typ": conc, ctor, ineq, lbot, lle, llt, ltop, sem, setcomp, sh, sol
 #import "../lib/theme.typ": vb
 #import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text
 
@@ -39,7 +39,7 @@ left unproved (@sec:termination).
 
 Voblint solves the equations with the side-effecting top-down solver of
 Tilscher et al., which is proved partially correct @tilscher26. Side effects
-are how a call reaches its callee: the caller publishes the entry value to the
+are how a call reaches its callee: the caller publishes the entry state to the
 callee's seed, and the callee's entry equation reads the seed back
 (@sec:eq-call). The solver returns a valuation #sol together with the set $V$
 of local unknowns it evaluated and stabilized.
@@ -177,7 +177,7 @@ unknown, its valuation is #lbot and the bound holds trivially.
     requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
     sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
   + carries a call into its callee: it makes the callee's seed hold every
-    entry value routed there, and global unknowns receive their values only
+    entry state routed there, and global unknowns receive their values only
     through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of
     @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
@@ -186,7 +186,7 @@ unknown, its valuation is #lbot and the bound holds trivially.
     values of `a = bump(5)` and `b = bump(4)` (@sec:eq-example).
 ]
 
-Among local unknowns the solver widens and narrows only at loop points
+Among local unknowns the solver widens and narrows only at widening points
 (@sec:td, @fig:td-trace). The returned #sol may therefore lie above the least
 solution, and (C1) to (C4) state all the solver guarantees about it. The
 collecting-soundness theorem of @ch:equations needs the bounds (C3) and (C4)
@@ -426,7 +426,7 @@ applies it to the analysis locale's equations.
 ) <tab:cert-premises>
 
 Running the solver needs two further choices, neither of which changes the
-certificate: how side contributions update global unknowns
+certificate: how published contributions update global unknowns
 (@sec:update-rules), and how abstract states are represented as executable
 values (@sec:represented-function).
 
@@ -567,7 +567,7 @@ values, and every unlisted name reads as #ltop, so two states can differ only
 at the listed names and are compared on those. We call such an executable
 representation of abstract states an _executable state carrier_, in this
 chapter _carrier_ for short; it is distinct from the carrier of a domain, the
-type of its abstract values (@ch:background). It works like a default dictionary, a finite dictionary that
+type of its domain elements (@ch:background). It works like a default dictionary, a finite dictionary that
 answers every missing key with a default, and it represents a total function
 exactly. It makes the existing abstraction computable and adds no new one.
 
@@ -852,7 +852,7 @@ unknowns but not their number (#fixture(
   "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
   label: "01-unbounded_context_chain_diverges",
 )). Finitely many unknowns do not suffice either: without contexts, the
-interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ contributes
+interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ publishes
 $[0, 0], [0, 1], [0, 2], dots$ to the one seed of `f`, and the joining update
 rules never widen this chain (#fixture(
   "24-site-figures/01-recursion_grows_join_diverges.vimp",
@@ -862,11 +862,12 @@ not machine-checked, are why we expect divergence (@sec:trust-boundary).
 
 The vendored termination theorems cover top-down solvers without side effects
 over a finite type of unknowns @tilscher26. They further require monotone
-right-hand sides and the ascending chain condition for plain TD, well-founded
-widening chains for TD with widening, and monotone right-hand sides with
+right-hand sides and the ascending chain condition for plain TD, which says
+that every strictly ascending chain $a_0 llt a_1 llt dots$ is finite,
+well-founded widening chains for TD with widening, and monotone right-hand sides with
 well-founded widening and narrowing chains for TD with warrowing. Voblint's
 unknowns pair a graph node, whose type is infinite, with a context, so these
-theorems apply to no configuration. Seidl and Vogler prove on paper that
+theorems apply to no analysis configuration. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system as long as only
 finitely many unknowns are encountered @seidl21[§9, Thm. 5], for widening and
 narrowing operators whose iterations always stabilize @seidl21[§3]. That solver widens at a target once one origin increases it a second time

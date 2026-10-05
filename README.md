@@ -404,7 +404,7 @@ settings.
   <tr>
     <td align="center">
       <a href="docs/images/playground-int-refinement.png">
-        <img src="docs/images/playground-int-refinement.png" width="760" alt="The int product domain proving y == 2 where sign, interval and parity each report UNKNOWN">
+        <img src="docs/images/playground-int-refinement.png" width="760" alt="The Int domain proving y == 2 where sign, interval and parity each report UNKNOWN">
       </a>
       <br><b>The refining <code>int</code> domain against three of its components</b>
       <br><sub><code>int: PROVED</code> beside <code>interval</code>, <code>sign</code> and <code>parity</code>, each UNKNOWN on the same program and the same check.</sub>

@@ -507,7 +507,7 @@
           <li class="rs rs-5"><code>c % 2 == -1</code> is true</li>
         </ol>
 
-        <figcaption>The left pane shows Goblint before that pull request, on the regression test that pull request added, <a href="https://github.com/goblint/analyzer/blob/master/tests/regression/37-congruence/14-negative.c" target="_blank" rel="noreferrer"><code>37-congruence/14-negative.c</code></a>, with that test's flags <code>--enable ana.int.congruence --set sem.int.signed_overflow assume_none</code>. The fix returns the constant result of <code>%</code> only when the remainder is zero, when the dividend is already a single value, or when the type is unsigned. A signed <code>c</code> that is only known to be odd now yields the class <code>1+2ℤ</code>. Both analyzers run the congruence domain and arrive at this class. The difference is that Voblint's operation is proved sound (<a href="Voblint/Voblint_Analysis_Congruence/Congruence_Arithmetic.html#Congruence_Arithmetic.congruence_mod_sound%7Cfact"><code>congruence_mod_sound</code></a>), so the wrong answers on the left are not available to it. Neither analyzer decides the checks with congruences alone, and Goblint's test states why: it marks the second check <code>TODO (Track information that c is negative)</code>. The missing information is the sign of <code>c</code>; machine integers play no role. The Int product supplies the sign and <a href="#values">decides both checks</a>.
+        <figcaption>The left pane shows Goblint before that pull request, on the regression test that pull request added, <a href="https://github.com/goblint/analyzer/blob/master/tests/regression/37-congruence/14-negative.c" target="_blank" rel="noreferrer"><code>37-congruence/14-negative.c</code></a>, with that test's flags <code>--enable ana.int.congruence --set sem.int.signed_overflow assume_none</code>. The fix returns the constant result of <code>%</code> only when the remainder is zero, when the dividend is already a single value, or when the type is unsigned. A signed <code>c</code> that is only known to be odd now yields the class <code>1+2ℤ</code>. Both analyzers run the congruence domain and arrive at this class. The difference is that Voblint's operation is proved sound (<a href="Voblint/Voblint_Analysis_Congruence/Congruence_Arithmetic.html#Congruence_Arithmetic.congruence_mod_sound%7Cfact"><code>congruence_mod_sound</code></a>), so the wrong answers on the left are not available to it. Neither analyzer decides the checks with congruences alone, and Goblint's test states why: it marks the second check <code>TODO (Track information that c is negative)</code>. The missing information is the sign of <code>c</code>; machine integers play no role. Int supplies the sign and <a href="#values">decides both checks</a>.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/04-goblint_1161_congruence_mod.vimp&amp;analysis=congruence&amp;context=none">Run the congruence side ↗</a>
           <a href="https://github.com/goblint/analyzer/issues?q=label%3Aunsound" target="_blank" rel="noreferrer">Goblint's soundness issues ↗</a></figcaption>
       </figure>
@@ -648,7 +648,7 @@
           <code>x &lt; 3</code> leaves <code>[1, 2]</code> and the check there is UNKNOWN instead of
           DEAD. At <code>pp7</code> the guard <code>x &gt; 5</code> contradicts <code>[−∞, 0]</code>
           outright: the value is <code>⊥</code> and the check is DEAD, which means no run gets there.
-          The Int product, whose congruence component tracks <code>x ≡ 0 (mod 3)</code>, marks both
+          Int, whose congruence component tracks <code>x ≡ 0 (mod 3)</code>, marks both
           checks DEAD.
         </p>
 
@@ -781,7 +781,7 @@
         </article>
 
         <article class="domain-card">
-          <svg viewBox="0 0 200 124" role="img" aria-label="Int product: four stacked components, sign, interval, parity and congruence, describing one value together.">
+          <svg viewBox="0 0 200 124" role="img" aria-label="Int: four stacked components, sign, interval, parity and congruence, describing one value together.">
             <g class="product-rows">
               <rect x="20" y="10" width="160" height="22" rx="4"/><text x="30" y="25">sign</text><text class="val" x="170" y="25" text-anchor="end">&gt;0</text>
               <rect x="20" y="36" width="160" height="22" rx="4"/><text x="30" y="51">interval</text><text class="val" x="170" y="51" text-anchor="end">[1, 9]</text>
@@ -789,7 +789,7 @@
               <rect x="20" y="88" width="160" height="22" rx="4"/><text x="30" y="103">congruence</text><text class="val" x="170" y="103" text-anchor="end">1 mod 4</text>
             </g>
           </svg>
-          <h4>Int product</h4>
+          <h4>Int</h4>
           <p>All four at once. Its components sharpen one another after every arithmetic operation and every guard, so four weak facts can decide a check.</p>
         </article>
       </div>
@@ -877,7 +877,7 @@
       </details>
 
       <h3 class="setting-title">Two analyses, one question</h3>
-      <p class="setting-copy">The Int product combines four numeric domains inside one value. Separate analyses can also exchange information while the fixpoint is being computed. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks all active analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
+      <p class="setting-copy">Int combines four numeric domains inside one value. Separate analyses can also exchange information while the fixpoint is being computed. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks all active analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
 
       <figure class="scene scene-coop" data-prog="eq" data-sel="both">
         <div class="coop-controls">
@@ -1585,7 +1585,7 @@ datatype activation_trace =
             </tbody>
           </table>
         </div>
-        <p>The repeated answers follow from what the stacks keep. A configuration is a snapshot, so there is no path to read off it. The frames hold the <em>callers'</em> stores, so an activation's own entry store is lost as soon as it assigns a variable. A frame names a return point, not a run. The flat list has all the steps but not the grouping, so every answer requires a scan.</p>
+        <p>The repeated answers follow from what the stacks keep. A configuration is a snapshot, so there is no path to read off it. The frames hold the <em>callers'</em> stores, so an activation's own entered store is lost as soon as it assigns a variable. A frame names a return point, not a run. The flat list has all the steps but not the grouping, so every answer requires a scan.</p>
         <p>The last row is the reason the proofs use activation traces. When a call returns, the proof has to say that <em>this</em> callee returned into <em>that</em> caller. With the caller inside the value, the return rule simply states <code>caller_of callee = Some caller</code>. Against a stack there is no term for the caller's run that a rule could refer to, and this matters for recursion. <a href="#settings">Contexts</a> later read the same two fields: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> for the activation that made the call, and <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.entry_store%7Cconst"><code>entry_store</code></a> for the store it was entered with.</p>
         <p>The choice follows a general rule. A soundness claim can only distinguish what the semantics it quantifies over distinguishes. An analyzer that keeps activations apart therefore needs a semantics that keeps them apart, or its theorem cannot say what it covers. Choosing the finer semantics as the base loses nothing, because the coarser views are projections of it: <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a> drops the activation, and <a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a> keeps its context. A coarser base, in contrast, cannot be refined afterwards.</p>
       </div>
@@ -2077,7 +2077,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
       <div class="prose-block">
         <p>The TD solver is <em>demand-driven</em>. It is asked for one unknown and evaluates that unknown's tree, and every <code>QueryL</code> on the way asks for another unknown, recursively. It computes exactly what the first question turns out to need. Voblint always asks the same question: the exit of the entry procedure under the root context.</p>
         <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_pipeline.root_query%7Cconst">root_query</a> p = (<a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_exit%7Cconst">cfg_exit</a> (prog_cfg p), root_ctx)</code></pre>
-        <p>A terminating run ends at that point, so asking for it pulls in, one query at a time, every point its value depends on. The vendored solver therefore promises a <em>partial</em> <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst">post-solution</a> with three properties. It covers the question. Its covered set is closed under the dependencies the trees take. And for every covered unknown, the tree's answer is below <code>σ</code>'s value there, with its side contributions below <code>σ</code> at the globals they write. The middle property speaks only of direct dependencies; <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution_implies_trans_dep_subsumed%7Cfact"><code>part_post_solution_implies_trans_dep_subsumed</code></a> extends it to all of them, so everything transitively reachable from the question lies inside the covered set.</p>
+        <p>A terminating run ends at that point, so asking for it pulls in, one query at a time, every point its value depends on. The vendored solver therefore promises a <em>partial</em> <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst">post-solution</a> with three properties. It covers the question. Its covered set is closed under the dependencies the trees take. And for every covered unknown, the tree's answer is below <code>σ</code>'s value there, with its contributions below <code>σ</code> at the globals they write. The middle property speaks only of direct dependencies; <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution_implies_trans_dep_subsumed%7Cfact"><code>part_post_solution_implies_trans_dep_subsumed</code></a> extends it to all of them, so everything transitively reachable from the question lies inside the covered set.</p>
         <p>Every node a run can reach has a path in the graph to its procedure's exit, so the solver's backward queries reach it (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact"><code>live_unknowns_cover</code></a>). A key outside the solved set is still defined to read as <code>bot</code>:</p>
         <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Framework/Routed_Analysis_Sound.html#Routed_Analysis_Sound.solved_local_reader%7Cconst">solved_local_reader</a> vars σ k =
   (case k of Inl vc ⇒ (if vc ∈ vars then locals (σ (Inl vc)) else bot)
@@ -2257,7 +2257,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
             <div class="td-chips" data-set="c"></div>
             <p class="td-panel-title">Stable</p>
             <div class="td-chips" data-set="stable"></div>
-            <p class="td-panel-title">Loop points</p>
+            <p class="td-panel-title">Widening points</p>
             <div class="td-chips" data-set="point"></div>
           </div>
         </div>
@@ -2278,8 +2278,8 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           and
           <a href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.iterate%7Cconst"><code>iterate</code></a>
           in the vendored solver, simplified to one variable and without side effects. Two details are
-          easy to get wrong: the round that discovers a loop point still updates plainly, and
-          an unknown that is already being computed is marked a loop point and answered from its
+          easy to get wrong: the round that discovers a widening point still updates plainly, and
+          an unknown that is already being computed is marked a widening point and answered from its
           current value rather than recomputed.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/03-counting_loop.vimp&amp;analysis=interval&amp;context=none">Run the loop ↗</a>
         </figcaption>
@@ -3720,7 +3720,7 @@ fun main() {
           <code>--narrow-bound</code> sets another), each switch takes only its first narrowing
           step, so a bound of 0 behaves like 1. Here <em>A</em> switches once, at step 3, and the
           row matches Warrow per origin; the bound changes a result only where an origin needs
-          several narrowing steps in a row. The setting governs these procedure entries; loop points
+          several narrowing steps in a row. The setting governs these procedure entries; widening points
           always use warrowing.
         </figcaption>
       </figure>
@@ -5305,7 +5305,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">IntDomTuple</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Domain/Int_Lattice.html#Int_Lattice.int_dom%7Ctype" title="Definition in the formalization">Int product: sign × interval × parity × congruence</a>
+            <a class="align-voblint" href="Voblint/Voblint_Domain/Int_Lattice.html#Int_Lattice.int_dom%7Ctype" title="Definition in the formalization">Int: sign × interval × parity × congruence</a>
             <span class="align-note">Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked.</span>
           </li>
           <li class="align-row absent">
@@ -5601,7 +5601,7 @@ qed</code></pre>
       <figure class="scene scene-strata">
         <div class="strata-layout">
           <svg class="strata-svg" viewBox="0 0 1000 624" role="img"
-            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, the Int product, CLI exposing all six analyses including relational Order, code export, and the example sessions at the surface. Thickness grows with line count.">
+            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain and Solver, then Compile and Framework, Exec, Routing beside the relational domain, Result, Nonrelational, the four per-variable domains, Int, CLI exposing all six analyses including relational Order, code export, and the example sessions at the surface. Thickness grows with line count.">
               <g class="stratum stratum-examples" data-layer="examples">
                 <text class="stratum-name" x="306" y="52" text-anchor="end">Examples and regressions</text>
                 <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_CLI Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="68"></rect><text x="655.0" y="52">Example sessions</text></a>
@@ -5615,8 +5615,8 @@ qed</code></pre>
                 <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Analysis_Int Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Relational Voblint_Analysis_Sign Voblint_CFG Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Solver" data-info="run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser. This session assembles their cooperating local specifications and proves the source-level soundness results."><rect x="320.0" y="104" width="670.0" height="29"></rect><text x="655.0" y="123">CLI · five numeric analyses + Order</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
-                <text class="stratum-name" x="306" y="157" text-anchor="end">Int product</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="The Int product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="320.0" y="133" width="670.0" height="39"></rect><text x="655.0" y="157">Int</text></a>
+                <text class="stratum-name" x="306" y="157" text-anchor="end">Int</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_VIMP" data-info="Int, the reduced product of sign, interval, parity and congruence with its reduction. It sits above the four because it imports them."><rect x="320.0" y="133" width="670.0" height="39"></rect><text x="655.0" y="157">Int</text></a>
               </g>
               <g class="stratum stratum-d8" data-layer="d8">
                 <text class="stratum-name" x="306" y="203" text-anchor="end">Value domains (operation bundles)</text>
@@ -5635,7 +5635,7 @@ qed</code></pre>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
                 <text class="stratum-name" x="306" y="299" text-anchor="end">Routing and order analysis</text>
-                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="282" width="355.0" height="26"></rect><text x="497.5" y="299">Routing</text></a>
                 <a class="stratum-part" href="Voblint/Voblint_Analysis_Relational/index.html" data-name="Voblint_Analysis_Relational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework" data-info="The Order analysis is selectable in the CLI and browser alongside the five numeric analyses. It supplies its local specification directly, without the non-relational operation bundles. Its lower layer reflects that shorter dependency chain; CLI imports it directly."><rect x="675.0" y="282" width="315.0" height="26"></rect><text x="832.5" y="299">Order (relational)</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">

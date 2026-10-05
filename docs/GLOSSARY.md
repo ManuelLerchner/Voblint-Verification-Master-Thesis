@@ -3,6 +3,41 @@
 The source theories are authoritative. File references identify the defining
 layer without embedding line numbers that drift.
 
+## Canonical thesis terminology
+
+One term per concept in thesis prose. Distinct formal objects keep distinct
+names.
+
+| Term | Use for | Not |
+| --- | --- | --- |
+| valuation `σ` | a map from unknowns to domain elements (`#sol`) | an abstract state (write `d`) |
+| domain element | an element of a carrier where the definition is generic in it | |
+| abstract value | a domain element describing the values of one variable (an interval) | a D element |
+| abstract state | a domain element describing stores; D elements of the D/G framework | |
+| entry / resume / exit state | `e`, `q` (`cont` in the theories), `r` of one call; `r` is the callee's state at `FunctionResult` | entry/resume/exit value, `t♯` |
+| entered store | the concrete store a callee starts with | entry store |
+| execution configuration | a source configuration `(c, s, frs)` or a graph configuration `(v, s, stk)` | |
+| analysis configuration | the `analysis_config` argument of `run_voblint` | |
+| analysis settings | informal: the selected domain, context policy and update rule | bare "configuration" |
+| side-effecting constraint system | the literature formalism (Apinis et al.) | |
+| equation system `T` | Voblint's generated system as the TD solver receives it | |
+| side effect / contribution / publish | the mechanism / the published domain element / the verb | side contribution, contribute |
+| stable set | the solver's `stabl`, returned by a terminating solve | |
+| solved set `V` | the set `vars` on which `part_post_solution` holds; a solve instantiates it with its stable set | `S` (initial stores) |
+| loop head | the CFG node where a loop is entered and left | |
+| widening point | an unknown in the solver's `point` set, where TD warrows; the TD papers' widening/narrowing point | loop point |
+| non-relational state | a state that describes each variable independently (precision) | |
+| pointwise | the representation `vname ⇒ 'a` of a non-relational state | a synonym of non-relational |
+| frame stack | the stack of frames in a source or graph configuration | call stack (intuition only) |
+| context policy | the choice among unit, call strings and entry states (`context_mode`) | calling-context / routing policy |
+| source contract | `wf_source_program`, `wf_compile_input` | bare "the contract" |
+| coverage contract | `activation_coverage` | |
+| analysis contract | `analysis_contract` | analysis soundness contract |
+| `Int` | the reduced-product domain `int_dom`, introduced once as such | Int product, product Int |
+| `+∞` | the positive interval endpoint | bare `∞` |
+| `≤` | every carrier order (`lle`) | `⊑` |
+| `Unk`, `Unk_G` | local and global unknowns in Chapter 2 | `G` (clashes with the classifier `𝒢`) |
+
 ## Source language
 
 | Term | Meaning | Source |
@@ -62,7 +97,7 @@ layer without embedding line numbers that drift.
 | `readback` | The abstract state an executable state represents, written `ρ⇘𝒢⇙ x` in bundle `default_st_syntax`. One overloaded constant with three instances chosen by the type of `x`: `default_st_to_fun` for a carrier state, `map_lift (default_st_to_fun 𝒢)` for a lifted one, and `dg_state_to_fun` for a D/G state. The concretization of an executable state is `⟦ρ⇘𝒢⇙ x⟧`. | `src/Abstract_Interpreter/Domain/State/State_Concretization.thy` |
 | `exact_emptiness`, `sound_emptiness` | Whether an emptiness test `e` holds of exactly the values a concretization `γ` maps to `{}` (`e x ⟷ γ x = {}`) or only of some of them (`e x ⟹ γ x = {}`). Exact: a domain's `is_empty`, `is_empty_state`, `default_st_is_bot_for`, the order domain. Sound only: the D/G locale's `empty⇩V` (its contract asks only soundness; an instance may be exact), the combined state's `mcp_empty_v` (not exact: `mcp_empty_v_not_exact`), and `DEAD` on report points (not exact: `DEAD_not_exact`). | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
 | `numeric_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
-| `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every side contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
+| `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
 | `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
 | `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) and `finite_stabl_solve` it discharges `certified_solver`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
 | `certified_solver` | The solver contract the analysis pipeline assumes, over any equation system: in the solver's domain a solve answers a `part_post_solution` over a finite key set, and `solve_c` succeeding implies `solve_dom` (assumptions `solve_pp`, `solve_fin`, `dom_of_solve_c`). `dg_analysis` and `dg_analysis_exec` extend it; `td_certified_solver` (`Globals_Rule.thy`) proves it for the vendored solver at every `globals_rule`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
@@ -75,7 +110,7 @@ layer without embedding line numbers that drift.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `analysis_contract` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| resume value (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume value. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
+| resume state (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume state. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Indexed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
