@@ -538,8 +538,7 @@ notion of location is the command that remains to run. Without recursion, only f
 because a loop may run arbitrarily often but its unfolding revisits the same
 command forms. Recursion is different, because a recursive call can nest
 another #ctor("Restore") wrapper at every call depth. Residual commands
-therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between stable
-program points. Inside a sequence it steps through the rule
+therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between fixed program points. Inside a sequence it steps through the rule
 #isathm("pstep.Seq2"), which rebuilds the surrounding residual command. So the same assignment is executed by a different derivation inside every surrounding command.
 Finally, nothing names the entry of a procedure, its result, or the point where
 a caller resumes. The schematic control-flow graph of @fig:counting-loop solves
