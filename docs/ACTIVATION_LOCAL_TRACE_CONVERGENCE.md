@@ -71,7 +71,7 @@ The redesign reverses that perspective:
 
 > Procedure activations are the fundamental concrete semantic objects.
 
-A procedure activation has a concrete entered store, a local path, a concrete sink store, and a
+A procedure activation has a concrete entry store, a local path, a concrete sink store, and a
 creation history. Calls create nested activations; returns resume the exact suspended caller.
 This is the sequential interprocedural analogue of Schwarz et al.'s local-trace architecture:
 local traces are the concrete reference semantics and analyses are observations of them.

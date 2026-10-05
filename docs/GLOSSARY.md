@@ -15,7 +15,9 @@ names.
 | abstract value | a domain element describing the values of one variable (an interval) | a D element |
 | abstract state | a domain element describing stores; D elements of the D/G framework | |
 | entry / resume / exit state | `e`, `q` (`cont` in the theories), `r` of one call; `r` is the callee's state at `FunctionResult` | entry/resume/exit value, `t♯` |
-| entered store | the concrete store a callee starts with | entry store |
+| entered store | the concrete store a procedure call produces for the callee | |
+| initial store | a store at the start of a program run (`cinit_stores`) | entered store |
+| entry store | generic: the first store of any activation (root, callee or resumed caller), when neither term above fits | |
 | execution configuration | a source configuration `(c, s, frs)` or a graph configuration `(v, s, stk)` | |
 | analysis configuration | the `analysis_config` argument of `run_voblint` | |
 | analysis settings | informal: the selected domain, context policy and update rule | bare "configuration" |
