@@ -41,7 +41,7 @@ lemma certificate_demo_wf: "wf_program_compile_input_exec certificate_demo_prog"
   by eval
 
 text \<open>
-  The configuration: the Int product at its most precise refinement, the joining
+  The configuration: Int at its most precise refinement, the joining
   update rule, and call strings of length one.
 \<close>
 

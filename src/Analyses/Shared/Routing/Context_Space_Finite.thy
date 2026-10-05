@@ -2,14 +2,14 @@ theory Context_Space_Finite
   imports "Voblint_Framework.Call_String_Context" "Voblint_Compile.Compile_Wellformed"
 begin
 
-section \<open>Which routing policies can have a finite solved key set\<close>
+section \<open>Which context policies can have a finite solved key set\<close>
 
 text \<open>
   A published result table is well formed only if its key set is finite
   (\<open>wf_solved_table\<close>, in the framework's result layer). A key is a
   \<open>(node, context)\<close> pair, so one way to get there is to exhibit a fixed finite set the
   keys are drawn from and appeal to \<open>finite_subset\<close>. This theory builds that set, one per
-  routing policy.
+  context policy.
 
   What it builds is a candidate space, not a reachability or a termination result. Nothing
   below says which keys a solver run actually produces, and nothing below bounds how often

@@ -60,25 +60,25 @@ locale sound_nonrelational_transfer =
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_sound_assign_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>asn x a \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>asn x a d\<rbrakk>"
   assumes tf_sound_special_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>sp sc x \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>sp sc x d\<rbrakk>"
   assumes tf_sound_branch_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol d\<rbrakk>"
   assumes tf_sound_skip_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sk \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sk d\<rbrakk>"
   assumes tf_sound_body_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>bd p \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>bd p d\<rbrakk>"
   assumes tf_sound_return_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
        s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
-         \<in> \<lbrakk>rt e p \<sigma>\<rbrakk>"
+         \<in> \<lbrakk>rt e p d\<rbrakk>"
   assumes tf_sound_enter_entry_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow>
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
        bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state \<G> s)
-         \<in> \<lbrakk>en ci \<sigma>\<rbrakk>"
+         \<in> \<lbrakk>en ci d\<rbrakk>"
   assumes tf_sound_event_for[intro]:
-    "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>ev evt \<sigma>\<rbrakk>"
+    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>ev evt d\<rbrakk>"
 
 text \<open>Each obligation is stated directly as an inference rule
   (\<open>P\<^sub>1 \<Longrightarrow> ... \<Longrightarrow> P\<^sub>n \<Longrightarrow> Q\<close>). Variables not fixed by the locale are
@@ -93,7 +93,7 @@ text \<open>The per-edge dispatcher's soundness, which is what an equation gener
   action names, and each selected operation is sound by one locale assumption.\<close>
 
 lemma step_sound_for[intro]:
-  "edge_collect a \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br bd rt ev a \<sigma>\<rbrakk>"
+  "edge_collect a \<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br bd rt ev a d\<rbrakk>"
 proof (cases a)
   case (EA_Special sc x)
   then show ?thesis by (cases sc) auto

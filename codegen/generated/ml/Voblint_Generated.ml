@@ -6203,64 +6203,61 @@ let rec ivl_mod
           else bot_ivla);;
 
 let rec aval_ivl
-  x0 sigma = match x0, sigma with N n, sigma -> ivl_of_int n
-    | V x, sigma -> sigma x
-    | Plus (a, b), sigma -> plus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Minus (a, b), sigma -> minus_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Times (a, b), sigma -> times_ivl (aval_ivl a sigma) (aval_ivl b sigma)
-    | Div (a, b), sigma -> ivl_div (aval_ivl a sigma) (aval_ivl b sigma)
-    | Mod (a, b), sigma -> ivl_mod (aval_ivl a sigma) (aval_ivl b sigma)
-    | Less (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+  x0 d = match x0, d with N n, d -> ivl_of_int n
+    | V x, d -> d x
+    | Plus (a, b), d -> plus_ivl (aval_ivl a d) (aval_ivl b d)
+    | Minus (a, b), d -> minus_ivl (aval_ivl a d) (aval_ivl b d)
+    | Times (a, b), d -> times_ivl (aval_ivl a d) (aval_ivl b d)
+    | Div (a, b), d -> ivl_div (aval_ivl a d) (aval_ivl b d)
+    | Mod (a, b), d -> ivl_mod (aval_ivl a d) (aval_ivl b d)
+    | Less (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_less (aval_ivl a sigma) (aval_ivl b sigma)))
-    | LessEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (interval_less (aval_ivl a d) (aval_ivl b d)))
+    | LessEq (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_less (aval_ivl b sigma) (aval_ivl a sigma))))
-    | Greater (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (map_option not (interval_less (aval_ivl b d) (aval_ivl a d))))
+    | Greater (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_less (aval_ivl b sigma) (aval_ivl a sigma)))
-    | GreaterEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (interval_less (aval_ivl b d) (aval_ivl a d)))
+    | GreaterEq (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_less (aval_ivl a sigma) (aval_ivl b sigma))))
-    | NotEq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (map_option not (interval_less (aval_ivl a d) (aval_ivl b d))))
+    | NotEq (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (map_option not
-                   (interval_eq (aval_ivl a sigma) (aval_ivl b sigma))))
-    | Eq (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (map_option not (interval_eq (aval_ivl a d) (aval_ivl b d))))
+    | Eq (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (interval_eq (aval_ivl a sigma) (aval_ivl b sigma)))
-    | Not a, sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) then bot_ivla
+                 (interval_eq (aval_ivl a d) (aval_ivl b d)))
+    | Not a, d ->
+        (if is_empty_ivl (aval_ivl a d) then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
-                 (map_option not (interval_tobool (aval_ivl a sigma))))
-    | And (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                 (map_option not (interval_tobool (aval_ivl a d))))
+    | And (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
                  (bin_log (fun aa ba -> aa && ba) false
-                   (interval_tobool (aval_ivl a sigma))
-                   (interval_tobool (aval_ivl b sigma))))
-    | Or (a, b), sigma ->
-        (if is_empty_ivl (aval_ivl a sigma) || is_empty_ivl (aval_ivl b sigma)
+                   (interval_tobool (aval_ivl a d))
+                   (interval_tobool (aval_ivl b d))))
+    | Or (a, b), d ->
+        (if is_empty_ivl (aval_ivl a d) || is_empty_ivl (aval_ivl b d)
           then bot_ivla
           else of_bool_option sup_ivl ivl_of_int
                  (bin_log (fun aa ba -> aa || ba) true
-                   (interval_tobool (aval_ivl a sigma))
-                   (interval_tobool (aval_ivl b sigma))));;
+                   (interval_tobool (aval_ivl a d))
+                   (interval_tobool (aval_ivl b d))));;
 
 let ivl_ops : (ivl, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -7010,77 +7007,72 @@ let rec parity_div
 let rec parity_lt uu uv = None;;
 
 let rec aval_parity
-  x0 sigma = match x0, sigma with N n, sigma -> parity_of_int n
-    | V v, sigma -> sigma v
-    | Plus (a, b), sigma ->
-        plus_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Minus (a, b), sigma ->
-        minus_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Times (a, b), sigma ->
-        times_parity (aval_parity a sigma) (aval_parity b sigma)
-    | Div (a, b), sigma ->
-        parity_div (aval_parity a sigma) (aval_parity b sigma)
-    | Mod (a, b), sigma ->
-        parity_mod (aval_parity a sigma) (aval_parity b sigma)
-    | Less (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+  x0 d = match x0, d with N n, d -> parity_of_int n
+    | V v, d -> d v
+    | Plus (a, b), d -> plus_parity (aval_parity a d) (aval_parity b d)
+    | Minus (a, b), d -> minus_parity (aval_parity a d) (aval_parity b d)
+    | Times (a, b), d -> times_parity (aval_parity a d) (aval_parity b d)
+    | Div (a, b), d -> parity_div (aval_parity a d) (aval_parity b d)
+    | Mod (a, b), d -> parity_mod (aval_parity a d) (aval_parity b d)
+    | Less (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (parity_lt (aval_parity a sigma) (aval_parity b sigma)))
-    | LessEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                 (parity_lt (aval_parity a d) (aval_parity b d)))
+    | LessEq (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
                  (map_option not
-                   (parity_lt (aval_parity b sigma) (aval_parity a sigma))))
-    | Greater (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                   (parity_lt (aval_parity b d) (aval_parity a d))))
+    | Greater (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (parity_lt (aval_parity b sigma) (aval_parity a sigma)))
-    | GreaterEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
-          then bot_paritya
-          else of_bool_option sup_parity parity_of_int
-                 (map_option not
-                   (parity_lt (aval_parity a sigma) (aval_parity b sigma))))
-    | NotEq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                 (parity_lt (aval_parity b d) (aval_parity a d)))
+    | GreaterEq (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
                  (map_option not
-                   (parity_eqb (aval_parity a sigma) (aval_parity b sigma))))
-    | Eq (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                   (parity_lt (aval_parity a d) (aval_parity b d))))
+    | NotEq (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (parity_eqb (aval_parity a sigma) (aval_parity b sigma)))
-    | Not a, sigma ->
-        (if is_empty_parity (aval_parity a sigma) then bot_paritya
+                 (map_option not
+                   (parity_eqb (aval_parity a d) (aval_parity b d))))
+    | Eq (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
+          then bot_paritya
           else of_bool_option sup_parity parity_of_int
-                 (map_option not (parity_tobool (aval_parity a sigma))))
-    | And (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                 (parity_eqb (aval_parity a d) (aval_parity b d)))
+    | Not a, d ->
+        (if is_empty_parity (aval_parity a d) then bot_paritya
+          else of_bool_option sup_parity parity_of_int
+                 (map_option not (parity_tobool (aval_parity a d))))
+    | And (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
                  (bin_log (fun aa ba -> aa && ba) false
-                   (parity_tobool (aval_parity a sigma))
-                   (parity_tobool (aval_parity b sigma))))
-    | Or (a, b), sigma ->
-        (if is_empty_parity (aval_parity a sigma) ||
-              is_empty_parity (aval_parity b sigma)
+                   (parity_tobool (aval_parity a d))
+                   (parity_tobool (aval_parity b d))))
+    | Or (a, b), d ->
+        (if is_empty_parity (aval_parity a d) ||
+              is_empty_parity (aval_parity b d)
           then bot_paritya
           else of_bool_option sup_parity parity_of_int
                  (bin_log (fun aa ba -> aa || ba) true
-                   (parity_tobool (aval_parity a sigma))
-                   (parity_tobool (aval_parity b sigma))));;
+                   (parity_tobool (aval_parity a d))
+                   (parity_tobool (aval_parity b d))));;
 
 let parity_ops : (parity, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -7429,72 +7421,60 @@ let rec sign_lt
                                then Some false else None))));;
 
 let rec aval_sign
-  x0 sigma = match x0, sigma with N n, sigma -> sign_of_int n
-    | V x, sigma -> sigma x
-    | Plus (a, b), sigma -> plus_sign (aval_sign a sigma) (aval_sign b sigma)
-    | Minus (a, b), sigma -> minus_sign (aval_sign a sigma) (aval_sign b sigma)
-    | Times (a, b), sigma -> times_sign (aval_sign a sigma) (aval_sign b sigma)
-    | Div (a, b), sigma -> sign_div (aval_sign a sigma) (aval_sign b sigma)
-    | Mod (a, b), sigma -> sign_mod (aval_sign a sigma) (aval_sign b sigma)
-    | Less (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+  x0 d = match x0, d with N n, d -> sign_of_int n
+    | V x, d -> d x
+    | Plus (a, b), d -> plus_sign (aval_sign a d) (aval_sign b d)
+    | Minus (a, b), d -> minus_sign (aval_sign a d) (aval_sign b d)
+    | Times (a, b), d -> times_sign (aval_sign a d) (aval_sign b d)
+    | Div (a, b), d -> sign_div (aval_sign a d) (aval_sign b d)
+    | Mod (a, b), d -> sign_mod (aval_sign a d) (aval_sign b d)
+    | Less (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (sign_lt (aval_sign a sigma) (aval_sign b sigma)))
-    | LessEq (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (sign_lt (aval_sign a d) (aval_sign b d)))
+    | LessEq (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (map_option not
-                   (sign_lt (aval_sign b sigma) (aval_sign a sigma))))
-    | Greater (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (map_option not (sign_lt (aval_sign b d) (aval_sign a d))))
+    | Greater (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (sign_lt (aval_sign b sigma) (aval_sign a sigma)))
-    | GreaterEq (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (sign_lt (aval_sign b d) (aval_sign a d)))
+    | GreaterEq (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (map_option not
-                   (sign_lt (aval_sign a sigma) (aval_sign b sigma))))
-    | NotEq (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (map_option not (sign_lt (aval_sign a d) (aval_sign b d))))
+    | NotEq (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (map_option not
-                   (sign_eqb (aval_sign a sigma) (aval_sign b sigma))))
-    | Eq (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (map_option not (sign_eqb (aval_sign a d) (aval_sign b d))))
+    | Eq (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (sign_eqb (aval_sign a sigma) (aval_sign b sigma)))
-    | Not a, sigma ->
-        (if is_empty_sign (aval_sign a sigma) then bot_signa
+                 (sign_eqb (aval_sign a d) (aval_sign b d)))
+    | Not a, d ->
+        (if is_empty_sign (aval_sign a d) then bot_signa
           else of_bool_option sup_sign sign_of_int
-                 (map_option not (sign_tobool (aval_sign a sigma))))
-    | And (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                 (map_option not (sign_tobool (aval_sign a d))))
+    | And (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
                  (bin_log (fun aa ba -> aa && ba) false
-                   (sign_tobool (aval_sign a sigma))
-                   (sign_tobool (aval_sign b sigma))))
-    | Or (a, b), sigma ->
-        (if is_empty_sign (aval_sign a sigma) ||
-              is_empty_sign (aval_sign b sigma)
+                   (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))
+    | Or (a, b), d ->
+        (if is_empty_sign (aval_sign a d) || is_empty_sign (aval_sign b d)
           then bot_signa
           else of_bool_option sup_sign sign_of_int
                  (bin_log (fun aa ba -> aa || ba) true
-                   (sign_tobool (aval_sign a sigma))
-                   (sign_tobool (aval_sign b sigma))));;
+                   (sign_tobool (aval_sign a d))
+                   (sign_tobool (aval_sign b d))));;
 
 let sign_ops : (sign, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext

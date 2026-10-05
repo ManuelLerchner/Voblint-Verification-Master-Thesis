@@ -20,7 +20,7 @@ concrete run to the abstract result.
 | --- | --- |
 | **storage classifier** | the `gs :: vname => bool` saying which names are global. Every definition here is parametric in one; `sign_ex_gs`, `bf_prog_gs` and `ov_gs` are each *this* program's own classifier, not a fixed choice. |
 | **ownership split** | the carrier that keeps a local half and a global half of the abstract state apart, joined back only where the transfer contract says so. `ownership_split_dg_spec_st_for` is the stock executable specification built over it. |
-| **routed unit context** | context-insensitivity spelled as the degenerate routing policy: unknowns are keyed by `(node, ())`, so `compiled_routed_eqs_for` at `route_unit` is the same routed generator the call-string instances use, at the one-element context type. |
+| **routed unit context** | context-insensitivity spelled as the degenerate context policy: unknowns are keyed by `(node, ())`, so `compiled_routed_eqs_for` at `route_unit` is the same routed generator the call-string instances use, at the one-element context type. |
 | **overlapping enter** | `dgs_enter` answering a *list* of (continuation, callee entry) alternatives whose entries and continuations both cover the same concrete call, so the route materializes two contexts for one call site. |
 | **statement index** | `Statement n` numbering: source order, callee procedures before `main`, one index per command plus one epilogue index per procedure. |
 

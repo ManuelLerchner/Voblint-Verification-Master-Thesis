@@ -684,7 +684,7 @@ end
 subsection \<open>The context relation a solved entry-state table induces\<close>
 
 text \<open>
-  A state-dependent policy picks a context from an abstract entry value, and a pure entry
+  A state-dependent policy picks a context from an abstract entry state, and a pure entry
   answers a list of them, so one concrete call may be routed to several contexts --- one
   per alternative whose continuation covers the caller store and whose entry covers the
   entered store.  \<open>routed_entry_context_rel alts\<close> is exactly that set, for an entry

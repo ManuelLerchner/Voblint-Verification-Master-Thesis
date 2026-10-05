@@ -21,7 +21,7 @@ text \<open>
   carrier \<^typ>\<open>sign default_st lifted\<close>, so a global is read and written exactly where a
   local is, and the solver-global carrier is inert --- every field of
   \<^const>\<open>exec_dg_spec\<close> threads its incoming \<open>g\<close> through unchanged, so
-  \<open>Inr Global\<close> is never read back to reconstruct program state. Only the routing policy
+  \<open>Inr Global\<close> is never read back to reconstruct program state. Only the context policy
   (\<^const>\<open>cs_route\<close>, \<^const>\<open>cs_context\<close>) is call-string specific; the storage, the transfer
   primitives, and the CALL/COMB discharge are shared with every other Base-style analysis.
 
@@ -269,7 +269,7 @@ abbreviation sign_ctx_sg_1 ::
   "pp \<times> cfg_node list + call_string_gk \<Rightarrow> sign default_st lifted" where
   "sign_ctx_sg_1 \<equiv> solved_local_reader (fst sign_nest_1_sol) sigma_1"
 
-text \<open>The call-string routing policy instantiated at \<open>k = 1\<close>. The generic locale
+text \<open>The call-string context policy instantiated at \<open>k = 1\<close>. The generic locale
   discharges everything that is a fact about \<^const>\<open>cs_route\<close>/\<^const>\<open>cs_context\<close> or about
   \<^const>\<open>compile_prog\<close> alone --- call-edge finiteness, seed-key distinctness, route/context
   agreement, and call-source uniqueness. What stays here is the two coverage obligations

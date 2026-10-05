@@ -79,9 +79,9 @@ text \<open>
 fun special_parity ::
     "special_call => vname => (vname => parity) => (vname => parity)"
 where
-  "special_parity Nondet_Int x \<sigma> = \<sigma>(x := PTop)"
-| "special_parity (Min a b) x \<sigma> = \<sigma>(x := parity_min (aval_parity a \<sigma>) (aval_parity b \<sigma>))"
-| "special_parity (Max a b) x \<sigma> = \<sigma>(x := parity_max (aval_parity a \<sigma>) (aval_parity b \<sigma>))"
+  "special_parity Nondet_Int x d = d(x := PTop)"
+| "special_parity (Min a b) x d = d(x := parity_min (aval_parity a d) (aval_parity b d))"
+| "special_parity (Max a b) x d = d(x := parity_max (aval_parity a d) (aval_parity b d))"
 
 definition parity_special_ops :: "parity special_ops" where
   "parity_special_ops = (| special_min = parity_min, special_max = parity_max |)"
@@ -98,7 +98,7 @@ lemma parity_special_ops_max [simp]: "special_max parity_special_ops = parity_ma
   by (simp add: parity_special_ops_def)
 
 lemma special_parity_eq_transfer:
-  "special_parity sc x \<sigma> = parity_special.special_transfer sc x \<sigma>"
+  "special_parity sc x d = parity_special.special_transfer sc x d"
   by (cases sc) (simp_all add: top_parity_def)
 
 end

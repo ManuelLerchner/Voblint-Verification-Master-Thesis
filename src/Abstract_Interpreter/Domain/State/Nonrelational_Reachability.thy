@@ -30,7 +30,7 @@ adhoc_overloading gamma_S == "gamma_lift gamma_state"
 fun is_empty_state_lift ::
   "'a::executable_domain abs_state lifted \<Rightarrow> bool" where
   "is_empty_state_lift Bot = True"
-| "is_empty_state_lift (Lifted \<sigma>) = is_empty_state \<sigma>"
+| "is_empty_state_lift (Lifted d) = is_empty_state d"
 
 lemma is_empty_state_lift_iff:
   "is_empty_state_lift s \<longleftrightarrow> \<lbrakk>s\<rbrakk>\<^sub>\<bottom> = {}"
@@ -51,7 +51,7 @@ text \<open>
 \<close>
 
 lemma gamma_state_normalize_lift [simp]:
-  "\<lbrakk>normalize_lift is_empty_state \<sigma>\<rbrakk>\<^sub>\<bottom> = \<lbrakk>\<sigma>\<rbrakk>"
+  "\<lbrakk>normalize_lift is_empty_state d\<rbrakk>\<^sub>\<bottom> = \<lbrakk>d\<rbrakk>"
   by (rule gamma_normalize_lift) (rule is_empty_state_iff_gamma_state_empty)
 
 text \<open>Collapsing a witness-bottom payload changes what a value says about
@@ -61,13 +61,13 @@ text \<open>Collapsing a witness-bottom payload changes what a value says about
   entirely.\<close>
 
 lemma gamma_state_canonicalize_lift [simp]:
-  "\<lbrakk>canonicalize_lift is_empty_state \<sigma>\<rbrakk>\<^sub>\<bottom> = \<lbrakk>\<sigma>\<rbrakk>\<^sub>\<bottom>"
-  by (cases \<sigma>) simp_all
+  "\<lbrakk>canonicalize_lift is_empty_state d\<rbrakk>\<^sub>\<bottom> = \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
+  by (cases d) simp_all
 
 lemma normalize_state_lift_mono [intro]:
-  fixes \<sigma>1 \<sigma>2 :: "'a::numeric_domain abs_state"
-  assumes le: "\<sigma>1 \<le> \<sigma>2"
-  shows "normalize_lift is_empty_state \<sigma>1 \<le> normalize_lift is_empty_state \<sigma>2"
+  fixes d1 d2 :: "'a::numeric_domain abs_state"
+  assumes le: "d1 \<le> d2"
+  shows "normalize_lift is_empty_state d1 \<le> normalize_lift is_empty_state d2"
   by (rule normalize_lift_mono[OF le]) (rule is_empty_state_antimono[OF le])
 
 lemma normalized_state_lift_sup [intro]:
@@ -119,39 +119,39 @@ text \<open>
 \<close>
 
 lemma transfer_lift_sound_collect:
-  assumes step: "\<And>\<sigma>. C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>"
+  assumes step: "\<And>d'. C \<lbrakk>d'\<rbrakk> \<subseteq> \<lbrakk>f d'\<rbrakk>"
     and Cempty: "C {} = {}"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+    and empty_pred_sound: "\<And>d'. empty_pred d' \<Longrightarrow> \<lbrakk>d'\<rbrakk> = {}"
   shows "C (\<lbrakk>d\<rbrakk>\<^sub>\<bottom>) \<subseteq> \<lbrakk>transfer_lift empty_pred f d\<rbrakk>\<^sub>\<bottom>"
 proof (cases d)
   case Bot
   then show ?thesis by (simp add: Cempty)
 next
-  case (Lifted \<sigma>)
-  have "C \<lbrakk>\<sigma>\<rbrakk> \<subseteq> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
+  case (Lifted d')
+  have "C \<lbrakk>d'\<rbrakk> \<subseteq> \<lbrakk>f d'\<rbrakk>" by (rule step)
   then show ?thesis
-    using Lifted empty_pred_sound[of "f \<sigma>"] by (auto simp: normalize_lift_def)
+    using Lifted empty_pred_sound[of "f d'"] by (auto simp: normalize_lift_def)
 qed
 
 lemma transfer_lift_sound_mem:
-  assumes step: "\<And>\<sigma>. s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> h s \<in> \<lbrakk>f \<sigma>\<rbrakk>"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+  assumes step: "\<And>d'. s \<in> \<lbrakk>d'\<rbrakk> \<Longrightarrow> h s \<in> \<lbrakk>f d'\<rbrakk>"
+    and empty_pred_sound: "\<And>d'. empty_pred d' \<Longrightarrow> \<lbrakk>d'\<rbrakk> = {}"
     and s: "s \<in> \<lbrakk>d\<rbrakk>\<^sub>\<bottom>"
   shows "h s \<in> \<lbrakk>transfer_lift empty_pred f d\<rbrakk>\<^sub>\<bottom>"
 proof (cases d)
   case Bot
   then show ?thesis using s by simp
 next
-  case (Lifted \<sigma>)
-  with s have "s \<in> \<lbrakk>\<sigma>\<rbrakk>" by simp
-  then have hs: "h s \<in> \<lbrakk>f \<sigma>\<rbrakk>" by (rule step)
-  then have "\<not> empty_pred (f \<sigma>)" using empty_pred_sound by auto
+  case (Lifted d')
+  with s have "s \<in> \<lbrakk>d'\<rbrakk>" by simp
+  then have hs: "h s \<in> \<lbrakk>f d'\<rbrakk>" by (rule step)
+  then have "\<not> empty_pred (f d')" using empty_pred_sound by auto
   with Lifted hs show ?thesis by simp
 qed
 
 lemma transfer_lift2_sound_mem:
-  assumes step: "\<And>\<sigma>1 \<sigma>2. s \<in> \<lbrakk>\<sigma>1\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>\<sigma>2\<rbrakk> \<Longrightarrow> h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>"
-    and empty_pred_sound: "\<And>\<sigma>. empty_pred \<sigma> \<Longrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+  assumes step: "\<And>d1' d2'. s \<in> \<lbrakk>d1'\<rbrakk> \<Longrightarrow> t \<in> \<lbrakk>d2'\<rbrakk> \<Longrightarrow> h s t \<in> \<lbrakk>f d1' d2'\<rbrakk>"
+    and empty_pred_sound: "\<And>d'. empty_pred d' \<Longrightarrow> \<lbrakk>d'\<rbrakk> = {}"
     and s: "s \<in> \<lbrakk>d1\<rbrakk>\<^sub>\<bottom>"
     and t: "t \<in> \<lbrakk>d2\<rbrakk>\<^sub>\<bottom>"
   shows "h s t \<in> \<lbrakk>transfer_lift2 empty_pred f d1 d2\<rbrakk>\<^sub>\<bottom>"
@@ -159,17 +159,17 @@ proof (cases d1)
   case Bot
   then show ?thesis using s by simp
 next
-  case (Lifted \<sigma>1)
+  case (Lifted d1')
   show ?thesis
   proof (cases d2)
     case Bot
     then show ?thesis using t by simp
   next
-    case (Lifted \<sigma>2)
-    with \<open>d1 = Lifted \<sigma>1\<close> s t have "s \<in> \<lbrakk>\<sigma>1\<rbrakk>" "t \<in> \<lbrakk>\<sigma>2\<rbrakk>" by simp_all
-    then have hst: "h s t \<in> \<lbrakk>f \<sigma>1 \<sigma>2\<rbrakk>" by (rule step)
-    then have "\<not> empty_pred (f \<sigma>1 \<sigma>2)" using empty_pred_sound by auto
-    with \<open>d1 = Lifted \<sigma>1\<close> Lifted hst show ?thesis by simp
+    case (Lifted d2')
+    with \<open>d1 = Lifted d1'\<close> s t have "s \<in> \<lbrakk>d1'\<rbrakk>" "t \<in> \<lbrakk>d2'\<rbrakk>" by simp_all
+    then have hst: "h s t \<in> \<lbrakk>f d1' d2'\<rbrakk>" by (rule step)
+    then have "\<not> empty_pred (f d1' d2')" using empty_pred_sound by auto
+    with \<open>d1 = Lifted d1'\<close> Lifted hst show ?thesis by simp
   qed
 qed
 

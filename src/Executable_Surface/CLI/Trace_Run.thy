@@ -18,8 +18,8 @@ text \<open>
 subsection \<open>Routing\<close>
 
 text \<open>
-  A route receives the calling unknown's node and context and the entry value,
-  and returns the callee's context. Each routing policy the CLI runs reports
+  A route receives the calling unknown's node and context and the entry state,
+  and returns the callee's context. Each context policy the CLI runs reports
   that triple from its own equation.
 \<close>
 
@@ -58,7 +58,7 @@ text \<open>
   as the result shows it, a global unknown as the node-owned buffer, a program
   global, or the seed of a procedure entry in a context, a solver value's local
   part as a state, a global unknown's value as the globals it describes, and an
-  entry value as a state. With shared program globals a local value holds its
+  entry state as a state. With shared program globals a local value holds its
   globals at bottom by construction, which the emptiness check would read as
   unreachable; it is shown without that check and without the globals, and a
   program global's unknown shows that global alone.

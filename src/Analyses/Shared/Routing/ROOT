@@ -2,7 +2,7 @@ chapter Voblint
 
 session Voblint_Routing in "." = "Voblint_Exec" +
   description
-    "Shared equation construction and concrete context-routing policies over
+    "Shared equation construction and concrete context policies over
      compiled programs, including key-space finiteness arguments"
   sessions
     "Voblint_Compile"

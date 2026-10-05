@@ -10,7 +10,7 @@ section \<open>Context-sensitive interval analysis of \<open>twice\<close> (exec
 text \<open>
   The production entry-state analysis
   (\<^theory>\<open>Voblint_Analysis_Interval.Interval_Analyses\<close>) run on
-  \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry value
+  \<^const>\<open>twice_program\<close>.  Each call to \<open>twice\<close> receives the abstract entry state
   of formal \<open>p\<close> as its context:
 
   \<^item> \<open>twice(3)\<close> uses context \<open>[3,3]\<close> and computes \<open>#ret = [6,6]\<close> and \<open>x = [6,6]\<close>;

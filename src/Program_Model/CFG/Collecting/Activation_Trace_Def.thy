@@ -12,7 +12,7 @@ text \<open>
 
   Local flow follows \<open>intra\<close>, including \<open>EA_Ret\<close> into the matching
   \<open>FunctionResult\<close>.  A \<open>calls\<close> tuple supplies the call site, callee entry, and
-  continuation.  The call rule builds the parameter-bound entry store with
+  continuation.  The call rule builds the parameter-bound entered store with
   \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
   and the return value with \<^const>\<open>combine_collect\<close>.
 
@@ -28,7 +28,7 @@ subsection \<open>The datatype\<close>
 
 text \<open>
   \<^item> \<open>Root p\<close> --- the main activation, with local path \<open>p\<close>.
-  \<^item> \<open>Call caller p\<close> --- a callee whose local path \<open>p\<close> starts at the callee-entry store;
+  \<^item> \<open>Call caller p\<close> --- a callee whose local path \<open>p\<close> starts at the entered store;
     \<open>caller\<close> is the exact suspended caller, frozen at the call node.
   \<^item> \<open>Resume current callee p\<close> --- the activation continued past a completed call.
     \<open>current\<close> is that activation frozen at its call node (the value that spawned \<open>callee\<close>);
@@ -90,7 +90,7 @@ text \<open>
   activation at \<^const>\<open>cfg_entry\<close>; an \<open>intra\<close> step; a call; and a return.  Each rule reads
   exactly the relation for its phenomenon.  \<open>intra\<close> carries no side condition --- calls are
   not \<open>intra\<close> members, so they are untraversable by typing.  \<open>call\<close> enters the callee named
-  by the \<open>calls\<close> edge at the callee-entry store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
+  by the \<open>calls\<close> edge at the entered store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
   callee's \<open>FunctionResult p\<close> against the \<open>FunctionEntry p\<close> of a concrete \<open>calls\<close> edge
   leaving the caller's node, and resumes at the continuation stored in that same edge; the
   resumed state is \<^const>\<open>combine_collect\<close>.  There is no \<open>combines\<close> lookup and no scan for a
@@ -141,7 +141,7 @@ inductive_cases valid_activation_trace_ResumeE [elim]:
 subsection \<open>Structural lemmas\<close>
 
 text \<open>How the three trace shapes answer the projections every later proof reads them
-  through -- path, sink, caller, entry store.  Kept as \<open>simp\<close> rules so an induction over
+  through -- path, sink, caller, entered store.  Kept as \<open>simp\<close> rules so an induction over
   \<open>valid_activation_trace\<close> never has to case on the constructor merely to look up a sink.\<close>
 lemma extend_simps [simp]:
   "path_of (extend t x) = path_of t @ [x]"
@@ -344,9 +344,9 @@ end
 
 subsection \<open>Stable context entry invariant\<close>
 
-text \<open>An activation's entry store is fixed once it starts: a call names the store the callee
+text \<open>An activation's entered store is fixed once it starts: a call names the store the callee
   begins with, and resuming a caller keeps the caller's own first store rather than adopting
-  the callee's.  Context policies that read the entry store rely on this -- otherwise the
+  the callee's.  Context policies that read the entered store rely on this -- otherwise the
   context a trace carries could change under it as the trace grows.\<close>
 definition call_enter_store :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
   "call_enter_store \<G> g c s t \<longleftrightarrow>

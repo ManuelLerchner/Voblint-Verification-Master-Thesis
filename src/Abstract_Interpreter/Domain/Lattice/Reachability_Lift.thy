@@ -214,7 +214,7 @@ text \<open>
   together with a step that carries any such witness through \<open>f\<close> gives a
   witness for the bind. Targets the sequential \<open>And\<close>/\<open>Or\<close> recursions that
   chain one filtering step's result into the next, replacing their manual
-  \<open>obtain \<sigma>' where "... = Lifted \<sigma>'" "s \<in> ..."\<close> destructuring with one
+  \<open>obtain d' where "... = Lifted d'" "s \<in> ..."\<close> destructuring with one
   \<open>cases\<close>-driven rule.
 \<close>
 

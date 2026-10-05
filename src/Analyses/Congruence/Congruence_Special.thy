@@ -104,14 +104,14 @@ qed
 fun special_congruence ::
     "special_call => vname => (vname => congruence) => (vname => congruence)"
 where
-  "special_congruence Nondet_Int x \<sigma> = \<sigma>(x := top)"
-| "special_congruence (Min a b) x \<sigma> =
-     \<sigma>(x := congruence_min (aval_congruence a \<sigma>) (aval_congruence b \<sigma>))"
-| "special_congruence (Max a b) x \<sigma> =
-     \<sigma>(x := congruence_max (aval_congruence a \<sigma>) (aval_congruence b \<sigma>))"
+  "special_congruence Nondet_Int x d = d(x := top)"
+| "special_congruence (Min a b) x d =
+     d(x := congruence_min (aval_congruence a d) (aval_congruence b d))"
+| "special_congruence (Max a b) x d =
+     d(x := congruence_max (aval_congruence a d) (aval_congruence b d))"
 
 lemma special_congruence_eq_transfer:
-  "special_congruence sc x \<sigma> = congruence_special.special_transfer sc x \<sigma>"
+  "special_congruence sc x d = congruence_special.special_transfer sc x d"
   by (cases sc) simp_all
 
 end

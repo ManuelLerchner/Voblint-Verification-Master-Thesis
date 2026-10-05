@@ -139,11 +139,11 @@ text \<open>
 fun special_int_dom ::
     "refine_mode => special_call => vname => (vname => int_dom) => (vname => int_dom)"
 where
-  "special_int_dom mode Nondet_Int x \<sigma> = \<sigma>(x := top)"
-| "special_int_dom mode (Min a b) x \<sigma> =
-     \<sigma>(x := int_dom_min mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
-| "special_int_dom mode (Max a b) x \<sigma> =
-     \<sigma>(x := int_dom_max mode (aval_int_dom mode a \<sigma>) (aval_int_dom mode b \<sigma>))"
+  "special_int_dom mode Nondet_Int x d = d(x := top)"
+| "special_int_dom mode (Min a b) x d =
+     d(x := int_dom_min mode (aval_int_dom mode a d) (aval_int_dom mode b d))"
+| "special_int_dom mode (Max a b) x d =
+     d(x := int_dom_max mode (aval_int_dom mode a d) (aval_int_dom mode b d))"
 
 definition int_dom_special_ops :: "refine_mode \<Rightarrow> int_dom special_ops" where
   "int_dom_special_ops mode =
@@ -166,8 +166,8 @@ lemma int_dom_mono_special_ops:
      (simp_all add: int_dom_min_mono int_dom_max_mono assms)
 
 lemma special_int_dom_eq_transfer:
-  "sound_minmax_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x \<sigma>
-     = special_int_dom mode sc x \<sigma>"
+  "sound_minmax_ops.special_transfer (int_dom_special_ops mode) (aval_int_dom mode) sc x d
+     = special_int_dom mode sc x d"
   by (cases sc)
      (simp_all add: sound_minmax_ops.special_transfer_def[OF int_dom_sound_special_ops])
 

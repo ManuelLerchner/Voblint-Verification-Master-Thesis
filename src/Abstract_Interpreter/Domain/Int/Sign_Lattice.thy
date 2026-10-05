@@ -14,7 +14,7 @@ text \<open>
     Pos    -- strictly positive   {n | n > 0}
     Top    -- all integers        UNIV
 
-  Seven-element lattice (\<open>Bot \<sqsubseteq> Neg,Zero,Pos \<sqsubseteq> NonPos,NonNeg \<sqsubseteq> Top\<close>).
+  Seven-element lattice (\<open>Bot \<le> Neg,Zero,Pos \<le> NonPos,NonNeg \<le> Top\<close>).
   Finite; no widening needed.
 \<close>
 

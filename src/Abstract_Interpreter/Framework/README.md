@@ -79,7 +79,7 @@ in the session derives from, transports, or instantiates one of them.
 | `dg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
 | `analysis_contract` | a joint concretization `gammaDG d g` the edge and combine programs' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
 | `dg_context_activation` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
-| `routed_context` | a routing policy `route`/`call_context_rel`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
+| `routed_context` | a context policy `route`/`call_context_rel`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
 | `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
 Entry is deliberately absent from `analysis_contract`. A call answers a *list* of
@@ -130,7 +130,7 @@ other dependency in the session is stated where it is used. That is what keeps
 `DG_Constraint_Programs` and `DG_Indexed_Generator` free of any domain and `Spec/`
 free of any CFG generator.
 
-The routing policies that need a compiled program (`Call_String_Routed_Context`,
+The context policies that need a compiled program (`Call_String_Routed_Context`,
 `Entry_State_Routed_Context`, `Context_Space_Finite`) live in
 `Voblint_Routing`, under `src/Analyses/Shared/Routing/`; the executable carrier
 and its transport live in `Voblint_Exec`.

@@ -319,7 +319,7 @@ subsection \<open>The entry-state endpoint over the live keys\<close>
 text \<open>
   The routed soundness statement restated over \<open>live_unknowns\<close>, whose coverage
   needs no premise beyond termination, and carried to the published table and
-  the source-level endpoints under the functional routing policy.
+  the source-level endpoints under the functional context policy.
 \<close>
 
 context

@@ -14,7 +14,7 @@ the floor under it.
 
 | Session | Directory | Holds |
 | --- | --- | --- |
-| `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete routing policies (call-string, entry-state), and key-space finiteness arguments |
+| `Voblint_Routing` | `Routing/` | compiled routed-equation construction, concrete context policies (call-string, entry-state), and key-space finiteness arguments |
 | `Voblint_Result` | `Result/` | the domain-free bridge from a source run to a collecting-semantics bound (`Source_Activation_Sound`); what a solved routed system publishes (`DG_Result_Construction`) and the surface a caller reads it through (`Analysis_Surface`); `DG_Analysis` assembles one whole analysis --- at any context policy, the context-insensitive unit route included --- from a domain's choices, and `DG_Live_Unknowns` states its endpoints from termination alone |
 | `Voblint_Nonrelational` | `Nonrelational/` | what a non-relational domain reuses: expression evaluation and soundness, special-call dispatch, generic procedure entry, executable backward filtering |
 
@@ -24,8 +24,8 @@ the floor under it.
 | --- | --- |
 | reuse locale | a locale a domain *interprets* to obtain a family of derived operations, rather than redefining them. `sound_arith_ops` (`Abstract_Arithmetic`), `sound_minmax_ops` (`Special_Ops`) and `sound_nonrelational_ops`/`mono_nonrelational_ops` (`Nonrelational_Transfer`) are these; `Exec_Backward` extends `sound_refinement` the same way. `Nonrelational_Ops` is the `nonrelational_ops` bundle a domain supplies: its primitive choices, from which one interpretation derives the filters, the branch, the check classifier and the transfer. |
 | non-relational | a domain whose state is one abstract value per variable, independently --- a store of type `vname => 'a` |
-| routing policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
-| context space | the candidate contexts a routing policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
+| context policy | how a call site maps to a context: none, the entered abstract value, or a bounded call string |
+| context space | the candidate contexts a context policy may choose. Its finiteness is separate from the solver's finite stabilized key set. |
 | analysis surface | the published shape of a finished analysis --- the report a caller reads --- independent of which domain produced it |
 
 ## Worked example: how a domain uses these
@@ -117,7 +117,7 @@ Two different reasons, and only the first is a hard constraint.
 
 `Voblint_Framework` is `Voblint_CFG` plus `Domain` and `Solver`. It sees neither
 the compiler nor the executable carrier. `Routing/` and `Analysis_Surface` need
-`Voblint_Compile` because a routing policy is about a *compiled* program;
+`Voblint_Compile` because a context policy is about a *compiled* program;
 `Nonrelational_Ops`, `Exec_Backward` and `DG_Result_Construction` need `Voblint_Exec`.
 None of them could move down even if we wanted it.
 

@@ -45,9 +45,9 @@ text \<open>
   environment stage instead.
 \<close>
 lemma combine_env_sound [intro]:
-  fixes \<sigma>c \<sigma>e :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_env \<G> s t \<in> \<lbrakk>combine_env \<G> \<sigma>c \<sigma>e\<rbrakk>"
+  fixes dc de :: "'a::numeric_domain abs_state"
+  assumes sc: "s \<in> \<lbrakk>dc\<rbrakk>" and se: "t \<in> \<lbrakk>de\<rbrakk>"
+  shows "combine_env \<G> s t \<in> \<lbrakk>combine_env \<G> dc de\<rbrakk>"
   using assms by (auto simp: gamma_state_def le_fun_def)
 
 subsection \<open>Generic soundness and monotonicity helpers\<close>
@@ -57,9 +57,9 @@ text \<open>The two facts a call boundary keeps re-deriving: writing one variabl
   arbitrary domain and no transfer function, so every analysis picks them up rather than
   proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
-  fixes \<sigma> :: "'a::numeric_domain abs_state"
-  assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and v: "v \<in> \<gamma> a"
-  shows "s(x := v) \<in> \<lbrakk>\<sigma>(x := a)\<rbrakk>"
+  fixes d :: "'a::numeric_domain abs_state"
+  assumes s: "s \<in> \<lbrakk>d\<rbrakk>" and v: "v \<in> \<gamma> a"
+  shows "s(x := v) \<in> \<lbrakk>d(x := a)\<rbrakk>"
   using s v unfolding gamma_state_def by auto
 
 text \<open>
@@ -67,11 +67,11 @@ text \<open>
   same formals yield a sound entry state.
 \<close>
 lemma bind_formals_sound [intro]:
-  fixes \<sigma> :: "'a::numeric_domain abs_state"
-  assumes s: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  fixes d :: "'a::numeric_domain abs_state"
+  assumes s: "s \<in> \<lbrakk>d\<rbrakk>"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a) vs avs"
-  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals xs avs \<sigma>\<rbrakk>"
-  using assms apply (induction xs arbitrary: vs avs s \<sigma>)
+  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals xs avs d\<rbrakk>"
+  using assms apply (induction xs arbitrary: vs avs s d)
   subgoal
     by simp
   subgoal for _ _ vs avs
@@ -79,11 +79,11 @@ lemma bind_formals_sound [intro]:
   done
 
 lemma bind_formals_mono:
-  fixes \<sigma>1 \<sigma>2 :: "'a::order abs_state"
-  assumes base: "\<sigma>1 \<le> \<sigma>2"
+  fixes d1 d2 :: "'a::order abs_state"
+  assumes base: "d1 \<le> d2"
     and vals: "list_all2 (\<le>) avs1 avs2"
-  shows "bind_formals xs avs1 \<sigma>1 \<le> bind_formals xs avs2 \<sigma>2"
-  using assms apply (induction xs arbitrary: avs1 avs2 \<sigma>1 \<sigma>2)
+  shows "bind_formals xs avs1 d1 \<le> bind_formals xs avs2 d2"
+  using assms apply (induction xs arbitrary: avs1 avs2 d1 d2)
   subgoal
     by simp
   subgoal for _ _ avs1 avs2
@@ -102,7 +102,7 @@ text \<open>
   definition and two instances of it.
 
   What this theory adds is the pair of facts that relate those two instances --
-  the concrete entry store lands in the concretization of the abstract one, and
+  the concrete entered store lands in the concretization of the abstract one, and
   the abstract one is monotone. Neither is expressible below here, because
   \<^const>\<open>gamma_state\<close> lives in the domain session and \<^const>\<open>enter_binding\<close> in
   the language session.
@@ -110,15 +110,15 @@ text \<open>
 
 lemma enter_frame_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
-  shows "enter_state \<G> s \<in> \<lbrakk>enter_frame \<G> reset_val \<sigma>\<rbrakk>"
+  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
+  shows "enter_state \<G> s \<in> \<lbrakk>enter_frame \<G> reset_val d\<rbrakk>"
   unfolding gamma_state_def enter_state_def
   using gamma_stateD[OF sv] reset_full by auto
 
 lemma enter_frame_mono:
   fixes reset_val :: "'a::order"
-  assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_frame \<G> reset_val \<sigma>1 \<le> enter_frame \<G> reset_val \<sigma>2"
+  assumes "d1 \<le> d2"
+  shows "enter_frame \<G> reset_val d1 \<le> enter_frame \<G> reset_val d2"
   by (simp add: assms le_funD le_funI)
 
 text \<open>
@@ -136,35 +136,35 @@ lemma list_all2_map_mapI [intro]:
 
 lemma enter_binding_sound_list_all2 [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
+  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-                 (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
+                 (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
   shows "enter_binding \<G> 0 aval xs es s
-           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es \<sigma>\<rbrakk>"
+           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es d\<rbrakk>"
   unfolding enter_binding_def enter_state_def[symmetric]
   by (rule bind_formals_sound[OF enter_frame_sound[OF sv reset_full] vals])
 
 lemma enter_binding_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
-    and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e \<sigma>)"
+  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
+    and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
   shows "enter_binding \<G> 0 aval xs es s
-           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es \<sigma>\<rbrakk>"
+           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es d\<rbrakk>"
 proof (rule enter_binding_sound_list_all2[OF sv reset_full])
   show "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-          (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e \<sigma>) es)"
+          (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
     by (rule list_all2_map_mapI) (rule eval)
 qed
 
 lemma enter_binding_mono:
   fixes reset_val :: "'a::order"
-  assumes state_le: "\<sigma>1 \<le> \<sigma>2"
-    and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e \<sigma>1 \<le> aval_abs e \<sigma>2"
-  shows "enter_binding \<G> reset_val aval_abs xs es \<sigma>1
-           \<le> enter_binding \<G> reset_val aval_abs xs es \<sigma>2"
+  assumes state_le: "d1 \<le> d2"
+    and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
+  shows "enter_binding \<G> reset_val aval_abs xs es d1
+           \<le> enter_binding \<G> reset_val aval_abs xs es d2"
   unfolding enter_binding_def
 proof (rule bind_formals_mono[OF enter_frame_mono[OF state_le]])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_abs e \<sigma>1) es) (map (\<lambda>e. aval_abs e \<sigma>2) es)"
+  show "list_all2 (\<le>) (map (\<lambda>e. aval_abs e d1) es) (map (\<lambda>e. aval_abs e d2) es)"
     by (rule list_all2_map_mapI) (rule eval_mono)
 qed
 
@@ -204,13 +204,13 @@ text \<open>
 definition combine_collect_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     ("combine\<^sup>#") where
-  "combine_collect_abs \<G> dst \<sigma>c \<sigma>e =
-     combine_assign dst (\<sigma>e ret_var) (combine_env \<G> \<sigma>c \<sigma>e)"
+  "combine_collect_abs \<G> dst dc de =
+     combine_assign dst (de ret_var) (combine_env \<G> dc de)"
 
 lemma combine_collect_abs_mono:
-  fixes \<sigma>c1 \<sigma>c2 \<sigma>e1 \<sigma>e2 :: "'a::order abs_state"
-  assumes c: "\<sigma>c1 \<le> \<sigma>c2" and e: "\<sigma>e1 \<le> \<sigma>e2"
-  shows "combine\<^sup># \<G> dst \<sigma>c1 \<sigma>e1 \<le> combine\<^sup># \<G> dst \<sigma>c2 \<sigma>e2"
+  fixes dc1 dc2 de1 de2 :: "'a::order abs_state"
+  assumes c: "dc1 \<le> dc2" and e: "de1 \<le> de2"
+  shows "combine\<^sup># \<G> dst dc1 de1 \<le> combine\<^sup># \<G> dst dc2 de2"
   unfolding combine_collect_abs_def
   by (rule combine_assign_mono[OF le_funD[OF e] combine_env_mono[OF c e]])
 
@@ -238,9 +238,9 @@ text \<open>
   @{thm combine_env_sound}.
 \<close>
 lemma combine_collect_sound [intro]:
-  fixes \<sigma>c \<sigma>e :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<lbrakk>\<sigma>c\<rbrakk>" and se: "t \<in> \<lbrakk>\<sigma>e\<rbrakk>"
-  shows "combine_collect \<G> dst s t \<in> \<lbrakk>combine\<^sup># \<G> dst \<sigma>c \<sigma>e\<rbrakk>"
+  fixes dc de :: "'a::numeric_domain abs_state"
+  assumes sc: "s \<in> \<lbrakk>dc\<rbrakk>" and se: "t \<in> \<lbrakk>de\<rbrakk>"
+  shows "combine_collect \<G> dst s t \<in> \<lbrakk>combine\<^sup># \<G> dst dc de\<rbrakk>"
   unfolding combine_collect_def combine_collect_abs_def
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)

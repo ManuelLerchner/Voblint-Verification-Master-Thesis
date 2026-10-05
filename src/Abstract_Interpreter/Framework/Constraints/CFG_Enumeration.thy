@@ -442,7 +442,7 @@ text \<open>
   solved too.  Hence the conditional shape here against the unconditional shape
   above.
 
-  Where a call leads is not a fact about the graph.  A routing policy computes
+  Where a call leads is not a fact about the graph.  A context policy computes
   the callee's context from the call site, the caller's context, the callee, and
   in general the state published at the call --- which is why \<open>succ_ctx\<close> is a
   parameter rather than something read off \<open>g\<close>.  An instance supplies its own
