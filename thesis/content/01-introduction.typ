@@ -52,10 +52,10 @@ cache management and hardware @klein09. Voblint draws its boundary at the
 source language. Its main theorem starts from source executions, so the graph
 and trace semantics in between are connected to the source by proof and need
 no adequacy argument of their own. Only the source semantics, VIMP's own
-small-step semantics #isaconst("pstep"), must be argued adequate
-(@sec:vimp-vs-c): which fragment of C it models, where it departs from C11,
-and why no existing verified semantics such as IMP2 @lammich19imp2 serves as
-the anchor. Isabelle checks the theorems, and this thesis explains what they
+small-step semantics #isaconst("pstep"), must be argued adequate: which
+fragment of C it models and where it departs from C11 (@sec:vimp-vs-c), and
+why no existing verified semantics such as IMP2 @lammich19imp2 serves as the
+anchor (@sec:vimp). Isabelle checks the theorems, and this thesis explains what they
 state and why they are the statements one wants of an analyzer.
 
 == From executions to static guarantees

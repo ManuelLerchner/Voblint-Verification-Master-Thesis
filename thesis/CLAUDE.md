@@ -246,6 +246,8 @@ handing a section over.
   ("Chapter 3 compiles …"). Backward reminders are welcome.
 - Restate running-example values where the argument uses them, for example
   "(the collecting semantics {0, …, 5})".
+- Join clauses with proper sentences or conjunctions, not semicolons or
+  colons. A colon is fine before a displayed formula or a list.
 - Cut meta-narration and asides that carry no argument: "each only as far as
   they use it", "the rest of this chapter computes …", tangential terminology
   remarks, citations that do not support the sentence they sit in.
