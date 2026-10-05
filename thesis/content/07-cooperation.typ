@@ -123,7 +123,7 @@ sound using the order analysis's invariant, the two proofs are coupled, every
 new pair of analyses needs a new proof, and adding an analysis reopens old
 ones. This chapter gives each analysis one proof obligation that does not
 mention its partners. It shows that analyses meeting the obligation combine
-into an analysis that meets the contract of @sec:sound-core, so @ch:equations
+into an analysis that meets the analysis contract of @sec:sound-core, so @ch:equations
 applies to the combination unchanged.
 
 == Questions and answers <sec:coop-queries>
@@ -132,7 +132,7 @@ The analyses must agree on what a question means and on what an answer
 claims. A _query_ asks for a fact about the stores a state describes. Voblint
 has one kind, named after Goblint's: the query #isaconst("EvalInt") $e$ asks
 which integers the expression $e$ may evaluate to. Its answer is an abstract
-value of the reduced product #isatype("int_dom") of @sec:reduced-product,
+value of Int (#isatype("int_dom")) of @sec:reduced-product,
 lifted by a bottom and by a top element that claims nothing
 (#isatype("query_lift")). Goblint answers its query in an analogous lifted
 integer domain. A comparison evaluates to $0$ or $1$, so the exact answer $1$
@@ -335,9 +335,9 @@ specification must become one. #isaconst("dg_spec_of") does this, and the
 record it builds never touches the analysis global. It computes the channel of each state
 with #isaconst("ls_channel") and passes it to the operation, so its transfers
 leave the manager's #isaconst("man_ask") unused. With the theorem above,
-#isathm("dg_spec_of_contract") obtains the analysis soundness contract
+#isathm("dg_spec_of_contract") obtains the analysis contract
 #isalocale("analysis_contract") from #isaconst("sound_local_spec"). Applied to
-#isathm("mcp_comp_sound"), this gives the contract for every selection, and
+#isathm("mcp_comp_sound"), this gives the analysis contract for every selection, and
 @ch:equations treats the combination like a single analysis.
 
 == The combination at work <sec:coop-examples>
@@ -424,8 +424,7 @@ $s(x) lt.eq s(y)$ for every pair. It replaces the default handler, which now
 answers comparisons between variables it has ordered
 (#isathm("relc_qry_sound")), and the default branch. It asks at assignments (@sec:coop-any-channel) and enters and returns
 with no facts (#isathm("order_spec_sound")). @fig:contract-routes collects
-the routes by which the analyses of this thesis reach the analysis soundness
-contract.
+the routes by which the analyses of this thesis reach the analysis contract.
 
 #let _cbox(pos, name, body) = node(
   pos,
@@ -448,7 +447,7 @@ contract.
     ),
     _cbox((0, 2), <c-rules>, [one rule per operation \ #isalocale("sound_nonrelational_transfer")]),
     _cbox((0, 3), <c-local>, [sound local specification \ #isaconst("sound_local_spec")]),
-    _cbox((0, 4), <c-contract>, [analysis soundness contract \ #isalocale("analysis_contract")]),
+    _cbox((0, 4), <c-contract>, [analysis contract \ #isalocale("analysis_contract")]),
     _cbox((1, 3), <c-order>, [order analysis \ #isaconst("order_spec")]),
     _cbox(
       (1, 4),
@@ -506,14 +505,13 @@ contract.
   ),
   kind: image,
   placement: auto,
-  caption: [How the analyses of this thesis reach the analysis soundness
-    contract. An arrow leads from what an analysis supplies to what it thereby
+  caption: [How the analyses of this thesis reach the analysis contract. An arrow leads from what an analysis supplies to what it thereby
     establishes, and its label names the Isabelle fact. A numeric domain
     proves its primitives sound once, which yields one rule
     per operation, as Voblint proves once for every domain. These rules make its executed local specification sound.
     The order analysis is a sound local specification by its own proof. Every
-    sound local specification meets the contract through
-    #isaconst("dg_spec_of"). The order analysis with an analysis global is not a local specification and interprets the contract itself.],
+    sound local specification meets the analysis contract through
+    #isaconst("dg_spec_of"). The order analysis with an analysis global is not a local specification and interprets the analysis contract itself.],
 ) <fig:contract-routes>
 
 == What the combination leaves out <sec:coop-limits>
@@ -524,7 +522,7 @@ one exception applies to the combined state as a whole: when program globals
 are flow-insensitive, a lifter around the combination publishes each program
 global's part of the combined state to that global's unknown
 (@sec:mixed-flow). Apart from those, the only values published in an analyzer
-run are the entry values that calls publish to their callees' seeds
+run are the entry states that calls publish to their callees' seeds
 (@sec:eq-seed-global). An analysis
 with an analysis global, such as #isaconst("rel_order_spec"), is proved sound
 on its own but cannot be selected. The analyzer runs a local variant of it,

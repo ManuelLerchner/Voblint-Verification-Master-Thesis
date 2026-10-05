@@ -12,7 +12,7 @@ text \<open>
 
   Local flow follows \<open>intra\<close>, including \<open>EA_Ret\<close> into the matching
   \<open>FunctionResult\<close>.  A \<open>calls\<close> tuple supplies the call site, callee entry, and
-  continuation.  The call rule builds the parameter-bound entry store with
+  continuation.  The call rule builds the parameter-bound entered store with
   \<^const>\<open>call_enter\<close>.  The resume rule combines caller locals, callee globals,
   and the return value with \<^const>\<open>combine_collect\<close>.
 
@@ -28,7 +28,7 @@ subsection \<open>The datatype\<close>
 
 text \<open>
   \<^item> \<open>Root p\<close> --- the main activation, with local path \<open>p\<close>.
-  \<^item> \<open>Call caller p\<close> --- a callee whose local path \<open>p\<close> starts at the callee-entry store;
+  \<^item> \<open>Call caller p\<close> --- a callee whose local path \<open>p\<close> starts at the entered store;
     \<open>caller\<close> is the exact suspended caller, frozen at the call node.
   \<^item> \<open>Resume current callee p\<close> --- the activation continued past a completed call.
     \<open>current\<close> is that activation frozen at its call node (the value that spawned \<open>callee\<close>);
@@ -90,7 +90,7 @@ text \<open>
   activation at \<^const>\<open>cfg_entry\<close>; an \<open>intra\<close> step; a call; and a return.  Each rule reads
   exactly the relation for its phenomenon.  \<open>intra\<close> carries no side condition --- calls are
   not \<open>intra\<close> members, so they are untraversable by typing.  \<open>call\<close> enters the callee named
-  by the \<open>calls\<close> edge at the callee-entry store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
+  by the \<open>calls\<close> edge at the entered store \<^const>\<open>call_enter\<close>.  \<open>ret\<close> matches the
   callee's \<open>FunctionResult p\<close> against the \<open>FunctionEntry p\<close> of a concrete \<open>calls\<close> edge
   leaving the caller's node, and resumes at the continuation stored in that same edge; the
   resumed state is \<^const>\<open>combine_collect\<close>.  There is no \<open>combines\<close> lookup and no scan for a

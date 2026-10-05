@@ -159,45 +159,45 @@ text \<open>
 \<close>
 
 fun aval_ivl :: "exp => (vname => ivl) => ivl" where
-    "aval_ivl (N n)        \<sigma> = ivl_of_int n"
-  | "aval_ivl (V x)        \<sigma> = \<sigma> x"
-  | "aval_ivl (Plus  a b)  \<sigma> = aval_ivl a \<sigma> + aval_ivl b \<sigma>"
-  | "aval_ivl (Minus a b)  \<sigma> = aval_ivl a \<sigma> - aval_ivl b \<sigma>"
-  | "aval_ivl (Times a b)  \<sigma> = aval_ivl a \<sigma> * aval_ivl b \<sigma>"
-  | "aval_ivl (Div a b)  \<sigma> = ivl_div (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
-  | "aval_ivl (Mod a b)  \<sigma> = ivl_mod (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)"
-  | "aval_ivl (Less a b)   \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_less (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
-  | "aval_ivl (LessEq a b)   \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+    "aval_ivl (N n)        d = ivl_of_int n"
+  | "aval_ivl (V x)        d = d x"
+  | "aval_ivl (Plus  a b)  d = aval_ivl a d + aval_ivl b d"
+  | "aval_ivl (Minus a b)  d = aval_ivl a d - aval_ivl b d"
+  | "aval_ivl (Times a b)  d = aval_ivl a d * aval_ivl b d"
+  | "aval_ivl (Div a b)  d = ivl_div (aval_ivl a d) (aval_ivl b d)"
+  | "aval_ivl (Mod a b)  d = ivl_mod (aval_ivl a d) (aval_ivl b d)"
+  | "aval_ivl (Less a b)   d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
+        else of_bool_option ivl_of_int (interval_less (aval_ivl a d) (aval_ivl b d)))"
+  | "aval_ivl (LessEq a b)   d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_less (aval_ivl b \<sigma>) (aval_ivl a \<sigma>))))"
-  | "aval_ivl (Greater a b)   \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_less (aval_ivl b \<sigma>) (aval_ivl a \<sigma>)))"
-  | "aval_ivl (GreaterEq a b)   \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+               (map_option HOL.Not (interval_less (aval_ivl b d) (aval_ivl a d))))"
+  | "aval_ivl (Greater a b)   d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
+        else of_bool_option ivl_of_int (interval_less (aval_ivl b d) (aval_ivl a d)))"
+  | "aval_ivl (GreaterEq a b)   d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_less (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
-  | "aval_ivl (NotEq a b) \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+               (map_option HOL.Not (interval_less (aval_ivl a d) (aval_ivl b d))))"
+  | "aval_ivl (NotEq a b) d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
-               (map_option HOL.Not (interval_eq (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))))"
-  | "aval_ivl (exp.Eq a b) \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
-        else of_bool_option ivl_of_int (interval_eq (aval_ivl a \<sigma>) (aval_ivl b \<sigma>)))"
-  | "aval_ivl (exp.Not a)  \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) then bot
-        else of_bool_option ivl_of_int (map_option HOL.Not (interval_tobool (aval_ivl a \<sigma>))))"
-  | "aval_ivl (And a b)    \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+               (map_option HOL.Not (interval_eq (aval_ivl a d) (aval_ivl b d))))"
+  | "aval_ivl (exp.Eq a b) d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
+        else of_bool_option ivl_of_int (interval_eq (aval_ivl a d) (aval_ivl b d)))"
+  | "aval_ivl (exp.Not a)  d =
+       (if is_empty (aval_ivl a d) then bot
+        else of_bool_option ivl_of_int (map_option HOL.Not (interval_tobool (aval_ivl a d))))"
+  | "aval_ivl (And a b)    d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
-               (and_opt (interval_tobool (aval_ivl a \<sigma>)) (interval_tobool (aval_ivl b \<sigma>))))"
-  | "aval_ivl (Or a b)     \<sigma> =
-       (if is_empty (aval_ivl a \<sigma>) \<or> is_empty (aval_ivl b \<sigma>) then bot
+               (and_opt (interval_tobool (aval_ivl a d)) (interval_tobool (aval_ivl b d))))"
+  | "aval_ivl (Or a b)     d =
+       (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
-               (or_opt (interval_tobool (aval_ivl a \<sigma>)) (interval_tobool (aval_ivl b \<sigma>))))"
+               (or_opt (interval_tobool (aval_ivl a d)) (interval_tobool (aval_ivl b d))))"
 
 interpretation ivl_arith: mono_arith_ops
     aval_ivl ivl_of_int "(+)" "(-)" "(*)" ivl_div ivl_mod

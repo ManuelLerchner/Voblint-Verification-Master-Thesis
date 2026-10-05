@@ -53,22 +53,22 @@ begin
 definition special_transfer ::
     "special_call => vname => (vname => 'a) => (vname => 'a)"
 where
-  "special_transfer sc x \<sigma> =
-     \<sigma>(x := (case sc of
+  "special_transfer sc x d =
+     d(x := (case sc of
                 Nondet_Int => top
-              | Min a b => special_min ops (ev a \<sigma>) (ev b \<sigma>)
-              | Max a b => special_max ops (ev a \<sigma>) (ev b \<sigma>)))"
+              | Min a b => special_min ops (ev a d) (ev b d)
+              | Max a b => special_max ops (ev a d) (ev b d)))"
 
 lemma special_transfer_Nondet_Int [simp]:
-  "special_transfer Nondet_Int x \<sigma> = \<sigma>(x := top)"
+  "special_transfer Nondet_Int x d = d(x := top)"
   unfolding special_transfer_def by simp
 
 lemma special_transfer_Min [simp]:
-  "special_transfer (Min a b) x \<sigma> = \<sigma>(x := special_min ops (ev a \<sigma>) (ev b \<sigma>))"
+  "special_transfer (Min a b) x d = d(x := special_min ops (ev a d) (ev b d))"
   unfolding special_transfer_def by simp
 
 lemma special_transfer_Max [simp]:
-  "special_transfer (Max a b) x \<sigma> = \<sigma>(x := special_max ops (ev a \<sigma>) (ev b \<sigma>))"
+  "special_transfer (Max a b) x d = d(x := special_max ops (ev a d) (ev b d))"
   unfolding special_transfer_def by simp
 
 text \<open>
@@ -81,8 +81,8 @@ text \<open>
 \<close>
 
 lemma special_transfer_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>" and sr: "special_result sc s v"
-  shows "s(x := v) \<in> \<lbrakk>special_transfer sc x \<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>" and sr: "special_result sc s v"
+  shows "s(x := v) \<in> \<lbrakk>special_transfer sc x d\<rbrakk>"
 proof -
   show ?thesis
   proof (cases sc)
@@ -91,13 +91,13 @@ proof -
   next
     case (Min a b)
     with sr have "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b d)"
       by (rule aval_abs_sound)+
     ultimately show ?thesis using Min \<G> by auto
   next
     case (Max a b)
     with sr have "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a \<sigma>)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b \<sigma>)"
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b d)"
       by (rule aval_abs_sound)+
     ultimately show ?thesis using Max \<G> by auto
   qed

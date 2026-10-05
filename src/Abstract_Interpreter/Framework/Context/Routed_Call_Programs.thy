@@ -274,7 +274,7 @@ lemma routed_entry_seed_programs_local_only:
 
 text \<open>
   Every routed hook runs its continuation once, given that the specification's
-  transfers do. The generator's fold asks for exactly that, and a routing policy
+  transfers do. The generator's fold asks for exactly that, and a context policy
   discharges it by naming its specification's \<^const>\<open>dg_spec_wf\<close>.
 \<close>
 

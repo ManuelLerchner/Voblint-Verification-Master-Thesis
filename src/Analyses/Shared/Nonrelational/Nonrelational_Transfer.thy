@@ -54,42 +54,42 @@ text \<open>
 \<close>
 
 definition assign :: "vname \<Rightarrow> exp \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "assign x a \<sigma> = \<sigma>(x := n_aval ops a \<sigma>)"
+  "assign x a d = d(x := n_aval ops a d)"
 
 definition skip :: "'a abs_state \<Rightarrow> 'a abs_state" where
-  "skip \<sigma> = \<sigma>"
+  "skip d = d"
 
 definition body :: "pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "body p \<sigma> = \<sigma>"
+  "body p d = d"
 
 text \<open>A check observes its condition but never refines the store --- narrowing a
   state against a checked condition is \<open>sound_check_query\<close>'s job --- so
   \<open>event\<close> is the identity like \<open>skip\<close> and \<open>body\<close>.\<close>
 
 definition event :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "event evt \<sigma> = \<sigma>"
+  "event evt d = d"
 
 definition ret :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state" where
-  "ret e p \<sigma> = (case e of None \<Rightarrow> \<sigma> | Some a \<Rightarrow> assign ret_var a \<sigma>)"
+  "ret e p d = (case e of None \<Rightarrow> d | Some a \<Rightarrow> assign ret_var a d)"
 
 lemma assign_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign x a \<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
+  shows "s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign x a d\<rbrakk>"
   unfolding assign_def
   using gamma_stateD[OF \<G>] \<G> by blast
 
-lemma skip_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip \<sigma>\<rbrakk>"
+lemma skip_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip d\<rbrakk>"
   by (simp add: skip_def)
 
-lemma body_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body p \<sigma>\<rbrakk>"
+lemma body_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body p d\<rbrakk>"
   by (simp add: body_def)
 
-lemma event_sound: "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event evt \<sigma>\<rbrakk>"
+lemma event_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event evt d\<rbrakk>"
   by (simp add: event_def)
 
 lemma ret_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<lbrakk>ret e p \<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<lbrakk>ret e p d\<rbrakk>"
   using assign_sound[OF \<G>] \<G> by (cases e) (simp_all add: ret_def)
 
 
@@ -113,20 +113,20 @@ definition enter_ci_for ::
   "enter_ci_for \<G> ci = enter_for \<G> (ci_formals ci) (ci_args ci)"
 
 lemma enter_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
   shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
-           \<in> \<lbrakk>enter_for cls xs es \<sigma>\<rbrakk>"
+           \<in> \<lbrakk>enter_for cls xs es d\<rbrakk>"
   unfolding enter_for_def enter_binding_concrete[symmetric]
 proof (rule enter_binding_sound[OF \<G> gamma_top])
   fix e
-  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (n_aval ops e \<sigma>)"
+  show "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (n_aval ops e d)"
     using gamma_stateD[OF \<G>] by blast
 qed
 
 lemma enter_ci_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
   shows "bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>enter_ci_for cls ci \<sigma>\<rbrakk>"
+           \<in> \<lbrakk>enter_ci_for cls ci d\<rbrakk>"
   using enter_for_sound[OF \<G>, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
   by (simp add: enter_ci_for_def)
 
@@ -181,8 +181,8 @@ text \<open>
 
 lemma tf_abs_eq_generic: "tf_abs = generic_tf_abs ops backward.branch"
 proof (rule ext, rule ext)
-  fix a :: edge_action and \<sigma> :: "'a abs_state"
-  show "tf_abs a \<sigma> = generic_tf_abs ops backward.branch a \<sigma>"
+  fix a :: edge_action and d :: "'a abs_state"
+  show "tf_abs a d = generic_tf_abs ops backward.branch a d"
     by (cases a)
        (simp_all add: op_defs split: special_call.splits option.splits)
 qed
@@ -320,15 +320,15 @@ locale mono_nonrelational_ops = sound_nonrelational_ops ops
   for ops :: "'a::numeric_domain nonrelational_ops"
 begin
 
-lemma assign_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> assign x a \<sigma>1 \<le> assign x a \<sigma>2"
+lemma assign_mono: "d1 \<le> d2 \<Longrightarrow> assign x a d1 \<le> assign x a d2"
   unfolding assign_def by (simp add: aval_abs_mono le_funD le_funI)
 
-lemma ret_mono: "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> ret e p \<sigma>1 \<le> ret e p \<sigma>2"
+lemma ret_mono: "d1 \<le> d2 \<Longrightarrow> ret e p d1 \<le> ret e p d2"
   by (cases e) (simp_all add: ret_def assign_mono)
 
 lemma enter_for_mono:
-  assumes "\<sigma>1 \<le> \<sigma>2"
-  shows "enter_for \<G> xs es \<sigma>1 \<le> enter_for \<G> xs es \<sigma>2"
+  assumes "d1 \<le> d2"
+  shows "enter_for \<G> xs es d1 \<le> enter_for \<G> xs es d2"
   unfolding enter_for_def
   by (rule enter_binding_mono[OF assms]) (rule aval_abs_mono[OF assms])
 

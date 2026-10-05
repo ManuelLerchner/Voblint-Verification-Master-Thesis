@@ -18,8 +18,8 @@ text \<open>
   \<^locale>\<open>sound_numeric_queries\<close> instead of restating it.
 
   The per-domain guard machinery (the \<open>sound_refinement\<close> locale's
-  \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False \<sigma>\<close>
-  represents no states, \<open>c\<close> is soundly established on \<open>\<sigma>\<close>, whenever
+  \<open>bfilter\<close>/\<open>afilter\<close>) would also decide a check: if \<open>bfilter c False d\<close>
+  represents no states, \<open>c\<close> is soundly established on \<open>d\<close>, whenever
   \<open>gamma bot = {}\<close> --- a sound sufficient condition, not an iff, since no
   completeness result for \<open>bfilter\<close> is proved here. It is not usable as an
   executable decision procedure over \<open>'a abs_state\<close>, though: that is a raw

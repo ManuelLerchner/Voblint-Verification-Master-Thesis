@@ -81,7 +81,7 @@ only approximately, it can contain violating states that no execution reaches.
 The analysis then cannot decide the check, even when every execution satisfies
 it.
 
-Suppose, for instance, that the analysis computes $x in [43, infinity)$ at a
+Suppose, for instance, that the analysis computes $x in [43, +infinity]$ at a
 point that divides by `x`. Every execution that reaches the point has $x >= 43$
 there, so the division is safe. If the analysis computes only $x in [0, 100]$,
 the abstract state contains $x = 0$ and the analysis cannot prove the division
@@ -119,8 +119,8 @@ runs in the
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
   playground], together with what each answer guarantees. Only `DEAD` makes a
 claim about reachability, and `REFUTED` is not a verified counterexample. Each
-run fixes a configuration: the abstract domain (Sign, Interval, Parity,
-Congruence or their reduced product Int), the calling-context policy, and the
+run fixes an analysis configuration: the abstract domain (Sign, Interval, Parity,
+Congruence or the reduced-product domain Int), the context policy, and the
 rule that combines contributions to global values. The run shown uses
 intervals without calling contexts.
 
@@ -354,11 +354,11 @@ Voblint's architecture follows Goblint, an abstract interpreter for
 multithreaded C programs @vojdani16 @seidl26. Goblint defines analyses independently of the generic solvers that compute
 their results, and the interface between the two is a side-effecting constraint
 system @apinis12 @seidl26. A side effect lets the right-hand side of one
-unknown contribute to others (@sec:side-effects). The top-down solver algorithm of
+unknown publish contributions to others (@sec:side-effects). The top-down solver algorithm of
 Goblint, including its extension to side effects, has been formalized and
 proved partially correct in Isabelle/HOL @stade24 @tilscher26. When it terminates, the verified solver returns a partial
 post-solution (#isaconst("part_post_solution", thy: "Basics_side")) of the equation system it receives (@sec:td): a valuation that bounds the
-right-hand side and side contributions of every unknown it has solved, and
+right-hand side and published contributions of every unknown it has solved, and
 whose solved set contains every unknown those right-hand sides read. Whether that system describes
 the program, and whether the verdicts read off its solution hold, is outside
 the solver's theorem. No proof relates the equations of its example analyses to a program's
@@ -367,12 +367,12 @@ counterpart in an ordinary concrete semantics: a run has a call stack, but nothi
 which context the analyzer assigned to an activation.
 
 To our knowledge, no prior mechanized analyzer connects a source semantics to
-a side-effecting constraint system, in which right-hand sides contribute to global unknowns, or is proved sound through a verified solver for such
+a side-effecting constraint system, in which right-hand sides publish contributions to global unknowns, or is proved sound through a verified solver for such
 systems. Voblint goes further than the analyzers above in two respects. Its
 theorem covers context-sensitive analysis of recursive procedures, which
 Astrée, MOPSA and Verasco exclude, and among the executable analyzers of
 @tab:state-of-art it is the only one whose verified fixpoint solver handles
-context-sensitive, side-effecting equation systems. Its guarantee is stated
+context-sensitive, side-effecting constraint systems. Its guarantee is stated
 over source executions of the analyzed language, whereas that of Verasco
 concerns C\#minor, an intermediate language of CompCert. It claims no better precision than any of them, and its language is far
 smaller than the C dialects they analyze. The contributions
@@ -459,7 +459,7 @@ each.
 - _End-to-end soundness._ The definite verdicts returned by the analysis
   function #isaconst("run_voblint") are correct for every source execution
   from an initial store with zeroed globals (#isaconst("cinit_stores")) that
-  reaches the corresponding program point, in every configuration it offers,
+  reaches the corresponding program point, for all analysis settings it offers,
   whenever it returns a report (#isathm("run_voblint_source_sound"),
   @sec:headline). Companion theorems justify `DEAD`
   (#isathm("run_voblint_dead_check_unreached")) and the absence of arithmetic
@@ -481,7 +481,7 @@ each.
   trace partitioning @rival07[Rem. 3.2.4].
 - _Separately verified components._ Domains, context policies, analyses and
   the solver are each verified against their own interface, and generic
-  theorems compose them for every configuration the analyzer offers. A numeric
+  theorems compose them for all analysis settings the analyzer offers. A numeric
   domain proves only its primitive operations sound, and the transfer
   functions derived from them are proved sound once
   (#isalocale("sound_nonrelational_ops")). A context policy proves only that
@@ -605,7 +605,7 @@ The theorem has the following limits. @sec:limitations discusses each of them.
 - _Trusted components._ The parser, the code generator and the target
   toolchains lie outside the proof (@sec:trust-boundary).
 - _Precision._ No completeness or general precision ordering between
-  configurations is proved. Each precision result concerns one program
+  analysis settings is proved. Each precision result concerns one program
   (@sec:eval-precision).
 - _Goblint._ The correspondence with Goblint is architectural. No theorem
   transfers to its OCaml implementation (@sec:eval-goblint).

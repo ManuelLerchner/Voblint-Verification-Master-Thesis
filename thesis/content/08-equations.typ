@@ -34,9 +34,9 @@ Procedures break this: the same node is reached by different activations, and
 merging them loses facts. Voblint therefore keeps one unknown per node and
 _context_. Local edges pass values between unknowns of the same context. Calls
 are harder, because the context in which the callee runs can depend on an
-abstract value that is known only once the caller is solved. The equations
+abstract state that is known only once the caller is solved. The equations
 discover such calls while they are solved: each call chooses a context of the
-callee from its entry value, sends the entry value there, and reads the
+callee from its entry state, sends the entry state there, and reads the
 callee's result back at its continuation. We call this choice _routing_, and
 the context policy decides it.
 
@@ -156,7 +156,7 @@ that joins every contribution (@sec:td) the analyzer without contexts reports ex
 #_cli("pg-contexts-none-join", "a == 6", 3) with
 #_cli("pg-contexts-none-join", "a == 6", 4). The default rule, warrowing, reports
 #_cli("pg-contexts-none", "a == 6", 4)\; its lower bound $-infinity$ comes from
-widening the shared entry value (@sec:eq-seed-global). The concrete semantics keeps
+widening the shared entry state (@sec:eq-seed-global). The concrete semantics keeps
 the two calls apart: the collecting semantics of @sec:contexts files each
 activation of `bump` under its own context. Voblint indexes the unknowns by the
 same contexts.
@@ -269,12 +269,12 @@ policy is chosen.
 
 Calls are where contexts change, and the callee context depends on a value.
 The context policy supplies a function $ctxh$ that maps the call node $u$, the
-caller context $c$ and the abstract entry value $e$ to the callee context
+caller context $c$ and the abstract entry state $e$ to the callee context
 $c' = ctxh(u, c, e)$. Since $e$ is computed from the caller's value, the
 equations cannot wire callers to callee entries in advance, and the entry
 unknown $(ctor("FunctionEntry") thin p, c')$ cannot list its contributors:
 which call sites route to $c'$ is known only once their callers are solved.
-Side-effecting systems reverse the direction: each caller contributes to the
+Side-effecting systems reverse the direction: each caller publishes to the
 callee's entry while it evaluates its own equation (@ch:background). Voblint
 adds one global unknown per callee entry and context, the _seed_
 $ctor("Activation_Seed") thin p space c'$ (a #isatype("global_unknown"), keyed
@@ -282,11 +282,11 @@ by the callee's entry node, which we name by its procedure $p$), which
 receives these contributions
 (@sec:eq-seed-global explains why they do not target the entry directly). Every call routed to $(p, c')$ publishes its entry
 value to the seed, and the entry reads the seed back, so the seed collects
-every entry value routed to $(p, c')$.
+every entry state routed to $(p, c')$.
 
 A call follows the protocol of @sec:calls (@fig:eq-protocol). Its contribution
 reads the caller's value at $(u, c)$ and applies enter, which
-yields a list of entry pairs, each a resume value $q$ and an entry value $e$.
+yields a list of entry pairs, each a resume state $q$ and an entry state $e$.
 Each pair is routed separately, so we follow one. The call computes
 $c' = ctxh(u, c, e)$, publishes $e$ to $ctor("Activation_Seed") thin p space c'$, reads the
 callee's result $r$ directly from the unknown of its result node
@@ -297,10 +297,10 @@ body. The body's unknowns have their own equations, and the solver evaluates
 them when the caller first reads the result. Since a call never enters the
 callee's body, recursion needs no special case. In @fig:eq-unknowns the
 continuation $(italic("pp3"), c_0)$ reads $(italic("pp2"), c_0)$, computes
-$c_1$ from the entry value $n = 5$, publishes that value to the seed of `bump`
+$c_1$ from the entry state $n = 5$, publishes that value to the seed of `bump`
 in $c_1$, and reads $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 
-When the entry value is bottom, no store enters the callee. The call then
+When the entry state is bottom, no store enters the callee. The call then
 publishes nothing, reads no result, and combines $q$ with a bottom callee
 result. Apinis et al. use a similar test so that procedures which are not
 called are not analyzed, but their call constraint then contributes bottom
@@ -351,7 +351,7 @@ locale: a value the test classifies as bottom concretizes to the empty set.
   )),
   caption: [One call at node $u$ in context $c$, contributing to its
     continuation $(k, c)$. Enter turns the caller value into a
-    resume value $q$ and an entry value $e$, and $e$ selects the callee context
+    resume state $q$ and an entry state $e$, and $e$ selects the callee context
     $c'$. The call publishes $e$ to the seed of $(#_p, c')$ (dashed) and reads
     the callee's result $r$ at $c'$. All steps except the callee body belong to
     the right-hand side of $(k, c)$. The callee's unknowns have their own
@@ -372,7 +372,7 @@ static description (#isatype("call_info")), which we leave implicit. The trace s
 the activation collecting semantics files the stores of the activation under
 each admitted $c'$. Under
 call strings of length one, for instance, $R$ admits exactly $[italic("pp2")]$ for the
-call `bump(5)` from `main`. The analyzer never sees $s'$. It computes an abstract entry value $e$,
+call `bump(5)` from `main`. The analyzer never sees $s'$. It computes an abstract entry state $e$,
 chooses a context from $e$, and publishes $e$ to the callee's seed for that
 context. The two must meet:
 $
@@ -419,11 +419,11 @@ the same $c'$, and totality gives #oblig("TOTAL") of @sec:contract.
   placement: none,
   caption: [For a call at site $u$ from caller context $c$ with caller store
     $s$ and entered store $s'$: the contexts $R$ admits, where the equations
-    route the entry value $e$, and why the two agree. $u dot c$ prepends the
+    route the entry state $e$, and why the two agree. $u dot c$ prepends the
     site, $e|_"formals"$ lists the formals' values in $e$, and an entry pair
     $(q, e)$ of the caller's solved value covers $(s, s')$ when
     $s in conc(q)$ and $s' in conc(e)$. Unit and call
-    strings are _functional_: the context ignores abstract values.],
+    strings are _functional_: the context ignores abstract states.],
 ) <tab:eq-policies>
 
 For unit and call strings the correspondence is direct, as the last column
@@ -439,12 +439,12 @@ context, so the concrete call alone fixes its context. Entry-state contexts are
 different: the context is part of the abstract analysis result.
 
 Recall from @sec:calls that enter turns the caller's value into entry pairs
-$(q, e)$: a resume value $q$ and an entry value $e$, an abstract state of
+$(q, e)$: a resume state $q$ and an entry state $e$, an abstract state of
 the callee. The entry-state policy takes as context the abstract values that
 $e$ gives the callee's formal parameters, written $e|_"formals"$. For
 `bump(n)` with $e = {n |-> [4, 5]}$, the context is $e|_"formals" = [[4, 5]]$,
 a list with one entry per formal. Which context a call gets therefore depends
-on the entry value computed from the caller's solved value.
+on the entry state computed from the caller's solved value.
 
 This value cannot be reconstructed from one concrete call. Suppose the
 caller's solved value maps $x$ to $[4, 5]$ and the program calls `bump(x)`.
@@ -454,7 +454,7 @@ and enters `bump` with $n = 4$:
 $
   underbrace(s' = {n |-> 4}, "one concrete entered store")
   quad in quad
-  underbrace(conc(e) "with" e = {n |-> [4, 5]}, "the abstract entry value")
+  underbrace(conc(e) "with" e = {n |-> [4, 5]}, "the abstract entry state")
   quad --> quad
   underbrace(c' = [[4, 5]], "the context it is routed to").
 $
@@ -463,7 +463,7 @@ never publish to that context, so an activation filed there would land in an
 unknown nothing fills. Entry-state contexts therefore cannot be defined by
 abstracting each concrete entered store independently.
 
-Instead, the concrete call is assigned the context of the abstract entry value
+Instead, the concrete call is assigned the context of the abstract entry state
 that covers it. For a call from caller store $s$ with entered store $s'$, the
 relation #isaconst("routed_entry_context_rel") admits $c'$ when the entry pair
 $(q, e)$ computed from the caller's solved value satisfies
@@ -475,7 +475,7 @@ value $e = {n |-> [4, 5]}$ covers $n = 4$, and $[[4, 5]]$ is where the
 equations published $e$.
 
 Adequacy is then immediate: whenever $R$ admits a context $c'$, it does so
-through a covering entry value that the equations route to exactly $c'$.
+through a covering entry state that the equations route to exactly $c'$.
 Totality follows from entry coverage (@sec:calls): every concrete call covered
 by the caller's value has a covering entry pair and therefore an admitted
 context.
@@ -602,7 +602,7 @@ between call-string lengths one and two.
 The construction is designed so that every post-solution covers the
 context-indexed collecting semantics. The theorem is independent of the
 abstract domain and of the context policy: it uses only the analysis
-soundness contract and the routing properties of @sec:eq-routing.
+contract and the routing properties of @sec:eq-routing.
 
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
   Let $sol$ be a post-solution of the generated equations. Suppose the solved
@@ -658,13 +658,15 @@ concretization of its left side.
     [*obligation*], [*uses*], [*and the soundness fact*],
     table.hline(stroke: 0.5pt),
     [#oblig("INIT")], [#ineq(1)], [$d_0$ covers the initial stores],
-    [#oblig("INTRA")], [#ineq(2)], [the edge transfer is sound (the contract's #oblig("INTRA"))],
+    [#oblig("INTRA")],
+    [#ineq(2)],
+    [the edge transfer is sound (the analysis contract's #oblig("INTRA"))],
     [#oblig("CALL")],
     [#ineq(3), #ineq(4)],
     [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
     [#oblig("RETURN")],
     [#ineq(5)],
-    [the combine stages are sound (the contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
+    [the combine stages are sound (the analysis contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
     [#oblig("TOTAL")], [#ineq(6)], [none beyond the premise itself],
     table.hline(),
   ),
@@ -724,7 +726,7 @@ origin (@sec:eq-buffer).
 Most right-hand sides read a fixed set of unknowns: a local edge reads its
 predecessor. A call does not. In the running example the continuation
 $(italic("pp3"), c_0)$ first reads the caller $(italic("pp2"), c_0)$. Only from that value does it
-learn the entry value $n = 5$ and with it the context $c_1$, and only then
+learn the entry state $n = 5$ and with it the context $c_1$, and only then
 does it know which result to read, $(ctor("FunctionResult") thin italic("bump"), c_1)$.
 The second unknown depends on the value of the first, so the equation cannot
 be handed to the solver as a function of a fixed list of arguments.
@@ -748,7 +750,7 @@ result. These are lines #ineq(3) and #ineq(5) of
 
 === Publishing to local entries through activation seeds <sec:eq-seed-global>
 
-Line #ineq(4) of @sec:eq-discharge lets the callee's entry take in the entry value
+Line #ineq(4) of @sec:eq-discharge lets the callee's entry take in the entry state
 $e$ the call computed. The natural encoding is a side effect of the call into
 the entry unknown $(ctor("FunctionEntry") thin p, c')$, as Apinis et al. write
 it @apinis12[§6] and as Goblint does with its local side effect `sidel`
@@ -795,7 +797,7 @@ value, the entry state it passes to the callee.
     [*solver unknown*], [*role*], [*value*],
     table.hline(stroke: 0.5pt),
     [$(v, c)$, local], [the state at $v$ in context $c$], [$(d, lbot)$],
-    [#isaconst("Activation_Seed"), global], [an entry value published by a call], [$(e, lbot)$],
+    [#isaconst("Activation_Seed"), global], [an entry state published by a call], [$(e, lbot)$],
     [#isaconst("Analysis_Global") $v$, global], [the analysis global $v$], [$(lbot, g)$],
     [#isaconst("Analysis_Buffer"), global], [a node's own global half], [$(lbot, g)$],
     table.hline(),
@@ -919,7 +921,7 @@ published entry state, and each context of `bump` is solved once.
   let (n, c) = key.split("@")
   if n.starts-with("Seed(") { _tnode(key) } else { $(#raw(n), #_tctx(c))$ }
 }
-// A value as the trace prints it: bottom, a routed entry value e_i, or the
+// A value as the trace prints it: bottom, a routed entry state e_i, or the
 // bindings the analyzer shows.
 #let _tval(v, route: none) = if v == "⊥" { $lbot$ } else if route != none and v == route.entry {
   $e_#route.context.slice(1)$

@@ -265,7 +265,7 @@ lemma side_rhs_fold_dg_mono_tree_deps:
   by (rule mono_tree_deps_fold_rhs_program_projected[OF wf prog_mono])
 
 text \<open>
-  The fold's Side contributions are carried only by the per-contribution Side
+  The fold's contributions are carried only by the per-contribution Side
   nodes; the accumulator flows into the final \<open>Answer\<close> (whose own sides are
   \<open>bot\<close>), so the side map is acc-independent --- the same fact
   @{thm dep_program_side_rhs_fold_dg_acc_indep} established for dependencies,
@@ -282,7 +282,7 @@ lemma sides_of_program_side_rhs_fold_dg_acc_indep:
   by (rule sides_of_program_fold_rhs_program_projected_acc_indep[OF wf])
 
 text \<open>
-  The declarative twin of \<^const>\<open>side_acc_dg\<close>: \<open>side_rhs_fold_dg\<close>'s side contribution
+  The declarative twin of \<^const>\<open>side_acc_dg\<close>: \<open>side_rhs_fold_dg\<close>'s contribution
   at any one key is a plain fold over each element's own \<^const>\<open>sides_of_rhs\<close>, seeded at
   \<open>bot\<close> rather than the running local accumulator -- @{thm
   sides_of_program_side_rhs_fold_dg_acc_indep} already shows the accumulator never affects a
@@ -364,7 +364,7 @@ subsection \<open>What one folded program contributes\<close>
 
 text \<open>
   Lower bounds, the counterpart of the upper bounds above: every folded program's
-  answer and side contribution is below the fold's, and the accumulator only
+  answer and contribution is below the fold's, and the accumulator only
   grows. A soundness proof reaches one selected contribution through these,
   having reached the fold itself through the generator.
 

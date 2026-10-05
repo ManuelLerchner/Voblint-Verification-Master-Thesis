@@ -119,9 +119,9 @@ text \<open>
 fun special_sign ::
     "special_call => vname => (vname => sign) => (vname => sign)"
 where
-  "special_sign Nondet_Int x \<sigma> = \<sigma>(x := STop)"
-| "special_sign (Min a b) x \<sigma> = \<sigma>(x := sign_min (aval_sign a \<sigma>) (aval_sign b \<sigma>))"
-| "special_sign (Max a b) x \<sigma> = \<sigma>(x := sign_max (aval_sign a \<sigma>) (aval_sign b \<sigma>))"
+  "special_sign Nondet_Int x d = d(x := STop)"
+| "special_sign (Min a b) x d = d(x := sign_min (aval_sign a d) (aval_sign b d))"
+| "special_sign (Max a b) x d = d(x := sign_max (aval_sign a d) (aval_sign b d))"
 
 definition sign_special_ops :: "sign special_ops" where
   "sign_special_ops = (| special_min = sign_min, special_max = sign_max |)"
@@ -137,7 +137,7 @@ lemma sign_special_ops_min [simp]: "special_min sign_special_ops = sign_min"
 lemma sign_special_ops_max [simp]: "special_max sign_special_ops = sign_max"
   by (simp add: sign_special_ops_def)
 
-lemma special_sign_eq_transfer: "special_sign sc x \<sigma> = sign_special.special_transfer sc x \<sigma>"
+lemma special_sign_eq_transfer: "special_sign sc x d = sign_special.special_transfer sc x d"
   by (cases sc) (simp_all add: top_sign_def)
 
 end

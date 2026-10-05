@@ -155,7 +155,7 @@ lemma buffer_eqs_apply [simp]:
 subsection \<open>The declarative reading is unchanged\<close>
 
 text \<open>Buffering is invisible to the declarative reading: the local value is untouched, and
-  the side contribution at each key is the same join as before, only emitted at a flush
+  the contribution at each key is the same join as before, only emitted at a flush
   point. That is what makes this a scheduling change and not a semantic one, wherever the
   flush points are.\<close>
 lemma traverse_rhs_flush_sides [simp]:

@@ -31,12 +31,12 @@ text \<open>Pointwise join on abstract states is idempotent because the value-do
 subsection \<open>State concretization\<close>
 
 definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store set" where
-  "gamma_state \<sigma> = {s. \<forall>x. s x \<in> \<gamma> (\<sigma> x)}"
+  "gamma_state d = {s. \<forall>x. s x \<in> \<gamma> (d x)}"
 
 adhoc_overloading gamma_S == gamma_state
 
 lemma gamma_stateI [intro]:
-  "(\<And>x. s x \<in> \<gamma> (\<sigma> x)) \<Longrightarrow> s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  "(\<And>x. s x \<in> \<gamma> (d x)) \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk>"
   unfolding gamma_state_def by simp
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
@@ -96,8 +96,8 @@ text \<open>
   \<open>env_indep_depsD\<close>). Cite it explicitly with the variable the goal needs.
 \<close>
 lemma gamma_stateD:
-  "s \<in> \<lbrakk>\<sigma>\<rbrakk> \<Longrightarrow> s x \<in> \<gamma> (\<sigma> x)"
-  for \<sigma> :: "'a::numeric_domain abs_state"
+  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s x \<in> \<gamma> (d x)"
+  for d :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def by simp
 
 subsection \<open>Witness-bottom abstract states\<close>
@@ -107,7 +107,7 @@ text \<open>
   number of a state's components can independently denote the empty set of
   concrete integers at once, and \<open>is_empty_state\<close> does not distinguish those
   cases from each other or count them. It only asks whether at least one
-  witness exists (\<open>\<exists>x. is_empty (\<sigma> x)\<close>), because one witness already
+  witness exists (\<open>\<exists>x. is_empty (d x)\<close>), because one witness already
   suffices -- \<open>gamma_state\<close>'s product structure means a single empty
   component collapses the whole state's concretization to the empty set of
   stores, so a second, third, or every remaining empty component would only
@@ -115,7 +115,7 @@ text \<open>
 
   \<open>is_empty_state\<close> is a logical characterization of that condition, not an
   executable test: \<open>'a abs_state\<close> is a raw function \<open>vname \<Rightarrow> 'a\<close>, and
-  \<^typ>\<open>vname\<close> is infinite, so \<open>\<exists>x. is_empty (\<sigma> x)\<close> has no code equation --
+  \<^typ>\<open>vname\<close> is infinite, so \<open>\<exists>x. is_empty (d x)\<close> has no code equation --
   there is no finite witness search for code generation to compile. The
   finite executable bottom test a real dispatcher runs is \<open>default_st_is_bot_for\<close>,
   defined downstream in the \<open>Voblint_Exec\<close> session, which scans only the
@@ -124,15 +124,15 @@ text \<open>
 \<close>
 
 definition is_empty_state :: "('a::executable_domain) abs_state \<Rightarrow> bool" where
-  "is_empty_state \<sigma> = (\<exists>x. is_empty (\<sigma> x))"
+  "is_empty_state d = (\<exists>x. is_empty (d x))"
 
 lemma is_empty_stateI [intro]:
-  "is_empty (\<sigma> x) \<Longrightarrow> is_empty_state \<sigma>"
+  "is_empty (d x) \<Longrightarrow> is_empty_state d"
   unfolding is_empty_state_def by (rule exI)
 
 lemma is_empty_stateE [elim]:
-  assumes "is_empty_state \<sigma>"
-  obtains x where "is_empty (\<sigma> x)"
+  assumes "is_empty_state d"
+  obtains x where "is_empty (d x)"
   using assms unfolding is_empty_state_def by blast
 
 text \<open>
@@ -143,47 +143,47 @@ text \<open>
 \<close>
 
 lemma is_empty_state_fun_upd_iff:
-  assumes "\<not> is_empty_state \<sigma>"
-  shows "is_empty_state (\<sigma>(x := a)) \<longleftrightarrow> is_empty a"
+  assumes "\<not> is_empty_state d"
+  shows "is_empty_state (d(x := a)) \<longleftrightarrow> is_empty a"
 proof
-  assume "is_empty_state (\<sigma>(x := a))"
-  then obtain y where "is_empty ((\<sigma>(x := a)) y)"
+  assume "is_empty_state (d(x := a))"
+  then obtain y where "is_empty ((d(x := a)) y)"
     by (rule is_empty_stateE)
   with assms show "is_empty a"
     by (cases "y = x") auto
 next
   assume "is_empty a"
-  then have "is_empty ((\<sigma>(x := a)) x)" by simp
-  then show "is_empty_state (\<sigma>(x := a))"
+  then have "is_empty ((d(x := a)) x)" by simp
+  then show "is_empty_state (d(x := a))"
     by (rule is_empty_stateI)
 qed
 
 lemma is_empty_state_gamma_state_empty:
-  assumes "is_empty_state \<sigma>"
-  shows "\<lbrakk>\<sigma>\<rbrakk> = {}"
+  assumes "is_empty_state d"
+  shows "\<lbrakk>d\<rbrakk> = {}"
 proof -
-  obtain x where "is_empty (\<sigma> x)" using assms by (rule is_empty_stateE)
+  obtain x where "is_empty (d x)" using assms by (rule is_empty_stateE)
   then show ?thesis
-    using gamma_stateD[of _ \<sigma> x] unfolding is_empty_correct by fastforce
+    using gamma_stateD[of _ d x] unfolding is_empty_correct by fastforce
 qed
 
 lemma gamma_state_empty_is_empty_state:
-  assumes "\<lbrakk>\<sigma>\<rbrakk> = {}"
-  shows "is_empty_state \<sigma>"
+  assumes "\<lbrakk>d\<rbrakk> = {}"
+  shows "is_empty_state d"
 proof (rule ccontr)
-  assume "\<not> is_empty_state \<sigma>"
-  then have nonempty: "\<And>x. \<exists>v. v \<in> \<gamma> (\<sigma> x)"
+  assume "\<not> is_empty_state d"
+  then have nonempty: "\<And>x. \<exists>v. v \<in> \<gamma> (d x)"
     unfolding is_empty_state_def using is_empty_correct by blast
-  define s where "s = (\<lambda>x. SOME v. v \<in> \<gamma> (\<sigma> x))"
-  have s_prop: "s x \<in> \<gamma> (\<sigma> x)" for x
+  define s where "s = (\<lambda>x. SOME v. v \<in> \<gamma> (d x))"
+  have s_prop: "s x \<in> \<gamma> (d x)" for x
     unfolding s_def using nonempty[of x] by (rule someI_ex)
-  then have "s \<in> \<lbrakk>\<sigma>\<rbrakk>"
+  then have "s \<in> \<lbrakk>d\<rbrakk>"
     unfolding gamma_state_def by simp
   with assms show False by simp
 qed
 
 lemma is_empty_state_iff_gamma_state_empty:
-  "is_empty_state \<sigma> \<longleftrightarrow> \<lbrakk>\<sigma>\<rbrakk> = {}"
+  "is_empty_state d \<longleftrightarrow> \<lbrakk>d\<rbrakk> = {}"
   using is_empty_state_gamma_state_empty gamma_state_empty_is_empty_state by blast
 
 lemma exact_emptiness_is_empty_state:
@@ -196,8 +196,8 @@ lemma is_empty_state_bot [simp]:
   using is_empty_correct gamma_bot by blast
 
 lemma is_empty_state_antimono:
-  "\<sigma>1 \<le> \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>2 \<Longrightarrow> is_empty_state \<sigma>1"
-  for \<sigma>1 \<sigma>2 :: "'a::numeric_domain abs_state"
+  "d1 \<le> d2 \<Longrightarrow> is_empty_state d2 \<Longrightarrow> is_empty_state d1"
+  for d1 d2 :: "'a::numeric_domain abs_state"
   unfolding is_empty_state_def le_fun_def using is_empty_antimono by blast
 
 end

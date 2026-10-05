@@ -11,7 +11,7 @@ text \<open>
     Odd   -- {n | odd n}
     Top   -- all integers
 
-  Four-element lattice (\<open>Bot \<sqsubseteq> Even,Odd \<sqsubseteq> Top\<close>). Finite; widen = sup.
+  Four-element lattice (\<open>Bot \<le> Even,Odd \<le> Top\<close>). Finite; widen = sup.
   This analysis does not implement backward guard refinement. Its branch transfer
   therefore preserves parity information from the incoming state.
 \<close>

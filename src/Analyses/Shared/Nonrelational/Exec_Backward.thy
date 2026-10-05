@@ -14,7 +14,7 @@ text \<open>
   filters through @{const default_st_to_fun}, proved once here so no
     domain needs to repeat the induction by hand. Each concrete domain names its
   specialization through its existing \<open>sound_refinement\<close> interpretation; Sign,
-  Interval, Congruence, and the Int product all reuse the same correspondence.
+  Interval, Congruence, and Int all reuse the same correspondence.
 \<close>
 
 subsection \<open>Standalone executable recursion, outside the semantic locale\<close>

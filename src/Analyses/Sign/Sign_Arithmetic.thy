@@ -245,45 +245,45 @@ text \<open>
 \<close>
 
 fun aval_sign :: "exp => (vname => sign) => sign" where
-    "aval_sign (N n)        \<sigma> = sign_of_int n"
-  | "aval_sign (V x)        \<sigma> = \<sigma> x"
-  | "aval_sign (Plus  a b)  \<sigma> = aval_sign a \<sigma> + aval_sign b \<sigma>"
-  | "aval_sign (Minus a b)  \<sigma> = aval_sign a \<sigma> - aval_sign b \<sigma>"
-  | "aval_sign (Times a b)  \<sigma> = aval_sign a \<sigma> * aval_sign b \<sigma>"
-  | "aval_sign (Div a b)  \<sigma> = sign_div (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
-  | "aval_sign (Mod a b)  \<sigma> = sign_mod (aval_sign a \<sigma>) (aval_sign b \<sigma>)"
-  | "aval_sign (Less a b)   \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else of_bool_option sign_of_int (sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>)))"
-  | "aval_sign (LessEq a b)   \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+    "aval_sign (N n)        d = sign_of_int n"
+  | "aval_sign (V x)        d = d x"
+  | "aval_sign (Plus  a b)  d = aval_sign a d + aval_sign b d"
+  | "aval_sign (Minus a b)  d = aval_sign a d - aval_sign b d"
+  | "aval_sign (Times a b)  d = aval_sign a d * aval_sign b d"
+  | "aval_sign (Div a b)  d = sign_div (aval_sign a d) (aval_sign b d)"
+  | "aval_sign (Mod a b)  d = sign_mod (aval_sign a d) (aval_sign b d)"
+  | "aval_sign (Less a b)   d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
+        else of_bool_option sign_of_int (sign_lt (aval_sign a d) (aval_sign b d)))"
+  | "aval_sign (LessEq a b)   d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>))))"
-  | "aval_sign (Greater a b)   \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else of_bool_option sign_of_int (sign_lt (aval_sign b \<sigma>) (aval_sign a \<sigma>)))"
-  | "aval_sign (GreaterEq a b)   \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+               (map_option HOL.Not (sign_lt (aval_sign b d) (aval_sign a d))))"
+  | "aval_sign (Greater a b)   d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
+        else of_bool_option sign_of_int (sign_lt (aval_sign b d) (aval_sign a d)))"
+  | "aval_sign (GreaterEq a b)   d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_lt (aval_sign a \<sigma>) (aval_sign b \<sigma>))))"
-  | "aval_sign (NotEq a b) \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+               (map_option HOL.Not (sign_lt (aval_sign a d) (aval_sign b d))))"
+  | "aval_sign (NotEq a b) d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
-               (map_option HOL.Not (sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>))))"
-  | "aval_sign (exp.Eq a b) \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
-        else of_bool_option sign_of_int (sign_eqb (aval_sign a \<sigma>) (aval_sign b \<sigma>)))"
-  | "aval_sign (exp.Not a)  \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) then bot
-        else of_bool_option sign_of_int (map_option HOL.Not (sign_tobool (aval_sign a \<sigma>))))"
-  | "aval_sign (And a b)    \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+               (map_option HOL.Not (sign_eqb (aval_sign a d) (aval_sign b d))))"
+  | "aval_sign (exp.Eq a b) d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
+        else of_bool_option sign_of_int (sign_eqb (aval_sign a d) (aval_sign b d)))"
+  | "aval_sign (exp.Not a)  d =
+       (if is_empty (aval_sign a d) then bot
+        else of_bool_option sign_of_int (map_option HOL.Not (sign_tobool (aval_sign a d))))"
+  | "aval_sign (And a b)    d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
-               (and_opt (sign_tobool (aval_sign a \<sigma>)) (sign_tobool (aval_sign b \<sigma>))))"
-  | "aval_sign (Or a b)     \<sigma> =
-       (if is_empty (aval_sign a \<sigma>) \<or> is_empty (aval_sign b \<sigma>) then bot
+               (and_opt (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))"
+  | "aval_sign (Or a b)     d =
+       (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
-               (or_opt (sign_tobool (aval_sign a \<sigma>)) (sign_tobool (aval_sign b \<sigma>))))"
+               (or_opt (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"

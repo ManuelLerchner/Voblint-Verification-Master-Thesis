@@ -34,16 +34,16 @@ lemma finite_report_rows [simp]: "finite (report_rows res v)"
   by (simp add: report_rows_def)
 
 definition report_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^bsub>_\<^esub>" [0, 0] 1000) where
-  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = (\<Union>\<sigma> \<in> report_rows res v. gamma_lift (report_gamma res) \<sigma>)"
+  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = (\<Union>d \<in> report_rows res v. gamma_lift (report_gamma res) d)"
 
 lemma mem_report_sem [simp]:
   "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<longleftrightarrow> (\<exists>d. Lifted d \<in> report_rows res v \<and> s \<in> report_gamma res d)"
   unfolding report_sem_def
 proof
-  assume "s \<in> (\<Union>\<sigma> \<in> report_rows res v. gamma_lift (report_gamma res) \<sigma>)"
-  then obtain \<sigma> where "\<sigma> \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) \<sigma>"
+  assume "s \<in> (\<Union>dl \<in> report_rows res v. gamma_lift (report_gamma res) dl)"
+  then obtain dl where "dl \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) dl"
     by blast
-  then show "\<exists>d. Lifted d \<in> report_rows res v \<and> s \<in> report_gamma res d" by (cases \<sigma>) auto
+  then show "\<exists>d. Lifted d \<in> report_rows res v \<and> s \<in> report_gamma res d" by (cases dl) auto
 qed (metis UN_I gamma_lift_Lifted)
 
 lemma report_semI [intro]:
@@ -54,9 +54,9 @@ lemma report_semE [elim]:
   assumes "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   obtains d where "Lifted d \<in> report_rows res v" and "s \<in> report_gamma res d"
 proof -
-  from assms obtain \<sigma> where "\<sigma> \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) \<sigma>"
+  from assms obtain dl where "dl \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) dl"
     unfolding report_sem_def by blast
-  then show ?thesis by (cases \<sigma>) (auto intro: that)
+  then show ?thesis by (cases dl) (auto intro: that)
 qed
 
 subsection \<open>One state per point\<close>
@@ -81,7 +81,7 @@ lemma mcp_gamma_v_mono: "v \<le> v' \<Longrightarrow> mcp_gamma_v as v \<subsete
 lemma fold_sup_ge: "x \<in> set xs \<or> x \<le> acc \<Longrightarrow> x \<le> fold (\<squnion>) xs (acc :: 'a::semilattice_sup)"
   by (induction xs arbitrary: acc) (auto intro: le_supI1 le_supI2)
 
-lemma report_rows_le_point_join: "\<sigma> \<in> report_rows res v \<Longrightarrow> \<sigma> \<le> report_point_join res v"
+lemma report_rows_le_point_join: "d \<in> report_rows res v \<Longrightarrow> d \<le> report_point_join res v"
   unfolding report_rows_def report_point_join_sup by (auto intro!: fold_sup_ge)
 
 text \<open>Every store the report describes at a point, the joined state describes.\<close>
@@ -153,7 +153,7 @@ text \<open>
 \<close>
 
 definition DEAD :: "analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
-  "DEAD res v \<longleftrightarrow> (\<forall>\<sigma> \<in> report_rows res v. \<sigma> = Bot)"
+  "DEAD res v \<longleftrightarrow> (\<forall>d \<in> report_rows res v. d = Bot)"
 
 subsection \<open>A consistent report\<close>
 
@@ -293,8 +293,8 @@ proof -
           (classify_point (report_classify res) (check_exp c) ` report_rows res (check_point c))
         = Dead"
     using assms unfolding consistent_report_def by auto
-  then have "\<forall>\<sigma> \<in> report_rows res (check_point c).
-               classify_point (report_classify res) (check_exp c) \<sigma> = Dead"
+  then have "\<forall>d \<in> report_rows res (check_point c).
+               classify_point (report_classify res) (check_exp c) d = Dead"
     by (simp add: aggregate_verdicts_eq_Dead_iff)
   then show ?thesis
     unfolding DEAD_def by (metis classify_point.elims lifted.distinct(1))
@@ -313,7 +313,7 @@ proof
   from assms(2) obtain c where c: "c \<in> set (report_checks res)" "check_point c = v"
     and verdict: "check_verdict c = Decided Check_Unknown"
     unfolding HAS_VERDICT_def report_checks_at_def by blast
-  have "\<forall>\<sigma> \<in> report_rows res v. classify_point (report_classify res) (check_exp c) \<sigma> = Dead"
+  have "\<forall>d \<in> report_rows res v. classify_point (report_classify res) (check_exp c) d = Dead"
     using dead unfolding DEAD_def by auto
   then have "aggregate_verdicts
                (classify_point (report_classify res) (check_exp c) ` report_rows res v) = Dead"
@@ -378,25 +378,25 @@ proof -
   qed
   show ?thesis
   proof (intro equalityI subsetI)
-    fix \<sigma>
-    assume "\<sigma> \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
-    then show "\<sigma> \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
+    fix d
+    assume "d \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
+    then show "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
       unfolding report_rows_def report_of_def Let_def by (auto simp: table_contexts_iff)
   next
-    fix \<sigma>
-    assume "\<sigma> \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
+    fix d
+    assume "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
     then obtain ctx where cov: "(v, ctx) \<in> covered_keys r"
-      and \<sigma>: "\<sigma> = lookup_table r v ctx"
+      and d: "d = lookup_table r v ctx"
       by (auto simp: r_def table_contexts_iff)
     from cov ctxs have "ctx \<in> set ctxs" by force
     then obtain i where i: "(i, ctx) \<in> set (enumerate 0 ctxs)" using indexed by blast
     have w: "v \<in> set nodes" using nodes[OF cov] .
-    show "\<sigma> \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
+    show "d \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
       unfolding report_rows_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
         nodes_def[symmetric]
       apply (simp only: analysis_report.select_convs)
       apply (rule image_eqI[rotated], rule CollectI, rule conjI, rule row_in_rows[OF i w])
-      using cov \<sigma> by (simp_all add: r_def)
+      using cov d by (simp_all add: r_def)
   qed
 qed
 

@@ -8,7 +8,7 @@ text \<open>
   The activation context is computed from the concrete trace after the fact and is
   activation-stable: fixed when the activation is created and unchanged by the calls it
   later makes and returns from.  \<^const>\<open>Root\<close> carries the seed; a \<^const>\<open>Call\<close> routes the
-  caller context on the call site and the callee-entry store --- \<open>sink_node parent\<close> is
+  caller context on the call site and the entered store --- \<open>sink_node parent\<close> is
   exactly the call site, since \<^const>\<open>extend\<close> only ever appends to the callee path and
   leaves \<open>parent\<close> frozen there; a \<^const>\<open>Resume\<close> keeps the resumed caller's own context, so
   a completed call does not repartition the caller.  Exposing the call site to \<open>enterc\<close> is
@@ -56,7 +56,7 @@ text \<open>
 
   A functional policy --- the unit context, a k-call-string --- is the graph of a function,
   \<open>call_context_rel_of_fun\<close>.  The abstract selector an analysis actually runs stays a
-  function of the abstract entry value; only the activation-trace semantics is relational.
+  function of the abstract entry state; only the activation-trace semantics is relational.
 \<close>
 
 type_synonym 'c call_context_rel =
@@ -340,7 +340,7 @@ proof -
 qed
 
 text \<open>The context of an activation is exactly what \<open>enterc\<close> computes from its immediate
-  caller's own context and the callee-entry store.  This is what lets a RETURN argument
+  caller's own context and the entered store.  This is what lets a RETURN argument
   construct the callee's context directly from the caller's chosen one, rather than
   rediscovering it after the fact. A special case of \<open>activation_context_rel_caller_entry\<close> at
   the functional relation \<^const>\<open>call_context_rel_of_fun\<close>, where \<open>activation_context_rel_of_fun_iff\<close>

@@ -29,8 +29,8 @@ context policy and update rule. Each domain tests a different part of the
 interface. Sign is finite, so
 its join serves as its widening. Interval is infinite and needs widening and
 narrowing. Parity refines guards through parity alone. Congruence has an exact meet. The
-product Int combines the four under a partial reduction. A relational carrier
-(@sec:relational) asks whether the contract depends on pointwise states at all,
+reduced-product domain Int combines the four under a partial reduction. A relational carrier
+(@sec:relational) asks whether the analysis contract depends on pointwise states at all,
 and as the order analysis it cooperates with the numeric domains through the
 queries of @ch:cooperation.
 
@@ -258,7 +258,7 @@ fun main() {
   ),
   caption: [The stride-2 loop under each domain (claims #claim-ref("dom-stride2-*")). No
     single component proves `v == 51`: Interval has the bound, Parity and
-    Congruence have the oddness. The reduced product `int` combines them.],
+    Congruence have the oddness. Int combines them.],
 ) <fig:stride2>
 
 Sign is finite, so a plain join serves as its widening.
@@ -454,8 +454,8 @@ Its state is a set of variable pairs $(x, y)$, each meaning $x lt.eq y$: the
 relational state #isatype("relc") of @sec:rel-state. It asks whether the
 generic interface admits a local state that is not a map from variables to
 values. It does, without any change to the framework. The specification
-#isaconst("rel_order_spec") discharges the analysis soundness contract
-#isalocale("analysis_contract") of the numeric analyses, because the contract
+#isaconst("rel_order_spec") discharges the analysis contract
+#isalocale("analysis_contract") of the numeric analyses, because the analysis contract
 already ranges over arbitrary local and shared carriers with a joint
 concretization (@ch:analysis-interface). On
 `if (x < y) { z = 1; } else { z = 0; }` with $x$ and $y$ unconstrained,

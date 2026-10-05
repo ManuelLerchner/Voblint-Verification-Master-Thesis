@@ -149,7 +149,7 @@ where
 text \<open>
   Every contribution runs its continuation once, given that each hook does.
   The fold's observation lemmas all carry that side condition, and this is
-  where a generator instance discharges it: the hooks a routing policy
+  where a generator instance discharges it: the hooks a context policy
   supplies are built from \<^const>\<open>sp_return\<close>, the reads and \<^const>\<open>sp_publish\<close>,
   whose closure lemmas fire by \<open>simp\<close>.
 \<close>
@@ -879,7 +879,7 @@ text \<open>
   The three
   @{const TD_side_mono} preconditions reduce to a per-program contract on the
   intra, combine, and extra hooks, discharged once here and reusable at every
-  routing policy --- a routed context policy is then a second interpretation
+  context policy --- a routed context policy is then a second interpretation
   of this reduction, not a second monotonicity proof. The outer @{const Side}
   wrapper at @{term "cfg_entry g"} is invisible to @{const traverse_rhs} and
   @{const dep_aux} (a \<^const>\<open>Side\<close> node only ever repackages, never queries);

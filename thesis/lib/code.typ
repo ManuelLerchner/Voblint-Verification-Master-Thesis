@@ -175,11 +175,14 @@
   k: 1,
   placement: "flow-sensitive",
   refinement: "fixpoint",
+  trace: "off",
 ) = {
   let query = "?analysis=" + analysis + "&globals=" + globals + "&context=" + ctx
   if ctx == "call-string" { query += "&k=" + str(k) }
   if placement != "flow-sensitive" { query += "&placement=" + placement }
   if refinement != "fixpoint" { query += "&refinement=" + refinement }
+  // "verbose" opens the solver trace, as the playground's Share link does.
+  if trace != "off" { query += "&trace=" + trace }
   playground-base + query + "#code=" + _base64url(_deflate-stored(array(bytes(program))))
 }
 

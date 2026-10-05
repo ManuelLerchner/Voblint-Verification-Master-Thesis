@@ -174,8 +174,8 @@ an interpreter, a handler stack or a monad stack between the concrete and the
 abstract semantics. Voblint mechanizes a three-way split between analysis,
 context policy and solver for a constraint-based analyzer, with one composition
 theorem, #isathm("activation_collect_dg_sound"), instantiated for every shipped
-configuration. Lammich and Müller-Olm prove precision of their analysis for
-every program. Voblint's precision statements compare two configurations on
+analysis configuration. Lammich and Müller-Olm prove precision of their analysis for
+every program. Voblint's precision statements compare two analysis settings on
 one program.
 
 == Verified fixpoint solvers <sec:rel-solvers>
@@ -270,7 +270,7 @@ Voblint follows Goblint's architecture and the local-trace semantics of its
 research line. This section names what it adopts and where it departs.
 
 Side-effecting constraint systems let one equation both define a local unknown
-and contribute to global unknowns @apinis12. Seidl et al. @seidl26
+and publish contributions to global unknowns @apinis12. Seidl et al. @seidl26
 describe how Goblint uses them to decouple a mixed flow-sensitive analysis from
 the solver, with digests on the analysis side and update rules on the solver
 side recovering precision. Voblint adopts the split: an analysis supplies local

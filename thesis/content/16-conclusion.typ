@@ -29,7 +29,7 @@ one place, and outlines future work.
 Several design choices trade one cost for another. A context relation lets entry-state routing read contexts
 off the analysis's result, at the price of the obligation #oblig("TOTAL").
 Functional policies embed as relations and satisfy it directly
-(#isaconst("call_context_rel_of_fun")). Stating the contract over an
+(#isaconst("call_context_rel_of_fun")). Stating the analysis contract over an
 environment of analysis globals lets the flow-insensitive placement give each
 program global its own unknown, so a write wakes only the readers of that
 global. The price is a frame obligation on the carrier: a store that agrees on
@@ -47,7 +47,7 @@ stated over right-hand sides and unknowns and mentions no VIMP construct. The
 coverage contract has one obligation per rule of #isaconst("valid_activation_trace") and
 refers to VIMP only through the graph, its stores and three step functions,
 #isaconst("edge_step"), #isaconst("call_enter") and #isaconst("combine_collect")
-(@sec:contract). We therefore expect the contract's shape,
+(@sec:contract). We therefore expect the coverage contract's shape,
 the theorem that the contexts exhaust the node collecting semantics and the
 composition of @sec:eq-discharge to carry over to a
 language whose activations do not interfere, with the step
@@ -78,7 +78,7 @@ boundary unless verified.
 For other verified analyzers, the development suggests an order of work. State
 soundness against a context-free trace semantics and read contexts off traces,
 so that policies are proved against one fixed semantics. Consume the solver
-through a certificate that also bounds side contributions and closes the
+through a certificate that also bounds published contributions and closes the
 reached set (@sec:certificate). Export the constant the theorem is about.
 Counterexample theorems for weakened obligations are easy to state, and two
 of them determined the shape of the call interface (@sec:revealed).
@@ -87,7 +87,7 @@ of them determined the shape of the call interface (@sec:revealed).
 
 The first limits concern what the theorem covers. It is a partial-correctness
 result: it covers every answer the analyzer returns, and termination is proved
-neither for the solve nor for the reduction of the Int product, so regression
+neither for the solve nor for the reduction of Int, so regression
 programs exist whose solves do not finish (@sec:termination,
 @sec:reduced-product). It concerns VIMP, a scalar language without pointers,
 heap or memory model, with unbounded integers, defined division by zero and
@@ -119,10 +119,11 @@ the vendored solver and require its proof to be redone, while the rest of the
 chain uses the solver only through its certificate (@sec:certificate).
 
 The evidence beyond the theorem is narrow. Each counterexample theorem weakens
-one selected condition on one program, and none shows that the contract as a
+one selected condition on one program, and none shows that the coverage contract as a
 whole is minimal (@sec:falsification). No general precision, optimality or
-completeness theorem is proved, and each precision witness concerns one program
-at fixed configurations (@sec:eval-precision). The regression corpus is small
+completeness theorem is proved, where completeness would mean that every check
+that holds in all executions is reported as proved, and each precision witness concerns one program
+with fixed analysis settings (@sec:eval-precision). The regression corpus is small
 and written for this work, and its expected behaviour is the author's reading
 of each program (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was
 not re-run, and the playground is illustrative; no study measures whether it
@@ -139,6 +140,27 @@ A richer source language, up to a subset of C, needs the new
 obligations that @sec:discussion names for machine integers, pointers, a heap
 and threads, and a semantics and a preservation argument per construct at
 every layer.
+
+Such a language would benefit from an elaboration phase between the parser and
+the compiler. Already for VIMP, the source-level theorem only asserts that
+_some_ node $v$ is related to the reached source configuration (@sec:headline).
+The existential is forced by the representation. A residual command records
+nothing about the occurrence it came from, so two equal assignments in one body
+are indistinguishable, and #isaconst("control_at") can only place a residual at
+some node of a fragment that produced it (@sec:csim). An elaboration phase would
+annotate every statement with the node the compiler emits for it, and the
+source semantics would run the annotated program. Each source configuration would then
+name its node, and the theorem could state its conclusions at that node without
+an existential. The compiler already numbers its statement nodes
+deterministically (#isaconst("csize"), #isaconst("prog_stmt_post_order")). If
+elaboration and compilation shared this numbering, annotated and emitted nodes
+would agree by construction instead of through a correspondence proof. The same
+phase is where a C-like front end resolves names to declarations, fixes the type
+of every expression and makes implicit conversions explicit, so that the
+compiler and the analyses never reconstruct them. Annotated syntax that is
+parametric in its variable and expression types would let such resolution and
+typing be added later without changing the statement nodes or the location
+proof.
 
 On the analysis side, the order analysis drops the pairs of an assigned variable before
 relearning some by asking, and it keeps nothing across calls. A useful relational domain needs its own transfer proofs, and
@@ -159,7 +181,7 @@ activation traces would allow path- or history-sensitive unknowns, each
 with its own admissibility conditions.
 
 Voblint adapts its equations to the interface of the vendored solver
-(@sec:eq-encoding). A version of the solver that side-effects local unknowns
+(@sec:eq-encoding). A version of the solver that publishes to local unknowns
 and joins the writes of one evaluation per target, as Goblint's solvers do,
 would let callers publish into callee entries directly and make activation
 seeds and buffering unnecessary. It would need its partial-correctness proof

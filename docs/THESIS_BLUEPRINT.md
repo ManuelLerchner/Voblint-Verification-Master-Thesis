@@ -242,7 +242,7 @@ compiler-free. `dg_state` (opaque `D`/`G`), the manager (`man_local`,
 `routed_node_rhs` (and its buffered production variant), `Activation_Backbone`
 (the `activation_coverage` obligations in global shape), `DG_Ctx_Activation` (EDGE and
 COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
-discharged once for any routing policy), the check layers, and the result table.
+discharged once for any context policy), the check layers, and the result table.
 
 **`Voblint_Exec`.** The gap between what soundness talks about and what the
 solver computes on. `default_st` is a quotient type over
@@ -524,7 +524,7 @@ membership. Termination for every program is not proved.
 
 The one seam between Voblint and the vendored solver is
 `part_post_solution` — a two-part certificate (the local answer bounds the
-right-hand side; every side contribution bounds its target key; dependencies
+right-hand side; every contribution bounds its target key; dependencies
 stay inside the covered set). `activation_collect_dg_sound` consumes it and
 never asks how it was produced, which is what makes the collecting-soundness
 argument solver-independent.
@@ -1080,7 +1080,7 @@ that way.** It is discharged in five named steps, each in a different session:
 | --- | --- | --- |
 | `activation_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
 | `dg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
-| `routed_context` | CALL, COMB, for any routing policy | `Voblint_Framework.Routed_Context` |
+| `routed_context` | CALL, COMB, for any context policy | `Voblint_Framework.Routed_Context` |
 | `dg_analysis` / `dg_analysis_exec` | the published table and the source bridge | `Voblint_Result` |
 | `covered_table` + `sound_classifier` / `run_voblint_source_sound` | the configuration-level statement | `Voblint_CLI` |
 
@@ -1289,7 +1289,7 @@ PART III — THE ANALYZER
   7.2 Keyed unknowns: one program point, several contexts
   7.3 The call protocol: enter, seed, exit read, combine
   7.4 Why the callee entry is a global proxy, and what that costs
-  7.5 Routing policies: monovariant, call strings, entry state
+  7.5 Context policies: monovariant, call strings, entry state
   7.6 Discharging CALL and RETURN once (routed_context)
   7.7 Side buffering: why one right-hand side must not name a key twice
   7.8 Context spaces: which policies can be finite

@@ -51,12 +51,12 @@ lemma restrict_global_for_restrict_local_for_bot [simp]:
   unfolding restrict_local_for_def restrict_global_for_def by (rule ext) simp
 
 lemma restrict_local_for_global_join [simp]:
-  "restrict_local_for \<G> \<sigma> \<squnion> restrict_global_for \<G> \<sigma> = \<sigma>"
+  "restrict_local_for \<G> d \<squnion> restrict_global_for \<G> d = d"
   unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
   by (rule ext) simp
 
 lemma restrict_global_for_local_join [simp]:
-  "restrict_global_for \<G> \<sigma> \<squnion> restrict_local_for \<G> \<sigma> = \<sigma>"
+  "restrict_global_for \<G> d \<squnion> restrict_local_for \<G> d = d"
   unfolding restrict_local_for_def restrict_global_for_def sup_fun_def
   by (rule ext) simp
 

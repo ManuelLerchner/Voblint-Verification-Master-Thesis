@@ -49,7 +49,7 @@ Apinis et al. formulate them as a constraint system @apinis12[§3].
 Seidl et al. state that the invariant for $[u, c]$ "only need[s] to take into
 account executions reaching $u$ that satisfy the restriction imposed by context
 $c$" @seidl26[§4]. Such a claim states that every store of an execution in
-context $c$ at node $v$ is described by the abstract value that the analysis
+context $c$ at node $v$ is described by the abstract state that the analysis
 computes for $[v, c]$.
 
 Take the running example (@fig:program-to-equations): `main` calls `bump(5)`
@@ -63,7 +63,7 @@ activations of `bump` use the same nodes, but they were entered
 by different calls, and a context policy may use exactly that entry information
 to tell them apart.
 
-The graph execution (@sec:cstep) already has a call stack. This stack stores
+The graph execution (@sec:cstep) already has a frame stack. This stack stores
 only what is needed to resume suspended callers. Activation traces keep
 more of the history. Because a callee trace keeps its creating caller and a
 resumed trace keeps both caller and callee, the context relation can choose a
@@ -227,7 +227,7 @@ We turn the grouping of @fig:flat-nested into a datatype.
 
 $#Root($pi$)$ is the initial activation of the program with activation path $pi$.
 $#CallT($tau'$, $pi$)$ is a callee created by the caller $tau'$
-(#isaconst("activation_trace_caller")); its activation path begins at the callee's entry store.
+(#isaconst("activation_trace_caller")); its activation path begins at the callee's entered store.
 $#ResumeT($tau'$, $tau''$, $pi$)$ is the activation $tau'$
 (#isaconst("activation_trace_current")) continued past the call that produced the finished
 callee $tau''$ (#isaconst("activation_trace_callee")). The observer
@@ -390,12 +390,12 @@ resulting callee entry state to the analysis's `context` operation
 (@sec:eval-goblint), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
 
 Voblint models context membership as a relation, for two reasons. First,
-with entry-state contexts the context of a call is an abstract value the
+with entry-state contexts the context of a call is an abstract state the
 analysis computes, so which context a concrete call belongs to depends on the
 analysis's result and not on the execution alone (@sec:eq-entry-routing).
 Second, the relation may admit no context for a call, for instance a call the
 analysis's entry does not cover. A context function would have to return one.
-Keeping this case expressible lets the contract state separately, as
+Keeping this case expressible lets the coverage contract state separately, as
 #oblig("TOTAL") (@sec:contract), that every covered call is admitted
 somewhere. For the shipped policies, a concrete call admits at most one callee
 context from a fixed caller context.
@@ -490,7 +490,7 @@ Soundness needs neither functional contexts nor disjoint sets. The claim for
 each context only has to cover that context's set. A store in the sets of two
 contexts is covered twice, once by each claim. The end-to-end argument does
 need the sets of all contexts together to cover the node collecting semantics,
-since a store in none of them would escape every claim. The contract establishes the stronger sufficient property that every valid
+since a store in none of them would escape every claim. The coverage contract establishes the stronger sufficient property that every valid
 trace carries at least one context (#isathm("activation_coverage.valid_activation_trace_has_context")).
 
 // The grey region is the collecting semantics at the node; the context
@@ -533,13 +533,13 @@ trace carries at least one context (#isathm("activation_coverage.valid_activatio
 == The coverage contract <sec:contract>
 
 We want a claim #isai("cover") $v$ $c$ that contains every store of
-#isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c"), a set of stores for each node and context. The contract
+#isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c"), a set of stores for each node and context. The coverage contract
 below reduces this to local conditions. Like the
 collecting semantics, a claim is a mathematical object. Its sets of stores may
 be infinite, so the analyzer does not compute it directly. The following chapters turn the solver's result into an abstract reader indexed
 by $(v, c)$; only the unknowns the solver encounters need to be computed. In
 the routed instance, #isai("cover v c") is the concretization of the value this
-reader returns for $(v, c)$ (@ch:equations). The contract below is therefore the interface between the
+reader returns for $(v, c)$ (@ch:equations). The coverage contract below is therefore the interface between the
 analyzer and the concrete semantics. It mentions only stores and no abstract
 domain.
 
@@ -598,7 +598,7 @@ at one call.
 #oblig("TOTAL") protects the union over all contexts (@fig:buckets). If $R$
 admits no context for a call, the resulting
 callee trace carries no context and contributes to no context's set. Unless another
-trace with a context reaches the same store, the union misses it. The contract
+trace with a context reaches the same store, the union misses it. The coverage contract
 therefore requires every covered call state to admit at least one callee
 context.
 
@@ -720,10 +720,10 @@ Isabelle states the obligations as the assumptions of the locale
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
 ) <fig:activation-coverage>
 
-== What the contract gives <sec:consequences>
+== What the coverage contract gives <sec:consequences>
 
-The contract has two consequences. First, each context's set of stores lies
-inside that context's claim, which is the per-context soundness statement. Second, under the full contract, #oblig("TOTAL") supplies the existence step
+The coverage contract has two consequences. First, each context's set of stores lies
+inside that context's claim, which is the per-context soundness statement. Second, under the full coverage contract, #oblig("TOTAL") supplies the existence step
 that shows every valid trace carries at least one context, so the
 union over all contexts is exactly the node collecting semantics
 (@fig:buckets).
@@ -739,7 +739,7 @@ hypothesis is strengthened to every trace on the chain of creating callers
 
 #block(breakable: false)[
   #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-    Assume that the claim meets the contract, that is, the locale
+    Assume that the claim meets the coverage contract, that is, the locale
     #isalocale("activation_coverage") holds for it (its five obligations).
     Then for every node $v$ and context $c$,
     #align(center, isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c \<subseteq> cover v c"))
@@ -768,7 +768,7 @@ sound claim that must cover the whole node, as "result $6$ in context $5$" for
 `bump`, while the union over all contexts still contains every store of the
 node collecting semantics. For the abstract side, Apinis et al. @apinis12[§3] observe that after local
 solving, a program point can only be reached by
-abstract values bounded by the join of the partial solution's values at that
+abstract states bounded by the join of the partial solution's values at that
 point over the contexts that the solver encountered. Here we make the corresponding concrete sets explicit for our relational
 trace semantics and prove that each is covered by its claim.
 

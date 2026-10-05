@@ -735,7 +735,7 @@ subsubsection \<open>The one entry alternative this carrier answers with\<close>
 text \<open>
   The specification's entry answers with a single alternative, the recombined
   caller state and the callee frame entered from it, each split back by the
-  placement. \<open>entry_cover\<close> is the only fact about it any routing policy needs,
+  placement. \<open>entry_cover\<close> is the only fact about it any context policy needs,
   namely that a concrete call from a described caller lands in the described
   callee.
 \<close>

@@ -434,11 +434,11 @@ subsection \<open>Local-only combine\<close>
 
 text \<open>
   The combine counterpart: a pure function of the caller-continuation and
-  callee-exit values, no global contact. When both stages --- \<open>combine_env\<^sup>#\<close>
+  callee exit states, no global contact. When both stages --- \<open>combine_env\<^sup>#\<close>
   and \<open>combine_assign\<^sup>#\<close> --- are local, the whole return pipeline collapses
   monadically to one pure composition -- the sequencing updates
   \<^const>\<open>man_local\<close> and extracts nothing -- and the
-  compiled combine tree is two reads and an answer, with no side contribution
+  compiled combine tree is two reads and an answer, with no contribution
   and dependencies exactly the two sources.
 \<close>
 

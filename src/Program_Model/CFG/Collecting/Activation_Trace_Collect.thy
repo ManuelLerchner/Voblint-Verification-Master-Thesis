@@ -212,7 +212,7 @@ text \<open>
   \<^const>\<open>valid_activation_trace\<close> and \<^const>\<open>node_collect\<close> are defined over an arbitrary graph, and every
   soundness statement downstream is an over-approximation claim about them; if they were
   empty, all of it would hold vacuously.  A two-node graph with one assignment edge settles
-  that inside this session, without borrowing a graph from the compiler: the entry store is
+  that inside this session, without borrowing a graph from the compiler: the initial store is
   collected at the entry, and the assigned store is collected one edge later.
 \<close>
 

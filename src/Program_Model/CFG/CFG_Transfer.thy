@@ -57,7 +57,7 @@ subsection \<open>Call-entry transfer\<close>
 text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in the caller store,
   the callee locals are reset (\<^const>\<open>enter_state\<close>, globals preserved), and the resulting
   values are bound to the callee formals.  All payload comes from the \<open>CallEdge\<close>, so the
-  transfer needs no procedure table.  This is exactly the callee-entry store produced by the
+  transfer needs no procedure table.  This is exactly the entered store produced by the
   source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
 
 definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where

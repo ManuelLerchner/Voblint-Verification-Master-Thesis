@@ -9,7 +9,7 @@ text \<open>
   carrier \<open>'d\<close> and therefore does not support a polymorphic bind.
   \<open>strategy_program\<close> supplies a continuation-based typed interface: a
   program may produce any result type \<open>'a\<close> while its generated vendor tree
-  continues to use \<open>'d\<close> for solver values and side contributions.
+  continues to use \<open>'d\<close> for solver values and contributions.
   \<open>sp_compile_with\<close> encodes the final result into \<open>'d\<close> and produces the vendor
   tree consumed by the solver.
 \<close>
@@ -54,7 +54,7 @@ text \<open>
   -- as the program that runs it and continues, by recursing over the tree's
   own constructors directly: an \<open>Answer\<close> becomes a pure result, a
   \<open>QueryL\<close>/\<open>QueryG\<close> becomes a read continuing into the lifted subtree, a
-  \<open>Side\<close> becomes a published side contribution continuing into the lifted
+  \<open>Side\<close> becomes a published contribution continuing into the lifted
   subtree. Defined directly against the constructors, its primitive-recursion
   equations are already the normal form needed by proofs about vendor trees.
 \<close>

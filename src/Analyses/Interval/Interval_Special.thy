@@ -15,9 +15,9 @@ subsection \<open>Special-call dispatch\<close>
 fun special_ivl ::
     "special_call => vname => (vname => ivl) => (vname => ivl)"
 where
-  "special_ivl Nondet_Int x \<sigma> = \<sigma>(x := ivl_top)"
-| "special_ivl (Min a b) x \<sigma> = \<sigma>(x := ivl_min (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))"
-| "special_ivl (Max a b) x \<sigma> = \<sigma>(x := ivl_max (aval_ivl a \<sigma>) (aval_ivl b \<sigma>))"
+  "special_ivl Nondet_Int x d = d(x := ivl_top)"
+| "special_ivl (Min a b) x d = d(x := ivl_min (aval_ivl a d) (aval_ivl b d))"
+| "special_ivl (Max a b) x d = d(x := ivl_max (aval_ivl a d) (aval_ivl b d))"
 
 definition ivl_special_ops :: "ivl special_ops" where
   "ivl_special_ops = (| special_min = ivl_min, special_max = ivl_max |)"
@@ -33,7 +33,7 @@ lemma ivl_special_ops_min [simp]: "special_min ivl_special_ops = ivl_min"
 lemma ivl_special_ops_max [simp]: "special_max ivl_special_ops = ivl_max"
   by (simp add: ivl_special_ops_def)
 
-lemma special_ivl_eq_transfer: "special_ivl sc x \<sigma> = ivl_special.special_transfer sc x \<sigma>"
+lemma special_ivl_eq_transfer: "special_ivl sc x d = ivl_special.special_transfer sc x d"
   by (cases sc) (simp_all add: top_ivl_def)
 
 end

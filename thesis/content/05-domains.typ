@@ -588,30 +588,32 @@ symbol serves every kind of state, and the type of $d$ selects its definition
 @ch:analysis-interface states the analysis for an arbitrary abstract state
 and makes these requirements formal. Two kinds of abstract state are common, and this thesis uses both.
 
-A _non-relational_, or pointwise, state gives each variable its own
+A _non-relational_ state describes each variable independently. It is
+represented pointwise, which gives each variable its own
 abstract value and reuses a numeric domain unchanged. A _relational_ state records how variables relate to each other. They differ in what
-they can state. Take the stores with $0 <= x <= y <= 5$. The best pointwise
+they can state. Take the stores with $0 <= x <= y <= 5$. The best non-relational
 state over intervals is ${x |-> ivl(0, 5), y |-> ivl(0, 5)}$. It shows
 $x >= 0$ and $y <= 5$, but not $x <= y$, since it also admits $x = 5, y = 0$.
 A relational state that records $x <= y$ shows exactly that fact, but
 bounds neither variable, so it also admits $x = y = -7$. Neither state is stronger than the other. Together they describe exactly the given set. The numeric analyses of this
-thesis use pointwise states, the order analysis uses a relational state, and
+thesis use non-relational states, the order analysis uses a relational state, and
 @ch:cooperation shows how Voblint combines them.
 
 
 === A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
 
-A pointwise state replaces the integer of a store by an abstract value:
-#isatype("abs_state") $=$ #isatype("vname") $=>$ `'a`, so a state $sigma$ maps
-every variable name $x$ to $sigma(x)$. When the state is clear, we write
-$x = a$ for $sigma(x) = a$, as in $x = signval(top)$. Its concretization is
+A non-relational state is represented pointwise. It replaces the integer of a
+store by an abstract value:
+#isatype("abs_state") $=$ #isatype("vname") $=>$ `'a`, so a state $d$ maps
+every variable name $x$ to $d(x)$. When the state is clear, we write
+$x = a$ for $d(x) = a$, as in $x = signval(top)$. Its concretization is
 #isaconst("gamma_state"), the set of stores whose every variable lies in the
 concretization of its abstract value,
-$ sem(sigma) = setcomp(s, forall x. s(x) in conc(sigma(x))). $
+$ sem(d) = setcomp(s, forall x. s(x) in conc(d(x))). $
 Order and join work variable by variable (@fig:pointwise). A
 pointwise state denotes no store exactly when one of its variables has an
 empty value:
-$ sem(sigma) = emptyset <==> exists x. isai("is_empty") (sigma(x)), $
+$ sem(d) = emptyset <==> exists x. isai("is_empty") (d(x)), $
 which #isathm("is_empty_state_iff_gamma_state_empty") proves for the predicate
 #isaconst("is_empty_state").
 
@@ -649,7 +651,7 @@ which #isathm("is_empty_state_iff_gamma_state_empty") proves for the predicate
   kind: image,
   placement: none,
   caption: [Pointwise states over two variables, each pair giving
-    $(sigma(x), sigma(y))$ with values from the fragment
+    $(d(x), d(y))$ with values from the fragment
     $signval(bot) lle signval("0") lle signval(top)$ of Sign, ordered
     variable by variable. The dashed states have a #signval($bot$) component and
     denote no store, although only the lowest one is the bottom state.],
@@ -703,7 +705,7 @@ unreachable.
 
 Voblint therefore makes unreachability a value of its own. A lifted state
 (#isatype("lifted")) is either #ctor("Bot"), meaning unreachable, or
-$ctor("Lifted")(sigma)$ for an ordinary state $sigma$, with #ctor("Bot") below
+$ctor("Lifted")(d)$ for an ordinary state $d$, with #ctor("Bot") below
 every other value and $sem(ctor("Bot")) = emptyset$.
 After every transfer, the analysis tests whether the result is empty and, if
 so, replaces it by #ctor("Bot") (#isaconst("normalize_lift")). From then on
@@ -1147,7 +1149,7 @@ a relation. On the true arm of `if (x < y)`, the relational state of
 @sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), which is
 again the meet of its current value with $ctor("RelC"){x <= y}$. The carrier
 stores only weak orders, so the strictness of $x < y$ is lost, which is sound
-but less precise. A pointwise
+but less precise. A non-relational
 state learns nothing there when $x$ and $y$ are unbounded, since $x < y$ bounds
 neither variable on its own (@sec:relational).
 
@@ -1156,7 +1158,7 @@ never remove a store that satisfies the condition.
 
 #block(breakable: false)[
   #theorem(name: [Sound guard filter], isa: "bfilter_sound")[
-    If a store $s$ lies in $sem(sigma)$ and the guard $e$ has truth value
+    If a store $s$ lies in $sem(d)$ and the guard $e$ has truth value
     #isai("res") at $s$, then $s$ lies in the meaning of the filtered state.
   ]
 

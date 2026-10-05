@@ -57,7 +57,7 @@ from an ancestor heap rather than re-deriving them.
 
 [`Analyses/Shared/`](Analyses/Shared/) holds what every domain reuses, as three
 sessions chained `Routing -> Result -> Nonrelational` on top of `Voblint_Exec`: the
-routing policies, the publication surface with the source-level endpoints, and the
+context policies, the publication surface with the source-level endpoints, and the
 reuse locales a *non-relational* domain interprets.
 `Voblint_Nonrelational` is the parent of [`Sign/`](Analyses/Sign/),
 [`Interval/`](Analyses/Interval/), [`Parity/`](Analyses/Parity/),

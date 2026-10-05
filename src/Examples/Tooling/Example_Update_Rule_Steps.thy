@@ -7,7 +7,7 @@ begin
 section \<open>One global under the five update rules, contribution by contribution\<close>
 
 text \<open>
-  The update rules differ only in how they merge a side contribution into a global
+  The update rules differ only in how they merge a contribution into a global
   unknown. Feeding the same contributions to each rule, outside any solver run, shows
   that difference directly: the values below are what the vendored rules compute,
   selected through \<^const>\<open>update_global_of\<close> and instantiated at the interval domain.

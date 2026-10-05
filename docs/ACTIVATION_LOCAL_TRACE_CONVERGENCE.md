@@ -45,7 +45,7 @@ with the expected result `y = 20`. The existing activation soundness theorem the
 not merely prove an empty-set inclusion for this example.
 
 The problem is compositionality. At the second return, the current `combine` rule requires a
-callee trace whose head is the bound entry store for `twice(10)`. The witness can satisfy this
+callee trace whose head is the bound entered store for `twice(10)`. The witness can satisfy this
 by constructing a separate whole-program execution re-rooted at a store where `p = 10`, then
 splicing that execution into the caller trace.
 
@@ -146,7 +146,7 @@ datatype ltr =
 ```
 
 - `Root` represents the main activation.
-- `Call caller path` represents a callee whose local path starts at the bound entry store;
+- `Call caller path` represents a callee whose local path starts at the bound entered store;
   the embedded `caller` is the exact suspended caller activation, **frozen at the call node**
   (the value it had when it took the enter edge; it is never mutated while suspended).
 
@@ -155,7 +155,7 @@ datatype ltr =
   - *Creation invariant*: a newly created activation has path `[(fe, se)]`, the single bound
     entry step produced by the `call` rule (`se = edge_step (EA_Enter ...) ...`).
   - *Representation invariant*: subsequent intra transitions extend that path, so a valid `Call`
-    has a **non-empty** path whose head is the bound entry store — not necessarily a singleton.
+    has a **non-empty** path whose head is the bound entered store — not necessarily a singleton.
 
   The Stage-1 theorem is the representation invariant (`valid_ltr_Call_path_nonempty`); the
   singleton form holds only at the instant of creation. Reading `Call caller [(fe,se)]` in the
@@ -615,7 +615,7 @@ Start from this document, not from the historical design records. The first impl
 Non-negotiable invariants:
 
 - every callee is created by a concrete caller and an `EA_Enter` edge;
-- that entry store is the result of `edge_step`, retaining `bind_formals`;
+- that entered store is the result of `edge_step`, retaining `bind_formals`;
 - every return identifies its exact caller structurally, through `caller_of callee = Some caller`,
   for a completed callee of **any** constructor (`Call` or `Resume`) — never by requiring the
   callee to still be a bare `Call`;

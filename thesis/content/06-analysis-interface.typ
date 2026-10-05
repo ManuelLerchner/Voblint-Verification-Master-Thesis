@@ -13,7 +13,7 @@
 = What an Analysis Supplies <ch:analysis-interface>
 
 @ch:traces reduced soundness to five obligations over sets of stores, and
-@ch:domains supplied finite abstract values that represent such sets. An analysis connects
+@ch:domains supplied finite abstract states that represent such sets. An analysis connects
 the two, but only part of an abstract interpreter is specific to it. Some parts
 are the same for every analysis: the control-flow graph, the equations built
 from it, the calling contexts and the solver. Others are what makes Sign differ
@@ -84,12 +84,12 @@ fun main() { g = 1; x = 5; y = inc(x); }
 ```)
 
 Enter describes the two stores that exist at the call `y = inc(x)`, each by an
-abstract value, an element of the domain $D_L$ of values the analysis keeps
-per program point. The _entry value_ $e$
+abstract state, an element of the domain $D_L$ the analysis keeps
+per program point. The _entry state_ $e$
 describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
-value_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine
+state_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine
 later merges with the callee's exit (the theories call $q$ the
-continuation). Usually $q$ is the caller's own abstract value at the call, but
+continuation). Usually $q$ is the caller's own abstract state at the call, but
 an analysis may weaken it there, for example by forgetting facts the callee
 may invalidate. @fig:return-stores shows both values and what combine makes
 of them.
@@ -114,15 +114,15 @@ of them.
       ppoint((1, 2), `pp6`, name: <c-pp6>),
       entry-node((4, 0), [entry `inc`], name: <c-ent>),
       entry-node((4, 2), [exit `inc`], name: <c-ex>),
-      _st((0, 0), [resume value $q$ \ describes #_from-s[`x = 5`], `g = 1`]),
+      _st((0, 0), [resume state $q$ \ describes #_from-s[`x = 5`], `g = 1`]),
       _st(
         (0, 2),
-        [$sh("combine")(q, t^sharp)$ \ describes #_from-s[`x = 5`], #_from-t[`g = 6`], #_from-t[`y = 4`]],
+        [$sh("combine")(q, r)$ \ describes #_from-s[`x = 5`], #_from-t[`g = 6`], #_from-t[`y = 4`]],
       ),
-      _st((5, 0), [entry value $e$ \ describes `g = 1`, `a = 5`]),
+      _st((5, 0), [entry state $e$ \ describes `g = 1`, `a = 5`]),
       _st(
         (5, 2),
-        [exit value $t^sharp$ \ describes #_from-t[`g = 6`], `a = 5`, \ #_from-t[result $4$]],
+        [exit state $r$ \ describes #_from-t[`g = 6`], `a = 5`, \ #_from-t[result $4$]],
       ),
       intra-edge(<c-pp5>, <c-pp6>, label: "continuation", label-side: right),
       intra-edge(<c-ent>, <c-ex>, label: "g := g + a; return a - 1", label-side: left),
@@ -133,16 +133,16 @@ of them.
   kind: image,
   placement: none,
   caption: [The analysis's operations at the call `y = inc(x)` of the program
-    above, and the concrete store each abstract value must describe
+    above, and the concrete store each abstract state must describe
     (schematic: the body of `inc` is drawn as one edge). Enter answers the
-    resume value $q$ and the entry value $e$; after the callee is analyzed,
-    combine merges $q$ with the callee's exit value $t^sharp$. The combined
+    resume state $q$ and the entry state $e$; after the callee is analyzed,
+    combine merges $q$ with the callee's exit state $r$. The combined
     value must describe the caller's locals (blue) together with the callee's
     globals and result (green), as #isaconst("combine_collect") does.],
 ) <fig:return-stores>
 
 Combine therefore receives two values, the caller's value and the
-callee's exit value, like the abstract `combine` of the functional approach
+callee's exit state, like the abstract `combine` of the functional approach
 @seidl12compiler[§2.6]. As in Goblint, it has two stages:
 #isaconst("dgs_combine_env") merges the two environments, and
 #isaconst("dgs_combine_assign") writes the result into the destination,
@@ -151,8 +151,8 @@ carries an obligation, so a specification may do the whole combine in either
 stage.
 
 The callee is analyzed from $e$, and its result is combined with $q$. Enter
-must describe both stores: its resume value must cover the caller's store and
-its entry value the entered store (#isaconst("entry_pairs_cover")). The
+must describe both stores: its resume state must cover the caller's store and
+its entry state the entered store (#isaconst("entry_pairs_cover")). The
 formalization, like Goblint's `enter`, lets enter answer a list of such pairs,
 each analyzed in a context of its own; every analysis in this thesis answers
 one, and we describe that case.
@@ -224,7 +224,7 @@ reads only the value at the edge's source and publishes nothing
 (#isathm("sp_compile_transfer_program_local_transfer")). The numeric analyses
 are built this way, so for them the manager changes nothing about the
 equations. In the solver, analysis globals become global unknowns, next to
-the seeds through which @ch:equations passes entry values to callees
+the seeds through which @ch:equations passes entry states to callees
 (@sec:global-unknowns).
 
 == The specification record <sec:spec-record>
@@ -232,7 +232,7 @@ the seeds through which @ch:equations passes entry values to callees
 The framework takes an analysis as one parameter, so its operations form
 one record, #isatype("dg_spec"), with one field per operation (@fig:dg-spec). The seven edge transfers of
 @sec:dg have type #isatype("man_transfer"). Enter (@sec:calls) answers the
-pair $(q, e)$, and the two combine stages also receive the callee's exit value.
+pair $(q, e)$, and the two combine stages also receive the callee's exit state.
 The query handler is the subject of @ch:cooperation. Every field has the role
 of the Goblint method it is named after. A check `__voblint_check(c)` becomes
 an edge whose action is an event (#isatype("analysis_event")), so the event
@@ -253,12 +253,12 @@ transfer sees it; Goblint handles `__goblint_check` in `special` instead.
     the same manager.],
 ) <fig:dg-spec>
 
-== The analysis soundness contract <sec:sound-core>
+== The analysis contract <sec:sound-core>
 
 Which facts must one analysis prove so that @ch:equations can discharge the
 obligations of @ch:traces for it, once for every analysis? Most of them form
-one locale, the _analysis soundness contract_
-#isalocale("analysis_contract"). The contract speaks only
+one locale, the _analysis contract_
+#isalocale("analysis_contract"). The analysis contract speaks only
 about the analysis's own objects: its record of operations, and a
 concretization $conc_(D G)(d, e)$ that says which stores a local value $d$
 describes, given an _environment_ $e$ that maps each analysis-global name to
@@ -278,11 +278,11 @@ its value. It mentions no context and no solver. It asks for four things:
   program answers, together with $e$ joined with what the program publishes
   (#isathm("analysis_contract.step_sound")).
 + _Sound returns_ (#oblig("RETURN")). Take a caller store covered by the
-  resume value and a callee exit store covered by the exit value, both against
+  resume state and a callee exit store covered by the exit state, both against
   $e$. The store after the return must be covered by what the two combine
   stages answer, against $e$ joined with what they publish
   (#isathm("analysis_contract.combine_sound")). This must hold at arbitrary values, because no unknown holds the
-  resume value for the solver to bound.
+  resume state for the solver to bound.
 
 A transfer is thus judged by what its compiled program answers and publishes,
 however its reads and publications are arranged. A transfer that changes no
@@ -297,15 +297,15 @@ environment off a valuation through that map. The edge and return obligations
 quantify over every key map and every valuation, so the analysis never learns
 how its names are laid out in the solver. An analysis with a single
 global takes `'v` to be `unit`, and #isathm("analysis_contract_unitI") derives
-the contract from obligations stated against that one value. The analyzer
+the analysis contract from obligations stated against that one value. The analyzer
 names analysis globals by program variables. Under flow-sensitive program
 globals it never reads or publishes them, and under flow-insensitive ones each
 variable's global holds that variable's value (@sec:mixed-flow). Otherwise the
-contract asks the carriers only for a join semilattice with a least element
+analysis contract asks the carriers only for a join semilattice with a least element
 and $conc_(D G)$ only for monotonicity. It never requires a map from variables
 to abstract values (@sec:relational).
 
-The contract covers #oblig("INTRA") and #oblig("RETURN"), the two obligations
+The analysis contract covers #oblig("INTRA") and #oblig("RETURN"), the two obligations
 of @ch:traces that involve no context. @ch:equations derives the other three
 from further premises. #oblig("CALL"), that the callee's entry covers the
 entered store in the context the call enters, combines the analysis's
@@ -372,7 +372,7 @@ lifted transfer reads the globals from $kappa$ and publishes the global half of
 its result there. A solved store is read back by merging the local half with
 $sol(kappa)$ (#isaconst("gamma_ownership_split")), and
 #isathm("ownership_split_lift_contract") shows that the lifted specification
-meets the analysis soundness contract for every transfer bundle that satisfies
+meets the analysis contract for every transfer bundle that satisfies
 #isalocale("sound_nonrelational_transfer"). The values of different globals
 stay apart inside $kappa$, since joins and widening act on each entry of the
 store, but the solver sees one unknown (@fig:shared-deps-one). A write to `g`
@@ -398,7 +398,7 @@ check this shape on one reading and one writing edge.
 
 Skipping the unwritten globals is sound because a concrete step leaves them
 unchanged (#isathm("edge_step_frame")). #isathm("keyed_split_contract")
-turns this into the analysis soundness contract over environments
+turns this into the analysis contract over environments
 (@sec:sound-core) for every sound local specification, given monotone
 operations to recombine a local half with a global environment and to cut out
 one global, and one frame law on the carrier: a store that the result
@@ -410,7 +410,7 @@ state of @ch:cooperation provides these operations field by field
 where it is stored, and the order analysis's relation stays wholly local. The
 routed obligations of @sec:eq-routing are discharged for this placement as for
 the default one, for every program and under all three context policies. The
-placement is therefore a configuration choice of #isaconst("run_voblint")
+placement is therefore an analysis setting of #isaconst("run_voblint")
 (#ctor("Program_Globals_Flow_Insensitive"), @sec:headline), and
 #isathm("run_voblint_source_sound") covers it. The command-line interface and
 the playground default to bounded narrowing under this placement.
