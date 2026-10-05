@@ -210,7 +210,7 @@ Here `'dl` and `'dg` are the local and the global lattice, $D_L$ and $D_G$,
 and `'v` names the analysis globals. #isaconst("man_local") is the current
 local value. A #isatype("strategy_program") is a program that may read and
 publish values before it yields its result, a strategy tree of @sec:td
-that hands this result to a continuation, and `'x` and
+(@fig:strategy-trees) that hands this result to a continuation, and `'x` and
 `'k` name the unknowns it reads. The framework builds the manager
 (#isaconst("mk_dg_man")): #isaconst("man_global") $v$ reads the current value
 of the analysis global $v$, and #isaconst("man_sideg") $v$ $g$ publishes $g$

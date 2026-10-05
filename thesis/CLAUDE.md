@@ -218,6 +218,44 @@ Rules the author set while reviewing drafts. They refine the sections above.
 - Keep one running example per chapter and derive from it (the counting loop in
   @ch:background: its graph, its inequalities, its solutions).
 
+### Review patterns
+
+Rules distilled from the author's line-by-line reviews. Apply them before
+handing a section over.
+
+- Write an argument, not a fact list. Each sentence should follow from the one
+  before it (problem, idea, consequence). Rewrite paragraphs that read as
+  independent statements placed side by side.
+- Motivate before defining. Say why the reader needs a concept (why compare
+  descriptions, why monotonicity, why not compute the least fixpoint) before
+  giving its definition, and start a chapter at a level a newcomer follows.
+- Define or drop every technical term at its first use, including the ones
+  that feel obvious: sound, precise, closed, invariant, collecting set. If the
+  term is not needed later, rephrase without it.
+- Use the field's standard vocabulary (over-approximation, more precise than,
+  post-fixpoint, widening point) and avoid colloquial shortcuts such as "says
+  more", "does this", "superset of states".
+- State the general notion first, then its reading in abstract
+  interpretation (⊤ is the greatest element, and in abstract interpretation it
+  describes all states). Give the scope that makes a claim true.
+- Connect background to Voblint. After a classical notion, say what Voblint
+  needs of it (a join semilattice with a least element rather than a complete
+  lattice; monotonicity is not assumed by the solver theorem).
+- A forward reference must help the reader where it stands, for navigation or
+  as the formal source. Drop references that only advertise later material
+  ("Chapter 3 compiles …"). Backward reminders are welcome.
+- Restate running-example values where the argument uses them, for example
+  "(the collecting semantics {0, …, 5})".
+- Cut meta-narration and asides that carry no argument: "each only as far as
+  they use it", "the rest of this chapter computes …", tangential terminology
+  remarks, citations that do not support the sentence they sit in.
+- Prefer a figure for a central relation (the soundness square, nested sets)
+  and give a central concept its own named place in the structure instead of
+  burying it in an introduction.
+- Verify reviewer suggestions against the theories and the literature before
+  applying them, and report where the sources disagree (the soundness square
+  commutes only up to ⊆; the solver needs no meet).
+
 ### Evidence
 
 - Fact-check every claim, not a sample: theorem statements and premises against

@@ -187,7 +187,7 @@ unknown, its valuation is #lbot and the bound holds trivially.
 ]
 
 Among local unknowns the solver widens and narrows only at widening points
-(@sec:td, @fig:td-trace). The returned #sol may therefore lie above the least
+(@sec:td). The returned #sol may therefore lie above the least
 solution, and (C1) to (C4) state all the solver guarantees about it. The
 collecting-soundness theorem of @ch:equations needs the bounds (C3) and (C4)
 on a set $V$ that contains the program entry and that executions cannot leave,
