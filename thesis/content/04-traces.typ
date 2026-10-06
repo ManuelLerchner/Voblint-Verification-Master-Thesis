@@ -296,27 +296,22 @@ The root rule corresponds to the initial graph configuration, and the other
 three rules correspond to the three rules of #isaconst("cstep"). Intra appends
 a step along a local edge. Call starts a new trace that holds the caller, where
 #isaconst("cstep") pushes a frame. Ret builds a third trace that holds caller
-and callee, where #isaconst("cstep") pops the frame. After the pop the graph
-configuration no longer records the finished call, but the $ctor("Resume")$
-trace still holds the caller, so the caller's context can be derived from it.
+and callee, where #isaconst("cstep") pops the frame.
 The #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics")[explainer page] animates the source execution,
 the graph execution and the activation trace side by side on one program.
 
 The ret rule applies when a callee trace has reached a result node
-#isai("FunctionResult p"). In a compiled graph no edge leaves this node,
-because one result node serves every caller of $p$. The rule therefore finds
-the caller through #isai("caller_of callee = Some caller") and takes a
-#isaconst("calls") edge from the caller's call node into $p$, on compiled
-programs the only one. That edge names
-the continuation node $italic("cont")$, and the caller continues there with
-the store that #isaconst("combine_collect") builds from the caller's store and
-the callee's final store.
+#isai("FunctionResult p"). In a compiled graph no edge leaves it, since one
+result node serves every caller of $p$, so the rule finds the caller through
+#isai("caller_of callee = Some caller") and takes a #isaconst("calls") edge
+from its call node into $p$, on compiled programs the only one. That edge
+names the continuation $italic("cont")$, where the caller continues with the
+store that #isaconst("combine_collect") builds from both final stores.
 
 === Graph runs are valid traces <sec:source-bridge>
 
-The traces are meant to describe the runs of the compiled graph, and through
-@sec:csim the runs of VIMP programs, while keeping the history that the frame
-stack discards in an accessible form.
+The traces describe the runs of the compiled graph, and through @sec:csim
+those of VIMP programs, keeping the history that the frame stack discards.
 
 #block(breakable: false)[
   #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
@@ -345,17 +340,19 @@ trace (#isathm("cstep_preserves_activation_trace_repr")). The initial configurat
 (#isathm("located_activation_trace_entry")). Hence
 every configuration that a graph run of such a program reaches has a
 representing valid trace (#isathm("csteps_preserve_located_activation_trace")). Only this
-direction is proved, and soundness needs only this direction. Composed with the
-simulation of @ch:program-model, it extends to VIMP programs.
+direction is proved, and soundness needs no more. With the simulation of
+@ch:program-model, it extends to VIMP programs.
 
-#theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
-  For a well-formed compiled program, every finite source execution from an
-  initial store in $S$ has a matching graph configuration and a valid trace ending at
-  the same node with the same store, whose caller chain represents the graph's
-  frame stack.
+#block(breakable: false)[
+  #theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
+    For a well-formed compiled program, every finite source execution from an
+    initial store in $S$ has a matching graph configuration and a valid trace ending at
+    the same node with the same store, whose caller chain represents the graph's
+    frame stack.
+  ]
+
+  #proved("source_run_has_activation_trace")
 ]
-
-#proved("source_run_has_activation_trace")
 
 === The node collecting semantics <sec:collect>
 
@@ -526,14 +523,20 @@ We call #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") the _activation colle
 It contains the final stores of the valid traces that end at $v$ and carry
 $c$, and the claim for the unknown $[v, c]$ must contain it. In the running example under interval entry-state contexts, `bump(5)` gets the
 context $[[5, 5]]$ and `bump(4)` the context $[[4, 4]]$
-(@sec:eq-entry-routing), so the final store with result $6$ lies in the
-activation collecting semantics of $[[5, 5]]$ at the result node of `bump` and
-the one with result $5$ in that of $[[4, 4]]$. The node collecting semantics
-there contains both.
+(@sec:eq-entry-routing). The final store of `bump(5)`, with result $6$, lies in
+the activation collecting semantics of context $[[5, 5]]$ at the result node of
+`bump`, and the final store of `bump(4)`, with result $5$, in that of context
+$[[4, 4]]$. The node collecting semantics at the result node contains both
+stores. A store that activations in two contexts reach lies in the sets of
+both contexts.
 
 The two sets show what the split by context buys. A single claim for the
-result node must contain both stores, so an interval analysis can at best bound the result by $[5, 6]$. A claim per context only has to contain one of them. No store is lost by the split as long as every valid trace carries a
-context, which the coverage contract of the next section guarantees.
+result node must contain both stores, so an interval analysis can at best bound the result by $[5, 6]$. A claim per context only has to contain the stores of
+its own context, the result $6$ in context $[[5, 5]]$ and the result $5$ in
+context $[[4, 4]]$. No store is lost by the split as long as every valid trace carries at
+least one context, because then every store of the node collecting semantics
+lies in the activation collecting semantics of some context. The coverage
+contract of the next section guarantees this.
 
 == The coverage contract <sec:contract>
 
@@ -630,13 +633,15 @@ Isabelle states the five obligations as the assumptions of the locale
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
 ) <fig:activation-coverage>
 
-#theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-  If the claim meets the five obligations of
-  #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
-  at $v$ and $c$ is contained in the claim #isai("cover v c").
-]
+#block(breakable: false)[
+  #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
+    If the claim meets the five obligations of
+    #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
+    at $v$ and $c$ is contained in the claim #isai("cover v c").
+  ]
 
-#proved("activation_collect_sound")
+  #proved("activation_collect_sound")
+]
 
 #block(breakable: false)[
   The same obligations give every valid trace at least one context, so the
@@ -651,16 +656,18 @@ Isabelle states the five obligations as the assumptions of the locale
     collecting semantics at every node $v$ is the union of the activation
     collecting semantics at $v$ over all contexts.
   ]
+
+  #proved("node_collect_eq_Union_activation_collect")
 ]
 
-#proved("node_collect_eq_Union_activation_collect")
+#block(breakable: false)[
+  #corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
+    Under the five coverage obligations, every store of the node collecting
+    semantics at $v$ lies in the claim #isai("cover v c") of some context $c$.
+  ]
 
-#corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
-  Under the five coverage obligations, every store of the node collecting
-  semantics at $v$ lies in the claim #isai("cover v c") of some context $c$.
+  #proved("node_collect_covered")
 ]
-
-#proved("node_collect_covered")
 
 Apinis et al. recall the corresponding observation for the abstract side
 @apinis12[§3]: after local solving, the abstract values that reach a program
