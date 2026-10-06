@@ -344,9 +344,8 @@ instance by call site or by the abstract state at entry, and the analyzer
 keeps one abstract state per program point and context. For _contexts_, Verasco reanalyzes a function at every call site, Dabrowski and
 Pichardie compute object-sensitive contexts by a function, Lammich and
 Müller-Olm use per-procedure summaries, and Voblint admits contexts through a
-relation that may admit several per call. A relation is needed because an
-entry-state policy reads the context of a call off the analysis result, which
-a function fixed in advance cannot do. For the _fixpoint_, three analyzers iterate over the program's syntax
+context policy that returns a set of contexts per call, since an entry
+operation may split a call into several alternatives (@sec:contexts). For the _fixpoint_, three analyzers iterate over the program's syntax
 ("structural"), Nipkow and Klein over the whole annotated program, Blazy et
 al. check the result of an untrusted iterator, Cachera et al. use a verified
 solver of ordinary inequations, and two works only specify constraints.
@@ -477,7 +476,7 @@ each.
   the stores collected per context together equal the stores of the
   context-free semantics (#isathm("node_collect_eq_Union_activation_collect"),
   @sec:contract). Where the context function of Dabrowski and Pichardie
-  picks exactly one context per call @dabrowski09, Voblint's relation may admit
+  picks exactly one context per call @dabrowski09, Voblint's context policy may admit
   several, as one trace can belong to several partitions in the coverings of
   trace partitioning @rival07[Rem. 3.2.4].
 - _Separately verified components._ Domains, context policies, analyses and
