@@ -100,7 +100,7 @@ begin
 sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global
   "\<lambda>_. Global"
   "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
-  "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "call_context_rel_of_fun (cs_context k)"
+  "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "context_policy_of_fun (cs_context k)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
 next
@@ -127,8 +127,8 @@ next
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont)
                \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gamma_at u ctx"
-    and Rc: "call_context_rel_of_fun (cs_context k) u ctx (call_info_of (CallEdge dst pars args) p)
-               s (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+    and Rc: "ctx' \<in> context_policy_of_fun (cs_context k) u ctx (call_info_of (CallEdge dst pars args) p)
+               s (call_enter \<G> (CallEdge dst pars args) s)"
   have ctx': "ctx' = cs_context k u ctx (call_enter \<G> (CallEdge dst pars args) s)"
     using Rc by simp
   obtain pairs pub deps
@@ -163,9 +163,9 @@ next
     using R D mem ccov ecov req covE by auto
 next
   fix u ctx dst pars args p cont s
-  show "\<exists>ctx'. call_context_rel_of_fun (cs_context k) u ctx
+  show "context_policy_of_fun (cs_context k) u ctx
                  (call_info_of (CallEdge dst pars args) p) s
-                 (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+                 (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}"
     by simp
 next
   fix cl c1 dst pars args p cont

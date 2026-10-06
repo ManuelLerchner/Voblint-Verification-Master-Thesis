@@ -26,7 +26,7 @@ text \<open>
   is shared across instances: each is keyed by its own carrier's value list, so \<open>buffer_key\<close> and
   \<open>seed\<close> stay genuine locale parameters too.
 
-  Everything the routed locale asks about \<open>R\<close> reduces to two facts about \<open>alts\<close>: its
+  Everything the routed locale asks about \<open>adm\<close> reduces to two facts about \<open>alts\<close>: its
   alternatives cover every concrete call at a covered call site (\<open>enter_cover\<close>), and the
   solver visited the callee entry at every context a live alternative routes to
   (\<open>call_fwd\<close>).  A one-alternative specification instantiates \<open>alts ci d = [(d, en ci d)]\<close>;
@@ -87,7 +87,7 @@ locale pure_entry_routed_context =
 begin
 
 text \<open>The context relation this instance keys its collecting semantics by.\<close>
-abbreviation entry_context_rel :: "'c call_context_rel" where
+abbreviation entry_context_rel :: "'c context_policy" where
   "entry_context_rel \<equiv> routed_entry_context_rel alts (\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())) sigma (\<lambda>_. buffer_key) route"
 
 sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" buffer_key
@@ -118,8 +118,8 @@ next
   assume covV: "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gamma_at u ctx"
-    and Rc: "entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
-               (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+    and Rc: "ctx' \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
+               (call_enter \<G> (CallEdge dst pars args) s)"
   let ?ci = "call_info_of (CallEdge dst pars args) p"
   let ?d = "dg_local (sigma (Inl (u, ctx)))"
   from Rc obtain cont' entry
@@ -151,8 +151,8 @@ next
   assume covV: "(u, ctx) \<in> vars"
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)"
     and sin: "s \<in> gamma_at u ctx"
-  show "\<exists>ctx'. entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
-                 (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+  show "entry_context_rel u ctx (call_info_of (CallEdge dst pars args) p) s
+                 (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}"
   proof (rule routed_entry_context_rel_total)
     show "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (genv (\<lambda>_. buffer_key) sigma ())) s
             (call_enter \<G> (CallEdge dst pars args) s)

@@ -82,12 +82,12 @@ names.
 | `valid_activation_trace` | Inductive concrete semantics over activation traces. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
 | `caller_of` | Immediate caller stored structurally in a called or resumed trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy` |
 | `node_collect` | Node-indexed collecting semantics: reachable sink stores at each CFG node, forgetting activation structure and context. `activation_collect` is its context-indexed refinement. | `src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy` |
-| `activation_collect` | `activation_collect gs R c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `activation_context_rel`-grouped view of `node_collect`. `R` is the `call_context_rel`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `activation_collect` | `activation_collect gs adm c\<^sub>0 g S v c`: reachable sink stores at `v` in context `c`, the `activation_context_rel`-grouped view of `node_collect`. `adm` is the `context_policy`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
 | `activation_coverage` | The five obligations (`INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL`) under which a per-node, per-context store-set claim covers every valid activation trace. | `src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy` |
-| `activation_context_rel` | Inductive `activation_context_rel gs R c\<^sub>0 g t c`: the context a valid activation trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
-| `call_context_rel` | `'c call_context_rel = cfg_node => 'c => call_info => store => store => 'c => bool`: the admissible callee contexts of one concrete call, from call site, caller context, call info, caller store and entered store. Several contexts per call are allowed. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
-| `call_context_rel_of_fun` | Embeds a functional policy (`unit`, call strings) as the relation admitting exactly the function's value. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
-| `call_context_total_on` | `call_context_total_on cover R gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`node_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `activation_context_rel` | Inductive `activation_context_rel gs adm c\<^sub>0 g t c`: the context a valid activation trace carries. Its Call rule picks an edge in `calls g` at the call node that reproduces the entered store, so no compiler uniqueness invariant is needed. The relational form of the paper's `beta`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `context_policy` | `'c context_policy = cfg_node => 'c => call_info => store => store => 'c set`: the set of callee contexts admitted for one concrete call, from call site, caller context, call info, caller store and entered store. The set may be empty or have several elements; `call_context_total_on` requires it non-empty for covered calls. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `context_policy_of_fun` | Embeds a functional policy (`unit`, call strings) as the singleton set of the function's value. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
+| `call_context_total_on` | `call_context_total_on cover adm gs g`: conditional totality -- an empty relation is rejected only where a covered call exists. It is what makes the context-insensitive collection exactly the union of the buckets (`node_collect_eq_Union_activation_collect`). Buckets form a cover, not a partition. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
 | `c\<^sub>0` | Context of the root activation (locale parameter, formerly `startcontext`), Goblint's `Spec.startcontext`. | `src/Program_Model/CFG/Collecting/Activation_Trace_Context.thy` |
 
 ## Abstract interpretation
@@ -158,7 +158,7 @@ carries the soundness proof -- notation does not rename the identifier.
 | `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
 | `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
-`route`'s semantic counterpart is the relation `call_context_rel`
+`route`'s semantic counterpart is the relation `context_policy`
 (`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
 counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the

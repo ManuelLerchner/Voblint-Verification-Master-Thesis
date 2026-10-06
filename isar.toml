@@ -231,6 +231,8 @@ allow = [
   "Unwind_not_pcompletes",
 
   # Unused lemmas the docs cite as results.
+  # named in thesis chapter 4 (Corollary "Claims cover the collection")
+  "node_collect_covered",
   # named in GOBLINT_ALIGNMENT_REGISTER.md, THESIS_BLUEPRINT.md
   "branch_le_bfilter",
   # named in THEOREM_MAP.md

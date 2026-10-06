@@ -41,7 +41,7 @@ text \<open>
 locale dg_analysis_adapter =
   routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0 sg
     seed
-    "static_resolve g" is_bot \<gamma>\<^sub>M R
+    "static_resolve g" is_bot \<gamma>\<^sub>M adm
   for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
@@ -56,7 +56,7 @@ locale dg_analysis_adapter =
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
-    and R :: "'c call_context_rel" +
+    and adm :: "'c context_policy" +
   fixes rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
@@ -175,10 +175,10 @@ lemma analyse_result_node_sound:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
 proof -
-  have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+  have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov s0_sound s0e_le])
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
@@ -217,7 +217,7 @@ lemma analyse_result_covered_unreachable:
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
     and dead: "lookup_coverage analyse_result v ctx = Covered Bot"
-  shows "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}"
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_node_sound[OF entry_cov s0_sound s0e_le]])
 
@@ -232,7 +232,7 @@ text \<open>
   So every bucket is empty and so is their union.
 
   \<^term>\<open>node_collect\<close> decomposes into those buckets only for a context relation
-  that comes from a function, which this locale does not assume of \<^term>\<open>R\<close>;
+  that comes from a function, which this locale does not assume of \<^term>\<open>adm\<close>;
   the decomposition is therefore a hypothesis, discharged by
   \<open>node_collect_eq_Union_activation_of_fun\<close> at every instance whose relation has
   that shape.
@@ -244,11 +244,11 @@ lemma analyse_result_node_unreachable:
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
     and union: "\<C>\<^bsub>\<G>,g,S0\<^esub> v
-                  = (\<Union>ctx. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx)"
+                  = (\<Union>ctx. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx)"
     and dead: "result_node_is_bottom analyse_result v"
   shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v = {}"
 proof -
-  have bucket: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx = {}" for ctx
+  have bucket: "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx = {}" for ctx
   proof -
     have bot: "lookup_table analyse_result v ctx = Bot"
     proof (cases "(v, ctx) \<in> vars")
@@ -260,7 +260,7 @@ proof -
       case False
       then show ?thesis unfolding lookup_table_analyse_result by simp
     qed
-    have "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+    have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
             \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
       by (rule analyse_result_node_sound[OF entry_cov s0_sound s0e_le])
     then show ?thesis unfolding bot by simp
@@ -302,11 +302,11 @@ lemma analyse_report_ctx_decided:
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-    and smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
+    and smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
-  have node_sound: "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+  have node_sound: "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
       \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
     by (rule analyse_result_node_sound[OF entry_cov s0_sound s0e_le])
   obtain st where reach: "lookup_table analyse_result v ctx = Lifted st"
@@ -324,11 +324,11 @@ theorem analyse_report_ctx_proved_sound:
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound s0e_le smem]) simp
   thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
@@ -340,11 +340,11 @@ theorem analyse_report_ctx_refuted_sound:
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx
+  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound s0e_le smem]) simp
   thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast

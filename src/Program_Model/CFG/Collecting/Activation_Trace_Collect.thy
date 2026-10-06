@@ -167,11 +167,11 @@ subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 text \<open>Bridge (1): every context bucket, and so their union, is included in the
   context-insensitive collection.\<close>
 theorem activation_collect_le_node_collect:
-  "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c \<subseteq> \<C> v"
+  "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> \<C> v"
   unfolding activation_collect_def node_collect_def by blast
 
 theorem Union_activation_collect_le_node_collect:
-  "(\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
+  "(\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
   using activation_collect_le_node_collect by blast
 
 text \<open>Bridge (2): the converse needs every valid activation trace to carry some context.  That premise is
@@ -180,26 +180,26 @@ text \<open>Bridge (2): the converse needs every valid activation trace to carry
   \<^const>\<open>activation_context_of\<close> is total; a relational one earns it from conditional totality, which is
   \<open>Activation_Trace_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem node_collect_eq_Union_activation_of_has_context:
-  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
-  shows "\<C> v = (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
+  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
+  shows "\<C> v = (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
 proof
-  show "\<C> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
+  show "\<C> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
   proof
     fix x assume "x \<in> \<C> v"
     then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
       by (rule node_collect_E)
-    from has_ctx [OF t(1)] obtain c where "activation_context_rel \<G> R c\<^sub>0 g t c" ..
-    with t show "x \<in> (\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c)"
+    from has_ctx [OF t(1)] obtain c where "activation_context_rel \<G> adm c\<^sub>0 g t c" ..
+    with t show "x \<in> (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
       by blast
   qed
 next
-  show "(\<Union>c. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
+  show "(\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
     by (rule Union_activation_collect_le_node_collect)
 qed
 
 theorem node_collect_eq_Union_activation_of_fun:
   "\<C> v
-     = (\<Union>c. \<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,g,S\<^esub> v c)"
+     = (\<Union>c. \<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,g,S\<^esub> v c)"
   by (rule node_collect_eq_Union_activation_of_has_context)
      (simp add: activation_context_rel_of_fun_iff)
 

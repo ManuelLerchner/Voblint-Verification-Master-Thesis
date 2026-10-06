@@ -662,7 +662,7 @@ text \<open>
   retired functional selector, whose singleton premise this override deliberately breaks.
 \<close>
 
-abbreviation ov_R :: "sign list call_context_rel" where
+abbreviation ov_R :: "sign list context_policy" where
   "ov_R \<equiv> routed_entry_context_rel (ov_enter ov_gs ov_ep) (\<lambda>d _. \<lbrakk>\<rho>\<^bsub>ov_gs\<^esub> d\<rbrakk>) (snd ov_sol)
             (\<lambda>_::unit. Analysis_Global ()) (exec_formals_route ov_gs)"
 
@@ -988,11 +988,10 @@ next
 qed
 
 lemma ov_pos_context_admitted:
-  "ov_R (Statement 3) []
+  "[SPos] \<in> ov_R (Statement 3) []
      (call_info_of ov_ca (STR ''p''))
      ov_caller_store
-     (call_enter ov_gs ov_ca ov_caller_store)
-     [SPos]"
+     (call_enter ov_gs ov_ca ov_caller_store)"
 proof -
   let ?ci = "call_info_of ov_ca (STR ''p'')"
   let ?d = "dg_local (snd ov_sol (Inl (Statement 3, [])))"
@@ -1014,11 +1013,10 @@ proof -
 qed
 
 lemma ov_top_context_admitted:
-  "ov_R (Statement 3) []
+  "[STop] \<in> ov_R (Statement 3) []
      (call_info_of ov_ca (STR ''p''))
      ov_caller_store
-     (call_enter ov_gs ov_ca ov_caller_store)
-     [STop]"
+     (call_enter ov_gs ov_ca ov_caller_store)"
 proof -
   let ?ci = "call_info_of ov_ca (STR ''p'')"
   let ?d = "dg_local (snd ov_sol (Inl (Statement 3, [])))"
@@ -1042,10 +1040,10 @@ proof -
 qed
 
 lemma ov_two_contexts_admitted:
-  "ov_R (Statement 3) [] (call_info_of ov_ca (STR ''p''))
-     ov_caller_store (call_enter ov_gs ov_ca ov_caller_store) [SPos]
-   \<and> ov_R (Statement 3) [] (call_info_of ov_ca (STR ''p''))
-     ov_caller_store (call_enter ov_gs ov_ca ov_caller_store) [STop]
+  "[SPos] \<in> ov_R (Statement 3) [] (call_info_of ov_ca (STR ''p''))
+     ov_caller_store (call_enter ov_gs ov_ca ov_caller_store)
+   \<and> [STop] \<in> ov_R (Statement 3) [] (call_info_of ov_ca (STR ''p''))
+     ov_caller_store (call_enter ov_gs ov_ca ov_caller_store)
    \<and> [SPos] \<noteq> [STop]"
   using ov_pos_context_admitted ov_top_context_admitted by simp
 

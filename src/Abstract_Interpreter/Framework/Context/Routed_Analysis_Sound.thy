@@ -55,7 +55,7 @@ subsection \<open>The composition locale\<close>
 text \<open>
   Everything a routed analysis needs above its solved system, in one place: the
   domain enters through \<open>S\<close> and \<open>\<gamma>\<^sub>D\<^sub>G\<close>, the context policy through \<open>route\<close>,
-  \<open>R\<close> and \<open>seed\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
+  \<open>adm\<close> and \<open>seed\<close>, and the solved system through \<open>sigma\<close>/\<open>vars\<close>. The
   fixed reader is \<^const>\<open>solved_local_reader\<close>, and its concretization reads
   the solved global at \<open>Inr buffer_key\<close> as the second argument of \<open>rd\<close>,
   so the two coverage obligations are the one-line lemmas above.
@@ -69,7 +69,7 @@ locale routed_analysis =
   dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0
     "solved_local_reader vars sigma" seed is_bot
     "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
-    R rd \<gamma>\<^sub>V empty\<^sub>V classify
+    adm rd \<gamma>\<^sub>V empty\<^sub>V classify
   for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
@@ -82,7 +82,7 @@ locale routed_analysis =
     and x0 :: "pp \<times> 'c"
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
-    and R :: "'c call_context_rel"
+    and adm :: "'c context_policy"
     and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"

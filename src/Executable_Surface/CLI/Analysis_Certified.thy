@@ -325,13 +325,13 @@ theorem run_voblint_spine:
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-      and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> R c\<^sub>0 g t c"
-      and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
+      and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
+      and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R c\<^sub>0 g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
            \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
@@ -341,8 +341,8 @@ proof -
          [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
   have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R c\<^sub>0 g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
+           \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
     unfolding cfg .
   from witness buckets run_voblint_covers [OF ans]
        analysis_report_verdicts_sound [OF run_voblint_consistent [OF ans]]
@@ -355,21 +355,21 @@ theorem run_voblint_call_string_chain:
       and Pi_def: "\<Pi> \<equiv> prog_table p"
       and g_def: "g \<equiv> prog_cfg p"
       and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "R \<equiv> call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)"
+      and R_def: "adm \<equiv> context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r (Ctx_CallString k) pg) p = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R [] g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> activation_context_rel \<G> adm [] g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
            \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
-  have has_ctx: "\<exists>c. activation_context_rel \<G> R [] g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
+  have has_ctx: "\<exists>c. activation_context_rel \<G> adm [] g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
+  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
     unfolding G_def g_def S_def R_def
     by (rule mcp_cs_rule.fun_route_node_collect_eq_Union [where ctx_fun = "cs_context k",
           symmetric])
@@ -385,21 +385,21 @@ theorem run_voblint_unit_chain:
       and Pi_def: "\<Pi> \<equiv> prog_table p"
       and g_def: "g \<equiv> prog_cfg p"
       and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "R \<equiv> call_context_rel_of_fun (\<lambda>u c t. ())"
+      and R_def: "adm \<equiv> context_policy_of_fun (\<lambda>u c t. ())"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r Ctx_None pg) p = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R () g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> activation_context_rel \<G> adm () g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
            \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
-  have has_ctx: "\<exists>c. activation_context_rel \<G> R () g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
+  have has_ctx: "\<exists>c. activation_context_rel \<G> adm () g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
+  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
     unfolding G_def g_def S_def R_def
     by (rule mcp_rule.fun_route_node_collect_eq_Union [where ctx_fun = "\<lambda>u c t. ()",
           symmetric])
@@ -459,21 +459,21 @@ theorem run_voblint_entry_state_chain:
       and Pi_def: "\<Pi> \<equiv> prog_table p"
       and g_def: "g \<equiv> prog_cfg p"
       and S_def: "S \<equiv> cinit_stores (declared_global p)"
-      and R_def: "R \<equiv> mcp_es_admitted pg as r p"
+      and R_def: "adm \<equiv> mcp_es_admitted pg as r p"
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
   shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
-           \<and> activation_context_rel \<G> R mcp_root_ctx g t c
-           \<and> s \<in> \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c
-           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
+           \<and> activation_context_rel \<G> adm mcp_root_ctx g t c
+           \<and> s \<in> \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
            \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
            \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   note wf = run_voblint_wf [OF ans]
   note terminates = run_voblint_entry_state_terminates [OF ans]
-  have has_ctx: "\<exists>c. activation_context_rel \<G> R mcp_root_ctx g t c"
+  have has_ctx: "\<exists>c. activation_context_rel \<G> adm mcp_root_ctx g t c"
     if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
   proof (cases pg)
     case Program_Globals_Flow_Sensitive
@@ -486,7 +486,7 @@ proof -
       using mcp_split_es_rule.entry_state_has_context_of_terminates [OF wf] that
       unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   qed
-  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,R,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
+  have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
   proof (cases pg)
     case Program_Globals_Flow_Sensitive
     with terminates show ?thesis

@@ -25,8 +25,8 @@ text \<open>
   \<open>route_unit\<close> ignores every argument and always chooses the sole context \<open>()\<close>: no
   call-site history, no dependence on the caller's abstract state, no sentinel encoding.
   \<open>enterc_unit\<close> is its trace-semantic counterpart; its graph
-  \<open>call_context_rel_of_fun enterc_unit\<close> instantiates
-  \<^locale>\<open>routed_context\<close>'s \<open>R\<close> parameter. The two are definitionally
+  \<open>context_policy_of_fun enterc_unit\<close> instantiates
+  \<^locale>\<open>routed_context\<close>'s \<open>adm\<close> parameter. The two are definitionally
   the same constant function, so \<open>routed_entry_cover\<close>'s routing agreement holds
   independently of any call edge, solved state, or concrete store.
 \<close>
@@ -46,7 +46,7 @@ text \<open>
 \<close>
 
 lemma activation_collect_unit_eq_node_collect:
-  "\<A>\<^bsub>\<G>,call_context_rel_of_fun enterc_unit,(),g,S\<^esub> v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
+  "\<A>\<^bsub>\<G>,context_policy_of_fun enterc_unit,(),g,S\<^esub> v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
   unfolding activation_collect_of_fun node_collect_def by simp
 
 end

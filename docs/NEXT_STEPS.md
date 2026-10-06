@@ -8,10 +8,10 @@ directions are:
 Entry-state and call-string contexts are done for all five domains, from the
 collecting semantics to the CLI:
 
-- **Semantics.** `call_context_rel` admits the contexts of one concrete call,
+- **Semantics.** `context_policy` admits the contexts of one concrete call,
   `activation_context_rel` threads them over traces, and `activation_collect` is indexed
   by them (`Activation_Trace_Context`). A functional policy embeds through
-  `call_context_rel_of_fun`.
+  `context_policy_of_fun`.
 - **Routing.** `routed_context` (`Routed_Context`) discharges the call
   and combine obligations once for any context type `'c`;
   `Entry_State_Routed_Context` and `Call_String_Routed_Context`
@@ -54,7 +54,7 @@ A user-chosen set of flow-insensitive variables stays out of scope;
   premise the flat analysis ships with. Bounding it needs a policy decision
   first -- a gas budget that widens overflow entries into one shared per-callee
   context, a loop-detecting variant, or something else -- and then that policy's
-  `call_context_rel` instance. Erhard, Schinabeck, Schwarz, Seidl, "Context gas
+  `context_policy` instance. Erhard, Schinabeck, Schwarz, Seidl, "Context gas
   and friends: taming context-sensitivity on the fly" is the reference.
 
 ## D/G communication
