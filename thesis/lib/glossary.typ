@@ -336,7 +336,7 @@
     "call-context-rel",
     "call-context relation",
     _trace,
-    isa: [#isatype("call_context_rel"), #isaconst("admits_call_context")],
+    isa: [#isatype("context_policy"), #isaconst("admits_call_context")],
     notation: isai("R"),
     see: <sec:contexts>,
   )[

@@ -543,7 +543,7 @@ therefore do not form the finite, fixed set of locations that Voblint needs. An 
 Finally, nothing names the entry of a procedure, its result, or the point where
 a caller resumes. The schematic control-flow graph of @fig:counting-loop solves
 the first two problems. It has finitely many nodes and one transfer per edge.
-The procedure-aware graph solves the third. It adds an entry node and a result
+The procedure-aware graph then solves the third. It adds an entry node and a result
 node per procedure, and call edges that record their continuations. Each gives
 the analysis a place for one fact about a call. The entry node holds the state
 a callee starts from, the result node the state it returns with, and the
@@ -583,8 +583,7 @@ et al. @tilscher26, which Voblint includes as a submodule with a few changes
   resumes. Nodes (#isatype("cfg_node")) are $ctor("Statement") thin n$,
   $ctor("FunctionEntry") thin p$ or $ctor("FunctionResult") thin p$.
   #isaconst("cfg_entry") is the root node. #isaconst("checks") pairs the node
-  of each check with its condition. For a compiled graph it is read off the
-  #isaconst("EA_Check") edges, so it cannot drift from them, and the report
+  of each check with its condition. For a compiled graph it is computed from the #isaconst("EA_Check") edges, so it cannot drift from them, and the report
   classifies the same edges (#isaconst("classify_checks")).
 ]
 
@@ -809,24 +808,22 @@ only for compiled ones.
 == Relating the two executions <sec:csim>
 
 So far #isaconst("pstep") and #isaconst("cstep") are two separate
-definitions. One describes source programs, the other arbitrary graphs.
-Nothing yet says that a compiled graph behaves like its program. The soundness
+definitions. One describes source programs, the other arbitrary graphs, and
+nothing yet says that a compiled graph behaves like its program. The soundness
 theorem is stated over #isaconst("pstep"), but the analysis solves equations
 generated from the graph, so every source run must be matched by a run of the
 compiled graph that holds the same store at corresponding points. We prove this with a _forward simulation_, a
 relation between source and graph configurations that every source step
 preserves.
 
-Two differences make the relation nontrivial. The source keeps the remaining
-work of a suspended caller inside the running command, behind a
-#ctor("Restore") marker. The graph keeps it on the frame stack as the
+Two differences make the relation nontrivial. The source stores the remaining work of a suspended caller inside the running command, behind a
+#ctor("Restore") marker. The graph, in contrast, stores it on the frame stack as the
 continuation node $k$. The two also step at different places. Unfolding a loop
 into a conditional, discarding a finished #skipC, and propagating
-#ctor("Unwind") past the commands it skips have no graph counterpart. So the
-graph answers one source step with zero or more steps. We prove only this
-direction. Soundness needs no converse. The analysis is proved to cover every
-run of the graph from its entry (@ch:traces), and every source run has such a
-graph counterpart.
+#ctor("Unwind") past the commands it skips have no corresponding graph step. As a result,
+the graph answers one source step with zero or more steps. We prove only this
+direction, because soundness needs no converse. The analysis is proved to cover every
+run of the graph from its entry (@ch:traces), and every source run is matched by such a graph run.
 
 #definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
   #isaconst("csim"), written
@@ -908,11 +905,11 @@ analyzer checks well-formedness before it runs and declines to analyze
 programs that violate it (#isaconst("wf_program_compile_input_exec")), so the
 end-to-end theorem needs no separate premise for it.
 
-Graph runs suffice for an analysis with one abstract state per program point.
-A context-sensitive analysis keeps separate states for the activations of a
+Graph runs suffice for an analysis with one abstract state per node.
+A context-sensitive analysis, however, computes separate states for the activations of a
 procedure entered in different calling contexts, and for this the runs are too _flat_. A run is one long sequence of steps across all
 activations, so it does not group the steps of one activation or link each step to
 the store with which its activation started. @ch:traces therefore regroups graph runs into activation
 traces, one per procedure activation
 (#isathm("source_run_has_activation_trace")), and defines on them the
-obligations a sound analysis has to meet.
+coverage obligations used to establish soundness.

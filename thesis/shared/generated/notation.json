@@ -597,7 +597,7 @@
       "group": "set",
       "kind": "notation",
       "reads": "the stores collected at _v_ in context _c_",
-      "meaning": "the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _c₀_",
+      "meaning": "the stores valid activation traces carrying context _c_ reach at node _v_; _adm_ admits callee contexts and the root runs in _c₀_",
       "forms": [
         {
           "const": "activation_collect",
@@ -605,7 +605,7 @@
             "kind": "const",
             "name": "activation_collect"
           },
-          "symbol": "\\<A>\\<^bsub>\\<G>,R,c₀,g,S\\<^esub> v c",
+          "symbol": "\\<A>\\<^bsub>\\<G>,adm,c₀,g,S\\<^esub> v c",
           "mixfix": "\\<A>\\<^bsub>_,_,_,_,_\\<^esub>",
           "declaration": "definition",
           "scope": "global",
@@ -631,7 +631,7 @@
         "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
         "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst",
         "session": "Voblint_CFG",
-        "expands": "\\<A>\\<^bsub>\\<G>,R,c\\<^sub>0,g,S\\<^esub>",
+        "expands": "\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub>",
         "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
         "shorthand_for": "activation_collect"
       }
@@ -710,7 +710,7 @@
           "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
           "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst",
           "session": "Voblint_CFG",
-          "expands": "activation_context_rel \\<G> R c\\<^sub>0 g",
+          "expands": "activation_context_rel \\<G> adm c\\<^sub>0 g",
           "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"
         }
       ],
@@ -738,7 +738,7 @@
           "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
           "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.admits%7Cconst",
           "session": "Voblint_CFG",
-          "expands": "admits_call_context \\<G> g R",
+          "expands": "admits_call_context \\<G> g adm",
           "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"
         }
       ],

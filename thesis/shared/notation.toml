@@ -206,11 +206,11 @@ local = { locale = "activation_coverage", const = "collect", args = ["v"] }
 [[entry]]
 group = "set"
 reads = "the stores collected at _v_ in context _c_"
-meaning = "the stores valid activation traces carrying context _c_ reach at node _v_; _R_ admits callee contexts and the root runs in _c₀_"
+meaning = "the stores valid activation traces carrying context _c_ reach at node _v_; _adm_ admits callee contexts and the root runs in _c₀_"
 forms = [
   { const = "activation_collect", args = [
     '\<G>',
-    "R",
+    "adm",
     "c₀",
     "g",
     "S",

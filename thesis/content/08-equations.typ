@@ -43,7 +43,7 @@ the context policy decides it.
 The goal is a solution $sol$ that over-approximates the activation collecting
 semantics of @sec:contexts: for every node $v$ and context $c$,
 $
-  #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
+  #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)),
 $
 where $conc_(M)$ is the concretization $conc_(D G)(d, e)$ of @sec:sound-core applied to
 the local half $d$ of $sol(v, c)$ and the environment $e$ that reads each
@@ -52,8 +52,9 @@ outside the solved set. The main result (#isathm("activation_collect_dg_sound"),
 @sec:eq-discharge) shows that every post-solution of the equations meets this
 goal, for every domain and context policy, provided the analysis is sound and
 routing agrees with the concrete semantics: every callee context the concrete
-semantics admits for a covered call is one the equations route that call to,
-and every covered call is admitted in some context (@sec:eq-routing). Whether
+semantics admits for a call from a caller store that $sol$ describes at the
+call site is one the equations route that call to, and every such call is
+admitted in some context (@sec:eq-routing). Whether
 a solve terminates is a separate question (@sec:termination). The running
 example is the program of @fig:program-to-equations, repeated in
 @fig:eq-running with the names this chapter gives its calls.
@@ -363,31 +364,31 @@ locale: a value the test classifies as bottom concretizes to the empty set.
 The equations route each call to a callee context. Soundness requires this
 routing to agree with the contexts the collecting semantics uses.
 
-The concrete side is the relation $R$ of @sec:contexts. It is the context
-policy's rule for concrete calls: given the call site $u$, the caller's
-context $c$, the caller's store $s$ and the entered store $s'$, it says which
-callee contexts $c'$ the new activation gets. We write "$R$ admits $c'$" when
-$R(u, c, s, s', c')$ holds. The Isabelle relation also receives the call's
-static description (#isatype("call_info")), which we leave implicit. The trace semantics applies $R$ at every call, and
+The concrete side is the context policy $italic("adm")$ of @sec:contexts.
+Given the call site $u$, the caller's context $c$, the caller's store $s$ and
+the entered store $s'$, it returns the set of callee contexts that the new
+activation may get. We write "$italic("adm")$ admits $c'$" when
+$c' in italic("adm")(u, c, s, s')$. The Isabelle policy also receives the call's
+static description (#isatype("call_info")), which we leave implicit. The trace semantics applies $italic("adm")$ at every call, and
 the activation collecting semantics files the stores of the activation under
 each admitted $c'$. Under
-call strings of length one, for instance, $R$ admits exactly $[italic("pp2")]$ for the
+call strings of length one, for instance, $italic("adm")$ admits exactly $[italic("pp2")]$ for the
 call `bump(5)` from `main`. The analyzer never sees $s'$. It computes an abstract entry state $e$,
 chooses a context from $e$, and publishes $e$ to the callee's seed for that
 context. The two must meet:
 $
-  R "admits" c' quad ==> quad e "is routed to" c'.
+  italic("adm") "admits" c' quad ==> quad e "is routed to" c'.
 $
 With the soundness of enter, every concrete entered store filed under $c'$ is
 then covered by the value published for $c'$. Two properties
 make this precise.
 
 - _Totality_ (#isathm("routed_context.routed_entry_total", thy: "Routed_Context", display: "routed_entry_total")):
-  $R$ admits at least one context for every concrete call from a
+  $italic("adm")$ admits at least one context for every concrete call from a
   store that the caller's solved value covers, so no such activation is
   missing from the context-indexed collecting semantics.
 - _Adequacy_ (#isathm("routed_context.routed_entry_cover", thy: "Routed_Context", display: "routed_entry_cover")):
-  whenever $R$ admits $c'$ for a concrete call from a store that
+  whenever $italic("adm")$ admits $c'$ for a concrete call from a store that
   the caller's value covers, the caller's entry pair $(q, e)$ covers that store
   and the entered one (@sec:calls), $e$ routes to $c'$, and the entry unknown
   at $c'$ is among the solved unknowns.
@@ -405,20 +406,20 @@ the same $c'$, and totality gives #oblig("TOTAL") of @sec:contract.
       inset: (x: 5pt, y: 4pt),
       stroke: none,
       table.hline(),
-      [*policy*], [*$R$ admits $c'$ iff*], [*routed to*], [*why equal*],
+      [*policy*], [*$italic("adm")$ admits $c'$ iff*], [*routed to*], [*why equal*],
       table.hline(stroke: 0.5pt),
       [unit], [$c' = ()$], [$()$], [both constant],
       [call strings], [$c' = "take"_k (u dot c)$], [$"take"_k (u dot c)$], [the same term],
       [entry states],
       [$c' = e|_"formals"$, $(q, e)$ covers $(s, s')$],
       [$e|_"formals"$],
-      [$R$ reads the routing],
+      [$italic("adm")$ reads the routing],
       table.hline(),
     )
   },
   placement: none,
   caption: [For a call at site $u$ from caller context $c$ with caller store
-    $s$ and entered store $s'$: the contexts $R$ admits, where the equations
+    $s$ and entered store $s'$: the contexts $italic("adm")$ admits, where the equations
     route the entry state $e$, and why the two agree. $u dot c$ prepends the
     site, $e|_"formals"$ lists the formals' values in $e$, and an entry pair
     $(q, e)$ of the caller's solved value covers $(s, s')$ when
@@ -427,8 +428,8 @@ the same $c'$, and totality gives #oblig("TOTAL") of @sec:contract.
 ) <tab:eq-policies>
 
 For unit and call strings the correspondence is direct, as the last column
-shows. $R$ admits exactly the context the analyzer's own context function
-computes for the concrete call (#isaconst("call_context_rel_of_fun")), so
+shows. $italic("adm")$ admits exactly the context the analyzer's own context function
+computes for the concrete call (#isaconst("context_policy_of_fun")), so
 totality is immediate. The rest of adequacy is the entry coverage of
 @sec:calls and the routed entry unknown being solved.
 
@@ -474,16 +475,16 @@ In the example the execution with $n = 4$ is assigned $[[4, 5]]$: the entry
 value $e = {n |-> [4, 5]}$ covers $n = 4$, and $[[4, 5]]$ is where the
 equations published $e$.
 
-Adequacy is then immediate: whenever $R$ admits a context $c'$, it does so
+Adequacy is then immediate: whenever $italic("adm")$ admits a context $c'$, it does so
 through a covering entry state that the equations route to exactly $c'$.
 Totality follows from entry coverage (@sec:calls): every concrete call covered
 by the caller's value has a covering entry pair and therefore an admitted
 context.
 
-So $R$ depends on the solved analysis, as @sec:contexts anticipated, and so does
+So $italic("adm")$ depends on the solved analysis, as @sec:contexts anticipated, and so does
 the activation collecting semantics. This is not circular: the proof first fixes a post-solution
-$sol$, then defines $R$ from $sol$, and finally proves that $sol(v, c)$ covers
-the activation collecting semantics this $R$ induces.
+$sol$, then defines $italic("adm")$ from $sol$, and finally proves that $sol(v, c)$ covers
+the activation collecting semantics this $italic("adm")$ induces.
 
 The dependence is necessary for entry-state contexts. Taking the context
 directly from the concrete entered store gives $[[4, 4]]$ in the example,
@@ -494,7 +495,7 @@ equations never fill.
 
 The dependence disappears in the source-level result, which uses only the
 union over all contexts of the activation collecting semantics at a node. By totality this union is the context-free
-collecting semantics (@sec:consequences), whatever the split into contexts.
+collecting semantics (@sec:contract), whatever the split into contexts.
 
 The policy still affects precision, because it decides which calls share an
 unknown (@fig:eq-policies). A call string of length one separates the two
@@ -614,7 +615,7 @@ contract and the routing properties of @sec:eq-routing.
   enter, and routing is adequate and total. Then for every node $v$ and
   context $c$,
   $
-    #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)).
+    #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c)).
   $
 ]
 
@@ -638,7 +639,7 @@ $c' = ctxh(u, c, e)$ and continuation $k$, a post-solution satisfies
     sol(ctor("Activation_Seed") thin p space c') & gt.eq e & wide #ineq-tag(3) \
     sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(ctor("Activation_Seed") thin p space c') & wide #ineq-tag(4) \
     sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide #ineq-tag(5) \
-    forall s in conc_(M)(sol(u, c)). & med exists c'. med R(u, c, s, s', c') & wide #ineq-tag(6)
+    forall s in conc_(M)(sol(u, c)). & med italic("adm")(u, c, s, s') != emptyset & wide #ineq-tag(6)
   $
 ]
 Line #ineq(6) is not an inequality of the system but the totality premise of
@@ -663,10 +664,10 @@ concretization of its left side.
     [the edge transfer is sound (the analysis contract's #oblig("INTRA"))],
     [#oblig("CALL")],
     [#ineq(3), #ineq(4)],
-    [$e$ covers the entered store, and $R$ admits $c'$ (adequacy)],
+    [$e$ covers the entered store, and $italic("adm")$ admits $c'$ (adequacy)],
     [#oblig("RETURN")],
     [#ineq(5)],
-    [the combine stages are sound (the analysis contract's #oblig("RETURN")), and $R$ admits $c'$ (adequacy)],
+    [the combine stages are sound (the analysis contract's #oblig("RETURN")), and $italic("adm")$ admits $c'$ (adequacy)],
     [#oblig("TOTAL")], [#ineq(6)], [none beyond the premise itself],
     table.hline(),
   ),

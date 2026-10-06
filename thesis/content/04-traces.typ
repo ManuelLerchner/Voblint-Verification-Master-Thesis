@@ -1,6 +1,4 @@
 #import "@preview/fletcher:0.5.8" as fletcher: diagram, edge, node
-#import "@preview/curryst:0.6.0": prooftree, rule
-#import "@preview/cetz:0.5.2"
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
 #import "../lib/figures.typ": *
@@ -11,85 +9,85 @@
 
 = Traces and the Coverage Contract <ch:traces>
 
-In the context-sensitive formulation used here, an analysis computes separate
-invariants for the same program point under different calling contexts. To
-justify such a result, we need a concrete account of which executions each
+@ch:program-model matched every source run with a run of the compiled graph.
+For an analysis that computes one abstract state per node, this suffices. A
+context-sensitive analysis, however, computes a separate state for each node and
+calling context, so to justify its result we need to know which executions each
 context represents.
 
-The node-indexed collecting semantics of @ch:background forgets this. In the
-running example, both calls of `bump` reach the same result node, but a
+The collecting semantics of @ch:background, which gathers the stores reached
+at each node, does not record this.
+In the running example, both calls of `bump` reach the same result node, but a
 context-sensitive analysis may distinguish the activation entered with $5$ from
 the one entered with $4$. This chapter gives that distinction a concrete
 meaning.
 
-Each call of a procedure creates an _activation_. In the activation tree of a
-run, every activation is a node, and while one activation executes, the live
-activations form the path from the root to its node @aho06[§7.2.1]. We
-represent executions by _activation traces_, a term of this thesis. An
-activation trace follows one activation: its own path through the graph, the
-caller that created it, and the callees it has completed. We read calling contexts from
-this structure and do not store them in the execution semantics. Context
-membership is a relation: a concrete call may be admitted under no context, one,
-or several, and which ones may depend on the analysis's result.
+Each call of a procedure starts a new _activation_ of it, which lasts until the
+call returns @aho06[§7.2.1]. We represent executions by _activation traces_.
+An activation trace records the path of one activation through the graph. It
+also records the trace of the caller that created the activation, because the
+context of a call is chosen from the caller's context and store. After a call
+returns, it records the finished callee as well, whose result the activation
+continues with. The calling contexts of an activation are then derived from
+its trace.
 
-From this semantics we derive a local _coverage contract_. Its obligations are
+On this semantics we build a local _coverage contract_. Its obligations are
 the concrete interface that the abstract analyses and the equation system of
-@ch:domains to @ch:solving must satisfy. Once they hold, every
-context-indexed claim covers the executions assigned to its context, and the
-union of the context-indexed collections is the node collecting semantics (@sec:collect).
+@ch:domains to @ch:solving must satisfy. Once they hold, the claim for a node
+and a context covers the stores that executions in that context reach there,
+and the claims of all contexts together cover every store that a run reaches
+at the node.
 
 == Why contexts need traces <sec:why-traces>
 
 The collecting semantics of @ch:background assigns each node $v$ of a
 control-flow graph the set of stores that some run holds on reaching $v$
-@cousot77[§4], which an unknown $[v]$ per node over-approximates @apinis12[§2]. A
-context-sensitive analysis splits $[v]$ into unknowns $[v, c]$, one per calling
-context $c$, following the value tables of Sharir and Pnueli @sharir81, as
-Apinis et al. formulate them as a constraint system @apinis12[§3].
-Seidl et al. state that the invariant for $[u, c]$ "only need[s] to take into
-account executions reaching $u$ that satisfy the restriction imposed by context
-$c$" @seidl26[§4]. Such a claim states that every store of an execution in
-context $c$ at node $v$ is described by the abstract state that the analysis
-computes for $[v, c]$.
+@cousot77[§4]. @ch:background over-approximated it with one unknown per node,
+which we now write $[v]$ @apinis12[§2]. A context-sensitive analysis instead
+splits $[v]$ into unknowns $[v, c]$, one per calling context $c$, following the
+value tables of Sharir and Pnueli @sharir81, as Apinis et al. formulate them as
+a constraint system @apinis12[§3]. Seidl et al. state that the invariant for
+$[u, c]$ "only need[s] to take into account executions reaching $u$ that
+satisfy the restriction imposed by context $c$" @seidl26[§4]. The claim for
+$[v, c]$ therefore has to describe fewer stores than the claim for $[v]$, and
+it can be correspondingly more precise.
 
-Take the running example (@fig:program-to-equations): `main` calls `bump(5)`
-and then `bump(4)`, and `bump` returns its argument plus one. At the end of
-`bump`, the collecting semantics holds two stores, one with argument $5$ and
-result $6$, one with argument $4$ and result $5$. An analysis with one context
-per argument claims "result $6$ in context $5$". The collecting semantics cannot
-justify this claim, because it does not say which of the two stores belongs to
-context $5$. It has forgotten which activation holds each store. The two
-activations of `bump` use the same nodes, but they were entered
-by different calls, and a context policy may use exactly that entry information
-to tell them apart.
+In the running example (@fig:program-to-equations), `main` calls `bump(5)` and
+then `bump(4)`, and `bump` returns its argument plus one. A context-insensitive
+analysis has one claim for the result node of `bump`, which must describe both
+results, $6$ and $5$. An analysis that distinguishes the two calls by their
+argument can instead claim the result $6$ for the call with argument $5$ and
+the result $5$ for the call with argument $4$. To justify these claims, we must know which store at the result node belongs
+to which call. The collecting semantics, however, is too weak to tell. It holds
+both stores at the result node but does not record which activation reached
+each of them, so we need a richer semantics that keeps this information.
 
-The graph execution (@sec:cstep) already has a frame stack. This stack stores
-only what is needed to resume suspended callers. Activation traces keep
-more of the history. Because a callee trace keeps its creating caller and a
-resumed trace keeps both caller and callee, the context relation can choose a
-callee context at the call and keep the caller's context across calls and
-returns. On well-formed compiled programs, the caller structure of a trace is
-proved to match the runtime stack (@sec:source-bridge).
+The graph execution (@sec:cstep) has a frame stack, which records the callers
+that wait for the running activation. The stack, however, holds only what
+execution needs to resume these callers, and it forgets a call once the call
+has returned. A context policy needs more. It chooses the context of a call
+from the caller's context and store at the call, and after the return the
+caller must continue in the context it had before. Activation traces keep this
+information. A callee trace records the caller that created it, and a resumed
+trace records both the caller and the finished callee.
 
-A flat record of the graph run, namely the list of node-store pairs $(v, s)$
-that the run passes through (@fig:flat-nested, top), interleaves the steps of
-all activations and leaves their nesting implicit. In the program of @fig:cfgmap,
+Contexts could in principle be derived from the graph run itself. A flat
+record of the run, namely the list of node-store pairs $(v, s)$ that the run
+passes through (@fig:flat-nested, top), interleaves the steps of all
+activations and leaves their nesting implicit. In the program of @fig:cfgmap,
 `sum(2)` calls `dec` and then itself, so one run visits the nodes of `sum` in
-three activations. To find the context of a step, one has to recover from the
-list which call created its activation and which return resumes which caller.
+three activations. To find the context of a step, one would therefore have to
+recover from the list which call created its activation and which return
+resumes which caller.
 
-Grouping the same run by activation makes these relationships explicit
-(@fig:flat-nested, bottom). Each activation has its own activation path. A call
-creates a new activation attached to its caller, and a return composes the
-finished callee back into that caller. This construction adapts the _local traces_ of Schwarz et al. @schwarz21, each
-one thread's view of a concurrent execution, to procedure activations. An
-_activation trace_ is one activation's view of a sequential execution
+Grouping the same run by activation, in contrast, makes these relationships
+explicit (@fig:flat-nested, bottom). Each activation has its own activation
+path. A call creates a new activation attached to its caller, and a return
+composes the finished callee back into that caller. The construction is
+inspired by the _local traces_ of Schwarz et al. @schwarz21, which record one
+thread's view of a concurrent execution. An activation trace applies the same
+idea to a sequential program and records one activation's view of the run
 (@sec:rel-goblint).
-
-@sec:traces turns this grouping into a datatype, gives the rules that make a
-trace valid, shows that every graph run is represented by a valid trace, and
-reads the node collecting semantics off the valid traces. @sec:contexts then reads
-calling contexts off the same traces.
 
 #let _acts = (vb.neutral, vb.accent, vb.sign, vb.par, vb.cong, vb.trusted)
 // Colour alone does not survive greyscale printing: every box names its
@@ -225,88 +223,98 @@ We turn the grouping of @fig:flat-nested into a datatype.
   ) <fig:activation-trace>
 ]
 
-$#Root($pi$)$ is the initial activation of the program with activation path $pi$.
-$#CallT($tau'$, $pi$)$ is a callee created by the caller $tau'$
+$#Root($pi$)$ is the initial activation of the program with activation path
+$pi$. A run starts with $#Root($[(italic("entry"), s_0)]$)$, the entry node of
+the graph, which is the entry of `main`, paired with an initial store $s_0$.
+$#CallT($t'$, $pi$)$ is a callee created by the caller $t'$
 (#isaconst("activation_trace_caller")); its activation path begins at the callee's entered store.
-$#ResumeT($tau'$, $tau''$, $pi$)$ is the activation $tau'$
+$#ResumeT($t'$, $t''$, $pi$)$ is the activation $t'$
 (#isaconst("activation_trace_current")) continued past the call that produced the finished
-callee $tau''$ (#isaconst("activation_trace_callee")). The observer
-$#isaconst("path_of") thin tau$ returns the activation path,
-$#isaconst("sink_node") thin tau$ the node of its last entry and
-$#isaconst("sink_store") thin tau$ that entry's store.
+callee $t''$ (#isaconst("activation_trace_callee")). The observer
+$#isaconst("path_of") thin t$ returns the activation path,
+$#isaconst("sink_node") thin t$ the node of its last entry,
+$#isaconst("sink_store") thin t$ that entry's store, and
+$#isaconst("caller_of") thin t$ the caller that created the activation, which
+a $ctor("Root")$ does not have. The
+#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#observers")[explainer page] shows these observers interactively on a
+run of the program of @fig:flat-nested.
 
-Each trace represents the history of one activation up to a program point. On
-well-formed compiled programs, its activation path stays inside the nodes of one
-procedure (#isathm("valid_activation_trace_frag_callers")). A call creates a separate trace
-for the callee, which holds its caller as a field. When the callee finishes, a
-$ctor("Resume")$ creates a new trace for the continued caller, which keeps both
-the frozen caller and the finished callee. A whole run is therefore a family of
-traces linked by these fields. A $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller exactly,
-frozen at the call node. So a finished callee composes back into the activation
-that created it, and no search for a compatible stack frame is needed. Validity
-forces the frozen caller of a $ctor("Resume")$ to be exactly the creating
-caller of its callee (#isathm("valid_activation_trace_Resume_fields")). The context defined
-below does not read the finished callee. Both the validity rules and the
-context need the activation that created a trace.
+Each trace represents the history of one activation up to a program point, so
+on well-formed compiled programs its activation path stays inside the nodes of
+one procedure (#isathm("valid_activation_trace_frag_callers")). A callee is a
+new activation and gets a trace of its own, which holds its caller as a field.
+When the callee finishes, a $ctor("Resume")$ creates a new trace for the
+continued caller, which holds both the frozen caller and the finished callee.
+A whole run is therefore a family of traces linked by these fields.
 
-#definition(name: [Creating caller], isa: "caller_of", cmd: "fun")[
-  The creating caller is a partial function: a $ctor("Root")$ has none.
-  #thy("caller_of")
-]
+Because a $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller
+exactly, frozen at the call node, a finished callee composes back into the
+activation that created it, and no search for a compatible stack frame is
+needed. This is what makes context-specific return flow sound. A return
+continues exactly the caller that created the callee, in that caller's
+context, so the result of a callee entered in context $c'$ flows back only to
+the callers whose calls admitted $c'$. A claim for a context therefore needs to cover only the executions in that
+context.
 
-A resumed activation is the same activation, so its creating caller is that of
-the activation it resumed; the recursion descends through every call the
-activation has already made and returned from. The definition mentions no
-calling context. @sec:contexts reads the context off the trace instead of
-storing it there. A stored context would make the concrete semantics depend on
-the analysis. When the context is chosen from the entry state, the admissible contexts
-even depend on the solved table (@sec:eq-entry-routing). Reading the context off the trace lets
-every policy share one semantics.
+The datatype stores no calling context. Which information a context records
+depends on the analysis. A call-string analysis distinguishes activations by
+their recent call sites, and an entry-state analysis by abstract entry states
+that it computes itself. If a trace stored its context, the concrete semantics
+would change with every analysis, and for entry-state contexts it would even
+depend on the analysis's own result (@sec:eq-entry-routing). Instead, the
+concrete semantics is fixed once. Each context policy supplies, for every concrete call, the set of callee
+contexts it admits, and contexts of traces are derived from these sets
+(@sec:contexts). The soundness theorems are proved once for every policy, and a
+policy only has to discharge the coverage contract of @sec:contract.
 
 === Valid traces <sec:valid>
 
-The datatype admits terms that no execution produces: a path whose step follows
-no edge, or a $ctor("Resume")$ pairing a caller with a callee that another
-activation created. Validity rules such terms out.
+The datatype also admits terms that no execution produces. A path may contain
+a step that follows no edge of the graph, for instance a jump from the entry of
+`sum` directly to its result node. A $ctor("Resume")$ may pair a caller with a
+callee that another activation created, for instance continue `main` after its
+call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
+`sum(2)`. Validity rules out such terms.
 
 #definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
   For a global-variable classifier $cal(G)$, a graph $g$ and a set $S$ of
-  initial stores (for VIMP programs #isaconst("cinit_stores"): globals $0$,
-  locals arbitrary), #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
+  initial stores, #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
   the least set of traces closed under the four rules of @fig:valid-rules.
 ]
 
 #figure(
   thy("valid_activation_trace"),
   kind: image,
-  caption: [The four rules of #isaconst("valid_activation_trace"): init, intra, call and
+  caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call and
     ret. Each reads the relation for its own phenomenon: #isaconst("intra")
     for local flow, #isaconst("calls") for entering a callee and for
     recovering the continuation $italic("cont")$ at a return.],
 ) <fig:valid-rules>
 
-Init corresponds to the initial graph configuration, and the other three rules
-correspond to the three rules of #isaconst("cstep"). Intra appends a step along
-a local edge. Call starts a new trace that holds the caller, where
+The root rule corresponds to the initial graph configuration, and the other
+three rules correspond to the three rules of #isaconst("cstep"). Intra appends
+a step along a local edge. Call starts a new trace that holds the caller, where
 #isaconst("cstep") pushes a frame. Ret builds a third trace that holds caller
 and callee, where #isaconst("cstep") pops the frame. After the pop the graph
-configuration no longer records the finished call, but the
-$ctor("Resume")$ trace still holds the caller, so the caller's context can be
-read from it.
+configuration no longer records the finished call, but the $ctor("Resume")$
+trace still holds the caller, so the caller's context can be derived from it.
+The #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics")[explainer page] animates the source execution,
+the graph execution and the activation trace side by side on one program.
 
-The ret rule follows no edge out of #isai("FunctionResult p"). It reads the
-continuation from a #isaconst("calls") tuple that leaves the caller's call node
-and enters $p$, so one result node serves every caller of $p$. On compiled
-graphs each call node has a single outgoing #isaconst("calls") tuple
-(#isaconst("calls_source_unique"), #isathm("compile_prog_calls_source_unique")),
-so this is the tuple through which the callee was entered. The premise
-#isai("caller_of callee = Some caller") reads the caller from the callee's own
-structure. No separate matching invariant is needed.
+The ret rule applies when a callee trace has reached the result node
+#isai("FunctionResult p") of its procedure. The result node has no outgoing
+edge, because one result node serves every caller of $p$. The rule therefore
+finds the caller through #isai("caller_of callee = Some caller") and takes the
+#isaconst("calls") edge from the caller's call node into $p$. That edge names
+the continuation node $italic("cont")$, and the caller continues there with
+the store that #isaconst("combine_collect") builds from the caller's store and
+the callee's final store.
 
 === Graph runs are valid traces <sec:source-bridge>
 
 The traces are meant to describe the runs of the compiled graph, and through
-@sec:csim the runs of VIMP programs.
+@sec:csim the runs of VIMP programs, while keeping the history that the frame
+stack discards in an accessible form.
 
 #block(breakable: false)[
   #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
@@ -349,9 +357,9 @@ simulation of @ch:program-model, it extends to VIMP programs.
 
 === The node collecting semantics <sec:collect>
 
-From the valid traces we can read off which stores some activation can hold
-at a node. This gives the _node collecting semantics_, a counterpart of the
-node-indexed collecting semantics of @ch:background.
+Collecting the final stores of the valid traces per node gives the _node
+collecting semantics_. It plays the role of the collecting semantics of @ch:background for programs
+with procedures, with valid traces in place of runs.
 
 #block(breakable: false)[
   #definition(name: [Node collecting semantics], isa: "node_collect", cmd: "definition")[
@@ -362,76 +370,124 @@ node-indexed collecting semantics of @ch:background.
 A store is in #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") exactly when some valid
 trace ends at $v$ with this store. The classifier, graph and initial stores
 are those of the program at hand, written #isai("\<G>"), #isai("g") and
-#isai("S") from here on. In @fig:flat-nested, the three activations of `sum`
-reach #raw("exit_sum") with different stores; the collected set keeps the
-stores and forgets which activation held each. A procedure's result is an
-ordinary collected node, and whole-program completion is collection at
-$ctor("FunctionResult") italic("main")$.
-
-#isaconst("node_collect") is a function from nodes to store sets, like the
-intraprocedural collecting semantics of @ch:background, so a claim stated over
-it alone is context-insensitive. The trace structure remains available in
-#isaconst("valid_activation_trace"), and @sec:contexts reads the context off it.
-
-By @sec:source-bridge, every store that a finite source execution of a
-well-formed program reaches lies in the node collecting semantics at a related node
+#isai("S") from here on. A procedure's result is an ordinary collected node,
+and whole-program completion is collection at
+$ctor("FunctionResult") italic("main")$. Every store that a finite source
+execution of a well-formed program reaches therefore lies in the node
+collecting semantics at a corresponding node
 (#isathm("source_reaches_node_collect")).
-The node is existential because #isaconst("csim") is not functional
-(@sec:csim).
 
-== Calling contexts, as a relation <sec:contexts>
+The node collecting semantics forgets the traces, so a claim stated over it
+alone is context-insensitive. The valid traces themselves, however, keep their
+structure. The same set of traces thus supports two views: collected per node,
+as here, and split by context, as in @sec:contexts.
+
+== Calling contexts <sec:contexts>
 
 A _context_ is the index under which an activation is analyzed. At a fixed node,
 activations with the same context contribute to the same abstract unknown
-$[v, c]$. The context belongs to the whole activation: extending a trace by a
-local edge keeps its contexts (#isathm("activation_context_rel_extend")). We call
-contexts _activation-stable_ for this reason. The classical designs differ in what a context records @sharir81 @rival20[§8.4.1] @seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records the call history, and practical variants bound it to the $k$ most recent call sites, since a recursive procedure otherwise has infinitely many contexts. The functional approach computes a procedure summary independent of callers, which each call site instantiates. Goblint computes the callee context after its entry operation, by passing each
-resulting callee entry state to the analysis's `context` operation
-(@sec:eval-goblint), and Erhard et al. treat full entry states, their projections and call strings in one framework @erhard25[§4]. Voblint offers the context-insensitive policy, bounded call strings and entry-state contexts (#isatype("context_mode"), @ch:equations).
+$[v, c]$. Contexts change only at calls. Within one activation, a step along a
+local edge keeps the contexts of the trace
+(#isathm("activation_context_rel_extend")), and after a return the caller continues in the contexts it had before the call
+(#isathm("activation_context_rel_Resume_iff")).
 
-Voblint models context membership as a relation, for two reasons. First,
-with entry-state contexts the context of a call is an abstract state the
-analysis computes, so which context a concrete call belongs to depends on the
-analysis's result and not on the execution alone (@sec:eq-entry-routing).
-Second, the relation may admit no context for a call, for instance a call the
-analysis's entry does not cover. A context function would have to return one.
-Keeping this case expressible lets the coverage contract state separately, as
-#oblig("TOTAL") (@sec:contract), that every covered call is admitted
-somewhere. For the shipped policies, a concrete call admits at most one callee
-context from a fixed caller context.
+Which information a context records is a design decision of the analysis, and
+the literature describes many such _context policies_ @sharir81 @rival20[§8.4.1]
+@seidl12compiler[§2.6] @seidl12compiler[§2.9]. The call-string approach records
+the call history, and practical variants bound it to the $k$ most recent call
+sites, since a recursive procedure otherwise has infinitely many contexts. The
+functional approach, in contrast, computes a procedure summary independent of
+callers, which each call site instantiates. Goblint obtains the context of a
+callee by applying each analysis's `context` function to the callee's abstract
+entry state (@sec:eval-goblint), and Erhard et al. treat full entry states,
+their projections and call strings in one framework @erhard25[§4]. Voblint
+offers the context-insensitive policy, bounded call strings and entry-state
+contexts (#isatype("context_mode"), @ch:equations).
+
+These context selectors are functions, which choose one callee context for
+each entry state. Goblint's entry operation, however, may return several
+alternatives for one call, each a pair of a caller state and a callee entry
+state, and each alternative gets its own context. Several alternatives let an
+analysis split a call into cases. Suppose a caller passes an argument that is
+either negative or positive. With a single entry state, the callee is analyzed
+once for the join of both cases, which a sign analysis can only describe by the
+greatest element $ltop$, any sign. With one alternative per case, the callee is analyzed once in a
+context for negative arguments and once in a context for positive ones, so the analysis
+preserves the argument's sign separately in the two contexts. If the cases overlap, one
+concrete call lies in several alternatives and belongs to several contexts at
+once. A context function of the call cannot express this, so a Voblint policy
+returns, for each concrete call, a set of callee contexts. The analyses
+shipped with Voblint return one alternative per call, so for them the set has
+at most one element for a fixed caller context. A separate example returns two
+overlapping alternatives and admits one concrete call in two contexts
+(#isathm("ov_two_contexts_admitted")). The set may also be empty. Under entry-state contexts it is empty for every
+caller store that the analysis's state at the call site does not describe, for
+instance at a call that the analysis considers unreachable. No alternative
+describes such a store, so no context is admitted for it. Emptiness is
+harmless there, because the claim contains no such store. It is harmful at a
+call that the program actually makes. An entry operation that returns no
+alternative for a reachable call leaves the callee unanalyzed and the
+continuation at $lbot$, although the run reaches it
+(#isathm("ov_empty_continuation_bot")). The coverage contract rules this out
+through #oblig("TOTAL") (@sec:contract).
 
 #block(breakable: false)[
-  #definition(name: [Call-context relation], isa: "call_context_rel", cmd: "type_synonym")[
-    A call-context relation says which callee contexts are admissible for a call.
+  #definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
+    A context policy maps a concrete call to the set of callee contexts it admits.
   ]
 
   #figure(
     {
       show raw.where(block: true): set text(size: 6.2pt)
-      thy("call_context_rel")
+      thy("context_policy")
     },
     kind: image,
     placement: none,
-    caption: [The declaration of #isatype("call_context_rel"), lifted from the theory.],
+    caption: [The declaration of #isatype("context_policy"), lifted from the theory.],
   ) <fig:call-context-rel>
 ]
 
-A call-context relation $R$ decides whether a candidate callee context $c'$ is
-admissible for a concrete call. It may depend on the call, the caller's context,
-the caller's store and the entered store. Ordinary context functions are the
-special case that admits exactly one context
-(#isaconst("call_context_rel_of_fun")). Both stores are present because an entry-state policy admits a context only
-for a call whose caller store and entered store the analysis's entry covers
-(@sec:eq-entry-routing). #isaconst("admits_call_context") holds for a call site
-$u$, a caller context, a callee $p$, a caller store $s$, an entered store and a
-callee context $c'$ when some #isaconst("calls") edge from $u$ enters $p$ with
-exactly this entered store and $R$ admits $c'$ for that edge. The context of a
-whole trace is built from these calls.
+A context policy is a mathematical object over concrete stores and is not
+executed. The analyzer instead chooses callee contexts from the abstract entry
+states it computes, and @sec:eq-routing gives the two conditions, totality and
+adequacy, under which these choices agree with the policy.
+
+A context policy $italic("adm")$ maps a concrete call to the set of callee
+contexts $c'$ it admits. Each of its arguments serves some policy. The call site
+lets call strings record where a call happened: with call strings of length
+one, `bump(5)` enters the context that consists of its call site in `main`. The
+caller's context lets call strings extend the caller's history and lets
+entry-state routing read the abstract state that the analysis computed for the
+caller in that context. The call information, the call's callee, formals,
+arguments and result variable, is what the analysis's entry operation needs to
+compute an abstract entry state. The two stores, finally, serve entry-state
+contexts. The context is an abstract entry state, so it must describe the
+entered store, the store at the callee's entry after the formals have been
+bound: `bump(5)` enters with $n = 5$. Each alternative also describes the
+caller, and the return later combines this description with the callee's
+result. A context is therefore admitted only for a caller store that its
+alternative describes (@sec:eq-entry-routing).
+
+#isaconst("admits_call_context") applies $italic("adm")$ to an actual call edge
+of the graph, with the entered store that the edge's entry transfer
+#isaconst("call_enter") computes from the caller's store.
+
+The relation #isaconst("activation_context_rel") assigns contexts to whole
+traces. It does not pick one context per activation. It states which contexts
+an activation may carry, and there can be none, one or several. The root
+activation carries the initial context #isai("c\<^sub>0"). A called activation
+carries a context $c'$ if its caller carries some context $c$ and $c'$ lies in
+the set that $italic("adm")$ admits for the call from $c$. A resumed activation carries
+the contexts that the caller had before the call. The
+#link(
+  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings",
+)[explainer page]
+draws the result for each policy, with every copy of a procedure labelled by
+its context.
 
 #block(breakable: false)[
   #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
-    #isai("activation_context_rel \<G> R c\<^sub>0 g t ctx") reads "$t$ may carry
-    #isai("ctx")".
+    The contexts that a trace may carry.
   ]
 
   #figure(
@@ -445,20 +501,12 @@ whole trace is built from these calls.
   ) <fig:trace-context>
 ]
 
-A $ctor("Root")$ carries only the initial context #isai("c\<^sub>0"). A
-$ctor("Call", thy: "Activation_Trace_Def")$ trace whose path starts at #isai("FunctionEntry p") with entered
-store #isai("es") carries every context that is admitted, from some context of its
-caller, for a call to $p$ with this entered store. Admission is checked at the
-caller's last node and store. A $ctor("Resume")$ carries the contexts of the
-resumed caller. So the contexts an activation may carry are determined when it is created,
-and $ctor("Resume")$ keeps them while the activation calls and returns from
-other procedures.
-The classifier, the graph, the relation $R$ and the initial context are fixed
-per program.
+The contexts of an activation are thus fixed when the activation is
+created, and calls it makes later do not change them.
 
-With the context of a trace in hand, the node collecting semantics of @sec:collect
-can be split by context. A store belongs to context $c$ at node $v$ if some
-valid trace ending at $v$ with that store carries $c$.
+With the contexts of a trace in hand, the node collecting semantics can be
+split by context. A store belongs to context $c$ at node $v$ if some valid
+trace ending at $v$ with that store carries $c$.
 
 #block(breakable: false)[
   #definition(
@@ -470,86 +518,43 @@ valid trace ending at $v$ with that store carries $c$.
   ]
 ]
 
-The claim for $[v, c]$ must over-approximate, relative to the policy
-#isai("R"), the final stores of the valid traces that end at $v$ and carry
-$c$. #isaconst("activation_collect") collects exactly these stores; we call it
-the _activation collecting semantics_. For a
-fixed node $v$, we call these context-indexed sets the _buckets_ of $v$, an
-informal shorthand for #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c").
-In the example of @sec:why-traces, with one context per argument, the final
-store of the `bump(5)` activation belongs to the bucket of context $5$, and
-the final store of `bump(4)` to the bucket of context $4$.
+We call #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") the _activation collecting semantics_ at $v$ and $c$.
+It contains the final stores of the valid traces that end at $v$ and carry
+$c$, and the claim for the unknown $[v, c]$ must contain it. In the running
+example, with one context per argument, the final store of `bump(5)`, with
+result $6$, lies in the activation collecting semantics of context $5$ at the
+result node of `bump`, and the final store of `bump(4)`, with result $5$, in
+that of context $4$. The node collecting semantics at the result node contains
+both stores.
 
-Under a functional policy the activation collecting semantics at $(v, c)$ contains the final stores of the
-traces whose context, computed by the context function, is $c$
-(#isathm("activation_collect_of_fun")). Each valid trace then carries exactly
-one context, so the traces fall into disjoint classes. The sets of different contexts may still
-overlap, because two traces in different contexts may end in the same store.
-
-Soundness needs neither functional contexts nor disjoint sets. The claim for
-each context only has to cover that context's set. A store in the sets of two
-contexts is covered twice, once by each claim. The end-to-end argument does
-need the sets of all contexts together to cover the node collecting semantics,
-since a store in none of them would escape every claim. The coverage contract establishes the stronger sufficient property that every valid
-trace carries at least one context (#isathm("activation_coverage.valid_activation_trace_has_context")).
-
-// The grey region is the collecting semantics at the node; the context
-// regions tile it completely (a cover), overlapping only on the right.
-#let _bucket-panel(title, regions, dots) = cetz.canvas(length: 1cm, {
-  import cetz.draw: *
-  let (w, h) = (4.2, 2.2)
-  for (i, (x0, x1, col, lab)) in regions.enumerate() {
-    rect((x0, 0), (x1, h), stroke: 0.9pt + col, fill: col.lighten(80%).transparentize(35%))
-    // Stagger the spans only where regions overlap.
-    let overlap = regions.len() > 1 and regions.at(0).at(1) > regions.at(1).at(0)
-    let y = h + 0.15 + (if overlap { 0.3 * i } else { 0 })
-    line((x0, y), (x1, y), stroke: 0.9pt + col, mark: (start: "|", end: "|"))
-    content(((x0 + x1) / 2, y + 0.17), text(size: 7pt, fill: col, weight: "bold", lab))
-  }
-  rect((0, 0), (w, h), stroke: 0.8pt + vb.neutral, fill: none)
-  content((w / 2, -0.28), text(size: 7pt, fill: vb.muted, title))
-  for (pos, lab) in dots {
-    circle(pos, radius: 0.06, fill: vb.neutral, stroke: none)
-    content((pos.at(0), pos.at(1) - 0.24), text(size: 6.5pt, font: "DejaVu Sans Mono", lab))
-  }
-})
-#figure(
-  grid(
-    columns: 1,
-    align: bottom,
-    _bucket-panel(
-      [#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") at the result of `bump`],
-      ((0, 2.1, vb.accent, [context $5$]), (2.1, 4.2, vb.sign, [context $4$])),
-      (((1.05, 1.15), "bump(5)"), ((3.15, 1.15), "bump(4)")),
-    ),
-  ),
-  kind: image,
-  placement: none,
-  caption: [The node collecting semantics #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v")
-    (black frame) at the result of `bump`, split by context: the activation
-    collecting semantics of contexts $5$ and $4$ together fill it. Illustrative.],
-) <fig:buckets>
+The two sets show what the split by context buys. A single claim for the
+result node must contain both stores, so an interval analysis can only bound
+the result by $[5, 6]$. A claim per context only has to contain the stores of
+its own context, the result $6$ in context $5$ and the result $5$ in context
+$4$. No store is lost by the split as long as every valid trace carries at
+least one context, because then every store of the node collecting semantics
+lies in the activation collecting semantics of some context. The coverage
+contract of the next section guarantees this.
 
 == The coverage contract <sec:contract>
 
-We want a claim #isai("cover") $v$ $c$ that contains every store of
-#isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c"), a set of stores for each node and context. The coverage contract
-below reduces this to local conditions. Like the
-collecting semantics, a claim is a mathematical object. Its sets of stores may
-be infinite, so the analyzer does not compute it directly. The following chapters turn the solver's result into an abstract reader indexed
-by $(v, c)$; only the unknowns the solver encounters need to be computed. In
-the routed instance, #isai("cover v c") is the concretization of the value this
-reader returns for $(v, c)$ (@ch:equations). The coverage contract below is therefore the interface between the
-analyzer and the concrete semantics. It mentions only stores and no abstract
-domain.
+The goal is a claim #isai("cover") $v$ $c$, a set of stores for each node and
+context, that contains #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). A claim is a mathematical
+object, and its sets of stores may be infinite. The analyzer instead computes
+abstract values, and @ch:equations takes #isai("cover v c") to be the
+concretization of the value computed for $[v, c]$. The coverage contract
+reduces the goal to local conditions on #isai("cover") that mention only
+stores. It is therefore the interface between the analyzer and the concrete
+semantics.
 
 Valid traces grow by four rules, so it is enough to check the claim locally
 against the same four cases. #oblig("INIT") covers the root activation,
 #oblig("INTRA") a local edge, #oblig("CALL") the entry into a callee and
-#oblig("RETURN") the continuation after a callee finishes. A fifth condition,
-#oblig("TOTAL"), ensures that a call from a covered store is not lost because
-the relation admits no callee context. @fig:contract shows the five obligations
-at one call.
+#oblig("RETURN") the continuation after a callee finishes. Apart from
+#oblig("INIT"), each obligation looks at one step of a run and requires the
+claim to contain the store after the step whenever it contains the stores
+before it. @fig:contract shows
+these obligations at one call, together with a fifth, #oblig("TOTAL").
 
 #let _key(pos, name, body, col: vb.neutral) = node(
   pos,
@@ -591,120 +596,28 @@ at one call.
     obligation. It shows the caller store $s$ that #oblig("RETURN") reads.
     #oblig("RETURN") combines the caller's store $s$ with the
     callee's result read in the admitted context $c'$. #oblig("TOTAL") demands
-    that at least one $c'$ exists (@fig:total).],
+    that at least one $c'$ exists.],
 ) <fig:contract>
 
+The fifth obligation, #oblig("TOTAL"), concerns a call at a call site $u$ in
+a caller context $c$ from a caller store $s$. If $s in #isai("cover u c")$,
+#oblig("TOTAL") requires the policy to admit at least one callee context for
+the call from $s$ (#isaconst("call_context_total_on")). For a store $s$ that the claim
+excludes it requires nothing.
 
-#oblig("TOTAL") protects the union over all contexts (@fig:buckets). If $R$
-admits no context for a call, the resulting
-callee trace carries no context and contributes to no context's set. Unless another
-trace with a context reaches the same store, the union misses it. The coverage contract
-therefore requires every covered call state to admit at least one callee
-context.
+The other four obligations do not suffice without it
+(#isathm("total_dropped_unsound")). A call that gets no context leaves the
+callee's result unconstrained, while the caller continues in its own context,
+so a store that the caller reaches after the return can lie outside the
+claim.
 
-Demanding this of $R$ for every call and every store would be too strong. An
-entry-state policy admits the contexts that the analysis computed for the
-call. For a call that the analysis considers unreachable it computed nothing,
-and it admits no context there. The requirement is therefore stated relative
-to the claim. $R$ must admit a context only for the stores that the claim
-itself covers at a call site. This is why the totality is _conditional_.
-
-#figure(
-  cetz.canvas(length: 1cm, {
-    import cetz.draw: *
-    let dot(p, name, hollow: false) = {
-      circle(
-        p,
-        radius: 0.07,
-        fill: if hollow { white } else { vb.neutral },
-        stroke: 0.7pt + vb.neutral,
-        name: name,
-      )
-    }
-    // Call site u in context c; the claim's stores sit in the dashed region.
-    rect((0, 0), (3.2, 2.6), stroke: 0.8pt + vb.neutral, fill: vb.bg, radius: 0.15)
-    content((1.6, 2.85), text(size: 7.5pt)[call site $u$, context $c$])
-    rect(
-      (0.3, 0.85),
-      (2.9, 2.3),
-      stroke: (paint: vb.accent, thickness: 0.9pt, dash: "dashed"),
-      radius: 0.1,
-    )
-    content((1.6, 1.0), text(size: 6.5pt, fill: vb.accent)[covered by the claim])
-    dot((0.9, 2.0), "s1")
-    dot((1.6, 1.6), "s2")
-    dot((2.3, 2.0), "s3")
-    dot((1.6, 0.42), "s4", hollow: true)
-    content((2.35, 0.42), anchor: "west", text(size: 6.5pt, fill: vb.muted)[exempt])
-    let cx = 5.6
-    for (i, (lab, col)) in (
-      ([$c'_1$], vb.accent),
-      ([$c'_2$], vb.sign),
-      ([$c'_3$], vb.cong),
-    ).enumerate() {
-      let y = 2.2 - 0.8 * i
-      rect(
-        (cx, y - 0.28),
-        (cx + 1.3, y + 0.28),
-        stroke: 0.8pt + col,
-        fill: col.lighten(85%),
-        radius: 0.1,
-        name: "k" + str(i),
-      )
-      content((cx + 0.65, y), text(size: 7.5pt, fill: col, weight: "bold", lab))
-    }
-    content((cx + 0.65, 2.85), text(size: 7.5pt)[callee entry])
-    let arr(a, b) = line(a, b, stroke: 0.7pt + vb.called, mark: (end: ">", fill: vb.called))
-    arr("s1", "k0.west")
-    arr("s2", "k1.west")
-    arr("s3", "k1.west")
-    arr("s3", "k2.west")
-  }),
-  kind: image,
-  placement: none,
-  caption: [Conditional totality at one call edge. Every store that the claim
-    covers at the call site (dashed) needs at least one callee context that
-    $R$ admits (arrows); a store may get several. A store outside the claim
-    (hollow) needs none. Illustrative.],
-) <fig:total>
-
-#block(breakable: false)[
-  #definition(name: [Conditional totality], isa: "call_context_total_on", cmd: "definition")[
-    At every call edge, every store the claim admits at the call site in a
-    context $c$ has _some_ callee context that $R$ admits from $c$.
-  ]
-
-  #figure(
-    {
-      show raw.where(block: true): set text(size: 6pt)
-      thy("call_context_total_on")
-    },
-    kind: image,
-    placement: none,
-    caption: [The declaration of #isaconst("call_context_total_on"), lifted from the theory.],
-  ) <fig:call-context-total-on>
-]
-
-Read from left to right (@fig:total), the definition says the following. For
-every call edge from $u$, every context $c$ and every store $s$ that the claim
-covers at $u$ in $c$, $R$ admits some callee context $c'$ for this call from
-$c$ with the entered store. Stores outside the claim impose nothing. Together with the four closure
-obligations, this suffices for soundness (#isathm("activation_collect_sound")). The proof follows a run step by step. When the run
-reaches a call site, the other obligations have already placed its store in the
-claim there, so the condition applies and the callee gets a context.
-
-A functional policy satisfies the condition for every claim, since it always
-names exactly one context (#isathm("call_context_total_on_of_fun")). Call
-strings are functional in this sense: the callee's context is the caller's
-context extended by the call site and cut to the last $k$ calls
-(#isaconst("cs_context")). In the
-running example, the policy that gives each call of `bump` the context of its
-argument is such a function: `bump(5)` enters context $5$ and `bump(4)` enters
-context $4$, whatever the claim is. A relational policy such as entry-state
-routing reads the admitted contexts off the computed claim and has to discharge
-the condition against it. For entry-state routing this follows from entry coverage (@sec:eq-entry-routing).
-
-Isabelle states the obligations as the assumptions of the locale
+Asking for contexts at every call would be too strong, since an entry-state policy admits
+no context for a caller store that the analysis excludes at the call site, and
+the claim contains no such store either. The context-insensitive policy and
+call strings admit a context for every call and meet #oblig("TOTAL") for every
+claim (#isathm("call_context_total_on_of_fun")). For entry-state contexts it
+follows from the coverage of the analysis's entry (@sec:eq-entry-routing).
+Isabelle states the five obligations as the assumptions of the locale
 #isalocale("activation_coverage") (@fig:activation-coverage).
 
 #figure(
@@ -713,110 +626,56 @@ Isabelle states the obligations as the assumptions of the locale
     thy("activation_coverage")
   },
   kind: image,
-  placement: auto,
+  placement: top,
   caption: [The declaration of #isalocale("activation_coverage"), lifted from the
     theory. In #oblig("RETURN"), $p'$ and #isai("es") range over every call edge
     out of #isai("cl"). On compiled programs a call site has one call edge
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
 ) <fig:activation-coverage>
 
-== What the coverage contract gives <sec:consequences>
-
-The coverage contract has two consequences. First, each context's set of stores lies
-inside that context's claim, which is the per-context soundness statement. Second, under the full coverage contract, #oblig("TOTAL") supplies the existence step
-that shows every valid trace carries at least one context, so the
-union over all contexts is exactly the node collecting semantics
-(@fig:buckets).
-
-The proof of the first consequence is a rule induction over the valid traces.
-Each rule of #isaconst("valid_activation_trace") matches one obligation: a root trace is
-covered by #oblig("INIT"), an extended trace by #oblig("INTRA"), a callee trace
-by #oblig("CALL"), and a resumed trace by #oblig("RETURN"). #oblig("TOTAL")
-supplies an admitted callee context in the call and return cases. The return case
-needs a bound on the caller as well as on the finished callee, so the induction
-hypothesis is strengthened to every trace on the chain of creating callers
-(#isathm("caller_chain_closure")).
-
-#block(breakable: false)[
-  #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
-    Assume that the claim meets the coverage contract, that is, the locale
-    #isalocale("activation_coverage") holds for it (its five obligations).
-    Then for every node $v$ and context $c$,
-    #align(center, isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c \<subseteq> cover v c"))
-  ]
-
-  #proved("activation_collect_sound")
+#theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
+  If the claim meets the five obligations of
+  #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
+  at $v$ and $c$ is contained in the claim #isai("cover v c").
 ]
 
-#theorem(
-  name: [Exhaustive contexts],
-  isa: "node_collect_eq_Union_activation_collect",
-)[
-  Under the five coverage obligations, including #oblig("TOTAL"),
-  #align(
-    center,
-    isai(
-      "\<C>\<^bsub>\<G>,g,S\<^esub> v = (\<Union>c. \<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c)",
-    ),
-  )
+#proved("activation_collect_sound")
+
+#block(breakable: false)[
+  The same obligations give every valid trace at least one context, so the
+  activation collecting semantics of all contexts together are exactly the
+  node collecting semantics.
+
+  #theorem(
+    name: [Exhaustive contexts],
+    isa: "node_collect_eq_Union_activation_collect",
+  )[
+    Under the five coverage obligations, including #oblig("TOTAL"), the node
+    collecting semantics at every node $v$ is the union of the activation
+    collecting semantics at $v$ over all contexts.
+  ]
 ]
 
 #proved("node_collect_eq_Union_activation_collect")
 
-With this equality, a context-specific claim can be more precise than a single
-sound claim that must cover the whole node, as "result $6$ in context $5$" for
-`bump`, while the union over all contexts still contains every store of the
-node collecting semantics. For the abstract side, Apinis et al. @apinis12[§3] observe that after local
-solving, a program point can only be reached by
-abstract states bounded by the join of the partial solution's values at that
-point over the contexts that the solver encountered. Here we make the corresponding concrete sets explicit for our relational
-trace semantics and prove that each is covered by its claim.
+Together, the two theorems give the bound that later chapters use.
+#corollary(name: [Claims cover the collection], isa: "node_collect_covered")[
+  Under the five coverage obligations, every store of the node collecting
+  semantics at $v$ lies in the claim #isai("cover v c") of some context $c$.
+]
 
-@fig:ch4-chain summarizes the chapter. A context is a property of an
-activation trace, and the five coverage obligations guarantee that the claim
-covers every context's set of stores (#isathm("activation_collect_sound")). With #oblig("TOTAL"), these sets together
-recover the node collecting semantics (#isathm("node_collect_eq_Union_activation_collect")). For well-formed programs, the trace
-representation and the forward simulation of @ch:program-model transfer these
-guarantees to finite VIMP source executions (#isathm("source_reaches_node_collect")). The following chapters construct
-such claims from abstract domains and equations.
+#proved("node_collect_covered")
 
-#let _step(pos, name, body) = node(
-  pos,
-  text(size: 7.5pt, body),
-  stroke: 0.8pt + vb.neutral,
-  fill: vb.bg,
-  corner-radius: 3pt,
-  inset: 5pt,
-  name: name,
-)
-#let _via(body) = text(size: 6.5pt, fill: vb.muted, body)
-#figure(
-  diagram(
-    spacing: (11mm, 10mm),
-    label-size: 6.5pt,
-    _step((0, 0), <h-src>, [VIMP source run]),
-    _step((1, 0), <h-cfg>, [graph run]),
-    _step((2, 0), <h-tr>, [valid trace]),
-    _step((3, 0), <h-bk>, [activation collection #isai("\<A>") $v$ $c$, all $c$]),
-    _step((4, 0), <h-cl>, [claims #isai("cover") $v$ $c$, all $c$]),
-    _step((3, 1), <h-col>, [collection #isai("\<C>") $v$]),
-    edge(<h-src>, <h-cfg>, "-|>", label: _via[simulation], label-side: left),
-    edge(<h-cfg>, <h-tr>, "-|>", label: _via[represents], label-side: left),
-    edge(<h-tr>, <h-bk>, "-|>", label: _via[context], label-side: left),
-    edge(<h-bk>, <h-cl>, "-|>", label: _via[each $subset.eq$], label-side: left),
-    edge(
-      <h-bk>,
-      <h-col>,
-      "-|>",
-      label: _via[union $=$, with #smallcaps("Total")],
-      label-side: left,
-    ),
-  ),
-  kind: image,
-  placement: none,
-  caption: [The links of this chapter. A source run is represented by a valid
-    trace. The trace's contexts place its store in the activation collecting
-    semantics at each of those contexts. The coverage contract bounds each
-    context's set by its claim, and with #oblig("TOTAL") the union over all
-    contexts is the node collecting semantics.],
-) <fig:ch4-chain>
+Apinis et al. make the corresponding observation for the abstract side: after local solving, the states that reach a program point are
+bounded by the join of the solution's values at that point over the contexts
+the solver encountered @apinis12[§3].
+
+This chapter has built the concrete half of the soundness argument. Every
+finite source execution of a well-formed program is matched by a graph run
+(@ch:program-model), which a valid activation trace represents
+(@sec:source-bridge). The contexts of the trace place its final store in their
+activation collecting semantics (@sec:contexts), and a claim that meets the
+coverage contract contains all of these sets. The following chapters construct
+such claims by abstract interpretation, with abstract domains describing sets
+of stores (@ch:domains) and equation systems computing the abstract values
+(@ch:equations, @ch:solving).

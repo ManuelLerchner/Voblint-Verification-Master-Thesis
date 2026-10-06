@@ -105,6 +105,12 @@ fact = "activation_coverage.node_collect_eq_Union_activation_collect"
 session = "Voblint_CFG"
 theory = "Voblint_CFG.Activation_Trace_Abstract"
 
+[facts.node_collect_covered]
+why = "Chapter 4: the claims of all contexts contain the node collecting semantics."
+fact = "activation_coverage.node_collect_covered"
+session = "Voblint_CFG"
+theory = "Voblint_CFG.Activation_Trace_Abstract"
+
 [facts.cstep_preserves_activation_trace_repr]
 why = "Chapter 4: one graph step is matched by a trace rule."
 session = "Voblint_Compile"
