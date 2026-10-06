@@ -339,12 +339,12 @@ text \<open>
 \<close>
 
 lemma routed_analysis_from_live_unknowns:
-  fixes R :: "'c call_context_rel"
+  fixes adm :: "'c context_policy"
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> R u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'
+        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+              (call_enter (declared_global p) (CallEdge dst pars args) s)
         \<Longrightarrow> route (declared_global p) u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
                  (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
@@ -352,13 +352,13 @@ lemma routed_analysis_from_live_unknowns:
     and total_R: "\<And>u ctx dst pars args q cont s. (u, ctx) \<in> live_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)
-        \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
+        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
   shows "routed_analysis (analysis_spec (declared_global p) p) (\<lambda>d e. pgam p d e)
      (declared_global p) (prog_cfg p) buffer_key global_of
      (route (declared_global p)) Bot (Lifted init_st)
      (place_rg (declared_global p) (Lifted init_st))
-     (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) R
+     (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) adm
      (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e))
      gamma\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
@@ -480,12 +480,12 @@ next
 qed
 
 theorem activation_collect_sound_live_unknowns:
-  fixes R :: "'c call_context_rel"
+  fixes adm :: "'c context_policy"
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> live_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> R u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'
+        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+              (call_enter (declared_global p) (CallEdge dst pars args) s)
         \<Longrightarrow> route (declared_global p) u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
                  (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
@@ -493,26 +493,26 @@ theorem activation_collect_sound_live_unknowns:
     and total_R: "\<And>u ctx dst pars args q cont s. (u, ctx) \<in> live_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
         \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))) (gsol p)
-        \<Longrightarrow> \<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
-  shows "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
+        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
+  shows "\<A>\<^bsub>declared_global p,adm,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof -
   interpret live: routed_analysis "analysis_spec (declared_global p) p" "\<lambda>d e. pgam p d e"
       "declared_global p" "prog_cfg p" buffer_key global_of
       "route (declared_global p)" Bot
         "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
-      "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" R
+      "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" adm
       "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
       gamma\<^sub>V empty\<^sub>V classify
-    by (rule routed_analysis_from_live_unknowns[where R = R, OF wf solves cover_R total_R])
+    by (rule routed_analysis_from_live_unknowns[where adm = adm, OF wf solves cover_R total_R])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
   have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
       live.pp_entry_s0g_bound[OF entry_cov]]
     by (simp add: sol_global_def)
-  have "\<A>\<^bsub>declared_global p,R,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
+  have "\<A>\<^bsub>declared_global p,adm,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
              (gsol p)"
     using live.activation_collect_dg_sound
@@ -531,15 +531,15 @@ theorem fun_route_activation_collect_sound_of_terminates:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+  shows "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
            prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> pgam p (reader (declared_global p) p (Inl (v, ctx))) (gsol p)"
 proof (rule activation_collect_sound_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and Rc: "call_context_rel_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-               (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
+    and Rc: "ctx' \<in> context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
+               (call_enter (declared_global p) (CallEdge dst pars args) s)"
   show "route (declared_global p) u ctx
           (entered p (call_info_of (CallEdge dst pars args) q)
              (dg_local (sol_env (declared_global p) p (Inl (u, ctx)))))
@@ -549,8 +549,8 @@ proof (rule activation_collect_sound_live_unknowns[OF wf solves])
       route_const[of _ _ _ _ "call_enter (declared_global p) (CallEdge dst pars args) s"])
 next
   fix u ctx dst pars args q cont and s :: store
-  show "\<exists>ctx'. call_context_rel_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
+  show "context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
+                 (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
     by simp
 qed
 
@@ -565,11 +565,11 @@ theorem fun_route_state_at_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-  shows "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+  shows "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
            prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
            \<subseteq> gamma\<^sub>V (state_at (declared_global p) p ctx v)"
 proof -
-  have "\<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+  have "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
     using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
@@ -593,7 +593,7 @@ theorem fun_route_report_proved_sound:
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and mem: "(v, c, Check_Proved) \<in> set (report (declared_global p) p ctx)"
-  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                  prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have fin: "finite (intra (prog_cfg p))"
@@ -602,7 +602,7 @@ proof -
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
              and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
-             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                                prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
            OF fin _ classify_proved fun_route_state_at_sound[OF route_const wf solves]])
        (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
@@ -613,7 +613,7 @@ theorem fun_route_report_refuted_sound:
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
     and mem: "(v, c, Check_Refuted) \<in> set (report (declared_global p) p ctx)"
-  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+  shows "\<forall>s \<in> \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                  prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have fin: "finite (intra (prog_cfg p))"
@@ -622,7 +622,7 @@ proof -
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
              and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
-             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,call_context_rel_of_fun ctx_fun,root_ctx,
+             and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                                prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
            OF fin _ classify_refuted fun_route_state_at_sound[OF route_const wf solves]])
        (use mem in \<open>simp add: report_def state_at_def analysis_surface.report_def\<close>)
@@ -670,9 +670,9 @@ proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and Rc: "admitted_contexts (declared_global p) p u ctx
+    and Rc: "ctx' \<in> admitted_contexts (declared_global p) p u ctx
                (call_info_of (CallEdge dst pars args) q) s
-               (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
+               (call_enter (declared_global p) (CallEdge dst pars args) s)"
   let ?ci = "call_info_of (CallEdge dst pars args) q"
   let ?caller = "dg_local (sol_env (declared_global p) p (Inl (u, ctx)))"
   let ?ent = "entered p ?ci ?caller"
@@ -692,9 +692,9 @@ next
   have cont: "(cont, ctx) \<in> sol_vars (declared_global p) p"
     using ctx_vars_cover_live_combineD[OF live_unknowns_cover[OF wf solves] uL ce]
       live_unknowns_sub by blast
-  show "\<exists>ctx'. admitted_contexts (declared_global p) p u ctx
+  show "admitted_contexts (declared_global p) p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter (declared_global p) (CallEdge dst pars args) s) ctx'"
+                 (call_enter (declared_global p) (CallEdge dst pars args) s) \<noteq> {}"
     unfolding admitted_contexts_alt
     by (rule routed_entry_context_rel_total)
        (use entry_cover[OF solves cont ce sin]

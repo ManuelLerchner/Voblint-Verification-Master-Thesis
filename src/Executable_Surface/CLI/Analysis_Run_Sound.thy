@@ -90,14 +90,14 @@ text \<open>
 
 lemma lookup_table_covers_of_activation:
   fixes r :: "('c, 'v) solved_table"
-  assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v c)"
-      and sound: "\<And>ctx. \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx
+  assumes union: "\<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v c)"
+      and sound: "\<And>ctx. \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v ctx
                     \<subseteq> gamma_lift gm (lookup_table r v ctx)"
       and mem: "s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  obtains ctx st where "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx"
+  obtains ctx st where "s \<in> \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v ctx"
     and "lookup_table r v ctx = Lifted st" and "s \<in> gm st"
 proof -
-  from mem union obtain ctx where a: "s \<in> \<A>\<^bsub>\<G>,R,rc,g,S\<^esub> v ctx" by blast
+  from mem union obtain ctx where a: "s \<in> \<A>\<^bsub>\<G>,adm,rc,g,S\<^esub> v ctx" by blast
   with sound have g: "s \<in> gamma_lift gm (lookup_table r v ctx)" by blast
   show ?thesis
   proof (cases "lookup_table r v ctx")
@@ -210,9 +210,9 @@ text \<open>
 lemma covered_table_of_activation:
   fixes r :: "('c, 'v) solved_table"
   assumes union: "\<And>u. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> u
-                    \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
+                    \<subseteq> (\<Union>c. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,
                                 cinit_stores (declared_global p)\<^esub> u c)"
-      and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,R,rc,prog_cfg p,
+      and sound: "\<And>u ctx. \<A>\<^bsub>declared_global p,adm,rc,prog_cfg p,
                               cinit_stores (declared_global p)\<^esub> u ctx
                     \<subseteq> gamma_lift gm (lookup_table r u ctx)"
       and fin: "finite_solved_table r"
@@ -239,7 +239,7 @@ lemma mcp_rule_table:
   shows "covered_table p (mcp_rule.result as r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
+    [where adm = "context_policy_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
   case (1 u)
   show ?case
     by (rule equalityD1
@@ -265,7 +265,7 @@ lemma mcp_split_rule_table:
   shows "covered_table p (mcp_split_rule.result as r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
+    [where adm = "context_policy_of_fun (\<lambda>u c t. ())" and rc = "()"], goal_cases)
   case (1 u)
   show ?case
     by (rule equalityD1

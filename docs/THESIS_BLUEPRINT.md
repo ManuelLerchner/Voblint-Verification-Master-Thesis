@@ -209,7 +209,7 @@ entry and continuation. Nodes are `Statement n`, `FunctionEntry p`,
 `FunctionResult p`. `cstep` executes an arbitrary graph. `CFG_Transfer` gives
 the three concrete transfers: `edge_collect`, `call_enter`, `combine_collect`.
 `Collecting/` holds the semantic heart: `activation_trace`, `valid_activation_trace`, `node_collect`,
-`activation_context_rel`, `call_context_rel`, `activation_collect`, and the
+`activation_context_rel`, `context_policy`, `activation_collect`, and the
 `activation_coverage` locale with `activation_collect_sound` and
 `node_collect_eq_Union_activation_collect`.
 
@@ -378,7 +378,7 @@ L1  COMPILATION AND SIMULATION
 L2  CONCRETE INTERPROCEDURAL SEMANTICS
     activation_trace, valid_activation_trace (Root / intra / call / ret)     Activation_Trace_Def
     node_collect, node_collect_I / _E                Activation_Trace_Collect
-    activation_context_rel, call_context_rel,
+    activation_context_rel, context_policy,
     call_context_total_on, activation_collect      Activation_Trace_Context
              │
              v
@@ -692,7 +692,7 @@ answers".
 ### C2 — A concrete semantics for calling context
 
 **Claim.** Calling context is given a semantics rather than postulated. A
-`call_context_rel` says which contexts may describe one concrete call
+`context_policy` says which contexts may describe one concrete call
 transition; `activation_context_rel` threads it along a concrete trace; and
 `activation_collect` is the collecting semantics indexed by it. The relational
 form is essential, because Goblint's `enter` returns a list of alternatives
@@ -1514,7 +1514,7 @@ thesis section → theories → central definitions → central theorems.
 | 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location` | `csim`, `control_at`, `procs_embedded` | `csim_step`, `csim_star`, `procs_embedded_compile_prog` |
 | 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_activation_trace_entry_result_eq`, `prog_live_reaches` |
 | 4.2–4.4 | `Voblint_CFG.Activation_Trace_Def`, `Activation_Trace_Collect` | `activation_trace`, `activation_path`, `path_of`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_activation_trace`, `node_collect` | `node_collect_I`, `node_collect_E` |
-| 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `call_context_rel`, `call_context_rel_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
+| 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `context_policy`, `context_policy_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
 | 4.7–4.8 | `Voblint_CFG.Activation_Trace_Abstract`, `Voblint_Framework.Activation_Backbone` | locale `activation_coverage`, `trace_covered` | `valid_activation_trace_covered_at`, `node_collect_semantic_postfix`, `node_collect_eq_Union_activation_collect`, `activation_collect_sound` |
 | 4.10 | `Voblint_Compile.Source_To_Trace` | `stack_repr` | `source_run_has_activation_trace`, `source_reaches_node_collect` |
 | 5.1–5.3 | `Voblint_Domain.Abstract_Domain`, `Nonrelational_State`, `Reachability_Lift`, `Nonrelational_Reachability` | class `numeric_domain`, class `executable_domain`, `abs_state`, `gamma_state`, `is_empty_state`, `'a lifted`, `normalize_lift`, `canonicalize_lift` | `gamma_stateD` |

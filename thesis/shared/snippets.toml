@@ -145,7 +145,7 @@ why = "Figure gallery example."
 [snippets.activation_trace]
 why = "Chapter 4, the activation trace datatype."
 
-[snippets.call_context_rel]
+[snippets.context_policy]
 why = "Chapter 4, the type of a call-context relation."
 
 [snippets.activation_context_rel]
@@ -171,6 +171,9 @@ why = "Chapter 4, source-reachable stores are collected."
 
 [snippets.node_collect_eq_Union_activation_collect]
 why = "Chapter 4, under the whole contract the buckets recover the collection."
+
+[snippets.node_collect_covered]
+why = "Chapter 4, the claims of all contexts contain the collection."
 
 [snippets.activation_path]
 why = "Chapter 4, an activation path: a list of node-store pairs."

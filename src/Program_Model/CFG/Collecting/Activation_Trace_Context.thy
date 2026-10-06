@@ -32,10 +32,10 @@ text \<open>\<open>activation_context_of\<close> fixes one context per trace by 
   executable routed solver's own \<open>route\<close> is typed to return a single context, not a set.
   The entry-state instance is not: a call may answer several overlapping alternatives, each
   covering the same concrete activation and routing it to its own context, so its concrete
-  semantics is stated directly over \<open>activation_context_rel\<close>/\<open>call_context_rel\<close> rather than over
+  semantics is stated directly over \<open>activation_context_rel\<close>/\<open>context_policy\<close> rather than over
   \<open>activation_context_of\<close>. \<open>activation_context_of\<close> is therefore not the primary semantics; it is the deterministic
   compatibility witness for the functional case, connected to \<open>activation_context_rel\<close> via
-  \<open>call_context_rel_of_fun\<close> and \<open>activation_context_rel_of_fun_iff\<close>.\<close>
+  \<open>context_policy_of_fun\<close> and \<open>activation_context_rel_of_fun_iff\<close>.\<close>
 
 
 lemma activation_context_extend_nonempty:
@@ -43,37 +43,43 @@ lemma activation_context_extend_nonempty:
   by (cases t) (auto simp: hd_append)
 
 
-subsection \<open>Admissible callee contexts, relationally\<close>
+subsection \<open>Admissible callee contexts, as a set per call\<close>
 
 text \<open>
   An analysis's entry operation answers a \<^emph>\<open>list\<close> of alternatives and its context
   selector is applied to each, so one concrete call may be admitted in several contexts.
-  \<open>call_context_rel\<close> is the semantic shape of that whole-call protocol: given the call
+  \<open>context_policy\<close> is the semantic shape of that whole-call protocol: given the call
   site, the caller's own context, the call's information, the caller store and the entered
-  store, it says which callee contexts may describe this transition.  Both stores are
+  store, it returns the set of callee contexts that may describe this transition.  The set
+  may be empty or have several elements; \<open>call_context_total_on\<close> below requires it to be
+  non-empty for every covered call.  Both stores are
   arguments so an instance can tie the chosen context to one alternative whose continuation
   half covers the caller and whose entry half covers the entered store, never mixing two.
 
-  A functional policy --- the unit context, a k-call-string --- is the graph of a function,
-  \<open>call_context_rel_of_fun\<close>.  The abstract selector an analysis actually runs stays a
-  function of the abstract entry state; only the activation-trace semantics is relational.
+  A functional policy --- the unit context, a k-call-string --- returns a singleton,
+  \<open>context_policy_of_fun\<close>.  The abstract selector an analysis actually runs stays a
+  function of the abstract entry state; only the activation-trace semantics is set-valued.
 \<close>
 
-type_synonym 'c call_context_rel =
-  "cfg_node \<Rightarrow> 'c \<Rightarrow> call_info \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
+type_synonym 'c context_policy =
+  "cfg_node \<Rightarrow> 'c \<Rightarrow> call_info \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c set"
 
-definition call_context_rel_of_fun ::
-  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c call_context_rel"
+definition context_policy_of_fun ::
+  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c) \<Rightarrow> 'c context_policy"
 where
-  "call_context_rel_of_fun f u ctx ci caller entered ctx' \<longleftrightarrow> ctx' = f u ctx entered"
+  "context_policy_of_fun f u ctx ci caller entered = {f u ctx entered}"
 
-lemma call_context_rel_of_fun_iff [simp]:
-  "call_context_rel_of_fun f u ctx ci caller entered ctx' \<longleftrightarrow> ctx' = f u ctx entered"
-  by (simp add: call_context_rel_of_fun_def)
+lemma context_policy_of_fun_iff [simp]:
+  "ctx' \<in> context_policy_of_fun f u ctx ci caller entered \<longleftrightarrow> ctx' = f u ctx entered"
+  by (simp add: context_policy_of_fun_def)
+
+lemma context_policy_of_fun_nonempty [simp]:
+  "context_policy_of_fun f u ctx ci caller entered \<noteq> {}"
+  by (simp add: context_policy_of_fun_def)
 
 text \<open>
-  \<open>admits_call_context \<G> g R u ctx p s es ctx'\<close>: from node \<open>u\<close> in context \<open>ctx\<close> with store
-  \<open>s\<close>, some \<open>calls\<close> edge of \<open>g\<close> enters \<open>p\<close> with exactly the store \<open>es\<close>, and \<open>R\<close> admits
+  \<open>admits_call_context \<G> g adm u ctx p s es ctx'\<close>: from node \<open>u\<close> in context \<open>ctx\<close> with store
+  \<open>s\<close>, some \<open>calls\<close> edge of \<open>g\<close> enters \<open>p\<close> with exactly the store \<open>es\<close>, and \<open>adm\<close> admits
   \<open>ctx'\<close> for that edge.  It is \<^const>\<open>call_enter_store\<close> with the callee and the admitted
   context made explicit.  Naming the edge by its effect rather than assuming it unique keeps
   the semantics honest on a graph with two call edges leaving one node, exactly as
@@ -81,36 +87,36 @@ text \<open>
 \<close>
 
 definition admits_call_context ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 'c call_context_rel
+  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 'c context_policy
      \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
 where
-  "admits_call_context \<G> g R u ctx p s es ctx' \<longleftrightarrow>
+  "admits_call_context \<G> g adm u ctx p s es ctx' \<longleftrightarrow>
      (\<exists>dst pars args cont.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<and> es = call_enter \<G> (CallEdge dst pars args) s
-        \<and> R u ctx (call_info_of (CallEdge dst pars args) p) s es ctx')"
+        \<and> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s es)"
 
 lemma admits_call_contextI:
   assumes "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-    and "R u ctx (call_info_of (CallEdge dst pars args) p) s
-           (call_enter \<G> (CallEdge dst pars args) s) ctx'"
-  shows "admits_call_context \<G> g R u ctx p s (call_enter \<G> (CallEdge dst pars args) s) ctx'"
+    and "ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
+           (call_enter \<G> (CallEdge dst pars args) s)"
+  shows "admits_call_context \<G> g adm u ctx p s (call_enter \<G> (CallEdge dst pars args) s) ctx'"
   using assms unfolding admits_call_context_def by blast
 
 lemma admits_call_contextE:
-  assumes "admits_call_context \<G> g R u ctx p s es ctx'"
+  assumes "admits_call_context \<G> g adm u ctx p s es ctx'"
   obtains dst pars args cont
     where "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
       and "es = call_enter \<G> (CallEdge dst pars args) s"
-      and "R u ctx (call_info_of (CallEdge dst pars args) p) s es ctx'"
+      and "ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s es"
   using assms unfolding admits_call_context_def by blast
 
 lemma admits_call_context_call_enter_storeD:
-  "admits_call_context \<G> g R u ctx p s es ctx' \<Longrightarrow> call_enter_store \<G> g u s es"
+  "admits_call_context \<G> g adm u ctx p s es ctx' \<Longrightarrow> call_enter_store \<G> g u s es"
   unfolding admits_call_context_def call_enter_store_def by blast
 
 lemma admits_call_context_of_fun:
-  "admits_call_context \<G> g (call_context_rel_of_fun f) u ctx p s es ctx'
+  "admits_call_context \<G> g (context_policy_of_fun f) u ctx p s es ctx'
      \<longleftrightarrow> (\<exists>dst pars args cont.
            (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
            \<and> es = call_enter \<G> (CallEdge dst pars args) s)
@@ -118,61 +124,61 @@ lemma admits_call_context_of_fun:
   unfolding admits_call_context_def by auto
 
 text \<open>
-  \<open>activation_context_rel \<G> R c\<^sub>0 g t ctx\<close>: the trace \<open>t\<close> may carry context \<open>ctx\<close>.  A root
+  \<open>activation_context_rel \<G> adm c\<^sub>0 g t ctx\<close>: the trace \<open>t\<close> may carry context \<open>ctx\<close>.  A root
   carries \<open>c\<^sub>0\<close>; a call carries any context admitted for its creating transition,
   computed from the caller's own carried context; a resumed caller keeps what it carried.
 \<close>
 
 inductive activation_context_rel ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
-  for \<G> :: "vname \<Rightarrow> bool" and R :: "'c call_context_rel" and c\<^sub>0 :: 'c and g :: cfg
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
+  for \<G> :: "vname \<Rightarrow> bool" and adm :: "'c context_policy" and c\<^sub>0 :: 'c and g :: cfg
 where
-  Root [intro]: "activation_context_rel \<G> R c\<^sub>0 g (Root xs) c\<^sub>0"
+  Root [intro]: "activation_context_rel \<G> adm c\<^sub>0 g (Root xs) c\<^sub>0"
 | Call [intro]:
-    "activation_context_rel \<G> R c\<^sub>0 g parent ctx
-     \<Longrightarrow> admits_call_context \<G> g R (sink_node parent) ctx p (sink_store parent) es ctx'
-     \<Longrightarrow> activation_context_rel \<G> R c\<^sub>0 g (Call parent ((FunctionEntry p, es) # xs)) ctx'"
+    "activation_context_rel \<G> adm c\<^sub>0 g parent ctx
+     \<Longrightarrow> admits_call_context \<G> g adm (sink_node parent) ctx p (sink_store parent) es ctx'
+     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Call parent ((FunctionEntry p, es) # xs)) ctx'"
 | Resume [intro]:
-    "activation_context_rel \<G> R c\<^sub>0 g current ctx
-     \<Longrightarrow> activation_context_rel \<G> R c\<^sub>0 g (Resume current callee xs) ctx"
+    "activation_context_rel \<G> adm c\<^sub>0 g current ctx
+     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Resume current callee xs) ctx"
 
 
 inductive_cases activation_context_rel_RootE [elim!]:
-  "activation_context_rel \<G> R c\<^sub>0 g (Root xs) ctx"
+  "activation_context_rel \<G> adm c\<^sub>0 g (Root xs) ctx"
 
 inductive_cases activation_context_rel_CallE [elim]:
-  "activation_context_rel \<G> R c\<^sub>0 g (Call parent xs) ctx"
+  "activation_context_rel \<G> adm c\<^sub>0 g (Call parent xs) ctx"
 
 inductive_cases activation_context_rel_ResumeE [elim]:
-  "activation_context_rel \<G> R c\<^sub>0 g (Resume current callee xs) ctx"
+  "activation_context_rel \<G> adm c\<^sub>0 g (Resume current callee xs) ctx"
 
 lemma activation_context_rel_Root_iff [simp]:
-  "activation_context_rel \<G> R c\<^sub>0 g (Root xs) ctx \<longleftrightarrow> ctx = c\<^sub>0"
+  "activation_context_rel \<G> adm c\<^sub>0 g (Root xs) ctx \<longleftrightarrow> ctx = c\<^sub>0"
   by blast
 
 lemma activation_context_rel_Resume_iff [simp]:
-  "activation_context_rel \<G> R c\<^sub>0 g (Resume current callee xs) ctx
-     \<longleftrightarrow> activation_context_rel \<G> R c\<^sub>0 g current ctx"
+  "activation_context_rel \<G> adm c\<^sub>0 g (Resume current callee xs) ctx
+     \<longleftrightarrow> activation_context_rel \<G> adm c\<^sub>0 g current ctx"
   by blast
 
 lemma activation_context_rel_Call_Nil [simp]:
-  "\<not> activation_context_rel \<G> R c\<^sub>0 g (Call parent []) ctx"
+  "\<not> activation_context_rel \<G> adm c\<^sub>0 g (Call parent []) ctx"
   by blast
 
 text \<open>The carried context of a called activation depends on its caller and its entry
   record only: the rest of the local path is irrelevant, which is what makes an intra step
   context-preserving.\<close>
 lemma activation_context_rel_Call_iff:
-  "activation_context_rel \<G> R c\<^sub>0 g (Call parent ((n, es) # xs)) ctx'
+  "activation_context_rel \<G> adm c\<^sub>0 g (Call parent ((n, es) # xs)) ctx'
      \<longleftrightarrow> (\<exists>ctx p. n = FunctionEntry p
-           \<and> activation_context_rel \<G> R c\<^sub>0 g parent ctx
-           \<and> admits_call_context \<G> g R (sink_node parent) ctx p (sink_store parent) es ctx')"
+           \<and> activation_context_rel \<G> adm c\<^sub>0 g parent ctx
+           \<and> admits_call_context \<G> g adm (sink_node parent) ctx p (sink_store parent) es ctx')"
   by blast
 
 lemma activation_context_rel_extend:
   assumes "path_of t \<noteq> []"
-  shows "activation_context_rel \<G> R c\<^sub>0 g (extend t x) ctx
-           \<longleftrightarrow> activation_context_rel \<G> R c\<^sub>0 g t ctx"
+  shows "activation_context_rel \<G> adm c\<^sub>0 g (extend t x) ctx
+           \<longleftrightarrow> activation_context_rel \<G> adm c\<^sub>0 g t ctx"
 proof (cases t)
   case (Call parent xs)
   then obtain n es ys where "xs = (n, es) # ys" using assms by (cases xs) auto
@@ -201,15 +207,15 @@ lemma activation_context_rel_caller_entry:
   assumes "callee \<in> \<T>"
   shows "\<forall>u \<in> callers callee. \<forall>c. caller_of u = Some c
        \<longrightarrow> (\<exists>p es. hd (path_of u) = (FunctionEntry p, es)
-             \<and> (\<forall>ctx'. activation_context_rel \<G> R c\<^sub>0 g u ctx'
-                  \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> R c\<^sub>0 g c ctx
-                        \<and> admits_call_context \<G> g R (sink_node c) ctx p (sink_store c) es ctx')))"
+             \<and> (\<forall>ctx'. activation_context_rel \<G> adm c\<^sub>0 g u ctx'
+                  \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> adm c\<^sub>0 g c ctx
+                        \<and> admits_call_context \<G> g adm (sink_node c) ctx p (sink_store c) es ctx')))"
 proof -
   define P where "P u \<longleftrightarrow> (\<forall>c. caller_of u = Some c
        \<longrightarrow> (\<exists>p es. hd (path_of u) = (FunctionEntry p, es)
-             \<and> (\<forall>ctx'. activation_context_rel \<G> R c\<^sub>0 g u ctx'
-                  \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> R c\<^sub>0 g c ctx
-                        \<and> admits_call_context \<G> g R (sink_node c) ctx p (sink_store c) es ctx'))))"
+             \<and> (\<forall>ctx'. activation_context_rel \<G> adm c\<^sub>0 g u ctx'
+                  \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> adm c\<^sub>0 g c ctx
+                        \<and> admits_call_context \<G> g adm (sink_node c) ctx p (sink_store c) es ctx'))))"
     for u
   have "\<forall>u \<in> callers callee. P u"
   proof (rule caller_chain_closure[OF _ _ _ _ assms])
@@ -241,18 +247,18 @@ qed
 
 lemma activation_context_rel_caller_entryE:
   assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
-    and "activation_context_rel \<G> R c\<^sub>0 g callee ctx'"
+    and "activation_context_rel \<G> adm c\<^sub>0 g callee ctx'"
   obtains ctx p where "hd (path_of callee) = (FunctionEntry p, entry_store callee)"
-    and "activation_context_rel \<G> R c\<^sub>0 g caller ctx"
-    and "admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller)
+    and "activation_context_rel \<G> adm c\<^sub>0 g caller ctx"
+    and "admits_call_context \<G> g adm (sink_node caller) ctx p (sink_store caller)
            (entry_store callee) ctx'"
 proof -
   from activation_context_rel_caller_entry[OF assms(1), THEN bspec, OF callers_refl,
       rule_format, OF assms(2)]
   obtain p es where hd: "hd (path_of callee) = (FunctionEntry p, es)"
-    and iff: "\<forall>ctx'. activation_context_rel \<G> R c\<^sub>0 g callee ctx'
-         \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> R c\<^sub>0 g caller ctx
-               \<and> admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller) es ctx')"
+    and iff: "\<forall>ctx'. activation_context_rel \<G> adm c\<^sub>0 g callee ctx'
+         \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> adm c\<^sub>0 g caller ctx
+               \<and> admits_call_context \<G> g adm (sink_node caller) ctx p (sink_store caller) es ctx')"
     by force
   have "es = entry_store callee" using hd by (simp add: entry_store_def)
   with hd iff assms(3) show thesis using that by blast
@@ -261,17 +267,17 @@ qed
 lemma activation_context_rel_caller_entryI:
   assumes "callee \<in> \<T>" and "caller_of callee = Some caller"
     and "hd (path_of callee) = (FunctionEntry p, entry_store callee)"
-    and "activation_context_rel \<G> R c\<^sub>0 g caller ctx"
-    and "admits_call_context \<G> g R (sink_node caller) ctx p (sink_store caller)
+    and "activation_context_rel \<G> adm c\<^sub>0 g caller ctx"
+    and "admits_call_context \<G> g adm (sink_node caller) ctx p (sink_store caller)
            (entry_store callee) ctx'"
-  shows "activation_context_rel \<G> R c\<^sub>0 g callee ctx'"
+  shows "activation_context_rel \<G> adm c\<^sub>0 g callee ctx'"
 proof -
   from activation_context_rel_caller_entry[OF assms(1), THEN bspec, OF callers_refl,
       rule_format, OF assms(2)]
   obtain p' es where hd: "hd (path_of callee) = (FunctionEntry p', es)"
-    and iff: "\<forall>ctx'. activation_context_rel \<G> R c\<^sub>0 g callee ctx'
-         \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> R c\<^sub>0 g caller ctx
-               \<and> admits_call_context \<G> g R (sink_node caller) ctx p' (sink_store caller) es ctx')"
+    and iff: "\<forall>ctx'. activation_context_rel \<G> adm c\<^sub>0 g callee ctx'
+         \<longleftrightarrow> (\<exists>ctx. activation_context_rel \<G> adm c\<^sub>0 g caller ctx
+               \<and> admits_call_context \<G> g adm (sink_node caller) ctx p' (sink_store caller) es ctx')"
     by force
   have "p' = p" and "es = entry_store callee" using hd assms(3) by simp_all
   with iff assms(4,5) show ?thesis by blast
@@ -281,10 +287,10 @@ text \<open>A functional policy carries exactly \<^const>\<open>activation_conte
   restriction to valid activation traces is what supplies the call edge the relational clause names.\<close>
 lemma activation_context_rel_of_fun_iff:
   assumes "t \<in> \<T>"
-  shows "activation_context_rel \<G> (call_context_rel_of_fun f) c\<^sub>0 g t ctx
+  shows "activation_context_rel \<G> (context_policy_of_fun f) c\<^sub>0 g t ctx
            \<longleftrightarrow> activation_context_of f c\<^sub>0 t = ctx"
 proof -
-  define P where "P u \<longleftrightarrow> (\<forall>ctx. activation_context_rel \<G> (call_context_rel_of_fun f) c\<^sub>0 g u ctx
+  define P where "P u \<longleftrightarrow> (\<forall>ctx. activation_context_rel \<G> (context_policy_of_fun f) c\<^sub>0 g u ctx
                                 \<longleftrightarrow> activation_context_of f c\<^sub>0 u = ctx)" for u
   have "\<forall>u \<in> callers t. P u"
   proof (rule caller_chain_closure[OF _ _ _ _ assms])
@@ -343,7 +349,7 @@ text \<open>The context of an activation is exactly what \<open>enterc\<close> c
   caller's own context and the entered store.  This is what lets a RETURN argument
   construct the callee's context directly from the caller's chosen one, rather than
   rediscovering it after the fact. A special case of \<open>activation_context_rel_caller_entry\<close> at
-  the functional relation \<^const>\<open>call_context_rel_of_fun\<close>, where \<open>activation_context_rel_of_fun_iff\<close>
+  the functional policy \<^const>\<open>context_policy_of_fun\<close>, where \<open>activation_context_rel_of_fun_iff\<close>
   pins both sides' witness context to \<^const>\<open>activation_context_of\<close> and \<open>admits_call_context_of_fun\<close> reads off
   the \<open>enterc\<close>-equation and the call-edge witness in one step.\<close>
 
@@ -356,12 +362,12 @@ proof (intro ballI allI impI)
   fix u c assume mem: "u \<in> callers callee" and cof: "caller_of u = Some c"
   have uv: "u \<in> \<T>" using callers_valid[OF assms mem] .
   have cv: "c \<in> \<T>" using valid_activation_trace_caller_valid[OF uv cof] .
-  have tc_u: "activation_context_rel \<G> (call_context_rel_of_fun enterc) initial_ctx g u
+  have tc_u: "activation_context_rel \<G> (context_policy_of_fun enterc) initial_ctx g u
                 (activation_context_of enterc initial_ctx u)"
     by (simp only: activation_context_rel_of_fun_iff[OF uv])
   obtain p ctx where hd: "hd (path_of u) = (FunctionEntry p, entry_store u)"
-    and tc_c: "activation_context_rel \<G> (call_context_rel_of_fun enterc) initial_ctx g c ctx"
-    and adm: "admits_call_context \<G> g (call_context_rel_of_fun enterc) (sink_node c) ctx p
+    and tc_c: "activation_context_rel \<G> (context_policy_of_fun enterc) initial_ctx g c ctx"
+    and adm: "admits_call_context \<G> g (context_policy_of_fun enterc) (sink_node c) ctx p
                 (sink_store c) (entry_store u) (activation_context_of enterc initial_ctx u)"
     by (rule activation_context_rel_caller_entryE[OF uv cof tc_u])
   have activation_context_c: "activation_context_of enterc initial_ctx c = ctx"
@@ -389,38 +395,38 @@ end
 subsection \<open>Conditional totality\<close>
 
 text \<open>
-  A relation may admit no context for a call.  The callee activation then carries no
+  A policy may admit no context for a call.  The callee activation then carries no
   context and drops out of every bucket, but the resumed caller keeps its own, so the
   continuation is still collected.  CALL and RETURN hold vacuously at such a call, and a
   claim may leave the continuation uncovered although a valid activation trace reaches it there
-  (\<open>total_dropped_unsound\<close> in \<open>Example_Non_Vacuity\<close>).  \<open>call_context_total_on cover R \<G> g\<close>
+  (\<open>total_dropped_unsound\<close> in \<open>Example_Non_Vacuity\<close>).  \<open>call_context_total_on cover adm \<G> g\<close>
   rules that out exactly where it matters: at every call edge, every store the claimed
   \<open>cover\<close> admits at the call site has some admissible callee context.  A dead call site
   owes nothing.  The graph of a function is total outright.
 \<close>
 
 definition call_context_total_on ::
-  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c call_context_rel \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool"
+  "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c context_policy \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool"
 where
-  "call_context_total_on cover R \<G> g \<longleftrightarrow>
+  "call_context_total_on cover adm \<G> g \<longleftrightarrow>
      (\<forall>u dst pars args p cont ctx s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<longrightarrow> s \<in> cover u ctx
-        \<longrightarrow> (\<exists>ctx'. R u ctx (call_info_of (CallEdge dst pars args) p) s
-                      (call_enter \<G> (CallEdge dst pars args) s) ctx'))"
+        \<longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) p) s
+              (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {})"
 
 lemma call_context_total_onE:
-  assumes "call_context_total_on cover R \<G> g"
+  assumes "call_context_total_on cover adm \<G> g"
     and "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and "s \<in> cover u ctx"
-  obtains ctx' where "admits_call_context \<G> g R u ctx p s
+  obtains ctx' where "admits_call_context \<G> g adm u ctx p s
                         (call_enter \<G> (CallEdge dst pars args) s) ctx'"
   using assms unfolding call_context_total_on_def
   by (blast intro: admits_call_contextI)
 
 lemma call_context_total_on_of_fun [simp]:
-  "call_context_total_on cover (call_context_rel_of_fun f) \<G> g"
-  unfolding call_context_total_on_def call_context_rel_of_fun_def by blast
+  "call_context_total_on cover (context_policy_of_fun f) \<G> g"
+  unfolding call_context_total_on_def context_policy_of_fun_def by blast
 
 subsection \<open>The activation-indexed context collecting\<close>
 
@@ -429,28 +435,28 @@ text \<open>The activation-sensitive collecting is the sink stores of valid acti
   buckets of one node cover its stores without partitioning them.\<close>
 
 definition activation_collect ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'c call_context_rel \<Rightarrow> 'c
+  "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c
      \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
     ("\<A>\<^bsub>_,_,_,_,_\<^esub>") where
-  "\<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c =
+  "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c =
      {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v
-                        \<and> activation_context_rel \<G> R c\<^sub>0 g t c}"
+                        \<and> activation_context_rel \<G> adm c\<^sub>0 g t c}"
 
 lemma activation_collect_I [intro]:
-  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t = v \<Longrightarrow> activation_context_rel \<G> R c\<^sub>0 g t c
-   \<Longrightarrow> sink_store t \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
+  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t = v \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g t c
+   \<Longrightarrow> sink_store t \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
   unfolding activation_collect_def by blast
 
 text \<open>Every collected state has a valid activation trace witness carrying the queried \<open>c\<close>.\<close>
 lemma activation_collect_E [elim]:
-  assumes "s \<in> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub> v c"
+  assumes "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
   obtains t where "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" "sink_node t = v"
-    "activation_context_rel \<G> R c\<^sub>0 g t c" "sink_store t = s"
+    "activation_context_rel \<G> adm c\<^sub>0 g t c" "sink_store t = s"
   using assms unfolding activation_collect_def by blast
 
 text \<open>Under a functional policy the buckets are \<^const>\<open>activation_context_of\<close>'s fibres.\<close>
 lemma activation_collect_of_fun:
-  "\<A>\<^bsub>\<G>,call_context_rel_of_fun f,c\<^sub>0,g,S\<^esub> v c =
+  "\<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,g,S\<^esub> v c =
      {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v \<and> activation_context_of f c\<^sub>0 t = c}"
   unfolding activation_collect_def
   by (auto simp: activation_context_rel_of_fun_iff)

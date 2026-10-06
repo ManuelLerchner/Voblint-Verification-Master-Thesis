@@ -288,7 +288,8 @@ that its compiled code behaves as the source semantics specifies and lists the
 components that remain trusted @leroy09. Verasco carries the approach to a static
 analyzer for C @jourdan15. Local traces give each thread a concrete semantics from which
 Goblint's thread-modular analyses are derived on paper @schwarz21 @schwarz23,
-and Voblint adapts them to procedure activations (@ch:traces).
+and Voblint's activation traces apply the same idea to procedure activations
+(@ch:traces).
 
 #figure(
   {
@@ -343,9 +344,8 @@ instance by call site or by the abstract state at entry, and the analyzer
 keeps one abstract state per program point and context. For _contexts_, Verasco reanalyzes a function at every call site, Dabrowski and
 Pichardie compute object-sensitive contexts by a function, Lammich and
 Müller-Olm use per-procedure summaries, and Voblint admits contexts through a
-relation that may admit several per call. A relation is needed because an
-entry-state policy reads the context of a call off the analysis result, which
-a function fixed in advance cannot do. For the _fixpoint_, three analyzers iterate over the program's syntax
+context policy that returns a set of contexts per call, since an entry
+operation may split a call into several alternatives (@sec:contexts). For the _fixpoint_, three analyzers iterate over the program's syntax
 ("structural"), Nipkow and Klein over the whole annotated program, Blazy et
 al. check the result of an untrusted iterator, Cachera et al. use a verified
 solver of ordinary inequations, and two works only specify constraints.
@@ -467,16 +467,16 @@ each.
   this for recursive procedures under configurable context sensitivity
   (@tab:state-of-art).
 - _A concrete semantics of calling contexts._ An analyzer keeps one abstract
-  state per calling context, but ordinary executions carry no contexts. A relation
-  between calls and contexts (#isatype("call_context_rel")) therefore assigns
-  each activation trace the contexts it may carry
+  state per calling context, but ordinary executions carry no contexts. A context policy (#isatype("context_policy")) therefore maps each concrete
+  call to the set of callee contexts it admits, and from these sets each
+  activation trace gets the contexts it may carry
   (#isaconst("activation_context_rel")). Provided a claim meets the coverage
   contract (#isalocale("activation_coverage")), which admits every covered call
   at some context,
   the stores collected per context together equal the stores of the
   context-free semantics (#isathm("node_collect_eq_Union_activation_collect"),
-  @sec:consequences). Where the context function of Dabrowski and Pichardie
-  picks exactly one context per call @dabrowski09, Voblint's relation may admit
+  @sec:contract). Where the context function of Dabrowski and Pichardie
+  picks exactly one context per call @dabrowski09, Voblint's context policy may admit
   several, as one trace can belong to several partitions in the coverings of
   trace partitioning @rival07[Rem. 3.2.4].
 - _Separately verified components._ Domains, context policies, analyses and

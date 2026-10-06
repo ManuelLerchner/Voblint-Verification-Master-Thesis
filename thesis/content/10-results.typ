@@ -56,7 +56,7 @@ implication. Each step is a theorem:
 
   [],
   _step($=$, isathm("node_collect_eq_Union_activation_collect")),
-  $union.big_c #isai("\<A>\<^bsub>\<G>,R,c₀,g,S\<^esub> v c")$,
+  $union.big_c #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c")$,
 
   [],
   _step(sym.subset.eq, isathm("run_voblint_covers")),
@@ -68,13 +68,9 @@ implication. Each step is a theorem:
 ))
 The first step places a store that a finite source run reaches: it lies in the
 node collecting semantics at some node $v$ that simulates the run's
-execution configuration. The node is existential because the simulation is structural,
-not a function: the same residual command may match several compiled nodes, for
-instance in an uncalled procedure with the same body, and membership in
-#isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") selects a node the run reaches. The node
+execution configuration (the node need not be unique, @sec:csim). The node
 collecting semantics #isaconst("node_collect") splits into the activation
-collecting semantics #isaconst("activation_collect") of the contexts the
-policy's relation $R$ admits, with `main` in the initial context
+collecting semantics #isaconst("activation_collect") of the contexts the policy $italic("adm")$ admits, with `main` in the initial context
 #isai("c\<^sub>0") (@sec:contexts). The report $"res"$ holds one state at $v$
 for every context the solver reached $v$ in, and
 #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") (#isaconst("report_sem")) is the
@@ -279,9 +275,10 @@ $
   #isai("\<C>") v subset.eq #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>")
   subset.eq #isai("\<V>\<^bsub>res\<^esub> v").
 $
-It keeps the trace and its context rather than picking some bucket that
-contains $s$. A policy supplies only two facts: every valid trace carries some
-context, and the buckets together are the collecting semantics. The unit,
+It keeps the trace and its context rather than picking some context whose
+activation collecting semantics contains $s$. A policy supplies only two facts: every valid trace carries some
+context, and the activation collecting semantics of all contexts together are the
+node collecting semantics. The unit,
 entry-state and call-string policies discharge them in one theorem each.
 
 An analysed answer also fixes what kind of object the report is
@@ -409,7 +406,7 @@ divisors in every collected store. A warning means only that the analysis
 could not exclude a zero divisor.
 
 Three features of the theorem are forced. The node is existential because a
-source configuration does not determine its CFG node (@ch:traces), the context
+source configuration does not determine its CFG node (@sec:csim), the context
 because a store is covered in some context only, and coverage of the solved
 unknowns is absent because it is derived (@sec:cert-forward). Termination is not
 a premise: #isaconst("run_voblint") returns a report only where its executable

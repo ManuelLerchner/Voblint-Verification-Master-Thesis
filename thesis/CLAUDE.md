@@ -226,6 +226,12 @@ handing a section over.
 - Write an argument, not a fact list. Each sentence should follow from the one
   before it (problem, idea, consequence). Rewrite paragraphs that read as
   independent statements placed side by side.
+- Mark the logical relation between sentences with discourse markers
+  (however, therefore, thus, instead, in contrast, as a result). They turn a
+  list of facts into an argument: "A context-sensitive analysis, however,
+  computes a separate state for each node and calling context." Use the marker
+  that names the actual relation (contrast, consequence, cause), and do not
+  add one where the sentences have none.
 - Motivate before defining. Say why the reader needs a concept (why compare
   descriptions, why monotonicity, why not compute the least fixpoint) before
   giving its definition, and start a chapter at a level a newcomer follows.

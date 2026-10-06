@@ -253,8 +253,7 @@ calling-context sensitivity as one such indexing; keeping the full stack amounts
 to inlining and works only for nonrecursive calls. They also note that the
 function mapping tokens to tokens in a covering may be replaced by a relation
 @rival07[Rem. 3.2.4]. Voblint's context-indexed
-collecting semantics is a covering of this relational kind, since a context relation may admit one
-activation in several contexts. Voblint mechanizes the indexing over
+collecting semantics is a covering of this relational kind, since a context policy may admit one activation in several contexts. Voblint mechanizes the indexing over
 activation traces and proves that the solved, routed result bounds the activation
 collecting semantics of every admitted context.
 
@@ -336,8 +335,8 @@ a call action, and Schwarz lists procedures among the features that Goblint
 implements but the local-trace semantics does not yet support
 @schwarz25phd[§8, p. 277].
 In Voblint, the context relation #isaconst("activation_context_rel") (@sec:contexts)
-takes the digest's place for sequential activations. It is a relation, because an entry-state context is
-read off the analysis's result.
+takes the digest's place for sequential activations. It is a relation, because a context policy may admit an activation in several
+contexts or in none.
 
 Mixed flow sensitivity has been mechanized before.
 Cachera et al. @cachera05 prove in Coq that a constraint-based analysis

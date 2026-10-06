@@ -561,7 +561,7 @@ text \<open>
   interface, the carrier-opaque \<^verbatim>\<open>analysis_contract\<close>; every domain is one of its
   instances, and context slicing is factored through
   the relational activation spine and its per-context admitted slots --- the unit
-  and call-string routings stay functional (\<^const>\<open>call_context_rel_of_fun\<close>), while
+  and call-string routings stay functional (\<^const>\<open>context_policy_of_fun\<close>), while
   entry-state routing genuinely admits several contexts per call. There is one
   such spine: every domain reaches \<^const>\<open>node_collect\<close> through the routed
   unit-context instance's \<^verbatim>\<open>node_collect_eq_Union_activation_of_fun\<close>, and the routed

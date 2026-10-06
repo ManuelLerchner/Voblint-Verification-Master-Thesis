@@ -30,8 +30,8 @@ text \<open>The equation-level route: push the call site, keep only the most rec
 definition cs_route :: "nat \<Rightarrow> pp \<Rightarrow> call_string \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> call_string" where
   "cs_route k u ctx d ca = take k (u # ctx)"
 
-text \<open>The trace-semantic context function whose graph, \<open>call_context_rel_of_fun (cs_context k)\<close>,
-  instantiates \<open>routed_context\<close>'s \<open>R\<close>: same closed term as \<^const>\<open>cs_route\<close>,
+text \<open>The trace-semantic context function whose graph, \<open>context_policy_of_fun (cs_context k)\<close>,
+  instantiates \<open>routed_context\<close>'s \<open>adm\<close>: same closed term as \<^const>\<open>cs_route\<close>,
   over the concrete \<^typ>\<open>store\<close> the activation-trace semantics supplies instead of an
   abstract/executable \<open>'d\<close>.\<close>
 

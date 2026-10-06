@@ -198,12 +198,11 @@ text \<open>The admitted-context relation is a relation, not a function: it admi
 
 lemma twice_context_at_call1:
   assumes sin: "s \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 2, []))))\<rbrakk>"
-  shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "ctx_call1 \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) []
            (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
              (STR ''twice''))
-           s (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)
-           ctx_call1"
+           s (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)"
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3])
                (STR ''twice'')"
@@ -217,11 +216,11 @@ proof -
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s
                 \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> ?entry\<rbrakk>"
     using cov unfolding entry_pairs_cover_def by simp
-  have base: "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  have base: "(exec_formals_route twice_gs (Statement 2) [] ?entry
+         (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))
+      \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 2) [] ?ci s
-      (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)
-      (exec_formals_route twice_gs (Statement 2) [] ?entry
-         (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]))"
+      (call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s)"
     unfolding twice_empty_pred_def twice_ctx_sol_def
       interval_es_rule.entry_of_exec[where r = Globals_Warrow, symmetric]
       interval_es_rule.sol_env_def[symmetric]
@@ -235,13 +234,12 @@ qed
 
 lemma twice_context_at_call2:
   assumes sin: "s \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 3, []))))\<rbrakk>"
-  shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "ctx_call2 \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
              (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
              (STR ''twice''))
-           s (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)
-           ctx_call2"
+           s (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)"
 proof -
   let ?ci = "call_info_of (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
                (STR ''twice'')"
@@ -255,11 +253,11 @@ proof -
   have ecov: "call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s
                 \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> ?entry\<rbrakk>"
     using cov unfolding entry_pairs_cover_def by simp
-  have base: "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  have base: "(exec_formals_route twice_gs (Statement 3) [] ?entry
+         (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))
+      \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
       (Statement 3) [] ?ci s
-      (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)
-      (exec_formals_route twice_gs (Statement 3) [] ?entry
-         (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]))"
+      (call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s)"
     unfolding twice_empty_pred_def twice_ctx_sol_def
       interval_es_rule.entry_of_exec[where r = Globals_Warrow, symmetric]
       interval_es_rule.sol_env_def[symmetric]
@@ -334,9 +332,9 @@ theorem ivl_context_is_entry_state_context_call1:
   assumes cov: "s \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 2, []))))\<rbrakk>"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) s"
-  shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "(ivl_context (Statement 2) [] s') \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 2) [] (call_info_of (CallEdge (Some (STR ''x'')) [(STR ''p'')] [VIMP_Syntax.N 3]) (STR ''twice''))
-           s s' (ivl_context (Statement 2) [] s')"
+           s s'"
 proof -
   have "ivl_context (Statement 2) [] s' = ctx_call1"
     by (rule enter_route_exact_call1[OF refl es])
@@ -347,12 +345,12 @@ theorem ivl_context_is_entry_state_context_call2:
   assumes cov: "s \<in> \<lbrakk>\<rho>\<^bsub>twice_gs\<^esub> (dg_local (snd twice_ctx_sol (Inl (Statement 3, []))))\<rbrakk>"
     and es:
       "s' = call_enter twice_gs (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10]) s"
-  shows "interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
+  shows "(ivl_context (Statement 3) [] s') \<in> interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program
            (Statement 3) []
            (call_info_of
              (CallEdge (Some (STR ''y'')) [(STR ''p'')] [VIMP_Syntax.N 10])
              (STR ''twice''))
-           s s' (ivl_context (Statement 3) [] s')"
+           s s'"
 proof -
   have "ivl_context (Statement 3) [] s' = ctx_call2"
     by (rule enter_route_exact_call2[OF refl es])

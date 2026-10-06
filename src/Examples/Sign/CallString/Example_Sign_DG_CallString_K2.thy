@@ -253,7 +253,7 @@ text \<open>
 \<close>
 
 theorem sign_nest_2_activation_collect_sound:
-  "\<A>\<^bsub>sign_nest_gs,call_context_rel_of_fun (cs_context 2),[],sign_nest_cfg,
+  "\<A>\<^bsub>sign_nest_gs,context_policy_of_fun (cs_context 2),[],sign_nest_cfg,
      cinit_stores sign_nest_gs\<^esub> v ctx
      \<subseteq> gamma_lift (default_st_gamma sign_nest_gs)
            (sign_ctx_sg_2 (Inl (v, ctx)))"

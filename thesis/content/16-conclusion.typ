@@ -26,10 +26,10 @@ one place, and outlines future work.
 
 == Discussion <sec:discussion>
 
-Several design choices trade one cost for another. A context relation lets entry-state routing read contexts
-off the analysis's result, at the price of the obligation #oblig("TOTAL").
-Functional policies embed as relations and satisfy it directly
-(#isaconst("call_context_rel_of_fun")). Stating the analysis contract over an
+Several design choices trade one cost for another. A context policy that returns a set of contexts lets entry-state routing read
+contexts off the analysis's result, at the price of the obligation
+#oblig("TOTAL"). Functional policies return singletons and satisfy it directly
+(#isaconst("context_policy_of_fun")). Stating the analysis contract over an
 environment of analysis globals lets the flow-insensitive placement give each
 program global its own unknown, so a write wakes only the readers of that
 global. The price is a frame obligation on the carrier: a store that agrees on
@@ -174,7 +174,7 @@ carry activation seeds and, under the flow-insensitive placement, one value per
 program global. Threads and locks with a thread-local trace semantics would
 allow thread-modular uses of these global unknowns.
 
-The context relation reads only how an activation was entered. Digests refine
+The contexts of an activation depend only on how it was entered. Digests refine
 unknowns by other abstractions of a local trace (@sec:rel-goblint).
 Generalizing #isaconst("activation_context_rel") to such abstractions over
 activation traces would allow path- or history-sensitive unknowns, each

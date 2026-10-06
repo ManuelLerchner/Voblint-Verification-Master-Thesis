@@ -36,14 +36,14 @@ text \<open>
 
 subsection \<open>The abstract interface\<close>
 
-text \<open>\<open>cover\<close> is the claim itself, \<open>R\<close> the context policy it is indexed by, and
+text \<open>\<open>cover\<close> is the claim itself, \<open>adm\<close> the context policy it is indexed by, and
   \<open>c\<^sub>0\<close> the context the seed stores arrive under.  An analysis interprets this once,
   with its own solved table in place of \<open>cover\<close>; nothing below asks how that table was
   computed.\<close>
 locale activation_coverage =
   fixes g :: cfg and S :: "store set"
     and cover :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
-    and R :: "'c call_context_rel"
+    and adm :: "'c context_policy"
     and c\<^sub>0 :: 'c
     and \<G> :: "vname \<Rightarrow> bool"
   assumes INIT[intro]: "\<And>s. s \<in> S \<Longrightarrow> s \<in> cover (cfg_entry g) c\<^sub>0"
@@ -52,16 +52,16 @@ locale activation_coverage =
     and CALL[intro]: "\<And>u dst pars args p cont c c' s.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover u c
-        \<Longrightarrow> R u c (call_info_of (CallEdge dst pars args) p) s
-              (call_enter \<G> (CallEdge dst pars args) s) c'
+        \<Longrightarrow> c' \<in> adm u c (call_info_of (CallEdge dst pars args) p) s
+              (call_enter \<G> (CallEdge dst pars args) s)
         \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
     and RETURN[intro]: "\<And>cl dst pars args p cont c1 c' p' s t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
         \<Longrightarrow> s \<in> cover cl c1
-        \<Longrightarrow> admits_call_context \<G> g R cl c1 p' s es c'
+        \<Longrightarrow> admits_call_context \<G> g adm cl c1 p' s es c'
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
         \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
-    and TOTAL: "call_context_total_on cover R \<G> g"
+    and TOTAL: "call_context_total_on cover adm \<G> g"
 begin
 
 text \<open>The trace-level objects at the locale's fixed arguments: the collection \<open>\<C>\<close>, the
@@ -72,11 +72,11 @@ abbreviation collect :: "cfg_node \<Rightarrow> store set" ("\<C>")
 abbreviation traces :: "activation_trace set" ("\<T>")
   where "\<T> \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
 abbreviation carries :: "activation_trace \<Rightarrow> 'c \<Rightarrow> bool"
-  where "carries \<equiv> activation_context_rel \<G> R c\<^sub>0 g"
+  where "carries \<equiv> activation_context_rel \<G> adm c\<^sub>0 g"
 abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store set" ("\<A>")
-  where "\<A> \<equiv> \<A>\<^bsub>\<G>,R,c\<^sub>0,g,S\<^esub>"
+  where "\<A> \<equiv> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub>"
 abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool"
-  where "admits \<equiv> admits_call_context \<G> g R"
+  where "admits \<equiv> admits_call_context \<G> g adm"
 
 text \<open>\<open>trace_covered u\<close>: \<open>u\<close> carries some context, and its sink store is admitted at its
   own node under every context it carries.\<close>
@@ -144,8 +144,8 @@ proof -
     from adm0 obtain dst' pars' args' cont'
       where e': "(sink_node caller, CallEdge dst' pars' args', FunctionEntry p, cont') \<in> calls g"
         and es: "?es = call_enter \<G> (CallEdge dst' pars' args') (sink_store caller)"
-        and Rc: "R (sink_node caller) c0 (call_info_of (CallEdge dst' pars' args') p)
-                   (sink_store caller) ?es c'"
+        and Rc: "c' \<in> adm (sink_node caller) c0 (call_info_of (CallEdge dst' pars' args') p)
+                   (sink_store caller) ?es"
       by (rule admits_call_contextE)
     have "sink_store caller \<in> cover (sink_node caller) c0"
       using ihc c0 by (rule trace_coveredD)
@@ -281,6 +281,19 @@ next
     by (rule Union_activation_collect_le_node_collect)
 qed
 
+text \<open>The two results together: the claims of all contexts contain the context-insensitive
+  collection.\<close>
+corollary node_collect_covered: "\<C> v \<subseteq> (\<Union>c. cover v c)"
+proof
+  fix x assume "x \<in> \<C> v"
+  then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
+    by (rule node_collect_E)
+  from valid_activation_trace_has_context[OF t(1)] obtain c where "carries t c" .
+  then have "x \<in> cover v c"
+    using valid_activation_trace_covered_at[OF t(1)] t(2,3) by blast
+  then show "x \<in> (\<Union>c. cover v c)" by blast
+qed
+
 end
 
 subsection \<open>Non-vacuity\<close>
@@ -288,13 +301,13 @@ subsection \<open>Non-vacuity\<close>
 text \<open>The interface is satisfiable for every graph, seed set, and initial context: choosing
   the top cover \<open>cover = (\<lambda>_ _. UNIV)\<close> together with any total functional context policy
   discharges all five obligations, \<open>TOTAL\<close> included, since a functional policy is total
-  (\<open>call_context_total_on_of_fun\<close>). It is not satisfiable at an arbitrary \<open>R\<close>: taking
-  \<open>R = (\<lambda>_ _ _ _ _ _. False)\<close> fails \<open>TOTAL\<close> for any graph with a reachable call, however
+  (\<open>call_context_total_on_of_fun\<close>). It is not satisfiable at an arbitrary \<open>adm\<close>: taking
+  \<open>adm = (\<lambda>_ _ _ _ _. {})\<close> fails \<open>TOTAL\<close> for any graph with a reachable call, however
   wide \<open>cover\<close> is chosen --- \<open>TOTAL\<close> genuinely constrains the context policy, not merely
   the cover.\<close>
 
 lemma activation_coverage_exists:
-  "activation_coverage g S (\<lambda>_ _. UNIV) (call_context_rel_of_fun (\<lambda>_ _ _. ())) () \<G>"
+  "activation_coverage g S (\<lambda>_ _. UNIV) (context_policy_of_fun (\<lambda>_ _ _. ())) () \<G>"
   by unfold_locales auto
 
 subsection \<open>Monovariant semantic post-fixpoint\<close>
@@ -321,7 +334,7 @@ lemma node_collect_semantic_postfix:
         \<Longrightarrow> combine_collect \<G> dst s t \<in> B cont"
   shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v \<subseteq> B v"
 proof -
-  interpret G: activation_coverage g S0 "\<lambda>v _. B v" "call_context_rel_of_fun (\<lambda>_ _ _. ())" "()" \<G>
+  interpret G: activation_coverage g S0 "\<lambda>v _. B v" "context_policy_of_fun (\<lambda>_ _ _. ())" "()" \<G>
   proof (standard, goal_cases INIT INTRA CALL RETURN TOTAL)
     case (INIT s) then show ?case using entry by auto
   next
@@ -339,7 +352,7 @@ proof -
     then obtain u where u: "u \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>" "sink_node u = v" "sink_store u = x"
       by (rule node_collect_E)
     from G.valid_activation_trace_has_context[OF u(1)] obtain c
-      where c: "activation_context_rel \<G> (call_context_rel_of_fun (\<lambda>_ _ _. ())) () g u c" .
+      where c: "activation_context_rel \<G> (context_policy_of_fun (\<lambda>_ _ _. ())) () g u c" .
     have "sink_store u \<in> B (sink_node u)" using G.valid_activation_trace_covered_at[OF u(1) c]
       by simp
     then show "x \<in> B v" using u(2,3) by simp

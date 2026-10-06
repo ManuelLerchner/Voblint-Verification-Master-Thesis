@@ -402,8 +402,8 @@ lemma ret_enter:
 
 text \<open>The policy of the illustration: the callee context is the entry value of \<open>n\<close>.\<close>
 
-definition ret_R :: "int call_context_rel" where
-  "ret_R = call_context_rel_of_fun (\<lambda>_ _ es. es (STR ''n''))"
+definition ret_R :: "int context_policy" where
+  "ret_R = context_policy_of_fun (\<lambda>_ _ es. es (STR ''n''))"
 
 text \<open>
   The claim: \<open>main\<close> is covered in the initial context \<open>0\<close> up to its first call site
@@ -425,8 +425,8 @@ lemma ret_weak_obligations:
     and "\<forall>u dst pars args p cont c c' s.
               (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
               \<longrightarrow> s \<in> ret_cover u c
-              \<longrightarrow> ret_R u c (call_info_of (CallEdge dst pars args) p) s
-                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s) c'
+              \<longrightarrow> c' \<in> ret_R u c (call_info_of (CallEdge dst pars args) p) s
+                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s)
               \<longrightarrow> call_enter (declared_global ret_prog) (CallEdge dst pars args) s
                     \<in> ret_cover (FunctionEntry p) c'"
     and "\<forall>cl dst pars args p cont c1 s t.
@@ -531,14 +531,14 @@ text \<open>
 \<close>
 
 lemma resume_keeps_context:
-  assumes s: "s \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> u ctx"
+  assumes s: "s \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> u ctx"
     and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
     and body: "intra_path g (FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)
                  (FunctionResult q, t)"
-  shows "combine_collect \<G> dst s t \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> cont ctx"
+  shows "combine_collect \<G> dst s t \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> cont ctx"
 proof -
   from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    and cn: "sink_node caller = u" and ck: "activation_context_rel \<G> R c0 g caller ctx"
+    and cn: "sink_node caller = u" and ck: "activation_context_rel \<G> adm c0 g caller ctx"
     and cs: "sink_store caller = s"
     by (rule activation_collect_E)
   let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
@@ -554,7 +554,7 @@ proof -
               (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
   have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
     by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
-  have "sink_store ?r \<in> \<A>\<^bsub>\<G>,R,c0,g,S\<^esub> (sink_node ?r) ctx"
+  have "sink_store ?r \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
 qed
@@ -562,8 +562,8 @@ qed
 text \<open>The relation that admits no context, and the claim that covers \<open>main\<close> up to its first
   call site in the initial context and nothing else.\<close>
 
-definition tot_R :: "int call_context_rel" where
-  "tot_R u ctx ci s es ctx' \<longleftrightarrow> False"
+definition tot_R :: "int context_policy" where
+  "tot_R u ctx ci s es = {}"
 
 definition tot_cover :: "cfg_node \<Rightarrow> int \<Rightarrow> store set" where
   "tot_cover v ctx =
@@ -577,8 +577,8 @@ lemma tot_weak_obligations:
     and "\<forall>u dst pars args p cont c c' s.
               (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (prog_cfg ret_prog)
               \<longrightarrow> s \<in> tot_cover u c
-              \<longrightarrow> tot_R u c (call_info_of (CallEdge dst pars args) p) s
-                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s) c'
+              \<longrightarrow> c' \<in> tot_R u c (call_info_of (CallEdge dst pars args) p) s
+                    (call_enter (declared_global ret_prog) (CallEdge dst pars args) s)
               \<longrightarrow> call_enter (declared_global ret_prog) (CallEdge dst pars args) s
                     \<in> tot_cover (FunctionEntry p) c'"
     and "\<forall>cl dst pars args p cont c1 c' p' s t es.

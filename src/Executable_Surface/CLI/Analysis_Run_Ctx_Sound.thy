@@ -25,7 +25,7 @@ lemma mcp_es_rule_table:
   shows "covered_table p (mcp_es_rule.result as r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "mcp_es_rule.admitted_contexts as r (declared_global p) p"
+    [where adm = "mcp_es_rule.admitted_contexts as r (declared_global p) p"
        and rc = mcp_root_ctx], goal_cases)
   case (1 u)
   show ?case
@@ -56,7 +56,7 @@ lemma mcp_cs_rule_table:
   shows "covered_table p (mcp_cs_rule.result as k r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
+    [where adm = "context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
     goal_cases)
   case (1 u)
   show ?case
@@ -86,7 +86,7 @@ lemma mcp_split_es_rule_table:
   shows "covered_table p (mcp_split_es_rule.result as r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "mcp_split_es_rule.admitted_contexts as r (declared_global p) p"
+    [where adm = "mcp_split_es_rule.admitted_contexts as r (declared_global p) p"
        and rc = mcp_root_ctx], goal_cases)
   case (1 u)
   show ?case
@@ -110,7 +110,7 @@ lemma mcp_split_cs_rule_table:
   shows "covered_table p (mcp_split_cs_rule.result as k r (declared_global p) p)
            (mcp_gamma_v (activation as))"
 proof (rule covered_table_of_activation
-    [where R = "call_context_rel_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
+    [where adm = "context_policy_of_fun (\<lambda>u ctx t. cs_context k u ctx t)" and rc = "[]"],
     goal_cases)
   case (1 u)
   show ?case
