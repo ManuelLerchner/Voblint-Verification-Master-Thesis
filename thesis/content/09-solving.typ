@@ -1053,11 +1053,8 @@ $⟪(ltop, []), (0^sharp, [])⟫$, and the least element that the solver's latti
 interface asks for is $⟪(lbot, []), (lbot, [])⟫$. The mixed-flow extension of
 @sec:mixed-flow also stores states whose locals are all #lbot. In
 #isaconst("run_voblint") the solver's values are lifted states, which start at
-#ctor("Bot") below every carrier state. In Isabelle, a dictionary has type
-#isatype("default_dict"), a carrier state #isatype("default_st_rep"), and the
-notation is #isaconst("default_st_mk"). The initial state is
-#isaconst("initial_default_st") (for Sign, #isaconst("cinit_sign_st")) and the
-least element #isaconst("bot_default_st").
+#ctor("Bot") below every carrier state. In Isabelle, a carrier state is a #isatype("default_st_rep") of two
+#isatype("default_dict") values.
 
 Different pairs of dictionaries can describe the same state: overrides of
 distinct names may appear in any order, and an override equal to its default
@@ -1085,10 +1082,7 @@ location $l$ and $d⟨l := a⟩$ for the update. The function a state represents
 $rho_(cal(G))(d)$, looks up every variable at its location. It is the total
 function on variable names that the specification uses. The same $rho_(cal(G))$
 reads back a lifted state, pointwise under the lift, and a D/G state, component
-by component. In Isabelle, locations have type #isatype("location"), lookup and
-update are #isaconst("default_st_get") and #isaconst("default_st_set"),
-$rho_(cal(G))$ is #isaconst("default_st_to_fun"), and one overloaded
-#isaconst("readback") selects its instance by the argument's type.
+by component. In Isabelle, $rho_(cal(G))$ is #isaconst("default_st_to_fun").
 
 A carrier state means what its represented function means. @sec:nonrel-state concretizes a
 function state $f$ to the stores whose every variable lies in the
@@ -1293,11 +1287,9 @@ Whether the recursive solve returns is the remaining question.
 == Why termination is not proved <sec:termination>
 
 The analyzer answers only when the solver returns, and we do not prove that it
-always does. In a proof assistant termination is a question
-of the logic itself. HOL is a
-logic of total functions, so a recursive definition is admitted only when its
-recursion terminates; otherwise one could define $f(n) = f(n) + 1$ and derive
-$0 = 1$ @nipkow14[§2.3.4]. The vendored solver's termination is not known in
+always does. HOL admits a recursive definition only when its recursion
+terminates, since otherwise $f(n) = f(n) + 1$ would derive $0 = 1$
+@nipkow14[§2.3.4]. The vendored solver's termination is not known in
 general, so Isabelle defines it with a domain predicate
 (#isaconst("solve_dom", thy: "TD_side_upd_rule")), the arguments on which
 the recursion is well founded, and the certificate of @sec:certificate holds on
@@ -1305,8 +1297,7 @@ that domain. The
 analyzer never assumes domain membership. It runs the executable form of the
 solver, #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when
 the recursion finishes, and #isathm("solve_dom_of_solve_c") turns a returned
-run into domain membership of the query. #isaconst("run_voblint") answers with a
-report only after that run returned, so every report carries the membership the
+run into domain membership of the query. Every report of #isaconst("run_voblint") therefore carries the membership the
 certificate needs, and the theorems about the analyzer have no termination
 premise.
 
@@ -1325,21 +1316,16 @@ $[0, 0], [0, 1], [0, 2], dots$ to the one seed of `f`, and the joining update
 rules never widen this chain (#fixture(
   "24-site-figures/01-recursion_grows_join_diverges.vimp",
   label: "01-recursion_grows_join_diverges",
-), @fig:rules-programs). Both programs exceed their time limits, but the arguments above, which are
-not machine-checked, are why we expect divergence (@sec:trust-boundary).
+), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
+they diverge (@sec:trust-boundary).
 
 The vendored termination theorems cover top-down solvers without side effects
-over a finite type of unknowns @tilscher26. They further require monotone
-right-hand sides and the ascending chain condition for plain TD, which says
-that every strictly ascending chain $a_0 llt a_1 llt dots$ is finite,
-well-founded widening chains for TD with widening, and monotone right-hand sides with
-well-founded widening and narrowing chains for TD with warrowing. Voblint's
-unknowns pair a graph node, whose type is infinite, with a context, so these
-theorems apply to no analysis configuration. Seidl and Vogler prove on paper that
+over a finite type of unknowns, under monotonicity and chain conditions on the
+right-hand sides and operators @tilscher26. Voblint's unknowns pair nodes of an infinite type with contexts, so these
+theorems apply to no configuration. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system as long as only
 finitely many unknowns are encountered @seidl21[§9, Thm. 5], for widening and
-narrowing operators whose iterations always stabilize @seidl21[§3]. That solver widens at a target once one origin increases it a second time
-@seidl21[§9]. The joining update rules never widen, so the result does not
-carry over to them. Mechanizing such a result for the vendored solver is future work, so the
+narrowing operators whose iterations always stabilize @seidl21[§3]. The joining update rules never widen, so this result does not carry over to
+them. Mechanizing such a result for the vendored solver is future work, so the
 end-to-end theorem (@sec:headline) is a partial-correctness result about every
 report the analyzer returns.
