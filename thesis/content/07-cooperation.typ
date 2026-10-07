@@ -390,10 +390,10 @@ globals with its index. And no theorem guarantees that the combination is more
 precise than its components. The opening program and the one in
 @sec:eval-precision only show concrete cases where it is.
 
-The proofs of the analyses thus stay independent. Each analysis is proved
-sound against every channel that holds, and the framework supplies such a
-channel and runs each analysis on its own field. Adding an analysis therefore
-needs one new proof and reopens none.
+Each analysis is proved sound against every channel that holds, and the
+framework supplies such a channel and runs each analysis on its own field. The
+proofs of the analyses therefore stay independent, and adding an analysis needs
+one new proof and reopens none.
 
 This completes what the analyses contribute. @ch:domains gave the laws of one
 abstract state, @ch:analysis-interface the contract of one analysis, and this

@@ -53,18 +53,9 @@ program that fails the structural conditions of compilation, and
 values, one combined state per solved point and context with its verdicts.
 #isaconst("render_report") turns them into strings, which no theorem reads.
 
-For a user, the most direct guarantee concerns one check. Suppose
-#isaconst("run_voblint") returns a report for a program and a source run of
-`main` from an initial store reaches a check. Then the report lists that check
-at a node where the run's store is collected, its verdict is not `DEAD`, a
-`PROVED` condition holds in the store, and a `REFUTED` one fails:
-
-#proved("run_voblint_check_sound", note: [What a reported verdict guarantees.])
-
-#isathm("run_voblint_dead_check_unreached") gives the reading of `DEAD`, and
-#isathm("run_voblint_arithmetic_safe") the reading of a node without an
-arithmetic diagnostic. All three are derived from the source-level theorem
-#isathm("run_voblint_source_sound") (@sec:headline).
+What a user reads off a report, one check verdict or diagnostic at a time, is
+stated by the theorems of @sec:verdicts, all derived from
+#isathm("run_voblint_source_sound").
 
 Export needs code equations for everything #isaconst("run_voblint") uses.
 Two objects of the soundness argument have none, and @ch:solving replaces
@@ -149,9 +140,9 @@ A post-solution certificate states that the solver's result bounds the
 equations; it says nothing about how the solver reached it. For explaining a
 run and for debugging an analysis, the order of the steps matters: which
 unknown is queried when, which update destabilizes whom, where widening sets
-in. @tab:eq-trace shows such a sequence for the calls of `bump` in
-@ch:equations, where each call publishes its entry state to the callee's seed
-before the callee is read.
+in. @tab:eq-trace shows such a sequence for the calls of `bump` in the running
+example of @ch:equations (@sec:eq-example), where each call publishes its
+entry state to the callee's seed before the callee is read.
 
 *Tracing inside the export.* The executable solver reports its steps through
 one constant, #isaconst("trace_event"), which takes a channel name and a
@@ -218,25 +209,15 @@ such a trace, registered as a claim.
 Three questions determine what a run of the delivered analyzer establishes, and
 @fig:intro-trust places each component under one of them.
 
-*What is proved.* Every store a finite source run reaches is described by the
-report at a simulating graph node, in some context
-(#isai("s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>")), and there every
-`PROVED` condition holds and every `REFUTED` condition fails
-(#isai("s \<in> \<V>\<^bsub>res\<^esub> v")). This is
-#isathm("run_voblint_source_sound") (@sec:headline). It assumes an initial
-store from #isaconst("cinit_stores") and an #isaconst("Analysed") answer of
-#isaconst("run_voblint"), and nothing about termination: an answer exists only
-where the solve returned. #isathm("run_voblint_dead_check_unreached") and
-#isathm("run_voblint_arithmetic_safe") give `DEAD` and the absence of an
-arithmetic diagnostic their meaning. The proved side includes the compiler,
+*What is proved.* #isathm("run_voblint_source_sound") (@sec:headline) and the
+verdict theorems of @sec:verdicts hold for every report #isaconst("run_voblint")
+returns, so termination is not a premise. The proved side includes the compiler,
 the well-formedness test, the vendored solver with its executable refinement,
 and the finite carrier. The vendored solver's changes (@sec:upstream-td) are
 checked by Isabelle like every other theory. The proved side ends at two
 points: the syntax tree #isaconst("run_voblint") receives, and the semantic
 report it returns, before #isaconst("render_report") turns its states into text
-(@sec:codegen). Termination is not proved for every program
-(@sec:termination); that is a gap in what the analyzer can answer, not a
-premise of what an answer means. No theorem constrains `UNKNOWN` verdicts or
+(@sec:codegen). No theorem constrains `UNKNOWN` verdicts or
 warnings.
 
 *What is trusted.* The delivered guarantee also relies on the following
@@ -245,9 +226,12 @@ components, which the theorem does not mention.
 - The lexer and parser. A fault builds a syntax tree other than the one the
   text denotes, and the verdicts then describe another program.
 - Isabelle's kernel, and its code generator with the library's target
-  mappings, which send HOL integers to Zarith and HOL strings to OCaml strings.
-  The code equations of the development are theorems. The translation to OCaml
-  and these mappings are not. Witness theorems proved by `eval`, such as the
+  mappings (#isacmd("code_printing")), which send HOL integers to Zarith and
+  HOL strings to OCaml strings. The code equations of the development are
+  theorems. The translation to OCaml and these mappings are not, although
+  Haftmann and Nipkow give the generator's source and intermediate language a
+  semantics and prove the translation of type classes correct on paper
+  @haftmann10. Witness theorems proved by `eval`, such as the
   non-vacuity instances of @sec:nonvacuity, trust the same generator inside
   Isabelle.
 - The mapping of #isaconst("trace_event") to the tracer's OCaml hook
@@ -294,8 +278,7 @@ and the browser. An abort branch of a code equation, such as the query
 recursion exceeding #isaconst("query_depth"), raises an
 exception and yields no answer.
 
-The delivered tools run the constant the source-level theorem is about, through
-code equations that are theorems. The trust boundary consists of the frontend,
-the code generator's translation and target mappings, the compilers and
-runtimes, and the rendering, together with the argued adequacy of
+The delivered tools thus run the proved constant. The trust boundary consists
+of the frontend, the code generator's translation and target mappings, the
+compilers and runtimes, the rendering, and the argued adequacy of
 #isaconst("pstep").

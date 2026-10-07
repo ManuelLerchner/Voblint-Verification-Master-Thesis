@@ -137,3 +137,13 @@ theory = "Voblint_Framework.MCP_Spec"
 why = "Solving chapter, update-rule figure: one global under each rule after each of four contributions."
 session = "Voblint_Examples_Tooling"
 theory = "Voblint_Examples_Tooling.Example_Update_Rule_Steps"
+
+[facts.routed_node_rhs_parts]
+why = "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
+session = "Voblint_Framework"
+theory = "Voblint_Framework.DG_Indexed_Generator"
+
+[facts.routed_node_rhs_buffered_parts]
+why = "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
+session = "Voblint_Framework"
+theory = "Voblint_Framework.DG_Indexed_Generator"

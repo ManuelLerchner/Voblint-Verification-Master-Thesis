@@ -2,61 +2,551 @@
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing
 #import "../lib/sources.typ": thy, update-rule-steps
-#import "../lib/math.typ": conc, ctor, ineq, lbot, lle, llt, ltop, sem, setcomp, sh, sol
+#import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
-#import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text
+#import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text, claim-trace
 
-= Solver Certificates and Executable States <ch:solving>
+// A verdict or state of a registered CLI claim (shared/claims.toml), read from
+// the checked output rather than typed.
+#let _cli(name, cond, col) = {
+  let cells = read("/shared/generated/" + name + ".txt")
+    .split("\n")
+    .map(l => l.trim().split(regex("\s{2,}")))
+    .find(c => c.len() == 5 and c.at(2) == cond)
+  assert(cells != none, message: "claim " + name + " has no check " + cond)
+  raw(cells.at(col))
+}
+#let _b = $italic("bump")$
 
-@ch:equations stopped at post-solutions: a valuation that satisfies the
-generated constraints on a suitably closed set of unknowns covers the
+= Solving the Equations <ch:solving>
+
+@ch:equations ended with post-solutions. Every valuation that satisfies the
+generated equations on a suitably closed set of unknowns covers the
 context-indexed collecting semantics (#isathm("activation_collect_dg_sound")).
-This chapter connects that theorem to a run of the executable solver. The
-solver enters the proof through three facts about its result (@sec:cert-param).
-The main one is a _certificate_: the valuation it returns is a post-solution on
-the set of unknowns it evaluated (@sec:certificate). The other two state that
-this set is finite and that a finished run of the executable solver lies in the
-domain on which the certificate holds. The proof uses nothing else about the
-solver, so its algorithm and its update rule (@sec:update-rules) can change
-without touching the proof. The solver runs on an executable representation of
-abstract states, and @sec:represented-function shows that this representation computes the
-same values as the functions over variable names the analyses are specified
-with. The analyzer runs the executable form of the solver, so it has a result
-only where the solve returned, and termination for every program is not proved
-(@sec:termination).
+That chapter did not say how such a valuation is computed. Voblint computes it
+with the verified top-down solver of Tilscher et al., which is proved partially
+correct and was not written for these equations @tilscher26.
 
-Chaining the two results gives the statement @ch:results builds on: whenever
-the executable solver returns for a program, the valuation it returns covers
-every store that reaches each solved unknown in its context. The chapter
-isolates the certificate (@sec:certificate), fixes the two choices needed to
-run the solver, an update rule (@sec:update-rules) and an executable state
-representation (@sec:represented-function), and explains why termination is
-left unproved (@sec:termination).
+This chapter describes how the equations are solved and why the solver's
+result may be used. The equations are first brought into the form the solver
+accepts (@sec:eq-encoding), and @sec:eq-example follows one solve of the
+running example. The solver enters the proof only through a _certificate_,
+which states that the valuation it returns is a post-solution on the unknowns
+it evaluated (@sec:certificate). The proof therefore holds for every update
+rule the solver may use (@sec:update-rules). The solver computes with a finite
+representation of abstract states (@sec:represented-function), and termination
+remains a premise for each program (@sec:termination). Together, whenever the
+executable solver returns for a program, the valuation it returns covers every
+store that reaches each solved unknown in its context. @ch:results builds on
+this statement.
+
+== From equations to the solver <sec:eq-encoding>
+
+A post-solution satisfies one inequality for each source of the equations of
+@sec:eq-call. Write $v_0$ for the program entry and $c_0$ for the initial
+context. For a local edge $u ->^a v$, and for a call at $u$ in context $c$ to
+$p$ with an entry pair $(q, e)$ of $enterh (sol(u, c))$ whose entry state $e$
+is not bottom, routed context $c' = ctxh(u, c, e)$ and continuation $k$, a
+post-solution satisfies at the solved unknowns
+#[
+  #show math.equation: set block(breakable: true)
+  $
+    sol(v_0, c_0) & gt.eq d_0 & wide #ineq-tag(1) \
+    sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide #ineq-tag(2) \
+    sol(ctor("Activation_Seed") thin p space c') & gt.eq e & wide #ineq-tag(3) \
+    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(ctor("Activation_Seed") thin p space c') & wide #ineq-tag(4) \
+    sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide #ineq-tag(5) \
+  $
+]
+Lines #ineq(3) and #ineq(4) are #isathm("routed_seed_publish_bound_seed") and
+#isathm("routed_seed_read_bound").
+
+The solver's interface is narrower than the equations of @ch:equations, so
+Voblint adapts the equations to it. No adaptation changes what a post-solution
+is. The whole interface is the type of a right-hand side, the strategy tree of
+@sec:td, here as Isabelle declares it with one value type $'d$ for all
+unknowns:
+
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("strategy_tree")
+}
+
+Reads of local and global unknowns, publications to analysis globals, and
+contexts discovered during the solve map onto these trees directly. So do
+reads that depend on values read earlier (@sec:eq-trees). Three mismatches
+remain and need an adapter. Side effects cannot target local unknowns such as
+a callee's entry (@sec:eq-seed-global), all unknowns share one value type
+(@sec:global-unknowns), and repeated writes from one right-hand side share one
+origin (@sec:eq-buffer).
+
+
+
+=== Dynamic dependencies as strategy trees <sec:eq-trees>
+
+A local edge reads a fixed unknown, its predecessor. A call does not. In the
+running example the continuation $(italic("pp3"), c_0)$ first reads the caller
+$(italic("pp2"), c_0)$. Only from that value does it learn the entry state
+$n = [5, 5]$ and with it the context $c_1$, and only then does it know which
+result to read, $(ctor("FunctionResult") thin italic("bump"), c_1)$. A
+strategy tree expresses this dependency, because each continuation receives
+the value just read. In the notation of @sec:td, the contribution of a call at
+$u$ in context $c$ (#isaconst("rhs_call")) is the value of the tree
+$
+  #ctor("QueryL") ( & (u, c), lambda d. \
+                    & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
+                    & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
+                        #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ),
+$
+where each continuation receives the value just read: $d$ is the caller's
+value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$, and $r$ is the callee's
+result. These are lines #ineq(3) and #ineq(5) above in an order the solver can execute. The tree is
+#isaconst("routed_call_program") for one callee and one entry pair, without
+the bottom test of @sec:eq-call. The analyzer runs a buffered form of it
+(@sec:eq-buffer).
+
+=== Publishing to local entries through activation seeds <sec:eq-seed-global>
+
+Lines #ineq(3) and #ineq(4) pass the entry state $e$
+that the call computed to the callee's entry. The natural encoding is a side effect of the call into
+the entry unknown $(ctor("FunctionEntry") thin p, c')$, as Apinis et al. write
+it @apinis12[§6] and as Goblint does with its local side effect `sidel`
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L244")[`constraints.ml`]). The entry is a
+local unknown, though, and the vendored solver's #ctor("Side") accepts only
+global unknowns. Allowing local targets would mean changing the solver and
+redoing its correctness proof.
+
+The seeds of @sec:eq-call avoid this restriction. A seed
+$ctor("Activation_Seed") thin p space c'$ is a global unknown, so the call can
+publish $e$ to it with #ctor("Side"), and the entry equation of
+$(ctor("FunctionEntry") thin p, c')$ reads it back with #ctor("QueryG"). In
+the running example `bump(5)` publishes ${n |-> [5, 5]}$ to
+$ctor("Activation_Seed") thin #_b space c_1$, and
+$(ctor("FunctionEntry") thin italic("bump"), c_1)$ reads it. Publishing alone does not demand `bump`, since the solver solves only unknowns
+that some tree queries. The result query does. Solving
+$(ctor("FunctionResult") thin italic("bump"), c_1)$ reaches the entry, which queries its seed.
+
+Because seeds are global unknowns, they inherit the update rule for globals.
+Without contexts, both calls publish to the one seed of `bump`, and warrowing
+widens it. The analyzer then reports
+#_cli("pg-contexts-none", "a == 6", 3) for `a == 6` with
+#_cli("pg-contexts-none", "a == 6", 4), whose lower bound $-infinity$ comes
+from this widening.
+
+=== One value type for all unknowns <sec:global-unknowns>
+
+An analysis works with two kinds of value. A local unknown holds an abstract
+state of its local domain, and an analysis global holds a value of its global
+domain (@sec:shared-facts). The vendored solver has a single value type
+$'d$ for all unknowns, so both kinds must fit into one type.
+
+Voblint uses their product. Every unknown holds a pair #isatype("dg_state") of
+a local and a global half, #isaconst("dg_local") and #isaconst("dg_global"),
+uses one half and leaves the other at $lbot$ (@tab:eq-carrier). Order and join
+on pairs work componentwise, so the solver's requirements on the value type
+follow from those on the two halves. "Global" names the solver's kind of
+unknown, not the half it uses. A seed is a global unknown that carries a local
+value, the entry state it passes to the callee.
+
+#figure(
+  table(
+    columns: (auto, auto, auto),
+    align: (left, left, left),
+    stroke: none,
+    table.hline(),
+    [*solver unknown*], [*role*], [*value*],
+    table.hline(stroke: 0.5pt),
+    [$(v, c)$, local], [the state at $v$ in context $c$], [$(d, lbot)$],
+    [#isaconst("Activation_Seed"), global], [an entry state published by a call], [$(e, lbot)$],
+    [#isaconst("Analysis_Global") $v$, global], [the analysis global $v$], [$(lbot, g)$],
+    [#isaconst("Analysis_Buffer"), global], [a node's own global half], [$(lbot, g)$],
+    table.hline(),
+  ),
+  placement: auto,
+  caption: [Which half of #isatype("dg_state") each kind of unknown uses. The
+    global unknowns are named by #isatype("global_unknown"). No selectable
+    analysis publishes to #isaconst("Analysis_Buffer").],
+) <tab:eq-carrier>
+
+Transfers never see the pair or the seeds. The manager hands a transfer the
+half it needs. In the manager #isaconst("mk_dg_man") builds,
+#isaconst("man_global") $v$ becomes a #ctor("QueryG") and
+#isaconst("man_sideg") $v$ $g$ a #ctor("Side") on the analysis global's
+unknown. Goblint uses a
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30-L32",
+)[lifted sum]
+for the same purpose. Voblint uses the product because its componentwise
+lattice structure keeps the Isabelle proofs simple.
+
+=== Buffering repeated publications <sec:eq-buffer>
+
+One right-hand side can publish to the same global unknown twice. Two edges
+into a node may both assign the flow-insensitive global `g` of @sec:mixed-flow.
+Two call edges that resume at the same node are separate contributions as
+well, and when both are routed to the same callee context they write the same seed
+$ctor("Activation_Seed") thin p space c'$. Declaratively the two writes mean one bound:
+$
+  #ctor("Side") (ctor("Activation_Seed") thin p space c', a); #ctor("Side") (ctor("Activation_Seed") thin p space c', b)
+  quad "means" quad
+  sol(ctor("Activation_Seed") thin p space c') gt.eq a union.sq b.
+$
+The vendored solver joins the publications of one evaluation, but it applies
+the update rule at every #ctor("Side"), first to $a$ and then to
+$a union.sq b$. The per-origin rules (@sec:update-rules) keep one record
+per origin (@sec:td), so in every re-evaluation the recorded
+contribution first shrinks to $a$ and then grows back to $a union.sq b$. Under
+warrowing the shrinking step narrows and the growing step widens again, and
+the solve need not stabilize. #isaconst("buffer_sides") gives the update rule
+complete joins instead. It collects the publications of one right-hand side,
+joins those to the same target, and issues one #ctor("Side") per target at a
+flush point. One joined contribution per target and evaluation is the input
+the update rules of Stemmler et al. assume @stemmler25[§3].
+
+Where the flush points lie decides when a seed reaches the
+solver. A call publishes the callee's entry state and then reads the callee's
+result, and that read is what makes the solver evaluate the callee. Flushed
+only when the right-hand side has answered, the publication would arrive after
+the callee had been solved from an empty seed, and the seed's change would send
+the caller round a second time. So at a node where at most one call returns, the
+buffer flushes before every local read, and the seed is published before the
+result is read, in the order of Goblint's normal-call transfer
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/constraints.ml#L242-L245")[`constraints.ml`]).
+At a node where several calls return, it flushes only at the answer, because an
+earlier flush would write a seed the next call may write again, and the per-origin
+rules would again see a partial contribution first. There a newly routed
+callee is still read once with an empty seed. Goblint's narrowing rule for globals, which also keeps
+one contribution per origin, joins the side effects of an evaluation before
+updating
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L116")[`td3UpdateRule.ml`]).
+The analyzer runs the buffered generator
+#isaconst("routed_node_rhs_buffered"). Buffering changes only when
+publications are issued, so it answers the same join of the four parts as the
+direct generator of @sec:eq-call
+(#isathm("routed_node_rhs_buffered_parts")), and @sec:cert-param carries its
+certificate to the direct generator the proof speaks about.
+@sec:outlook-extending discusses a solver extension that would make seeds and
+buffering unnecessary.
+
+== A solve in action <sec:eq-example>
+
+We now follow the running example of @fig:program-to-equations under entry-state
+contexts: the part of the equation system a solve reaches, and the order in
+which the solver reaches it. The generator defines a right-hand side for every
+unknown. The solver does not enumerate them. Which context-indexed unknowns it
+demands depends on values it computes: $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$
+become known only after the caller values at `pp2` and `pp3` have been read. We
+therefore write out the finite fragment this run reaches. The calls have the
+entry pairs $(q_1, e_1) = enterh (sol(italic("pp2"), c_0))$ with
+$e_1 = {n |-> [5, 5]}$ and $(q_2, e_2) = enterh (sol(italic("pp3"), c_0))$
+with $e_2 = {n |-> [4, 4]}$. With $c_0$ the initial context, every post-solution
+satisfies
+#[
+  #show math.equation: set block(breakable: true)
+  #set text(size: 10pt)
+  $
+    sol(ctor("FunctionEntry") thin italic("main"), c_0) & gt.eq d_0 union.sq sol(ctor("Activation_Seed") thin italic("main") space c_0) & quad & "initial state and seed" \
+    sol(italic("pp2"), c_0) & gt.eq sh(f)_("body(main)") (sol(ctor("FunctionEntry") thin italic("main"), c_0)) & & "local edge" \
+    sol(ctor("Activation_Seed") thin #_b space c_1) & gt.eq e_1 & & "call 1 publishes" \
+    sol(ctor("FunctionEntry") thin italic("bump"), c_1) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_1) & & "entry reads its seed" \
+    sol(italic("pp0"), c_1) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin italic("bump"), c_1)) & & "local edge" \
+    sol(ctor("FunctionResult") thin italic("bump"), c_1) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_1)) & & "local edge" \
+    sol(italic("pp3"), c_0) & gt.eq sh("combine") (q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) & & "call 1 returns" \
+    sol(ctor("Activation_Seed") thin #_b space c_2) & gt.eq e_2 & & "call 2 publishes" \
+    sol(ctor("FunctionEntry") thin italic("bump"), c_2) & gt.eq sol(ctor("Activation_Seed") thin #_b space c_2) & & "entry reads its seed" \
+    sol(italic("pp0"), c_2) & gt.eq sh(f)_("body(bump)") (sol(ctor("FunctionEntry") thin italic("bump"), c_2)) & & "local edge" \
+    sol(ctor("FunctionResult") thin italic("bump"), c_2) & gt.eq sh(f)_("return n + 1") (sol(italic("pp0"), c_2)) & & "local edge" \
+    sol(italic("pp4"), c_0) & gt.eq sh("combine") (q_2, sol(ctor("FunctionResult") thin italic("bump"), c_2)) & & "call 2 returns" \
+    sol(italic("pp5"), c_0) & gt.eq sh(f)_("check(a == 6)") (sol(italic("pp4"), c_0)) & & "local edge" \
+    sol(italic("pp6"), c_0) & gt.eq sh(f)_("check(b == 5)") (sol(italic("pp5"), c_0)) & & "local edge" \
+    sol(ctor("FunctionResult") thin italic("main"), c_0) & gt.eq sh(f)_("return") (sol(italic("pp6"), c_0)) & & "local edge"
+  $
+]
+Each local edge gives one inequality, each call two (its publication and its
+return), and each procedure entry one that reads its seed. The entry of `main`
+reads a seed as every entry does. No call publishes to it, so it stays $lbot$
+and the initial state $d_0$ supplies the value. The bottom test is omitted.
+
+@tab:eq-trace shows how the solver reaches this fragment, condensed into
+phases, and @fig:eq-walk draws the same phases on the unknowns. Both are
+generated from the solver trace of the executable analyzer (`--trace`,
+Interval, the warrowing update rule), stored as a checked claim. Each call
+resumes at a node of its own, so the buffer of @sec:eq-buffer flushes the
+seed before the callee's result is read. The entry of `bump` therefore reads
+the published entry state, and each context of `bump` is solved once.
+
+#let _trace = claim-trace("pg-contexts-trace")
+#let _tctx(c) = $c_#c.slice(1)$
+#let _tnode(key) = {
+  let (n, c) = key.split("@")
+  if n.starts-with("Seed(") {
+    $ctor("Activation_Seed") thin italic(#n.slice(5, -1)) space #_tctx(c)$
+  } else { raw(n) }
+}
+#let _tunk(key) = {
+  let (n, c) = key.split("@")
+  if n.starts-with("Seed(") { _tnode(key) } else { $(#raw(n), #_tctx(c))$ }
+}
+// A value as the trace prints it: bottom, a routed entry state e_i, or the
+// bindings the analyzer shows.
+#let _tval(v, route: none) = if v == "⊥" { $lbot$ } else if route != none and v == route.entry {
+  $e_#route.context.slice(1)$
+} else { raw(v) }
+#let _tbind(v) = v.matches(regex("([a-z]\w*)=(\[[^\]]*\])")).map(m => m.text)
+#let _tfind(p, pred) = p.events.find(pred)
+
+#let _trows = {
+  let rows = ()
+  let routed = ()
+  for (i, p) in _trace.phases.enumerate() {
+    let evs = p.events
+    let (who, what) = if p.kind == "descent" {
+      let qs = evs.filter(e => e.event == "query_local")
+      let path = qs.map(e => _tnode(e.target))
+      (
+        [#_tnode(qs.first().current) to #_tnode(qs.last().current)],
+        [the root query at #_tnode(qs.first().current) queries back through
+          #path.slice(0, -1).join(", ", last: " and ") to #path.last()],
+      )
+    } else if p.kind == "root-seed" {
+      let q = _tfind(p, e => e.event == "query_global")
+      (_tnode(q.current), [#ctor("QueryG") reads #_tunk(q.target) $=$ #_tval(q.value), joins $d_0$])
+    } else if p.kind == "flush" {
+      let sd = _tfind(p, e => e.event == "side")
+      let up = _tfind(p, e => e.event == "update_global")
+      let r = rows.last().route
+      (
+        _tnode(sd.current),
+        [flushes #ctor("Side") $(#_tunk(sd.target), #_tval(sd.value, route: r))$: the seed grows
+          from #_tval(up.old) and its reader, the entry, is destabilized],
+      )
+    } else {
+      let r = p.route
+      let res = _tfind(p, e => e.event == "value_local" and e.target.starts-with("exit_"))
+      let cur = res.current
+      let seed = _tfind(p, e => e.event == "query_global")
+      let again = r.context in routed
+      // The bindings the call adds to what the continuation read before it.
+      let ans = _tfind(p, e => e.event == "answer" and e.current == cur)
+      let before = _tfind(p, e => (
+        e.event == "value_local" and e.current == cur and not e.target.starts-with("exit_")
+      ))
+      let fresh = if again { _tbind(ans.value).filter(b => b not in _tbind(before.value)) } else {
+        ()
+      }
+      // Unknowns that change after the continuation answers: the answer
+      // travelling back to the root query.
+      let done = evs.position(e => e.event == "answer" and e.current == cur)
+      let up = if done == none { () } else {
+        evs
+          .slice(done)
+          .filter(e => e.event == "update_local" and e.unknown != cur)
+          .map(e => e.unknown)
+      }
+      let unchanged = evs.any(e => e.event == "side")
+      // A seed the call publishes before it first queries the callee.
+      let first-query = evs.position(e => e.event == "query_local")
+      let published = evs
+        .slice(0, if first-query == none { evs.len() } else { first-query })
+        .any(e => (
+          e.event == "side"
+        ))
+      (
+        [#_tnode(cur)#if again [, again]],
+        if again [
+          re-reads #_tnode(before.target) and the result, whose entry now reads
+          #_tval(seed.value, route: r): #fresh.map(raw).join(", ")#if unchanged [. The second flush changes nothing]#if up.len() > 1 [. The answers then propagate up through #up.slice(0, -1).map(_tnode).join(" and ") to #_tnode(up.last())]
+        ] else [
+          computes #_tval(r.entry, route: r) and routes to the new context #_tctx(r.context),
+          #if published [publishes it to #_tunk(seed.target), ]queries #_tunk(res.target),
+          which queries back to the entry, which reads #_tunk(seed.target) $=$
+          #_tval(seed.value, route: r): the result is #_tval(res.value)#if up.len() > 1 [. The answers then propagate up through #up.slice(0, -1).map(_tnode).join(" and ") to #_tnode(up.last())]
+        ],
+      )
+    }
+    if p.kind == "pass" and p.route.context not in routed { routed.push(p.route.context) }
+    rows.push((
+      route: if p.kind == "pass" { p.route } else if rows.len() > 0 { rows.last().route } else {
+        none
+      },
+      cells: ([#(i + 1)], who, what),
+    ))
+  }
+  rows.map(r => r.cells).flatten()
+}
+
+#[
+  #set text(size: 9pt)
+  #figure(
+    table(
+      columns: (auto, auto, 1fr),
+      align: (right, left, left),
+      stroke: none,
+      inset: (x: 4pt, y: 3pt),
+      table.hline(),
+      [*phase*], [*evaluating*], [*what happens*],
+      table.hline(stroke: 0.5pt),
+      .._trows,
+      table.hline(),
+    ),
+    placement: none,
+    caption: [The solve of the running example under entry-state contexts,
+      condensed into phases. Generated from the solver trace (claim
+      #claim-ref("pg-contexts-trace")); the phase numbers are assigned when the thesis
+      renders the trace. The second column names the unknown, or the chain of
+      unknowns, whose right-hand side the phase evaluates.],
+  ) <tab:eq-trace>
+]
+
+The checks at `pp4` and `pp5` read the solved values
+#_cli("pg-contexts-entry", "a == 6", 4) and
+#_cli("pg-contexts-entry", "b == 5", 4), and the analyzer proves both. Without contexts,
+$c_1 = c_2$, both calls publish to one seed, and `bump` is solved once for both
+(@sec:eq-seed-global).
+
+#figure(
+  {
+    set text(size: 7pt)
+    let wnode(pos, key, body, color: vb.neutral) = node(
+      pos,
+      body,
+      name: label(key),
+      stroke: 0.7pt + color,
+      fill: color.lighten(92%),
+      corner-radius: 5pt,
+      inset: 3pt,
+    )
+    let cfg(a, b, lab: none, side: left) = edge(
+      label(a),
+      label(b),
+      "-|>",
+      stroke: 0.6pt + vb.muted,
+      label: if lab == none { none } else {
+        text(size: 6pt, font: "DejaVu Sans Mono", fill: vb.muted, lab)
+      },
+      label-side: side,
+    )
+    // Layout of each solver step the trace records; the phases on the
+    // arrows come from the trace.
+    let styles = (
+      "exit_main@c0 -> pp6@c0": (bend: 45deg),
+      "pp6@c0 -> pp5@c0": (bend: 45deg),
+      "pp5@c0 -> pp4@c0": (bend: 45deg),
+      "pp4@c0 -> pp3@c0": (bend: -45deg, side: right, pos: 0.25),
+      "pp3@c0 -> pp2@c0": (bend: -45deg, side: right),
+      "pp2@c0 -> entry_main@c0": (bend: -45deg, side: right),
+      "entry_main@c0 -> Seed(main)@c0": (bend: 0deg),
+      "pp3@c0 -> Seed(bump)@c1": (bend: 25deg),
+      "pp3@c0 -> exit_bump@c1": (bend: -20deg, side: right),
+      "exit_bump@c1 -> pp0@c1": (bend: -45deg, side: right),
+      "pp0@c1 -> entry_bump@c1": (bend: -45deg, side: right),
+      "entry_bump@c1 -> Seed(bump)@c1": (bend: -45deg, side: right),
+      "pp4@c0 -> Seed(bump)@c2": (bend: -25deg, side: right),
+      "pp4@c0 -> exit_bump@c2": (bend: 40deg),
+      "exit_bump@c2 -> pp0@c2": (bend: 45deg),
+      "pp0@c2 -> entry_bump@c2": (bend: 45deg),
+      "entry_bump@c2 -> Seed(bump)@c2": (bend: 45deg),
+    )
+    for k in styles.keys() { assert(k in _trace.arrows, message: "the trace no longer takes " + k) }
+    let step(key, phases) = {
+      let st = styles.at(key, default: none)
+      assert(st != none, message: "no layout for the solver step " + key)
+      let (a, b) = key.split(" -> ")
+      edge(
+        label(a),
+        label(b),
+        "-|>",
+        stroke: (paint: vb.accent, thickness: 0.8pt, dash: "dashed"),
+        bend: st.at("bend", default: 30deg),
+        label: box(
+          fill: white,
+          inset: 1pt,
+          text(size: 6.5pt, weight: "bold", fill: vb.accent, phases.map(str).join(", ")),
+        ),
+        label-side: st.at("side", default: left),
+        label-pos: st.at("pos", default: 0.5),
+      )
+    }
+    diagram(
+      spacing: (17mm, 7mm),
+      wnode((0, 0), "entry_main@c0", raw("entry_main")),
+      wnode(
+        (-1.0, 0),
+        "Seed(main)@c0",
+        [$ctor("Activation_Seed") thin italic("main") space c_0$],
+        color: vb.called,
+      ),
+      wnode((0, 1), "pp2@c0", raw("pp2")),
+      wnode((0, 2), "pp3@c0", raw("pp3")),
+      wnode((0, 3), "pp4@c0", raw("pp4")),
+      wnode((0, 4), "pp5@c0", raw("pp5")),
+      wnode((0, 5), "pp6@c0", raw("pp6")),
+      wnode((0, 6), "exit_main@c0", raw("exit_main")),
+      wnode(
+        (1.6, 0),
+        "Seed(bump)@c1",
+        [$ctor("Activation_Seed") thin #_b space c_1$],
+        color: vb.called,
+      ),
+      wnode((1.6, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
+      wnode((1.6, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
+      wnode((1.6, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
+      wnode(
+        (-1.6, 1.8),
+        "Seed(bump)@c2",
+        [$ctor("Activation_Seed") thin #_b space c_2$],
+        color: vb.called,
+      ),
+      wnode((-1.6, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
+      wnode((-1.6, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
+      wnode((-1.6, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),
+      cfg("entry_main@c0", "pp2@c0", lab: [body(main)], side: right),
+      cfg("pp4@c0", "pp5@c0", lab: [check(a == 6)], side: left),
+      cfg("pp5@c0", "pp6@c0", lab: [check(b == 5)], side: left),
+      cfg("pp6@c0", "exit_main@c0", lab: [return], side: left),
+      cfg("Seed(bump)@c1", "entry_bump@c1", lab: [seed read], side: right),
+      cfg("entry_bump@c1", "pp0@c1", lab: [body(bump)], side: right),
+      cfg("pp0@c1", "exit_bump@c1", lab: [return n + 1], side: right),
+      cfg("Seed(bump)@c2", "entry_bump@c2", lab: [seed read], side: left),
+      cfg("entry_bump@c2", "pp0@c2", lab: [body(bump)], side: left),
+      cfg("pp0@c2", "exit_bump@c2", lab: [return n + 1], side: left),
+      .._trace.arrows.pairs().map(((k, ph)) => step(k, ph)),
+    )
+  },
+  kind: image,
+  placement: none,
+  caption: [The solve of @tab:eq-trace drawn on the unknowns. Grey arrows are
+    the edges of the graph, including a seed feeding its entry. Blue dashed
+    arrows are the solver's queries and publications, labelled with the
+    phases of the table. Each call publishes to its seed before it queries the
+    callee, so every arrow is taken once. The solve runs backwards from the result node of `main` and demands the
+    copies of `bump` for $c_1$ (right) and $c_2$ (left) as those contexts are
+    discovered. Generated from the same solver trace as @tab:eq-trace.],
+) <fig:eq-walk>
+
+By the soundness theorem of @sec:eq-discharge, every post-solution of this
+system covers the activation collecting semantics of the running example.
+@sec:certificate states why a terminating solve returns one.
 
 == The certificate between solver and semantics <sec:certificate>
 
 === What a solve computes <sec:cert-solve>
 
-Voblint solves the equations with the side-effecting top-down solver of
-Tilscher et al., which is proved partially correct @tilscher26. Side effects
-are how a call reaches its callee: the caller publishes the entry state to the
-callee's seed, and the callee's entry equation reads the seed back
-(@sec:eq-call). The solver returns a valuation #sol together with the set $V$
+The solver returns a valuation #sol together with the set $V$
 of local unknowns it evaluated and stabilized.
 
-The solve is demand-driven, as the recorded solve of the running example in
-@sec:eq-example showed (@tab:eq-trace, @fig:eq-walk). The generator is a function that gives a
-right-hand side to every pair of a graph node and a context
-(#isaconst("compiled_routed_eqs_for")), so the system is total over
-node-context pairs; for a policy with an infinite context type, such as
-entry-state contexts over intervals, it has infinitely many unknowns. The solver starts from a
-single query, the result node of `main` in the initial context $c_0$ (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query")),
-evaluates its right-hand side, and solves every unknown that right-hand side
-reads, recursively @seidl21 @tilscher26. Starting from the result node of `main`, it
-follows the predecessor and call dependencies that the evaluated right-hand
-sides expose, in each context the solve discovers, and a terminating solve
-reaches finitely many unknowns in total. Apinis et al.
-start local solving from the same unknown @apinis12[§3]. @fig:solve-infinite
+The generator gives a right-hand side to every pair of a graph node and a
+context (#isaconst("compiled_routed_eqs_for")), so the system is total over
+node-context pairs. For a policy with an infinite context type, such as
+entry-state contexts over intervals, it has infinitely many unknowns. The
+solve is demand-driven, as the recorded solve of @sec:eq-example showed
+(@tab:eq-trace, @fig:eq-walk). It starts from a single query, the result node
+of `main` in the initial context $c_0$
+(#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query")),
+and solves the local unknowns that the evaluated right-hand sides read,
+recursively @seidl21 @tilscher26. Apinis et al. start local solving from the
+same unknown @apinis12[§3]. A terminating solve thus reaches finitely many
+unknowns, in the contexts it discovers. @fig:solve-infinite
 draws the system of a five-procedure program and marks the part one solve
 reaches. Unknowns from which the result node cannot be reached, such as code after a
 `return`, are handled in @sec:cert-forward.
@@ -87,7 +577,7 @@ reaches. Unknowns from which the result node cannot be reached, such as code aft
 
 #figure(
   image("/shared/generated/svg/infinite.svg", width: 100%),
-  placement: none,
+  placement: auto,
   caption: [The equation system of a five-procedure program as a grid: rows
     are program points grouped by procedure, columns are contexts, one cell
     per unknown. `main` calls `w` and `f(3)`, `f` calls itself twice and calls
@@ -168,18 +658,14 @@ unknown, its valuation is #lbot and the bound holds trivially.
   + is the post-solution inequality of @ch:background for local unknowns: the
     value #sol stores at $u$ is at least what the right-hand side of $u$
     computes from the values #sol stores for the unknowns it reads
-    (#isathm("part_post_solution_local_bound")). That
-    right-hand side joins everything that reaches $u$: the initial state, the
-    transfer along each incoming edge, the seed read at a callee entry and each
-    call's combined result. So $sol(u)$ over-approximates each of them; these
-    are the inequalities #ineq(1), #ineq(2), #ineq(4) and #ineq(5) of
-    @sec:eq-discharge. In the running example, (C3) at $(italic("pp3"), c_0)$
-    requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
-    sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
+    (#isathm("part_post_solution_local_bound")). Unfolded over the parts of the
+  right-hand side, these are the inequalities #ineq(1), #ineq(2), #ineq(4) and
+  #ineq(5) of @sec:eq-encoding. In the running example, (C3) at $(italic("pp3"), c_0)$
+  requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
+  sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
   + carries a call into its callee: it makes the callee's seed hold every
     entry state routed there, and global unknowns receive their values only
-    through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of
-    @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
+    through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of @sec:eq-encoding. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
     ${n |-> [5, 5]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$ and
     ${n |-> [4, 4]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_2)$, the entry
@@ -432,9 +918,8 @@ values (@sec:represented-function).
 
 == One proof for five update rules <sec:update-rules>
 
-A global unknown receives contributions from several places. The entry seed of
-a procedure, for instance, receives the entry state of every call site that
-enters the procedure in that context. The solver merges each new contribution
+A global unknown such as a seed receives contributions from several places,
+and the solver merges each new contribution
 into the value it holds, and the merge decides both precision and termination.
 Joining keeps every contribution exactly but may grow forever; widening stops
 the growth but loses precision. Such a merge is an _update rule_. Stemmler et
@@ -464,17 +949,9 @@ the unknown of each program global when program globals are flow-insensitive
 accumulates across call sites, and how a flow-insensitive global accumulates
 its writes.
 
-No rule is more precise on every program. Per-origin warrowing helps when
-several origins feed one global, as Seidl et al. show on a global that receives
-one constant per location @seidl26[§1]. A recursive call that feeds its own
-seed, however, is a single origin, so distinguishing origins gains nothing
-there, and the rule can lose precision, as on the shrinking recursion of
-@fig:rules-programs (@sec:eval-precision). The rules also differ in termination. The
-two joining rules never widen a seed, so a recursion that enters with a growing
-argument can keep the solve running (@sec:termination), while the three
-warrowing rules widen it. On the growing recursion of @fig:rules-programs only
-the warrowing rules answer, and each warrowing rule loses precision on a
-program that the joining rules solve exactly.
+No rule is more precise on every program, and the rules also differ in
+termination. @sec:eval-precision compares them on the programs of
+@fig:rules-programs.
 
 #let _rule-steps = update-rule-steps()
 
@@ -549,7 +1026,7 @@ The update rule fixes how values are combined. The values themselves still need
 an executable representation, which @sec:represented-function supplies.
 
 
-== Executable abstract states <sec:represented-function>
+== Making abstract states executable <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
 $"Var" -> A$. The relational order analysis keeps its own state type, a set of
@@ -585,11 +1062,8 @@ $⟪(ltop, []), (0^sharp, [])⟫$, and the least element that the solver's latti
 interface asks for is $⟪(lbot, []), (lbot, [])⟫$. The mixed-flow extension of
 @sec:mixed-flow also stores states whose locals are all #lbot. In
 #isaconst("run_voblint") the solver's values are lifted states, which start at
-#ctor("Bot") below every carrier state. In Isabelle, a dictionary has type
-#isatype("default_dict"), a carrier state #isatype("default_st_rep"), and the
-notation is #isaconst("default_st_mk"). The initial state is
-#isaconst("initial_default_st") (for Sign, #isaconst("cinit_sign_st")) and the
-least element #isaconst("bot_default_st").
+#ctor("Bot") below every carrier state. In Isabelle, a carrier state is a #isatype("default_st_rep") of two
+#isatype("default_dict") values.
 
 Different pairs of dictionaries can describe the same state: overrides of
 distinct names may appear in any order, and an override equal to its default
@@ -617,10 +1091,7 @@ location $l$ and $d⟨l := a⟩$ for the update. The function a state represents
 $rho_(cal(G))(d)$, looks up every variable at its location. It is the total
 function on variable names that the specification uses. The same $rho_(cal(G))$
 reads back a lifted state, pointwise under the lift, and a D/G state, component
-by component. In Isabelle, locations have type #isatype("location"), lookup and
-update are #isaconst("default_st_get") and #isaconst("default_st_set"),
-$rho_(cal(G))$ is #isaconst("default_st_to_fun"), and one overloaded
-#isaconst("readback") selects its instance by the argument's type.
+by component. In Isabelle, $rho_(cal(G))$ is #isaconst("default_st_to_fun").
 
 A carrier state means what its represented function means. @sec:nonrel-state concretizes a
 function state $f$ to the stores whose every variable lies in the
@@ -825,20 +1296,15 @@ Whether the recursive solve returns is the remaining question.
 == Why termination is not proved <sec:termination>
 
 The analyzer answers only when the solver returns, and we do not prove that it
-always does. In a proof assistant termination is a question
-of the logic itself. HOL is a
-logic of total functions, so a recursive definition is admitted only when its
-recursion terminates; otherwise one could define $f(n) = f(n) + 1$ and derive
-$0 = 1$ @nipkow14[§2.3.4]. The vendored solver's termination is not known in
-general, so Isabelle defines it with a domain predicate
-(#isaconst("solve_dom", thy: "TD_side_upd_rule")), the arguments on which
-the recursion is well founded, and the certificate of @sec:certificate holds on
+always does. HOL admits only terminating recursion, and the vendored solver's
+termination is not known in general, so Isabelle defines it with a domain
+predicate (#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:isabelle),
+the arguments on which the recursion is well founded, and the certificate of @sec:certificate holds on
 that domain. The
 analyzer never assumes domain membership. It runs the executable form of the
 solver, #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when
 the recursion finishes, and #isathm("solve_dom_of_solve_c") turns a returned
-run into domain membership of the query. #isaconst("run_voblint") answers with a
-report only after that run returned, so every report carries the membership the
+run into domain membership of the query. Every report of #isaconst("run_voblint") therefore carries the membership the
 certificate needs, and the theorems about the analyzer have no termination
 premise.
 
@@ -857,21 +1323,19 @@ $[0, 0], [0, 1], [0, 2], dots$ to the one seed of `f`, and the joining update
 rules never widen this chain (#fixture(
   "24-site-figures/01-recursion_grows_join_diverges.vimp",
   label: "01-recursion_grows_join_diverges",
-), @fig:rules-programs). Both programs exceed their time limits, but the arguments above, which are
-not machine-checked, are why we expect divergence (@sec:trust-boundary).
+), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
+they diverge (@sec:trust-boundary).
 
 The vendored termination theorems cover top-down solvers without side effects
-over a finite type of unknowns @tilscher26. They further require monotone
-right-hand sides and the ascending chain condition for plain TD, which says
-that every strictly ascending chain $a_0 llt a_1 llt dots$ is finite,
-well-founded widening chains for TD with widening, and monotone right-hand sides with
-well-founded widening and narrowing chains for TD with warrowing. Voblint's
-unknowns pair a graph node, whose type is infinite, with a context, so these
-theorems apply to no analysis configuration. Seidl and Vogler prove on paper that
+over a finite type of unknowns. The solver with separate widening and narrowing
+phases terminates under this condition alone @tilscher26jar[Thm. 2], and the
+warrowing solver additionally needs a precise widening and monotonic
+right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
+pair nodes of an infinite type with contexts, so these theorems apply to no
+configuration. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system as long as only
 finitely many unknowns are encountered @seidl21[§9, Thm. 5], for widening and
-narrowing operators whose iterations always stabilize @seidl21[§3]. That solver widens at a target once one origin increases it a second time
-@seidl21[§9]. The joining update rules never widen, so the result does not
-carry over to them. Mechanizing such a result for the vendored solver is future work, so the
+narrowing operators whose iterations always stabilize @seidl21[§3]. The joining update rules never widen, so this result does not carry over to
+them. Mechanizing such a result for the vendored solver is future work, so the
 end-to-end theorem (@sec:headline) is a partial-correctness result about every
 report the analyzer returns.

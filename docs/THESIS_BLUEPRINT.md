@@ -1312,6 +1312,15 @@ PART III — THE ANALYZER
   8.5 Commutation: running the real thing, reasoning about the other one
   8.6 Deciding deadness finitely
 
+  Reason for the structural change (2026-10-07): chapter 8 (thesis
+  numbering) mixed the semantic equation system with the solver adapter. It now
+  holds context-indexed unknowns, the call equations (seeds as the entry's
+  inbox), one merged routing section and the soundness theorem. Strategy
+  trees, the reason for seeds, the product carrier, buffering and the traced
+  solve open chapter 9, retitled "Solving the Equations", before the
+  certificate that reuses them. The four-policy precision figure moved to the
+  evaluation's precision section.
+
 9 Results, checks, and the source-level theorem                    [10%]
   9.1 The published table: coverage is not reachability
   9.2 Live keys: coverage derived from termination
@@ -1534,7 +1543,7 @@ thesis section → theories → central definitions → central theorems.
 | 6.7 | `Voblint_Framework.DG_Ownership_Split_Spec`, `State_Restriction`, `DG_Keyed_Split_Spec`, `Voblint_CLI.MCP_Split` | `ownership_split_transfer_gen`, `ownership_split_enter_transfer_gen`, `ownership_split_combine_transfer_gen`, `restrict_local`, `restrict_global`, `keyed_split_spec`, `keyed_transfer`, `edge_global_reads`, `edge_global_writes` | `enter_runs_ownership_split_enter_transfer_gen`, `keyed_split_contract`, `mcp_keyed_dg_analysis`, `edge_step_frame` |
 | 7.1–7.2 | `Voblint_Solver.Strategy_Tree_Program`, `Voblint_Framework.DG_Constraint_Programs`, `DG_Indexed_Generator`, `CFG_Enumeration` | `strategy_program`, `sp_compile_with`, `side_rhs_fold_dg`, `routed_node_rhs`, `routed_node_rhs_buffered`, `cfg_intra_list`, `call_site_list` | `routed_node_rhs_buffered_correspondence` |
 | 7.3–7.4 | `Voblint_Framework.Routed_Call_Programs` | `global_unknown` (`Analysis_Global`, `Activation_Seed`), `routed_call_program`, `routed_callee_call_program`, `routed_entry_seed_programs`, `resolve`, `static_resolve` | — |
-| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routed_entry_cover` | `activation_collect_dg_sound`, `activation_collect_unit_eq_node_collect`, `cs_route_context_agree`, `cs_route_length` |
+| 7.5–7.6 | `Voblint_Framework.Routed_Context`, `Routed_Context_Unit`, `Call_String_Context`, `Voblint_Routing.Call_String_Routed_Context`, `Entry_State_Routed_Context` | locale `routed_context`, `route`, `route_unit`, `enterc_unit`, `cs_route`, `cs_context`, `formals_route_lifted_gen`, `routing_adequate` | `activation_collect_dg_sound`, `activation_collect_unit_eq_node_collect`, `cs_route_context_agree`, `cs_route_length` |
 | 7.7 | `Voblint_Solver.Strategy_Tree_Side_Buffering` | `buffer_sides` | — |
 | 7.8 | `Voblint_Routing.Context_Space_Finite` | — | `compiled_call_strings_finite`, `compiled_call_string_vars_finite` |
 | 8.1–8.3 | vendor `Basics_side`, `TD_side_upd_rule`; `Voblint_Solver.Globals_Rule` | `strategy_tree`, `eqsT`, `part_post_solution`, `least_part_post_solution`, `globals_rule`, locale `TD_side_upd_rule` | `partial_post_solution`, `term_equivalence`, `solve_code_equation`, `solve_dom_of_solve_c` |

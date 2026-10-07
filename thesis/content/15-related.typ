@@ -5,16 +5,13 @@
 = Related Work <ch:related>
 
 @sec:state-of-art placed Voblint among unverified and mechanized analyzers by
-what its theorem covers. This chapter compares mechanisms, which needs the
-definitions of the preceding chapters. We compare Voblint with prior systems along three design choices: the
+what its theorem covers. This chapter compares mechanisms along three design
+choices: the
 semantics an analyzer is proved against, how its fixpoint is computed, and how
-much of the delivered tool the proof covers. Each section opens with the
-question it compares and Voblint's answer, then reports each work's own claims
-before relating them to this thesis. The
+much of the delivered tool the proof covers. The
 comparisons are based on a web and OpenAlex search with full-text reads of the
 closest papers, not on a systematic review, so a work that search missed could
-narrow the scoped claims below. Several comparisons depend on how the fixpoint
-is formulated. Voblint is constraint-based, as Goblint is, whereas Verasco and the
+narrow the scoped claims below. Voblint is constraint-based, as Goblint is, whereas Verasco and the
 analyzers of Nipkow and Klein and of Franceschino et al. are syntax-directed (@sec:why-graph).
 
 == Verified analyzers: Verasco and the CompCert line
@@ -56,8 +53,8 @@ Verasco covers a far larger language, so the comparison concerns design only.
 Voblint's language is small, but recursion and context-sensitive calls are
 central to it: calls become equations over (program point, context) unknowns,
 and a generic solver computes their solution. With fuel, Verasco needs no
-termination argument. Voblint's source theorem takes termination of the solve as
-a premise.
+termination argument. Voblint's analyzer returns a report only where its solve
+terminates, and termination is not proved for every program (@sec:termination).
 Both specify abstract operations through concretization alone.
 
 The earlier value analysis of Blazy et al. @blazy13 does not verify
@@ -97,25 +94,17 @@ the domain supplies abstract operations and inverse operations with their
 soundness laws, and the interpreter derives forward evaluation, the backward
 filtering of guards and the step of each command generically
 @nipkow14[Sects. 13.5, 13.7]. Voblint's non-relational domains follow this
-pattern. Each supplies one record of primitives
-(#isatype("nonrelational_ops")), and #isalocale("sound_nonrelational_ops")
-derives the transfer, branch, entry and check classifier from it and proves
-them sound once (@sec:instances-supply). Voblint keeps the separation between collecting semantics and
+pattern (@sec:domain-contract). Voblint keeps the separation between collecting semantics and
 abstraction. Its collecting semantics ranges over activation traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
 which caller resumes. Their executable abstract state lists some variables and
 reads every other variable as top; they call the map from such a list to the
 function it represents `fun_rep` @nipkow14[§13.6]. Voblint's executable state also lists only
-some names, but it needs two defaults, because the states it stores fill
-unlisted names in two ways: the entry state reads every unlisted global as
-zero, and the global half of a published state reads every local as bottom
-(@sec:represented-function).
+some names, but with two defaults instead of one (@sec:represented-function).
 
-IMP2 @lammich19imp2, an Isabelle language with procedures, did not fit: its
-semantics is deterministic, a procedure call takes no arguments and returns no
-value, so parameters pass through variables set by generated code, and its
-verification condition generator handles recursive procedures only for total
-correctness (@sec:vimp).
+IMP2 @lammich19imp2, an Isabelle language with procedures, did not fit as the
+source language (@sec:vimp). Its verification condition generator, moreover,
+handles recursive procedures only for total correctness.
 
 Three works factor the soundness proof of an analyzer for reuse.
 Michelland et al. @michelland24 build abstract interpreters in Coq from
@@ -217,8 +206,7 @@ unknown at a widening point, whichever of the five selectable update rules
 merges the global contributions. The least-solution theorem therefore does not
 apply, and Voblint uses only partial correctness and claims no optimality for
 its results. Soundness rests on #isaconst("part_post_solution", thy: "Basics_side") alone, for all
-five selectable rules (@sec:update-rules). Voblint's precision statements are strict inequalities
-between the results of named solves.
+five selectable rules (@sec:update-rules).
 
 == Context sensitivity and trace partitioning
 
@@ -277,12 +265,11 @@ and global transfer behaviour, and the generator and solver organize their
 interaction. @sec:eval-goblint records where the model differs from Goblint's
 implementation.
 
-Goblint combines its analyses at run time. Its MCP runs every activated
-analysis on its part of one combined state, meets the answers of all analyses
-to a query, answers a query cycle with the top element and caches answers per
-transfer, and raises `Deadcode` when one analysis finds a point unreachable
+Goblint combines its analyses at run time in its MCP (@sec:coop-mcp), which
+also answers a query cycle with the top element, caches answers per transfer,
+and raises `Deadcode` when one analysis finds a point unreachable
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml")[`mCP.ml`]
-at revision `5320a6b7`). Voblint's combination of @ch:cooperation follows this
+at revision `5320a6b7`). Voblint's combination follows this
 design for one query kind and for analyses without globals, and adds a proof
 obligation per analysis that quantifies over every sound query channel. The
 reduced product @cousot79 @rival20[§5.1.2] combines domains through a reduction
@@ -296,13 +283,12 @@ through queries.
 Verasco combines its numerical domains through the channels of @sec:coop-channels
 for the same reason: reduced products tend to be specific to the two domains
 combined and scale poorly beyond two @jourdan15[§7]. The channels follow
-those of Astrée @cousot07astree[§5.2]. Its
+the input channels of Astrée @cousot07astree[§5.3]. Its
 combinator threads the channels so that the second domain can query the state
 the first has just computed. Voblint's answers describe the predecessor state
 only, as Goblint's do. Voblint combines any list of components on the fields of
 one state and proves the combination sound for calls, returns and
-context-sensitive equations, where Verasco raises an alarm at a possible
-recursive call.
+context-sensitive equations.
 
 Local traces give each thread of a concurrent program a semantics from which
 thread-modular analyses can be derived and compared @schwarz21, later
@@ -314,18 +300,15 @@ procedure activations: a trace covers one activation and records its suspended
 caller, so a return reads its caller from the trace instead of choosing one. A calling context becomes a
 projection of the trace instead of a component of the state. Context policies can therefore be
 proved against one fixed concrete semantics. Activations do not interfere, so
-no concurrency result of that work transfers. We call our objects activation
-traces to keep them apart from these local traces, which are a semantics of
-multithreaded programs.
+no concurrency result of that work transfers.
 
 #cite(<sotin11>, form: "prose") also replace a stack semantics by a local one,
 in which every instruction acts on the top activation record only. They prove
 the two semantics equivalent with respect to reachable stacks @sotin11[§3]
 and derive a
 relational interprocedural analysis from the local semantics. Their motive is
-pointers into the stack, which VIMP lacks. For activation traces, Voblint
-proves only the direction soundness needs: every graph run is represented by a
-valid trace (@sec:valid).
+pointers into the stack, which VIMP lacks. Voblint proves for activation traces
+only that every graph run is represented by a valid trace (@sec:valid).
 
 A digest is a total function on local traces that splits the unknowns $[u]$
 into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. Seidl et
@@ -335,8 +318,7 @@ a call action, and Schwarz lists procedures among the features that Goblint
 implements but the local-trace semantics does not yet support
 @schwarz25phd[§8, p. 277].
 In Voblint, the context relation #isaconst("activation_context_rel") (@sec:contexts)
-takes the digest's place for sequential activations. It is a relation, because a context policy may admit an activation in several
-contexts or in none.
+takes the digest's place for sequential activations.
 
 Mixed flow sensitivity has been mechanized before.
 Cachera et al. @cachera05 prove in Coq that a constraint-based analysis
@@ -352,15 +334,13 @@ module type of contexts, whose call-context function computes the context
 of a callee from the call site, the caller's context and the receiver, and
 they instantiate it, among others, with $k$-object sensitivity. The authors
 state that the specification is not executable: the analyses are specified
-only as sets of constraints, and no solver computes them @dabrowski09[§7]. Voblint's instance with
-flow-insensitive program globals, and the exact scope of its proof, are
-described in @sec:mixed-flow.
+only as sets of constraints, and no solver computes them @dabrowski09[§7]. Voblint's
+flow-insensitive placement of program globals is described in @sec:mixed-flow.
 
-Dabrowski and Pichardie are the closest precedent for the context semantics: a mechanized
-concrete semantics that carries contexts, parameterized by a context policy.
-Voblint's differs in three respects. Contexts are admitted by a relation, so one call
-may enter several contexts; the totality condition
-#isaconst("call_context_total_on") makes the context-indexed collection
-exhaustive (#isathm("node_collect_eq_Union_activation_collect")); and the
-indexing is connected to an executable solver. The adaptation of local traces
+Their concrete semantics, which carries contexts and is parameterized by a
+context policy, is the closest precedent for Voblint's. Voblint's differs in three respects. Its contexts are admitted by a relation,
+the totality condition #isaconst("call_context_total_on") makes the
+context-indexed collection exhaustive
+(#isathm("node_collect_eq_Union_activation_collect")), and the indexing is
+connected to an executable solver. The adaptation of local traces
 to activations has no mechanized predecessor that we found.

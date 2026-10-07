@@ -1,6 +1,7 @@
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/sources.typ": proved
+#import "../lib/theorems.typ": theorem
 #import "../lib/theme.typ": vb
 #import "../lib/math.typ": ctor, sem
 #import "../lib/figures.typ": check-row, snapshot-var
@@ -197,15 +198,10 @@ only what both contexts claim: #raw(_vnode). Without contexts the one entry of
 `chain-split-none`). Precision differs between the policies; every inclusion
 holds under both.
 
-The first link is the compiler simulation of @ch:program-model composed with
-the trace construction of @ch:traces. The split of the node collecting semantics by
-context rests on #oblig("TOTAL"): every covered call reaches some context.
-Equation soundness (@ch:equations) bounds the activation collecting semantics
-of each context by the solver's valuation, given the certificate of
-@ch:solving, and the report lists that valuation's states. What the chain
-should deliver to a client is this: every store a finite source run reaches is
-described by the report at a node that simulates the run, in some context, and
-every definite verdict listed there holds of the store.
+A client should therefore get the following guarantee. Every store a finite
+source run reaches is described by the report at a node that simulates the
+run, in some context, and every definite verdict listed there holds of the
+store.
 
 == The source-level theorem <sec:headline>
 
@@ -229,8 +225,9 @@ and the program $p$ is an #isatype("imp_prog"). The run of @fig:chain is
 #ctor("Globals_Warrow") #ctor("Ctx_EntryState") #ctor("Program_Globals_Flow_Sensitive")) $p$. The variables are
 universally quantified, so the theorem holds for every analysis configuration, without a
 separate theorem per analysis or policy.
-#proved("run_voblint_source_sound", note: [Source-level soundness of the
-  analyzer.])
+#theorem(name: [Source-level soundness of the analyzer], isa: "run_voblint_source_sound")[
+  #proved("run_voblint_source_sound")
+]
 
 Here $cal(G)$ is the global-variable classifier #isaconst("declared_global") $p$,
 #isai("\<Pi>") the procedure table #isaconst("prog_table") $p$, and $g$ the
@@ -266,20 +263,11 @@ $v$ of $g$ and some frame stack exist such that:
     holds in $s$, and every `REFUTED` check is false in $s$.
 ]
 
-The last two conclusions are the chain of @sec:chain read at one store. The
-chain itself is a theorem too, stated once for every context policy
-(#isathm("run_voblint_spine")): a source run is represented by a valid activation
-trace $t$ ending at $v$, the policy assigns $t$ a context $c$, and
-$
-  s in #isai("\<A>") (v, c) subset.eq union.big_(c') #isai("\<A>") (v, c') =
-  #isai("\<C>") v subset.eq #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>")
-  subset.eq #isai("\<V>\<^bsub>res\<^esub> v").
-$
-It keeps the trace and its context rather than picking some context whose
-activation collecting semantics contains $s$. A policy supplies only two facts: every valid trace carries some
-context, and the activation collecting semantics of all contexts together are the
-node collecting semantics. The unit,
-entry-state and call-string policies discharge them in one theorem each.
+The last two conclusions are the chain of @sec:chain read at one store.
+#isathm("run_voblint_spine") states the chain itself once for every context
+policy and keeps the valid trace that represents the run together with the
+context the policy assigns it. The unit, entry-state and call-string policies
+discharge its two assumptions in one theorem each.
 
 An analysed answer also fixes what kind of object the report is
 (#isathm("run_voblint_report_contract")). It answers a valid analysis configuration
@@ -319,7 +307,10 @@ executions_: finite source executions of `main` from an initial store in
 - `DEAD`: no covered execution reaches the check's node
   (#isathm("run_voblint_dead_check_unreached")).
 The first three constrain each store at the node and hold vacuously when there
-is none. Only `DEAD` makes a claim about reachability.
+is none. Only `DEAD` makes a claim about reachability. The theorem for
+`PROVED` and `REFUTED` reads:
+
+#proved("run_voblint_check_sound", note: [What a reported verdict guarantees.])
 
 *How a verdict is computed.* At each node the report holds one state per
 context the solver solved there. A pair the solver never solved has no row,
@@ -405,14 +396,12 @@ admits none.
 divisors in every collected store. A warning means only that the analysis
 could not exclude a zero divisor.
 
-Three features of the theorem are forced. The node is existential because a
-source configuration does not determine its CFG node (@sec:csim), the context
-because a store is covered in some context only, and coverage of the solved
-unknowns is absent because it is derived (@sec:cert-forward). Termination is not
-a premise: #isaconst("run_voblint") returns a report only where its executable
-solver returned, and where the solve diverges there is no report and no claim.
-Termination is not proved for every program (@sec:termination), so the theorem
-is a partial-correctness result, and the analyzed program need not terminate. #isathm("certificate_demo_source_certified") discharges every
+The node and the context are existential because a source configuration does
+not determine its node (@sec:csim) and a store is covered in some context only,
+coverage of the solved unknowns is derived (@sec:cert-forward), and termination
+is neither a premise (P3) nor proved for every program, so the theorem is a
+partial-correctness result (@sec:termination).
+#isathm("certificate_demo_source_certified") discharges every
 premise by evaluation for one program and analysis configuration, a non-vacuity witness.
 @ch:instances compares what the shipped domains can prove under the theorem,
 and @ch:executable draws the boundary between #isaconst("run_voblint") and the

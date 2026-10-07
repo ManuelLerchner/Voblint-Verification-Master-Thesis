@@ -20,7 +20,7 @@ clean. The checks that keep the text honest, and what each one reads:
 
 | Task | Fails when |
 | --- | --- |
-| `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup |
+| `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup, or a `#theorem`/`#lemma`/`#corollary` environment names a fact the theories declare with a different keyword |
 | `thesis-links` | a name the markup links has no anchor in the rendered theories (`--write` regenerates `shared/generated/links.json`; `--live` checks the deployed pages) |
 | `thesis-snippets` | a declaration or theorem statement shown with `thy`/`proved` no longer matches its source text |
 | `thesis-domain-tree` | a class instantiation or certificate lemma for an interface drawn in a chapter 5 domain tree is missing from that tree's list in `shared/domain-tree.toml` |
@@ -82,6 +82,10 @@ repeated proof plumbing and introduce no constants. Add new notation only for a
 central semantic concept that occurs prominently in theorem statements and
 reads clearly better as a symbol. Never add a thesis-only symbol for an
 Isabelle object; write its name with the checked helpers.
+HOL-style big operators over lists, such as the list join `⨆x←xs. f x`
+modelled on `∑x←xs. f x`, count as library syntax rather than project
+notation. They need no `notation.toml` entry, and the prose explains them
+where they first appear.
 
 ## Motivated exposition
 
@@ -127,9 +131,11 @@ Consequences:
   record).
 - Put optional capabilities after what every instance needs (chapter 6: edge
   transfers and calls before analysis globals).
-- Give encoding material one home: chapter 8's encoding section owns how the
-  equation construction maps to the TD solver; chapter 2 owns the generic
-  solver notions; chapter 9 owns the certificate. Other chapters point there.
+- Give encoding material one home: chapter 9's first section owns how the
+  equation construction maps to the TD solver (strategy trees, seeds, the
+  product carrier, buffering) and the traced solve; chapter 2 owns the generic
+  solver notions; chapter 9 also owns the certificate. Chapter 8 states the
+  equations and their soundness only. Other chapters point there.
 - Side results, extensions and limitations leave the main construction: the
   termination section (finite context spaces) or the chapter's closing
   limitations section. Flow-insensitive program globals are selectable and

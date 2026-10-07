@@ -44,18 +44,45 @@ text \<open>
 subsection \<open>Join-folds over a list\<close>
 
 text \<open>
-  Every characterization below states the fold as an ordinary
-  \<open>foldr (\<squnion>)\<close> over already-computed values, so its consumers keep needing
-  the same handful of facts about that: the seed can be moved out, a bound
-  against the fold is a bound against every element, one element is below the
-  fold, only the element set matters, a pointwise bound lifts, two lists that
-  agree elementwise agree, and an all-\<^const>\<open>bot\<close> fold is \<^const>\<open>bot\<close>.
+  \<open>\<Squnion>x\<leftarrow>xs. f x\<close> joins \<open>f x\<close> over the list \<open>xs\<close>; the empty join is
+  \<^const>\<open>bot\<close>. It is built like HOL's \<^const>\<open>sum_list\<close>: \<open>join_list\<close> is the
+  list fold of the commutative monoid \<open>(\<squnion>, \<bottom>)\<close>, and the binder maps
+  before it folds.
+\<close>
+
+context bounded_semilattice_sup_bot
+begin
+
+sublocale join_list: comm_monoid_list sup bot
+  defines join_list = join_list.F ..
+
+end
+
+open_bundle join_list_syntax
+begin
+
+syntax
+  "_join_list" :: "pttrn \<Rightarrow> 'a list \<Rightarrow> 'b \<Rightarrow> 'b"
+    (\<open>(\<open>indent=3 notation=\<open>binder \<Squnion>\<close>\<close>\<Squnion>_\<leftarrow>_. _)\<close> [0, 51, 10] 10)
+syntax_consts
+  "_join_list" == join_list
+translations
+  "\<Squnion>x\<leftarrow>xs. b" == "CONST join_list (CONST map (\<lambda>x. b) xs)"
+
+end
+
+text \<open>
+  Every characterization below states the fold as a list join over
+  already-computed values, so its consumers keep needing the same handful of
+  facts about that: the seed of a right fold can be moved out, a bound against
+  the join is a bound against every element, one element is below the join,
+  only the element set matters, a pointwise bound lifts, two lists that agree
+  elementwise agree, and an all-\<^const>\<open>bot\<close> join is \<^const>\<open>bot\<close>.
 
   They are collected here, ahead of the fold they serve, rather than restated
   per generator. \<open>foldr_sup_seed_swap\<close> is the one with content --- it needs
-  only \<open>semilattice_sup\<close> --- and the two seed orientations below it are
-  readings of that single equation, kept under their own names because proofs
-  phrase their goals both ways.
+  only \<open>semilattice_sup\<close> --- and \<open>foldr_join_list\<close> and \<open>foldr_join_seed_out\<close>
+  read a right fold with a \<^const>\<open>bot\<close> or an arbitrary seed as a list join.
 \<close>
 
 lemma foldr_sup_seed_swap:
@@ -63,66 +90,48 @@ lemma foldr_sup_seed_swap:
   shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts (acc \<squnion> x) = x \<squnion> foldr (\<lambda>t acc'. h t \<squnion> acc') ts acc"
   by (induction ts arbitrary: acc) (simp_all add: sup_assoc sup_commute sup_left_commute)
 
+lemma foldr_join_list:
+  fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
+  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts bot = (\<Squnion>t\<leftarrow>ts. h t)"
+  by (induction ts) simp_all
+
 lemma foldr_join_seed_out:
   fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
-  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts a = a \<squnion> foldr (\<lambda>t acc'. h t \<squnion> acc') ts bot"
-  using foldr_sup_seed_swap[of h ts bot a] by simp
-
-lemma foldr_sup_acc:
-  fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
-  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot \<squnion> b = foldr (\<lambda>t acc'. h t \<squnion> acc') xs b"
-  by (simp only: foldr_join_seed_out[of h xs b]) (rule sup_commute)
+  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') ts a = a \<squnion> (\<Squnion>t\<leftarrow>ts. h t)"
+  using foldr_sup_seed_swap[of h ts bot a] by (simp add: foldr_join_list)
 
 lemma foldr_sup_le_iff [simp]:
   fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
-  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot \<le> y \<longleftrightarrow> (\<forall>x \<in> set xs. h x \<le> y)"
+  shows "(\<Squnion>t\<leftarrow>xs. h t) \<le> y \<longleftrightarrow> (\<forall>x \<in> set xs. h x \<le> y)"
   by (induction xs) auto
 
 lemma foldr_sup_member_le [intro]:
   fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
   assumes "x \<in> set xs"
-  shows "h x \<le> foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot"
+  shows "h x \<le> (\<Squnion>t\<leftarrow>xs. h t)"
   using assms by (induction xs) (auto intro: le_supI2)
 
 lemma foldr_sup_mono:
-  fixes f g :: "'a \<Rightarrow> 'b::{bot, semilattice_sup}"
+  fixes f g :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
   assumes "\<And>x. x \<in> set xs \<Longrightarrow> f x \<le> g x"
-  shows "foldr (\<lambda>t a. f t \<squnion> a) xs bot \<le> foldr (\<lambda>t a. g t \<squnion> a) xs bot"
-  using assms
-proof (induction xs)
-  case Nil then show ?case by simp
-next
-  case (Cons x xs)
-  show ?case
-    by (simp only: foldr.simps o_apply, rule sup_mono) (use Cons in auto)
-qed
+  shows "(\<Squnion>t\<leftarrow>xs. f t) \<le> (\<Squnion>t\<leftarrow>xs. g t)"
+  using assms by (auto intro: order_trans[OF _ foldr_sup_member_le])
 
 lemma foldr_sup_set_cong:
   fixes h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
   assumes eq: "set xs = set ys"
-  shows "foldr (\<lambda>t acc'. h t \<squnion> acc') xs b = foldr (\<lambda>t acc'. h t \<squnion> acc') ys b"
-proof -
-  have "foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot = foldr (\<lambda>t acc'. h t \<squnion> acc') ys bot"
-  proof (rule order_antisym)
-    show "foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot \<le> foldr (\<lambda>t acc'. h t \<squnion> acc') ys bot"
-      by (auto simp: eq)
-  next
-    show "foldr (\<lambda>t acc'. h t \<squnion> acc') ys bot \<le> foldr (\<lambda>t acc'. h t \<squnion> acc') xs bot"
-      by (auto simp: eq[symmetric])
-  qed
-  then show ?thesis
-    using foldr_sup_acc[of h xs b] foldr_sup_acc[of h ys b] by simp
-qed
+  shows "(\<Squnion>t\<leftarrow>xs. h t) = (\<Squnion>t\<leftarrow>ys. h t)"
+  by (rule order_antisym) (auto simp: eq)
 
 text \<open>Two lists whose elements agree under their respective observations have
-  the same join-fold. This is what lets a correspondence proof relate two
+  the same join. This is what lets a correspondence proof relate two
   generators' contribution lists elementwise instead of reasoning about the
   folds themselves.\<close>
 
 lemma foldr_sup_list_all2_cong:
   fixes f :: "'a \<Rightarrow> 'c::bounded_semilattice_sup_bot"
   assumes "list_all2 (\<lambda>x y. f x = g y) xs ys"
-  shows "foldr (\<lambda>x a. f x \<squnion> a) xs seed = foldr (\<lambda>y a. g y \<squnion> a) ys seed"
+  shows "(\<Squnion>x\<leftarrow>xs. f x) = (\<Squnion>y\<leftarrow>ys. g y)"
   using assms by (induction rule: list_all2_induct) simp_all
 
 text \<open>The two ways such a correspondence is built and consumed: establishing
@@ -141,7 +150,7 @@ lemma list_all2_Union_eq:
 lemma foldr_sup_bot_of_all_bot:
   fixes L :: "'a list" and h :: "'a \<Rightarrow> 'b::bounded_semilattice_sup_bot"
   assumes "\<And>x. x \<in> set L \<Longrightarrow> h x = bot"
-  shows "foldr (\<lambda>x acc'. h x \<squnion> acc') L bot = bot"
+  shows "(\<Squnion>x\<leftarrow>L. h x) = bot"
   using assms by (induction L) simp_all
 
 subsection \<open>Folding contributions into one right-hand side\<close>
@@ -198,7 +207,7 @@ theorem sides_of_program_fold_rhs_program_projected_char:
   fixes ps :: "('x, 'g, 'd::bounded_semilattice_sup_bot, 'd) strategy_program list"
   assumes "\<forall>p \<in> set ps. sp_wf p"
   shows "sides_of_program (fold_rhs_program_projected prj emb acc ps) \<sigma> z
-     = foldr (\<lambda>p acc'. sides_of_program p \<sigma> z \<squnion> acc') ps \<bottom>"
+     = (\<Squnion>p\<leftarrow>ps. sides_of_program p \<sigma> z)"
   using assms
   by (induction ps arbitrary: acc)
      (auto simp add: sp_compile_def sp_compile_with_bind sides_of_rhs_sp_wf traverse_rhs_sp_wf)
@@ -214,7 +223,7 @@ theorem dep_program_fold_rhs_program_projected_char:
 lemma fold_acc_projected_as_foldr:
   fixes prj :: "'a::bounded_semilattice_sup_bot \<Rightarrow> 'b::bounded_semilattice_sup_bot"
   shows "fold_acc_projected prj acc \<sigma> ps
-           = acc \<squnion> foldr (\<lambda>p a. prj (traverse_program p \<sigma>) \<squnion> a) ps bot"
+           = acc \<squnion> (\<Squnion>p\<leftarrow>ps. prj (traverse_program p \<sigma>))"
   by (induction ps arbitrary: acc) (simp_all add: sup_assoc)
 
 lemma fold_acc_projected_acc_mono:
@@ -319,7 +328,7 @@ theorem sides_of_program_fold_rhs_program_char:
   fixes ps :: "('x,'g,'d::bounded_semilattice_sup_bot,'d) strategy_program list"
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
   shows "sides_of_program (fold_rhs_program acc ps) \<sigma> z
-     = foldr (\<lambda>p acc'. sides_of_program p \<sigma> z \<squnion> acc') ps \<bottom>"
+     = (\<Squnion>p\<leftarrow>ps. sides_of_program p \<sigma> z)"
   unfolding fold_rhs_program_def
   by (rule sides_of_program_fold_rhs_program_projected_char[OF wf])
 

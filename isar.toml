@@ -139,6 +139,8 @@ allow = [
   "dg_spec_step_state_dg_spec",
   # Order characterization of the named fold ownership_split_enter_sides
   "ownership_split_enter_sides_le_iff",
+  # The executed generator's parts, cited by the thesis next to routed_node_rhs_parts
+  "routed_node_rhs_buffered_parts",
   # The address-level return obligation that dg_spec_combine_program exists for
   "combine_sound_program",
   # rule 2: monotonicity of the abstract return combine combine#

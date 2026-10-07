@@ -161,7 +161,7 @@ carries the soundness proof -- notation does not rename the identifier.
 `route`'s semantic counterpart is the relation `context_policy`
 (`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
-counterpart of `enter#` -- staying unnotated. `routed_entry_cover` is the
+counterpart of `enter#` -- staying unnotated. `routing_adequate` is the
 per-instance locale obligation: at a real call edge, some `(cont, entry)`
 alternative of the spec's own `enter#` run covers the caller and entered
 stores, and `route` on that entry yields a context `routed_entry_context_rel`

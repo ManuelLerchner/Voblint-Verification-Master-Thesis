@@ -1,5 +1,6 @@
 theory DG_Keyed_Split_Spec
   imports DG_Local_State_Spec "Voblint_Solver.Strategy_Tree_Side_Buffering"
+    "Voblint_Solver.Strategy_Program_Fold"
 begin
 
 section \<open>One solver unknown per global name\<close>
@@ -205,7 +206,7 @@ definition keyed_enter_transfer ::
 where
   "keyed_enter_transfer cmb rl rg free R W en m =
      read_view m rg R (free R) \<bind> (\<lambda>g.
-     publish_at m rg W (foldr (\<lambda>(c, e) acc. e \<squnion> acc) (en (cmb (man_local m) g)) bot) \<bind> (\<lambda>_.
+     publish_at m rg W (\<Squnion>(c, e)\<leftarrow>en (cmb (man_local m) g). e) \<bind> (\<lambda>_.
      sp_return (map (\<lambda>(c, e). (rl c, rl e)) (en (cmb (man_local m) g)))))"
 
 text \<open>A call answers the alternatives its entry computes from the recombined state
@@ -215,7 +216,7 @@ lemma enter_runs_keyed_enter_transfer:
   "enter_runs (keyed_enter_transfer cmb rl rg free R W en) (mk_dg_man d key) \<sigma>
      (map (\<lambda>(c, e). (rl c, rl e)) (en (cmb d (view_of rg R (genv key \<sigma>) (free R)))))
      (pub_sides key rg W
-        (foldr (\<lambda>(c, e) acc. e \<squnion> acc) (en (cmb d (view_of rg R (genv key \<sigma>) (free R)))) bot))"
+        (\<Squnion>(c, e)\<leftarrow>en (cmb d (view_of rg R (genv key \<sigma>) (free R))). e))"
   unfolding enter_runs_def keyed_enter_transfer_def
   by (simp add: sp_bind_def sp_return_def ac_simps)
 

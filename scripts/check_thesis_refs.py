@@ -85,6 +85,9 @@ ISA_ARG = re.compile(r"\bisa:\s*\"([A-Za-z][A-Za-z0-9_.']*)\"")
 # A definition environment also names the command that declares its entity
 # (`cmd: "datatype"`), so the header says what kind of object it defines.
 DEFINITION_ENV = re.compile(r"#definition\((.*?)\)\[", re.S)
+# A theorem, lemma or corollary environment names its fact, and its header
+# must say what the theory declares it as, so prose and source agree on rank.
+STATEMENT_ENV = re.compile(r"#(theorem|lemma|corollary)\((.*?)\)\[", re.S)
 CMD_ARG = re.compile(r"\bcmd:\s*\"([a-z_]+)\"")
 
 # Names that deliberately do not resolve, with the reason.
@@ -477,6 +480,26 @@ def main() -> int:
                 deviated.append(
                     f'  {site}: {isa.group(1)} is cited with cmd: "{cmd.group(1)}", '
                     f"but the sources declare it with {'/'.join(sorted(have))}"
+                )
+
+    for path in sorted((thesis / "content").glob("*.typ")):
+        text = path.read_text(errors="ignore")
+        for m in STATEMENT_ENV.finditer(text):
+            env, isa = m.group(1), ISA_ARG.search(m.group(2))
+            if isa is None:
+                continue
+            have = declared_by.get(isa.group(1), set()) & {
+                "theorem",
+                "lemma",
+                "corollary",
+            }
+            if have and env not in have:
+                site = (
+                    f"{path.relative_to(REPO)}:{text.count(chr(10), 0, m.start()) + 1}"
+                )
+                deviated.append(
+                    f"  {site}: {isa.group(1)} is stated in a {env} environment, "
+                    f"but the sources declare it as a {'/'.join(sorted(have))}"
                 )
 
     for path, line, name in collect_unmarked(thesis, kinds):

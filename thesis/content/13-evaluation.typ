@@ -2,8 +2,9 @@
 #import "../lib/stats.typ": stat, stat-percent, stat-sum
 #import "../lib/alignment.typ": alignment, alignment-count
 #import "../lib/claims.typ": (
-  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-verdict,
+  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-cluster-of, snapshot-verdict,
 )
+#import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 
 = Evaluation <ch:evaluation>
@@ -17,7 +18,7 @@ constraints the formal statements exposed.
 
 The kinds of evidence differ in strength. A _machine-checked_ result is an
 Isabelle theorem and holds for every input its statement ranges over, under its
-premises. An _evaluated_ result is an Isabelle lemma proved by `eval`, which
+premises. An _evaluated_ result is an Isabelle fact proved by `eval`, which
 runs the generated code of a concrete solve: Isabelle checks it, but it trusts
 the code generator and concerns one input. An _executable_ result records that
 one program, run with fixed analysis settings, produces one answer, and it also
@@ -44,30 +45,21 @@ together are the node collecting semantics
 #isathm("activation_collect_dg_sound") discharges the coverage obligations for
 every policy that proves its routing adequacy and totality (@sec:eq-discharge).
 
-The ingredients are verified on their own. A numeric domain proves facts about
-integers and stores only (#isalocale("sound_nonrelational_ops")), and
-#isathm("sound_nonrelational_ops.dg_analysis_execI") derives every obligation
-the analysis places on it (@sec:instances-supply). A relational analysis
-enters as a local specification (#isaconst("sound_local_spec"),
-@ch:cooperation). The routing obligations are discharged once for all domains,
-the solver enters only through its certificate (@sec:certificate), so all five
-update rules share one proof, and #isathm("mcp_combine_sound") composes any non-empty list of
-independent analyses. _Evidence: source inspection._ Adding the order analysis took
+The ingredients are verified on their own: a numeric domain through
+#isalocale("sound_nonrelational_ops") and
+#isathm("sound_nonrelational_ops.dg_analysis_execI") (@sec:instances-supply), a
+relational analysis as a local specification (#isaconst("sound_local_spec"),
+@ch:cooperation), the routing once for all domains, the solver through its
+certificate for all five update rules (@sec:certificate), and a combination of
+analyses through #isathm("mcp_combine_sound"). _Evidence: source inspection._ Adding the order analysis took
 three proofs about its local specification (#isathm("order_spec_sound"),
 #isathm("single_entry_order_spec"), #isathm("relc_qry_sound")) and an entry in
 the analysis manifest (@ch:tooling). No theory of the framework or of the
 numeric domains refers to it outside document text.
 
-_Limits._ The result is partial correctness. Termination is not proved,
-neither for the solve (@sec:termination) nor for the fixpoint reduction of
-Int (@sec:reduced-product), so the analyzer answers only where both
-return. That every valid trace arises from a graph run is not proved
-(@sec:valid); soundness needs only the forward direction. The delivered tool
-trusts the parser, the code generator, the compilers, runtimes and renderer
-(@sec:trust-boundary), which @sec:eval-unverified measures and tests. Whether
-#isaconst("pstep") models the intended language is argued in @sec:vimp-vs-c,
-and a verdict about a VIMP program does not transfer to a C program with the
-same text.
+_Limits._ The result is partial correctness about VIMP and rests on a trusted
+toolchain (@sec:limitations), whose parts @sec:eval-unverified measures and
+tests.
 
 == How strong the theorem is <sec:eval-strength>
 
@@ -102,14 +94,12 @@ claim, a second program sets `x = 1` and guards a check by `x < 0`; the
 analyzer marks it `DEAD`, and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to conclude that the collecting
 semantics at that node is empty. The runs and the collecting-semantics facts
-are proved by simplification. The answers are computed by `eval` and therefore
-trust the code generator (@sec:trust-boundary).
-The witnesses are informative because the verdicts they constrain are `PROVED`
-and `DEAD`, which #isathm("unknown_everywhere_sound") shows to be the
-non-trivial ones. Non-vacuity is a property of the premises: the witnesses do
+are proved by simplification and the answers by `eval`. The witnesses
+constrain `PROVED` and `DEAD`, the non-trivial verdicts (@sec:falsification).
+Non-vacuity is a property of the premises: the witnesses do
 not show that #isaconst("pstep") is the intended semantics of VIMP.
 
-=== Necessity: falsification lemmas <sec:falsification>
+=== Necessity: falsification theorems <sec:falsification>
 
 _Evidence: machine-checked and evaluated._ Soundness alone is easy to satisfy. #isaconst("verdict_stores") constrains only
 decided verdicts, so an analyzer answering `UNKNOWN` at every check satisfies
@@ -127,15 +117,15 @@ that admits no context lets a claim meet #oblig("INIT"), #oblig("INTRA"),
 #oblig("CALL") and #oblig("RETURN") while a store collected at a continuation
 lies outside it (#isathm("total_dropped_unsound"), @sec:contract). These are
 direct mutations of conditions we selected; they do not show that every
-premise of the development is needed. The three counterexamples on concrete
-programs prove facts about them by `eval` and are therefore evaluated.
+premise of the development is needed.
 
 
 === A real unsoundness, replayed: Goblint pull request 1161 <sec:eval-1161>
 
-_Evidence: executable, against a defect documented upstream._ Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue
-  1156] reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$, although
-C's truncating remainder gives $-1$ for both values (@ch:intro). #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
+_Evidence: executable, against a defect documented upstream._ @ch:intro opened
+with Goblint #link("https://github.com/goblint/analyzer/issues/1156")[issue
+  1156], which reports that Goblint claimed `c % 2 == 1` for $c in {-5, -7}$,
+although C's truncating remainder gives $-1$ for both values. #link("https://github.com/goblint/analyzer/pull/1161")[Pull request
   1161] restricted the cases in which the congruence domain returns a constant
 remainder and added the program as regression test
 `37-congruence/14-negative.c` @goblint1161. That test marks the first check as
@@ -202,8 +192,8 @@ so the pre-fix answer is not available to the verified domain.
 
 == Precision on concrete programs <sec:eval-precision>
 
-The theorem says nothing about precision: an analyzer that answers `UNKNOWN`
-everywhere satisfies it. What each mechanism gains is therefore shown on
+The theorem says nothing about precision, since an analyzer that answers
+`UNKNOWN` everywhere satisfies it (@sec:falsification). What each mechanism gains is therefore shown on
 concrete programs. Each witness below fixes the concrete behaviour first, then
 shows what one mechanism keeps or loses, and supports a claim about its program
 only.
@@ -212,8 +202,7 @@ only.
 #let _k100 = claim-snapshot("cost-down-k100")
 
 *Contexts.* _Evidence: executable, and evaluated._ The two calls of `bump` are
-decided under entry-state contexts but not without them (@sec:eq-unknowns,
-@sec:eq-call). #isathm("sign_k2_strictly_more_precise_than_k1_at_g") proves a
+decided under entry-state contexts but not without them (@sec:eq-call). #isathm("sign_k2_strictly_more_precise_than_k1_at_g") proves a
 strict separation on one program: the Sign value of a parameter at a procedure
 entry is strictly lower under call strings of length 2 than under length 1,
 with the component values computed by `eval`. The witness uses Sign because
@@ -226,6 +215,12 @@ holds at every call. Call strings of length 100 give
 stands for the deepest calls, widening removes the lower bound there, and the
 check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") and
 #claim-ref("cost-down-k100")).
+
+A context policy decides which calls share an unknown (@fig:eq-policies). A
+call string of length one separates the two calls of `wrap` but merges them
+again in `scale`, where both arrive from the same call site. Length two and
+entry-state routing keep them apart through `scale`. The strict separation
+between call-string lengths one and two above is of this kind.
 
 #let _verdict(name, cond) = {
   if claim-timed-out(name) { return text(fill: vb.unproved)[no answer in 5 s] }
@@ -351,12 +346,6 @@ stores lose relations between variables (@sec:relational). The order analysis
 recovers some of them, within the limits of @sec:coop-catalogue. A call string of
 length $k$ merges paths deeper than $k$, as in `down` above.
 
-_Limits._ Every precision witness concerns one program with fixed analysis settings, and the evaluated ones trust the code generator. The
-development proves no general precision or optimality theorem, and a
-separation shown on one program does not order two analysis settings on all
-programs. The concrete behaviour a fixture header states is the author's
-reading of the program, and the corpus is tested, not proved.
-
 == The unverified parts <sec:eval-unverified>
 
 === Size of the proved and the unverified parts
@@ -469,38 +458,28 @@ configuration flags per test.
 
 == What the mechanization revealed <sec:revealed>
 
-Stating the theorems formally forced several constraints on the design and made
-some consequences of the source model explicit. Most of them concern contexts.
-A per-context statement could hold vacuously at a callee entry if the callee
-were indexed by the caller's context, which is why
-#isaconst("activation_context_rel") reads the context at the call; this is an
-argument, and the current definitions exclude the situation
-(@sec:why-traces). Totality is a premise of the per-context theorem, and for
-entry-state routing it must be discharged against the computed result,
-evaluated on one program (#isathm("total_dropped_unsound")) with one evaluated
-solve (#isathm("ov_empty_continuation_bot"), @sec:contexts, @sec:contract). A
-callee's result must be read at the callee's own context, which fixes the shape
-of #oblig("RETURN"), evaluated on one program
-(#isathm("return_at_caller_context_unsound"), @sec:contract).
-
-Two constraints concern the interface to the solver. Context selection and seed
-publication must use the same entered value, evaluated for one call
-(#isathm("w0_seed_at_entered_frame"), #isathm("w0_no_seed_at_caller_frame"),
-@sec:eq-call). A right-hand side may publish to a global unknown only once per
-evaluation, because the update rules record one contribution per origin. This
-is evaluated for the buffered system
-(#isathm("keyed_multiwrite_buffered_terminates")); that the unbuffered one does
-not terminate is expected, neither proved nor evaluated (@sec:eq-buffer).
-
-The last two concern domains and the source semantics. A domain obligation
-excludes a documented Goblint defect for all operands, where the upstream
-regression test samples one program; this is machine-checked
-(#isathm("prefix_congruence_mod_unsound")), and the upstream behaviour is
-documented, not re-run (@sec:eval-1161). A `PROVED` verdict may depend on
-VIMP's convention for behaviour that C11 leaves undefined: division by zero,
-and the zeroed locals of a callee (#isaconst("enter_state")), which no shipped
-analysis uses but the theorem would accept. This rests on source inspection,
-and for the division on an executable run: in the claim
-#claim-ref("pg-division-definite") the check `quotient == 0` is
-#raw(claim-check("pg-division-definite", "quotient == 0").at(3))
-(@sec:vimp-vs-c, @sec:verdicts).
+Stating the theorems formally forced the following constraints on the design
+and made some consequences of the source model explicit. Each item names the
+strength of its evidence and the section that develops it.
+- A callee is indexed by the context read at its call. Indexed by the caller's
+  context, a per-context statement could hold vacuously at a callee entry
+  (argument, @sec:why-traces).
+- Totality is a premise of the per-context theorem, and entry-state routing
+  must discharge it against the computed result (evaluated,
+  #isathm("total_dropped_unsound"), #isathm("ov_empty_continuation_bot"),
+  @sec:contract).
+- A callee's result must be read at the callee's own context, which fixes the
+  shape of #oblig("RETURN") (evaluated,
+  #isathm("return_at_caller_context_unsound"), @sec:contract).
+- Context selection and seed publication must use the same entered value
+  (evaluated, #isathm("w0_seed_at_entered_frame"),
+  #isathm("w0_no_seed_at_caller_frame"), @sec:eq-call).
+- A right-hand side may publish to a global unknown only once per evaluation,
+  because the update rules record one contribution per origin (evaluated for
+  the buffered system, #isathm("keyed_multiwrite_buffered_terminates"),
+  @sec:eq-buffer).
+- A domain obligation excludes the Goblint remainder defect for all operands
+  (machine-checked, #isathm("prefix_congruence_mod_unsound"), @sec:eval-1161).
+- A `PROVED` verdict may depend on VIMP's conventions for division by zero and
+  zeroed callee locals, which C11 leaves undefined (executable, claim
+  #claim-ref("pg-division-definite"), @sec:vimp-vs-c).

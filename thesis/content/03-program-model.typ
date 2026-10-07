@@ -142,7 +142,7 @@ calls `bump(5)` and `bump(4)`, is a running example throughout the remaining cha
     edge labels as `voblint --dot` prints them. Solid arrows are local edges and
     dashed arrows are call edges. Dotted connectors are not edges. They show the
     continuation of a call edge, that is, the node where the caller resumes. @fig:eq-unknowns shows the unknowns
-    @ch:equations generates for it.],
+    that @ch:equations generates around the first call.],
 ) <fig:program-to-equations>
 
 == VIMP, and what it leaves out <sec:vimp>

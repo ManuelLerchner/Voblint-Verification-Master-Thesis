@@ -5,7 +5,7 @@
   thy-badge,
 )
 #import "../lib/sources.typ": proved, thy
-#import "../lib/theorems.typ": definition, theorem
+#import "../lib/theorems.typ": definition, lemma, theorem
 #import "../lib/theme.typ": vb
 #import "@preview/cetz:0.5.2"
 #import "../lib/claims.typ": claim-ref
@@ -1026,7 +1026,7 @@ within a required value @nipkow14[§13.7.1]. Its soundness is exactly what
 the branch needs, since it never removes a store that satisfies the guard.
 
 #block(breakable: false)[
-  #theorem(name: [Sound guard filter], isa: "bfilter_sound")[
+  #lemma(name: [Sound guard filter], isa: "bfilter_sound")[
     If a store $s$ lies in $sem(d)$ and the guard $e$ has truth value
     #isai("res") at $s$, then $s$ lies in the meaning of the filtered state.
   ]

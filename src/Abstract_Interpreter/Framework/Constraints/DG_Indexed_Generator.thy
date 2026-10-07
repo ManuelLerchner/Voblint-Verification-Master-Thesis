@@ -180,6 +180,21 @@ lemma routed_contribution_programsE:
     | "t \<in> set (extra route ctx v)"
   using assms by (auto simp: routed_contribution_programs_def)
 
+
+text \<open>
+  The local value a node's fold starts from: \<open>bot0\<close>, joined with the injected
+  \<open>s0d\<close> at the CFG entry. An abbreviation, so every statement that spells the
+  conditional out prints as \<open>rhs_init\<close> and needs no unfolding.
+  \<open>rhs_init_global\<close> is the global counterpart: the injected \<open>s0g\<close> at the
+  CFG entry, \<^const>\<open>bot\<close> elsewhere.
+\<close>
+
+abbreviation rhs_init :: "cfg \<Rightarrow> 'd::sup \<Rightarrow> 'd \<Rightarrow> pp \<Rightarrow> 'd" where
+  "rhs_init g bot0 s0d v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
+
+abbreviation rhs_init_global :: "cfg \<Rightarrow> 'h::bot \<Rightarrow> pp \<Rightarrow> 'h" where
+  "rhs_init_global g s0g v \<equiv> (if v = cfg_entry g then s0g else bot)"
+
 definition routed_node_rhs ::
   "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
    \<Rightarrow> (cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action) list)
@@ -198,8 +213,7 @@ definition routed_node_rhs ::
 where
   "routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g =
      (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then bot0 \<squnion> s0d else bot0);
-            t = sp_compile (side_rhs_fold_dg acc0
+        let t = sp_compile (side_rhs_fold_dg (rhs_init g bot0 s0d v)
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c v))
         in if v = cfg_entry g then Side (buffer_key_at c) (DG bot s0g) t else t)"
 
@@ -210,9 +224,7 @@ lemma eq_routed_node_rhs:
   shows
   "eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g)
       (v, ctx) \<tau> =
-   DG (side_acc_dg
-     (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)
-     \<tau>
+   DG (side_acc_dg (rhs_init g bot0 s0d v) \<tau>
      (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v)) bot"
   by (simp add: routed_node_rhs_def Let_def
         traverse_side_rhs_fold_dg[OF wf])
@@ -224,11 +236,47 @@ lemma sides_routed_node_rhs:
   "sides_of_rhs (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g
       (v, ctx)) \<tau> (Inr (buffer_key_at ctx)) =
    (if v = cfg_entry g then DG bot s0g else bot)
-   \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-       (routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v) bot"
+   \<squnion> (\<Squnion>t\<leftarrow>routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v.
+         sides_of_program t \<tau> (Inr (buffer_key_at ctx)))"
   by (simp add: routed_node_rhs_def Let_def
         sides_of_program_side_rhs_fold_dg_char[OF wf]
         bot_dg_state_def[symmetric] ac_simps)
+
+subsection \<open>The right-hand side as a join of its parts\<close>
+
+text \<open>
+  At a fixed valuation the answer of \<^const>\<open>routed_node_rhs\<close> is a join: the
+  node's initial value, one value per intra edge entering it, one per call
+  returning at it, and the values of the routing protocol's own programs, the
+  seed read among them. \<^const>\<open>rhs_init\<close> names the first part in the
+  generator itself; the definitions below name the other three, and
+  \<open>routed_node_rhs_parts\<close> states the answer as the join of all four. Every
+  part is the local half of a contribution's answer at the valuation;
+  publications do not enter the answer and are characterized by
+  \<open>sides_routed_node_rhs\<close>.
+\<close>
+
+definition rhs_edge where
+  "rhs_edge it \<tau> ctx u a = dg_local (traverse_program (it ctx u a) \<tau>)"
+
+definition rhs_call where
+  "rhs_call cmb route \<tau> ctx u ca v = dg_local (traverse_program (cmb route ctx ca u v) \<tau>)"
+
+definition rhs_seed where
+  "rhs_seed extra route \<tau> ctx v = (\<Squnion>p\<leftarrow>extra route ctx v. dg_local (traverse_program p \<tau>))"
+
+lemma routed_node_rhs_parts:
+  assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                     extra g c w). sp_wf p"
+  shows
+  "eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g)
+      (v, c) \<tau> =
+   DG (rhs_init g bot0 s0d v
+       \<squnion> (\<Squnion>(u, a)\<leftarrow>pred_sel g v c. rhs_edge it \<tau> c u a)
+       \<squnion> (\<Squnion>(u, ca)\<leftarrow>site_sel g v. rhs_call cmb route \<tau> c u ca v)
+       \<squnion> rhs_seed extra route \<tau> c v) bot"
+  by (simp add: eq_routed_node_rhs[OF wf] side_acc_dg_as_foldr routed_contribution_programs_def
+        rhs_edge_def rhs_call_def rhs_seed_def split_def comp_def sup_assoc)
 
 subsection \<open>Buffered generator: fold Side-free contributions, publish once\<close>
 
@@ -284,7 +332,7 @@ definition routed_node_rhs_buffered ::
 where
   "routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 s0d s0g =
      (\<lambda>(v, c).
-        let acc0 = (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot);
+        let acc0 = DG (rhs_init g bot0 s0d v) (rhs_init_global g s0g v);
             t = sp_compile (fold_rhs_program acc0
                   (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g c v))
         in buffer_sides (\<lambda>_. length (site_sel g v) \<le> 1) (sp_lift_tree t (\<lambda>res.
@@ -305,9 +353,36 @@ lemma eq_routed_node_rhs_buffered:
       (v, ctx) \<tau> =
    DG (dg_local (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
      (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)
-     (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot))) bot"
+     (DG (rhs_init g bot0 s0d v) (rhs_init_global g s0g v)))) bot"
   by (simp add: routed_node_rhs_buffered_def Let_def
         traverse_fold_rhs_program_char_foldr[OF wf])
+
+text \<open>
+  The buffered generator answers the same join of parts as the reference
+  generator, over its own contribution programs. Its answer carries no global
+  half; the global part of the initial accumulator leaves through the
+  publication at \<open>buffer_key_at c\<close>.
+\<close>
+
+lemma routed_node_rhs_buffered_parts:
+  assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
+                     extra g c w). sp_wf p"
+  shows
+  "eq (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g)
+      (v, c) \<tau> =
+   DG (rhs_init g bot0 s0d v
+       \<squnion> (\<Squnion>(u, a)\<leftarrow>pred_sel g v c. rhs_edge it \<tau> c u a)
+       \<squnion> (\<Squnion>(u, ca)\<leftarrow>site_sel g v. rhs_call cmb route \<tau> c u ca v)
+       \<squnion> rhs_seed extra route \<tau> c v) bot"
+proof -
+  have "eq (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g)
+      (v, c) \<tau>
+    = eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g) (v, c) \<tau>"
+    by (simp add: eq_routed_node_rhs_buffered[OF wf] eq_routed_node_rhs[OF wf]
+        dg_local_foldr_generic side_acc_dg_as_foldr_seeded)
+  then show ?thesis
+    by (simp only: routed_node_rhs_parts[OF wf])
+qed
 
 lemma sides_routed_node_rhs_buffered:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it_c cmb_c
@@ -321,7 +396,7 @@ lemma sides_routed_node_rhs_buffered:
       bot0 s0d s0g (v, ctx)) \<tau> (Inr (buffer_key_at ctx)) =
    DG bot (dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc')
      (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v)
-     (if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot)))"
+     (DG (rhs_init g bot0 s0d v) (rhs_init_global g s0g v))))"
 proof -
   have free: "\<And>w \<sigma> x.
       x \<in> set (routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx w)
@@ -441,7 +516,7 @@ proof -
   let ?comb_new = "map (\<lambda>(cc, ca). cmb_c route ctx ca cc v) (site_sel g v)"
   let ?comb_old = "map (\<lambda>(cc, ca). cmb route ctx ca cc v) (site_sel g v)"
   let ?extra = "extra route ctx v"
-  let ?acc0 = "if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot"
+  let ?acc0 = "DG (rhs_init g bot0 s0d v) (rhs_init_global g s0g v)"
   let ?new = "routed_contribution_programs pred_sel site_sel route it_c cmb_c extra g ctx v"
   let ?old = "routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v"
   have new_split: "?new = ?intra_new @ ?comb_new @ ?extra"
@@ -492,14 +567,12 @@ proof -
           (v, ctx)) \<tau>
         = DG (dg_local (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)) bot"
       by (simp add: eq_routed_node_rhs_buffered[OF wf_c] routed_contribution_programs_def)
-    also have "\<dots> = DG (foldr (\<lambda>t acc'. dg_local (traverse_program t \<tau>) \<squnion> acc')
-                     ?new (dg_local ?acc0)) bot"
-      by (simp add: dg_local_foldr_generic)
-    also have "\<dots> = DG (foldr (\<lambda>t acc'. dg_local (traverse_program t \<tau>) \<squnion> acc')
-                     ?old (dg_local ?acc0)) bot"
+    also have "\<dots> = DG (dg_local ?acc0 \<squnion> (\<Squnion>t\<leftarrow>?new. dg_local (traverse_program t \<tau>))) bot"
+      by (simp add: dg_local_foldr_generic foldr_join_seed_out dg_local_join_list)
+    also have "\<dots> = DG (dg_local ?acc0 \<squnion> (\<Squnion>t\<leftarrow>?old. dg_local (traverse_program t \<tau>))) bot"
       by (simp only: foldr_sup_list_all2_cong[OF local_list])
     also have "\<dots> = DG (side_acc_dg (dg_local ?acc0) \<tau> ?old) bot"
-      by (simp add: side_acc_dg_as_foldr_seeded)
+      by (simp add: side_acc_dg_as_foldr)
     also have "\<dots> = traverse_rhs
         (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>"
       by (simp add: eq_routed_node_rhs[OF wf] routed_contribution_programs_def)
@@ -514,18 +587,14 @@ proof -
        (use intra_free_at_key comb_free_at_key extra_free in blast)+
   have dg_global_new_char: "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
       = dg_global ?acc0
-        \<squnion> foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (buffer_key_at ctx))) \<squnion> acc') ?old bot"
+        \<squnion> (\<Squnion>t\<leftarrow>?old. dg_global (sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
   proof -
     have "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0)
-        = foldr (\<lambda>t acc'. dg_global (traverse_program t \<tau>) \<squnion> acc') ?new (dg_global ?acc0)"
-      by (rule dg_global_foldr_generic)
-    also have "\<dots> = foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (buffer_key_at ctx))) \<squnion> acc')
-                     ?old (dg_global ?acc0)"
-      by (simp only: foldr_sup_list_all2_cong[OF global_list])
+        = dg_global ?acc0 \<squnion> (\<Squnion>t\<leftarrow>?new. dg_global (traverse_program t \<tau>))"
+      by (simp add: dg_global_foldr_generic foldr_join_seed_out dg_global_join_list)
     also have "\<dots> = dg_global ?acc0
-                     \<squnion> foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> (Inr (buffer_key_at ctx))) \<squnion> acc')
-                         ?old bot"
-      by (rule foldr_join_seed_out)
+        \<squnion> (\<Squnion>t\<leftarrow>?old. dg_global (sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
+      by (simp only: foldr_sup_list_all2_cong[OF global_list])
     finally show ?thesis .
   qed
   have old_elem_side_pure: "\<And>t. t \<in> set ?old
@@ -533,34 +602,27 @@ proof -
     using comb_side_pure extra_free
     by (auto simp: intra_side_pure bot_dg_state_def routed_contribution_programs_def
           split: prod.splits)
-  have old_fold_side_pure: "dg_local
-      (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc') ?old bot)
-      = bot"
+  have old_fold_side_pure:
+    "dg_local (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))) = bot"
     by (rule foldr_sides_dg_local_bot) (rule old_elem_side_pure)
-  have old_fold_collapse: "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-      ?old bot
-      = DG bot (dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-           ?old bot))"
+  have old_fold_collapse: "(\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx)))
+      = DG bot (dg_global (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
     using old_fold_side_pure
-    by (cases "foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-           ?old bot") simp
+    by (cases "\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))") simp
   have old_sides: "sides_of_rhs
       (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
       (Inr (buffer_key_at ctx))
       = DG bot (dg_global ?acc0
-                \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-                     ?old bot))"
+                \<squnion> dg_global (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
   proof -
     have "sides_of_rhs
         (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
         (Inr (buffer_key_at ctx))
         = (if v = cfg_entry g then DG bot s0g else bot)
-          \<squnion> foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-              ?old bot"
-      by (simp add: sides_routed_node_rhs[OF wf] routed_contribution_programs_def)
+          \<squnion> (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx)))"
+      by (rule sides_routed_node_rhs[OF wf])
     also have "\<dots> = DG bot (dg_global ?acc0
-          \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-              ?old bot))"
+          \<squnion> dg_global (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
       by (subst old_fold_collapse)
          (cases "v = cfg_entry g", simp_all add: DG_sup_bot_left bot_dg_state_def)
     finally show ?thesis .
@@ -578,8 +640,7 @@ proof -
         = DG bot (dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?new ?acc0))"
       by (rule global_new)
     also have "\<dots> = DG bot (dg_global ?acc0
-        \<squnion> dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> (Inr (buffer_key_at ctx)) \<squnion> acc')
-             ?old bot))"
+        \<squnion> dg_global (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> (Inr (buffer_key_at ctx))))"
       by (simp only: dg_global_new_char foldr_dg_global_sides_char)
     also have "\<dots> = sides_of_rhs
         (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau>
@@ -634,15 +695,8 @@ proof -
     unfolding new_split old_split
     using intra_sides_off comb_sides_off extra_sides_off by (intro list_all2_appendI)
   have fold_sides_off: "\<And>z. z \<noteq> Inr (buffer_key_at ctx) \<Longrightarrow>
-      foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot
-        = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
-  proof -
-    fix z :: "cfg_node \<times> 'c + 'k"
-    assume z: "z \<noteq> Inr (buffer_key_at ctx)"
-    show "foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot
-        = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
-      using sides_list_off[OF z] by (induction rule: list_all2_induct) simp_all
-  qed
+      (\<Squnion>t\<leftarrow>?new. sides_of_program t \<tau> z) = (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> z)"
+    by (rule foldr_sup_list_all2_cong) (rule sides_list_off)
   show ?S
   proof (rule ext)
     fix z
@@ -659,13 +713,13 @@ proof -
       have new_off: "sides_of_rhs
           (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 s0d s0g
             (v, ctx)) \<tau> z
-        = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?new bot"
+        = (\<Squnion>t\<leftarrow>?new. sides_of_program t \<tau> z)"
         using False
         by (simp add: routed_node_rhs_buffered_def Let_def
             sides_of_program_fold_rhs_program_char[OF wf_c] bot_dg_state_def[symmetric])
       have old_off: "sides_of_rhs
           (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g (v, ctx)) \<tau> z
-        = foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') ?old bot"
+        = (\<Squnion>t\<leftarrow>?old. sides_of_program t \<tau> z)"
         using False
         by (simp add: routed_node_rhs_def Let_def
             sides_of_program_side_rhs_fold_dg_char[OF wf])
@@ -792,14 +846,15 @@ lemma routed_node_rhs_buffered_correspondence_answers_local:
     (is ?S)
 proof -
   let ?ps = "routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v"
-  let ?acc0 = "if v = cfg_entry g then DG (bot0 \<squnion> s0d) s0g else DG bot0 bot"
+  let ?acc0 = "DG (rhs_init g bot0 s0d v) (rhs_init_global g s0g v)"
   have glob: "dg_global (foldr (\<lambda>t acc'. traverse_program t \<tau> \<squnion> acc') ?ps ?acc0)
       = dg_global ?acc0"
   proof -
-    have "foldr (\<lambda>t acc'. dg_global (traverse_program t \<tau>) \<squnion> acc') ?ps bot = bot"
+    have "(\<Squnion>t\<leftarrow>?ps. dg_global (traverse_program t \<tau>)) = bot"
       by (rule foldr_sup_bot_of_all_bot) (rule answers_local)
     then show ?thesis
-      by (simp add: dg_global_foldr_generic foldr_join_seed_out[where a = "dg_global ?acc0"])
+      by (simp only: dg_global_foldr_generic foldr_join_seed_out[where a = "dg_global ?acc0"]
+          sup_bot_right)
   qed
   show ?T
   proof -
