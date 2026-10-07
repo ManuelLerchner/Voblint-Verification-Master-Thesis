@@ -94,20 +94,9 @@ value of each carrier and the integers it denotes.
 ) <fig:gamma>
 
 The domain proves its primitives sound by interpreting the soundness locale
-#isalocale("sound_nonrelational_ops"), whose parts @fig:domain-carrier draws:
-the refinement operations form a backward domain whose intersection lies below
-both operands (#isalocale("sound_refinement")), the queries are sound checks
-over the evaluator (#isalocale("sound_check_query")), and the abstract `min`
-and `max` are sound (#isalocale("sound_minmax_ops")). Everything else is
-derived once from the record: the guard filters, the branch transfer, the
-check classifier, the transfer of every edge, procedure entry, and their
-executable versions. The abstract and executable versions are
-computed from the same primitives and agree on every live store
-(#isathm("sound_nonrelational_ops.tf_st_for_commute"),
-#isathm("sound_nonrelational_ops.enter_st_for_commute")). Deriving the
-transfers from sound value operations follows Nipkow and Klein
-@nipkow14[Sects. 13.5, 13.7], who also make their abstract states executable
-by a data refinement @nipkow14[§13.6]. @fig:instance-chain shows the chain.
+#isalocale("sound_nonrelational_ops"), which derives every transfer and its
+executable version from them, as @sec:domain-contract describes.
+@fig:instance-chain shows the chain.
 
 This soundness proof makes the domain a sound field of the combined state of
 @ch:cooperation. For a numeric domain, the locale #isalocale("dg_analysis_exec")
@@ -261,14 +250,10 @@ fun main() {
     Congruence have the oddness. Int combines them.],
 ) <fig:stride2>
 
-Sign is finite, so a plain join serves as its widening.
-
-An interval with possibly infinite ends records a range, which makes the
-carrier infinite: the loop head sees $ivl(1, 1)$, $ivl(1, 3)$, $ivl(1, 5)$,
-and plain joins would grow without end on an unbounded loop. The widening
-#isaconst("widen_ivl_core") replaces a bound that moved by an infinity, and the
-narrowing #isaconst("narrow_ivl_td"), which replaces only infinite bounds,
-brings the head back to $ivl(1, 52)$. The exit state
+Interval's carrier is infinite. The loop head sees $ivl(1, 1)$, $ivl(1, 3)$,
+$ivl(1, 5)$, and plain joins would grow without end on an unbounded loop. The
+widening and narrowing of @sec:domain-carrier-laws bring the head back to
+$ivl(1, 52)$. The exit state
 #_s("interval", "25:3") contains 52, which no execution reaches, and an
 interval is convex, so it cannot say "odd".
 
@@ -450,10 +435,10 @@ fun main() {
 }
 ```)
 
-Its state is a set of variable pairs $(x, y)$, each meaning $x lt.eq y$: the
-relational state #isatype("relc") of @sec:rel-state. It asks whether the
-generic interface admits a local state that is not a map from variables to
-values. It does, without any change to the framework. The specification
+Its state is the relational state #isatype("relc") of @sec:rel-state, a set
+of pairs $x lt.eq y$. The generic interface admits this local state, which is
+not a map from variables to values, without any change to the framework. The
+specification
 #isaconst("rel_order_spec") discharges the analysis contract
 #isalocale("analysis_contract") of the numeric analyses, because the analysis contract
 already ranges over arbitrary local and shared carriers with a joint
@@ -464,14 +449,12 @@ while the relational carrier records $(x, y)$ there
 (#isathm("demo_rel_learns_xy")); both facts are proved by evaluating the
 generated solver inside Isabelle.
 
-The carrier is deliberately simple, and the other two checks show its limits.
-It does not close its pairs under transitivity: under `y <= z` it holds
-#state("order-alone-order", "14:7") and still reports
-#verdict("order-alone-order", "14:7") for `x <= z`. It forgets a variable on
-assignment, so after `y = y + 1` it holds #state("order-alone-order", "17:5")
-and reports #verdict("order-alone-order", "17:5"), and it forgets everything
-across calls. Alone it also cannot compare a variable with a constant. It shows
-that the proved interface admits a relational local state, and its use is as a
+The other two checks show the limits of the carrier (@sec:rel-state). Under
+`y <= z` it holds #state("order-alone-order", "14:7") and still reports
+#verdict("order-alone-order", "14:7") for `x <= z`, and after `y = y + 1` it
+holds #state("order-alone-order", "17:5") and reports
+#verdict("order-alone-order", "17:5"). It also forgets everything across calls
+and alone cannot compare a variable with a constant, so its use is as a
 partner of Interval (@sec:eval-precision).
 
 #isaconst("rel_order_spec") reads and publishes an analysis global, so it

@@ -36,13 +36,13 @@ text \<open>
   Beyond \<^locale>\<open>dg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>adm\<close> is the trace-semantic context relation
   keying the activation-trace collecting semantics; and two obligations about it cannot be
-  discharged generically.  \<open>routed_entry_cover\<close> is adequacy: whenever \<open>adm\<close> admits a context
+  discharged generically.  \<open>routing_adequate\<close> is adequacy: whenever \<open>adm\<close> admits a context
   for a real call edge and a covered caller store, some alternative of the specification's
   own entry run describes that call --- its continuation half containing the caller store,
   its entry half containing the entered store, and its route being exactly the admitted
   context.  The three come from one alternative rather than three, which is what keeps a
   multi-alternative entry from mixing one alternative's continuation with another's callee
-  frame.  \<open>routed_entry_total\<close> is existence: every covered call admits some context.
+  frame.  \<open>routing_total\<close> is existence: every covered call admits some context.
   Restricting both to an edge of \<open>g\<close> (rather than quantifying over every value of the
   \<open>call_action\<close> type) matches how CALL and COMB below only ever invoke them at a matched
   edge, and keeps the obligations provable for an abstract domain that is exact on edges
@@ -83,7 +83,7 @@ locale routed_context =
        \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (genv global_of sigma)
        \<Longrightarrow> p \<in> set (resolve cont u (CallEdge dst pars args)
                        (dg_local (sigma (Inl (u, ctx)))))"
-    and routed_entry_cover:
+    and routing_adequate:
     "\<And>u ctx dst pars args p cont s ctx'.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
@@ -101,7 +101,7 @@ locale routed_context =
                \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
            \<and> context\<^sup># u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
-    and routed_entry_total:
+    and routing_total:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
@@ -123,7 +123,7 @@ abbreviation (input) admits where
   "admits \<equiv> admits_call_context \<G> g adm"
 
 text \<open>
-  One place unpacks the call's entry protocol. \<open>routed_entry_cover\<close> is a nest
+  One place unpacks the call's entry protocol. \<open>routing_adequate\<close> is a nest
   of existentials over one entry run, and both CALL and COMB need the same
   witnesses: unpacking it separately in each would let them drift onto
   \<^emph>\<open>different\<close> alternatives of the same call, which is precisely the
@@ -150,7 +150,7 @@ lemma routed_enter_witness:
              \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)"
       and "context\<^sup># u ctx entry (CallEdge dst pars args) = ctx'"
       and "(FunctionEntry p, ctx') \<in> vars"
-  using routed_entry_cover[OF covV ce sin Rc] that by blast
+  using routing_adequate[OF covV ce sin Rc] that by blast
 
 text \<open>
   The alternative the eliminator hands over cannot be bottom, and no case
@@ -559,7 +559,7 @@ text \<open>
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
   \<^locale>\<open>activation_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
-  \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routed_entry_total\<close> read through the reader is \<open>TOTAL\<close>. An
+  \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routing_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
 \<close>
 
@@ -577,18 +577,17 @@ proof (intro allI impI)
     with sin show False by simp
   qed
   with sin have "s \<in> gamma_at u ctx" by simp
-  from routed_entry_total[OF covV ce this]
+  from routing_total[OF covV ce this]
   show "adm u ctx (call_info_of (CallEdge dst pars args) p) s
                  (call_enter \<G> (CallEdge dst pars args) s) \<noteq> {}" .
 qed
 
-lemma activation_collect_dg_sound:
+theorem activation_collect_dg_sound:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v c
-           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, c)))"
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v c \<subseteq> cover v c"
 proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"

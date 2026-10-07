@@ -4071,3 +4071,7 @@ oracle_holdsD
 oracle_holds_top
 oracle_holds_inf
 Oracle_Wrappers
+
+# --- Routing assumptions named after the thesis terms adequacy and totality (2026-10-07) ---
+routed_entry_cover
+routed_entry_total

@@ -1,5 +1,5 @@
 theory DG_Ownership_Split_Spec
-  imports DG_Local_State_Spec State_Restriction
+  imports DG_Local_State_Spec State_Restriction "Voblint_Solver.Strategy_Program_Fold"
 begin
 
 section \<open>Lifting a whole-state analysis onto the global channel\<close>
@@ -110,7 +110,7 @@ definition ownership_split_enter_sides ::
   "('d \<Rightarrow> 'd) \<Rightarrow> ('d::bounded_semilattice_sup_bot) enter_result list \<Rightarrow> 'd"
 where
   "ownership_split_enter_sides rg pairs =
-     foldr (\<lambda>(cont, entry) acc. rg cont \<squnion> rg entry \<squnion> acc) pairs bot"
+     (\<Squnion>(cont, entry)\<leftarrow>pairs. rg cont \<squnion> rg entry)"
 
 lemma ownership_split_enter_sides_Nil [simp]:
   "ownership_split_enter_sides rg [] = bot"

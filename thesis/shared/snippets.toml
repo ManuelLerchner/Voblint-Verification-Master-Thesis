@@ -336,3 +336,7 @@ why = "Chapter 5, Figure 5.2: the monotone strengthening of the bundle certifica
 
 [snippets.update_rules_example]
 why = "Solving chapter, update-rule figure: the value each rule computes after each contribution."
+
+[snippets.routed_node_rhs_parts]
+why = "Chapter 8, interprocedural equations: a node's right-hand side as the join of its initial value, edge, call and seed parts."
+

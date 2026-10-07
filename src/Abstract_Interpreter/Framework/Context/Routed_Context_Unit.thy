@@ -27,7 +27,7 @@ text \<open>
   \<open>enterc_unit\<close> is its trace-semantic counterpart; its graph
   \<open>context_policy_of_fun enterc_unit\<close> instantiates
   \<^locale>\<open>routed_context\<close>'s \<open>adm\<close> parameter. The two are definitionally
-  the same constant function, so \<open>routed_entry_cover\<close>'s routing agreement holds
+  the same constant function, so \<open>routing_adequate\<close>'s routing agreement holds
   independently of any call edge, solved state, or concrete store.
 \<close>
 

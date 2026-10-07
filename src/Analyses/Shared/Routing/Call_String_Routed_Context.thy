@@ -20,11 +20,11 @@ text \<open>
     \<^item> \<open>calls_unique\<close> is call-source uniqueness for every \<^const>\<open>compile_prog\<close>
       output (\<open>compile_prog_calls_source_unique\<close>);
     \<^item> \<open>seed_ne_buffer_key\<close> is datatype distinctness for \<^type>\<open>call_string_gk\<close>;
-    \<^item> \<open>routed_entry_cover\<close>'s routing conjunct is \<^const>\<open>cs_route\<close> and
+    \<^item> \<open>routing_adequate\<close>'s routing conjunct is \<^const>\<open>cs_route\<close> and
       \<^const>\<open>cs_context\<close> being the same closed term (\<open>cs_route_context_agree\<close>),
       independently of the entered value, so every context the relation admits is the
       one \<^const>\<open>cs_route\<close> computes on any alternative;
-    \<^item> \<open>routed_entry_total\<close> is immediate: the graph of a function admits exactly one
+    \<^item> \<open>routing_total\<close> is immediate: the graph of a function admits exactly one
       context per call.
 
   \<open>call_fwd\<close> and \<open>comb_fwd\<close> remain assumptions, and deliberately so: each says the solved

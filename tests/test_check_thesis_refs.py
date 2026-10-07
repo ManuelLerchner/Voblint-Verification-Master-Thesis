@@ -180,3 +180,16 @@ end
     assert kinds["Root"] == kinds["Call"] == kinds["ltr_caller"] == {"const"}
     # `definition name [simp]: "eq"` names the defining fact, not a constant.
     assert "const" not in kinds.get("op_nat", set())
+
+
+def test_statement_environment_names_its_fact():
+    spec = importlib.util.spec_from_file_location(
+        "thesis_refs", REPO / "scripts/check_thesis_refs.py"
+    )
+    checker = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(checker)
+    text = '#corollary(name: [Per policy], isa: "fun_route_sound")[\n  body\n]'
+    m = checker.STATEMENT_ENV.search(text)
+    assert m is not None
+    assert m.group(1) == "corollary"
+    assert checker.ISA_ARG.search(m.group(2)).group(1) == "fun_route_sound"

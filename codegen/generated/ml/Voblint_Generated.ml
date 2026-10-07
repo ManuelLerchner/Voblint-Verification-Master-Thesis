@@ -12529,12 +12529,12 @@ let rec routed_node_rhs_buffered _B _C _D
   pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 s0d s0g =
     (fun (v, c) ->
       (let acc0 =
-         (if equal_cfg_nodea v (cfg_entry g)
-           then DG (sup _C.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                      bot0 s0d,
-                     s0g)
-           else DG (bot0,
-                     bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
+         DG ((if equal_cfg_nodea v (cfg_entry g)
+               then sup _C.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
+                      bot0 s0d
+               else bot0),
+              (if equal_cfg_nodea v (cfg_entry g) then s0g
+                else bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
          in
        let t =
          sp_compile
@@ -12853,6 +12853,10 @@ let rec keyed_combine_transfer _A
       (fun _ ->
         sp_return (rl (h (cmb (man_local m) (free [])) (cmb de (free [])))));;
 
+let rec join_list _A
+  xs = foldr (sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup)
+         xs (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot);;
+
 let rec man_global
   (Man_ext (man_local, man_global, man_sideg, man_ask, more)) = man_global;;
 
@@ -12870,12 +12874,7 @@ let rec keyed_enter_transfer _A
       (fun g ->
         sp_bind
           (publish_at m rg w
-            (foldr
-              (fun (_, a) ->
-                sup _A.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                  a)
-              (en (cmb (man_local m) g))
-              (bot _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot)))
+            (join_list _A (map (fun (_, e) -> e) (en (cmb (man_local m) g)))))
           (fun _ ->
             sp_return
               (map (fun (c, e) -> (rl c, rl e)) (en (cmb (man_local m) g)))));;

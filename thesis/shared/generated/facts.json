@@ -144,6 +144,18 @@
       "theory": "Example_Non_Vacuity",
       "why": "Chapter 4: reading the callee result at the caller context is unsound."
     },
+    "routed_node_rhs_buffered_parts": {
+      "oracles": [],
+      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it cmb\n     extra g bot0.0 s0d s0g)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 s0d v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
+      "theory": "DG_Indexed_Generator",
+      "why": "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
+    },
+    "routed_node_rhs_parts": {
+      "oracles": [],
+      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g\n     bot0.0 s0d s0g)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 s0d v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
+      "theory": "DG_Indexed_Generator",
+      "why": "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
+    },
     "run_voblint_arithmetic_safe": {
       "oracles": [],
       "statement": "\\<lbrakk>run_voblint config p = Analysed res;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          v;\n \\<forall>d\\<in>set (report_diagnostics res).\n    diagnostic_point d \\<noteq> v\\<rbrakk>\n\\<Longrightarrow> arithmetic_safe_at (prog_cfg p) v s",

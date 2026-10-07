@@ -247,7 +247,7 @@ text \<open>
 definition init_env :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'n \<Rightarrow> 's lifted" where
   "init_env \<G> p n =
      (if global_of n = buffer_key then place_rg \<G> (Lifted init_st) else Bot)
-       \<squnion> foldr (\<lambda>(m, d) acc. if m = n then d \<squnion> acc else acc) (place_inits \<G> p) Bot"
+       \<squnion> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) (place_inits \<G> p). d)"
 
 definition equations :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
     \<Rightarrow> (pp \<times> 'c, 'k,
@@ -711,7 +711,7 @@ qed
 
 lemma foldr_init_le:
   "\<forall>(m, d) \<in> set xs. d \<le> f m
-     \<Longrightarrow> foldr (\<lambda>(m, d) acc. if m = n then d \<squnion> acc else acc) xs Bot \<le> (f n :: 's lifted)"
+     \<Longrightarrow> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) xs. d) \<le> (f n :: 's lifted)"
   by (induction xs) auto
 
 lemma init_env_le_sol:
@@ -721,7 +721,7 @@ lemma init_env_le_sol:
   shows "init_env pgs p \<le> gsol"
 proof (rule le_funI)
   fix n
-  have "foldr (\<lambda>(m, d) acc. if m = n then d \<squnion> acc else acc) (place_inits pgs p) Bot \<le> gsol n"
+  have "(\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) (place_inits pgs p). d) \<le> gsol n"
     by (rule foldr_init_le) (use init_publication_le_sol[OF solves entry_cov] in blast)
   moreover have "(if global_of n = buffer_key then place_rg pgs (Lifted init_st) else Bot)
                    \<le> gsol n"
@@ -1208,7 +1208,7 @@ lemma entry_s0e_le:
   using init_env_le_sol[OF solves entry_cov entry.pp_entry_s0g_bound[OF entry_cov]]
   by (simp add: sol_global_def)
 
-theorem entry_state_activation_collect_sound:
+corollary entry_state_activation_collect_sound:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
@@ -1250,7 +1250,7 @@ text \<open>
   such a policy owes; \<open>ctx_fun\<close> is its trace-semantic counterpart.
 \<close>
 
-theorem fun_route_activation_collect_sound:
+corollary fun_route_activation_collect_sound:
   fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
   assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
     and solves: "terminates pgs p"
@@ -1575,8 +1575,9 @@ proof -
       (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (declared_global_vars p)) (declared_global p) p"
     have ie: "rg x (Lifted init_st) \<le> ?ie x" if x: "x \<in> set ?xs" for x
     proof -
-      have "rg x (Lifted init_st) \<le> foldr (\<lambda>(m, d) acc. if m = x then d \<squnion> acc else acc)
-          (map (\<lambda>y. (y, rg y (Lifted init_st))) ys) Bot" if "x \<in> set ys" for ys
+      have "rg x (Lifted init_st)
+          \<le> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = x) (map (\<lambda>y. (y, rg y (Lifted init_st))) ys). d)"
+        if "x \<in> set ys" for ys
         using that by (induction ys) (auto intro: le_supI1 le_supI2)
       then show ?thesis using x by (simp add: dg_pipeline.init_env_def le_supI2)
     qed

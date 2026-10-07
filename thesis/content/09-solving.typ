@@ -42,6 +42,25 @@ this statement.
 
 == From equations to the solver <sec:eq-encoding>
 
+A post-solution satisfies one inequality for each source of the equations of
+@sec:eq-call. Write $v_0$ for the program entry and $c_0$ for the initial
+context. For a local edge $u ->^a v$, and for a call at $u$ in context $c$ to
+$p$ with an entry pair $(q, e)$ of $enterh (sol(u, c))$ whose entry state $e$
+is not bottom, routed context $c' = ctxh(u, c, e)$ and continuation $k$, a
+post-solution satisfies at the solved unknowns
+#[
+  #show math.equation: set block(breakable: true)
+  $
+    sol(v_0, c_0) & gt.eq d_0 & wide #ineq-tag(1) \
+    sol(v, c) & gt.eq sh(f)_a (sol(u, c)) & wide #ineq-tag(2) \
+    sol(ctor("Activation_Seed") thin p space c') & gt.eq e & wide #ineq-tag(3) \
+    sol(ctor("FunctionEntry") thin p, c') & gt.eq sol(ctor("Activation_Seed") thin p space c') & wide #ineq-tag(4) \
+    sol(k, c) & gt.eq sh("combine") (q, sol(ctor("FunctionResult") thin p, c')) & wide #ineq-tag(5) \
+  $
+]
+Lines #ineq(3) and #ineq(4) are #isathm("routed_seed_publish_bound_seed") and
+#isathm("routed_seed_read_bound").
+
 The solver's interface is narrower than the equations of @ch:equations, so
 Voblint adapts the equations to it. No adaptation changes what a post-solution
 is. The whole interface is the type of a right-hand side, the strategy tree of
@@ -71,25 +90,24 @@ $(italic("pp2"), c_0)$. Only from that value does it learn the entry state
 $n = [5, 5]$ and with it the context $c_1$, and only then does it know which
 result to read, $(ctor("FunctionResult") thin italic("bump"), c_1)$. A
 strategy tree expresses this dependency, because each continuation receives
-the value just read. In the notation of @sec:td, the contribution
-$italic("call")_u (c)$ of @sec:eq-call becomes the tree
+the value just read. In the notation of @sec:td, the contribution of a call at
+$u$ in context $c$ (#isaconst("rhs_call")) is the value of the tree
 $
-  italic("call")_u (c) = #ctor("QueryL") ( & (u, c), lambda d. \
-    & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
-      & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
-        #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ),
+  #ctor("QueryL") ( & (u, c), lambda d. \
+                    & #ctor("Side") ( ctor("Activation_Seed") thin p space c', e, \
+                    & quad #ctor("QueryL") ( (ctor("FunctionResult") thin p, c'), lambda r.
+                        #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ),
 $
 where each continuation receives the value just read: $d$ is the caller's
 value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$, and $r$ is the callee's
-result. These are lines #ineq(3) and #ineq(5) of
-@sec:eq-discharge in an order the solver can execute. The tree is
+result. These are lines #ineq(3) and #ineq(5) above in an order the solver can execute. The tree is
 #isaconst("routed_call_program") for one callee and one entry pair, without
 the bottom test of @sec:eq-call. The analyzer runs a buffered form of it
 (@sec:eq-buffer).
 
 === Publishing to local entries through activation seeds <sec:eq-seed-global>
 
-Lines #ineq(3) and #ineq(4) of @sec:eq-discharge pass the entry state $e$
+Lines #ineq(3) and #ineq(4) pass the entry state $e$
 that the call computed to the callee's entry. The natural encoding is a side effect of the call into
 the entry unknown $(ctor("FunctionEntry") thin p, c')$, as Apinis et al. write
 it @apinis12[§6] and as Goblint does with its local side effect `sidel`
@@ -201,14 +219,18 @@ callee is still read once with an empty seed. Goblint's narrowing rule for globa
 one contribution per origin, joins the side effects of an evaluation before
 updating
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L116")[`td3UpdateRule.ml`]).
-The analyzer runs the buffered generator, and @sec:cert-param carries its
+The analyzer runs the buffered generator
+#isaconst("routed_node_rhs_buffered"). Buffering changes only when
+publications are issued, so it answers the same join of the four parts as the
+direct generator of @sec:eq-call
+(#isathm("routed_node_rhs_buffered_parts")), and @sec:cert-param carries its
 certificate to the direct generator the proof speaks about.
 @sec:outlook-extending discusses a solver extension that would make seeds and
 buffering unnecessary.
 
 == A solve in action <sec:eq-example>
 
-We now follow the running example of @fig:eq-running under entry-state
+We now follow the running example of @fig:program-to-equations under entry-state
 contexts: the part of the equation system a solve reaches, and the order in
 which the solver reaches it. The generator defines a right-hand side for every
 unknown. The solver does not enumerate them. Which context-indexed unknowns it
@@ -636,18 +658,14 @@ unknown, its valuation is #lbot and the bound holds trivially.
   + is the post-solution inequality of @ch:background for local unknowns: the
     value #sol stores at $u$ is at least what the right-hand side of $u$
     computes from the values #sol stores for the unknowns it reads
-    (#isathm("part_post_solution_local_bound")). That
-    right-hand side joins everything that reaches $u$: the initial state, the
-    transfer along each incoming edge, the seed read at a callee entry and each
-    call's combined result. So $sol(u)$ over-approximates each of them; these
-    are the inequalities #ineq(1), #ineq(2), #ineq(4) and #ineq(5) of
-    @sec:eq-discharge. In the running example, (C3) at $(italic("pp3"), c_0)$
-    requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
-    sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
+    (#isathm("part_post_solution_local_bound")). Unfolded over the parts of the
+  right-hand side, these are the inequalities #ineq(1), #ineq(2), #ineq(4) and
+  #ineq(5) of @sec:eq-encoding. In the running example, (C3) at $(italic("pp3"), c_0)$
+  requires $sh("combine")(q_1, sol(ctor("FunctionResult") thin italic("bump"), c_1)) lle
+  sol(italic("pp3"), c_0)$, the value with $a = [6, 6]$.
   + carries a call into its callee: it makes the callee's seed hold every
     entry state routed there, and global unknowns receive their values only
-    through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of
-    @sec:eq-discharge. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
+    through it (#isathm("part_post_solution_side_bound")). It gives the seed inequality #ineq(3) of @sec:eq-encoding. In the running example, (C4) at $(italic("pp3"), c_0)$ and at
     $(italic("pp4"), c_0)$ requires
     ${n |-> [5, 5]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$ and
     ${n |-> [4, 4]} lle sol(ctor("Activation_Seed") thin italic("bump") space c_2)$, the entry
@@ -900,9 +918,8 @@ values (@sec:represented-function).
 
 == One proof for five update rules <sec:update-rules>
 
-A global unknown receives contributions from several places. The entry seed of
-a procedure, for instance, receives the entry state of every call site that
-enters the procedure in that context. The solver merges each new contribution
+A global unknown such as a seed receives contributions from several places,
+and the solver merges each new contribution
 into the value it holds, and the merge decides both precision and termination.
 Joining keeps every contribution exactly but may grow forever; widening stops
 the growth but loses precision. Such a merge is an _update rule_. Stemmler et
@@ -932,17 +949,9 @@ the unknown of each program global when program globals are flow-insensitive
 accumulates across call sites, and how a flow-insensitive global accumulates
 its writes.
 
-No rule is more precise on every program. Per-origin warrowing helps when
-several origins feed one global, as Seidl et al. show on a global that receives
-one constant per location @seidl26[§1]. A recursive call that feeds its own
-seed, however, is a single origin, so distinguishing origins gains nothing
-there, and the rule can lose precision, as on the shrinking recursion of
-@fig:rules-programs (@sec:eval-precision). The rules also differ in termination. The
-two joining rules never widen a seed, so a recursion that enters with a growing
-argument can keep the solve running (@sec:termination), while the three
-warrowing rules widen it. On the growing recursion of @fig:rules-programs only
-the warrowing rules answer, and each warrowing rule loses precision on a
-program that the joining rules solve exactly.
+No rule is more precise on every program, and the rules also differ in
+termination. @sec:eval-precision compares them on the programs of
+@fig:rules-programs.
 
 #let _rule-steps = update-rule-steps()
 
@@ -1287,12 +1296,10 @@ Whether the recursive solve returns is the remaining question.
 == Why termination is not proved <sec:termination>
 
 The analyzer answers only when the solver returns, and we do not prove that it
-always does. HOL admits a recursive definition only when its recursion
-terminates, since otherwise $f(n) = f(n) + 1$ would derive $0 = 1$
-@nipkow14[§2.3.4]. The vendored solver's termination is not known in
-general, so Isabelle defines it with a domain predicate
-(#isaconst("solve_dom", thy: "TD_side_upd_rule")), the arguments on which
-the recursion is well founded, and the certificate of @sec:certificate holds on
+always does. HOL admits only terminating recursion, and the vendored solver's
+termination is not known in general, so Isabelle defines it with a domain
+predicate (#isaconst("solve_dom", thy: "TD_side_upd_rule"), @sec:isabelle),
+the arguments on which the recursion is well founded, and the certificate of @sec:certificate holds on
 that domain. The
 analyzer never assumes domain membership. It runs the executable form of the
 solver, #isaconst("solve_c", thy: "TD_side_upd_rule"), which returns only when
@@ -1320,9 +1327,12 @@ rules never widen this chain (#fixture(
 they diverge (@sec:trust-boundary).
 
 The vendored termination theorems cover top-down solvers without side effects
-over a finite type of unknowns, under monotonicity and chain conditions on the
-right-hand sides and operators @tilscher26. Voblint's unknowns pair nodes of an infinite type with contexts, so these
-theorems apply to no configuration. Seidl and Vogler prove on paper that
+over a finite type of unknowns. The solver with separate widening and narrowing
+phases terminates under this condition alone @tilscher26jar[Thm. 2], and the
+warrowing solver additionally needs a precise widening and monotonic
+right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
+pair nodes of an infinite type with contexts, so these theorems apply to no
+configuration. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system as long as only
 finitely many unknowns are encountered @seidl21[§9, Thm. 5], for widening and
 narrowing operators whose iterations always stabilize @seidl21[§3]. The joining update rules never widen, so this result does not carry over to

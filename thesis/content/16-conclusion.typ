@@ -31,11 +31,9 @@ contexts off the analysis's result, at the price of the obligation
 #oblig("TOTAL"). Functional policies return singletons and satisfy it directly
 (#isaconst("context_policy_of_fun")). Stating the analysis contract over an
 environment of analysis globals lets the flow-insensitive placement give each
-program global its own unknown, so a write that changes a global destabilizes only its readers and their dependents.
-The price is a frame obligation on the carrier: a store that agrees on
-the unwritten globals with a covered store is covered by the recombined result
-(@sec:mixed-flow). That placement loses precision on the `set`/`get` program,
-and the cost of neither placement was measured. Consuming
+program global its own unknown, at the price of a frame obligation on the
+carrier and of precision on the `set`/`get` program (@sec:mixed-flow). The cost
+of neither placement was measured. Consuming
 the solver only through #isaconst("part_post_solution", thy: "Basics_side") makes soundness
 independent of the update rule (@sec:update-rules), but says nothing about
 termination or about which post-solution is returned (@sec:certificate). Exporting one dispatcher makes
@@ -174,7 +172,10 @@ carry activation seeds and, under the flow-insensitive placement, one value per
 program global. Threads and locks with a thread-local trace semantics would
 allow thread-modular uses of these global unknowns.
 
-The contexts of an activation depend only on how it was entered. Digests refine
+Every shipped analysis answers a single entry pair per call, although the
+interface admits several (@sec:calls), so path-sensitive analyses that split a
+call into cases remain future work. The contexts of an activation depend only
+on how it was entered. Digests refine
 unknowns by other abstractions of a local trace (@sec:rel-goblint).
 Generalizing #isaconst("activation_context_rel") to such abstractions over
 activation traces would allow path- or history-sensitive unknowns, each
@@ -188,14 +189,14 @@ seeds and buffering unnecessary. It would need its partial-correctness proof
 redone for local side effects. The rest of the chain consumes the solver only
 through the post-solution certificate (@sec:certificate).
 
-A termination theorem would remove the per-program premise. The
-total-correctness result of Tilscher et al. @tilscher26jar covers the
-top-down solver without side effects, with finitely many unknowns and a
-widening that stabilizes ascending chains
-#_todo[check the assumptions against the paper.]. The vendored class
-#isalocale("warrowing") states no stabilization law (@sec:widening), so even
-finitely many unknowns may take values that increase forever
-(@sec:termination).
+A termination theorem would guarantee an answer for every program. The
+total-correctness result of Tilscher et al. covers the top-down solver without
+side effects, for finitely many unknowns, a precise widening, and monotonic
+right-hand sides with monotonic dependencies @tilscher26jar[Cor. 1]. Their
+widening stabilizes every widening sequence by definition @tilscher26jar[Def. 2].
+The vendored class #isalocale("warrowing") states no stabilization law
+(@sec:widening), so even finitely many unknowns may take values that increase
+forever (@sec:termination).
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be

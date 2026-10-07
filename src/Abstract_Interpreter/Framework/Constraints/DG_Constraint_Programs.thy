@@ -295,12 +295,12 @@ lemma sides_of_program_side_rhs_fold_dg_char:
                  ('d, 'h) dg_state) strategy_program list"
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
   shows "sides_of_program (side_rhs_fold_dg acc ps) \<tau> z
-           = foldr (\<lambda>p acc'. sides_of_program p \<tau> z \<squnion> acc') ps bot"
+           = (\<Squnion>p\<leftarrow>ps. sides_of_program p \<tau> z)"
   unfolding side_rhs_fold_dg_def
   by (rule sides_of_program_fold_rhs_program_projected_char[OF wf])
 
 lemma side_acc_dg_as_foldr:
-  "side_acc_dg acc \<tau> ps = acc \<squnion> foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps bot"
+  "side_acc_dg acc \<tau> ps = acc \<squnion> (\<Squnion>p\<leftarrow>ps. dg_local (traverse_program p \<tau>))"
   by (simp add: side_acc_dg_def fold_acc_projected_as_foldr)
 
 text \<open>The same equation with the accumulator left as the fold's seed, which is
@@ -308,7 +308,7 @@ text \<open>The same equation with the accumulator left as the fold's seed, whic
 
 lemma side_acc_dg_as_foldr_seeded:
   "side_acc_dg acc \<tau> ps = foldr (\<lambda>p a. dg_local (traverse_program p \<tau>) \<squnion> a) ps acc"
-  by (simp only: side_acc_dg_as_foldr foldr_join_seed_out[symmetric])
+  by (simp only: side_acc_dg_as_foldr foldr_join_seed_out)
 
 lemma side_rhs_fold_dg_sides_mono:
   assumes wf: "\<forall>p \<in> set ps. sp_wf p"
@@ -341,20 +341,30 @@ lemma dg_global_foldr_generic:
      = foldr (\<lambda>t acc'. dg_global (h t) \<squnion> acc') L (dg_global acc)"
   by (induction L) simp_all
 
+lemma dg_local_join_list:
+  "dg_local (\<Squnion>t\<leftarrow>L. h t :: ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state)
+     = (\<Squnion>t\<leftarrow>L. dg_local (h t))"
+  by (induction L) simp_all
+
+lemma dg_global_join_list:
+  "dg_global (\<Squnion>t\<leftarrow>L. h t :: ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state)
+     = (\<Squnion>t\<leftarrow>L. dg_global (h t))"
+  by (induction L) simp_all
+
 lemma foldr_dg_global_sides_char:
   fixes L :: "('x, 'k, ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state,
                 ('d, 'h) dg_state) strategy_program list"
-  shows "foldr (\<lambda>t acc'. dg_global (sides_of_program t \<tau> z) \<squnion> acc') L bot
-       = dg_global (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot)"
-  by (simp add: dg_global_foldr_generic)
+  shows "(\<Squnion>t\<leftarrow>L. dg_global (sides_of_program t \<tau> z))
+       = dg_global (\<Squnion>t\<leftarrow>L. sides_of_program t \<tau> z)"
+  by (simp add: dg_global_foldr_generic foldr_join_list[symmetric])
 
 lemma foldr_sides_dg_local_bot:
   fixes L :: "('x, 'k, ('d::bounded_semilattice_sup_bot, 'h::bounded_semilattice_sup_bot) dg_state,
                 ('d, 'h) dg_state) strategy_program list"
   assumes "\<And>t. t \<in> set L \<Longrightarrow> dg_local (sides_of_program t \<tau> z) = bot"
-  shows "dg_local (foldr (\<lambda>t acc'. sides_of_program t \<tau> z \<squnion> acc') L bot) = bot"
+  shows "dg_local (\<Squnion>t\<leftarrow>L. sides_of_program t \<tau> z) = bot"
   using assms
-  by (simp add: dg_local_foldr_generic foldr_sup_bot_of_all_bot)
+  by (induction L) simp_all
 
 lemma DG_sup_bot_left:
   "DG (bot::'d::bounded_semilattice_sup_bot) a \<squnion> DG bot b = DG bot (a \<squnion> b)"
