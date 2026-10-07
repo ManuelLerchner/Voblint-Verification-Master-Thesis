@@ -488,7 +488,7 @@ each.
   its contexts agree with the concrete semantics and that every call gets one
   (#isalocale("routed_context")), from which #isathm("activation_collect_dg_sound")
   derives coverage (@sec:eq-discharge). Analyses that
-  exchange facts through Goblint-style queries compose, provided each component's operations
+  exchange facts through Goblint-style queries compose, provided there is at least one component and each component's operations
   preserve the others' concretizations (#isathm("mcp_combine_sound"),
   @ch:cooperation). As with CompCert's solver interface @compcertKildall, the
   proof uses only proved facts about the solver's result (@sec:cert-param). Darais et al. @darais15 compose
@@ -630,11 +630,14 @@ control-flow graph. @ch:traces turns graph runs into activation traces,
 indexes them by calling context, and states the coverage contract that an
 analysis must meet.
 
-#partref(<part:analyzer>) builds an analyzer that meets this contract from
-separately verified parts. @ch:domains develops the abstract domains,
+#partref(<part:analyses>) develops what each analysis contributes, without
+contexts or a solver. @ch:domains develops the abstract domains,
 @ch:analysis-interface the interface through which an analysis supplies its
 transfer functions, and @ch:cooperation the combination of analyses that query
-one another. @ch:equations generates the equations of a program, @ch:solving
+one another.
+
+#partref(<part:verdicts>) turns any analysis that meets this interface into a
+sound result. @ch:equations generates the equations of a program, @ch:solving
 computes their solution with the verified solver, and @ch:results composes
 these parts into the source-level theorem.
 

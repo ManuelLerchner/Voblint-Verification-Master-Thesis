@@ -11,6 +11,6 @@ locale analysis_contract =
       "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
     and combine_sound:
-      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G de (genv key \<tau>)\<rbrakk> \<Longrightarrow>
+      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G q (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G r (genv key \<tau>)\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
-          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key dc de \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>)"
+          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"

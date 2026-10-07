@@ -55,12 +55,12 @@ locale activation_coverage =
         \<Longrightarrow> c' \<in> adm u c (call_info_of (CallEdge dst pars args) p) s
               (call_enter \<G> (CallEdge dst pars args) s)
         \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s \<in> cover (FunctionEntry p) c'"
-    and RETURN[intro]: "\<And>cl dst pars args p cont c1 c' p' s t es.
-        (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<Longrightarrow> s \<in> cover cl c1
-        \<Longrightarrow> admits_call_context \<G> g adm cl c1 p' s es c'
+    and RETURN[intro]: "\<And>u dst pars args p cont c c' p' s t es.
+        (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+        \<Longrightarrow> s \<in> cover u c
+        \<Longrightarrow> admits_call_context \<G> g adm u c p' s es c'
         \<Longrightarrow> t \<in> cover (FunctionResult p) c'
-        \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c1"
+        \<Longrightarrow> combine_collect \<G> dst s t \<in> cover cont c"
     and TOTAL: "call_context_total_on cover adm \<G> g"
 begin
 

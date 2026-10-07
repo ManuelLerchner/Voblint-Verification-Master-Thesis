@@ -33,19 +33,19 @@ text \<open>
 
 theorem activation_collect_sound:
   assumes "activation_coverage g S cover adm c\<^sub>0 \<G>"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v ctx \<subseteq> cover v ctx"
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
 proof -
   interpret G: activation_coverage g S cover adm c\<^sub>0 \<G> by (fact assms)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v ctx"
+    fix st assume "st \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
     then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-      and sn: "sink_node t = v" and kc: "activation_context_rel \<G> adm c\<^sub>0 g t ctx"
+      and sn: "sink_node t = v" and kc: "activation_context_rel \<G> adm c\<^sub>0 g t c"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
-    have "sink_store t \<in> cover (sink_node t) ctx" using G.valid_activation_trace_covered_at[OF t kc]
+    have "sink_store t \<in> cover (sink_node t) c" using G.valid_activation_trace_covered_at[OF t kc]
       .
-    then show "st \<in> cover v ctx" using sn st by simp
+    then show "st \<in> cover v c" using sn st by simp
   qed
 qed
 

@@ -326,7 +326,7 @@ context the solver solved there. A pair the solver never solved has no row,
 which loses no execution (@sec:cert-forward). Each state gives its own verdict.
 The state #ctor("Bot") describes no store and gives `DEAD`. Any other state
 asks every active analysis for the truth value of the condition
-(@sec:coop-examples): an exact $1$ gives `PROVED`, an exact $0$ gives
+(@sec:coop-mcp): an exact $1$ gives `PROVED`, an exact $0$ gives
 `REFUTED`, and anything else `UNKNOWN`. A definite answer holds in every store
 the state describes. The node's verdict joins the verdicts of its contexts:
 equal verdicts stay, different ones become `UNKNOWN`, and `DEAD` changes

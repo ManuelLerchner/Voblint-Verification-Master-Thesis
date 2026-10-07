@@ -9,7 +9,7 @@ text \<open>
   local specification and cannot join the combination of cooperating analyses. This
   theory gives the same carrier a local-only form. Intraprocedurally it is the
   order analysis of \<^theory>\<open>Voblint_Analysis_Relational.Rel_Order_Domain\<close>, with
-  one addition: after an assignment it asks the oracle how the assigned value
+  one addition: after an assignment it asks the query channel how the assigned value
   compares with the other variables, and records every order the answer fixes.
   At calls it is deliberately coarse, entering and returning with no facts, so
   that the component studies cooperation and not relational call boundaries.
@@ -46,7 +46,7 @@ definition relc_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
       | NotEq a b \<Rightarrow> if relc_le d a b \<and> relc_le d b a then answer_of_int 0 else \<top>
       | _ \<Rightarrow> \<top>)"
 
-fun relc_qry :: "relc \<Rightarrow> answers" where
+fun relc_qry :: "relc \<Rightarrow> channel" where
   "relc_qry d (EvalInt e) = relc_eval d e"
 
 lemma relc_has_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
@@ -60,14 +60,14 @@ lemma relc_le_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_le d a 
       dest: relc_has_sound)
 
 lemma relc_eval_sound:
-  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom (relc_eval d e)"
+  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer (relc_eval d e)"
   by (cases e) (auto simp: relc_eval_def
       dest: relc_le_sound intro: order_antisym)
 
 lemma relc_qry_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> eval_holds q (relc_qry d q) s"
   by (cases q) (simp add: relc_eval_sound)
 
-subsection \<open>Learning orders from the oracle\<close>
+subsection \<open>Learning orders from the query channel\<close>
 
 text \<open>
   At \<open>x = e\<close> the question is asked about the state before the assignment, where
@@ -77,30 +77,30 @@ text \<open>
   variables in \<open>ys\<close>, a parameter so that the construction stays executable.
 \<close>
 
-definition relc_learn :: "answers \<Rightarrow> vname list \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> relc \<Rightarrow> relc" where
-  "relc_learn ask ys x e d =
+definition relc_learn :: "channel \<Rightarrow> vname list \<Rightarrow> vname \<Rightarrow> exp \<Rightarrow> relc \<Rightarrow> relc" where
+  "relc_learn ch ys x e d =
      (case d of
         RelBot \<Rightarrow> RelBot
       | RelC ps \<Rightarrow> RelC (ps
           \<union> set (map (\<lambda>y. (x, y))
-                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq e (V y)))) = Some 1) ys))
+                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ch (EvalInt (LessEq e (V y)))) = Some 1) ys))
           \<union> set (map (\<lambda>y. (y, x))
-                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
+                (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ch (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
 
 lemma relc_learn_sound:
   assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>d\<rbrakk>"
-    and "eval_query.oracle_holds ask s"
-  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>relc_learn ask ys x e d\<rbrakk>"
+    and "eval_query.channel_holds ch s"
+  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>relc_learn ch ys x e d\<rbrakk>"
 proof (cases d)
   case RelBot
   with assms(1) show ?thesis by simp
 next
   case (RelC ps)
-  have up: "\<lbrakk>e\<rbrakk>\<^sub>e s \<le> s y" if "answer_const (ask (EvalInt (LessEq e (V y)))) = Some 1" for y
-    using eval_holds_constD[OF eval_query.oracle_holdsD[OF assms(2)] that]
+  have up: "\<lbrakk>e\<rbrakk>\<^sub>e s \<le> s y" if "answer_const (ch (EvalInt (LessEq e (V y)))) = Some 1" for y
+    using eval_holds_constD[OF eval_query.channel_holdsD[OF assms(2)] that]
     by (simp split: if_splits)
-  have down: "s y \<le> \<lbrakk>e\<rbrakk>\<^sub>e s" if "answer_const (ask (EvalInt (LessEq (V y) e))) = Some 1" for y
-    using eval_holds_constD[OF eval_query.oracle_holdsD[OF assms(2)] that]
+  have down: "s y \<le> \<lbrakk>e\<rbrakk>\<^sub>e s" if "answer_const (ch (EvalInt (LessEq (V y) e))) = Some 1" for y
+    using eval_holds_constD[OF eval_query.channel_holdsD[OF assms(2)] that]
     by (simp split: if_splits)
   show ?thesis
     using assms(1) RelC up down by (auto simp: relc_learn_def)
@@ -123,25 +123,25 @@ definition relc_ret :: "exp option \<Rightarrow> relc \<Rightarrow> relc" where
 
 definition order_spec :: "vname list \<Rightarrow> relc local_spec" where
   "order_spec ys = (conservative_local_spec
-       (\<lambda>A x e d. relc_learn A ys x e (forget_relc x d))
-       (\<lambda>A sc x d. forget_relc x d)
-       (\<lambda>A eo p d. relc_ret eo d)
-       (\<lambda>A ci p. [(fst p, \<top>)])
-       (\<lambda>B ci d de. \<top>))
-     \<lparr>ls_query := (\<lambda>A. relc_qry), ls_branch := (\<lambda>A b pol d. relc_branch_step b pol d)\<rparr>"
+       (\<lambda>ch x e d. relc_learn ch ys x e (forget_relc x d))
+       (\<lambda>ch sc x d. forget_relc x d)
+       (\<lambda>ch eo p d. relc_ret eo d)
+       (\<lambda>ch ci p. [(fst p, \<top>)])
+       (\<lambda>ch' ci d de. \<top>))
+     \<lparr>ls_query := (\<lambda>ch. relc_qry), ls_branch := (\<lambda>ch b pol d. relc_branch_step b pol d)\<rparr>"
 
 theorem order_spec_sound: "sound_local_spec \<G> gamma_relc (order_spec ys)"
 proof -
-  have special: "sound_special gamma_relc (\<lambda>A sc x d. forget_relc x d)"
+  have special: "sound_special gamma_relc (\<lambda>ch sc x d. forget_relc x d)"
     unfolding sound_special_def
   proof (intro allI impI)
-    fix A d s sc x t
+    fix ch d s sc x t
     assume "s \<in> \<lbrakk>d :: relc\<rbrakk>" "t \<in> special_step sc x s"
     then show "t \<in> \<lbrakk>forget_relc x d\<rbrakk>" by (cases sc) auto
   qed
   have base: "sound_local_spec \<G> gamma_relc (conservative_local_spec
-       (\<lambda>A x e d. relc_learn A ys x e (forget_relc x d)) (\<lambda>A sc x d. forget_relc x d)
-       (\<lambda>A eo p d. relc_ret eo d) (\<lambda>A ci p. [(fst p, \<top>)]) (\<lambda>B ci d de. \<top>))"
+       (\<lambda>ch x e d. relc_learn ch ys x e (forget_relc x d)) (\<lambda>ch sc x d. forget_relc x d)
+       (\<lambda>ch eo p d. relc_ret eo d) (\<lambda>ch ci p. [(fst p, \<top>)]) (\<lambda>ch' ci d de. \<top>))"
     by (rule sound_conservative_local_spec[OF gamma_relc_mono _ special])
        (auto simp: sound_assign_def sound_return_def sound_enter_def relc_ret_def
           sound_combine_env_identity split: option.splits intro!: relc_learn_sound)

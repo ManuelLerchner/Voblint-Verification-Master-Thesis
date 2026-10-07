@@ -19,16 +19,16 @@ text \<open>
 subsection \<open>The representation invariant\<close>
 
 text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in lockstep with the runtime frame list: each
-  \<^type>\<open>cframe\<close> \<open>(cont, dst, caller)\<close> pins the caller activation \<open>c\<close> --- its frozen store
-  \<open>sink_store c = caller\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
+  \<^type>\<open>cframe\<close> \<open>(cont, dst, s)\<close> pins the caller activation \<open>caller\<close> --- its frozen store
+  \<open>sink_store caller = s\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
   whose callee \<^term>\<open>FunctionEntry p\<close> equals the child's (path-invariant) entry node.\<close>
 inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> activation_trace \<Rightarrow> bool" for g where
   empty [intro]: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
-| frame [intro]: "caller_of t = Some c \<Longrightarrow> sink_store c = caller
+| frame [intro]: "caller_of t = Some caller \<Longrightarrow> sink_store caller = s
           \<Longrightarrow> fst (hd (path_of t)) = FunctionEntry p
-          \<Longrightarrow> (sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-          \<Longrightarrow> stack_repr g stk c
-          \<Longrightarrow> stack_repr g ((cont, dst, caller) # stk) t"
+          \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
+          \<Longrightarrow> stack_repr g stk caller
+          \<Longrightarrow> stack_repr g ((cont, dst, s) # stk) t"
 
 
 text \<open>Inversion by the shape of the runtime stack.  A frame's clause recurses on the shorter

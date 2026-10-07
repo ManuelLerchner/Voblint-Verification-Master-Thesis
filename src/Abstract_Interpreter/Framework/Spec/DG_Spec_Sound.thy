@@ -346,9 +346,9 @@ locale analysis_contract =
       "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
          \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
     and combine_sound:
-      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G de (genv key \<tau>)\<rbrakk> \<Longrightarrow>
+      "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G q (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G r (genv key \<tau>)\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
-          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key dc de \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>)"
+          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key q r \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key q r \<tau>)"
 
 text \<open>
   The obligation is stated at \<^emph>\<open>values\<close> rather than at two unknown reads,
@@ -365,7 +365,7 @@ lemma (in analysis_contract) combine_sound_program:
   shows "combine_collect \<G> (ci_dst ci) s t
           \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))
               (genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_combine_program S ci src_cc src_ex key) \<tau>))"
-  using combine_sound[where dc = "dg_local (\<tau> src_cc)" and de = "dg_local (\<tau> src_ex)"
+  using combine_sound[where q = "dg_local (\<tau> src_cc)" and r = "dg_local (\<tau> src_ex)"
       and \<tau> = \<tau> and key = key and ci = ci, OF sc se]
   by (simp add: dg_spec_combine_program_def traverse_combine_transfer_program
       sides_combine_transfer_program)

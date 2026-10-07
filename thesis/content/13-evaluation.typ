@@ -51,8 +51,8 @@ the analysis places on it (@sec:instances-supply). A relational analysis
 enters as a local specification (#isaconst("sound_local_spec"),
 @ch:cooperation). The routing obligations are discharged once for all domains,
 the solver enters only through its certificate (@sec:certificate), so all five
-update rules share one proof, and #isathm("mcp_combine_sound") composes any
-list of analyses. _Evidence: source inspection._ Adding the order analysis took
+update rules share one proof, and #isathm("mcp_combine_sound") composes any non-empty list of
+independent analyses. _Evidence: source inspection._ Adding the order analysis took
 three proofs about its local specification (#isathm("order_spec_sound"),
 #isathm("single_entry_order_spec"), #isathm("relc_qry_sound")) and an entry in
 the analysis manifest (@ch:tooling). No theory of the framework or of the
@@ -310,9 +310,30 @@ programs.
 *The product.* _Evidence: executable._ In @fig:stride2 Int
 decides a check that none of its components decides alone.
 
-*Cooperation.* _Evidence: machine-checked by evaluation, and executable._
-The two programs of @sec:coop-examples separate the combination from its parts
-in each direction. #isathm("coop_demo_needs_both") and
+#let _le(name) = claim-check(name, "x <= y")
+
+*Cooperation.* _Evidence: machine-checked by evaluation, and executable._ The
+program opening @ch:cooperation needs Interval to ask the order analysis. In
+the following program the order analysis must ask Interval:
+
+#listing(lang: "c", claim: "coop-le-both", ```
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) { x = 0; y = 10; } else { x = 20; y = 30; }
+  __voblint_check(x <= y);
+}
+```)
+
+Interval joins the branches to #raw(_le("coop-le-interval").at(4)) and reports
+#raw(_le("coop-le-interval").at(3)). The order analysis alone cannot compare a
+variable with a constant and reports #raw(_le("coop-le-order").at(3)).
+Together, at `y = 10` the order analysis asks about the state before the
+assignment whether $x lt.eq 10$. Interval knows $x = 0$ there and answers $1$,
+so the order analysis records the pair $(x, y)$. At `y = 30` it asks whether
+$x lt.eq 30$ and records the same pair, which therefore survives the join, and
+the check is #raw(_le("coop-le-both").at(3)). Variants of both programs without
+the `__voblint_nondet_int` initializations separate the combination from its
+parts in each direction. #isathm("coop_demo_needs_both") and
 #isathm("order_asks_needs_both") (with #isathm("order_asks_interval_alone") and
 #isathm("order_asks_order_alone")) state the verdicts of #isaconst("run_voblint")
 for all three activation lists and are proved by `eval`.
@@ -327,7 +348,7 @@ verdict, because Sign's comparison query decides nothing for a positive value
 against 100, which may lie on either side of it. Intervals lose nonconvex
 information, as the multiples of three of @sec:verdicts show. Pointwise
 stores lose relations between variables (@sec:relational). The order analysis
-recovers some of them, within the limits of @sec:coop-limits. A call string of
+recovers some of them, within the limits of @sec:coop-catalogue. A call string of
 length $k$ merges paths deeper than $k$, as in `down` above.
 
 _Limits._ Every precision witness concerns one program with fixed analysis settings, and the evaluated ones trust the code generator. The

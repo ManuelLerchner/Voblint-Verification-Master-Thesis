@@ -267,21 +267,21 @@ text \<open>
 
 definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" where
   "dg_spec_wf S \<longleftrightarrow>
-     (\<forall>a d unknown_of A. (\<forall>q. sp_wf (A q))
-          \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>)))
-     \<and> (\<forall>d unknown_of A q. (\<forall>q'. sp_wf (A q'))
-          \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q))
+     (\<forall>a d unknown_of ch. (\<forall>q. sp_wf (ch q))
+          \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>)))
+     \<and> (\<forall>d unknown_of ch q. (\<forall>q'. sp_wf (ch q'))
+          \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>) q))
      \<and> (\<forall>ci d unknown_of. sp_wf (enter\<^sup># S ci (mk_dg_man d unknown_of)))
      \<and> (\<forall>ci d unknown_of ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d unknown_of) ex))"
 
 lemma dg_spec_wf_step_ask:
-  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
-   \<Longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>))"
+  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (ch q))
+   \<Longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>))"
   by (simp add: dg_spec_wf_def)
 
 lemma dg_spec_wf_query:
-  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (A q))
-   \<Longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := A\<rparr>) q)"
+  "dg_spec_wf S \<Longrightarrow> (\<And>q. sp_wf (ch q))
+   \<Longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>) q)"
   by (simp add: dg_spec_wf_def)
 
 lemma sp_wf_ask_with:
@@ -367,7 +367,7 @@ text \<open>
   them. A question nobody answers is answered \<open>\<top>\<close>, which claims nothing.
 \<close>
 
-type_synonym answers = "query \<Rightarrow> answer"
+type_synonym channel = "query \<Rightarrow> answer"
 
 text \<open>
   The local query handler: answers are a pure function of the local value.
@@ -375,15 +375,15 @@ text \<open>
   installs around it reduces to the handler itself.
 \<close>
 
-definition local_query :: "('dl \<Rightarrow> answers) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_query" where
+definition local_query :: "('dl \<Rightarrow> channel) \<Rightarrow> ('x,'k,'v,'dl,'dg) man_query" where
   "local_query h m q = sp_return (h (man_local m) q)"
 
 lemma local_query_update [simp]:
-  "local_query h (m\<lparr>man_ask := A\<rparr>) = local_query h m"
+  "local_query h (m\<lparr>man_ask := ch\<rparr>) = local_query h m"
   by (simp add: local_query_def fun_eq_iff)
 
 lemma local_transfer_update [simp]:
-  "local_transfer f (m\<lparr>man_ask := A\<rparr>) = local_transfer f m"
+  "local_transfer f (m\<lparr>man_ask := ch\<rparr>) = local_transfer f m"
   by (simp add: local_transfer_def)
 
 lemma ask_with_local_query:

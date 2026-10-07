@@ -41,7 +41,7 @@ in `Voblint_Domain`, below the framework.
 
 `query_algebra` fixes `answer_holds :: 'q ⇒ 'r ⇒ store ⇒ bool` over a
 `semilattice_inf` with top and asks two laws: `⊤` holds everywhere, and the meet
-of two holding answers holds. `oracle_holds A s` says every answer of `A` holds
+of two holding answers holds. `channel_holds A s` says every answer of `A` holds
 at `s`.
 
 The one interpretation is `eval_holds (EvalInt e) a s ⟷ ⟦e⟧ s ∈ γ a` over
@@ -74,8 +74,8 @@ every well-formed ask channel (`dg_spec_wf_step_ask`, `dg_spec_wf_query`);
 An analysis that cooperates is an `local_spec`: a record with one field per
 operation of Goblint's `Spec` (`ls_query`, `ls_skip`, `ls_assign`, `ls_special`,
 `ls_branch`, `ls_body`, `ls_return`, `ls_event`, `ls_enter`,
-`ls_combine_env`, `ls_combine_assign`). Every field receives the channel
-`answers`, the counterpart of `man.ask`. `sound_local_spec 𝒢 γ c` states
+`ls_combine_env`, `ls_combine_assign`). Every field receives a channel of type
+`channel`, the counterpart of `man.ask`. `sound_local_spec 𝒢 γ c` states
 each operation's obligation against every channel that holds at the store it
 is asked about; the edge obligation splits into one named law per field
 (`ls_step_sound_iff`), and `sound_local_spec_update` replaces one field

@@ -1099,6 +1099,13 @@ domains (Ch. 5) come after traces and before the analysis interface, because
 
 Five parts, fifteen chapters after the author-requested engineering chapter.
 
+**2026-10-07 amendment (author request):** split the part "The Analyzer" after
+chapter 7 into "Analyses" (chapters 5–7: domains, one analysis, cooperation) and
+"From Analyses to Verdicts" (chapters 8–10: equations, solving, the
+source-level theorem). Chapters 5–7 never mention contexts, equations or the
+solver, so the analysis-specific obligations and the framework's obligations now
+form separate parts. The thesis has six parts.
+
 **2026-09-21 amendment (author request):** insert *Engineering the Isabelle
 development* after analysis instances and before the executable-artifact chapter.
 It explains the locale inheritance, computational/semantic type-class split,

@@ -182,7 +182,7 @@ proof -
     show ?case using stock.step_sound by (simp add: dg_spec_edge_program_def)
   next
     case (4 s dc key \<tau> t de ci)
-    show ?case using stock.combine_sound[where ci = ci and dc = dc and de = de
+    show ?case using stock.combine_sound[where ci = ci and q = dc and r = de
           and \<tau> = \<tau> and key = key, OF 4(1) 4(2)]
       by (simp add: dg_spec_combine_transfer_def)
   qed

@@ -5003,11 +5003,11 @@ let rec event_action (Check_Event (l, cnd)) = EA_Check (l, cnd);;
 let rec make_local_spec
   qry st en ce ca =
     Local_spec_ext
-      (qry, (fun a -> st a EA_Nop), (fun a x e -> st a (EA_Assign (x, e))),
-        (fun a sc x -> st a (EA_Special (sc, x))),
-        (fun a b pol -> st a (if pol then EA_Assume b else EA_AssumeNot b)),
-        (fun a p -> st a (EA_Body p)), (fun a r p -> st a (EA_Ret (r, p))),
-        (fun a ev -> st a (event_action ev)), en, ce, ca, ());;
+      (qry, (fun ch -> st ch EA_Nop), (fun ch x e -> st ch (EA_Assign (x, e))),
+        (fun ch sc x -> st ch (EA_Special (sc, x))),
+        (fun ch b pol -> st ch (if pol then EA_Assume b else EA_AssumeNot b)),
+        (fun ch p -> st ch (EA_Body p)), (fun ch r p -> st ch (EA_Ret (r, p))),
+        (fun ch ev -> st ch (event_action ev)), en, ce, ca, ());;
 
 let rec ls_special
   (Local_spec_ext
@@ -5064,18 +5064,20 @@ let rec local_spec_step
         ev (Check_Event (l, cnd));;
 
 let rec ls_step
-  c a = local_spec_step (ls_skip c a) (ls_assign c a) (ls_special c a)
-          (ls_branch c a) (ls_body c a) (ls_return c a) (ls_event c a);;
+  c ch =
+    local_spec_step (ls_skip c ch) (ls_assign c ch) (ls_special c ch)
+      (ls_branch c ch) (ls_body c ch) (ls_return c ch) (ls_event c ch);;
 
 let rec lens_of
   get put c =
-    make_local_spec (fun a x -> ls_query c a (get x))
-      (fun a aa x -> put x (ls_step c a aa (get x)))
-      (fun a ci p ->
+    make_local_spec (fun ch x -> ls_query c ch (get x))
+      (fun ch a x -> put x (ls_step c ch a (get x)))
+      (fun ch ci p ->
         map (fun (q, e) -> (put (fst p) q, put (snd p) e))
-          (ls_enter c a ci (get (fst p), get (snd p))))
-      (fun a b ci x de -> put x (ls_combine_env c a b ci (get x) (get de)))
-      (fun b ci x de -> put x (ls_combine_assign c b ci (get x) (get de)));;
+          (ls_enter c ch ci (get (fst p), get (snd p))))
+      (fun ch cha ci x de ->
+        put x (ls_combine_env c ch cha ci (get x) (get de)))
+      (fun ch ci x de -> put x (ls_combine_assign c ch ci (get x) (get de)));;
 
 let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
                             | QLifted v, QBot -> QBot
@@ -5086,10 +5088,10 @@ let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
                             | QLifted a, QLifted b -> QLifted (inf _A a b);;
 
 let rec mcp_qry
-  cs a x q =
+  cs ch x q =
     fold (fun c r ->
            inf_query_lift (inf_int_dom_ext bounded_lattice_unit) r
-             (ls_query c a x q))
+             (ls_query c ch x q))
       cs (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
 let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
@@ -5135,11 +5137,12 @@ let rec lift_put _A (_B1, _B2)
       | Lifted r -> Lifted (u r v));;
 
 let rec mcp_comb
-  cs a b ci x de =
-    fold (fun c y -> ls_combine_assign c b ci (ls_combine_env c a b ci y de) de)
+  cs cha ch ci x de =
+    fold (fun c y ->
+           ls_combine_assign c ch ci (ls_combine_env c cha ch ci y de) de)
       cs x;;
 
-let rec mcp_step cs aa a x = fold (fun c -> ls_step c aa a) cs x;;
+let rec mcp_step cs ch a x = fold (fun c -> ls_step c ch a) cs x;;
 
 let rec ls_query_update
   ls_querya
@@ -8518,18 +8521,18 @@ let rec assume_step
 let rec relc_branch_step
   b pol d = (if pol then assume_step b d else assume_not_step b d);;
 
-let rec combine_env_identity a b ci x de = x;;
+let rec combine_env_identity cha ch ci x de = x;;
 
-let rec branch_identity a b pol x = x;;
+let rec branch_identity ch b pol x = x;;
 
-let rec event_identity a ev x = x;;
+let rec event_identity ch ev x = x;;
 
-let rec skip_identity a x = x;;
+let rec skip_identity ch x = x;;
 
 let rec query_unknown
-  a x = top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
+  ch x = top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
-let rec body_identity a p x = x;;
+let rec body_identity ch p x = x;;
 
 let rec conservative_local_spec
   asn sp rt en ca =
@@ -8546,7 +8549,7 @@ let rec sup_set _A
     | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
 
 let rec relc_learn
-  ask ys x e d =
+  ch ys x e d =
     (match d with RelBot -> RelBot
       | RelC ps ->
         RelC (sup_set (equal_prod equal_literal equal_literal)
@@ -8556,7 +8559,7 @@ let rec relc_learn
                           (if not ((xa : string) = x) &&
                                 equal_option equal_int
                                   (answer_const
-                                    (ask (EvalInt (LessEq (e, V xa)))))
+                                    (ch (EvalInt (LessEq (e, V xa)))))
                                   (Some one_inta)
                             then Some (x, xa) else None))
                         ys)))
@@ -8564,8 +8567,7 @@ let rec relc_learn
                       (fun xa ->
                         (if not ((xa : string) = x) &&
                               equal_option equal_int
-                                (answer_const
-                                  (ask (EvalInt (LessEq (V xa, e)))))
+                                (answer_const (ch (EvalInt (LessEq (V xa, e)))))
                                 (Some one_inta)
                           then Some (xa, x) else None))
                       ys))));;
@@ -8651,7 +8653,7 @@ let rec order_spec
   ys = ls_branch_update (fun _ _ -> relc_branch_step)
          (ls_query_update (fun _ _ -> relc_qry)
            (conservative_local_spec
-             (fun a x e d -> relc_learn a ys x e (forget_relc x d))
+             (fun ch x e d -> relc_learn ch ys x e (forget_relc x d))
              (fun _ _ -> forget_relc) (fun _ eo _ -> relc_ret eo)
              (fun _ _ p -> [(fst p, top_relc)]) (fun _ _ _ _ -> top_relc)));;
 
@@ -8666,9 +8668,9 @@ let rec ls_assign_update
           ls_combine_assign, more);;
 
 let rec assign_ask
-  asn a x e d =
-    (match answer_const (a (EvalInt e)) with None -> asn a x e d
-      | Some n -> asn a x (N n) d);;
+  asn ch x e d =
+    (match answer_const (ch (EvalInt e)) with None -> asn ch x e d
+      | Some n -> asn ch x (N n) d);;
 
 let rec ask_assign c = ls_assign_update (fun _ -> assign_ask (ls_assign c)) c;;
 
@@ -9566,7 +9568,8 @@ bounded_lattice_unit))),
   Order_Analysis
                                       then top_relc else bot_relca))))))));;
 
-let rec mcp_en_from cs a ci p = fold (fun c -> maps (ls_enter c a ci)) cs [p];;
+let rec mcp_en_from
+  cs ch ci p = fold (fun c -> maps (ls_enter c ch ci)) cs [p];;
 
 let rec mcp_combine
   = function [c] -> c
@@ -9625,10 +9628,10 @@ let rec sp_read_at = function Inl x -> sp_read_local x
 let rec dg_read_at src = sp_bind (sp_read_at src) (comp sp_return dg_local);;
 
 let rec map_local_spec
-  k c = make_local_spec (ls_query c) (fun a aa x -> k (ls_step c a aa x))
-          (fun a ci p -> map (fun (q, e) -> (q, k e)) (ls_enter c a ci p))
+  k c = make_local_spec (ls_query c) (fun ch a x -> k (ls_step c ch a x))
+          (fun ch ci p -> map (fun (q, e) -> (q, k e)) (ls_enter c ch ci p))
           (ls_combine_env c)
-          (fun b ci x de -> k (ls_combine_assign c b ci x de));;
+          (fun ch ci x de -> k (ls_combine_assign c ch ci x de));;
 
 let rec field_spec
   (Analysis_registration_ext
