@@ -494,7 +494,9 @@ def main() -> int:
                 "corollary",
             }
             if have and env not in have:
-                site = f"{path.relative_to(REPO)}:{text.count(chr(10), 0, m.start()) + 1}"
+                site = (
+                    f"{path.relative_to(REPO)}:{text.count(chr(10), 0, m.start()) + 1}"
+                )
                 deviated.append(
                     f"  {site}: {isa.group(1)} is stated in a {env} environment, "
                     f"but the sources declare it as a {'/'.join(sorted(have))}"
