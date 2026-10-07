@@ -161,10 +161,9 @@ qed
 lemma edge_bound_local:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) global_of) sigma)
-           \<le> dg_local (sigma (Inl (v, ctx)))"
+  shows "edge_out S a (Inl (u, ctx)) global_of sigma \<le> dg_local (sigma (Inl (v, ctx)))"
 proof -
-  have "dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) global_of) sigma)
+  have "edge_out S a (Inl (u, ctx)) global_of sigma
       \<le> side_acc_dg (acc0 v) sigma (contribs v ctx)"
     using dg_local_traverse_le_side_acc_dg[OF edge_program_mem_contribs[OF e]] .
   also have "\<dots> = dg_local (eq Gen (v, ctx) sigma)"
@@ -197,8 +196,7 @@ qed
 lemma edge_bound_genv:
   assumes cov_v: "(v, ctx) \<in> vars"
     and e: "(u, a, v) \<in> intra g"
-  shows "genv global_of (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) global_of) sigma)
-           \<le> genv global_of sigma"
+  shows "edge_pub S a (Inl (u, ctx)) global_of sigma \<le> genv global_of sigma"
   unfolding le_fun_def genv_def using edge_bound_global[OF cov_v e] by blast
 
 theorem dg_ctx_act_edge:
@@ -222,8 +220,8 @@ next
   moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
   ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
   hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
-      (dg_local (traverse_program (dg_spec_edge_program S a (Inl (u, ctx)) global_of) sigma))
-      (?g \<squnion> genv global_of (sides_of_program (dg_spec_edge_program S a (Inl (u, ctx)) global_of) sigma))"
+      (edge_out S a (Inl (u, ctx)) global_of sigma)
+      (?g \<squnion> edge_pub S a (Inl (u, ctx)) global_of sigma)"
     using step_sound[of a sigma "Inl (u, ctx)" global_of] by blast
   also have "\<dots> \<subseteq> gamma_at v ctx"
     by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e]

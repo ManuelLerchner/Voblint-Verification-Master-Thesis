@@ -370,8 +370,7 @@ proof -
     let ?R = "edge_global_reads \<G> a" and ?W = "edge_global_writes \<G> a"
     let ?g = "view_of rg ?R ?e (free ?R)"
     let ?r = "closed_step c a (cmb ?d ?g)"
-    have loc: "dg_local (traverse_program
-        (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>) = rl ?r"
+    have loc: "edge_out (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau> = rl ?r"
       by (simp add: dg_spec_edge_program_def traverse_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def)
     have sides: "sides_of_program
@@ -394,10 +393,9 @@ proof -
         by (rule mix[OF s r fr])
       also have "\<dots> \<subseteq> gm (cmb (rl ?r) (full_view rg xs (?e \<squnion> genv key (bot \<squnion> pub_sides key rg ?W ?r))))"
         by (rule env_mono[OF order_refl], rule out, erule pub)
-      finally show "s' \<in> gm (cmb (dg_local (traverse_program
-          (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>))
-          (full_view rg xs (genv key \<tau> \<squnion> genv key (sides_of_program
-            (dg_spec_edge_program (keyed_split_spec \<G> cmb rl rg free c) a src key) \<tau>))))"
+      finally show "s' \<in> gm (cmb (edge_out (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau>)
+          (full_view rg xs
+            (genv key \<tau> \<squnion> edge_pub (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau>)))"
         unfolding loc sides .
     qed
   next

@@ -4047,3 +4047,19 @@ spec_gamma
 call_context_rel
 call_context_rel_of_fun
 call_context_rel_of_fun_iff
+
+# --- Pointwise ownership-split lifter and its soundness theorem (2026-10-07) ---
+# No analysis run_voblint builds used it; the executable lifter is
+# ownership_split_dg_spec_st_for over the generic _gen transfers, which remain.
+ownership_split_lift
+ownership_split_lift_contract
+dg_spec_step_ownership_split_lift
+dgs_enter_ownership_split_lift
+dgs_query_ownership_split_lift
+dg_spec_combine_transfer_ownership_split_lift
+dg_spec_wf_ownership_split_lift
+ownership_split_transfer
+ownership_split_enter_transfer
+ownership_split_combine_transfer
+gamma_ownership_split
+gamma_ownership_split_mono

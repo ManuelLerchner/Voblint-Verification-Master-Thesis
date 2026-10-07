@@ -439,7 +439,7 @@ next
   fix a and \<tau> :: "'a + 'b \<Rightarrow> (relc, relc) dg_state" and src gk
   show "edge_collect a (gammaDG_relc (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
           \<subseteq> gammaDG_relc
-              (dg_local (traverse_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk)) \<tau>))
+              (edge_out rel_order_spec a src (\<lambda>_. gk) \<tau>)
               (dg_global (sides_of_program (dg_spec_edge_program rel_order_spec a src (\<lambda>_. gk))
                         \<tau> (Inr gk)))"
     using relc_step_sound[of a "dg_local (\<tau> src)" "dg_global (\<tau> (Inr gk))"]
