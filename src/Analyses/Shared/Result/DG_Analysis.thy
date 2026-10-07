@@ -1050,11 +1050,12 @@ proof -
       "\<lambda>d. d = Bot" adm "\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)" gamma\<^sub>V empty\<^sub>V classify
     by (rule routed_analysis_sound_of
           [where adm = adm, OF solves fwd_ok comb_fwd_ok cover_R total_R])
-  have s0e_le: "init_env pgs p \<le> genv global_of (sol_env pgs p)"
-    using init_env_le_sol[OF solves entry_cov adapter.pp_entry_s0g_bound[OF entry_cov]]
+  have init_env_le: "init_env pgs p \<le> genv global_of (sol_env pgs p)"
+    using init_env_le_sol[OF solves entry_cov adapter.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
   show ?thesis
-    using adapter.activation_collect_dg_sound[OF entry_cov _ s0e_le, of "cinit_stores pgs" v ctx]
+    using adapter.activation_collect_dg_sound[OF entry_cov _ init_env_le, of "cinit_stores pgs" v
+      ctx]
       cinit_le_init
     by (simp add: reader_def sol_global_def)
 qed
@@ -1202,10 +1203,10 @@ interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d e. pgam 
     gamma\<^sub>V empty\<^sub>V classify
   by (rule entry_state_routed_analysis_sound [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
 
-lemma entry_s0e_le:
+lemma entry_init_env_le:
   assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
   shows "init_env pgs p \<le> genv global_of (sol_env pgs p)"
-  using init_env_le_sol[OF solves entry_cov entry.pp_entry_s0g_bound[OF entry_cov]]
+  using init_env_le_sol[OF solves entry_cov entry.pp_entry_init_global_bound[OF entry_cov]]
   by (simp add: sol_global_def)
 
 corollary entry_state_activation_collect_sound:
@@ -1213,7 +1214,7 @@ corollary entry_state_activation_collect_sound:
   shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
            \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
   using entry.activation_collect_dg_sound
-      [OF entry_cov _ entry_s0e_le[OF entry_cov], of "cinit_stores pgs" v ctx]
+      [OF entry_cov _ entry_init_env_le[OF entry_cov], of "cinit_stores pgs" v ctx]
     cinit_le_init
   by (simp add: reader_def sol_global_def)
 
@@ -1222,7 +1223,7 @@ theorem entry_state_has_context:
     and trace: "t \<in> \<T>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub>"
   shows "\<exists>c. activation_context_rel pgs entry_context_rel root_ctx (prog_cfg p) t c"
   using entry.routed_valid_activation_trace_has_context
-      [OF entry_cov _ entry_s0e_le[OF entry_cov] trace] cinit_le_init
+      [OF entry_cov _ entry_init_env_le[OF entry_cov] trace] cinit_le_init
   by simp
 
 text \<open>

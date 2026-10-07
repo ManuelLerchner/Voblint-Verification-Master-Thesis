@@ -35,7 +35,7 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
       \<comment> \<open>one program per call site: the site's own resolver decides which callees it folds\<close>
     and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list"
-    and bot0 s0d :: 'D and s0g :: 'G
+    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
@@ -45,7 +45,7 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
     and finE: "finite (intra g)"
     and pp: "post_bounded
                (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key)
-                  route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 s0d s0g)
+                  route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 d\<^sub>0 g\<^sub>0)
                x0 sigma vars"
     and sg_cov[simp]: "\<And>v c. (v, c) \<in> vars
         \<Longrightarrow> \<gamma>\<^sub>M (sg (Inl (v, c))) =
@@ -60,10 +60,10 @@ begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
   "Gen \<equiv> routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key)
-           route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 s0d s0g"
+           route (\<lambda>c src a. dg_spec_edge_program S a src global_of) cmb extra g bot0 d\<^sub>0 g\<^sub>0"
 
 abbreviation acc0 :: "pp \<Rightarrow> 'D" where
-  "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> s0d else bot0)"
+  "acc0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> d\<^sub>0 else bot0)"
 
 abbreviation contribs :: "pp \<Rightarrow> 'c
     \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list" where
@@ -102,11 +102,11 @@ lemma pp_sides_bound:
   "(v, ctx) \<in> vars \<Longrightarrow> sides_of_rhs (Gen (v, ctx)) sigma \<le> sigma"
   by (rule tree_covered_at_sides[OF post_boundedD[OF pp]])
 
-lemma pp_entry_s0g_bound:
+lemma pp_entry_init_global_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0g \<le> dg_global (sigma (Inr buffer_key))"
+  shows "g\<^sub>0 \<le> dg_global (sigma (Inr buffer_key))"
 proof -
-  have "s0g \<le> dg_global (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr buffer_key))"
+  have "g\<^sub>0 \<le> dg_global (sides_of_rhs (Gen (cfg_entry g, ctx)) sigma (Inr buffer_key))"
     unfolding routed_node_rhs_def Let_def
     by (simp add: Let_def sup_dg_state_def)
   also have "\<dots> \<le> dg_global (sigma (Inr buffer_key))"
@@ -116,14 +116,14 @@ proof -
 qed
 
 text \<open>The local-carrier twin, proved the same way: \<open>Gen\<close>'s entry accumulator starts at
-  \<open>bot0 \<squnion> s0d\<close>, \<open>side_acc_dg_ge_acc\<close> only grows it, and \<open>pp_eq_bound\<close> transports the
+  \<open>bot0 \<squnion> d\<^sub>0\<close>, \<open>side_acc_dg_ge_acc\<close> only grows it, and \<open>pp_eq_bound\<close> transports the
   bound across a covered point's own equation.\<close>
 
-lemma pp_entry_s0d_bound:
+lemma pp_entry_init_local_bound:
   assumes cov: "(cfg_entry g, ctx) \<in> vars"
-  shows "s0d \<le> dg_local (sigma (Inl (cfg_entry g, ctx)))"
+  shows "d\<^sub>0 \<le> dg_local (sigma (Inl (cfg_entry g, ctx)))"
 proof -
-  have "s0d \<le> dg_local (eq Gen (cfg_entry g, ctx) sigma)"
+  have "d\<^sub>0 \<le> dg_local (eq Gen (cfg_entry g, ctx) sigma)"
     by (simp add: eq_routed_node_rhs[OF contribs_wf])
        (rule order_trans[OF _ side_acc_dg_ge_acc], simp add: le_supI2)
   also have "\<dots> \<le> dg_local (sigma (Inl (cfg_entry g, ctx)))"

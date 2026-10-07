@@ -39,7 +39,7 @@ text \<open>
 \<close>
 
 locale dg_analysis_adapter =
-  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0 sg
+  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     seed
     "static_resolve g" is_bot \<gamma>\<^sub>M adm
   for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
@@ -48,7 +48,7 @@ locale dg_analysis_adapter =
     and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 s0d :: 'D and s0g :: 'G
+    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"
@@ -173,14 +173,14 @@ text \<open>
 lemma analyse_result_node_sound:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
   shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
 proof -
   have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
-    by (rule activation_collect_dg_sound[OF entry_cov s0_sound s0e_le])
+    by (rule activation_collect_dg_sound[OF entry_cov init_sound init_env_le])
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
   proof (cases "(v, ctx) \<in> vars")
     case True
@@ -214,12 +214,12 @@ text \<open>
 lemma analyse_result_covered_unreachable:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
     and dead: "lookup_coverage analyse_result v ctx = Covered Bot"
   shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx = {}"
   by (rule reported_covered_unreachable_empty
-      [OF dead analyse_result_node_sound[OF entry_cov s0_sound s0e_le]])
+      [OF dead analyse_result_node_sound[OF entry_cov init_sound init_env_le]])
 
 lemma covered_keys_analyse_result [simp]: "covered_keys analyse_result = vars"
   unfolding analyse_result_def by simp
@@ -241,8 +241,8 @@ text \<open>
 lemma analyse_result_node_unreachable:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
     and union: "\<C>\<^bsub>\<G>,g,S0\<^esub> v
                   = (\<Union>ctx. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx)"
     and dead: "result_node_is_bottom analyse_result v"
@@ -262,7 +262,7 @@ proof -
     qed
     have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
             \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
-      by (rule analyse_result_node_sound[OF entry_cov s0_sound s0e_le])
+      by (rule analyse_result_node_sound[OF entry_cov init_sound init_env_le])
     then show ?thesis unfolding bot by simp
   qed
   show ?thesis unfolding union using bucket by simp
@@ -287,7 +287,7 @@ text \<open>
   discharges both as per-instance facts about its own solved system, not as
   locale theorems, since they depend on which keys a terminated solve
   actually reached --- \<open>entry_cov\<close> mirrors those instances' own \<open>entry_cov\<close>
-  context assumption, and \<open>s0_sound\<close> is the initial-store premise every
+  context assumption, and \<open>init_sound\<close> is the initial-store premise every
   activation-trace-level soundness theorem in this development already takes.
 \<close>
 text \<open>Both endpoints below reach their classifier obligation the same way, and
@@ -300,15 +300,15 @@ lemma analyse_report_ctx_decided:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided r) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
     and smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
   have node_sound: "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
       \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
-    by (rule analyse_result_node_sound[OF entry_cov s0_sound s0e_le])
+    by (rule analyse_result_node_sound[OF entry_cov init_sound init_env_le])
   obtain st where reach: "lookup_table analyse_result v ctx = Lifted st"
     and sst: "s \<in> \<gamma>\<^sub>V st"
     using smem node_sound by (cases "lookup_table analyse_result v ctx") auto
@@ -322,15 +322,15 @@ theorem analyse_report_ctx_proved_sound:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
   shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
   assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Proved"
-    by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound s0e_le smem]) simp
+    by (rule analyse_report_ctx_decided[OF mem entry_cov init_sound init_env_le smem]) simp
   thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
 qed
 
@@ -338,15 +338,15 @@ theorem analyse_report_ctx_refuted_sound:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
   shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
            \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   fix ctx s
   assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Refuted"
-    by (rule analyse_report_ctx_decided[OF mem entry_cov s0_sound s0e_le smem]) simp
+    by (rule analyse_report_ctx_decided[OF mem entry_cov init_sound init_env_le smem]) simp
   thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast
 qed
 

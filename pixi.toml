@@ -139,6 +139,8 @@ pages-links-live = { cmd = "python3 scripts/check_pages_links.py --live", descri
 
 [feature.thesis.dependencies]
 typst = ">=0.15"
+# pdftotext and pdftoppm for the page statistics and the whitespace check.
+poppler = "*"
 [feature.thesis.tasks]
 # The refs and links checks also read the citations of goblint-alignment.json.
 thesis-refs = { cmd = "python3 scripts/check_thesis_refs.py", depends-on = [
@@ -197,6 +199,7 @@ thesis-local-data = { depends-on = [
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF and fail on warnings." }
+thesis-whitespace = { cmd = "python3 thesis/tools/whitespace.py", description = "Warn about thesis pages with a large blank stretch (reads the built PDF)." }
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF while allowing warnings during drafting." }
@@ -235,6 +238,7 @@ thesis-check = { depends-on = [
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
+  "thesis-whitespace",
 ], description = "Run all thesis drift and theorem checks." }
 
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [

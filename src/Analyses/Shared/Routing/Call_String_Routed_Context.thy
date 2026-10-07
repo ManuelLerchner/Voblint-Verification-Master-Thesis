@@ -56,14 +56,14 @@ locale call_string_routed_context =
     "cs_route k"
     "routed_call_program S (\<lambda>_. Global) Seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs Seed"
-    bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
+    bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> cfg_node list, call_string_gk, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
     and Pi :: proc_table and ps :: "pname list"
     and k :: nat
-    and bot0 s0d s0g sigma vars x0 sg
+    and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set" +
   assumes is_bot_bot: "is_bot bot"
@@ -99,7 +99,7 @@ begin
 
 sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" Global
   "\<lambda>_. Global"
-  "cs_route k" bot0 s0d s0g sigma vars x0 sg Seed
+  "cs_route k" bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg Seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M "context_policy_of_fun (cs_context k)"
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp

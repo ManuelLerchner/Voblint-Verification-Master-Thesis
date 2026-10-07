@@ -12526,14 +12526,14 @@ let rec sp_compile_with encode p = p (comp (fun a -> Answer a) encode);;
 let rec sp_compile p = sp_compile_with id p;;
 
 let rec routed_node_rhs_buffered _B _C _D
-  pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 s0d s0g =
+  pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 d_0 g_0 =
     (fun (v, c) ->
       (let acc0 =
          DG ((if equal_cfg_nodea v (cfg_entry g)
                then sup _C.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-                      bot0 s0d
+                      bot0 d_0
                else bot0),
-              (if equal_cfg_nodea v (cfg_entry g) then s0g
+              (if equal_cfg_nodea v (cfg_entry g) then g_0
                 else bot _D.order_bot_bounded_semilattice_sup_bot.bot_order_bot))
          in
        let t =

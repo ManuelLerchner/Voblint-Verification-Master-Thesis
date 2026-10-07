@@ -57,14 +57,14 @@ locale routed_context =
   dg_context_activation S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route
     "routed_call_program S global_of seed resolve is_bot"
       "routed_entry_seed_programs seed"
-    bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
+    bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'v \<Rightarrow> 'k"
     and route ("context\<^sup>#")
-    and bot0 s0d s0g sigma vars x0 sg
+    and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list"
     and is_bot :: "'D \<Rightarrow> bool"
@@ -585,17 +585,17 @@ qed
 theorem activation_collect_dg_sound:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
   shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v c \<subseteq> cover v c"
 proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
-  have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
-    by (rule pp_entry_s0d_bound[OF entry_cov])
-  have "\<gamma>\<^sub>D\<^sub>G s0d s0e
+  have le_local: "d\<^sub>0 \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
+    by (rule pp_entry_init_local_bound[OF entry_cov])
+  have "\<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0
         \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
-    by (rule gammaDG_mono[OF le_local s0e_le])
-  with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+    by (rule gammaDG_mono[OF le_local init_env_le])
+  with s0mem init_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
   thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
     using entry_cov by simp
 next
@@ -634,20 +634,20 @@ text \<open>
 lemma routed_valid_activation_trace_has_context:
   fixes S0 :: "store set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
-    and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
-    and s0e_le: "s0e \<le> genv global_of sigma"
+    and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
+    and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
     and tv: "t \<in> \<T>\<^bsub>\<G>,g,S0\<^esub>"
   shows "\<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
 proof -
   interpret G: activation_coverage g S0 cover adm c\<^sub>0 \<G>
   proof unfold_locales
     fix s0 assume s0mem: "s0 \<in> S0"
-    have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
-      by (rule pp_entry_s0d_bound[OF entry_cov])
-    have "\<gamma>\<^sub>D\<^sub>G s0d s0e
+    have le_local: "d\<^sub>0 \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"
+      by (rule pp_entry_init_local_bound[OF entry_cov])
+    have "\<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0
           \<subseteq> gamma_at (cfg_entry g) c\<^sub>0"
-      by (rule gammaDG_mono[OF le_local s0e_le])
-    with s0mem s0_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
+      by (rule gammaDG_mono[OF le_local init_env_le])
+    with s0mem init_sound have "s0 \<in> gamma_at (cfg_entry g) c\<^sub>0" by blast
     thus "s0 \<in> cover (cfg_entry g) c\<^sub>0"
       using entry_cov by simp
   next

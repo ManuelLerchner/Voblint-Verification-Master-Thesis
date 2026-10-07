@@ -46,7 +46,7 @@ locale pure_entry_routed_context =
     "\<lambda>_. buffer_key" route
     "routed_call_program S (\<lambda>_. buffer_key) seed (static_resolve (compile_prog Pi ps)) is_bot"
     "routed_entry_seed_programs seed"
-    bot0 s0d s0g sigma vars x0 sg \<gamma>\<^sub>M
+    bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
   for S :: "(pp \<times> 'c, 'k, unit, 'D::bounded_semilattice_sup_bot,
               'G::bounded_semilattice_sup_bot) dg_spec"
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> 'G \<Rightarrow> store set"
@@ -54,7 +54,7 @@ locale pure_entry_routed_context =
     and Pi :: proc_table and ps :: "pname list"
     and buffer_key :: 'k
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 s0d s0g sigma vars x0 sg
+    and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
     and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
@@ -92,7 +92,7 @@ abbreviation entry_context_rel :: "'c context_policy" where
 
 sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e ())" \<G> "compile_prog Pi ps" buffer_key
   "\<lambda>_. buffer_key"
-  route bot0 s0d s0g sigma vars x0 sg seed
+  route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M entry_context_rel
 proof unfold_locales
   show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp

@@ -57,14 +57,14 @@ theorem pp_dg_spec_of:
         (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. buffer_key))
         (routed_call_program S (\<lambda>_. buffer_key) seed (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma_st vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route_st
         (\<lambda>ctx' src a. dg_spec_edge_program S a src (\<lambda>_. buffer_key))
         (routed_call_program S (\<lambda>_. buffer_key) seed (resolve_st g) (\<lambda>d. d = Bot))
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma_st vars"
 proof -
   have wf: "dg_spec_wf S" by (simp add: S)
@@ -217,13 +217,13 @@ theorem pp_st:
      (routed_node_rhs_buffered intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route_st
         intra_st (cmb_st g)
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma_st vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route_st
         intra_st (cmb_st g)
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma_st vars"
   by (rule pp_dg_spec_of[where S = spec_st])
      (rule exec_dg_spec_def, rule seed_ne_buffer_key, rule pp)

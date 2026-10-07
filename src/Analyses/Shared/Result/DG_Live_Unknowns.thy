@@ -21,7 +21,7 @@ subsection \<open>What a routed equation reads\<close>
 lemma dep_aux_routed_node_rhs:
   assumes wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel site_sel route
                      it cmb extra g cx w). sp_wf q"
-  shows "dep_aux \<tau> (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 s0d s0g
+  shows "dep_aux \<tau> (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0
            (v, cx))
      = (\<Union>q\<in>set (routed_contribution_programs pred_sel site_sel route it cmb extra g cx v).
           dep_program \<tau> q)"
@@ -34,7 +34,7 @@ lemma dep_L_routed_node_rhs_intra:
                      intra_predecessor_addr_list call_site_list route
                      (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs intra_predecessor_addr_list call_site_list buffer_key_at route
-            (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g bot0 s0d s0g) \<tau> (v, cx)"
+            (\<lambda>cx src a. dg_spec_edge_program S a src slot) cmb extra g bot0 d\<^sub>0 g\<^sub>0) \<tau> (v, cx)"
 proof -
   have "dg_spec_edge_program S a (Inl (u, cx)) slot
           \<in> set (routed_contribution_programs intra_predecessor_addr_list call_site_list route
@@ -74,7 +74,7 @@ lemma dep_L_routed_node_rhs_call_site:
     and wf: "\<And>w. \<forall>q \<in> set (routed_contribution_programs pred_sel call_site_list route it
                      (routed_call_program S global_of seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(u, cx) \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list buffer_key_at route it
-            (routed_call_program S global_of seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+            (routed_call_program S global_of seed resolve is_bot) extra g bot0 d\<^sub>0 g\<^sub>0) \<tau> (k, cx)"
 proof -
   have "Inl (u, cx)
           \<in> dep_program \<tau> (routed_call_program S global_of seed resolve is_bot route cx ca u k)"
@@ -98,7 +98,7 @@ lemma dep_L_routed_node_rhs_callee_result:
                      (routed_call_program S global_of seed resolve is_bot) extra g cx w). sp_wf q"
   shows "(FunctionResult q, route u cx ent ca)
            \<in> dep\<^sub>L (routed_node_rhs pred_sel call_site_list buffer_key_at route it
-                (routed_call_program S global_of seed resolve is_bot) extra g bot0 s0d s0g) \<tau> (k, cx)"
+                (routed_call_program S global_of seed resolve is_bot) extra g bot0 d\<^sub>0 g\<^sub>0) \<tau> (k, cx)"
 proof -
   let ?d = "dg_local (\<tau> (Inl (u, cx)))"
   have callee: "dep_program \<tau> (routed_callee_call_program S global_of seed route is_bot cx ca u ?d q)
@@ -508,15 +508,16 @@ proof -
     by (rule routed_analysis_from_live_unknowns[where adm = adm, OF wf solves cover_R total_R])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
-  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+  have init_env_le:
+    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
-      live.pp_entry_s0g_bound[OF entry_cov]]
+      live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
   have "\<A>\<^bsub>declared_global p,adm,root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
              (gsol p)"
     using live.activation_collect_dg_sound
-        [OF entry_cov _ s0e_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+        [OF entry_cov _ init_env_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
     by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
@@ -718,16 +719,17 @@ proof -
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
-  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+  have init_env_le:
+    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
-      live.pp_entry_s0g_bound[OF entry_cov]]
+      live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
   have "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
           root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
         \<subseteq> pgam p (solved_local_reader (live_unknowns p) (sol_env (declared_global p) p) (Inl (v, ctx)))
              (gsol p)"
     using live.activation_collect_dg_sound
-        [OF entry_cov _ s0e_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
+        [OF entry_cov _ init_env_le, of "cinit_stores (declared_global p)" v ctx] cinit_le_init
     by (simp add: sol_global_def)
   then show ?thesis using gamma_live_reader_le by blast
 qed
@@ -757,12 +759,13 @@ proof -
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
-  have s0e_le: "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
+  have init_env_le:
+    "init_env (declared_global p) p \<le> genv global_of (sol_env (declared_global p) p)"
     using init_env_le_sol[OF solves subsetD[OF live_unknowns_sub entry_cov]
-      live.pp_entry_s0g_bound[OF entry_cov]]
+      live.pp_entry_init_global_bound[OF entry_cov]]
     by (simp add: sol_global_def)
   show ?thesis
-    using live.routed_valid_activation_trace_has_context[OF entry_cov _ s0e_le t] cinit_le_init
+    using live.routed_valid_activation_trace_has_context[OF entry_cov _ init_env_le t] cinit_le_init
     by simp
 qed
 

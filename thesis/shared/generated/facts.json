@@ -2,7 +2,7 @@
   "facts": {
     "activation_collect_dg_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>routed_context S \\<gamma>\\<^sub>D\\<^sub>G \\<G> g buffer_key\n          global_of route bot0.0 s0d s0g sigma vars x0.0 sg seed resolve\n          is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G s0d s0e;\n s0e \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S0.0\\<^esub> v c\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, c)))",
+      "statement": "\\<lbrakk>routed_context S \\<gamma>\\<^sub>D\\<^sub>G \\<G> g buffer_key\n          global_of route bot0.0 d\\<^sub>0 g\\<^sub>0 sigma vars x0.0 sg seed\n          resolve is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G d\\<^sub>0 e\\<^sub>0;\n e\\<^sub>0 \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S0.0\\<^esub> v c\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, c)))",
       "theory": "Routed_Context",
       "why": "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
     },
@@ -146,13 +146,13 @@
     },
     "routed_node_rhs_buffered_parts": {
       "oracles": [],
-      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it cmb\n     extra g bot0.0 s0d s0g)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 s0d v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
+      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it cmb\n     extra g bot0.0 d\\<^sub>0 g\\<^sub>0)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 d\\<^sub>0 v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
       "theory": "DG_Indexed_Generator",
       "why": "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
     },
     "routed_node_rhs_parts": {
       "oracles": [],
-      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g\n     bot0.0 s0d s0g)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 s0d v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
+      "statement": "(\\<And>w.\n    \\<forall>p\\<in>set (routed_contribution_programs pred_sel site_sel route\n                         it cmb extra g c w).\n       sp_wf p) \\<Longrightarrow>\neq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g\n     bot0.0 d\\<^sub>0 g\\<^sub>0)\n (v, c) \\<tau> =\nDG (rhs_init g bot0.0 d\\<^sub>0 v \\<squnion>\n    (\\<Squnion>(u,\n        a)\\<leftarrow>pred_sel g v c. rhs_edge it \\<tau> c u a) \\<squnion>\n    (\\<Squnion>(u,\n        ca)\\<leftarrow>site_sel g\n                        v. rhs_call cmb route \\<tau> c u ca v) \\<squnion>\n    rhs_seed extra route \\<tau> c v)\n \\<bottom>",
       "theory": "DG_Indexed_Generator",
       "why": "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
     },

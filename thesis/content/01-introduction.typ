@@ -515,7 +515,7 @@ queries, and the top-down solver. The language is small enough to mechanize
 every semantic connection. Here, _end to end_ means from source executions to
 the result the analysis function returns. Voblint provides the semantic
 connections on both sides of the solver and depends on it only through its
-post-solution guarantee and two side facts (@sec:cert-param). @fig:intro-trust places each stage of
+post-solution guarantee and three side facts (@sec:cert-param). @fig:intro-trust places each stage of
 the analyzer relative to the proof.
 
 #figure(
