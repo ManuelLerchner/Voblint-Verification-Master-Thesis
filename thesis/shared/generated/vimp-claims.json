@@ -253,29 +253,9 @@
       "placement": "flow-sensitive"
     }
   },
-  "dom-guard-sign": {
+  "dom-guard-interval": {
     "fixture": "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
     "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = - x;\n  }\n  __voblint_check(y >= 0);\n}",
-    "settings": {
-      "analysis": "sign",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-int-plus-inverse": {
-    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
-    "settings": {
-      "analysis": "int",
-      "context": "none",
-      "globals": "warrow",
-      "placement": "flow-sensitive"
-    }
-  },
-  "dom-interval-plus-inverse": {
-    "fixture": "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x + 1 < 5) {\n    __voblint_check(x < 4);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",

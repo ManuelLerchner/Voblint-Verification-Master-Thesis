@@ -231,29 +231,13 @@ why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns
 # The domain chapters: guard filtering, explicit reachability, and one program
 # per step of the Sign -> Interval -> Parity -> Congruence -> product ladder.
 
-[claims.dom-guard-sign]
-argv = [
-  "--analysis",
-  "sign",
-  "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
-]
-why = "Backward filtering of 0 < x lets Sign prove y >= 0 after both arms, with y=≥0."
-
-[claims.dom-interval-plus-inverse]
+[claims.dom-guard-interval]
 argv = [
   "--analysis",
   "interval",
-  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
+  "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
 ]
-why = "Interval's identity inverse of + leaves x < 4 unknown on the true arm of x + 1 < 5."
-
-[claims.dom-int-plus-inverse]
-argv = [
-  "--analysis",
-  "int",
-  "tests/regression/02-control-flow/known-imprecision/03-interval_plus_inverse_is_identity.vimp",
-]
-why = "Int's component inverses of + carry no order either, so x < 4 stays unknown on the true arm of x + 1 < 5."
+why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,+∞]."
 
 [claims.dom-query-tree-sign]
 argv = [
