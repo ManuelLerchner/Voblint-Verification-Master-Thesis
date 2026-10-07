@@ -955,6 +955,11 @@ jobs:
       - name: Build the thesis (warnings are errors)
         run: pixi run thesis-typst
 
+      # A float that does not fit leaves a gap Typst does not report. This
+      # annotates pages whose text area is mostly blank; it never fails.
+      - name: Check the thesis for large blank stretches
+        run: pixi run thesis-whitespace
+
       # Downloadable from the run, so a reviewer never has to install a
       # toolchain to see what a branch changed.
       - name: Upload the PDF

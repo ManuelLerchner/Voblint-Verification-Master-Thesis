@@ -197,6 +197,7 @@ thesis-local-data = { depends-on = [
 thesis-typst = { cmd = "bash thesis/tools/typst-build.sh", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF and fail on warnings." }
+thesis-whitespace = { cmd = "python3 thesis/tools/whitespace.py", description = "Warn about thesis pages with a large blank stretch (reads the built PDF)." }
 thesis-draft = { cmd = "bash thesis/tools/typst-build.sh --allow-warnings", depends-on = [
   "thesis-local-data",
 ], description = "Build the thesis PDF while allowing warnings during drafting." }
