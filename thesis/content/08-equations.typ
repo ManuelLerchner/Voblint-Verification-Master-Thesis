@@ -261,7 +261,7 @@ The names $italic("rhs")$, $italic("init")$, $italic("call")_u$ and
 $italic("calls")$ are our notation for the parts of
 #isaconst("routed_node_rhs"), not constants of the formalization.
 A transfer that uses analysis globals also reads and publishes them
-(@sec:manager).
+(@sec:shared-facts).
 
 Local edges keep the context. An activation keeps its context from entry to
 return (@sec:contexts), so a local edge never changes it, and #oblig("INTRA")
@@ -778,7 +778,7 @@ $-infinity$ reported in @sec:eq-unknowns.
 
 An analysis works with two kinds of value. A local unknown holds an abstract
 state of its local domain, and an analysis global holds a value of its global
-domain (@sec:analysis-globals). The vendored solver has a single value type
+domain (@sec:shared-facts). The vendored solver has a single value type
 $'d$ for all unknowns, so both kinds must fit into one type.
 
 Voblint uses their product. Every unknown holds a pair #isatype("dg_state") of

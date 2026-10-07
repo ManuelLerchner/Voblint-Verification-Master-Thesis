@@ -43,7 +43,7 @@ values with exclusion sets, which the least-upper-bound requirement of
 integer domains. Goblint ships Sign only as a tutorial analysis
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/tutorials/signs.ml")[`signs.ml`]).
 
-== What an instance supplies <sec:instances-supply>
+== What a numeric domain proves <sec:instances-supply>
 
 What must a new numeric domain prove before the source-level theorem covers
 it? It supplies the record #isatype("nonrelational_ops") of
