@@ -3,7 +3,6 @@
   "links": {
     "const:Activation_Seed": "Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.global_unknown.Activation_Seed%7Cconst",
     "const:Analysed": "Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.analysis_answer.Analysed%7Cconst",
-    "const:Analysis_Buffer": "Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.global_unknown.Analysis_Buffer%7Cconst",
     "const:Analysis_Global": "Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.global_unknown.Analysis_Global%7Cconst",
     "const:Basics_side.eq": "Unsorted/TD/Basics_side.html#Basics_side.eq%7Cconst",
     "const:Basics_side.part_post_solution": "Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst",
@@ -353,6 +352,7 @@
     "thm:default_st_is_bot_for_gamma_iff": "Voblint/Voblint_Exec/Default_St_Reachability.html#Default_St_Reachability.default_st_is_bot_for_gamma_iff%7Cfact",
     "thm:demo_ivl_x_at_branch": "Voblint/Voblint_Examples_Relational/Example_Relational_DG_Demo.html#Example_Relational_DG_Demo.demo_ivl_x_at_branch%7Cfact",
     "thm:demo_rel_learns_xy": "Voblint/Voblint_Examples_Relational/Example_Relational_DG_Demo.html#Example_Relational_DG_Demo.demo_rel_learns_xy%7Cfact",
+    "thm:dep_aux_buffer_sides": "Voblint/Voblint_Solver/Strategy_Tree_Side_Buffering.html#Strategy_Tree_Side_Buffering.dep_aux_buffer_sides%7Cfact",
     "thm:dg_analysis.init_sound": "Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.init_sound%7Cfact",
     "thm:dg_spec_of_contract": "Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of_contract%7Cfact",
     "thm:entry_state_activation_collect_sound": "Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.entry_state_activation_collect_sound%7Cfact",

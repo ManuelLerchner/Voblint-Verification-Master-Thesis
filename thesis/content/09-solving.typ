@@ -22,8 +22,8 @@
 
 @ch:equations showed that every post-solution of the generated equations
 covers the context-indexed collecting semantics, provided the solved set
-contains the program entry and every unknown an execution from there can move
-to (#isathm("activation_collect_dg_sound")). This chapter shows that the
+contains the program entry and every unknown an execution from the entry
+reaches (#isathm("activation_collect_dg_sound")). This chapter shows that the
 analyzer obtains such a post-solution. Voblint solves the equations with the
 verified top-down solver of Tilscher et al. @tilscher26, which is proved
 partially correct. @ch:equations described each right-hand side by the value it
@@ -39,13 +39,13 @@ steps assume that the solver returns; whether it does is the last question.
 == Adapting the equations to the solver <sec:eq-encoding>
 
 The solver accepts a right-hand side only as a strategy tree, uses one value
-type for all unknowns, and allows side effects only to global unknowns. The natural encoding of the equations, the one Apinis et al. and
-Goblint use, needs four things this interface does not offer
+type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, along the lines of Apinis et al.
+and Goblint, needs four things this interface does not offer
 (@tab:eq-adapters). @ch:equations already stated the equations in the adapted
 form; this section explains why each adaptation is needed. Only buffering
 rewrites a right-hand side after the fact, and it leaves the value, the
 publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
-#isathm("sides_of_rhs_buffer_sides")).
+#isathm("sides_of_rhs_buffer_sides"), #isathm("dep_aux_buffer_sides")).
 
 #figure(
   table(
@@ -53,7 +53,7 @@ publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
     align: (left, left, left),
     stroke: none,
     table.hline(),
-    [*the natural encoding needs*], [*the solver offers*], [*adapter*],
+    [*the direct encoding needs*], [*the solver offers*], [*adapter*],
     table.hline(stroke: 0.5pt),
     [read a result chosen from the caller's value], [one read at a time],
     [strategy tree (@sec:eq-trees)],
@@ -66,7 +66,7 @@ publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
     table.hline(),
   ),
   placement: none,
-  caption: [Where the natural encoding of the equations and the interface of
+  caption: [Where the direct encoding of the equations and the interface of
     the vendored solver differ, and the adapter that bridges each.],
 ) <tab:eq-adapters>
 
@@ -74,9 +74,9 @@ publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
 
 A local edge always reads the same unknown, its predecessor, whereas a call
 chooses what to read from values it has already read. In the running example the continuation $(italic("pp3"), c_0)$ first reads the
-caller $(italic("pp2"), c_0)$. Only from that value does it learn the entry
-state $n = [5, 5]$, with it the context $c_1$, and only then which result to
-read, $(ctor("FunctionResult") thin italic("bump"), c_1)$. A strategy tree
+caller $(italic("pp2"), c_0)$. Only from that value does it compute the
+entry state $n = [5, 5]$, which determines the context $c_1$, and only then
+does it know which result to read, $(ctor("FunctionResult") thin italic("bump"), c_1)$. A strategy tree
 allows this, because each continuation receives the value just read and may
 choose the next read from it. In the notation of @sec:td, the contribution of
 a call at $u$ in context $c$ (#isaconst("rhs_call")) is the value of the tree
@@ -89,13 +89,9 @@ $
 $
 where $d$ is the caller's value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$,
 and $r$ is the callee's result; the #ctor("Side") step publishes the entry
-state to the callee's seed (@sec:eq-seed-global). This is the tree
-#isaconst("routed_call_program") builds for one callee and one entry pair
-whose entry state is not bottom; it also contains the bottom test of
-@sec:eq-call and folds over all callees and the list of entry pairs that
-$enterh$ returns. As in @ch:equations, we write
-$ctor("Activation_Seed") thin p space c'$ for the seed key, which Isabelle
-indexes by the callee's entry node.
+state to the callee's seed (@sec:eq-seed-global).
+#isaconst("routed_call_program") implements this tree for a call and
+additionally handles bottom entry states and several callees or entry pairs.
 
 === Local entries <sec:eq-seed-global>
 
@@ -150,17 +146,23 @@ callee.
     [$(v, c)$, local], [the state at $v$ in context $c$], [$(d, lbot)$],
     [#isaconst("Activation_Seed"), global], [an entry state published by a call], [$(e, lbot)$],
     [#isaconst("Analysis_Global") $v$, global], [the analysis global $v$], [$(lbot, g)$],
-    [#isaconst("Analysis_Buffer"), global], [a node's own global half], [$(lbot, g)$],
     table.hline(),
   ),
   placement: none,
   caption: [Which half of #isatype("dg_state") each kind of unknown uses. The
-    global unknowns are named by #isatype("global_unknown"). No selectable
-    analysis publishes to #isaconst("Analysis_Buffer").],
+    global unknowns are named by #isatype("global_unknown").],
 ) <tab:eq-carrier>
 
 Transfers never see the pair or the seeds: the manager of @sec:shared-facts
 gives each transfer the local state and access to the analysis globals.
+Goblint combines the two kinds of value in a
+#link(
+  "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/constraint/translators.ml#L30-L32",
+)[lifted sum]
+instead, in which each unknown holds a value of exactly one of the two kinds.
+Voblint uses the product because its componentwise lattice structure keeps
+the Isabelle proofs simple, at the price of an unused #lbot half in every
+unknown.
 
 === Repeated publications <sec:eq-buffer>
 
@@ -490,15 +492,16 @@ the equation system $T$, the valuation #sol and the solved set `vars`:
 #thy("part_post_solution")
 
 $T$ (#isatype("eqsT", thy: "Basics_side")) maps each unknown $u$ to its
-strategy tree $T med u$. Three functions follow the path that the reads select
-under #sol. #isaconst("traverse_rhs", thy: "Basics_side") returns the answer
-at its end, and $#isaconst("eq", thy: "Basics_side") med T med u med sol$
-abbreviates it for $T med u$; #isaconst("sides_of_rhs") joins the published
-values per target, #lbot where the tree publishes nothing; and
-$#isaconst("dep\<^sub>L") med T med sol med u$ is the set of local unknowns
-the path reads. Because reads depend on values read (@sec:eq-trees), all three
-are taken under the final valuation. With them the certificate states four
-facts about the query $x$ and the solved set $V$:
+strategy tree $T med u$. Evaluating a tree under the final valuation #sol
+determines three things: the answer it returns, the local unknowns it reads,
+and the contributions it publishes. In Isabelle these are
+$#isaconst("eq", thy: "Basics_side") med T med u med sol$ (an abbreviation of
+#isaconst("traverse_rhs", thy: "Basics_side")),
+$#isaconst("dep\<^sub>L") med T med sol med u$, and
+#isaconst("sides_of_rhs"), which joins the published values per target and is
+#lbot where the tree publishes nothing. They are taken under the final
+valuation because reads depend on values read (@sec:eq-trees). With them the
+certificate states four facts about the query $x$ and the solved set $V$:
 $
   & x in V & wide "(C1)" \
   forall u in V. med & #isaconst("dep\<^sub>L") med T med sol med u subset.eq V & wide "(C2)" \
@@ -555,8 +558,8 @@ No execution reaches line 3, so the failing step never happens. The proof only
 needs a region of the graph that contains the entry, that executions cannot
 leave, and in which every node leads to a solved result. To prove these
 properties once for every solve, the region should be read off the program
-text, and liveness, which marks the code that no `return` cuts off, is such a
-region. A command _can
+text, independently of a particular solve. _Liveness_ provides such a region:
+it marks the code that no preceding `return` cuts off. A command _can
 complete normally_ if it can end without executing a `return`. Assignments and
 calls can, `return` cannot, an `if` can when one of its branches can, and a
 loop always counts as completing normally. A statement is _live_ if, in each
@@ -709,8 +712,8 @@ therefore needs no premise about which unknowns the solve visited.
 
 === The solver as a parameter <sec:cert-param>
 
-The soundness argument uses four facts about a solve that returns, none of
-which depends on how the solver works: the result is a post-solution on the solved set
+The soundness argument uses only four facts about a solve that returns, and
+none of them depends on how the solver works. They are: the result is a post-solution on the solved set
 (the certificate), the solved set is finite, the run lies in the domain on
 which the first two facts hold (@sec:termination), and the executable run
 returns that same result. Finiteness lets
@@ -730,7 +733,7 @@ The solver merges each new contribution into the value it holds, and this
 merge, the _update rule_, decides both precision and termination. Joining
 keeps every contribution exactly but may grow forever; widening stops the
 growth but loses precision. Stemmler et
-al. collect and propose update rules @stemmler25[§3–4], and Tilscher et al. formalize a
+al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
 generic interface for them and prove five rules sound against it
 @tilscher26; Voblint exposes all five.
 
@@ -746,17 +749,14 @@ they record and whether they widen:
 - _warrow per origin_ warrows the origin's old record with the new
   contribution, then joins the records;
 - _bounded narrowing_ does the same, but also counts how often an origin has
-  switched from widening to narrowing. Once the count reaches a bound, a record
-  in its narrowing phase ignores contributions below it, so each further switch narrows
-  only once.
+  switched from widening to narrowing. Once the count reaches a bound, every
+  later switch to narrowing takes only its first narrowing step.
 @fig:update-rules runs all five on one sequence of contributions, and the
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site]
 runs them on a program with several shared callee entries. In
-#isaconst("run_voblint") the entry seeds receive contributions, and so does
-the unknown of each program global when program globals are flow-insensitive
-(@sec:mixed-flow). The rule therefore decides how a callee's entry state
-accumulates across call sites, and how a flow-insensitive global accumulates
-its writes.
+#isaconst("run_voblint") the rule decides how a callee's entry state
+accumulates across call sites and, with flow-insensitive program globals
+(@sec:mixed-flow), how a global accumulates its writes.
 
 No rule is more precise on every program, and the rules also differ in
 termination. @sec:eval-precision compares them on the programs of
@@ -831,17 +831,18 @@ $"Var" -> A$, total functions on variable names (the relational order
 analysis has its own state type, #isatype("relc")). This suits proofs, where
 lookup is function application and the lattice operations are pointwise. The solver, however, cannot compute with it: after every
 evaluation it decides whether an unknown changed, and deciding $f lle g$ for two such
-functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein meet the same
-problem in the abstract interpreter of Concrete Semantics and solve it by
-data refinement @nipkow14[§13.6]: a state is a finite list of variables with
-their values, every unlisted name reads as #ltop, and two states are compared
-on the listed names. Such a representation works like a default dictionary,
-a finite dictionary that answers every missing key with a default. It
-represents a total function exactly and therefore loses no precision. We call an executable representation of
-abstract states an _executable state carrier_, in this chapter _carrier_ for
-short; it is distinct from the carrier of a domain (@ch:background).
+functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein address the same
+problem in the abstract interpreter of Concrete Semantics by refining total
+function states to a finite representation with a default @nipkow14[§13.6]:
+a state is a finite list of variables with their values, every unlisted name
+reads as #ltop, and two states are compared on the listed names. Such a
+representation works like a default dictionary, a finite dictionary that
+answers every missing key with a default. Voblint follows the same idea but
+needs two defaults. It
+represents a total function exactly and therefore loses no precision. We call such a representation an _executable state carrier_ (_carrier_ for
+short, distinct from the carrier of a domain, @ch:background).
 
-A single default for all names cannot express the initial state. VIMP initializes globals to zero, as
+VIMP initializes globals to zero, as
 C does for objects with static storage (#c11("6.7.9p10")), and leaves the
 locals of `main` arbitrary (@sec:vimp-vs-c). The initial state must give every local
 the value #ltop and every global the value $0^sharp$, the abstract value of the
@@ -876,10 +877,8 @@ state means what its function means under the concretization
 #isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
 (#isaconst("default_st_gamma")) is
 $ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
-The solver never computes $sem(d)$; it uses only the
-executable lattice operations: bottom to start every unknown, order and
-equality to detect change, join to combine contributions, and widening and
-narrowing. Function states get order, join and bottom pointwise from HOL, but
+The solver never computes $sem(d)$; it uses only the executable lattice
+operations. Function states get order, join and bottom pointwise from HOL, but
 no widening or narrowing. The carrier instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the generic solver runs on
 it unchanged.
