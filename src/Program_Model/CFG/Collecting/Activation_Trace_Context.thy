@@ -135,12 +135,12 @@ inductive activation_context_rel ::
 where
   Root [intro]: "activation_context_rel \<G> adm c\<^sub>0 g (Root xs) c\<^sub>0"
 | Call [intro]:
-    "activation_context_rel \<G> adm c\<^sub>0 g parent ctx
-     \<Longrightarrow> admits_call_context \<G> g adm (sink_node parent) ctx p (sink_store parent) es ctx'
-     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Call parent ((FunctionEntry p, es) # xs)) ctx'"
+    "activation_context_rel \<G> adm c\<^sub>0 g caller c
+     \<Longrightarrow> admits_call_context \<G> g adm (sink_node caller) c p (sink_store caller) es c'
+     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Call caller ((FunctionEntry p, es) # xs)) c'"
 | Resume [intro]:
-    "activation_context_rel \<G> adm c\<^sub>0 g current ctx
-     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Resume current callee xs) ctx"
+    "activation_context_rel \<G> adm c\<^sub>0 g current c
+     \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g (Resume current callee xs) c"
 
 
 inductive_cases activation_context_rel_RootE [elim!]:

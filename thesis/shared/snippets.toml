@@ -65,13 +65,21 @@ why = "Chapter 6, the contract section: the record of operations an analysis sup
 file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, when an answer to an EvalInt query holds at a store."
 
-[snippets.oracle_holds]
+[snippets.channel_holds]
 file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
 why = "Chapter 7, a channel holds at a store when each of its answers holds there."
 
 [snippets.local_spec]
 file = "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy"
 why = "Chapter 7, the local specification: every operation takes a channel as its first argument."
+
+[snippets.query_algebra]
+file = "src/Abstract_Interpreter/Framework/Cooperation/Analysis_Query.thy"
+why = "Chapter 7, the two laws that let answers from several analyses be combined."
+
+[snippets.mcp_gamma]
+file = "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy"
+why = "Chapter 7, the combined state denotes the intersection of its fields' meanings."
 
 [snippets.ask_rec]
 file = "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy"

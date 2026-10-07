@@ -20,27 +20,27 @@ text \<open>
 locale query_algebra =
   fixes answer_holds :: "'q \<Rightarrow> 'r::{semilattice_inf, order_top} \<Rightarrow> store \<Rightarrow> bool"
   assumes top_sound: "answer_holds q \<top> s"
-    and inf_sound: "answer_holds q a s \<Longrightarrow> answer_holds q b s \<Longrightarrow> answer_holds q (a \<sqinter> b) s"
+      and inf_sound: "\<lbrakk>answer_holds q a s; answer_holds q b s\<rbrakk> \<Longrightarrow> answer_holds q (a \<sqinter> b) s"
 begin
 
 text \<open>
-  An oracle answers every query. It holds at a store when each of its answers
+  A channel answers every query. It holds at a store when each of its answers
   is true there. Component transfers are proved against this predicate, never
   against a particular partner.
 \<close>
 
-definition oracle_holds :: "('q \<Rightarrow> 'r) \<Rightarrow> store \<Rightarrow> bool" where
-  "oracle_holds ask s \<longleftrightarrow> (\<forall>q. answer_holds q (ask q) s)"
+definition channel_holds :: "('q \<Rightarrow> 'r) \<Rightarrow> store \<Rightarrow> bool" where
+  "channel_holds ch s \<longleftrightarrow> (\<forall>q. answer_holds q (ch q) s)"
 
-lemma oracle_holdsD: "oracle_holds ask s \<Longrightarrow> answer_holds q (ask q) s"
-  by (simp add: oracle_holds_def)
+lemma channel_holdsD: "channel_holds ch s \<Longrightarrow> answer_holds q (ch q) s"
+  by (simp add: channel_holds_def)
 
-lemma oracle_holds_top [simp, intro]: "oracle_holds (\<lambda>_. \<top>) s"
-  by (simp add: oracle_holds_def top_sound)
+lemma channel_holds_top [simp, intro]: "channel_holds (\<lambda>_. \<top>) s"
+  by (simp add: channel_holds_def top_sound)
 
-lemma oracle_holds_inf [intro]:
-  "oracle_holds a s \<Longrightarrow> oracle_holds b s \<Longrightarrow> oracle_holds (\<lambda>q. a q \<sqinter> b q) s"
-  by (simp add: oracle_holds_def inf_sound)
+lemma channel_holds_inf [intro]:
+  "channel_holds ch\<^sub>1 s \<Longrightarrow> channel_holds ch\<^sub>2 s \<Longrightarrow> channel_holds (\<lambda>q. ch\<^sub>1 q \<sqinter> ch\<^sub>2 q) s"
+  by (simp add: channel_holds_def inf_sound)
 
 end
 
@@ -61,6 +61,9 @@ datatype query = EvalInt exp
 
 type_synonym answer = "int_dom query_lift"
 
+abbreviation gamma_answer :: "answer \<Rightarrow> int set" where
+  "gamma_answer \<equiv> gamma_query_lift gamma_int_dom"
+
 text \<open>
   An answer claims that the expression evaluates into its concretization.
   \<open>QTop\<close> claims nothing: an analysis that does not understand the question
@@ -71,7 +74,7 @@ text \<open>
 \<close>
 
 fun eval_holds :: "query \<Rightarrow> answer \<Rightarrow> store \<Rightarrow> bool" where
-  "eval_holds (EvalInt e) a s \<longleftrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_query_lift gamma_int_dom a"
+  "eval_holds (EvalInt e) a s \<longleftrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer a"
 
 interpretation eval_query: query_algebra eval_holds
 proof
@@ -94,7 +97,7 @@ definition answer_of_int :: "int \<Rightarrow> answer" where
   "answer_of_int n = QLifted (int_dom_of_int n)"
 
 lemma gamma_answer_of_int [simp]:
-  "gamma_query_lift gamma_int_dom (answer_of_int n) = {n}"
+  "gamma_answer (answer_of_int n) = {n}"
   by (simp add: answer_of_int_def)
 
 fun answer_const :: "answer \<Rightarrow> int option" where
@@ -120,7 +123,7 @@ definition answer_of_ivl :: "ivl \<Rightarrow> answer" where
   "answer_of_ivl i = QLifted ((\<top> :: int_dom)\<lparr>int_ivl := i\<rparr>)"
 
 lemma gamma_answer_of_ivl [simp]:
-  "gamma_query_lift gamma_int_dom (answer_of_ivl i) = gamma_ivl i"
+  "gamma_answer (answer_of_ivl i) = gamma_ivl i"
   by (simp add: answer_of_ivl_def top_int_dom_ext_def top_sign_def top_parity_def
       gamma_int_dom_def)
 

@@ -291,7 +291,7 @@ that the run did not finish within its budget. It yields no verdict and does
 not show that the solver diverges. A hang may come from the solve, from the
 fixpoint reduction of Int (@ch:instances), or from the toolchain
 and the browser. An abort branch of a code equation, such as the query
-recursion exceeding #isaconst("query_depth") (@sec:coop-channel), raises an
+recursion exceeding #isaconst("query_depth"), raises an
 exception and yields no answer.
 
 The delivered tools run the constant the source-level theorem is about, through

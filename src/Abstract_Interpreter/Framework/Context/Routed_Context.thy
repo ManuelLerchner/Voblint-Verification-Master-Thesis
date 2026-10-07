@@ -533,8 +533,8 @@ next
     qed
     have "combine_collect \<G> dst s t
         \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_rhs ?sub sigma)) (?g \<squnion> genv global_of (sides_of_rhs ?sub sigma))"
-      using combine_sound[where dc = cont'
-          and de = "dg_local (sigma (Inl (FunctionResult p, ?ex_ctx)))"
+      using combine_sound[where q = cont'
+          and r = "dg_local (sigma (Inl (FunctionResult p, ?ex_ctx)))"
           and \<tau> = sigma and key = global_of and ci = ?ci, OF ccov tin]
       by simp
     also have "\<dots> = \<gamma>\<^sub>D\<^sub>G (dg_local (traverse_program ?alt sigma))
@@ -587,8 +587,8 @@ lemma activation_collect_dg_sound:
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and s0_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G s0d s0e"
     and s0e_le: "s0e \<le> genv global_of sigma"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
-           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v c
+           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, c)))"
 proof (rule activation_collect_sound[where cover = "cover"], unfold_locales)
   fix s0 assume s0mem: "s0 \<in> S0"
   have le_local: "s0d \<le> dg_local (sigma (Inl (cfg_entry g, c\<^sub>0)))"

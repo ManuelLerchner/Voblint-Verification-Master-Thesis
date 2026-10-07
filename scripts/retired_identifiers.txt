@@ -4063,3 +4063,11 @@ ownership_split_enter_transfer
 ownership_split_combine_transfer
 gamma_ownership_split
 gamma_ownership_split_mono
+
+# --- Query validity named after the channel it constrains (2026-10-07) ---
+# The thesis calls the function from queries to answers a channel, after Verasco.
+oracle_holds
+oracle_holdsD
+oracle_holds_top
+oracle_holds_inf
+Oracle_Wrappers

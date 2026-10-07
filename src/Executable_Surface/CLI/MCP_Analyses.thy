@@ -37,7 +37,7 @@ text \<open>
   (\<^const>\<open>with_qry\<close>) without touching a transfer.
 \<close>
 
-definition part_answer :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> answers"
+definition part_answer :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> channel"
 where
   "part_answer \<G> a x q =
      (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> value_answer (registration_of a) (mcp_rd \<G> r) q)"
@@ -47,7 +47,7 @@ lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> eval_hol
 
 definition mcp_field ::
   "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
-  "mcp_field \<G> p a = with_qry (\<lambda>A. part_answer \<G> a) (field_spec (registration_of a) \<G> p)"
+  "mcp_field \<G> p a = with_qry (\<lambda>ch. part_answer \<G> a) (field_spec (registration_of a) \<G> p)"
 
 lemma mcp_field_sound:
   "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)

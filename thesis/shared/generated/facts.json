@@ -2,13 +2,13 @@
   "facts": {
     "activation_collect_dg_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>routed_context S \\<gamma>\\<^sub>D\\<^sub>G \\<G> g buffer_key\n          global_of route bot0.0 s0d s0g sigma vars x0.0 sg seed resolve\n          is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G s0d s0e;\n s0e \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S0.0\\<^esub> v ctx\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, ctx)))",
+      "statement": "\\<lbrakk>routed_context S \\<gamma>\\<^sub>D\\<^sub>G \\<G> g buffer_key\n          global_of route bot0.0 s0d s0g sigma vars x0.0 sg seed resolve\n          is_bot \\<gamma>\\<^sub>M adm;\n (cfg_entry g, c\\<^sub>0) \\<in> vars;\n S0.0 \\<subseteq> \\<gamma>\\<^sub>D\\<^sub>G s0d s0e;\n s0e \\<le> genv global_of sigma\\<rbrakk>\n\\<Longrightarrow> \\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S0.0\\<^esub> v c\n                  \\<subseteq> \\<gamma>\\<^sub>M (sg (Inl (v, c)))",
       "theory": "Routed_Context",
       "why": "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
     },
     "activation_collect_sound": {
       "oracles": [],
-      "statement": "activation_coverage g S cover adm c\\<^sub>0 \\<G> \\<Longrightarrow>\n\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub> v ctx \\<subseteq> cover v ctx",
+      "statement": "activation_coverage g S cover adm c\\<^sub>0 \\<G> \\<Longrightarrow>\n\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub> v c \\<subseteq> cover v c",
       "theory": "Activation_Backbone",
       "why": "Main-statements appendix: the activation coverage theorem."
     },
@@ -62,13 +62,13 @@
     },
     "ls_channel_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>sound_local_spec \\<G> gm c; s \\<in> gm x\\<rbrakk>\n\\<Longrightarrow> eval_query.oracle_holds (ls_channel c x) s",
+      "statement": "\\<lbrakk>sound_local_spec \\<G> \\<gamma>\\<^sub>c c;\n s \\<in> \\<gamma>\\<^sub>c x\\<rbrakk>\n\\<Longrightarrow> eval_query.channel_holds (ls_channel c x) s",
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: the channel the framework supplies holds at every store of the state."
     },
     "mcp_combine_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<forall>(g, c)\\<in>set gcs. sound_local_spec \\<G> g c;\n mcp_independent gcs; gcs \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> sound_local_spec \\<G> (mcp_gamma (map fst gcs))\n                   (mcp_combine (map snd gcs))",
+      "statement": "\\<lbrakk>\\<forall>(\\<gamma>\\<^sub>i, c\\<^sub>i)\\<in>set comps.\n            sound_local_spec \\<G> \\<gamma>\\<^sub>i c\\<^sub>i;\n mcp_independent comps; comps \\<noteq> []\\<rbrakk>\n\\<Longrightarrow> sound_local_spec \\<G> (mcp_gamma (map fst comps))\n                   (mcp_combine (map snd comps))",
       "theory": "MCP_Spec",
       "why": "Cooperation chapter: independent sound components combine into a sound component."
     },

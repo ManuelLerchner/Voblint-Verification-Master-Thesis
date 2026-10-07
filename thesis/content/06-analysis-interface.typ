@@ -193,7 +193,7 @@ $e$ above. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
 local state a transfer returns and the environment of what it publishes, which
 is $lbot$ at every unknown it does not publish to.
 #isaconst("combine_out") and #isaconst("combine_pub") are the same for combine,
-whose resume state is `dc` and whose exit state is `de`. Third, $cal(G)$ marks
+whose resume state is $q$ and whose exit state is $r$. Third, $cal(G)$ marks
 the program globals, which #isaconst("combine_collect") takes from the callee.
 
 #isathm("analysis_contract.gammaDG_mono") requires that a larger state or

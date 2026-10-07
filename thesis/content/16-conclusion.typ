@@ -166,7 +166,7 @@ On the analysis side, the order analysis drops the pairs of an assigned variable
 relearning some by asking, and it keeps nothing across calls. A useful relational domain needs its own transfer proofs, and
 through the query channel it could answer the numeric analyses at branches as
 well as at assignments (@sec:relational). The combined state admits one query
-kind and components without globals (@sec:coop-limits). Further query kinds
+kind and components without globals (@sec:coop-queries, @sec:coop-catalogue). Further query kinds
 need their own truth relation, and a component with globals needs the
 combination to keep each analysis's globals apart, as Goblint's MCP tags them
 with the analysis they belong to. In the shipped analyzer the global unknowns

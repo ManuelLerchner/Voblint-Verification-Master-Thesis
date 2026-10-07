@@ -629,7 +629,7 @@ Isabelle states the five obligations as the assumptions of the locale
   placement: top,
   caption: [The declaration of #isalocale("activation_coverage"), lifted from the
     theory. In #oblig("RETURN"), $p'$ and #isai("es") range over every call edge
-    out of #isai("cl"). On compiled programs a call site has one call edge
+    out of #isai("u"). On compiled programs a call site has one call edge
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
 ) <fig:activation-coverage>
 

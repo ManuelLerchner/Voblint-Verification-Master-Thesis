@@ -135,12 +135,12 @@ lemma closed_step_state_local_spec [simp]:
   by (simp add: closed_step_def ls_step_def state_local_spec_def fun_eq_iff)
 
 lemma ls_step_state_local_spec [simp]:
-  "ls_step (state_local_spec \<G> sk asn sp br bd rt en ev) A a
+  "ls_step (state_local_spec \<G> sk asn sp br bd rt en ev) ch a
      = local_spec_step sk asn sp br bd rt ev a"
   by (simp add: ls_step_def state_local_spec_def)
 
 lemma ls_combine_state_local_spec [simp]:
-  "ls_combine (state_local_spec \<G> sk asn sp br bd rt en ev) A B ci dc de
+  "ls_combine (state_local_spec \<G> sk asn sp br bd rt en ev) ch ch' ci dc de
      = combine\<^sup># \<G> (ci_dst ci) dc de"
   by (simp add: state_local_spec_def)
 
@@ -152,8 +152,8 @@ abbreviation tf_spec :: "'a abs_state local_spec" where
 
 theorem state_local_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
 proof -
-  have step: "edge_collect a (\<lbrakk>d\<rbrakk> \<inter> Collect (eval_query.oracle_holds A))
-      \<subseteq> \<lbrakk>ls_step tf_spec A a d\<rbrakk>" for a A and d :: "'a abs_state"
+  have step: "edge_collect a (\<lbrakk>d\<rbrakk> \<inter> Collect (eval_query.channel_holds ch))
+      \<subseteq> \<lbrakk>ls_step tf_spec ch a d\<rbrakk>" for a ch and d :: "'a abs_state"
     by (simp only: ls_step_state_local_spec)
        (rule subset_trans[OF edge_collect_mono[OF Int_lower1] step_sound_for])
   show ?thesis
@@ -265,7 +265,7 @@ lemma local_spec_step_transfer_lift:
   by (cases a) simp_all
 
 lemma ls_step_lifted_state_local_spec [simp]:
-  "ls_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) A a
+  "ls_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) ch a
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: ls_step_def lifted_state_local_spec_def local_spec_step_transfer_lift)
 

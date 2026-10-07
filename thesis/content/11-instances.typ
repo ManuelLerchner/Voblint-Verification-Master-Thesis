@@ -472,7 +472,7 @@ assignment, so after `y = y + 1` it holds #state("order-alone-order", "17:5")
 and reports #verdict("order-alone-order", "17:5"), and it forgets everything
 across calls. Alone it also cannot compare a variable with a constant. It shows
 that the proved interface admits a relational local state, and its use is as a
-partner of Interval (@sec:coop-examples).
+partner of Interval (@sec:eval-precision).
 
 #isaconst("rel_order_spec") reads and publishes an analysis global, so it
 cannot join the combined state of @ch:cooperation. The analyzer runs the same
