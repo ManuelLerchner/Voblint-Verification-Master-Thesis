@@ -15,7 +15,9 @@
   link(claim-blob + "claims.toml", raw(name))
 } else {
   let _ = claim-text(name)
-  link(claim-playground(name), raw(name))
+  // Playground links render black by default (tum.typ); a claim in prose is
+  // a web link the reader should see as one.
+  link(claim-playground(name), underline(offset: 1.5pt, text(fill: rgb("#1565C0"), raw(name))))
 }
 
 // The run was stopped by `--timeout`: the report is the CLI's rejection line.

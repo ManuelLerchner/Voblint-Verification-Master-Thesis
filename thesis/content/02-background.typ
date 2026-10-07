@@ -665,7 +665,9 @@ from the query and solves only the unknowns it meets @seidl21. Its result is a
 partial certificate. Seidl and Vogler prove on paper that their
 top-down variants with widening and narrowing, including the side-effecting
 one, terminate on arbitrary, possibly non-monotone, systems as long as only
-finitely many unknowns are encountered @seidl21[Thms. 1 and 5].
+finitely many unknowns are encountered @seidl21[Thms. 1 and 5]; the
+side-effecting variant also requires side effects to target only unknowns
+without a right-hand side.
 
 == The verified top-down solver <sec:td>
 

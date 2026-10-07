@@ -44,7 +44,7 @@ that the solved abstract state at $(v, c)$ describes under the solved values
 of the analysis globals (@sec:sound-core). The running example is the program
 of @fig:program-to-equations.
 
-== Equations over contexts <sec:eq-call>
+== Unknowns and right-hand sides <sec:eq-call>
 
 The running example calls `bump` first with 5 and then with 4. If both
 activations shared one abstract state at the entry of `bump`, that state would
@@ -84,7 +84,8 @@ $italic("xs")$, and the empty join is $lbot$. The lists range over the local
 edges into $v$ and over the calls that return to $v$. The parts
 #isaconst("rhs_init"), #isaconst("rhs_edge"), #isaconst("rhs_call") and
 #isaconst("rhs_seed") are the four sources in this order. Publications to analysis globals (@sec:shared-facts) are not part of this
-value.
+value. A post-solution lies above it, and $conc_M$ is monotone, so
+$conc_M(sol(v, c))$ contains what each source describes.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
 $ctxh(u, c, e)$ of the call node $u$, the caller context $c$ and the entry
@@ -477,11 +478,10 @@ $e$ gives the callee's formal parameters, written $e|_"formals"$. For
 list with one entry per formal. Unlike a call string, it depends on the
 abstract entry state, so the concrete call alone does not determine it.
 
-Suppose the caller's solved state says $x in [4, 5]$ at a call `bump(x)`, so
-the equations publish an $e$ binding $n$ to $[4, 5]$ to the context
-$[[4, 5]]$. An execution with $x = 4$ enters `bump` with $n = 4$, whose own
-abstraction would be $[[4, 4]]$. The activation must nevertheless be assigned
-to $[[4, 5]]$, where its covering entry state was published.
+If the caller's solved state says $x in [4, 5]$ at `bump(x)`, the equations
+publish $n |-> [4, 5]$ to the context $[[4, 5]]$. An execution with $x = 4$
+must then be assigned to $[[4, 5]]$, where its covering entry state was
+published, and not to $[[4, 4]]$.
 
 The entry-state policy (#isaconst("routed_entry_context_rel")) does exactly
 this. For a call from $s$ with entered store $s'$, it admits $c'$ only when
@@ -490,9 +490,9 @@ $s' in conc(e)$. The equations publish that same $e$ to $c'$, so every admitted 
 backed by a covering entry state, which is adequacy. Entry coverage (@sec:calls)
 gives every covered call such a pair, which is totality.
 
-This policy depends on the solved analysis (@sec:contexts) without circularity.
-The proof fixes a post-solution $sol$, defines $italic("adm")$ from it, and
-shows that $sol$ covers the collecting semantics this $italic("adm")$ induces.
+This policy depends on the solved analysis (@sec:contexts) without circularity:
+the proof fixes $sol$, defines $italic("adm")$ from it, and shows that $sol$
+covers the collecting semantics this $italic("adm")$ induces.
 
 == Soundness of the generated system <sec:eq-discharge>
 
@@ -521,14 +521,14 @@ The argument holds for every domain and context policy. Its locale
 closed under local edges and call continuations, the
 #isalocale("analysis_contract") of @ch:analysis-interface, a sound bottom test,
 a sound callee resolution, and adequate and total routing. The theorem adds that the program entry
-is solved in the initial context and that its initial state covers the initial
-stores:
+is solved in the initial context and that the initial stores $S_0$ lie in
+$conc_(D G)(d_0, e_0)$: the initial state $d_0$ describes them under an
+environment $e_0$ of analysis-global values below the solved ones.
 #theorem(name: [Routed collecting soundness], isa: "activation_collect_dg_sound")[
   #proved("activation_collect_dg_sound")
 ]
 Here #isai("cover v c") is $conc_(M)(sol(v, c))$ inside the solved set and
-empty outside it, so no execution reaches an unsolved unknown. The proof turns
-each inequality of the post-solution (@sec:eq-encoding) into its row of
-@tab:eq-obligations. #isathm("fun_route_activation_collect_sound") and
+empty outside it. The proof turns the bound on each part, and on each seed,
+into its row of @tab:eq-obligations. #isathm("fun_route_activation_collect_sound") and
 #isathm("entry_state_activation_collect_sound") instantiate the theorem for the
 analyzer, and @ch:solving computes such a post-solution.
