@@ -92,7 +92,7 @@ ordered pair the generated carrier nests.
 
 ## Components and wrappers
 
-- `ask_assign` (`Oracle_Wrappers.thy`): at `x = e`, if the channel answers
+- `ask_assign` (`Channel_Wrappers.thy`): at `x = e`, if the channel answers
   `EvalInt e` with an exact integer `n`, assign `N n`; otherwise the
   component's own assignment. It replaces the assign field only, so its
   soundness is `assign_ask_sound` plus the update lemma.

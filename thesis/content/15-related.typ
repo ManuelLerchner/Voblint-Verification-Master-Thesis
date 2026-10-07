@@ -293,7 +293,7 @@ analyses. The open product of Cortesi et al. @cortesi94, designed for
 logic programs, also lets each combined domain use information from the others
 through queries.
 
-Verasco combines its numerical domains through the channels of @sec:coop-oracle
+Verasco combines its numerical domains through the channels of @sec:coop-channels
 for the same reason: reduced products tend to be specific to the two domains
 combined and scale poorly beyond two @jourdan15[§7]. The channels follow
 those of Astrée @cousot07astree[§5.2]. Its

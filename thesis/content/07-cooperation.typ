@@ -158,7 +158,7 @@ By the two laws, the channel answering $ltop$ everywhere holds at every store,
 and the pointwise meet of two channels that hold at $s$ holds at $s$
 (#isathm("query_algebra.channel_holds_inf")).
 
-== Proving an analysis against any channel <sec:coop-oracle>
+== Proving an analysis against any channel <sec:coop-channels>
 
 Interval's assignment in @fig:mcp-step uses the wrapper
 #isaconst("ask_assign"), which any analysis can put around its assignment

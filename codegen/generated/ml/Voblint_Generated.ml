@@ -8181,6 +8181,27 @@ let rec order_pairs
                    (linorder_prod linorder_literal linorder_literal))
                  ps));;
 
+let rec ls_assign_update
+  ls_assigna
+    (Local_spec_ext
+      (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
+        ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
+    = Local_spec_ext
+        (ls_query, ls_skip, ls_assigna ls_assign, ls_special, ls_branch,
+          ls_body, ls_return, ls_event, ls_enter, ls_combine_env,
+          ls_combine_assign, more);;
+
+let rec answer_const = function QLifted d -> int_dom_constant d
+                       | QBot -> None
+                       | QTop -> None;;
+
+let rec assign_ask
+  asn ch x e d =
+    (match answer_const (ch (EvalInt e)) with None -> asn ch x e d
+      | Some n -> asn ch x (N n) d);;
+
+let rec ask_assign c = ls_assign_update (fun _ -> assign_ask (ls_assign c)) c;;
+
 let top_relc : relc = RelC bot_set;;
 
 let rec ls_branch_update
@@ -8540,10 +8561,6 @@ let rec conservative_local_spec
       (query_unknown, skip_identity, asn, sp, branch_identity, body_identity,
         rt, event_identity, en, combine_env_identity, ca, ());;
 
-let rec answer_const = function QLifted d -> int_dom_constant d
-                       | QBot -> None
-                       | QTop -> None;;
-
 let rec sup_set _A
   x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
     | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
@@ -8656,23 +8673,6 @@ let rec order_spec
              (fun ch x e d -> relc_learn ch ys x e (forget_relc x d))
              (fun _ _ -> forget_relc) (fun _ eo _ -> relc_ret eo)
              (fun _ _ p -> [(fst p, top_relc)]) (fun _ _ _ _ -> top_relc)));;
-
-let rec ls_assign_update
-  ls_assigna
-    (Local_spec_ext
-      (ls_query, ls_skip, ls_assign, ls_special, ls_branch, ls_body, ls_return,
-        ls_event, ls_enter, ls_combine_env, ls_combine_assign, more))
-    = Local_spec_ext
-        (ls_query, ls_skip, ls_assigna ls_assign, ls_special, ls_branch,
-          ls_body, ls_return, ls_event, ls_enter, ls_combine_env,
-          ls_combine_assign, more);;
-
-let rec assign_ask
-  asn ch x e d =
-    (match answer_const (ch (EvalInt e)) with None -> asn ch x e d
-      | Some n -> asn ch x (N n) d);;
-
-let rec ask_assign c = ls_assign_update (fun _ -> assign_ask (ls_assign c)) c;;
 
 let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
 

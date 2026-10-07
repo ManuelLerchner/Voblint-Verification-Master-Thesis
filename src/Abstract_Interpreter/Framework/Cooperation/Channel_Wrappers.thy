@@ -1,4 +1,4 @@
-theory Oracle_Wrappers
+theory Channel_Wrappers
   imports "Voblint_Framework.MCP_Spec"
 begin
 
