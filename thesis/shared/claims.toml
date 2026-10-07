@@ -96,7 +96,7 @@ argv = [
   "jsonl",
   "docs/readme-figures/contexts.vimp",
 ]
-why = "The solver trace behind tab:eq-trace and fig:eq-walk: each new callee context is first read with an empty seed, the buffered publication is flushed after the result query, and a second pass computes a = 6 and b = 5."
+why = "The solver trace behind tab:eq-trace and fig:eq-walk: each call resumes at its own node, so the buffer flushes the seed before the result query, and each context of bump is solved once."
 
 [claims.pg-while-loop]
 argv = [

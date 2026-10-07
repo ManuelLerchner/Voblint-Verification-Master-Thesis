@@ -149,9 +149,9 @@ A post-solution certificate states that the solver's result bounds the
 equations; it says nothing about how the solver reached it. For explaining a
 run and for debugging an analysis, the order of the steps matters: which
 unknown is queried when, which update destabilizes whom, where widening sets
-in. @tab:eq-trace shows such a sequence for the calls of `bump` in
-@ch:equations, where each call publishes its entry state to the callee's seed
-before the callee is read.
+in. @tab:eq-trace shows such a sequence for the calls of `bump` in the running
+example of @ch:equations (@sec:eq-example), where each call publishes its
+entry state to the callee's seed before the callee is read.
 
 *Tracing inside the export.* The executable solver reports its steps through
 one constant, #isaconst("trace_event"), which takes a channel name and a

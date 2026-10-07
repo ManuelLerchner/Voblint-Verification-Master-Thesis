@@ -194,7 +194,6 @@
     "const:ret_var": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.ret_var%7Cconst",
     "const:return_safe": "Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.return_safe%7Cconst",
     "const:routed_call_program": "Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst",
-    "const:routed_callee_call_program": "Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_callee_call_program%7Cconst",
     "const:routed_context.cover": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst",
     "const:routed_entry_context_rel": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_entry_context_rel%7Cconst",
     "const:routed_node_rhs": "Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst",
