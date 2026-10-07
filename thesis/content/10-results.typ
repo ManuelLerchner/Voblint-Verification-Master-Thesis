@@ -71,8 +71,8 @@ verdict the report gives at $v$ holds. Each step is a theorem:
 ))
 The first step places a store that a finite source run reaches: it lies in the
 node collecting semantics at some node $v$ that simulates the run's
-execution configuration (the node need not be unique, @sec:csim). The second step holds for a policy that meets the coverage
-contract (#oblig("TOTAL") in particular): #isaconst("node_collect") is the
+execution configuration (the node need not be unique, @sec:csim). The second step holds for a policy with a cover that meets all
+five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts $italic("adm")$
 admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). It shows where
 contexts enter; the source-level theorem goes from #isai("\<C>") directly to
@@ -371,5 +371,5 @@ analysis could not exclude a zero divisor.
 The theorems are partial-correctness results: every report the analyzer
 returns is sound, while termination is not guaranteed for every program
 (@sec:termination). #isathm("certificate_demo_source_certified") discharges all
-three premises for one concrete program, the third by evaluation, which
-trusts code generation.
+three premises for one concrete program, the third by evaluation, which relies
+on code generation. The theorem is thus non-vacuous for an executable run.
