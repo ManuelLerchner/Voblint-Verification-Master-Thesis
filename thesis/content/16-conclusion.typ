@@ -31,8 +31,8 @@ contexts off the analysis's result, at the price of the obligation
 #oblig("TOTAL"). Functional policies return singletons and satisfy it directly
 (#isaconst("context_policy_of_fun")). Stating the analysis contract over an
 environment of analysis globals lets the flow-insensitive placement give each
-program global its own unknown, so a write wakes only the readers of that
-global. The price is a frame obligation on the carrier: a store that agrees on
+program global its own unknown, so a write that changes a global destabilizes only its readers and their dependents.
+The price is a frame obligation on the carrier: a store that agrees on
 the unwritten globals with a covered store is covered by the recombined result
 (@sec:mixed-flow). That placement loses precision on the `set`/`get` program,
 and the cost of neither placement was measured. Consuming

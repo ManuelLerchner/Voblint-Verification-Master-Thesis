@@ -10,7 +10,7 @@ text \<open>
   theory takes such a specification and returns one that does the opposite, and is
   the reason those capabilities exist.
 
-  The lifted specification chooses \<open>D = G = 'a abs_state\<close>, splitting each
+  The lifted specification uses one carrier for \<open>D\<close> and \<open>G\<close>, splitting each
   state by variable ownership: \<^const>\<open>combine_env\<close>'s predicate is the source
   language's own declaration of which names are global, so the global names live on
   the shared channel and the rest on the program point's own unknown. The split is
@@ -200,21 +200,6 @@ lemma ownership_split_transfer_gen_local_outer_man [simp]:
   "ownership_split_transfer_gen cmb rg rl (local_transfer f) (outer_man Q m)
      = ownership_split_transfer_gen cmb rg rl (local_transfer f) m"
   by (simp add: ownership_split_transfer_gen_def local_transfer_def)
-
-subsection \<open>The ownership rule at the pointwise carrier\<close>
-
-text \<open>The three carrier operations the wrapper is generic in, fixed at the
-  function-valued states: \<^const>\<open>combine_env\<close> merges by the classifier, and
-  \<^const>\<open>restrict_global_for\<close> and \<^const>\<open>restrict_local_for\<close> read each half back out.\<close>
-
-definition ownership_split_transfer ::
-  "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_transfer
-   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_transfer"
-where
-  "ownership_split_transfer \<G> =
-     ownership_split_transfer_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
-
 text \<open>
   What the lifter reads, in the same terms. The shared slot is read before the
   wrapped transfer runs, so it is a dependency of the call whatever the wrapped
@@ -240,16 +225,6 @@ proof (intro allI)
     by (simp add: ownership_split_enter_transfer_gen_def sp_bind_def sp_return_def
         enter_depsD[OF T] Un_assoc)
 qed
-
-definition ownership_split_enter_transfer ::
-  "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_enter_transfer
-   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_enter_transfer"
-where
-  "ownership_split_enter_transfer \<G> =
-     ownership_split_enter_transfer_gen (combine_env \<G>) (restrict_global_for \<G>)
-       (restrict_local_for \<G>)"
-
 text \<open>
   How the lifter behaves under a solution, in the same terms as the transfer it
   wraps. The manager has to be a concrete \<^const>\<open>mk_dg_man\<close>: for an arbitrary
@@ -287,16 +262,6 @@ next
        (auto simp: fun_eq_iff ac_simps split: if_splits)
 qed
 
-definition ownership_split_combine_transfer ::
-  "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) man_combine_transfer
-   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) man_combine_transfer"
-where
-  "ownership_split_combine_transfer \<G> =
-     ownership_split_combine_transfer_gen (combine_env \<G>) (restrict_global_for \<G>)
-       (restrict_local_for \<G>)"
-
-
 subsection \<open>The specification-to-specification lifter\<close>
 
 text \<open>
@@ -326,18 +291,6 @@ where
      dgs_combine_assign :=
        (\<lambda>ci. ownership_split_combine_transfer_gen cmb rg rl (dg_spec_combine_transfer S ci)) \<rparr>"
 
-
-text \<open>The lifter at the pointwise carrier, splitting by the classifier.\<close>
-
-definition ownership_split_lift ::
-  "(vname \<Rightarrow> bool)
-   \<Rightarrow> ('x,'k,unit,'a::bounded_semilattice_sup_bot abs_state,'a abs_state) dg_spec
-   \<Rightarrow> ('x,'k,unit,'a abs_state,'a abs_state) dg_spec"
-where
-  "ownership_split_lift \<G> =
-     ownership_split_lift_gen (combine_env \<G>) (restrict_global_for \<G>) (restrict_local_for \<G>)"
-
-
 text \<open>Both eliminate a constructed wrapper specification and expose the
   corresponding transfer wrapper, in a terminating direction, so they fire
   wherever a lifted specification meets the edge or combine dispatch.\<close>
@@ -362,24 +315,6 @@ lemma dg_spec_combine_transfer_ownership_split_lift_gen [simp]:
   unfolding dg_spec_combine_transfer_def ownership_split_lift_gen_def
   by (simp add: local_transfer_def local_combine_transfer_def)
 
-lemma dg_spec_step_ownership_split_lift [simp]:
-  "dg_spec_step (ownership_split_lift \<G> S) a = ownership_split_transfer \<G> (dg_spec_step S a)"
-  by (simp add: ownership_split_lift_def ownership_split_transfer_def)
-
-lemma dgs_enter_ownership_split_lift [simp]:
-  "enter\<^sup># (ownership_split_lift \<G> S) ci = ownership_split_enter_transfer \<G> (enter\<^sup># S ci)"
-  by (simp add: ownership_split_lift_def ownership_split_enter_transfer_def)
-
-lemma dgs_query_ownership_split_lift [simp]:
-  "dgs_query (ownership_split_lift \<G> S) m q = sp_return \<top>"
-  by (simp add: ownership_split_lift_def)
-
-lemma dg_spec_combine_transfer_ownership_split_lift [simp]:
-  "dg_spec_combine_transfer (ownership_split_lift \<G> S) ci
-     = ownership_split_combine_transfer \<G> (dg_spec_combine_transfer S ci)"
-  by (simp add: ownership_split_lift_def ownership_split_combine_transfer_def)
-
-
 text \<open>The lifter preserves well-formedness: it reads the shared slot, runs the
   wrapped transfer at a manager built the same way, publishes once and answers.
   Every step of that is a closure lemma.\<close>
@@ -400,78 +335,5 @@ lemma dg_spec_wf_ownership_split_lift_gen [intro]:
       ownership_split_combine_transfer_gen_def
       intro!: sp_wf_bind dg_spec_wf_step_ask[OF assms] dg_spec_wf_enter[OF assms]
         dg_spec_wf_combine[OF assms])
-
-lemma dg_spec_wf_ownership_split_lift [intro]:
-  assumes "dg_spec_wf S"
-  shows "dg_spec_wf (ownership_split_lift \<G> S)"
-  unfolding ownership_split_lift_def by (rule dg_spec_wf_ownership_split_lift_gen[OF assms])
-
-section \<open>What a split point means\<close>
-
-text \<open>
-  A point's two halves are read back by routing each name to the component that
-  owns it, never by joining them: an untouched name keeps whatever precision its
-  owning half has, instead of being coarsened by the other half's unrelated
-  default. That routing is exactly the merge the transfers above perform, which
-  is why this is the concretization they are sound for.
-\<close>
-
-definition gamma_ownership_split ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a::numeric_domain abs_state \<Rightarrow> 'a abs_state \<Rightarrow> store set"
-where
-  "gamma_ownership_split \<G> d g = \<lbrakk>combine_env \<G> d g\<rbrakk>"
-
-lemma gamma_ownership_split_mono:
-  assumes "d \<le> d'" and "g \<le> g'"
-  shows "gamma_ownership_split \<G> d g \<subseteq> gamma_ownership_split \<G> d' g'"
-  unfolding gamma_ownership_split_def
-  by (rule gamma_state_mono) (use assms in \<open>auto simp: combine_env_def le_fun_def\<close>)
-
-section \<open>Soundness of the lifted analysis\<close>
-
-text \<open>
-  The wrapped specification's own soundness is the only mathematics here. Each
-  obligation reduces by the four observation lemmas to a statement about the
-  merged state, where \<open>combine_env_restrict_id\<close> rebuilds exactly what the
-  wrapped transfer was applied to -- so what is left is the transfer contract
-  itself, cited from the locale.
-
-  The argument is a Base specification rather than an arbitrary one because the
-  wrapper feeds it a local value the environment never held: an argument that read
-  a global of its own would read it at a slot this concretization does not account
-  for. A whole-state analysis makes no such read, which is exactly what
-  \<^const>\<open>state_dg_spec\<close> guarantees about its programs.
-
-  The callee exit is merged before the wrapped combine sees it, so the return slot
-  is read off a whole state like every other name and no \<open>reserved_ret_var\<close>
-  side condition arises.
-\<close>
-
-theorem (in sound_nonrelational_transfer) ownership_split_lift_contract:
-  "analysis_contract
-     (ownership_split_lift \<G> (state_dg_spec \<G> sk asn sp br bd rt en ev))
-     (\<lambda>d e. gamma_ownership_split \<G> d (e ())) \<G>"
-proof (rule analysis_contract_unitI, goal_cases)
-  case 1
-  show ?case by (rule dg_spec_wf_ownership_split_lift) simp
-next
-  case (2 d d' g g')
-  then show ?case by (rule gamma_ownership_split_mono)
-next
-  case (3 a \<tau> src gk)
-  show ?case
-    unfolding dg_spec_edge_program_def dg_spec_step_ownership_split_lift
-      dg_spec_step_state_dg_spec ownership_split_transfer_def gamma_ownership_split_def
-    by (simp add: step_sound_for)
-next
-  case (4 s \<tau> src_cc gk t src_ex ci)
-  then show ?case
-    unfolding dg_spec_combine_transfer_ownership_split_lift
-      state_dg_spec_def dg_spec_combine_transfer_dg_spec_of
-      ownership_split_combine_transfer_def gamma_ownership_split_def
-    by (simp add: ownership_split_combine_transfer_gen_def local_combine_transfer_def
-        mk_dg_man_def dg_read_global_def dg_sideg_def sp_bind_assoc
-        combine_collect_sound)
-qed
 
 end

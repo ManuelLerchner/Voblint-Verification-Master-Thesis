@@ -478,12 +478,19 @@
   ],
 
   // -------------------------------------------------------------- equations --
-  term("dg-spec", "analysis specification", _eq, isa: isatype("dg_spec"), see: <sec:dg>)[
+  term("dg-spec", "analysis specification", _eq, isa: isatype("dg_spec"), see: <sec:sound-core>)[
     The record of operations an analysis supplies, following Goblint's `Spec`:
     seven edge transfers (skip, assign, special, branch, body, return, event),
     the call entry, and the two combine stages.
   ],
-  term("dg", "local/shared split", _eq, abbr: "D/G", isa: isatype("dg_state"), see: <sec:dg>)[
+  term(
+    "dg",
+    "local/shared split",
+    _eq,
+    abbr: "D/G",
+    isa: isatype("dg_state"),
+    see: <sec:shared-facts>,
+  )[
     The pairing of a flow-sensitive local component, owned by one node in one
     context, with a shared component reached only through side effects;
     Goblint's `D` and `G`.
@@ -493,7 +500,7 @@
     "manager",
     _eq,
     isa: [#isaconst("man_local"), #isaconst("man_global"), #isaconst("man_sideg")],
-    see: <sec:dg>,
+    see: <sec:shared-facts>,
   )[
     The interface through which a transfer reads its local value, reads a
     shared fact by an analysis-chosen name, and publishes to one. It hides the
@@ -537,16 +544,6 @@
     The obligations a specification owes its concretization: monotonicity,
     well-formedness, INTRA for each edge program and RETURN for the combine
     program. Entry soundness is left to routing.
-  ],
-  term(
-    "ownership-split",
-    "ownership split",
-    _eq,
-    isa: isaconst("ownership_split_lift"),
-    see: <sec:mixed-flow>,
-  )[
-    The transformation that moves VIMP globals from the local component into
-    the shared component, reassembling the two halves with the return merge.
   ],
   term(
     "strategy-tree",

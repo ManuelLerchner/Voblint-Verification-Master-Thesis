@@ -1254,14 +1254,17 @@ PART III — THE ANALYZER
   5.5 Numeric queries, and what a check needs from a domain
 
 6 What an analysis supplies                                        [10%]
-  6.1 Goblint's Spec, in one page
-  6.2 D and G: separating flow-sensitive from shared facts
-  6.3 The manager: capabilities, not keys
-  6.4 dg_spec, field by field
-  6.5 analysis_contract: the contract, stated over compiled trees
-  6.6 The whole-state shortcut: eight operations and one interpretation
-  6.7 The ownership-split lifter as a Spec2Spec functor
-  6.8 What the interface deliberately does not have (sync, startstate)
+  6.1 Transfers at edges and calls (INTRA per edge; enter, q/e, combine)
+  6.2 Facts without a program point (D_L/D_G, analysis vs program globals, manager)
+  6.3 The analysis contract (dg_spec record; gammaDG_mono, step_sound,
+      combine_sound, spec_wf; why CALL/TOTAL/INIT are discharged in Ch. 8)
+  6.4 Program globals: flow-sensitive or flow-insensitive (keyed_split_spec)
+  Reason for the structural change (2026-10-07): the eight-section plan
+  documented the interface's implementation rather than the abstraction
+  boundary. The Spec-correspondence and record sections merged into 6.1/6.3,
+  the whole-state shortcut moved to Ch. 7 (local specifications), the
+  ownership-split lifter was deleted from the theories as unused by
+  run_voblint, and the sync/startstate omissions were never drafted.
 
 7 Cooperating analyses (added 2026-09-27)                          [5%]
   7.1 Queries and answers (query_algebra, eval_holds)

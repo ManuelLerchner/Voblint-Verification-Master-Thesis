@@ -803,7 +803,7 @@ $x$ to $t$. A _datatype_ declares a type by its constructors and comes with
 case distinction and structural induction. VIMP's commands
 #isatype("com") are one (@sec:vimp). A _record_ is a tuple with named fields.
 The analysis interface #isatype("dg_spec") is a record with one field per
-operation (@sec:spec-record).
+operation (@sec:sound-core).
 
 Every HOL function is total, so an ordinary recursive definition needs a
 termination proof. Otherwise one could define $f(n) = f(n) + 1$ and derive

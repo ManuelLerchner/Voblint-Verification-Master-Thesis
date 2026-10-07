@@ -143,7 +143,7 @@ why = "Figure gallery: the theorem-statement example."
 why = "Figure gallery example."
 
 [snippets.analysis_contract]
-why = "Figure gallery example."
+why = "Chapter 6, the analysis contract."
 
 [snippets.activation_trace]
 why = "Chapter 4, the activation trace datatype."

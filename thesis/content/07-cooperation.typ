@@ -191,7 +191,7 @@ answers a premise of the proof. The transfer
 $#isaconst("ls_step") thin c thin A thin a thin x$ of a local specification $c$
 receives a channel $A$ besides the action $a$ and the value $x$ before the
 edge. Soundness
-is the condition of @sec:dg with one extra premise: for every channel $A$,
+is the condition of @sec:calls with one extra premise: for every channel $A$,
 every $s in conc(x)$ _at which $A$ holds_, and every
 $s' in$ #isai("edge_step a s"), $s' in conc(#isaconst("ls_step") thin c thin A thin a thin x)$
 (#isaconst("sound_local_spec"), #isathm("ls_step_sound_iff")). In the example, the premise excludes the stores
@@ -211,7 +211,7 @@ soundness follows the same pattern (#isathm("relc_learn_sound")).
 
 Every operation may need its partners' answers, so every operation must
 receive a channel. Most analyses use no analysis global, and for them the
-framework offers a simpler interface than the record of @sec:spec-record, the
+framework offers a simpler interface than the record of @sec:sound-core, the
 _local specification_ #isatype("local_spec") (@fig:local-spec). Its operations
 work on local values, and each takes a channel as its first argument, of type
 #isatype("answers"): a handler
@@ -330,7 +330,7 @@ $n$ channel, which holds by induction, so the handler law of
 the state before the edge, so its answers describe the predecessor state, as
 in Goblint.
 
-The equations consume the record of @sec:spec-record, so a local
+The equations consume the record of @sec:sound-core, so a local
 specification must become one. #isaconst("dg_spec_of") does this, and the
 record it builds never touches the analysis global. It computes the channel of each state
 with #isaconst("ls_channel") and passes it to the operation, so its transfers
@@ -516,7 +516,7 @@ the routes by which the analyses of this thesis reach the analysis contract.
 
 == What the combination leaves out <sec:coop-limits>
 
-Components cannot read or publish analysis globals (@sec:analysis-globals).
+Components cannot read or publish analysis globals (@sec:shared-facts).
 Every fact a selectable analysis keeps therefore lives in its local state. The
 one exception applies to the combined state as a whole: when program globals
 are flow-insensitive, a lifter around the combination publishes each program

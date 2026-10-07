@@ -137,8 +137,6 @@ allow = [
   "dg_spec_step_lifted_state_dg_spec",
   # Step equation of state_dg_spec
   "dg_spec_step_state_dg_spec",
-  # Cited by the thesis: the mixed-flow appendix states it as machine-checked
-  "ownership_split_lift_contract",
   # Order characterization of the named fold ownership_split_enter_sides
   "ownership_split_enter_sides_le_iff",
   # The address-level return obligation that dg_spec_combine_program exists for

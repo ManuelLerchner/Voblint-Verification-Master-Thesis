@@ -790,10 +790,8 @@ next
        (auto intro: sp_wf_dg_spec_edge_program[OF dg_spec_wf_ov_spec]
          sp_wf_routed_call_program[OF dg_spec_wf_ov_spec])
 next
-  show "\<And>c' src a \<tau>. dg_local (traverse_program
-           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)
-         = dg_local (traverse_program
-           (dg_spec_edge_program (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ())) \<tau>)"
+  show "\<And>c' src a \<tau>. edge_out (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()) \<tau>
+         = edge_out (ov_spec ov_gs ov_ep) a src (\<lambda>_. Analysis_Global ()) \<tau>"
     by (rule refl)
 next
   show "\<And>c' src a \<tau>. dg_local (sides_of_program

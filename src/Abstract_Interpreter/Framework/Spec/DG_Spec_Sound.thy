@@ -308,6 +308,26 @@ text \<open>Every name at one key reads one value: the environment of a single s
 lemma genv_const [simp]: "genv (\<lambda>_. k) \<tau> = (\<lambda>_. dg_global (\<tau> (Inr k)))"
   by (simp add: fun_eq_iff)
 
+text \<open>What an edge's compiled program answers under \<open>\<tau>\<close>: its local result and the
+  global environment its side-effects publish. The combine counterparts run the
+  composed combine at a continuation \<open>dc\<close> and a callee exit \<open>de\<close>.\<close>
+
+abbreviation edge_out where
+  "edge_out S a src key \<tau> \<equiv> dg_local (traverse_program (dg_spec_edge_program S a src key) \<tau>)"
+
+abbreviation edge_pub where
+  "edge_pub S a src key \<tau> \<equiv> genv key (sides_of_program (dg_spec_edge_program S a src key) \<tau>)"
+
+abbreviation combine_out where
+  "combine_out S ci key dc de \<tau> \<equiv>
+     dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+       (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>)"
+
+abbreviation combine_pub where
+  "combine_pub S ci key dc de \<tau> \<equiv>
+     genv key (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
+       (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>)"
+
 text \<open>The contract a specification signs: its concretization is monotone, an edge's program
   over-approximates the concrete edge step, and its combine over-approximates the concrete
   return. Both obligations read the globals from the environment the valuation holds, and
@@ -324,17 +344,11 @@ locale analysis_contract =
       "\<lbrakk>d \<le> d'; e \<le> e'\<rbrakk> \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d e \<subseteq> \<gamma>\<^sub>D\<^sub>G d' e'"
     and step_sound:
       "edge_collect a (\<gamma>\<^sub>D\<^sub>G (dg_local (\<tau> src)) (genv key \<tau>))
-         \<subseteq> \<gamma>\<^sub>D\<^sub>G
-           (dg_local (traverse_program (dg_spec_edge_program S a src key) \<tau>))
-           (genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_edge_program S a src key) \<tau>))"
+         \<subseteq> \<gamma>\<^sub>D\<^sub>G (edge_out S a src key \<tau>) (genv key \<tau> \<squnion> edge_pub S a src key \<tau>)"
     and combine_sound:
       "\<lbrakk>s \<in> \<gamma>\<^sub>D\<^sub>G dc (genv key \<tau>); t \<in> \<gamma>\<^sub>D\<^sub>G de (genv key \<tau>)\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
-          \<in> \<gamma>\<^sub>D\<^sub>G
-            (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-               (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>))
-            (genv key \<tau> \<squnion> genv key (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-               (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>))"
+          \<in> \<gamma>\<^sub>D\<^sub>G (combine_out S ci key dc de \<tau>) (genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>)"
 
 text \<open>
   The obligation is stated at \<^emph>\<open>values\<close> rather than at two unknown reads,
@@ -371,13 +385,12 @@ lemma analysis_contract_unitI:
     and mono: "\<And>d d' g g'. \<lbrakk>d \<le> d'; g \<le> g'\<rbrakk> \<Longrightarrow> gm d g \<subseteq> gm d' g'"
     and step: "\<And>a \<tau> src gk.
       edge_collect a (gm (dg_local (\<tau> src)) (dg_global (\<tau> (Inr gk))))
-        \<subseteq> gm (dg_local (traverse_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau>))
+        \<subseteq> gm (edge_out S a src (\<lambda>_. gk) \<tau>)
             (dg_global (sides_of_program (dg_spec_edge_program S a src (\<lambda>_. gk)) \<tau> (Inr gk)))"
     and comb: "\<And>s \<tau> dc gk t de ci.
       \<lbrakk>s \<in> gm dc (dg_global (\<tau> (Inr gk))); t \<in> gm de (dg_global (\<tau> (Inr gk)))\<rbrakk> \<Longrightarrow>
         combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau>))
+          \<in> gm (combine_out S ci (\<lambda>_. gk) dc de \<tau>)
               (dg_global (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
                  (dg_spec_combine_transfer S ci (mk_dg_man dc (\<lambda>_. gk)) de)) \<tau> (Inr gk)))"
   shows "analysis_contract S (\<lambda>d e. gm d (e ())) \<G>"
@@ -391,30 +404,21 @@ next
   fix a \<tau> src and key :: "unit \<Rightarrow> 'k"
   have key: "key = (\<lambda>_. key ())" by (rule ext) simp
   have "edge_collect a (gm (dg_local (\<tau> src)) (genv key \<tau> ()))
-          \<subseteq> gm (dg_local (traverse_program (dg_spec_edge_program S a src key) \<tau>))
-              (genv key (sides_of_program (dg_spec_edge_program S a src key) \<tau>) ())"
+          \<subseteq> gm (edge_out S a src key \<tau>) (edge_pub S a src key \<tau> ())"
     using step[of a \<tau> src "key ()"] by (subst (1 2 3) key) (simp add: genv_def)
-  also have "\<dots> \<subseteq> gm (dg_local (traverse_program (dg_spec_edge_program S a src key) \<tau>))
-              ((genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_edge_program S a src key) \<tau>)) ())"
+  also have "\<dots> \<subseteq> gm (edge_out S a src key \<tau>) ((genv key \<tau> \<squnion> edge_pub S a src key \<tau>) ())"
     by (rule mono) simp_all
   finally show "edge_collect a (gm (dg_local (\<tau> src)) (genv key \<tau> ()))
-          \<subseteq> gm (dg_local (traverse_program (dg_spec_edge_program S a src key) \<tau>))
-              ((genv key \<tau> \<squnion> genv key (sides_of_program (dg_spec_edge_program S a src key) \<tau>)) ())" .
+          \<subseteq> gm (edge_out S a src key \<tau>) ((genv key \<tau> \<squnion> edge_pub S a src key \<tau>) ())" .
 next
   fix s dc t de ci and key :: "unit \<Rightarrow> 'k" and \<tau> :: "'x + 'k \<Rightarrow> ('D, 'G) dg_state"
   assume s: "s \<in> gm dc (genv key \<tau> ())" and t: "t \<in> gm de (genv key \<tau> ())"
   have key: "key = (\<lambda>_. key ())" by (rule ext) simp
   have "combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>))
-              (genv key (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>) ())"
+          \<in> gm (combine_out S ci key dc de \<tau>) (combine_pub S ci key dc de \<tau> ())"
     using comb[of s dc \<tau> "key ()" t de ci] s t by (subst (1 2 3) key) (simp add: genv_def)
   then show "combine_collect \<G> (ci_dst ci) s t
-          \<in> gm (dg_local (traverse_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>))
-              ((genv key \<tau> \<squnion> genv key (sides_of_rhs (sp_compile_with (\<lambda>d. DG d \<bottom>)
-                 (dg_spec_combine_transfer S ci (mk_dg_man dc key) de)) \<tau>)) ())"
+          \<in> gm (combine_out S ci key dc de \<tau>) ((genv key \<tau> \<squnion> combine_pub S ci key dc de \<tau>) ())"
     by (rule subsetD[OF mono, rotated 2]) simp_all
 qed
 
