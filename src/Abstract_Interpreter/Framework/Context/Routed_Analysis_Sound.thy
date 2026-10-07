@@ -66,7 +66,7 @@ text \<open>
 \<close>
 
 locale routed_analysis =
-  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 s0d s0g sigma vars x0
+  dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0
     "solved_local_reader vars sigma" seed is_bot
     "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
     adm rd \<gamma>\<^sub>V empty\<^sub>V classify
@@ -76,7 +76,7 @@ locale routed_analysis =
     and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
     and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and bot0 s0d :: 'D and s0g :: 'G
+    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
     and x0 :: "pp \<times> 'c"

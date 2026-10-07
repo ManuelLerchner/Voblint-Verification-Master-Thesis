@@ -447,7 +447,7 @@ and mark it `superseded (see below)`.
   soundness section; for them the recipe is only `*_pp_abs` -> `*_pp_routed`.
 - 2026-08-30: `locals_ge_s0d` and `activation_collect_dg_sound` move from
   `dg_analysis_adapter` into `routed_context_base_hetero`. Both use only the
-  routed locale's own facts (`pp_eq_bound`, `pp_entry_s0g_bound`,
+  routed locale's own facts (`pp_eq_bound`, `pp_entry_init_global_bound`,
   `gammaDG_mono`, `sg_cov`, `dg_ctx_act_edge`, the CALL/COMB theorems), so the
   adapter's classifier was never a premise; a routed instance without a check
   layer -- the four CallString examples -- now gets its activation-indexed

@@ -4075,3 +4075,8 @@ Oracle_Wrappers
 # --- Routing assumptions named after the thesis terms adequacy and totality (2026-10-07) ---
 routed_entry_cover
 routed_entry_total
+
+# --- Initial-state names follow the thesis: d0, e0, g0 (2026-10-08) ---
+pp_entry_s0d_bound
+pp_entry_s0g_bound
+entry_s0e_le

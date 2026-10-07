@@ -504,14 +504,14 @@ theorem pp_routed_of_buffered:
         (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
         (routed_call_program S global_of seed resolve is_bot)
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma vars"
   shows "part_post_solution
      (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) route
         (\<lambda>ctx' src a. dg_spec_edge_program S a src global_of)
         (routed_call_program S global_of seed resolve is_bot)
         (routed_entry_seed_programs seed)
-        g bot0 s0d s0g)
+        g bot0 d\<^sub>0 g\<^sub>0)
      x0 sigma vars"
 proof (rule part_post_solution_routed_node_rhs_buffered_answers_local[OF _ _ pp])
   show "\<And>c' w. \<forall>p \<in> set (routed_contribution_programs intra_predecessor_addr_list
