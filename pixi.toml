@@ -236,6 +236,7 @@ thesis-check = { depends-on = [
   "thesis-claims",
   "thesis-facts",
   "thesis-typst",
+  "thesis-whitespace",
 ], description = "Run all thesis drift and theorem checks." }
 
 thesis-links = { cmd = "python3 scripts/check_thesis_links.py --check --lenient", depends-on = [
