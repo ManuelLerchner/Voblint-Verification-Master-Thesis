@@ -309,7 +309,7 @@ interval cannot have holes, so the join may contain values neither operand
 does: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
 intersects the bounds (#isaconst("inf_ivl")). Voblint's type #isatype("ivl")
 keeps raw bound pairs, whose order and join agree with this description on
-non-empty intervals (@sec:interval-domain).
+non-empty intervals (@sec:domain-carrier-laws).
 
 At the loop head both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
 as is every interval that contains $[0, 5]$. An analysis aims for the most

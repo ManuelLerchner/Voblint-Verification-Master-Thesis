@@ -23,39 +23,45 @@
 
 = Abstract Domains <ch:domains>
 
-
-@ch:traces reduced soundness to five obligations over arbitrary sets of stores.
-An analyzer computes with finite abstract values instead, and its solver
-(@ch:solving) compares, joins, widens and narrows them without knowing what
-they mean. Recall from @sec:abs-int that an abstract value $a$ denotes a set
-$conc(a)$ of concrete values. For the numeric domains of this chapter,
-$conc(a) subset.eq ZZ$, and @sec:domain-states lifts this meaning pointwise to
-stores. An arbitrary lattice of abstract values is not enough, for two reasons.
-First, the order must agree with the meaning. The solver only proves
-inequalities $a lle b$ in the abstract order, while the obligations of
-@ch:traces are inclusions between sets. The class law
+@ch:traces reduced soundness to five obligations on a claim. A claim assigns
+each node and context a set of stores. The obligations are local conditions,
+and together they guarantee that the claim contains every store an execution
+in that context brings there (#isathm("activation_collect_sound")). These sets
+are arbitrary and usually infinite. An analyzer, however, computes with finite
+abstract values, and its solver (@sec:td) compares, joins, widens and narrows them without
+knowing what they mean. Recall from @sec:abs-int that an abstract value $a$
+denotes a set $conc(a)$ of concrete values. A value of a numeric domain such
+as Sign or Interval denotes a set of integers, $conc(a) subset.eq ZZ$. An
+abstract state $d$, in contrast, denotes a set of stores,
+$sem(d) subset.eq (#isatype("vname") -> ZZ)$ (@sec:domain-states). The same
+brackets denote expression evaluation in @ch:program-model, where the
+subscript $e$ distinguishes them. An
+arbitrary lattice of abstract values is not enough, for two reasons. First,
+the order must agree with the meaning. The solver only proves inequalities
+$a lle b$ in the abstract order, while the obligations of @ch:traces are
+inclusions between sets. The law
 $ a lle b ==> conc(a) subset.eq conc(b) $
-turns each such inequality into an inclusion (#isathm("gamma_mono"), @fig:sign-conc). Second, a value
-can denote no integer without being the lattice's bottom element. The interval
-pair $ivl(5, 3)$, whose lower bound exceeds its upper bound, is such a value.
-An analyzer that recognizes only the bottom element as empty misses it, and
-after the next join the information that a program point is dead is gone
-(@sec:nonrel-state). This chapter derives what a domain must supply from what
-the analysis does with it. A domain gives values a meaning
-(@sec:domain-carrier-laws), states lift that meaning to stores
-(@sec:domain-states), and the analysis evaluates expressions
-(@sec:domain-forward), answers checks (@sec:queries) and learns from guards
-(@sec:branches). Intervals serve as the running example
-(@sec:interval-domain). @sec:domain-contract collects the operations and laws
-into the interface, and @sec:no-defexc names a carrier it excludes.
+turns each such inequality into an inclusion (#isathm("gamma_mono"),
+@fig:sign-conc). Second, a value can denote no integer without being the
+lattice's bottom element. The interval pair $ivl(5, 3)$, whose lower bound
+exceeds its upper bound, is such a value. An analyzer that recognizes only the
+bottom element as empty misses it. This is still sound, since the analyzer
+then assumes more stores than exist, but it costs precision. After the next
+join, the information that a program point is dead is gone
+(@sec:nonrel-state).
+
+This chapter therefore asks what an abstract domain must provide so that the
+analyzer can compute with it, every result still contains the stores it stands
+for, and no precision is lost merely through the abstract representation, such
+as the fact that a program point is unreachable.
 
 #let _snode(pos, name, body) = node(pos, text(size: 8pt, body), name: name, inset: 3pt)
 #let _order = 0.7pt + vb.neutral
 #let _hit = 1.1pt + vb.accent
 #figure(
   diagram(
-    spacing: (0mm, 9mm),
-    cell-size: (22mm, 5mm),
+    spacing: (0mm, 7.2mm),
+    cell-size: (17.6mm, 4mm),
     _snode((1, 0), <s-top>, signval($top$)),
     _snode((0.5, 1), <s-le>, signval("≤0")),
     _snode((1.5, 1), <s-ge>, signval("≥0")),
@@ -95,13 +101,11 @@ into the interface, and @sec:no-defexc names a carrier it excludes.
   kind: image,
   placement: none,
   caption: [The Sign domain (left) and the sets of integers its values denote
-    (right, drawn mirrored), each ordered bottom to top. The solid lines are
-    the orders $lle$ and $subset.eq$. The dashed arrows show four instances of
-    $conc$, which maps every value to the set at the mirrored position.
-    Since $conc$ is monotone, the blue step
+    (right, mirrored), both ordered bottom to top. The dashed arrows show four
+    instances of $conc$. Since $conc$ is monotone, the blue step
     $signval("+") lle signval("≥0")$ becomes the inclusion
-    $conc(signval("+")) subset.eq conc(signval("≥0"))$. Adapted from the
-    parity figure of @nipkow14[Fig. 13.5].],
+    $conc(signval("+")) subset.eq conc(signval("≥0"))$. Adapted from
+    @nipkow14[Fig. 13.5].],
 ) <fig:sign-conc>
 
 // What a domain supplies, as UML inheritance trees. Each node is a class or
@@ -463,7 +467,8 @@ into the interface, and @sec:no-defexc names a carrier it excludes.
 
 == What an abstract value means <sec:domain-carrier-laws>
 
-A domain is a type $A$ of abstract values, its _carrier_. The solver compares
+The two requirements of the chapter opening become laws on the domain's
+carrier. A domain is a type $A$ of abstract values, its _carrier_. The solver compares
 its values, joins them where control flow merges, starts from a least value
 $lbot$, and extrapolates with the widening $widen$ and the narrowing $narrow$
 of @sec:widening. The analysis also needs a greatest value $ltop$ for unknown
@@ -476,151 +481,139 @@ _numeric domain_:
   thy("numeric_domain")
 }
 
-The third law turns the solver's inequalities into inclusions
-(@fig:sign-conc). The fourth decides emptiness for every value, including
-empty values other than $lbot$. The class extends
-#isalocale("executable_domain"), the part the analyzer runs, by the
-concretization and its laws.
+The third and fourth laws, #isathm("gamma_mono") and
+#isathm("is_empty_correct"), are the two requirements of the chapter opening.
+The class extends #isalocale("executable_domain"), the part the analyzer runs, by
+the concretization and its laws.
 
+Intervals (@sec:abs-int) are this chapter's running example
+#thy-badge("Voblint_Domain", "Interval_Lattice"). As in Nipkow and Klein
+@nipkow14[§13.8.1], bounds are extended integers #isatype("eint"), and an
+interval is a pair of bounds with
+$conc(ivl(l, u)) = setcomp(n in ZZ, l <= n and n <= u)$. On non-empty pairs,
+the order and join (#isaconst("less_eq_ivl"), #isaconst("sup_ivl")) are those
+of @sec:abs-int. Nipkow and Klein identify all empty pairs by a quotient type.
+Voblint's #isatype("ivl") is a plain datatype of bound pairs, so it must
+handle them itself. Every pair with $l > u$ is
+empty, and so are $ivl(+infinity, +infinity)$ and $ivl(-infinity, -infinity)$,
+since no integer equals an infinite bound. The bottom value
+$lbot = ivl(+infinity, -infinity)$ is only one of these empty pairs. An empty
+pair such as $ivl(5, 3)$ denotes the same set as $lbot$, yet it is neither
+$lbot$ nor below it.
 
-== Intervals as a non-relational domain #thy-badge("Voblint_Domain", "Interval_Lattice") <sec:interval-domain>
+The arithmetic operations build their results through
+#isaconst("normalize_ivl"), which replaces every empty pair by
+$lbot = ivl(+infinity, -infinity)$ and leaves non-empty pairs unchanged.
+Otherwise $ivl(1, 0) + ivl(1, 1) = ivl(2, 1)$ would create ever new empty
+values, and the solver, which tests whether a value changed (@sec:td), could
+fail to stabilize. Normalizing never changes the denoted set
+(#isathm("normalize_ivl_gamma")), so it is sound wherever it is applied.
 
-The interval domain of @sec:abs-int is this chapter's running example.
-@sec:abs-int described it on non-empty intervals. The formal type must also
-represent unbounded ends and empty intervals, and most design decisions
-concern the latter.
+The meet intersects the bounds, so
+$ivl(0, 3) lmeet ivl(5, 9) = ivl(5, 3)$, an empty pair. In the order on pairs,
+$ivl(5, 3)$ is the greatest lower bound of the two operands, as a meet must
+be. A normalizing meet would return $lbot$ instead. However, $ivl(5, 3)$ lies
+below both operands but not below $lbot$, since its lower bound $5$ is smaller
+than the lower bound $+infinity$ of $lbot$. So $lbot$ would not be the greatest
+lower bound (#isathm("meet_ivl_normalized_breaks_greatest")). Because an empty
+pair need not be $lbot$, the emptiness test inspects the bounds
+(#isaconst("is_bottom_ivl")). A pair is empty if $l > u$, if its lower bound
+is $+infinity$, or if its upper bound is $-infinity$. The printer uses the same
+test and shows every empty pair as $lbot$. It lies outside the verified
+boundary (@sec:trust-boundary).
 
-Bounds are extended integers #isatype("eint"): $-infinity$, an integer, or
-$+infinity$, linearly ordered. Addition and subtraction extend the integer
-operations. HOL functions are total, so mixed cases such as
-$+infinity + (-infinity)$ return a fixed bound instead of being undefined. An
-interval is a raw pair of bounds, #isatype("ivl"), with
-$ conc(ivl(l, u)) = setcomp(n in ZZ, l <= n and n <= u). $
-@fig:bound-plane draws the pairs as points $(l, u)$. Every pair with $l > u$
-is empty, and so are $ivl(+infinity, +infinity)$ and
-$ivl(-infinity, -infinity)$, since no integer equals an infinite bound.
-
-#figure(
-  cetz.canvas(length: 0.62cm, {
-    import cetz.draw: *
-    let lbl(pos, body, anchor: "west", fill: vb.plain) = content(
-      pos,
-      text(size: 8pt, fill: fill, body),
-      anchor: anchor,
-    )
-    // The frame is the extended plane; its edges are the infinite bounds.
-    let empty-fill = rgb("#e6ebed") // vb.muted lightened
-    line((0, 0), (8, 0), (8, 8), close: true, fill: empty-fill, stroke: none)
-    rect((0, 0), (8, 8), stroke: 0.6pt + vb.neutral)
-    line((0, 0), (8, 8), stroke: (paint: vb.muted, thickness: 0.6pt, dash: "dashed"))
-    lbl((4, -1.0), [lower bound $l$ #sym.arrow.r], anchor: "north")
-    lbl((-0.3, 4), [upper bound $u$ #sym.arrow.t], anchor: "east")
-    lbl((4.3, 1.3), [empty: $l > u$], fill: vb.muted)
-    let pt(pos, body, at, anchor, fill: vb.plain) = {
-      circle(pos, radius: 0.13, fill: fill, stroke: none)
-      lbl(at, body, anchor: anchor, fill: fill)
-    }
-    pt((0, 8), $ltop = ivl(-infinity, +infinity)$, (0, 8.2), "south-west")
-    pt((8, 8), $ivl(+infinity, +infinity)$, (8, 8.2), "south-east", fill: vb.muted)
-    pt((0, 0), $ivl(-infinity, -infinity)$, (0, -0.2), "north-west", fill: vb.muted)
-    pt((8, 0), $lbot = ivl(+infinity, -infinity)$, (8, -0.2), "north-east", fill: vb.accent)
-    pt((3, 5), $ivl(0, 3)$, (3.25, 5), "west")
-    pt((5.2, 3.5), $ivl(5, 3)$, (5.0, 3.6), "south-east", fill: vb.muted)
-    bezier((5.25, 3.4), (7.85, 0.2), (7.3, 3.2), stroke: 0.7pt + vb.accent, mark: (
-      end: ">",
-      fill: vb.accent,
-    ))
-    lbl((7.55, 2.6), text(fill: vb.accent)[#isaconst("normalize_ivl")], anchor: "west")
-    line((3, 5), (1.7, 6.3), stroke: 0.7pt + vb.neutral, mark: (end: ">", fill: vb.neutral))
-    lbl((1.7, 6.4), [larger], anchor: "south")
-  }),
-  kind: image,
-  placement: auto,
-  caption: [Intervals as points $(l, u)$ of the extended plane, whose edges
-    are the infinite bounds. Pairs on or above the diagonal are non-empty,
-    except the two infinite singletons at the corners (grey). The shaded region
-    below the diagonal holds the empty pairs, one of which is $lbot$. A value
-    grows by moving up and to the left. #isaconst("normalize_ivl") maps every
-    empty pair to $lbot$. Illustrative.],
-) <fig:bound-plane>
-
-The order compares bounds: $ivl(l_1, u_1) lle ivl(l_2, u_2)$ if $l_2 <= l_1$
-and $u_1 <= u_2$ (#isaconst("less_eq_ivl")). The bottom value is one of the empty pairs,
-$lbot = ivl(+infinity, -infinity)$, and the top value is
-$ltop = ivl(-infinity, +infinity)$, the only pair denoting $ZZ$. An empty pair
-such as $ivl(5, 3)$ denotes the same set as $lbot$, yet it is neither $lbot$
-nor below it. The join takes the outer bounds,
-$ivl(l_1, u_1) ljoin ivl(l_2, u_2) = ivl(min(l_1, l_2), max(u_1, u_2))$ (#isaconst("join_ivl")), the
-least upper bound in this order (#isathm("join_ivl_le_least")). Joined with an empty pair it can add
-integers: $ivl(1, 0) ljoin ivl(5, 5) = ivl(1, 5)$, although only $5$ is
-denoted by either operand. The result is sound but imprecise.
-
-The solver's stability test compares values, so two different empty pairs
-would count as different. #isaconst("normalize_ivl") therefore replaces every
-empty pair by $lbot$ and leaves non-empty pairs unchanged. Arithmetic
-normalizes its operands, and `min`, `max` and the intersection normalize their
-results. Only the order-theoretic meet returns raw pairs (@sec:branches). Because an empty pair need not be $lbot$, the emptiness test
-inspects the bounds (#isaconst("is_bottom_ivl"),
-#isathm("is_bottom_ivl_correct")). The laws $conc(lbot) = emptyset$ and
-$conc(ltop) = ZZ$ hold by definition, and monotonicity of $conc$ follows from
-transitivity of $<=$ on bounds. The printer shows every empty pair as $lbot$.
-No law constrains it, and it lies outside the verified boundary
-(@sec:trust-boundary).
-
-The widening #isaconst("widen_ivl_core") is the standard one of
-@sec:widening with one adjustment. Its rule would send $lbot widen ivl(0, 0)$
-to $ltop$, since $lbot = ivl(+infinity, -infinity)$ has both bounds at the
-far ends, so widening from $lbot$ returns the other operand. The narrowing
-#isaconst("narrow_ivl_td") fills only infinite bounds,
-$ivl(0, +infinity) narrow ivl(0, 10) = ivl(0, 10)$. The laws of
-#isalocale("widening") and #isalocale("narrowing") follow by comparing bounds.
+The widening is the standard one of @sec:widening
+(#isaconst("widen_ivl_core")), with one exception: widening with $lbot$
+returns the other operand. The standard rule pushes a bound to infinity
+whenever the new value reaches beyond it. Both bounds of
+$lbot = ivl(+infinity, -infinity)$ are exceeded by every non-empty interval, so
+the rule would widen $lbot widen ivl(0, 0)$ all the way to $ltop$.
+The narrowing #isaconst("narrow_ivl_td") refines only infinite bounds and
+keeps finite ones, so $ivl(0, +infinity) narrow ivl(0, 10) = ivl(0, 10)$. Each
+bound leaves infinity at most once, so a narrowing sequence is finite.
 
 == From values to stores <sec:domain-states>
 
-A numeric domain describes the possible values of one variable. At a program
-point, the analysis must describe whole stores, since the obligations of
-@ch:traces are stated over sets of stores. A store, of type #isatype("store")
-$=$ #isatype("vname") $=>$ `int`, maps every variable name to an integer. An _abstract state_ describes a set of stores. It is a
-type $D$ with the order and join the solver needs and a monotone concretization
-that maps each state $d$ to the set $sem(d)$ of stores it describes. One
-symbol serves every kind of state, and the type of $d$ selects its definition
-(#isaconst("gamma_S")). Nothing else about $D$ is fixed.
-@ch:analysis-interface states the analysis for an arbitrary abstract state
-and makes these requirements formal. Two kinds of abstract state are common, and this thesis uses both.
+A numeric domain describes the possible values of one variable. The
+obligations of @ch:traces, however, are stated over sets of stores. A store
+maps every variable name to an integer,
+$#isatype("store") = #isatype("vname") -> ZZ$, so at a program point the
+analysis must describe whole stores. This thesis uses the two forms
+introduced in @sec:constraints, non-relational and relational states. A non-relational description gives each
+variable its own abstract value, and a relational one records how variables
+relate to each other. The two differ in what they can state. Take the stores with
+$0 <= x <= y <= 5$ (@fig:rel-vs-nonrel). The best non-relational description
+over intervals is ${x |-> ivl(0, 5), y |-> ivl(0, 5)}$. It shows $x >= 0$ and
+$y <= 5$, but not $x <= y$, since it also admits $x = 5, y = 0$. A relational
+description that records $x <= y$ shows exactly that fact, but it bounds
+neither variable, so it also admits $x = y = -7$. Neither description is
+therefore stronger than the other. Together, however, they describe exactly
+the given set.
 
-A _non-relational_ state describes each variable independently. It is
-represented pointwise, which gives each variable its own
-abstract value and reuses a numeric domain unchanged. A _relational_ state records how variables relate to each other. They differ in what
-they can state. Take the stores with $0 <= x <= y <= 5$. The best non-relational
-state over intervals is ${x |-> ivl(0, 5), y |-> ivl(0, 5)}$. It shows
-$x >= 0$ and $y <= 5$, but not $x <= y$, since it also admits $x = 5, y = 0$.
-A relational state that records $x <= y$ shows exactly that fact, but
-bounds neither variable, so it also admits $x = y = -7$. Neither state is stronger than the other. Together they describe exactly the given set. The numeric analyses of this
-thesis use non-relational states, the order analysis uses a relational state, and
-@ch:cooperation shows how Voblint combines them.
+#figure(
+  cetz.canvas(length: 0.5cm, {
+    import cetz.draw: *
+    let lbl(pos, body, anchor: "west", fill: vb.plain) = content(
+      pos,
+      text(size: 7.5pt, fill: fill, body),
+      anchor: anchor,
+    )
+    // The half-plane x <= y, clipped to the drawn window.
+    line((-1, -1), (-1, 7), (7, 7), close: true, fill: vb.muted.lighten(82%), stroke: none)
+    line((-1, -1), (7, 7), stroke: (paint: vb.muted, thickness: 0.6pt))
+    // The best non-relational state: the box [0, 5] x [0, 5].
+    rect((0, 0), (5, 5), stroke: (paint: vb.neutral, thickness: 0.8pt, dash: "dashed"))
+    line((-1, 0), (7.3, 0), stroke: 0.5pt + vb.neutral, mark: (end: ">", fill: vb.neutral))
+    line((0, -1), (0, 7.3), stroke: 0.5pt + vb.neutral, mark: (end: ">", fill: vb.neutral))
+    lbl((7.4, 0), $x$)
+    lbl((0, 7.4), $y$, anchor: "south")
+    for x in range(6) {
+      for y in range(x, 6) { circle((x, y), radius: 0.12, fill: vb.accent, stroke: none) }
+    }
+    circle((5, 0), radius: 0.14, fill: none, stroke: 0.8pt + vb.neutral)
+    lbl((5.25, 0.35), $(5, 0)$, fill: vb.neutral)
+    lbl((5.3, 5.4), [$ivl(0, 5) times ivl(0, 5)$], fill: vb.neutral)
+    lbl((1.2, 6.4), [$x <= y$], fill: vb.muted)
+  }),
+  kind: image,
+  placement: none,
+  caption: [Stores over two variables as points $(x, y)$. The stores with
+    $0 <= x <= y <= 5$ are the dots. The best non-relational state denotes the
+    square (dashed), which also admits $(5, 0)$. The relational state
+    ${x <= y}$ denotes the half-plane above the diagonal (shaded), which is
+    unbounded. Their intersection is exactly the dots. Illustrative.],
+) <fig:rel-vs-nonrel>
 
+An _abstract state_ describes a set of stores. It is a type $D$ with
+the order and join the solver needs and a monotone concretization that maps
+each state $d$ to the set $sem(d)$ of stores it describes. Each kind of state
+defines its own concretization, and Isabelle overloads one constant,
+#isaconst("gamma_S"), written $sem(d)$, for all of them. The numeric analyses use non-relational states. An analysis that records
+relations $x <= y$ between variables uses a relational state.
 
 === A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
 
 A non-relational state is represented pointwise. It replaces the integer of a
 store by an abstract value:
 #isatype("abs_state") $=$ #isatype("vname") $=>$ `'a`, so a state $d$ maps
-every variable name $x$ to $d(x)$. When the state is clear, we write
-$x = a$ for $d(x) = a$, as in $x = signval(top)$. Its concretization is
-#isaconst("gamma_state"), the set of stores whose every variable lies in the
-concretization of its abstract value,
-$ sem(d) = setcomp(s, forall x. s(x) in conc(d(x))). $
-Order and join work variable by variable (@fig:pointwise). A
-pointwise state denotes no store exactly when one of its variables has an
-empty value:
-$ sem(d) = emptyset <==> exists x. isai("is_empty") (d(x)), $
-which #isathm("is_empty_state_iff_gamma_state_empty") proves for the predicate
-#isaconst("is_empty_state").
+every variable name $x$ to $d(x)$. Its concretization admits a store if every
+variable's value lies in the concretization of its abstract value:
+
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("gamma_state")
+}
+
+Order and join work variable by variable, as for any function type in HOL.
+A state $d_1$ lies below $d_2$ if $d_1(x) lle d_2(x)$ for every variable $x$,
+and the join is $(d_1 ljoin d_2)(x) = d_1(x) ljoin d_2(x)$
+(@fig:pointwise). Because $conc$ is monotone, so is this concretization, and a
+larger state describes more stores.
 
 #let _pw-vals = ($bot$, "0", $top$)
 #figure(
   diagram(
-    spacing: (10mm, 7mm),
+    spacing: (7mm, 4.9mm),
     ..for i in range(3) {
       for j in range(3) {
         let empty = i == 0 or j == 0
@@ -649,28 +642,28 @@ which #isathm("is_empty_state_iff_gamma_state_empty") proves for the predicate
     },
   ),
   kind: image,
-  placement: none,
-  caption: [Pointwise states over two variables, each pair giving
-    $(d(x), d(y))$ with values from the fragment
-    $signval(bot) lle signval("0") lle signval(top)$ of Sign, ordered
-    variable by variable. The dashed states have a #signval($bot$) component and
-    denote no store, although only the lowest one is the bottom state.],
+  placement: auto,
+  caption: [Pointwise states $(d(x), d(y))$ over two variables, with values
+    from the fragment $signval(bot) lle signval("0") lle signval(top)$ of Sign,
+    ordered variable by variable. The dashed states have a #signval($bot$)
+    component and denote no store, although only the lowest one is the bottom
+    state.],
 ) <fig:pointwise>
 
 Some program points are reached by no execution, for example code behind a
 condition that never holds. The analysis should recognize them from their
 state. A pointwise state makes this hard, because it can say "unreachable" in
-many ways: every state with one empty variable describes no store, and only
+many ways. Every state with one empty variable describes no store, and only
 one of them is the bottom state (@fig:pointwise).
 
 Neither simple test works. Treating only the all-bottom state as unreachable
-misses most cases: refining a branch condition (@sec:branches) usually empties
-a single variable, as in ${x |-> signval(bot), y |-> signval(top)}$. Treating
+misses most cases, because refining a branch condition (@sec:branches) usually
+empties a single variable, as in ${x |-> signval(bot), y |-> signval(top)}$. Treating
 every empty state as unreachable is correct at the moment of the test, but the
-information does not survive the next step: joining two differently empty
+information does not survive the next step. Joining two differently empty
 states can give a non-empty one (@fig:domain-reachability). This is sound,
-since it only adds stores, but it loses the fact that the point is
-unreachable.
+since it only adds stores, but it loses the fact that the point is unreachable
+and is thus imprecise.
 
 #let _r = claim-row("dom-disjunct-sign", "13:5")
 #assert(_r.verdict == "DEAD", message: "dom-disjunct-sign: the caption says unreachable")
@@ -693,60 +686,88 @@ unreachable.
   })),
   kind: image,
   placement: none,
-  caption: [A branch no execution enters: no integer equals both $0$ and $1$.
+  caption: [A branch no execution enters, since no integer equals both $0$
+    and $1$.
     Sign refines the left disjunct to
     ${x |-> signval(bot), y |-> signval(top)}$ and the right one to
     ${x |-> signval(top), y |-> signval(bot)}$. Both are empty, but their
     pointwise join is ${x |-> signval(top), y |-> signval(top)}$. The branch
     turns each empty arm into #ctor("Bot") before the join, and the
     analyzer reports the check in the branch as unreachable (claim
-    `dom-disjunct-sign`).],
+    #claim-ref("dom-disjunct-sign")).],
 ) <fig:domain-reachability>
 
-Voblint therefore makes unreachability a value of its own. A lifted state
-(#isatype("lifted")) is either #ctor("Bot"), meaning unreachable, or
-$ctor("Lifted")(d)$ for an ordinary state $d$, with #ctor("Bot") below
-every other value and $sem(ctor("Bot")) = emptyset$.
+Voblint therefore makes unreachability a value of its own, as Nipkow and
+Klein do with an option type @nipkow14[§13.7] and as Goblint does. Goblint's
+framework lifts the local state by an outer bottom element for dead code
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L120-L135")[`Analyses.Dom`]), and a transfer function that finds its path unreachable
+raises the `Deadcode` exception instead of returning a state. In Voblint, a
+lifted state (#isatype("lifted")) is either #ctor("Bot"), meaning unreachable,
+or $ctor("Lifted")(d)$ for an ordinary state $d$, with #ctor("Bot") below every
+other value and $sem(ctor("Bot")) = emptyset$.
+
 After every transfer, the analysis tests whether the result is empty and, if
-so, replaces it by #ctor("Bot") (#isaconst("normalize_lift")). From then on
-#ctor("Bot") stays #ctor("Bot"). Like `None` in an option type, it
-short-circuits: a transfer applied to #ctor("Bot") is skipped and returns
-#ctor("Bot"), and a join with #ctor("Bot") returns the other operand. An unreachable program point thus keeps the value #ctor("Bot"), and the
-analysis can report it as unreachable. In the program of
-@fig:domain-reachability, both arms are joined inside one branch transfer, so
-the test after the transfer would come too late. The branch refinement of
-@sec:branches therefore also replaces each empty arm of a disjunction by
-#ctor("Bot") before the join, and the two arms join to #ctor("Bot").
+so, replaces it by #ctor("Bot") (#isaconst("normalize_lift")). Comparing with
+the bottom state cannot implement this test, for the reason above. The test
+instead asks the domain's emptiness test, which #isathm("is_empty_correct")
+makes exact for every value. A pointwise state is empty exactly when some
+variable's value is (#isaconst("is_empty_state"),
+#isathm("is_empty_state_iff_gamma_state_empty")). The variable names form an
+infinite set, so the executable analyzer decides this on a finite
+representation of the state (@sec:represented-function). Replacing an empty
+state by #ctor("Bot") only exchanges one abstract representation of the empty
+set for another, equivalent one (#isathm("gamma_state_normalize_lift")), so it
+cannot make the analysis unsound.
 
-Goblint separates reachability in the same way. Its framework lifts
-the local state by an outer bottom element for dead code
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L123-L126")[`Analyses.Dom`]), and a transfer function that finds its path unreachable
-raises the `Deadcode` exception instead of returning a state.
-
-Replacing an empty state by #ctor("Bot") does not change the stores it
-describes (#isathm("gamma_state_normalize_lift")), so it cannot make the
-analysis unsound. The construction needs only an emptiness test on whole
-states. For a pointwise state, the test asks whether some variable is empty.
-The variable names form an infinite set, so the executable analyzer decides
-the test on a finite representation of the state (@sec:represented-function).
+From then on #ctor("Bot") stays #ctor("Bot"). A transfer applied to
+#ctor("Bot") is skipped and returns #ctor("Bot"), and a join with #ctor("Bot") returns the other operand. An
+unreachable program point thus keeps the value #ctor("Bot"), and the analysis
+can report it as unreachable. In the program of @fig:domain-reachability, both
+arms are joined inside one branch transfer, so the test after the transfer
+would come too late. The branch refinement of @sec:branches therefore also
+replaces each empty arm of a disjunction by #ctor("Bot") before the join, and
+the two arms join to #ctor("Bot").
 
 === A relational state #thy-badge("Voblint_Domain", "Order_Lattice") <sec:rel-state>
 
-A relational state keeps what the pointwise form forgets. The type
-#isatype("relc") records a set $P$ of variable pairs, finite in every value the
-analysis constructs, where $(x, y)$
-asserts $x <= y$. Its concretization is #isaconst("gamma_relc"):
+A relational state keeps what the pointwise form forgets. Its concretization
+therefore maps a whole state to a set of stores directly, instead of a value
+to a set of integers. The type #isatype("relc") records a set $P$ of variable
+pairs, where the pair $(x, y)$ stands for the constraint $x <= y$. Its
+concretization is #isaconst("gamma_relc"):
 $
   sem(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
   quad sem(ctor("RelBot")) = emptyset.
 $
-Below, the pair $(x, y)$ is written $x <= y$. More pairs describe fewer stores, so the order is reverse inclusion:
-$ctor("RelC")(P) lle ctor("RelC")(Q)$ exactly when $Q subset.eq P$ (#isaconst("less_eq_relc")), with #ctor("RelBot")
-below every value and $ltop = ctor("RelC")(emptyset)$, which constrains
-nothing. The join keeps the pairs both operands share,
-$ctor("RelC")(P) ljoin ctor("RelC")(Q) = ctor("RelC")(P inter Q)$ (#isaconst("sup_relc")). The
-widening is the join, and the narrowing returns its second operand. Both
-satisfy the laws of the solver's classes.
+Below, the pair $(x, y)$ is written $x <= y$.
+
+More pairs describe fewer stores, so the order is reverse inclusion:
+$ctor("RelC")(P) lle ctor("RelC")(Q)$ exactly when $Q subset.eq P$
+(#isaconst("less_eq_relc")), with #ctor("RelBot") below every value and
+$ltop = ctor("RelC")(emptyset)$, which constrains nothing. The join keeps the
+pairs both operands share,
+$ctor("RelC")(P) ljoin ctor("RelC")(Q) = ctor("RelC")(P inter Q)$
+(#isaconst("sup_relc")). The widening is simply the join. The solver's
+widening contract (#isalocale("widening")) only asks for a value above both
+operands, and the join is one, although the contract alone does not force the
+iteration to terminate. Here an ascending chain can only drop pairs
+from a finite set, since every constructed $P$ is finite (below), so it is
+finite anyway. The narrowing returns its second
+operand, the newly computed value. This is sound for the same reason, since
+the narrowing law only asks for a value between the two operands.
+
+The carrier does not close its pairs under transitivity (@fig:rel-state). The
+values ${x <= y, y <= z}$ and ${x <= y, y <= z, x <= z}$ therefore denote the
+same stores but are different values. The join can also forget an implied
+relation. The join of ${x <= y, y <= z}$ and ${x <= y, x <= z}$ keeps only
+their common pair and is ${x <= y}$, although both operands imply $x <= z$.
+
+Pairs enter only at guards, and an assignment to $x$ removes every pair that
+mentions $x$, so $P$ is finite in every value the analysis constructs. This matters for the
+executable analyzer. Generated code stores a finite set as the list of its
+elements, while an infinite set, such as the set of all pairs, needs a
+complement representation for which not every set operation has executable
+code.
 
 #let _rnode(pos, name, body) = node(pos, text(size: 7pt, body), name: name, inset: 3pt)
 #figure(
@@ -786,7 +807,7 @@ satisfy the laws of the solver's classes.
     edge(<r-nine>, <r-bot>, "-", stroke: _order),
   ),
   kind: image,
-  placement: none,
+  placement: auto,
   caption: [The relational states over the variables $x$, $y$ and $z$,
     ordered bottom to top by reverse inclusion. Each #ctor("RelC") value is
     drawn as its set of pairs. The upper part shows all values built from
@@ -794,113 +815,120 @@ satisfy the laws of the solver's classes.
     drawn only below the lowest of these, and the dots stand for the rest.
     Nine pairs exist, including $x <= x$, so the values are finitely many, and
     the lowest #ctor("RelC") value holds all nine and denotes the stores with
-    $x = y = z$. For example, ${x <= y, y <= z}$ and
-    ${x <= y, y <= z, x <= z}$ denote the same stores, since the first two
-    pairs imply the third, yet they are different values, because the carrier
-    does not close its pairs under transitivity. The join of ${x <= y, y <= z}$
-    and ${x <= y, x <= z}$ keeps only their common pair and is ${x <= y}$,
-    although both operands imply $x <= z$.],
+    $x = y = z$.],
 ) <fig:rel-state>
 
-Emptiness is exact by construction. Every $ctor("RelC")(P)$ contains the store
-that maps every variable to $0$, so only #ctor("RelBot") denotes no store, and
-the emptiness test compares with it (#isathm("is_empty_relc_gamma")). Unlike
-the pointwise form, the carrier has a single representation of
+All constraints in $P$ can be satisfied simultaneously by assigning the same
+value to every variable. In particular, the store that maps every variable to $0$ satisfies every pair
+in $P$. Therefore every $ctor("RelC")(P)$ denotes at least one store,
+regardless of which constraints $P$ contains. Only #ctor("RelBot") denotes the
+empty set of stores. The emptiness
+test only compares with #ctor("RelBot") (#isathm("is_empty_relc_gamma")).
+Unlike the pointwise form, the carrier has a single representation of
 unreachability, so it needs no lifting.
 
-The type instantiates the solver's classes and
-#isalocale("executable_domain"). It is not a numeric domain, since its
-concretization yields sets of stores rather than sets of integers. Its laws are
-stated per transfer in the analysis interface (@ch:analysis-interface). @sec:coop-catalogue turns #isatype("relc") into a local specification of its own
-(#isaconst("order_spec")).
+A relational state stores no value per variable, so it cannot evaluate an
+expression to an abstract value. Its transfers update the constraints
+directly instead. An assignment to $x$ forgets every pair that mentions $x$,
+and a comparison between two variables adds the pairs it implies
+(@sec:branches). The type instantiates
+the solver's classes and #isalocale("executable_domain"), but it is not a
+numeric domain. The next three sections introduce operations on single
+numeric values. They serve non-relational states, and @sec:branches returns to
+the relational state at its end.
 
 == Evaluating expressions <sec:domain-forward>
 
+The carrier operations serve the solver. The analysis additionally needs
+operations that mirror the program's own arithmetic, comparisons and branch
+conditions. We call them the domain's _primitives_. This section
+and the next two introduce them, one use at a time.
+
 An assignment `x = e` needs the abstract value of $e$. Forward evaluation
 computes it from an abstract state $d$, as in the generic abstract interpreter
-of Nipkow and Klein @nipkow14[Sect. 13.5.2]. The abstract result must contain
+of Nipkow and Klein @nipkow14[§13.5.3]. The abstract result must contain
 every concrete result (#isalocale("sound_evaluator")):
 $ s in sem(d) ==> sem(e)_e thin s in conc(sh("eval")(e, d)). $
 Interval evaluates by interval arithmetic on the bounds (#isaconst("aval_ivl")).
-If $x = ivl(0, 9)$, then $x + 1$ evaluates to $ivl(1, 10)$. The abstract `min`
-and `max` take the minimum or maximum of both bounds and normalize the result
-(#isaconst("ivl_min"), #isaconst("ivl_max"), #isalocale("sound_minmax_ops")),
-so $min(ivl(0, 5), ivl(3, 9)) = ivl(0, 5)$.
+For example, if $d(x) = ivl(0, 9)$, Interval evaluates `x + 1` to
+$ivl(1, 10)$.
 
-A branch can drop an arm whose condition is known to be false
-(@sec:branches). For this a domain may also decide the truth of a value
-(#isalocale("sound_truth_test")). Its truth test $"tobool"(a)$ returns
-$"Some"(b)$ if it can decide that every integer in $conc(a)$ has truth value
-$b$, where non-zero counts as true, and $"None"$ otherwise:
+A condition is an expression too, and VIMP reads its value as a truth value,
+with non-zero meaning true. If the abstract value of a condition admits only
+one truth value, a branch can drop the arm that needs the other. A domain
+therefore also supplies a truth test (#isalocale("sound_truth_test")). The
+test $"tobool"(a)$ answers in three values. It returns $"Some"(b)$ if every
+integer in $conc(a)$ has truth value $b$, and $"None"$ otherwise:
 $ "tobool"(a) = "Some"(b) and i in conc(a) ==> (i != 0) = b. $
 Interval's test #isaconst("interval_tobool") returns $"Some"("true")$ for
 $ivl(l, u)$ if the interval excludes $0$, that is $u < 0$ or $l > 0$, and
 $"Some"("false")$ if $l = u = 0$. Otherwise it returns $"None"$. So
-$ivl(1, 5)$ is true, $ivl(0, 0)$ is false, and $ivl(0, 5)$ is undecided. An
-empty pair also counts as true. The law holds for it vacuously, since it
-denotes no integer.
+$ivl(1, 5)$ is true, $ivl(0, 0)$ is false, and $ivl(0, 5)$ is undecided.
 
 == Answering queries <sec:queries>
 
 An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
-reaches its program point, and the analysis must answer from the abstract state
-there. Filtering by $c$ does not answer this, since a filter may keep stores that
-violate $c$. Voblint therefore asks the domain, as Goblint's
+reaches its program point. The analysis must answer this from the abstract
+state there alone. Voblint follows Goblint here, whose
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/assert.ml",
 )[`assert`]
-analysis asks its query system.
+analysis answers a check through its query system.
 
-A domain answers two queries on abstract values, $"less"(a, b)$ for $a < b$
-and $"eq"(a, b)$ for $a = b$ (#isalocale("sound_numeric_queries")). A definite
-answer must hold for every pair of integers the two values denote, and
-$"None"$ is always allowed:
-$ "less"(a, b) = "Some"(r) and i in conc(a) and j in conc(b) ==> (i < j) = r, $
-and likewise for $"eq"$. Interval compares bounds through four judgments.
-#isaconst("interval_less_true") holds if $u_1 < l_2$ and
-#isaconst("interval_less_false") if $u_2 <= l_1$. #isaconst("interval_eq_true")
-holds for two equal singletons and #isaconst("interval_eq_false") for disjoint
-intervals. All four also hold when an operand has $l > u$, which the law
-allows, since such an operand denotes no integer. So
-$"less"(ivl(0, 3), ivl(5, 9))$ is true, while $"less"(ivl(0, 5), ivl(3, 9))$
-is undecided: the intervals overlap, and some of their pairs compare one way
-and some the other.
+A domain answers two comparisons on abstract values, $"less"(a, b)$ for
+$a < b$ and $"eq"(a, b)$ for $a = b$. Like the truth test, each answers in
+three values. A definite answer must hold for every pair of integers the two
+values denote, and $"None"$, meaning unknown, is always allowed:
 
-A check's condition can be compound, while a domain answers only
-$"less"$ and $"eq"$. The query reduces every condition to these two.
+#{
+  show raw.where(block: true): set text(size: 6.5pt)
+  thy("sound_numeric_queries")
+}
+
+Domains differ in which comparisons they can decide. Interval decides $a < b$
+when one interval lies entirely below the other, where a shared endpoint
+suffices for the answer false, and $a = b$ when the intervals are disjoint or
+the same single integer. Sign decides $a < b$ whenever the signs separate the
+values, for example for zero and a positive value. Parity and Congruence, the
+domains of @ch:instances, are weaker here. Parity can only refute equality
+between an even and an odd value and never decides $<$. Congruence answers
+only when both values are single integers. Answering unknown is always sound, so a domain that is not
+suited to a comparison leaves the check undecided.
+
+Every condition can be judged with these two comparisons alone.
 
 #definition(name: [Query], isa: "check_query", cmd: "fun")[
-  A query asks whether a condition $c$ holds in the stores an abstract state
-  $d$ describes. The answer _true_ certifies that $c$ holds in every such
-  store, _false_ that it holds in none, and _unknown_ makes no claim.
+  A query evaluates a condition $c$ on an abstract state $d$ to one of three
+  answers, _true_, _false_ or _unknown_, by recursion on $c$, using only the
+  domain's two comparisons.
 ]
 
-#isaconst("check_query") answers every condition from
-these two, by recursion on the condition. A comparison first evaluates its
-operands forward to abstract values $hat(a)$ and $hat(b)$ (@sec:domain-forward)
-and then asks one of the two queries, with the operands swapped or the answer
-negated where needed:
+#isaconst("check_query") answers a condition by recursion on it. A comparison
+first evaluates its operands forward to abstract values $hat(a)$ and $hat(b)$
+(@sec:domain-forward) and then asks one of the two comparisons, with the operands
+swapped or the answer negated where needed:
 $
   a < b & ~> "less"(hat(a), hat(b)), & quad a > b & ~> "less"(hat(b), hat(a)), & quad
   a == b & ~> "eq"(hat(a), hat(b)), \
   a <= b & ~> not "less"(hat(b), hat(a)), & quad a >= b & ~> not "less"(hat(a), hat(b)), & quad
   a != b & ~> not "eq"(hat(a), hat(b)).
 $
+
 Negation keeps _unknown_. The connectives `!`, `&&` and `||` combine the answers
-of their operands in three-valued logic: a definite _false_ decides `&&` and a
+of their operands in three-valued logic. A definite _false_ decides `&&`, and a
 definite _true_ decides `||`, whatever the other operand answers. Any other
 expression $e$ is read as $e != 0$, its truth value in VIMP. A new domain
-therefore gets checks on arbitrary conditions by providing these two queries.
-One proof covers every domain: a definite answer holds in every store the state
-describes (#isathm("check_query_sound")). #isalocale("sound_check_query")
-combines the queries with forward evaluation, and @sec:verdicts turns the answers into
-the analyzer's verdicts.
-
-=== Example: a compound check <sec:query-example>
+therefore gets checks on arbitrary conditions by providing these two
+comparisons.
+One proof covers every domain. The answer _true_ certifies that $c$ holds in
+every store the state describes, _false_ that it holds in none, and _unknown_
+makes no claim (#isathm("check_query_sound")). #isalocale("sound_check_query")
+combines the queries with forward evaluation, and @sec:verdicts turns the
+answers into the analyzer's verdicts.
 
 The condition `x <= y && y != 0` is answered from $"less"(hat(y), hat(x))$ and
 $"eq"(hat(y), hat(0))$ alone. In Sign, with $x$ non-positive and $y$ positive,
-both queries give a definite _false_, both negations give _true_, and so does
+both comparisons give a definite _false_, both negations give _true_, and so does
 the conjunction (@fig:query-tree).
 
 #let _q = claim-row("dom-query-tree-sign", "11:7")
@@ -932,7 +960,7 @@ the conjunction (@fig:query-tree).
   placement: none,
   caption: [How #isaconst("check_query") answers a compound condition, in Sign
     with #raw(_q.state) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
-    one of the domain's two queries (blue), as $~>$ marks; the answer follows
+    one of the domain's two comparisons (blue), as $~>$ marks; the answer follows
     the colon. Negation flips a definite answer,
     and `&&` is true because both operands are. The analyzer reports the check
     #_q.verdict.],
@@ -942,16 +970,16 @@ the conjunction (@fig:query-tree).
 
 When the analysis enters a branch, it knows whether the condition held. On the
 true arm of `if (0 < x)`, for example, $x$ is positive, even though the
-condition assigns no variable. Evaluating the condition forward cannot use
-this: it only tells the analysis whether the condition may hold, not which
-values of $x$ make it hold.
+condition assigns no variable. Ignoring this knowledge is sound, since the
+state before the branch already contains every store that takes either arm.
+It costs precision, however, as the following program shows.
 
-#let _g = claim-row("dom-guard-sign", "18:3")
+#let _g = claim-row("dom-guard-interval", "18:3")
 #align(center, block(width: 60%, {
   show raw: set text(size: 6.5pt)
   listing(
     lang: "c",
-    claim: "dom-guard-sign",
+    claim: "dom-guard-interval",
     ```
     x = __voblint_nondet_int();
     if (0 < x) {
@@ -964,197 +992,38 @@ values of $x$ make it hold.
   )
 }))
 
-In this program $y$ ends up as $|x|$, so the check always holds. With forward
-evaluation only, `0 < x` is unknown for $x = signval(top)$, both arms keep
-$x = signval(top)$, $y$ becomes #signval($top$), and the state cannot show that
-the check holds.
-Backward refinement runs the condition in reverse, as in the backward analysis
-of Nipkow and Klein @nipkow14[Sect. 13.7]. Given abstract operands $a_1, a_2$
-and the result an operation must produce, an inverse operator returns refined
-operands $a'_1, a'_2$ that keep every concrete pair producing that result. For
-a comparison that must yield $r$:
+In this program $y$ ends up as $|x|$, so the check always holds. Without
+refinement, both arms keep $x |-> ltop$, $y$ becomes $ltop$, and the state
+cannot show that the check holds. Backward refinement runs the condition in
+reverse, as in the backward analysis of Nipkow and Klein @nipkow14[§13.7].
+Given abstract operands $a_1, a_2$ and the result an operation must produce,
+an inverse operator returns refined operands $a'_1, a'_2$ that keep every
+concrete pair producing that result. For a comparison that must yield $r$:
 $
   n_1 in conc(a_1) and n_2 in conc(a_2) and (n_1 < n_2) = r
   ==> n_1 in conc(a'_1) and n_2 in conc(a'_2),
 $
 and likewise for equality, addition, subtraction and multiplication
-(#isalocale("sound_inverse_ops"), part of #isalocale("sound_refinement")). An intersection combines a refined value
-with the value known before. Nipkow and Klein use a lattice meet and require
-$conc(a_1 lmeet a_2) = conc(a_1) inter conc(a_2)$. One inclusion follows from
-the monotonicity of $conc$, and the other is all that soundness needs. The
-interface keeps that inclusion and drops the lattice. The intersection is any
-operation with
-$ conc(a_1) inter conc(a_2) subset.eq conc("intersect"(a_1, a_2)), $
-that lies below both operands, a lower bound that need not be the greatest one
-(#isalocale("sound_intersection"), shown in @sec:isabelle). Soundness of the
-filter needs only the inclusion. The lower bound serves the executable filter,
-which stops as soon as a refinement step empties the state: each later step
-returns a state below its input, and a state below an empty one is empty, so
-stopping early agrees with the full refinement
-(#isathm("sound_refinement.afilter_st_lift_correct")). The carrier
-classes require a join but no meet.
+(#isalocale("sound_inverse_ops"), part of #isalocale("sound_refinement")).
 
-In Sign, the refined value is the meet of the old value with what the guard
-implies. Sign refines $x$ to $signval(top) lmeet signval("+") = signval("+")$
-on the true arm and to $signval(top) lmeet signval("≤0") = signval("≤0")$ on
-the false arm (@fig:guard-meet). Both arms then give $y$ a non-negative value,
-and the join yields $y = signval("≥0")$ (#raw(_g.state)). The counting loop of
-@sec:constraints already used this refinement: its inequality
-$b gt.eq h lmeet [-infinity, 4]$ is the refinement of the loop-head interval
-$h$ at the guard `i < 5`.
+The refined operand is then combined with the value known before. Nipkow and
+Klein use the lattice meet for this and require it to be exact on the denoted
+sets. Voblint asks for less, namely an intersection that keeps every integer
+both operands share and lies below both (#isalocale("sound_intersection"), shown in
+@sec:isabelle). For Interval it is the normalized meet
+#isaconst("intersect_ivl"). Normalization changes nothing for the operands
+below, so it agrees with the meet there. In the program above, Interval
+refines $x$ to $ltop lmeet ivl(1, +infinity) = ivl(1, +infinity)$ on the true
+arm and to
+$ivl(-infinity, 0)$ on the false arm. Both arms then give $y$ a non-negative
+value, and the join yields #raw(_g.state).
 
-#let _mnode(pos, name, body, kind: none) = node(
-  pos,
-  text(size: 8pt, body),
-  name: name,
-  inset: 3pt,
-  stroke: if kind == "old" { stroke(paint: vb.neutral, thickness: 0.6pt, dash: "dashed") } else if (
-    kind != none
-  ) { 0.8pt + vb.accent } else { none },
-  fill: if kind == "meet" { vb.accent.lighten(80%) } else { none },
-  shape: rect,
-  corner-radius: 2pt,
-)
-#figure(
-  diagram(
-    spacing: (10mm, 8mm),
-    _mnode((1, 0), <m-top>, signval($top$)),
-    _mnode((0.5, 1), <m-le>, signval("≤0"), kind: "guard"),
-    _mnode((1.5, 1), <m-ge>, signval("≥0"), kind: "old"),
-    _mnode((0, 2), <m-neg>, signval("−")),
-    _mnode((1, 2), <m-zero>, signval("0"), kind: "meet"),
-    _mnode((2, 2), <m-pos>, signval("+")),
-    _mnode((1, 3), <m-bot>, signval($bot$)),
-    ..(
-      (<m-top>, <m-le>),
-      (<m-top>, <m-ge>),
-      (<m-le>, <m-neg>),
-      (<m-ge>, <m-pos>),
-      (<m-neg>, <m-bot>),
-      (<m-zero>, <m-bot>),
-      (<m-pos>, <m-bot>),
-    ).map(((a, b)) => edge(a, b, "-", stroke: _order)),
-    edge(<m-le>, <m-zero>, "-", stroke: _hit),
-    edge(<m-ge>, <m-zero>, "-", stroke: _hit),
-  ),
-  kind: image,
-  placement: none,
-  caption: [Refinement as a meet in Sign, for $x$ on the false arm of
-    `if (0 < x)` when $x = signval("≥0")$ held before the branch (dashed). The
-    guard implies $x in conc(signval("≤0"))$ (blue outline), and the refined value is
-    the meet, the greatest value below both (filled):
-    $signval("≥0") lmeet signval("≤0") = signval("0")$. Illustrative.],
-) <fig:guard-meet>
-
-For Interval, the meet intersects the bounds and is exact on the denoted
-sets, $conc(a lmeet b) = conc(a) inter conc(b)$. It cannot normalize its
-result: $ivl(5, 3)$ lies below both $ivl(0, 3)$ and $ivl(5, 9)$, but not below
-the normalized meet $lbot$, so a normalizing meet would not be a greatest lower
-bound (#isathm("meet_ivl_normalized_breaks_greatest")). The intersection of the
-interface is therefore a separate operation, the normalized meet
-#isaconst("intersect_ivl"). It preserves the denoted set exactly, lies below
-both operands as the interface requires, and is monotone. The inverse of $<$
-refines $x = ivl(0, +infinity)$ against $ivl(10, 10)$, with $x < 10$ required
-true, to $x = ivl(0, 9)$ (#isaconst("inv_less_ivl")). The inverse of $=$ gives
-both sides their meet on the true arm and keeps them on the false one
-(#isaconst("inv_eq_ivl")). Only comparisons refine. The inverses of addition,
-subtraction and multiplication return their operands unchanged, which the law
-allows. The inverse of addition could refine $x_1$ in $x_1 + x_2 = r$ to
-$x_1 lmeet (r - x_2)$, as the interval analysis of Nipkow and Klein does
-@nipkow14[Sect. 13.8.3].
-
-#let _ip = claim-row("dom-interval-plus-inverse", "10:5")
-#let _ipi = claim-row("dom-int-plus-inverse", "10:5")
-#align(center, block(width: 60%, {
-  show raw: set text(size: 6.5pt)
-  listing(
-    lang: "c",
-    claim: "dom-interval-plus-inverse",
-    ```
-    fun main() {
-      x = __voblint_nondet_int();
-      if (x + 1 < 5) {
-        __voblint_check(x < 4);
-      }
-    }
-    ```.text,
-  )
-}))
-
-On the true arm every execution has $x <= 3$, so the check holds. The inverse
-of $<$ refines $x + 1$ to $ivl(-infinity, 4)$, but the identity inverse of $+$
-passes nothing on to $x$, which stays $ltop$, and Interval answers #_ip.verdict.
-The inverse of Nipkow and Klein would compute
-$ x lmeet (ivl(-infinity, 4) - ivl(1, 1)) = ivl(-infinity, 3) $
-and prove the check. Int inverts arithmetic through its Parity and Congruence
-components (@fig:inverse-trace). On this guard it still answers #_ipi.verdict: the inverses of $+$ in Parity and Congruence
-carry no order.
-
-The branch transfer #isaconst("sound_refinement.branch") performs this
-refinement in two stages. A feasibility gate first evaluates the condition
-forward. If its value is empty, or the truth test decides it with the other
-truth value, no store takes the arm, and the result is unreachable. Otherwise
-the branch refines the state with #isaconst("bfilter_lifted"). It follows the
-structure of the condition. At each comparison it applies
-the filter #isaconst("bfilter"), which takes a condition, the required truth
-value and a state, and returns the refined state. #isaconst("bfilter") hands
-arithmetic operands to #isaconst("afilter"), which refines a state so that an
-expression evaluates within a required abstract value @nipkow14[Sect. 13.7.1].
-Where a disjunction joins two refined arms, #isaconst("bfilter_lifted")
-replaces an arm that is infeasible or refined to an empty state by
-#ctor("Bot") before the join. All of these are defined once, generically for
-every backward domain.
-
-The inverse operators decide how much the filter learns. @fig:inverse-trace
-follows the true arm of `x + 1 == y`, with $y$ even and $x$ unknown, in Parity.
-The inverse of equality gives both sides the meet of their values, so $x + 1$
-must be even, and Parity's inverse of addition (#isaconst("inv_plus_parity"))
-makes $x$ odd. Interval's inverse of addition returns its operands unchanged,
-so the same filter learns nothing about $x$ there. Parity, Congruence and Int
-invert arithmetic. Sign and Interval invert only comparisons, and neither
-Parity nor Congruence inverts $<$.
-
-#let _tv(body) = text(size: 7.5pt, body)
-#figure(
-  table(
-    columns: 2,
-    stroke: none,
-    inset: (x: 6pt, y: 3pt),
-    align: (left + horizon, center + horizon),
-    table.hline(stroke: 0.5pt),
-    [*step (record field)*], [*Parity*],
-    table.hline(stroke: 0.4pt),
-    _tv[state before], _tv($x |-> top, thin y |-> "even"$),
-    _tv[evaluate operands (#isaconst("n_aval"))], _tv($x + 1 |-> top, thin y |-> "even"$),
-    _tv[feasibility gate (#isaconst("r_tobool"))], _tv[undecided, arm kept],
-    _tv[invert `==` (#isaconst("r_inv_eq"))], _tv($x + 1 : "even", thin y : "even"$),
-    _tv[invert `+` (#isaconst("r_inv_plus"))], _tv($x : top lmeet ("even" - "odd") = "odd"$),
-    _tv[intersect (#isaconst("r_intersect"))], _tv($x |-> "odd", thin y |-> "even"$),
-    table.hline(stroke: 0.5pt),
-  ),
-  kind: image,
-  placement: none,
-  caption: [The generic branch refinement in Parity on the true arm of
-    `x + 1 == y`, one row per primitive it calls, grouped by primitive rather
-    than in execution order. The left column names the field of
-    #isatype("nonrelational_ops") that supplies the primitive: #isaconst("n_aval")
-    is the evaluator, and the #raw("r_") fields are the truth test, the
-    inverse operators and the intersection. $e : a$ is the target value an
-    operand must evaluate within. #isathm("bfilter_parity_plus_narrows")
-    checks the result by evaluation.],
-) <fig:inverse-trace>
-
-A relational state learns from a guard in the same way, but what it learns is
-a relation. On the true arm of `if (x < y)`, the relational state of
-@sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), which is
-again the meet of its current value with $ctor("RelC"){x <= y}$. The carrier
-stores only weak orders, so the strictness of $x < y$ is lost, which is sound
-but less precise. A non-relational
-state learns nothing there when $x$ and $y$ are unbounded, since $x < y$ bounds
-neither variable on its own (@sec:relational).
-
-A branch that ignores its condition is already sound. The filter must only
-never remove a store that satisfies the condition.
+The guard filter #isaconst("bfilter") takes a condition, the required truth
+value and a state, and applies the inverse operators along the structure of
+the condition. For the arithmetic operands of a comparison it calls
+#isaconst("afilter"), which refines a state so that an expression evaluates
+within a required value @nipkow14[§13.7.1]. Its soundness is exactly what
+the branch needs, since it never removes a store that satisfies the guard.
 
 #block(breakable: false)[
   #theorem(name: [Sound guard filter], isa: "bfilter_sound")[
@@ -1165,10 +1034,28 @@ never remove a store that satisfies the condition.
   #proved("bfilter_sound")
 ]
 
-The branch inherits this law. Its gate drops only arms that no store takes,
-and replacing an empty arm by #ctor("Bot") keeps the stores it describes
-(#isathm("sound_refinement.branch_sound")). The relational refinement
-#isaconst("relc_branch_step") satisfies the same statement
+Interval and Sign refine only at comparisons. Their inverses of addition,
+subtraction and multiplication return the operands unchanged, which the law
+allows. Inverting arithmetic, as the interval analysis of Nipkow and Klein does
+@nipkow14[§13.8.3], would also learn $x < 4$ from `x + 1 < 5`. Parity and
+Congruence invert arithmetic, and the reduced product Int
+(@sec:reduced-product) inherits their inverses for its parity and congruence
+components only.
+
+The branch transfer #isaconst("sound_refinement.branch") first drops an arm
+that the truth test rules out, and otherwise applies the filter. Where it joins
+the arms of a disjunction, it uses #isaconst("bfilter_lifted"), which turns
+each empty arm into #ctor("Bot") first (@sec:nonrel-state). The branch inherits the filter's
+soundness (#isathm("sound_refinement.branch_sound")).
+
+A relational state learns from a guard in the same way, but what it learns is
+a relation. On the true arm of a comparison between two variables such as
+`if (x < y)`, the relational state of
+@sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), which is
+again the meet of its current value with $ctor("RelC"){x <= y}$. The carrier
+stores only weak orders, so the strictness of $x < y$ is lost, which is sound
+but less precise. The relational refinement #isaconst("relc_branch_step")
+satisfies the same statement as the filter
 (#isathm("relc_branch_step_sound")).
 
 == The complete domain interface <sec:domain-contract>
@@ -1176,33 +1063,29 @@ and replacing an empty arm by #ctor("Bot") keeps the stores it describes
 The operations of this chapter fall into two groups. The _carrier operations_
 serve the solver: the order, the join, bottom and top, widening and narrowing,
 the emptiness test and the printer (@sec:domain-carrier-laws). The
-_primitives_ describe the program's operations: evaluation, the truth test and
-`min` and `max` (@sec:domain-forward), the two queries (@sec:queries), and the
-inverse operators and the intersection (@sec:branches). A non-relational
-domain hands its primitives over as one record, #isatype("nonrelational_ops"),
-and proves them sound once by interpreting #isalocale("sound_nonrelational_ops")
-(@fig:domain-carrier), from which the framework derives every transfer
-(@sec:instances-supply). For Interval, the record #isaconst("ivl_ops")
-collects the operations above. Its one interpretation proves the monotone form
-(#isalocale("mono_nonrelational_ops")), and everything of
-@sec:instances-supply follows from it.
+_primitives_ mirror the program's operations: evaluation and the truth test
+(@sec:domain-forward), the two comparisons (@sec:queries), and the inverse
+operators and the intersection (@sec:branches). Every non-relational domain
+hands its primitives over as one record of type #isatype("nonrelational_ops"),
+for Interval #isaconst("ivl_ops"), and proves them sound once by interpreting
+#isalocale("sound_nonrelational_ops") (@fig:domain-carrier).
 
-The laws constrain safety alone. A query may always answer unknown, an inverse
-operator may return its operands unchanged, and an intersection may keep more
-than the values both operands share. _Sound_ here means that an operation
-keeps every concrete value its inputs admit. The concretization and the laws
-are not part of the generated analyzer, which runs only the carrier operations
-and the primitives (@sec:codegen).
+The record contains no transfer function, because the primitives determine
+every edge. An assignment `x = e` overwrites $x$ with the abstract value of $e$,
+and a skip leaves the state unchanged. A branch is the backward refinement of
+@sec:branches, built from the evaluator, the truth test and the inverse
+operators. Procedure entry evaluates the arguments in the caller's state, sets
+every variable of the callee to $ltop$, and binds the formal parameters. A new
+non-relational domain therefore supplies values and primitives only, and its
+interpretation of #isalocale("sound_nonrelational_ops") proves all of these
+transfers sound at once.
 
-The interface asks for no monotone operations, although Kleene iteration
-approaches the least fixpoint only of a monotone step function
-(@sec:lattices). Soundness needs less. The solver stops only when every unknown
-it reached is stable, so a terminated solve returns a partial post-solution
-whatever the right-hand sides are (#isathm("partial_post_solution"),
-@sec:td). Monotonicity would buy the least such solution, and only for a
-variant of the solver without widening and narrowing, which Voblint does not
-run. @sec:instances-supply lists the domains that prove monotone operations
-anyway.
+The record and the executable transfers are stated for an executable domain,
+while the soundness locale requires a numeric domain. Code generation forces
+this split. Generated code for a definition over numeric domains must contain
+an implementation of the concretization, even where nothing calls it, and
+Interval's concretization, a set of integers, has no executable code
+equation.
 
 #figure(
   domain-tree("carrier"),
@@ -1213,14 +1096,12 @@ anyway.
     an analysis interprets. Each class (solid) or locale (dashed) lists the
     operations and laws it declares, which the declarations below it inherit.
     Solid arrows point to what a declaration extends, dashed ones to the class
-    its type variable is constrained to. An interface an analysis implements has a heavier border and
-    lists its instances. A superscript #mono-mark marks an interface with a
-    monotone strengthening, whose operations are also monotone in the abstract
-    order; on an interpretation it marks one that proves all of them
-    (#isalocale("mono_nonrelational_ops")). The post-solution
-    soundness argument needs no monotonicity. Colour gives where a node is
-    declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored solver,
-    #swatch(vb.voblint) Voblint.],
+    its type variable is constrained to. An interface an analysis implements
+    has a heavier border and lists its instances. A superscript #mono-mark
+    marks an interface with a monotone strengthening, and an interpretation
+    that proves it (#isalocale("mono_nonrelational_ops")). Colour gives where a
+    node is declared: #swatch(vb.hol) HOL, #swatch(vb.solver) the vendored
+    solver, #swatch(vb.voblint) Voblint.],
 ) <fig:domain-carrier>
 
 == A carrier the interface excludes <sec:no-defexc>
@@ -1229,16 +1110,17 @@ Voblint cannot host every domain Goblint offers. The verified solver requires
 its values to form a #isalocale("bounded_semilattice_sup_bot")
 (#isalocale("TD_side_upd_rule")), and the generic framework inherits the
 requirement. That class asks for the _least_ upper bound
-(#isalocale("semilattice_sup")), and the proofs use it: reductive refinement
+(#isalocale("semilattice_sup")), and the proofs use it. Reductive refinement
 bounds the join of two disjunction arms by the state it started from
-(#isathm("sound_refinement.bfilter_reductive")). The requirement excludes every
+(#isathm("sound_refinement.bfilter_reductive")). This requirement excludes every
 carrier in which two values have upper bounds but no least one.
 
 Goblint's exclusion-set domain
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/defExcDomain.ml",
 )[`DefExc`]
-is such a carrier once its bit range is removed. A value is `Definite n`,
+is such a carrier once its bit range is removed. A non-bottom value is
+`Definite n`,
 denoting ${n}$, or `Excluded (S, r)`, denoting the integers in the bit range
 $r$ outside the finite set $S$. Mathematical integers have no bit range, so
 `Excluded S` denotes $ZZ without S$ (@fig:defexc). Then `Definite 1` and
@@ -1246,13 +1128,13 @@ $r$ outside the finite set $S$. Mathematical integers have no bit range, so
 $p in.not {1, 2}$ lies above both. A least upper bound $u$ would lie below
 each of them, so by monotonicity of $conc$
 $ {1, 2} subset.eq conc(u) subset.eq inter.big_(p in.not {1, 2}) (ZZ without {p}) = {1, 2}, $
-but no value denotes exactly ${1, 2}$: `Definite n` denotes a single
-integer, and `Excluded S` all but finitely many.
+but no value denotes exactly ${1, 2}$, since `Definite n` denotes a single
+integer and `Excluded S` all but finitely many.
 
 #let _gnode(pos, name, body) = node(pos, text(size: 7pt, raw(body)), name: name, inset: 3pt)
 #figure(
   diagram(
-    spacing: (4.5mm, 6mm),
+    spacing: (4.5mm, 4.5mm),
     _gnode((1.5, 0), <x-top>, "Excluded {}"),
     _gnode((0.6, 1), <x-3>, "Excluded {3}"),
     _gnode((2.4, 1), <x-4>, "Excluded {4}"),
@@ -1288,7 +1170,7 @@ integer, and `Excluded S` all but finitely many.
     ..("s0", "s1", "s2", "s3").map(n => edge(label("x-" + n), <x-bot>, "-", stroke: _order)),
   ),
   kind: image,
-  placement: auto,
+  placement: none,
   caption: [Goblint's exclusion sets without a bit range, ordered bottom to
     top: `Definite n` denotes ${n}$ and `Excluded S` denotes $ZZ without S$.
     Every `Excluded S` with $1, 2 in.not S$ lies above `Definite 1` and
@@ -1298,15 +1180,14 @@ integer, and `Excluded S` all but finitely many.
     machine-checked.],
 ) <fig:defexc>
 
-Goblint's domain escapes in two ways. The bit range leaves only finitely many
-upper bounds of the two values. Its join does not compute the least one
-anyway: joining two distinct `Definite` values yields `Excluded ({0}, r)`,
-or excludes nothing if one of them is $0$. Voblint could admit this carrier
+Goblint's domain escapes this argument through its bit range. With a range $r$,
+the value `Excluded (`$r without {1, 2}$`, r)` denotes exactly ${1, 2}$. Its
+join does not return this value anyway. Joining two distinct `Definite`
+values yields `Excluded ({0}, r)`, or excludes nothing if one of them is $0$. Voblint could admit this carrier
 only by bounding its integers, or by weakening #isalocale("semilattice_sup")
-to an upper-bound law throughout the solver and the framework. This argument
-is not machine-checked.
+to an upper-bound law throughout the solver and the framework.
 
-The restriction is not marginal. `DefExc` is the only integer domain Goblint
-enables by default; its interval, congruence and enumeration domains are
-opt-in (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/config/options.schema.json")[`ana.int.def_exc`]). A carrier with Voblint's join law cannot run Goblint's
-default integer analysis unchanged.
+The domain interface is now complete. Its laws make every operation keep the
+stores its inputs admit, but each law speaks only about one value or one state.
+A program moves its state along edges and through calls, and
+@ch:analysis-interface states what an analysis must prove there.

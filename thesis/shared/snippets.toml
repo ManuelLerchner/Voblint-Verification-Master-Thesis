@@ -8,6 +8,9 @@ why = "Chapter 5, the domain interface figure: the executable operations a domai
 [snippets.numeric_domain]
 why = "The domain interface figure: what a domain must supply and prove."
 
+[snippets.gamma_state]
+why = "Chapter 5, a non-relational state: the pointwise concretization of a state."
+
 [snippets.sound_numeric_queries]
 why = "Chapter 5, the soundness condition of the comparison queries a check asks."
 
