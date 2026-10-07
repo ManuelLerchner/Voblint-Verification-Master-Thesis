@@ -218,7 +218,7 @@ store _in the context the call enters_. Entry coverage
 policy chooses the context in which it is analyzed, so @ch:equations combines
 the two. #oblig("TOTAL"), that every covered call reaches some context, follows from
 the policy, and for entry-state contexts also from entry coverage
-(@sec:eq-entry-routing). #oblig("INIT") requires the analysis's initial state
+(@sec:eq-routing). #oblig("INIT") requires the analysis's initial state
 $d_0$ to cover the initial stores, which the analysis discharges when it is
 registered (#isathm("dg_analysis.init_sound")).
 

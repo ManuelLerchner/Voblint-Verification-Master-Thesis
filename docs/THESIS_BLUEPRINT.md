@@ -1312,6 +1312,15 @@ PART III — THE ANALYZER
   8.5 Commutation: running the real thing, reasoning about the other one
   8.6 Deciding deadness finitely
 
+  Reason for the structural change (2026-10-07): chapter 8 (thesis
+  numbering) mixed the semantic equation system with the solver adapter. It now
+  holds context-indexed unknowns, the call equations (seeds as the entry's
+  inbox), one merged routing section and the soundness theorem. Strategy
+  trees, the reason for seeds, the product carrier, buffering and the traced
+  solve open chapter 9, retitled "Solving the Equations", before the
+  certificate that reuses them. The four-policy precision figure moved to the
+  evaluation's precision section.
+
 9 Results, checks, and the source-level theorem                    [10%]
   9.1 The published table: coverage is not reachability
   9.2 Live keys: coverage derived from termination

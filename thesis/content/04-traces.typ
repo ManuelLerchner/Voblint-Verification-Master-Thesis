@@ -261,7 +261,7 @@ depends on the analysis. A call-string analysis distinguishes activations by
 their recent call sites, and an entry-state analysis by abstract entry states
 that it computes itself. If a trace stored its context, the concrete semantics
 would change with every analysis, and for entry-state contexts it would even
-depend on the analysis's own result (@sec:eq-entry-routing). Instead, the
+depend on the analysis's own result (@sec:eq-routing). Instead, the
 concrete semantics is fixed once. Each context policy supplies, for every concrete call, the set of callee
 contexts it admits, and contexts of traces are derived from these sets
 (@sec:contexts). The soundness theorems are proved once for all policies, and an analysis only
@@ -467,7 +467,7 @@ callee's entry after the formals have been bound: `bump(5)` enters with
 $n = 5$. Each alternative also describes the
 caller, and the return later combines this description with the callee's
 result. A context is therefore admitted only for a caller store that its
-alternative describes (@sec:eq-entry-routing).
+alternative describes (@sec:eq-routing).
 
 #isaconst("admits_call_context") applies $italic("adm")$ to an actual call edge
 of the graph, with the entered store that the edge's entry transfer
@@ -523,7 +523,7 @@ We call #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") the _activation colle
 It contains the final stores of the valid traces that end at $v$ and carry
 $c$, and the claim for the unknown $[v, c]$ must contain it. In the running example under interval entry-state contexts, `bump(5)` gets the
 context $[[5, 5]]$ and `bump(4)` the context $[[4, 4]]$
-(@sec:eq-entry-routing). The final store of `bump(5)`, with result $6$, lies in
+(@sec:eq-routing). The final store of `bump(5)`, with result $6$, lies in
 the activation collecting semantics of context $[[5, 5]]$ at the result node of
 `bump`, and the final store of `bump(4)`, with result $5$, in that of context
 $[[4, 4]]$. The node collecting semantics at the result node contains both
@@ -616,7 +616,7 @@ policies, whose sets are empty for the caller stores that the analysis
 excludes (@sec:contexts). The context-insensitive policy and
 call strings admit a context for every call and meet #oblig("TOTAL") for every
 claim (#isathm("call_context_total_on_of_fun")). For entry-state contexts it
-follows from the coverage of the analysis's entry (@sec:eq-entry-routing).
+follows from the coverage of the analysis's entry (@sec:eq-routing).
 Isabelle states the five obligations as the assumptions of the locale
 #isalocale("activation_coverage") (@fig:activation-coverage).
 

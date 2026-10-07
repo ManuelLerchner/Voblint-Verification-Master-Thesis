@@ -127,9 +127,11 @@ Consequences:
   record).
 - Put optional capabilities after what every instance needs (chapter 6: edge
   transfers and calls before analysis globals).
-- Give encoding material one home: chapter 8's encoding section owns how the
-  equation construction maps to the TD solver; chapter 2 owns the generic
-  solver notions; chapter 9 owns the certificate. Other chapters point there.
+- Give encoding material one home: chapter 9's first section owns how the
+  equation construction maps to the TD solver (strategy trees, seeds, the
+  product carrier, buffering) and the traced solve; chapter 2 owns the generic
+  solver notions; chapter 9 also owns the certificate. Chapter 8 states the
+  equations and their soundness only. Other chapters point there.
 - Side results, extensions and limitations leave the main construction: the
   termination section (finite context spaces) or the chapter's closing
   limitations section. Flow-insensitive program globals are selectable and

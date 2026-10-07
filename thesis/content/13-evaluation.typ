@@ -2,8 +2,9 @@
 #import "../lib/stats.typ": stat, stat-percent, stat-sum
 #import "../lib/alignment.typ": alignment, alignment-count
 #import "../lib/claims.typ": (
-  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-verdict,
+  claim-check, claim-ref, claim-snapshot, claim-timed-out, snapshot-cluster-of, snapshot-verdict,
 )
+#import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
 
 = Evaluation <ch:evaluation>
@@ -226,6 +227,106 @@ holds at every call. Call strings of length 100 give
 stands for the deepest calls, widening removes the lower bound there, and the
 check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") and
 #claim-ref("cost-down-k100")).
+
+A context policy decides which calls share an unknown (@fig:eq-policies). A
+call string of length one separates the two calls of `wrap` but merges them
+again in `scale`, where both arrive from the same call site. Length two and
+entry-state routing keep them apart through `scale`. The strict separation
+between call-string lengths one and two above is of this kind.
+
+#let _policy(name, title) = {
+  let s = claim-snapshot(name)
+  let procs = ("main", "wrap", "scale")
+  let shown = s.clusters.filter(c => c.proc in procs)
+  let ctxlabel(c) = {
+    let t = c.ctx
+    if t == "root context" { "root" } else if t.starts-with("call-string=") {
+      t.slice("call-string=".len())
+    } else { t }
+  }
+  let pos = (:)
+  for (row, p) in procs.enumerate() {
+    let copies = shown.filter(c => c.proc == p)
+    for (i, c) in copies.enumerate() {
+      pos.insert(c.id, (i - (copies.len() - 1) / 2, row))
+    }
+  }
+  let pairs = ()
+  for e in s.edges.filter(e => e.label.starts-with("enter ")) {
+    let a = snapshot-cluster-of(s, e.src)
+    let b = snapshot-cluster-of(s, e.dst)
+    if a != none and b != none and a.id in pos and b.id in pos {
+      // Calls from several sites into one copy share an arrow and list the sites.
+      let site = s.nodes.at(e.src).label
+      let i = pairs.position(p => p.at(0) == a.id and p.at(1) == b.id)
+      if i == none { pairs.push((a.id, b.id, site)) } else if not pairs.at(i).at(2).contains(site) {
+        pairs.at(i).at(2) += ", " + site
+      }
+    }
+  }
+  let check = s.nodes.values().find(n => "check a == 2" in n.lines)
+  let state = check.lines.find(l => l.starts-with("a="))
+  let verdict = snapshot-verdict(s, "a == 2")
+  let tone = if verdict == "PROVED" { vb.proved } else { vb.unstable }
+  block(width: 100%, {
+    align(center, text(size: 8pt, weight: "bold", title))
+    v(2pt)
+    align(center, diagram(
+      spacing: (14mm, 4.5mm),
+      ..shown.map(c => node(
+        pos.at(c.id),
+        text(size: 6.5pt)[#c.proc \ #raw(ctxlabel(c))],
+        shape: rect,
+        stroke: 0.6pt + vb.accent,
+        fill: vb.accent.lighten(93%),
+        corner-radius: 2pt,
+        inset: 3pt,
+      )),
+      ..pairs.map(((a, b, site)) => edge(
+        pos.at(a),
+        pos.at(b),
+        "-|>",
+        stroke: 0.6pt + vb.called,
+        label: text(size: 7pt, fill: vb.called, raw(site)),
+        label-sep: 1pt,
+      )),
+    ))
+    v(2pt)
+    align(center, text(size: 7.5pt)[`a == 2`: #text(fill: tone, verdict), #raw(state)])
+  })
+}
+
+// The call site of a call as the analyzer numbers it, so the caption cannot
+// drift from the graph it describes.
+#let _site(call) = {
+  let s = claim-snapshot("ctx-demo-k2")
+  raw(s.nodes.at(s.edges.find(e => e.label == "enter " + call).src).label)
+}
+
+#figure(
+  {
+    set par(first-line-indent: 0pt, justify: false)
+    grid(
+      columns: (1fr, 1fr),
+      column-gutter: 8pt,
+      row-gutter: 6pt,
+      _policy("ctx-demo-none", [no contexts]), _policy("ctx-demo-entry", [entry states]),
+      _policy("ctx-demo-k1", [call strings, length 1]),
+      _policy("ctx-demo-k2", [call strings, length 2]),
+    )
+  },
+  kind: image,
+  placement: none,
+  caption: [Procedure copies under four context policies. The running example
+    has no nested call, so this figure uses a small program of the explainer:
+    `scale(v)` returns `2 * v`, `wrap(w)`
+    returns `scale(w)` from #_site("scale(w)"), and `main` calls `a = wrap(1)`
+    at #_site("wrap(1)") and `b = wrap(4)` at #_site("wrap(4)"), then checks
+    `a == 2`. Boxes are procedure copies labelled with their contexts as the
+    analyzer prints them (`root` is the initial context of `main`), arrows
+    calls labelled with their sites. Read from
+    the analyzer's solved graph (Interval, claims #claim-ref("ctx-demo-*")).],
+) <fig:eq-policies>
 
 #let _verdict(name, cond) = {
   if claim-timed-out(name) { return text(fill: vb.unproved)[no answer in 5 s] }
