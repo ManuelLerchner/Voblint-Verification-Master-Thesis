@@ -8624,7 +8624,8 @@ let rec relc_has
 let rec relc_le
   d a b =
     (match (var_of a, var_of b) with (None, _) -> false
-      | (Some _, None) -> false | (Some x, Some y) -> relc_has x y d);;
+      | (Some _, None) -> false
+      | (Some x, Some y) -> ((x : string) = y) || relc_has x y d);;
 
 let rec relc_eval
   d e = (match e

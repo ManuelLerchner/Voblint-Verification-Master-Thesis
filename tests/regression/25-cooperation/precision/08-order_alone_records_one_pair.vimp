@@ -2,8 +2,8 @@
 // The order analysis on its own. Under x < y it records the pair x <= y and
 // proves x <= y, which Interval, tracking each variable separately, cannot.
 // It does not close pairs under transitivity, so x <= z stays UNKNOWN under
-// y <= z, and an assignment to y forgets every pair with y. Backs the order
-// example of the thesis (Section 11.4).
+// y <= z, and y = y + 1 forgets every pair with y. A copy w = x records both
+// pairs between w and x, so w == x is PROVED. Backs thesis Section 11.4.
 fun main() {
   x = __voblint_nondet_int();
   y = __voblint_nondet_int();
@@ -16,4 +16,6 @@ fun main() {
     y = y + 1;
     __voblint_check(x <= y); // UNKNOWN
   }
+  w = x;
+  __voblint_check(w == x); // PROVED
 }

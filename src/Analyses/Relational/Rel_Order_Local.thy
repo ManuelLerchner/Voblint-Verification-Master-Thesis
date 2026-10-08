@@ -25,7 +25,11 @@ text \<open>
   other query is answered with \<open>\<top>\<close>, the claim that holds of every store.
 \<close>
 
-text \<open>\<open>relc_le d a b\<close> holds when \<open>a\<close> and \<open>b\<close> are variables whose order \<open>d\<close> records.\<close>
+text \<open>
+  \<open>relc_le d a b\<close> holds when \<open>a\<close> and \<open>b\<close> are variables whose order \<open>d\<close> records,
+  or the same variable. The reflexive case lets a copy \<open>x = y\<close> learn both orders
+  between \<open>x\<close> and \<open>y\<close> from the channel's own answer to \<open>y <= y\<close>.
+\<close>
 
 fun var_of :: "exp \<Rightarrow> vname option" where
   "var_of (V x) = Some x"
@@ -33,7 +37,7 @@ fun var_of :: "exp \<Rightarrow> vname option" where
 
 definition relc_le :: "relc \<Rightarrow> exp \<Rightarrow> exp \<Rightarrow> bool" where
   "relc_le d a b =
-     (case (var_of a, var_of b) of (Some x, Some y) \<Rightarrow> relc_has x y d | _ \<Rightarrow> False)"
+     (case (var_of a, var_of b) of (Some x, Some y) \<Rightarrow> x = y \<or> relc_has x y d | _ \<Rightarrow> False)"
 
 definition relc_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
   "relc_eval d e =
