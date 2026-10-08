@@ -114,6 +114,21 @@ theorem run_voblint_arithmetic_safe:
   shows "arithmetic_safe_at (prog_cfg p) v s"
   using run_voblint_sound[OF assms(1)] assms(2,3) unfolding sound_report_def by blast
 
+text \<open>An arithmetic error is the dual: wherever a collected store meets it, the divisor is zero.\<close>
+
+theorem run_voblint_arithmetic_refuted:
+  assumes "run_voblint config p = Analysed res"
+    and "d \<in> set (report_diagnostics res)" and "diagnostic_verdict d = Check_Refuted"
+    and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> (diagnostic_point d)"
+  shows "\<lbrakk>arithmetic_divisor (diagnostic_obligation d)\<rbrakk>\<^sub>e s = 0"
+proof -
+  have "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>"
+    using run_voblint_sound[OF assms(1)] assms(4) unfolding sound_report_def by blast
+  then have "\<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)"
+    using run_voblint_sound[OF assms(1)] assms(2,3) unfolding sound_report_def by blast
+  then show ?thesis using arithmetic_condition_safe by blast
+qed
+
 corollary run_voblint_arithmetic_intra_safe:
   assumes "run_voblint config p = Analysed res"
     and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
@@ -186,7 +201,7 @@ corollary run_voblint_source_sound_joined:
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
   shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> gamma_lift (report_gamma res) (report_point_join res v)"
+                 \<and> s \<in> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
   using run_voblint_source_sound[OF s0[unfolded G_def] run[unfolded G_def Pi_def] ans]
     report_sem_point_join
   unfolding Pi_def g_def by blast

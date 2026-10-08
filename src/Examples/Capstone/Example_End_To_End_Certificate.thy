@@ -450,7 +450,7 @@ proof (intro ballI)
     using certificate_demo_check [OF ans] by blast
   from certificate_demo_verdicts_at_check [OF ans mem] r rp re rv
   show "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
-    unfolding verdict_stores_def by simp
+    unfolding verdict_stores_eq by simp
 qed
 
 text \<open>

@@ -145,7 +145,7 @@ classifier over its own states at the check's point. From that alone:
 `analysis_report_of_sound` is the one proof that splits on the context policy: a
 report the run builds is consistent, covers the collecting semantics, makes the
 arithmetic diagnostics sound, and lists one row per compiled check. It rests on
-`report_rows_report_of`: the report's states at a point are exactly the table's
+`report_states_at_report_of`: the report's states at a point are exactly the table's
 entries there. That needs the context listing to be complete, which
 `ordered_by_key_set` proves for an injective key; the entry-state key breaks ties by
 `mcp_ctx_key`, which is injective on every context.

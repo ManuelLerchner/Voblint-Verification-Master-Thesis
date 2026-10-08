@@ -249,4 +249,21 @@ proof -
   qed
 qed
 
+text \<open>An error names a point whose divisor condition the solved table refutes.\<close>
+
+lemma arithmetic_diagnostic_of_refuted:
+  assumes "d \<in> set (arithmetic_diagnostic_of v i obligation verdict)"
+    and "diagnostic_verdict d = Check_Refuted"
+  shows "verdict = Lifted Check_Refuted \<and> diagnostic_point d = v
+    \<and> diagnostic_obligation d = obligation"
+  using assms by (cases "(v, i, obligation, verdict)" rule: arithmetic_diagnostic_of.cases) auto
+
+lemma arithmetic_diagnostics_refuted:
+  assumes "d \<in> set (arithmetic_diagnostics g r classify)"
+    and "diagnostic_verdict d = Check_Refuted"
+  shows "point_verdict r classify (diagnostic_point d)
+      (arithmetic_condition (diagnostic_obligation d)) = Lifted Check_Refuted"
+  using assms unfolding arithmetic_diagnostics_def
+  by (auto dest!: arithmetic_diagnostic_of_refuted)
+
 end

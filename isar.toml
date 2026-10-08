@@ -14,6 +14,8 @@ exclude = [
   "thesis/shared/generated/**",
   # Local scratch copies (.git/info/exclude), e.g. regenerated theories.
   ".scratch/**",
+  # Scratch theory that pixi run thesis-deps-export writes under build/.
+  "build/entity-deps/**",
 ]
 
 [fmt]
