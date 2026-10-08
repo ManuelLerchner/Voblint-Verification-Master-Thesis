@@ -202,9 +202,6 @@ idea to a sequential program and records one activation's view of the run
 
 == Traces <sec:traces>
 
-This section defines activation traces, the condition under which they are
-valid, their relation to graph runs, and the collecting semantics they induce.
-
 === Activation traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
 
 We turn the grouping of @fig:flat-nested into a datatype.

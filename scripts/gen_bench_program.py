@@ -23,7 +23,9 @@ def procs(n: int, size: int = 8) -> str:
         steps = "\n".join(f"  y{i} = y{i - 1} + 1;" for i in range(1, size))
         out.append(f"fun f{p}(a) {{\n  y0 = a;\n{steps}\n  return y{size - 1};\n}}")
     calls = "\n".join(f"  x{p + 1} = f{p}(x{p});" for p in range(count))
-    out.append(f"fun main() {{\n  x0 = 0;\n{calls}\n  __voblint_check(x{count} >= 0);\n}}")
+    out.append(
+        f"fun main() {{\n  x0 = 0;\n{calls}\n  __voblint_check(x{count} >= 0);\n}}"
+    )
     return "\n".join(out)
 
 
