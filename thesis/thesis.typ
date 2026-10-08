@@ -4,19 +4,14 @@
 #import "@preview/codly:1.3.0": codly, codly-init
 #import "lib/theorems.typ": thm-counter
 #import "lib/figures.typ": part, part-outline-entry
-#import "@preview/glossarium:0.5.10": make-glossary, print-glossary, register-glossary
-#import "lib/glossary.typ": entries as glossary-entries, print-thesis-glossary
-
-#show: make-glossary
-#register-glossary(glossary-entries)
-
 #show: thesis.with(
-  title: "Voblint: Towards a Verified Goblint-style Analysis Pipeline in Isabelle/HOL",
+  title: "Voblint: Towards a Verified Goblint-Style Analysis Pipeline in Isabelle/HOL",
+  title-de: [Voblint: Auf dem Weg zu einer verifizierten Analysepipeline im Stil von Goblint in #box[Isabelle/HOL]],
   doctype: "Master's Thesis",
   study-program: "Informatics",
   author: "Manuel Lerchner",
-  supervisor: "Alexandra Graß & Helmut Seidl",
-  examiner: "Francisco Javier Esparza Estaun",
+  supervisor: [Alexandra Graß, M.Sc. \ Prof. Dr. Helmut Seidl],
+  examiner: "Prof. Dr. Francisco Javier Esparza Estaun",
   date: "01.12.2026",
 )
 
@@ -114,11 +109,6 @@
 
 // -------------------------------------------------------------- back matter -
 #set heading(numbering: none)
-
-// The glossary is disabled: every term is defined where the chapters introduce it.
-// #pagebreak(weak: true)
-// = Glossary <glossary>
-// #print-thesis-glossary(print-glossary)
 
 #pagebreak(weak: true)
 #bibliography("literature.bib", style: "ieee")

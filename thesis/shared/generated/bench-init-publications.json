@@ -1,0 +1,71 @@
+{
+  "what": "Wall time of cli/voblint --analysis interval before and after the init_publications code equation (commit 6fb205799).",
+  "command": "hyperfine -N --warmup 1 --runs 5 on programs from scripts/gen_bench_program.py",
+  "machine": "Apple M4 Pro, macOS",
+  "date": "2026-10-09",
+  "note": "Recorded once on one machine for reproducibility; not used as a build assertion.",
+  "programs": {
+    "chain128": {
+      "before": {
+        "mean_s": 0.2918,
+        "stddev_s": 0.0045,
+        "user_s": 0.2427,
+        "runs": 5
+      },
+      "after": {
+        "mean_s": 0.0789,
+        "stddev_s": 0.001,
+        "user_s": 0.0416,
+        "runs": 5
+      }
+    },
+    "chain256": {
+      "before": {
+        "mean_s": 3.2092,
+        "stddev_s": 0.0745,
+        "user_s": 3.128,
+        "runs": 5
+      },
+      "after": {
+        "mean_s": 0.2386,
+        "stddev_s": 0.0029,
+        "user_s": 0.224,
+        "runs": 5
+      }
+    },
+    "procs256": {
+      "before": {
+        "mean_s": 0.3566,
+        "stddev_s": 0.0245,
+        "user_s": 0.3257,
+        "runs": 5
+      },
+      "after": {
+        "mean_s": 0.0424,
+        "stddev_s": 0.0013,
+        "user_s": 0.0318,
+        "runs": 5
+      }
+    },
+    "procs512": {
+      "before": {
+        "mean_s": 2.438,
+        "stddev_s": 0.0059,
+        "user_s": 2.396,
+        "runs": 5
+      },
+      "after": {
+        "mean_s": 0.134,
+        "stddev_s": 0.0022,
+        "user_s": 0.1081,
+        "runs": 5
+      }
+    }
+  },
+  "inputs": {
+    "chain128": "python3 scripts/gen_bench_program.py chain 128",
+    "chain256": "python3 scripts/gen_bench_program.py chain 256",
+    "procs256": "python3 scripts/gen_bench_program.py procs 256",
+    "procs512": "python3 scripts/gen_bench_program.py procs 512"
+  }
+}

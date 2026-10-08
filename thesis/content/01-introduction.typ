@@ -487,7 +487,7 @@ each.
   analyzers from parts, one per kind of sensitivity, with proofs on paper.
 - _Needed assumptions and non-empty results._ For several proof obligations, a
   theorem exhibits a claim or abstract operation that meets the remaining
-  conditions but misses a store some run reaches (e.g.
+  conditions but misses a store some run reaches (for instance
   #isathm("total_dropped_unsound"), @sec:eval-1161), so none of
   them can simply be dropped. A soundness theorem
   would also hold for an analyzer that answers #verdict("UNKNOWN") everywhere. Theorems

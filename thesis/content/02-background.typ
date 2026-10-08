@@ -157,7 +157,7 @@ Isabelle/HOL mechanisms the formalization uses.
 An analysis describes the states a program can be in at each of its points, so
 we first make the points explicit. A _control-flow graph_ has the program
 points as nodes and an edge for every way control can pass from one point to
-the next, labelled with the assignment or condition executed on the way.
+the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
 our running example. The loop becomes a cycle through $h$, $b$ and $t$, and
 its _loop head_ $h$ is the node at which the cycle is entered and left.

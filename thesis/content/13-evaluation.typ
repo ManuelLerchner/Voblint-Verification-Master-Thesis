@@ -143,7 +143,7 @@ $[-7, -5]$, refutes the first check, and proves the second.
 
 The theorem says nothing about precision, since an analyzer that answers
 #verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). What each mechanism gains is therefore shown on
-concrete programs. Each witness below fixes the concrete behaviour first, then
+concrete programs. Each witness below fixes the concrete behavior first, then
 shows what one mechanism keeps or loses, and supports a claim about its program
 only.
 

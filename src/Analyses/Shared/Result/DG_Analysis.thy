@@ -239,6 +239,17 @@ definition init_publications :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_pr
       then map (\<lambda>(n, d). (global_of n, DG Bot d)) (place_inits \<G> p) else [])"
 
 text \<open>
+  The generated code evaluates this test at every equation evaluation, so the code
+  equation names the entry node directly instead of compiling the program each time.
+\<close>
+
+lemma init_publications_code:
+  "init_publications \<G> p x =
+     (if x = (FunctionEntry prog_main_name, root_ctx)
+      then map (\<lambda>(n, d). (global_of n, DG Bot d)) (place_inits \<G> p) else [])"
+  by (simp add: init_publications_def prog_cfg_def)
+
+text \<open>
   The initial global environment a run starts from: what the entry node buffers at
   its own key, read at every name living there, together with the root's initial
   publications.
@@ -418,7 +429,7 @@ declare
   dg_pipeline.entry_alt_def [code]
   dg_pipeline.entry_of_def [code]
   dg_pipeline.sol_global_def [code]
-  dg_pipeline.init_publications_def [code]
+  dg_pipeline.init_publications_code [code]
   dg_pipeline.equations_def [code]
   dg_pipeline.solution_code [code]
   dg_pipeline.terminates_code [code]

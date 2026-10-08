@@ -208,7 +208,8 @@ We turn the grouping of @fig:flat-nested into a datatype.
 
 #block(breakable: false)[
   #definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
-    A trace has one constructor per way an activation begins or continues.
+    A trace has one constructor per way an activation begins or continues
+    (@fig:activation-trace).
   ]
 
   #figure(
@@ -317,7 +318,7 @@ those of VIMP programs, keeping the history that the frame stack discards.
   #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
     A valid trace represents a graph configuration if it ends at the
     configuration's node and store and its chain of creating callers matches
-    the runtime frame stack.
+    the runtime frame stack (@fig:activation-trace-repr).
   ]
 
   #figure(
@@ -433,7 +434,8 @@ through #oblig("TOTAL") (@sec:contract).
 
 #block(breakable: false)[
   #definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
-    A context policy maps a concrete call to the set of callee contexts it admits.
+    A context policy maps a concrete call to the set of callee contexts it admits
+    (@fig:call-context-rel).
   ]
 
   #figure(
@@ -484,11 +486,11 @@ the contexts that the caller had before the call. The
   "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings",
 )[explainer page]
 draws, for each policy, the contexts that the analyzer creates on one
-program, with every copy of a procedure labelled by its context.
+program, with every copy of a procedure labeled by its context.
 
 #block(breakable: false)[
   #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
-    The contexts that a trace may carry.
+    The contexts that a trace may carry (@fig:trace-context).
   ]
 
   #figure(

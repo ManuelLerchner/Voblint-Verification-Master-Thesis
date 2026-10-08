@@ -33,7 +33,7 @@ about the function the tool runs, code generated from the prover, and an
 explicit list of trusted components (@sec:trust-boundary). Voblint's parser
 corresponds to CompCert's parser, and its code generator and OCaml toolchain to
 the extraction and the Caml compiler. Compiler correctness
-preserves the behaviour of a program. Analyzer soundness only over-approximates
+preserves the behavior of a program. Analyzer soundness only over-approximates
 it, so a coarser result remains sound.
 
 Verasco is a Coq-verified analyzer for most of ISO C99, excluding recursion and
@@ -228,7 +228,7 @@ and publish contributions to global unknowns @apinis12. Seidl et al. @seidl26
 describe how Goblint uses them to decouple a mixed flow-sensitive analysis from
 the solver, with digests on the analysis side and update rules on the solver
 side recovering precision. Voblint adopts the split: an analysis supplies local
-and global transfer behaviour, and the generator and solver organize their
+and global transfer behavior, and the generator and solver organize their
 interaction.
 
 The correspondence with Goblint's implementation is architectural. We compared

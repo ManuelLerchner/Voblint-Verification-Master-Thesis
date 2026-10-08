@@ -101,9 +101,8 @@ The delivered tools rest on the trusted components of @sec:trust-boundary, and
 every witness proved by evaluation trusts the code generator. No test runs VIMP
 programs concretely, since the development has no executable form of
 #isaconst("pstep"). No time or memory measurement is reported. The executable
-keeps the data representations of the proofs. Finite sets are lists, the
-solver's value table is a function, and no data refinement to efficient sets
-and maps has been carried out. A refinement of the solver's state would require
+keeps proof-oriented data representations, and no data refinement to efficient
+sets and maps has been carried out (@sec:generated-code). A refinement of the solver's state would require
 the proof of the vendored solver to be redone. The rest of the chain uses the
 solver only through its certificate (@sec:certificate) and would be
 unaffected.
@@ -113,7 +112,7 @@ optimality or completeness theorem is proved. Completeness would mean that
 every check that holds in all executions is reported as proved. Each precision
 witness concerns one program with fixed analysis settings (@sec:eval-precision).
 The regression corpus is small and was written or adapted for this work, and
-its expected behaviour is the author's reading of each program
+its expected behavior is the author's reading of each program
 (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run. The
 playground is illustrative, and no study measures whether it helps a reader.
 The correspondence with Goblint is architectural. No theorem transfers to its
@@ -123,11 +122,12 @@ search rather than a systematic review (@ch:related).
 
 == Outlook <sec:outlook>
 
-=== Extending Voblint <sec:outlook-extending>
+Three directions stand out for extending Voblint: a richer source language
+with its semantics, richer analyses, and stronger execution infrastructure,
+from the solver to termination and efficient representations. Voblint also
+relates to Goblint in both directions.
 
-Three directions stand out. The first is a richer source language with its
-semantics, the second richer analyses, and the third stronger execution
-infrastructure, from the solver to termination and efficient representations.
+=== Extending Voblint <sec:outlook-extending>
 
 A richer source language, up to a subset of C, needs the new obligations that
 @sec:discussion names for machine integers, pointers, a heap and threads. It
