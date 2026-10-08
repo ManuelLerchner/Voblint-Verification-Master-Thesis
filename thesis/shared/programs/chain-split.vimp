@@ -8,9 +8,7 @@ fun f(n) {
 fun main() {
   a = f(1);
   x = __voblint_nondet_int();
-  if (0 < x) {
-    if (x < 4) {
-      b = f(x);
-    }
+  if (0 < x && x < 4) {
+    b = f(x);
   }
 }

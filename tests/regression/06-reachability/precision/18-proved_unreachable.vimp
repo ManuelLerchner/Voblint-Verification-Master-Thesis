@@ -3,13 +3,11 @@
 // no run reaches the check; the interval analysis cannot see that and keeps
 // x = [1,2] there, where x > 0 holds. The verdict is PROVED, and it is sound:
 // it says that x > 0 holds whenever a run reaches the check, which is vacuous.
-// Backs the example in thesis section 9.5.
+// Backs the example in thesis section 10.5.
 fun main() {
   n = __voblint_nondet_int();
   x = 3 * n;
-  if (x > 0) {
-    if (x < 3) {
-      __voblint_check(x > 0);  // PROVED
-    }
+  if (0 < x && x < 3) {
+    __voblint_check(x > 0);  // PROVED
   }
 }

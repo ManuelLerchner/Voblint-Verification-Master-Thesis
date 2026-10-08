@@ -11,8 +11,8 @@
 // at v = [51,52] (measured), one element too wide, and nothing in the
 // program refines that further. Solver-invariant across join, per-origin,
 // warrow, warrow-per-origin. Under --analysis int (16-composite-domain/
-// precision/05-mine_ex410_stride2_congruence.vimp) congruence 1 (mod 2)
-// cuts [51,52] down to [51,51].
+// precision/05-...congruence.vimp) oddness cuts [1,50] to [1,49] in the
+// body, so the head holds [1,51] and the exit guard leaves v = 51.
 fun main() {
   v = 1;
   while (v < 51) {
