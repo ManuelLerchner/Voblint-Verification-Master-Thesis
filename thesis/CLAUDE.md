@@ -22,6 +22,7 @@ clean. The checks that keep the text honest, and what each one reads:
 | --- | --- |
 | `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup, or a `#theorem`/`#lemma`/`#corollary` environment names a fact the theories declare with a different keyword |
 | `thesis-links` | a name the markup links has no anchor in the rendered theories (`--write` regenerates `shared/generated/links.json`; `--live` checks the deployed pages) |
+| `thesis-deps` | never fails; warns when a `thy`/`proved`/theorem-environment display comes before a cited entity its Isabelle statement uses, introduced in a later section (`--near` adds same-section ones, `// deps: preview` above a display marks an intentional preview, `thesis-deps-write` regenerates `shared/generated/entity-deps.json` from the built heap, `thesis-deps-html` draws the graph) |
 | `thesis-snippets` | a declaration or theorem statement shown with `thy`/`proved` no longer matches its source text |
 | `thesis-domain-tree` | a class instantiation or certificate lemma for an interface drawn in a chapter 5 domain tree is missing from that tree's list in `shared/domain-tree.toml` |
 | `thesis-facts` | a fact in `shared/facts.toml` is not proved by the built session, its printed statement changed, or a `proved` snippet comes from another theory than the one proving it |
