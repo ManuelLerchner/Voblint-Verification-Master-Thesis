@@ -1,5 +1,5 @@
 #import "../lib/code.typ": fixture, isaconst, isalocale, isathm, isatype, listing, oblig
-#import "../lib/figures.typ": check-row, partref
+#import "../lib/figures.typ": check-row, partref, verdict
 #import "../lib/sources.typ": proved
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
@@ -117,8 +117,8 @@ Voblint answers every check that the user writes into the source program as a
 it cannot exclude a zero divisor. @fig:intro-answers shows the analyzer as it
 runs in the
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html")[browser
-  playground], together with what each answer guarantees. Only `DEAD` makes a
-claim about reachability, and `REFUTED` is not a verified counterexample. Each
+  playground], together with what each answer guarantees. Only #verdict("DEAD") makes a
+claim about reachability, and #verdict("REFUTED") is not a verified counterexample. Each
 run fixes an analysis configuration: the abstract domain (Sign, Interval, Parity,
 Congruence or the reduced-product domain Int), the context policy, and the
 rule that combines contributions to global values. The run shown uses
@@ -129,14 +129,6 @@ intervals without calling contexts.
 #let _ans-refuted = check-row("intro-answers", cond: "p > 100")
 #let _ans-unknown = check-row("intro-answers", cond: "p == 50")
 #let _ans-dead = check-row("intro-answers", cond: "p == 0")
-// The playground's verdict colours (pages/style.css), so the table matches the
-// screenshot beside it.
-#let _pg = (
-  proved: rgb("#28734b"),
-  refuted: rgb("#ad422c"),
-  unknown: rgb("#a76924"),
-  warning: rgb("#8a4fbf"),
-)
 #let _ans-run = json("/shared/generated/playground/playground.json").clamp
 // Line numbers are read from the screenshot's own program, so the table cannot
 // drift from the image; a needle must match exactly one line.
@@ -170,14 +162,14 @@ intervals without calling contexts.
         table.hline(stroke: 0.5pt),
         [*Line*], [*Answer*], [*What it guarantees*],
         table.hline(stroke: 0.4pt),
-        [#_line("check(0 <= p && p <= 100)")], tag(_pg.proved, raw(_ans-proved.verdict)),
+        [#_line("check(0 <= p && p <= 100)")], verdict(_ans-proved.verdict),
         [the condition holds whenever a run reaches it],
-        [#_line("check(p > 100)")], tag(_pg.refuted, raw(_ans-refuted.verdict)),
+        [#_line("check(p > 100)")], verdict(_ans-refuted.verdict),
         [the condition fails whenever a run reaches it; not a counterexample],
-        [#_line("check(p == 50)")], tag(_pg.unknown, raw(_ans-unknown.verdict)), [nothing],
-        [#_line("check(p == 0)")], tag(vb.neutral, raw(_ans-dead.verdict)),
+        [#_line("check(p == 50)")], verdict(_ans-unknown.verdict), [nothing],
+        [#_line("check(p == 0)")], verdict(_ans-dead.verdict),
         [no run reaches the check],
-        [#_line("1000 / p;")], tag(_pg.warning, raw(_ans-warn.cond)),
+        [#_line("1000 / p;")], tag(vb.verdict-warning, raw(_ans-warn.cond)),
         [a zero divisor could not be excluded; no run is shown to divide by zero],
         [#_line("1000 / (p + 1)")], tag(vb.muted, [none]),
         [no run reaching this point divides by zero],
@@ -461,7 +453,7 @@ each.
   from an initial store with zeroed globals (#isaconst("cinit_stores")) that
   reaches the corresponding program point, for all analysis settings it offers,
   whenever it returns a report (#isathm("run_voblint_source_sound"),
-  @sec:headline). Companion theorems justify `DEAD`
+  @sec:headline). Companion theorems justify #verdict("DEAD")
   (#isathm("run_voblint_dead_check_unreached")) and the absence of arithmetic
   warnings (#isathm("run_voblint_arithmetic_safe")). No mechanized analyzer we found proves
   this for recursive procedures under configurable context sensitivity
@@ -498,7 +490,7 @@ each.
   conditions but misses a store some run reaches (e.g.
   #isathm("total_dropped_unsound"), @sec:falsification), so none of
   them can simply be dropped. A soundness theorem
-  would also hold for an analyzer that answers `UNKNOWN` everywhere. Theorems
+  would also hold for an analyzer that answers #verdict("UNKNOWN") everywhere. Theorems
   proved by evaluation rule this out: the analyzer gives definite verdicts on
   a concrete program (#isathm("nv_check_proved_sound")), and one context policy
   is strictly more precise than another on a concrete program

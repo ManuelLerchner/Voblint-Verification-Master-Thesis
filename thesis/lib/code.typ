@@ -176,6 +176,7 @@
   placement: "flow-sensitive",
   refinement: "fixpoint",
   trace: "off",
+  graph: "cfg",
 ) = {
   let query = "?analysis=" + analysis + "&globals=" + globals + "&context=" + ctx
   if ctx == "call-string" { query += "&k=" + str(k) }
@@ -183,7 +184,25 @@
   if refinement != "fixpoint" { query += "&refinement=" + refinement }
   // "verbose" opens the solver trace, as the playground's Share link does.
   if trace != "off" { query += "&trace=" + trace }
+  // "analysis" opens the context-expanded graph instead of the CFG.
+  if graph != "cfg" { query += "&graph=" + graph }
   playground-base + query + "#code=" + _base64url(_deflate-stored(array(bytes(program))))
+}
+
+// The playground preloaded with a registered claim's program and settings.
+#let claim-playground-link(claim, graph: "cfg") = {
+  assert(claim in _vimp-claims, message: "No VIMP claim " + repr(claim))
+  let st = playground-defaults + _vimp-claims.at(claim).settings
+  playground-link(
+    _vimp-claims.at(claim).program,
+    analysis: st.analysis,
+    globals: st.globals,
+    ctx: st.at("context"),
+    k: st.k,
+    placement: st.placement,
+    refinement: st.refinement,
+    graph: graph,
+  )
 }
 
 // A listing. VIMP (`lang: "c"`) carries a playground link on its language tag.

@@ -7,9 +7,9 @@ Location  Point  Severity  Message
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ------------------------------------------------------------------------------
-26:7      pp14   z == 1     PROVED   interval: z=[1,1]; order: {w≤y ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
-27:7      pp15   w == y     PROVED   interval: w=⊤, y=⊤; order: {w≤y ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
+--------  -----  ---------  -------  --------------------------------------------------------------------------------------------------
+26:7      pp14   z == 1     PROVED   interval: z=[1,1]; order: {w≤x ∧ w≤y ∧ x≤w ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
+27:7      pp15   w == y     PROVED   interval: w=⊤, y=⊤; order: {w≤x ∧ w≤y ∧ x≤w ∧ x≤y ∧ y≤w ∧ y≤x ∧ z≤n}
 39:3      pp24   u <= v     PROVED   interval: u=[0,20], v=[10,30]; order: {n≤v ∧ u≤v}
 46:3      pp28   i == 3     PROVED   interval: i=[3,3]; order: {i≤n ∧ i≤v ∧ n≤v ∧ u≤v}
 47:3      pp29   n == 7     REFUTED  interval: n=[3,3]; order: {i≤n ∧ i≤v ∧ n≤v ∧ u≤v}

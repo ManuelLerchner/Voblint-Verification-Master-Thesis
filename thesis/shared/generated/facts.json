@@ -156,6 +156,12 @@
       "theory": "DG_Indexed_Generator",
       "why": "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
     },
+    "run_voblint_arithmetic_refuted": {
+      "oracles": [],
+      "statement": "\\<lbrakk>run_voblint config p = Analysed res;\n d \\<in> set (report_diagnostics res); diagnostic_verdict d = Check_Refuted;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          (diagnostic_point d)\\<rbrakk>\n\\<Longrightarrow> \\<lbrakk>arithmetic_divisor\n                            (diagnostic_obligation d)\\<rbrakk>\\<^sub>e\n                   s =\n                  0",
+      "theory": "Analysis_Certified",
+      "why": "Results chapter: an arithmetic error means a zero divisor in every covered execution reaching it."
+    },
     "run_voblint_arithmetic_safe": {
       "oracles": [],
       "statement": "\\<lbrakk>run_voblint config p = Analysed res;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          v;\n \\<forall>d\\<in>set (report_diagnostics res).\n    diagnostic_point d \\<noteq> v\\<rbrakk>\n\\<Longrightarrow> arithmetic_safe_at (prog_cfg p) v s",

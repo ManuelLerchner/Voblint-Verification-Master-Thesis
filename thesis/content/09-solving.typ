@@ -4,6 +4,7 @@
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
+#import "../lib/figures.typ": verdict
 #import "../lib/claims.typ": claim-ref, claim-snapshot, claim-text, claim-trace
 
 // A verdict or state of a registered CLI claim (shared/claims.toml), read from
@@ -903,7 +904,7 @@ proved sound it holds without a per-domain proof, because the abstract and
 executable steps are derived from the same operations
 (#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
 
-Emptiness, on which `DEAD` rests (@ch:domains), is the one operation the
+Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
 listed overrides do not decide: an unlisted variable can make the state empty
 through its default. The carrier's test inspects the local default, the
 overrides that the represented function reads, and each declared global; the

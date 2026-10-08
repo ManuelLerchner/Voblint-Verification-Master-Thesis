@@ -1,5 +1,6 @@
 #import "../lib/code.typ": isaconst, isalocale, isathm, isatype, oblig
 #import "../lib/theme.typ": vb
+#import "../lib/figures.typ": verdict
 
 #let _todo(body) = text(fill: vb.unproved)[TODO: #body]
 
@@ -56,9 +57,9 @@ its primitives, while routing and the solver certificate do not mention
 arithmetic. The numeric domains
 themselves would need wrap-around-aware variants, since classical numeric
 domains describe ideal integers @mine13. A possible overflow could then be
-reported like the arithmetic diagnostics of @sec:verdicts. A C-like treatment of
+reported like the arithmetic diagnostics of @sec:verdict-meaning. A C-like treatment of
 division by zero changes more, because the semantics would need an error
-outcome and the verdicts of @sec:verdicts a meaning for it.
+outcome and the verdicts of @sec:verdict-meaning a meaning for it.
 
 Pointers into the stack break the non-interference assumption. A return keeps
 the caller's locals (@sec:calls), which fails once a callee can write them
@@ -201,7 +202,7 @@ forever (@sec:termination).
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
 #isaconst("pstep") runs would make this check systematic. A run that reaches and violates
-a check the analyzer reports as `PROVED` would then point to a fault in the
+a check the analyzer reports as #verdict("PROVED") would then point to a fault in the
 trusted base: the code generator, the target toolchain or the handwritten
 OCaml, and the parser if the evaluator reads the source independently. Comparing its runs with a
 C compiler on the common subset would test the adequacy argument itself.

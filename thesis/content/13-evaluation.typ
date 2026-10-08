@@ -6,6 +6,7 @@
 )
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
+#import "../lib/figures.typ": verdict
 
 = Evaluation <ch:evaluation>
 
@@ -85,26 +86,26 @@ executable instance shows that the assumptions can be met together.
 The instance is the two-call program of @fig:program-to-equations under
 Interval, entry-state contexts and warrowing. The theory builds the source run
 that returns from `bump(5)` and `bump(4)` and stops before the first check,
-and computes the answer by evaluation: both checks `PROVED`.
+and computes the answer by evaluation: both checks #verdict("PROVED").
 #isathm("nv_source_certified") instantiates
 #isathm("run_voblint_source_sound") with every premise discharged,
 and #isathm("nv_check_proved_sound") instantiates
 #isathm("run_voblint_check_sound") at the check `a == 6`. For the reachability
 claim, a second program sets `x = 1` and guards a check by `x < 0`; the
-analyzer marks it `DEAD`, and #isathm("nv_dead_unreached") instantiates
+analyzer marks it #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to conclude that the collecting
 semantics at that node is empty. The runs and the collecting-semantics facts
 are proved by simplification and the answers by `eval`. The witnesses
-constrain `PROVED` and `DEAD`, the non-trivial verdicts (@sec:falsification).
+constrain #verdict("PROVED") and #verdict("DEAD"), the non-trivial verdicts (@sec:falsification).
 Non-vacuity is a property of the premises: the witnesses do
 not show that #isaconst("pstep") is the intended semantics of VIMP.
 
 === Necessity: falsification theorems <sec:falsification>
 
 _Evidence: machine-checked and evaluated._ Soundness alone is easy to satisfy. #isaconst("verdict_stores") constrains only
-decided verdicts, so an analyzer answering `UNKNOWN` at every check satisfies
+decided verdicts, so an analyzer answering #verdict("UNKNOWN") at every check satisfies
 it at every node and store (#isathm("unknown_everywhere_sound")). Answering
-`PROVED` everywhere violates it at the store $x = 1$, which reaches the check
+#verdict("PROVED") everywhere violates it at the store $x = 1$, which reaches the check
 `x == 0` (#isathm("proved_everywhere_unsound")). Any abstract remainder that
 returns the constant 1 for $(1 + 2ZZ) mod 2$ violates the statement of
 #isathm("congruence_mod_sound") at $-5$
@@ -193,7 +194,7 @@ so the pre-fix answer is not available to the verified domain.
 == Precision on concrete programs <sec:eval-precision>
 
 The theorem says nothing about precision, since an analyzer that answers
-`UNKNOWN` everywhere satisfies it (@sec:falsification). What each mechanism gains is therefore shown on
+#verdict("UNKNOWN") everywhere satisfies it (@sec:falsification). What each mechanism gains is therefore shown on
 concrete programs. Each witness below fixes the concrete behaviour first, then
 shows what one mechanism keeps or loses, and supports a claim about its program
 only.
@@ -276,7 +277,7 @@ between call-string lengths one and two above is of this kind.
   kind: table,
   caption: [Update rules on four programs (Interval, no contexts; bounded
     narrowing at its default bound 5). Each cell is
-    the verdict and state of the check row. Every check holds in every execution, so an `UNKNOWN` is lost
+    the verdict and state of the check row. Every check holds in every execution, so an #verdict("UNKNOWN") is lost
     precision. "No answer in 5 s" means the command-line `--timeout 5` stopped
     the solve.],
 ) <fig:rules-programs>
@@ -320,13 +321,13 @@ fun main() {
 ```)
 
 Interval joins the branches to #raw(_le("coop-le-interval").at(4)) and reports
-#raw(_le("coop-le-interval").at(3)). The order analysis alone cannot compare a
-variable with a constant and reports #raw(_le("coop-le-order").at(3)).
+#verdict(_le("coop-le-interval").at(3)). The order analysis alone cannot compare a
+variable with a constant and reports #verdict(_le("coop-le-order").at(3)).
 Together, at `y = 10` the order analysis asks about the state before the
 assignment whether $x lt.eq 10$. Interval knows $x = 0$ there and answers $1$,
 so the order analysis records the pair $(x, y)$. At `y = 30` it asks whether
 $x lt.eq 30$ and records the same pair, which therefore survives the join, and
-the check is #raw(_le("coop-le-both").at(3)). Variants of both programs without
+the check is #verdict(_le("coop-le-both").at(3)). Variants of both programs without
 the `__voblint_nondet_int` initializations separate the combination from its
 parts in each direction. #isathm("coop_demo_needs_both") and
 #isathm("order_asks_needs_both") (with #isathm("order_asks_interval_alone") and
@@ -338,10 +339,10 @@ for all three activation lists and are proved by `eval`.
 *Known imprecision.* _Evidence: executable, except where marked._ Sign has no
 magnitude: in the claim #claim-ref("sign-cannot-bound-magnitude"), `total` is 7 in every execution, and at
 the check `total < 100` Sign reports #raw(_sign.at(4)) and the verdict
-#raw(_sign.at(3)). _Argument:_ no context policy or update rule can change this
+#verdict(_sign.at(3)). _Argument:_ no context policy or update rule can change this
 verdict, because Sign's comparison query decides nothing for a positive value
 against 100, which may lie on either side of it. Intervals lose nonconvex
-information, as the multiples of three of @sec:verdicts show. Pointwise
+information, as the multiples of three of @sec:verdict-meaning show. Pointwise
 stores lose relations between variables (@sec:relational). The order analysis
 recovers some of them, within the limits of @sec:coop-catalogue. A call string of
 length $k$ merges paths deeper than $k$, as in `down` above.
@@ -350,7 +351,7 @@ length $k$ merges paths deeper than $k$, as in `down` above.
 
 === Size of the proved and the unverified parts
 
-_Evidence: repository measurement._ The theories under `src/` contain
+_Evidence: repository measurement._ The theories under #link(repo-blob + "src")[`src/`] contain
 #stat("isabelle.lines") physical lines in #stat("isabelle.theories") files:
 semantics and compiler #stat("isabelle.directories.Program_Model")\; framework
 and value lattices #stat("isabelle.directories.Abstract_Interpreter")\; the
@@ -365,7 +366,7 @@ theories live beside the generic lattice constructions. It excludes the vendored
 which Voblint's sessions import #stat("solver.used.theories") of
 the #stat("solver.theories") theories of its `TD` session. The analyzer that runs is the
 #stat("generated_ocaml")-line generated OCaml module. Around it lie
-#stat("handwritten_ocaml") lines of handwritten OCaml under `cli/`, the
+#stat("handwritten_ocaml") lines of handwritten OCaml under #link(repo-blob + "cli")[`cli/`], the
 unverified part; the count excludes the lexer and parser
 specifications, which a script generates from a grammar description, and the
 page's JavaScript.
@@ -384,13 +385,13 @@ scope.
 
 === Tests of the unverified parts <sec:eval-corpus>
 
-_Evidence: executable._ The parts outside the theorem are tested: a regression
-corpus runs the analyzer end to end, and property tests exercise the frontend.
+_Evidence: executable._ The parts outside the theorem are tested: a
+#link(repo-blob + "tests/regression")[regression corpus] runs the analyzer end to end, and property tests exercise the frontend.
 The corpus holds #stat("corpus.cases") VIMP fixtures in
 #stat("corpus.groups") groups. Each fixture states its command-line flags and
 the verdict expected at each check. Cases in `precision/` must obtain a
 definite answer. In `soundness/`, the program has executions on both sides of
-the check, so `UNKNOWN` is the only sound answer. In `known-imprecision/`, the
+the check, so #verdict("UNKNOWN") is the only sound answer. In `known-imprecision/`, the
 concrete result is fixed but the abstraction cannot establish it, and the
 header names the mechanism that loses the information; these two categories
 separate genuine variation among executions from lost abstract information.
@@ -399,7 +400,7 @@ definite verdict: snapshots of the rendered graph or state, rejection of
 malformed input, and solves expected not to finish within their time limit.
 The runner matches results by source line, which tests the position
 bookkeeping of @sec:ocaml-boundary, and distinguishes a missing report row
-from a `DEAD` one, so a check the compiler dropped cannot pass as proved
+from a #verdict("DEAD") one, so a check the compiler dropped cannot pass as proved
 unreachable. Some fixtures pin the conventions of @tab:vimp-vs-c at the
 analyzer's output, for instance
 #fixture("10-arithmetic/precision/07-signed_division_totalization.vimp") (truncating
@@ -480,6 +481,6 @@ strength of its evidence and the section that develops it.
   @sec:eq-buffer).
 - A domain obligation excludes the Goblint remainder defect for all operands
   (machine-checked, #isathm("prefix_congruence_mod_unsound"), @sec:eval-1161).
-- A `PROVED` verdict may depend on VIMP's conventions for division by zero and
+- A #verdict("PROVED") verdict may depend on VIMP's conventions for division by zero and
   zeroed callee locals, which C11 leaves undefined (executable, claim
   #claim-ref("pg-division-definite"), @sec:vimp-vs-c).

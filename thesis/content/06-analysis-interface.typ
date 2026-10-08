@@ -186,10 +186,10 @@ to its value. The locale states three semantic laws and one technical premise:
   thy("analysis_contract")
 }
 First, $tau$ is an arbitrary
-valuation of the solver's unknowns and `key` maps each analysis global to its
-unknown. Together they give the local state #isai("dg_local (\<tau> src)") at
-the edge's source and the environment #isai("genv key \<tau>"), the $d$ and
-$e$ above. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
+valuation of the solver's unknowns, valued in pairs #isatype("dg_state")
+(@sec:global-unknowns), and `key` maps each analysis global to its unknown.
+Thus $d$ is the local half #isaconst("dg_local") of $tau$ at the edge's source,
+and $e$ is #isai("genv key \<tau>"), the global halves at those unknowns. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
 local state a transfer returns and the environment of what it publishes, which
 is $lbot$ at every unknown it does not publish to.
 #isaconst("combine_out") and #isaconst("combine_pub") are the same for combine,
@@ -250,9 +250,9 @@ after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")), although every
 run ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
 `set`'s exit into `get`'s entry and derives #signval(_mf("y")) (claim
 #claim-ref("mixed-flow-sign")). In sequential VIMP the flow-insensitive
-placement can thus cost precision. It is particularly useful for multi-threaded programs, where a thread-modular
+placement can thus cost precision. It suits multi-threaded programs, where a thread-modular
 analysis keeps the values that threads exchange through shared
-globals flow-insensitively @seidl26[§1, Ex. 4]. VIMP has no threads, but a future extension of VIMP with threads could build on this placement
+globals flow-insensitively @seidl26[§1, Ex. 4]. VIMP has no threads, but a future extension with threads could build on this placement
 (@sec:outlook-extending).
 
 Like Goblint and Apinis et al. @apinis12[§5] @seidl26[§3], the analyzer keeps

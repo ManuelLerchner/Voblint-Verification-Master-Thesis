@@ -3,7 +3,7 @@
 #import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
-#import "../lib/figures.typ": call-edge, entry-node, intra-edge
+#import "../lib/figures.typ": call-edge, entry-node, intra-edge, verdict as verdict-chip
 #import "../lib/claims.typ": (
   claim-ref, claim-snapshot, claim-trace, snapshot-cluster-of, snapshot-verdict,
 )
@@ -414,7 +414,6 @@ routing keep them apart.
   let check = s.nodes.values().find(n => "check a == 2" in n.lines)
   let state = check.lines.find(l => l.starts-with("a="))
   let verdict = snapshot-verdict(s, "a == 2")
-  let tone = if verdict == "PROVED" { vb.proved } else { vb.unstable }
   block(width: 100%, {
     align(center, text(size: 7pt, weight: "bold", title))
     v(2pt)
@@ -439,7 +438,7 @@ routing keep them apart.
       )),
     ))
     v(2pt)
-    align(center, text(size: 6.5pt)[`a == 2`: #text(fill: tone, verdict) \ #raw(state)])
+    align(center, text(size: 6.5pt)[`a == 2`: #verdict-chip(verdict) \ #raw(state)])
   })
 }
 

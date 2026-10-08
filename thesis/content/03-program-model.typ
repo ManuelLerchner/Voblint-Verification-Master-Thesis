@@ -483,10 +483,10 @@ languages have a construct but model it differently.
 Each row is a place where a statement true of a VIMP program need not hold for
 the corresponding C program. Unbounded integers and defined division by zero
 can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
-`PROVED` verdict on a program that divides by zero says nothing about C. The
+#verdict("PROVED") verdict on a program that divides by zero says nothing about C. The
 analyzer therefore reports a possible zero divisor as a separate diagnostic,
 and its absence at a reached node proves the divisor nonzero there
-(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). Division and
+(#isathm("run_voblint_arithmetic_safe"), @sec:verdict-meaning). Division and
 remainder truncate toward zero as in C11. Goblint once got the remainder wrong,
 and issue #link("https://github.com/goblint/analyzer/issues/1156")[1156]
 @goblint1156 reports it claiming `c % 2 == 1` for $c in {-5, -7}$

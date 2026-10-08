@@ -47,6 +47,31 @@
   text(size: 0.7em, fill: color, body),
 )
 #let proved-badge = badge([proved], vb.proved)
+
+// A verdict word as the analyzer prints it, tinted like the playground's
+// badges. An unknown word is a compile error, so a typo cannot pass as output.
+#let verdict-color(word) = {
+  let colors = (
+    PROVED: vb.verdict-proved,
+    REFUTED: vb.verdict-refuted,
+    UNKNOWN: vb.verdict-unknown,
+    DEAD: vb.verdict-dead,
+    WARNING: vb.verdict-warning,
+  )
+  let w = upper(word)
+  assert(w in colors, message: "not a verdict: " + word)
+  colors.at(w)
+}
+#let verdict(word) = {
+  let c = verdict-color(word)
+  box(
+    fill: c.lighten(88%),
+    inset: (x: 2pt),
+    outset: (y: 1.8pt),
+    radius: 1.5pt,
+    text(fill: c, raw(upper(word))),
+  )
+}
 #let trusted-badge = badge([trusted], vb.trusted)
 #let unproved-badge = badge([unverified], vb.unproved)
 

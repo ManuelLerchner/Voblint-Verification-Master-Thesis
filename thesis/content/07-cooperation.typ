@@ -4,6 +4,7 @@
 #import "../lib/math.typ": *
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": definition
+#import "../lib/figures.typ": verdict as verdict-chip
 
 // One row of a registered analyzer run (thesis/shared/claims.toml), found by
 // its source location, so a table cell cannot drift from what the CLI prints.
@@ -15,7 +16,7 @@
   assert(row != none, message: "no row " + loc + " in claim " + name)
   (verdict: row.at(3), state: if row.len() > 4 { row.at(4) } else { "" })
 }
-#let verdict(name, loc) = raw(claim-row(name, loc).verdict)
+#let verdict(name, loc) = verdict-chip(claim-row(name, loc).verdict)
 #let state(name, loc) = raw(claim-row(name, loc).state)
 
 = How Analyses Cooperate <ch:cooperation>

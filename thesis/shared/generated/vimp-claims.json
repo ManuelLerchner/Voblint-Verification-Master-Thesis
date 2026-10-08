@@ -41,7 +41,7 @@
   },
   "chain-split-entry": {
     "fixture": "thesis/shared/programs/chain-split.vimp",
-    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m >= 2);\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    if (x < 4) {\n      b = f(x);\n    }\n  }\n}",
+    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m >= 2);\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x && x < 4) {\n    b = f(x);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "entry-state",
@@ -51,7 +51,7 @@
   },
   "chain-split-none": {
     "fixture": "thesis/shared/programs/chain-split.vimp",
-    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m >= 2);\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    if (x < 4) {\n      b = f(x);\n    }\n  }\n}",
+    "program": "fun f(n) {\n  m = 2 * n;\n  __voblint_check(m >= 2);\n  __voblint_check(m == 2);\n  return m;\n}\n\nfun main() {\n  a = f(1);\n  x = __voblint_nondet_int();\n  if (0 < x && x < 4) {\n    b = f(x);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -406,7 +406,7 @@
   },
   "order-alone-interval": {
     "fixture": "tests/regression/25-cooperation/precision/08-order_alone_records_one_pair.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  z = __voblint_nondet_int();\n  if (x < y) {\n    __voblint_check(x <= y);\n    if (y <= z) {\n      __voblint_check(x <= z);\n    }\n    y = y + 1;\n    __voblint_check(x <= y);\n  }\n}",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  z = __voblint_nondet_int();\n  if (x < y) {\n    __voblint_check(x <= y);\n    if (y <= z) {\n      __voblint_check(x <= z);\n    }\n    y = y + 1;\n    __voblint_check(x <= y);\n  }\n  w = x;\n  __voblint_check(w == x);\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -416,7 +416,7 @@
   },
   "order-alone-order": {
     "fixture": "tests/regression/25-cooperation/precision/08-order_alone_records_one_pair.vimp",
-    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  z = __voblint_nondet_int();\n  if (x < y) {\n    __voblint_check(x <= y);\n    if (y <= z) {\n      __voblint_check(x <= z);\n    }\n    y = y + 1;\n    __voblint_check(x <= y);\n  }\n}",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  y = __voblint_nondet_int();\n  z = __voblint_nondet_int();\n  if (x < y) {\n    __voblint_check(x <= y);\n    if (y <= z) {\n      __voblint_check(x <= z);\n    }\n    y = y + 1;\n    __voblint_check(x <= y);\n  }\n  w = x;\n  __voblint_check(w == x);\n}",
     "settings": {
       "analysis": "order",
       "context": "none",
@@ -747,7 +747,7 @@
   },
   "verdicts-proved-unreachable": {
     "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (x > 0) {\n    if (x < 3) {\n      __voblint_check(x > 0);\n    }\n  }\n}",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (0 < x && x < 3) {\n    __voblint_check(x > 0);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -757,7 +757,7 @@
   },
   "verdicts-proved-unreachable-int": {
     "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (x > 0) {\n    if (x < 3) {\n      __voblint_check(x > 0);\n    }\n  }\n}",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (0 < x && x < 3) {\n    __voblint_check(x > 0);\n  }\n}",
     "settings": {
       "analysis": "int",
       "context": "none",
