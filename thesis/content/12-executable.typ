@@ -59,7 +59,7 @@ executable versions
 #isaconst("run_voblint") uses therefore has code equations, and Isabelle's
 code generator @haftmann10 can export it. One #isacmd("export_code")
 declaration emits #isaconst("run_voblint"), #isaconst("render_report") and the
-constructors a caller needs into one OCaml module,
+constructors and selectors a caller needs into one OCaml file,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
 This module contains the analyzer core that both delivered tools run. The
 command-line tool and the playground reach it only through the facade #link(repo-blob + "cli/voblint.ml")[`cli/voblint.ml`], and no handwritten code takes part in computing an analysis result.
@@ -84,8 +84,8 @@ function the theorems are about, up to the code generator and the compilers
 
 == The unverified shell <sec:ocaml-boundary>
 
-The generated #isaconst("run_voblint") takes a syntax tree and returns a typed
-answer, so unverified code has to surround it on both sides. Before it, an
+The generated #isaconst("run_voblint") takes a configuration and a syntax tree
+and returns a typed answer, so unverified code has to surround it on both sides. Before it, an
 `ocamllex` lexer and a Menhir parser turn the program text a user writes into
 an #isatype("imp_prog") and write
 each check's source position into its label. After it,
@@ -151,15 +151,16 @@ whenever #isaconst("run_voblint") returns an #ctor("Analysed") report.
 
 To explain a run, the command-line tool and the playground can trace the
 solver's steps: which unknown is queried when, which update destabilizes which
-unknown, where widening applies (@tab:eq-trace), as Goblint's tracing of its
-top-down solvers reports them. Because the vendored solver @tilscher26 stays
-unchanged, Voblint supplies traced versions of its equations that report each
+unknown (@tab:eq-trace), where widening applies, as Goblint's tracing of its
+top-down solvers reports them. Tracing must leave the definitions and proofs of
+the vendored solver @tilscher26 untouched. Voblint therefore supplies traced
+versions of its code equations that report each
 step through one constant, #isaconst("trace_event"), which is $()$ in the
 logic. Because it is $()$, each traced equation is proved equal to the one it
-replaces (#isathm("solve_rec_c_traced"); #isathm("trace_route") and
-#isathm("trace_run") do the same for the context policies and the reading of
-the result). Code export uses only these equations, so there is a single generated module
-containing the trace calls. Enabling tracing only changes the behaviour of the
+replaces (for example #isathm("solve_rec_c_traced")\; #isathm("cs_route_traced"),
+#isathm("trace_route") and #isathm("trace_run") do the same for routing and the
+reading of the result). Code export replaces the original equations with these,
+so one generated analyzer serves traced and untraced runs alike. Enabling tracing only changes the behaviour of the
 OCaml hook, not the generated analyzer. In OCaml, #isaconst("trace_event") is mapped
 to a hook that records the event when tracing is on. This mapping adds one target
 mapping to the trusted base: the hook must return, raise nothing and leave the
@@ -195,40 +196,40 @@ shows one step of the replay.
 
 == The trust boundary <sec:trust-boundary>
 
-Three questions decide what a run of the delivered analyzer establishes.
-@fig:intro-trust places each component on the proved, unverified or trusted
-side.
+Three questions decide what a run of the delivered analyzer establishes;
+@fig:intro-trust places the main components on each side.
 
 *What is proved.* #isathm("run_voblint_source_sound") and the verdict theorems
 of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
-returns. The proved side reaches from the syntax tree #isaconst("run_voblint")
-receives to the semantic report it returns. The proof covers the compiler, the
+returns, from the syntax tree it receives to the semantic report. The proof
+covers the compiler, the
 well-formedness test, the vendored solver with its executable refinement and
 the executable state carrier.
 
-*What is trusted.* Two groups lie outside the proof. The first is the code
-around the generated analyzer: the lexer and parser and the handwritten
-presentation code are unverified, and #isaconst("render_report") is generated
-HOL code, but no theorem establishes that its strings describe the semantic
-values. The second is the foundation everything runs on: Isabelle's kernel,
-its code generator with the target mappings (#isacmd("code_printing")), the
-trace hook among them, the OCaml and WebAssembly toolchains, Zarith and the
-browser. The handwritten frontend and presentation code are covered only by tests
-(@sec:eval-corpus), so bugs and unexpected behaviour remain possible there.
+*What is trusted.* Two groups lie outside the proof. The first is the
+handwritten code around the generated analyzer: the lexer, the parser, the
+translation of a request into a configuration, and the presentation, including
+the placement of arithmetic diagnostics. #isaconst("render_report") is
+generated and passes verdicts and diagnostics through unchanged
+(#isathm("render_report_columns")), but no theorem relates its state strings to
+the semantic values. The second is the foundation: Isabelle's kernel, its code
+generator with the target mappings (#isacmd("code_printing")), the trace hook
+among them, the OCaml and WebAssembly toolchains, Zarith or, in the browser, a
+JavaScript replacement of it, and the browser. Only the tests of
+@sec:eval-corpus cover the handwritten code.
 
 *Whether the definitions are adequate.* A proof establishes consequences of
 #isaconst("pstep"). It cannot show that #isaconst("pstep") is the language a
 reader has in mind; @sec:vimp-vs-c argues this for the fragment of C that VIMP
 models.
 
-*What the soundness theorem does not establish.* A parse error yields no
-analyzer answer. An #isaconst("Invalid_Activation"), #isaconst("Malformed_Program") or
+*What the soundness theorem does not establish.* A parse error, an
+#isaconst("Invalid_Activation"), #isaconst("Malformed_Program") or
 #isaconst("No_Answer") answer, a timeout, an aborted code equation and a run
-that never returns yield no #ctor("Analysed") report,
-so the source-level theorem gives no verdict for these cases. A hang may come from the solve, from the fixpoint reduction of Int,
+that never returns yield no #ctor("Analysed") report, so the theorem gives no
+verdict. A hang may come from the solve, from the fixpoint reduction of Int,
 whose generated code may loop where the HOL function returns
 (@sec:reduced-product), or from the toolchain.
 
 Both tools thus run generated code for the #isaconst("run_voblint") that
-@ch:results proves sound. The parser, the code generator, the toolchains and
-the presentation are trusted, and the source semantics is argued.
+@ch:results proves sound.

@@ -1177,6 +1177,19 @@ manifest that other chapters refer to. "Watching the solve" (`sec:tracing`)
 moved to the executable chapter, after the browser artifact. The solver
 section now lists the four upstream pull requests (td-verification 13-16).
 
+**Evaluation cut (2026-10-08, author decision).** The evaluation chapter
+repeated earlier chapters, so it now runs: non-vacuity (`sec:nonvacuity`); "Do
+the obligations exclude real errors?" (`sec:eval-1161`), which absorbs the
+falsification section (`sec:falsification`, table removed; TOTAL is argued in
+Ch. 4, RETURN and the remainder obligation lead into PR 1161); precision and
+cost (`sec:eval-precision`: contexts, modularity, update rules, refinement
+inside Int, queries between analyses with the new mutual Int/order fixture);
+tests of the unverified parts (`sec:eval-corpus`, with golden solver traces).
+"What the theorem covers" was cut as a recap. "Relation to Goblint"
+(`sec:eval-goblint`) moved into `sec:rel-goblint`, and "What the mechanization
+revealed" (`sec:revealed`) into the §16.1 discussion. Known imprecision was cut:
+Fig. 11.2 and earlier sections show each case.
+
 **Restructure (2026-10-04, author decision).** The evaluation chapter no
 longer follows the research questions section by section. It runs: what the
 theorem covers (`sec:eval-scope`, merging the former RQ1-RQ3 sections), how

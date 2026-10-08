@@ -861,6 +861,54 @@ argv = [
 ]
 why = "The order analysis asks Interval at y = 10 and y = 30, records x <= y on both branches, and x <= y is PROVED."
 
+[claims.int-refine-interval]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+]
+why = "Interval alone bounds q to [1,81] and r to [0,3], so r == 1 is UNKNOWN."
+
+[claims.int-refine-congruence]
+argv = [
+  "--analysis",
+  "congruence",
+  "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+]
+why = "Congruence alone keeps q = 1 (mod 4) through the exact division, so r is 1+4Z, which allows -3 for a negative q; r == 1 is UNKNOWN."
+
+[claims.int-refine-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+]
+why = "Int intersects r = [0,3] with r = 1+4Z to r = 1, so r == 1 is PROVED."
+
+[claims.coop-mutual-int]
+argv = [
+  "--analysis",
+  "int",
+  "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+]
+why = "Int alone joins x=[0,20] and y=[10,30], so z = (x <= y) is [0,1] and z == 1 is UNKNOWN."
+
+[claims.coop-mutual-order]
+argv = [
+  "--analysis",
+  "order",
+  "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+]
+why = "The order analysis alone records no pair and tracks no value of z, so z == 1 is UNKNOWN."
+
+[claims.coop-mutual-both]
+argv = [
+  "--analysis",
+  "int,order",
+  "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+]
+why = "The order analysis asks Int at y = 10 and y = 30 and records x <= y; Int asks EvalInt (x <= y) at z and gets 1, so z == 1 is PROVED."
+
 [claims.shell-json]
 argv = [
   "--analysis",

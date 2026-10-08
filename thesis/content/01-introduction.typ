@@ -488,7 +488,7 @@ each.
 - _Needed assumptions and non-empty results._ For several proof obligations, a
   theorem exhibits a claim or abstract operation that meets the remaining
   conditions but misses a store some run reaches (e.g.
-  #isathm("total_dropped_unsound"), @sec:falsification), so none of
+  #isathm("total_dropped_unsound"), @sec:eval-1161), so none of
   them can simply be dropped. A soundness theorem
   would also hold for an analyzer that answers #verdict("UNKNOWN") everywhere. Theorems
   proved by evaluation rule this out: the analyzer gives definite verdicts on
@@ -600,7 +600,7 @@ The theorem has the following limits. @sec:limitations discusses each of them.
   analysis settings is proved. Each precision result concerns one program
   (@sec:eval-precision).
 - _Goblint._ The correspondence with Goblint is architectural. No theorem
-  transfers to its OCaml implementation (@sec:eval-goblint).
+  transfers to its OCaml implementation (@sec:rel-goblint).
 - _Direction._ The simulation from source runs to graph runs and the
   representation of graph runs by traces are proved in the forward direction
   only, the direction soundness needs (@sec:csim).
@@ -608,8 +608,8 @@ The theorem has the following limits. @sec:limitations discusses each of them.
   proofs, such as lists for finite sets, and no time or memory measurement is
   reported (@sec:limitations).
 - _Evidence beyond the theorem._ Each counterexample theorem weakens one
-  condition on one program (@sec:falsification), and the regression corpus is
-  small and written for this work (@sec:eval-corpus).
+  condition on one program (@sec:eval-1161), and the regression corpus is
+  small and was written or adapted for this work (@sec:eval-corpus).
 
 == Outline
 
@@ -636,7 +636,7 @@ these parts into the source-level theorem.
 #partref(<part:instances>) puts the theorem to use. @ch:instances
 instantiates it for five domains and an order analysis, @ch:executable follows
 #isaconst("run_voblint") to the delivered tools and their trust boundary,
-@ch:evaluation evaluates the theorem's coverage, strength and precision, and @ch:tooling describes the tooling built around the formalization.
+@ch:evaluation asks whether the theorem's premises can hold together and whether its obligations exclude real errors, shows the precision reached on concrete programs and describes how the unverified code is tested, and @ch:tooling describes the tooling built around the formalization.
 
 #partref(<part:assessment>) closes the thesis. @ch:related compares Voblint's
 mechanisms with the closest prior constructions, and @ch:conclusion discusses

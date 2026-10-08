@@ -119,6 +119,36 @@
       "placement": "flow-sensitive"
     }
   },
+  "coop-mutual-both": {
+    "fixture": "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  z = (x <= y);\n  __voblint_check(z == 1);\n}",
+    "settings": {
+      "analysis": "int,order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "coop-mutual-int": {
+    "fixture": "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  z = (x <= y);\n  __voblint_check(z == 1);\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "coop-mutual-order": {
+    "fixture": "tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp",
+    "program": "fun main() {\n  c = __voblint_nondet_int();\n  if (0 < c) {\n    x = 0;\n    y = 10;\n  } else {\n    x = 20;\n    y = 30;\n  }\n  z = (x <= y);\n  __voblint_check(z == 1);\n}",
+    "settings": {
+      "analysis": "order",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "cost-down-k100": {
     "fixture": "tests/regression/24-site-figures/precision/42-down_call_string_100.vimp",
     "program": "fun down(n) {\n  __voblint_check(n >= 0);\n  if (n > 0) {\n    down(n - 1);\n  }\n}\n\nfun main() {\n  down(100);\n}",
@@ -372,6 +402,36 @@
       "globals": "warrow",
       "placement": "flow-sensitive",
       "refinement": "never"
+    }
+  },
+  "int-refine-congruence": {
+    "fixture": "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  if (0 <= n && n <= 20) {\n    q = (12 * n + 3) / 3;\n    r = q % 4;\n    __voblint_check(r == 1);\n    __voblint_check(r > 0);\n    __voblint_check(r % 2 == 1);\n  }\n}",
+    "settings": {
+      "analysis": "congruence",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "int-refine-int": {
+    "fixture": "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  if (0 <= n && n <= 20) {\n    q = (12 * n + 3) / 3;\n    r = q % 4;\n    __voblint_check(r == 1);\n    __voblint_check(r > 0);\n    __voblint_check(r % 2 == 1);\n  }\n}",
+    "settings": {
+      "analysis": "int",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
+  "int-refine-interval": {
+    "fixture": "tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp",
+    "program": "fun main() {\n  n = __voblint_nondet_int();\n  if (0 <= n && n <= 20) {\n    q = (12 * n + 3) / 3;\n    r = q % 4;\n    __voblint_check(r == 1);\n    __voblint_check(r > 0);\n    __voblint_check(r % 2 == 1);\n  }\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
     }
   },
   "intro-answers": {

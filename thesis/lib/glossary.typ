@@ -805,7 +805,7 @@
     "falsification (necessary condition)",
     _trust,
     isa: [#isathm("proved_everywhere_unsound"), #isathm("prefix_congruence_mod_unsound")],
-    see: <sec:falsification>,
+    see: <sec:eval-1161>,
   )[
     A concrete execution that the conclusion misses once one condition is
     removed or weakened, so the condition is needed.
@@ -837,7 +837,7 @@
     that produce the abstract syntax tree the public analysis function takes,
     and a renderer. The parser is trusted.
   ],
-  term("goblint", "Goblint", _trust, see: <sec:eval-goblint>)[
+  term("goblint", "Goblint", _trust, see: <sec:rel-goblint>)[
     The static analyzer for C whose architecture Voblint follows: the local and
     shared split, the side-effecting top-down solver and the enter and combine
     protocol. The correspondence is architectural, not operational.

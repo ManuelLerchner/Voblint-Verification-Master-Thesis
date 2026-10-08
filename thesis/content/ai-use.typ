@@ -46,7 +46,7 @@ call history, and that calling contexts are derived from traces.
 For the analysis framework, agents inspected Goblint's OCaml sources to
 identify interfaces the formalization could approximate, such as local and
 global unknowns, unknowns indexed by node and context, and the enter/combine
-protocol at calls (@sec:eval-goblint). The source language and its compilation, the activation traces, the coverage
+protocol at calls (@sec:rel-goblint). The source language and its compilation, the activation traces, the coverage
 contract, and the corresponding proofs have no direct counterpart in Goblint
 and were developed for this work. Goblint's top-down solver is reused together with its partial-correctness proof
 by Tilscher et al. @tilscher26.
