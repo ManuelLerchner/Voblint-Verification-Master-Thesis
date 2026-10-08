@@ -202,7 +202,7 @@ idea to a sequential program and records one activation's view of the run
 
 == Traces <sec:traces>
 
-=== Activation traces <sec:activation-trace>
+=== Activation traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:activation-trace>
 
 We turn the grouping of @fig:flat-nested into a datatype.
 
@@ -268,7 +268,7 @@ contexts it admits, and contexts of traces are derived from these sets
 has to show that its claim meets the coverage contract of @sec:contract for
 its policy.
 
-=== Valid traces <sec:valid>
+=== Valid traces #thy-badge("Voblint_CFG", "Activation_Trace_Def") <sec:valid>
 
 The datatype also admits terms that no execution produces. A path may contain
 a step that follows no edge of the graph, for instance a jump from the entry of
@@ -308,7 +308,7 @@ from its call node into $p$, on compiled programs the only one. That edge
 names the continuation $italic("cont")$, where the caller continues with the
 store that #isaconst("combine_collect") builds from both final stores.
 
-=== Graph runs are valid traces <sec:source-bridge>
+=== Graph runs are valid traces #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
 
 The traces describe the runs of the compiled graph, and through @sec:csim
 those of VIMP programs, keeping the history that the frame stack discards.
@@ -354,7 +354,7 @@ direction is proved, and soundness needs no more. With the simulation of
   #proved("source_run_has_activation_trace")
 ]
 
-=== The node collecting semantics <sec:collect>
+=== The node collecting semantics #thy-badge("Voblint_CFG", "Activation_Trace_Collect") <sec:collect>
 
 Collecting the final stores of the valid traces per node gives the _node
 collecting semantics_. It plays the role of the collecting semantics of @ch:background for programs
@@ -381,7 +381,7 @@ alone is context-insensitive. The valid traces themselves, however, keep their
 structure. The same set of traces thus supports two views: collected per node,
 as here, and split by context, as in @sec:contexts.
 
-== Calling contexts <sec:contexts>
+== Calling contexts #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
 
 A _context_ is the index under which an activation is analyzed. At a fixed node,
 activations with the same context contribute to the same abstract unknown
@@ -538,7 +538,7 @@ least one context, because then every store of the node collecting semantics
 lies in the activation collecting semantics of some context. The coverage
 contract of the next section guarantees this.
 
-== The coverage contract <sec:contract>
+== The coverage contract #thy-badge("Voblint_CFG", "Activation_Trace_Abstract") <sec:contract>
 
 The goal is a claim #isai("cover") $v$ $c$, a set of stores for each node and
 context, that contains #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). A claim is a mathematical

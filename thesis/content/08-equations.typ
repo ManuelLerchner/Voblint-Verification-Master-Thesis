@@ -1,6 +1,6 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
 #import "../lib/math.typ": *
 #import "../lib/theorems.typ": theorem
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, verdict as verdict-chip
@@ -44,7 +44,7 @@ that the solved abstract state at $(v, c)$ describes under the solved values
 of the analysis globals (@sec:sound-core). The running example is the program
 of @fig:program-to-equations.
 
-== Unknowns and right-hand sides <sec:eq-call>
+== Unknowns and right-hand sides #thy-badge("Voblint_Framework", "DG_Indexed_Generator") <sec:eq-call>
 
 The running example calls `bump` first with 5 and then with 4. If both
 activations shared one abstract state at the entry of `bump`, that state would
@@ -237,7 +237,7 @@ bottom entry states in the same way. The optimization is sound because a state
 classified as bottom is required to have an empty concretization
 (#isathm("routed_context.is_bot_sound", thy: "Routed_Context", display: "is_bot_sound")).
 
-== Routing and context policies <sec:eq-routing>
+== Routing and context policies #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
 
 The analyzer chooses a callee context from abstract information. The concrete
 semantics of @ch:traces also assigns each concrete activation to a context,
@@ -493,7 +493,7 @@ This policy depends on the solved analysis (@sec:contexts) without circularity:
 the proof fixes $sol$, defines $italic("adm")$ from it, and shows that $sol$
 covers the collecting semantics this $italic("adm")$ induces.
 
-== Soundness of the generated system <sec:eq-discharge>
+== Soundness of the generated system #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 
 #figure(
   table(

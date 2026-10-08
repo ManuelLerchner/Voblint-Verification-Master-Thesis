@@ -348,7 +348,7 @@ although the callee may still diverge. C11 makes using the value of a call that
 falls through undefined (#c11("6.9.1p12")). Without the condition, VIMP would
 silently store the $0$ that the reset on entry left in #isaconst("ret_var").
 
-== Executing a source program <sec:pstep>
+== Executing a source program #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
 
 An _operational semantics_ defines the meaning of a program by how it
 executes. A _small-step_ operational semantics does so one step at a time. A
@@ -567,7 +567,7 @@ implement the solver itself. It uses the verified top-down solver of Tilscher
 et al. @tilscher26, which Voblint includes as a submodule with a few changes
 (@sec:upstream-td). @ch:related returns to the comparison.
 
-=== Nodes and edges <sec:cfg>
+=== Nodes and edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
 
 #definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
   A graph $g$ is a record of type #isatype("cfg"):
@@ -698,7 +698,7 @@ The compiler turns a VIMP program into a procedure-aware graph. Its design
 decides which program points exist, and the simulation of @sec:csim relies on
 how it lays out the code of each command.
 
-=== Compiling a command <sec:compile>
+=== Compiling a command #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
 
 To emit the edges of a command, a compiler has to know where control goes
 after it. Compilers commonly pass this target down, so that each statement
@@ -766,7 +766,7 @@ the declared procedures other than `main`. Its input contract
 #isaconst("wf_source_program") plus the condition that $italic("ps")$ lists
 exactly those procedures, without repetition.
 
-=== Graph execution <sec:cstep>
+=== Graph execution #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 #block(breakable: false)[
   #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[

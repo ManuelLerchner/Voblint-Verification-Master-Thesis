@@ -35,7 +35,7 @@ the constant the theorem is about, which gives the executable half of the
 end-to-end result. @sec:trust-boundary states where the proof ends and which
 trusted components remain.
 
-== Code generation and the public interface <sec:codegen>
+== Code generation and the public interface #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 The theorems of @ch:results are about a HOL function, but a user runs an OCaml
 program. Voblint closes this gap by exporting the theorem's own constant: the
@@ -123,7 +123,7 @@ same generated core, registered as claims and re-executed by the build.
     Settings #playground-settings("overview")],
 ) <fig:pg-overview>
 
-== Watching the solve <sec:tracing>
+== Watching the solve #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 A post-solution certificate states that the solver's result bounds the
 equations; it says nothing about how the solver reached it. For explaining a

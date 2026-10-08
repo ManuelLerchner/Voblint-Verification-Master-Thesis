@@ -1,6 +1,8 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "@preview/cetz:0.5.2"
-#import "../lib/code.typ": c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing
+#import "../lib/code.typ": (
+  c11, fixture, isaconst, isai, isalocale, isathm, isatype, listing, thy-badge,
+)
 #import "../lib/sources.typ": thy, update-rule-steps
 #import "../lib/math.typ": *
 #import "../lib/theme.typ": vb
@@ -71,7 +73,7 @@ publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
     the vendored solver differ, and the adapter that bridges each.],
 ) <tab:eq-adapters>
 
-=== Dynamic reads <sec:eq-trees>
+=== Dynamic reads #thy-badge("Voblint_Framework", "Routed_Call_Programs") <sec:eq-trees>
 
 A local edge always reads the same unknown, its predecessor, whereas a call
 chooses what to read from values it has already read. In the running example the continuation $(italic("pp3"), c_0)$ first reads the
@@ -122,7 +124,7 @@ the one seed of `bump`, and warrowing widens it. The analyzer then reports
 #_cli("pg-contexts-none", "a == 6", 4), whose lower bound $-infinity$ comes
 from this widening.
 
-=== One value type <sec:global-unknowns>
+=== One value type #thy-badge("Voblint_Framework", "DG_State") <sec:global-unknowns>
 
 A local unknown holds an abstract state of the analysis's local domain, and an
 analysis global holds a value of its global domain (@sec:shared-facts). The
@@ -165,7 +167,7 @@ Voblint uses the product because its componentwise lattice structure keeps
 the Isabelle proofs simple, at the price of an unused #lbot half in every
 unknown.
 
-=== Repeated publications <sec:eq-buffer>
+=== Repeated publications #thy-badge("Voblint_Solver", "Strategy_Tree_Side_Buffering") <sec:eq-buffer>
 
 One right-hand side can publish to the same global unknown twice. Two calls
 that resume at the same node may be routed to the same callee context and then
@@ -484,7 +486,7 @@ right-hand sides, starting from the query: everything the result of `main`
 depends on is solved. @sec:cert-def states this certificate, and
 @sec:cert-forward derives from it the set the theorem needs.
 
-=== The certificate <sec:cert-def>
+=== The certificate #thy-badge("TD", "Basics_side") <sec:cert-def>
 
 The verified solver states its guarantee as the certificate
 #isaconst("part_post_solution", thy: "Basics_side") of @sec:side-effects, over
@@ -711,7 +713,7 @@ proves from a well-formed program and a terminating solve alone that it
 contains the entry and that executions cannot leave it. The final theorem
 therefore needs no premise about which unknowns the solve visited.
 
-=== The solver as a parameter <sec:cert-param>
+=== The solver as a parameter #thy-badge("Voblint_Solver", "TD_Solver_Bridge") <sec:cert-param>
 
 The soundness argument uses only four facts about a solve that returns, and
 none of them depends on how the solver works. They are: the result is a post-solution on the solved set
@@ -727,7 +729,7 @@ as a parameter and extends #isalocale("certified_solver"), which states the
 four facts. #isathm("td_certified_solver") proves them for the vendored
 solver under every update rule.
 
-== Merging contributions to global unknowns <sec:update-rules>
+== Merging contributions to global unknowns #thy-badge("TD", "Update_rules") <sec:update-rules>
 
 A global unknown such as a seed receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
@@ -825,7 +827,7 @@ No solver fact is proved per rule. Each rule meets the vendored update-rule
 interface (#isathm("update_rule_update_global_of")), so the certificate is
 proved once, with the rule as a parameter, and holds for all five.
 
-== Making abstract states executable <sec:represented-function>
+== Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
 $"Var" -> A$, total functions on variable names (the relational order

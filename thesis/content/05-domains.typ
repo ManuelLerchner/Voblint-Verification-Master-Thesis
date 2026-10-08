@@ -465,7 +465,7 @@ as the fact that a program point is unreachable.
   })
 }
 
-== What an abstract value means <sec:domain-carrier-laws>
+== What an abstract value means #thy-badge("Voblint_Domain", "Abstract_Domain") <sec:domain-carrier-laws>
 
 The two requirements of the chapter opening become laws on the domain's
 carrier. A domain is a type $A$ of abstract values, its _carrier_. The solver compares
@@ -837,7 +837,7 @@ numeric domain. The next three sections introduce operations on single
 numeric values. They serve non-relational states, and @sec:branches returns to
 the relational state at its end.
 
-== Evaluating expressions <sec:domain-forward>
+== Evaluating expressions #thy-badge("Voblint_Domain", "Forward_Domain") <sec:domain-forward>
 
 The carrier operations serve the solver. The analysis additionally needs
 operations that mirror the program's own arithmetic, comparisons and branch
@@ -966,7 +966,7 @@ the conjunction (@fig:query-tree).
     #_q.verdict.],
 ) <fig:query-tree>
 
-== Learning from a guard <sec:branches>
+== Learning from a guard #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
 
 When the analysis enters a branch, it knows whether the condition held. On the
 true arm of `if (0 < x)`, for example, $x$ is positive, even though the
@@ -1058,7 +1058,7 @@ but less precise. The relational refinement #isaconst("relc_branch_step")
 satisfies the same statement as the filter
 (#isathm("relc_branch_step_sound")).
 
-== The complete domain interface <sec:domain-contract>
+== The complete domain interface #thy-badge("Voblint_Nonrelational", "Nonrelational_Transfer") <sec:domain-contract>
 
 The operations of this chapter fall into two groups. The _carrier operations_
 serve the solver: the order, the join, bottom and top, widening and narrowing,

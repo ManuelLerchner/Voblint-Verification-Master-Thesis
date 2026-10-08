@@ -1,6 +1,6 @@
 #import "@preview/fletcher:0.5.8": diagram, edge, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
 #import "../lib/math.typ": *
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": definition
@@ -112,7 +112,7 @@ ones. This chapter describes how each analysis instead gets one proof
 obligation that does not mention its partners, and why analyses meeting it
 combine into one analysis that meets the analysis contract of @sec:sound-core.
 
-== Questions and answers <sec:coop-queries>
+== Questions and answers #thy-badge("Voblint_Framework", "Analysis_Query") <sec:coop-queries>
 
 The analyses must agree on what a question means and on what an answer
 claims. A _query_ asks for a fact about the stores a state describes. Voblint
@@ -159,7 +159,7 @@ By the two laws, the channel answering $ltop$ everywhere holds at every store,
 and the pointwise meet of two channels that hold at $s$ holds at $s$
 (#isathm("query_algebra.channel_holds_inf")).
 
-== Proving an analysis against any channel <sec:coop-channels>
+== Proving an analysis against any channel #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
 
 Interval's assignment in @fig:mcp-step uses the wrapper
 #isaconst("ask_assign"), which any analysis can put around its assignment
@@ -220,7 +220,7 @@ term we adopt, proves each transfer function under the hypothesis that the
 channels it receives are correct @jourdan15[§7]. Voblint uses the same form
 for Goblint's queries.
 
-== Many analyses over one state <sec:coop-mcp>
+== Many analyses over one state #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-mcp>
 
 The analyses cannot be solved one after another. In the opening example
 Interval needs the order analysis's facts at `z = (x == y)`, and in the example

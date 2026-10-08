@@ -1,7 +1,7 @@
 #import "@preview/cetz:0.5.2"
 #import "../lib/code.typ": (
   claim-playground-link, isaconst, isai, isalocale, isathm, isatype, listing, oblig,
-  playground-base,
+  playground-base, thy-badge,
 )
 #import "../lib/sources.typ": proved, thy
 #import "../lib/theorems.typ": theorem
@@ -33,7 +33,7 @@ a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
 from the solution and why every verdict in it is sound.
 
-== From solution to report <sec:report>
+== From solution to report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
 The constructions of the previous chapters are packaged behind one HOL
 function, #isaconst("run_voblint"). It takes an analysis configuration and a
@@ -217,9 +217,9 @@ node collecting semantics at some node $v$ that simulates the run's
 execution configuration (the node need not be unique, @sec:csim). The second step holds for a policy with a cover that meets all
 five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts #isai("adm")
-admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). It shows where
-contexts enter; the source-level theorem goes from #isai("\<C>") directly to
-the report. The third inclusion is the analyzer's soundness result. It bounds
+admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
+argument only at this step. The source-level theorem itself goes from
+#isai("\<C>") directly to the report. The third inclusion is the analyzer's soundness result. It bounds
 the stores collected at $v$, over all contexts, by the union of the report's
 states at $v$, without saying which state covers a given store. The fourth is
 the inclusion of @sec:verdicts and depends only on the report and its
@@ -352,7 +352,7 @@ verdicts: #verdict(_v1) and #verdict(_v2) give #verdict(_vnode). Without context
 the warrowing update rule widens, and the check is #verdict(_none.at(3)) at
 #raw(_none.at(4)) (claim #claim-ref("chain-split-none")).
 
-== The source-level theorem <sec:headline>
+== The source-level theorem #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
 
 One theorem states the chain at one store for the exported analyzer. It quantifies over an
 arbitrary analysis configuration and program, the arguments of
@@ -406,7 +406,7 @@ every context policy, together with the activation trace and the context that
 cover the reached store, and each shipped policy discharges its two
 assumptions.
 
-== What a verdict says about executions <sec:verdict-meaning>
+== What a verdict says about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
 *What the four verdicts mean.* Read through the theorem of @sec:headline,
 each verdict of a report #isaconst("run_voblint") returned becomes a claim

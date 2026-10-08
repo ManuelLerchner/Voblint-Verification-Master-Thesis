@@ -413,10 +413,13 @@
 // to the rendered theory the section is about.
 #let thy-badge(session, theory) = {
   let href = _url("theory", session + "." + theory)
+  // The vertical padding is an outset and the lift stays below the cap height,
+  // so a badged heading is exactly as tall as an unbadged one and moves no text.
   let body = box(
-    inset: (x: 3pt, y: 1pt),
+    inset: (x: 3pt),
+    outset: (y: 1pt),
     radius: 2pt,
-    baseline: -0.35em,
+    baseline: -0.3em,
     stroke: 0.6pt + vb.accent,
     text(size: 0.5em, font: "DejaVu Sans Mono", fill: vb.accent)[thy],
   )

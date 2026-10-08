@@ -73,7 +73,7 @@ input. _Falsification_ evidence removes or weakens a condition and shows that
 its consumer then fails on a concrete execution, so the condition is needed. A
 replayed Goblint defect shows one obligation excluding a real unsoundness.
 
-=== Non-vacuity <sec:nonvacuity>
+=== Non-vacuity #thy-badge("Voblint_Examples", "Example_Non_Vacuity") <sec:nonvacuity>
 
 _Evidence: machine-checked, with the concrete solves evaluated._ A theorem
 whose premises are unsatisfiable holds vacuously. The end-to-end
