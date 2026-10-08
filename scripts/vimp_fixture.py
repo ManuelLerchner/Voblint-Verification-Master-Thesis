@@ -29,6 +29,7 @@ OUTPUT_FLAGS = frozenset(
         "--parse-only",
         "--ast",
         "--html",
+        "--json",
         "--trace",
         "--verbose",
         "--compact",

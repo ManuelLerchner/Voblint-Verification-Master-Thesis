@@ -860,3 +860,15 @@ argv = [
   "tests/regression/25-cooperation/precision/06-order_asks_interval.vimp",
 ]
 why = "The order analysis asks Interval at y = 10 and y = 30, records x <= y on both branches, and x <= y is PROVED."
+
+[claims.shell-json]
+argv = [
+  "--analysis",
+  "interval",
+  "--context",
+  "none",
+  "--json",
+  "thesis/shared/programs/shell-json.vimp",
+]
+json_path = "raw"
+why = "Chapter 12, the shell figure: the call run_voblint receives and the answer it returns, as the browser adapter serializes them."

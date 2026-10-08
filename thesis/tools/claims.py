@@ -25,6 +25,7 @@ from __future__ import annotations
 
 import argparse
 import difflib
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -57,6 +58,13 @@ def run(name: str, claim: dict) -> str:
             f"claims: {name} exited {proc.returncode}, expected {expected}\n"
             f"{proc.stdout}{proc.stderr}"
         )
+    # A JSON claim keeps one subtree of the output, so that fields which change
+    # from run to run (the timing) stay out of the stored file.
+    if "json_path" in claim:
+        value = json.loads(proc.stdout)
+        for key in claim["json_path"].split("."):
+            value = value[key]
+        return json.dumps(value, indent=1, ensure_ascii=False) + "\n"
     # stderr carries the frontend's diagnostics, which some figures are about.
     return (proc.stdout + proc.stderr).rstrip("\n") + "\n"
 

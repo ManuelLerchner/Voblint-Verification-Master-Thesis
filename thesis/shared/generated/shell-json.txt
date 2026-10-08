@@ -1,0 +1,974 @@
+{
+ "input": {
+  "as": [
+   "Interval_Analysis"
+  ],
+  "rule": "Globals_Warrow",
+  "ctx": "Ctx_None",
+  "pg": "Program_Globals_Flow_Sensitive",
+  "p": {
+   "declared_global_vars": [],
+   "prog_main": {
+    "Seq": [
+     {
+      "Seq": [
+       {
+        "Seq": [
+         {
+          "Seq": [
+           {
+            "Assign": [
+             "k",
+             {
+              "N": 10
+             }
+            ]
+           },
+           {
+            "Assign": [
+             "q",
+             {
+              "Div": [
+               {
+                "N": 100
+               },
+               {
+                "V": "k"
+               }
+              ]
+             }
+            ]
+           }
+          ]
+         },
+         {
+          "Call": [
+           "d",
+           "__voblint_nondet_int",
+           []
+          ]
+         }
+        ]
+       },
+       {
+        "Assign": [
+         "y",
+         {
+          "Div": [
+           {
+            "N": 100
+           },
+           {
+            "V": "d"
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     },
+     {
+      "Check": [
+       [
+        6,
+        3
+       ],
+       {
+        "Less": [
+         {
+          "N": 0
+         },
+         {
+          "V": "q"
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "prog_table": []
+  }
+ },
+ "output": {
+  "Analysed": {
+   "res_cfg": {
+    "cfg_entry": {
+     "FunctionEntry": "main"
+    },
+    "cfg_node_list": [
+     {
+      "Statement": 1
+     },
+     {
+      "Statement": 2
+     },
+     {
+      "Statement": 3
+     },
+     {
+      "Statement": 4
+     },
+     {
+      "Statement": 5
+     },
+     {
+      "FunctionResult": "main"
+     },
+     {
+      "Statement": 0
+     },
+     {
+      "FunctionEntry": "main"
+     }
+    ],
+    "cfg_intra_list": [
+     [
+      {
+       "Statement": 0
+      },
+      [
+       {
+        "EA_Assign": [
+         "k",
+         {
+          "N": 10
+         }
+        ]
+       },
+       {
+        "Statement": 1
+       }
+      ]
+     ],
+     [
+      {
+       "Statement": 1
+      },
+      [
+       {
+        "EA_Assign": [
+         "q",
+         {
+          "Div": [
+           {
+            "N": 100
+           },
+           {
+            "V": "k"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Statement": 2
+       }
+      ]
+     ],
+     [
+      {
+       "Statement": 2
+      },
+      [
+       {
+        "EA_Special": [
+         "Nondet_Int",
+         "d"
+        ]
+       },
+       {
+        "Statement": 3
+       }
+      ]
+     ],
+     [
+      {
+       "Statement": 3
+      },
+      [
+       {
+        "EA_Assign": [
+         "y",
+         {
+          "Div": [
+           {
+            "N": 100
+           },
+           {
+            "V": "d"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Statement": 4
+       }
+      ]
+     ],
+     [
+      {
+       "Statement": 4
+      },
+      [
+       {
+        "EA_Check": [
+         [
+          6,
+          3
+         ],
+         {
+          "Less": [
+           {
+            "N": 0
+           },
+           {
+            "V": "q"
+           }
+          ]
+         }
+        ]
+       },
+       {
+        "Statement": 5
+       }
+      ]
+     ],
+     [
+      {
+       "Statement": 5
+      },
+      [
+       {
+        "EA_Ret": [
+         null,
+         "main"
+        ]
+       },
+       {
+        "FunctionResult": "main"
+       }
+      ]
+     ],
+     [
+      {
+       "FunctionEntry": "main"
+      },
+      [
+       {
+        "EA_Body": "main"
+       },
+       {
+        "Statement": 0
+       }
+      ]
+     ]
+    ],
+    "cfg_calls_list": []
+   },
+   "res_contexts": [
+    "Context_Unit"
+   ],
+   "res_states": [
+    {
+     "state_point": {
+      "Statement": 1
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "⊤"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [
+      [
+       {
+        "arithmetic_operation": {
+         "Div": [
+          {
+           "N": 100
+          },
+          {
+           "V": "k"
+          }
+         ]
+        },
+        "arithmetic_divisor": {
+         "V": "k"
+        }
+       },
+       {
+        "Lifted": "Check_Proved"
+       }
+      ]
+     ],
+     "state_steps": [
+      [
+       {
+        "Statement": 2
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "[10,10]"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "Statement": 2
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "[10,10]"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [],
+     "state_steps": [
+      [
+       {
+        "Statement": 3
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "[10,10]"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "Statement": 3
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "[10,10]"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [
+      [
+       {
+        "arithmetic_operation": {
+         "Div": [
+          {
+           "N": 100
+          },
+          {
+           "V": "d"
+          }
+         ]
+        },
+        "arithmetic_divisor": {
+         "V": "d"
+        }
+       },
+       {
+        "Lifted": "Check_Unknown"
+       }
+      ]
+     ],
+     "state_steps": [
+      [
+       {
+        "Statement": 4
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "[10,10]"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "Statement": 4
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "[10,10]"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [
+      [
+       {
+        "Less": [
+         {
+          "N": 0
+         },
+         {
+          "V": "q"
+         }
+        ]
+       },
+       {
+        "Lifted": "Check_Proved"
+       }
+      ]
+     ],
+     "state_diagnostics": [],
+     "state_steps": [
+      [
+       {
+        "Statement": 5
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "[10,10]"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "Statement": 5
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "[10,10]"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [],
+     "state_steps": [
+      [
+       {
+        "FunctionResult": "main"
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "[10,10]"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "FunctionResult": "main"
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "[10,10]"
+          ],
+          [
+           "q",
+           "[10,10]"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [],
+     "state_steps": []
+    },
+    {
+     "state_point": {
+      "Statement": 0
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "⊤"
+          ],
+          [
+           "q",
+           "⊤"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [],
+     "state_steps": [
+      [
+       {
+        "Statement": 1
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "[10,10]"
+            ],
+            [
+             "q",
+             "⊤"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    },
+    {
+     "state_point": {
+      "FunctionEntry": "main"
+     },
+     "state_context": 0,
+     "state_value": {
+      "Lifted": [
+       [
+        "Interval_Analysis",
+        {
+         "Field_Store": [
+          [
+           "#ret",
+           "⊤"
+          ],
+          [
+           "d",
+           "⊤"
+          ],
+          [
+           "k",
+           "⊤"
+          ],
+          [
+           "q",
+           "⊤"
+          ],
+          [
+           "y",
+           "⊤"
+          ]
+         ]
+        }
+       ]
+      ]
+     },
+     "state_checks": [],
+     "state_diagnostics": [],
+     "state_steps": [
+      [
+       {
+        "Statement": 0
+       },
+       {
+        "Lifted": [
+         [
+          "Interval_Analysis",
+          {
+           "Field_Store": [
+            [
+             "#ret",
+             "⊤"
+            ],
+            [
+             "d",
+             "⊤"
+            ],
+            [
+             "k",
+             "⊤"
+            ],
+            [
+             "q",
+             "⊤"
+            ],
+            [
+             "y",
+             "⊤"
+            ]
+           ]
+          }
+         ]
+        ]
+       }
+      ]
+     ]
+    }
+   ],
+   "res_routes": [],
+   "res_checks": [
+    {
+     "check_point": {
+      "Statement": 4
+     },
+     "check_label": [
+      6,
+      3
+     ],
+     "check_exp": {
+      "Less": [
+       {
+        "N": 0
+       },
+       {
+        "V": "q"
+       }
+      ]
+     },
+     "check_verdict": {
+      "Lifted": "Check_Proved"
+     }
+    }
+   ],
+   "res_globals": [
+    {
+     "global_unknown": {
+      "Global_Seed": [
+       "main",
+       0
+      ]
+     },
+     "global_state": "Bot"
+    }
+   ],
+   "res_diagnostics": [
+    {
+     "diagnostic_point": {
+      "Statement": 3
+     },
+     "diagnostic_occurrence": 0,
+     "diagnostic_obligation": {
+      "arithmetic_operation": {
+       "Div": [
+        {
+         "N": 100
+        },
+        {
+         "V": "d"
+        }
+       ]
+      },
+      "arithmetic_divisor": {
+       "V": "d"
+      }
+     },
+     "diagnostic_verdict": "Check_Unknown"
+    }
+   ]
+  }
+ }
+}

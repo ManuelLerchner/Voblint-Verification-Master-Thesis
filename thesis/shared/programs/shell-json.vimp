@@ -1,0 +1,7 @@
+fun main() {
+  k = 10;
+  q = 100 / k;
+  d = __voblint_nondet_int();
+  y = 100 / d;
+  __voblint_check(0 < q);
+}
