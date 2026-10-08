@@ -27,12 +27,11 @@ This chapter answers what the analyzer's output guarantees about the
 executions of the source program. Solving the equation system of
 @ch:equations with the solver of @ch:solving yields an abstract state for
 every pair of a CFG node and a context the solver reached, and a value for
-every global unknown. These states cover every execution
-(@sec:cert-forward). The analyzer turns them into a report. It keeps the
-states and uses them to judge every `__voblint_check` and every arithmetic
-safety condition, such as a nonzero divisor. The chapter defines the report
-and its verdicts, follows the chain of inclusions from a source execution to a
-verdict, and states the theorem that composes the chain for the analyzer.
+every global unknown. By @sec:cert-forward, these states cover every
+execution. A user, however, reads neither states nor contexts. The user reads
+a report with one verdict for every `__voblint_check` and a diagnostic wherever
+a division may fail. The chapter shows how the analyzer derives this report
+from the solution and why every verdict in it is sound.
 
 == From solution to report <sec:report>
 
@@ -49,73 +48,66 @@ context policy (@ch:equations), solves it from the exit of `main`
 
 #thy("run_voblint")
 
-Before it analyzes anything, #isaconst("run_voblint") tests its two inputs.
+Before it compiles anything, #isaconst("run_voblint") checks its two inputs,
+so that a report exists only where the soundness proofs apply.
 #isaconst("valid_config") requires a nonempty list of distinct analyses, and
 #isaconst("wf_program_compile_input_exec") decides the structural conditions
-under which the compilation theorems of @ch:program-model hold. Only inputs
-that pass both are compiled and solved. An answer #ctor("Analysed") $"res"$
-therefore implies both conditions (#isathm("run_voblint_report_contract")),
-and the executable test implies the well-formedness premise of the soundness
-proofs (#isathm("wf_program_compile_input_exec_sound"),
-#isathm("run_voblint_wf")). The source-level theorem of
-@sec:headline consequently needs no premise about the configuration or the
-program. An input that fails a test is answered with
-#isaconst("Invalid_Activation") or #isaconst("Malformed_Program"), and
-#isaconst("No_Answer") represents the case in which the solver produces no
-result.
+that the compilation theorems of @ch:program-model assume. An input that fails
+is answered with #isaconst("Invalid_Activation") or
+#isaconst("Malformed_Program"), and #isaconst("No_Answer") stands for a solve
+that produces no result. Every answer #ctor("Analysed") $"res"$ thus comes
+from inputs that pass both tests (#isathm("run_voblint_report_contract")), and
+the executable test implies the well-formedness premise of the proofs
+(#isathm("wf_program_compile_input_exec_sound"), #isathm("run_voblint_wf")).
+The source-level theorem of @sec:headline therefore needs no premise about the
+configuration or the program.
 
-#isaconst("Analysed") carries an #isatype("analysis_report"). Three parts of
-the report are relevant to the guarantees of this chapter. The first holds the abstract
-states, each filed under the CFG node and the context the solver solved it
-for. The second assigns every check of the program a verdict (@sec:verdicts).
-The third lists the arithmetic diagnostics (@sec:verdict-meaning). The report
-also holds the values of the global unknowns.
+The report that #ctor("Analysed") carries (#isatype("analysis_report")) keeps
+the solver's abstract states, each under the CFG node and the context it was
+solved for, and builds on them what the user reads: a verdict for every check
+(@sec:verdicts) and the arithmetic diagnostics (@sec:verdict-meaning). It also
+keeps the values of the global unknowns.
 
-The solver may analyze a procedure several times, once for each context
-(@sec:eq-routing), so a CFG node can carry several states. A user asks about
-the CFG, so the report has to aggregate these states back onto its nodes. The
+The solver may analyze a procedure several times, once per context
+(@sec:eq-routing), so a CFG node can carry several states. The
 #link(playground-base)[playground] draws both pictures for the program of
 @fig:chain. Its
 #link(claim-playground-link("chain-split-entry", graph: "analysis"))[Analysis
-  view] shows one node per pair of a program point and a context. Its
+  view] shows one node per pair of a program point and a context, and its
 #link(claim-playground-link("chain-split-entry"))[Control-flow view] shows
-each node of the compiled CFG once and groups the states of its contexts
-there. The report states its guarantee in the control-flow picture.
-#isai("report_states_at res v") collects the states the report files under
-$v$, one per context the solver solved $v$ in. A state $d$ describes the
-stores #isai("\<gamma>\<^bsub>res\<^esub> d"): the concretization of the
-configured analyses (#isaconst("mcp_gamma_v")), lifted so that the unreachable
-state #ctor("Bot") describes none (#isaconst("report_conc")). At $v$ the report
-describes the stores that one of its states there describes, a set with a
-constant of its own, #isaconst("report_sem"):
+each node of the compiled CFG once, with the states of all its contexts
+grouped there. The report takes the second view. At a node $v$ it describes
+every store that one of its states there describes, aggregated over all
+contexts the solver solved $v$ in (#isaconst("report_states_at"),
+#isaconst("report_sem")):
 $
-  #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") = union.big_(d in #isai("report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d").
+  #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") = union.big_(d in #isai("report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
 $
+where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
+configured analyses.
 
-The union forgets the contexts on purpose. A source execution that reaches a
-point does not come with a context. Which contexts exist depends on the
-context policy the user selects: with call strings, contexts distinguish
-bounded call histories; with entry states, distinct abstract entry states;
-without contexts, there is a single one. A guarantee about the stores at a CFG node has
-the same form whichever policy produced the states, so one theorem covers
-every policy (@sec:headline). Each per-context state does over-approximate the
-activation collecting semantics of its context (@sec:cert-forward). The
-report's guarantees and its verdicts, however, are stated only through the
-union #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"). The per-context
-states remain in the report as data, which the Analysis view displays.
+The union drops the contexts on purpose. A context is not part of the
+program's state. It is a label the analysis attaches to a procedure activation
+to keep different calls apart, and the context policy decides which labels
+exist (@sec:eq-routing). A source execution consists of the remaining
+program, a store and a stack of frames, so there is no context it could be
+compared with. A user asks what holds at a program point, whichever call led there, and
+a guarantee per CFG node answers exactly this question. Inside the proof the
+contexts still matter: each per-context state over-approximates the activation
+collecting semantics of its context (@sec:cert-forward), and the chain of
+@sec:chain passes through this fact. The report keeps the per-context states
+for inspection, and the Analysis view displays them.
 
 == Verdicts <sec:verdicts>
 
 The command-line tool prints the report through its checks: each check at $v$
 receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
 #verdict("UNKNOWN") or #verdict("DEAD"). The
-#link(playground-base)[browser playground] shows the same verdicts beside the
-graph, the state of every node and context, and a replay of the solve
-(@sec:ocaml-boundary, @sec:tracing). The text report lists verdicts by source
-position: each check carries its position as a label, written by the trusted
-parser, and when the labels are distinct, which the text report checks before
-printing, every verdict belongs to the check at its position
-(#isathm("run_voblint_labelled_check_sound")).
+#link(playground-base)[browser playground] shows the same verdicts inline in
+the editor and beside the graph, together with the state of every node and
+context and a replay of the solve (@sec:ocaml-boundary, @sec:tracing). Each
+verdict is printed at the source position of its check, whose uniqueness the
+text report checks (#isathm("run_voblint_labelled_check_sound")).
 
 *How a verdict is computed.* Each state $d$ in
 #isai("report_states_at res v") gives its own verdict for a check:
@@ -130,19 +122,18 @@ answers by meet: an exact $1$ gives #verdict("PROVED"), an exact $0$ gives
 holds in every store the state describes (#isathm("mcp_classify_proved"),
 #isathm("mcp_classify_refuted")).
 
-The verdict of the CFG node joins the per-context verdicts of its states
+The verdict of the CFG node soundly joins the per-context verdicts of its states
 (#isaconst("aggregate_verdicts")). If every state other than #ctor("Bot")
 gives #verdict("PROVED"), the node is #verdict("PROVED"); if every such state
 gives #verdict("REFUTED"), it is #verdict("REFUTED"). If the states disagree,
 or one of them gives #verdict("UNKNOWN"), the node is #verdict("UNKNOWN").
 States classified #verdict("DEAD"), the #ctor("Bot") states, are neutral in
 this aggregation, so a node at which the report holds no state, or only
-#ctor("Bot") states, is #verdict("DEAD"). The report holds finitely many
-states at each node, those of the finitely many unknowns a terminating solve
-stabilizes (#isathm("finite_stabl_solve")).
+#ctor("Bot") states, is #verdict("DEAD").
 
 *What a verdict claims about stores.* The chain of @sec:chain has to end in
-what an end user reads: the verdicts, not the states. To state that
+something an end user reads, and an end user reads the verdicts rather than
+the states. To state that
 the verdicts are correct as an inclusion of sets, we turn the verdicts at $v$
 into the set of stores consistent with them, the _verdict set_
 #isai("\<V>\<^bsub>res\<^esub> v"). If $v$ carries the check `x > 0` with
@@ -153,33 +144,34 @@ tells the user that $x$ is positive there and nothing else.
 
 #thy("verdict_holds")
 
-A #verdict("DEAD") check claims only that no store arrives at $v$, a
-reachability claim that @sec:verdict-meaning states separately. In this
-store-set interpretation it admits every store, the neutral element of the
-intersection below:
+A #verdict("DEAD") check says nothing about the values in a store. It claims
+that no store arrives at $v$, which is a statement about reachability, and
+@sec:verdict-meaning treats it there. As a set of stores it therefore admits
+every store and leaves the claims of the other checks at $v$ untouched:
 
 #thy("check_stores")
 
-A store is consistent with the verdicts at $v$ if it satisfies the claim of
-every check there:
+A store is consistent with what the user reads at $v$ only if no verdict there
+contradicts it, so the verdict set keeps exactly the stores that satisfy every
+check at $v$:
 
 #thy("verdict_stores")
 
-By construction of #isaconst("compile"), each check has a node of its own, so
-the intersection ranges over at most one check. Stated as an intersection, the
-verdict set does not depend on how the compiler places checks.
+The intersection states this for any number of checks at a node. In a compiled
+program each check has a node of its own, and the verdict set is then the set
+of that single check.
 
 The verdict set can be much larger than
 #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"), because a verdict keeps only
 the truth value of one condition (last row of @fig:chain). Soundness needs
 only that every store reaching $v$ lies in it.
 
-If each node verdict is the join of its states' verdicts, the verdicts claim
-no more than the states support:
+Every verdict is backed by the states it was computed from: each store that a
+state at $v$ describes satisfies every definite verdict at $v$, that is,
 #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v")
-(#isathm("analysis_report_verdicts_sound")), and every report
-#isaconst("run_voblint") returns is built this way
-(#isathm("run_voblint_consistent")).
+(#isathm("analysis_report_verdicts_sound")). The theorem assumes that each node
+verdict is the join of its states' verdicts, which holds for every report
+#isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
 
 == The chain at one check <sec:chain>
 
@@ -187,9 +179,10 @@ Let $"res"$ be a report #isaconst("run_voblint") returns for a program $p$,
 $g$ = #isaconst("prog_cfg") $p$ its compiled graph, $cal(G)$ =
 #isaconst("declared_global") $p$ its global-variable classifier, and $S$ =
 #isaconst("cinit_stores") $cal(G)$ its initial-store set (@sec:vimp-vs-c,
-@ch:traces). The
-argument that a verdict is sound places a reached store at a CFG node $v$ and
-follows a chain of inclusions between sets of stores there. It ends in the
+@ch:traces). A store is _reached_ if some finite run of `main`, started from a
+store in $S$, arrives at it. The argument that a verdict is sound places a
+reached store at a CFG node $v$ and follows a chain of inclusions between sets
+of stores there. It ends in the
 two sets of the report, #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") and
 #isai("\<V>\<^bsub>res\<^esub> v"). Each step is a theorem:
 // One relation per row, centred over the fact that proves it, so the relations
@@ -357,8 +350,7 @@ The report does not say which
 context covers a reached store, so the node verdict joins the context
 verdicts: #verdict(_v1) and #verdict(_v2) give #verdict(_vnode). Without contexts, both calls feed the one seed of `f`, which
 the warrowing update rule widens, and the check is #verdict(_none.at(3)) at
-#raw(_none.at(4)) (claim #claim-ref("chain-split-none")). Every inclusion holds under both
-policies.
+#raw(_none.at(4)) (claim #claim-ref("chain-split-none")).
 
 == The source-level theorem <sec:headline>
 
@@ -386,7 +378,9 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     nonterminating programs are covered through their prefixes.
   + #isaconst("run_voblint") $"config"$ $p$ $=$ #ctor("Analysed") $"res"$: the
     analyzer returned a report. Input validity and solver termination are
-    therefore not separate premises (@sec:report).
+    therefore not separate premises (@sec:report), and the theorem is a
+    partial-correctness result: termination is not proved for every program
+    (@sec:termination).
 ]
 
 It concludes that some node $v$ of $g$ and frame stack $"stk"$ exist with:
@@ -414,12 +408,12 @@ assumptions.
 
 == What a verdict says about executions <sec:verdict-meaning>
 
-*What the four verdicts mean.* The report's states may describe stores that
-no execution reaches, so a verdict claims only what holds for every store that
-reaches the check. Each meaning holds for a report that
-#isaconst("run_voblint") returned, (P3). The verdicts speak about _covered
-executions_: finite source executions of `main` from an initial store in
-#isaconst("cinit_stores"), stopped at any point.
+*What the four verdicts mean.* Read through the theorem of @sec:headline,
+each verdict of a report #isaconst("run_voblint") returned becomes a claim
+about _covered executions_: finite runs of `main` from an initial store in
+#isaconst("cinit_stores"), stopped at any point. Because the report's states
+may also describe stores that no execution reaches, a verdict can only claim
+what holds whenever an execution reaches its check.
 - #verdict("PROVED"): whenever a covered execution reaches the check, the condition
   holds (#isathm("run_voblint_check_sound")).
 - #verdict("REFUTED"): whenever a covered execution reaches the check, the condition
@@ -473,29 +467,17 @@ may describe stores that no run reaches, as Interval's state above does, or it
 may describe no store without the test recognizing this. Either way the state
 is classified like any other, and the verdict is sound.
 
-*Arithmetic diagnostics.* Division by zero needs no check in the program.
-The analyzer treats the condition that a divisor is nonzero as an implicit
-check at every division and remainder and classifies it with the same queries.
-Where that condition is #verdict("PROVED") or the node #verdict("DEAD"), it
-prints nothing. Otherwise it prints an error for #verdict("REFUTED") and a
-warning for #verdict("UNKNOWN"). The guarantee concerns the silent nodes: at a
-node without a diagnostic, every collected store has nonzero divisors
-(#isathm("run_voblint_arithmetic_safe")). An error carries the dual
-guarantee: whenever a covered execution reaches its node, the divisor is zero.
+*Arithmetic diagnostics.* Division by zero needs no check in the program. At
+every division and remainder the analyzer asks the query system of
+@sec:coop-queries whether the divisor can be zero. If the analyses show that
+it is zero, the analyzer reports an error; if they cannot exclude zero, a
+warning; otherwise it prints nothing. At a node without a diagnostic, every
+collected store has nonzero divisors (#isathm("run_voblint_arithmetic_safe")).
+An error carries the dual guarantee: whenever a covered execution reaches its
+node, the divisor is zero.
 
 #proved("run_voblint_arithmetic_refuted")
 
-A warning means only that the analysis could not exclude a zero divisor.
-Neither an error nor a warning establishes that the node is reached.
-
-The theorems constrain only definite verdicts and silent nodes, so they say
-nothing about precision: an analyzer that answered #verdict("UNKNOWN") at every
-check would satisfy them (#isathm("unknown_everywhere_sound")). How often the
-analyzer does better is measured in @ch:evaluation, and @sec:falsification
-shows that the theorems do reject an analyzer that claims too much.
-
-The theorems are partial-correctness results: every report the analyzer
-returns is sound, while termination is not guaranteed for every program
-(@sec:termination). #isathm("certificate_demo_source_certified") discharges all
-three premises for one concrete program, the third by evaluation, which relies
-on code generation. The theorem is thus non-vacuous for an executable run.
+A warning means only that the analysis could not exclude a zero divisor. In
+practice warnings can be frequent, since the analysis has to warn wherever it
+is too weak to rule out zero.
