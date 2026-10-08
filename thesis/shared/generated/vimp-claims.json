@@ -735,6 +735,16 @@
       "placement": "flow-sensitive"
     }
   },
+  "shell-json": {
+    "fixture": "thesis/shared/programs/shell-json.vimp",
+    "program": "fun main() {\n  k = 10;\n  q = 100 / k;\n  d = __voblint_nondet_int();\n  y = 100 / d;\n  __voblint_check(0 < q);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "sign-cannot-bound-magnitude": {
     "fixture": "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp",
     "program": "global total;\nfun inc(n) {\n  total = total + n;\n}\nfun main() {\n  total = 0;\n  inc(3);\n  inc(4);\n  __voblint_check(total < 100);\n}",

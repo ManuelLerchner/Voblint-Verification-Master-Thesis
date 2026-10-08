@@ -92,3 +92,13 @@ why = "The formalization in cross-section: one stratum per session, sized by its
 # (fletcher/curryst, payload from Abstract_Domain.thy and Basics_side.thy); the
 # literature timeline is bibliography data and belongs in Chapter 13 as a table
 # or a generated plot, not as a lifted web figure.
+
+[figures.build]
+aria_prefix = "Build lane: Isabelle theories are exported by export_code"
+css = ["build"]
+colours = { "#a76924" = "trusted" }
+# The page animates a token along the build lane and badges the stages with
+# logos and source links; none of them means anything in print.
+drop_classes = ["build-token", "token-track", "logo-badge", "link-sub"]
+chapter = "12.1"
+why = "The delivered tools run generated code for the proved run_voblint: export_code to one OCaml module, linked with handwritten adapters, compiled natively for the CLI and by wasm_of_ocaml for the playground's web worker."
