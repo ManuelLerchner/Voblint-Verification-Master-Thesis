@@ -1,0 +1,1 @@
+Demo.thy:8:27: locale-free-variable: gamma_sgn in the header of locale sound_domain is no parameter, bound variable, or name used elsewhere; Isabelle generalizes over it as a free variable

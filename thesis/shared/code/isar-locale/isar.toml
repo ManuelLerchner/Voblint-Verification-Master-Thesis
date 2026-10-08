@@ -1,0 +1,2 @@
+# The locale-check example the thesis prints (Section 14.2). It must keep
+# its finding, so the repository-wide configuration excludes this directory.

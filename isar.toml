@@ -16,6 +16,8 @@ exclude = [
   ".scratch/**",
   # Scratch theory that pixi run thesis-deps-export writes under build/.
   "build/entity-deps/**",
+  # The locale-check example of the thesis, which must keep its finding.
+  "thesis/shared/code/isar-locale/**",
 ]
 
 [fmt]

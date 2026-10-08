@@ -67,6 +67,10 @@ ALLOW: dict[tuple[str, str], str] = {
     ("10-results.typ", "60"): "bar lightening in fig:chain",
     # Listing line numbers, not counts.
     ("11-instances.typ", "10"): "line of the stride-2 listing marked in fig:stride2",
+    (
+        "14-tooling.typ",
+        "19",
+    ): "past share of a clean build, recorded in scripts/mk/reelaboration-check.sh",
 }
 
 
