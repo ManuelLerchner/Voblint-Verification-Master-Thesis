@@ -174,6 +174,15 @@ thesis-alignment-write = { cmd = "python3 thesis/tools/goblint_alignment.py", de
 # thesis/tools/locale_graph.ML, so it needs `pixi run isabelle-build` first.
 thesis-locale-graph = { cmd = "bash scripts/mk/locale-graph.sh", description = "Regenerate the thesis's locale dependency graph from the built Voblint_Examples heap." }
 
+# The entity dependency graph is read off the built heap by
+# thesis/tools/entity_deps.ML, so `thesis-deps-write` needs `pixi run isabelle-build` first.
+thesis-deps-export = { cmd = "bash scripts/mk/entity-deps.sh", description = "Export the statement-level dependency graph of every project theory from the built Voblint_Examples heap." }
+thesis-deps-write = { cmd = "python3 thesis/tools/entity_deps.py --write", depends-on = [
+  "thesis-deps-export",
+], description = "Regenerate the thesis's entity dependency graph from the built heap." }
+thesis-deps = { cmd = "python3 thesis/tools/entity_deps.py", description = "Warn when the thesis shows a definition or theorem before the entities its statement uses." }
+thesis-deps-html = { cmd = "python3 thesis/tools/entity_deps.py --html build/entity-deps/index.html", description = "Write the interactive entity-order graph to build/entity-deps/index.html." }
+
 thesis-notation = { cmd = "python3 -m pytest -q tests/test_thesis_notation.py && python3 thesis/tools/notation.py --check --lenient", description = "Check the notation table in the thesis, README and explainer against the theories' declarations and anchors." }
 thesis-notation-write = { cmd = "python3 thesis/tools/notation.py --write", description = "Regenerate the notation table data and its README and explainer blocks from the theories." }
 
@@ -229,6 +238,7 @@ thesis-check = { depends-on = [
   "thesis-sketches",
   "thesis-links",
   "thesis-links-coverage",
+  "thesis-deps",
   "thesis-alignment",
   "thesis-notation",
   "thesis-stats",

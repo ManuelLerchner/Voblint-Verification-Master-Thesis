@@ -22,6 +22,7 @@ clean. The checks that keep the text honest, and what each one reads:
 | --- | --- |
 | `thesis-refs` | an `isa*("…")` or `isa: "…"` names nothing in the theories, cites the wrong kind, or a declared multi-word name (`valid_activation_trace`, `EA_Assign`) is written as prose without markup, or a `#theorem`/`#lemma`/`#corollary` environment names a fact the theories declare with a different keyword |
 | `thesis-links` | a name the markup links has no anchor in the rendered theories (`--write` regenerates `shared/generated/links.json`; `--live` checks the deployed pages) |
+| `thesis-deps` | never fails; warns when a `thy`/`proved`/theorem-environment display comes before a cited entity its Isabelle statement uses, introduced in a later section (`--near` adds same-section ones, `// deps: preview` above a display marks an intentional preview, `thesis-deps-write` regenerates `shared/generated/entity-deps.json` from the built heap, `thesis-deps-html` draws the graph) |
 | `thesis-snippets` | a declaration or theorem statement shown with `thy`/`proved` no longer matches its source text |
 | `thesis-domain-tree` | a class instantiation or certificate lemma for an interface drawn in a chapter 5 domain tree is missing from that tree's list in `shared/domain-tree.toml` |
 | `thesis-facts` | a fact in `shared/facts.toml` is not proved by the built session, its printed statement changed, or a `proved` snippet comes from another theory than the one proving it |
@@ -269,6 +270,18 @@ handing a section over.
 - Verify reviewer suggestions against the theories and the literature before
   applying them, and report where the sources disagree (the soundness square
   commutes only up to ⊆; the solver needs no meet).
+- Open a chapter or section from the reader's question, not with an inventory
+  of its contents ("This chapter presents X: a, b and c"). Every sentence must
+  connect to its neighbours; a lone declarative such as "The report states its
+  guarantee in the control-flow picture." needs the sentence that motivates it.
+- Leave out implementation detail the argument does not use: finiteness side
+  conditions, executable plumbing, printing and label checks, internal record
+  fields, how a concretization is lifted. If the reader needs it at all, one
+  clause with the citation is enough.
+- Spend space where the formalization contributes. Textbook material (the
+  standard domains, classical fixpoint theory) gets a sentence, a citation and,
+  where it exists, a link to the interactive explainer; the depth goes to what
+  only this development has.
 
 ### Evidence
 
@@ -290,6 +303,22 @@ handing a section over.
   concepts such as `order`, `complete_lattice`, `lfp` and `mono` link to HOL.
 - Show real declarations with `thy(...)` rather than paraphrasing them when the
   text teaches an Isabelle mechanism.
+- Use no notation in prose that the theories lack. A formula names the Isabelle
+  constants or their declared notation (`report_states_at res v`, `γ⇘res⇙`), not
+  an ad hoc symbol such as $"states"_"res"(v)$ or "(v, c, d) ∈ res". If the
+  prose needs a shorter name, add it to the theory (an abbreviation or a
+  rename) first. A short definition may be written as a formula with its
+  constant cited; a mechanical case split is better shown with `thy(...)`.
+- When a definition reads differently from the prose that explains it (a
+  quantified set where the prose says intersection), generalize the theory
+  definition in place so the two match, and keep the old form as a lemma for
+  existing proofs. Do not change a definition only to ease the prose when it
+  would alter what is proved.
+- Introduce every Isabelle object before the first section that uses it. If a
+  later chapter owns the definition, move its introduction forward instead of
+  citing ahead.
+- Badge a heading with `thy-badge(session, theory)` when the section presents
+  the content of one theory, so the reader can open its page.
 
 ### Figures, tables and listings
 
@@ -305,6 +334,15 @@ handing a section over.
 - Captions are short: what is shown, how it was obtained, what is schematic.
 - Listings are small (6.5pt or less), typed, without unused imports or aliases,
   and read from a checked-in file that a test runs.
+- Keep example programs minimal: merge nested guards into one `&&` condition
+  and drop lines the point does not need, after confirming the analyzer output
+  is unchanged. Highlight the lines a figure or table refers to in the listing
+  (codly `highlights` with a tag) and put a program and the plot it explains
+  side by side in one figure.
+- Everything the reader could open is a link: claim names with `claim-ref`,
+  fixtures with `fixture`, repository paths, theories with `thy-badge`,
+  upstream code at a pinned revision. Verdict words use the `verdict` helper so
+  they carry the same colours everywhere.
 
 ### Layout
 

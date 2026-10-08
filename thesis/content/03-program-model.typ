@@ -348,7 +348,7 @@ although the callee may still diverge. C11 makes using the value of a call that
 falls through undefined (#c11("6.9.1p12")). Without the condition, VIMP would
 silently store the $0$ that the reset on entry left in #isaconst("ret_var").
 
-== Executing a source program <sec:pstep>
+== Executing a source program #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
 
 An _operational semantics_ defines the meaning of a program by how it
 executes. A _small-step_ operational semantics does so one step at a time. A
@@ -483,10 +483,10 @@ languages have a construct but model it differently.
 Each row is a place where a statement true of a VIMP program need not hold for
 the corresponding C program. Unbounded integers and defined division by zero
 can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
-`PROVED` verdict on a program that divides by zero says nothing about C. The
+#verdict("PROVED") verdict on a program that divides by zero says nothing about C. The
 analyzer therefore reports a possible zero divisor as a separate diagnostic,
 and its absence at a reached node proves the divisor nonzero there
-(#isathm("run_voblint_arithmetic_safe"), @sec:verdicts). Division and
+(#isathm("run_voblint_arithmetic_safe"), @sec:verdict-meaning). Division and
 remainder truncate toward zero as in C11. Goblint once got the remainder wrong,
 and issue #link("https://github.com/goblint/analyzer/issues/1156")[1156]
 @goblint1156 reports it claiming `c % 2 == 1` for $c in {-5, -7}$
@@ -567,7 +567,7 @@ implement the solver itself. It uses the verified top-down solver of Tilscher
 et al. @tilscher26, which Voblint includes as a submodule with a few changes
 (@sec:upstream-td). @ch:related returns to the comparison.
 
-=== Nodes and edges <sec:cfg>
+=== Nodes and edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
 
 #definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
   A graph $g$ is a record of type #isatype("cfg"):
@@ -698,7 +698,7 @@ The compiler turns a VIMP program into a procedure-aware graph. Its design
 decides which program points exist, and the simulation of @sec:csim relies on
 how it lays out the code of each command.
 
-=== Compiling a command <sec:compile>
+=== Compiling a command #thy-badge("Voblint_Compile", "VIMP_Proc_to_CFG") <sec:compile>
 
 To emit the edges of a command, a compiler has to know where control goes
 after it. Compilers commonly pass this target down, so that each statement
@@ -766,7 +766,7 @@ the declared procedures other than `main`. Its input contract
 #isaconst("wf_source_program") plus the condition that $italic("ps")$ lists
 exactly those procedures, without repetition.
 
-=== Graph execution <sec:cstep>
+=== Graph execution #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 #block(breakable: false)[
   #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[

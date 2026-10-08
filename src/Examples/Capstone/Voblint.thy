@@ -442,9 +442,10 @@ text \<open>
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
     \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
       every configuration the dispatcher answers with a report
-      (@{thm [source] run_voblint_source_sound}), and the dead-check
-      guarantee at the same entry point
-      (@{thm [source] run_voblint_dead_check_unreached}).
+      (@{thm [source] run_voblint_source_sound}), and the dead-check and
+      arithmetic-error guarantees at the same entry point
+      (@{thm [source] run_voblint_dead_check_unreached},
+      @{thm [source] run_voblint_arithmetic_refuted}).
     \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
       statement instantiated at one program, with its answer evaluated.
 

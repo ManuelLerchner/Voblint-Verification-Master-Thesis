@@ -852,6 +852,7 @@ A theorem declares its variables and their types after #isai("fixes"),
 introduces abbreviations local to the statement after #isai("defines"), lists
 its premises after #isai("assumes") and states its conclusion after
 #isai("shows"). The source-level theorem of @sec:headline uses all four:
+// deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
 #proved("run_voblint_source_sound")
 It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
 program's global variables, procedure table and graph as $cal(G)$, $Pi$ and

@@ -29,6 +29,9 @@ why = "Unreachability endpoint cited in the introduction."
 [facts.run_voblint_arithmetic_safe]
 why = "Arithmetic-safety endpoint cited in the introduction."
 
+[facts.run_voblint_arithmetic_refuted]
+why = "Results chapter: an arithmetic error means a zero divisor in every covered execution reaching it."
+
 [facts.source_run_has_activation_trace]
 why = "Main-statements appendix: source runs are represented by valid traces."
 

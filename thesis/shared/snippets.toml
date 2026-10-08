@@ -105,7 +105,19 @@ why = "The certificate between the vendored solver and the semantic proof (solvi
 why = "The executable carrier's lookup: one default dictionary per partition (solving chapter)."
 
 [snippets.run_voblint]
-why = "The public operation and its type: what the executable chapter says the browser and CLI call."
+why = "The public operation and its type: the results chapter introduces it, the browser and CLI call it."
+
+[snippets.classify_point]
+why = "Results chapter: the verdict one state gives a check."
+
+[snippets.verdict_holds]
+why = "Results chapter: the claim one verdict makes about a store."
+
+[snippets.check_stores]
+why = "Results chapter: the stores one check's verdict admits."
+
+[snippets.verdict_stores]
+why = "Results chapter: the verdict set, the stores every definite verdict at a node admits."
 
 # Theorems shown with proved(...): the statement as the theory states it, cut
 # before the proof. Each is also listed in facts.toml, which checks that the
@@ -122,6 +134,9 @@ why = "Results chapter: the contract of an analysed report."
 
 [snippets.run_voblint_check_sound]
 why = "Main-statements appendix: the check-verdict endpoint."
+
+[snippets.run_voblint_arithmetic_refuted]
+why = "Results chapter: an arithmetic error means a zero divisor in every covered execution reaching it."
 
 [snippets.run_voblint_dead_check_unreached]
 why = "Main-statements appendix: the unreachability endpoint."

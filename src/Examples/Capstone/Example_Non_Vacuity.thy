@@ -281,7 +281,7 @@ definition answer_all :: "contextual_verdict \<Rightarrow> analysis_report \<Rig
 
 lemma unknown_everywhere_sound:
   "s \<in> \<V>\<^bsub>answer_all (Decided Check_Unknown) res\<^esub> v"
-  by (auto simp: verdict_stores_def answer_all_def)
+  by (auto simp: verdict_stores_eq answer_all_def)
 
 text \<open>
   An answer of \<^const>\<open>Check_Proved\<close> everywhere is not sound: the store after
@@ -333,7 +333,7 @@ proof -
       "check_exp chk = Eq (V (STR ''x'')) (N 0)"
     by (cases "report_checks res" rule: remdups_adj.cases) auto
   then show ?thesis
-    by (auto simp: verdict_stores_def answer_all_def
+    by (auto simp: verdict_stores_eq answer_all_def
         intro!: bexI[of _ "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>"])
 qed
 

@@ -343,6 +343,9 @@
   // One size for every listing, in running text or inside a figure: Typst's
   // default scales raw text with its surroundings (6.4pt in an 8pt figure).
   show raw.where(block: true): set text(size: 8pt)
+  // A short code fragment in prose stays on one line: `x > 0` split after `x`
+  // reads as two fragments. Longer fragments may still break at spaces.
+  show raw.where(block: false): it => if it.text.len() <= 28 { box(it) } else { it }
 
   // ------------------------------------------------------------- cover ----
   // Positions are the glyph tops the template produces: logo 102pt, school

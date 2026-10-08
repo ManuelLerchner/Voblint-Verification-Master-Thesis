@@ -66,6 +66,8 @@ ALLOW: dict[tuple[str, str], str] = {
     ("09-solving.typ", "90"): "fill lightening in fig:cert-forward",
     ("10-results.typ", "30"): "bar lightening in fig:chain",
     ("10-results.typ", "60"): "bar lightening in fig:chain",
+    # Listing line numbers, not counts.
+    ("11-instances.typ", "10"): "line of the stride-2 listing marked in fig:stride2",
 }
 
 

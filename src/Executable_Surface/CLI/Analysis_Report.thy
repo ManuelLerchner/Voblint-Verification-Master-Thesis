@@ -27,34 +27,40 @@ definition report_classify :: "analysis_report \<Rightarrow> exp \<Rightarrow> m
 
 text \<open>The states a report holds at a point, one per context it was solved at.\<close>
 
-definition report_rows :: "analysis_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted set" where
-  "report_rows res v = state_value ` {st \<in> set (report_states res). state_point st = v}"
+definition report_states_at :: "analysis_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted set" where
+  "report_states_at res v = state_value ` {st \<in> set (report_states res). state_point st = v}"
 
-lemma finite_report_rows [simp]: "finite (report_rows res v)"
-  by (simp add: report_rows_def)
+lemma finite_report_states_at [simp]: "finite (report_states_at res v)"
+  by (simp add: report_states_at_def)
+
+text \<open>The stores one such state describes; \<open>Bot\<close> describes none.\<close>
+
+abbreviation report_conc :: "analysis_report \<Rightarrow> mcp_val lifted \<Rightarrow> store set" ("\<gamma>\<^bsub>_\<^esub>") where
+  "\<gamma>\<^bsub>res\<^esub> \<equiv> gamma_lift (report_gamma res)"
 
 definition report_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^bsub>_\<^esub>" [0, 0] 1000) where
-  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = (\<Union>d \<in> report_rows res v. gamma_lift (report_gamma res) d)"
+  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = (\<Union>d \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> d)"
 
 lemma mem_report_sem [simp]:
-  "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<longleftrightarrow> (\<exists>d. Lifted d \<in> report_rows res v \<and> s \<in> report_gamma res d)"
+  "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<longleftrightarrow> (\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> report_gamma res d)"
   unfolding report_sem_def
 proof
-  assume "s \<in> (\<Union>dl \<in> report_rows res v. gamma_lift (report_gamma res) dl)"
-  then obtain dl where "dl \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) dl"
+  assume "s \<in> (\<Union>dl \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> dl)"
+  then obtain dl where "dl \<in> report_states_at res v" and "s \<in> \<gamma>\<^bsub>res\<^esub> dl"
     by blast
-  then show "\<exists>d. Lifted d \<in> report_rows res v \<and> s \<in> report_gamma res d" by (cases dl) auto
+  then show "\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> report_gamma res d" by (cases dl) auto
 qed (metis UN_I gamma_lift_Lifted)
 
 lemma report_semI [intro]:
-  "Lifted d \<in> report_rows res v \<Longrightarrow> s \<in> report_gamma res d \<Longrightarrow> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  "Lifted d \<in> report_states_at res v \<Longrightarrow> s \<in> report_gamma res d \<Longrightarrow> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
   unfolding report_sem_def by (rule UN_I[of "Lifted d"]) simp_all
 
 lemma report_semE [elim]:
   assumes "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
-  obtains d where "Lifted d \<in> report_rows res v" and "s \<in> report_gamma res d"
+  obtains d where "Lifted d \<in> report_states_at res v" and "s \<in> report_gamma res d"
 proof -
-  from assms obtain dl where "dl \<in> report_rows res v" and "s \<in> gamma_lift (report_gamma res) dl"
+  from assms
+  obtain dl where "dl \<in> report_states_at res v" and "s \<in> \<gamma>\<^bsub>res\<^esub> dl"
     unfolding report_sem_def by blast
   then show ?thesis by (cases dl) (auto intro: that)
 qed
@@ -81,22 +87,22 @@ lemma mcp_gamma_v_mono: "v \<le> v' \<Longrightarrow> mcp_gamma_v as v \<subsete
 lemma fold_sup_ge: "x \<in> set xs \<or> x \<le> acc \<Longrightarrow> x \<le> fold (\<squnion>) xs (acc :: 'a::semilattice_sup)"
   by (induction xs arbitrary: acc) (auto intro: le_supI1 le_supI2)
 
-lemma report_rows_le_point_join: "d \<in> report_rows res v \<Longrightarrow> d \<le> report_point_join res v"
-  unfolding report_rows_def report_point_join_sup by (auto intro!: fold_sup_ge)
+lemma report_states_at_le_point_join: "d \<in> report_states_at res v \<Longrightarrow> d \<le> report_point_join res v"
+  unfolding report_states_at_def report_point_join_sup by (auto intro!: fold_sup_ge)
 
 text \<open>Every store the report describes at a point, the joined state describes.\<close>
 
 theorem report_sem_point_join:
-  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> gamma_lift (report_gamma res) (report_point_join res v)"
+  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
 proof
   fix s assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
-  then obtain d where row: "Lifted d \<in> report_rows res v" and s: "s \<in> report_gamma res d"
+  then obtain d where row: "Lifted d \<in> report_states_at res v" and s: "s \<in> report_gamma res d"
     by blast
-  have "gamma_lift (report_gamma res) (Lifted d)
-          \<subseteq> gamma_lift (report_gamma res) (report_point_join res v)"
-    by (rule gamma_lift_mono[OF _ report_rows_le_point_join[OF row]])
+  have "\<gamma>\<^bsub>res\<^esub> (Lifted d)
+          \<subseteq> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
+    by (rule gamma_lift_mono[OF _ report_states_at_le_point_join[OF row]])
       (simp add: report_gamma_def mcp_gamma_v_mono)
-  with s show "s \<in> gamma_lift (report_gamma res) (report_point_join res v)" by auto
+  with s show "s \<in> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)" by auto
 qed
 
 subsection \<open>Verdicts\<close>
@@ -122,10 +128,24 @@ fun verdict_holds :: "check_result \<Rightarrow> exp \<Rightarrow> store \<Right
 | "verdict_holds Check_Refuted e s = (\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
 | "verdict_holds Check_Unknown e s = True"
 
+text \<open>
+  The stores a check's verdict admits. A \<open>Dead\<close> check claims nothing about stores;
+  its claim, that the point is unreached, is \<open>DEAD\<close> below.
+\<close>
+
+definition check_stores :: "result_check \<Rightarrow> store set" where
+  "check_stores c = (case check_verdict c of
+                       Decided r \<Rightarrow> {s. verdict_holds r (check_exp c) s}
+                     | Dead \<Rightarrow> UNIV)"
+
 definition verdict_stores :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<V>\<^bsub>_\<^esub>") where
+  "\<V>\<^bsub>res\<^esub> v = (\<Inter>c \<in> report_checks_at res v. check_stores c)"
+
+lemma verdict_stores_eq:
   "\<V>\<^bsub>res\<^esub> v =
      {s. \<forall>c \<in> report_checks_at res v. \<forall>r.
            check_verdict c = Decided r \<longrightarrow> verdict_holds r (check_exp c) s}"
+  unfolding verdict_stores_def check_stores_def by (auto split: lifted.splits)
 
 definition HAS_VERDICT :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> check_result \<Rightarrow> bool" where
   "HAS_VERDICT res v e r \<longleftrightarrow>
@@ -142,7 +162,7 @@ abbreviation UNKNOWN :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Ri
 
 lemma verdict_storesD:
   "s \<in> \<V>\<^bsub>res\<^esub> v \<Longrightarrow> HAS_VERDICT res v e r \<Longrightarrow> verdict_holds r e s"
-  unfolding verdict_stores_def HAS_VERDICT_def by blast
+  unfolding verdict_stores_eq HAS_VERDICT_def by blast
 
 text \<open>
   \<open>DEAD\<close> is a property of a point, not of a condition: every state the report holds
@@ -153,7 +173,7 @@ text \<open>
 \<close>
 
 definition DEAD :: "analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
-  "DEAD res v \<longleftrightarrow> (\<forall>d \<in> report_rows res v. d = Bot)"
+  "DEAD res v \<longleftrightarrow> (\<forall>d \<in> report_states_at res v. d = Bot)"
 
 subsection \<open>A consistent report\<close>
 
@@ -169,19 +189,19 @@ definition consistent_report :: "analysis_report \<Rightarrow> bool" where
         check_verdict c
           = aggregate_verdicts
               (classify_point (report_classify res) (check_exp c)
-                 ` report_rows res (check_point c)))"
+                 ` report_states_at res (check_point c)))"
 
 lemma consistent_report_decided:
   assumes cons: "consistent_report res"
     and c: "c \<in> report_checks_at res v"
     and verdict: "check_verdict c = Decided r" and known: "r \<noteq> Check_Unknown"
-    and row: "Lifted d \<in> report_rows res v"
+    and row: "Lifted d \<in> report_states_at res v"
   shows "report_classify res (check_exp c) d = r"
 proof -
   from c have mem: "c \<in> set (report_checks res)" and pt: "check_point c = v"
     by (simp_all add: report_checks_at_def)
   have agg: "aggregate_verdicts
-               (classify_point (report_classify res) (check_exp c) ` report_rows res v)
+               (classify_point (report_classify res) (check_exp c) ` report_states_at res v)
              = Decided r"
     using cons mem verdict pt unfolding consistent_report_def by auto
   from aggregate_verdicts_decided_dest[OF agg known] row
@@ -206,10 +226,10 @@ theorem analysis_report_verdicts_sound:
 proof
   fix s
   assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
-  then obtain d where row: "Lifted d \<in> report_rows res v" and s: "s \<in> report_gamma res d"
+  then obtain d where row: "Lifted d \<in> report_states_at res v" and s: "s \<in> report_gamma res d"
     by (rule report_semE)
   show "s \<in> \<V>\<^bsub>res\<^esub> v"
-    unfolding verdict_stores_def
+    unfolding verdict_stores_eq
   proof (intro CollectI ballI allI impI)
     fix c r
     assume c: "c \<in> report_checks_at res v" and verdict: "check_verdict c = Decided r"
@@ -265,8 +285,8 @@ definition contradiction_report :: "pp \<Rightarrow> analysis_report" where
 lemma DEAD_not_exact:
   "\<not> exact_emptiness (DEAD (contradiction_report v)) (report_sem (contradiction_report v))"
 proof -
-  have rows: "report_rows (contradiction_report v) v = {Lifted mcp_contradiction}"
-    by (auto simp: report_rows_def contradiction_report_def)
+  have rows: "report_states_at (contradiction_report v) v = {Lifted mcp_contradiction}"
+    by (auto simp: report_states_at_def contradiction_report_def)
   have live: "\<not> DEAD (contradiction_report v) v"
     by (simp add: DEAD_def rows)
   have "report_config (contradiction_report v)
@@ -290,10 +310,10 @@ lemma analysis_report_check_dead:
   shows "DEAD res (check_point c)"
 proof -
   have "aggregate_verdicts
-          (classify_point (report_classify res) (check_exp c) ` report_rows res (check_point c))
+          (classify_point (report_classify res) (check_exp c) ` report_states_at res (check_point c))
         = Dead"
     using assms unfolding consistent_report_def by auto
-  then have "\<forall>d \<in> report_rows res (check_point c).
+  then have "\<forall>d \<in> report_states_at res (check_point c).
                classify_point (report_classify res) (check_exp c) d = Dead"
     by (simp add: aggregate_verdicts_eq_Dead_iff)
   then show ?thesis
@@ -313,10 +333,10 @@ proof
   from assms(2) obtain c where c: "c \<in> set (report_checks res)" "check_point c = v"
     and verdict: "check_verdict c = Decided Check_Unknown"
     unfolding HAS_VERDICT_def report_checks_at_def by blast
-  have "\<forall>d \<in> report_rows res v. classify_point (report_classify res) (check_exp c) d = Dead"
+  have "\<forall>d \<in> report_states_at res v. classify_point (report_classify res) (check_exp c) d = Dead"
     using dead unfolding DEAD_def by auto
   then have "aggregate_verdicts
-               (classify_point (report_classify res) (check_exp c) ` report_rows res v) = Dead"
+               (classify_point (report_classify res) (check_exp c) ` report_states_at res v) = Dead"
     by (simp add: aggregate_verdicts_eq_Dead_iff)
   with assms(1) c verdict show False unfolding consistent_report_def by auto
 qed
@@ -351,9 +371,9 @@ lemma row_in_rows:
   shows "f i ctx v \<in> set (concat (map (\<lambda>(i, ctx). map (f i ctx) (filter (\<lambda>v. P v ctx) ns)) xs))"
   using assms by force
 
-lemma report_rows_report_of:
+lemma report_states_at_report_of:
   assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
-  shows "report_rows (report_of config ctx_key ctx_tag classify sr p) v
+  shows "report_states_at (report_of config ctx_key ctx_tag classify sr p) v
            = lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
 proof -
   define r where "r = run_table sr"
@@ -379,9 +399,9 @@ proof -
   show ?thesis
   proof (intro equalityI subsetI)
     fix d
-    assume "d \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
+    assume "d \<in> report_states_at (report_of config ctx_key ctx_tag classify sr p) v"
     then show "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
-      unfolding report_rows_def report_of_def Let_def by (auto simp: table_contexts_iff)
+      unfolding report_states_at_def report_of_def Let_def by (auto simp: table_contexts_iff)
   next
     fix d
     assume "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
@@ -391,8 +411,8 @@ proof -
     from cov ctxs have "ctx \<in> set ctxs" by force
     then obtain i where i: "(i, ctx) \<in> set (enumerate 0 ctxs)" using indexed by blast
     have w: "v \<in> set nodes" using nodes[OF cov] .
-    show "d \<in> report_rows (report_of config ctx_key ctx_tag classify sr p) v"
-      unfolding report_rows_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
+    show "d \<in> report_states_at (report_of config ctx_key ctx_tag classify sr p) v"
+      unfolding report_states_at_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
         nodes_def[symmetric]
       apply (simp only: analysis_report.select_convs)
       apply (rule image_eqI[rotated], rule CollectI, rule conjI, rule row_in_rows[OF i w])
@@ -422,6 +442,9 @@ definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow>
    \<and> (\<forall>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
         \<longrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)
         \<longrightarrow> arithmetic_safe_at (prog_cfg p) v s)
+   \<and> (\<forall>d \<in> set (report_diagnostics res). diagnostic_verdict d = Check_Refuted
+        \<longrightarrow> (\<forall>s \<in> \<lbrakk>res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>.
+              \<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)))
    \<and> map (\<lambda>c. (check_point c, check_label c, check_exp c)) (report_checks res)
        = check_sites (prog_cfg p)"
 
@@ -435,7 +458,7 @@ proof -
   have st: "sound_table p (run_table sr) classify gm"
     by (rule sound_table.intro [OF cov]) (unfold cl gm, rule mcp_sound_classifier)
   let ?res = "report_of config ctx_key ctx_tag classify sr p"
-  note rows = report_rows_report_of[OF fin inj]
+  note rows = report_states_at_report_of[OF fin inj]
   have cons: "consistent_report ?res"
     unfolding consistent_report_def
     by (auto simp: result_checks_of_def point_verdict_def rows report_classify_def cl image_comp
@@ -446,7 +469,7 @@ proof -
     from covered_table.covers[OF cov that] obtain ctx d
       where look: "lookup_table (run_table sr) v ctx = Lifted d" and s: "s \<in> gm d"
       unfolding table_covers_def by blast
-    then have "Lifted d \<in> report_rows ?res v"
+    then have "Lifted d \<in> report_states_at ?res v"
       unfolding rows by (metis image_eqI lookup_table_LiftedD)
     with s show ?thesis by (auto simp: report_gamma_def gm)
   qed
@@ -454,9 +477,26 @@ proof -
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
       and "\<forall>d \<in> set (report_diagnostics ?res). diagnostic_point d \<noteq> v" for v s
     using sound_table.arithmetic_safe[OF st _ that(1)] that(2) by simp
+  have refuted: "\<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)"
+    if d: "d \<in> set (report_diagnostics ?res)" and r: "diagnostic_verdict d = Check_Refuted"
+      and s: "s \<in> \<lbrakk>?res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>" for d s
+  proof -
+    let ?e = "arithmetic_condition (diagnostic_obligation d)"
+    have pv: "point_verdict (run_table sr) classify (diagnostic_point d) ?e = Decided Check_Refuted"
+      using arithmetic_diagnostics_refuted d r by simp
+    from s obtain st where row: "Lifted st \<in> report_states_at ?res (diagnostic_point d)"
+      and sg: "s \<in> report_gamma ?res st"
+      by (rule report_semE)
+    then obtain ctx where "lookup_table (run_table sr) (diagnostic_point d) ctx = Lifted st"
+      unfolding rows by force
+    then have "classify ?e st = Check_Refuted"
+      by (rule point_verdict_decided[OF pv, rotated]) simp
+    with sg show ?thesis
+      unfolding cl report_gamma_def report_of_simps by (blast dest: mcp_classify_refuted)
+  qed
   show ?thesis
     unfolding sound_report_def
-    using cons covers safe by (auto simp: result_checks_of_sites)
+    using cons covers safe refuted by (auto simp: result_checks_of_sites)
 qed
 
 text \<open>
@@ -664,7 +704,7 @@ proof -
     using wf that unfolding well_formed_report_def by blast
   have "{verdict | st verdict. st \<in> set (report_states res)
            \<and> state_point st = check_point c \<and> (check_exp c, verdict) \<in> set (state_checks st)}
-          = ?cl ` report_rows res (check_point c)"
+          = ?cl ` report_states_at res (check_point c)"
   proof (intro equalityI subsetI)
     fix x
     assume "x \<in> {verdict | st verdict. st \<in> set (report_states res)
@@ -672,14 +712,14 @@ proof -
     then obtain st where st: "st \<in> set (report_states res)" and pt: "state_point st = check_point c"
       and mem: "(check_exp c, x) \<in> set (state_checks st)" by blast
     from mem rows[OF st] have "x = ?cl (state_value st)" by auto
-    with st pt show "x \<in> ?cl ` report_rows res (check_point c)"
-      unfolding report_rows_def by blast
+    with st pt show "x \<in> ?cl ` report_states_at res (check_point c)"
+      unfolding report_states_at_def by blast
   next
     fix x
-    assume "x \<in> ?cl ` report_rows res (check_point c)"
+    assume "x \<in> ?cl ` report_states_at res (check_point c)"
     then obtain st where st: "st \<in> set (report_states res)" and pt: "state_point st = check_point c"
       and x: "x = ?cl (state_value st)"
-      unfolding report_rows_def by blast
+      unfolding report_states_at_def by blast
     have "(check_exp c, x) \<in> set (state_checks st)"
       unfolding rows[OF st] using c pt x by force
     with st pt show "x \<in> {verdict | st verdict. st \<in> set (report_states res)

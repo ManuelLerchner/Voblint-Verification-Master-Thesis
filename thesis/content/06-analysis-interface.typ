@@ -1,6 +1,6 @@
 #import "@preview/fletcher:0.5.8": diagram, node
 #import "../lib/theme.typ": vb
-#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig
+#import "../lib/code.typ": isaconst, isai, isalocale, isathm, isatype, listing, oblig, thy-badge
 #import "../lib/math.typ": *
 #import "../lib/sources.typ": thy
 #import "../lib/figures.typ": call-edge, entry-node, intra-edge, ppoint, snapshot-var
@@ -117,7 +117,7 @@ uses this to return one pair per path. Every analysis shipped with Voblint
 answers a single pair, and only a test example of @ch:traces answers two, so
 path-sensitive analyses remain future work.
 
-== Facts without a program point <sec:shared-facts>
+== Facts without a program point #thy-badge("Voblint_Framework", "DG_Manager") <sec:shared-facts>
 
 Not every fact belongs to one program point. An analysis may keep, for
 example, one range for a global variable `g` that holds throughout the run.
@@ -154,7 +154,7 @@ the edge's source and publishes nothing
 (#isathm("sp_compile_transfer_program_local_transfer")). By default, the
 numeric analyses are of this kind.
 
-== The analysis contract <sec:sound-core>
+== The analysis contract #thy-badge("Voblint_Framework", "DG_Spec_Sound") <sec:sound-core>
 
 The framework takes an analysis as one parameter, the record
 #isatype("dg_spec") with one field per operation (@fig:dg-spec): the edge
@@ -186,10 +186,10 @@ to its value. The locale states three semantic laws and one technical premise:
   thy("analysis_contract")
 }
 First, $tau$ is an arbitrary
-valuation of the solver's unknowns and `key` maps each analysis global to its
-unknown. Together they give the local state #isai("dg_local (\<tau> src)") at
-the edge's source and the environment #isai("genv key \<tau>"), the $d$ and
-$e$ above. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
+valuation of the solver's unknowns, valued in pairs #isatype("dg_state")
+(@sec:global-unknowns), and `key` maps each analysis global to its unknown.
+Thus $d$ is the local half #isaconst("dg_local") of $tau$ at the edge's source,
+and $e$ is #isai("genv key \<tau>"), the global halves at those unknowns. Second, #isaconst("edge_out") and #isaconst("edge_pub") are the
 local state a transfer returns and the environment of what it publishes, which
 is $lbot$ at every unknown it does not publish to.
 #isaconst("combine_out") and #isaconst("combine_pub") are the same for combine,
@@ -222,7 +222,7 @@ the policy, and for entry-state contexts also from entry coverage
 $d_0$ to cover the initial stores, which the analysis discharges when it is
 registered (#isathm("dg_analysis.init_sound")).
 
-== Program globals: flow-sensitive or flow-insensitive <sec:mixed-flow>
+== Program globals: flow-sensitive or flow-insensitive #thy-badge("Voblint_Framework", "DG_Keyed_Split_Spec") <sec:mixed-flow>
 
 The contract leaves open where program globals are kept. By default, program globals are part of the local state,
 as in Goblint's default base analysis for single-threaded programs
@@ -250,9 +250,9 @@ after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")), although every
 run ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
 `set`'s exit into `get`'s entry and derives #signval(_mf("y")) (claim
 #claim-ref("mixed-flow-sign")). In sequential VIMP the flow-insensitive
-placement can thus cost precision. It is particularly useful for multi-threaded programs, where a thread-modular
+placement can thus cost precision. It suits multi-threaded programs, where a thread-modular
 analysis keeps the values that threads exchange through shared
-globals flow-insensitively @seidl26[§1, Ex. 4]. VIMP has no threads, but a future extension of VIMP with threads could build on this placement
+globals flow-insensitively @seidl26[§1, Ex. 4]. VIMP has no threads, but a future extension with threads could build on this placement
 (@sec:outlook-extending).
 
 Like Goblint and Apinis et al. @apinis12[§5] @seidl26[§3], the analyzer keeps

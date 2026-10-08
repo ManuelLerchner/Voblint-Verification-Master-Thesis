@@ -378,7 +378,7 @@ diff of all 322 corpus fixtures: text, JSON, graph snapshot and verbose trace):
 - the per-policy semantic spine (`run_voblint_unit_chain`,
   `run_voblint_entry_state_chain`, `run_voblint_call_string_chain`);
 - an injective entry-state context key (`mcp_ctx_key`) and the listing lemmas
-  (`ordered_by_key_set`, `report_rows_report_of`), which the covering proof needs;
+  (`ordered_by_key_set`, `report_states_at_report_of`), which the covering proof needs;
 - phase 8 in part: `render_report` as the adapters' projection, the shared
   `cli/result/analysis_request.ml`, and phase 8a, the carrier-specialized boundary
   (`mcp_equations`, `mcp_solve_c`, `mcp_run_of`);

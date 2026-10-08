@@ -9,3 +9,4 @@ Location  Point  Condition  Verdict  State
 12:5      pp4    x <= y     PROVED   order: {x≤y}
 14:7      pp6    x <= z     UNKNOWN  order: {x≤y ∧ y≤z}
 17:5      pp9    x <= y     UNKNOWN  order: ⊤
+20:3      pp12   w == x     PROVED   order: {w≤x ∧ x≤w}

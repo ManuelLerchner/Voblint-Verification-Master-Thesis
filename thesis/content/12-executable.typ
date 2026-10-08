@@ -16,12 +16,12 @@
   assert(cells != none, message: "claim " + name + " has no check " + cond)
   cells
 }
-#let cli-verdict(name, cond) = raw(cli-row(name, cond).at(3))
+#let cli-verdict(name, cond) = verdict(cli-row(name, cond).at(3))
 // One verdict shared by several (claim, condition) rows; fails if they differ.
 #let cli-same(..rows) = {
   let vs = rows.pos().map(((name, cond)) => cli-row(name, cond).at(3))
   assert(vs.dedup().len() == 1, message: "verdicts differ: " + repr(vs))
-  raw(vs.first())
+  verdict(vs.first())
 }
 
 = From Formalization to Executable Analyzer <ch:executable>
@@ -35,27 +35,16 @@ the constant the theorem is about, which gives the executable half of the
 end-to-end result. @sec:trust-boundary states where the proof ends and which
 trusted components remain.
 
-== Code generation and the public interface <sec:codegen>
+== Code generation and the public interface #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
 The theorems of @ch:results are about a HOL function, but a user runs an OCaml
 program. Voblint closes this gap by exporting the theorem's own constant: the
 command-line tool and the playground call the generated code of
-#isaconst("run_voblint"), so the theorems speak about the function they run,
-up to the code generator and the OCaml toolchain (@sec:trust-boundary).
-
-#thy("run_voblint")
-
-Without a report, the result says why: #isaconst("Invalid_Activation") for an
-empty or duplicated list of analyses, #isaconst("Malformed_Program") for a
-program that fails the structural conditions of compilation, and
-#isaconst("No_Answer"), the logical case in which the solver returns nothing.
-#isaconst("Analysed") carries an #isatype("analysis_report") of semantic
-values, one combined state per solved point and context with its verdicts.
-#isaconst("render_report") turns them into strings, which no theorem reads.
-
-What a user reads off a report, one check verdict or diagnostic at a time, is
-stated by the theorems of @sec:verdicts, all derived from
-#isathm("run_voblint_source_sound").
+#isaconst("run_voblint") (@sec:report), so the theorems speak about the
+function they run, up to the code generator and the OCaml toolchain
+(@sec:trust-boundary). The #isatype("analysis_report") it returns holds
+semantic values. #isaconst("render_report") turns them into strings, which no
+theorem reads.
 
 Export needs code equations for everything #isaconst("run_voblint") uses.
 Two objects of the soundness argument have none, and @ch:solving replaces
@@ -134,7 +123,7 @@ same generated core, registered as claims and re-executed by the build.
     Settings #playground-settings("overview")],
 ) <fig:pg-overview>
 
-== Watching the solve <sec:tracing>
+== Watching the solve #thy-badge("Voblint_Solver", "Solver_Trace") <sec:tracing>
 
 A post-solution certificate states that the solver's result bounds the
 equations; it says nothing about how the solver reached it. For explaining a
@@ -210,14 +199,14 @@ Three questions determine what a run of the delivered analyzer establishes, and
 @fig:intro-trust places each component under one of them.
 
 *What is proved.* #isathm("run_voblint_source_sound") (@sec:headline) and the
-verdict theorems of @sec:verdicts hold for every report #isaconst("run_voblint")
+verdict theorems of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
 returns, so termination is not a premise. The proved side includes the compiler,
 the well-formedness test, the vendored solver with its executable refinement,
 and the finite carrier. The vendored solver's changes (@sec:upstream-td) are
 checked by Isabelle like every other theory. The proved side ends at two
 points: the syntax tree #isaconst("run_voblint") receives, and the semantic
 report it returns, before #isaconst("render_report") turns its states into text
-(@sec:codegen). No theorem constrains `UNKNOWN` verdicts or
+(@sec:codegen). No theorem constrains #verdict("UNKNOWN") verdicts or
 warnings.
 
 *What is trusted.* The delivered guarantee also relies on the following

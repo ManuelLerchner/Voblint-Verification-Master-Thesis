@@ -35,6 +35,14 @@
   solver: rgb("#EF6C00"), // the vendored TD solver
   voblint: rgb("#1E88E5"), // this formalization
 
+  // check verdicts and diagnostics: the playground's light palette
+  // (pages/style.css), so prose, figures and screenshots agree.
+  verdict-proved: rgb("#28734b"),
+  verdict-refuted: rgb("#ad422c"),
+  verdict-unknown: rgb("#a76924"),
+  verdict-dead: rgb("#607078"),
+  verdict-warning: rgb("#8a4fbf"),
+
   // domains
   sign: rgb("#00695C"),
   ivl: rgb("#1565C0"),
