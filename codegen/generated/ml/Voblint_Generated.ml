@@ -12723,7 +12723,7 @@ let rec compiled_routed_eqs_for _A (_D1, _D2) _E
 
 let rec init_publications _C _D
   global_of root_ctx place_inits g p x =
-    (if equal_proda equal_cfg_node _C x (cfg_entry (prog_cfg p), root_ctx)
+    (if equal_proda equal_cfg_node _C x (FunctionEntry prog_main_name, root_ctx)
       then map (fun (n, d) -> (global_of n, DG (Bot, d))) (place_inits g p)
       else []);;
 
