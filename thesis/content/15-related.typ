@@ -269,9 +269,7 @@ reduced product @cousot79 @rival20[§5.1.2] combines domains through a reduction
 on the product carrier, as the Int domain of @sec:reduced-product does. The
 combined state keeps separate carriers and exchanges facts only through
 answers, so no reduction operator has to be defined or proved for a pair of
-analyses. The open product of Cortesi et al. @cortesi94, designed for
-logic programs, also lets each combined domain use information from the others
-through queries.
+analyses.
 
 Verasco, whose channels Voblint's follow (@sec:coop-channels), threads them so
 that the second domain can query the state the first has just computed
@@ -286,8 +284,7 @@ Local traces give each thread of a concurrent program a semantics from which
 thread-modular analyses can be derived and compared @schwarz21, later
 extended to relational analyses @schwarz23. The digest framework uses
 abstractions of execution histories to decide which observations may interact
-@schwarz24digest, and #cite(<schwarz26vmcai>, form: "prose") define data races
-in the same local-trace semantics. Voblint adapts the local view to sequential
+@schwarz24digest. Voblint adapts the local view to sequential
 procedure activations: a trace covers one activation and records its suspended
 caller, so a return reads its caller from the trace instead of choosing one. A calling context becomes a
 projection of the trace instead of a component of the state. Context policies can therefore be

@@ -429,7 +429,7 @@
 #let part-outline-entry(it) = {
   if it.element.supplement == [Part] {
     let n = part-counter.at(it.element.location()).first()
-    block(above: 9pt, below: 0pt, link(it.element.location(), text(
+    block(above: 13pt, below: 0pt, sticky: true, link(it.element.location(), text(
       font: "Latin Modern Sans",
       weight: "bold",
     )[Part #numbering("I", n): #it.element.body]))
