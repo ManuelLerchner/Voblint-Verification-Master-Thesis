@@ -121,7 +121,7 @@ OCaml implementation, and no agreement rate between the two analyzers is
 measured (@sec:rel-goblint). The comparison with prior work rests on a targeted
 search rather than a systematic review (@ch:related).
 
-== Outlook and future work <sec:outlook>
+== Outlook <sec:outlook>
 
 === Extending Voblint <sec:outlook-extending>
 

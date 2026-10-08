@@ -789,7 +789,7 @@ proved, and
 @sec:isabelle explains how Isabelle defines a function whose termination is
 open.
 
-== Isabelle/HOL mechanisms <sec:isabelle>
+== Isabelle/HOL mechanisms used in this development <sec:isabelle>
 
 // The declarations below are examples, set smaller than the running text.
 #show raw.where(block: true): set text(size: 6.5pt)
