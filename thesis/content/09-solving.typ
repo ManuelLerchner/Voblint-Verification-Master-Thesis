@@ -460,7 +460,7 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
   placement: none,
   caption: [The solve of @tab:eq-trace on the unknowns. Grey arrows are graph
     edges, including a seed feeding its entry; blue dashed arrows are the
-    solver's queries and publications, labelled with their phases. The solve
+    solver's queries and publications, labeled with their phases. The solve
     runs backwards from the result of `main` and demands the copies of `bump`
     for $c_1$ (right) and $c_2$ (left) as it discovers those contexts.],
 ) <fig:eq-walk>

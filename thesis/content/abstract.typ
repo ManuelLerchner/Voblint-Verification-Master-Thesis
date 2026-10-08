@@ -1,5 +1,6 @@
 #import "../lib/code.typ": isathm
 #import "../lib/stats.typ": stat
+#import "../lib/figures.typ": verdict
 
 = Abstract <abstract>
 
@@ -21,7 +22,7 @@ control-flow graph. The main theorem states that whenever the analyzer returns
 a report, the report covers every store reached by a finite execution from an
 initial store with zeroed globals, and every definite verdict at the
 corresponding program point holds for that store, without claiming that the
-point itself is reached. Further theorems show that a check reported `DEAD` is
+point itself is reached. Further theorems show that a check reported #verdict("DEAD") is
 unreachable and that a reached divisor is nonzero wherever no warning is
 issued. To our knowledge, Voblint is the first mechanized analyzer whose
 soundness proof connects a source semantics to a side-effecting constraint

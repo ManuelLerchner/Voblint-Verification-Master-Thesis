@@ -306,7 +306,7 @@
       return it
     }
     let indent = (0pt, 16.4pt, 50.6pt).at(it.level - 1)
-    let numw = (16.4pt, 34.2pt, 31.4pt).at(it.level - 1)
+    let numw = (20pt, 34.2pt, 31.4pt).at(it.level - 1)
     let prefix = it.prefix()
     let row = {
       h(indent)
@@ -362,12 +362,15 @@
     place(top + center, dx: dx, dy: logo-top, image(logo, width: 4cm))
     place(top + center, dx: dx, dy: logo-top + 85.2pt, block(width: 100%, {
       set par(justify: false, leading: leading-for(25pt, 20.74pt))
-      text(font: serif-17, size: 20.74pt)[SCHOOL OF COMPUTATION, INFORMATION AND TECHNOLOGY]
+      text(
+        font: serif-17,
+        size: 20.74pt,
+      )[SCHOOL OF COMPUTATION, INFORMATION AND TECHNOLOGY – INFORMATICS]
     }))
     place(top + center, dx: dx, dy: logo-top + 144.1pt, text(
       font: serif-12,
       size: 12pt,
-    )[DER TECHNISCHEN UNIVERSITÄT MÜNCHEN])
+    )[TECHNISCHE UNIVERSITÄT MÜNCHEN])
     place(top + center, dx: dx, dy: logo-top + 225.1pt, text(
       font: serif-12,
       size: 14.4pt,
@@ -394,22 +397,22 @@
     set par(justify: false, leading: leading-for(25pt, 20.74pt))
     text(font: serif-12, size: 20.74pt, weight: "bold", title)
   }))
-  place(top + center, dy: 456pt - margin-top, block(width: 100%, {
+  place(top + center, dy: 470pt - margin-top, block(width: 100%, {
     set par(justify: false, leading: leading-for(17.3pt, 17.28pt))
     text(font: serif-12, size: 17.28pt, weight: "bold", title-de)
   }))
-  place(top + left, dx: 51.2pt, dy: 517pt - margin-top, {
+  place(top + left, dx: 51.2pt, dy: 559pt - margin-top, {
     set text(font: serif-12, size: 14.4pt)
     set align(left)
     table(
-      columns: (80.7pt, auto),
+      columns: (118pt, auto),
       align: (left, left),
       inset: 0pt,
       row-gutter: leading-for(20pt, 14.4pt),
       [Author:], [#author],
-      [Supervisor:], [#supervisor],
+      [Supervisors:], [#supervisor],
       [Examiner:], [#examiner],
-      [Date:], [#date],
+      [Submission Date:], [#date],
     )
   })
   pagebreak(weak: true)

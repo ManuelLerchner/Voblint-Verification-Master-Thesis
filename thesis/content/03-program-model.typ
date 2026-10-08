@@ -575,7 +575,7 @@ et al. @tilscher26, which Voblint includes as a submodule with a few changes
     show raw.where(block: true): set text(size: 6.5pt)
     thy("cfg")
   }
-  #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labelled by an
+  #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled by an
   #isatype("edge_action") $a$. #isaconst("calls") holds the _call edges_
   $(u, italic("ca"), ctor("FunctionEntry") thin q, k)$. Such an edge consists
   of the call site $u$, the call information $italic("ca")$, the entry node of
@@ -679,7 +679,7 @@ recursive program.
   }),
   kind: image,
   placement: none,
-  caption: [A recursive program and its compiled graph, labelled as
+  caption: [A recursive program and its compiled graph, labeled as
     `voblint --dot` prints it. Here $sans("pp") thin n$ is
     $ctor("Statement") thin n$, and $sans("entry")_p$, $sans("exit")_p$ are
     $ctor("FunctionEntry") thin p$, $ctor("FunctionResult") thin p$. As in

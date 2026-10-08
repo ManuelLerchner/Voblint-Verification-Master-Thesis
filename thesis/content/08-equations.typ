@@ -467,8 +467,8 @@ routing keep them apart.
     program: `scale(v)` returns `2 * v`, `wrap(w)` returns `scale(w)` from
     #_site("scale(w)"), and `main` calls `a = wrap(1)` at #_site("wrap(1)") and
     `b = wrap(4)` at #_site("wrap(4)"), then checks `a == 2`. Boxes are copies
-    labelled with their contexts (`root` is that of `main`), arrows calls
-    labelled with their sites (Interval, claims #claim-ref("ctx-demo-*")).],
+    labeled with their contexts (`root` is that of `main`), arrows calls
+    labeled with their sites (Interval, claims #claim-ref("ctx-demo-*")).],
 ) <fig:eq-policies>
 
 An entry-state context consists of the abstract values that the entry state
