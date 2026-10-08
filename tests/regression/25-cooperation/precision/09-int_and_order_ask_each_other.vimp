@@ -1,0 +1,23 @@
+// PARAM: --analysis int,order
+// Concretely x <= y after the branches, so z is 1 at the check.
+//
+// Int alone joins x = [0,20] and y = [10,30], which overlap, so z = (x <= y)
+// is only [0,1]. The order analysis alone cannot compare a variable with a
+// constant and records nothing. Run together, the queries go both ways: at
+// y = 10 and y = 30 the order analysis asks Int how the new value compares
+// with x and records x <= y on both branches, and at z = (x <= y) Int asks
+// EvalInt (x <= y), which the order analysis answers with the exact 1.
+// The assignment to z is what makes Int ask: on the check x <= y itself the
+// order analysis would answer alone, as in 06-order_asks_interval.
+fun main() {
+  c = __voblint_nondet_int();
+  if (0 < c) {
+    x = 0;
+    y = 10;
+  } else {
+    x = 20;
+    y = 30;
+  }
+  z = (x <= y);
+  __voblint_check(z == 1); // PROVED
+}

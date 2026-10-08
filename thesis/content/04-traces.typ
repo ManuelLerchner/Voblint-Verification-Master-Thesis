@@ -398,7 +398,7 @@ sites, since a recursive procedure otherwise has infinitely many contexts. The
 functional approach, in contrast, computes a procedure summary independent of
 callers, which each call site instantiates. Goblint obtains the context of a
 callee by applying each analysis's `context` function to the callee's abstract
-entry state (@sec:eval-goblint), and Erhard et al. treat full entry states,
+entry state (@sec:rel-goblint), and Erhard et al. treat full entry states,
 their projections and call strings in one framework @erhard25[§4]. Voblint
 offers the context-insensitive policy, bounded call strings and entry-state
 contexts (#isatype("context_mode"), @ch:equations).

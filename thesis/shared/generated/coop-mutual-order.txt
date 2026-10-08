@@ -1,0 +1,9 @@
+tests/regression/25-cooperation/precision/09-int_and_order_ask_each_other.vimp [order]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  ----------
+22:3      pp7    z == 1     UNKNOWN  order: ⊤

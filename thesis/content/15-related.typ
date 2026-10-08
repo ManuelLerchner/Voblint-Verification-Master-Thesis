@@ -1,5 +1,6 @@
 #import "../lib/code.typ": *
 #import "../lib/theme.typ": vb
+#import "../lib/alignment.typ": alignment, alignment-count
 
 
 = Related Work <ch:related>
@@ -262,8 +263,35 @@ describe how Goblint uses them to decouple a mixed flow-sensitive analysis from
 the solver, with digests on the analysis side and update rules on the solver
 side recovering precision. Voblint adopts the split: an analysis supplies local
 and global transfer behaviour, and the generator and solver organize their
-interaction. @sec:eval-goblint records where the model differs from Goblint's
-implementation.
+interaction.
+
+The correspondence with Goblint's implementation is architectural. We compared
+Voblint with the framework interface of Goblint's
+#link("https://github.com/goblint/analyzer/blob/" + alignment.revision + "/src/framework/constraints.ml")[constraint generator] at revision #raw(alignment.revision.slice(0, 8)) by
+source inspection. There, a call runs the analysis's `enter`, selects the
+callee context from the entered state, publishes the callee entry, and combines
+the callee's exit with the caller. Voblint's equations have the same four
+steps, with enter and combine from the D/G specification and the context
+chosen by the routing policy. The project site's side-by-side comparison
+(#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#goblint")[site])
+lists #alignment.rows.len() Goblint constructs:
+#alignment-count("modeled") are modeled, #alignment-count("simplified")
+simplified, and #alignment-count("absent") not modeled. No row claims that the
+two compute the same fixpoint.
+
+Three simplifications affect how results transfer to Goblint. The callee
+entry is published to a global seed and read back by the entry's local
+unknown, where Goblint writes the local entry directly. Under the warrowing
+rules the seed itself can be widened, so widening is placed differently; the
+direction of that difference is unproved, and no equivalence is claimed. Call
+targets are resolved statically. The activated analyses share one combined
+state and one query kind, and their components use no globals, where Goblint's
+MCP also passes events, spawns and per-analysis globals and supports many query
+kinds. No agreement rate between the verdicts of the two analyzers is
+reported. The fixtures adapted from Goblint's regression tests record Goblint's
+annotations only as prose in their header comments, and the corpus has not been
+run through Goblint. A measured comparison would need those annotations in
+machine-readable form and Goblint's configuration flags fixed per test.
 
 Goblint combines its analyses at run time in its MCP (@sec:coop-mcp), which
 also answers a query cycle with the top element, caches answers per transfer,

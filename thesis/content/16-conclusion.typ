@@ -21,7 +21,7 @@ non-relational domain supplies only primitives proved sound, from which
 a generic builder in the style of Nipkow and Klein derives its analysis.
 Analyses that answer one another's queries combine under the same theorem, each
 proving one obligation that names no partner.
-The evidence for this, its strength and its gaps are assessed in
+How strong this result is, and where its evidence stops, is assessed in
 @ch:evaluation. This chapter discusses the design, collects the limitations in
 one place, and outlines future work.
 
@@ -74,13 +74,25 @@ rule that meets the vendored interface needs the least work, since only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such as CIL would join the parser in the trust
 boundary unless verified.
 
-For other verified analyzers, the development suggests an order of work. State
-soundness against a context-free trace semantics and read contexts off traces,
-so that policies are proved against one fixed semantics. Consume the solver
-through a certificate that also bounds published contributions and closes the
-reached set (@sec:certificate). Export the constant the theorem is about.
-Counterexample theorems for weakened obligations are easy to state, and two
-of them determined the shape of the call interface (@sec:revealed).
+For other verified analyzers, the development suggests an order of work, and
+the counterexample theorems show why several of its steps are needed. State soundness
+against a context-free trace semantics and read contexts off traces, so that
+policies are proved against one fixed semantics. Index a callee by the context
+read at its call (@sec:why-traces). Read a callee's
+result at the callee's own context, and make the context relation total.
+Without either, a claim meets the remaining obligations and still misses a
+store a run reaches (#isathm("return_at_caller_context_unsound"),
+#isathm("total_dropped_unsound"), @sec:eval-1161). Select the callee
+context and publish the callee entry from the same entered value
+(#isathm("w0_seed_at_entered_frame"), #isathm("w0_no_seed_at_caller_frame"),
+@sec:eq-routing), and let a right-hand side publish to a global unknown only once
+per evaluation, because the update rules record one contribution per origin
+(@sec:eq-buffer; on one witness the buffered system terminates,
+#isathm("keyed_multiwrite_buffered_terminates"), where the unbuffered one
+did not finish in our runs). Consume the
+solver through a certificate that also bounds published contributions and
+closes the reached set (@sec:certificate). Export the constant the theorem is
+about.
 
 == Limitations <sec:limitations>
 
@@ -119,16 +131,16 @@ chain uses the solver only through its certificate (@sec:certificate).
 
 The evidence beyond the theorem is narrow. Each counterexample theorem weakens
 one selected condition on one program, and none shows that the coverage contract as a
-whole is minimal (@sec:falsification). No general precision, optimality or
+whole is minimal (@sec:eval-1161). No general precision, optimality or
 completeness theorem is proved, where completeness would mean that every check
 that holds in all executions is reported as proved, and each precision witness concerns one program
 with fixed analysis settings (@sec:eval-precision). The regression corpus is small
-and written for this work, and its expected behaviour is the author's reading
+and was written or adapted for this work, and its expected behaviour is the author's reading
 of each program (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was
 not re-run, and the playground is illustrative; no study measures whether it
 helps a reader. The correspondence with Goblint is architectural: no theorem
 transfers to its OCaml implementation, and no agreement rate between the two
-analyzers is measured (@sec:eval-goblint). The comparison with prior work rests
+analyzers is measured (@sec:rel-goblint). The comparison with prior work rests
 on a targeted search rather than a systematic review (@ch:related).
 
 == Outlook and future work <sec:outlook>
@@ -211,7 +223,7 @@ A faster executable needs the data refinement of @sec:limitations.
 
 === Voblint and Goblint <sec:outlook-goblint>
 
-Within the architectural correspondence of @sec:eval-goblint, Voblint can serve as an executable specification of the
+Within the architectural correspondence of @sec:rel-goblint, Voblint can serve as an executable specification of the
 architecture with proved soundness obligations. From Goblint to Voblint, a
 Goblint feature gives the design that an extension follows, as the query
 mechanism did for @ch:cooperation. A documented Goblint defect can be replayed
@@ -236,7 +248,7 @@ context, solver or equation (@sec:coop-catalogue). This suits development with
 AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
 The obligations are the specification, and the batch build and the drift
 checks of @ch:tooling are the oracle. Counterexample theorems for weakened
-obligations (@sec:falsification, @sec:revealed) act as negative tests. The
+obligations (@sec:eval-1161, @sec:discussion) act as negative tests. The
 order analysis and the query layer of @ch:cooperation were written this way.
 This is the experience of one author on one extension, not a measured result.
 An agent that delivers an analysis with its proof against these obligations

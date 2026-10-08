@@ -1,0 +1,11 @@
+tests/regression/16-composite-domain/precision/11-division_remainder_reduction.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition   Verdict  State
+--------  -----  ----------  -------  -----------------
+11:5      pp4    r == 1      UNKNOWN  interval: r=[0,3]
+12:5      pp5    r > 0       UNKNOWN  interval: r=[0,3]
+13:5      pp6    r % 2 == 1  UNKNOWN  interval: r=[0,3]
