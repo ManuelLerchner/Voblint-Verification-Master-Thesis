@@ -90,6 +90,18 @@ New value: interval: a=⊤, #ret=⊤, n=[5,5]
         %%% infl: add_infl (pp0 "return n + 1;" L5, [[5,5]]) (exit_bump, [[5,5]])
         %%% answer: exiting query for (pp0 "return n + 1;" L5, [[5,5]]) from (exit_bump, [[5,5]])
 answer: interval: a=⊤, #ret=⊤, n=[5,5]
+      %%% solver_query: entering query for (pp1, [[5,5]]) from (exit_bump, [[5,5]]); stable false; called false
+        %%% iter: iterate called from query
+        %%% iter: begin iterate (pp1, [[5,5]]), called: true, stable: false, wpoint: false
+        %%% eq: eq (pp1, [[5,5]])
+        %%% rhs: (pp1, [[5,5]]) = ⊥
+        %%% sol: Var: (pp1, [[5,5]]) (wp: false)
+Old value: ⊥
+Eqd: ⊥
+New value: ⊥
+        %%% infl: add_infl (pp1, [[5,5]]) (exit_bump, [[5,5]])
+        %%% answer: exiting query for (pp1, [[5,5]]) from (exit_bump, [[5,5]])
+answer: ⊥
       %%% rhs: (exit_bump, [[5,5]]) = interval: a=⊤, #ret=[6,6], n=[5,5]
       %%% sol: Var: (exit_bump, [[5,5]]) (wp: false)
 Old value: ⊥
@@ -134,4 +146,4 @@ New value: interval: a=[6,6], #ret=⊤, n=⊤
 
 CHECK    a == 6 at pp3: PROVED
 
-Trace complete: 8 local and 2 global unknowns solved
+Trace complete: 9 local and 2 global unknowns solved

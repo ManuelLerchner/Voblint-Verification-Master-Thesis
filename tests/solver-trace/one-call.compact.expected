@@ -14,4 +14,4 @@ RETURN   (pp3 "__voblint_check(a == 6);" L10, root) = interval: a=[6,6], #ret=‚ä
 
 CHECK    a == 6 at pp3: PROVED
 
-Trace complete: 8 local and 2 global unknowns solved
+Trace complete: 9 local and 2 global unknowns solved

@@ -21,4 +21,4 @@ RETURN   (pp4 "__voblint_check(a == 6);" L8, root) = interval: a=[6,6], b=[5,5],
 CHECK    a == 6 at pp4: PROVED
 CHECK    b == 5 at pp5: PROVED
 
-Trace complete: 13 local and 3 global unknowns solved
+Trace complete: 15 local and 3 global unknowns solved

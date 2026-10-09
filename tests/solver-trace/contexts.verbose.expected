@@ -98,6 +98,18 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
             %%% infl: add_infl (pp0 "return n + 1;" L2, [[5,5]]) (exit_bump, [[5,5]])
             %%% answer: exiting query for (pp0 "return n + 1;" L2, [[5,5]]) from (exit_bump, [[5,5]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]
+          %%% solver_query: entering query for (pp1, [[5,5]]) from (exit_bump, [[5,5]]); stable false; called false
+            %%% iter: iterate called from query
+            %%% iter: begin iterate (pp1, [[5,5]]), called: true, stable: false, wpoint: false
+            %%% eq: eq (pp1, [[5,5]])
+            %%% rhs: (pp1, [[5,5]]) = ⊥
+            %%% sol: Var: (pp1, [[5,5]]) (wp: false)
+Old value: ⊥
+Eqd: ⊥
+New value: ⊥
+            %%% infl: add_infl (pp1, [[5,5]]) (exit_bump, [[5,5]])
+            %%% answer: exiting query for (pp1, [[5,5]]) from (exit_bump, [[5,5]])
+answer: ⊥
           %%% rhs: (exit_bump, [[5,5]]) = interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]
           %%% sol: Var: (exit_bump, [[5,5]]) (wp: false)
 Old value: ⊥
@@ -161,6 +173,18 @@ New value: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
           %%% infl: add_infl (pp0 "return n + 1;" L2, [[4,4]]) (exit_bump, [[4,4]])
           %%% answer: exiting query for (pp0 "return n + 1;" L2, [[4,4]]) from (exit_bump, [[4,4]])
 answer: interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]
+        %%% solver_query: entering query for (pp1, [[4,4]]) from (exit_bump, [[4,4]]); stable false; called false
+          %%% iter: iterate called from query
+          %%% iter: begin iterate (pp1, [[4,4]]), called: true, stable: false, wpoint: false
+          %%% eq: eq (pp1, [[4,4]])
+          %%% rhs: (pp1, [[4,4]]) = ⊥
+          %%% sol: Var: (pp1, [[4,4]]) (wp: false)
+Old value: ⊥
+Eqd: ⊥
+New value: ⊥
+          %%% infl: add_infl (pp1, [[4,4]]) (exit_bump, [[4,4]])
+          %%% answer: exiting query for (pp1, [[4,4]]) from (exit_bump, [[4,4]])
+answer: ⊥
         %%% rhs: (exit_bump, [[4,4]]) = interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]
         %%% sol: Var: (exit_bump, [[4,4]]) (wp: false)
 Old value: ⊥
@@ -217,4 +241,4 @@ New value: interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤
 CHECK    a == 6 at pp4: PROVED
 CHECK    b == 5 at pp5: PROVED
 
-Trace complete: 13 local and 3 global unknowns solved
+Trace complete: 15 local and 3 global unknowns solved
