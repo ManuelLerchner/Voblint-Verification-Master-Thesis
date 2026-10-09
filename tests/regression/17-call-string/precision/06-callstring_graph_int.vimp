@@ -17,19 +17,23 @@
 //     main_pp7_ctx0
 //     main_entry_main_ctx0
 //   cluster_ctx_1: g / call-string=pp2 pp5
+//     g_pp1_ctx0
 //     g_exit_g_ctx0
 //     g_pp0_ctx0
 //     g_entry_g_ctx0
 //   cluster_ctx_2: g / call-string=pp2 pp6
+//     g_pp1_ctx1
 //     g_exit_g_ctx1
 //     g_pp0_ctx1
 //     g_entry_g_ctx1
 //   cluster_ctx_3: f / call-string=pp5
+//     f_pp4_ctx0
 //     f_exit_f_ctx0
 //     f_pp2_ctx0
 //     f_pp3_ctx0
 //     f_entry_f_ctx0
 //   cluster_ctx_4: f / call-string=pp6
+//     f_pp4_ctx1
 //     f_exit_f_ctx1
 //     f_pp2_ctx1
 //     f_pp3_ctx1
@@ -66,6 +70,8 @@
 //       int:
 //         x=⊤
 //         y=⊤
+//   g_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   g_exit_g_ctx0: exit_g
 //       int:
 //         p=3
@@ -75,6 +81,8 @@
 //   g_entry_g_ctx0: entry_g
 //       int:
 //         p=3
+//   g_pp1_ctx1: pp1 [unreachable]
+//       unreachable
 //   g_exit_g_ctx1: exit_g
 //       int:
 //         p=10
@@ -84,6 +92,8 @@
 //   g_entry_g_ctx1: entry_g
 //       int:
 //         p=10
+//   f_pp4_ctx0: pp4 [unreachable]
+//       unreachable
 //   f_exit_f_ctx0: exit_f
 //       int:
 //         p=3
@@ -100,6 +110,8 @@
 //       int:
 //         p=3
 //         t=⊤
+//   f_pp4_ctx1: pp4 [unreachable]
+//       unreachable
 //   f_exit_f_ctx1: exit_f
 //       int:
 //         p=10
@@ -120,8 +132,12 @@
 // edges:
 //   g_pp0_ctx0 -> g_exit_g_ctx0: return p + p
 //   g_pp0_ctx1 -> g_exit_g_ctx1: return p + p
+//   g_pp1_ctx0 -> g_exit_g_ctx0: return
+//   g_pp1_ctx1 -> g_exit_g_ctx1: return
 //   f_pp3_ctx0 -> f_exit_f_ctx0: return t
 //   f_pp3_ctx1 -> f_exit_f_ctx1: return t
+//   f_pp4_ctx0 -> f_exit_f_ctx0: return
+//   f_pp4_ctx1 -> f_exit_f_ctx1: return
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(x == 6)
 //   main_pp8_ctx0 -> main_pp9_ctx0: check(y == 20)
 //   main_pp9_ctx0 -> main_exit_main_ctx0: return

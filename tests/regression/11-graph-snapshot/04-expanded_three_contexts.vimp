@@ -25,16 +25,19 @@
 //     main_entry_main_ctx0
 //   cluster_ctx_1: bump / [4,4]
 //     bump_pp1_ctx0
+//     bump_pp2_ctx0
 //     bump_exit_bump_ctx0
 //     bump_pp0_ctx0
 //     bump_entry_bump_ctx0
 //   cluster_ctx_2: bump / [5,5]
 //     bump_pp1_ctx1
+//     bump_pp2_ctx1
 //     bump_exit_bump_ctx1
 //     bump_pp0_ctx1
 //     bump_entry_bump_ctx1
 //   cluster_ctx_3: bump / [19,19]
 //     bump_pp1_ctx2
+//     bump_pp2_ctx2
 //     bump_exit_bump_ctx2
 //     bump_pp0_ctx2
 //     bump_entry_bump_ctx2
@@ -97,6 +100,8 @@
 //       interval:
 //         n=[4,4]
 //         m=[5,5]
+//   bump_pp2_ctx0: pp2 [unreachable]
+//       unreachable
 //   bump_exit_bump_ctx0: exit_bump
 //       interval:
 //         n=[4,4]
@@ -113,6 +118,8 @@
 //       interval:
 //         n=[5,5]
 //         m=[6,6]
+//   bump_pp2_ctx1: pp2 [unreachable]
+//       unreachable
 //   bump_exit_bump_ctx1: exit_bump
 //       interval:
 //         n=[5,5]
@@ -129,6 +136,8 @@
 //       interval:
 //         n=[19,19]
 //         m=[20,20]
+//   bump_pp2_ctx2: pp2 [unreachable]
+//       unreachable
 //   bump_exit_bump_ctx2: exit_bump
 //       interval:
 //         n=[19,19]
@@ -149,6 +158,9 @@
 //   bump_pp1_ctx0 -> bump_exit_bump_ctx0: return m
 //   bump_pp1_ctx1 -> bump_exit_bump_ctx1: return m
 //   bump_pp1_ctx2 -> bump_exit_bump_ctx2: return m
+//   bump_pp2_ctx0 -> bump_exit_bump_ctx0: return
+//   bump_pp2_ctx1 -> bump_exit_bump_ctx1: return
+//   bump_pp2_ctx2 -> bump_exit_bump_ctx2: return
 //   main_pp3_ctx0 -> main_pp4_ctx0: g := 19
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(a == 6)
 //   main_pp8_ctx0 -> main_pp9_ctx0: check(b == 5)

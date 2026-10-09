@@ -7,6 +7,7 @@
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: inc / unit
+//     inc_pp1_ctx0
 //     inc_exit_inc_ctx0
 //     inc_pp0_ctx0
 //     inc_entry_inc_ctx0
@@ -18,6 +19,8 @@
 //     main_entry_main_ctx0
 //
 // nodes:
+//   inc_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   inc_exit_inc_ctx0: exit_inc
 //       interval:
 //         n=[5,5]
@@ -46,6 +49,7 @@
 //
 // edges:
 //   inc_pp0_ctx0 -> inc_exit_inc_ctx0: return n + 1
+//   inc_pp1_ctx0 -> inc_exit_inc_ctx0: return
 //   main_pp3_ctx0 -> main_pp4_ctx0: check(0 < r)
 //   main_pp4_ctx0 -> main_exit_main_ctx0: return
 //   inc_entry_inc_ctx0 -> inc_pp0_ctx0: body(inc)

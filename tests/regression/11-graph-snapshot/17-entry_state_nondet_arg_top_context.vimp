@@ -16,6 +16,7 @@
 //     main_pp4_ctx0
 //     main_entry_main_ctx0
 //   cluster_ctx_1: p / ⊤
+//     p_pp1_ctx0
 //     p_exit_p_ctx0
 //     p_pp0_ctx0
 //     p_entry_p_ctx0
@@ -46,6 +47,8 @@
 //       interval:
 //         x=⊤
 //         y=⊤
+//   p_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   p_exit_p_ctx0: exit_p
 //       interval:
 //         a=⊤
@@ -58,6 +61,7 @@
 //
 // edges:
 //   p_pp0_ctx0 -> p_exit_p_ctx0: return a
+//   p_pp1_ctx0 -> p_exit_p_ctx0: return
 //   main_pp2_ctx0 -> main_pp3_ctx0: x := __voblint_nondet_int()
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(0 < y)
 //   main_pp5_ctx0 -> main_exit_main_ctx0: return
