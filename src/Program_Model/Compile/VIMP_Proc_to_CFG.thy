@@ -55,26 +55,6 @@ fun csize :: "com \<Rightarrow> nat" where
 lemma csize_pos: "0 < csize c"
   by (induction c) auto
 
-subsection \<open>Normal completion\<close>
-
-text \<open>\<open>falls_through c\<close>: control can leave the fragment of \<open>c\<close> through its continuation, rather
-  than only through an explicit \<^const>\<open>Return\<close>.  It is a syntactic over-approximation of the
-  dynamic property --- \<open>While\<close> is counted as falling through because its guard may fail on the
-  first test, and a branch that is never taken still contributes.  The two directions
-  \<open>compile_reaches_falls_through\<close> and \<open>compile_reaches_returns\<close> turn it into the reachability
-  facts the procedure wrapper needs, and \<open>compile_proc\<close> uses it to decide whether the epilogue
-  node is worth allocating.\<close>
-fun falls_through :: "com \<Rightarrow> bool" where
-  "falls_through SKIP = True"
-| "falls_through (Assign x a) = True"
-| "falls_through (Check l c) = True"
-| "falls_through (Seq c1 c2) = (falls_through c1 \<and> falls_through c2)"
-| "falls_through (If b c1 c2) = (falls_through c1 \<or> falls_through c2)"
-| "falls_through (While b c) = True"
-| "falls_through (Call dst q actuals) = True"
-| "falls_through (Return e) = False"
-| "falls_through Restore = True"
-| "falls_through Unwind = True"
 
 subsection \<open>Command compilation\<close>
 
@@ -183,15 +163,10 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   order and \<open>r\<close> lies inside the procedure's own counter range --- which is what keeps edge
   locality a statement about one fragment.
 
-  The epilogue is wired only when the body can reach it, that is when
-  \<^const>\<open>falls_through\<close> holds.  A body all of whose paths end in an explicit \<^const>\<open>Return\<close>
-  leaves \<open>Statement r\<close> with no edges at all, so it is not a node of the compiled graph --- nodes
-  exist extensionally, through the edges that mention them.  \<open>compile_reaches_returns\<close> supplies
-  the reachability that the epilogue edge would otherwise have carried.
-
-  The counter still advances past \<open>r\<close> in both cases.  Reserving the index costs one \<open>nat\<close> and
-  keeps every \<^const>\<open>csize\<close> equation, fragment range and procedure interval independent of
-  \<^const>\<open>falls_through\<close>.\<close>
+  The epilogue edge is emitted for every body, also for one all of whose paths end in an
+  explicit \<^const>\<open>Return\<close>; there the epilogue is dead code.  Emitting it unconditionally
+  makes every node of a procedure reach its result, which the solver's coverage argument
+  relies on (\<open>prog_node_reaches\<close>).\<close>
 
 definition compile_proc ::
   "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat

@@ -15,11 +15,10 @@ text \<open>
   its own.  A literal source \<^const>\<open>SKIP\<close> is the exception: it keeps its own statement node
   until its \<^term>\<open>EA_Nop\<close> edge is taken.
 
-  \<open>SeqRight\<close> and \<open>IfDone\<close> require \<^const>\<open>falls_through\<close>, so that \<open>control_at\<close> describes only
-  positions a normal completion can reach: control enters the second half of a
-  \<^const>\<open>Seq\<close> only if the first half can complete, and a conditional completes only through
-  a branch that can.  Without the guard a conditional whose branches both \<^const>\<open>Return\<close>
-  would still be allowed a \<^const>\<open>SKIP\<close> residual at its continuation.
+  The relation also locates positions no execution reaches, such as the second half of a
+  \<^const>\<open>Seq\<close> whose first half always returns.  That is harmless: the compiled graph has the
+  matching edges there too, since every procedure body ends at an epilogue whose return edge
+  \<^const>\<open>compile_proc\<close> always emits.
 \<close>
 
 subsection \<open>Located residuals\<close>
@@ -47,8 +46,7 @@ where
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
 | SeqRight [intro]:
-    "falls_through c1 \<Longrightarrow>
-     control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
+    "control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n r v"
 | IfHead [intro]:
     "control_at \<Pi> p (If b c1 c2) k n (If b c1 c2) (Statement n)"
@@ -59,8 +57,7 @@ where
     "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow> c2 \<noteq> SKIP \<Longrightarrow>
      control_at \<Pi> p (If b c1 c2) k n r v"
 | IfDone [intro]:
-    "falls_through (If b c1 c2) \<Longrightarrow>
-     control_at \<Pi> p (If b c1 c2) k n SKIP k"
+    "control_at \<Pi> p (If b c1 c2) k n SKIP k"
 | WhileHead [intro]:
     "control_at \<Pi> p (While b c) k n (While b c) (Statement n)"
 | WhileUnfolded [intro]:
@@ -97,13 +94,6 @@ inductive_cases control_at_ReturnE [elim!]:  "control_at \<Pi> p (Return e) k n 
 inductive_cases control_at_RestoreE [elim!]: "control_at \<Pi> p Restore k n r v"
 inductive_cases control_at_UnwindE [elim!]:  "control_at \<Pi> p Unwind k n r v"
 
-text \<open>The converse of the \<^const>\<open>falls_through\<close> guards: a located \<^const>\<open>SKIP\<close> witnesses that
-  its command can complete normally.  This is what lets \<open>compile_proc\<close> allocate the epilogue
-  lazily --- the \<^term>\<open>EA_Ret None p\<close> edge is needed exactly when some execution can reach it.\<close>
-lemma control_at_SKIP_imp_falls_through:
-  assumes "control_at \<Pi> p c k n SKIP v"
-  shows "falls_through c"
-  using assms by (induction c k n "SKIP :: com" v rule: control_at.induct) auto
 
 subsection \<open>Initial location\<close>
 
@@ -126,12 +116,12 @@ proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.in
   then have "(Statement n, EA_Nop, k) \<in> intra g" by auto
   then show ?case by (rule intra_path_nop)
 next
-  case (SeqRight c1 c2 k n v)
+  case (SeqRight c2 k n c1 v)
   from SeqRight.prems(1) obtain n2 E2 K2 where
     c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     and "E2 \<subseteq> E"
     by (rule compile_SeqE) blast
-  with SeqRight.prems(2) show ?case by (intro SeqRight.hyps(3)[OF c2]) blast
+  with SeqRight.prems(2) show ?case by (intro SeqRight.hyps(2)[OF c2]) blast
 next
   case (IfLeft c1 k n v b c2)
   from IfLeft.prems(1) obtain n1 E1 K1 where

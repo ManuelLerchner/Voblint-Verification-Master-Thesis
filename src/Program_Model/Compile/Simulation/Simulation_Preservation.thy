@@ -26,8 +26,7 @@ definition procs_embedded :: "proc_table \<Rightarrow> cfg \<Rightarrow> bool" w
            compile \<Pi> p (body decl) k n = (n', en, E, K)
          \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
          \<and> (FunctionEntry p, EA_Body p, en) \<in> intra g
-         \<and> (falls_through (body decl) \<longrightarrow>
-              (k, EA_Ret None p, FunctionResult p) \<in> intra g)
+         \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g
          \<and> source_com (body decl) \<and> special_table p = None))"
 
 lemma procs_embedded_proc:
@@ -36,7 +35,7 @@ lemma procs_embedded_proc:
     "compile \<Pi> p (body decl) k n = (n', en, E, K)"
     "E \<subseteq> intra g" "K \<subseteq> calls g"
     "(FunctionEntry p, EA_Body p, en) \<in> intra g"
-    "falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
+    "(k, EA_Ret None p, FunctionResult p) \<in> intra g"
     "source_com (body decl)" "special_table p = None"
   using assms unfolding procs_embedded_def by blast
 
@@ -69,7 +68,7 @@ proof -
     cb: "compile \<Pi> p (body decl) k n = (n', en, E, K)"
       and Esub: "E \<subseteq> intra g" and Ksub: "K \<subseteq> calls g"
       and entry: "(FunctionEntry p, EA_Body p, en) \<in> intra g"
-      and ex: "falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
+      and ex: "(k, EA_Ret None p, FunctionResult p) \<in> intra g"
       and src: "source_com (body decl)"
       and sp: "special_table p = None"
     by (rule procs_embedded_proc[OF pc decl])
@@ -391,11 +390,10 @@ next
     proof (cases rule: csim.cases)
       case (Base p2 body_p2 k2 n2) with that show ?thesis by auto
     qed simp_all
-    have ftin: "falls_through c0in" by (rule control_at_SKIP_imp_falls_through[OF ctrl])
     from cacc obtain n' en E K where comp: "compile \<Pi> pin c0in kin nin = (n', en, E, K)"
       and Esub: "E \<subseteq> intra g"
       and exitedge: "(kin, EA_Ret None pin, FunctionResult pin) \<in> intra g"
-      using ftin by blast
+      by blast
     have star1: "\<G>, g \<turnstile> (v0, s0, [(cont, dst, caller)])
                    \<rightarrow>\<^sub>c\<^sup>* (kin, s0, [(cont, dst, caller)])"
       by (rule control_at_skip_to_exit[OF ctrl refl comp Esub])
@@ -781,14 +779,12 @@ proof (intro allI impI)
     by (rule compile_procE)
   have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by auto
   have ent: "(FunctionEntry p, EA_Body p, Statement m) \<in> intra ?g" using Edef Esub by auto
-  have ext: "falls_through (body decl) \<longrightarrow>
-               (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
+  have ext: "(Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"
     using Edef Esub by auto
   show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra ?g \<and> K \<subseteq> calls ?g
           \<and> (FunctionEntry p, EA_Body p, en) \<in> intra ?g
-          \<and> (falls_through (body decl) \<longrightarrow>
-               (k, EA_Ret None p, FunctionResult p) \<in> intra ?g)
+          \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra ?g
           \<and> source_com (body decl) \<and> special_table p = None"
     using cb Ebsub Ksub ent ext srccom wf_compile_inputD(6)[OF wf pd] by blast
 qed

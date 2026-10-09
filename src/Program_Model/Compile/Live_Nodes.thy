@@ -133,14 +133,9 @@ subsection \<open>Every compiled node reaches the continuation or the result\<cl
 
 text \<open>
   A fragment's nodes all lead out of it: to its continuation or, along an explicit
-  \<^const>\<open>Return\<close>, to the procedure result.  The induction needs no case split on
-  whether the fragment can fall through.
+  \<^const>\<open>Return\<close>, to the procedure result.  \<open>compile_reaches\<close> states this for the entry;
+  the lemmas below extend it to every edge source and target.
 \<close>
-
-lemma compile_entry_reaches:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
-  shows "local_reaches g en k \<or> local_reaches g en (FunctionResult p)"
-  using compile_reaches_falls_through[OF assms] compile_reaches_returns[OF assms] by blast
 
 lemma compile_src_reaches:
   assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
@@ -158,7 +153,7 @@ proof (induction c arbitrary: k n n' en E K u a v ca ce)
     using Seq.prems(2,3) E K by auto
   have mid: "local_reaches g (Statement (n + csize c1)) k
              \<or> local_reaches g (Statement (n + csize c1)) (FunctionResult p)"
-    by (rule compile_entry_reaches[OF c2 sub(3,4)])
+    by (rule compile_reaches[OF c2 sub(3,4)])
   from Seq.prems(4) E K consider "(u, a, v) \<in> E1 \<or> (u, ca, ce, v) \<in> K1"
     | "(u, a, v) \<in> E2 \<or> (u, ca, ce, v) \<in> K2"
     by blast
@@ -187,10 +182,10 @@ next
   have K2_skip: "c2 = SKIP \<Longrightarrow> K2 = {}" using c2 by auto
   have e1: "c1 \<noteq> SKIP \<Longrightarrow> local_reaches g (Statement (Suc n)) k
              \<or> local_reaches g (Statement (Suc n)) (FunctionResult p)"
-    using compile_entry_reaches[OF c1 subE1 subK(1)] by blast
+    using compile_reaches[OF c1 subE1 subK(1)] by blast
   have e2: "c2 \<noteq> SKIP \<Longrightarrow> local_reaches g (Statement (Suc n + csize c1)) k
              \<or> local_reaches g (Statement (Suc n + csize c1)) (FunctionResult p)"
-    using compile_entry_reaches[OF c2 subE2 subK(2)] by blast
+    using compile_reaches[OF c2 subE2 subK(2)] by blast
   have head: "local_reaches g (Statement n) k \<or> local_reaches g (Statement n) (FunctionResult p)"
   proof (cases "c1 = SKIP")
     case True

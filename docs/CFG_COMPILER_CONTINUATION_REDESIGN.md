@@ -1551,7 +1551,7 @@ direction and nothing else:
 | `edge_action` constructors | — | **unchanged** (§5) |
 | Analysis framework definitions | — | **unchanged** |
 | `entry` leaves the result tuple | 7 | deferred cleanup |
-| Lazy epilogue | 6 | landed (`fe5e9733`): `IfDone`/`SeqRight` guarded by `falls_through`, epilogue edge conditional |
+| Lazy epilogue | 6 | reverted: landed in `fe5e9733`, then dropped because dead code after a `return` needed a liveness theory to keep the coverage proof closed. The epilogue edge is unconditional again and `falls_through` is gone |
 | Presentation pruning | 2 | rejected: hid the compiler-level issue instead of fixing it; removed |
 | Old-vs-new observable-trace comparison | 1, 4, deleted in 5 | confidence check, not a gate |
 

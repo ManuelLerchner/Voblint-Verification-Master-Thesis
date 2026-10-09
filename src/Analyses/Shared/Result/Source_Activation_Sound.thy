@@ -205,13 +205,10 @@ proof -
   from sim obtain p body_p k n where
     ca: "control_at Pi p body_p k n SKIP v" and cat: "compiled_at Pi ?g p body_p k n"
     by blast
-  \<comment> \<open>a completed activation witnesses that its fragment can fall through, which is exactly
-      when the epilogue return edge exists\<close>
-  have ft: "falls_through body_p" by (rule control_at_SKIP_imp_falls_through[OF ca])
   from cat obtain n' en E K where
     cc: "compile Pi p body_p k n = (n', en, E, K)" and Esub: "E \<subseteq> intra ?g"
     and ret: "(k, EA_Ret None p, FunctionResult p) \<in> intra ?g"
-    using ft by blast
+    by blast
   \<comment> \<open>the whole extension is intra flow, so it stays inside this same (root) activation\<close>
   have path_to_ret: "intra_path ?g (sink_node t, sink_store t) (FunctionResult p, s)"
   proof -

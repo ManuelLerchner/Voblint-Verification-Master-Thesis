@@ -326,15 +326,12 @@ lemma local_reaches_comb_caller_sub:
 
 subsection \<open>Compiled entry reaches its exit or its procedure result\<close>
 
-text \<open>\<^const>\<open>falls_through\<close> decides where a fragment's entry leads: a fragment that can
-  complete normally reaches its continuation; one that cannot reaches the enclosing
-  procedure's \<^term>\<open>FunctionResult\<close> along an explicit \<^const>\<open>Return\<close> edge.  The second
-  direction is what lets \<open>compile_proc\<close> leave the epilogue node unallocated.  Both stay
-  inside the activation, so they hold for \<^const>\<open>local_reaches\<close>.\<close>
-lemma compile_reaches_falls_through:
+text \<open>A fragment's entry leads to its continuation or, along an explicit \<^const>\<open>Return\<close>
+  edge, to the enclosing procedure's \<^term>\<open>FunctionResult\<close>.  Both stay inside the
+  activation, so the statement is about \<^const>\<open>local_reaches\<close>.\<close>
+lemma compile_reaches:
   assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
-    and "falls_through c"
-  shows "local_reaches g en k"
+  shows "local_reaches g en k \<or> local_reaches g en (FunctionResult p)"
   using assms
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
@@ -343,81 +340,13 @@ proof (induction c arbitrary: k n n' en E K)
     and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     and res: "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
     by (rule compile_SeqE)
-  have "local_reaches g (Statement n) (Statement (n + csize c1))"
+  have h1: "local_reaches g (Statement n) (Statement (n + csize c1))
+            \<or> local_reaches g (Statement n) (FunctionResult p)"
     using Seq.IH(1)[OF c1] Seq.prems res by auto
-  moreover have "local_reaches g (Statement (n + csize c1)) k"
+  have h2: "local_reaches g (Statement (n + csize c1)) k
+            \<or> local_reaches g (Statement (n + csize c1)) (FunctionResult p)"
     using Seq.IH(2)[OF c2] Seq.prems res by auto
-  ultimately show ?case unfolding res(1) by (rule local_reaches_trans)
-next
-  case (If b c1 c2)
-  from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-      c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
-    and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and res: "en = Statement n"
-      "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-            (Statement n, EA_AssumeNot b,
-              if c2 = SKIP then k else Statement (Suc n + csize c1))}
-            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
-      "K = K1 \<union> K2"
-    by (rule compile_IfE)
-  have b1: "local_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
-    and b2: "local_reaches g (Statement n)
-      (if c2 = SKIP then k else Statement (Suc n + csize c1))"
-    using res(2) If.prems(2) by (blast intro: local_reaches_intra_sub)+
-  from If.prems(4) consider "falls_through c1" | "falls_through c2" by auto
-  then show ?case
-  proof cases
-    case 1
-    show ?thesis
-    proof (cases "c1 = SKIP")
-      case True with b1 res(1) show ?thesis by simp
-    next
-      case False
-      have "local_reaches g (Statement (Suc n)) k"
-        using If.IH(1)[OF c1] If.prems res 1 False by auto
-      with b1 False show ?thesis unfolding res(1)
-        by (simp only: if_False) (rule local_reaches_trans)
-    qed
-  next
-    case 2
-    show ?thesis
-    proof (cases "c2 = SKIP")
-      case True with b2 res(1) show ?thesis by simp
-    next
-      case False
-      have "local_reaches g (Statement (Suc n + csize c1)) k"
-        using If.IH(2)[OF c2] If.prems res 2 False by auto
-      with b2 False show ?thesis unfolding res(1)
-        by (simp only: if_False) (rule local_reaches_trans)
-    qed
-  qed
-qed (auto simp: Let_def split: prod.splits option.splits
-     intro: local_reaches_intra_sub local_reaches_comb_caller_sub)
-
-lemma compile_reaches_returns:
-  assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
-    and "\<not> falls_through c"
-  shows "local_reaches g en (FunctionResult p)"
-  using assms
-proof (induction c arbitrary: k n n' en E K)
-  case (Seq c1 c2)
-  from Seq.prems(1) obtain n1 E1 K1 n2 E2 K2 where
-      c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, Statement n, E1, K1)"
-    and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
-    and res: "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
-    by (rule compile_SeqE)
-  show ?case
-  proof (cases "falls_through c1")
-    case False
-    then show ?thesis using Seq.IH(1)[OF c1] Seq.prems res by auto
-  next
-    case True
-    have "local_reaches g (Statement n) (Statement (n + csize c1))"
-      using compile_reaches_falls_through[OF c1] Seq.prems res True by auto
-    moreover have "local_reaches g (Statement (n + csize c1)) (FunctionResult p)"
-      using Seq.IH(2)[OF c2] Seq.prems res True by auto
-    ultimately show ?thesis unfolding res(1) by (rule local_reaches_trans)
-  qed
+  from h1 h2 show ?case unfolding res(1) by (blast intro: local_reaches_trans)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 E1 K1 E2 K2 where
@@ -429,13 +358,20 @@ next
             \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
       "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have nonempty: "c1 \<noteq> SKIP" using If.prems(4) by auto
-  have "local_reaches g (Statement n) (Statement (Suc n))"
-    using res(2) If.prems(2) nonempty by (auto intro: local_reaches_intra_sub)
-  moreover have "local_reaches g (Statement (Suc n)) (FunctionResult p)"
-    using If.IH(1)[OF c1] If.prems res nonempty by auto
-  ultimately show ?case unfolding res(1) by (rule local_reaches_trans)
-qed (auto simp: Let_def split: prod.splits option.splits intro: local_reaches_intra_sub)
+  have b1: "local_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
+    using res(2) If.prems(2) by (blast intro: local_reaches_intra_sub)
+  show ?case
+  proof (cases "c1 = SKIP")
+    case True with b1 res(1) show ?thesis by simp
+  next
+    case False
+    have "local_reaches g (Statement (Suc n)) k
+          \<or> local_reaches g (Statement (Suc n)) (FunctionResult p)"
+      using If.IH(1)[OF c1] If.prems res False by auto
+    with b1 False show ?thesis unfolding res(1) by (auto intro: local_reaches_trans)
+  qed
+qed (auto simp: Let_def split: prod.splits option.splits
+     intro: local_reaches_intra_sub local_reaches_comb_caller_sub)
 
 lemma compile_proc_reaches_result:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
@@ -453,16 +389,8 @@ proof -
     using E_eq assms(2) by (blast intro: local_reaches_intra_sub)
   have epi: "local_reaches g (Statement ?r) (FunctionResult p)"
     using E_eq assms(2) by (blast intro: local_reaches_intra_sub)
-  show ?thesis
-  proof (cases "falls_through (body decl)")
-    case True
-    with compile_reaches_falls_through[OF body Ebg assms(3) True] entry epi show ?thesis
-      by (blast intro: local_reaches_trans)
-  next
-    case False
-    from compile_reaches_returns[OF body Ebg assms(3) False] entry show ?thesis
-      by (rule local_reaches_trans[rotated])
-  qed
+  from compile_reaches[OF body Ebg assms(3)] entry epi show ?thesis
+    by (blast intro: local_reaches_trans)
 qed
 
 theorem compile_prog_entry_cfg_reaches_exit:
