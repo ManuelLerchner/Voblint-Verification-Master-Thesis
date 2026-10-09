@@ -247,6 +247,22 @@ argv = [
 ]
 why = "check_query proves x <= y && y != 0 from Sign's less and eq with x=≤0, y=+."
 
+[claims.dom-disjunction-one-state]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/02-control-flow/known-imprecision/04-disjunction_judged_in_one_state.vimp",
+]
+why = "check_query judges both disjuncts in one state, so x == 1 || x == 2 stays UNKNOWN for x=[1,2], and x != 1 does not trim [1,2] to [2,2]."
+
+[claims.dom-conjunct-order]
+argv = [
+  "--analysis",
+  "interval",
+  "tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp",
+]
+why = "bfilter refines a conjunction in one pass, so 0 < i && i < j && j < 10 bounds i but not j, and the reversed order bounds j but not i."
+
 [claims.dom-disjunct-sign]
 argv = [
   "--analysis",

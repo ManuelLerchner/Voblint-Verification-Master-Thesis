@@ -1,0 +1,21 @@
+// PARAM: --analysis interval
+// Inside the guard x is 1 or 2, so x == 1 || x == 2 holds in every store.
+// check_query (Abstract_Checks.thy) judges both disjuncts in the same state
+// x=[1,2]: eq([1,2],[1,1]) and eq([1,2],[2,2]) are both unknown, and so is
+// their disjunction. The disjunction is never re-judged under the refinement
+// of its first operand. Goblint's CIL front end lowers || into branches, so
+// there the second operand is judged after the first has failed.
+// The nested form below does not help Voblint either: inv_eq_ivl
+// (Interval_Backward.thy) leaves both intervals unchanged on a definite
+// inequality, so the else branch of x == 1 keeps x=[1,2] instead of [2,2].
+fun main() {
+  x = __voblint_nondet_int();
+  if (x >= 1 && x <= 2) {
+    __voblint_check(x == 1 || x == 2); // UNKNOWN
+    if (x == 1) {
+      t = 1;
+    } else {
+      __voblint_check(x == 2); // UNKNOWN
+    }
+  }
+}
