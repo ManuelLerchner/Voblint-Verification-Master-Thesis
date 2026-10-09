@@ -1,5 +1,6 @@
 (* src/Executable_Surface/CLI/Analysis_Run.thy *)
-definition run_voblint :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report analysis_answer"
+definition run_voblint ::
+  "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report analysis_answer"
 where
   "run_voblint config p =
      (if \<not> valid_config config then Invalid_Activation
