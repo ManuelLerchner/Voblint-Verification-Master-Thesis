@@ -31,6 +31,7 @@
 //     main_entry_main_ctx0
 //   cluster_ctx_1: fact / call-string=pp2
 //     fact_pp1_ctx0
+//     fact_pp4_ctx0
 //     fact_exit_fact_ctx0
 //     fact_pp0_ctx0
 //     fact_pp2_ctx0
@@ -38,6 +39,7 @@
 //     fact_entry_fact_ctx0
 //   cluster_ctx_2: fact / call-string=pp5
 //     fact_pp1_ctx1
+//     fact_pp4_ctx1
 //     fact_exit_fact_ctx1
 //     fact_pp0_ctx1
 //     fact_pp2_ctx1
@@ -65,6 +67,8 @@
 //       interval:
 //         n=[1,1]
 //         tmp=⊤
+//   fact_pp4_ctx0: pp4 [unreachable]
+//       unreachable
 //   fact_exit_fact_ctx0: exit_fact
 //       interval:
 //         n=[1,49]
@@ -86,6 +90,8 @@
 //         n=[1,49]
 //         tmp=⊤
 //   fact_pp1_ctx1: pp1 [unreachable]
+//       unreachable
+//   fact_pp4_ctx1: pp4 [unreachable]
 //       unreachable
 //   fact_exit_fact_ctx1: exit_fact
 //       interval:
@@ -117,6 +123,8 @@
 //   fact_pp1_ctx1 -> fact_exit_fact_ctx1: return 1
 //   fact_pp3_ctx0 -> fact_exit_fact_ctx0: return n * tmp
 //   fact_pp3_ctx1 -> fact_exit_fact_ctx1: return n * tmp
+//   fact_pp4_ctx0 -> fact_exit_fact_ctx0: return
+//   fact_pp4_ctx1 -> fact_exit_fact_ctx1: return
 //   main_pp6_ctx0 -> main_pp7_ctx0: check(0 < r)
 //   main_pp7_ctx0 -> main_exit_main_ctx0: return
 //   fact_entry_fact_ctx0 -> fact_pp0_ctx0: body(fact)

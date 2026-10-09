@@ -9857,18 +9857,6 @@ let rec callee_of_entry = function FunctionEntry p -> p
                           | Statement v -> ""
                           | FunctionResult v -> "";;
 
-let rec falls_through
-  = function SKIP -> true
-    | Assign (x, a) -> true
-    | Check (l, c) -> true
-    | Seq (c1, c2) -> falls_through c1 && falls_through c2
-    | If (b, c1, c2) -> falls_through c1 || falls_through c2
-    | While (b, c) -> true
-    | Call (dst, q, actuals) -> true
-    | Return e -> false
-    | Restore -> true
-    | Unwind -> true;;
-
 let rec classify_special
   uu x1 = match uu, x1 with SD_Nondet_Int, [] -> Some Nondet_Int
     | SD_Min, [a; b] -> Some (Min (a, b))
@@ -10074,12 +10062,10 @@ let rec compile_proc
            (equal_prod equal_cfg_node
              (equal_prod equal_edge_action equal_cfg_node))
            (FunctionEntry p, (EA_Body p, ben))
-           (if falls_through (body decl)
-             then inserta
-                    (equal_prod equal_cfg_node
-                      (equal_prod equal_edge_action equal_cfg_node))
-                    (Statement r, (EA_Ret (None, p), FunctionResult p)) e
-             else e),
+           (inserta
+             (equal_prod equal_cfg_node
+               (equal_prod equal_edge_action equal_cfg_node))
+             (Statement r, (EA_Ret (None, p), FunctionResult p)) e),
           k)));;
 
 let rec compile_procs

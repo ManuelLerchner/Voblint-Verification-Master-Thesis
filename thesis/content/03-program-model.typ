@@ -734,11 +734,13 @@ Calls and returns leave the current fragment. A call to a declared procedure
 becomes a call edge from the call site to the callee's entry, with $k$ as its
 continuation, and adds no local edge. A #keyw("return") becomes an
 #isaconst("EA_Ret") edge to the result node of its procedure. A body that can
-reach its end without a #keyw("return") (#isaconst("falls_through")) needs
-such an edge as well. #isaconst("compile_proc") compiles the body against one
-extra node, from which a return edge without a value leads to the result node
-(@fig:compile-proc). Every edge into $ctor("FunctionResult") thin p$ is
-therefore a return edge.
+reach its end without a #keyw("return") needs such an edge as well.
+#isaconst("compile_proc") compiles the body against one extra node, from which
+a return edge without a value leads to the result node (@fig:compile-proc). It
+emits this edge for every body, so in a body that always returns, the extra
+node and its edge are dead code; @sec:cert-forward explains why the compiler
+keeps them. Every edge into $ctor("FunctionResult") thin p$ is therefore a
+return edge.
 
 #figure(
   {

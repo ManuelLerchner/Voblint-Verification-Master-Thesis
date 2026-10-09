@@ -634,15 +634,15 @@ lemma compile_proc_ret_wf:
 lemma compile_procs_call_ce_entry:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>q. ce = FunctionEntry q"
-  using compile_procs_calls_origin compile_proc_call_ce_entry by blast
+  using compile_procs_calls_origin compile_proc_call_ce_entry by metis
 
 lemma compile_procs_intra_tgt_not_entry:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, a, v) \<in> E \<Longrightarrow> v \<noteq> FunctionEntry q"
-  using compile_procs_intra_origin compile_proc_intra_tgt_not_entry by blast
+  using compile_procs_intra_origin compile_proc_intra_tgt_not_entry by metis
 
 lemma compile_procs_ret_wf:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (u, EA_Ret e q, v) \<in> E \<Longrightarrow> v = FunctionResult q"
-  using compile_procs_intra_origin compile_proc_ret_wf by blast
+  using compile_procs_intra_origin compile_proc_ret_wf by metis
 
 subsection \<open>The compiled program is well-formed\<close>
 

@@ -1,0 +1,12 @@
+tests/regression/02-control-flow/known-imprecision/05-conjunct_order.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition  Verdict  State
+--------  -----  ---------  -------  --------------------
+13:5      pp3    i <= 8     PROVED   interval: i=[1,8]
+14:5      pp4    j >= 2     UNKNOWN  interval: j=[-∞,9]
+17:5      pp7    i <= 8     UNKNOWN  interval: i=[1,+∞]
+18:5      pp8    j >= 2     PROVED   interval: j=[2,9]

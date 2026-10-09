@@ -114,9 +114,7 @@ proof -
     cb: "compile \<Pi> r (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry r, EA_Body r, Statement n)
-              (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb
-               else Eb)"
+              (insert (Statement (n + csize (body decl)), EA_Ret None r, FunctionResult r) Eb)"
     and n': "n' = Suc (n + csize (body decl))"
     by (rule compile_procE)
   have kin: "Statement (n + csize (body decl)) \<in> pfn r n n'"
@@ -204,9 +202,7 @@ proof -
     cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Body q, Statement n)
-              (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
-               else Eb)"
+              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
     by (rule compile_procE)
   have "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
   then show ?thesis using e E by (auto split: if_splits)
@@ -221,9 +217,7 @@ proof -
     cb: "compile \<Pi> q (body decl) (Statement (n + csize (body decl))) n
            = (n + csize (body decl), Statement n, Eb, K)"
     and E: "E = insert (FunctionEntry q, EA_Body q, Statement n)
-              (if falls_through (body decl)
-               then insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb
-               else Eb)"
+              (insert (Statement (n + csize (body decl)), EA_Ret None q, FunctionResult q) Eb)"
     by (rule compile_procE)
   have nb: "\<And>aa vv. (FunctionEntry r, aa, vv) \<notin> Eb" using compile_E_shape[OF cb] by blast
   from e1 E nb have "v1 = Statement n" by (auto split: if_splits)
@@ -316,7 +310,7 @@ lemma compile_procs_entry_unique:
 proof -
   from compile_procs_intra_origin[OF cps e1] obtain decl
     where rin: "r \<in> set ps" and decl: "\<Pi> r = Some decl"
-    using compile_proc_entry_mem by blast
+    using compile_proc_entry_mem by metis
   from compile_procs_member_frag[OF cps distinct rin decl] obtain m m' Er Kr where
       cp: "compile_proc \<Pi> r decl m = (m', Er, Kr)"
     and own: "\<forall>u a v. (u, a, v) \<in> E \<longrightarrow> u \<in> pfn r m m' \<longrightarrow> (u, a, v) \<in> Er" by blast
@@ -443,7 +437,7 @@ proof -
     have mout: "m' = n2" "Ep = Emain" "Kp = Kmain" using cb mainc True dd mn by simp_all
     show ?thesis unfolding True mn mout
       using EI KC compile_procs_intra_src_notin_pfn[OF procs _ main_notin]
-        compile_procs_calls_src_notin_pfn[OF procs _ main_notin] by blast
+        compile_procs_calls_src_notin_pfn[OF procs _ main_notin] by auto
   next
     case False
     have rin: "r \<in> set ps" using decl setps False by auto

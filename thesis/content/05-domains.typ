@@ -869,11 +869,11 @@ $ivl(1, 5)$ is true, $ivl(0, 0)$ is false, and $ivl(0, 5)$ is undecided.
 
 An assertion `__voblint_check(c)` asks whether $c$ holds in every store that
 reaches its program point. The analysis must answer this from the abstract
-state there alone. Voblint follows Goblint here, whose
+state there alone. Voblint answers it through queries, as does Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/assert.ml",
 )[`assert`]
-analysis answers a check through its query system.
+analysis.
 
 A domain answers two comparisons on abstract values, $"less"(a, b)$ for
 $a < b$ and $"eq"(a, b)$ for $a = b$. Like the truth test, each answers in
@@ -892,10 +892,7 @@ the same single integer. Sign decides $a < b$ whenever the signs separate the
 values, for example for zero and a positive value. Parity and Congruence, the
 domains of @ch:instances, are weaker here. Parity can only refute equality
 between an even and an odd value and never decides $<$. Congruence answers
-only when both values are single integers. Answering unknown is always sound, so a domain that is not
-suited to a comparison leaves the check undecided.
-
-Every condition can be judged with these two comparisons alone.
+only when both values are single integers.
 
 #definition(name: [Query], isa: "check_query", cmd: "fun")[
   A query evaluates a condition $c$ on an abstract state $d$ to one of three
@@ -903,8 +900,7 @@ Every condition can be judged with these two comparisons alone.
   domain's two comparisons.
 ]
 
-#isaconst("check_query") answers a condition by recursion on it. A comparison
-first evaluates its operands forward to abstract values $hat(a)$ and $hat(b)$
+In #isaconst("check_query"), a comparison first evaluates its operands forward to abstract values $hat(a)$ and $hat(b)$
 (@sec:domain-forward) and then asks one of the two comparisons, with the operands
 swapped or the answer negated where needed:
 $
@@ -916,7 +912,17 @@ $
 
 Negation keeps _unknown_. The connectives `!`, `&&` and `||` combine the answers
 of their operands in three-valued logic. A definite _false_ decides `&&`, and a
-definite _true_ decides `||`, whatever the other operand answers. Any other
+definite _true_ decides `||`, whatever the other operand answers. Both
+operands are judged in the same state, so for $x$ in $ivl(1, 2)$,
+`x == 1 || x == 2` stays unknown although every store satisfies it (claim
+#claim-ref("dom-disjunction-one-state")). Goblint is more precise here. CIL
+compiles `&&` and `||` into branches
+(#link("https://github.com/goblint/cil/blob/003821f1d4a95c758bb255080e9b91a22ea5df31/src/frontc/cabs2cil.ml#L5264-L5299")[`cabs2cil.ml`]),
+and where `x == 1` fails, Goblint's interval refinement narrows $ivl(1, 2)$ to
+$ivl(2, 2)$
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/baseInvariant.ml#L395-L410")[`baseInvariant.ml`],
+@saan26phd[§4.5.1, Rem. 8]). Voblint's interval inverse of a failed equality
+changes nothing (#isaconst("inv_eq_ivl")). Any other
 expression $e$ is read as $e != 0$, its truth value in VIMP. A new domain
 therefore gets checks on arbitrary conditions by providing these two
 comparisons.
@@ -962,15 +968,14 @@ the conjunction (@fig:query-tree).
     with #raw(_q.state) (claim #claim-ref("dom-query-tree-sign")). Each comparison becomes
     one of the domain's two comparisons (blue), as $~>$ marks; the answer follows
     the colon. Negation flips a definite answer,
-    and `&&` is true because both operands are. The analyzer reports the check
+    and `&&` is true because both operands are, so the check is
     #_q.verdict.],
 ) <fig:query-tree>
 
 == Learning from a guard #thy-badge("Voblint_Domain", "Backward_Domain") <sec:branches>
 
 When the analysis enters a branch, it knows whether the condition held. On the
-true arm of `if (0 < x)`, for example, $x$ is positive, even though the
-condition assigns no variable. Ignoring this knowledge is sound, since the
+true arm of `if (0 < x)`, for example, $x$ is positive. Ignoring this knowledge is sound, since the
 state before the branch already contains every store that takes either arm.
 It costs precision, however, as the following program shows.
 
@@ -995,7 +1000,9 @@ It costs precision, however, as the following program shows.
 In this program $y$ ends up as $|x|$, so the check always holds. Without
 refinement, both arms keep $x |-> ltop$, $y$ becomes $ltop$, and the state
 cannot show that the check holds. Backward refinement runs the condition in
-reverse, as in the backward analysis of Nipkow and Klein @nipkow14[§13.7].
+reverse, as in the backward abstract interpretation of tests by Cousot
+@cousot99[§§8.5, 10.1] and the backward analysis of Nipkow and Klein
+@nipkow14[§13.7].
 Given abstract operands $a_1, a_2$ and the result an operation must produce,
 an inverse operator returns refined operands $a'_1, a'_2$ that keep every
 concrete pair producing that result. For a comparison that must yield $r$:
@@ -1004,15 +1011,14 @@ $
   ==> n_1 in conc(a'_1) and n_2 in conc(a'_2),
 $
 and likewise for equality, addition, subtraction and multiplication
-(#isalocale("sound_inverse_ops"), part of #isalocale("sound_refinement")).
+(#isalocale("sound_inverse_ops")).
 
 The refined operand is then combined with the value known before. Nipkow and
 Klein use the lattice meet for this and require it to be exact on the denoted
 sets. Voblint asks for less, namely an intersection that keeps every integer
 both operands share and lies below both (#isalocale("sound_intersection"), shown in
 @sec:isabelle). For Interval it is the normalized meet
-#isaconst("intersect_ivl"). Normalization changes nothing for the operands
-below, so it agrees with the meet there. In the program above, Interval
+#isaconst("intersect_ivl"), which agrees with the meet on the operands below. In the program above, Interval
 refines $x$ to $ltop lmeet ivl(1, +infinity) = ivl(1, +infinity)$ on the true
 arm and to
 $ivl(-infinity, 0)$ on the false arm. Both arms then give $y$ a non-negative
@@ -1024,6 +1030,13 @@ the condition. For the arithmetic operands of a comparison it calls
 #isaconst("afilter"), which refines a state so that an expression evaluates
 within a required value @nipkow14[§13.7.1]. Its soundness is exactly what
 the branch needs, since it never removes a store that satisfies the guard.
+The filter refines a conjunction from right to left. Each conjunct is applied
+once, to the state the conjuncts on its right have refined, and the filter does
+not iterate to a local fixpoint. Which bound reaches which variable can therefore
+depend on the order of the conjuncts. With Interval, `0 < i && i < j && j < 10`
+bounds $i$ to $ivl(1, 8)$ but not $j$ from below, and the reversed order bounds
+$j$ to $ivl(2, 9)$ but not $i$ from above (claim
+#claim-ref("dom-conjunct-order")).
 
 #block(breakable: false)[
   #lemma(name: [Sound guard filter], isa: "bfilter_sound")[
@@ -1034,13 +1047,10 @@ the branch needs, since it never removes a store that satisfies the guard.
   #proved("bfilter_sound")
 ]
 
-Interval and Sign refine only at comparisons. Their inverses of addition,
-subtraction and multiplication return the operands unchanged, which the law
-allows. Inverting arithmetic, as the interval analysis of Nipkow and Klein does
-@nipkow14[§13.8.3], would also learn $x < 4$ from `x + 1 < 5`. Parity and
-Congruence invert arithmetic, and the reduced product Int
-(@sec:reduced-product) inherits their inverses for its parity and congruence
-components only.
+The shipped inverse operators are sound but not the most precise possible.
+Interval and Sign, for
+instance, do not invert arithmetic and cannot learn $x < 4$ from `x + 1 < 5`,
+as the interval analysis of Nipkow and Klein does @nipkow14[§13.8.3].
 
 The branch transfer #isaconst("sound_refinement.branch") first drops an arm
 that the truth test rules out, and otherwise applies the filter. Where it joins
@@ -1049,10 +1059,9 @@ each empty arm into #ctor("Bot") first (@sec:nonrel-state). The branch inherits 
 soundness (#isathm("sound_refinement.branch_sound")).
 
 A relational state learns from a guard in the same way, but what it learns is
-a relation. On the true arm of a comparison between two variables such as
-`if (x < y)`, the relational state of
-@sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), which is
-again the meet of its current value with $ctor("RelC"){x <= y}$. The carrier
+a relation. On the true arm of `if (x < y)`, the relational
+state of @sec:rel-state adds the pair $x <= y$ (#isaconst("assume_step")), the
+meet of its current value with $ctor("RelC"){x <= y}$. The carrier
 stores only weak orders, so the strictness of $x < y$ is lost, which is sound
 but less precise. The relational refinement #isaconst("relc_branch_step")
 satisfies the same statement as the filter
@@ -1079,13 +1088,6 @@ every variable of the callee to $ltop$, and binds the formal parameters. A new
 non-relational domain therefore supplies values and primitives only, and its
 interpretation of #isalocale("sound_nonrelational_ops") proves all of these
 transfers sound at once.
-
-The record and the executable transfers are stated for an executable domain,
-while the soundness locale requires a numeric domain. Code generation forces
-this split. Generated code for a definition over numeric domains must contain
-an implementation of the concretization, even where nothing calls it, and
-Interval's concretization, a set of integers, has no executable code
-equation.
 
 #figure(
   domain-tree("carrier"),

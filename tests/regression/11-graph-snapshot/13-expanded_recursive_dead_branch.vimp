@@ -20,6 +20,7 @@
 //   cluster_ctx_1: f / [1,1]
 //     f_pp1_ctx0
 //     f_pp2_ctx0
+//     f_pp5_ctx0
 //     f_exit_f_ctx0
 //     f_pp0_ctx0
 //     f_pp3_ctx0
@@ -28,6 +29,7 @@
 //   cluster_ctx_2: f / [2,2]
 //     f_pp1_ctx1
 //     f_pp2_ctx1
+//     f_pp5_ctx1
 //     f_exit_f_ctx1
 //     f_pp0_ctx1
 //     f_pp3_ctx1
@@ -36,6 +38,7 @@
 //   cluster_ctx_3: f / [3,3]
 //     f_pp1_ctx2
 //     f_pp2_ctx2
+//     f_pp5_ctx2
 //     f_exit_f_ctx2
 //     f_pp0_ctx2
 //     f_pp3_ctx2
@@ -68,6 +71,8 @@
 //       interval:
 //         n=[1,1]
 //         r=⊤
+//   f_pp5_ctx0: pp5 [unreachable]
+//       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
 //         n=[1,1]
@@ -88,6 +93,8 @@
 //       unreachable
 //       check n == 1 [dead]
 //   f_pp2_ctx1: pp2 [unreachable]
+//       unreachable
+//   f_pp5_ctx1: pp5 [unreachable]
 //       unreachable
 //   f_exit_f_ctx1: exit_f
 //       interval:
@@ -113,6 +120,8 @@
 //       unreachable
 //       check n == 1 [dead]
 //   f_pp2_ctx2: pp2 [unreachable]
+//       unreachable
+//   f_pp5_ctx2: pp5 [unreachable]
 //       unreachable
 //   f_exit_f_ctx2: exit_f
 //       interval:
@@ -151,6 +160,9 @@
 //   f_pp4_ctx0 -> f_exit_f_ctx0: return n * r
 //   f_pp4_ctx1 -> f_exit_f_ctx1: return n * r
 //   f_pp4_ctx2 -> f_exit_f_ctx2: return n * r
+//   f_pp5_ctx0 -> f_exit_f_ctx0: return
+//   f_pp5_ctx1 -> f_exit_f_ctx1: return
+//   f_pp5_ctx2 -> f_exit_f_ctx2: return
 //   main_pp7_ctx0 -> main_pp8_ctx0: check(a == 6)
 //   main_pp8_ctx0 -> main_exit_main_ctx0: return
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)

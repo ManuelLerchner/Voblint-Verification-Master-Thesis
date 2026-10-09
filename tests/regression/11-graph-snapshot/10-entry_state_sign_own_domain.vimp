@@ -26,6 +26,7 @@
 //     main_pp4_ctx0
 //     main_entry_main_ctx0
 //   cluster_ctx_1: square / +
+//     square_pp1_ctx0
 //     square_exit_square_ctx0
 //     square_pp0_ctx0
 //     square_entry_square_ctx0
@@ -61,6 +62,8 @@
 //       sign:
 //         a=⊤
 //         b=⊤
+//   square_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   square_exit_square_ctx0: exit_square
 //       sign:
 //         n=+
@@ -73,6 +76,7 @@
 //
 // edges:
 //   square_pp0_ctx0 -> square_exit_square_ctx0: return n * n
+//   square_pp1_ctx0 -> square_exit_square_ctx0: return
 //   main_pp4_ctx0 -> main_pp5_ctx0: check(0 < a)
 //   main_pp5_ctx0 -> main_pp6_ctx0: check(0 < b)
 //   main_pp6_ctx0 -> main_exit_main_ctx0: return

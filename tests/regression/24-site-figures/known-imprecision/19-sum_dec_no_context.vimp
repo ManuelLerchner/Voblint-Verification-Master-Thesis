@@ -7,11 +7,13 @@
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: dec / unit
+//     dec_pp1_ctx0
 //     dec_exit_dec_ctx0
 //     dec_pp0_ctx0
 //     dec_entry_dec_ctx0
 //   cluster_ctx_1: sum / unit
 //     sum_pp3_ctx0
+//     sum_pp8_ctx0
 //     sum_exit_sum_ctx0
 //     sum_pp2_ctx0
 //     sum_pp5_ctx0
@@ -26,6 +28,8 @@
 //     main_entry_main_ctx0
 //
 // nodes:
+//   dec_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   dec_exit_dec_ctx0: exit_dec
 //       interval:
 //         x=[-∞,2]
@@ -34,6 +38,8 @@
 //         n=[-∞,0]
 //         m=⊤
 //         r=⊤
+//   sum_pp8_ctx0: pp8 [unreachable]
+//       unreachable
 //   sum_exit_sum_ctx0: exit_sum
 //       interval:
 //         n=[-∞,2]
@@ -89,10 +95,12 @@
 //
 // edges:
 //   dec_pp0_ctx0 -> dec_exit_dec_ctx0: return x - 1
+//   dec_pp1_ctx0 -> dec_exit_dec_ctx0: return
 //   sum_pp2_ctx0 -> sum_pp3_ctx0: [n < 1]
 //   sum_pp2_ctx0 -> sum_pp5_ctx0: ![n < 1]
 //   sum_pp3_ctx0 -> sum_exit_sum_ctx0: return 0
 //   sum_pp7_ctx0 -> sum_exit_sum_ctx0: return r + n
+//   sum_pp8_ctx0 -> sum_exit_sum_ctx0: return
 //   main_pp10_ctx0 -> main_pp11_ctx0: check(x == 3)
 //   main_pp11_ctx0 -> main_exit_main_ctx0: return
 //   dec_entry_dec_ctx0 -> dec_pp0_ctx0: body(dec)

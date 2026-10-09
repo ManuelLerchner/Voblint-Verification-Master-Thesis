@@ -30,7 +30,8 @@ is proved.
 Everything this thesis describes is published in one repository: the Isabelle
 theories, a submodule reference to the vendored solver, whose repository is
 private (@sec:upstream-td), the exported analyzer with its command-line tool and playground, the
-regression corpus, and the sources of this thesis. The project site hosts the
+regression corpus, and the sources of this thesis. Each release is archived on
+Zenodo with a citable DOI @voblint. The project site hosts the
 playground, the explainer and the rendered theories that every Isabelle name in
 this thesis links to.
 

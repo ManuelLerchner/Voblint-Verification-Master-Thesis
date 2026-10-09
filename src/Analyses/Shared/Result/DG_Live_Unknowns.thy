@@ -7,9 +7,9 @@ section \<open>Which solved keys a terminating solve is closed on\<close>
 text \<open>
   The key set a terminating solve returns is not one the soundness argument can use as it
   stands: it may hold keys the solver queried under an earlier value and no longer reads,
-  and keys inside code no execution reaches.  \<open>live_unknowns\<close> keeps a solved key when its
-  node is live in a procedure (\<^theory>\<open>Voblint_Compile.Live_Nodes\<close>) whose result is
-  solved at the same context.  From what each generated equation reads under the final
+  and keys of procedures whose result it never solved.  \<open>live_unknowns\<close> keeps a solved key
+  when its node belongs to a procedure (\<^theory>\<open>Voblint_Compile.Live_Nodes\<close>) whose result
+  is solved at the same context.  From what each generated equation reads under the final
   valuation, \<open>live_unknowns_cover\<close> shows that set closed under every intra edge, every call
   continuation and every call that enters a live state, with no premise beyond termination
   and a well-formed program.  The endpoints below restate the routed soundness over these
@@ -133,7 +133,7 @@ subsection \<open>Keys of a solve whose activation returned\<close>
 text \<open>
   The solved key set is closed under the equations' reads (\<open>sol_vars_dep_closed\<close>).
   Walking those reads backwards, \<open>live_unknowns_cover\<close> shows \<open>live_unknowns\<close> closed
-  under intra edges, call continuations and live callee entries.
+  under intra edges, call continuations and the entries of callees a call actually enters.
 \<close>
 
 context dg_analysis
@@ -227,11 +227,10 @@ next
     using sol_vars_back_intra[OF solves step.IH] sol_vars_back_call_site[OF solves step.IH]
     by blast
 qed
-
 definition live_unknowns :: "imp_prog \<Rightarrow> (pp \<times> 'c) set" where
   "live_unknowns p =
      {(u, cx) \<in> sol_vars (declared_global p) p.
-        \<exists>q. prog_live (prog_table p) (prog_procs p) q u
+        \<exists>q. prog_node (prog_table p) (prog_procs p) q u
           \<and> (FunctionResult q, cx) \<in> sol_vars (declared_global p) p}"
 
 lemma live_unknowns_sub: "live_unknowns p \<subseteq> sol_vars (declared_global p) p"
@@ -239,12 +238,12 @@ lemma live_unknowns_sub: "live_unknowns p \<subseteq> sol_vars (declared_global 
 
 lemma live_unknowns_of_result:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
-    and live: "prog_live (prog_table p) (prog_procs p) q y"
+    and live: "prog_node (prog_table p) (prog_procs p) q y"
     and r: "(FunctionResult q, cx) \<in> sol_vars (declared_global p) p"
   shows "(y, cx) \<in> live_unknowns p"
 proof -
   have "local_reaches (prog_cfg p) y (FunctionResult q)"
-    unfolding prog_cfg_def by (rule prog_live_reaches[OF live])
+    unfolding prog_cfg_def by (rule prog_node_reaches[OF live])
   then have "(y, cx) \<in> sol_vars (declared_global p) p" by (rule sol_vars_back_reach[OF solves r])
   then show ?thesis unfolding live_unknowns_def using live r by blast
 qed
@@ -257,37 +256,37 @@ proof (rule ctx_vars_cover_liveI)
   have root: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars (declared_global p) p"
     using pp_routed[OF solves] by (simp add: root_query_def prog_cfg_def)
   show "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
-    using live_unknowns_of_result[OF wf solves prog_live_main_entry[OF wf] root]
+    using live_unknowns_of_result[OF wf solves prog_node_main_entry[OF wf] root]
     by (simp add: prog_cfg_def)
 next
   fix u a v ctx
   assume u: "(u, ctx) \<in> live_unknowns p" and e: "(u, a, v) \<in> intra (prog_cfg p)"
-  from u obtain q where lq: "prog_live (prog_table p) (prog_procs p) q u"
+  from u obtain q where lq: "prog_node (prog_table p) (prog_procs p) q u"
     and r: "(FunctionResult q, ctx) \<in> sol_vars (declared_global p) p"
     unfolding live_unknowns_def by blast
-  have "prog_live (prog_table p) (prog_procs p) q v"
-    using prog_live_intra[OF wf lq] e by (simp add: prog_cfg_def)
+  have "prog_node (prog_table p) (prog_procs p) q v"
+    using prog_node_intra[OF wf lq] e by (simp add: prog_cfg_def)
   then show "(v, ctx) \<in> live_unknowns p" by (rule live_unknowns_of_result[OF wf solves _ r])
 next
   fix u ctx dst fs as q k
   assume u: "(u, ctx) \<in> live_unknowns p"
     and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-  from u obtain r where lr: "prog_live (prog_table p) (prog_procs p) r u"
+  from u obtain r where lr: "prog_node (prog_table p) (prog_procs p) r u"
     and res: "(FunctionResult r, ctx) \<in> sol_vars (declared_global p) p"
     unfolding live_unknowns_def by blast
-  have "prog_live (prog_table p) (prog_procs p) r k"
-    using prog_live_calls[OF wf lr] e by (simp add: prog_cfg_def)
+  have "prog_node (prog_table p) (prog_procs p) r k"
+    using prog_node_calls[OF wf lr] e by (simp add: prog_cfg_def)
   then show "(k, ctx) \<in> live_unknowns p" by (rule live_unknowns_of_result[OF wf solves _ res])
 next
   fix u ctx dst fs as q k ctx'
   assume u: "(u, ctx) \<in> live_unknowns p"
     and e: "(u, CallEdge dst fs as, FunctionEntry q, k) \<in> calls (prog_cfg p)"
     and s: "live_succ (declared_global p) p u ctx (CallEdge dst fs as) q = Some ctx'"
-  from u obtain r where lr: "prog_live (prog_table p) (prog_procs p) r u"
+  from u obtain r where lr: "prog_node (prog_table p) (prog_procs p) r u"
     and res: "(FunctionResult r, ctx) \<in> sol_vars (declared_global p) p"
     unfolding live_unknowns_def by blast
-  have "prog_live (prog_table p) (prog_procs p) r k"
-    using prog_live_calls[OF wf lr] e by (simp add: prog_cfg_def)
+  have "prog_node (prog_table p) (prog_procs p) r k"
+    using prog_node_calls[OF wf lr] e by (simp add: prog_cfg_def)
   then have k: "(k, ctx) \<in> sol_vars (declared_global p) p"
     using live_unknowns_of_result[OF wf solves _ res] live_unknowns_sub by blast
   from s have nb: "entry_of (declared_global p) p (call_info_of (CallEdge dst fs as) q)
@@ -297,8 +296,8 @@ next
     by (auto simp: live_succ_def split: if_splits)
   have rq: "(FunctionResult q, ctx') \<in> sol_vars (declared_global p) p"
     unfolding c' by (rule sol_vars_callee_result[OF solves k e nb])
-  have "prog_live (prog_table p) (prog_procs p) q (FunctionEntry q)"
-    using prog_live_callee_entry[OF wf] e by (simp add: prog_cfg_def)
+  have "prog_node (prog_table p) (prog_procs p) q (FunctionEntry q)"
+    using prog_node_callee_entry[OF wf] e by (simp add: prog_cfg_def)
   then show "(FunctionEntry q, ctx') \<in> live_unknowns p"
     by (rule live_unknowns_of_result[OF wf solves _ rq])
 qed
@@ -310,10 +309,9 @@ proof -
   have r: "(FunctionResult prog_main_name, root_ctx) \<in> sol_vars (declared_global p) p"
     using pp_routed[OF solves] by (simp add: root_query_def prog_cfg_def)
   show ?thesis
-    using live_unknowns_of_result[OF wf solves prog_live_result[OF prog_live_main_entry[OF wf]] r]
+    using live_unknowns_of_result[OF wf solves prog_node_result[OF prog_node_main_entry[OF wf]] r]
     by (simp add: root_query_def prog_cfg_def)
 qed
-
 subsection \<open>The entry-state endpoint over the live keys\<close>
 
 text \<open>

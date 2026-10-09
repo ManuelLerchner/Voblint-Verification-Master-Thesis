@@ -1,0 +1,20 @@
+// PARAM: --analysis interval
+// Both guards state 0 < i < j < 10, so i <= 8 and j >= 2 hold in both arms.
+// bfilter (Backward_Domain.thy) refines a conjunction from right to left
+// (bfilter (And b1 b2) True d = bfilter b1 True (bfilter b2 True d)), each
+// conjunct once, without iterating to a local fixpoint. Which bound reaches
+// which variable therefore depends on the order of the conjuncts: in the
+// first arm i=[1,8] but j=[-inf,9], in the second j=[2,9] but i=[1,+inf].
+// Repeating the pass would give i=[1,8] and j=[2,9] in both.
+fun main() {
+  i = __voblint_nondet_int();
+  j = __voblint_nondet_int();
+  if (0 < i && i < j && j < 10) {
+    __voblint_check(i <= 8); // PROVED
+    __voblint_check(j >= 2); // UNKNOWN
+  }
+  if (j < 10 && i < j && 0 < i) {
+    __voblint_check(i <= 8); // UNKNOWN
+    __voblint_check(j >= 2); // PROVED
+  }
+}

@@ -200,7 +200,7 @@ proof -
     with cb show "\<exists>k n n' en E K. compile \<Pi> p (body decl) k n = (n', en, E, K)
           \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
           \<and> (FunctionEntry p, EA_Body p, en) \<in> intra g
-          \<and> (falls_through (body decl) \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g)
+          \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g
           \<and> source_com (body decl) \<and> special_table p = None"
       by (intro exI[of _ "FunctionResult p"] exI[of _ "0 :: nat"] exI[of _ n'] exI[of _ en]
             exI[of _ E] exI[of _ K])

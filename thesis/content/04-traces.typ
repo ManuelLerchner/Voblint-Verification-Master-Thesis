@@ -26,7 +26,7 @@ Each call of a procedure starts a new _activation_ of it, which lasts until the
 call returns @aho06[§7.2.1]. We represent executions by _activation traces_.
 An activation trace records the path of one activation through the graph. It
 also records the trace of the caller that created the activation, because the
-context of a call is chosen from the caller's context and store. After a call
+contexts of a call are admitted from the caller's context and store. After a call
 returns, it records the finished callee as well, whose result the activation
 continues with. The calling contexts of an activation are then derived from
 its trace.
@@ -65,9 +65,9 @@ each of them, so we need a richer semantics that keeps this information.
 The graph execution (@sec:cstep) has a frame stack, which records the callers
 that wait for the running activation. The stack, however, holds only what
 execution needs to resume these callers, and it forgets a call once the call
-has returned. A context policy needs more. It chooses the context of a call
+has returned. A context policy needs more. It admits the contexts of a call
 from the caller's context and store at the call, and after the return the
-caller must continue in the context it had before. Activation traces keep this
+caller must continue in the contexts it had before. Activation traces keep this
 information. A callee trace records the caller that created it, and a resumed
 trace records both the caller and the finished callee.
 
@@ -76,7 +76,7 @@ record of the run, namely the list of node-store pairs $(v, s)$ that the run
 passes through (@fig:flat-nested, top), interleaves the steps of all
 activations and leaves their nesting implicit. In the program of @fig:cfgmap,
 `sum(2)` calls `dec` and then itself, so one run visits the nodes of `sum` in
-three activations. To find the context of a step, one would therefore have to
+three activations. To find the contexts of a step, one would therefore have to
 recover from the list which call created its activation and which return
 resumes which caller.
 
@@ -252,8 +252,8 @@ Because a $ctor("Call", thy: "Activation_Trace_Def")$ stores its caller
 exactly, frozen at the call node, a finished callee composes back into the
 activation that created it, and no search for a compatible stack frame is
 needed. This is what makes context-specific return flow sound. A return
-continues exactly the caller that created the callee, in that caller's
-context, so the result of a callee entered in context $c'$ flows back only to
+continues exactly the caller that created the callee, in each context that
+caller carries, so the result of a callee entered in context $c'$ flows back only to
 the callers whose calls admitted $c'$. A claim for a context therefore needs to cover only the executions in that
 context.
 
@@ -384,7 +384,8 @@ as here, and split by context, as in @sec:contexts.
 
 == Calling contexts #thy-badge("Voblint_CFG", "Activation_Trace_Context") <sec:contexts>
 
-A _context_ is the index under which an activation is analyzed. At a fixed node,
+A _context_ is an index under which an activation is analyzed, and one
+activation may carry several. At a fixed node,
 activations with the same context contribute to the same abstract unknown
 $[v, c]$. Contexts change only at calls. Within one activation, a step along a
 local edge keeps the contexts of the trace
@@ -397,7 +398,12 @@ the literature describes many such _context policies_ @sharir81 @rival20[§8.4.1
 the call history, and practical variants bound it to the $k$ most recent call
 sites, since a recursive procedure otherwise has infinitely many contexts. The
 functional approach, in contrast, computes a procedure summary independent of
-callers, which each call site instantiates. Goblint obtains the context of a
+callers, which each call site instantiates. Goblint uses partial tabulation, a
+variant of the functional approach that tabulates summaries only for the
+calling contexts the analysis meets @saan26phd[§3.3] @schwarz25phd[§5, p. 110].
+Voblint's entry-state policy is of this kind. Its context is the abstract
+value of the callee's formal parameters in the entry state (@ch:equations), and
+nothing bounds the number of such contexts (@sec:termination). Goblint obtains the context of a
 callee by applying each analysis's `context` function to the callee's abstract
 entry state (@sec:rel-goblint), and Erhard et al. treat full entry states,
 their projections and call strings in one framework @erhard25[§4]. Voblint
@@ -504,11 +510,9 @@ program, with every copy of a procedure labeled by its context.
   ) <fig:trace-context>
 ]
 
-The contexts of an activation are thus fixed when the activation is
-created, and calls it makes later do not change them.
+The contexts of an activation are thus fixed when it is created.
 
-With the contexts of a trace in hand, the node collecting semantics can be
-split by context. A store belongs to context $c$ at node $v$ if some valid
+The node collecting semantics can then be split by context. A store belongs to context $c$ at node $v$ if some valid
 trace ending at $v$ with that store carries $c$.
 
 #block(breakable: false)[
@@ -526,16 +530,12 @@ It contains the final stores of the valid traces that end at $v$ and carry
 $c$, and the claim for the unknown $[v, c]$ must contain it. In the running example under interval entry-state contexts, `bump(5)` gets the
 context $[[5, 5]]$ and `bump(4)` the context $[[4, 4]]$
 (@sec:eq-routing). The final store of `bump(5)`, with result $6$, lies in
-the activation collecting semantics of context $[[5, 5]]$ at the result node of
-`bump`, and the final store of `bump(4)`, with result $5$, in that of context
-$[[4, 4]]$. The node collecting semantics at the result node contains both
-stores. A store that activations in two contexts reach lies in the sets of
-both contexts.
+the activation collecting semantics of context $[[5, 5]]$ at `bump`'s result node, and the final store of `bump(4)`, with result $5$, in that of context
+$[[4, 4]]$. The node collecting semantics there contains both stores. Stores reached in two contexts lie in both sets.
 
 The two sets show what the split by context buys. A single claim for the
 result node must contain both stores, so an interval analysis can at best bound the result by $[5, 6]$. A claim per context only has to contain the stores of
-its own context, the result $6$ in context $[[5, 5]]$ and the result $5$ in
-context $[[4, 4]]$. No store is lost by the split as long as every valid trace carries at
+its own context, $6$ in $[[5, 5]]$ and $5$ in $[[4, 4]]$. No store is lost by the split as long as every valid trace carries at
 least one context, because then every store of the node collecting semantics
 lies in the activation collecting semantics of some context. The coverage
 contract of the next section guarantees this.
@@ -610,7 +610,7 @@ the call from $s$ (#isaconst("call_context_total_on")).
 The other four obligations do not suffice without it
 (#isathm("total_dropped_unsound")). At a call that gets no context, #oblig("CALL") and #oblig("RETURN") hold
 vacuously, so nothing forces the claim at the continuation, while the resumed
-caller keeps its context (#isathm("resume_keeps_context")). A store that the
+caller keeps its contexts (#isathm("resume_keeps_context")). A store that the
 caller reaches after the return can therefore lie outside the claim.
 
 Asking for contexts at every call would be too strong for entry-state

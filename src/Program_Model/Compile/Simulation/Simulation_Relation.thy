@@ -121,10 +121,7 @@ text \<open>
   fall-through preservation is false for a fragment that is not a whole body.
 
   A procedure body's continuation is its epilogue node, which is why the fall-through return
-  edge is stated from \<open>k\<close>.  That edge exists only when the body can actually fall through to
-  it, so the requirement is guarded by \<^const>\<open>falls_through\<close>;
-  \<open>control_at_SKIP_imp_falls_through\<close> discharges the guard wherever a completed
-  (\<^const>\<open>SKIP\<close>) residual needs the edge.
+  edge is stated from \<open>k\<close>.  \<^const>\<open>compile_proc\<close> emits that edge for every body.
 \<close>
 definition compiled_at ::
   "proc_table \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> bool" where
@@ -132,12 +129,12 @@ definition compiled_at ::
      (\<exists>decl n' en E K. \<Pi> p = Some decl \<and> body_p = body decl
         \<and> compile \<Pi> p body_p k n = (n', en, E, K)
         \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
-        \<and> (falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g))"
+        \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g)"
 
 lemma compiled_atI [intro]:
   "\<Pi> p = Some decl \<Longrightarrow> body_p = body decl \<Longrightarrow>
    compile \<Pi> p body_p k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
-   (falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g) \<Longrightarrow>
+   (k, EA_Ret None p, FunctionResult p) \<in> intra g \<Longrightarrow>
    compiled_at \<Pi> g p body_p k n"
   unfolding compiled_at_def by blast
 
@@ -146,7 +143,7 @@ lemma compiled_atE [elim]:
   obtains decl n' en E K where
     "\<Pi> p = Some decl" "body_p = body decl"
     "compile \<Pi> p body_p k n = (n', en, E, K)" "E \<subseteq> intra g" "K \<subseteq> calls g"
-    "falls_through body_p \<longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
+    "(k, EA_Ret None p, FunctionResult p) \<in> intra g"
   using assms unfolding compiled_at_def by blast
 
 text \<open>The procedure-identity half on its own, for the many proofs that only need the
@@ -157,8 +154,7 @@ lemma compiled_at_decl:
   using assms unfolding compiled_at_def by blast
 
 lemma compiled_at_exit:
-  "compiled_at \<Pi> g p body_p k n \<Longrightarrow> falls_through body_p \<Longrightarrow>
-   (k, EA_Ret None p, FunctionResult p) \<in> intra g"
+  "compiled_at \<Pi> g p body_p k n \<Longrightarrow> (k, EA_Ret None p, FunctionResult p) \<in> intra g"
   unfolding compiled_at_def by auto
 
 subsection \<open>The simulation relation\<close>

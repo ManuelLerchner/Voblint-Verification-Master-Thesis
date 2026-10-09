@@ -5,6 +5,7 @@ digraph AnalysisCFG {
   subgraph cluster_ctx_0 {
     label="bump / unit";
     style=rounded; color=gray70; penwidth=1;
+    bump_pp1_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
     bump_exit_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_bump",tooltip="exit_bump\ninterval:\n  n=[-∞,5]"];
     bump_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  n=[-∞,5]"];
     bump_entry_bump_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_bump",tooltip="entry_bump\ninterval:\n  n=[-∞,5]"];
@@ -21,6 +22,7 @@ digraph AnalysisCFG {
     main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  a=⊤\n  b=⊤"];
   }
   bump_pp0_ctx0 -> bump_exit_bump_ctx0 [weight=20,label="return n + 1"];
+  bump_pp1_ctx0 -> bump_exit_bump_ctx0 [weight=20,label="return"];
   main_pp4_ctx0 -> main_pp5_ctx0 [weight=20,label="check(a == 6)"];
   main_pp5_ctx0 -> main_pp6_ctx0 [weight=20,label="check(b == 5)"];
   main_pp6_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];

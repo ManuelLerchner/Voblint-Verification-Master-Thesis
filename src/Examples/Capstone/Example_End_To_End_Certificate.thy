@@ -231,6 +231,7 @@ lemma certificate_demo_intra_eval:
      {(FunctionEntry (STR ''bump''), EA_Body (STR ''bump''), Statement 0),
       (Statement 0, EA_Ret (Some (Plus (V (STR ''n'')) (N 1))) (STR ''bump''),
        FunctionResult (STR ''bump'')),
+      (Statement 1, EA_Ret None (STR ''bump''), FunctionResult (STR ''bump'')),
       (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2),
       (Statement 5, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')),
       (Statement 4, EA_Check (0, 0) (Less (N 0) (V (STR ''b''))), Statement 5)}"

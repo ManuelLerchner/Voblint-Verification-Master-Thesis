@@ -21,6 +21,7 @@
 //     main_pp7_ctx0
 //     main_entry_main_ctx0
 //   cluster_ctx_1: f / [7,7]
+//     f_pp1_ctx0
 //     f_exit_f_ctx0
 //     f_pp0_ctx0
 //     f_entry_f_ctx0
@@ -64,6 +65,8 @@
 //         a=⊤
 //         b=⊤
 //         x=⊤
+//   f_pp1_ctx0: pp1 [unreachable]
+//       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
 //         n=[7,7]
@@ -76,6 +79,7 @@
 //
 // edges:
 //   f_pp0_ctx0 -> f_exit_f_ctx0: return n
+//   f_pp1_ctx0 -> f_exit_f_ctx0: return
 //   main_pp2_ctx0 -> main_pp3_ctx0: x := 5
 //   main_pp3_ctx0 -> main_pp4_ctx0: [x < 2]
 //   main_pp3_ctx0 -> main_pp6_ctx0: ![x < 2]

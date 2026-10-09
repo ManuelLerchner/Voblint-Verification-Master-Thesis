@@ -69,7 +69,7 @@ next
     with act show ?thesis by auto
   qed
 next
-  case (SeqRight c1 c2 k n0 r v)
+  case (SeqRight c2 k n0 c1 r v)
   from SeqRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
@@ -78,7 +78,7 @@ next
     jw: "v = Statement j" "(Statement j, a, w) \<in> E2"
         "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
-    using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
+    using control_at.SeqRight[OF jw(3)] .
   then show ?case using jw sub by blast
 next
   case (IfLeft c1 k n0 r v b c2)
@@ -125,7 +125,7 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
     by (rule compile_Seq_leftE)
   with SeqLeft.IH SeqLeft.prems(1) show ?case by auto
 next
-  case (SeqRight c1 c2 k n0 r v)
+  case (SeqRight c2 k n0 c1 r v)
   from SeqRight.prems(2) obtain m F L
     where "compile \<Pi> p c2 k (n0 + csize c1) = (m, Statement (n0 + csize c1), F, L)"
       and "F \<subseteq> E"
@@ -184,7 +184,7 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
   qed
   from E ca1 ca2 r show ?case by auto
 next
-  case (SeqRight c1' c2' k n0 r v)
+  case (SeqRight c2' k n0 c1' r v)
   from SeqRight.prems(3) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2' k (n0 + csize c1') = (n2, Statement (n0 + csize c1'), E2, K2)"
     and sub: "E2 \<subseteq> E"
@@ -195,8 +195,8 @@ next
         "control_at \<Pi> p c2' k (n0 + csize c1') c1 e1"
         "control_at \<Pi> p c2' k (n0 + csize c1') c2 e2" by blast
   have "control_at \<Pi> p (Seq c1' c2') k n0 c1 e1" "control_at \<Pi> p (Seq c1' c2') k n0 c2 e2"
-    using control_at.SeqRight[OF SeqRight.hyps(1) jw(4)]
-          control_at.SeqRight[OF SeqRight.hyps(1) jw(5)] .
+    using control_at.SeqRight[OF jw(4)]
+          control_at.SeqRight[OF jw(5)] .
   then show ?case using jw sub by blast
 next
   case (IfLeft c1' k n0 r v b' c2')
@@ -277,9 +277,8 @@ proof (induction arbitrary: n' en E K rule: control_at.induct)
     using SeqLeft.hyps ri by simp
   from control_at_skip_to_exit[OF skipc1 refl c1c subset_trans[OF sub SeqLeft.prems(3)]]
   have sk: "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (Statement (n0 + csize c1), s, stk)" .
-  have ft: "falls_through c1" by (rule control_at_SKIP_imp_falls_through[OF skipc1])
   have "control_at \<Pi> p (Seq c1 c2r) k n0 c2r (Statement (n0 + csize c1))"
-    by (rule control_at.SeqRight[OF ft control_at_initial[OF src2]])
+    by (rule control_at.SeqRight[OF control_at_initial[OF src2]])
   then have "control_at \<Pi> p (Seq c1 c2r) k n0 c2 (Statement (n0 + csize c1))" using c2eq by simp
   with sk show ?case by blast
 next
@@ -296,7 +295,7 @@ next
   then have "control_at \<Pi> p (While b c) k n0 c2 (Statement n0)" using c2eq by simp
   with sk show ?case by blast
 next
-  case (SeqRight c1 c2' k n0 r v)
+  case (SeqRight c2' k n0 c1 r v)
   from SeqRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2' k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
@@ -306,7 +305,7 @@ next
   obtain v' where v': "control_at \<Pi> p c2' k (n0 + csize c1) c2 v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s, stk)" by blast
   have "control_at \<Pi> p (Seq c1 c2') k n0 c2 v'"
-    using control_at.SeqRight[OF SeqRight.hyps(1) v'(1)] .
+    using control_at.SeqRight[OF v'(1)] .
   with v'(2) show ?case by blast
 next
   case (IfLeft c1 k n0 r v b c2')
@@ -442,7 +441,7 @@ next
     using control_at.SeqLeft[OF jw(3)] by (simp add: afx seq_after_snoc)
   then show ?case using jw sub by blast
 next
-  case (SeqRight c1 c2 k n0 r v afters)
+  case (SeqRight c2 k n0 c1 r v afters)
   from SeqRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and sub: "K2 \<subseteq> K"
@@ -453,7 +452,7 @@ next
          FunctionEntry q, w) \<in> K2"
        "control_at \<Pi> p c2 k (n0 + csize c1) (seq_after SKIP afters) w" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after SKIP afters) w"
-    using control_at.SeqRight[OF SeqRight.hyps(1) jw(3)] .
+    using control_at.SeqRight[OF jw(3)] .
   then show ?case using jw sub by blast
 next
   case (IfLeft c1 k n0 r v b c2 afters)
@@ -520,7 +519,7 @@ next
     by (rule compile_Seq_leftE)
   from SeqLeft.IH[OF req c1c] show ?case using sub by blast
 next
-  case (SeqRight c1 c2 k n0 r v afters)
+  case (SeqRight c2 k n0 c1 r v afters)
   from SeqRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
@@ -736,7 +735,7 @@ next
     by (rule control_at_seq_step[OF control_at.SeqLeft[OF SeqLeft.hyps] SeqLeft.prems])
        (use SeqLeft.IH[OF _ c1c subset_trans[OF sub SeqLeft.prems(3)] src1] in blast)
 next
-  case (SeqRight c1 c2 k n0 r v)
+  case (SeqRight c2 k n0 c1 r v)
   from SeqRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (n0 + csize c1) = (n2, Statement (n0 + csize c1), E2, K2)"
     and sub: "E2 \<subseteq> E"
@@ -749,7 +748,7 @@ next
   then obtain v' where v': "control_at \<Pi> p c2 k (n0 + csize c1) c' v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk)" by blast
   have "control_at \<Pi> p (Seq c1 c2) k n0 c' v'"
-    using control_at.SeqRight[OF SeqRight.hyps(1) v'(1)] .
+    using control_at.SeqRight[OF v'(1)] .
   with fr v'(2) show ?case by blast
 next
   case (IfHead b c1 c2 k n0)

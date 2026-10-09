@@ -1,0 +1,10 @@
+tests/regression/02-control-flow/known-imprecision/04-disjunction_judged_in_one_state.vimp [interval]
+
+Arithmetic diagnostics
+None
+
+Assertion checks
+Location  Point  Condition         Verdict  State
+--------  -----  ----------------  -------  -----------------
+14:5      pp2    x == 1 || x == 2  UNKNOWN  interval: x=[1,2]
+18:7      pp5    x == 2            UNKNOWN  interval: x=[1,2]

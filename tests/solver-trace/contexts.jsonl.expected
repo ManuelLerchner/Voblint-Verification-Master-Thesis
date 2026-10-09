@@ -81,79 +81,95 @@
 {"step":80,"event":"iterate","line":97,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"called":true,"stable":true,"wpoint":false}
 {"step":81,"event":"add_infl","line":98,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"reader":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}}}
 {"step":82,"event":"value_local","line":99,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"target":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]"}
-{"step":83,"event":"answer","line":101,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
-{"step":84,"event":"update_local","line":102,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
-{"step":85,"event":"destabilize","line":106,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}}}
-{"step":86,"event":"iterate","line":108,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"called":true,"stable":true,"wpoint":false}
-{"step":87,"event":"add_infl","line":109,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"reader":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}}}
-{"step":88,"event":"value_local","line":110,"current":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
-{"step":89,"event":"answer","line":112,"current":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
-{"step":90,"event":"update_local","line":113,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
-{"step":91,"event":"destabilize","line":117,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}}}
-{"step":92,"event":"iterate","line":119,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
-{"step":93,"event":"add_infl","line":120,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
-{"step":94,"event":"value_local","line":121,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
-{"step":95,"event":"route","line":123,"call":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"entry":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]","context":{"kind":"entry_state","values":["[4,4]"]}}
-{"step":96,"event":"side","line":124,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":97,"event":"update_global","line":124,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":98,"event":"destabilize","line":125,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":99,"event":"query_local","line":126,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":100,"event":"iterate","line":128,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
-{"step":101,"event":"solve","line":128,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":102,"event":"eq","line":129,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":103,"event":"stable_add","line":129,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":104,"event":"query_local","line":130,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":105,"event":"iterate","line":132,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
-{"step":106,"event":"solve","line":132,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":107,"event":"eq","line":133,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":108,"event":"stable_add","line":133,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":109,"event":"query_local","line":134,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":110,"event":"iterate","line":136,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
-{"step":111,"event":"solve","line":136,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":112,"event":"eq","line":137,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":113,"event":"stable_add","line":137,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":114,"event":"add_infl","line":139,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":115,"event":"query_global","line":140,"current":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":116,"event":"answer","line":142,"current":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":117,"event":"update_local","line":143,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":118,"event":"destabilize","line":147,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":119,"event":"iterate","line":149,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
-{"step":120,"event":"add_infl","line":150,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":121,"event":"value_local","line":151,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":122,"event":"answer","line":153,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":123,"event":"update_local","line":154,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":124,"event":"destabilize","line":158,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":125,"event":"iterate","line":160,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
-{"step":126,"event":"add_infl","line":161,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":127,"event":"value_local","line":162,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
-{"step":128,"event":"answer","line":164,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
-{"step":129,"event":"update_local","line":165,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
-{"step":130,"event":"destabilize","line":169,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
-{"step":131,"event":"iterate","line":171,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
-{"step":132,"event":"add_infl","line":172,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
-{"step":133,"event":"value_local","line":173,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
-{"step":134,"event":"answer","line":175,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":135,"event":"update_local","line":176,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":136,"event":"destabilize","line":180,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
-{"step":137,"event":"iterate","line":182,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
-{"step":138,"event":"add_infl","line":183,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}}}
-{"step":139,"event":"value_local","line":184,"current":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":140,"event":"answer","line":186,"current":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":141,"event":"update_local","line":187,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":142,"event":"destabilize","line":191,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}}}
-{"step":143,"event":"iterate","line":193,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
-{"step":144,"event":"add_infl","line":194,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}}}
-{"step":145,"event":"value_local","line":195,"current":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":146,"event":"answer","line":197,"current":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":147,"event":"update_local","line":198,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":148,"event":"destabilize","line":202,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}}}
-{"step":149,"event":"iterate","line":204,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
-{"step":150,"event":"add_infl","line":205,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}}}
-{"step":151,"event":"value_local","line":206,"current":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":152,"event":"answer","line":208,"current":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":153,"event":"update_local","line":209,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
-{"step":154,"event":"destabilize","line":213,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}}}
-{"step":155,"event":"iterate","line":215,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
+{"step":83,"event":"query_local","line":101,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"target":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":84,"event":"iterate","line":103,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"called":true,"stable":false,"wpoint":false}
+{"step":85,"event":"solve","line":103,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":86,"event":"eq","line":104,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":87,"event":"stable_add","line":104,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":88,"event":"answer","line":105,"current":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"⊥"}
+{"step":89,"event":"add_infl","line":110,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"reader":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":90,"event":"value_local","line":111,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"target":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"⊥"}
+{"step":91,"event":"answer","line":113,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
+{"step":92,"event":"update_local","line":114,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
+{"step":93,"event":"destabilize","line":118,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}}}
+{"step":94,"event":"iterate","line":120,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"called":true,"stable":true,"wpoint":false}
+{"step":95,"event":"add_infl","line":121,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"reader":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}}}
+{"step":96,"event":"value_local","line":122,"current":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
+{"step":97,"event":"answer","line":124,"current":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
+{"step":98,"event":"update_local","line":125,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
+{"step":99,"event":"destabilize","line":129,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}}}
+{"step":100,"event":"iterate","line":131,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
+{"step":101,"event":"add_infl","line":132,"unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
+{"step":102,"event":"value_local","line":133,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
+{"step":103,"event":"route","line":135,"call":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"entry":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]","context":{"kind":"entry_state","values":["[4,4]"]}}
+{"step":104,"event":"side","line":136,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":105,"event":"update_global","line":136,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":106,"event":"destabilize","line":137,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":107,"event":"query_local","line":138,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":108,"event":"iterate","line":140,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
+{"step":109,"event":"solve","line":140,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":110,"event":"eq","line":141,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":111,"event":"stable_add","line":141,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":112,"event":"query_local","line":142,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":113,"event":"iterate","line":144,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
+{"step":114,"event":"solve","line":144,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":115,"event":"eq","line":145,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":116,"event":"stable_add","line":145,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":117,"event":"query_local","line":146,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":118,"event":"iterate","line":148,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
+{"step":119,"event":"solve","line":148,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":120,"event":"eq","line":149,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":121,"event":"stable_add","line":149,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":122,"event":"add_infl","line":151,"unknown":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":123,"event":"query_global","line":152,"current":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"activation_seed","procedure":"bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":124,"event":"answer","line":154,"current":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":125,"event":"update_local","line":155,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":126,"event":"destabilize","line":159,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":127,"event":"iterate","line":161,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
+{"step":128,"event":"add_infl","line":162,"unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":129,"event":"value_local","line":163,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":130,"event":"answer","line":165,"current":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":131,"event":"update_local","line":166,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":132,"event":"destabilize","line":170,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":133,"event":"iterate","line":172,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
+{"step":134,"event":"add_infl","line":173,"unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":135,"event":"value_local","line":174,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"step":136,"event":"query_local","line":176,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":137,"event":"iterate","line":178,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":false,"wpoint":false}
+{"step":138,"event":"solve","line":178,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":139,"event":"eq","line":179,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":140,"event":"stable_add","line":179,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":141,"event":"answer","line":180,"current":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"⊥"}
+{"step":142,"event":"add_infl","line":185,"unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":143,"event":"value_local","line":186,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"target":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"⊥"}
+{"step":144,"event":"answer","line":188,"current":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
+{"step":145,"event":"update_local","line":189,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"old":"⊥","new":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
+{"step":146,"event":"destabilize","line":193,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}}}
+{"step":147,"event":"iterate","line":195,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"called":true,"stable":true,"wpoint":false}
+{"step":148,"event":"add_infl","line":196,"unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"reader":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
+{"step":149,"event":"value_local","line":197,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
+{"step":150,"event":"answer","line":199,"current":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":151,"event":"update_local","line":200,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":152,"event":"destabilize","line":204,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}}}
+{"step":153,"event":"iterate","line":206,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
+{"step":154,"event":"add_infl","line":207,"unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}}}
+{"step":155,"event":"value_local","line":208,"current":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":156,"event":"answer","line":210,"current":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":157,"event":"update_local","line":211,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":158,"event":"destabilize","line":215,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}}}
+{"step":159,"event":"iterate","line":217,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
+{"step":160,"event":"add_infl","line":218,"unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}}}
+{"step":161,"event":"value_local","line":219,"current":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":162,"event":"answer","line":221,"current":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":163,"event":"update_local","line":222,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":164,"event":"destabilize","line":226,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}}}
+{"step":165,"event":"iterate","line":228,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
+{"step":166,"event":"add_infl","line":229,"unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"reader":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}}}
+{"step":167,"event":"value_local","line":230,"current":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"target":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":168,"event":"answer","line":232,"current":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":169,"event":"update_local","line":233,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"old":"⊥","new":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
+{"step":170,"event":"destabilize","line":237,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}}}
+{"step":171,"event":"iterate","line":239,"unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"called":true,"stable":true,"wpoint":false}
 {"event":"result","unknown":{"kind":"local","node":"pp5","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"pp6","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"exit_main","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
@@ -161,12 +177,14 @@
 {"event":"result","unknown":{"kind":"local","node":"pp3","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=⊤, #ret=⊤, n=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"pp4","context":{"kind":"entry_state","values":[]}},"value":"interval: a=[6,6], b=[5,5], #ret=⊤, n=⊤"}
 {"event":"result","unknown":{"kind":"local","node":"entry_main","context":{"kind":"entry_state","values":[]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=⊤"}
+{"event":"result","unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"⊥"}
 {"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=[5,5], n=[4,4]"}
 {"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
 {"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[4,4]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[4,4]"}
+{"event":"result","unknown":{"kind":"local","node":"pp1","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"⊥"}
 {"event":"result","unknown":{"kind":"local","node":"exit_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=[6,6], n=[5,5]"}
 {"event":"result","unknown":{"kind":"local","node":"pp0","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]"}
 {"event":"result","unknown":{"kind":"local","node":"entry_bump","context":{"kind":"entry_state","values":["[5,5]"]}},"value":"interval: a=⊤, b=⊤, #ret=⊤, n=[5,5]"}
 {"event":"check","point":"pp4","condition":"a == 6","verdict":"PROVED"}
 {"event":"check","point":"pp5","condition":"b == 5","verdict":"PROVED"}
-{"event":"end","local_unknowns":13,"global_unknowns":3}
+{"event":"end","local_unknowns":15,"global_unknowns":3}

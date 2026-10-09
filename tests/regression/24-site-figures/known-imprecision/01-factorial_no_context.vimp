@@ -8,6 +8,7 @@
 // clusters:
 //   cluster_ctx_0: f / unit
 //     f_pp1_ctx0
+//     f_pp4_ctx0
 //     f_exit_f_ctx0
 //     f_pp0_ctx0
 //     f_pp2_ctx0
@@ -25,6 +26,8 @@
 //       interval:
 //         n=[-∞,1]
 //         r=⊤
+//   f_pp4_ctx0: pp4 [unreachable]
+//       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
 //         n=[-∞,2]
@@ -67,6 +70,7 @@
 //   f_pp0_ctx0 -> f_pp2_ctx0: ![n < 2]
 //   f_pp1_ctx0 -> f_exit_f_ctx0: return 1
 //   f_pp3_ctx0 -> f_exit_f_ctx0: return n * r
+//   f_pp4_ctx0 -> f_exit_f_ctx0: return
 //   main_pp6_ctx0 -> main_pp7_ctx0: check(a == 2)
 //   main_pp7_ctx0 -> main_exit_main_ctx0: return
 //   f_entry_f_ctx0 -> f_pp0_ctx0: body(f)
