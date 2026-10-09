@@ -11,6 +11,8 @@ license: BSD-3-Clause
 authors:
   - family-names: Lerchner
     given-names: Manuel
+    affiliation: Technical University of Munich
+    orcid: "https://orcid.org/0000-0002-5167-465X"
 repository-code: >-
   https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis
 url: >-
