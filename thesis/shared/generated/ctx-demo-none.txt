@@ -5,10 +5,12 @@ clusters:
     record_pp0_ctx0
     record_entry_record_ctx0
   cluster_ctx_1: scale / unit
+    scale_pp3_ctx0
     scale_exit_scale_ctx0
     scale_pp2_ctx0
     scale_entry_scale_ctx0
   cluster_ctx_2: wrap / unit
+    wrap_pp6_ctx0
     wrap_exit_wrap_ctx0
     wrap_pp4_ctx0
     wrap_pp5_ctx0
@@ -39,9 +41,13 @@ nodes:
   record_exit_record_ctx0: exit_record
       interval:
         amount=⊤
+  scale_pp3_ctx0: pp3 [unreachable]
+      unreachable
   scale_exit_scale_ctx0: exit_scale
       interval:
         v=[1,+∞]
+  wrap_pp6_ctx0: pp6 [unreachable]
+      unreachable
   wrap_exit_wrap_ctx0: exit_wrap
       interval:
         w=[1,+∞]
@@ -182,7 +188,9 @@ edges:
   record_pp0_ctx0 -> record_pp1_ctx0: hits := hits + amount
   record_pp1_ctx0 -> record_exit_record_ctx0: return
   scale_pp2_ctx0 -> scale_exit_scale_ctx0: return v * 2
+  scale_pp3_ctx0 -> scale_exit_scale_ctx0: return
   wrap_pp5_ctx0 -> wrap_exit_wrap_ctx0: return r
+  wrap_pp6_ctx0 -> wrap_exit_wrap_ctx0: return
   main_pp7_ctx0 -> main_pp8_ctx0: i := 0
   main_pp8_ctx0 -> main_pp9_ctx0: [i < 5]
   main_pp8_ctx0 -> main_pp10_ctx0: ![i < 5]

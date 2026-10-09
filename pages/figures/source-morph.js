@@ -13,7 +13,7 @@
       rule: {
         name: "compile_proc",
         clause:
-          "compile_proc Π p decl n =\n  (let r = n + csize (body decl); …\n   in … insert (FunctionEntry p, EA_Body p, ben)\n          (if falls_through (body decl)\n           then insert (Statement r, EA_Ret None p, FunctionResult p) E\n           else E) …)",
+          "compile_proc Π p decl n =\n  (let r = n + csize (body decl); …\n   in … insert (FunctionEntry p, EA_Body p, ben)\n          (insert (Statement r, EA_Ret None p, FunctionResult p) E) …)",
       },
       text: "`main` gets its two special nodes, `entry_main` and `exit_main`, and a body edge to where its body will begin. The body has `csize` 4, so its epilogue will be `Statement 4`: that number is reserved now, dashed, before any statement is compiled.",
     },
@@ -53,9 +53,9 @@
       rule: {
         name: "compile_proc",
         clause:
-          "compile_proc Π p decl n =\n  (let r = n + csize (body decl); …\n   in … insert (FunctionEntry p, EA_Body p, ben)\n          (if falls_through (body decl)\n           then insert (Statement r, EA_Ret None p, FunctionResult p) E\n           else E) …)",
+          "compile_proc Π p decl n =\n  (let r = n + csize (body decl); …\n   in … insert (FunctionEntry p, EA_Body p, ben)\n          (insert (Statement r, EA_Ret None p, FunctionResult p) E) …)",
       },
-      text: "The body falls through its end, so the epilogue `Statement 4` gets the implicit `EA_Ret None main` edge into `exit_main`. Every edge into a result node is now a return edge.",
+      text: "The epilogue `Statement 4` gets the implicit `EA_Ret None main` edge into `exit_main`, as every body's epilogue does. Every edge into a result node is now a return edge.",
     },
     {
       rule: null,

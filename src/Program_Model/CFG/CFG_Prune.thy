@@ -59,36 +59,51 @@ lemma cfg_succ_rel_cases:
 
 subsection \<open>Reachability: reflexive-transitive closure of the successor relation\<close>
 
-text \<open>Reachability over that successor relation, with the transitivity and one-step
-  introduction rules consumers actually cite.  Because the relation already relates a caller
-  to its continuation and a callee result to the same continuation, this closure crosses
-  procedure boundaries without any separate interprocedural notion.\<close>
-definition cfg_succ :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
-  "cfg_succ g u w \<longleftrightarrow> (u, w) \<in> cfg_succ_rel g"
-
+text \<open>Reachability over that successor relation.  Because the relation already relates a
+  caller to its continuation and a callee result to the same continuation, this closure
+  crosses procedure boundaries without any separate interprocedural notion.\<close>
 definition cfg_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "cfg_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> (cfg_succ_rel g)\<^sup>*"
 
-lemma cfg_reaches_refl: "cfg_reaches g v v"
-  by (simp add: cfg_reaches_def)
+subsection \<open>Reachability inside one activation\<close>
 
-lemma cfg_succ_reaches:
-  "cfg_succ g u w \<Longrightarrow> cfg_reaches g w v0 \<Longrightarrow> cfg_reaches g u v0"
-  by (auto simp: cfg_succ_def cfg_reaches_def intro: converse_rtrancl_into_rtrancl)
+text \<open>The same closure without entering callees: a call site steps straight to its
+  continuation.  These are the steps a routed equation reads backwards, so this is the
+  reachability the solver's coverage argument needs.\<close>
 
-lemma cfg_succ_imp_reaches: "cfg_succ g u w \<Longrightarrow> cfg_reaches g u w"
-  using cfg_succ_reaches cfg_reaches_refl by blast
+definition local_succ_rel :: "cfg \<Rightarrow> (cfg_node \<times> cfg_node) set" where
+  "local_succ_rel g =
+     {(u, v). \<exists>a. (u, a, v) \<in> intra g}
+     \<union> {(u, k). \<exists>ca q. (u, ca, FunctionEntry q, k) \<in> calls g}"
 
-lemma cfg_reaches_trans:
-  "cfg_reaches g a b \<Longrightarrow> cfg_reaches g b c \<Longrightarrow> cfg_reaches g a c"
-  by (auto simp: cfg_reaches_def)
+definition local_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
+  "local_reaches g u v \<longleftrightarrow> (u, v) \<in> (local_succ_rel g)\<^sup>*"
 
-lemma cfg_reaches_intra:
-  "(u, a, v) \<in> intra g \<Longrightarrow> cfg_reaches g u v"
-  by (rule cfg_succ_imp_reaches) (simp add: cfg_succ_def cfg_succ_rel_intra)
+lemma local_reaches_refl [simp]: "local_reaches g v v"
+  by (simp add: local_reaches_def)
 
-lemma cfg_reaches_comb_caller:
-  "(c, ca, ce, k) \<in> calls g \<Longrightarrow> cfg_reaches g c k"
-  by (rule cfg_succ_imp_reaches) (simp add: cfg_succ_def cfg_succ_rel_comb_caller)
+lemma local_reaches_trans:
+  "local_reaches g u v \<Longrightarrow> local_reaches g v w \<Longrightarrow> local_reaches g u w"
+  unfolding local_reaches_def by (rule rtrancl_trans)
+
+lemma local_reaches_intra_step:
+  "(u, a, v) \<in> intra g \<Longrightarrow> local_reaches g v w \<Longrightarrow> local_reaches g u w"
+  unfolding local_reaches_def local_succ_rel_def
+  by (rule converse_rtrancl_into_rtrancl) blast+
+
+lemma local_reaches_comb_step:
+  "(u, ca, FunctionEntry q, k) \<in> calls g \<Longrightarrow> local_reaches g k w \<Longrightarrow> local_reaches g u w"
+  unfolding local_reaches_def local_succ_rel_def
+  by (rule converse_rtrancl_into_rtrancl) blast+
+
+lemma local_reaches_cfg_reaches:
+  "local_reaches g u v \<Longrightarrow> cfg_reaches g u v"
+  unfolding local_reaches_def cfg_reaches_def
+proof (induction rule: rtrancl_induct)
+  case (step y z)
+  then have "(y, z) \<in> cfg_succ_rel g"
+    unfolding local_succ_rel_def by (auto simp: cfg_succ_rel_intra cfg_succ_rel_comb_caller)
+  with step.IH show ?case by (rule rtrancl_into_rtrancl)
+qed simp
 
 end

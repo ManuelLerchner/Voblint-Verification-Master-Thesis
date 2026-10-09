@@ -180,6 +180,7 @@ definition sign_nest_1_nodes :: "(pp \<times> cfg_node list) set" where
      (FunctionResult (STR ''f''), [Statement 5]), (Statement 6, []),
      (FunctionEntry (STR ''f''), [Statement 6]), (Statement 2, [Statement 6]),
      (Statement 3, [Statement 6]), (FunctionResult (STR ''f''), [Statement 6]),
+     (Statement 4, [Statement 5]), (Statement 4, [Statement 6]), (Statement 1, [Statement 2]),
      (Statement 7, []), (FunctionResult (STR ''main''), [])}"
 
 lemma sign_nest_1_nodes_eq: "fst sign_nest_1_sol = sign_nest_1_nodes"

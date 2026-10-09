@@ -203,9 +203,7 @@ where
           (n', ben, E, K) = compile \<Pi> p (body decl) (Statement r) n
       in (Suc r,
           insert (FunctionEntry p, EA_Body p, ben)
-            (if falls_through (body decl)
-             then insert (Statement r, EA_Ret None p, FunctionResult p) E
-             else E),
+            (insert (Statement r, EA_Ret None p, FunctionResult p) E),
           K))"
 
 fun compile_procs ::
@@ -522,9 +520,7 @@ lemma compile_procE [elim]:
     "compile \<Pi> p (body decl) (Statement (n + csize (body decl))) n
        = (n + csize (body decl), Statement n, Eb, K)"
     "E = insert (FunctionEntry p, EA_Body p, Statement n)
-           (if falls_through (body decl)
-            then insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb
-            else Eb)"
+           (insert (Statement (n + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
     "n' = Suc (n + csize (body decl))"
 proof -
   define r where "r = n + csize (body decl)"
@@ -535,9 +531,7 @@ proof -
   have i: "m = r" using compile_next_id[OF cb] unfolding r_def by simp
   from assms cb e i
   have "E = insert (FunctionEntry p, EA_Body p, Statement n)
-              (if falls_through (body decl)
-               then insert (Statement r, EA_Ret None p, FunctionResult p) Eb
-               else Eb)"
+              (insert (Statement r, EA_Ret None p, FunctionResult p) Eb)"
     "K = Kb" "n' = Suc r"
     unfolding compile_proc_def r_def by (auto simp: Let_def)
   with cb e i show ?thesis unfolding r_def by (auto intro: that)

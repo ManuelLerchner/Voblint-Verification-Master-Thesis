@@ -777,12 +777,9 @@ proof (intro allI impI)
     cb: "compile \<Pi> p (body decl) (Statement (m + csize (body decl))) m
            = (m + csize (body decl), Statement m, Eb, Kf)"
     and Edef: "Ef = insert (FunctionEntry p, EA_Body p, Statement m)
-                 (if falls_through (body decl)
-                  then insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p)
-                         Eb
-                  else Eb)"
+                 (insert (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) Eb)"
     by (rule compile_procE)
-  have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by (auto split: if_splits)
+  have Ebsub: "Eb \<subseteq> intra ?g" using Edef Esub by auto
   have ent: "(FunctionEntry p, EA_Body p, Statement m) \<in> intra ?g" using Edef Esub by auto
   have ext: "falls_through (body decl) \<longrightarrow>
                (Statement (m + csize (body decl)), EA_Ret None p, FunctionResult p) \<in> intra ?g"

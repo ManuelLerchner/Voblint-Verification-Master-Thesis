@@ -9,7 +9,5 @@ where
           (n', ben, E, K) = compile \<Pi> p (body decl) (Statement r) n
       in (Suc r,
           insert (FunctionEntry p, EA_Body p, ben)
-            (if falls_through (body decl)
-             then insert (Statement r, EA_Ret None p, FunctionResult p) E
-             else E),
+            (insert (Statement r, EA_Ret None p, FunctionResult p) E),
           K))"

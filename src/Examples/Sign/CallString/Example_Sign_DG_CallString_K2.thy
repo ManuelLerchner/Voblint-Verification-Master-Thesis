@@ -59,6 +59,8 @@ definition sign_nest_2_nodes :: "(pp \<times> cfg_node list) set" where
      (FunctionResult (STR ''g''), [Statement 2, Statement 5]),
      (FunctionEntry (STR ''g''), [Statement 2, Statement 6]), (Statement 0, [Statement 2, Statement 6]),
      (FunctionResult (STR ''g''), [Statement 2, Statement 6]),
+     (Statement 4, [Statement 5]), (Statement 4, [Statement 6]),
+     (Statement 1, [Statement 2, Statement 5]), (Statement 1, [Statement 2, Statement 6]),
      (FunctionResult (STR ''main''), [])}"
 
 lemma sign_nest_2_nodes_eq: "fst sign_nest_2_sol = sign_nest_2_nodes"

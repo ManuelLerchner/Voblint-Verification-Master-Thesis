@@ -147,28 +147,39 @@ let call_edges g =
     (C.cfg_calls_list g)
 
 (* The procedure a CFG node belongs to. Intra edges and a call's step to its own
-   continuation never leave a procedure, so everything reachable from a procedure's
-   entry through them is that procedure's; a result node is named by its procedure
-   directly. *)
+   continuation never leave a procedure, so everything connected to a procedure's
+   entry or result through them is that procedure's. Code after a return is not
+   reachable from the entry, but every node reaches its procedure's result
+   (prog_node_reaches), so walking back from the results names it too. *)
 let owners g =
   let table = Hashtbl.create 64 in
   let successors = Hashtbl.create 64 in
-  List.iter (fun (u, _, v) -> Hashtbl.add successors u v) (intra_edges g);
-  List.iter
-    (fun (u, _, _, after) -> Hashtbl.add successors u after)
-    (call_edges g);
-  let rec visit owner node =
+  let predecessors = Hashtbl.create 64 in
+  let step u v =
+    Hashtbl.add successors u v;
+    Hashtbl.add predecessors v u
+  in
+  List.iter (fun (u, _, v) -> step u v) (intra_edges g);
+  List.iter (fun (u, _, _, after) -> step u after) (call_edges g);
+  let rec visit edges owner node =
     if not (Hashtbl.mem table node) then begin
       Hashtbl.replace table node owner;
-      List.iter (visit owner) (Hashtbl.find_all successors node)
+      List.iter (visit edges owner) (Hashtbl.find_all edges node)
     end
   in
+  let nodes = C.cfg_node_list g in
   List.iter
     (function
-      | C.FunctionEntry p as entry -> visit p entry
-      | C.FunctionResult p as result -> Hashtbl.replace table result p
-      | C.Statement _ -> ())
-    (C.cfg_node_list g);
+      | C.FunctionEntry p as entry -> visit successors p entry | _ -> ())
+    nodes;
+  List.iter
+    (function
+      | C.FunctionResult p as result ->
+          Hashtbl.replace table result p;
+          List.iter (visit predecessors p)
+            (Hashtbl.find_all predecessors result)
+      | _ -> ())
+    nodes;
   fun node -> Option.value ~default:"" (Hashtbl.find_opt table node)
 
 (* The variables an expression mentions, once each, in order of first occurrence. *)

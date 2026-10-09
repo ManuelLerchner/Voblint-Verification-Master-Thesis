@@ -18,10 +18,12 @@ clusters:
     main_pp20_ctx0
     main_entry_main_ctx0
   cluster_ctx_1: scale / [1,1]
+    scale_pp3_ctx0
     scale_exit_scale_ctx0
     scale_pp2_ctx0
     scale_entry_scale_ctx0
   cluster_ctx_2: wrap / [1,1]
+    wrap_pp6_ctx0
     wrap_exit_wrap_ctx0
     wrap_pp4_ctx0
     wrap_pp5_ctx0
@@ -32,10 +34,12 @@ clusters:
     record_pp0_ctx0
     record_entry_record_ctx0
   cluster_ctx_4: scale / [4,4]
+    scale_pp3_ctx1
     scale_exit_scale_ctx1
     scale_pp2_ctx1
     scale_entry_scale_ctx1
   cluster_ctx_5: wrap / [4,4]
+    wrap_pp6_ctx1
     wrap_exit_wrap_ctx1
     wrap_pp4_ctx1
     wrap_pp5_ctx1
@@ -150,9 +154,13 @@ nodes:
         b=⊤
         i=⊤
         share=⊤
+  scale_pp3_ctx0: pp3 [unreachable]
+      unreachable
   scale_exit_scale_ctx0: exit_scale
       interval:
         v=[1,1]
+  wrap_pp6_ctx0: pp6 [unreachable]
+      unreachable
   wrap_exit_wrap_ctx0: exit_wrap
       interval:
         w=[1,1]
@@ -187,9 +195,13 @@ nodes:
   record_entry_record_ctx0: entry_record
       interval:
         amount=[3,3]
+  scale_pp3_ctx1: pp3 [unreachable]
+      unreachable
   scale_exit_scale_ctx1: exit_scale
       interval:
         v=[4,4]
+  wrap_pp6_ctx1: pp6 [unreachable]
+      unreachable
   wrap_exit_wrap_ctx1: exit_wrap
       interval:
         w=[4,4]
@@ -232,8 +244,12 @@ edges:
   record_pp1_ctx1 -> record_exit_record_ctx1: return
   scale_pp2_ctx0 -> scale_exit_scale_ctx0: return v * 2
   scale_pp2_ctx1 -> scale_exit_scale_ctx1: return v * 2
+  scale_pp3_ctx0 -> scale_exit_scale_ctx0: return
+  scale_pp3_ctx1 -> scale_exit_scale_ctx1: return
   wrap_pp5_ctx0 -> wrap_exit_wrap_ctx0: return r
   wrap_pp5_ctx1 -> wrap_exit_wrap_ctx1: return r
+  wrap_pp6_ctx0 -> wrap_exit_wrap_ctx0: return
+  wrap_pp6_ctx1 -> wrap_exit_wrap_ctx1: return
   main_pp7_ctx0 -> main_pp8_ctx0: i := 0
   main_pp8_ctx0 -> main_pp9_ctx0: [i < 5]
   main_pp8_ctx0 -> main_pp10_ctx0: ![i < 5]

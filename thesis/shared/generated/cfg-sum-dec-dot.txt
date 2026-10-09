@@ -5,6 +5,7 @@ digraph AnalysisCFG {
   subgraph cluster_ctx_0 {
     label="dec / unit";
     style=rounded; color=gray70; penwidth=1;
+    dec_pp1_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp1\nunreachable",tooltip="pp1\nunreachable"];
     dec_exit_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_dec",tooltip="exit_dec\ninterval:\n  x=[-∞,2]"];
     dec_pp0_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp0",tooltip="pp0\ninterval:\n  x=[-∞,2]"];
     dec_entry_dec_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_dec",tooltip="entry_dec\ninterval:\n  x=[-∞,2]"];
@@ -13,6 +14,7 @@ digraph AnalysisCFG {
     label="sum / unit";
     style=rounded; color=gray70; penwidth=1;
     sum_pp3_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp3",tooltip="pp3\ninterval:\n  n=[-∞,0]\n  m=⊤\n  r=⊤"];
+    sum_pp8_ctx0 [shape=box,style="rounded,dashed,filled",color=gray45,fillcolor=gray90,fontcolor=gray35,label="pp8\nunreachable",tooltip="pp8\nunreachable"];
     sum_exit_sum_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="exit_sum",tooltip="exit_sum\ninterval:\n  n=[-∞,2]\n  m=⊤\n  r=⊤"];
     sum_pp2_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp2",tooltip="pp2\ninterval:\n  n=[-∞,2]\n  m=⊤\n  r=⊤"];
     sum_pp5_ctx0 [shape=box,style=filled,fillcolor=lightgreen,label="pp5",tooltip="pp5\ninterval:\n  n=[1,2]\n  m=⊤\n  r=⊤"];
@@ -30,10 +32,12 @@ digraph AnalysisCFG {
     main_entry_main_ctx0 [shape=doublecircle,color=orange,style=filled,fillcolor=lightyellow,label="entry_main",tooltip="entry_main\ninterval:\n  x=⊤"];
   }
   dec_pp0_ctx0 -> dec_exit_dec_ctx0 [weight=20,label="return x - 1"];
+  dec_pp1_ctx0 -> dec_exit_dec_ctx0 [weight=20,label="return"];
   sum_pp2_ctx0 -> sum_pp3_ctx0 [weight=20,label="[n < 1]"];
   sum_pp2_ctx0 -> sum_pp5_ctx0 [weight=20,label="![n < 1]"];
   sum_pp3_ctx0 -> sum_exit_sum_ctx0 [weight=20,label="return 0"];
   sum_pp7_ctx0 -> sum_exit_sum_ctx0 [weight=20,label="return r + n"];
+  sum_pp8_ctx0 -> sum_exit_sum_ctx0 [weight=20,label="return"];
   main_pp10_ctx0 -> main_pp11_ctx0 [weight=20,label="check(x == 3)"];
   main_pp11_ctx0 -> main_exit_main_ctx0 [weight=20,label="return"];
   dec_entry_dec_ctx0 -> dec_pp0_ctx0 [weight=20,label="body(dec)"];

@@ -382,11 +382,13 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       "pp3@c0 -> Seed(bump)@c1": (bend: 25deg),
       "pp3@c0 -> exit_bump@c1": (bend: -20deg, side: right),
       "exit_bump@c1 -> pp0@c1": (bend: -45deg, side: right),
+      "exit_bump@c1 -> pp1@c1": (bend: -30deg, side: right),
       "pp0@c1 -> entry_bump@c1": (bend: -45deg, side: right),
       "entry_bump@c1 -> Seed(bump)@c1": (bend: -45deg, side: right),
       "pp4@c0 -> Seed(bump)@c2": (bend: -25deg, side: right),
       "pp4@c0 -> exit_bump@c2": (bend: 40deg),
       "exit_bump@c2 -> pp0@c2": (bend: 45deg),
+      "exit_bump@c2 -> pp1@c2": (bend: 30deg),
       "pp0@c2 -> entry_bump@c2": (bend: 45deg),
       "entry_bump@c2 -> Seed(bump)@c2": (bend: 45deg),
     )
@@ -434,6 +436,7 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       wnode((1.6, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
       wnode((1.6, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
       wnode((1.6, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
+      wnode((2.6, 2), "pp1@c1", [#raw("pp1"), $c_1$], color: vb.muted),
       wnode(
         (-1.6, 1.8),
         "Seed(bump)@c2",
@@ -443,6 +446,7 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       wnode((-1.6, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
       wnode((-1.6, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
       wnode((-1.6, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),
+      wnode((-2.6, 3.8), "pp1@c2", [#raw("pp1"), $c_2$], color: vb.muted),
       cfg("entry_main@c0", "pp2@c0", lab: [body(main)], side: right),
       cfg("pp4@c0", "pp5@c0", lab: [check(a == 6)], side: left),
       cfg("pp5@c0", "pp6@c0", lab: [check(b == 5)], side: left),
@@ -450,9 +454,11 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       cfg("Seed(bump)@c1", "entry_bump@c1", lab: [seed read], side: right),
       cfg("entry_bump@c1", "pp0@c1", lab: [body(bump)], side: right),
       cfg("pp0@c1", "exit_bump@c1", lab: [return n + 1], side: right),
+      cfg("pp1@c1", "exit_bump@c1", lab: [return], side: right),
       cfg("Seed(bump)@c2", "entry_bump@c2", lab: [seed read], side: left),
       cfg("entry_bump@c2", "pp0@c2", lab: [body(bump)], side: left),
       cfg("pp0@c2", "exit_bump@c2", lab: [return n + 1], side: left),
+      cfg("pp1@c2", "exit_bump@c2", lab: [return], side: left),
       .._trace.arrows.pairs().map(((k, ph)) => step(k, ph)),
     )
   },
@@ -462,7 +468,9 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
     edges, including a seed feeding its entry; blue dashed arrows are the
     solver's queries and publications, labeled with their phases. The solve
     runs backwards from the result of `main` and demands the copies of `bump`
-    for $c_1$ (right) and $c_2$ (left) as it discovers those contexts.],
+    for $c_1$ (right) and $c_2$ (left) as it discovers those contexts. Grey
+    `pp1` is the dead end of the body of `bump`, which always returns
+    (@sec:cert-forward); its value stays #lbot.],
 ) <fig:eq-walk>
 
 The checks at `pp4` and `pp5` read the solved values
@@ -544,168 +552,60 @@ $e_1 lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$.
 The solver discovers unknowns backwards from the result of `main`. The
 soundness proof follows executions forwards from the entry, and each step uses
 the bound (C3) at the node the execution moves to, so it needs every node an
-execution visits to be solved. Soundness thus works in the opposite direction
-to the solver. The argument is the same in every context, so below we speak of
-nodes rather than unknowns.
+execution visits to be solved. The argument is the same in every context, so
+below we speak of nodes rather than unknowns.
 
-In most of the program the two agree. The solver works backwards: a node's
-equation reads its predecessors, so by (C2) every node that leads to a solved
-result is solved as well. The exception is code after a `return`. It is
-compiled into the graph, although no execution reaches it, and parts of it may
-lead nowhere. In @fig:cert-forward, the dead `if` on line 3 is solved, since it
-reaches the result through `return 1`. Its successor `b = 2` on line 6 is not,
-since the result is unreachable from there. So the proof cannot argue that the
-next node is solved because the current one is.
-
-No execution reaches line 3, so the failing step never happens. The proof only
-needs a region of the graph that contains the entry, that executions cannot
-leave, and in which every node leads to a solved result. To prove these
-properties once for every solve, the region should be read off the program
-text, independently of a particular solve. _Liveness_ provides such a region:
-it marks the code that no preceding `return` cuts off. A command _can
-complete normally_ if it can end without executing a `return`. Assignments and
-calls can, `return` cannot, an `if` can when one of its branches can, and a
-loop always counts as completing normally. A statement is _live_ if, in each
-sequence that encloses it, every command before it can complete normally. In
-@fig:cert-forward, `return b` cannot complete normally, so lines 3 to 6 are not
-live.
-
-// The markers tie lines of the listing to points of the diagram beside it.
-// Solved nodes are circles, the unsolved node a grey square, so the two
-// differ in shape as well as colour.
-#let _badge(n, col, solved, r: 0.6em) = {
-  let label = align(center + horizon, text(
-    size: 5.5pt,
-    fill: col.darken(20%),
-    weight: "bold",
-    str(n),
-  ))
-  box(baseline: 20%, if solved {
-    circle(radius: r, stroke: 0.6pt + col, fill: col.lighten(80%), inset: 0pt, label)
-  } else {
-    rect(
-      width: 2 * r,
-      height: 2 * r,
-      radius: 1pt,
-      stroke: 0.6pt + col,
-      fill: col.lighten(80%),
-      inset: 0pt,
-      label,
-    )
-  })
-}
+The two directions meet through (C2). A node's equation reads its
+predecessors, and the node after a call reads the call site, so every node
+that reaches a solved result along such steps is solved as well. It therefore
+suffices that every node of a procedure reaches the procedure's result. Code
+after a `return` is the case to check, since no execution reaches it but the
+compiler still compiles it. In @fig:cert-forward, line 3 reaches the result
+through `return 1`. Line 6 continues to the end of the body, and the compiler
+ends every body with a return edge without a value (@sec:compile), so line 6
+reaches the result as well. Once the result of `f` is solved, (C2) therefore
+makes every node of `f` solved, dead code included.
 
 #figure(
   {
     show raw: set text(size: 7pt)
-    let mark(line, n, col, solved) = (
-      line: line,
-      start: 2,
-      end: none,
-      fill: col,
-      tag: [#h(2pt)#_badge(n, col, solved, r: 0.47em)],
-    )
+    let mark(line) = (line: line, start: 2, end: none, fill: vb.muted)
     // `main` may not return, so the example is a callee; the link opens it with its caller.
     let program = read("/shared/programs/live-nodes.vimp").trim()
-    let code = listing(
+    box(width: 5cm, listing(
       lang: "c",
       program.split("\nfun main").first(),
       program: program,
-      highlight-stroke: _ => none,
-      highlight-fill: _ => none,
-      highlight-inset: 0.5pt,
-      highlight-outset: 0pt,
-      highlight-clip: false,
-      highlights: (
-        mark(2, 1, vb.proved, true),
-        mark(3, 2, vb.unproved, true),
-        mark(6, 3, vb.muted, false),
-      ),
-    )
-    let cones = cetz.canvas(length: 1cm, {
-      import cetz.draw: *
-      let (w, h) = (2.3, 2.8)
-      let lab(p, body, col: vb.muted) = content(p, text(size: 6.5pt, fill: col, body))
-      let solved = ((0, 0), (-w, h), (w, h))
-      let reached = ((0, h), (-w, 0), (w, 0))
-      line(..solved, close: true, stroke: none, fill: vb.accent.lighten(90%))
-      // The parts of the forward cone outside the solved set hold no node.
-      for sx in (-1, 1) {
-        line(
-          (0, 0),
-          (sx * w, 0),
-          (sx * w / 2, h / 2),
-          close: true,
-          stroke: none,
-          fill: vb.muted.lighten(80%),
-        )
-        lab((sx * 1.4, 0.4), [proved\ empty])
-      }
-      line(
-        (0, h),
-        (w / 2, h / 2),
-        (0, 0),
-        (-w / 2, h / 2),
-        close: true,
-        stroke: none,
-        fill: vb.proved.lighten(80%),
-      )
-      line(..solved, close: true, stroke: 0.7pt + vb.accent)
-      line(..reached, close: true, stroke: (paint: vb.proved, thickness: 0.7pt, dash: "dashed"))
-      lab((0, h + 0.2), [entry of `f`])
-      lab((0, -0.2), [result of `f`])
-      content(
-        (w + 0.1, h - 0.15),
-        text(size: 6.5pt, fill: vb.accent)[can reach\ solved result],
-        anchor: "west",
-      )
-      content(
-        (w * 0.6 + 0.3, h * 0.4),
-        text(size: 6.5pt, fill: vb.proved)[reachable\ from entry],
-        anchor: "west",
-      )
-      lab((0, 0.85), [live], col: vb.proved)
-      // Outside both regions: neither reachable from the entry nor solved.
-      content(
-        (-2.3, 1.45),
-        text(size: 6.5pt, fill: vb.muted)[neither reached\ nor solved],
-        anchor: "north",
-      )
-      let (p1, p2, p3) = ((0, 1.8), (-1.35, 2.45), (-2.3, 1.75))
-      content(p1, _badge(1, vb.proved, true))
-      content(p2, _badge(2, vb.unproved, true))
-      content(p3, _badge(3, vb.muted, false))
-    })
-    grid(
-      columns: (auto, auto),
-      column-gutter: 2.5em,
-      align: horizon,
-      box(width: 5cm, code), cones,
-    )
+      highlights: (mark(3), mark(6)),
+    ))
   },
   placement: none,
   kind: image,
-  caption: [Backward solving and forward execution in `f`, schematic on the
-    right. Blue: nodes from which the solved result of `f` is reachable.
-    Dashed green: nodes reachable from the entry. The live nodes, which the
-    soundness proof uses, lie in both, and the proof shows that no execution
-    visits a node that is reachable from the entry but not solved. Line 3 is solved
-    but unreachable (circle 2); line 6 is neither (grey square 3). The shapes
-    show direction only, not graph geometry.],
+  caption: [Code after a `return` in `f`. No execution reaches lines 3 to 6,
+    yet every line reaches the result of `f`: line 3 through `return 1`, line 6
+    through the return edge that ends the body. A solve that solves the result
+    of `f` therefore solves all of them.],
 ) <fig:cert-forward>
 
-Executions never leave live code, because every edge out of a live node leads
-to a live node and the entry of a procedure is live. Every live node also
-reaches its procedure's result along steps that equations read, so a live node
-of a procedure whose result is solved is itself solved. The proof therefore
-uses the _live unknowns_, the solved nodes that are live in a procedure whose
-result is solved. For the same reasons no execution visits the grey corners of
-@fig:cert-forward.
+The proof uses the solved nodes of procedures whose result is solved in the
+same context. An execution starts at the entry of `main`, whose result is the
+query and therefore solved by (C1). Intra edges and the step from a call site
+to its continuation stay inside a procedure. A call that enters a callee reads
+the callee's result in the context it computes, so by (C2) that result is
+solved too. Executions therefore never leave this set.
 
-In Isabelle, completing normally is #isaconst("falls_through") and liveness
-is #isaconst("prog_live"); #isathm("prog_live_reaches"),
-#isathm("prog_live_intra"), #isathm("prog_live_calls") and
-#isathm("prog_live_entry") prove these properties. The restricted set is
+In a body that always returns, the return edge that ends it starts in dead
+code, where the analyzer computes #lbot, so it adds nothing to the result.
+Omitting the edge for such bodies would save one dead node each. Code after a
+`return` could then end in a node without successors, and the proof would need
+a syntactic description of the code that no `return` cuts off. The compiler
+therefore always emits the edge.
+
+In Isabelle, the nodes of a procedure are #isaconst("prog_node").
+#isathm("prog_node_reaches") proves that each reaches the procedure's result,
+and #isathm("prog_node_entry"), #isathm("prog_node_intra") and
+#isathm("prog_node_calls") that executions stay among them. The restricted set
+is
 #isaconst("dg_analysis.live_unknowns", thy: "DG_Live_Unknowns", display: "live_unknowns"),
 and
 #isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")

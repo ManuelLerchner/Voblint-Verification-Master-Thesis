@@ -377,6 +377,7 @@ lemma ret_intra:
   "intra (prog_cfg ret_prog) =
      {(FunctionEntry (STR ''f''), EA_Body (STR ''f''), Statement 0),
       (Statement 0, EA_Ret (Some (V (STR ''n''))) (STR ''f''), FunctionResult (STR ''f'')),
+      (Statement 1, EA_Ret None (STR ''f''), FunctionResult (STR ''f'')),
       (FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 2),
       (Statement 4, EA_Ret None (STR ''main''), FunctionResult (STR ''main''))}"
   unfolding prog_cfg_def by eval

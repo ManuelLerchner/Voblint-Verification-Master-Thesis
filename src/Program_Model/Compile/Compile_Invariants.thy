@@ -316,24 +316,25 @@ text \<open>A compiled fragment's entry reaches its continuation or its procedur
 
 text \<open>The fragment-relative forms the compiler inductions use: an edge of a fragment
   included in the graph.\<close>
-lemma cfg_reaches_intra_sub:
-  "(u, a, v) \<in> E \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> cfg_reaches g u v"
-  by (blast intro: cfg_reaches_intra)
+lemma local_reaches_intra_sub:
+  "(u, a, v) \<in> E \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> local_reaches g u v"
+  by (auto intro: local_reaches_intra_step)
 
-lemma cfg_reaches_comb_caller_sub:
-  "(c, ca, ce, k) \<in> K \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow> cfg_reaches g c k"
-  by (blast intro: cfg_reaches_comb_caller)
+lemma local_reaches_comb_caller_sub:
+  "(c, ca, FunctionEntry q, k) \<in> K \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow> local_reaches g c k"
+  by (auto intro: local_reaches_comb_step)
 
 subsection \<open>Compiled entry reaches its exit or its procedure result\<close>
 
 text \<open>\<^const>\<open>falls_through\<close> decides where a fragment's entry leads: a fragment that can
   complete normally reaches its continuation; one that cannot reaches the enclosing
   procedure's \<^term>\<open>FunctionResult\<close> along an explicit \<^const>\<open>Return\<close> edge.  The second
-  direction is what lets \<open>compile_proc\<close> leave the epilogue node unallocated.\<close>
+  direction is what lets \<open>compile_proc\<close> leave the epilogue node unallocated.  Both stay
+  inside the activation, so they hold for \<^const>\<open>local_reaches\<close>.\<close>
 lemma compile_reaches_falls_through:
   assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
     and "falls_through c"
-  shows "cfg_reaches g en k"
+  shows "local_reaches g en k"
   using assms
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
@@ -342,11 +343,11 @@ proof (induction c arbitrary: k n n' en E K)
     and c2: "compile \<Pi> p c2 k (n + csize c1) = (n2, Statement (n + csize c1), E2, K2)"
     and res: "en = Statement n" "E = E1 \<union> E2" "K = K1 \<union> K2"
     by (rule compile_SeqE)
-  have "cfg_reaches g (Statement n) (Statement (n + csize c1))"
+  have "local_reaches g (Statement n) (Statement (n + csize c1))"
     using Seq.IH(1)[OF c1] Seq.prems res by auto
-  moreover have "cfg_reaches g (Statement (n + csize c1)) k"
+  moreover have "local_reaches g (Statement (n + csize c1)) k"
     using Seq.IH(2)[OF c2] Seq.prems res by auto
-  ultimately show ?case unfolding res(1) by (rule cfg_reaches_trans)
+  ultimately show ?case unfolding res(1) by (rule local_reaches_trans)
 next
   case (If b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
@@ -359,10 +360,10 @@ next
             \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
       "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have b1: "cfg_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
-    and b2: "cfg_reaches g (Statement n)
+  have b1: "local_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
+    and b2: "local_reaches g (Statement n)
       (if c2 = SKIP then k else Statement (Suc n + csize c1))"
-    using res(2) If.prems(2) by (blast intro: cfg_reaches_intra_sub)+
+    using res(2) If.prems(2) by (blast intro: local_reaches_intra_sub)+
   from If.prems(4) consider "falls_through c1" | "falls_through c2" by auto
   then show ?case
   proof cases
@@ -372,10 +373,10 @@ next
       case True with b1 res(1) show ?thesis by simp
     next
       case False
-      have "cfg_reaches g (Statement (Suc n)) k"
+      have "local_reaches g (Statement (Suc n)) k"
         using If.IH(1)[OF c1] If.prems res 1 False by auto
       with b1 False show ?thesis unfolding res(1)
-        by (simp only: if_False) (rule cfg_reaches_trans)
+        by (simp only: if_False) (rule local_reaches_trans)
     qed
   next
     case 2
@@ -384,19 +385,19 @@ next
       case True with b2 res(1) show ?thesis by simp
     next
       case False
-      have "cfg_reaches g (Statement (Suc n + csize c1)) k"
+      have "local_reaches g (Statement (Suc n + csize c1)) k"
         using If.IH(2)[OF c2] If.prems res 2 False by auto
       with b2 False show ?thesis unfolding res(1)
-        by (simp only: if_False) (rule cfg_reaches_trans)
+        by (simp only: if_False) (rule local_reaches_trans)
     qed
   qed
 qed (auto simp: Let_def split: prod.splits option.splits
-     intro: cfg_reaches_intra_sub cfg_reaches_comb_caller_sub)
+     intro: local_reaches_intra_sub local_reaches_comb_caller_sub)
 
 lemma compile_reaches_returns:
   assumes "compile \<Pi> p c k n = (n', en, E, K)" and "E \<subseteq> intra g" and "K \<subseteq> calls g"
     and "\<not> falls_through c"
-  shows "cfg_reaches g en (FunctionResult p)"
+  shows "local_reaches g en (FunctionResult p)"
   using assms
 proof (induction c arbitrary: k n n' en E K)
   case (Seq c1 c2)
@@ -411,11 +412,11 @@ proof (induction c arbitrary: k n n' en E K)
     then show ?thesis using Seq.IH(1)[OF c1] Seq.prems res by auto
   next
     case True
-    have "cfg_reaches g (Statement n) (Statement (n + csize c1))"
+    have "local_reaches g (Statement n) (Statement (n + csize c1))"
       using compile_reaches_falls_through[OF c1] Seq.prems res True by auto
-    moreover have "cfg_reaches g (Statement (n + csize c1)) (FunctionResult p)"
+    moreover have "local_reaches g (Statement (n + csize c1)) (FunctionResult p)"
       using Seq.IH(2)[OF c2] Seq.prems res True by auto
-    ultimately show ?thesis unfolding res(1) by (rule cfg_reaches_trans)
+    ultimately show ?thesis unfolding res(1) by (rule local_reaches_trans)
   qed
 next
   case (If b c1 c2)
@@ -429,40 +430,38 @@ next
       "K = K1 \<union> K2"
     by (rule compile_IfE)
   have nonempty: "c1 \<noteq> SKIP" using If.prems(4) by auto
-  have "cfg_reaches g (Statement n) (Statement (Suc n))"
-    using res(2) If.prems(2) nonempty by (auto intro: cfg_reaches_intra_sub)
-  moreover have "cfg_reaches g (Statement (Suc n)) (FunctionResult p)"
+  have "local_reaches g (Statement n) (Statement (Suc n))"
+    using res(2) If.prems(2) nonempty by (auto intro: local_reaches_intra_sub)
+  moreover have "local_reaches g (Statement (Suc n)) (FunctionResult p)"
     using If.IH(1)[OF c1] If.prems res nonempty by auto
-  ultimately show ?case unfolding res(1) by (rule cfg_reaches_trans)
-qed (auto simp: Let_def split: prod.splits option.splits intro: cfg_reaches_intra_sub)
+  ultimately show ?case unfolding res(1) by (rule local_reaches_trans)
+qed (auto simp: Let_def split: prod.splits option.splits intro: local_reaches_intra_sub)
 
 lemma compile_proc_reaches_result:
   assumes "compile_proc \<Pi> p decl n = (n', E, K)"
       and "E \<subseteq> intra g" "K \<subseteq> calls g"
-  shows "cfg_reaches g (FunctionEntry p) (FunctionResult p)"
+  shows "local_reaches g (FunctionEntry p) (FunctionResult p)"
 proof -
   let ?r = "n + csize (body decl)"
   obtain Eb where
       body: "compile \<Pi> p (body decl) (Statement ?r) n = (?r, Statement n, Eb, K)"
     and E_eq: "E = insert (FunctionEntry p, EA_Body p, Statement n)
-                     (if falls_through (body decl)
-                      then insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb
-                      else Eb)"
+                     (insert (Statement ?r, EA_Ret None p, FunctionResult p) Eb)"
     by (rule compile_procE[OF assms(1)])
-  have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by (auto split: if_splits)
-  have entry: "cfg_reaches g (FunctionEntry p) (Statement n)"
-    using E_eq assms(2) by (blast intro: cfg_reaches_intra_sub)
+  have Ebg: "Eb \<subseteq> intra g" using E_eq assms(2) by auto
+  have entry: "local_reaches g (FunctionEntry p) (Statement n)"
+    using E_eq assms(2) by (blast intro: local_reaches_intra_sub)
+  have epi: "local_reaches g (Statement ?r) (FunctionResult p)"
+    using E_eq assms(2) by (blast intro: local_reaches_intra_sub)
   show ?thesis
   proof (cases "falls_through (body decl)")
     case True
-    have "cfg_reaches g (Statement ?r) (FunctionResult p)"
-      using E_eq assms(2) True using cfg_reaches_intra_sub by auto
-    with compile_reaches_falls_through[OF body Ebg assms(3) True] entry show ?thesis
-      by (blast intro: cfg_reaches_trans)
+    with compile_reaches_falls_through[OF body Ebg assms(3) True] entry epi show ?thesis
+      by (blast intro: local_reaches_trans)
   next
     case False
     from compile_reaches_returns[OF body Ebg assms(3) False] entry show ?thesis
-      by (rule cfg_reaches_trans[rotated])
+      by (rule local_reaches_trans[rotated])
   qed
 qed
 
@@ -478,7 +477,7 @@ proof -
     by (rule compile_prog_intra_split)
   have "cfg_reaches (compile_prog \<Pi> ps)
           (FunctionEntry prog_main_name) (FunctionResult prog_main_name)"
-    using g by (intro compile_proc_reaches_result[OF cmain]) auto
+    using g by (intro local_reaches_cfg_reaches compile_proc_reaches_result[OF cmain]) auto
   then show ?thesis by simp
 qed
 
