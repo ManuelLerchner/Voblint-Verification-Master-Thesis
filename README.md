@@ -9,6 +9,7 @@
 [![CI](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml/badge.svg)](https://github.com/ManuelLerchner/Voblint-Verification-Master-Thesis/actions/workflows/ci.yml)
 [![Ask DeepWiki](https://deepwiki.com/badge.svg)](https://deepwiki.com/ManuelLerchner/Voblint-Verification-Master-Thesis)
 ![Isabelle](https://img.shields.io/badge/Isabelle-2025--2-blue)
+[![DOI](https://zenodo.org/badge/1222030547.svg)](https://doi.org/10.5281/zenodo.23260696)
 
 ## What is verified?
 

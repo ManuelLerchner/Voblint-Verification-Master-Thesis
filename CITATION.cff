@@ -6,6 +6,7 @@ title: >-
 type: software
 version: 2.1.0
 date-released: "2026-10-09"
+doi: 10.5281/zenodo.23260696
 license: BSD-3-Clause
 authors:
   - family-names: Lerchner
