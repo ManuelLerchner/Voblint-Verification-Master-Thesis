@@ -225,4 +225,4 @@ edges:
   main_pp19_ctx0 -> wrap_entry_wrap_ctx0: enter wrap(4)
   wrap_exit_wrap_ctx0 -> main_pp20_ctx0: combine b := wrap(4)
   main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
-tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:266:3: warning: possible division by zero: 10 / (a - 2) [interval]
+tests/regression/24-site-figures/known-imprecision/11-demo_no_context.vimp:274:3: warning: possible division by zero: 10 / (a - 2) [interval]

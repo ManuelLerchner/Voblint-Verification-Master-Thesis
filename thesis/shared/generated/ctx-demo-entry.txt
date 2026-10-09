@@ -288,4 +288,4 @@ edges:
   main_pp19_ctx0 -> wrap_entry_wrap_ctx1: enter wrap(4)
   wrap_exit_wrap_ctx1 -> main_pp20_ctx0: combine b := wrap(4)
   main_pp19_ctx0 -> main_pp20_ctx0: call-to-return wrap
-tests/regression/24-site-figures/precision/43-demo_entry_state.vimp:317:3: error: division by zero whenever this operation is evaluated: 10 / (a - 2) [interval]
+tests/regression/24-site-figures/precision/43-demo_entry_state.vimp:333:3: error: division by zero whenever this operation is evaluated: 10 / (a - 2) [interval]
