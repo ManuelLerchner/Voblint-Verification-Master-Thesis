@@ -297,6 +297,8 @@ Results in the same theory specialise the guarantee to what the report shows:
 - [`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Analysis_Certified.thy): at a reachable point with no arithmetic
   diagnostic, every divisor in the point's expressions is nonzero in every store
   that reaches it.
+- [`run_voblint_arithmetic_refuted`](src/Executable_Surface/CLI/Analysis_Certified.thy): the divisor
+  of an `error` is zero in every store that reaches its point.
 
 <details>
 <summary>Exact statements</summary>
@@ -338,6 +340,14 @@ theorem run_voblint_arithmetic_safe:
   shows "arithmetic_safe_at (prog_cfg p) v s"
 ```
 
+```isabelle
+theorem run_voblint_arithmetic_refuted:
+  assumes "run_voblint config p = Analysed res"
+      and "d ∈ set (report_diagnostics res)" and "diagnostic_verdict d = Check_Refuted"
+      and "s ∈ 𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ (diagnostic_point d)"
+  shows "⟦arithmetic_divisor (diagnostic_obligation d)⟧⇩e s = 0"
+```
+
 </details>
 
 ### Limits
@@ -356,7 +366,7 @@ not be `DEAD`.
 | VIMP execution from an already-constructed AST | Solver termination for arbitrary programs |
 | Compilation to the procedure-aware CFG | Lexing and parsing |
 | Equation generation and the computed post-solution | Isabelle code generation, the OCaml compiler and runtime |
-| The report's states, check rows under their labels, arithmetic safety at quiet points | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
+| The report's states, check rows under their labels, arithmetic safety at quiet points, zero divisors at errors | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
 | | Completeness and precision |
 
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)

@@ -23,8 +23,10 @@ abstract: >-
   operational semantics, executable equation generation, and a vendored
   verified side-effecting top-down solver into one soundness statement about
   the analyzer's own output. The statement covers every configuration the
-  tool offers -- five abstract domains, five global update rules, and
-  context-insensitive, entry-state and call-string context policies -- and is
+  tool offers -- any cooperating combination of five numeric analyses and a
+  relational order analysis, five global update rules, context-insensitive,
+  entry-state and call-string context policies, and flow-sensitive or
+  flow-insensitive program globals -- and is
   stated about the same operation that is exported to OCaml and runs in the
   command-line tool and the browser playground. Solver termination is a
   per-program premise; lexing, parsing, code generation and rendering lie

@@ -23,8 +23,8 @@ a report, the report covers every store reached by a finite execution from an
 initial store with zeroed globals, and every definite verdict at the
 corresponding program point holds for that store, without claiming that the
 point itself is reached. Further theorems show that a check reported #verdict("DEAD") is
-unreachable and that a reached divisor is nonzero wherever no warning is
-issued. To our knowledge, Voblint is the first mechanized analyzer whose
+unreachable and that a reached divisor is nonzero wherever no warning is issued
+and zero wherever an error is reported. To our knowledge, Voblint is the first mechanized analyzer whose
 soundness proof connects a source semantics to a side-effecting constraint
 system and its verified solver.
 
