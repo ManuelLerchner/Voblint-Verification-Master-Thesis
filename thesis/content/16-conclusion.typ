@@ -9,23 +9,19 @@ executions to the verdicts of the exported function. The result holds for a
 scalar language with recursive procedures and is a partial-correctness result,
 so it covers every answer the analyzer returns. The proof follows one chain.
 Graph runs simulate source executions, and valid activation traces represent
-graph runs. The context read off each activation sorts the traces into the
-activation collecting semantics. Context-indexed equations with routed calls
+graph runs. Each activation carries the contexts its policy admits, and the
+activation collecting semantics groups the traces by these contexts, so one
+trace may lie in the sets of several contexts. Context-indexed equations with routed calls
 cover this semantics at every context, provided the analysis and the context
 policy meet their separate obligations. The solver enters only through a
 post-solution certificate, and the source-level theorem reads the verdicts off
-its result. A non-relational domain supplies only primitives proved sound, and
-a generic builder in the style of Nipkow and Klein derives its analysis from
-them. Analyses that answer one another's queries combine under the same
-theorem, each proving one obligation that names no partner.
+its result.
 
 The central contribution is this composition. A context-free activation
 semantics, relational context routing, analysis-local soundness obligations and
 a verified side-effecting solver together yield one guarantee from source
 executions to verdicts. The proved function is the analyzer that the
-command-line tool and the browser playground run (@ch:executable). @ch:evaluation assesses how
-strong the result is and where its evidence stops. This chapter discusses the
-design, collects the limitations in one place and outlines future work.
+command-line tool and the browser playground run (@ch:executable).
 
 == Discussion <sec:discussion>
 
@@ -58,10 +54,10 @@ unfolds them would have to be redone.
 Machine integers fit this case. They change the step functions, the generic
 derivation in #isalocale("sound_nonrelational_ops") and each domain's
 soundness proofs for its primitives. Routing and the solver certificate do not
-mention arithmetic. The numeric domains themselves would need variants that
-account for wrap-around, since classical numeric domains describe ideal
-integers @mine13. A possible overflow could then be reported like the
-arithmetic diagnostics of @sec:verdict-meaning. A C-like treatment of division
+mention arithmetic. For signed overflow, a domain could keep its ideal-integer
+bounds and report an overflow when they exceed the type, as Goblint does
+@saan26phd[§3.3.2]. Unsigned wrap-around would need domain variants, since
+classical numeric domains describe ideal integers @mine13. A C-like treatment of division
 by zero changes more. The semantics would need an error outcome, and the
 verdicts of @sec:verdict-meaning a meaning for it.
 
@@ -72,8 +68,9 @@ introduce their local semantics for this case. A heap adds a store component
 that caller and callee share, so #oblig("RETURN"), the entry pairs and the one
 value per variable in the domains (@sec:vimp) would all change. Threads
 interleave activations, which #isaconst("valid_activation_trace") cannot
-express. The local traces of Schwarz et al. @schwarz21 handle them, but the
-interface would also need synchronization, which it lacks. A new update rule
+express. The local traces of Schwarz et al. @schwarz21 give threads a
+semantics, but that semantics has no procedures @schwarz25phd[§8, p. 277],
+and the interface would also need synchronization, which it lacks. A new update rule
 that meets the vendored interface requires comparatively little change, since
 only
 #isathm("update_rule_update_global_of") splits on the rule. A C front end such
@@ -98,7 +95,7 @@ its local form, and one update rule serves every global unknown of a run
 (@sec:mixed-flow, @sec:relational, @sec:update-rules).
 
 The delivered tools rest on the trusted components of @sec:trust-boundary, and
-every witness proved by evaluation trusts the code generator. No test runs VIMP
+every theorem proved by evaluation trusts the code generator. No test runs VIMP
 programs concretely, since the development has no executable form of
 #isaconst("pstep"). No time or memory measurement is reported. The executable
 keeps proof-oriented data representations, and no data refinement to efficient
@@ -110,22 +107,16 @@ unaffected.
 No general precision,
 optimality or completeness theorem is proved. Completeness would mean that
 every check that holds in all executions is reported as proved. Each precision
-witness concerns one program with fixed analysis settings (@sec:eval-precision).
+example concerns one program with fixed analysis settings (@sec:eval-precision).
 The regression corpus is small and was written or adapted for this work, and
-its expected behavior is the author's reading of each program
-(@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run. The
-playground is illustrative, and no study measures whether it helps a reader.
+its expected verdicts were set by hand, not checked against an independent
+analyzer (@sec:eval-corpus). The Goblint defect of @sec:eval-1161 was not re-run.
 The correspondence with Goblint is architectural. No theorem transfers to its
 OCaml implementation, and no agreement rate between the two analyzers is
 measured (@sec:rel-goblint). The comparison with prior work rests on a targeted
 search rather than a systematic review (@ch:related).
 
 == Outlook <sec:outlook>
-
-Three directions stand out for extending Voblint: a richer source language
-with its semantics, richer analyses, and stronger execution infrastructure,
-from the solver to termination and efficient representations. Voblint also
-relates to Goblint in both directions.
 
 === Extending Voblint <sec:outlook-extending>
 
@@ -140,11 +131,8 @@ _some_ node $v$ is related to the reached source configuration
 (@sec:headline). A residual command records nothing about the occurrence it
 came from (@sec:csim). An elaboration phase would annotate every statement with
 the node the compiler emits for it. Each source configuration would then name
-its node, and the theorem could drop the existential. If elaboration and
-compilation shared the compiler's deterministic numbering (#isaconst("csize"),
-#isaconst("prog_stmt_post_order")), the annotated and emitted nodes would agree
-by construction. The same phase is where a C-like front end resolves names,
-fixes the type of every expression and makes implicit conversions explicit.
+its node, and the theorem could drop the existential. The same phase is where a front end for C resolves names, types
+expressions and makes conversions explicit.
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
@@ -157,13 +145,12 @@ stronger transfer functions than the order analysis could also answer the
 numeric analyses at branches (@sec:relational). Further query kinds would each
 need a truth relation, and analyses with their own globals would need the
 combination to keep these globals apart, as Goblint's MCP does
-(@sec:coop-catalogue). Threads and locks with a thread-local trace semantics
-would allow thread-modular uses of the global unknowns.
+(@sec:coop-catalogue).
 
 Every shipped analysis answers a single entry pair per call, although the
 interface admits several (@sec:calls). Path-sensitive analyses that split a
-call into cases therefore remain future work. The context of an activation
-depends only on how the activation was entered. Digests refine unknowns by
+call into cases therefore remain future work. The contexts of an activation
+depend only on how the activation was entered. Digests refine unknowns by
 other abstractions of a local trace (@sec:rel-goblint). Generalizing
 #isaconst("activation_context_rel") to such abstractions of activation traces
 would allow path- or history-sensitive unknowns, each with its own
@@ -174,8 +161,7 @@ Voblint adapts its equations to the interface of the vendored solver
 writes of one evaluation per target. A version of the vendored solver that does
 the same would let callers publish into callee entries directly and make
 activation seeds and buffering unnecessary. Its partial-correctness proof would
-have to be redone for local side effects. The rest of the chain consumes the
-solver only through the post-solution certificate (@sec:certificate).
+have to be redone for local side effects.
 
 A termination theorem would guarantee an answer for every program. The
 total-correctness result of Tilscher et al. covers the top-down solver without
@@ -192,12 +178,25 @@ Each new analysis only has to meet its own obligations, which mention neither
 the other analyses nor contexts, the solver or the equations
 (@sec:coop-catalogue). This suits development with
 AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
-The obligations are the specification, and the batch build and the drift
-checks of @ch:tooling are the oracle. Counterexample theorems for weakened
-obligations (@sec:eval-1161, @sec:discussion) act as negative tests. The order
-analysis and the query layer of @ch:cooperation were written this way. The guarantee of such
-an analysis rests on the adequacy of the obligations and on
-the trusted base of @sec:trust-boundary.
+Formal verification and agents complement each other here. An agent may
+propose definitions and proofs, but Isabelle checks every proof, and the batch
+build and the drift checks of @ch:tooling reject anything that does not check.
+Counterexample theorems for weakened obligations (@sec:eval-1161,
+@sec:discussion) act as negative tests. Human review can therefore concentrate
+on what no proof settles: whether the base definitions and the obligations state
+the intended meaning (@sec:vimp-vs-c), and whether the trusted base of
+@sec:trust-boundary is acceptable.
+
+The same division applies beyond single analyses. Extending the framework with
+a construct from C, or with a Goblint feature such as path-sensitive entry
+alternatives or further query kinds, changes definitions at several layers.
+Isabelle then reports every proof the change breaks, at whichever layer it
+sits, so an agent can work through the failures one by one while a reviewer
+checks the new definitions, above all the extended source semantics. Goblint
+supplies both the design to follow and test material: its regression programs
+can be adapted as fixtures, as part of the corpus already is (@sec:eval-corpus),
+and its documented defects can be replayed as counterexample theorems
+(@sec:eval-1161). We expect this to make larger extensions practical.
 
 === Voblint and Goblint <sec:outlook-goblint>
 

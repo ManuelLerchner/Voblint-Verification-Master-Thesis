@@ -31,7 +31,9 @@ every global unknown. By @sec:cert-forward, these states cover every
 execution. A user, however, reads neither states nor contexts. The user reads
 a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
-from the solution and why every verdict in it is sound.
+from the solution and why every verdict in it is sound. Neither verdict claims its
+check is reached. #verdict("PROVED") says the condition holds whenever a run
+reaches the check, #verdict("REFUTED") that it fails there (@sec:verdict-meaning).
 
 == From solution to report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
@@ -81,14 +83,14 @@ every store that one of its states there describes, aggregated over all
 contexts the solver solved $v$ in (#isaconst("report_states_at"),
 #isaconst("report_sem")):
 $
-  #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") = union.big_(d in #isai("report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
+  #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") = union.big_(#isai("d \<in> report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
 $
 where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
 configured analyses.
 
 The union drops the contexts on purpose. A context is not part of the
-program's state. It is a label the analysis attaches to a procedure activation
-to keep different calls apart, and the context policy decides which labels
+program's state. It is a label the analysis attaches to procedure activations, possibly
+several to one activation, to keep different calls apart, and the context policy decides which labels
 exist (@sec:eq-routing). A source execution consists of the remaining
 program, a store and a stack of frames, so there is no context it could be
 compared with. A user asks what holds at a program point, whichever call led there, and
@@ -127,6 +129,10 @@ The verdict of the CFG node soundly joins the per-context verdicts of its states
 gives #verdict("PROVED"), the node is #verdict("PROVED"); if every such state
 gives #verdict("REFUTED"), it is #verdict("REFUTED"). If the states disagree,
 or one of them gives #verdict("UNKNOWN"), the node is #verdict("UNKNOWN").
+Disagreement cannot be resolved otherwise. If one context proves `x > 0` and
+another refutes it, the stores reaching $v$ in the first satisfy the condition
+and those in the second violate it, so no single definite verdict holds for
+every store at the node.
 States classified #verdict("DEAD"), the #ctor("Bot") states, are neutral in
 this aggregation, so a node at which the report holds no state, or only
 #ctor("Bot") states, is #verdict("DEAD").
@@ -350,7 +356,9 @@ The report does not say which
 context covers a reached store, so the node verdict joins the context
 verdicts: #verdict(_v1) and #verdict(_v2) give #verdict(_vnode). Without contexts, both calls feed the one seed of `f`, which
 the warrowing update rule widens, and the check is #verdict(_none.at(3)) at
-#raw(_none.at(4)) (claim #claim-ref("chain-split-none")).
+#raw(_none.at(4)) (claim #claim-ref("chain-split-none")). All of these verdicts
+are sound. They differ only in how much the analysis keeps apart, which the
+context policy decides.
 
 == The source-level theorem #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
 
@@ -359,7 +367,10 @@ arbitrary analysis configuration and program, the arguments of
 #isaconst("run_voblint") (@sec:report), so no separate theorem is needed per
 analysis or context policy: whenever the analyzer returns a report, every
 store a finite source execution reaches is covered by that report and
-satisfies its definite verdicts.
+satisfies its definite verdicts. The theorem is about #isaconst("run_voblint")
+itself, the constant that code generation exports, so it concerns the analyzer
+the tools run, up to the trusted code generator and target toolchains
+(@sec:codegen, @sec:trust-boundary).
 #theorem(name: [Source-level soundness of the analyzer], isa: "run_voblint_source_sound")[
   #proved("run_voblint_source_sound")
 ]
@@ -371,7 +382,8 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
   #set enum(numbering: n => "(P" + str(n) + ")")
   + #isai("s0 \<in> cinit_stores \<G>"): the run starts from a store in
     #isaconst("cinit_stores"), the initial stores $S$ of @ch:traces, which zero
-    every global and leave the locals unconstrained.
+    every global, as C does for objects with static storage duration, and leave
+    the locals unconstrained.
   + #isai("\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"):
     a finite #isaconst("pstep") execution of $p$ runs from the body of `main`
     to a configuration with store $s$. Any stopping point is allowed, so
@@ -402,8 +414,8 @@ statement mentions no activation and no context. Source executions carry
 neither, and the report states its guarantee per CFG node (@sec:report), so
 both appear only inside the proof, at the second inclusion of the chain.
 #isathm("run_voblint_spine") keeps them visible: it states the chain once for
-every context policy, together with the activation trace and the context that
-cover the reached store, and each shipped policy discharges its two
+every context policy, together with a representing activation trace and one context it carries
+whose set contains the reached store, and each shipped policy discharges its two
 assumptions.
 
 == What a verdict says about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>

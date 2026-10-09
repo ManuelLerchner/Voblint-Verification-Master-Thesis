@@ -56,7 +56,7 @@ Voblint therefore indexes the unknowns of the equations by contexts. For every
 node $v$ and context $c$ there is a _local_ unknown $(v, c)$, whose value
 $sol(v, c)$ is the abstract state for the activations of context $c$ at $v$.
 These are the indices of the claim. Goblint's local unknowns have the
-#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape].
+#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L26-L28")[same shape] @apinis14[§5.2].
 Besides the local unknowns, the equations have _global_ unknowns without a
 program point (@sec:td). They hold the analysis globals of @sec:shared-facts
 and the entry states that calls publish to their callees.
@@ -240,8 +240,8 @@ classified as bottom is required to have an empty concretization
 == Routing and context policies #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
 
 The analyzer chooses a callee context from abstract information. The concrete
-semantics of @ch:traces also assigns each concrete activation to a context,
-through the context policy $italic("adm")$ of @sec:contexts, and its choice may
+semantics of @ch:traces also assigns each concrete activation a set of
+contexts, through the context policy $italic("adm")$ of @sec:contexts, and this set may
 depend on concrete stores that the analyzer never sees. For the equations to
 be sound, the two choices must fit together. Whenever the concrete semantics
 assigns an activation to a context $c'$, some call must have published to the
@@ -479,8 +479,8 @@ abstract entry state, so the concrete call alone does not determine it.
 
 If the caller's solved state says $x in [4, 5]$ at `bump(x)`, the equations
 publish $n |-> [4, 5]$ to the context $[[4, 5]]$. An execution with $x = 4$
-must then be assigned to $[[4, 5]]$, where its covering entry state was
-published, and not to $[[4, 4]]$.
+must then be admitted in $[[4, 5]]$, where its covering entry state was
+published, and not in $[[4, 4]]$.
 
 The entry-state policy (#isaconst("routed_entry_context_rel")) does exactly
 this. For a call from $s$ with entered store $s'$, it admits $c'$ only when
@@ -491,7 +491,7 @@ gives every covered call such a pair, which is totality.
 
 This policy depends on the solved analysis (@sec:contexts) without circularity:
 the proof fixes $sol$, defines $italic("adm")$ from it, and shows that $sol$
-covers the collecting semantics this $italic("adm")$ induces.
+covers the induced collecting semantics.
 
 == Soundness of the generated system #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-discharge>
 

@@ -145,7 +145,7 @@ analyses can be answered by the meet of their answers. In the example, asked
 #isaconst("EvalInt") $(x == y)$ after both guards, Interval answers
 $ivl(0, 1)$, which holds at every store, and the order analysis answers $1$.
 Their meet is $ivl(0, 1) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combines answers the
-same way.
+same way, as formalized by Apinis @apinis14[§5.5].
 
 A transfer may ask several questions. The framework therefore hands it all
 answers at once, as a _channel_ $italic("ch")$ of type #isatype("channel"), a function
@@ -215,7 +215,7 @@ specification thus also contains entry coverage and the handler law.
 
 The idea is not new. In Astrée an abstract transfer need only cover concrete
 arguments and results that satisfy the constraints of its channels
-@cousot07astree[§§5.3, 6]. Verasco, whose channels follow Astrée's and whose
+@cousot07astree[§§5.3, 6]. Verasco, whose channels are inspired by Astrée's and whose
 term we adopt, proves each transfer function under the hypothesis that the
 channels it receives are correct @jourdan15[§7]. Voblint uses the same form
 for Goblint's queries.

@@ -62,7 +62,7 @@ The assistants' output was not reliable on its own. Agents proposed incorrect
 lemmas and, in one case, introduced a premise into the end-to-end theorem that
 no program satisfied, making the theorem vacuous until the solver run was
 redesigned. Audits of theorem statements and full batch builds exposed these
-errors. The non-vacuity witnesses of @sec:nonvacuity now demonstrate that the
+errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
 premises of the main theorems can in fact be satisfied.
 
 Agents also wrote much of the supporting tooling around the formalization,

@@ -22,7 +22,7 @@ its proof.
 This chapter describes what an analysis must supply, and what it must prove
 about it, so that the framework can discharge the obligations of @ch:traces
 once for every analysis. An analysis supplies a record of abstract operations,
-and the analysis contract states what they must preserve.
+and the analysis contract states what they preserve.
 
 == Transfers at edges and calls <sec:calls>
 
@@ -35,7 +35,8 @@ supplies, for each action $a$, an abstract transfer $sh(f)_a$. The transfer is
 sound if it loses no successor:
 $ s in conc_(D)(d) and s' in #isai("edge_step a s") ==> s' in conc_(D)(sh(f)_a (d)). $
 This is the abstract counterpart of the obligation #oblig("INTRA") of
-@ch:traces for one edge. The interface has one transfer per kind of action,
+@ch:traces for one edge. Unlike Saan's abstract operators @saan26phd[§2.4.2], the
+obligation does not require strictness, $sh(f)_a (lbot) = lbot$. The interface has one transfer per kind of action,
 named after the corresponding method of Goblint's `Spec` (@fig:dg-spec).
 
 A call cannot be handled by one such transfer. After it returns, the caller's
@@ -58,8 +59,8 @@ Enter describes two stores associated with the call `y = inc(x)`. The _entry sta
 describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
 state_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine later
 merges with the callee's exit state $r$ (the theories call $q$ the
-continuation). @fig:return-stores shows $q$, $e$ and $r$ and the state combine
-computes from $q$ and $r$.
+continuation). @fig:return-stores shows $q$, $e$, $r$ and the state combine
+computes.
 
 // The call `y = inc(x)` on the control-flow graph, as the playground draws it,
 // with the store at each of the four nodes around the call. The continuation
@@ -113,7 +114,7 @@ such pairs. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml#L722",
 )[path-sensitivity lifter]
-uses this to return one pair per path. Every analysis shipped with Voblint
+uses this to return one pair per path @apinis14[§5.7]. Every analysis shipped with Voblint
 answers a single pair, and only a test example of @ch:traces answers two, so
 path-sensitive analyses remain future work.
 
@@ -213,7 +214,7 @@ least element, and never for a map from variables to abstract values
 
 The contract supplies the context-independent core of #oblig("INTRA") and
 #oblig("RETURN"). #oblig("CALL") requires that the callee's entry covers the entered
-store _in the context the call enters_. Entry coverage
+store _in every context the policy admits for the call_. Entry coverage
 (#isaconst("entry_pairs_cover")) provides the covering pair, but the routing
 policy chooses the context in which it is analyzed, so @ch:equations combines
 the two. #oblig("TOTAL"), that every covered call reaches some context, follows from
@@ -226,7 +227,8 @@ registered (#isathm("dg_analysis.init_sound")).
 
 The contract leaves open where program globals are kept. By default, program globals are part of the local state,
 as in Goblint's default base analysis for single-threaded programs
-(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml#L539")[`base.ml`]).
+(#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/base.ml#L539")[`base.ml`],
+@saan26phd[§5.6.1]).
 The other placement keeps each program global at an analysis global of its
 own, written by side effects and read where it is used. The analysis is then
 _mixed flow-sensitive_, flow-sensitive in the locals and flow-insensitive in
@@ -250,9 +252,11 @@ after `y = get()` (claim #claim-ref("mixed-flow-sign-shared")), although every
 run ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
 `set`'s exit into `get`'s entry and derives #signval(_mf("y")) (claim
 #claim-ref("mixed-flow-sign")). In sequential VIMP the flow-insensitive
-placement can thus cost precision. It suits multi-threaded programs, where a thread-modular
-analysis keeps the values that threads exchange through shared
-globals flow-insensitively @seidl26[§1, Ex. 4]. VIMP has no threads, but a future extension with threads could build on this placement
+placement can thus cost precision. A guard on such a global refines nothing,
+since the guard writes no global, as in Goblint's non-relational
+thread-modular analyses @saan26phd[§5.6.2].
+The placement suits multi-threaded programs, where the simplest thread-modular
+analysis keeps shared globals flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1]. VIMP has no threads, but an extension with threads could build on it
 (@sec:outlook-extending).
 
 Like Goblint and Apinis et al. @apinis12[§5] @seidl26[§3], the analyzer keeps
@@ -260,11 +264,10 @@ one unknown per program global, so a write that changes `g` destabilizes only th
 `g` and those that depend on them. #isathm("keyed_split_contract") shows that this
 placement meets the analysis contract whenever the wrapped analysis is sound and the domain satisfies monotonicity
 laws and a frame law for the globals a transfer does not assign, which the analyzer's combined
-state does (#isathm("mcp_keyed_dg_analysis")). #isathm("run_voblint_source_sound")
-therefore covers it.
+state does (#isathm("mcp_keyed_dg_analysis")), so #isathm("run_voblint_source_sound")
+covers it.
 
-An analysis thus supplies a record of abstract operations, and the analysis
-contract states what these operations must preserve. The interface is modular, since an analysis proves facts about its own
+The interface is modular, since an analysis proves facts about its own
 operations only, while context handling, equation construction and solving are
 implemented and proved once by the framework. @ch:cooperation combines
-several such analyses into one.
+several analyses.

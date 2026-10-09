@@ -30,9 +30,7 @@ Coq's extraction together with the Caml compiler and run-time system
 @leroy09[§5].
 Voblint's guarantee has the same shape: a theorem
 about the function the tool runs, code generated from the prover, and an
-explicit list of trusted components (@sec:trust-boundary). Voblint's parser
-corresponds to CompCert's parser, and its code generator and OCaml toolchain to
-the extraction and the Caml compiler. Compiler correctness
+explicit list of trusted components (@sec:trust-boundary). Compiler correctness
 preserves the behavior of a program. Analyzer soundness only over-approximates
 it, so a coarser result remains sound.
 
@@ -46,10 +44,11 @@ preservation extends the guarantee to compiled code.
 Verasco covers a far larger language, so the comparison concerns design only.
 Voblint's language is small, but recursion and context-sensitive calls are
 central to it: calls become equations over (program point, context) unknowns,
-and a generic solver computes their solution. Verasco reanalyzes functions at every call site up to a fuel bound and raises
-an alarm at a possible recursive call (@tab:state-of-art, @jourdan15[§4]), so it
-needs no termination argument. Voblint's analyzer returns a report only where its solve
-terminates, and termination is not proved for every program (@sec:termination).
+and a generic solver computes their solution. Verasco reanalyzes functions at every call site and raises an alarm at a
+possible recursive call (@tab:state-of-art, @jourdan15[§4]). Its extracted
+analyzer runs with unbounded fuel, and termination is proved only on paper
+@jourdan16phd[§§3.1.2, 4.3.1], so its theorem, like Voblint's
+(@sec:termination), covers only the results it returns.
 Both state the soundness of abstract operations through their concretization.
 
 The earlier value analysis of Blazy et al. @blazy13 does not verify
@@ -59,6 +58,14 @@ accepts it as a post-fixpoint or falls back to top @blazy13[§4]. Voblint instea
 solver whose partial correctness is proved @tilscher26. The checker leaves the
 iteration heuristics free and tests every result at run time. A verified solver
 needs no such test, and its proof holds for that one algorithm.
+
+Witness validation also checks results instead of the analyzer. A verifier
+that claims a program correct exports a _correctness witness_, invariants at
+program locations, and an independent validator re-establishes the result from
+them. In the 2016 software verification competition, ten of 13 verifiers
+claimed correctness for some programs known to contain a bug @beyer16[§1]. Saan et al. @saan24 build such a validator
+on Goblint's abstract interpreter. Such a validator confirms one result
+at a time and, unlike the checker of Blazy et al., is itself unverified.
 
 CompCert hides its dataflow solvers behind a common Coq module type whose
 clients rely only on fixpoint properties of the result @compcertKildall, and La
@@ -89,10 +96,7 @@ filtering of guards and the step of each command generically
 pattern (@sec:domain-contract). Voblint keeps the separation between collecting semantics and
 abstraction. Its collecting semantics ranges over activation traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
-which caller resumes. Their executable abstract state lists some variables and
-reads every other variable as top; they call the map from such a list to the
-function it represents `fun_rep` @nipkow14[§13.6]. Voblint's executable state also lists only
-some names, but with two defaults instead of one (@sec:represented-function).
+which caller resumes.
 
 Michelland et al. @michelland24, Keidel et al. @keidel18 and Darais et al.
 @darais15 make soundness proofs reusable by sharing one interpreter between
@@ -147,7 +151,9 @@ soundness direction of its certificate.
 
 Hofmann et al. @hofmann10 verify the local generic solver RLD in Coq;
 like the top-down solver, it records dependencies between unknowns while it
-evaluates right-hand sides. Stade et al. @stade24 prove the top-down
+evaluates right-hand sides. De Vilhena et al. @devilhena20 verify in Iris a
+local generic solver that discovers dependencies dynamically and computes the
+least fixpoint of a monotone system. Stade et al. @stade24 prove the top-down
 solver partially correct in Isabelle/HOL, first for a simpler recursive
 formulation and then for the optimized solver, which agrees with it on
 termination and results. Tilscher et al. @tilscher26 extend the line to
@@ -164,16 +170,14 @@ Voblint's equations.
 
 Voblint includes a copy of the solver of @tilscher26; the algorithm, the update
 rules and their proofs belong to that work. The copy carries local
-refactorings, such as renamings and an interface theory (@sec:upstream-td). A solver theorem speaks about
-arbitrary right-hand sides and gives the equations no meaning. Voblint supplies that
-meaning for its language: the certificate #isaconst("part_post_solution", thy: "Basics_side")
+refactorings, such as renamings and an interface theory (@sec:upstream-td). Voblint gives the equations their
+meaning: the certificate #isaconst("part_post_solution", thy: "Basics_side")
 implies coverage of the concrete traces, and compiler correctness transfers the
 coverage to source executions. The solver Voblint runs warrows every local
 unknown at a widening point, whichever of the five selectable update rules
 merges the global contributions. The least-solution theorem therefore does not
-apply, and Voblint uses only partial correctness and claims no optimality for
-its results. Soundness rests on #isaconst("part_post_solution", thy: "Basics_side") alone, for all
-five selectable rules (@sec:update-rules).
+apply, and Voblint uses only partial correctness, for all five rules
+(@sec:update-rules), and claims no optimality.
 
 == Context sensitivity and trace partitioning
 
@@ -196,8 +200,8 @@ caller's pre-call state with the callee's result (@sec:calls).
 Reps et al. @reps95 solve interprocedural problems with finite fact
 sets and distributive transfer functions precisely, as reachability over
 interprocedurally valid paths, and state that semantic correctness is an
-orthogonal issue @reps95[§2]. Voblint's domains need not be finite or
-distributive, and Voblint proves no precision.
+orthogonal issue @reps95[§2]. Voblint needs neither finite nor
+distributive domains and proves no precision.
 
 Trace partitioning abstracts a set of traces by indexing it with control history
 before abstracting states @rival07. Rival and Mauborgne define both partitions
@@ -224,7 +228,7 @@ of Schwarz et al. This section names what it adopts and where it departs.
 === Architecture
 
 Side-effecting constraint systems let one equation both define a local unknown
-and publish contributions to global unknowns @apinis12. Seidl et al. @seidl26
+and publish contributions to global unknowns @seidl03 @apinis12. Seidl et al. @seidl26
 describe how Goblint uses them to decouple a mixed flow-sensitive analysis from
 the solver, with digests on the analysis side and update rules on the solver
 side recovering precision. Voblint adopts the split: an analysis supplies local
@@ -280,9 +284,10 @@ context-sensitive equations.
 
 === Local traces and contexts
 
-Local traces give each thread of a concurrent program a semantics from which
-thread-modular analyses can be derived and compared @schwarz21, later
-extended to relational analyses @schwarz23. The digest framework uses
+Local traces give each thread of a concurrent program a semantics against which
+thread-modular analyses are proved sound and compared @schwarz21, later
+extended to relational analyses @schwarz23, with detailed proofs in
+@schwarz25phd[Ch. 6]. The digest framework uses
 abstractions of execution histories to decide which observations may interact
 @schwarz24digest. Voblint adapts the local view to sequential
 procedure activations: a trace covers one activation and records its suspended
@@ -300,16 +305,20 @@ pointers into the stack, which VIMP lacks. Voblint proves for activation traces
 only that every graph run is represented by a valid trace (@sec:valid).
 
 A digest is a total function on local traces that splits the unknowns $[u]$
-into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. Seidl et
-al. describe digests as generalizing calling contexts @seidl26[§4, p. 456]. The local-trace semantics itself
+into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. The local-trace semantics itself
 has no procedures, and Schwarz lists procedures among the features that Goblint
 implements but the local-trace semantics does not yet support
 @schwarz25phd[§8, p. 277].
 In Voblint, the context relation #isaconst("activation_context_rel") (@sec:contexts)
-takes the digest's place for sequential activations. It fixes a context when
-an activation is created and keeps it until the activation returns, so a
-digest that splits unknowns by history within one activation would need the
-relation to advance at every step of a trace, an extension we have not made.
+plays a similar role for sequential activations, with two differences. A
+digest is a function, so every trace has exactly one digest and the traces
+split into disjoint groups @schwarz25phd[§2.3, Def. 4, Thm. 4]. One activation
+may carry several contexts instead, so Voblint's groups may overlap, and
+together they still contain every collected store
+(#isathm("node_collect_eq_Union_activation_collect")). A digest is also updated
+at every step of a trace, whereas an activation's contexts are fixed when it is
+called. Voblint therefore distinguishes activations only by how they were
+entered.
 
 == Where Voblint sits <sec:rel-summary>
 
@@ -335,8 +344,7 @@ is parameterized by a context policy, is the closest precedent for Voblint's. Vo
 the totality condition #isaconst("call_context_total_on") makes the
 context-indexed collection exhaustive
 (#isathm("node_collect_eq_Union_activation_collect")), and the indexing is
-connected to an executable solver. The adaptation of local traces
-to activations has no mechanized predecessor that we found.
+connected to an executable solver.
 
 Voblint thus takes its trust pattern from CompCert and Verasco, its domain
 interface from Nipkow and Klein, its solver from Tilscher et al., and its

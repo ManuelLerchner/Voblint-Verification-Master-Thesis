@@ -14,8 +14,8 @@
   author = {Kalmer Apinis},
   title  = {Frameworks for Analyzing Multi-threaded {C}},
   school = {Technische Universit{\"a}t M{\"u}nchen},
-  publisher = {Technische Universit{\"a}t M{\"u}nchen},
-  year   = {2014}
+  year   = {2014},
+  url    = {https://nbn-resolving.org/urn:nbn:de:bvb:91-diss-20140606-1189191-0-9}
 }
 
 @phdthesis{vojdani10,
@@ -31,6 +31,8 @@
   title     = {Clustered Relational Thread-Modular Abstract Interpretation with Local Traces},
   booktitle = {Programming Languages and Systems (ESOP 2023)},
   pages     = {28--58},
+  series    = {LNCS},
+  volume    = {13990},
   year      = {2023},
   doi       = {10.1007/978-3-031-30044-8_2}
 }
@@ -180,6 +182,8 @@
   title = {Improving Thread-Modular Abstract Interpretation},
   booktitle = {Static Analysis},
   pages = {359--383},
+  series = {LNCS},
+  volume = {12913},
   year = {2021},
   doi = {10.1007/978-3-030-88806-0_18}
 }
@@ -244,12 +248,15 @@
   url = {https://mitpress.mit.edu/9780262043410/introduction-to-static-analysis/}
 }
 
-@misc{kocal26,
-  author = {Ali Rasim Kocal and Michael Schwarz and Simmo Saan and Helmut Seidl},
-  title = {Same Engine, Multiple Gears: Parallelizing Fixpoint Iteration at Different Granularities (Extended Version)},
-  year = {2026},
-  url = {https://arxiv.org/abs/2602.06680},
-  note = {arXiv:2602.06680}
+@inproceedings{kocal26,
+  author    = {Ali Rasim Kocal and Michael Schwarz and Simmo Saan and Helmut Seidl},
+  title     = {Same Engine, Multiple Gears: Parallelizing Fixpoint Iteration at Different Granularities},
+  booktitle = {Tools and Algorithms for the Construction and Analysis of Systems ({TACAS} 2026)},
+  series    = {LNCS},
+  pages     = {173--194},
+  publisher = {Springer},
+  year      = {2026},
+  doi       = {10.1007/978-3-032-22749-2_9}
 }
 
 @inproceedings{cousot77,
@@ -549,6 +556,7 @@
   journal = {Journal of Automated Reasoning},
   volume  = {70},
   number  = {2},
+  pages   = {15},
   year    = {2026},
   doi     = {10.1007/s10817-026-09756-x}
 }
@@ -1384,4 +1392,109 @@
   pages   = {583--626},
   year    = {2003},
   doi     = {10.1016/S0304-3975(02)00869-1}
+}
+
+@article{seidl03,
+  author  = {Helmut Seidl and Varmo Vene and Markus M{\"u}ller-Olm},
+  title   = {Global Invariants for Analysing Multi-threaded Applications},
+  journal = {Proceedings of the Estonian Academy of Sciences. Physics. Mathematics},
+  volume  = {52},
+  number  = {4},
+  pages   = {413--436},
+  year    = {2003},
+  doi     = {10.3176/phys.math.2003.4.05}
+}
+
+@inproceedings{beyer16,
+  author    = {Dirk Beyer and Matthias Dangl and Daniel Dietsch and Matthias Heizmann},
+  title     = {Correctness Witnesses: Exchanging Verification Results between Verifiers},
+  booktitle = {Proceedings of the 24th {ACM} {SIGSOFT} International Symposium on Foundations of Software Engineering ({FSE} 2016)},
+  pages     = {326--337},
+  publisher = {ACM},
+  year      = {2016},
+  doi       = {10.1145/2950290.2950351}
+}
+
+@inproceedings{saan24,
+  author    = {Simmo Saan and Michael Schwarz and Julian Erhard and Helmut Seidl and Sarah Tilscher and Vesal Vojdani},
+  title     = {Correctness Witness Validation by Abstract Interpretation},
+  booktitle = {Verification, Model Checking, and Abstract Interpretation ({VMCAI} 2024)},
+  series    = {LNCS},
+  volume    = {14499},
+  pages     = {74--97},
+  publisher = {Springer},
+  year      = {2024},
+  doi       = {10.1007/978-3-031-50524-9_4}
+}
+
+@phdthesis{saan26phd,
+  author = {Simmo Saan},
+  title  = {Correctness Witnesses for Thread-Modular Program Analysis},
+  school = {University of Tartu},
+  series = {Dissertationes Informaticae Universitatis Tartuensis},
+  number = {79},
+  year   = {2026},
+  url    = {https://dspace.ut.ee/server/api/core/bitstreams/00ec3799-947c-48eb-99e3-f43c9646bbcb/content}
+}
+
+@misc{voblint,
+  author    = {Manuel Lerchner},
+  title     = {{Voblint}: A Verified {Goblint}-Style Static Analysis Pipeline in {Isabelle/HOL}},
+  year      = {2026},
+  publisher = {Zenodo},
+  doi       = {10.5281/zenodo.23260696}
+}
+
+@incollection{cousot99,
+  author    = {Patrick Cousot},
+  title     = {The Calculational Design of a Generic Abstract Interpreter},
+  booktitle = {Calculational System Design},
+  editor    = {Manfred Broy and Ralf Steinbr{\"u}ggen},
+  series    = {NATO ASI Series F},
+  volume    = {173},
+  pages     = {421--505},
+  publisher = {IOS Press},
+  year      = {1999}
+}
+
+@incollection{apinis16,
+  author    = {Kalmer Apinis and Helmut Seidl and Vesal Vojdani},
+  title     = {Enhancing Top-Down Solving with Widening and Narrowing},
+  booktitle = {Semantics, Logics, and Calculi},
+  series    = {LNCS},
+  volume    = {9560},
+  pages     = {272--288},
+  publisher = {Springer},
+  year      = {2016},
+  doi       = {10.1007/978-3-319-27810-0_14}
+}
+
+@article{devilhena20,
+  author  = {Paulo Emílio de Vilhena and François Pottier and Jacques-Henri Jourdan},
+  title   = {Spy Game: Verifying a Local Generic Solver in {Iris}},
+  journal = {Proceedings of the ACM on Programming Languages},
+  volume  = {4},
+  number  = {POPL},
+  pages   = {1--28},
+  year    = {2020},
+  doi     = {10.1145/3371101}
+}
+
+@article{schulzefrielinghaus18,
+  author  = {Stefan {Schulze Frielinghaus} and Helmut Seidl and Ralf Vogler},
+  title   = {Enforcing Termination of Interprocedural Analysis},
+  journal = {Formal Methods in System Design},
+  volume  = {53},
+  number  = {2},
+  pages   = {313--338},
+  year    = {2018},
+  doi     = {10.1007/s10703-017-0288-5}
+}
+
+@phdthesis{jourdan16phd,
+  author = {Jacques-Henri Jourdan},
+  title  = {Verasco: a Formally Verified {C} Static Analyzer},
+  school = {Universit{\'e} Paris Diderot (Paris 7)},
+  year   = {2016},
+  url    = {https://theses.hal.science/tel-01327023}
 }

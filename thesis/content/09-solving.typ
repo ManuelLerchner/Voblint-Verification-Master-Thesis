@@ -583,23 +583,23 @@ makes every node of `f` solved, dead code included.
   kind: image,
   caption: [Code after a `return` in `f`. No execution reaches lines 3 to 6,
     yet every line reaches the result of `f`: line 3 through `return 1`, line 6
-    through the return edge that ends the body. A solve that solves the result
-    of `f` therefore solves all of them.],
+    through the final return edge.],
 ) <fig:cert-forward>
 
 The proof uses the solved nodes of procedures whose result is solved in the
-same context. An execution starts at the entry of `main`, whose result is the
-query and therefore solved by (C1). Intra edges and the step from a call site
-to its continuation stay inside a procedure. A call that enters a callee reads
-the callee's result in the context it computes, so by (C2) that result is
-solved too. Executions therefore never leave this set.
+same context. An execution starts at the entry of `main`, which is solved
+because the result of `main` is the query (C1) and every node reaches its
+procedure's result. Intra edges and the step from a call site
+to its continuation stay inside a procedure. A call reads the callee's result in
+the context it computes, so by (C2) it is solved too, and executions never
+leave this set.
 
-In a body that always returns, the return edge that ends it starts in dead
-code, where the analyzer computes #lbot, so it adds nothing to the result.
-Omitting the edge for such bodies would save one dead node each. Code after a
-`return` could then end in a node without successors, and the proof would need
-a syntactic description of the code that no `return` cuts off. The compiler
-therefore always emits the edge.
+The return edge that ends every body is the implicit return of a body that
+reaches its end without a `return`. In a body that always returns, it starts in
+dead code, where the analyzer computes #lbot, and adds nothing.
+Omitting it saves one dead node per body, but code after a `return` could end in a node without successors, and the proof would need a
+syntactic description of the code no `return` cuts off, so the compiler always
+emits the edge.
 
 In Isabelle, the nodes of a procedure are #isaconst("prog_node").
 #isathm("prog_node_reaches") proves that each reaches the procedure's result,
@@ -610,7 +610,7 @@ is
 and
 #isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")
 proves from a well-formed program and a terminating solve alone that it
-contains the entry and that executions cannot leave it. The final theorem
+contains the entry and is closed under execution steps. The final theorem
 therefore needs no premise about which unknowns the solve visited.
 
 === The solver as a parameter #thy-badge("Voblint_Solver", "TD_Solver_Bridge") <sec:cert-param>
@@ -708,7 +708,7 @@ termination. @sec:eval-precision compares them on the programs of
     )
   },
   kind: table,
-  placement: none,
+  placement: auto,
   caption: [One global unknown under each update rule, from #raw("⊥"), after
     four interval contributions from origins A and B. Join per origin reports
     the join of each origin's latest contribution, so at step 3 A's
@@ -842,14 +842,19 @@ fresh context at every level, and widening bounds the values of existing
 unknowns but not their number (#fixture(
   "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
   label: "01-unbounded_context_chain_diverges",
-)). Finitely many unknowns do not suffice either: without contexts, the
+)). Goblint's configuration for the SV-COMP
+competition avoids this explosion by omitting intervals from the contexts of
+recursive functions @saan26phd[§3.4.3]. Finitely many unknowns do not suffice either: without contexts, the
 interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ makes the one seed of `f`
 grow through $[0, 0], [0, 1], [0, 2], dots$, and the joining update rules never
 widen this chain (#fixture(
   "24-site-figures/01-recursion_grows_join_diverges.vimp",
   label: "01-recursion_grows_join_diverges",
 ), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
-they diverge (@sec:trust-boundary).
+they diverge (@sec:trust-boundary). Both are recursive. For partial
+tabulation over abstract calling contexts, Schulze Frielinghaus et al. give a
+local solver that terminates on every non-recursive program, even over lattices
+with infinite ascending or descending chains @schulzefrielinghaus18.
 
 The vendored termination theorems cover top-down solvers without side effects
 over a finite type of unknowns. The solver with separate widening and narrowing

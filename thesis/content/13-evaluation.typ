@@ -38,7 +38,7 @@ theorem assumes an initial store, a source run, and an
 terminates.
 #cite(<marmsoler26stark>, form: "prose", supplement: [§9]) shows with one small
 executable instance that the locale assumptions of a formal model can be
-satisfied. We use the same kind of witness for the premises of the end-to-end
+satisfied. We use the same kind of instance for the premises of the end-to-end
 theorem.
 
 The instance is the two-call program of @fig:program-to-equations under
@@ -53,7 +53,7 @@ claim, a second program sets `x = 1` and guards a check by `x < 0`; the
 analyzer marks it #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to conclude that the collecting
 semantics at that node is empty. The source runs are proved by rule application, the compiled graphs and the
-answers by `eval`. The witnesses
+answers by `eval`. The instances
 cover a definite truth verdict, #verdict("PROVED"), and the reachability
 verdict #verdict("DEAD").
 
@@ -143,7 +143,7 @@ $[-7, -5]$, refutes the first check, and proves the second.
 
 The theorem says nothing about precision, since an analyzer that answers
 #verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). What each mechanism gains is therefore shown on
-concrete programs. Each witness below fixes the concrete behavior first, then
+concrete programs. Each example below fixes the concrete behavior first, then
 shows what one mechanism keeps or loses, and supports a claim about its program
 only.
 
@@ -154,7 +154,7 @@ only.
 which calls each context policy separates. #isathm("sign_k2_strictly_more_precise_than_k1_at_g") proves a
 strict separation on one program: the Sign value of a parameter at a procedure
 entry is strictly lower under call strings of length 2 than under length 1,
-with the component values computed by `eval`. The witness uses Sign because
+with the component values computed by `eval`. The theorem uses Sign because
 its widening is its join and its narrowing returns the current value, so the
 difference cannot come from widening.
 
@@ -374,9 +374,9 @@ relates the parsed tree to the program a user meant to write. CI runs the
 corpus and the property tests on every pull request and push to the main
 branch.
 
-Together, the witnesses show that the end-to-end theorem applies to a concrete
+Together, these results show that the end-to-end theorem applies to a concrete
 run, that two selected coverage conditions cannot simply be dropped, and that
-one domain obligation excludes a real defect. Each precision witness concerns one
+one domain obligation excludes a real defect. Each precision example concerns one
 program, the tests reach only what the corpus covers, and none of this shows
 that #isaconst("pstep") is the intended
 semantics of VIMP (@sec:limitations).
