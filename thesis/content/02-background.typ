@@ -650,10 +650,9 @@ right-hand side of one unknown is evaluated, it may _publish_ a
 _contribution_ to another unknown as a _side effect_. A right-hand side then
 returns a pair @saan26phd[§2.4.5],
 $rhs(x) : (Unk -> A) -> (Unk harpoon.rt A) times A$: a partial map $rho$ of
-the contributions it publishes, holding the join of all contributions to the
-same unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a
-post-solution must bound both:
-$ d lle sol(x), quad rho(y) lle sol(y) " for every" y in op("dom")(rho). $
+the contributions it publishes, joined per unknown, and its own value $d$. If
+$rhs(x)(sol) = (rho, d)$, a post-solution must bound both, $d lle sol(x)$ and
+$rho(y) lle sol(y)$ for every $y in op("dom")(rho)$.
 If the assignments `g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to the
 unknown of a flow-insensitive global `g`, that unknown must bound their join
 $[4, 5]$. The solver's result comes with a _certificate_, the property
