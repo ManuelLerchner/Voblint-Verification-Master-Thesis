@@ -1618,7 +1618,7 @@ Where each chapter uses it:
 | 1 | the analyzer's output on it, with the trust boundary drawn |
 | 3 | its AST, one `pstep` sequence, its compiled CFG with node numbers |
 | 4 | one `activation_trace` for the second `bump` activation, drawn as a tree; the hand-built cover in §4.9 |
-| 6 | what `assign#`, `branch#`, `enter#`, `combine_assign#` do at three of its edges |
+| 6 | what `assign♯`, `branch♯`, `enter♯`, `combine_assign♯` do at three of its edges |
 | 7 | its full equation system at `Ctx_None`, then the two `bump` contexts under `Ctx_CallString 1` |
 | 8 | the solver's iteration at the loop head, with and without widening |
 | 9 | its result table and check column |

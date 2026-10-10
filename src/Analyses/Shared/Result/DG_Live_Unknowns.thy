@@ -88,7 +88,7 @@ qed
 
 lemma dep_L_routed_node_rhs_callee_result:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-    and deps: "enter_deps (enter\<^sup># S (call_info_of ca q))
+    and deps: "enter_deps (enter\<^sup>\<sharp> S (call_info_of ca q))
                  (mk_dg_man (dg_local (\<tau> (Inl (u, cx)))) global_of) \<tau> pairs D"
     and mem: "(c, ent) \<in> set pairs"
     and res: "q \<in> set (resolve k u ca (dg_local (\<tau> (Inl (u, cx)))))"
@@ -198,7 +198,7 @@ proof -
     "entry_alt (declared_global p) p (call_info_of ca q) ?d (sol_global (declared_global p) p)"
   have res: "q \<in> set (static_resolve (prog_cfg p) k u ca ?d)"
     using e prog_cfg_finite(2) by simp
-  obtain D where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) (call_info_of ca q))
+  obtain D where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) (call_info_of ca q))
       (mk_dg_man ?d global_of) (sol_env (declared_global p) p) [?alt] D"
     using place_enter_deps unfolding sol_global_def by blast
   have mem: "(fst ?alt, snd ?alt) \<in> set [?alt]" by simp
@@ -423,11 +423,11 @@ next
   have covE: "(FunctionEntry q, ctx') \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_enterD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)])
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
-  obtain pub where runs: "enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
+  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] pub"
     using place_enter_runs by blast
-  obtain deps where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
+  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] deps"
     using place_enter_deps by blast

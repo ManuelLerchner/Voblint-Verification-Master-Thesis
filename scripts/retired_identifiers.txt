@@ -138,7 +138,7 @@
 # convention; those three are live vocabulary, not dead references.
 # copy: `enter_binding` (VIMP_Proc) is generic in the state's codomain, the
 # default_local_dg_spec is a construction scaffold, not Goblint's default.
-# definitions, matching how the return side writes combine^# gs (ci_dst ci).
+# definitions, matching how the return side writes combine^♯ gs (ci_dst ci).
 # depend on the non-executable is_empty_state. bfilter_lifted fixes the
 # derived names moved with it: sound_dg_spec_st, and the two lift/override
 # dg_ctx_activation_base, and only the pair together explains the entry seed.

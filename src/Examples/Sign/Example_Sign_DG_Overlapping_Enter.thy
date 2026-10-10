@@ -124,15 +124,15 @@ lemma dg_spec_step_ov_spec [simp]:
   by (cases a) (simp_all add: ov_spec_def)
 
 lemma dgs_combine_env_ov_spec [simp]:
-  "combine_env\<^sup># (ov_spec \<G> ep) = combine_env\<^sup># (sign_tf.spec_exec \<G> ep)"
+  "combine_env\<^sup>\<sharp> (ov_spec \<G> ep) = combine_env\<^sup>\<sharp> (sign_tf.spec_exec \<G> ep)"
   by (simp add: ov_spec_def)
 
 lemma dgs_combine_assign_ov_spec [simp]:
-  "combine_assign\<^sup># (ov_spec \<G> ep) = combine_assign\<^sup># (sign_tf.spec_exec \<G> ep)"
+  "combine_assign\<^sup>\<sharp> (ov_spec \<G> ep) = combine_assign\<^sup>\<sharp> (sign_tf.spec_exec \<G> ep)"
   by (simp add: ov_spec_def)
 
 lemma dgs_enter_ov_spec [simp]:
-  "enter\<^sup># (ov_spec \<G> ep) ci = local_enter_transfer (ov_enter \<G> ep ci)"
+  "enter\<^sup>\<sharp> (ov_spec \<G> ep) ci = local_enter_transfer (ov_enter \<G> ep ci)"
   by (simp add: ov_spec_def)
 
 lemma dgs_query_ov_spec [simp]:
@@ -153,7 +153,7 @@ next
     using that by (simp add: dg_spec_wf_query[OF sign_tf.dg_spec_wf_spec_exec])
 next
   fix ci d unknown_of
-  show "sp_wf (enter\<^sup># (ov_spec \<G> ep) ci (mk_dg_man d unknown_of))"
+  show "sp_wf (enter\<^sup>\<sharp> (ov_spec \<G> ep) ci (mk_dg_man d unknown_of))"
     by (simp add: local_enter_transfer_def)
 next
   fix ci d unknown_of ex
@@ -455,7 +455,7 @@ lemma ov_empty_pairs_never_cover:
        (call_enter ov_gs ov_ca ov_caller_store) []"
   by simp
 
-text \<open>What the missing obligation would let through. With \<open>enter\<^sup>#\<close> answering \<open>[]\<close>, the
+text \<open>What the missing obligation would let through. With \<open>enter\<^sup>\<sharp>\<close> answering \<open>[]\<close>, the
   solver seeds no callee, materializes no context at \<open>p\<close>, and leaves the continuation
   \<^const>\<open>Bot\<close> --- although the concrete run reaches it. A relation admitting no context for
   this call would produce the same empty buckets; conditional totality is what rules it out.\<close>
@@ -725,12 +725,12 @@ lemma ov_cmb_side_free_at_analysis_global:
   "sides_of_program (routed_call_program (ov_spec ov_gs ov_ep) (\<lambda>_. (Analysis_Global ())) Activation_Seed
       (static_resolve ov_cfg) (\<lambda>d. d = Bot) route ctx ca cc v) sigma (Inr (Analysis_Global ())) = bot"
 proof (rule routed_call_program_side_free_at_buffer_key[OF dg_spec_wf_ov_spec])
-  show "\<And>ci d pairs pub. enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ci)
+  show "\<And>ci d pairs pub. enter_runs (enter\<^sup>\<sharp> (ov_spec ov_gs ov_ep) ci)
           (mk_dg_man d (\<lambda>_. Analysis_Global ())) sigma pairs pub \<Longrightarrow> pub (Inr (Analysis_Global ())) = bot"
     unfolding dgs_enter_ov_spec
     by (auto simp: bot_fun_def dest: enter_runs_local_pub_bot)
 next
-  show "\<And>ci d. \<exists>pairs pub. enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ci)
+  show "\<And>ci d. \<exists>pairs pub. enter_runs (enter\<^sup>\<sharp> (ov_spec ov_gs ov_ep) ci)
           (mk_dg_man d (\<lambda>_. Analysis_Global ())) sigma pairs pub"
     unfolding dgs_enter_ov_spec by blast
 next
@@ -949,10 +949,10 @@ next
                    \<in> \<gamma> (\<rho>\<^bsub>ov_gs\<^esub> entry)"
       and req: "ctx' = exec_formals_route ov_gs u ctx entry (CallEdge dst pars args)"
     using routed_entry_context_relE[OF Rc] by (auto simp: declared_global_def[abs_def])
-  have Rr: "enter_runs (enter\<^sup># (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
+  have Rr: "enter_runs (enter\<^sup>\<sharp> (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
               (snd ov_sol) (ov_enter ov_gs ov_ep ?ci ?d) bot"
     by (simp add: enter_runs_local_enter_transfer_mk_dg_man)
-  have D: "enter_deps (enter\<^sup># (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
+  have D: "enter_deps (enter\<^sup>\<sharp> (ov_spec ov_gs ov_ep) ?ci) (mk_dg_man ?d (\<lambda>_. Analysis_Global ()))
              (snd ov_sol) (ov_enter ov_gs ov_ep ?ci ?d) {}"
     by (simp add: enter_deps_local_enter_transfer_mk_dg_man)
   have upin: "u = Statement 3" and caeq: "CallEdge dst pars args = ov_ca"

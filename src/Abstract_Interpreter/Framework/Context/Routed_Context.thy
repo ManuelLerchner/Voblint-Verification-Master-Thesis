@@ -63,7 +63,7 @@ locale routed_context =
     and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
     and \<G> :: "vname \<Rightarrow> bool"
     and g buffer_key and global_of :: "'v \<Rightarrow> 'k"
-    and route ("context\<^sup>#")
+    and route ("context\<^sup>\<sharp>")
     and bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and resolve :: "pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list"
@@ -91,15 +91,15 @@ locale routed_context =
        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
              (call_enter \<G> (CallEdge dst pars args) s)
        \<Longrightarrow> \<exists>pairs pub deps cont' entry.
-             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs pub
-           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) global_of) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv global_of sigma)
            \<and> call_enter \<G> (CallEdge dst pars args) s
                \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
-           \<and> context\<^sup># u ctx entry (CallEdge dst pars args) = ctx'
+           \<and> context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'
            \<and> (FunctionEntry p, ctx') \<in> vars"
     and routing_total:
     "\<And>u ctx dst pars args p cont s.
@@ -140,15 +140,15 @@ lemma routed_enter_witness:
     and Rc: "ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) p) s
                (call_enter \<G> (CallEdge dst pars args) s)"
   obtains pairs pub deps cont' entry
-    where "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    where "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
              (man_at u ctx) sigma pairs pub"
-      and "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+      and "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
              (man_at u ctx) sigma pairs deps"
       and "(cont', entry) \<in> set pairs"
       and "s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv global_of sigma)"
       and "call_enter \<G> (CallEdge dst pars args) s
              \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)"
-      and "context\<^sup># u ctx entry (CallEdge dst pars args) = ctx'"
+      and "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'"
       and "(FunctionEntry p, ctx') \<in> vars"
   using routing_adequate[OF covV ce sin Rc] that by blast
 
@@ -188,7 +188,7 @@ text \<open>
 
 lemma resolved_site_mem:
   assumes ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
-  shows "routed_call_program S global_of seed resolve is_bot context\<^sup># ctx
+  shows "routed_call_program S global_of seed resolve is_bot context\<^sup>\<sharp> ctx
              (CallEdge dst pars args) cc cont
            \<in> set (contribs cont ctx)"
 proof -
@@ -201,9 +201,9 @@ lemma resolved_target_mem:
   assumes covV: "(cc, ctx) \<in> vars"
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
-  shows "routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) cc
+  shows "routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) cc
              (dg_local (sigma (Inl (cc, ctx)))) p
-           \<in> set (map (routed_callee_call_program S global_of seed context\<^sup># is_bot ctx
+           \<in> set (map (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx
                           (CallEdge dst pars args) cc
                         (dg_local (sigma (Inl (cc, ctx)))))
                       (resolve cont cc (CallEdge dst pars args)
@@ -215,15 +215,15 @@ lemma resolved_at_le_site_acc:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
   shows "dg_local (traverse_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma)
          \<le> side_acc_dg (acc0 cont) sigma (contribs cont ctx)"
 proof -
   have "dg_local (traverse_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma)
       \<le> dg_local (traverse_program
-           (routed_call_program S global_of seed resolve is_bot context\<^sup># ctx
+           (routed_call_program S global_of seed resolve is_bot context\<^sup>\<sharp> ctx
               (CallEdge dst pars args) cc cont)
            sigma)"
     using dg_local_traverse_le_side_acc_dg[OF resolved_target_mem[OF covV ce sin], where acc = bot]
@@ -239,15 +239,15 @@ lemma resolved_at_le_site_sides:
     and ce: "(cc, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cc ctx"
   shows "sides_of_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma z
          \<le> sides_of_program (side_rhs_fold_dg (acc0 cont) (contribs cont ctx)) sigma z"
 proof -
   have "sides_of_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) cc
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) cc
               (dg_local (sigma (Inl (cc, ctx)))) p) sigma z
       \<le> sides_of_program
-           (routed_call_program S global_of seed resolve is_bot context\<^sup># ctx
+           (routed_call_program S global_of seed resolve is_bot context\<^sup>\<sharp> ctx
               (CallEdge dst pars args) cc cont)
            sigma z"
     by (rule routed_call_program_sides_ge_at
@@ -299,17 +299,17 @@ lemma routed_seed_publish_bound_seed:
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at u ctx"
     and covV_cont: "(cont, ctx) \<in> vars"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
               (man_at u ctx) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
   shows "entry
          \<le> dg_local (sigma (Inr (seed (FunctionEntry p)
-               (context\<^sup># u ctx entry (CallEdge dst pars args)))))"
+               (context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args)))))"
 proof -
-  let ?ctx' = "context\<^sup># u ctx entry (CallEdge dst pars args)"
+  let ?ctx' = "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args)"
   let ?k = "Inr (seed (FunctionEntry p) ?ctx')"
-  let ?t = "routed_callee_call_program S global_of seed context\<^sup># is_bot ctx (CallEdge dst pars args) u
+  let ?t = "routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot ctx (CallEdge dst pars args) u
               (dg_local (sigma (Inl (u, ctx)))) p"
   have seedb: "DG entry bot \<le> sides_of_program ?t sigma ?k"
     using spec_wf R mem nb by (rule routed_callee_call_program_sides_ge_seed)
@@ -331,14 +331,14 @@ lemma routed_seed_publish_bound_local:
     and ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at u ctx"
     and covV_cont: "(cont, ctx) \<in> vars"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
               (man_at u ctx) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
-    and covV: "(FunctionEntry p, context\<^sup># u ctx entry (CallEdge dst pars args)) \<in> vars"
+    and covV: "(FunctionEntry p, context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args)) \<in> vars"
   shows "entry
          \<le> dg_local (sigma (Inl (FunctionEntry p,
-               context\<^sup># u ctx entry (CallEdge dst pars args))))"
+               context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args))))"
   by (rule order_trans
         [OF routed_seed_publish_bound_seed[OF covV_call ce sin covV_cont R mem nb]
             routed_seed_read_bound[OF covV]])
@@ -361,16 +361,16 @@ next
   have sin': "s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) ?g"
     using sin True by simp
   obtain pairs pub deps cont' entry
-    where Rr: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    where Rr: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs pub"
-      and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+      and D: "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ecov: "call_enter \<G> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
-      and req: "context\<^sup># u ctx entry (CallEdge dst pars args) = ctx'"
+      and req: "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args) = ctx'"
       and covV: "(FunctionEntry p, ctx') \<in> vars"
     by (rule routed_enter_witness[OF True ce sin' Rc])
-  let ?ctx' = "context\<^sup># u ctx entry (CallEdge dst pars args)"
+  let ?ctx' = "context\<^sup>\<sharp> u ctx entry (CallEdge dst pars args)"
   have nb: "\<not> is_bot entry" using ecov by (rule entry_cover_not_bot)
   have "\<gamma>\<^sub>D\<^sub>G entry ?g \<subseteq> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (FunctionEntry p, ?ctx')))) ?g"
     by (rule gammaDG_mono
@@ -393,19 +393,19 @@ lemma routed_comb_bound_local:
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cl c1"
     and covV_cont: "(cont, c1) \<in> vars"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
               (man_at cl c1) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "dg_local (traverse_program
-           (routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+           (routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma)
          \<le> dg_local (sigma (Inl (cont, c1)))"
 proof -
   have "dg_local (traverse_program
-           (routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+           (routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma)
       \<le> dg_local (traverse_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot c1 (CallEdge dst pars args) cl
               (dg_local (sigma (Inl (cl, c1)))) p) sigma)"
     by (rule routed_callee_call_program_traverse_ge[OF spec_wf R mem])
   also have "\<dots> \<le> side_acc_dg (acc0 cont) sigma (contribs cont c1)"
@@ -422,19 +422,19 @@ lemma routed_comb_bound_global:
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cl c1"
     and covV_cont: "(cont, c1) \<in> vars"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
               (man_at cl c1) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "dg_global (sides_of_program
-           (routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+           (routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma (Inr k))
          \<le> dg_global (sigma (Inr k))"
 proof -
   have "dg_global (sides_of_program
-           (routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+           (routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma (Inr k))
       \<le> dg_global (sides_of_program
-           (routed_callee_call_program S global_of seed context\<^sup># is_bot c1 (CallEdge dst pars args) cl
+           (routed_callee_call_program S global_of seed context\<^sup>\<sharp> is_bot c1 (CallEdge dst pars args) cl
               (dg_local (sigma (Inl (cl, c1)))) p) sigma (Inr k))"
     by (rule le_dg_state_globalD[OF routed_callee_call_program_sides_ge_combine[OF spec_wf R mem]])
   also have "\<dots> \<le> dg_global (sides_of_program
@@ -453,11 +453,11 @@ lemma routed_comb_bound_genv:
     and ce: "(cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
     and sin: "s \<in> gamma_at cl c1"
     and covV_cont: "(cont, c1) \<in> vars"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
               (man_at cl c1) sigma pairs pub"
     and mem: "(cont', entry) \<in> set pairs"
   shows "genv global_of (sides_of_program
-           (routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+           (routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
               (CallEdge dst pars args) cl p (cont', entry)) sigma)
          \<le> genv global_of sigma"
   unfolding le_fun_def genv_def
@@ -491,17 +491,17 @@ next
   have Rc: "ctx' \<in> adm cl c1 ?ci s (call_enter \<G> (CallEdge dst pars args) s)"
     using Rc2 unfolding es_eq same pp' .
   obtain pairs pub deps cont' entry
-    where Rr: "enter_runs (enter\<^sup># S ?ci)
+    where Rr: "enter_runs (enter\<^sup>\<sharp> S ?ci)
                 (man_at cl c1) sigma pairs pub"
-      and D: "enter_deps (enter\<^sup># S ?ci)
+      and D: "enter_deps (enter\<^sup>\<sharp> S ?ci)
                 (man_at cl c1) sigma pairs deps"
       and mem: "(cont', entry) \<in> set pairs"
       and ccov: "s \<in> \<gamma>\<^sub>D\<^sub>G cont' ?g"
       and ecov: "call_enter \<G> (CallEdge dst pars args) s \<in> \<gamma>\<^sub>D\<^sub>G entry ?g"
-      and req: "context\<^sup># cl c1 entry (CallEdge dst pars args) = ctx'"
+      and req: "context\<^sup>\<sharp> cl c1 entry (CallEdge dst pars args) = ctx'"
     by (rule routed_enter_witness[OF True ce sin Rc])
-  let ?ex_ctx = "context\<^sup># cl c1 entry (CallEdge dst pars args)"
-  let ?alt = "routed_call_alternative_program S global_of seed context\<^sup># is_bot c1
+  let ?ex_ctx = "context\<^sup>\<sharp> cl c1 entry (CallEdge dst pars args)"
+  let ?alt = "routed_call_alternative_program S global_of seed context\<^sup>\<sharp> is_bot c1
                 (CallEdge dst pars args) cl p (cont', entry)"
   have nb: "\<not> is_bot entry" using ecov by (rule entry_cover_not_bot)
   show ?thesis

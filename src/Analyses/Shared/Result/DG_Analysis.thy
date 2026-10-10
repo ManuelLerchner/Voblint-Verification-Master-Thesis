@@ -365,7 +365,7 @@ definition solved_run_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
            run_seed = (\<lambda>f ctx. read (place_cmb p
                          (dg_local (snd sol (Inr (seed (FunctionEntry f) ctx)))) g)),
            run_step = (\<lambda>v ctx a. read (let d = place_cmb p (dg_local (snd sol (Inl (v, ctx)))) g
-                                       in closed_step c a d)),
+                                       in \<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d)),
            run_succ = (\<lambda>u ctx ca q.
              let d = entry_of \<G> p (call_info_of ca q) (dg_local (snd sol (Inl (u, ctx)))) g
              in if d = Bot then None else Some (route \<G> u ctx d ca)) \<rparr>)"
@@ -504,16 +504,16 @@ locale dg_analysis =
                         (map_lift (rd (declared_global p)) (place_cmb p d e)))
                (declared_global p)"
     and place_enter_runs:
-      "\<And>p ci d \<sigma>. \<exists>pub. enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ci)
+      "\<And>p ci d \<sigma>. \<exists>pub. enter_runs (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ci)
           (mk_dg_man d global_of) \<sigma>
           [entry_alt (declared_global p) p ci d (genv global_of \<sigma>)] pub"
     and place_enter_deps:
-      "\<And>p ci d \<sigma>. \<exists>deps. enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) ci)
+      "\<And>p ci d \<sigma>. \<exists>deps. enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ci)
           (mk_dg_man d global_of) \<sigma>
           [entry_alt (declared_global p) p ci d (genv global_of \<sigma>)] deps"
     and place_entry_sound:
       "\<And>p ci d \<sigma> pub s.
-         enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ci)
+         enter_runs (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ci)
            (mk_dg_man d global_of) \<sigma>
            [entry_alt (declared_global p) p ci d (genv global_of \<sigma>)] pub
          \<Longrightarrow> genv global_of pub \<le> genv global_of \<sigma>
@@ -761,7 +761,7 @@ lemma enter_pub_le_sol:
   assumes solves: "terminates pgs p"
     and cont: "(k, ctx) \<in> sol_vars pgs p"
     and ce: "(u, ca, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-    and R: "enter_runs (enter\<^sup># (analysis_spec pgs p) (call_info_of ca q))
+    and R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) (call_info_of ca q))
               (mk_dg_man (dg_local (sol_env pgs p (Inl (u, ctx)))) global_of)
               (sol_env pgs p) pairs pub"
   shows "genv global_of pub \<le> gsol"
@@ -822,7 +822,7 @@ proof -
   let ?ci = "call_info_of (CallEdge dst pars args) q"
   let ?d = "dg_local (sol_env pgs p (Inl (u, ctx)))"
   let ?alt = "entry_alt pgs p ?ci ?d gsol"
-  obtain pub where R: "enter_runs (enter\<^sup># (analysis_spec pgs p) ?ci)
+  obtain pub where R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
       (mk_dg_man ?d global_of) (sol_env pgs p)
       [entry_alt pgs p ?ci ?d (genv global_of (sol_env pgs p))] pub"
     using place_enter_runs by blast
@@ -943,11 +943,11 @@ next
   have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
     and covE: "(FunctionEntry q, ctx') \<in> sol_vars pgs p"
     using cover_R[OF EnterCover(1,2,4) nbE] by blast+
-  obtain pub where runs: "enter_runs (enter\<^sup># (analysis_spec pgs p) ?ci)
+  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env pgs p)
       [entry_alt pgs p ?ci ?caller ?g] pub"
     using place_enter_runs by blast
-  obtain deps where deps: "enter_deps (enter\<^sup># (analysis_spec pgs p) ?ci)
+  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env pgs p)
       [entry_alt pgs p ?ci ?caller ?g] deps"
     using place_enter_deps by blast
@@ -1521,7 +1521,7 @@ proof -
            (free (call_global_reads (declared_global p) (ci_args ci)))))
         ?\<G> p ci d ?e = (rl ?w, rl ?E)"
       by (simp add: dg_pipeline.entry_alt_def Let_def)
-    have R0: "enter_runs (enter\<^sup># (dg_pipeline.analysis_spec comp
+    have R0: "enter_runs (enter\<^sup>\<sharp> (dg_pipeline.analysis_spec comp
           (\<lambda>p. keyed_split_spec (declared_global p) cmb rl rg free) ?\<G> p) ci)
         (mk_dg_man d global_of) \<sigma> [(rl ?w, rl ?E)] (pub_sides global_of rg ?W (?E \<squnion> bot))"
       using enter_runs_keyed_enter_transfer[of cmb rl rg free ?R ?W

@@ -56,16 +56,16 @@ datatype analysis_event =
   Check_Event check_label exp
 
 record ('x,'k,'v,'dl,'dg) dg_spec =
-  dgs_skip           :: "('x,'k,'v,'dl,'dg) man_transfer" ("skip\<^sup>#")
-  dgs_assign         :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("assign\<^sup>#")
-  dgs_special        :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("special\<^sup>#")
-  dgs_branch         :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("branch\<^sup>#")
-  dgs_body           :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("body\<^sup>#")
-  dgs_return         :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("return\<^sup>#")
-  dgs_enter          :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer" ("enter\<^sup>#")
-  dgs_event          :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("event\<^sup>#")
-  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_env\<^sup>#")
-  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_assign\<^sup>#")
+  dgs_skip           :: "('x,'k,'v,'dl,'dg) man_transfer" ("skip\<^sup>\<sharp>")
+  dgs_assign         :: "vname \<Rightarrow> exp \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("assign\<^sup>\<sharp>")
+  dgs_special        :: "special_call \<Rightarrow> vname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("special\<^sup>\<sharp>")
+  dgs_branch         :: "exp \<Rightarrow> bool \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("branch\<^sup>\<sharp>")
+  dgs_body           :: "pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("body\<^sup>\<sharp>")
+  dgs_return         :: "exp option \<Rightarrow> pname \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("return\<^sup>\<sharp>")
+  dgs_enter          :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_enter_transfer" ("enter\<^sup>\<sharp>")
+  dgs_event          :: "analysis_event \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer" ("event\<^sup>\<sharp>")
+  dgs_combine_env    :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_env\<^sup>\<sharp>")
+  dgs_combine_assign :: "call_info \<Rightarrow> ('x,'k,'v,'dl,'dg) man_combine_transfer" ("combine'_assign\<^sup>\<sharp>")
   dgs_query          :: "('x,'k,'v,'dl,'dg) man_query"
 
 text \<open>
@@ -77,11 +77,11 @@ text \<open>
 
 text \<open>
   Every field carries the Goblint \<open>Spec\<close> method name it answers to, marked
-  \<open>\<^sup>#\<close>. A specification therefore reads in the analyzer's vocabulary,
+  \<open>\<^sup>\<sharp>\<close>. A specification therefore reads in the analyzer's vocabulary,
   and the marker keeps the abstract operation apart from the concrete one it
   over-approximates: \<^const>\<open>combine_env\<close> merges two stores, whereas
-  \<open>combine_env\<^sup>#\<close> is the field a domain fills to describe that merge.
-  The whole-state combine wears the same marker as \<open>combine\<^sup>#\<close>, so it
+  \<open>combine_env\<^sup>\<sharp>\<close> is the field a domain fills to describe that merge.
+  The whole-state combine wears the same marker as \<open>combine\<^sup>\<sharp>\<close>, so it
   means one thing on both sides of the transfer boundary.
 
   Two of the names contain an underscore, which a mixfix template would
@@ -105,8 +105,8 @@ definition dg_spec_combine_transfer ::
 where
   "dg_spec_combine_transfer S ci m exit =
      do {
-       d_env \<leftarrow> combine_env\<^sup># S ci m exit;
-       combine_assign\<^sup># S ci (m\<lparr>man_local := d_env\<rparr>) exit
+       d_env \<leftarrow> combine_env\<^sup>\<sharp> S ci m exit;
+       combine_assign\<^sup>\<sharp> S ci (m\<lparr>man_local := d_env\<rparr>) exit
      }"
 
 text \<open>
@@ -123,14 +123,14 @@ text \<open>
 fun dg_spec_step ::
   "('x,'k,'v,'dl,'dg,'z) dg_spec_scheme \<Rightarrow> edge_action \<Rightarrow> ('x,'k,'v,'dl,'dg) man_transfer"
 where
-  "dg_spec_step S EA_Nop            = skip\<^sup># S"
-| "dg_spec_step S (EA_Assign x e)   = assign\<^sup># S x e"
-| "dg_spec_step S (EA_Special sc x) = special\<^sup># S sc x"
-| "dg_spec_step S (EA_Assume b)     = branch\<^sup># S b True"
-| "dg_spec_step S (EA_AssumeNot b)  = branch\<^sup># S b False"
-| "dg_spec_step S (EA_Body p)       = body\<^sup># S p"
-| "dg_spec_step S (EA_Ret e p)      = return\<^sup># S e p"
-| "dg_spec_step S (EA_Check l cnd)  = event\<^sup># S (Check_Event l cnd)"
+  "dg_spec_step S EA_Nop            = skip\<^sup>\<sharp> S"
+| "dg_spec_step S (EA_Assign x e)   = assign\<^sup>\<sharp> S x e"
+| "dg_spec_step S (EA_Special sc x) = special\<^sup>\<sharp> S sc x"
+| "dg_spec_step S (EA_Assume b)     = branch\<^sup>\<sharp> S b True"
+| "dg_spec_step S (EA_AssumeNot b)  = branch\<^sup>\<sharp> S b False"
+| "dg_spec_step S (EA_Body p)       = body\<^sup>\<sharp> S p"
+| "dg_spec_step S (EA_Ret e p)      = return\<^sup>\<sharp> S e p"
+| "dg_spec_step S (EA_Check l cnd)  = event\<^sup>\<sharp> S (Check_Event l cnd)"
 
 subsection \<open>Compiling a specification to right-hand sides\<close>
 
@@ -271,7 +271,7 @@ definition dg_spec_wf :: "('x,'k,'v,'dl::bot,'dg) dg_spec \<Rightarrow> bool" wh
           \<longrightarrow> sp_wf (dg_spec_step S a ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>)))
      \<and> (\<forall>d unknown_of ch q. (\<forall>q'. sp_wf (ch q'))
           \<longrightarrow> sp_wf (dgs_query S ((mk_dg_man d unknown_of)\<lparr>man_ask := ch\<rparr>) q))
-     \<and> (\<forall>ci d unknown_of. sp_wf (enter\<^sup># S ci (mk_dg_man d unknown_of)))
+     \<and> (\<forall>ci d unknown_of. sp_wf (enter\<^sup>\<sharp> S ci (mk_dg_man d unknown_of)))
      \<and> (\<forall>ci d unknown_of ex. sp_wf (dg_spec_combine_transfer S ci (mk_dg_man d unknown_of) ex))"
 
 lemma dg_spec_wf_step_ask:
@@ -298,7 +298,7 @@ lemma dg_spec_wf_step:
   unfolding outer_man_def by (intro dg_spec_wf_step_ask sp_wf_ask_with)
 
 lemma dg_spec_wf_enter:
-  "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup># S ci (mk_dg_man d unknown_of))"
+  "dg_spec_wf S \<Longrightarrow> sp_wf (enter\<^sup>\<sharp> S ci (mk_dg_man d unknown_of))"
   by (simp add: dg_spec_wf_def)
 
 lemma dg_spec_wf_combine:
@@ -434,8 +434,8 @@ subsection \<open>Local-only combine\<close>
 
 text \<open>
   The combine counterpart: a pure function of the caller-continuation and
-  callee exit states, no global contact. When both stages --- \<open>combine_env\<^sup>#\<close>
-  and \<open>combine_assign\<^sup>#\<close> --- are local, the whole return pipeline collapses
+  callee exit states, no global contact. When both stages --- \<open>combine_env\<^sup>\<sharp>\<close>
+  and \<open>combine_assign\<^sup>\<sharp>\<close> --- are local, the whole return pipeline collapses
   monadically to one pure composition -- the sequencing updates
   \<^const>\<open>man_local\<close> and extracts nothing -- and the
   compiled combine tree is two reads and an answer, with no contribution
@@ -448,8 +448,8 @@ where
   "local_combine_transfer f m exit = sp_return (f (man_local m) exit)"
 
 lemma dg_spec_combine_transfer_local:
-  assumes "combine_env\<^sup># S ci = local_combine_transfer ce"
-    and "combine_assign\<^sup># S ci = local_combine_transfer ca"
+  assumes "combine_env\<^sup>\<sharp> S ci = local_combine_transfer ce"
+    and "combine_assign\<^sup>\<sharp> S ci = local_combine_transfer ca"
   shows "dg_spec_combine_transfer S ci m exit
            = sp_return (ca (ce (man_local m) exit) exit)"
   by (simp add: dg_spec_combine_transfer_def assms local_combine_transfer_def)
@@ -533,16 +533,16 @@ text \<open>The argument-free template must generalize in generated ML. Expandin
 lemmas [code] = local_dg_spec_template_def[unfolded local_transfer_def]
 
 lemma local_dg_spec_template_simps [simp]:
-  "skip\<^sup># local_dg_spec_template = local_transfer id"
-  "assign\<^sup># local_dg_spec_template x e = local_transfer id"
-  "special\<^sup># local_dg_spec_template sc x = local_transfer id"
-  "branch\<^sup># local_dg_spec_template b pol = local_transfer id"
-  "body\<^sup># local_dg_spec_template p = local_transfer id"
-  "return\<^sup># local_dg_spec_template eo p = local_transfer id"
-  "enter\<^sup># local_dg_spec_template ci = local_enter_transfer (\<lambda>d. [(d, d)])"
-  "event\<^sup># local_dg_spec_template ev = local_transfer id"
-  "combine_env\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
-  "combine_assign\<^sup># local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
+  "skip\<^sup>\<sharp> local_dg_spec_template = local_transfer id"
+  "assign\<^sup>\<sharp> local_dg_spec_template x e = local_transfer id"
+  "special\<^sup>\<sharp> local_dg_spec_template sc x = local_transfer id"
+  "branch\<^sup>\<sharp> local_dg_spec_template b pol = local_transfer id"
+  "body\<^sup>\<sharp> local_dg_spec_template p = local_transfer id"
+  "return\<^sup>\<sharp> local_dg_spec_template eo p = local_transfer id"
+  "enter\<^sup>\<sharp> local_dg_spec_template ci = local_enter_transfer (\<lambda>d. [(d, d)])"
+  "event\<^sup>\<sharp> local_dg_spec_template ev = local_transfer id"
+  "combine_env\<^sup>\<sharp> local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
+  "combine_assign\<^sup>\<sharp> local_dg_spec_template ci = local_combine_transfer (\<lambda>d de. d)"
   "dgs_query local_dg_spec_template m q = sp_return \<top>"
   by (simp_all add: local_dg_spec_template_def)
 

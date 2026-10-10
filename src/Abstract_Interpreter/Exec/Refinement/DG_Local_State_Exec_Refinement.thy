@@ -31,7 +31,7 @@ lemma default_st_to_fun_combine_assign:
   "\<rho>\<^bsub>\<G>\<^esub>
      (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
         (combine_default_st x y))
-   = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
+   = combine\<^sup>\<sharp> \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
   unfolding default_st_to_fun_def
   by (auto simp add: combine_collect_abs_def fun_eq_iff location_of_def
       split: option.splits)
@@ -162,13 +162,13 @@ lemma combine_lift_commute:
             (\<lambda>env0 de0. combine_assign_default_st \<G> dst
                  de0\<langle>location_of \<G> ret_var\<rangle> env0)
             (combine_env_st_lifted dc de) de)
-     = transfer_lift2 is_empty_state (combine\<^sup># \<G> dst) (reader dc) (reader de)"
+     = transfer_lift2 is_empty_state (combine\<^sup>\<sharp> \<G> dst) (reader dc) (reader de)"
   unfolding transfer_lift2_combine_env_st_lifted
 proof (rule transfer_lift2_commute)
   show "\<And>x y. \<rho>\<^bsub>\<G>\<^esub>
       (combine_assign_default_st \<G> dst y\<langle>location_of \<G> ret_var\<rangle>
          (combine_default_st x y))
-        = combine\<^sup># \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
+        = combine\<^sup>\<sharp> \<G> dst (\<rho>\<^bsub>\<G>\<^esub> x) (\<rho>\<^bsub>\<G>\<^esub> y)"
     by (rule default_st_to_fun_combine_assign)
   show "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
     by (rule empty_pred_exact)
@@ -192,8 +192,8 @@ abbreviation spec_abs :: "('x,'k,unit,'a abs_state lifted,'a abs_state lifted) d
 
 lemma Henter_lifted_for:
   "dg_reader_commute_gen.dg_enter_st_commute reader reader \<sigma>_st
-     (enter\<^sup># spec_st ci (mk_dg_man d (\<lambda>_. gk)))
-     (enter\<^sup># spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
+     (enter\<^sup>\<sharp> spec_st ci (mk_dg_man d (\<lambda>_. gk)))
+     (enter\<^sup>\<sharp> spec_abs ci (mk_dg_man (reader d) (\<lambda>_. gk)))"
   unfolding dgs_enter_exec_dg_spec dgs_enter_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_enter_st_commute_local_enter_transfer
         [OF dg_reader_commute_gen_lifted_for])
@@ -209,7 +209,7 @@ lemma Hcomb_lifted_for:
     dg_spec_combine_transfer_lifted_state_dg_spec
   by (rule dg_reader_commute_gen.dg_tree_st_commute_local_combine_transfer
         [OF dg_reader_commute_gen_lifted_for,
-         where F = "transfer_lift2 is_empty_state (combine\<^sup># \<G> (ci_dst ci))"])
+         where F = "transfer_lift2 is_empty_state (combine\<^sup>\<sharp> \<G> (ci_dst ci))"])
      (rule combine_lift_commute)
 
 subsection \<open>Soundness at the executable carrier, pulled back through its functions\<close>

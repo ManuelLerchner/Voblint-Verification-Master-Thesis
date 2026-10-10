@@ -172,7 +172,7 @@ text \<open>
   A call site reads the formals and actuals off \<^typ>\<open>call_info\<close> rather than
   passing them separately, but that projection stays at the call site: a domain
   writes \<open>enter_binding \<G> top ev (ci_formals ci) (ci_args ci)\<close>, exactly as the
-  return side writes \<open>combine\<^sup># \<G> (ci_dst ci)\<close>. No constant here wraps it.
+  return side writes \<open>combine\<^sup>\<sharp> \<G> (ci_dst ci)\<close>. No constant here wraps it.
 
   The caller's own continuation is not computed here either. Goblint's
   \<open>Spec.enter\<close> answers caller/callee pairs and \<open>constraints.ml\<close> hands the caller
@@ -203,14 +203,14 @@ text \<open>
 \<close>
 definition combine_collect_abs ::
     "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    ("combine\<^sup>#") where
+    ("combine\<^sup>\<sharp>") where
   "combine_collect_abs \<G> dst dc de =
      combine_assign dst (de ret_var) (combine_env \<G> dc de)"
 
 lemma combine_collect_abs_mono:
   fixes dc1 dc2 de1 de2 :: "'a::order abs_state"
   assumes c: "dc1 \<le> dc2" and e: "de1 \<le> de2"
-  shows "combine\<^sup># \<G> dst dc1 de1 \<le> combine\<^sup># \<G> dst dc2 de2"
+  shows "combine\<^sup>\<sharp> \<G> dst dc1 de1 \<le> combine\<^sup>\<sharp> \<G> dst dc2 de2"
   unfolding combine_collect_abs_def
   by (rule combine_assign_mono[OF le_funD[OF e] combine_env_mono[OF c e]])
 
@@ -221,11 +221,11 @@ text \<open>
   \<open>cases dst\<close>, so no caller unfolds its definition by hand.
 \<close>
 lemma combine_collect_abs_None[simp]:
-  "combine\<^sup># \<G> None a b = combine_env \<G> a b"
+  "combine\<^sup>\<sharp> \<G> None a b = combine_env \<G> a b"
   by (simp add: combine_collect_abs_def)
 
 lemma combine_collect_abs_Some[simp]:
-  "combine\<^sup># \<G> (Some x) a b = (combine_env \<G> a b)(x := b ret_var)"
+  "combine\<^sup>\<sharp> \<G> (Some x) a b = (combine_env \<G> a b)(x := b ret_var)"
   by (simp add: combine_collect_abs_def)
 
 subsection \<open>Soundness of the structural return combine\<close>
@@ -240,7 +240,7 @@ text \<open>
 lemma combine_collect_sound [intro]:
   fixes dc de :: "'a::numeric_domain abs_state"
   assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
-  shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup># \<G> dst dc de)"
+  shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
   unfolding combine_collect_def combine_collect_abs_def
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)

@@ -280,14 +280,14 @@ definition ownership_split_lift_gen ::
    \<Rightarrow> ('x,'k,unit,'d,'d) dg_spec"
 where
   "ownership_split_lift_gen cmb rg rl S = local_dg_spec_template\<lparr>
-     dgs_skip := ownership_split_transfer_gen cmb rg rl (skip\<^sup># S),
-     dgs_assign := (\<lambda>x e. ownership_split_transfer_gen cmb rg rl (assign\<^sup># S x e)),
-     dgs_special := (\<lambda>sc x. ownership_split_transfer_gen cmb rg rl (special\<^sup># S sc x)),
-     dgs_branch := (\<lambda>b pol. ownership_split_transfer_gen cmb rg rl (branch\<^sup># S b pol)),
-     dgs_body := (\<lambda>p. ownership_split_transfer_gen cmb rg rl (body\<^sup># S p)),
-     dgs_return := (\<lambda>e p. ownership_split_transfer_gen cmb rg rl (return\<^sup># S e p)),
-     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup># S ci)),
-     dgs_event := (\<lambda>evt. ownership_split_transfer_gen cmb rg rl (event\<^sup># S evt)),
+     dgs_skip := ownership_split_transfer_gen cmb rg rl (skip\<^sup>\<sharp> S),
+     dgs_assign := (\<lambda>x e. ownership_split_transfer_gen cmb rg rl (assign\<^sup>\<sharp> S x e)),
+     dgs_special := (\<lambda>sc x. ownership_split_transfer_gen cmb rg rl (special\<^sup>\<sharp> S sc x)),
+     dgs_branch := (\<lambda>b pol. ownership_split_transfer_gen cmb rg rl (branch\<^sup>\<sharp> S b pol)),
+     dgs_body := (\<lambda>p. ownership_split_transfer_gen cmb rg rl (body\<^sup>\<sharp> S p)),
+     dgs_return := (\<lambda>e p. ownership_split_transfer_gen cmb rg rl (return\<^sup>\<sharp> S e p)),
+     dgs_enter := (\<lambda>ci. ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup>\<sharp> S ci)),
+     dgs_event := (\<lambda>evt. ownership_split_transfer_gen cmb rg rl (event\<^sup>\<sharp> S evt)),
      dgs_combine_assign :=
        (\<lambda>ci. ownership_split_combine_transfer_gen cmb rg rl (dg_spec_combine_transfer S ci)) \<rparr>"
 
@@ -301,8 +301,8 @@ lemma dg_spec_step_ownership_split_lift_gen [simp]:
   unfolding ownership_split_lift_gen_def by (cases a) simp_all
 
 lemma dgs_enter_ownership_split_lift_gen [simp]:
-  "enter\<^sup># (ownership_split_lift_gen cmb rg rl S) ci
-     = ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup># S ci)"
+  "enter\<^sup>\<sharp> (ownership_split_lift_gen cmb rg rl S) ci
+     = ownership_split_enter_transfer_gen cmb rg rl (enter\<^sup>\<sharp> S ci)"
   unfolding ownership_split_lift_gen_def by simp
 
 lemma dgs_query_ownership_split_lift_gen [simp]:
@@ -322,7 +322,7 @@ text \<open>The lifter preserves well-formedness: it reads the shared slot, runs
 lemma sp_wf_dgs_combine_assign_ownership_split_lift_gen [intro]:
   assumes "dg_spec_wf S"
   shows
-    "sp_wf (combine_assign\<^sup># (ownership_split_lift_gen cmb rg rl S) ci (mk_dg_man d unknown_of) ex)"
+    "sp_wf (combine_assign\<^sup>\<sharp> (ownership_split_lift_gen cmb rg rl S) ci (mk_dg_man d unknown_of) ex)"
   unfolding ownership_split_lift_gen_def
   by (auto simp: ownership_split_combine_transfer_gen_def
       intro!: sp_wf_bind dg_spec_wf_combine[OF assms])

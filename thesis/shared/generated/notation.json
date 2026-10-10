@@ -95,6 +95,32 @@
       "local": null
     },
     {
+      "id": "abs_step",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the abstract transfer of action _a_ in component _c_",
+      "meaning": "the state component _c_ computes from _d_ at an edge with action _a_, asking its own channel; for a sound component it covers every store the edge produces from a store _d_ describes",
+      "forms": [
+        {
+          "const": "abs_step",
+          "cite": {
+            "kind": "const",
+            "name": "abs_step"
+          },
+          "symbol": "\\<lbrakk>a\\<rbrakk>\\<^sup>\\<sharp>\\<^bsub>c\\<^esub>",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sup>\\<sharp>\\<^bsub>_\\<^esub>",
+          "declaration": "abbreviation",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "MCP_Spec",
+          "file": "src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy",
+          "href": "Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.abs_step%7Cconst",
+          "session": "Voblint_Framework"
+        }
+      ],
+      "local": null
+    },
+    {
       "id": "gamma_S",
       "group": "operator",
       "kind": "notation",
@@ -243,8 +269,8 @@
             "kind": "const",
             "name": "dgs_skip"
           },
-          "symbol": "skip\\<^sup># S",
-          "mixfix": "skip\\<^sup>#",
+          "symbol": "skip\\<^sup>\\<sharp> S",
+          "mixfix": "skip\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -259,8 +285,8 @@
             "kind": "const",
             "name": "dgs_assign"
           },
-          "symbol": "assign\\<^sup># S",
-          "mixfix": "assign\\<^sup>#",
+          "symbol": "assign\\<^sup>\\<sharp> S",
+          "mixfix": "assign\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -275,8 +301,8 @@
             "kind": "const",
             "name": "dgs_special"
           },
-          "symbol": "special\\<^sup># S",
-          "mixfix": "special\\<^sup>#",
+          "symbol": "special\\<^sup>\\<sharp> S",
+          "mixfix": "special\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -291,8 +317,8 @@
             "kind": "const",
             "name": "dgs_branch"
           },
-          "symbol": "branch\\<^sup># S",
-          "mixfix": "branch\\<^sup>#",
+          "symbol": "branch\\<^sup>\\<sharp> S",
+          "mixfix": "branch\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -307,8 +333,8 @@
             "kind": "const",
             "name": "dgs_body"
           },
-          "symbol": "body\\<^sup># S",
-          "mixfix": "body\\<^sup>#",
+          "symbol": "body\\<^sup>\\<sharp> S",
+          "mixfix": "body\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -323,8 +349,8 @@
             "kind": "const",
             "name": "dgs_return"
           },
-          "symbol": "return\\<^sup># S",
-          "mixfix": "return\\<^sup>#",
+          "symbol": "return\\<^sup>\\<sharp> S",
+          "mixfix": "return\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -339,8 +365,8 @@
             "kind": "const",
             "name": "dgs_event"
           },
-          "symbol": "event\\<^sup># S",
-          "mixfix": "event\\<^sup>#",
+          "symbol": "event\\<^sup>\\<sharp> S",
+          "mixfix": "event\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -365,8 +391,8 @@
             "kind": "const",
             "name": "dgs_enter"
           },
-          "symbol": "enter\\<^sup># S",
-          "mixfix": "enter\\<^sup>#",
+          "symbol": "enter\\<^sup>\\<sharp> S",
+          "mixfix": "enter\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -381,8 +407,8 @@
             "kind": "const",
             "name": "dgs_combine_env"
           },
-          "symbol": "combine_env\\<^sup># S",
-          "mixfix": "combine'_env\\<^sup>#",
+          "symbol": "combine_env\\<^sup>\\<sharp> S",
+          "mixfix": "combine'_env\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -397,8 +423,8 @@
             "kind": "const",
             "name": "dgs_combine_assign"
           },
-          "symbol": "combine_assign\\<^sup># S",
-          "mixfix": "combine'_assign\\<^sup>#",
+          "symbol": "combine_assign\\<^sup>\\<sharp> S",
+          "mixfix": "combine'_assign\\<^sup>\\<sharp>",
           "declaration": "record dg_spec",
           "scope": "global",
           "pretty_printed": true,
@@ -423,8 +449,8 @@
             "kind": "const",
             "name": "combine_collect_abs"
           },
-          "symbol": "combine\\<^sup># \\<G> dst \\<sigma>c \\<sigma>e",
-          "mixfix": "combine\\<^sup>#",
+          "symbol": "combine\\<^sup>\\<sharp> \\<G> dst \\<sigma>c \\<sigma>e",
+          "mixfix": "combine\\<^sup>\\<sharp>",
           "declaration": "definition",
           "scope": "global",
           "pretty_printed": true,
@@ -449,8 +475,8 @@
             "kind": "locale",
             "name": "routed_context"
           },
-          "symbol": "context\\<^sup>#",
-          "mixfix": "context\\<^sup>#",
+          "symbol": "context\\<^sup>\\<sharp>",
+          "mixfix": "context\\<^sup>\\<sharp>",
           "declaration": "locale routed_context",
           "scope": "routed_context",
           "pretty_printed": true,
@@ -812,6 +838,10 @@
     {
       "kind": "locale",
       "name": "sound_evaluator"
+    },
+    {
+      "kind": "const",
+      "name": "abs_step"
     },
     {
       "kind": "const",

@@ -127,10 +127,10 @@ where
      ls_branch = (\<lambda>_. br), ls_body = (\<lambda>_. bd), ls_return = (\<lambda>_. rt), ls_event = (\<lambda>_. ev),
      ls_enter = (\<lambda>_ ci p. [(fst p, en ci (fst p))]),
      ls_combine_env = (\<lambda>_ _ ci dc de. dc),
-     ls_combine_assign = (\<lambda>_ ci. combine\<^sup># \<G> (ci_dst ci)) \<rparr>"
+     ls_combine_assign = (\<lambda>_ ci. combine\<^sup>\<sharp> \<G> (ci_dst ci)) \<rparr>"
 
 lemma closed_step_state_local_spec [simp]:
-  "closed_step (state_local_spec \<G> sk asn sp br bd rt en ev) a
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>state_local_spec \<G> sk asn sp br bd rt en ev\<^esub>
      = local_spec_step sk asn sp br bd rt ev a"
   by (simp add: closed_step_def ls_step_def state_local_spec_def fun_eq_iff)
 
@@ -141,7 +141,7 @@ lemma ls_step_state_local_spec [simp]:
 
 lemma ls_combine_state_local_spec [simp]:
   "ls_combine (state_local_spec \<G> sk asn sp br bd rt en ev) ch ch' ci dc de
-     = combine\<^sup># \<G> (ci_dst ci) dc de"
+     = combine\<^sup>\<sharp> \<G> (ci_dst ci) dc de"
   by (simp add: state_local_spec_def)
 
 context sound_nonrelational_transfer
@@ -234,7 +234,7 @@ where
      ls_enter = (\<lambda>_ ci p. [(fst p, transfer_lift empty_pred (en ci) (fst p))]),
      ls_combine_env = (\<lambda>_ _ ci dc de. dc),
      ls_combine_assign = (\<lambda>_ ci dcM de.
-        transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dcM de) \<rparr>"
+        transfer_lift2 empty_pred (combine\<^sup>\<sharp> \<G> (ci_dst ci)) dcM de) \<rparr>"
 
 definition lifted_state_dg_spec ::
   "(vname \<Rightarrow> bool)
@@ -270,7 +270,7 @@ lemma ls_step_lifted_state_local_spec [simp]:
   by (simp add: ls_step_def lifted_state_local_spec_def local_spec_step_transfer_lift)
 
 lemma closed_step_lifted_state_local_spec [simp]:
-  "closed_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) a
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev\<^esub>
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: closed_step_def fun_eq_iff)
 
@@ -284,7 +284,7 @@ lemma dg_spec_wf_lifted_state_dg_spec [intro, simp]:
   by (simp add: lifted_state_dg_spec_def)
 
 lemma dgs_enter_lifted_state_dg_spec:
-  "enter\<^sup># (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
+  "enter\<^sup>\<sharp> (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (en ci) d)])"
   by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
@@ -296,7 +296,7 @@ lemma dg_spec_combine_transfer_lifted_state_dg_spec:
   "dg_spec_combine_transfer
      (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
-         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de)"
+         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup>\<sharp> \<G> (ci_dst ci)) dc de)"
   by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
 end

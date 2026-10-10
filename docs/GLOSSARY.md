@@ -112,7 +112,7 @@ names.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `analysis_contract` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| resume state (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume state. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
+| resume state (`cont`) | First component `q` of an entry pair `(q, e)` that `enter♯` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume state. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Indexed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
@@ -152,18 +152,18 @@ carries the soundness proof -- notation does not rename the identifier.
 
 | Notation | Identifier | Layer |
 | --- | --- | --- |
-| `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `context#` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
-| `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
+| `enter♯` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `context♯` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
+| `combine_env♯` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine_assign♯` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine♯` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
 `route`'s semantic counterpart is the relation `context_policy`
 (`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
-counterpart of `enter#` -- staying unnotated. `routing_adequate` is the
+counterpart of `enter♯` -- staying unnotated. `routing_adequate` is the
 per-instance locale obligation: at a real call edge, some `(cont, entry)`
-alternative of the spec's own `enter#` run covers the caller and entered
+alternative of the spec's own `enter♯` run covers the caller and entered
 stores, and `route` on that entry yields a context `routed_entry_context_rel`
 admits. Goblint's `Spec.context` is a function applied per `enter`
 alternative; since `enter` returns a list, one concrete call can land in

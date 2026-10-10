@@ -257,7 +257,7 @@ next
     by (simp add: rel_order_spec_def)
 next
   fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b"
-  show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d unknown_of))"
+  show "sp_wf (enter\<^sup>\<sharp> rel_order_spec ci (mk_dg_man d unknown_of))"
     by (auto simp: rel_order_spec_def relc_enter_transfer_def Let_def)
 next
   fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b" and ex :: relc
@@ -382,7 +382,7 @@ lemma dg_spec_step_rel_order_spec [simp]:
   unfolding rel_order_spec_def by (cases a) simp_all
 
 lemma dgs_enter_rel_order_spec [simp]:
-  "enter\<^sup># rel_order_spec ci = relc_enter_transfer (relc_enter ci)"
+  "enter\<^sup>\<sharp> rel_order_spec ci = relc_enter_transfer (relc_enter ci)"
   unfolding rel_order_spec_def by simp
 
 lemma relc_step_sound:

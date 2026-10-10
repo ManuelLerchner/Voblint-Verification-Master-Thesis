@@ -31,12 +31,12 @@ assignment or a guard, whose concrete meaning #isaconst("edge_step") is fixed
 by @ch:program-model. For a store $s$, #isai("edge_step a s") is the set of
 stores the edge can produce. An analysis describes the stores at a program
 point by an abstract state $d$ of its _local domain_ $D_L$ (@sec:shared-facts) and
-supplies, for each action $a$, an abstract transfer $sh(f)_a$. The transfer is
+supplies, for each action $a$, an abstract transfer $asem(a)$. The transfer is
 sound if it loses no successor:
-$ s in conc_(D)(d) and s' in #isai("edge_step a s") ==> s' in conc_(D)(sh(f)_a (d)). $
+$ s in conc_(D)(d) and s' in #isai("edge_step a s") ==> s' in conc_(D)(asem(a) thin d). $
 This is the abstract counterpart of the obligation #oblig("INTRA") of
 @ch:traces for one edge. Unlike Saan's abstract operators @saan26phd[§2.4.2], the
-obligation does not require strictness, $sh(f)_a (lbot) = lbot$. The interface has one transfer per kind of action,
+obligation does not require strictness, $asem(a) thin lbot = lbot$. The interface has one transfer per kind of action,
 named after the corresponding method of Goblint's `Spec` (@fig:dg-spec).
 
 A call cannot be handled by one such transfer. After it returns, the caller's

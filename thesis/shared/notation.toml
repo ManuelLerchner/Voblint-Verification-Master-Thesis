@@ -66,6 +66,12 @@ forms = [
 
 [[entry]]
 group = "operator"
+reads = "the abstract transfer of action _a_ in component _c_"
+meaning = "the state component _c_ computes from _d_ at an edge with action _a_, asking its own channel; for a sound component it covers every store the edge produces from a store _d_ describes"
+forms = [{ const = "abs_step", args = ["a", "c"] }]
+
+[[entry]]
+group = "operator"
 reads = "the stores the abstract state _d_ represents"
 meaning = 'one symbol for every kind of state, selected by the type of _d_: a pointwise state gives the stores _s_ with {s x \<in> \<gamma> (d x)} for every variable _x_, a relational state the stores satisfying its pairs, and a lifted state represents no store when it is Bot'
 forms = [{ const = "gamma_S", args = ["d"] }]

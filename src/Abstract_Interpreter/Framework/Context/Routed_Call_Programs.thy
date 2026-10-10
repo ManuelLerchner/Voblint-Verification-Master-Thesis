@@ -76,7 +76,7 @@ subsection \<open>The canonical routed entry-seed publication and return combine
 text \<open>
   The routing combine reads the caller under its own context, the callee exit under the
   context \<open>route\<close> selects from the callee's entered value --- the alternative's own
-  second component, after \<open>enter\<^sup>#\<close> has run --- and the exact matched
+  second component, after \<open>enter\<^sup>\<sharp>\<close> has run --- and the exact matched
   \<^typ>\<open>call_action\<close> (from \<^const>\<open>return_call_action_list\<close>, never re-derived from
   the call site's outgoing edges). The spec's own enter and combine transfers run as
   compiled manager programs over the caller value, so whether the global slot \<open>buffer_key\<close>
@@ -100,7 +100,7 @@ text \<open>
   \<open>enter#\<close> runs exactly once per call action rather than once per hook. The caller
   continuation is not reconstructed here: it is handed to
   \<^const>\<open>dg_spec_combine_transfer\<close> as the manager's own local value, and that
-  pipeline runs \<open>combine_env\<^sup>#\<close> and \<open>combine_assign\<^sup>#\<close> over it,
+  pipeline runs \<open>combine_env\<^sup>\<sharp>\<close> and \<open>combine_assign\<^sup>\<sharp>\<close> over it,
   so this layer only chooses addresses and keys. Only the half that
   cannot move stays with \<open>routed_entry_seed_programs\<close>: a callee's own entry equation is the one
   place that can read its own seed slot back. \<open>route\<close> is kept as a parameter of that
@@ -205,7 +205,7 @@ definition routed_callee_call_program ::
 where
   "routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p =
      do {
-       pairs \<leftarrow> enter\<^sup># S (call_info_of ca p) (mk_dg_man caller global_of);
+       pairs \<leftarrow> enter\<^sup>\<sharp> S (call_info_of ca p) (mk_dg_man caller global_of);
        side_rhs_fold_dg bot
          (map (routed_call_alternative_program S global_of seed route is_bot ctx ca cc p) pairs)
      }"
@@ -327,7 +327,7 @@ text \<open>
 
 lemma routed_callee_call_program_sides_ge_seed:
   assumes wfS: "dg_spec_wf S"
-    and R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (mk_dg_man caller global_of) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
     and nb: "\<not> is_bot entry"
@@ -382,7 +382,7 @@ qed
 
 lemma routed_callee_call_program_sides_ge_combine:
   assumes wfS: "dg_spec_wf S"
-    and R: "enter_runs (enter\<^sup># S (call_info_of ca p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of ca p))
                 (mk_dg_man caller global_of) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "sides_of_program
@@ -413,7 +413,7 @@ text \<open>
 
 lemma routed_callee_call_program_traverse_ge:
   assumes wfS: "dg_spec_wf S"
-    and R: "enter_runs (enter\<^sup># S (call_info_of ca p))
+    and R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of ca p))
                 (mk_dg_man caller global_of) \<sigma> pairs pub"
     and mem: "(cont, entry) \<in> set pairs"
   shows "dg_local (traverse_program
@@ -541,9 +541,9 @@ text \<open>
 lemma routed_callee_call_program_side_free_at_buffer_key:
   assumes wfS: "dg_spec_wf S"
     and enter_free: "\<And>ci d pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
+        enter_runs (enter\<^sup>\<sharp> S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
+        enter_runs (enter\<^sup>\<sharp> S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d global_of) de)) \<sigma> z = bot"
     and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> buffer_key"
@@ -552,7 +552,7 @@ lemma routed_callee_call_program_side_free_at_buffer_key:
          = bot"
 proof -
   obtain pairs pub
-    where R: "enter_runs (enter\<^sup># S (call_info_of ca p))
+    where R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of ca p))
                 (mk_dg_man caller global_of) \<sigma> pairs pub"
     using enter_runs_ex by blast
   have alts: "\<And>t. t \<in> set (map (routed_call_alternative_program S global_of seed route is_bot ctx
@@ -584,9 +584,9 @@ qed
 lemma routed_call_program_side_free_at_buffer_key:
   assumes wfS: "dg_spec_wf S"
     and enter_free: "\<And>ci d pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
+        enter_runs (enter\<^sup>\<sharp> S ci) (mk_dg_man d global_of) \<sigma> pairs pub \<Longrightarrow> pub (Inr buffer_key) = bot"
     and enter_runs_ex: "\<And>ci d. \<exists>pairs pub.
-        enter_runs (enter\<^sup># S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
+        enter_runs (enter\<^sup>\<sharp> S ci) (mk_dg_man d global_of) \<sigma> pairs pub"
     and comb_free: "\<And>ci d de z. sides_of_rhs (sp_compile_with (\<lambda>x. DG x bot)
         (dg_spec_combine_transfer S ci (mk_dg_man d global_of) de)) \<sigma> z = bot"
     and ne: "\<And>p ctx'. seed (FunctionEntry p) ctx' \<noteq> buffer_key"
