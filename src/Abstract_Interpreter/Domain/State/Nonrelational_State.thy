@@ -1,5 +1,5 @@
 theory Nonrelational_State
-  imports Abstract_Domain State_Concretization
+  imports State_Concretization
 begin
 
 section \<open>What a store of one abstract value per variable denotes, and when it denotes nothing\<close>
@@ -36,7 +36,7 @@ definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store se
 adhoc_overloading gamma_S == gamma_state
 
 lemma gamma_stateI [intro]:
-  "(\<And>x. s x \<in> \<gamma> (d x)) \<Longrightarrow> s \<in> \<lbrakk>d\<rbrakk>"
+  "(\<And>x. s x \<in> \<gamma> (d x)) \<Longrightarrow> s \<in> \<gamma> d"
   unfolding gamma_state_def by simp
 
 (* Note: pointwise bot / sup on 'a abs_state come from HOL's
@@ -48,23 +48,23 @@ text \<open>Every value-level concretization law, lifted to states.  All of them
   pointwise, which is exactly what makes a nonrelational state cheap: order, bottom and join
   are read one variable at a time, and no law here needs a relation between variables.\<close>
 lemma gamma_state_mono:
-  "sigma1 \<le> sigma2 \<Longrightarrow> \<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma2\<rbrakk>"
+  "sigma1 \<le> sigma2 \<Longrightarrow> \<gamma> sigma1 \<subseteq> \<gamma> sigma2"
   for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def le_fun_def
   using gamma_mono by blast
 
 lemma gamma_state_bot [simp]:
-  "\<lbrakk>bot :: 'a::numeric_domain abs_state\<rbrakk> = {}"
+  "\<gamma> (bot :: 'a::numeric_domain abs_state) = {}"
   unfolding gamma_state_def bot_fun_def using gamma_bot by auto
 
 lemma gamma_state_sup_ub1 [intro]:
-  "\<lbrakk>sigma1\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  "\<gamma> sigma1 \<subseteq> \<gamma> (sigma1 \<squnion> sigma2)"
   for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub1 by blast
 
 lemma gamma_state_sup_ub2 [intro]:
-  "\<lbrakk>sigma2\<rbrakk> \<subseteq> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  "\<gamma> sigma2 \<subseteq> \<gamma> (sigma1 \<squnion> sigma2)"
   for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
@@ -74,18 +74,18 @@ text \<open>
   for citing at a witness \<open>s\<close> directly (\<open>using subsetD[OF gamma_state_sup_ub1 h]\<close>
   otherwise repeats the same \<open>subsetD\<close> wrapper at every call site).
   \<open>[intro]\<close>: their conclusion has the distinctive
-  \<open>s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>\<close> shape a join-injection goal actually has, and a
+  \<open>s \<in> \<gamma> (sigma1 \<squnion> sigma2)\<close> shape a join-injection goal actually has, and a
   witness already in one side's concretization is exactly the natural way to
   discharge it.
 \<close>
 
 lemma gamma_state_supI1 [intro]:
-  "s \<in> \<lbrakk>sigma1\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  "s \<in> \<gamma> sigma1 \<Longrightarrow> s \<in> \<gamma> (sigma1 \<squnion> sigma2)"
   for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   using gamma_state_sup_ub1 by blast
 
 lemma gamma_state_supI2 [intro]:
-  "s \<in> \<lbrakk>sigma2\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sigma1 \<squnion> sigma2\<rbrakk>"
+  "s \<in> \<gamma> sigma2 \<Longrightarrow> s \<in> \<gamma> (sigma1 \<squnion> sigma2)"
   for sigma1 sigma2 :: "'a::numeric_domain abs_state"
   using gamma_state_sup_ub2 by blast
 
@@ -96,7 +96,7 @@ text \<open>
   \<open>env_indep_depsD\<close>). Cite it explicitly with the variable the goal needs.
 \<close>
 lemma gamma_stateD:
-  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s x \<in> \<gamma> (d x)"
+  "s \<in> \<gamma> d \<Longrightarrow> s x \<in> \<gamma> (d x)"
   for d :: "'a::numeric_domain abs_state"
   unfolding gamma_state_def by simp
 
@@ -160,7 +160,7 @@ qed
 
 lemma is_empty_state_gamma_state_empty:
   assumes "is_empty_state d"
-  shows "\<lbrakk>d\<rbrakk> = {}"
+  shows "\<gamma> d = {}"
 proof -
   obtain x where "is_empty (d x)" using assms by (rule is_empty_stateE)
   then show ?thesis
@@ -168,7 +168,7 @@ proof -
 qed
 
 lemma gamma_state_empty_is_empty_state:
-  assumes "\<lbrakk>d\<rbrakk> = {}"
+  assumes "\<gamma> d = {}"
   shows "is_empty_state d"
 proof (rule ccontr)
   assume "\<not> is_empty_state d"
@@ -177,13 +177,13 @@ proof (rule ccontr)
   define s where "s = (\<lambda>x. SOME v. v \<in> \<gamma> (d x))"
   have s_prop: "s x \<in> \<gamma> (d x)" for x
     unfolding s_def using nonempty[of x] by (rule someI_ex)
-  then have "s \<in> \<lbrakk>d\<rbrakk>"
+  then have "s \<in> \<gamma> d"
     unfolding gamma_state_def by simp
   with assms show False by simp
 qed
 
 lemma is_empty_state_iff_gamma_state_empty:
-  "is_empty_state d \<longleftrightarrow> \<lbrakk>d\<rbrakk> = {}"
+  "is_empty_state d \<longleftrightarrow> \<gamma> d = {}"
   using is_empty_state_gamma_state_empty gamma_state_empty_is_empty_state by blast
 
 lemma exact_emptiness_is_empty_state:

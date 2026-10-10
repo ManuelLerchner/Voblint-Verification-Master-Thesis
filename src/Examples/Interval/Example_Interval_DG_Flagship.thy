@@ -132,7 +132,7 @@ theorem flagship_source_run_sound:
     "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
   shows "\<exists>v stk. flagship_pi, flagship_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-                 \<and> t \<in> \<lbrakk>flagship_at v\<rbrakk>"
+                 \<and> t \<in> \<gamma> (flagship_at v)"
 proof -
   have run':
     "flagship_gs, prog_table flagship_prog \<turnstile> (main_body (prog_table flagship_prog), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
@@ -152,9 +152,9 @@ text \<open>
 \<close>
 
 theorem flagship_head_bound_proper:
-  "(\<lambda>_. 100) \<notin> \<lbrakk>flagship_at (Statement 1)\<rbrakk>"
+  "(\<lambda>_. 100) \<notin> \<gamma> (flagship_at (Statement 1))"
 proof
-  assume "(\<lambda>_. 100) \<in> \<lbrakk>flagship_at (Statement 1)\<rbrakk>"
+  assume "(\<lambda>_. 100) \<in> \<gamma> (flagship_at (Statement 1))"
   then have "(100::int) \<in> \<gamma> (flagship_at (Statement 1)
       (STR ''x''))"
     by (simp add: gamma_state_def)

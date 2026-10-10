@@ -1,12 +1,13 @@
 #import "theme.typ": vb
 // Notation library. Only mathematical notation lives here, and each symbol is
-// the one the theories print: gamma for the class parameter of numeric_domain,
-// the semantic brackets for gamma_state, HOL's order, lattice and function-
+// the one the theories print: gamma for every concretization (overloaded by
+// type), the semantic brackets for evaluation, HOL's order, lattice and function-
 // update syntax, and the solver's widening and narrowing. Every other formal
 // object is written under its Isabelle name (isaconst, isai), not a macro.
 
 // ============================================================== brackets ====
 #let sem(x) = $lr(⟦ #x ⟧)$
+#let asem(x) = $lr(⟦ #x ⟧)^sharp$
 #let sh(x) = $#x^sharp$
 #let setof(x) = $lr({ #x })$
 #let setcomp(x, y) = $lr({ #x mid(bar.v) #y })$

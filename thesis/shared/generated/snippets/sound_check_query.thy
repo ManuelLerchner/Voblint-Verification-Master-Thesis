@@ -4,4 +4,4 @@ locale sound_check_query =
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>")

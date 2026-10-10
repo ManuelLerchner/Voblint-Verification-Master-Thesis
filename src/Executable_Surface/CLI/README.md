@@ -50,7 +50,7 @@ part that really does see all five.
 | `Analysis_Render.thy` | `render_report`: the displayed `run_result` the adapters read, a projection no theorem reads |
 | `Analysis_Run_Sound.thy` | what a configuration's table owes its report (`sound_table`), and the context-free table `mcp_rule_table` |
 | `Analysis_Run_Ctx_Sound.thy` | the same at the entry-state and call-string tables, `mcp_es_rule_table`, `mcp_cs_rule_table` |
-| `Analysis_Report.thy` | the report semantics `⟦res⟧⇘v⇙`, `verdict_stores`, the CAPS queries and their theorems; `analysis_report_of_sound`, the one proof that splits on the context policy |
+| `Analysis_Report.thy` | the report semantics `ℛ⇘res⇙ v`, `verdict_stores`, the CAPS queries and their theorems; `analysis_report_of_sound`, the one proof that splits on the context policy |
 | `Analysis_Certified.thy` | the source-level theorems over every configuration `run_voblint` answers, with no termination premise |
 | `Trace_Run.thy` | the solver trace in the exported code: traced code equations for routing and `analysis_report_of`, the readers a run hands the tracer, and the OCaml mapping of `trace_event` |
 

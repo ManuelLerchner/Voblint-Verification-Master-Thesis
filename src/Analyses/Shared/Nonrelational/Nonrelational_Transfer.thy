@@ -73,23 +73,23 @@ definition ret :: "exp option \<Rightarrow> pname \<Rightarrow> 'a abs_state \<R
   "ret e p d = (case e of None \<Rightarrow> d | Some a \<Rightarrow> assign ret_var a d)"
 
 lemma assign_sound:
-  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
-  shows "s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>assign x a d\<rbrakk>"
+  assumes \<G>: "s \<in> \<gamma> d"
+  shows "s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<gamma> (assign x a d)"
   unfolding assign_def
   using gamma_stateD[OF \<G>] \<G> by blast
 
-lemma skip_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>skip d\<rbrakk>"
+lemma skip_sound: "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (skip d)"
   by (simp add: skip_def)
 
-lemma body_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>body p d\<rbrakk>"
+lemma body_sound: "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (body p d)"
   by (simp add: body_def)
 
-lemma event_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>event evt d\<rbrakk>"
+lemma event_sound: "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (event evt d)"
   by (simp add: event_def)
 
 lemma ret_sound:
-  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
-  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<lbrakk>ret e p d\<rbrakk>"
+  assumes \<G>: "s \<in> \<gamma> d"
+  shows "s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) \<in> \<gamma> (ret e p d)"
   using assign_sound[OF \<G>] \<G> by (cases e) (simp_all add: ret_def)
 
 
@@ -113,9 +113,9 @@ definition enter_ci_for ::
   "enter_ci_for \<G> ci = enter_for \<G> (ci_formals ci) (ci_args ci)"
 
 lemma enter_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes \<G>: "s \<in> \<gamma> d"
   shows "bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state cls s)
-           \<in> \<lbrakk>enter_for cls xs es d\<rbrakk>"
+           \<in> \<gamma> (enter_for cls xs es d)"
   unfolding enter_for_def enter_binding_concrete[symmetric]
 proof (rule enter_binding_sound[OF \<G> gamma_top])
   fix e
@@ -124,9 +124,9 @@ proof (rule enter_binding_sound[OF \<G> gamma_top])
 qed
 
 lemma enter_ci_for_sound:
-  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes \<G>: "s \<in> \<gamma> d"
   shows "bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state cls s)
-           \<in> \<lbrakk>enter_ci_for cls ci d\<rbrakk>"
+           \<in> \<gamma> (enter_ci_for cls ci d)"
   using enter_for_sound[OF \<G>, of \<open>ci_formals ci\<close> \<open>ci_args ci\<close>]
   by (simp add: enter_ci_for_def)
 
@@ -245,7 +245,7 @@ subsection \<open>The specification and its soundness, before any context\<close
 text \<open>
   What the bundle supplies to the framework on its own: a whole-state D/G
   specification over the executable step and entry, and its soundness against the
-  concretization of the read-back local value, \<open>\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<close>. Neither
+  concretization of the read-back local value, \<open>\<lambda>d g. \<gamma> (\<rho>\<^bsub>\<G>\<^esub> d)\<close>. Neither
   mentions a context, a routing function, a seed key or a solver, so every domain
   reads them off its bundle instead of restating them.
 \<close>
@@ -272,11 +272,11 @@ interpretation dom: dg_domain_exec
      (rule tf_st_for_commute[unfolded tf_abs_def], assumption,
       rule enter_st_for_commute, rule exact)
 
-lemma gamma_exec_readback: "dom.gamma_exec = (\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>)"
+lemma gamma_exec_readback: "dom.gamma_exec = (\<lambda>d g. \<gamma> (\<rho>\<^bsub>\<G>\<^esub> d))"
   by (intro ext) (simp add: dom.gamma_exec_def gamma_lift_default_st_gamma_to_fun)
 
 theorem sound_exec:
-  "analysis_contract (spec_exec \<G> empty_pred) (\<lambda>d g. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>) \<G>"
+  "analysis_contract (spec_exec \<G> empty_pred) (\<lambda>d g. \<gamma> (\<rho>\<^bsub>\<G>\<^esub> d)) \<G>"
 proof -
   have "analysis_contract dom.spec_st (\<lambda>d e. dom.gamma_exec d (e ())) \<G>"
     by (rule dom.analysis_contract_st[OF is_sound_nonrelational_transfer])
@@ -287,8 +287,8 @@ text \<open>Entry is stated apart from \<^locale>\<open>analysis_contract\<close
   it separately; the alternative list is the singleton this entry answers.\<close>
 
 theorem entry_cover_exec:
-  assumes "s \<in> \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>"
-  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> d'\<rbrakk>) s
+  assumes "s \<in> \<gamma> (\<rho>\<^bsub>\<G>\<^esub> d)"
+  shows "entry_pairs_cover (\<lambda>d'. \<gamma> (\<rho>\<^bsub>\<G>\<^esub> d')) s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (generic_enter_st_for ops \<G> ci) d)]"
 proof -

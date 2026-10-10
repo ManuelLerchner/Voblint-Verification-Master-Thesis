@@ -173,9 +173,9 @@ definition mcp_contradiction :: mcp_val where
 lemma mcp_contradiction_not_empty:
   "\<not> mcp_empty_v [Interval_Analysis, Parity_Analysis] mcp_contradiction"
 proof -
-  have "(\<lambda>_. 2) \<in> \<lbrakk>(\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2))\<rbrakk>"
+  have "(\<lambda>_. 2) \<in> \<gamma> ((\<top> :: ivl abs_state)(STR ''x'' := Ivl (Fin 2) (Fin 2)))"
     by (auto simp: gamma_state_def top_ivl_def gamma_ivl_top)
-  moreover have "(\<lambda>_. 1) \<in> \<lbrakk>(\<top> :: parity abs_state)(STR ''x'' := POdd)\<rbrakk>"
+  moreover have "(\<lambda>_. 1) \<in> \<gamma> ((\<top> :: parity abs_state)(STR ''x'' := POdd))"
     by (auto simp: gamma_state_def gamma_parity_top)
   ultimately show ?thesis
     by (auto simp: mcp_empty_v_def mcp_contradiction_def is_empty_state_iff_gamma_state_empty)

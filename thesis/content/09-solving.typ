@@ -779,8 +779,8 @@ that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
 state means what its function means under the concretization
 #isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
 (#isaconst("default_st_gamma")) is
-$ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
-The solver never computes $sem(d)$; it uses only the executable lattice
+$ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
+The solver never computes $conc(d)$; it uses only the executable lattice
 operations. Function states get order, join and bottom pointwise from HOL, but
 no widening or narrowing. The carrier instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the generic solver runs on
@@ -798,7 +798,7 @@ $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
 bottom, order, widening and narrowing. The transfer functions must commute
 with the represented function in the same way,
 $ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
-and since $sem(d) = sem(rho_(cal(G))(d))$, the soundness facts of
+and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
 @ch:analysis-interface then transport from the abstract to the executable
 operation. The locale #isalocale("dg_analysis_exec") states this commutation
 for the transfer on nonempty states and for procedure entry. For primitives
@@ -813,7 +813,7 @@ overrides that the represented function reads, and each declared global; the
 globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
 #isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
-$ #isaconst("default_st_is_bot_for") space "globals" space d <==> sem(d) = emptyset, $
+$ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
 provided the list enumerates exactly the globals of $cal(G)$. Because the test
 is exact, collapsing the states it finds empty to #lbot commutes with the
 represented function, as the specification's collapse requires, and a state

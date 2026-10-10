@@ -68,6 +68,33 @@
       "local": null
     },
     {
+      "id": "sound_evaluator",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "the abstract value of _e_ in _d_",
+      "meaning": "the abstract value an evaluator computes for expression _e_ in abstract state _d_; it contains the concrete value whenever the store lies in {\\<gamma> d}",
+      "forms": [
+        {
+          "const": "aval_abs",
+          "cite": {
+            "kind": "locale",
+            "name": "sound_evaluator"
+          },
+          "symbol": "\\<lbrakk>e\\<rbrakk>\\<^sup>\\<sharp> d",
+          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sup>\\<sharp>",
+          "declaration": "locale sound_evaluator",
+          "scope": "sound_evaluator",
+          "pretty_printed": true,
+          "theory": "Forward_Domain",
+          "file": "src/Abstract_Interpreter/Domain/Eval/Forward_Domain.thy",
+          "href": "Voblint/Voblint_Domain/Forward_Domain.html#Forward_Domain.sound_evaluator%7Clocale",
+          "session": "Voblint_Domain",
+          "scope_href": "Voblint/Voblint_Domain/Forward_Domain.html#Forward_Domain.sound_evaluator%7Clocale"
+        }
+      ],
+      "local": null
+    },
+    {
       "id": "gamma_S",
       "group": "operator",
       "kind": "notation",
@@ -80,8 +107,8 @@
             "kind": "const",
             "name": "gamma_S"
           },
-          "symbol": "\\<lbrakk>d\\<rbrakk>",
-          "mixfix": "\\<lbrakk>_\\<rbrakk>",
+          "symbol": "\\<gamma> d",
+          "mixfix": "\\<gamma>",
           "declaration": "consts",
           "scope": "global",
           "pretty_printed": true,
@@ -649,8 +676,8 @@
             "kind": "const",
             "name": "report_sem"
           },
-          "symbol": "\\<lbrakk>res\\<rbrakk>\\<^bsub>v\\<^esub>",
-          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^bsub>_\\<^esub>",
+          "symbol": "\\<R>\\<^bsub>res\\<^esub> v",
+          "mixfix": "\\<R>\\<^bsub>_\\<^esub>",
           "declaration": "definition",
           "scope": "global",
           "pretty_printed": true,
@@ -781,6 +808,10 @@
     {
       "kind": "const",
       "name": "aval"
+    },
+    {
+      "kind": "locale",
+      "name": "sound_evaluator"
     },
     {
       "kind": "const",

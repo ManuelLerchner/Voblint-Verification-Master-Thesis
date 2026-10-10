@@ -1,5 +1,5 @@
 theory Parity_Lattice
-  imports "Voblint_Domain.Abstract_Domain"
+  imports "Voblint_Domain.State_Concretization"
 begin
 
 section \<open>Parity lattice\<close>

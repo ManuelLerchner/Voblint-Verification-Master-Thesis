@@ -15,5 +15,5 @@ theorem run_voblint_spine:
            \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
+           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"

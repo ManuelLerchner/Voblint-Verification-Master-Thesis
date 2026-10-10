@@ -38,7 +38,7 @@ locale sound_check_query =
   for less :: "'a::numeric_domain \<Rightarrow> 'a \<Rightarrow> bool option"
     and eq :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>")
 begin
 
 subsection \<open>A single three-valued decision procedure over \<^typ>\<open>exp\<close>\<close>
@@ -56,7 +56,7 @@ text \<open>
 \<close>
 
 definition truthy_query :: "exp \<Rightarrow> 'd \<Rightarrow> bool option" where
- [code]: "truthy_query e d = map_option HOL.Not (eq (aval_abs e d) (aval_abs (N 0) d))"
+ [code]: "truthy_query e d = map_option HOL.Not (eq (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d))"
 
 lemma truthy_query_sound:
   assumes mem: "s \<in> \<gamma>\<^sub>S d"
@@ -69,12 +69,12 @@ fun check_query :: "exp \<Rightarrow> 'd \<Rightarrow> bool option" where
     "check_query (Not b) d = map_option HOL.Not (check_query b d)"
   | "check_query (And b1 b2) d = and_opt (check_query b1 d) (check_query b2 d)"
   | "check_query (Or b1 b2) d = or_opt (check_query b1 d) (check_query b2 d)"
-  | "check_query (Less a b) d = less (aval_abs a d) (aval_abs b d)"
-  | "check_query (LessEq a b) d = map_option HOL.Not (less (aval_abs b d) (aval_abs a d))"
-  | "check_query (Greater a b) d = less (aval_abs b d) (aval_abs a d)"
-  | "check_query (GreaterEq a b) d = map_option HOL.Not (less (aval_abs a d) (aval_abs b d))"
-  | "check_query (Eq a b) d = eq (aval_abs a d) (aval_abs b d)"
-  | "check_query (NotEq a b) d = map_option HOL.Not (eq (aval_abs a d) (aval_abs b d))"
+  | "check_query (Less a b) d = less (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)"
+  | "check_query (LessEq a b) d = map_option HOL.Not (less (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d))"
+  | "check_query (Greater a b) d = less (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d)"
+  | "check_query (GreaterEq a b) d = map_option HOL.Not (less (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d))"
+  | "check_query (Eq a b) d = eq (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)"
+  | "check_query (NotEq a b) d = map_option HOL.Not (eq (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d))"
   | "check_query e d = truthy_query e d"
 
 text \<open>Soundness of the arithmetic fallback, proved once and cited by every
@@ -108,28 +108,28 @@ next
   then show ?case using aval_abs_sound mem eq_sound by auto
 next
   case (LessEq a b)
-  have query: "less (aval_abs b d) (aval_abs a d) = Some (\<not> r)"
+  have query: "less (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) = Some (\<not> r)"
     using LessEq.prems by (auto split: option.splits)
   have relation: "(\<lbrakk>b\<rbrakk>\<^sub>e s < \<lbrakk>a\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by auto
 next
   case (Greater a b)
-  have query: "less (aval_abs b d) (aval_abs a d) = Some r"
+  have query: "less (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) = Some r"
     using Greater.prems by simp
   have relation: "(\<lbrakk>b\<rbrakk>\<^sub>e s < \<lbrakk>a\<rbrakk>\<^sub>e s) = r"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by simp
 next
   case (GreaterEq a b)
-  have query: "less (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
+  have query: "less (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) = Some (\<not> r)"
     using GreaterEq.prems by (auto split: option.splits)
   have relation: "(\<lbrakk>a\<rbrakk>\<^sub>e s < \<lbrakk>b\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule less_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])
   show ?case using relation by auto
 next
   case (NotEq a b)
-  have query: "eq (aval_abs a d) (aval_abs b d) = Some (\<not> r)"
+  have query: "eq (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d) = Some (\<not> r)"
     using NotEq.prems by (auto split: option.splits)
   have relation: "(\<lbrakk>a\<rbrakk>\<^sub>e s = \<lbrakk>b\<rbrakk>\<^sub>e s) = (\<not> r)"
     by (rule eq_sound[OF query aval_abs_sound[OF mem] aval_abs_sound[OF mem]])

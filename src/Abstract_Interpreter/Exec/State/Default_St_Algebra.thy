@@ -1,5 +1,5 @@
 theory Default_St_Algebra
-  imports Default_St_Base "Voblint_Domain.Abstract_Domain"
+  imports Default_St_Base "Voblint_Domain.State_Concretization"
 begin
 
 unbundle default_st_carrier_syntax

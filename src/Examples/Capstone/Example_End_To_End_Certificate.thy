@@ -419,7 +419,7 @@ text \<open>
 
 lemma certificate_demo_report_covers_at_check:
   assumes ans: "run_voblint certificate_config certificate_demo_prog = Analysed res"
-  shows "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>res\<rbrakk>\<^bsub>Statement 4\<^esub>"
+  shows "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> (Statement 4)"
   using run_voblint_covers [OF ans] certificate_demo_reaches_check by blast
 
 text \<open>
@@ -474,7 +474,7 @@ theorem certificate_demo_full_certificate:
        ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
-    "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>res\<rbrakk>\<^bsub>Statement 4\<^esub>"
+    "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> (Statement 4)"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> (Statement 4)"
     "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
 proof (cases "run_voblint certificate_config
@@ -515,7 +515,7 @@ theorem certificate_demo_source_certified:
    \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog \<turnstile> (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
-   \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+   \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> v"
 proof (cases "run_voblint certificate_config
                 certificate_demo_prog")

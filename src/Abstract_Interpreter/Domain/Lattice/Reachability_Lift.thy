@@ -1,5 +1,5 @@
 theory Reachability_Lift
-  imports Abstract_Domain "HOL-Library.Monad_Syntax"
+  imports State_Concretization "HOL-Library.Monad_Syntax"
 begin
 
 section \<open>Explicit reachability over an abstract carrier\<close>

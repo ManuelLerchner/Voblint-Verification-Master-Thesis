@@ -33,9 +33,9 @@ knowing what they mean. Recall from @sec:abs-int that an abstract value $a$
 denotes a set $conc(a)$ of concrete values. A value of a numeric domain such
 as Sign or Interval denotes a set of integers, $conc(a) subset.eq ZZ$. An
 abstract state $d$, in contrast, denotes a set of stores,
-$sem(d) subset.eq (#isatype("vname") -> ZZ)$ (@sec:domain-states). The same
-brackets denote expression evaluation in @ch:program-model, where the
-subscript $e$ distinguishes them. An
+$conc(d) subset.eq (#isatype("vname") -> ZZ)$ (@sec:domain-states). We write
+$conc$ for both, as the theories do; the type of the argument determines
+which concretization is meant. An
 arbitrary lattice of abstract values is not enough, for two reasons. First,
 the order must agree with the meaning. The solver only proves inequalities
 $a lle b$ in the abstract order, while the obligations of @ch:traces are
@@ -586,9 +586,9 @@ the given set.
 
 An _abstract state_ describes a set of stores. It is a type $D$ with
 the order and join the solver needs and a monotone concretization that maps
-each state $d$ to the set $sem(d)$ of stores it describes. Each kind of state
+each state $d$ to the set $conc(d)$ of stores it describes. Each kind of state
 defines its own concretization, and Isabelle overloads one constant,
-#isaconst("gamma_S"), written $sem(d)$, for all of them. The numeric analyses use non-relational states. An analysis that records
+#isaconst("gamma_S"), written $conc(d)$, for all of them. The numeric analyses use non-relational states. An analysis that records
 relations $x <= y$ between variables uses a relational state.
 
 === A non-relational state #thy-badge("Voblint_Domain", "Nonrelational_State") <sec:nonrel-state>
@@ -704,7 +704,7 @@ framework lifts the local state by an outer bottom element for dead code
 raises the `Deadcode` exception instead of returning a state. In Voblint, a
 lifted state (#isatype("lifted")) is either #ctor("Bot"), meaning unreachable,
 or $ctor("Lifted")(d)$ for an ordinary state $d$, with #ctor("Bot") below every
-other value and $sem(ctor("Bot")) = emptyset$.
+other value and $conc(ctor("Bot")) = emptyset$.
 
 After every transfer, the analysis tests whether the result is empty and, if
 so, replaces it by #ctor("Bot") (#isaconst("normalize_lift")). Comparing with
@@ -736,8 +736,8 @@ to a set of integers. The type #isatype("relc") records a set $P$ of variable
 pairs, where the pair $(x, y)$ stands for the constraint $x <= y$. Its
 concretization is #isaconst("gamma_relc"):
 $
-  sem(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
-  quad sem(ctor("RelBot")) = emptyset.
+  conc(ctor("RelC")(P)) = setcomp(s, forall (x, y) in P. s(x) <= s(y)),
+  quad conc(ctor("RelBot")) = emptyset.
 $
 Below, the pair $(x, y)$ is written $x <= y$.
 
@@ -846,9 +846,9 @@ and the next two introduce them, one use at a time.
 
 An assignment `x = e` needs the abstract value of $e$. Forward evaluation
 computes it from an abstract state $d$, as in the generic abstract interpreter
-of Nipkow and Klein @nipkow14[§13.5.3]. The abstract result must contain
+of Nipkow and Klein @nipkow14[§13.5.3]. The abstract result $asem(e) thin d$ must contain
 every concrete result (#isalocale("sound_evaluator")):
-$ s in sem(d) ==> sem(e)_e thin s in conc(sh("eval")(e, d)). $
+$ s in conc(d) ==> sem(e)_e thin s in conc(asem(e) thin d). $
 Interval evaluates by interval arithmetic on the bounds (#isaconst("aval_ivl")).
 For example, if $d(x) = ivl(0, 9)$, Interval evaluates `x + 1` to
 $ivl(1, 10)$.
@@ -1040,7 +1040,7 @@ $j$ to $ivl(2, 9)$ but not $i$ from above (claim
 
 #block(breakable: false)[
   #lemma(name: [Sound guard filter], isa: "bfilter_sound")[
-    If a store $s$ lies in $sem(d)$ and the guard $e$ has truth value
+    If a store $s$ lies in $conc(d)$ and the guard $e$ has truth value
     #isai("res") at $s$, then $s$ lies in the meaning of the filtered state.
   ]
 

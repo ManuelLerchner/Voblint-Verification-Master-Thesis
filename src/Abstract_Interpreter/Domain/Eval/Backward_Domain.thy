@@ -125,7 +125,7 @@ locale sound_refinement =
     + sound_truth_test tobool
     + sound_inverse_ops intersect inv_less inv_eq inv_plus inv_minus inv_times
     for intersect :: "'a::numeric_domain => 'a => 'a"
-    and aval_abs :: "exp => 'a abs_state => 'a"
+    and aval_abs :: "exp => 'a abs_state => 'a" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>")
     and tobool :: "'a => bool option"
     and inv_less  :: "bool => 'a => 'a => 'a * 'a"
     and inv_eq    :: "bool => 'a => 'a => 'a * 'a"
@@ -137,13 +137,13 @@ begin
 fun afilter :: "exp => 'a => 'a abs_state => 'a abs_state" where
     "afilter (V x) a d = d(x := intersect a (d x))"
   | "afilter (Plus  e1 e2) a d =
-       (let (a1, a2) = inv_plus a (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_plus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "afilter (Minus e1 e2) a d =
-       (let (a1, a2) = inv_minus a (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_minus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "afilter (Times e1 e2) a d =
-       (let (a1, a2) = inv_times a (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_times a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "afilter _ a d = d"
 
@@ -169,7 +169,7 @@ text \<open>
 
 definition feasible :: "exp => bool => 'a abs_state => bool" where
   "feasible e pol d =
-     (\<not> is_empty (aval_abs e d) \<and> tobool (aval_abs e d) \<noteq> Some (\<not> pol))"
+     (\<not> is_empty (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) \<and> tobool (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) \<noteq> Some (\<not> pol))"
 
 text \<open>
   Every state a concrete store witnesses is feasible for the polarity that
@@ -179,7 +179,7 @@ text \<open>
 \<close>
 
 lemma feasible_of_concrete [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" and "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
+  assumes "s \<in> \<gamma> d" and "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
   shows "feasible e pol d"
   unfolding feasible_def using assms is_empty_correct tobool_sound by blast
 
@@ -226,16 +226,16 @@ text \<open>
 
 fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
     "bfilter (Less e1 e2) res d =
-       (let (a1, a2) = inv_less res (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_less res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "bfilter (GreaterEq e1 e2) res d =
-       (let (a1, a2) = inv_less (\<not> res) (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_less (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "bfilter (Greater e1 e2) res d =
-       (let (a1, a2) = inv_less res (aval_abs e2 d) (aval_abs e1 d)
+       (let (a1, a2) = inv_less res (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)
         in afilter e2 a1 (afilter e1 a2 d))"
   | "bfilter (LessEq e1 e2) res d =
-       (let (a1, a2) = inv_less (\<not> res) (aval_abs e2 d) (aval_abs e1 d)
+       (let (a1, a2) = inv_less (\<not> res) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)
         in afilter e2 a1 (afilter e1 a2 d))"
   | "bfilter (Not b) res d = bfilter b (\<not> res) d"
   | "bfilter (And b1 b2) True  d = bfilter b1 True  (bfilter b2 True  d)"
@@ -247,13 +247,13 @@ fun bfilter :: "exp => bool => 'a abs_state => 'a abs_state" where
        \<squnion> (if feasible b2 True d then bfilter b2 True d else bot)"
   | "bfilter (Or  b1 b2) False d = bfilter b1 False (bfilter b2 False d)"
   | "bfilter (Eq  e1 e2) res  d =
-       (let (a1, a2) = inv_eq res (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_eq res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "bfilter (NotEq  e1 e2) res  d =
-       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e1 d) (aval_abs e2 d)
+       (let (a1, a2) = inv_eq (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)
         in afilter e1 a1 (afilter e2 a2 d))"
   | "bfilter e res d =
-       (let (a1, a2) = inv_eq (\<not> res) (aval_abs e d) (aval_abs (N 0) d)
+       (let (a1, a2) = inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d)
         in afilter e a1 d)"
 
 text \<open>
@@ -265,20 +265,20 @@ text \<open>
 \<close>
 
 lemma gamma_state_update_intersect [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" and "s x \<in> \<gamma> a"
-  shows "s \<in> \<lbrakk>d(x := intersect a (d x))\<rbrakk>"
+  assumes "s \<in> \<gamma> d" and "s x \<in> \<gamma> a"
+  shows "s \<in> \<gamma> (d(x := intersect a (d x)))"
   using assms by (simp add: gamma_stateD gamma_stateI intersect_sound)
 
 lemma afilter_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> a"
-  shows "s \<in> \<lbrakk>afilter e a d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> a"
+  shows "s \<in> \<gamma> (afilter e a d)"
 using assms proof (induction e arbitrary: a d)
   case (V x)
   then show ?case
     unfolding afilter.simps aval.simps by (rule gamma_state_update_intersect)
 next
   case (Plus e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Plus.prems(1)] by simp_all
   have asum: "\<lbrakk>e1\<rbrakk>\<^sub>e s + \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Plus.prems(2) by simp
   show ?case
@@ -287,7 +287,7 @@ next
     by (blast intro: Plus.IH)
 next
   case (Minus e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Minus.prems(1)] by simp_all
   have adiff: "\<lbrakk>e1\<rbrakk>\<^sub>e s - \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Minus.prems(2) by simp
   show ?case
@@ -296,7 +296,7 @@ next
     by (blast intro: Minus.IH)
 next
   case (Times e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Times.prems(1)] by simp_all
   have aprod: "\<lbrakk>e1\<rbrakk>\<^sub>e s * \<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> a" using Times.prems(2) by simp
   show ?case
@@ -315,12 +315,12 @@ text \<open>
 \<close>
 
 lemma afilter_pair_sound [intro]:
-  assumes st: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes st: "s \<in> \<gamma> d"
       and fst: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (fst p)"
       and snd: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (snd p)"
-  shows "s \<in> \<lbrakk>afilter e1 (fst p) (afilter e2 (snd p) d)\<rbrakk>"
+  shows "s \<in> \<gamma> (afilter e1 (fst p) (afilter e2 (snd p) d))"
 proof -
-  have inner: "s \<in> \<lbrakk>afilter e2 (snd p) d\<rbrakk>" by (rule afilter_sound[OF st snd])
+  have inner: "s \<in> \<gamma> (afilter e2 (snd p) d)" by (rule afilter_sound[OF st snd])
   show ?thesis by (rule afilter_sound[OF inner fst])
 qed
 
@@ -335,16 +335,16 @@ text \<open>
   arithmetic constructor.
 \<close>
 lemma bfilter_default_sound:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
-  shows "s \<in> \<lbrakk>afilter e (fst (inv_eq (\<not> res) (aval_abs e d) (aval_abs (N 0) d))) d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
+  shows "s \<in> \<gamma> (afilter e (fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d))) d)"
 proof -
-  have ea: "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
+  have ea: "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF assms(1)] by simp
-  have e0: "\<lbrakk>N 0\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs (N 0) d)"
+  have e0: "\<lbrakk>N 0\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d)"
     by (rule aval_abs_sound[of s d "N 0", OF assms(1)])
   have eq0: "(\<lbrakk>e\<rbrakk>\<^sub>e s = \<lbrakk>N 0\<rbrakk>\<^sub>e s) = (\<not> res)"
     using assms(2) by auto
-  have "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (fst (inv_eq (\<not> res) (aval_abs e d) (aval_abs (N 0) d)))"
+  have "\<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d)))"
     using inv_eq_sound[OF ea e0 eq0] by simp
   then show ?thesis using afilter_sound[OF assms(1)]
     by simp
@@ -359,12 +359,12 @@ text \<open>
 
 lemma gated_join_sound:
   fixes f1 f2 :: "'a abs_state"
-  assumes st: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes st: "s \<in> \<gamma> d"
     and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
-    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>"
-    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>"
-  shows "s \<in> \<lbrakk>(if feasible b1 pol d then f1 else bot)
-                \<squnion> (if feasible b2 pol d then f2 else bot)\<rbrakk>"
+    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma> f1"
+    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma> f2"
+  shows "s \<in> \<gamma> ((if feasible b1 pol d then f1 else bot)
+                \<squnion> (if feasible b2 pol d then f2 else bot))"
   using assms(2)
 proof
   assume h: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol"
@@ -377,8 +377,8 @@ next
 qed
 
 lemma bfilter_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
-  shows "s \<in> \<lbrakk>bfilter e res d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
+  shows "s \<in> \<gamma> (bfilter e res d)"
 using assms proof (induction e arbitrary: res d)
   case (Not e)
   have bv': "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
@@ -421,7 +421,7 @@ next
   qed
 next
   case (Less e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Less.prems(1)] by simp_all
   have less: "(\<lbrakk>e1\<rbrakk>\<^sub>e s < \<lbrakk>e2\<rbrakk>\<^sub>e s) = res" using Less.prems(2) by (auto split: if_splits)
   show ?case
@@ -430,7 +430,7 @@ next
                       inv_less_sound_snd[OF e1a e2a less])
 next
   case (GreaterEq e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF GreaterEq.prems(1)] by simp_all
   have less: "(\<lbrakk>e1\<rbrakk>\<^sub>e s < \<lbrakk>e2\<rbrakk>\<^sub>e s) = (\<not> res)" using GreaterEq.prems(2) by (auto split: if_splits)
   show ?case
@@ -439,7 +439,7 @@ next
                       inv_less_sound_snd[OF e1a e2a less])
 next
   case (Greater e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Greater.prems(1)] by simp_all
   have less: "(\<lbrakk>e2\<rbrakk>\<^sub>e s < \<lbrakk>e1\<rbrakk>\<^sub>e s) = res" using Greater.prems(2) by (auto split: if_splits)
   show ?case
@@ -448,7 +448,7 @@ next
                       inv_less_sound_snd[OF e2a e1a less])
 next
   case (LessEq e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF LessEq.prems(1)] by simp_all
   have less: "(\<lbrakk>e2\<rbrakk>\<^sub>e s < \<lbrakk>e1\<rbrakk>\<^sub>e s) = (\<not> res)" using LessEq.prems(2) by (auto split: if_splits)
   show ?case
@@ -457,7 +457,7 @@ next
                       inv_less_sound_snd[OF e2a e1a less])
 next
   case (Eq e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF Eq.prems(1)] by simp_all
   have eq: "(\<lbrakk>e1\<rbrakk>\<^sub>e s = \<lbrakk>e2\<rbrakk>\<^sub>e s) = res" using Eq.prems(2) by (auto split: if_splits)
   show ?case
@@ -466,7 +466,7 @@ next
 
 next
   case (NotEq e1 e2)
-  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e1 d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e2 d)"
+  have e1a: "\<lbrakk>e1\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)" and e2a: "\<lbrakk>e2\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)"
     using aval_abs_sound[OF NotEq.prems(1)] by simp_all
   have eq: "(\<lbrakk>e1\<rbrakk>\<^sub>e s = \<lbrakk>e2\<rbrakk>\<^sub>e s) = (\<not> res)" using NotEq.prems(2) by (auto split: if_splits)
   show ?case
@@ -555,11 +555,12 @@ qed simp_all
 text \<open>\<open>gated_join_sound\<close> for \<open>bfilter_lifted\<close>'s join cases, against \<^const>\<open>Bot\<close>.\<close>
 
 lemma gated_join_lifted_sound:
-  assumes st: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes st: "s \<in> \<gamma> d"
     and "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol"
-    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f1\<rbrakk>\<^sub>\<bottom>"
-    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>f2\<rbrakk>\<^sub>\<bottom>"
-  shows "s \<in> \<lbrakk>(if feasible b1 pol d then f1 else Bot) \<squnion> (if feasible b2 pol d then f2 else Bot)\<rbrakk>\<^sub>\<bottom>"
+    and f1: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma>\<^sub>\<bottom> f1"
+    and f2: "truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma>\<^sub>\<bottom> f2"
+  shows
+    "s \<in> \<gamma>\<^sub>\<bottom> ((if feasible b1 pol d then f1 else Bot) \<squnion> (if feasible b2 pol d then f2 else Bot))"
   using assms(2)
 proof
   assume h: "truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) = pol"
@@ -572,8 +573,8 @@ next
 qed
 
 lemma bfilter_lifted_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
-  shows "s \<in> \<lbrakk>bfilter_lifted e res d\<rbrakk>\<^sub>\<bottom>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = res"
+  shows "s \<in> \<gamma>\<^sub>\<bottom> (bfilter_lifted e res d)"
 using assms proof (induction e arbitrary: res d)
   case (Not e)
   have bv': "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = (\<not> res)" using Not.prems(2) by (auto split: if_splits)
@@ -585,7 +586,7 @@ next
     case True
     have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = True" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = True"
       using And.prems(2) True unfolding truthy_aval_And by simp_all
-    have h2: "s \<in> \<lbrakk>bfilter_lifted e2 True d\<rbrakk>\<^sub>\<bottom>"
+    have h2: "s \<in> \<gamma>\<^sub>\<bottom> (bfilter_lifted e2 True d)"
       using And.IH(2)[OF And.prems(1) v2] .
     have res_eq: "res = True" using True by simp
     show ?thesis
@@ -611,7 +612,7 @@ next
     case False
     have v1: "truthy (\<lbrakk>e1\<rbrakk>\<^sub>e s) = False" and v2: "truthy (\<lbrakk>e2\<rbrakk>\<^sub>e s) = False"
       using Or.prems(2) False unfolding truthy_aval_Or by simp_all
-    have h2: "s \<in> \<lbrakk>bfilter_lifted e2 False d\<rbrakk>\<^sub>\<bottom>"
+    have h2: "s \<in> \<gamma>\<^sub>\<bottom> (bfilter_lifted e2 False d)"
       using Or.IH(2)[OF Or.prems(1) v2] .
     have res_eq: "res = False" using False by simp
     show ?thesis
@@ -637,11 +638,11 @@ lemma branch_lifted_normalized [simp]:
   unfolding branch_lifted_def by simp
 
 lemma branch_lifted_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
-  shows "s \<in> \<lbrakk>branch_lifted e pol d\<rbrakk>\<^sub>\<bottom>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
+  shows "s \<in> \<gamma>\<^sub>\<bottom> (branch_lifted e pol d)"
 proof -
   have g: "feasible e pol d" by (rule feasible_of_concrete[OF assms])
-  have "s \<in> \<lbrakk>bfilter_lifted e pol d\<rbrakk>\<^sub>\<bottom>" by (rule bfilter_lifted_sound[OF assms])
+  have "s \<in> \<gamma>\<^sub>\<bottom> (bfilter_lifted e pol d)" by (rule bfilter_lifted_sound[OF assms])
   with g show ?thesis unfolding branch_lifted_def by simp
 qed
 
@@ -664,8 +665,8 @@ definition branch :: "exp => bool => 'a abs_state => 'a abs_state" where
   "branch e pol d = collapse_lift (branch_lifted e pol d)"
 
 lemma branch_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
-  shows "s \<in> \<lbrakk>branch e pol d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = pol"
+  shows "s \<in> \<gamma> (branch e pol d)"
   unfolding branch_def
   by (rule gamma_collapse_lift[where gam = gamma_state,
         OF branch_lifted_sound[OF assms] gamma_state_bot])

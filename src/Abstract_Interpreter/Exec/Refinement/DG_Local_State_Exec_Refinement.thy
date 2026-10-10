@@ -98,7 +98,7 @@ locale dg_domain_exec =
       "\<And>s. empty_pred s = is_empty_state (\<rho>\<^bsub>\<G>\<^esub> s)"
 begin
 
-text \<open>With \<open>\<G>\<close> fixed, \<open>\<lbrakk>s\<rbrakk>\<close> is the carrier's concretization, for a plain and
+text \<open>With \<open>\<G>\<close> fixed, \<open>\<gamma> s\<close> is the carrier's concretization, for a plain and
   for a lifted carrier state alike.\<close>
 
 adhoc_overloading gamma_S == "default_st_gamma \<G>"
@@ -225,7 +225,7 @@ text \<open>
 \<close>
 
 definition gamma_exec :: "'a default_st lifted \<Rightarrow> 'a default_st lifted \<Rightarrow> store set" where
-  "gamma_exec d g = \<lbrakk>d\<rbrakk>"
+  "gamma_exec d g = \<gamma> d"
 
 lemma gamma_exec_Bot [simp]: "gamma_exec Bot g = {}"
   by (simp add: gamma_exec_def)
@@ -239,9 +239,9 @@ text \<open>
 
 lemma entered_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and s: "s \<in> \<lbrakk>d\<rbrakk>"
+    and s: "s \<in> \<gamma> d"
   shows "call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
-           \<in> \<lbrakk>transfer_lift empty_pred (enter_st ci) d\<rbrakk>"
+           \<in> \<gamma> (transfer_lift empty_pred (enter_st ci) d)"
   using s unfolding gamma_lift_default_st_gamma_to_fun enter_lift_commute
   by (intro transfer_lift_sound_mem[OF _ is_empty_state_gamma_state_empty])
      (simp add: call_enter_CallEdge
@@ -249,8 +249,8 @@ lemma entered_st:
 
 theorem entry_pairs_cover_st:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-    and sin: "s \<in> \<lbrakk>d\<rbrakk>"
-  shows "entry_pairs_cover (\<lambda>d'. \<lbrakk>d'\<rbrakk>) s
+    and sin: "s \<in> \<gamma> d"
+  shows "entry_pairs_cover (\<lambda>d'. \<gamma> d') s
            (call_enter \<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s)
            [(d, transfer_lift empty_pred (enter_st ci) d)]"
   by (rule entry_pairs_coverI
@@ -265,9 +265,9 @@ text \<open>
 
 theorem exec_local_spec_sound:
   assumes tf_sound: "sound_nonrelational_transfer \<G> sk asn sp br bd rt en ev"
-  shows "sound_local_spec \<G> (\<lambda>d. \<lbrakk>d\<rbrakk>) (exec_local_spec \<G> empty_pred tf_st enter_st)"
+  shows "sound_local_spec \<G> (\<lambda>d. \<gamma> d) (exec_local_spec \<G> empty_pred tf_st enter_st)"
 proof -
-  have step: "edge_collect a \<lbrakk>reader d\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader (transfer_lift empty_pred (tf_st a) d)\<rbrakk>\<^sub>\<bottom>"
+  have step: "edge_collect a (\<gamma>\<^sub>\<bottom> (reader d)) \<subseteq> \<gamma>\<^sub>\<bottom> (reader (transfer_lift empty_pred (tf_st a) d))"
     for a d
   proof (cases "normalized_lift empty_pred d")
     case True
@@ -281,15 +281,15 @@ proof -
     then obtain s where "d = Lifted s" "empty_pred s" by (cases d) simp_all
     then show ?thesis by (simp add: empty_pred_exact is_empty_state_gamma_state_empty)
   qed
-  have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<lbrakk>reader (transfer_lift2 empty_pred
+  have comb: "combine_collect \<G> (ci_dst ci) s t \<in> \<gamma>\<^sub>\<bottom> (reader (transfer_lift2 empty_pred
         (\<lambda>env0 de0. combine_assign_default_st \<G> (ci_dst ci)
            de0\<langle>location_of \<G> ret_var\<rangle> env0)
-        (combine_env_st_lifted dc de) de)\<rbrakk>\<^sub>\<bottom>"
-    if "s \<in> \<lbrakk>reader dc\<rbrakk>\<^sub>\<bottom>" "t \<in> \<lbrakk>reader de\<rbrakk>\<^sub>\<bottom>" for s t dc de ci
+        (combine_env_st_lifted dc de) de))"
+    if "s \<in> \<gamma>\<^sub>\<bottom> (reader dc)" "t \<in> \<gamma>\<^sub>\<bottom> (reader de)" for s t dc de ci
     unfolding combine_lift_commute
     by (rule
       transfer_lift2_sound_mem[OF combine_collect_sound is_empty_state_gamma_state_empty that])
-  have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<lbrakk>reader x\<rbrakk>\<^sub>\<bottom> \<subseteq> \<lbrakk>reader y\<rbrakk>\<^sub>\<bottom>"
+  have mono: "\<forall>x y. x \<le> y \<longrightarrow> \<gamma>\<^sub>\<bottom> (reader x) \<subseteq> \<gamma>\<^sub>\<bottom> (reader y)"
     by (meson gamma_lift_mono gamma_state_mono map_lift_default_st_to_fun_mono)
   show ?thesis
     unfolding sound_local_spec_def gamma_lift_default_st_gamma_to_fun

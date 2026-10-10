@@ -83,7 +83,7 @@ every store that one of its states there describes, aggregated over all
 contexts the solver solved $v$ in (#isaconst("report_states_at"),
 #isaconst("report_sem")):
 $
-  #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") = union.big_(#isai("d \<in> report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
+  #isai("\<R>\<^bsub>res\<^esub> v") = union.big_(#isai("d \<in> report_states_at res v")) #isai("\<gamma>\<^bsub>res\<^esub> d"),
 $
 where #isai("\<gamma>\<^bsub>res\<^esub>") is the concretization of the
 configured analyses.
@@ -168,13 +168,13 @@ program each check has a node of its own, and the verdict set is then the set
 of that single check.
 
 The verdict set can be much larger than
-#isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"), because a verdict keeps only
+#isai("\<R>\<^bsub>res\<^esub> v"), because a verdict keeps only
 the truth value of one condition (last row of @fig:chain). Soundness needs
 only that every store reaching $v$ lies in it.
 
 Every verdict is backed by the states it was computed from: each store that a
 state at $v$ describes satisfies every definite verdict at $v$, that is,
-#isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v")
+#isai("\<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v")
 (#isathm("analysis_report_verdicts_sound")). The theorem assumes that each node
 verdict is the join of its states' verdicts, which holds for every report
 #isaconst("run_voblint") returns (#isathm("run_voblint_consistent")).
@@ -189,7 +189,7 @@ $g$ = #isaconst("prog_cfg") $p$ its compiled graph, $cal(G)$ =
 store in $S$, arrives at it. The argument that a verdict is sound places a
 reached store at a CFG node $v$ and follows a chain of inclusions between sets
 of stores there. It ends in the
-two sets of the report, #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") and
+two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
 #isai("\<V>\<^bsub>res\<^esub> v"). Each step is a theorem:
 // One relation per row, centred over the fact that proves it, so the relations
 // line up whatever the length of the fact's name.
@@ -210,9 +210,7 @@ two sets of the report, #isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>") and
   _step($=$, isathm("node_collect_eq_Union_activation_collect")),
   $union.big_c #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c")$,
 
-  [],
-  _step(sym.subset.eq, isathm("run_voblint_covers")),
-  isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"),
+  [], _step(sym.subset.eq, isathm("run_voblint_covers")), isai("\<R>\<^bsub>res\<^esub> v"),
 
   [],
   _step(sym.subset.eq, isathm("analysis_report_verdicts_sound")),
@@ -291,7 +289,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
           vb.proved,
         ),
         (
-          [#isai("\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"), the report],
+          [#isai("\<R>\<^bsub>res\<^esub> v"), the report],
           "bar",
           (calc.min(r1.at(0), r2.at(0)), calc.max(r1.at(1), r2.at(1))),
           vb.accent,
@@ -403,7 +401,7 @@ It concludes that some node $v$ of $g$ and frame stack $"stk"$ exist with:
     related by the simulation #isaconst("csim") of @sec:csim, so $v$ is a node
     at which the compiled program can stand when the source run reaches $s$;
   + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node;
-  + #isai("s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"): some state the report
+  + #isai("s \<in> \<R>\<^bsub>res\<^esub> v"): some state the report
     holds at $v$, under one of its contexts, describes $s$;
   + #isai("s \<in> \<V>\<^bsub>res\<^esub> v"): every #verdict("PROVED") check listed at $v$
     holds in $s$, and every #verdict("REFUTED") check is false in $s$.

@@ -10,7 +10,7 @@ text \<open>
   bridge \<open>source_store_in_activation_collect\<close> with \<open>activation_collect_sound\<close>.
 
   The cap-consuming theorems read the abstract map through a supplied concretization \<open>\<gamma>\<^sub>M\<close>
-  instead of fixing it to \<open>'a::numeric_domain abs_state\<close>/\<open>\<lbrakk>_\<rbrakk>\<close>:
+  instead of fixing it to \<open>'a::numeric_domain abs_state\<close>/\<open>\<gamma> _\<close>:
   the cap is the only thing they touch, so a reachability-lifted map fits as readily as a raw one.
   The backbone corollaries below read it at \<^const>\<open>gamma_state\<close>, which is what
   \<open>activation_collect_sound\<close> produces.
@@ -81,31 +81,31 @@ theorem source_activation_sound:
   assumes wf: "wf_compile_input \<G> Pi ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cfg_entry (compile_prog Pi ps), c\<^sub>0))\<rbrakk>"
+    and ENTRY_G: "\<And>x. x \<in> S \<Longrightarrow> x \<in> \<gamma> (sg (Inl (cfg_entry (compile_prog Pi ps), c\<^sub>0)))"
     and EDGE: "\<And>u a v c x x'. (u, a, v) \<in> intra (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk> \<Longrightarrow> x' \<in> edge_step a x
-        \<Longrightarrow> x' \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
+        \<Longrightarrow> x \<in> \<gamma> (sg (Inl (u, c))) \<Longrightarrow> x' \<in> edge_step a x
+        \<Longrightarrow> x' \<in> \<gamma> (sg (Inl (v, c)))"
     and CALL: "\<And>u dst pars args p cont c c' x.
         (u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (u, c))\<rbrakk>
+        \<Longrightarrow> x \<in> \<gamma> (sg (Inl (u, c)))
         \<Longrightarrow> c' \<in> adm u c (call_info_of (CallEdge dst pars args) p) x
               (call_enter \<G> (CallEdge dst pars args) x)
-        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) x \<in> \<lbrakk>sg (Inl (FunctionEntry p, c'))\<rbrakk>"
+        \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) x \<in> \<gamma> (sg (Inl (FunctionEntry p, c')))"
     and COMB: "\<And>cl dst pars args p cont c1 c' p' x t es.
         (cl, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls (compile_prog Pi ps)
-        \<Longrightarrow> x \<in> \<lbrakk>sg (Inl (cl, c1))\<rbrakk>
+        \<Longrightarrow> x \<in> \<gamma> (sg (Inl (cl, c1)))
         \<Longrightarrow> admits_call_context \<G> (compile_prog Pi ps) adm cl c1 p' x es c'
-        \<Longrightarrow> t \<in> \<lbrakk>sg (Inl (FunctionResult p, c'))\<rbrakk>
-        \<Longrightarrow> combine_collect \<G> dst x t \<in> \<lbrakk>sg (Inl (cont, c1))\<rbrakk>"
-    and TOTAL: "call_context_total_on (\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>) adm \<G> (compile_prog Pi ps)"
+        \<Longrightarrow> t \<in> \<gamma> (sg (Inl (FunctionResult p, c')))
+        \<Longrightarrow> combine_collect \<G> dst x t \<in> \<gamma> (sg (Inl (cont, c1)))"
+    and TOTAL: "call_context_total_on (\<lambda>v c. \<gamma> (sg (Inl (v, c)))) adm \<G> (compile_prog Pi ps)"
   shows "\<exists>v stk t c. Pi, compile_prog Pi ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> activation_context_rel \<G> adm c\<^sub>0 (compile_prog Pi ps) t c
-                   \<and> s \<in> \<lbrakk>sg (Inl (v, c))\<rbrakk>"
+                   \<and> s \<in> \<gamma> (sg (Inl (v, c)))"
 proof -
-  interpret G: activation_coverage "compile_prog Pi ps" S "\<lambda>v c. \<lbrakk>sg (Inl (v, c))\<rbrakk>" adm c\<^sub>0 \<G>
+  interpret G: activation_coverage "compile_prog Pi ps" S "\<lambda>v c. \<gamma> (sg (Inl (v, c)))" adm c\<^sub>0 \<G>
     by (standard; blast intro: ENTRY_G EDGE CALL COMB TOTAL)
   have cap: "\<And>v ctx. \<A>\<^bsub>\<G>,adm,c\<^sub>0,compile_prog Pi ps,S\<^esub> v ctx
-                     \<subseteq> \<lbrakk>sg (Inl (v, ctx))\<rbrakk>"
+                     \<subseteq> \<gamma> (sg (Inl (v, ctx)))"
     by (rule activation_collect_sound[OF G.activation_coverage_axioms])
   have has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
                    \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 (compile_prog Pi ps) t c"

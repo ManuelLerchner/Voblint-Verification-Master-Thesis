@@ -1,5 +1,5 @@
 theory Numeric_Queries
-  imports Abstract_Domain
+  imports State_Concretization
 begin
 
 section \<open>Numeric relational query interface\<close>

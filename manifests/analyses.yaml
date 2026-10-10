@@ -135,10 +135,10 @@ domains:
       published_type: relc
       context_type: unit list
       component: order_spec (program_vars $p)
-      gamma: '\<lbrakk>$f\<rbrakk>'
+      gamma: '\<gamma> $f'
       empty: ($f = RelBot)
       read: $f
-      published_gamma: '\<lbrakk>$v\<rbrakk>'
+      published_gamma: '\<gamma> $v'
       published_empty: ($v = RelBot)
       answer: relc_qry $v $q
       display: Field_Whole (OrderValue (order_pairs $v))

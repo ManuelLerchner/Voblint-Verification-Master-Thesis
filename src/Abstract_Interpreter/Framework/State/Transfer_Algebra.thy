@@ -46,8 +46,8 @@ text \<open>
 \<close>
 lemma combine_env_sound [intro]:
   fixes dc de :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<lbrakk>dc\<rbrakk>" and se: "t \<in> \<lbrakk>de\<rbrakk>"
-  shows "combine_env \<G> s t \<in> \<lbrakk>combine_env \<G> dc de\<rbrakk>"
+  assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
+  shows "combine_env \<G> s t \<in> \<gamma> (combine_env \<G> dc de)"
   using assms by (auto simp: gamma_state_def le_fun_def)
 
 subsection \<open>Generic soundness and monotonicity helpers\<close>
@@ -58,8 +58,8 @@ text \<open>The two facts a call boundary keeps re-deriving: writing one variabl
   proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
   fixes d :: "'a::numeric_domain abs_state"
-  assumes s: "s \<in> \<lbrakk>d\<rbrakk>" and v: "v \<in> \<gamma> a"
-  shows "s(x := v) \<in> \<lbrakk>d(x := a)\<rbrakk>"
+  assumes s: "s \<in> \<gamma> d" and v: "v \<in> \<gamma> a"
+  shows "s(x := v) \<in> \<gamma> (d(x := a))"
   using s v unfolding gamma_state_def by auto
 
 text \<open>
@@ -68,9 +68,9 @@ text \<open>
 \<close>
 lemma bind_formals_sound [intro]:
   fixes d :: "'a::numeric_domain abs_state"
-  assumes s: "s \<in> \<lbrakk>d\<rbrakk>"
+  assumes s: "s \<in> \<gamma> d"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a) vs avs"
-  shows "bind_formals xs vs s \<in> \<lbrakk>bind_formals xs avs d\<rbrakk>"
+  shows "bind_formals xs vs s \<in> \<gamma> (bind_formals xs avs d)"
   using assms apply (induction xs arbitrary: vs avs s d)
   subgoal
     by simp
@@ -110,8 +110,8 @@ text \<open>
 
 lemma enter_frame_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
-  shows "enter_state \<G> s \<in> \<lbrakk>enter_frame \<G> reset_val d\<rbrakk>"
+  assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
+  shows "enter_state \<G> s \<in> \<gamma> (enter_frame \<G> reset_val d)"
   unfolding gamma_state_def enter_state_def
   using gamma_stateD[OF sv] reset_full by auto
 
@@ -136,20 +136,20 @@ lemma list_all2_map_mapI [intro]:
 
 lemma enter_binding_sound_list_all2 [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
+  assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
                  (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
   shows "enter_binding \<G> 0 aval xs es s
-           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es d\<rbrakk>"
+           \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
   unfolding enter_binding_def enter_state_def[symmetric]
   by (rule bind_formals_sound[OF enter_frame_sound[OF sv reset_full] vals])
 
 lemma enter_binding_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
-  assumes sv: "s \<in> \<lbrakk>d\<rbrakk>" and reset_full: "\<gamma> reset_val = UNIV"
+  assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
     and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
   shows "enter_binding \<G> 0 aval xs es s
-           \<in> \<lbrakk>enter_binding \<G> reset_val aval_abs xs es d\<rbrakk>"
+           \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
 proof (rule enter_binding_sound_list_all2[OF sv reset_full])
   show "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
           (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
@@ -239,8 +239,8 @@ text \<open>
 \<close>
 lemma combine_collect_sound [intro]:
   fixes dc de :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<lbrakk>dc\<rbrakk>" and se: "t \<in> \<lbrakk>de\<rbrakk>"
-  shows "combine_collect \<G> dst s t \<in> \<lbrakk>combine\<^sup># \<G> dst dc de\<rbrakk>"
+  assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
+  shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup># \<G> dst dc de)"
   unfolding combine_collect_def combine_collect_abs_def
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)
@@ -250,7 +250,7 @@ subsection \<open>The C-faithful initial store set\<close>
 text \<open>
   \<^const>\<open>cinit_stores\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>) is the C-faithful initial
   store set. Any analysis that uses a domain-specific abstract seed \<open>s0\<close>
-  satisfying \<open>cinit_stores \<G> \<subseteq> \<lbrakk>s0\<rbrakk>\<close> may state its soundness
+  satisfying \<open>cinit_stores \<G> \<subseteq> \<gamma> s0\<close> may state its soundness
   theorem against \<open>cinit_stores \<G>\<close> rather than \<open>UNIV\<close>, matching VIMP's
   C-like initialization semantics.\<close>
 

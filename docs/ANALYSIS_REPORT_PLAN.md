@@ -11,12 +11,12 @@ facts carry the whole guarantee:
 
 | Fact | Statement | Uses |
 | --- | --- | --- |
-| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧ᵥ` | compiler, traces, routing, equations, solver |
-| `analysis_report_verdicts_sound` | `⟦res⟧ᵥ ⊆ 𝒱(res, v)` | the report alone, no executions |
-| `analysis_report_dead` | `DEAD res v ⟹ ⟦res⟧ᵥ = ∅` | the report alone |
+| `run_voblint_covers` | `𝒞 v ⊆ ℛ⇘res⇙ v` | compiler, traces, routing, equations, solver |
+| `analysis_report_verdicts_sound` | `ℛ⇘res⇙ v ⊆ 𝒱(res, v)` | the report alone, no executions |
+| `analysis_report_dead` | `DEAD res v ⟹ ℛ⇘res⇙ v = ∅` | the report alone |
 
-`PROVED` and `REFUTED` constrain the stores inside `⟦res⟧ᵥ`; `DEAD` says there are
-none. With the first fact, `DEAD` gives `𝒞 v ⊆ ⟦res⟧ᵥ = ∅`. The source-level theorem
+`PROVED` and `REFUTED` constrain the stores inside `ℛ⇘res⇙ v`; `DEAD` says there are
+none. With the first fact, `DEAD` gives `𝒞 v ⊆ ℛ⇘res⇙ v = ∅`. The source-level theorem
 keeps its existential node: a finite `pstep` run reaches some `v` related by `csim`,
 and its store lies in `𝒞 v`. No set of "source stores at `v`" is introduced, since
 the simulation is not functional.
@@ -24,8 +24,8 @@ the simulation is not functional.
 The third fact is one direction only. A `Lifted` entry passed the product's
 emptiness test, which is sound and incomplete: `mcp_empty_v` reports a state empty
 when one active analysis does, so a state with Interval `x = 2` and Parity `x odd`
-passes it although it concretizes to no store. `⟦res⟧ᵥ = ∅` therefore does not
-imply `DEAD res v`, and `UNKNOWN` does not imply `⟦res⟧ᵥ ≠ ∅`.
+passes it although it concretizes to no store. `ℛ⇘res⇙ v = ∅` therefore does not
+imply `DEAD res v`, and `UNKNOWN` does not imply `ℛ⇘res⇙ v ≠ ∅`.
 
 ## Why
 
@@ -64,7 +64,7 @@ analysis_report_of config p                              (one split over the pol
       ▼
 analysis_report               semantic, exported; theorems read only this
       │
-      ├── ⟦res⟧ᵥ, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD
+      ├── ℛ⇘res⇙ v, 𝒱(res, v), PROVED / REFUTED / UNKNOWN / DEAD
       │
 ══════ generated API boundary: run_voblint, report selectors, projections ══════
       │
@@ -91,7 +91,7 @@ report theorems, and nothing above the report reads them.
 | `CLI/generated/MCP_Carrier` | `registration_of` and its accessors |
 | `CLI/Analysis_Run` | `analysis_config`, `analysis_report`, the one policy dispatch, `run_voblint` |
 | `CLI/Analysis_Render` (new) | `run_result` (rendered), `render_report` |
-| `CLI/Analysis_Report` (new) | `⟦res⟧ᵥ`, `𝒱`, CAPS queries, the three facts |
+| `CLI/Analysis_Report` (new) | `ℛ⇘res⇙ v`, `𝒱`, CAPS queries, the three facts |
 | `CLI/Analysis_Certified` | source-level corollaries |
 
 ## Target types
@@ -161,11 +161,11 @@ Write `σ ∈ rows(res, v)` for the `state_value` of a row of `res_states res` a
 point `v`, and `γ = mcp_gamma_v (activation (config_analyses (report_config res)))`.
 
 ```text
-⟦res⟧ᵥ      = ⋃ { γ⊥ σ | σ ∈ rows(res, v) }
+ℛ⇘res⇙ v      = ⋃ { γ⊥ σ | σ ∈ rows(res, v) }
 Checks(res,v) = the rows of res_checks res with check_point = v
 𝒱(res, v)   = { s | ∀ chk ∈ Checks(res, v).
-                     (verdict = PROVED  ⟶ truthy ⟦e_chk⟧ s)
-                   ∧ (verdict = REFUTED ⟶ ¬ truthy ⟦e_chk⟧ s) }
+                     (verdict = PROVED  ⟶ truthy ⟦e_chk⟧ₑ s)
+                   ∧ (verdict = REFUTED ⟶ ¬ truthy ⟦e_chk⟧ₑ s) }
 PROVED res v e  ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = PROVED
 REFUTED res v e ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = REFUTED
 UNKNOWN res v e ⟷ ∃ chk ∈ Checks(res, v). e_chk = e ∧ verdict = UNKNOWN
@@ -179,10 +179,10 @@ check row's `Dead` verdict is one presentation of it: the row is `Dead` exactly 
 every context at its point is `Bot`, so it implies `DEAD res v`. `DEAD` is
 structural on purpose. The rows are canonical lifted values: the report's table
 collapses a state the emptiness test rejects to `Bot`, and `Bot` denotes no store, so
-`DEAD res v ⟹ ⟦res⟧ᵥ = ∅` is nearly definitional. The converse would need the
+`DEAD res v ⟹ ℛ⇘res⇙ v = ∅` is nearly definitional. The converse would need the
 incomplete test to be exact, so `DEAD` does not rerun it.
 
-`⟦res⟧ᵥ` is the constant `report_sem` with mixfix `⟦_⟧⇩_`. Overloading it under a
+`ℛ⇘res⇙ v` is the constant `report_sem` with mixfix `ℛ⇘_⇙`. Overloading it under a
 `gamma_at` constant waits for a second representation; with one instance it buys
 nothing.
 
@@ -190,11 +190,11 @@ nothing.
 
 ```text
 run_voblint_covers:        run_voblint config p = Analysed res
-                               ⟹ 𝒞 v ⊆ ⟦res⟧ᵥ
-analysis_report_verdicts_sound:  ⟦res⟧ᵥ ⊆ 𝒱(res, v)
-analysis_report_proved:        PROVED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ truthy ⟦e⟧ s
-analysis_report_refuted:       REFUTED res v e ⟹ s ∈ ⟦res⟧ᵥ ⟹ ¬ truthy ⟦e⟧ s
-analysis_report_dead:          DEAD res v ⟹ ⟦res⟧ᵥ = ∅
+                               ⟹ 𝒞 v ⊆ ℛ⇘res⇙ v
+analysis_report_verdicts_sound:  ℛ⇘res⇙ v ⊆ 𝒱(res, v)
+analysis_report_proved:        PROVED res v e ⟹ s ∈ ℛ⇘res⇙ v ⟹ truthy ⟦e⟧ₑ s
+analysis_report_refuted:       REFUTED res v e ⟹ s ∈ ℛ⇘res⇙ v ⟹ ¬ truthy ⟦e⟧ₑ s
+analysis_report_dead:          DEAD res v ⟹ ℛ⇘res⇙ v = ∅
 analysis_report_unknown:       UNKNOWN res v e ⟹ ¬ DEAD res v          (lemma)
 
 run_voblint_source_sound:
@@ -202,14 +202,14 @@ run_voblint_source_sound:
   𝒢, Π ⊢ (main_body Π, s0, []) →p* (c, s, frs)
   run_voblint config p = Analysed res
   ⟹ ∃ v stk. Π, g ⊢ (c, s, frs) ≈ (v, s, stk)
-             ∧ s ∈ 𝒞 v ∧ s ∈ ⟦res⟧ᵥ ∧ s ∈ 𝒱(res, v)
+             ∧ s ∈ 𝒞 v ∧ s ∈ ℛ⇘res⇙ v ∧ s ∈ 𝒱(res, v)
 run_voblint_check_sound, run_voblint_dead_unreached,
 run_voblint_arithmetic_safe: the existing corollaries, restated over res.
 ```
 
 Below the point where contexts are erased, one theorem per policy states the full
 chain for a source run: a valid activation trace carrying some context `c`, and
-`s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧ᵥ ⊆ 𝒱(res, v)`. It composes
+`s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res⇙ v ⊆ 𝒱(res, v)`. It composes
 `source_run_has_activation_trace`, `node_collect_eq_Union_activation_collect` and
 the report facts; its value is stating the whole spine in one checked statement.
 The context-erased theorem above is the public one.
@@ -233,7 +233,7 @@ report makes no unreachability claim at an `UNKNOWN` check. Termination is inter
 | `analysis_surface` | report projections | absorb or delete |
 | `analysis_result` (CLI, 3-way) | `analysis_report_of` | replace |
 | `config_terminates` premise | `solve_c_run` | internal |
-| `analysis_result_covers`, `table_covers` | `s ∈ ⟦res⟧ᵥ` | retire publicly |
+| `analysis_result_covers`, `table_covers` | `s ∈ ℛ⇘res⇙ v` | retire publicly |
 | `checks_sound_at` | `𝒱(res, v)` | retire publicly |
 | `run_voblint_sound_at`, `run_voblint_certified_source_sound` | report theorems, `run_voblint_source_sound` | replace |
 | `sound_table` | `covered_table` + `sound_classifier` | split |
@@ -267,7 +267,7 @@ These are grep targets on `src/` outside the theory that owns each name:
   context policy, refinement mode or update rule.
 - After a solve becomes an `analysis_report`, no public theorem mentions solver
   tables, context representations or rendering projections.
-- One canonical API per concept: concretization through `γ`/`⟦·⟧` (with `⟦res⟧ᵥ`
+- One canonical API per concept: concretization through `γ` (with `ℛ⇘res⇙ v`
   as the located form), solved data through `solved_table`, analyzer output through
   `analysis_report`, verdict truth through `𝒱(res, v)` and the CAPS queries.
 - CLI text, JSON and the verbose solver trace stay byte-identical (`golden-check`).

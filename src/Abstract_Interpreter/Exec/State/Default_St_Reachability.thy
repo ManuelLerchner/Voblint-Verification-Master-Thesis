@@ -316,7 +316,7 @@ text \<open>
 \<close>
 
 lemma gamma_lift_default_st_gamma_to_fun:
-  "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<lbrakk>map_lift \<rho>\<^bsub>\<G>\<^esub> d\<rbrakk>\<^sub>\<bottom>)"
+  "gamma_lift (default_st_gamma \<G>) = (\<lambda>d. \<gamma>\<^sub>\<bottom> (map_lift \<rho>\<^bsub>\<G>\<^esub> d))"
   by (rule ext) (simp add: gamma_lift_def default_st_gamma_def split: lifted.split)
 
 

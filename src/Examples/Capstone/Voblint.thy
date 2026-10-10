@@ -232,7 +232,7 @@ text \<open>
     \<^item> @{theory Voblint_VIMP.VIMP_Expr} --- expression evaluation and small-step semantics.
     \<^item> @{theory Voblint_VIMP.VIMP_Globals} --- global variable names and initial store.
     \<^item> @{theory Voblint_VIMP.VIMP_Proc} --- procedural extension: \<^verbatim>\<open>Scope\<close>, \<^verbatim>\<open>Call\<close>, \<^verbatim>\<open>Restore\<close>.
-    \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<lbrakk> ... \<rbrakk>\<close> quotation bracket for examples.
+    \<^item> @{theory Voblint_VIMP.VIMP_Notation} --- \<^verbatim>\<open>\<gamma> (...)\<close> quotation bracket for examples.
 
   \<^bold>\<open>2. Control-flow graph and concrete semantics.\<close> CFG construction, transfer primitives, and
   the activation trace semantics it carries.
@@ -524,7 +524,7 @@ text \<open>
       @{thm [source] mcp_cs_rule_table}), each stated for an arbitrary activation list
       and update rule, over the registrations of
       \<^theory>\<open>Voblint_CLI.MCP_Analyses\<close>.
-      @{theory Voblint_CLI.Analysis_Report} reads a report through \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>\<close> and
+      @{theory Voblint_CLI.Analysis_Report} reads a report through \<open>\<R>\<^bsub>res\<^esub> v\<close> and
       \<^const>\<open>verdict_stores\<close> and proves, by one case split over the tables, that
       every report \<^const>\<open>run_voblint\<close> returns is sound
       (@{thm [source] analysis_report_of_sound}).

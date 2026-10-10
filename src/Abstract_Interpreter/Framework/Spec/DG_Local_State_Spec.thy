@@ -60,25 +60,25 @@ locale sound_nonrelational_transfer =
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_sound_assign_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>asn x a d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<gamma> (asn x a d)"
   assumes tf_sound_special_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>sp sc x d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<gamma> (sp sc x d)"
   assumes tf_sound_branch_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma> (br b pol d)"
   assumes tf_sound_skip_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sk d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (sk d)"
   assumes tf_sound_body_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>bd p d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (bd p d)"
   assumes tf_sound_return_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
+    "s \<in> \<gamma> d \<Longrightarrow>
        s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
-         \<in> \<lbrakk>rt e p d\<rbrakk>"
+         \<in> \<gamma> (rt e p d)"
   assumes tf_sound_enter_entry_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
+    "s \<in> \<gamma> d \<Longrightarrow>
        bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state \<G> s)
-         \<in> \<lbrakk>en ci d\<rbrakk>"
+         \<in> \<gamma> (en ci d)"
   assumes tf_sound_event_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>ev evt d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (ev evt d)"
 
 text \<open>Each obligation is stated directly as an inference rule
   (\<open>P\<^sub>1 \<Longrightarrow> ... \<Longrightarrow> P\<^sub>n \<Longrightarrow> Q\<close>). Variables not fixed by the locale are
@@ -93,7 +93,7 @@ text \<open>The per-edge dispatcher's soundness, which is what an equation gener
   action names, and each selected operation is sound by one locale assumption.\<close>
 
 lemma step_sound_for[intro]:
-  "edge_collect a \<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br bd rt ev a d\<rbrakk>"
+  "edge_collect a (\<gamma> d) \<subseteq> \<gamma> (local_spec_step sk asn sp br bd rt ev a d)"
 proof (cases a)
   case (EA_Special sc x)
   then show ?thesis by (cases sc) auto
@@ -152,8 +152,8 @@ abbreviation tf_spec :: "'a abs_state local_spec" where
 
 theorem state_local_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
 proof -
-  have step: "edge_collect a (\<lbrakk>d\<rbrakk> \<inter> Collect (eval_query.channel_holds ch))
-      \<subseteq> \<lbrakk>ls_step tf_spec ch a d\<rbrakk>" for a ch and d :: "'a abs_state"
+  have step: "edge_collect a (\<gamma> d \<inter> Collect (eval_query.channel_holds ch))
+      \<subseteq> \<gamma> (ls_step tf_spec ch a d)" for a ch and d :: "'a abs_state"
     by (simp only: ls_step_state_local_spec)
        (rule subset_trans[OF edge_collect_mono[OF Int_lower1] step_sound_for])
   show ?thesis
@@ -197,7 +197,7 @@ lemma dg_spec_wf_state_dg_spec [intro, simp]:
   by (simp add: state_dg_spec_def)
 
 theorem (in sound_nonrelational_transfer) state_dg_spec_contract:
-  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
+  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<gamma> d) \<G>"
   unfolding state_dg_spec_def by (rule dg_spec_of_contract[OF state_local_spec_sound])
 
 

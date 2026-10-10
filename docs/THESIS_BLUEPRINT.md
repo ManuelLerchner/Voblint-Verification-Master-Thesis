@@ -453,7 +453,7 @@ L11 THE ANALYZER
     covered_table, sound_classifier,
       covered_table_of_activation                   Analysis_Run_Sound,
                                                     Analysis_Run_Ctx_Sound
-    report_sem ⟦res⟧⇘v⇙, verdict_stores 𝒱⇘res⇙ v,
+    report_sem ℛ⇘res⇙ v, verdict_stores 𝒱⇘res⇙ v,
       consistent_report, well_formed_report,
       analysis_report_of_sound                      Analysis_Report
     run_voblint_source_sound            ← headline Analysis_Certified
@@ -481,14 +481,14 @@ theorem run_voblint_source_sound:
       and ans: "run_voblint config p = Analysed res"
   shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
                  ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-                 ∧ s ∈ ⟦res⟧⇘v⇙
+                 ∧ s ∈ ℛ⇘res⇙ v
                  ∧ s ∈ 𝒱⇘res⇙ v"
 ```
 
 There is no termination premise: `run_voblint` solves with the executable
 `solve_c`, and `Analysed res` exists only where that solve returned.
 `run_voblint_spine` states the same chain keeping the activation trace `t` and
-its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v`.
+its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v`.
 
 Four things about this statement deserve a paragraph each in the thesis.
 

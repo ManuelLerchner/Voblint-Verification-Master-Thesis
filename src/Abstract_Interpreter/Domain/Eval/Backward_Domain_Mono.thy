@@ -84,56 +84,56 @@ text \<open>
 
 lemma afilter_Plus_unfold:
   "afilter (Plus e1 e2) a d =
-     afilter e1 (fst (inv_plus a (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_plus a (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_plus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_plus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_Minus_unfold:
   "afilter (Minus e1 e2) a d =
-     afilter e1 (fst (inv_minus a (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_minus a (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_minus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_minus a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_Times_unfold:
   "afilter (Times e1 e2) a d =
-     afilter e1 (fst (inv_times a (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_times a (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_times a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_times a (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_Less_unfold:
   "bfilter (Less e1 e2) res d =
-     afilter e1 (fst (inv_less res (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_less res (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_less res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_less res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_GreaterEq_unfold:
   "bfilter (GreaterEq e1 e2) res d =
-     afilter e1 (fst (inv_less (\<not> res) (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_less (\<not> res) (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_less (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_less (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_Greater_unfold:
   "bfilter (Greater e1 e2) res d =
-     afilter e2 (fst (inv_less res (aval_abs e2 d) (aval_abs e1 d)))
-               (afilter e1 (snd (inv_less res (aval_abs e2 d) (aval_abs e1 d))) d)"
+     afilter e2 (fst (inv_less res (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e1 (snd (inv_less res (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_LessEq_unfold:
   "bfilter (LessEq e1 e2) res d =
-     afilter e2 (fst (inv_less (\<not> res) (aval_abs e2 d) (aval_abs e1 d)))
-               (afilter e1 (snd (inv_less (\<not> res) (aval_abs e2 d) (aval_abs e1 d))) d)"
+     afilter e2 (fst (inv_less (\<not> res) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e1 (snd (inv_less (\<not> res) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_Eq_unfold:
   "bfilter (Eq e1 e2) res d =
-     afilter e1 (fst (inv_eq res (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_eq res (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_eq res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_eq res (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma bfilter_NotEq_unfold:
   "bfilter (NotEq e1 e2) res d =
-     afilter e1 (fst (inv_eq (\<not> res) (aval_abs e1 d) (aval_abs e2 d)))
-               (afilter e2 (snd (inv_eq (\<not> res) (aval_abs e1 d) (aval_abs e2 d))) d)"
+     afilter e1 (fst (inv_eq (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d)))
+               (afilter e2 (snd (inv_eq (\<not> res) (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d))) d)"
   by (simp add: Let_def case_prod_beta)
 
 lemma afilter_reductive: "afilter e a d \<le> d"
@@ -273,21 +273,21 @@ next
   qed
 next
   case (Plus e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Plus.prems(2)] by simp_all
   show ?case unfolding afilter_Plus_unfold
     using v1 v2 Plus.prems
     by (blast intro: Plus.IH)
 next
   case (Minus e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Minus.prems(2)] by simp_all
   show ?case unfolding afilter_Minus_unfold
     using v1 v2 Minus.prems
     by (blast intro: Minus.IH)
 next
   case (Times e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Times.prems(2)] by simp_all
   show ?case unfolding afilter_Times_unfold
     using v1 v2 Times.prems
@@ -344,13 +344,13 @@ text \<open>
 \<close>
 lemma bfilter_default_mono:
   assumes "d1 \<le> d2"
-  shows "afilter e (fst (inv_eq (\<not> res) (aval_abs e d1) (aval_abs (N 0) d1))) d1
-       \<le> afilter e (fst (inv_eq (\<not> res) (aval_abs e d2) (aval_abs (N 0) d2))) d2"
+  shows "afilter e (fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d1) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d1))) d1
+       \<le> afilter e (fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d2) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d2))) d2"
 proof -
-  have v1: "aval_abs e d1 \<le> aval_abs e d2" by (rule aval_abs_mono[OF assms])
-  have v0: "aval_abs (N 0) d1 \<le> aval_abs (N 0) d2" by (rule aval_abs_mono[OF assms])
-  have iv: "fst (inv_eq (\<not> res) (aval_abs e d1) (aval_abs (N 0) d1))
-              \<le> fst (inv_eq (\<not> res) (aval_abs e d2) (aval_abs (N 0) d2))"
+  have v1: "\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e\<rbrakk>\<^sup>\<sharp> d2" by (rule aval_abs_mono[OF assms])
+  have v0: "\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d2" by (rule aval_abs_mono[OF assms])
+  have iv: "fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d1) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d1))
+              \<le> fst (inv_eq (\<not> res) (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d2) (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> d2))"
     using inv_eq_mono[OF v1 v0] by simp
   show ?thesis by (rule afilter_mono[OF iv assms])
 qed
@@ -370,13 +370,13 @@ lemma feasible_mono:
   assumes "sigma1 \<le> sigma2" and "feasible e pol sigma1"
   shows "feasible e pol sigma2"
 proof -
-  have v: "aval_abs e sigma1 \<le> aval_abs e sigma2" by (rule aval_abs_mono[OF assms(1)])
-  have nb1: "\<not> is_empty (aval_abs e sigma1)" using assms(2) by (simp add: feasible_def)
-  have nb2: "\<not> is_empty (aval_abs e sigma2)" using nb1 is_empty_antimono[OF v] by blast
-  have "tobool (aval_abs e sigma2) \<noteq> Some (\<not> pol)"
+  have v: "\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma1 \<le> \<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma2" by (rule aval_abs_mono[OF assms(1)])
+  have nb1: "\<not> is_empty (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma1)" using assms(2) by (simp add: feasible_def)
+  have nb2: "\<not> is_empty (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma2)" using nb1 is_empty_antimono[OF v] by blast
+  have "tobool (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma2) \<noteq> Some (\<not> pol)"
   proof
-    assume "tobool (aval_abs e sigma2) = Some (\<not> pol)"
-    then have "tobool (aval_abs e sigma1) = Some (\<not> pol)"
+    assume "tobool (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma2) = Some (\<not> pol)"
+    then have "tobool (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma1) = Some (\<not> pol)"
       using tobool_mono[OF nb1 v] by simp
     then show False using assms(2) by (simp add: feasible_def)
   qed
@@ -453,42 +453,42 @@ next
   qed
 next
   case (Less e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Less.prems] by simp_all
   show ?case unfolding bfilter_Less_unfold
     by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v1 v2] inv_less_mono_snd[OF v1 v2]
                                   Less.prems])
 next
   case (GreaterEq e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF GreaterEq.prems] by simp_all
   show ?case unfolding bfilter_GreaterEq_unfold
     by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v1 v2] inv_less_mono_snd[OF v1 v2]
                                   GreaterEq.prems])
 next
   case (Greater e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Greater.prems] by simp_all
   show ?case unfolding bfilter_Greater_unfold
     by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v2 v1] inv_less_mono_snd[OF v2 v1]
                                   Greater.prems])
 next
   case (LessEq e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF LessEq.prems] by simp_all
   show ?case unfolding bfilter_LessEq_unfold
     by (rule afilter_pair_mono[OF inv_less_mono_fst[OF v2 v1] inv_less_mono_snd[OF v2 v1]
                                   LessEq.prems])
 next
   case (Eq e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF Eq.prems] by simp_all
   show ?case unfolding bfilter_Eq_unfold
     by (rule afilter_pair_mono[OF inv_eq_mono_fst[OF v1 v2] inv_eq_mono_snd[OF v1 v2] Eq.prems])
 
 next
   case (NotEq e1 e2)
-  have v1: "aval_abs e1 d1 \<le> aval_abs e1 d2" and v2: "aval_abs e2 d1 \<le> aval_abs e2 d2"
+  have v1: "\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e1\<rbrakk>\<^sup>\<sharp> d2" and v2: "\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e2\<rbrakk>\<^sup>\<sharp> d2"
     using aval_abs_mono[OF NotEq.prems] by simp_all
   show ?case unfolding bfilter_NotEq_unfold
     by (rule afilter_pair_mono[OF inv_eq_mono_fst[OF v1 v2] inv_eq_mono_snd[OF v1 v2] NotEq.prems])

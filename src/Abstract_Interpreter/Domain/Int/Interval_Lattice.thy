@@ -1,5 +1,5 @@
 theory Interval_Lattice
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_VIMP.VIMP_Proc"
+  imports "Voblint_Domain.State_Concretization" "Voblint_VIMP.VIMP_Proc"
 begin
 
 section \<open>Interval lattice\<close>

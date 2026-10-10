@@ -1,5 +1,5 @@
 theory Order_Lattice
-  imports "Voblint_Domain.Abstract_Domain" "Voblint_Domain.State_Concretization"
+  imports "Voblint_Domain.State_Concretization"
     "HOL-Library.Product_Lexorder"
 begin
 
@@ -128,13 +128,13 @@ fun gamma_relc :: "relc \<Rightarrow> store set" where
 
 adhoc_overloading gamma_S == gamma_relc
 
-lemma gamma_relc_top [simp]: "\<lbrakk>\<top> :: relc\<rbrakk> = UNIV"
+lemma gamma_relc_top [simp]: "\<gamma> (\<top> :: relc) = UNIV"
   unfolding top_relc_def by simp
 
 lemma gamma_relc_mono:
   fixes d d' :: relc
   assumes "d \<le> d'"
-  shows "\<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>d'\<rbrakk>"
+  shows "\<gamma> d \<subseteq> \<gamma> d'"
   using assms by (cases d; cases d') auto
 
 text \<open>
@@ -156,8 +156,8 @@ fun forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
 | "forget_relc x (RelC ps) = RelC {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
 
 lemma forget_relc_sound[intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>"
-  shows "s(x := v) \<in> \<lbrakk>forget_relc x d\<rbrakk>"
+  assumes "s \<in> \<gamma> d"
+  shows "s(x := v) \<in> \<gamma> (forget_relc x d)"
   using assms by (cases d) auto
 
 subsection \<open>Executable operations\<close>
@@ -193,10 +193,10 @@ instance ..
 
 end
 
-lemma is_empty_relc_gamma: "is_empty d \<longleftrightarrow> \<lbrakk>d\<rbrakk> = {}" for d :: relc
+lemma is_empty_relc_gamma: "is_empty d \<longleftrightarrow> \<gamma> d = {}" for d :: relc
 proof (cases d)
   case (RelC ps)
-  then have "(\<lambda>_. 0) \<in> \<lbrakk>d\<rbrakk>" by auto
+  then have "(\<lambda>_. 0) \<in> \<gamma> d" by auto
   with RelC show ?thesis by (auto simp: is_empty_relc_def)
 qed (simp add: is_empty_relc_def)
 

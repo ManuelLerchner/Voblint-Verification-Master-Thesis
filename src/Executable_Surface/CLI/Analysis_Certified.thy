@@ -6,7 +6,7 @@ section \<open>What an analysis report guarantees about the program\<close>
 
 text \<open>
   \<^const>\<open>run_voblint\<close> answers every configuration. Its analysed answer is a report
-  that the theorems below read through \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>\<close>, \<open>verdict_stores\<close> and the CAPS
+  that the theorems below read through \<open>\<R>\<^bsub>res\<^esub> v\<close>, \<open>verdict_stores\<close> and the CAPS
   queries, and nothing else: no premise asks for termination, coverage of the solve or
   well-formedness, since an analysed answer was only given for a well-formed program
   whose solve the executable solver completed.
@@ -65,7 +65,7 @@ theorem run_voblint_report_contract:
 
 theorem run_voblint_covers:
   assumes "run_voblint config p = Analysed res"
-  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v"
   using run_voblint_sound[OF assms] unfolding sound_report_def by blast
 
 text \<open>
@@ -122,7 +122,7 @@ theorem run_voblint_arithmetic_refuted:
     and "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> (diagnostic_point d)"
   shows "\<lbrakk>arithmetic_divisor (diagnostic_obligation d)\<rbrakk>\<^sub>e s = 0"
 proof -
-  have "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>"
+  have "s \<in> \<R>\<^bsub>res\<^esub> (diagnostic_point d)"
     using run_voblint_sound[OF assms(1)] assms(4) unfolding sound_report_def by blast
   then have "\<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)"
     using run_voblint_sound[OF assms(1)] assms(2,3) unfolding sound_report_def by blast
@@ -171,7 +171,7 @@ theorem run_voblint_source_sound:
       and ans: "run_voblint config p = Analysed res"
   shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
-                 \<and> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+                 \<and> s \<in> \<R>\<^bsub>res\<^esub> v
                  \<and> s \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
   have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
@@ -231,7 +231,7 @@ proof -
   obtain v stk
     where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
-      and sem: "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+      and sem: "s \<in> \<R>\<^bsub>res\<^esub> v"
       and verdicts: "s \<in> \<V>\<^bsub>res\<^esub> v"
     by blast
   from csim_next_check_edge [OF m chk]
@@ -244,7 +244,7 @@ proof -
   proof
     assume "check_verdict c = Dead"
     from analysis_report_check_dead[OF run_voblint_consistent[OF ans] c this]
-    have "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}" using \<open>check_point c = v\<close> analysis_report_dead by blast
+    have "\<R>\<^bsub>res\<^esub> v = {}" using \<open>check_point c = v\<close> analysis_report_dead by blast
     with sem show False by blast
   qed
   moreover have holds: "verdict_holds r e s" if "check_verdict c = Decided r" for r
@@ -347,8 +347,8 @@ theorem run_voblint_spine:
            \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
+           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   have cfg: "g = compile_prog \<Pi> (prog_procs p)"
     unfolding g_def Pi_def by (rule prog_cfg_def)
@@ -379,8 +379,8 @@ theorem run_voblint_call_string_chain:
            \<and> activation_context_rel \<G> adm [] g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
+           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   have has_ctx: "\<exists>c. activation_context_rel \<G> adm [] g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
@@ -409,8 +409,8 @@ theorem run_voblint_unit_chain:
            \<and> activation_context_rel \<G> adm () g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
+           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   have has_ctx: "\<exists>c. activation_context_rel \<G> adm () g t c" if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
     unfolding R_def by (rule exI, subst activation_context_rel_of_fun_iff [OF that]) (rule refl)
@@ -483,8 +483,8 @@ theorem run_voblint_entry_state_chain:
            \<and> activation_context_rel \<G> adm mcp_root_ctx g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c
            \<and> (\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v
-           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
-           \<and> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+           \<and> \<C>\<^bsub>\<G>,g,S\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v
+           \<and> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof -
   note wf = run_voblint_wf [OF ans]
   note terminates = run_voblint_entry_state_terminates [OF ans]
