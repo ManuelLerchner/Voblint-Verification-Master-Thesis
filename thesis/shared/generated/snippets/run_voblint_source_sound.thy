@@ -9,5 +9,5 @@ theorem run_voblint_source_sound:
       and ans: "run_voblint config p = Analysed res"
   shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
-                 \<and> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+                 \<and> s \<in> \<R>\<^bsub>res\<^esub> v
                  \<and> s \<in> \<V>\<^bsub>res\<^esub> v"

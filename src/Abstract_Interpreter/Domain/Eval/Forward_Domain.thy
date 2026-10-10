@@ -1,5 +1,5 @@
 theory Forward_Domain
-  imports Abstract_Domain "Voblint_VIMP.VIMP_Expr"
+  imports State_Concretization "Voblint_VIMP.VIMP_Expr"
 begin
 
 section \<open>Forward evaluation over a numeric domain\<close>
@@ -22,9 +22,9 @@ text \<open>
 
 locale sound_evaluator =
   fixes \<gamma>\<^sub>S :: "'d \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain"
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>")
   assumes aval_abs_sound[intro]:
-    "s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
+    "s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d)"
 
 text \<open>
   A truth test answers \<open>Some b\<close> only when every integer the abstract value
@@ -45,9 +45,9 @@ text \<open>
 
 locale mono_evaluator = sound_evaluator \<gamma>\<^sub>S aval_abs
   for \<gamma>\<^sub>S :: "'d::order \<Rightarrow> store set"
-    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" +
+    and aval_abs :: "exp \<Rightarrow> 'd \<Rightarrow> 'a::numeric_domain" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>") +
   assumes aval_abs_mono[intro]:
-    "d1 \<le> d2 \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
+    "d1 \<le> d2 \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sup>\<sharp> d1 \<le> \<lbrakk>e\<rbrakk>\<^sup>\<sharp> d2"
 
 text \<open>
   \<open>mono_truth_test\<close> adds \<open>tobool_mono\<close> on top of the sound truth test,

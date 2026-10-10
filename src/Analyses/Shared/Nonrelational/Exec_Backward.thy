@@ -210,18 +210,18 @@ where
        s\<langle>location_of \<G> x := intersect a (\<rho>\<^bsub>\<G>\<^esub> s x)\<rangle>"
   | "afilter_st \<G> (Plus e1 e2) a s =
        (let (a1, a2) = inv_plus a
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "afilter_st \<G> (Minus e1 e2) a s =
        (let (a1, a2) = inv_minus a
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "afilter_st \<G> (Times e1 e2) a s =
        (let (a1, a2) = inv_times a
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "afilter_st \<G> _ a s = s"
 
@@ -230,23 +230,23 @@ fun bfilter_st ::
 where
     "bfilter_st \<G> (Less e1 e2) res s =
        (let (a1, a2) = inv_less res
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "bfilter_st \<G> (GreaterEq e1 e2) res s =
        (let (a1, a2) = inv_less (\<not> res)
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "bfilter_st \<G> (Greater e1 e2) res s =
        (let (a1, a2) = inv_less res
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e2 a1 (afilter_st \<G> e1 a2 s))"
   | "bfilter_st \<G> (LessEq e1 e2) res s =
        (let (a1, a2) = inv_less (\<not> res)
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e2 a1 (afilter_st \<G> e1 a2 s))"
   | "bfilter_st \<G> (Not b) res s = bfilter_st \<G> b (\<not> res) s"
   | "bfilter_st \<G> (And b1 b2) True s =
@@ -265,18 +265,18 @@ where
        bfilter_st \<G> b1 False (bfilter_st \<G> b2 False s)"
   | "bfilter_st \<G> (Eq e1 e2) res s =
        (let (a1, a2) = inv_eq res
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "bfilter_st \<G> (NotEq e1 e2) res s =
        (let (a1, a2) = inv_eq (\<not> res)
-              (aval_abs e1 (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs e2 (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e1 a1 (afilter_st \<G> e2 a2 s))"
   | "bfilter_st \<G> e res s =
        (let (a1, a2) = inv_eq (\<not> res)
-              (aval_abs e (\<rho>\<^bsub>\<G>\<^esub> s))
-              (aval_abs (N 0) (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
+              (\<lbrakk>N 0\<rbrakk>\<^sup>\<sharp> (\<rho>\<^bsub>\<G>\<^esub> s))
         in afilter_st \<G> e a1 s)"
 
 text \<open>

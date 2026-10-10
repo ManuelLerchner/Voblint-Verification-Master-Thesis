@@ -52,7 +52,7 @@ text \<open>
 \<close>
 
 lemma gamma_state_of_reachable_env [simp]:
-  "\<lbrakk>case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st\<rbrakk> = \<lbrakk>p\<rbrakk>\<^sub>\<bottom>"
+  "\<gamma> (case p of Bot \<Rightarrow> bot | Lifted st \<Rightarrow> st) = \<gamma>\<^sub>\<bottom> p"
   for p :: "'a::numeric_domain abs_state lifted"
   by (cases p) simp_all
 
@@ -256,8 +256,8 @@ lemma wf_solved_table_gamma_point_eq_empty_iff:
   fixes r :: "('ctx, 'a::numeric_domain abs_state) solved_table"
     and empty_pred :: "'a abs_state \<Rightarrow> bool"
   assumes wf: "wf_solved_table empty_pred r"
-    and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<lbrakk>st\<rbrakk> = {}"
-  shows "\<lbrakk>lookup_table r v ctx\<rbrakk>\<^sub>\<bottom> = {} \<longleftrightarrow> lookup_table r v ctx = Bot"
+    and exact: "\<And>st. empty_pred st \<longleftrightarrow> \<gamma> st = {}"
+  shows "\<gamma>\<^sub>\<bottom> (lookup_table r v ctx) = {} \<longleftrightarrow> lookup_table r v ctx = Bot"
 proof (cases "lookup_table r v ctx")
   case Bot
   then show ?thesis by simp

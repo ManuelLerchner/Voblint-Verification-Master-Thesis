@@ -30,7 +30,7 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | --- | --- |
 | `dgs_*` fields of `dg_spec` | `Spec.*` methods of the same name |
 | `man_local` / `man_global` / `man_sideg` | `man.local` / `man.global` / `man.sideg` |
-| `route` (notation `context#`) | `Spec.context` |
+| `route` (notation `context♯`) | `Spec.context` |
 | `c\<^sub>0` (start context) | `Spec.startcontext` |
 | `Inl (pp, ctx)` | local unknown `lv = node * C.t` |
 | `Analysis_Global v` | `G of V.t` |
@@ -39,7 +39,7 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | `call_context_rel` / `activation_context_rel` | none; proof-only |
 
 `context` is an Isar outer keyword, so the selector is spelled `route` and
-carries `context#` as notation.
+carries `context♯` as notation.
 
 ## One generator, six layers
 

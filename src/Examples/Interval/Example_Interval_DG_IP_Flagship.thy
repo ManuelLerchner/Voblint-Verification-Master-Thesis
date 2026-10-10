@@ -148,7 +148,7 @@ theorem twice_source_run_sound:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s, []) \<rightarrow>\<^sub>p\<^sup>* src'"
       and init: "s \<in> cinit_stores twice_gs"
   shows "\<exists>v t stk. twice_pi, twice_cfg \<turnstile> src' \<approx> (v, t, stk)
-                   \<and> t \<in> \<lbrakk>twice_at v\<rbrakk>"
+                   \<and> t \<in> \<gamma> (twice_at v)"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
   have run':
@@ -159,7 +159,7 @@ proof -
   have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   have cert:
     "\<exists>v stk. twice_pi, twice_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-       \<and> t \<in> \<lbrakk>twice_at v\<rbrakk>"
+       \<and> t \<in> \<gamma> (twice_at v)"
     using interval_rule.fun_route_source_sound[OF unit_route wf twice_terminates init run']
     by (simp add: twice_cfg_prog_cfg twice_pi_def)
   show ?thesis using cert src' by blast

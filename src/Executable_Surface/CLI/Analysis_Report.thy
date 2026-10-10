@@ -6,13 +6,13 @@ section \<open>What a report claims\<close>
 
 text \<open>
   A report is read through three sets of stores at a point \<open>v\<close>. \<open>\<C> v\<close> holds the
-  stores the program reaches at \<open>v\<close>. \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>\<close> holds the stores the report's states
+  stores the program reaches at \<open>v\<close>. \<open>\<R>\<^bsub>res\<^esub> v\<close> holds the stores the report's states
   at \<open>v\<close> describe, over all of its contexts. \<open>\<V>\<^bsub>res\<^esub> v\<close> holds the stores in which
   every definite verdict the report gives at \<open>v\<close> is valid. The report is sound when
 
-    \<open>\<C> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v\<close>
+    \<open>\<C> v \<subseteq> \<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v\<close>
 
-  and a point the report calls dead has \<open>\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}\<close>, so no execution reaches it.
+  and a point the report calls dead has \<open>\<R>\<^bsub>res\<^esub> v = {}\<close>, so no execution reaches it.
   The first inclusion needs the run that built the report; the second and the dead
   case follow from the report alone, once its verdicts agree with its states.
 \<close>
@@ -38,11 +38,11 @@ text \<open>The stores one such state describes; \<open>Bot\<close> describes no
 abbreviation report_conc :: "analysis_report \<Rightarrow> mcp_val lifted \<Rightarrow> store set" ("\<gamma>\<^bsub>_\<^esub>") where
   "\<gamma>\<^bsub>res\<^esub> \<equiv> gamma_lift (report_gamma res)"
 
-definition report_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<lbrakk>_\<rbrakk>\<^bsub>_\<^esub>" [0, 0] 1000) where
-  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = (\<Union>d \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> d)"
+definition report_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<R>\<^bsub>_\<^esub>") where
+  "\<R>\<^bsub>res\<^esub> v = (\<Union>d \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> d)"
 
 lemma mem_report_sem [simp]:
-  "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<longleftrightarrow> (\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> report_gamma res d)"
+  "s \<in> \<R>\<^bsub>res\<^esub> v \<longleftrightarrow> (\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> report_gamma res d)"
   unfolding report_sem_def
 proof
   assume "s \<in> (\<Union>dl \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> dl)"
@@ -52,11 +52,11 @@ proof
 qed (metis UN_I gamma_lift_Lifted)
 
 lemma report_semI [intro]:
-  "Lifted d \<in> report_states_at res v \<Longrightarrow> s \<in> report_gamma res d \<Longrightarrow> s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  "Lifted d \<in> report_states_at res v \<Longrightarrow> s \<in> report_gamma res d \<Longrightarrow> s \<in> \<R>\<^bsub>res\<^esub> v"
   unfolding report_sem_def by (rule UN_I[of "Lifted d"]) simp_all
 
 lemma report_semE [elim]:
-  assumes "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  assumes "s \<in> \<R>\<^bsub>res\<^esub> v"
   obtains d where "Lifted d \<in> report_states_at res v" and "s \<in> report_gamma res d"
 proof -
   from assms
@@ -73,7 +73,7 @@ text \<open>
   since each component's concretization is monotone.
 \<close>
 
-lemma gamma_lift_state_mono: "x \<le> y \<Longrightarrow> \<lbrakk>x\<rbrakk> \<subseteq> \<lbrakk>y :: _ abs_state lifted\<rbrakk>"
+lemma gamma_lift_state_mono: "x \<le> y \<Longrightarrow> \<gamma> x \<subseteq> \<gamma> (y :: _ abs_state lifted)"
   by (rule gamma_lift_mono[where gam = gamma_state]) (use gamma_state_mono in blast)
 
 lemma val_gamma_mono: "v \<le> v' \<Longrightarrow> val_gamma a v \<subseteq> val_gamma a v'"
@@ -93,9 +93,9 @@ lemma report_states_at_le_point_join: "d \<in> report_states_at res v \<Longrigh
 text \<open>Every store the report describes at a point, the joined state describes.\<close>
 
 theorem report_sem_point_join:
-  "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
+  "\<R>\<^bsub>res\<^esub> v \<subseteq> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
 proof
-  fix s assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  fix s assume "s \<in> \<R>\<^bsub>res\<^esub> v"
   then obtain d where row: "Lifted d \<in> report_states_at res v" and s: "s \<in> report_gamma res d"
     by blast
   have "\<gamma>\<^bsub>res\<^esub> (Lifted d)
@@ -222,10 +222,10 @@ lemma (in sound_classifier) classify_verdict_holds:
 
 theorem analysis_report_verdicts_sound:
   assumes "consistent_report res"
-  shows "\<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> \<subseteq> \<V>\<^bsub>res\<^esub> v"
+  shows "\<R>\<^bsub>res\<^esub> v \<subseteq> \<V>\<^bsub>res\<^esub> v"
 proof
   fix s
-  assume "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  assume "s \<in> \<R>\<^bsub>res\<^esub> v"
   then obtain d where row: "Lifted d \<in> report_states_at res v" and s: "s \<in> report_gamma res d"
     by (rule report_semE)
   show "s \<in> \<V>\<^bsub>res\<^esub> v"
@@ -245,25 +245,25 @@ proof
 qed
 
 corollary analysis_report_proved:
-  assumes "consistent_report res" and "PROVED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  assumes "consistent_report res" and "PROVED res v e" and "s \<in> \<R>\<^bsub>res\<^esub> v"
   shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
   using verdict_storesD[OF subsetD[OF analysis_report_verdicts_sound[OF assms(1)] assms(3)]
     assms(2)]
   by simp
 
 corollary analysis_report_refuted:
-  assumes "consistent_report res" and "REFUTED res v e" and "s \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>"
+  assumes "consistent_report res" and "REFUTED res v e" and "s \<in> \<R>\<^bsub>res\<^esub> v"
   shows "\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
   using verdict_storesD[OF subsetD[OF analysis_report_verdicts_sound[OF assms(1)] assms(3)]
     assms(2)]
   by simp
 
-theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub> = {}"
+theorem analysis_report_dead: "DEAD res v \<Longrightarrow> \<R>\<^bsub>res\<^esub> v = {}"
   unfolding DEAD_def report_sem_def by auto
 
 text \<open>Read as an emptiness test on points, \<open>DEAD\<close> is sound.\<close>
 
-corollary sound_emptiness_DEAD: "sound_emptiness (DEAD res) (report_sem res)"
+corollary sound_emptiness_DEAD: "sound_emptiness (DEAD res) \<R>\<^bsub>res\<^esub>"
   by (rule sound_emptinessI) (rule analysis_report_dead)
 
 text \<open>
@@ -283,7 +283,7 @@ definition contradiction_report :: "pp \<Rightarrow> analysis_report" where
        report_routes = [], report_checks = [], report_globals = [], report_diagnostics = [] \<rparr>"
 
 lemma DEAD_not_exact:
-  "\<not> exact_emptiness (DEAD (contradiction_report v)) (report_sem (contradiction_report v))"
+  "\<not> exact_emptiness (DEAD (contradiction_report v)) \<R>\<^bsub>contradiction_report v\<^esub>"
 proof -
   have rows: "report_states_at (contradiction_report v) v = {Lifted mcp_contradiction}"
     by (auto simp: report_states_at_def contradiction_report_def)
@@ -293,11 +293,11 @@ proof -
                    = Analysis_Config [Interval_Analysis, Parity_Analysis] Globals_Join Ctx_None
                        Program_Globals_Flow_Sensitive"
     by (simp add: contradiction_report_def)
-  then have empty: "\<lbrakk>contradiction_report v\<rbrakk>\<^bsub>v\<^esub> = {}"
+  then have empty: "\<R>\<^bsub>contradiction_report v\<^esub> v = {}"
     using mcp_contradiction_no_store by (auto simp: rows report_gamma_def activation_id)
   show ?thesis
   proof
-    assume "exact_emptiness (DEAD (contradiction_report v)) (report_sem (contradiction_report v))"
+    assume "exact_emptiness (DEAD (contradiction_report v)) \<R>\<^bsub>contradiction_report v\<^esub>"
     from exact_emptinessD [OF this, of v] live empty show False by simp
   qed
 qed
@@ -438,12 +438,12 @@ text \<open>
 definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow> bool" where
   "sound_report p res \<longleftrightarrow>
      consistent_report res
-   \<and> (\<forall>v. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>)
+   \<and> (\<forall>v. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v)
    \<and> (\<forall>v s. s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
         \<longrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)
         \<longrightarrow> arithmetic_safe_at (prog_cfg p) v s)
    \<and> (\<forall>d \<in> set (report_diagnostics res). diagnostic_verdict d = Check_Refuted
-        \<longrightarrow> (\<forall>s \<in> \<lbrakk>res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>.
+        \<longrightarrow> (\<forall>s \<in> \<R>\<^bsub>res\<^esub> (diagnostic_point d).
               \<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)))
    \<and> map (\<lambda>c. (check_point c, check_label c, check_exp c)) (report_checks res)
        = check_sites (prog_cfg p)"
@@ -463,7 +463,7 @@ proof -
     unfolding consistent_report_def
     by (auto simp: result_checks_of_def point_verdict_def rows report_classify_def cl image_comp
         comp_def)
-  have covers: "s \<in> \<lbrakk>?res\<rbrakk>\<^bsub>v\<^esub>"
+  have covers: "s \<in> \<R>\<^bsub>?res\<^esub> v"
     if "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v" for v s
   proof -
     from covered_table.covers[OF cov that] obtain ctx d
@@ -479,7 +479,7 @@ proof -
     using sound_table.arithmetic_safe[OF st _ that(1)] that(2) by simp
   have refuted: "\<not> truthy (\<lbrakk>arithmetic_condition (diagnostic_obligation d)\<rbrakk>\<^sub>e s)"
     if d: "d \<in> set (report_diagnostics ?res)" and r: "diagnostic_verdict d = Check_Refuted"
-      and s: "s \<in> \<lbrakk>?res\<rbrakk>\<^bsub>diagnostic_point d\<^esub>" for d s
+      and s: "s \<in> \<R>\<^bsub>?res\<^esub> (diagnostic_point d)" for d s
   proof -
     let ?e = "arithmetic_condition (diagnostic_obligation d)"
     have pv: "point_verdict (run_table sr) classify (diagnostic_point d) ?e = Decided Check_Refuted"

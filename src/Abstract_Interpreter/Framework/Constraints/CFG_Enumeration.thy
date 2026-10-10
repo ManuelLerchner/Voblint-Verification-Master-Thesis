@@ -234,7 +234,7 @@ subsection \<open>Return enumeration\<close>
 
 text \<open>The return edges, as an image of \<^const>\<open>call_targets\<close> that keeps the triggering
   \<^typ>\<open>call_action\<close> whole.  The return contribution is the caller state and the callee-exit
-  state assembled by \<open>combine\<^sup>#\<close>.  The callee's \<^term>\<open>FunctionResult p\<close> node comes back
+  state assembled by \<open>combine\<^sup>\<sharp>\<close>.  The callee's \<^term>\<open>FunctionResult p\<close> node comes back
   directly --- recovered from the callee entry \<^term>\<open>FunctionEntry p\<close> --- so no separate
   combine relation is needed and no client has to rebuild the result node.
 

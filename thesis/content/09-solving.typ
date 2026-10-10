@@ -375,18 +375,18 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       "exit_main@c0 -> pp6@c0": (bend: 45deg),
       "pp6@c0 -> pp5@c0": (bend: 45deg),
       "pp5@c0 -> pp4@c0": (bend: 45deg),
-      "pp4@c0 -> pp3@c0": (bend: -45deg, side: right, pos: 0.25),
-      "pp3@c0 -> pp2@c0": (bend: -45deg, side: right),
-      "pp2@c0 -> entry_main@c0": (bend: -45deg, side: right),
+      "pp4@c0 -> pp3@c0": (bend: 45deg),
+      "pp3@c0 -> pp2@c0": (bend: 45deg),
+      "pp2@c0 -> entry_main@c0": (bend: 45deg),
       "entry_main@c0 -> Seed(main)@c0": (bend: 0deg),
-      "pp3@c0 -> Seed(bump)@c1": (bend: 25deg),
-      "pp3@c0 -> exit_bump@c1": (bend: -20deg, side: right),
+      "pp3@c0 -> Seed(bump)@c1": (bend: 20deg, side: right),
+      "pp3@c0 -> exit_bump@c1": (bend: -10deg, side: right),
       "exit_bump@c1 -> pp0@c1": (bend: -45deg, side: right),
       "exit_bump@c1 -> pp1@c1": (bend: -30deg, side: right),
       "pp0@c1 -> entry_bump@c1": (bend: -45deg, side: right),
       "entry_bump@c1 -> Seed(bump)@c1": (bend: -45deg, side: right),
-      "pp4@c0 -> Seed(bump)@c2": (bend: -25deg, side: right),
-      "pp4@c0 -> exit_bump@c2": (bend: 40deg),
+      "pp4@c0 -> Seed(bump)@c2": (bend: -15deg, side: right),
+      "pp4@c0 -> exit_bump@c2": (bend: 10deg),
       "exit_bump@c2 -> pp0@c2": (bend: 45deg),
       "exit_bump@c2 -> pp1@c2": (bend: 30deg),
       "pp0@c2 -> entry_bump@c2": (bend: 45deg),
@@ -428,26 +428,26 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
       wnode((0, 5), "pp6@c0", raw("pp6")),
       wnode((0, 6), "exit_main@c0", raw("exit_main")),
       wnode(
-        (1.6, 0),
+        (1.2, 0),
         "Seed(bump)@c1",
         [$ctor("Activation_Seed") thin #_b space c_1$],
         color: vb.called,
       ),
-      wnode((1.6, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
-      wnode((1.6, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
-      wnode((1.6, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
-      wnode((2.6, 2), "pp1@c1", [#raw("pp1"), $c_1$], color: vb.muted),
+      wnode((1.2, 1), "entry_bump@c1", [#raw("entry_bump"), $c_1$]),
+      wnode((1.2, 2), "pp0@c1", [#raw("pp0"), $c_1$]),
+      wnode((1.2, 3), "exit_bump@c1", [#raw("exit_bump"), $c_1$]),
+      wnode((1.9, 2), "pp1@c1", [#raw("pp1"), $c_1$], color: vb.muted),
       wnode(
-        (-1.6, 1.8),
+        (-1.2, 1.8),
         "Seed(bump)@c2",
         [$ctor("Activation_Seed") thin #_b space c_2$],
         color: vb.called,
       ),
-      wnode((-1.6, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
-      wnode((-1.6, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
-      wnode((-1.6, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),
-      wnode((-2.6, 3.8), "pp1@c2", [#raw("pp1"), $c_2$], color: vb.muted),
-      cfg("entry_main@c0", "pp2@c0", lab: [body(main)], side: right),
+      wnode((-1.2, 2.8), "entry_bump@c2", [#raw("entry_bump"), $c_2$]),
+      wnode((-1.2, 3.8), "pp0@c2", [#raw("pp0"), $c_2$]),
+      wnode((-1.2, 4.8), "exit_bump@c2", [#raw("exit_bump"), $c_2$]),
+      wnode((-1.9, 3.8), "pp1@c2", [#raw("pp1"), $c_2$], color: vb.muted),
+      cfg("entry_main@c0", "pp2@c0", lab: [body(main)], side: left),
       cfg("pp4@c0", "pp5@c0", lab: [check(a == 6)], side: left),
       cfg("pp5@c0", "pp6@c0", lab: [check(b == 5)], side: left),
       cfg("pp6@c0", "exit_main@c0", lab: [return], side: left),
@@ -528,6 +528,14 @@ pointwise (#isathm("part_post_solution_query"),
 #isathm("part_post_solution_side_bound")). The returned #sol may lie above the
 least solution, because the solver widens and narrows at its widening points
 (@sec:td), and (C1) to (C4) are all the solver guarantees about #sol.
+
+(C3) and (C4) together are the pair condition of @sec:side-effects. As a pair,
+the tree of $u$ evaluates to #isaconst("rhs_pair"): its answer and
+#isaconst("rhs_sides"), which restricts #isaconst("sides_of_rhs") to the
+targets the evaluation publishes to. #isathm("part_post_solution_iff_rhs_pair")
+proves the certificate equivalent to (C1), (C2) and that pair bound at every
+$u in V$. Both components come from the evaluators above, so the solver and
+its strategy trees are unchanged.
 
 // How many local unknowns the recorded solve of the running example certifies.
 #let _local-unknowns = {
@@ -723,10 +731,6 @@ termination. @sec:eval-precision compares them on the programs of
     from no program.],
 ) <fig:update-rules>
 
-No solver fact is proved per rule. Each rule meets the vendored update-rule
-interface (#isathm("update_rule_update_global_of")), so the certificate is
-proved once, with the rule as a parameter, and holds for all five.
-
 == Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
@@ -779,8 +783,8 @@ that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
 state means what its function means under the concretization
 #isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
 (#isaconst("default_st_gamma")) is
-$ sem(d) = sem(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
-The solver never computes $sem(d)$; it uses only the executable lattice
+$ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
+The solver never computes $conc(d)$; it uses only the executable lattice
 operations. Function states get order, join and bottom pointwise from HOL, but
 no widening or narrowing. The carrier instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the generic solver runs on
@@ -798,7 +802,7 @@ $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
 bottom, order, widening and narrowing. The transfer functions must commute
 with the represented function in the same way,
 $ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
-and since $sem(d) = sem(rho_(cal(G))(d))$, the soundness facts of
+and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
 @ch:analysis-interface then transport from the abstract to the executable
 operation. The locale #isalocale("dg_analysis_exec") states this commutation
 for the transfer on nonempty states and for procedure entry. For primitives
@@ -813,7 +817,7 @@ overrides that the represented function reads, and each declared global; the
 globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
 #isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
-$ #isaconst("default_st_is_bot_for") space "globals" space d <==> sem(d) = emptyset, $
+$ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
 provided the list enumerates exactly the globals of $cal(G)$. Because the test
 is exact, collapsing the states it finds empty to #lbot commutes with the
 represented function, as the specification's collapse requires, and a state

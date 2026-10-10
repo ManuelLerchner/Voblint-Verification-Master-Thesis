@@ -98,7 +98,7 @@ together are the collecting semantics (`node_collect_eq_Union_activation_collect
 and its per-policy instances). Then:
 
 ```text
-s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v
+s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v
 ```
 
 `run_voblint_spine` states the chain once, for any context relation `R` and root
@@ -120,7 +120,7 @@ placements. `run_voblint_source_sound` is the context-erased form.
 `Analysis_Report.thy` reads a report through two store sets at a point `v`:
 
 ```text
-⟦res⟧⇘v⇙   (report_sem)      the stores some state at v describes
+ℛ⇘res⇙ v   (report_sem)      the stores some state at v describes
 𝒱⇘res⇙ v  (verdict_stores)  the stores in which every definite verdict at v holds
 DEAD res v                   every state at v is Bot
 HAS_VERDICT res v e r        some check at v on e has the definite verdict r
@@ -136,9 +136,9 @@ classifier over its own states at the check's point. From that alone:
 
 | Theorem | Claim |
 | --- | --- |
-| `analysis_report_verdicts_sound` | `⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` |
-| `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `⟦res⟧⇘v⇙` |
-| `analysis_report_dead`, `sound_emptiness_DEAD` | `DEAD res v ⟹ ⟦res⟧⇘v⇙ = {}`: `DEAD` is a sound emptiness test on points; the converse does not hold: `DEAD_not_exact` gives a report whose point describes no store and is not `DEAD`, its one state being the combined state `mcp_contradiction` that no store satisfies (`mcp_empty_v_not_exact`) |
+| `analysis_report_verdicts_sound` | `ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v` |
+| `analysis_report_proved`, `analysis_report_refuted` | a definite verdict holds in every store of `ℛ⇘res⇙ v` |
+| `analysis_report_dead`, `sound_emptiness_DEAD` | `DEAD res v ⟹ ℛ⇘res⇙ v = {}`: `DEAD` is a sound emptiness test on points; the converse does not hold: `DEAD_not_exact` gives a report whose point describes no store and is not `DEAD`, its one state being the combined state `mcp_contradiction` that no store satisfies (`mcp_empty_v_not_exact`) |
 | `analysis_report_check_dead` | a `Dead` check row's point is `DEAD` |
 | `analysis_report_unknown` | an `UNKNOWN` check's point is not `DEAD` |
 
@@ -155,9 +155,9 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 | Theorem | Claim |
 | --- | --- |
 | `run_voblint_report_contract` | an analysed report answers a valid configuration and a well-formed program, is for exactly that configuration and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
-| `run_voblint_covers` | `𝒞 v ⊆ ⟦res⟧⇘v⇙` |
+| `run_voblint_covers` | `𝒞 v ⊆ ℛ⇘res⇙ v` |
 | `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱⇘res⇙ v` |
-| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `⟦res⟧⇘v⇙` and `𝒱⇘res⇙ v` |
+| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `ℛ⇘res⇙ v` and `𝒱⇘res⇙ v` |
 | `run_voblint_check_sound` | a run about to execute `Check e` finds a listed check for `e` at a node it reaches, not `Dead`, whose verdict holds |
 | `run_voblint_proved`, `run_voblint_refuted` | a definite verdict holds at every collected store |
 | `run_voblint_dead_unreached`, `run_voblint_dead_check_unreached` | a `DEAD` point collects no store |

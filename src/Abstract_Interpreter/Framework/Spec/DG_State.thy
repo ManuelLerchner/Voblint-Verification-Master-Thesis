@@ -1,5 +1,5 @@
 theory DG_State
-  imports "Voblint_Domain.Abstract_Domain"
+  imports "Voblint_Domain.State_Concretization"
 begin
 
 section \<open>The value a D/G unknown carries\<close>

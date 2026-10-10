@@ -88,7 +88,7 @@ qed
 
 lemma dep_L_routed_node_rhs_callee_result:
   assumes fin: "finite (calls g)" and e: "(u, ca, FunctionEntry q, k) \<in> calls g"
-    and deps: "enter_deps (enter\<^sup># S (call_info_of ca q))
+    and deps: "enter_deps (enter\<^sup>\<sharp> S (call_info_of ca q))
                  (mk_dg_man (dg_local (\<tau> (Inl (u, cx)))) global_of) \<tau> pairs D"
     and mem: "(c, ent) \<in> set pairs"
     and res: "q \<in> set (resolve k u ca (dg_local (\<tau> (Inl (u, cx)))))"
@@ -198,7 +198,7 @@ proof -
     "entry_alt (declared_global p) p (call_info_of ca q) ?d (sol_global (declared_global p) p)"
   have res: "q \<in> set (static_resolve (prog_cfg p) k u ca ?d)"
     using e prog_cfg_finite(2) by simp
-  obtain D where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) (call_info_of ca q))
+  obtain D where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) (call_info_of ca q))
       (mk_dg_man ?d global_of) (sol_env (declared_global p) p) [?alt] D"
     using place_enter_deps unfolding sol_global_def by blast
   have mem: "(fst ?alt, snd ?alt) \<in> set [?alt]" by simp
@@ -358,7 +358,7 @@ lemma routed_analysis_from_live_unknowns:
      (place_rg (declared_global p) (Lifted init_st))
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot) adm
      (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e))
-     gamma\<^sub>V empty\<^sub>V classify"
+     \<gamma>\<^sub>V empty\<^sub>V classify"
 proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
     SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
     EmptyExact ClProved ClRefuted VarsFin)
@@ -423,11 +423,11 @@ next
   have covE: "(FunctionEntry q, ctx') \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_enterD[OF live_unknowns_cover[OF wf solves] EnterCover(1,2)])
        (use nbE req in \<open>simp add: live_succ_def ctx_succ_def\<close>)
-  obtain pub where runs: "enter_runs (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
+  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] pub"
     using place_enter_runs by blast
-  obtain deps where deps: "enter_deps (enter\<^sup># (analysis_spec (declared_global p) p) ?ci)
+  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec (declared_global p) p) ?ci)
       (mk_dg_man ?caller global_of) (sol_env (declared_global p) p)
       [entry_alt (declared_global p) p ?ci ?caller ?g] deps"
     using place_enter_deps by blast
@@ -502,7 +502,7 @@ proof -
         "Lifted init_st" "place_rg (declared_global p) (Lifted init_st)"
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot" adm
       "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
-      gamma\<^sub>V empty\<^sub>V classify
+      \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule routed_analysis_from_live_unknowns[where adm = adm, OF wf solves cover_R total_R])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
@@ -566,11 +566,11 @@ theorem fun_route_state_at_sound:
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
            prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> gamma\<^sub>V (state_at (declared_global p) p ctx v)"
+           \<subseteq> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
 proof -
   have "\<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
           prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-        \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
+        \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
     using fun_route_activation_collect_sound_of_terminates[OF route_const wf solves]
     unfolding gamma_reader_eq_lookup .
   then show ?thesis
@@ -582,7 +582,7 @@ theorem fun_route_result_node_sound:
   assumes route_const: "\<And>u ctx d ca s. route (declared_global p) u ctx d ca = ctx_fun u ctx s"
     and wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v
-           \<subseteq> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
+           \<subseteq> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
   using fun_route_node_collect_eq_Union[where ctx_fun = ctx_fun and p = p and v = v]
     fun_route_state_at_sound[OF route_const wf solves]
   by (simp add: SUP_mono')
@@ -600,7 +600,7 @@ proof -
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
-             and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
+             and classify = classify and \<gamma>\<^sub>S = \<gamma>\<^sub>V
              and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                                prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
            OF fin _ classify_proved fun_route_state_at_sound[OF route_const wf solves]])
@@ -620,7 +620,7 @@ proof -
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
-             and classify = classify and \<gamma>\<^sub>S = gamma\<^sub>V
+             and classify = classify and \<gamma>\<^sub>S = \<gamma>\<^sub>V
              and reach = "\<lambda>v. \<A>\<^bsub>declared_global p,context_policy_of_fun ctx_fun,root_ctx,
                                prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx",
            OF fin _ classify_refuted fun_route_state_at_sound[OF route_const wf solves]])
@@ -635,12 +635,12 @@ theorem fun_route_source_sound:
     and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, [])
                 \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk ctx. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-           \<and> s \<in> gamma\<^sub>V (state_at (declared_global p) p ctx v)"
+           \<and> s \<in> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
 proof -
   have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
     by (rule prog_cfg_def)
   have "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-          \<and> s \<in> (\<Union>ctx. gamma\<^sub>V (state_at (declared_global p) p ctx v))"
+          \<and> s \<in> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
     unfolding cfg_eq
     by (rule source_sound_from_node_collect_cap[OF wf s0 run])
        (use fun_route_result_node_sound[OF route_const wf solves] in \<open>simp add: cfg_eq\<close>)
@@ -664,7 +664,7 @@ lemma entry_state_routed_analysis_from_live_unknowns:
      (sol_env (declared_global p) p) (live_unknowns p) (root_query p) seed (\<lambda>d. d = Bot)
      (admitted_contexts (declared_global p) p)
      (\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e))
-     gamma\<^sub>V empty\<^sub>V classify"
+     \<gamma>\<^sub>V empty\<^sub>V classify"
 proof (rule routed_analysis_from_live_unknowns[OF wf solves])
   fix u ctx dst pars args q cont and s :: store and ctx'
   assume "(u, ctx) \<in> live_unknowns p"
@@ -713,7 +713,7 @@ proof -
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
-      gamma\<^sub>V empty\<^sub>V classify
+      \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])
@@ -736,7 +736,7 @@ corollary entry_state_lookup_sound_of_terminates:
   assumes wf: "wf_program_compile_input p" and solves: "terminates (declared_global p) p"
   shows "\<A>\<^bsub>declared_global p,admitted_contexts (declared_global p) p,
            root_ctx,prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx
-           \<subseteq> gamma_lift gamma\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
+           \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table (result (declared_global p) p) v ctx)"
   using entry_state_activation_collect_sound_of_terminates[OF wf solves]
   unfolding gamma_reader_eq_lookup .
 
@@ -753,7 +753,7 @@ proof -
       "sol_env (declared_global p) p" "live_unknowns p" "root_query p" seed "\<lambda>d. d = Bot"
       "admitted_contexts (declared_global p) p"
       "\<lambda>d e. map_lift (rd (declared_global p)) (place_cmb p d e)"
-      gamma\<^sub>V empty\<^sub>V classify
+      \<gamma>\<^sub>V empty\<^sub>V classify
     by (rule entry_state_routed_analysis_from_live_unknowns[OF wf solves])
   have entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> live_unknowns p"
     by (rule ctx_vars_cover_live_entryD[OF live_unknowns_cover[OF wf solves]])

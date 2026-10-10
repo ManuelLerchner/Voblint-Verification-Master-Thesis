@@ -250,7 +250,7 @@ class Domain:
             "empty": "(case $f of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> default_st_is_bot_for $gs st)",
             "read": "map_lift (default_st_to_fun $G) $f",
-            "published_gamma": "\\<lbrakk>$v\\<rbrakk>\\<^sub>\\<bottom>",
+            "published_gamma": "\\<gamma>\\<^sub>\\<bottom> $v",
             "published_empty": "(case $v of Bot \\<Rightarrow> True"
             " | Lifted st \\<Rightarrow> is_empty_state st)",
             "answer": "(case $v of Bot \\<Rightarrow> \\<top>"

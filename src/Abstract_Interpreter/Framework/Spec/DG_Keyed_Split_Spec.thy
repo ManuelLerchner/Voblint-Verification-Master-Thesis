@@ -262,7 +262,7 @@ definition keyed_split_spec ::
 where
   "keyed_split_spec \<G> cmb rl rg free c =
      (let step = (\<lambda>a. keyed_transfer cmb rl rg free (edge_global_reads \<G> a)
-                        (edge_global_writes \<G> a) (closed_step c a))
+                        (edge_global_writes \<G> a) \<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>)
       in local_dg_spec_template\<lparr>
          dgs_skip := step EA_Nop,
          dgs_assign := (\<lambda>x e. step (EA_Assign x e)),
@@ -282,11 +282,11 @@ where
 lemma dg_spec_step_keyed_split_spec [simp]:
   "dg_spec_step (keyed_split_spec \<G> cmb rl rg free c) a
      = keyed_transfer cmb rl rg free (edge_global_reads \<G> a) (edge_global_writes \<G> a)
-         (closed_step c a)"
+         \<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
   unfolding keyed_split_spec_def Let_def by (cases a) simp_all
 
 lemma dgs_enter_keyed_split_spec [simp]:
-  "enter\<^sup># (keyed_split_spec \<G> cmb rl rg free c) ci
+  "enter\<^sup>\<sharp> (keyed_split_spec \<G> cmb rl rg free c) ci
      = keyed_enter_transfer cmb rl rg free (call_global_reads \<G> (ci_args ci))
          (global_names_in \<G> (ci_formals ci)) (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))"
   unfolding keyed_split_spec_def Let_def by simp
@@ -370,7 +370,7 @@ proof -
     let ?d = "dg_local (\<tau> src)" and ?e = "genv key \<tau>"
     let ?R = "edge_global_reads \<G> a" and ?W = "edge_global_writes \<G> a"
     let ?g = "view_of rg ?R ?e (free ?R)"
-    let ?r = "closed_step c a (cmb ?d ?g)"
+    let ?r = "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> (cmb ?d ?g)"
     have loc: "edge_out (keyed_split_spec \<G> cmb rl rg free c) a src key \<tau> = rl ?r"
       by (simp add: dg_spec_edge_program_def traverse_transfer_program keyed_transfer_def
           sp_compile_with_def sp_bind_def sp_return_def)

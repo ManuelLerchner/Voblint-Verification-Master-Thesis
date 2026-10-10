@@ -304,7 +304,7 @@ fun part_gamma :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Ri
 | "part_gamma \<G> Congruence_Analysis =
      (\<lambda>x. gamma_lift (default_st_gamma \<G>) (lift_get slot7 x))"
 | "part_gamma \<G> Order_Analysis =
-     (\<lambda>x. \<lbrakk>(lift_get slot8 x)\<rbrakk>)"
+     (\<lambda>x. \<gamma> (lift_get slot8 x))"
 
 fun val_empty :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> bool" where
   "val_empty Sign_Analysis v =
@@ -326,21 +326,21 @@ fun val_empty :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> bool" wher
 
 fun val_gamma :: "analysis_domain \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "val_gamma Sign_Analysis v =
-     \<lbrakk>(slot1 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot1 v)"
 | "val_gamma Interval_Analysis v =
-     \<lbrakk>(slot2 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot2 v)"
 | "val_gamma Parity_Analysis v =
-     \<lbrakk>(slot3 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot3 v)"
 | "val_gamma (Int_Analysis Refine_Fixpoint) v =
-     \<lbrakk>(slot4 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot4 v)"
 | "val_gamma (Int_Analysis Refine_Once) v =
-     \<lbrakk>(slot5 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot5 v)"
 | "val_gamma (Int_Analysis Refine_Never) v =
-     \<lbrakk>(slot6 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot6 v)"
 | "val_gamma Congruence_Analysis v =
-     \<lbrakk>(slot7 v)\<rbrakk>\<^sub>\<bottom>"
+     \<gamma>\<^sub>\<bottom> (slot7 v)"
 | "val_gamma Order_Analysis v =
-     \<lbrakk>(slot8 v)\<rbrakk>"
+     \<gamma> (slot8 v)"
 
 subsection \<open>What each field publishes\<close>
 

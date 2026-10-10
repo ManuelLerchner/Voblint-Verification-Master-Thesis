@@ -563,12 +563,12 @@ text \<open>
   to their counterparts on \<^typ>\<open>'a abs_state\<close>. Only the classifier
   \<open>\<G>\<close> is needed besides the state, because it decides which location holds each
   name's value. A context that fixes \<open>\<G>\<close> may register
-  \<open>default_st_gamma \<G>\<close> under \<open>\<lbrakk>_\<rbrakk>\<close> with \<open>adhoc_overloading\<close>.
+  \<open>default_st_gamma \<G>\<close> under \<open>\<gamma> _\<close> with \<open>adhoc_overloading\<close>.
 \<close>
 
 definition default_st_gamma ::
   "(vname => bool) => ('a::numeric_domain) default_st => store set" where
-  "default_st_gamma \<G> s = \<lbrakk>\<rho>\<^bsub>\<G>\<^esub> s\<rbrakk>"
+  "default_st_gamma \<G> s = \<gamma> (\<rho>\<^bsub>\<G>\<^esub> s)"
 
 lemma default_st_gamma_mono:
   "s \<le> t \<Longrightarrow> default_st_gamma \<G> s \<subseteq> default_st_gamma \<G> t"
@@ -579,7 +579,7 @@ lemma default_st_gamma_bot [simp]: "default_st_gamma \<G> bot = {}"
 
 lemma default_st_gamma_initial:
   "default_st_gamma \<G> (initial_default_st local_value global_value) =
-   \<lbrakk>\<lambda>x. if \<G> x then global_value else local_value\<rbrakk>"
+   \<gamma> (\<lambda>x. if \<G> x then global_value else local_value)"
   by (simp add: default_st_gamma_def default_st_to_fun_initial)
 
 unbundle no default_st_syntax

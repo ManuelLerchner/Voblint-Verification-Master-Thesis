@@ -60,25 +60,25 @@ locale sound_nonrelational_transfer =
     and en :: "call_info \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
     and ev :: "analysis_event \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
   assumes tf_sound_assign_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<lbrakk>asn x a d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<gamma> (asn x a d)"
   assumes tf_sound_special_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<lbrakk>sp sc x d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<gamma> (sp sc x d)"
   assumes tf_sound_branch_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<lbrakk>br b pol d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma> (br b pol d)"
   assumes tf_sound_skip_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>sk d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (sk d)"
   assumes tf_sound_body_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>bd p d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (bd p d)"
   assumes tf_sound_return_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
+    "s \<in> \<gamma> d \<Longrightarrow>
        s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))
-         \<in> \<lbrakk>rt e p d\<rbrakk>"
+         \<in> \<gamma> (rt e p d)"
   assumes tf_sound_enter_entry_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow>
+    "s \<in> \<gamma> d \<Longrightarrow>
        bind_formals (ci_formals ci) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (ci_args ci)) (enter_state \<G> s)
-         \<in> \<lbrakk>en ci d\<rbrakk>"
+         \<in> \<gamma> (en ci d)"
   assumes tf_sound_event_for[intro]:
-    "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> s \<in> \<lbrakk>ev evt d\<rbrakk>"
+    "s \<in> \<gamma> d \<Longrightarrow> s \<in> \<gamma> (ev evt d)"
 
 text \<open>Each obligation is stated directly as an inference rule
   (\<open>P\<^sub>1 \<Longrightarrow> ... \<Longrightarrow> P\<^sub>n \<Longrightarrow> Q\<close>). Variables not fixed by the locale are
@@ -93,7 +93,7 @@ text \<open>The per-edge dispatcher's soundness, which is what an equation gener
   action names, and each selected operation is sound by one locale assumption.\<close>
 
 lemma step_sound_for[intro]:
-  "edge_collect a \<lbrakk>d\<rbrakk> \<subseteq> \<lbrakk>local_spec_step sk asn sp br bd rt ev a d\<rbrakk>"
+  "edge_collect a (\<gamma> d) \<subseteq> \<gamma> (local_spec_step sk asn sp br bd rt ev a d)"
 proof (cases a)
   case (EA_Special sc x)
   then show ?thesis by (cases sc) auto
@@ -127,10 +127,10 @@ where
      ls_branch = (\<lambda>_. br), ls_body = (\<lambda>_. bd), ls_return = (\<lambda>_. rt), ls_event = (\<lambda>_. ev),
      ls_enter = (\<lambda>_ ci p. [(fst p, en ci (fst p))]),
      ls_combine_env = (\<lambda>_ _ ci dc de. dc),
-     ls_combine_assign = (\<lambda>_ ci. combine\<^sup># \<G> (ci_dst ci)) \<rparr>"
+     ls_combine_assign = (\<lambda>_ ci. combine\<^sup>\<sharp> \<G> (ci_dst ci)) \<rparr>"
 
 lemma closed_step_state_local_spec [simp]:
-  "closed_step (state_local_spec \<G> sk asn sp br bd rt en ev) a
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>state_local_spec \<G> sk asn sp br bd rt en ev\<^esub>
      = local_spec_step sk asn sp br bd rt ev a"
   by (simp add: closed_step_def ls_step_def state_local_spec_def fun_eq_iff)
 
@@ -141,7 +141,7 @@ lemma ls_step_state_local_spec [simp]:
 
 lemma ls_combine_state_local_spec [simp]:
   "ls_combine (state_local_spec \<G> sk asn sp br bd rt en ev) ch ch' ci dc de
-     = combine\<^sup># \<G> (ci_dst ci) dc de"
+     = combine\<^sup>\<sharp> \<G> (ci_dst ci) dc de"
   by (simp add: state_local_spec_def)
 
 context sound_nonrelational_transfer
@@ -152,8 +152,8 @@ abbreviation tf_spec :: "'a abs_state local_spec" where
 
 theorem state_local_spec_sound: "sound_local_spec \<G> gamma_state tf_spec"
 proof -
-  have step: "edge_collect a (\<lbrakk>d\<rbrakk> \<inter> Collect (eval_query.channel_holds ch))
-      \<subseteq> \<lbrakk>ls_step tf_spec ch a d\<rbrakk>" for a ch and d :: "'a abs_state"
+  have step: "edge_collect a (\<gamma> d \<inter> Collect (eval_query.channel_holds ch))
+      \<subseteq> \<gamma> (ls_step tf_spec ch a d)" for a ch and d :: "'a abs_state"
     by (simp only: ls_step_state_local_spec)
        (rule subset_trans[OF edge_collect_mono[OF Int_lower1] step_sound_for])
   show ?thesis
@@ -197,7 +197,7 @@ lemma dg_spec_wf_state_dg_spec [intro, simp]:
   by (simp add: state_dg_spec_def)
 
 theorem (in sound_nonrelational_transfer) state_dg_spec_contract:
-  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<lbrakk>d\<rbrakk>) \<G>"
+  "analysis_contract (state_dg_spec \<G> sk asn sp br bd rt en ev) (\<lambda>d g. \<gamma> d) \<G>"
   unfolding state_dg_spec_def by (rule dg_spec_of_contract[OF state_local_spec_sound])
 
 
@@ -234,7 +234,7 @@ where
      ls_enter = (\<lambda>_ ci p. [(fst p, transfer_lift empty_pred (en ci) (fst p))]),
      ls_combine_env = (\<lambda>_ _ ci dc de. dc),
      ls_combine_assign = (\<lambda>_ ci dcM de.
-        transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dcM de) \<rparr>"
+        transfer_lift2 empty_pred (combine\<^sup>\<sharp> \<G> (ci_dst ci)) dcM de) \<rparr>"
 
 definition lifted_state_dg_spec ::
   "(vname \<Rightarrow> bool)
@@ -270,7 +270,7 @@ lemma ls_step_lifted_state_local_spec [simp]:
   by (simp add: ls_step_def lifted_state_local_spec_def local_spec_step_transfer_lift)
 
 lemma closed_step_lifted_state_local_spec [simp]:
-  "closed_step (lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev) a
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>lifted_state_local_spec \<G> empty_pred sk asn sp br bd rt en ev\<^esub>
      = transfer_lift empty_pred (local_spec_step sk asn sp br bd rt ev a)"
   by (simp add: closed_step_def fun_eq_iff)
 
@@ -284,7 +284,7 @@ lemma dg_spec_wf_lifted_state_dg_spec [intro, simp]:
   by (simp add: lifted_state_dg_spec_def)
 
 lemma dgs_enter_lifted_state_dg_spec:
-  "enter\<^sup># (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
+  "enter\<^sup>\<sharp> (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (en ci) d)])"
   by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
@@ -296,7 +296,7 @@ lemma dg_spec_combine_transfer_lifted_state_dg_spec:
   "dg_spec_combine_transfer
      (lifted_state_dg_spec \<G> empty_pred sk asn sp br bd rt en ev) ci
      = local_combine_transfer
-         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup># \<G> (ci_dst ci)) dc de)"
+         (\<lambda>dc de. transfer_lift2 empty_pred (combine\<^sup>\<sharp> \<G> (ci_dst ci)) dc de)"
   by (simp add: lifted_state_dg_spec_def lifted_state_local_spec_def)
 
 end

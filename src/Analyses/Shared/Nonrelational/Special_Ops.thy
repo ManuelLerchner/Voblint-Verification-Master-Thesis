@@ -30,7 +30,7 @@ text \<open>
 
 locale sound_minmax_ops = sound_evaluator gamma_state ev
   for ops :: "'a::numeric_domain special_ops"
-    and ev  :: "exp => 'a abs_state => 'a" +
+    and ev  :: "exp => 'a abs_state => 'a" ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>") +
   assumes special_min_sound[intro]:
     "i \<in> \<gamma> p \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> min i j \<in> \<gamma> (special_min ops p q)"
   assumes special_max_sound[intro]:
@@ -56,19 +56,19 @@ where
   "special_transfer sc x d =
      d(x := (case sc of
                 Nondet_Int => top
-              | Min a b => special_min ops (ev a d) (ev b d)
-              | Max a b => special_max ops (ev a d) (ev b d)))"
+              | Min a b => special_min ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)
+              | Max a b => special_max ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)))"
 
 lemma special_transfer_Nondet_Int [simp]:
   "special_transfer Nondet_Int x d = d(x := top)"
   unfolding special_transfer_def by simp
 
 lemma special_transfer_Min [simp]:
-  "special_transfer (Min a b) x d = d(x := special_min ops (ev a d) (ev b d))"
+  "special_transfer (Min a b) x d = d(x := special_min ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d))"
   unfolding special_transfer_def by simp
 
 lemma special_transfer_Max [simp]:
-  "special_transfer (Max a b) x d = d(x := special_max ops (ev a d) (ev b d))"
+  "special_transfer (Max a b) x d = d(x := special_max ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d))"
   unfolding special_transfer_def by simp
 
 text \<open>
@@ -81,8 +81,8 @@ text \<open>
 \<close>
 
 lemma special_transfer_sound:
-  assumes \<G>: "s \<in> \<lbrakk>d\<rbrakk>" and sr: "special_result sc s v"
-  shows "s(x := v) \<in> \<lbrakk>special_transfer sc x d\<rbrakk>"
+  assumes \<G>: "s \<in> \<gamma> d" and sr: "special_result sc s v"
+  shows "s(x := v) \<in> \<gamma> (special_transfer sc x d)"
 proof -
   show ?thesis
   proof (cases sc)
@@ -91,13 +91,13 @@ proof -
   next
     case (Min a b)
     with sr have "v = min (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b d)"
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)"
       by (rule aval_abs_sound)+
     ultimately show ?thesis using Min \<G> by auto
   next
     case (Max a b)
     with sr have "v = max (\<lbrakk>a\<rbrakk>\<^sub>e s) (\<lbrakk>b\<rbrakk>\<^sub>e s)" by simp
-    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (ev a d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (ev b d)"
+    moreover from \<G> have "\<lbrakk>a\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> d)" and "\<lbrakk>b\<rbrakk>\<^sub>e s \<in> \<gamma> (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> d)"
       by (rule aval_abs_sound)+
     ultimately show ?thesis using Max \<G> by auto
   qed
@@ -116,14 +116,14 @@ proof (cases sc)
   with le show ?thesis by (simp add: le_funD le_funI)
 next
   case (Min a b)
-  have "special_min ops (ev a sigma1) (ev b sigma1)
-          \<le> special_min ops (ev a sigma2) (ev b sigma2)"
+  have "special_min ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> sigma1) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> sigma1)
+          \<le> special_min ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> sigma2) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> sigma2)"
     using le by (intro special_min_mono aval_abs_mono)
   with le Min show ?thesis unfolding le_fun_def by auto
 next
   case (Max a b)
-  have "special_max ops (ev a sigma1) (ev b sigma1)
-          \<le> special_max ops (ev a sigma2) (ev b sigma2)"
+  have "special_max ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> sigma1) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> sigma1)
+          \<le> special_max ops (\<lbrakk>a\<rbrakk>\<^sup>\<sharp> sigma2) (\<lbrakk>b\<rbrakk>\<^sup>\<sharp> sigma2)"
     using le by (intro special_max_mono aval_abs_mono)
   with le Max show ?thesis unfolding le_fun_def by auto
 qed

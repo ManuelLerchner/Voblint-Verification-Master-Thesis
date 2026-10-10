@@ -759,17 +759,24 @@ text \<open>The step a component takes on an edge, with its own channel.\<close>
 definition closed_step :: "'s local_spec \<Rightarrow> edge_action \<Rightarrow> 's \<Rightarrow> 's" where
   "closed_step c a d = ls_step c (ls_channel c d) a d"
 
+text \<open>\<open>\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d\<close> is the abstract transfer of action \<open>a\<close>, the counterpart of
+  the abstract evaluation \<open>\<lbrakk>e\<rbrakk>\<^sup>\<sharp> d\<close>; the subscript names the component.\<close>
+
+abbreviation abs_step :: "edge_action \<Rightarrow> 's local_spec \<Rightarrow> 's \<Rightarrow> 's"
+  ("\<lbrakk>_\<rbrakk>\<^sup>\<sharp>\<^bsub>_\<^esub>") where
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> \<equiv> closed_step c a"
+
 definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_spec" where
   "dg_spec_of c = local_dg_spec_template\<lparr>
-     dgs_skip := local_transfer (closed_step c EA_Nop),
-     dgs_assign := (\<lambda>x e. local_transfer (closed_step c (EA_Assign x e))),
-     dgs_special := (\<lambda>sc x. local_transfer (closed_step c (EA_Special sc x))),
+     dgs_skip := local_transfer \<lbrakk>EA_Nop\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>,
+     dgs_assign := (\<lambda>x e. local_transfer \<lbrakk>EA_Assign x e\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
+     dgs_special := (\<lambda>sc x. local_transfer \<lbrakk>EA_Special sc x\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
      dgs_branch := (\<lambda>b pol. local_transfer
-                      (closed_step c (if pol then EA_Assume b else EA_AssumeNot b))),
-     dgs_body := (\<lambda>p. local_transfer (closed_step c (EA_Body p))),
-     dgs_return := (\<lambda>e p. local_transfer (closed_step c (EA_Ret e p))),
+                      \<lbrakk>if pol then EA_Assume b else EA_AssumeNot b\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
+     dgs_body := (\<lambda>p. local_transfer \<lbrakk>EA_Body p\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
+     dgs_return := (\<lambda>e p. local_transfer \<lbrakk>EA_Ret e p\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
      dgs_enter := (\<lambda>ci. local_enter_transfer (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))),
-     dgs_event := (\<lambda>ev. local_transfer (closed_step c (event_action ev))),
+     dgs_event := (\<lambda>ev. local_transfer \<lbrakk>event_action ev\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>),
      dgs_combine_env := (\<lambda>ci. local_combine_transfer
         (\<lambda>dc de. ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de)),
      dgs_combine_assign := (\<lambda>ci. local_combine_transfer
@@ -778,25 +785,25 @@ definition dg_spec_of :: "'s local_spec \<Rightarrow> ('x,'k,'v,'s::bot,'G) dg_s
 
 
 lemma dg_spec_of_simps [simp]:
-  "skip\<^sup># (dg_spec_of c) = local_transfer (closed_step c EA_Nop)"
-  "assign\<^sup># (dg_spec_of c) x e = local_transfer (closed_step c (EA_Assign x e))"
-  "special\<^sup># (dg_spec_of c) sc x = local_transfer (closed_step c (EA_Special sc x))"
-  "branch\<^sup># (dg_spec_of c) b pol
-     = local_transfer (closed_step c (if pol then EA_Assume b else EA_AssumeNot b))"
-  "body\<^sup># (dg_spec_of c) p = local_transfer (closed_step c (EA_Body p))"
-  "return\<^sup># (dg_spec_of c) eo p = local_transfer (closed_step c (EA_Ret eo p))"
-  "enter\<^sup># (dg_spec_of c) ci
+  "skip\<^sup>\<sharp> (dg_spec_of c) = local_transfer \<lbrakk>EA_Nop\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "assign\<^sup>\<sharp> (dg_spec_of c) x e = local_transfer \<lbrakk>EA_Assign x e\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "special\<^sup>\<sharp> (dg_spec_of c) sc x = local_transfer \<lbrakk>EA_Special sc x\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "branch\<^sup>\<sharp> (dg_spec_of c) b pol
+     = local_transfer \<lbrakk>if pol then EA_Assume b else EA_AssumeNot b\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "body\<^sup>\<sharp> (dg_spec_of c) p = local_transfer \<lbrakk>EA_Body p\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "return\<^sup>\<sharp> (dg_spec_of c) eo p = local_transfer \<lbrakk>EA_Ret eo p\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "enter\<^sup>\<sharp> (dg_spec_of c) ci
      = local_enter_transfer (\<lambda>d. ls_enter c (ls_channel c d) ci (d, d))"
-  "event\<^sup># (dg_spec_of c) ev = local_transfer (closed_step c (event_action ev))"
-  "combine_env\<^sup># (dg_spec_of c) ci = local_combine_transfer
+  "event\<^sup>\<sharp> (dg_spec_of c) ev = local_transfer \<lbrakk>event_action ev\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
+  "combine_env\<^sup>\<sharp> (dg_spec_of c) ci = local_combine_transfer
      (\<lambda>dc de. ls_combine_env c (ls_channel c dc) (ls_channel c de) ci dc de)"
-  "combine_assign\<^sup># (dg_spec_of c) ci = local_combine_transfer
+  "combine_assign\<^sup>\<sharp> (dg_spec_of c) ci = local_combine_transfer
      (\<lambda>dc de. ls_combine_assign c (ls_channel c de) ci dc de)"
   "dgs_query (dg_spec_of c) = local_query (ls_channel c)"
   by (simp_all add: dg_spec_of_def)
 
 lemma dg_spec_step_dg_spec_of [simp]:
-  "dg_spec_step (dg_spec_of c) a = local_transfer (closed_step c a)"
+  "dg_spec_step (dg_spec_of c) a = local_transfer \<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
   by (cases a) simp_all
 
 lemma dg_spec_combine_transfer_dg_spec_of [simp]:
@@ -816,7 +823,7 @@ text \<open>
 
 lemma closed_step_sound:
   assumes sound: "sound_local_spec \<G> gm c"
-  shows "edge_collect a (gm d) \<subseteq> gm (closed_step c a d)"
+  shows "edge_collect a (gm d) \<subseteq> gm (\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub> d)"
 proof -
   have "gm d = gm d \<inter> Collect (eval_query.channel_holds (ls_channel c d))"
     using ls_channel_sound[OF sound] by blast

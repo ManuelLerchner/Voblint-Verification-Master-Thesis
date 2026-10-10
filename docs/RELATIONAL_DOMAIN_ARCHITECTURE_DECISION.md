@@ -55,7 +55,7 @@ Tracing the DG layer directly (not assumed — read below) shows:
   (`src/Analysis/Generic/Solver/Context/DG/README.md`).
 
 What **is** box-only is not the framework — it's every existing
-*interpretation* of it: `gamma_dg d g = ⟦d⟧ ∩ ⟦g⟧` (`DG_Soundness.thy:106-109`)
+*interpretation* of it: `gamma_dg d g = γ d ∩ γ g` (`DG_Soundness.thy:106-109`)
 calls `gamma_state`, which is `'a::numeric_domain abs_state => store set`
 (`Abstract_Domain.thy:58`, "lifts `gamma` pointwise," per the domain README).
 `ownership_split_dg_spec`, `indep_dg_spec`, `mixed_si_spec` all choose `'dl = 'a abs_state`,
@@ -93,7 +93,7 @@ The real remaining blockers, precisely stated:
    `Exec_DG_Bridge.thy`) is separate, additive work.
 5. Context-sensitivity (`DG_Ctx_Activation.thy`) needs its own new
    `gammaDG`-shaped locale if a relational domain wants it — matches Gap 4's
-   own finding this session (`gamma_ownership_split d g = ⟦d ⊔ g⟧` needs a unified type,
+   own finding this session (`gamma_ownership_split d g = γ (d ⊔ g)` needs a unified type,
    ~245-line file's worth of new locale work) — but this is additive and only
    needed if an instance actually wants context-sensitivity.
 

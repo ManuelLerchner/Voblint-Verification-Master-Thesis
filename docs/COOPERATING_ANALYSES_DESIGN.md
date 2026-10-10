@@ -44,7 +44,7 @@ in `Voblint_Domain`, below the framework.
 of two holding answers holds. `channel_holds A s` says every answer of `A` holds
 at `s`.
 
-The one interpretation is `eval_holds (EvalInt e) a s ⟷ ⟦e⟧ s ∈ γ a` over
+The one interpretation is `eval_holds (EvalInt e) a s ⟷ ⟦e⟧ₑ s ∈ γ a` over
 `answer = int_dom query_lift`, Goblint's `Lattice.Lift(IntDomTuple)`
 (`Query_Lift.thy`). `QTop` claims nothing and is how an analysis declines a
 query; `QBot` admits no value, so a sound handler returns it only for a state
@@ -52,7 +52,7 @@ that represents no store. The meet lifts the `int_dom` meet, which is exact
 (`gamma_inf_int_dom`), so combining answers loses nothing.
 `answer_of_int` is the exact answer for a known integer and `answer_const`
 reads one back (Goblint's `of_int` and `to_int`); `eval_holds_constD` turns
-`answer_const a = Some n` into `⟦e⟧ s = n`. An interval-only handler answers
+`answer_const a = Some n` into `⟦e⟧ₑ s = n`. An interval-only handler answers
 `answer_of_ivl`, the interval with every other component at top.
 
 ## Manager and specification (`DG_Manager.thy`, `DG_Spec.thy`)

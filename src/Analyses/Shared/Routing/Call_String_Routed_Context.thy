@@ -75,9 +75,9 @@ locale call_string_routed_context =
              \<in> calls (compile_prog Pi ps)
        \<Longrightarrow> s \<in> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, ctx)))) (dg_global (sigma (Inr Global)))
        \<Longrightarrow> \<exists>pairs pub deps.
-             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs pub
-           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (mk_dg_man (dg_local (sigma (Inl (u, ctx)))) (\<lambda>_. Global)) sigma pairs deps
            \<and> entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
                (call_enter \<G> (CallEdge dst pars args) s) pairs"
@@ -132,9 +132,9 @@ next
   have ctx': "ctx' = cs_context k u ctx (call_enter \<G> (CallEdge dst pars args) s)"
     using Rc by simp
   obtain pairs pub deps
-    where R: "enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+    where R: "enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs pub"
-      and D: "enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+      and D: "enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                 (man_at u ctx) sigma pairs deps"
       and P: "entry_pairs_cover (\<lambda>d. \<gamma>\<^sub>D\<^sub>G d (dg_global (sigma (Inr Global)))) s
                 (call_enter \<G> (CallEdge dst pars args) s) pairs"
@@ -150,9 +150,9 @@ next
   have covE: "(FunctionEntry p, ctx') \<in> vars"
     using call_fwd[OF covV ce] req by (simp add: cs_route_def)
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+             enter_runs (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (man_at u ctx) sigma pairs pub
-           \<and> enter_deps (enter\<^sup># S (call_info_of (CallEdge dst pars args) p))
+           \<and> enter_deps (enter\<^sup>\<sharp> S (call_info_of (CallEdge dst pars args) p))
                (man_at u ctx) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv (\<lambda>_. Global) sigma ())

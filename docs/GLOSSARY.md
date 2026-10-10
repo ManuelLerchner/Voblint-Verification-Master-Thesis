@@ -96,10 +96,11 @@ names.
 | --- | --- | --- |
 | `abs_state` | Pointwise abstract variable environment. | `src/Abstract_Interpreter/Domain/State/Nonrelational_State.thy` |
 | `default_st_to_fun` | The function a carrier state represents, written `ρ⇘𝒢⇙ s` in bundle `default_st_syntax` ("its function", "the represented function"). It plays the role of `fun_rep` in HOL-IMP's `Abs_State.thy` (Concrete Semantics) for the executable `default_st`, with the classifier `𝒢` choosing the local or global slot of each name. | `src/Abstract_Interpreter/Exec/State/Default_St_Transfer.thy` |
-| `readback` | The abstract state an executable state represents, written `ρ⇘𝒢⇙ x` in bundle `default_st_syntax`. One overloaded constant with three instances chosen by the type of `x`: `default_st_to_fun` for a carrier state, `map_lift (default_st_to_fun 𝒢)` for a lifted one, and `dg_state_to_fun` for a D/G state. The concretization of an executable state is `⟦ρ⇘𝒢⇙ x⟧`. | `src/Abstract_Interpreter/Domain/State/State_Concretization.thy` |
+| `readback` | The abstract state an executable state represents, written `ρ⇘𝒢⇙ x` in bundle `default_st_syntax`. One overloaded constant with three instances chosen by the type of `x`: `default_st_to_fun` for a carrier state, `map_lift (default_st_to_fun 𝒢)` for a lifted one, and `dg_state_to_fun` for a D/G state. The concretization of an executable state is `γ (ρ⇘𝒢⇙ x)`. | `src/Abstract_Interpreter/Domain/State/State_Concretization.thy` |
 | `exact_emptiness`, `sound_emptiness` | Whether an emptiness test `e` holds of exactly the values a concretization `γ` maps to `{}` (`e x ⟷ γ x = {}`) or only of some of them (`e x ⟹ γ x = {}`). Exact: a domain's `is_empty`, `is_empty_state`, `default_st_is_bot_for`, the order domain. Sound only: the D/G locale's `empty⇩V` (its contract asks only soundness; an instance may be exact), the combined state's `mcp_empty_v` (not exact: `mcp_empty_v_not_exact`), and `DEAD` on report points (not exact: `DEAD_not_exact`). | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
 | `numeric_domain` | Abstract carrier, order, and concretization obligations. | `src/Abstract_Interpreter/Domain/Lattice/Abstract_Domain.thy` |
 | `part_post_solution` | Certificate with a query-membership condition and three conditions per unknown in the vars set (dependency closure, local-result bound, every contribution bounded) an equation-system valuation must satisfy; generic over the unknown/value types, so it is the shared interface between solver correctness and D/G collecting soundness, not tied to any one solver. | `vendor/td-verification/Basics_side.thy` |
+| `rhs_pair` | A strategy tree's evaluation as a pair: `rhs_sides`, the contributions it publishes as a partial map (`sides_of_rhs` restricted to the keys `side_path` visits), and its value `traverse_rhs`. `part_post_solution_iff_rhs_pair` states the certificate's local and side bounds on this pair, the side-effecting constraint form of Saan's thesis. | `src/Abstract_Interpreter/Solver/Strategy_Tree_Pair.thy` |
 | `TD_side_upd_rule` | Vendored verified side-effecting top-down solver, parametric in the global update rule, that the analyses instantiate (`TD_side_rule_Interp`, `Globals_Rule.thy`). It warrows every local unknown at a widening point. Its leastness theorem belongs to the separate `TD_side_mono` locale, which Voblint does not instantiate. | `vendor/td-verification/TD_side_upd_rule.thy` |
 | `solve_dom_of_solve_c` | `solve_c x ≠ None` implies `solve_dom x`. With the vendored `partial_post_solution` (`solve_dom` implies `part_post_solution`) and `finite_stabl_solve` it discharges `certified_solver`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
 | `certified_solver` | The solver contract the analysis pipeline assumes, over any equation system: in the solver's domain a solve answers a `part_post_solution` over a finite key set, and `solve_c` succeeding implies `solve_dom` (assumptions `solve_pp`, `solve_fin`, `dom_of_solve_c`). `dg_analysis` and `dg_analysis_exec` extend it; `td_certified_solver` (`Globals_Rule.thy`) proves it for the vendored solver at every `globals_rule`. | `src/Abstract_Interpreter/Solver/TD_Solver_Bridge.thy` |
@@ -112,7 +113,7 @@ names.
 | `G` | Analysis-chosen shared fact routed through global side effects. | `src/Abstract_Interpreter/Framework/Spec/DG_State.thy` |
 | `dg_spec` | D/G transfer, entry, combine, read, and publication interface. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy` |
 | `analysis_contract` | Concrete-soundness obligations for a D/G instance. | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
-| resume state (`cont`) | First component `q` of an entry pair `(q, e)` that `enter#` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume state. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
+| resume state (`cont`) | First component `q` of an entry pair `(q, e)` that `enter♯` returns: the caller-side value the callee's result is combined with. The theories name it `cont` (`entry_pairs_cover`: `(cont, entry) ∈ set pairs`); the thesis calls it the resume state. One pair must cover both the caller store (by `cont`) and the entered store (by `entry`). | `src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy` |
 | `routed_node_rhs` | D/G equation generator: one right-hand side per node and context, joining the local-edge programs, one program per call site, and the extra contribution programs (`routed_contribution_programs`; in the routed instance these are the framework's seed-reading programs, `routed_entry_seed_programs`). | `src/Abstract_Interpreter/Framework/Constraints/DG_Indexed_Generator.thy` |
 
 ### Correspondence to Goblint's `Spec` interface
@@ -152,18 +153,18 @@ carries the soundness proof -- notation does not rename the identifier.
 
 | Notation | Identifier | Layer |
 | --- | --- | --- |
-| `enter#` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `context#` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
-| `combine_env#` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `combine_assign#` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
-| `combine#` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
+| `enter♯` | `dgs_enter` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `context♯` | `route` (locale parameter of `dg_context_activation`, carrying the notation in `routed_context`) | Generator, `Routed_Context.thy` |
+| `combine_env♯` | `dgs_combine_env` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine_assign♯` | `dgs_combine_assign` (`dg_spec` field) | Specification, `DG_Spec.thy` |
+| `combine♯` | `combine_collect_abs` (the fixed whole-state return merge) | Abstract-state algebra, `Transfer_Algebra.thy` |
 
 `route`'s semantic counterpart is the relation `context_policy`
 (`Activation_Trace_Context.thy`), which consumes **concrete** stores rather than
 an abstract state and is left unnotated, matching `call_enter` -- the concrete
-counterpart of `enter#` -- staying unnotated. `routing_adequate` is the
+counterpart of `enter♯` -- staying unnotated. `routing_adequate` is the
 per-instance locale obligation: at a real call edge, some `(cont, entry)`
-alternative of the spec's own `enter#` run covers the caller and entered
+alternative of the spec's own `enter♯` run covers the caller and entered
 stores, and `route` on that entry yields a context `routed_entry_context_rel`
 admits. Goblint's `Spec.context` is a function applied per `enter`
 alternative; since `enter` returns a list, one concrete call can land in
@@ -212,6 +213,6 @@ the table.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `analysis_report` | What `run_voblint` returns for an analysed program: the semantic states per point and context, the check column and the diagnostics. Read through `⟦res⟧⇘v⇙` (`report_sem`), `𝒱⇘res⇙ v` (`verdict_stores`) and `DEAD`. Termination is not a premise of its theorems: `run_voblint` solves with the executable `solve_c`, and an answer exists only where it returned (`solve_c_run`). | `src/Executable_Surface/CLI/Analysis_Report.thy` |
+| `analysis_report` | What `run_voblint` returns for an analysed program: the semantic states per point and context, the check column and the diagnostics. Read through `ℛ⇘res⇙ v` (`report_sem`), `𝒱⇘res⇙ v` (`verdict_stores`) and `DEAD`. Termination is not a premise of its theorems: `run_voblint` solves with the executable `solve_c`, and an answer exists only where it returned (`solve_c_run`). | `src/Executable_Surface/CLI/Analysis_Report.thy` |
 | `source_activation_sound` | Compiler and activation-collecting bridge for accepted source executions. | `src/Analyses/Shared/Result/Source_Activation_Sound.thy` |
 | `fun_route_source_sound` | The routed endpoints for a route that is a function of the call site, the unit route among them: a terminating solve bounds every store a source run reaches by the state published at its point under one of its contexts (`fun_route_source_sound`, `fun_route_result_node_sound`, `fun_route_report_proved_sound`). Every domain's unit registration is an instance. | `src/Analyses/Shared/Result/DG_Live_Unknowns.thy` |

@@ -233,10 +233,18 @@ allow = [
   "Return_empty_not_pcompletes",
   # evidence for the prose explaining why a top-level Return must not reach the source
   "Unwind_not_pcompletes",
+  # evidence for the pair-view prose: only visited keys are in the side map's domain
+  "dom_rhs_sides",
+  # evidence for the pair-view prose: repeated side effects to one key join
+  "rhs_sides_Side",
+  # evidence for the same prose: two side effects to one key, worked out
+  "rhs_pair_two_sides",
 
   # Unused lemmas the docs cite as results.
   # named in thesis chapter 4 (Corollary "Claims cover the collection")
   "node_collect_covered",
+  # named in thesis chapter 9 (§9.3.1), index.html, GLOSSARY.md
+  "part_post_solution_iff_rhs_pair",
   # named in GOBLINT_ALIGNMENT_REGISTER.md, THESIS_BLUEPRINT.md
   "branch_le_bfilter",
   # named in THEOREM_MAP.md

@@ -163,7 +163,7 @@ theorem nv_source_certified:
        (v, nv_final, stk)
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                    cinit_stores (declared_global nv_prog)\<^esub> v
-   \<and> nv_final \<in> \<lbrakk>res\<rbrakk>\<^bsub>v\<^esub>
+   \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
    \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
   obtain res where ans: "run_voblint nv_config nv_prog

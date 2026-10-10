@@ -53,22 +53,22 @@ definition relc_eval :: "relc \<Rightarrow> exp \<Rightarrow> answer" where
 fun relc_qry :: "relc \<Rightarrow> channel" where
   "relc_qry d (EvalInt e) = relc_eval d e"
 
-lemma relc_has_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
+lemma relc_has_sound: "s \<in> \<gamma> d \<Longrightarrow> relc_has x y d \<Longrightarrow> s x \<le> s y"
   by (cases d) auto
 
 lemma var_of_SomeD: "var_of a = Some x \<Longrightarrow> a = V x"
   by (cases a) simp_all
 
-lemma relc_le_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> relc_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
+lemma relc_le_sound: "s \<in> \<gamma> d \<Longrightarrow> relc_le d a b \<Longrightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s \<le> \<lbrakk>b\<rbrakk>\<^sub>e s"
   by (auto simp: relc_le_def split: option.splits dest!: var_of_SomeD
       dest: relc_has_sound)
 
 lemma relc_eval_sound:
-  "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer (relc_eval d e)"
+  "s \<in> \<gamma> d \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer (relc_eval d e)"
   by (cases e) (auto simp: relc_eval_def
       dest: relc_le_sound intro: order_antisym)
 
-lemma relc_qry_sound: "s \<in> \<lbrakk>d\<rbrakk> \<Longrightarrow> eval_holds q (relc_qry d q) s"
+lemma relc_qry_sound: "s \<in> \<gamma> d \<Longrightarrow> eval_holds q (relc_qry d q) s"
   by (cases q) (simp add: relc_eval_sound)
 
 subsection \<open>Learning orders from the query channel\<close>
@@ -92,9 +92,9 @@ definition relc_learn :: "channel \<Rightarrow> vname list \<Rightarrow> vname \
                 (filter (\<lambda>y. y \<noteq> x \<and> answer_const (ch (EvalInt (LessEq (V y) e))) = Some 1) ys))))"
 
 lemma relc_learn_sound:
-  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>d\<rbrakk>"
+  assumes "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<gamma> d"
     and "eval_query.channel_holds ch s"
-  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<lbrakk>relc_learn ch ys x e d\<rbrakk>"
+  shows "s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) \<in> \<gamma> (relc_learn ch ys x e d)"
 proof (cases d)
   case RelBot
   with assms(1) show ?thesis by simp
@@ -140,8 +140,8 @@ proof -
     unfolding sound_special_def
   proof (intro allI impI)
     fix ch d s sc x t
-    assume "s \<in> \<lbrakk>d :: relc\<rbrakk>" "t \<in> special_step sc x s"
-    then show "t \<in> \<lbrakk>forget_relc x d\<rbrakk>" by (cases sc) auto
+    assume "s \<in> \<gamma> (d :: relc)" "t \<in> special_step sc x s"
+    then show "t \<in> \<gamma> (forget_relc x d)" by (cases sc) auto
   qed
   have base: "sound_local_spec \<G> gamma_relc (conservative_local_spec
        (\<lambda>ch x e d. relc_learn ch ys x e (forget_relc x d)) (\<lambda>ch sc x d. forget_relc x d)

@@ -461,8 +461,8 @@ lemma dg_prog_st_commute_routed_callee_call_program:
   assumes wf_st: "dg_spec_wf S_st"
     and wf_abs: "dg_spec_wf S_abs"
     and Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
-        (enter\<^sup># S_st ci (mk_dg_man d global_of))
-        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) global_of))"
+        (enter\<^sup>\<sharp> S_st ci (mk_dg_man d global_of))
+        (enter\<^sup>\<sharp> S_abs ci (mk_dg_man (Floc d) global_of))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st ci (mk_dg_man d global_of) de))
@@ -516,8 +516,8 @@ lemma dg_prog_st_commute_routed_call_program:
   assumes wf_st: "dg_spec_wf S_st"
     and wf_abs: "dg_spec_wf S_abs"
     and Henter: "\<And>ci d. dg_enter_st_commute \<sigma>_st
-        (enter\<^sup># S_st ci (mk_dg_man d global_of))
-        (enter\<^sup># S_abs ci (mk_dg_man (Floc d) global_of))"
+        (enter\<^sup>\<sharp> S_st ci (mk_dg_man d global_of))
+        (enter\<^sup>\<sharp> S_abs ci (mk_dg_man (Floc d) global_of))"
     and Hcomb: "\<And>ci d de. dg_tree_st_commute \<sigma>_st
         (sp_compile_with (\<lambda>x. DG x bot)
            (dg_spec_combine_transfer S_st ci (mk_dg_man d global_of) de))

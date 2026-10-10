@@ -62,7 +62,7 @@ lemma ls_step_exec_local_spec [simp]:
   by (simp add: exec_local_spec_def)
 
 lemma closed_step_exec_local_spec [simp]:
-  "closed_step (exec_local_spec \<G> empty_pred tf_st enter_st) a
+  "\<lbrakk>a\<rbrakk>\<^sup>\<sharp>\<^bsub>exec_local_spec \<G> empty_pred tf_st enter_st\<^esub>
      = transfer_lift empty_pred (tf_st a)"
   by (simp add: closed_step_def fun_eq_iff)
 
@@ -98,7 +98,7 @@ lemma dg_spec_wf_exec_dg_spec [intro, simp]:
   by (simp add: exec_dg_spec_def)
 
 lemma dgs_enter_exec_dg_spec:
-  "enter\<^sup># (exec_dg_spec \<G> empty_pred tf_st enter_st) ci
+  "enter\<^sup>\<sharp> (exec_dg_spec \<G> empty_pred tf_st enter_st) ci
      = local_enter_transfer (\<lambda>d. [(d, transfer_lift empty_pred (enter_st ci) d)])"
   by (simp add: exec_dg_spec_def)
 

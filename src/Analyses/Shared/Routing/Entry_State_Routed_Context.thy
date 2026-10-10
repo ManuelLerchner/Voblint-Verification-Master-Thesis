@@ -12,7 +12,7 @@ text \<open>
 
   \<open>alts ci d\<close> is that list --- the alternatives the specification answers for call
   \<open>ci\<close> at caller state \<open>d\<close> --- and \<open>enter_pure\<close> is the assumption that the
-  specification's own \<open>enter\<^sup>#\<close> is exactly that list handed to its continuation.
+  specification's own \<open>enter\<^sup>\<sharp>\<close> is exactly that list handed to its continuation.
   What the locale restricts is therefore the entry operation, not the route; hence
   the name.
 
@@ -62,7 +62,7 @@ locale pure_entry_routed_context =
   assumes seed_ne_buffer_key[simp]: "\<And>p ctx. seed p ctx \<noteq> buffer_key"
     and is_bot_bot: "is_bot bot"
     and is_bot_sound: "\<And>d gv. is_bot d \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G d gv = {}"
-    and enter_pure: "\<And>ci. enter\<^sup># S ci = local_enter_transfer (alts ci)"
+    and enter_pure: "\<And>ci. enter\<^sup>\<sharp> S ci = local_enter_transfer (alts ci)"
     and enter_cover:
     "\<And>u ctx dst pars args p cont s.
        (u, ctx) \<in> vars
@@ -132,13 +132,13 @@ next
   have req: "route u ctx entry (CallEdge dst pars args) = ctx'" using req0 by simp
   have not_bot: "\<not> is_bot entry"
     using ecov is_bot_sound by fastforce
-  have Rr: "enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma (alts ?ci ?d) bot"
+  have Rr: "enter_runs (enter\<^sup>\<sharp> S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma (alts ?ci ?d) bot"
     unfolding enter_pure by (rule enter_runs_local_enter_transfer_mk_dg_man)
-  have D: "enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma (alts ?ci ?d) {}"
+  have D: "enter_deps (enter\<^sup>\<sharp> S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma (alts ?ci ?d) {}"
     unfolding enter_pure by (rule enter_deps_local_enter_transfer_mk_dg_man)
   show "\<exists>pairs pub deps cont' entry.
-             enter_runs (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma pairs pub
-           \<and> enter_deps (enter\<^sup># S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma pairs deps
+             enter_runs (enter\<^sup>\<sharp> S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma pairs pub
+           \<and> enter_deps (enter\<^sup>\<sharp> S ?ci) (mk_dg_man ?d (\<lambda>_. buffer_key)) sigma pairs deps
            \<and> (cont', entry) \<in> set pairs
            \<and> s \<in> \<gamma>\<^sub>D\<^sub>G cont' (genv (\<lambda>_. buffer_key) sigma ())
            \<and> call_enter \<G> (CallEdge dst pars args) s

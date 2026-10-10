@@ -241,7 +241,7 @@ theorem run_voblint_source_sound:
       and ans: "run_voblint config p = Analysed res"
   shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
                  ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-                 ∧ s ∈ ⟦res⟧⇘v⇙
+                 ∧ s ∈ ℛ⇘res⇙ v
                  ∧ s ∈ 𝒱⇘res⇙ v"
 ```
 
@@ -251,24 +251,24 @@ theorem run_voblint_source_sound:
 | `run` | Any finite execution prefix from `main`; the program need not terminate. |
 | `ans` | `run_voblint` accepted the configuration and the program, and its solve finished. |
 
-`→⇩p⇧*` is `psteps`, `≈` is `csim`, and `𝒞`, `⟦res⟧` and `𝒱` are `node_collect`,
+`→⇩p⇧*` is `psteps`, `≈` is `csim`, and `𝒞`, `ℛ⇘res⇙ v` and `𝒱` are `node_collect`,
 `report_sem` and `verdict_stores`; the [notation table](#notation) lists each symbol.
 
 | Conclusion | Guarantee |
 | --- | --- |
 | `Π, g ⊢ … ≈ (v, s, stk)` | The compiler's forward simulation relates the source state to CFG node `v`. |
 | `s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v` | A valid activation trace reaches `v` with store `s`. |
-| `s ∈ ⟦res⟧⇘v⇙` | Some state the report holds at `v`, under one of its contexts, describes `s`. |
+| `s ∈ ℛ⇘res⇙ v` | Some state the report holds at `v`, under one of its contexts, describes `s`. |
 | `s ∈ 𝒱⇘res⇙ v` | Every `PROVED` or `REFUTED` verdict at `v` holds for `s`. |
 
 `config` names a nonempty list of distinct analyses among Sign, Interval, Parity,
 Congruence, Int and Order, run together, one of the globals rules, and one
 context policy: no contexts, entry states, or call strings of any length.
 
-The last two conclusions are two inclusions: `𝒞 v ⊆ ⟦res⟧⇘v⇙`
+The last two conclusions are two inclusions: `𝒞 v ⊆ ℛ⇘res⇙ v`
 needs the run that built the report
 ([`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy)), and
-`⟦res⟧⇘v⇙ ⊆ 𝒱⇘res⇙ v` holds for the report alone
+`ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v` holds for the report alone
 ([`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
 
 <details>
@@ -389,7 +389,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
 | 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |
-| ⟦res⟧<sub>v</sub> | the stores report _res_ describes at _v_ | [`report_sem`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst) | the stores some state the analysis report holds at point _v_, under any of its contexts, describes |
+| ℛ<sub>res</sub> v | the stores report _res_ describes at _v_ | [`report_sem`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst) | the stores some state the analysis report holds at point _v_, under any of its contexts, describes |
 | 𝒱<sub>res</sub> v | the stores the verdicts of _res_ at _v_ hold in | [`verdict_stores`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst) | the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false |
 | carries t c<br>In `activation_coverage`, short for activation&#95;context&#95;rel 𝒢 adm c<sub>0</sub> g | _t_ carries context _c_ | [`carries`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst) | the context relation of the locale's policy, between a valid activation trace and the contexts it may run in |
 | cover v ctx<br>In `routed_context`, input only, short for γ<sub>M</sub> (sg (Inl (v, ctx))) | the stores claimed at _v_ in _ctx_ | [`cover`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst) | proof-local shorthand for applying γ<sub>M</sub> to the value the published reader holds at (_v_, _ctx_), the claim handed to the coverage locale; it is not a separate semantic operation |

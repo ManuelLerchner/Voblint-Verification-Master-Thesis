@@ -193,7 +193,7 @@ theorem parity_source_run_sound:
   assumes run: "parity_gs, parity_pi \<turnstile> (parity_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
   shows "\<exists>v stk. parity_pi, parity_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
-                 \<and> t \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program () v\<rbrakk>"
+                 \<and> t \<in> \<gamma> (parity_rule.state_at Globals_Join parity_gs parity_program () v)"
 proof -
   have run':
     "parity_gs, prog_table parity_program \<turnstile> (main_body (prog_table parity_program), s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
@@ -233,9 +233,9 @@ lemma parity_state_at_head_x:
   unfolding parity_rule.state_at_unfold by eval
 
 theorem parity_head_excludes_odd_store:
-  "(\<lambda>_. 1) \<notin> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program () (Statement 2)\<rbrakk>"
+  "(\<lambda>_. 1) \<notin> \<gamma> (parity_rule.state_at Globals_Join parity_gs parity_program () (Statement 2))"
 proof
-  assume "(\<lambda>_. 1) \<in> \<lbrakk>parity_rule.state_at Globals_Join parity_gs parity_program () (Statement 2)\<rbrakk>"
+  assume "(\<lambda>_. 1) \<in> \<gamma> (parity_rule.state_at Globals_Join parity_gs parity_program () (Statement 2))"
   then have "(1::int) \<in> gamma_parity
       (parity_rule.state_at Globals_Join parity_gs parity_program () (Statement 2) (STR ''x''))"
     by (simp add: gamma_state_def)

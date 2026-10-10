@@ -18,7 +18,7 @@ text \<open>
 subsection \<open>Local and global state together\<close>
 
 definition gammaDG_relc :: "relc \<Rightarrow> relc \<Rightarrow> store set" where
-  "gammaDG_relc d g = \<lbrakk>d\<rbrakk> \<inter> \<lbrakk>g\<rbrakk>"
+  "gammaDG_relc d g = \<gamma> d \<inter> \<gamma> g"
 
 lemma gammaDG_relc_top [simp]: "gammaDG_relc \<top> \<top> = UNIV"
   unfolding gammaDG_relc_def by simp
@@ -45,8 +45,8 @@ definition assume_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_step_sound[intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "s \<in> \<lbrakk>assume_step b d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  shows "s \<in> \<gamma> (assume_step b d)"
   using assms
   by (cases d; cases b) (auto simp: assume_step_def split: exp.splits if_splits)
 
@@ -68,8 +68,8 @@ definition assume_not_step :: "exp \<Rightarrow> relc \<Rightarrow> relc" where
            | _ \<Rightarrow> RelC ps))"
 
 lemma assume_not_step_sound[intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "s \<in> \<lbrakk>assume_not_step b d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
+  shows "s \<in> \<gamma> (assume_not_step b d)"
   using assms
   by (cases d; cases b) (auto simp: assume_not_step_def split: exp.splits if_splits)
 
@@ -118,8 +118,8 @@ definition relc_branch_step :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Righ
 text \<open>The relational counterpart of \<open>bfilter_sound\<close>, in the same shape: refining
   at a guard keeps every store at which the guard has the required truth value.\<close>
 lemma relc_branch_step_sound [intro]:
-  assumes "s \<in> \<lbrakk>d\<rbrakk>" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol"
-  shows "s \<in> \<lbrakk>relc_branch_step b pol d\<rbrakk>"
+  assumes "s \<in> \<gamma> d" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol"
+  shows "s \<in> \<gamma> (relc_branch_step b pol d)"
   using assms by (cases pol) (auto simp: relc_branch_step_def)
 
 definition relc_branch :: "exp \<Rightarrow> bool \<Rightarrow> relc \<Rightarrow> relc \<Rightarrow> relc \<times> relc" where
@@ -257,7 +257,7 @@ next
     by (simp add: rel_order_spec_def)
 next
   fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b"
-  show "sp_wf (enter\<^sup># rel_order_spec ci (mk_dg_man d unknown_of))"
+  show "sp_wf (enter\<^sup>\<sharp> rel_order_spec ci (mk_dg_man d unknown_of))"
     by (auto simp: rel_order_spec_def relc_enter_transfer_def Let_def)
 next
   fix ci and d :: relc and unknown_of :: "unit \<Rightarrow> 'b" and ex :: relc
@@ -300,7 +300,7 @@ proof -
   have "edge_collect (EA_Assign x e) (gammaDG_relc d g)
       = {s(x := \<lbrakk>e\<rbrakk>\<^sub>e s) | s. s \<in> gammaDG_relc d g}"
     by simp
-  also have "... \<subseteq> \<lbrakk>forget_relc x d\<rbrakk> \<inter> \<lbrakk>forget_relc x g\<rbrakk>"
+  also have "... \<subseteq> \<gamma> (forget_relc x d) \<inter> \<gamma> (forget_relc x g)"
     using forget_relc_sound unfolding gammaDG_relc_def by blast
   finally show ?thesis
     unfolding relc_assign_def gammaDG_relc_def by simp
@@ -313,7 +313,7 @@ proof -
   have "edge_collect (EA_Special sc x) (gammaDG_relc d g)
       \<subseteq> {s(x := v) | s v. s \<in> gammaDG_relc d g}"
     by (cases sc) auto
-  also have "... \<subseteq> \<lbrakk>forget_relc x d\<rbrakk> \<inter> \<lbrakk>forget_relc x g\<rbrakk>"
+  also have "... \<subseteq> \<gamma> (forget_relc x d) \<inter> \<gamma> (forget_relc x g)"
     using forget_relc_sound unfolding gammaDG_relc_def by blast
   finally show ?thesis
     unfolding relc_special_def gammaDG_relc_def by simp
@@ -326,7 +326,7 @@ proof -
   have "edge_collect (EA_Assume b) (gammaDG_relc d g)
       = {s. s \<in> gammaDG_relc d g \<and> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
     by simp
-  also have "... \<subseteq> \<lbrakk>assume_step b d\<rbrakk> \<inter> \<lbrakk>g\<rbrakk>"
+  also have "... \<subseteq> \<gamma> (assume_step b d) \<inter> \<gamma> g"
     using assume_step_sound unfolding gammaDG_relc_def by blast
   finally show ?thesis
     unfolding relc_branch_def relc_branch_step_def gammaDG_relc_def by simp
@@ -339,7 +339,7 @@ proof -
   have "edge_collect (EA_AssumeNot b) (gammaDG_relc d g)
       = {s. s \<in> gammaDG_relc d g \<and> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
     by simp
-  also have "... \<subseteq> \<lbrakk>assume_not_step b d\<rbrakk> \<inter> \<lbrakk>g\<rbrakk>"
+  also have "... \<subseteq> \<gamma> (assume_not_step b d) \<inter> \<gamma> g"
     using assume_not_step_sound unfolding gammaDG_relc_def by blast
   finally show ?thesis
     unfolding relc_branch_def relc_branch_step_def gammaDG_relc_def by simp
@@ -357,7 +357,7 @@ next
   have "edge_collect (EA_Ret (Some a) p) (gammaDG_relc d g)
       = {s(ret_var := \<lbrakk>a\<rbrakk>\<^sub>e s) | s. s \<in> gammaDG_relc d g}"
     by simp
-  also have "... \<subseteq> \<lbrakk>forget_relc ret_var d\<rbrakk> \<inter> \<lbrakk>forget_relc ret_var g\<rbrakk>"
+  also have "... \<subseteq> \<gamma> (forget_relc ret_var d) \<inter> \<gamma> (forget_relc ret_var g)"
     using forget_relc_sound unfolding gammaDG_relc_def by blast
   finally show ?thesis
     using Some
@@ -382,7 +382,7 @@ lemma dg_spec_step_rel_order_spec [simp]:
   unfolding rel_order_spec_def by (cases a) simp_all
 
 lemma dgs_enter_rel_order_spec [simp]:
-  "enter\<^sup># rel_order_spec ci = relc_enter_transfer (relc_enter ci)"
+  "enter\<^sup>\<sharp> rel_order_spec ci = relc_enter_transfer (relc_enter ci)"
   unfolding rel_order_spec_def by simp
 
 lemma relc_step_sound:

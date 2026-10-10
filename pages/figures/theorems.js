@@ -77,7 +77,7 @@
       linkText: "node_collect",
     },
     cover: {
-      clause: "s ∈ ⟦res⟧ᵥ",
+      clause: "s ∈ ℛ⇘res⇙ v",
       text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`. Not every context has to: another activation's state need not describe this store.",
       link: isaConst("Voblint_CLI", "Analysis_Report", "report_sem"),
       linkText: "report_sem",

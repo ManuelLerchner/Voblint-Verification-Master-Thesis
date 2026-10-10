@@ -1,5 +1,5 @@
 theory Congruence_Lattice
-  imports "Voblint_Domain.Abstract_Domain" "HOL-Computational_Algebra.Euclidean_Algorithm"
+  imports "Voblint_Domain.State_Concretization" "HOL-Computational_Algebra.Euclidean_Algorithm"
 begin
 
 section \<open>Congruence lattice\<close>
