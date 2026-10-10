@@ -731,10 +731,6 @@ termination. @sec:eval-precision compares them on the programs of
     from no program.],
 ) <fig:update-rules>
 
-No solver fact is proved per rule. Each rule meets the vendored update-rule
-interface (#isathm("update_rule_update_global_of")), so the certificate is
-proved once, with the rule as a parameter, and holds for all five.
-
 == Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
