@@ -70,7 +70,7 @@ at a time and, unlike the checker of Blazy et al., is itself unverified.
 CompCert hides its dataflow solvers behind a common Coq module type whose
 clients rely only on fixpoint properties of the result @compcertKildall, and La
 Spina et al. @laspina25 verify two solvers based on weak topological orderings
-against it, with which CompCert's dataflow analyses then run. Both works are
+against it, and CompCert's dataflow analyses then run with these solvers. Both works are
 intraprocedural.
 Voblint consumes its solver through a fixpoint guarantee in the same way, for
 side-effecting, context-indexed systems, where the certificate
@@ -82,7 +82,7 @@ unknowns.
 Abstract interpreters have been mechanized in several provers, with different
 ways of factoring their proofs for reuse. Voblint follows the design of Nipkow
 and Klein's generic interpreter for its domains and splits the rest into
-analysis, context policy and solver.
+analysis, context policy, and solver.
 
 Nipkow and Klein develop abstract interpretation in Isabelle/HOL over annotated
 commands of the While language IMP @nipkow12 @nipkow14. A collecting semantics
@@ -91,17 +91,17 @@ annotates it with an abstract state. The development is syntax-directed and
 intraprocedural. Its interpreter is parametric in a domain of abstract values:
 the domain supplies abstract operations and inverse operations with their
 soundness laws, and the interpreter derives forward evaluation, the backward
-filtering of guards and the step of each command generically
+filtering of guards, and the step of each command generically
 @nipkow14[Sects. 13.5, 13.7]. Voblint's non-relational domains follow this
 pattern (@sec:domain-contract). Voblint keeps the separation between collecting semantics and
 abstraction. Its collecting semantics ranges over activation traces of a
 procedure-aware control-flow graph (@ch:traces), because a return must know
 which caller resumes.
 
-Michelland et al. @michelland24, Keidel et al. @keidel18 and Darais et al.
+Michelland et al. @michelland24, Keidel et al. @keidel18, and Darais et al.
 @darais15 make soundness proofs reusable by sharing one interpreter between
 the concrete and the abstract semantics, through monadic handlers, an
-arrow-based interface or monad transformers. Voblint instead splits analysis, context policy and solver for
+arrow-based interface, or monad transformers. Voblint instead splits analysis, context policy, and solver for
 a constraint-based analyzer and composes them in one theorem,
 #isathm("activation_collect_dg_sound"), instantiated for every shipped
 analysis configuration.
@@ -119,7 +119,7 @@ interactive verified analyzer is not new with this thesis.
 Interprocedural analyses have been verified in Isabelle before, but not with a
 context-indexed collecting semantics like Voblint's. #cite(<lammich07afp>, form: "prose") prove soundness and,
 for every program, precision of a conflict analysis for programs with
-recursive procedures, threads and monitors, interpreting calls and returns
+recursive procedures, threads, and monitors, interpreting calls and returns
 exactly. #cite(<wasserrab09afp>, form: "prose") proves an interprocedural
 slicer correct over an abstract control-flow graph with matched calls and
 returns. #cite(<breitner10afp>, form: "prose") proves Shivers' control-flow
@@ -138,8 +138,7 @@ A verified solver guarantees a property of its result for arbitrary
 equations, and the analyzer must give the equations their meaning. Voblint
 reuses the solver of Tilscher et al. @tilscher26 and supplies that meaning.
 
-An early Isabelle instance of a verified solver consumed through a
-specification is the bytecode verifier of Klein and Nipkow @klein03bcv[§3].
+The bytecode verifier of Klein and Nipkow @klein03bcv[§3] is an early Isabelle instance of a verified solver consumed through a specification.
 A function is a bytecode verifier if it reports no error exactly when a stable,
 error-free method type, a post-fixpoint of the flow functions, exists above the
 initial state. Kildall's algorithm is proved to be one for every semilattice
@@ -168,21 +167,18 @@ Tilscher et al. @tilscher26jar treat the termination of the solver without
 side effects; @sec:termination explains why these results do not apply to
 Voblint's equations.
 
-Voblint includes a copy of the solver of @tilscher26; the algorithm, the update
-rules and their proofs belong to that work. The copy carries local
+Voblint includes a copy of the solver of @tilscher26. The algorithm, the update rules, and their proofs belong to that work. The copy carries local
 refactorings, such as renamings and an interface theory (@sec:upstream-td). Voblint gives the equations their
 meaning: the certificate #isaconst("part_post_solution", thy: "Basics_side")
 implies coverage of the concrete traces, and compiler correctness transfers the
 coverage to source executions. The solver Voblint runs warrows every local
-unknown at a widening point, whichever of the five selectable update rules
-merges the global contributions. The least-solution theorem therefore does not
+unknown at a widening point, regardless of which of the five selectable update rules merges the global contributions. The least-solution theorem therefore does not
 apply, and Voblint uses only partial correctness, for all five rules
 (@sec:update-rules), and claims no optimality.
 
 == Context sensitivity and trace partitioning
 
-Calling contexts have been defined by call history, by procedure summaries
-and as an index of traces. Voblint's contexts index a collecting semantics, as
+Calling contexts have been defined by call history, by procedure summaries, and as an index of traces. Voblint's contexts index a collecting semantics, as
 trace partitioning does, and one activation may belong to several of them.
 
 #cite(<sharir81>, form: "prose") introduce the two classical approaches to
@@ -201,12 +197,12 @@ Reps et al. @reps95 solve interprocedural problems with finite fact
 sets and distributive transfer functions precisely, as reachability over
 interprocedurally valid paths, and state that semantic correctness is an
 orthogonal issue @reps95[§2]. Voblint needs neither finite nor
-distributive domains and proves no precision.
+distributive domains and proves no precision result.
 
 Trace partitioning abstracts a set of traces by indexing it with control history
 before abstracting states @rival07. Rival and Mauborgne define both partitions
 and coverings, in which one trace may belong to several indices, and present
-calling-context sensitivity as one such indexing; keeping the full stack amounts
+calling-context sensitivity as one such indexing. Keeping the full stack amounts
 to inlining and works only for nonrecursive calls. They also note that the
 function mapping tokens to tokens in a covering may be replaced by a relation
 @rival07[Rem. 3.2.4]. Voblint's context-indexed
@@ -255,10 +251,9 @@ unknown, where Goblint writes the local entry directly; under the warrowing
 rules the seed itself can be widened, so widening is placed differently, in a
 direction we have not proved. Call targets are resolved statically. The
 analyses share one combined state and one query kind without globals, where
-Goblint's MCP also passes events, spawns and per-analysis globals. No agreement
+Goblint's MCP also passes events, spawns, and per-analysis globals. No agreement
 rate between the verdicts of the two analyzers is reported: the corpus has not
-been run through Goblint, whose annotations the adapted fixtures record only as
-prose.
+been run through Goblint, and the adapted fixtures record Goblint's annotations only as prose.
 
 === Combining analyses
 
@@ -279,8 +274,7 @@ Verasco, whose channels Voblint's follow (@sec:coop-channels), threads them so
 that the second domain can query the state the first has just computed
 @jourdan15[§7]. Voblint's answers describe the predecessor state only, as
 Goblint's do. Voblint combines any list of components on the fields of one
-state and proves the combination sound for calls, returns and
-context-sensitive equations.
+state and proves the combination sound for calls, returns, and context-sensitive equations.
 
 === Local traces and contexts
 
@@ -329,12 +323,10 @@ of Carmel, an intermediate representation of Java Card bytecode, is sound with
 respect to a small-step operational semantics. It keeps one flow-insensitive
 heap and flow-sensitive local variables and operand stacks per program point,
 is context-insensitive, and solves ordinary inequations with a verified
-round-robin solver extracted to OCaml @cachera05[§§2, 3.2]. #cite(<dabrowski09>, form: "prose")
-prove sound in Coq a context-sensitive points-to analysis with a
-flow-insensitive heap, a component of their certified data race analyzer. They
+round-robin solver extracted to OCaml @cachera05[§§2, 3.2]. #cite(<dabrowski09>, form: "prose") prove in Coq that a context-sensitive points-to analysis with a flow-insensitive heap, a component of their certified data race analyzer, is sound. They
 instrument the concrete semantics with contexts through a Coq functor over a
 module type of contexts, whose call-context function computes the context
-of a callee from the call site, the caller's context and the receiver, and
+of a callee from the call site, the caller's context, and the receiver, and
 they instantiate it, among others, with $k$-object sensitivity. The authors
 state that the specification is not executable: the analyses are specified
 only as sets of constraints, and no solver computes them @dabrowski09[§7].

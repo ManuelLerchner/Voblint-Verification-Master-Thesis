@@ -133,7 +133,7 @@ running it. In classical program analysis, typical questions are which values
 a variable can hold at a given point, whether a division by zero can occur, or
 whether an assertion can fail. No algorithm can answer such questions exactly
 for every program. Rice's theorem is the classical form of this limit: every
-non-trivial property of the function a program computes is undecidable
+nontrivial property of the function a program computes is undecidable
 @rice53. An analysis based on abstract
 interpretation therefore does not attempt the exact answer and computes an
 _over-approximation_ directly: a
@@ -159,7 +159,7 @@ we first make the points explicit. A _control-flow graph_ has the program
 points as nodes and an edge for every way control can pass from one point to
 the next, labeled with the assignment or condition executed on the way.
 @fig:counting-loop shows the graph of a loop that counts `i` from $0$ to $5$,
-our running example. The loop becomes a cycle through $h$, $b$ and $t$, and
+our running example. The loop becomes a cycle through $h$, $b$, and $t$, and
 its _loop head_ $h$ is the node at which the cycle is entered and left.
 
 #figure(
@@ -178,7 +178,7 @@ its _loop head_ $h$ is the node at which the cycle is entered and left.
   kind: image,
   caption: [The counting loop and its control-flow graph (schematic). Nodes
     are program points: $h$ is the loop head, $b$ the start of the body, $t$
-    the point after the increment and $e$ the point after the loop. Edges
+    the point after the increment, and $e$ the point after the loop. Edges
     carry the assignment or the condition that leads from one point to the
     next. The edge from $t$ back to $h$ has no effect.],
 ) <fig:counting-loop>
@@ -239,7 +239,7 @@ widening and narrowing operators of @sec:widening: joins only need to exist
 for pairs of elements, not for arbitrary sets. A numeric domain adds a top
 element (@ch:domains). Refinement at a branch adds a pairwise intersection
 (#isalocale("sound_intersection")). It must keep every value both operands
-admit and lie below both, but it need not be the greatest such element, so it
+admit and lie below both, but it is not necessarily the greatest such element, so it
 may be less precise than the meet (@sec:branches).
 
 An analysis computes the description at a point from the descriptions at its
@@ -248,14 +248,13 @@ $f$ to be _monotone_ (#isaconst("mono")): $a lle b$ implies $f(a) lle f(b)$
 @nipkow14[Def. 10.26] @mine17[Def. 2.9],
 so more precise input never yields less precise output. Without
 monotonicity, the standard fixpoint guarantees no longer apply. Monotonicity
-ensures that iteration from $lbot$ proceeds upwards. Starting from $lbot$, the iterates
+ensures that iteration from $lbot$ proceeds upward. Starting from $lbot$, the iterates
 $lbot, f(lbot), f(f(lbot)), dots$ of a monotone $f$ only grow, and each lies
 below every fixpoint. It is also the premise of the classical fixpoint theorems below and
 of narrowing (@sec:widening). The verified solver itself does not assume it:
 its correctness theorem holds for arbitrary right-hand sides (@sec:td).
 
-A _fixpoint_ of $f$ is an element with $f(d) = d$, and a _post-fixpoint_ one
-with $f(d) lle d$: applying $f$ once more yields nothing beyond $d$. By the
+A _fixpoint_ of $f$ is an element with $f(d) = d$, and a _post-fixpoint_ is an element with $f(d) lle d$: applying $f$ once more yields nothing beyond $d$. By the
 Knaster–Tarski theorem, a monotone $f$ on a complete lattice has a least
 fixpoint $lfp f$, the meet of all post-fixpoints @tarski55[Thm. 1]. Isabelle
 defines #isaconst("lfp") as this meet and proves the fixpoint equation
@@ -270,8 +269,7 @@ the least fixpoint (#isathm("lfp_Kleene_iter")).
 
 An analysis does not have to reach $lfp f$. Soundness needs only an element
 that contains the collecting semantics, and every post-fixpoint does
-(@sec:abs-int). Insisting on the least one can also be impossible in finite
-time: on domains with infinite ascending chains, such as intervals, the
+(@sec:abs-int). The least one can also be impossible to compute in finite time: on domains with infinite ascending chains, such as intervals, the
 iteration may never stabilize. Later sections introduce operators that force
 the iteration to stabilize on such domains, possibly giving up some precision
 (@sec:widening).
@@ -305,11 +303,10 @@ $ conc([l, u]) = {n in ZZ | l <= n <= u}, quad conc(lbot) = emptyset. $
 The order is inclusion of these sets, so $[l, u] lle [l', u']$ holds exactly
 when $l' <= l$ and $u <= u'$ (#isaconst("less_eq_ivl")). The join $[l, u] ljoin [l', u'] =
 [min(l, l'), max(u, u')]$ (#isaconst("sup_ivl")) is the smallest interval containing both. An
-interval cannot have holes, so the join may contain values neither operand
-does: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
+interval cannot have holes, so the join may contain values that neither operand contains: $[0, 0] ljoin [5, 5] = [0, 5]$. The meet
 intersects the bounds (#isaconst("inf_ivl")). Voblint's type #isatype("ivl")
 keeps raw bound pairs, whose order and join agree with this description on
-non-empty intervals (@sec:domain-carrier-laws).
+nonempty intervals (@sec:domain-carrier-laws).
 
 At the loop head both $[0, 5]$ and $[0, 10]$ are sound (@fig:concretization),
 as is every interval that contains $[0, 5]$. An analysis aims for the most
@@ -390,7 +387,7 @@ all states in $X$. The transfer function is sound if, for every $a$,
 $ "post"(conc(a)) subset.eq conc(sh(f)(a)): $
 stepping from any state that $a$ describes leads to a state that $sh(f)(a)$
 describes @cousot77[§6] @mine17[Def. 2.15] @rival20[§4.2.2]. The two paths
-around the square of @fig:transfer-square need not lead to equal sets: the
+around the square of @fig:transfer-square do not necessarily lead to equal sets: the
 concrete result only has to be a subset of the abstract one. For the
 increment `i = i + 1`, the interval transfer $[l, u] |-> [l + 1, u + 1]$, the
 addition #isaconst("plus_ivl") with $[1, 1]$, is sound. Applied to
@@ -444,7 +441,7 @@ configurations that some execution reaches in finitely many steps.
 In the counting loop, executions start at `start` with any value of $i$, so
 $I = {("start", n) | n in ZZ}$. Iterating $F$ from $emptyset$ adds one step at
 a time: $F(emptyset) = I$, the next iterate adds $(h, 0)$, and the following
-ones add $(b, 0)$, $(t, 1)$, $(h, 1)$ and so on, until $(h, 5)$ and finally
+ones add $(b, 0)$, $(t, 1)$, $(h, 1)$, and so on, until $(h, 5)$ and finally
 $(e, 5)$. The least fixpoint contains $(h, n)$
 exactly for $n in {0, dots, 5}$, which is the collecting semantics $cal(C)(h)$
 (@sec:collecting): $cal(C)$ groups the reachable configurations by their
@@ -485,11 +482,11 @@ restricts the branch into the body, and its negation restricts the exit.
 Substituting $b$ and $t$ into the first inequality gives one for the loop head,
 $h gt.eq f(h)$ with
 $ f(d) = [0, 0] ljoin ((d lmeet [-infinity, 4]) sh(+) [1, 1]), $
-whose post-fixpoints @fig:lattice-fixpoints shows. A solution assigns an
+whose post-fixpoints appear in @fig:lattice-fixpoints. A solution assigns an
 interval to every unknown such that all four inequalities hold, and
 @fig:loop-solutions shows two. Both contain the collecting semantics
 (${0, dots, 5}$ at $h$). The second, which widening reaches (@sec:widening), is
-less precise at $h$ and $e$, so a solution need not be the least one.
+less precise at $h$ and $e$, so a solution is not necessarily the least one.
 
 In general, let $Unk$ be a set of unknowns and $sol : Unk -> A$ a
 _valuation_, which assigns a domain element to every unknown. To compare
@@ -536,7 +533,7 @@ The formulation goes back to data-flow analysis. Kildall computes one value per
 node of a program graph by iteration @kildall73[§3], and Kam and Ullman show
 that for transfer functions that are only monotone, the result can be less
 precise than combining the values of all paths separately @kam77. Nielson et al.
-present data-flow analysis, constraint-based analysis and abstract
+present data-flow analysis, constraint-based analysis, and abstract
 interpretation side by side @nielson99[Chs. 2--4]. In this thesis, the verified
 solver certifies a _partial post-solution_
 (#isaconst("part_post_solution", thy: "Basics_side")) of such a system, a
@@ -602,14 +599,13 @@ $b = f(a)$. The lower bracket gives $f(a) lle a narrow f(a)$, and if $f$ is
 monotone, the narrowed value is again a post-fixpoint:
 $f(a narrow f(a)) lle f(a) lle a narrow f(a)$. It therefore stays above the
 least fixpoint and remains sound. In the counting loop the interval narrowing
-(#isaconst("narrow_ivl_td")) reaches $[0, 5]$, but in general narrowing need
-not recover the least fixpoint. The argument requires a monotone $f$
+(#isaconst("narrow_ivl_td")) reaches $[0, 5]$, but in general narrowing does not necessarily recover the least fixpoint. The argument requires a monotone $f$
 @seidl12compiler[§1.10], and widening is not monotone in general
 @cousot92plilp[Ex. 11]. For intervals, $[0, 1] widen [0, 2] = [0, +infinity]$,
 whereas the larger old value $[0, 2]$ gives $[0, 2] widen [0, 2] = [0, 2]$. A
 smaller current value can thus make the widening jump further. If $f$ contains
 such a widening, it may yield more at the narrowed value than at $a$, so the
-narrowed value need not be a post-fixpoint, and stopping there could miss
+narrowed value is not necessarily a post-fixpoint, and stopping there could miss
 reachable states and yield an unsound result.
 
 The verified TD solver applies both operators through one update, _warrowing_
@@ -632,19 +628,15 @@ statements execute and therefore compute a separate abstract state for every
 program point. For some facts, one value for the whole program is enough. A
 _flow-insensitive_ analysis ignores execution order and keeps one
 abstract value for an aspect of the state across the program, for
-example one range for a global variable. Mixed analyses choose per aspect of
-the state @seidl26.
+example one range for a global variable. Mixed analyses choose between the two per aspect of the state @seidl26.
 
 A flow-insensitive fact needs an unknown of its own, one that belongs to no
 program point. Every point that changes the fact has to feed its new value into
 that unknown. An ordinary right-hand side for the unknown would have to list
 all these points in advance, which is not always possible. For example, in a
-context-sensitive analysis, the unknowns that write a global pair a program
-point with a calling context, and the contexts are discovered only while the
-system is solved.
+context-sensitive analysis, an unknown that writes a global is a pair of a program point and a calling context, and the contexts are discovered only while the system is solved.
 
-Side-effecting constraint systems avoid that list. Seidl, Vene and
-Müller-Olm introduced them for multi-threaded programs @seidl03[§3], and
+Side-effecting constraint systems avoid that list. Seidl, Vene, and Müller-Olm introduced them for multithreaded programs @seidl03[§3], and
 Apinis et al. use them for context-sensitive analysis @apinis12. While the
 right-hand side of one unknown is evaluated, it may _publish_ a
 _contribution_ to another unknown as a _side effect_. A right-hand side then
@@ -661,15 +653,14 @@ bounds only on a set of unknowns that contains the _query_, the unknown whose
 value is asked for, and is closed under the local reads of its right-hand
 sides (@sec:certificate).
 
-Partial certificates are what make infinite systems usable. With contexts as
+Partial certificates make infinite systems usable. With contexts as
 indices, a system can have infinitely many unknowns, of which only those that
 influence the query matter. A _local_ solver therefore explores the system
 from the query and solves only the unknowns it meets @seidl21. Its result is a
 partial certificate. Seidl and Vogler prove on paper that their
 top-down variants with widening and narrowing, including the side-effecting
 one, terminate on arbitrary, possibly non-monotone, systems as long as only
-finitely many unknowns are encountered @seidl21[Thms. 1 and 5]; the
-side-effecting variant also requires side effects to target only unknowns
+finitely many unknowns are encountered @seidl21[Thms. 1 and 5]. The side-effecting variant also requires side effects to target only unknowns
 without a right-hand side.
 
 == The verified top-down solver <sec:td>
@@ -692,12 +683,10 @@ changes later, every unknown that read it becomes unstable (it is
 _destabilized_) and is evaluated again. The unknowns at which a read closes a
 cycle are the solver's _widening points_, its set `point`, which the TD
 literature calls widening and narrowing points @seidl21. Widening points are not read off the
-control-flow graph: TD detects them during the solve @apinis16[§4], and they need not
-coincide with the loop heads. At a widening point TD combines the old and the new
+control-flow graph: TD detects them during the solve @apinis16[§4], and they do not necessarily coincide with the loop heads. At a widening point TD combines the old and the new
 value with warrowing instead of replacing it. The
 #link(playground-link(_counting-loop, trace: "verbose"))[playground] replays
-this solve on the counting loop step by step, with the values, the unknowns
-being computed and the widening points after every evaluation. Contributions
+this solve on the counting loop step by step, with the values, the unknowns being computed, and the widening points after every evaluation. Contributions
 published to a global unknown are merged into its value by an update rule
 (#isalocale("update_rule"), @sec:update-rules), which keeps one record per
 _origin_, the unknown whose right-hand side published the contribution. The run
@@ -713,7 +702,7 @@ sense of the C programming language.
 To solve on demand, TD has to discover dynamically which unknowns a
 right-hand side reads, so that it can solve each of them first and record the
 dependency. In the counting loop the reads are fixed: the right-hand side
-of $h$ always reads $t$. In general they are not, because a right-hand side
+of $h$ always reads $t$. In general, they are not, because a right-hand side
 may decide which unknown to read next from a value it has already read. A
 procedure call is the main case: which context of the callee to read is known
 only once the caller's value has been read (@sec:eq-trees). A right-hand side
@@ -732,8 +721,7 @@ read. $ctor("Answer", thy: "Basics_side")(d)$ returns $d$ as the value of the
 right-hand side, $ctor("QueryL")$ and $ctor("QueryG")$ read a local or a
 global unknown, and $ctor("Side")(g, d, tau)$ publishes $d$ to $g$ before
 continuing with $tau$. @fig:strategy-trees shows the trees of the counting
-loop and of a flow-insensitive assignment, and @sec:cert-def defines the
-value, the contributions and the reads of a tree.
+loop and of a flow-insensitive assignment, and @sec:cert-def defines the value, the contributions, and the reads of a tree.
 
 #let _tree(steps) = {
   set text(size: 7.5pt)
@@ -807,8 +795,7 @@ case distinction and structural induction. VIMP's commands
 The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
 
 Every HOL function is total, so an ordinary recursive definition needs a
-termination proof. Otherwise one could define $f(n) = f(n) + 1$ and derive
-$0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
+termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would yield $0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
 recursive function without one. The result is still a total HOL constant, but
 its defining equations are proved only on its _domain_, the arguments on which
 the recursion terminates, and theorems about it assume membership in that
@@ -858,7 +845,7 @@ answer of the analyzer. It shows that some graph node $v$ and stack correspond
 to the reached configuration and that the reached store lies in the collecting
 semantics, in the state the report gives at $v$, and in the stores its
 verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
-$and$, $or$ are the usual connectives. Subscripts, superscripts and symbols
+$and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
 such as $tack.r$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.
 

@@ -20,9 +20,8 @@
 
 = Five Domains and an Order Analysis <ch:instances>
 
-@ch:results proved that a report is sound whichever analyses produced it. A
-user can choose among the numeric domains Sign, Interval, Parity and
-Congruence, their combination Int, and the relational order analysis. The four
+@ch:results proved that a report is sound regardless of which analyses produced it. A
+user can choose among the numeric domains Sign, Interval, Parity, and Congruence, their combination Int, and the relational order analysis. The four
 base domains are textbook material, and the project site lets readers
 #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#values")[try them interactively],
 so this chapter treats them briefly. Most of it describes Int, which combines
@@ -34,7 +33,7 @@ why narrowing must skip it.
 
 The four base domains, Sign #thy-badge("Voblint_Domain", "Sign_Lattice"),
 Interval #thy-badge("Voblint_Domain", "Interval_Lattice"), Parity
-#thy-badge("Voblint_Domain", "Parity_Lattice") and Congruence
+#thy-badge("Voblint_Domain", "Parity_Lattice"), and Congruence
 #thy-badge("Voblint_Domain", "Congruence_Lattice"), are the classical
 non-relational domains @mine17;
 congruences go back to Granger @granger89. @fig:gamma shows one value of each
@@ -104,8 +103,7 @@ soundness proof for its operations: it supplies the record #isatype("nonrelation
 The generic construction then derives the abstract and executable transfer
 functions and their agreement, and
 #isathm("sound_nonrelational_ops.dg_analysis_execI") makes the domain a sound
-component of the combined state (@ch:cooperation). Of the lemma's premises,
-only one concerns the domain's values: its initial state must cover the
+component of the combined state (@ch:cooperation). Only one of the lemma's premises concerns the domain's values: its initial state must cover the
 initial stores (for Parity, #isathm("parity_cinit_gamma")).
 
 == One loop, five answers <sec:stride2>
@@ -193,7 +191,7 @@ would be sound, but each would work with its own value only, so a fact that
 needs two of them would not be found. @fig:stride2 shows this: no
 base domain alone proves `v == 51`. In the program below, the guards keep
 $x$ between $-2$ and $10$, and the assignment makes $x$ one more than a
-multiple of $4$. Only $1$, $5$ and $9$ satisfy both, so `x >= 1 && x <= 9`
+multiple of $4$. Only $1$, $5$, and $9$ satisfy both, so `x >= 1 && x <= 9`
 holds. Yet the interval alone still allows $-2$ and the residue class alone
 allows $-3$, so neither component can decide the check. A _reduction_ lets
 the components sharpen each other, as in the reduced product @cousot79
@@ -206,7 +204,7 @@ similar reduced-tuple design for integers. Its
   "https://github.com/goblint/analyzer/blob/5503dec/src/cdomain/value/cdomains/int/intDomTuple.ml",
 )[`IntDomTuple`]
 combines up to six optional components, among them definite values with
-exclusion sets, intervals, enumerations and congruences, each enabled by an
+exclusion sets, intervals, enumerations, and congruences, each enabled by an
 option. Its `ana.int.refinement` setting offers the same three reduction modes
 as Int. Goblint defaults to no reduction, and Voblint defaults to the
 fixpoint mode.
@@ -263,10 +261,9 @@ loop only $51$ remains.
 
 A reduction round has two steps. #isaconst("refine_interval") first combines
 the range information of Sign and Interval and uses the result to sharpen
-Sign, Interval and Parity. #isaconst("refine_congruence") then uses the
-residue class, intersected with the parity, to sharpen Interval, Parity and Congruence. Through
-#isatype("refine_mode") the user chooses whether to reduce never, once, or
-until nothing changes, which is the default. Every mode keeps the integers a
+Sign, Interval, and Parity. #isaconst("refine_congruence") then uses the
+residue class, intersected with the parity, to sharpen Interval, Parity, and Congruence. Through
+#isatype("refine_mode") the user chooses whether to skip reduction, reduce once, or reduce until nothing changes. The last mode is the default. Every mode keeps the integers a
 value stands for (#isathm("refine_exact")) and only ever makes the value
 smaller (#isathm("refine_reductive")).
 
@@ -279,8 +276,7 @@ returning a report, just as it would if the solver did not terminate
 speaks about reports that are returned.
 
 Int reduces the result of every arithmetic operation and of the intersections
-and inverse operators of the guard filter. Join, widening and narrowing work
-componentwise, and for join and widening Goblint makes the same choice. For
+and inverse operators of the guard filter. Join, widening, and narrowing work componentwise, and for join and widening Goblint makes the same choice. For
 narrowing, Voblint's solver contract forces the choice. The verified solver relies on the bracket
 laws $b lle a narrow b lle a$ for $b lle a$ (@sec:widening), and reduction,
 which only makes values smaller, can push a narrowed value below $b$

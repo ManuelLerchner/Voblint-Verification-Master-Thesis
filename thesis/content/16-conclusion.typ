@@ -4,7 +4,7 @@
 = Conclusion <ch:conclusion>
 
 The thesis shows that the soundness of a Goblint-style analyzer with contexts,
-side effects and a verified solver can be machine-checked from source
+side effects, and a verified solver can be machine-checked from source
 executions to the verdicts of the exported function. The result holds for a
 scalar language with recursive procedures and is a partial-correctness result,
 so it covers every answer the analyzer returns. The proof follows one chain.
@@ -39,12 +39,11 @@ dispatcher makes the constant of the theorem the one the tools run
 (@sec:codegen).
 
 How far the results carry beyond VIMP depends on the layer. Goblint analyzes C
-after CIL normalization, with pointers, a heap, threads, machine integers and
-further update rules. The certificate is stated over right-hand sides and
+after CIL normalization, with pointers, a heap, threads, machine integers, and further update rules. The certificate is stated over right-hand sides and
 unknowns and mentions no VIMP construct. The coverage contract has one
 obligation per rule of #isaconst("valid_activation_trace"). It refers to VIMP
-only through the graph, its stores and three step functions,
-#isaconst("edge_step"), #isaconst("call_enter") and #isaconst("combine_collect")
+only through the graph, its stores, and three step functions,
+#isaconst("edge_step"), #isaconst("call_enter"), and #isaconst("combine_collect")
 (@sec:contract). We therefore expect three parts to carry over to a language
 whose activations do not interfere: the shape of the coverage contract, the
 theorem that the contexts exhaust the node collecting semantics, and the
@@ -52,20 +51,19 @@ composition of @sec:eq-discharge. The step functions and every proof that
 unfolds them would have to be redone.
 
 Machine integers fit this case. They change the step functions, the generic
-derivation in #isalocale("sound_nonrelational_ops") and each domain's
+derivation in #isalocale("sound_nonrelational_ops"), and each domain's
 soundness proofs for its primitives. Routing and the solver certificate do not
 mention arithmetic. For signed overflow, a domain could keep its ideal-integer
 bounds and report an overflow when they exceed the type, as Goblint does
 @saan26phd[§3.3.2]. Unsigned wrap-around would need domain variants, since
 classical numeric domains describe ideal integers @mine13. A C-like treatment of division
-by zero changes more. The semantics would need an error outcome, and the
-verdicts of @sec:verdict-meaning a meaning for it.
+by zero changes more. The semantics would need an error outcome, and the verdicts of @sec:verdict-meaning would need a meaning for it.
 
 Pointers into the stack break the assumption that activations do not
 interfere. A return keeps the caller's locals (@sec:calls), and this fails once
 a callee can write them through a pointer. #cite(<sotin11>, form: "prose")
 introduce their local semantics for this case. A heap adds a store component
-that caller and callee share, so #oblig("RETURN"), the entry pairs and the one
+that caller and callee share, so #oblig("RETURN"), the entry pairs, and the one
 value per variable in the domains (@sec:vimp) would all change. Threads
 interleave activations, which #isaconst("valid_activation_trace") cannot
 express. The local traces of Schwarz et al. @schwarz21 give threads a
@@ -79,14 +77,10 @@ as CIL would join the parser in the trust boundary unless it is verified.
 == Limitations <sec:limitations>
 
 The first limits concern what the theorem covers. It is a partial-correctness
-result and covers every answer the analyzer returns. Termination is proved
-neither for the solve nor for the reduction of Int, and regression programs
+result and covers every answer the analyzer returns. Termination is not proved for the solve or for the reduction of Int, and regression programs
 exist whose solves do not finish (@sec:termination, @sec:reduced-product). The
-theorem concerns VIMP, a scalar language without pointers, heap or memory
-model. VIMP has unbounded integers, defined division by zero and
-zero-initialized callee locals, so a verdict about a VIMP program does not
-transfer to a C program with the same text (@sec:vimp-vs-c). That
-#isaconst("pstep") models the intended language is argued, not proved. The
+theorem concerns VIMP, a scalar language without pointers, heap, or memory model. VIMP has unbounded integers, defined division by zero, and zero-initialized callee locals, so a verdict about a VIMP program does not
+transfer to a C program with the same text (@sec:vimp-vs-c). We argue, but do not prove, that #isaconst("pstep") models the intended language. The
 simulation from source runs to graph runs and the representation of graph runs
 by valid traces are proved in the forward direction only (@sec:csim,
 @sec:valid). Within the analyzer, only the combined state as a whole publishes
@@ -104,8 +98,7 @@ the proof of the vendored solver to be redone. The rest of the chain uses the
 solver only through its certificate (@sec:certificate) and would be
 unaffected.
 
-No general precision,
-optimality or completeness theorem is proved. Completeness would mean that
+No general precision, optimality, or completeness theorem is proved. Completeness would mean that
 every check that holds in all executions is reported as proved. Each precision
 example concerns one program with fixed analysis settings (@sec:eval-precision).
 The regression corpus is small and was written or adapted for this work, and
@@ -121,18 +114,17 @@ search rather than a systematic review (@ch:related).
 === Extending Voblint <sec:outlook-extending>
 
 A richer source language, up to a subset of C, needs the new obligations that
-@sec:discussion names for machine integers, pointers, a heap and threads. It
+@sec:discussion names for machine integers, pointers, a heap, and threads. It
 also needs a semantics and a preservation argument per construct at every
 layer.
 
 Such a language would benefit from an elaboration phase between the parser and
-the compiler. Already for VIMP, the source-level theorem only asserts that
+the compiler. Even for VIMP, the source-level theorem only asserts that
 _some_ node $v$ is related to the reached source configuration
 (@sec:headline). A residual command records nothing about the occurrence it
 came from (@sec:csim). An elaboration phase would annotate every statement with
 the node the compiler emits for it. Each source configuration would then name
-its node, and the theorem could drop the existential. The same phase is where a front end for C resolves names, types
-expressions and makes conversions explicit.
+its node, and the theorem could drop the existential. The same phase is where a front end for C resolves names, types, and expressions and makes conversions explicit.
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
@@ -175,7 +167,7 @@ take values that increase forever (@sec:termination).
 === Agent-assisted development <sec:outlook-agents>
 
 Each new analysis only has to meet its own obligations, which mention neither
-the other analyses nor contexts, the solver or the equations
+the other analyses nor contexts, the solver, or the equations
 (@sec:coop-catalogue). This suits development with
 AI agents (see #link(<ai-use>)[the statement on the use of generative AI]).
 Formal verification and agents complement each other here. An agent may
@@ -220,8 +212,6 @@ component's proofs assume VIMP's unbounded ones (@sec:vimp-vs-c).
 
 Voblint verifies neither Goblint nor an analyzer for C. It establishes a
 smaller result. For a Goblint-style architecture with recursive procedures,
-routed contexts, cooperating analyses and a generic side-effecting solver, one
+routed contexts, cooperating analyses, and a generic side-effecting solver, one
 machine-checked chain connects source executions to the verdicts of executable
-code. Its remaining gaps, a richer language, termination, efficient representations
-and the handwritten code around the analyzer, are places where the same proof
-structure can be extended.
+code. Its remaining gaps are a richer language, termination, efficient representations, and the handwritten code around the analyzer. The same proof structure can be extended to each of them.

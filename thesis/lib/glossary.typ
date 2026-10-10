@@ -86,7 +86,7 @@
     says nothing about which admitted states occur.
   ],
   term("precision", "precision", _ai, see: <sec:chain>)[
-    How few states outside the concrete behaviour an abstract result admits.
+    How few states outside the concrete behavior an abstract result admits.
     Each inclusion of the soundness chain may lose precision; none may lose a
     concrete state.
   ],
@@ -327,7 +327,7 @@
     therefore context-insensitive.
   ],
   term("context", "calling context", _trace, see: <sec:contexts>)[
-    The key under which an activation is analysed, so that the results of
+    The key under which an activation is analyzed, so that the results of
     different calls are not joined: activations with the same context share one
     abstract state. Voblint reads the context off a trace's structure through a
     relation.
@@ -355,7 +355,7 @@
     The inductive relation stating which contexts a trace carries. A
     #ctor("Root") carries the initial context #isai("c\<^sub>0") (Goblint's `startcontext`,
     printed as `root`), a #ctor("Call", thy: "Activation_Trace_Def") any context admissible from a context
-    of its caller, a #ctor("Resume") whatever the resumed trace carries.
+    of its caller, a #ctor("Resume") the contexts of the resumed trace.
   ],
   term(
     "bucket",
@@ -695,7 +695,7 @@
     isa: [#isatype("analysis_report"), #isaconst("report_sem"), #isaconst("verdict_stores")],
     see: <sec:chain>,
   )[
-    What an analysed answer carries: one semantic state per solved point and
+    What an analyzed answer carries: one semantic state per solved point and
     context, the check verdicts and the arithmetic diagnostics. Its semantics at
     a point $v$ is the set of stores its states there describe; its verdict
     semantics is the set of stores in which every definite verdict at $v$
@@ -819,7 +819,7 @@
   ],
   term("regression-fixture", "regression fixture", _trust)[
     A VIMP program of the regression corpus whose analyzer output is recorded
-    and rechecked. It demonstrates one behaviour, not a general result.
+    and rechecked. It demonstrates one behavior, not a general result.
   ],
   term("playground", "playground", _trust, see: <sec:ocaml-boundary>)[
     The browser page that runs the exported analyzer compiled to WebAssembly

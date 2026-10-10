@@ -26,9 +26,7 @@ Each call of a procedure starts a new _activation_ of it, which lasts until the
 call returns @aho06[§7.2.1]. We represent executions by _activation traces_.
 An activation trace records the path of one activation through the graph. It
 also records the trace of the caller that created the activation, because the
-contexts of a call are admitted from the caller's context and store. After a call
-returns, it records the finished callee as well, whose result the activation
-continues with. The calling contexts of an activation are then derived from
+contexts of a call are admitted from the caller's context and store. After a call returns, it also records the finished callee, because the activation continues with the callee's result. The calling contexts of an activation are then derived from
 its trace.
 
 On this semantics we build a local _coverage contract_. Its obligations are
@@ -65,9 +63,7 @@ each of them, so we need a richer semantics that keeps this information.
 The graph execution (@sec:cstep) has a frame stack, which records the callers
 that wait for the running activation. The stack, however, holds only what
 execution needs to resume these callers, and it forgets a call once the call
-has returned. A context policy needs more. It admits the contexts of a call
-from the caller's context and store at the call, and after the return the
-caller must continue in the contexts it had before. Activation traces keep this
+has returned. A context policy needs more. It admits the contexts of a call from the caller's context and the caller's store at the call, and after the return the caller must continue in the contexts it had before. Activation traces keep this
 information. A callee trace records the caller that created it, and a resumed
 trace records both the caller and the finished callee.
 
@@ -76,8 +72,7 @@ record of the run, namely the list of node-store pairs $(v, s)$ that the run
 passes through (@fig:flat-nested, top), interleaves the steps of all
 activations and leaves their nesting implicit. In the program of @fig:cfgmap,
 `sum(2)` calls `dec` and then itself, so one run visits the nodes of `sum` in
-three activations. To find the contexts of a step, one would therefore have to
-recover from the list which call created its activation and which return
+three activations. To find the contexts of a step, we would therefore have to recover from the list which call created its activation and which return
 resumes which caller.
 
 Grouping the same run by activation, in contrast, makes these relationships
@@ -194,7 +189,7 @@ idea to a sequential program and records one activation's view of the run
   },
   kind: image,
   caption: [The compiled graph of the program in @fig:cfgmap (top) and one run
-    on it, as the flat list of its steps and grouped by activation. Colours mark
+    on it, as the flat list of its steps and grouped by activation. Colors mark
     each step's activation, which the flat list itself does not record. A
     dashed tag #sym.arrow.r.hook marks a call of the named callee. The run is
     written out by hand, and stores are omitted.],
@@ -228,7 +223,7 @@ $#Root($pi$)$ is the initial activation of the program with activation path
 $pi$. A run starts with $#Root($[(italic("entry"), s_0)]$)$, the entry node of
 the graph, which is the entry of `main`, paired with an initial store $s_0$.
 $#CallT($t'$, $pi$)$ is a callee created by the caller $t'$
-(#isaconst("activation_trace_caller")); its activation path begins at the callee's entered store.
+(#isaconst("activation_trace_caller")). Its activation path begins at the callee's entered store.
 $#ResumeT($t'$, $t''$, $pi$)$ is the activation $t'$
 (#isaconst("activation_trace_current")) continued past the call that produced the finished
 callee $t''$ (#isaconst("activation_trace_callee")). The observer
@@ -279,7 +274,7 @@ call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
 `sum(2)`. Validity rules out such terms.
 
 #definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
-  For a global-variable classifier $cal(G)$, a graph $g$ and a set $S$ of
+  For a global-variable classifier $cal(G)$, a graph $g$, and a set $S$ of
   initial stores, #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
   the least set of traces closed under the four rules of @fig:valid-rules.
 ]
@@ -287,10 +282,7 @@ call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
 #figure(
   thy("valid_activation_trace"),
   kind: image,
-  caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call and
-    ret. Each reads the relation for its own phenomenon: #isaconst("intra")
-    for local flow, #isaconst("calls") for entering a callee and for
-    recovering the continuation $italic("cont")$ at a return.],
+  caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call, and ret. Each reads the graph relation for its own kind of step: #isaconst("intra") for local flow, and #isaconst("calls") both for entering a callee and for recovering the continuation $italic("cont")$ at a return.],
 ) <fig:valid-rules>
 
 The root rule corresponds to the initial graph configuration, and the other
@@ -299,13 +291,13 @@ a step along a local edge. Call starts a new trace that holds the caller, where
 #isaconst("cstep") pushes a frame. Ret builds a third trace that holds caller
 and callee, where #isaconst("cstep") pops the frame.
 The #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics")[explainer page] animates the source execution,
-the graph execution and the activation trace side by side on one program.
+the graph execution, and the activation trace side by side for one program.
 
 The ret rule applies when a callee trace has reached a result node
 #isai("FunctionResult p"). In a compiled graph no edge leaves it, since one
 result node serves every caller of $p$, so the rule finds the caller through
 #isai("caller_of callee = Some caller") and takes a #isaconst("calls") edge
-from its call node into $p$, on compiled programs the only one. That edge
+from its call node into $p$, which on compiled programs is the only such edge. That edge
 names the continuation $italic("cont")$, where the caller continues with the
 store that #isaconst("combine_collect") builds from both final stores.
 
@@ -316,8 +308,7 @@ those of VIMP programs, keeping the history that the frame stack discards.
 
 #block(breakable: false)[
   #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
-    A valid trace represents a graph configuration if it ends at the
-    configuration's node and store and its chain of creating callers matches
+    A valid trace represents a graph configuration if it ends at the configuration's node and store, and its chain of creating callers matches
     the runtime frame stack (@fig:activation-trace-repr).
   ]
 
@@ -340,9 +331,7 @@ call creates a $ctor("Call", thy: "Activation_Trace_Def")$ trace, and a return c
 trace (#isathm("cstep_preserves_activation_trace_repr")). The initial configuration has a representing trace, a $ctor("Root")$ trace
 (#isathm("located_activation_trace_entry")). Hence
 every configuration that a graph run of such a program reaches has a
-representing valid trace (#isathm("csteps_preserve_located_activation_trace")). Only this
-direction is proved, and soundness needs no more. With the simulation of
-@ch:program-model, it extends to VIMP programs.
+representing valid trace (#isathm("csteps_preserve_located_activation_trace")). The converse is not proved, and soundness does not need it. With the simulation of @ch:program-model, this result extends to VIMP programs.
 
 #block(breakable: false)[
   #theorem(name: [Source runs are traces], isa: "source_run_has_activation_trace")[
@@ -368,11 +357,10 @@ with procedures, with valid traces in place of runs.
 ]
 
 A store is in #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") exactly when some valid
-trace ends at $v$ with this store. The classifier, graph and initial stores
-are those of the program at hand, written #isai("\<G>"), #isai("g") and
+trace ends at $v$ with this store. The classifier, graph, and initial stores
+are those of the program at hand, written #isai("\<G>"), #isai("g"), and
 #isai("S") from here on. A procedure's result is an ordinary collected node,
-and whole-program completion is collection at
-$ctor("FunctionResult") italic("main")$. Every store that a finite source
+and the stores in which a run of the whole program completes are those collected at $ctor("FunctionResult") italic("main")$. Every store that a finite source
 execution of a well-formed program reaches therefore lies in the node
 collecting semantics at a corresponding node
 (#isathm("source_reaches_node_collect")).
@@ -405,13 +393,11 @@ Voblint's entry-state policy is of this kind. Its context is the abstract
 value of the callee's formal parameters in the entry state (@ch:equations), and
 nothing bounds the number of such contexts (@sec:termination). Goblint obtains the context of a
 callee by applying each analysis's `context` function to the callee's abstract
-entry state (@sec:rel-goblint), and Erhard et al. treat full entry states,
-their projections and call strings in one framework @erhard25[§4]. Voblint
-offers the context-insensitive policy, bounded call strings and entry-state
-contexts (#isatype("context_mode"), @ch:equations).
+entry state (@sec:rel-goblint), and Erhard et al. treat full entry states, their projections, and call strings in one framework @erhard25[§4]. Voblint
+offers the context-insensitive policy, bounded call strings, and entry-state contexts (#isatype("context_mode"), @ch:equations).
 
 These context selectors are functions, each choosing one callee context per
-call from the call site, the caller's context or the entry state. Goblint's entry operation, however, may return several
+call from the call site, the caller's context, or the entry state. Goblint's entry operation, however, may return several
 alternatives for one call, each a pair of a caller state and a callee entry
 state, and each alternative gets its own context. Several alternatives let an
 analysis split a call into cases. Suppose a caller passes an argument that is either negative or positive, and
@@ -466,11 +452,9 @@ lets call strings record where a call happened: with call strings of length
 one, `bump(5)` enters the context that consists of its call site in `main`. The
 caller's context lets call strings extend the caller's history and lets
 entry-state routing read the abstract state that the analysis computed for the
-caller in that context. The call information, the call's callee, formals,
-arguments and result variable, is what the analysis's entry operation needs to
+caller in that context. The call information, which names the call's callee, formals, arguments, and result variable, is what the analysis's entry operation needs to
 compute an abstract entry state. The two stores, finally, serve entry-state
-contexts. The context is read off an abstract entry state, the values it gives the
-formals, and that entry state must describe the entered store, the store at the
+contexts. The context is read off the values that an abstract entry state gives the formals, and that entry state must describe the entered store, the store at the
 callee's entry after the formals have been bound: `bump(5)` enters with
 $n = 5$. Each alternative also describes the
 caller, and the return later combines this description with the callee's
@@ -483,7 +467,7 @@ of the graph, with the entered store that the edge's entry transfer
 
 The relation #isaconst("activation_context_rel") assigns contexts to whole
 traces. It does not pick one context per activation. It states which contexts
-an activation may carry, and there can be none, one or several. The root
+an activation may carry, and there can be none, one, or several. The root
 activation carries the initial context #isai("c\<^sub>0"). A called activation
 carries a context $c'$ if its caller carries some context $c$ and $c'$ lies in
 the set that $italic("adm")$ admits for the call from $c$. A resumed activation carries
@@ -491,8 +475,7 @@ the contexts that the caller had before the call. The
 #link(
   "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#settings",
 )[explainer page]
-draws, for each policy, the contexts that the analyzer creates on one
-program, with every copy of a procedure labeled by its context.
+draws, for each policy, the contexts that the analyzer creates for one program, with every copy of a procedure labeled by its context.
 
 #block(breakable: false)[
   #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
@@ -552,9 +535,7 @@ stores. It is therefore the interface between the analyzer and the concrete
 semantics.
 
 Valid traces grow by four rules, so it is enough to check the claim locally
-against the same four cases. #oblig("INIT") covers the root activation,
-#oblig("INTRA") a local edge, #oblig("CALL") the entry into a callee and
-#oblig("RETURN") the continuation after a callee finishes. Apart from #oblig("INIT"), each of these four obligations looks at one step of a run and requires the
+against the same four cases. There is one obligation per rule: #oblig("INIT") for the root activation, #oblig("INTRA") for a local edge, #oblig("CALL") for the entry into a callee, and #oblig("RETURN") for the continuation after a callee finishes. Each obligation other than #oblig("INIT") looks at one step of a run and requires the
 claim to contain the store after the step whenever it contains the stores
 before it. @fig:contract shows
 these obligations at one call, together with a fifth, #oblig("TOTAL").
@@ -647,7 +628,7 @@ Isabelle states the five obligations as the assumptions of the locale
 
 #block(breakable: false)[
   The same obligations give every valid trace at least one context, so the
-  activation collecting semantics of all contexts together are exactly the
+  activation collecting semantics of all contexts together is exactly the
   node collecting semantics.
 
   #theorem(
