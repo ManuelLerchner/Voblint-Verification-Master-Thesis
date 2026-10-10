@@ -11,6 +11,9 @@ session Voblint_Solver in "." = "TD" +
     (* Equation-level normalization: aggregates repeated side effects to one
        key into a single write, so no right-hand side names a key twice. *)
     Strategy_Tree_Side_Buffering
+    (* A right-hand side as the pair of its published contributions and its value,
+       and part_post_solution restated on that pair. *)
+    Strategy_Tree_Pair
     (* The solver contract the pipeline assumes. *)
     TD_Solver_Bridge
     (* The global update rule as a value: one solver interpretation for all four. *)

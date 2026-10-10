@@ -529,6 +529,14 @@ pointwise (#isathm("part_post_solution_query"),
 least solution, because the solver widens and narrows at its widening points
 (@sec:td), and (C1) to (C4) are all the solver guarantees about #sol.
 
+(C3) and (C4) together are the pair condition of @sec:side-effects. As a pair,
+the tree of $u$ evaluates to #isaconst("rhs_pair"): its answer and
+#isaconst("rhs_sides"), which restricts #isaconst("sides_of_rhs") to the
+targets the evaluation publishes to. #isathm("part_post_solution_iff_rhs_pair")
+proves the certificate equivalent to (C1), (C2) and that pair bound at every
+$u in V$. Both components come from the evaluators above, so the solver and
+its strategy trees are unchanged.
+
 // How many local unknowns the recorded solve of the running example certifies.
 #let _local-unknowns = {
   let m = claim-text("pg-contexts-trace").match(regex("\"local_unknowns\":(\\d+)"))

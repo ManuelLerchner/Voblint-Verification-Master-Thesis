@@ -18,6 +18,7 @@ repeated `Side` writes from destabilising an update rule.
 | `Strategy_Program_Fold.thy` | `fold_rhs_program_projected` and its identity instance `fold_rhs_program`: a right-hand side as a join-fold over contribution programs |
 | `Strategy_Tree_Program.thy` | `strategy_program`, a typed continuation-passing frontend with do-notation: `sp_bind`'s intermediate type need not be the solver carrier `'d`, only the final answer `sp_compile`/`sp_compile_with` encodes does. `sp_lift_tree` embeds an already-built vendor tree by recursing over its constructors directly |
 | `Strategy_Tree_Side_Buffering.thy` | `buffer_sides`: one flush per key per evaluation |
+| `Strategy_Tree_Pair.thy` | `rhs_pair`: a right-hand side as its published contributions (a partial map) and its value; `part_post_solution_iff_rhs_pair` restates the certificate on that pair |
 | `TD_Solver_Bridge.thy` | `certified_solver`, the solver contract the pipeline assumes |
 | `Solver_Trace.thy` | `trace_event`, the `solver_event` vocabulary, and alternative code equations for the exported solver (`solve`, `solve_rec_c`, `destab_opt`) that report its steps; each is proved equal to the vendored equation it replaces |
 

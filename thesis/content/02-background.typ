@@ -647,10 +647,13 @@ Side-effecting constraint systems avoid that list. Seidl, Vene and
 Müller-Olm introduced them for multi-threaded programs @seidl03[§3], and
 Apinis et al. use them for context-sensitive analysis @apinis12. While the
 right-hand side of one unknown is evaluated, it may _publish_ a
-_contribution_ to another unknown as a _side effect_. If evaluating the
-right-hand side for $x$ returns $d$ and publishes each contribution $d_i$ to
-an unknown $y_i$, a post-solution must bound all of them:
-$ d lle sol(x), quad d_i lle sol(y_i) " for every published contribution". $
+_contribution_ to another unknown as a _side effect_. A right-hand side then
+returns a pair @saan26phd[§2.4.5],
+$rhs(x) : (Unk -> A) -> (Unk harpoon.rt A) times A$: a partial map $rho$ of
+the contributions it publishes, holding the join of all contributions to the
+same unknown, and its own value $d$. If $rhs(x)(sol) = (rho, d)$, a
+post-solution must bound both:
+$ d lle sol(x), quad rho(y) lle sol(y) " for every" y in op("dom")(rho). $
 If the assignments `g = 5` and `g = 4` publish $[5, 5]$ and $[4, 4]$ to the
 unknown of a flow-insensitive global `g`, that unknown must bound their join
 $[4, 5]$. The solver's result comes with a _certificate_, the property
