@@ -141,8 +141,7 @@ several analyses work together:
 The top answer $ltop$ holds at every store, so
 an analysis that cannot answer a question answers $ltop$ and claims nothing.
 If two answers hold at a store, so does their meet, so a question asked of all
-analyses can be answered by the meet of their answers. In the example, asked
-#isaconst("EvalInt") $(x == y)$ after both guards, Interval answers
+analyses can be answered by the meet of their answers. In the example, when asked #isaconst("EvalInt") $(x == y)$ after both guards, Interval answers
 $ivl(0, 1)$, which holds at every store, and the order analysis answers $1$.
 Their meet is $ivl(0, 1) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combines answers the
 same way, as formalized by Apinis @apinis14[§5.5].
@@ -206,14 +205,13 @@ monotone concretization, which turns the solver's inequalities into inclusions
 as in @sec:sound-core, and one law per operation, with one law for the two
 combine stages together (#isathm("sound_local_spec_iff")). The edge and combine
 laws are the counterparts of the step and combine laws of the analysis contract
-(@sec:sound-core), and the enter law that of entry coverage, each assuming that the channels it receives
-hold. The new handler law requires the handler's answers about a state $x$ to
+(@sec:sound-core), and the enter law matches entry coverage, each assuming that its channels hold. The new handler law requires the handler's answers about a state $x$ to
 hold at every store of $conc(x)$ at which the channel it receives holds
 (#isaconst("sound_query")). It is the analysis's promise to its partners, and
 the only one they rely on. Beyond the analysis contract, a sound local
 specification thus also contains entry coverage and the handler law.
 
-The idea is not new. In Astrée an abstract transfer need only cover concrete
+The idea is not new. In Astrée an abstract transfer only has to cover concrete
 arguments and results that satisfy the constraints of its channels
 @cousot07astree[§§5.3, 6]. Verasco, whose channels are inspired by Astrée's and whose
 term we adopt, proves each transfer function under the hypothesis that the
@@ -230,7 +228,7 @@ single analysis whose abstract state is a tuple with one field per analysis.
 At `z = (x == y)` this state is the pair of Interval's state, in which $x$ and
 $y$ are unbounded, and the order analysis's state $\{x lt.eq y, y lt.eq x\}$.
 The solver sees one value per node and context and never looks inside it. The
-tuple is ordered, joined and widened field by field (#isatype("analysis_product")),
+tuple is ordered, joined, and widened field by field (#isatype("analysis_product")),
 so each field evolves as it would alone, except that its transfers may ask the
 other fields. If one selected field shows that a node is unreachable, the whole
 tuple does (#isaconst("mcp_norm")).
@@ -336,24 +334,22 @@ combined state. A component therefore leaves the concretizations of all other
 fields unchanged (#isathm("field_frame")), which makes the components
 _independent_ (#isaconst("mcp_independent")). #isaconst("mcp_combine") runs the
 components in turn, gives every one the same channel, and meets the answers of
-their handlers. If the list of components is non-empty, the components are
+their handlers. If the list of components is nonempty, the components are
 independent, and each is a sound local specification, then the combination is
 a sound local specification for the intersection of their concretizations
 (#isathm("mcp_combine_sound")). #isathm("mcp_comp_sound") applies this to every
-non-empty selection of distinct analyses. The components cannot invalidate one
+nonempty selection of distinct analyses. The components cannot invalidate one
 another's guarantees, since each guarantee is about a field no other component
-writes, and it holds for any channel that holds, whichever component gave the
-answer.
+writes, and it holds for any channel that holds, whichever component answered.
 
 The premise that the channel holds leaves one task to the framework. For every
 state $x$ it must build a channel that holds at every store of $conc(x)$. It
-asks the combined handler, whose components may ask in turn, and answers a
-query that is asked again while it is being answered with $ltop$, as Goblint's
+asks the combined handler, whose components may ask in turn, and answers with $ltop$ any query that is asked again while it is being answered, as Goblint's
 `MCP.query'` does. Every answer of this channel holds
 (#isathm("ls_channel_sound")). #isaconst("dg_spec_of") passes this channel to
 the operations and turns a sound local specification into a record that meets
 the analysis contract (#isathm("dg_spec_of_contract")). The combination of any
-non-empty selection of distinct analyses therefore meets the analysis contract, and @ch:equations treats it
+nonempty selection of distinct analyses therefore meets the analysis contract, and @ch:equations treats it
 like a single analysis.
 
 Checks are decided from the same kind of answers. At a check with condition
@@ -369,25 +365,21 @@ also works in the other direction, with the order analysis asking Interval
 == What a new analysis has to prove <sec:coop-catalogue>
 
 A new analysis joins the combined state by proving the laws of its local
-specification, which mention no other analysis. Its field, the lens and the
-code that reads its answers are generated from its entry in the analysis
+specification, which mention no other analysis. Its field, the lens, and the code that reads its answers are generated from its entry in the analysis
 manifest (@ch:tooling), so only its operations and their proofs are written by
 hand. There are two routes to these proofs. A numeric domain proves its
 primitive operations sound once (#isalocale("sound_nonrelational_ops"),
 @sec:instances-supply), and the framework derives the laws from that proof
 (#isathm("sound_nonrelational_ops.dg_analysis_execI")). Any other analysis
 starts from conservative defaults, a handler that answers $ltop$ and
-operations that keep the state at skips, guards, procedure bodies, events and
-the first combine stage. These defaults are sound for every concretization (#isathm("sound_conservative_local_spec")). The
-analysis then supplies and proves the assignment, the special calls, the
-return, enter and the second combine stage, and proves each default it
-replaces. The order analysis follows this route. It answers comparisons between
+operations that keep the state at skips, guards, procedure bodies, events, and the first combine stage. These defaults are sound for every concretization (#isathm("sound_conservative_local_spec")). The
+analysis then supplies and proves the assignment, the special calls, the return, enter, and the second combine stage, and proves each operation that replaces a default. The order analysis follows this route. It answers comparisons between
 variables it has ordered, asks at assignments, and enters and returns with no
 facts (#isathm("order_spec_sound")).
 
 Two limits remain. Components cannot read or publish analysis globals
 (@sec:shared-facts), which Goblint's MCP allows by tagging each analysis's
-globals with its index. And no theorem guarantees that the combination is more
+globals with its index. No theorem guarantees that the combination is more
 precise than its components. The opening program and the one in
 @sec:eval-precision only show concrete cases where it is.
 
@@ -396,10 +388,10 @@ framework supplies such a channel and runs each analysis on its own field. The
 proofs of the analyses therefore stay independent, and adding an analysis needs
 one new proof and reopens none.
 
-This completes what the analyses contribute. @ch:domains gave the laws of one
+@ch:domains gave the laws of one
 abstract state, @ch:analysis-interface the contract of one analysis, and this
 chapter showed that a selection of analyses meets the same contract as one.
-None of these chapters mentions contexts, equations or a solver.
+None of these chapters mentions contexts, equations, or a solver.
 @ch:equations builds an equation system over nodes and contexts from the
 operations of the combined analysis and discharges the obligations of
 @ch:traces for it.

@@ -82,13 +82,13 @@ the join of these four sources under a valuation $tau$:
 Here $scripts(⨆)_(x <- italic("xs")) f(x)$ joins $f(x)$ over the list
 $italic("xs")$, and the empty join is $lbot$. The lists range over the local
 edges into $v$ and over the calls that return to $v$. The parts
-#isaconst("rhs_init"), #isaconst("rhs_edge"), #isaconst("rhs_call") and
+#isaconst("rhs_init"), #isaconst("rhs_edge"), #isaconst("rhs_call"), and
 #isaconst("rhs_seed") are the four sources in this order. Publications to analysis globals (@sec:shared-facts) are not part of this
 value. A post-solution lies above it, and $conc_M$ is monotone, so
 $conc_M(sol(v, c))$ contains what each source describes.
 
 At a call, the analyzer chooses the callee's context with a _routing_ function
-$ctxh(u, c, e)$ of the call node $u$, the caller context $c$ and the entry
+$ctxh(u, c, e)$ of the call node $u$, the caller context $c$, and the entry
 state $e$. Under entry-state contexts the choice depends on $e$, which is
 known only while the equations are solved. The set of calls that contribute to
 a particular callee context is therefore not known in advance, and the
@@ -191,7 +191,7 @@ its entry state to the callee as a side effect (@sec:side-effects).
     publishes it to the seed of `bump` in $c_1$ (purple, dashed), reads the
     result in the same context and joins the combined state into its own value.
     Blue boxes are local unknowns, the purple box is a global unknown, white
-    boxes are steps of the right-hand side, and grey frames group the unknowns
+    boxes are steps of the right-hand side, and gray frames group the unknowns
     of one procedure in one context.],
 ) <fig:eq-unknowns>
 
@@ -213,16 +213,13 @@ therefore an ordinary call. Its equation reads the result of the callee in
 some context, which creates a cycle of dependencies between unknowns. The
 solver treats this cycle like the cycle of a loop, and the unknown at which a
 read closes it becomes a widening point (@sec:td). The explainer's
-#link(
-  "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#replay",
-)[solve replay]
-animates this protocol.
+#link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#replay")[solver replay] animates this protocol.
 
 Formally, a call publishes its entry state to a _seed_
 $ctor("Activation_Seed") thin p space c'$, one global unknown
 (#isatype("global_unknown")) per callee entry and context. Every call routed
 to $(p, c')$ publishes to this seed, and the equation of the entry
-$(ctor("FunctionEntry") thin p, c')$ reads it. In general a call may enter
+$(ctor("FunctionEntry") thin p, c')$ reads it. In general, a call may enter
 several callees, and enter may return several entry pairs. Each of them is
 routed separately.
 
@@ -372,9 +369,7 @@ soundness theorem and are proved once for each context policy.
 For unit and call strings the correspondence is direct, as the last column of
 @tab:eq-policies shows. $italic("adm")$ admits exactly the context that the
 routing function computes for the call, which does not depend on $e$
-(#isaconst("context_policy_of_fun")), so totality is immediate. The rest of
-adequacy is the entry coverage of @sec:calls and the routed entry unknown
-being in the solved set.
+(#isaconst("context_policy_of_fun")), so totality is immediate. Adequacy then reduces to the entry coverage of @sec:calls and a routed entry unknown in the solved set.
 
 @fig:eq-policies shows how the policies differ on a call chain. A call string
 of length one separates the two calls of `wrap` but merges them again in
@@ -466,9 +461,7 @@ routing keep them apart.
   caption: [Procedure copies under four context policies, on a nested-call
     program: `scale(v)` returns `2 * v`, `wrap(w)` returns `scale(w)` from
     #_site("scale(w)"), and `main` calls `a = wrap(1)` at #_site("wrap(1)") and
-    `b = wrap(4)` at #_site("wrap(4)"), then checks `a == 2`. Boxes are copies
-    labeled with their contexts (`root` is that of `main`), arrows calls
-    labeled with their sites (Interval, claims #claim-ref("ctx-demo-*")).],
+    `b = wrap(4)` at #_site("wrap(4)"), then checks `a == 2`. Boxes are copies labeled with their contexts (`root` is that of `main`), and arrows are calls labeled with their sites (Interval, claims #claim-ref("ctx-demo-*")).],
 ) <fig:eq-policies>
 
 An entry-state context consists of the abstract values that the entry state

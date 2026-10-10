@@ -9,7 +9,7 @@
 = Evaluation <ch:evaluation>
 
 @ch:results proved that every report #isaconst("run_voblint") returns is
-sound. A machine-checked theorem needs no test of whether it holds, but it can
+sound. A machine-checked theorem does not need testing to show that it holds, but it can
 hold for uninteresting reasons. Its premises may never be met together, its
 obligations may be weaker than they look, or it may exclude only errors that
 no real analyzer makes. Following
@@ -42,9 +42,8 @@ satisfied. We use the same kind of instance for the premises of the end-to-end
 theorem.
 
 The instance is the two-call program of @fig:program-to-equations under
-Interval, entry-state contexts and warrowing. The theory builds the source run
-that returns from `bump(5)` and `bump(4)` and stops before the first check,
-and computes the answer by evaluation: both checks #verdict("PROVED").
+Interval, entry-state contexts, and warrowing. The theory builds the source run that returns from `bump(5)` and `bump(4)` and stops before the first check.
+It computes the answer by evaluation: both checks are #verdict("PROVED").
 #isathm("nv_source_certified") instantiates
 #isathm("run_voblint_source_sound") with every premise discharged,
 and #isathm("nv_check_proved_sound") instantiates
@@ -52,8 +51,7 @@ and #isathm("nv_check_proved_sound") instantiates
 claim, a second program sets `x = 1` and guards a check by `x < 0`; the
 analyzer marks it #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
 #isathm("run_voblint_dead_check_unreached") to conclude that the collecting
-semantics at that node is empty. The source runs are proved by rule application, the compiled graphs and the
-answers by `eval`. The instances
+semantics at that node is empty. The source runs are proved by rule application, and the compiled graphs and the answers are proved by `eval`. The instances
 cover a definite truth verdict, #verdict("PROVED"), and the reachability
 verdict #verdict("DEAD").
 
@@ -87,8 +85,7 @@ remainder #isaconst("c_mod") lies in the concretization of the abstract
 remainder. #isaconst("c_mod") truncates toward zero, as C11 specifies
 (@sec:vimp-vs-c). The pre-fix answer, the constant $1$ for $(1 + 2ZZ) mod 2$,
 violates the obligation at $-5$ (#isathm("prefix_congruence_mod_unsound")). The
-theorem holds for every abstract remainder that returns this constant. By the
-description of pull request 1161, Goblint's pre-fix operator returned it, so an
+theorem holds for every abstract remainder that returns this constant. Pull request 1161 reports that Goblint's pre-fix operator returned it, so an
 obligation of this form would have rejected that operator as well. Our fixture transliterates the test into VIMP, whose remainder also
 truncates toward zero (@fig:goblint-1161). Congruence alone knows only
 $c in 1 + 2ZZ$ and decides neither check. Int also knows that $c$ lies in
@@ -142,8 +139,7 @@ $[-7, -5]$, refutes the first check, and proves the second.
 == Precision and cost on concrete programs <sec:eval-precision>
 
 The theorem says nothing about precision, since an analyzer that answers
-#verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). What each mechanism gains is therefore shown on
-concrete programs. Each example below fixes the concrete behavior first, then
+#verdict("UNKNOWN") everywhere satisfies it (#isathm("unknown_everywhere_sound")). We therefore show on concrete programs what each mechanism gains. Each example below fixes the concrete behavior first, then
 shows what one mechanism keeps or loses, and supports a claim about its program
 only.
 
@@ -171,7 +167,7 @@ specification (#isathm("order_spec_sound"), #isathm("single_entry_order_spec"),
 #isathm("relc_qry_sound")), a lattice instance, an entry in the analysis manifest
 (@ch:tooling), and a few class instances for the command-line layer. No theory of the framework or of the numeric domains refers to
 it outside document text. A new numeric domain proves its lattice laws and its
-forward, backward and query operations sound once
+forward, backward, and query operations sound once
 (#isalocale("sound_nonrelational_ops")), and the generic construction derives
 its transfer functions and their soundness (@sec:instances-supply).
 
@@ -240,7 +236,7 @@ its transfer functions and their soundness (@sec:instances-supply).
 with two writers to one global._ @fig:rules-programs runs the five update rules of @sec:update-rules on
 four programs whose checks hold in every execution. In the first row `p(1)`
 and `p(2)` publish to the same entry seed. Warrow joins the two contributions
-before widening, so the second looks like growth and the upper bound goes to
+before widening, so the second looks like growth, and the upper bound goes to
 $+infinity$. Per-origin warrowing widens each call site's contribution
 separately. Each origin writes one constant, so nothing grows.
 #isathm("two_writer_slot_warrow_loses_upper_bound") and
@@ -248,9 +244,7 @@ separately. Each origin writes one constant, so nothing grows.
 system with two writers to one global by `eval`. No rule is best on every row. In the last row the
 fixture header attributes the loss to the recursive call's own contribution:
 per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
-the division loses all information. We attribute Warrow's
-result to its joining in `main`'s argument $-1$ first, which keeps the lower
-bound. On the growing recursion the joining
+the division loses all information. We attribute Warrow's result to the fact that it joins in `main`'s argument $-1$ first, which keeps the lower bound. On the growing recursion the joining
 rules give no answer within the limit. The argument grows without bound, so we
 expect, without a proof, that their solve diverges (@sec:termination); the
 timeout alone does not show this (@sec:trust-boundary). Bounded narrowing, at
@@ -311,8 +305,8 @@ check is #verdict(_z("coop-mutual-both").at(3)) (claims
 the answer is decisive. On a check of `x <= y` itself, the order analysis
 would answer the check directly, though it still needs Int's answers at the
 assignments to `y`. On two related programs with Interval in place of Int,
-#isathm("coop_demo_needs_both") and #isathm("order_asks_interval_alone"),
-#isathm("order_asks_order_alone") and #isathm("order_asks_needs_both") prove by
+#isathm("coop_demo_needs_both"), #isathm("order_asks_interval_alone"),
+#isathm("order_asks_order_alone"), and #isathm("order_asks_needs_both") prove by
 `eval`, one direction each, that the check is proved only with both
 analyses.
 
@@ -322,11 +316,10 @@ _Evidence: executable, and repository measurement._ For Voblint's handwritten
 code around the generated analyzer (@sec:trust-boundary), tests are the only
 project-local evidence. The theories under
 #link(repo-blob + "src")[`src/`] contain #stat("isabelle.lines") physical lines
-in #stat("isabelle.theories") files, comments and document text included and
-generated theories excluded, and
+in #stat("isabelle.theories") files, including comments and document text but excluding generated theories, and
 the analyzer that runs is the #stat("generated_ocaml")-line generated OCaml
 module. Around it lie #stat("handwritten_ocaml") lines of handwritten OCaml
-under #link(repo-blob + "cli")[`cli/`], not counting the lexer, parser and printer that a
+under #link(repo-blob + "cli")[`cli/`], not counting the lexer, parser, and printer that a
 script generates from a grammar description.
 
 A #link(repo-blob + "tests/regression")[regression corpus] runs the analyzer
@@ -338,7 +331,7 @@ The corpus holds #stat("corpus.cases") VIMP fixtures in
 the verdict expected at each check. Cases in `precision/` pin the exact verdict at each
 check, which is usually definite. In `soundness/`, the program has executions on both sides of
 the check, so #verdict("UNKNOWN") is the only sound answer. In `known-imprecision/`, the
-concrete result is fixed but the abstraction cannot establish it, and the
+concrete result is fixed, but the abstraction cannot establish it, and the
 header names the mechanism that loses the information. The playground's
 _Examples_ menu opens every fixture with its settings, so a reader can inspect
 its solve and change the analysis parameters.
@@ -364,11 +357,7 @@ steps. The playground
 replays such a trace on the graph (@fig:replay-still).
 
 The parser is trusted to hand the analyzer the program the user wrote. A
-parser bug could make the analyzer report verdicts for a different program. Property
-tests therefore build random syntax trees with the constructors exported from
-Isabelle, the type the generated analyzer receives, print them, and require
-the parser to read back the same tree, and they feed mutated programs
-to the parser and require it to finish without a crash. A round trip cannot
+parser bug could make the analyzer report verdicts for a different program. Property tests therefore print random syntax trees built from the constructors exported from Isabelle, the type the generated analyzer receives, and require the parser to read back the same tree. They also require the parser to finish on mutated programs without a crash. A round trip cannot
 detect a misreading of the grammar that parser and printer share, and no test
 relates the parsed tree to the program a user meant to write. CI runs the
 corpus and the property tests on every pull request and push to the main

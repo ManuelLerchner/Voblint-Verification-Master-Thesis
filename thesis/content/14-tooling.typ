@@ -9,16 +9,15 @@ inside it. Its theories must be formatted and checked for unfinished proofs,
 its names must stay consistent with the prose that cites them, and a new
 contributor must be able to install everything the build needs. For Isabelle,
 comparatively little project-level tooling is available outside the distribution itself.
-The resulting gap has been noted by Isabelle users as well, for instance in a
+Isabelle users have noted the resulting gap as well, for instance in a
 comment on a recent blog post by Paulson @paulson26lean, which observes that
 Isabelle's own development uses almost no standard tooling @halbgefressen26.
 
-The need of such tooling grows with AI assistance. Many proofs and a large share of the
+The need for such tooling grows with AI assistance. Many proofs and a large share of the
 surrounding code of this development were written by agents (see #link(<ai-use>)[the statement on the use of generative AI]). An agent can
 produce a plausible change quickly, but it cannot be trusted to keep the
 cross-references of a large development consistent, and a reviewer cannot read every line
-it writes. What made the agent work usable at this scale was deterministic
-tooling around it. An agent's change counts as done only when these checks pass, so
+it writes. Deterministic tooling around the agent made its work usable at this scale. An agent's change counts as done only when these checks pass, so
 the checks, not the agent, decide whether the repository is consistent.
 
 This chapter describes the published repository, and the tools and upstream
@@ -32,7 +31,7 @@ theories, a submodule reference to the vendored solver, whose repository is
 private (@sec:upstream-td), the exported analyzer with its command-line tool and playground, the
 regression corpus, and the sources of this thesis. Each release is archived on
 Zenodo with a citable DOI @voblint. The project site hosts the
-playground, the explainer and the rendered theories that every Isabelle name in
+playground, the explainer, and the rendered theories that every Isabelle name in
 this thesis links to.
 
 A development of this size drifts when one fact is written down twice. The
@@ -42,8 +41,7 @@ analyzer's parser and its printer. The parser lies outside the proof and hands
 the proved analyzer its syntax tree (@sec:trust-boundary), but it and the
 Isabelle syntax are generated from the same language description. An
 analysis manifest names each analysis, its value type and the theories that
-prove it sound. A generator writes from it the registration of each numeric
-domain (@sec:instances-supply) and the combined state of @ch:cooperation, and
+prove it sound. From it, a generator writes the registration of each numeric domain (@sec:instances-supply) and the combined state of @ch:cooperation, and
 Isabelle checks every generated proof. The generator exists because the
 repetition lies outside what a theory can express: each domain is registered
 once per context policy it supports, for every update rule, and the combined
@@ -51,7 +49,7 @@ state has one field per analysis, of differing types. With dependent types, a he
 by these types could express it inside the logic @chlipala13cpdt[ch. 9]; HOL's
 simple types cannot. #isaconst("run_voblint") itself reaches OCaml through
 #isacmd("export_code") (@sec:codegen). Because the derived files are checked
-against their sources, a stale name, statement or quoted output fails the build
+against their sources, a stale name, statement, or quoted output fails the build
 instead of reaching the reader (@fig:pipeline).
 
 #figure(
@@ -162,10 +160,9 @@ instead of reaching the reader (@fig:pipeline).
 This thesis is held to the same discipline. Each Isabelle name in its Typst
 sources goes through a helper that a check resolves against the theories and
 links to the rendered theories. Theorem statements are lifted from the theories
-and compared with what the built session proves, quoted analyzer results are
-re-run against the analyzer, each VIMP listing's playground link is decoded
+and compared with what the built session proves, quoted analyzer results are rerun against the analyzer, each VIMP listing's playground link is decoded
 from the PDF and compared with the listing, and repository figures come from a
-measurement script. A rename, a changed statement or a changed result
+measurement script. A rename, a changed statement, or a changed result
 therefore fails the build, and another check warns when the text shows a
 statement before the entities it uses.
 
@@ -173,8 +170,7 @@ The checks run in layers ordered by cost (@fig:gates), from hooks triggered by
 the staged files to continuous integration, which reruns the checks on a fresh
 runner, reusing cached results for unchanged inputs, together with the tests of
 @sec:eval-corpus. Only the main branch is deployed, and only after the rendered
-theories, the formalization PDF and this thesis build. All layers invoke the
-same named Pixi tasks, and a further check keeps the local `verify` task and
+theories, the formalization PDF, and this thesis build. All layers invoke the same-named Pixi tasks, and a further check keeps the local `verify` task and
 continuous integration from diverging.
 
 #figure(
@@ -249,22 +245,18 @@ continuous integration from diverging.
 
 == `isar-tools`: source tooling for Isabelle <sec:isar-tools>
 
-Isabelle checks what a theory means, but not how a project is kept: whether
+Isabelle checks what a theory means, but not how a project is maintained: whether
 every theory is reached by a session, whether a proof was left unfinished,
 whether two lemmas state the same fact, or whether a locale still says what it
 said before a rename.
 #link("https://github.com/ManuelLerchner/isar-tools")[`isar-tools`] @isartools
 answers such questions from the sources alone. Written for this thesis and
-published separately, it reads sources, build logs and rendered HTML as text
+published separately, it reads sources, build logs, and rendered HTML as text
 and never runs Isabelle, so it also reads theories that do not yet check and
 runs all its checks in a pre-commit hook.
 
 Its formatter is designed to change only layout. Its checks, grouped by topic,
-report unfinished and unclosed proofs, theories no session reaches and
-malformed `ROOT` files and, when named, unused or duplicated lemmas, unused
-imports, leftover proof-search commands and broken links; this repository runs
-all of them. Project views list the sessions, the import graph, the class and
-locale hierarchy and every named declaration, and statistics report sizes and
+report unfinished and unclosed proofs, theories no session reaches, malformed `ROOT` files, and, when named, unused or duplicated lemmas, unused imports, leftover proof-search commands, and broken links. This repository runs all of them. Project views list the sessions, the import graph, the class and locale hierarchy, and every named declaration, and statistics report sizes and
 proof counts. An extraction layer was built for the remaining tooling of this
 repository, in particular to keep the website and this thesis in sync with the
 theories: the theorem statements of this thesis come from
@@ -273,7 +265,7 @@ from `isar project notation`, and the links into the rendered theories from
 `isar project anchors`. Among related tools, the Isabelle Linter
 @isabellelinter runs inside Isabelle and lints proof style, and
 `isabelle-query` @isabellequery parses the sources without Isabelle and
-answers queries about entries, call graphs and `sorry`s.
+answers queries about entries, call graphs, and `sorry`s.
 
 === A silent failure in locale headers
 
@@ -318,29 +310,26 @@ Isabelle's inner syntax lexically and is therefore a heuristic.
 === A hidden cost: re-elaborated theories
 
 A second problem also leaves the build green. A session inherits only the
-heaps of its parent chain, so a library theory that is no ancestor is
-elaborated again in every session that imports it; in this repository that
-once cost 19% of a clean build. `isar stats build` finds it in a build log, and
+heaps of its parent chain, so a library theory that is not an ancestor is elaborated again in every session that imports it. In this repository, this once cost 19% of a clean build. `isar stats build` finds it in a build log, and
 continuous integration enforces a budget per library session.
 
 == Changes to the verified solver <sec:upstream-td>
 
 Voblint vendors the top-down solver formalization of Tilscher et al.
-@tilscher26 as a submodule. Four changes made for this thesis, each of use to
-any downstream user, were proposed upstream.
+@tilscher26 as a submodule. Four changes made for this thesis, each useful to any downstream user, were proposed upstream.
 
 - The first restores the build under Isabelle2025-2 @td15.
 - The second removes the well-foundedness assumptions from the solver's
   #isalocale("widening") and #isalocale("narrowing") classes; termination is
   proved in locales that state their own well-foundedness assumptions @td13. Those assumptions say that
   widening and narrowing stabilize, which only termination proofs use. Partial
-  correctness needs the four order laws alone, so a domain need not provide a
+  correctness needs the four order laws alone, so a domain does not have to provide a
   stabilizing widening (@sec:domain-carrier-laws), and no domain instance has
   to prove a property that no soundness theorem uses (@sec:termination).
 - The third renames short record fields and constructors, such as `c`, `W`
   and `N`, that took these names away from downstream theories, and adds one
   interface theory per solver family @td14.
-- The fourth adds solver facts that Voblint had proved on its side although
+- The fourth adds solver facts that Voblint had proved on its side, although
   they speak only about the solver's own definitions @td16, among them that a
   returned run of the executable solver lies in the solver's domain
   (#isathm("solve_dom_of_solve_c")) and that a terminating solve returns a

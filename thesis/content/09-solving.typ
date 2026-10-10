@@ -37,7 +37,7 @@ and every publication explicit, so that the solver can record dependencies
 while it evaluates. The equations first have to be brought into this form.
 Then the solver's correctness
 theorem has to be connected to the premises of the soundness theorem. Both
-steps assume that the solver returns; whether it does is the last question.
+steps assume that the solver returns. Whether it does is the last question of this chapter.
 
 == Adapting the equations to the solver <sec:eq-encoding>
 
@@ -45,9 +45,8 @@ The solver accepts a right-hand side only as a strategy tree, uses one value
 type for all unknowns, and allows side effects only to global unknowns. A direct encoding of the equations, along the lines of Apinis et al.
 and Goblint, needs four things this interface does not offer
 (@tab:eq-adapters). @ch:equations already stated the equations in the adapted
-form; this section explains why each adaptation is needed. Only buffering
-rewrites a right-hand side after the fact, and it leaves the value, the
-publications and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
+form, and this section explains why each adaptation is needed. Only buffering
+rewrites a right-hand side after the fact, and it leaves the value, the publications, and the reads unchanged (#isathm("traverse_rhs_buffer_sides"),
 #isathm("sides_of_rhs_buffer_sides"), #isathm("dep_aux_buffer_sides")).
 
 #figure(
@@ -91,7 +90,7 @@ $
                                    #ctor("Answer", thy: "Basics_side") (sh("combine") (q, r)) ) ) ),
 $
 where $d$ is the caller's value, $(q, e) = enterh(d)$, $c' = ctxh(u, c, e)$,
-and $r$ is the callee's result; the #ctor("Side") step publishes the entry
+and $r$ is the callee's result. The #ctor("Side") step publishes the entry
 state to the callee's seed (@sec:eq-seed-global).
 #isaconst("routed_call_program") implements this tree for a call and
 additionally handles bottom entry states and several callees or entry pairs.
@@ -114,8 +113,7 @@ back with #ctor("QueryG"). In the running example `bump(5)` publishes
 ${n |-> [5, 5]}$ to $ctor("Activation_Seed") thin #_b space c_1$, and
 $(ctor("FunctionEntry") thin italic("bump"), c_1)$ reads it. Publishing alone
 does not make the solver evaluate `bump`, since it solves only unknowns that
-some tree reads. The call's read of the callee's result does, and solving the
-result reaches the entry, which reads the seed.
+some tree reads. The call, however, reads the callee's result, and solving the result reaches the entry, which reads the seed.
 
 Because seeds are global unknowns, the update rule for globals merges their
 contributions (@sec:update-rules). Without contexts, both calls publish to
@@ -182,9 +180,7 @@ The vendored solver applies the update rule at every #ctor("Side"), first to
 $a$ and then to $a union.sq b$. The per-origin update rules keep one record
 per origin (@sec:td), so in every re-evaluation the recorded contribution
 first shrinks to $a$ and then grows back to $a union.sq b$. Under warrowing
-the shrinking step narrows, the growing step widens again, and the solve need
-not stabilize. One joined contribution per target and evaluation is what the
-update rules of Stemmler et al. assume @stemmler25[§3], and Goblint's
+the shrinking step narrows, the growing step widens again, and the solver may not stabilize. The update rules of Stemmler et al. assume one joined contribution per target and evaluation @stemmler25[§3], and Goblint's
 per-origin narrowing rule for globals, when `narrow-globs` is enabled, joins
 the side effects of an evaluation before updating
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/solver/td3UpdateRule.ml#L113-L228")[`td3UpdateRule.ml`]).
@@ -212,12 +208,11 @@ extension that would make seeds and buffering unnecessary.
 == A demand-driven solve <sec:eq-example>
 
 The generator defines a right-hand side for every pair of a node and a context
-(#isaconst("compiled_routed_eqs_for")), infinitely many under entry-state
-contexts over intervals. A solve never enumerates them all. It starts from one
+(#isaconst("compiled_routed_eqs_for")). Under entry-state contexts over intervals there are infinitely many such pairs, and a solve never enumerates them all. It starts from one
 query, the result of `main` in the initial context $c_0$
 (#isaconst("dg_pipeline.root_query", thy: "DG_Analysis", display: "root_query"),
 as in @apinis12[§3]), and evaluates an unknown only when a right-hand side it
-is solving reads it @seidl21 @tilscher26. The solve thus runs backwards from
+is solving reads it @seidl21 @tilscher26. The solve thus runs backward from
 the result and discovers contexts as it goes: at a call it computes the
 callee's context from the caller's value and demands the callee's result
 there. @tab:eq-trace and @fig:eq-walk follow this solve on the running
@@ -464,11 +459,11 @@ $c_1 = [[5, 5]]$ and $c_2 = [[4, 4]]$.
   },
   kind: image,
   placement: none,
-  caption: [The solve of @tab:eq-trace on the unknowns. Grey arrows are graph
+  caption: [The solve of @tab:eq-trace on the unknowns. Gray arrows are graph
     edges, including a seed feeding its entry; blue dashed arrows are the
     solver's queries and publications, labeled with their phases. The solve
-    runs backwards from the result of `main` and demands the copies of `bump`
-    for $c_1$ (right) and $c_2$ (left) as it discovers those contexts. Grey
+    runs backward from the result of `main` and demands the copies of `bump`
+    for $c_1$ (right) and $c_2$ (left) as it discovers those contexts. Gray
     `pp1` is the dead end of the body of `bump`, which always returns
     (@sec:cert-forward); its value stays #lbot.],
 ) <fig:eq-walk>
@@ -511,7 +506,7 @@ $#isaconst("eq", thy: "Basics_side") med T med u med sol$ (an abbreviation of
 $#isaconst("dep\<^sub>L") med T med sol med u$, and
 #isaconst("sides_of_rhs"), which joins the published values per target and is
 #lbot where the tree publishes nothing. They are taken under the final
-valuation because reads depend on values read (@sec:eq-trees). With them the
+valuation because the unknowns a tree reads depend on the values it has already read (@sec:eq-trees). With them the
 certificate states four facts about the query $x$ and the solved set $V$:
 $
   & x in V & wide "(C1)" \
@@ -533,7 +528,7 @@ least solution, because the solver widens and narrows at its widening points
 the tree of $u$ evaluates to #isaconst("rhs_pair"): its answer and
 #isaconst("rhs_sides"), which restricts #isaconst("sides_of_rhs") to the
 targets the evaluation publishes to. #isathm("part_post_solution_iff_rhs_pair")
-proves the certificate equivalent to (C1), (C2) and that pair bound at every
+proves the certificate equivalent to (C1), (C2), and that pair bound at every
 $u in V$. Both components come from the evaluators above, so the solver and
 its strategy trees are unchanged.
 
@@ -555,10 +550,10 @@ sol(italic("pp3"), c_0)$, where $q_1$ is the resume state of the first call's
 entry pair, and (C4) there requires
 $e_1 lle sol(ctor("Activation_Seed") thin italic("bump") space c_1)$.
 
-=== Solved backwards, used forwards <sec:cert-forward>
+=== Solved backward, used forward <sec:cert-forward>
 
-The solver discovers unknowns backwards from the result of `main`. The
-soundness proof follows executions forwards from the entry, and each step uses
+The solver discovers unknowns backward from the result of `main`. The
+soundness proof follows executions forward from the entry, and each step uses
 the bound (C3) at the node the execution moves to, so it needs every node an
 execution visits to be solved. The argument is the same in every context, so
 below we speak of nodes rather than unknowns.
@@ -567,7 +562,7 @@ The two directions meet through (C2). A node's equation reads its
 predecessors, and the node after a call reads the call site, so every node
 that reaches a solved result along such steps is solved as well. It therefore
 suffices that every node of a procedure reaches the procedure's result. Code
-after a `return` is the case to check, since no execution reaches it but the
+after a `return` is the case to check, since no execution reaches it, but the
 compiler still compiles it. In @fig:cert-forward, line 3 reaches the result
 through `return 1`. Line 6 continues to the end of the body, and the compiler
 ends every body with a return edge without a value (@sec:compile), so line 6
@@ -611,7 +606,7 @@ emits the edge.
 
 In Isabelle, the nodes of a procedure are #isaconst("prog_node").
 #isathm("prog_node_reaches") proves that each reaches the procedure's result,
-and #isathm("prog_node_entry"), #isathm("prog_node_intra") and
+and #isathm("prog_node_entry"), #isathm("prog_node_intra"), and
 #isathm("prog_node_calls") that executions stay among them. The restricted set
 is
 #isaconst("dg_analysis.live_unknowns", thy: "DG_Live_Unknowns", display: "live_unknowns"),
@@ -642,11 +637,10 @@ solver under every update rule.
 A global unknown such as a seed receives contributions from several places.
 The solver merges each new contribution into the value it holds, and this
 merge, the _update rule_, decides both precision and termination. Joining
-keeps every contribution exactly but may grow forever; widening stops the
-growth but loses precision. Stemmler et
+keeps every contribution exactly but may grow forever. Widening stops the growth but loses precision. Stemmler et
 al. compare existing update rules and propose new ones @stemmler25[§3–4], and Tilscher et al. formalize a
 generic interface for them and prove five rules sound against it
-@tilscher26; Voblint exposes all five.
+@tilscher26. Voblint exposes all five.
 
 Every rule keeps one record per origin, the right-hand side that sent the
 contribution (@sec:td). In the analyzer, each right-hand side's contributions
@@ -721,9 +715,8 @@ termination. @sec:eval-precision compares them on the programs of
     four interval contributions from origins A and B. Join per origin reports
     the join of each origin's latest contribution, so at step 3 A's
     #raw("[1,1]") replaces #raw("[0,3]"). Warrow widens at step 2, because
-    #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3; warrow per
-    origin widens only when A's own contribution grows. Bounded narrowing
-    agrees with warrow per origin here, since A switches to narrowing once and
+    #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3. Warrow per origin widens only when A's own contribution grows. Bounded narrowing
+    agrees with warrow per origin here, since A switches to narrowing once, and
     the bound 5 is never reached. A widened bound is set
     bold and marked $nabla$. The cells are read from
     #isathm("update_rules_example"), which evaluates the vendored rules with
@@ -784,8 +777,7 @@ state means what its function means under the concretization
 #isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
 (#isaconst("default_st_gamma")) is
 $ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
-The solver never computes $conc(d)$; it uses only the executable lattice
-operations. Function states get order, join and bottom pointwise from HOL, but
+The solver never computes $conc(d)$. It uses only the executable lattice operations. Function states get order, join, and bottom pointwise from HOL, but
 no widening or narrowing. The carrier instantiates all of these classes on
 #isatype("default_st") whenever the values do, so the generic solver runs on
 it unchanged.
@@ -799,7 +791,7 @@ two defaults and on each listed name, so under lookup it agrees with the
 pointwise operation on functions. For the join,
 #isathm("default_st_get_sup") states
 $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
-bottom, order, widening and narrowing. The transfer functions must commute
+bottom, order, widening, and narrowing. The transfer functions must commute
 with the represented function in the same way,
 $ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
 and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
@@ -813,8 +805,7 @@ executable steps are derived from the same operations
 Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
 listed overrides do not decide: an unlisted variable can make the state empty
 through its default. The carrier's test inspects the local default, the
-overrides that the represented function reads, and each declared global; the
-globals are listed explicitly because a program has finitely many of them, so
+overrides that the represented function reads, and each declared global. The globals are listed explicitly because a program has finitely many of them, so
 the global default may describe no variable at all.
 #isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
 $ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
@@ -866,8 +857,7 @@ phases terminates under this condition, given widening and narrowing operators
 whose iterations are ultimately stable @tilscher26jar[Thm. 2], and the
 warrowing solver additionally needs a precise widening and monotonic
 right-hand sides and dependencies @tilscher26jar[Cor. 1]. Voblint's unknowns
-pair nodes of an infinite type with contexts, so these theorems apply to no
-configuration. Seidl and Vogler prove on paper that
+pair nodes of an infinite type with contexts, so these theorems do not apply to any of its configurations. Seidl and Vogler prove on paper that
 their side-effecting solver terminates on every system in which side effects
 target only unknowns without a right-hand side, as long as only finitely many
 unknowns are encountered @seidl21[§9, Thm. 5], for widening and narrowing

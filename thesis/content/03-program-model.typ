@@ -149,13 +149,13 @@ calls `bump(5)` and `bump(4)`, is a running example throughout the remaining cha
 
 VIMP (@fig:vimp-island) is the small imperative language with C-like syntax
 that the formalization analyzes. It is kept small because every construct needs a
-semantics, compiler clauses and a transfer function proved sound in every
+semantics, compiler clauses, and a transfer function proved sound in every
 abstract domain. It has unbounded integer variables, locals and globals,
 procedures with value parameters, direct calls with an optional result,
 recursion, assignment, sequencing, conditionals, `while` loops,
-nondeterministic input and checks. It omits machine integers, pointers and the
+nondeterministic input, and checks. It omits machine integers, pointers and the
 heap, arrays and structs, indirect calls, threads, floating point, `goto`,
-`break`, `continue` and exceptions. Each of these would need its own
+`break`, `continue`, and exceptions. Each of these would need its own
 preservation argument at every layer (@ch:conclusion discusses the heap).
 @sec:vimp-vs-c compares the fragment with C and with Goblint's input.
 
@@ -176,7 +176,7 @@ of @ch:domains lift it pointwise to one abstract value per variable.
 
 Expressions are integer-valued. As in C11, comparisons and logical operators
 yield $0$ or $1$ (#c11("6.5.8p6"), #c11("6.5.9p3"), #c11("6.5.3.3p5"), #c11("6.5.13p3"), #c11("6.5.14p3")), and a
-condition holds when it is non-zero (#isaconst("truthy"), #c11("6.8.4.1p2"),
+condition holds when it is nonzero (#isaconst("truthy"), #c11("6.8.4.1p2"),
 #c11("6.8.5p4")).
 
 #definition(name: [Expressions], isa: "exp", cmd: "datatype")[
@@ -236,7 +236,7 @@ execution.
 ]
 
 In concrete syntax, an assignment is written `x = e;` and a check
-`__voblint_check(e);`. The parser lowers `true`, `false` and unary minus to the
+`__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
 expression grammar above. A check states a condition for the analyzer to
 decide (@sec:verdicts) and does not influence the execution. It behaves like
 #skipC whatever value $e$ has, so it neither stops the run nor refines the
@@ -245,13 +245,11 @@ and the analyzer's report uses it to name the check.
 
 Calls come in two kinds. A call of a declared procedure starts an
 _activation_, one execution of the procedure body from its call to its return.
-VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`
-and `max`, which a program calls but does not declare. The fixed table
+VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`, and `max`, which a program calls but does not declare. The fixed table
 #isaconst("special_table") recognizes their names, and
 #isaconst("special_result") gives the values they may return: any integer for
 `__voblint_nondet_int`, and the minimum or maximum of the arguments for `min`
-and `max`. A library call finishes in one step and stores its value, so unlike
-a call of a declared procedure it enters no activation and pushes no frame (@sec:pstep). The
+and `max`. A library call finishes in one step and stores its value, so, unlike a call of a declared procedure, it enters no activation and pushes no frame (@sec:pstep). The
 remaining constructors, #ctor("Restore") and #ctor("Unwind"), are not source
 syntax (#isaconst("source_com") excludes them). They appear only during
 execution, where @sec:pstep uses them for calls and returns.
@@ -259,7 +257,7 @@ execution, where @sec:pstep uses them for calls and returns.
 A program (#isatype("imp_prog")) is a list of procedure declarations
 (#isaconst("proc_rep")), each with formal parameters and a body, plus a list of
 global variables (#isaconst("declared_global_vars")). Its procedure table
-(#isatype("proc_table")) looks a name up in that list, and the classifier
+(#isatype("proc_table")) looks up a name in that list, and the classifier
 #isaconst("declared_global") tests membership in the globals. The entry
 procedure is the declaration named `main`, and #isaconst("main_body") is its
 body. @fig:vimp-ast shows the running example in this form. The formal
@@ -395,10 +393,9 @@ call. Each suspended activation keeps its data in a _frame_.
 ) <fig:pstep>
 
 A classifier #isai("\<G> :: vname \<Rightarrow> bool"), separate from the
-store, says which names are global, which a call needs because it resets only
-the locals. For a program it is #isaconst("declared_global"). The relation is written
+store, says which names are global. A call needs this information because it resets only the locals. For a program it is #isaconst("declared_global"). The relation is written
 #isai("\<G>, \<Pi> \<turnstile> \<kappa> \<rightarrow>\<^sub>p \<kappa>'") for
-configurations $kappa$, $kappa'$ and a procedure table #isai("\<Pi>"). Its
+configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
 rules. The
 #link(
@@ -407,9 +404,9 @@ rules. The
 animates these steps.
 
 A call evaluates the actuals in the caller's store, resets the locals, binds
-the formals (#isaconst("enter_state"), #isaconst("bind_formals")) and pushes a
+the formals (#isaconst("enter_state"), #isaconst("bind_formals")), and pushes a
 frame. A `return e` writes the value of $e$ to #isaconst("ret_var"), and
-popping the frame merges the caller's locals, the callee's globals and the
+popping the frame merges the caller's locals, the callee's globals, and the
 result. These operations select by name and are polymorphic in the value type (#isaconst("enter_binding"),
 #isaconst("combine_env"), #isaconst("combine_assign")). Therefore the
 non-relational analyses reuse the concrete definitions at their abstract state types, with $top$ in place of the reset
@@ -480,7 +477,7 @@ languages have a construct but model it differently.
     #isaconst("cinit_stores"), #isaconst("enter_state") and #isaconst("pstep").],
 ) <tab:vimp-vs-c>
 
-Each row is a place where a statement true of a VIMP program need not hold for
+Each row is a place where a statement true of a VIMP program does not necessarily hold for
 the corresponding C program. Unbounded integers and defined division by zero
 can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
 #verdict("PROVED") verdict on a program that divides by zero says nothing about C. The
@@ -489,11 +486,10 @@ and its absence at a reached node proves the divisor nonzero there
 (#isathm("run_voblint_arithmetic_safe"), @sec:verdict-meaning). Division and
 remainder truncate toward zero as in C11. Goblint once got the remainder wrong,
 and issue #link("https://github.com/goblint/analyzer/issues/1156")[1156]
-@goblint1156 reports it claiming `c % 2 == 1` for $c in {-5, -7}$
+@goblint1156 reports that it claimed `c % 2 == 1` for $c in {-5, -7}$
 (@sec:eval-1161). Evaluating both
 operands of `&&` is harmless, because expressions are total and have no
-effects. It gives the short-circuit value, and only the division diagnostic
-differs, which warns about the divisor in `x != 0 && 10 / x > 1`.
+effects. It gives the short-circuit value. Only the division diagnostic differs. It warns about the divisor in `x != 0 && 10 / x > 1`.
 
 The initial values that VIMP fixes are ones C leaves open. Every source-level
 theorem assumes an initial store from #isaconst("cinit_stores"), with globals
@@ -515,7 +511,7 @@ classifies it as checked and not used for refinement
 call is a separate instruction with an optional destination
 (#link("https://github.com/goblint/cil/blob/d97418f2e8d2aa88a36c22397c38ccf4d3ffbcde/src/cil.mli")[`cil.mli`]
 at the revision Goblint pins). VIMP makes the same choice, and every edge kind
-of Goblint's CFG except inline assembly and in-place declarations has a VIMP
+of Goblint's CFG, except inline assembly and in-place declarations, has a VIMP
 counterpart (@tab:cfg-edges). No translation from C to VIMP is formalized.
 
 *No second semantics.* No external semantics cross-checks #isaconst("pstep").
@@ -535,7 +531,7 @@ work.
 An analysis attaches abstract states to program points and transfer functions
 to transitions. #isaconst("pstep") offers neither in a usable form. Its only
 notion of location is the command that remains to run. Without recursion, only finitely many distinct residual commands arise,
-because a loop may run arbitrarily often but its unfolding revisits the same
+because a loop may run arbitrarily often, but its unfolding revisits the same
 command forms. Recursion is different, because a recursive call can nest
 another #ctor("Restore") wrapper at every call depth. Residual commands
 therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between fixed program points. Inside a sequence it steps through the rule
@@ -579,7 +575,7 @@ et al. @tilscher26, which Voblint includes as a submodule with a few changes
   #isatype("edge_action") $a$. #isaconst("calls") holds the _call edges_
   $(u, italic("ca"), ctor("FunctionEntry") thin q, k)$. Such an edge consists
   of the call site $u$, the call information $italic("ca")$, the entry node of
-  the callee (by #isaconst("wf_cfg")) and the node $k$ where the caller
+  the callee (by #isaconst("wf_cfg")), and the node $k$ where the caller
   resumes. Nodes (#isatype("cfg_node")) are $ctor("Statement") thin n$,
   $ctor("FunctionEntry") thin p$ or $ctor("FunctionResult") thin p$.
   #isaconst("cfg_entry") is the root node. #isaconst("checks") pairs the node
@@ -591,12 +587,11 @@ The call information $ctor("CallEdge") thin italic("dst") thin
 italic("formals") thin italic("args")$ (#isatype("call_action")) copies the
 callee's formals onto the edge, so the graph semantics binds actuals to formals
 without looking up the procedure table. VIMP has no function pointers (@sec:vimp), so
-every call names its callee and the compiler can fix the target of each call
-edge. Supporting indirect calls would require the analysis to discover call
-targets while it runs, which is left for future work.
+every call names its callee, and the compiler can fix the target of each call
+edge. Supporting indirect calls would require discovering call targets during the analysis, which is left for future work.
 The node kinds match Goblint's
 (#link("https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/common/framework/node0.ml")[`node0.ml`]),
-which has statement and function-entry nodes as well and calls our
+which also has statement and function-entry nodes and calls our
 $ctor("FunctionResult")$ node `Function`.
 
 #figure(
@@ -683,7 +678,7 @@ recursive program.
     `voblint --dot` prints it. Here $sans("pp") thin n$ is
     $ctor("Statement") thin n$, and $sans("entry")_p$, $sans("exit")_p$ are
     $ctor("FunctionEntry") thin p$, $ctor("FunctionResult") thin p$. As in
-    @fig:program-to-equations, solid grey arrows are #isaconst("intra") edges,
+    @fig:program-to-equations, solid gray arrows are #isaconst("intra") edges,
     and dashed purple arrows are #isaconst("calls") tuples. Dotted connectors
     and thin blue arrows are not edges. Dotted connectors show the continuation
     of a call tuple. Thin blue arrows show where execution continues after a
@@ -705,7 +700,7 @@ after it. Compilers commonly pass this target down, so that each statement
 receives the label of the code that follows it, the inherited attribute
 $S."next"$ of the dragon book @aho06[§6.6.3]. Voblint's compiler works the
 same way and is therefore called _continuation-passing_. Besides the command,
-it takes the node $k$ at which control continues afterwards, and it emits the
+it takes the node $k$ at which control continues afterward, and it emits the
 command's edges so that they end at $k$ (#isaconst("compile") for commands,
 #isaconst("compile_proc") and #isaconst("compile_prog") for procedures and
 programs). Schematically, writing $"compile"(c, k)$ for the edges of $c$
@@ -738,7 +733,7 @@ reach its end without a #keyw("return") needs such an edge as well.
 #isaconst("compile_proc") compiles the body against one extra node, from which
 a return edge without a value leads to the result node (@fig:compile-proc). It
 emits this edge for every body, so in a body that always returns, the extra
-node and its edge are dead code; @sec:cert-forward explains why the compiler
+node and its edge are dead code. @sec:cert-forward explains why the compiler
 keeps them. Every edge into $ctor("FunctionResult") thin p$ is therefore a
 return edge.
 
@@ -795,7 +790,7 @@ exactly those procedures, without repetition.
 transfer #isaconst("edge_step"), a call edge enters the callee and pushes a
 frame, and a result node pops the top frame. In the running example
 (@fig:program-to-equations), a run of `main` reaches the call site of
-`bump(5)`, takes the call edge to the entry of `bump` with $n = 5$ and pushes a
+`bump(5)`, takes the call edge to the entry of `bump` with $n = 5$, and pushes a
 frame that names the continuation. It then follows the local edges of `bump`
 to its result node, where the frame is popped. Execution resumes at the
 continuation, and `a` holds $6$. The entry and exit transfers are
@@ -860,9 +855,9 @@ continuation node $italic("cont")$. $sans("Returning")$ covers
 the moment after a callee finishes. The graph has reached
 $ctor("FunctionResult") thin p$, while the source still holds the
 #ctor("Restore") of the activation, possibly behind an #ctor("Unwind") that is
-propagating towards it (#isaconst("pop_ready")).
+propagating toward it (#isaconst("pop_ready")).
 
-The relation is not functional. It only asks that the running command belongs
+The relation is not functional. It only asks that the running command belong
 to some compiled body, so the same source configuration can be related to
 several nodes, for instance to a second, uncalled copy of a body. The simulation therefore yields _some_ related graph node, and the
 source-level theorem inherits this and states its conclusions at an
@@ -886,7 +881,7 @@ syntax under a non-library name and lies in $g$ with its entry edge and, if the 
 through, its final return edge. Without it, a source call could enter a body that the graph
 does not contain. #isaconst("return_safe") $c$ says that the running command
 returns only inside an activation that a call opened. It is the runtime form
-of the ban on #keyw("return") in `main` (@sec:pstep). Both premises hold for every well-formed program
+of the rule that `main` contains no #keyw("return") (@sec:pstep). Both premises hold for every well-formed program
 (#isathm("procs_embedded_compile_prog"),
 #isathm("wf_compile_input_return_safe")), and every source step preserves the
 second (#isathm("return_safe_pstep")). By induction on the run,
@@ -909,7 +904,7 @@ end-to-end theorem needs no separate premise for it.
 
 Graph runs suffice for an analysis with one abstract state per node.
 A context-sensitive analysis, however, computes separate states for the activations of a
-procedure entered in different calling contexts, and for this the runs are too _flat_. A run is one long sequence of steps across all
+procedure entered in different calling contexts, and for this purpose the runs are too _flat_. A run is one long sequence of steps across all
 activations, so it does not group the steps of one activation or link each step to
 the store with which its activation started. @ch:traces therefore regroups graph runs into activation
 traces, one per procedure activation

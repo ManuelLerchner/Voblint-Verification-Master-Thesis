@@ -49,17 +49,15 @@
 @ch:results proved that every report #isaconst("run_voblint") returns is
 sound. A user, however, does not evaluate a HOL function. The user writes
 source text and reads a report in a terminal or a browser tab. This chapter
-shows how the proved function becomes the analyzer that runs, and where between
-the source text and the displayed report the proof stops.
+shows how the proved function becomes the analyzer that runs, and where the proof stops between the source text and the displayed report.
 
 == From theorem to code #thy-badge("Voblint_Codegen", "Voblint_Codegen") <sec:codegen>
 
-@ch:solving replaced the two objects of the argument that cannot run by
-executable versions
+@ch:solving replaced the two objects of the argument that cannot run with executable versions
 (@sec:represented-function, @sec:termination). Every function that
 #isaconst("run_voblint") uses therefore has code equations, and Isabelle's
 code generator @haftmann10 can export it. One #isacmd("export_code")
-declaration emits #isaconst("run_voblint"), #isaconst("render_report") and the
+declaration emits #isaconst("run_voblint"), #isaconst("render_report"), and the
 constructors and selectors a caller needs into one OCaml file,
 #link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[`Voblint_Generated.ml`].
 This module contains the analyzer core that both delivered tools run. The
@@ -96,15 +94,13 @@ The exported module,
 runs, but it follows the proofs rather than the habits of OCaml programmers. It has #stat("generated_ocaml") lines. Type classes
 become records of operations passed as arguments, so polymorphic operations
 such as equality go through an indirect call. Finite sets are unsorted lists,
-and the finite maps the code uses are association lists, so membership,
-insertion and lookup scan them. The solver keeps
+and the finite maps the code uses are association lists, so membership, insertion, and lookup scan them. The solver keeps
 its valuation as a function. Each update wraps the previous valuation in
 another closure, so a lookup may traverse a chain as long as the number of
 earlier updates, and superseded closures stay reachable.
 
 The proofs guarantee that this code computes the proved function, but they say
-nothing about its running time or how it computes the result, and one such cost
-was a defect. A sampling profile of a
+nothing about its running time or how it computes the result. One such cost was a defect. A sampling profile of a
 program of 256 chained assignments, taken on one machine, attributed most of
 the CPU time to the compiler, which ran once per equation evaluation. The cause
 was #isaconst("init_publications"). On every equation evaluation it tests
@@ -162,8 +158,7 @@ entry of `main` (@fig:init-publications).
     #isathm("init_publications_code") (green), it compares with a constant.],
 ) <fig:init-publications>
 
-Isabelle lets a theory replace the equation that code generation uses for a
-constant by any proved equation for it. #isathm("init_publications_code")
+Isabelle lets a theory replace the equation that code generation uses for a constant with any proved equation for it. #isathm("init_publications_code")
 states #isaconst("init_publications") with the entry node
 #isai("FunctionEntry prog_main_name") written out and follows from
 #isathm("cfg_entry_compile_prog") by simplification. The definition and every
@@ -177,14 +172,10 @@ assignments in procedures of eight statements #_speedup("procs512") times
 faster (#link(repo-blob + "thesis/shared/generated/bench-init-publications.json")[recorded
   measurement]).
 
-The remaining cost is spread over report construction, printing and dictionary
-calls. Three routes would remove more of it,
+The remaining cost is spread over report construction, printing, and dictionary calls. Three routes would remove more of it,
 at increasing price. Further proved code equations change the code without
 changing a theorem. Isabelle's library implements sets by red-black trees, but
-only for element types with a linear order. Abstract values, check results and
-entry-state contexts have only their lattice order. Replacing the solver's function-valued table by a
-finite map would remove the closure chains, but it changes the state of the
-vendored solver and requires its proof to be redone. This thesis aims at a sound
+only for element types with a linear order. Abstract values, check results, and entry-state contexts have only their lattice order. Replacing the solver's function-valued table with a finite map would remove the closure chains, but it would change the state of the vendored solver and require its proof to be redone. This thesis aims at a sound
 analyzer rather than efficient generated code, so the code was not measured
 further.
 
@@ -201,7 +192,7 @@ carries, or serializes the answer as JSON, from which the playground draws the
 graph and places the verdicts and arithmetic diagnostics in the editor. Isabelle's code export maps HOL's mathematical integers to
 arbitrary-precision Zarith integers, so the generated code computes with
 VIMP's integers (@sec:vimp-vs-c). The command-line tool and the playground share the parser,
-the generated module and the code that turns a request into an analysis
+the generated module, and the code that turns a request into an analysis
 configuration. They differ in their surroundings: the command-line tool
 manages processes and files, and the playground's worker exchanges JSON with
 the page.
@@ -264,11 +255,11 @@ versions of its code equations that report each
 step through one constant, #isaconst("trace_event"), which is $()$ in the
 logic. Because it is $()$, each traced equation is proved equal to the one it
 replaces (for example #isathm("solve_rec_c_traced")\; #isathm("cs_route_traced"),
-#isathm("trace_route") and #isathm("trace_run") do the same for routing and the
+#isathm("trace_route"), and #isathm("trace_run") do the same for routing and the
 reading of the result). Code export replaces the original equations with these,
 so one generated analyzer serves traced and untraced runs alike. In OCaml, #isaconst("trace_event") is mapped
 to a hook that records the event when tracing is on. This mapping adds one target
-mapping to the trusted base: the hook must return, raise nothing and leave the
+mapping to the trusted base: the hook must return, raise nothing, and leave the
 solver's values alone. The trace, and the playground's replay of it, are
 unverified observations and never feed back into a result. @fig:replay-still
 shows one step of the replay.
@@ -285,7 +276,7 @@ shows one step of the replay.
   playground-figure(
     "solve-replay-still",
     width: 72%,
-    [one step of the solve replay for the calls of `bump` (@tab:eq-trace): the
+    [one step of the solver replay for the calls of `bump` (@tab:eq-trace): the
       graph shows each unknown's value at this step, and the trace beside it
       marks the step's line. Settings #playground-settings("solve-replay-still")],
   ),
@@ -301,8 +292,7 @@ shows one step of the replay.
 
 == The trust boundary <sec:trust-boundary>
 
-Three questions decide what a run of the delivered analyzer establishes;
-@fig:intro-trust places the main components on each side.
+Three questions decide what a run of the delivered analyzer establishes, and @fig:intro-trust places the main components on each side.
 
 *What is proved.* #isathm("run_voblint_source_sound") and the verdict theorems
 of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
@@ -329,8 +319,7 @@ reader has in mind; @sec:vimp-vs-c argues this for the fragment of C that VIMP
 models.
 
 *What the soundness theorem does not establish.* A parse error, an
-#isaconst("Invalid_Activation"), #isaconst("Malformed_Program") or
-#isaconst("No_Answer") answer, a timeout, an aborted code equation and a run
+#isaconst("Invalid_Activation"), #isaconst("Malformed_Program"), or #isaconst("No_Answer") answer, a timeout, an aborted code equation, and a run
 that never returns yield no #ctor("Analysed") report, so the theorem gives no
 verdict. A hang may come from the solve, from the fixpoint reduction of Int,
 whose generated code may loop where the HOL function returns

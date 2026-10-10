@@ -10,12 +10,9 @@
 
 @ch:domains ended with laws about one abstract state. Its order agrees with
 its meaning, and its operations over-approximate the concrete ones. The
-obligations of @ch:traces, however, speak about edges, calls and contexts.
+obligations of @ch:traces, however, speak about edges, calls, and contexts.
 Most of what connects the two is the same for every analysis, namely the
-equations built from the control-flow graph, the calling contexts and the
-solver. What
-makes Sign differ from Interval is only the abstract effect of each program
-construct. Goblint therefore separates an analysis from the framework that
+equations built from the control-flow graph, the calling contexts, and the solver. Sign and Interval differ only in the abstract effect of each program construct. Goblint therefore separates an analysis from the framework that
 runs it @seidl26[§6], and Voblint makes the same split in its program and in
 its proof.
 
@@ -59,7 +56,7 @@ Enter describes two stores associated with the call `y = inc(x)`. The _entry sta
 describes the store the callee starts with (`g = 1`, `a = 5`). The _resume
 state_ $q$ describes the caller's store (`x = 5`, `g = 1`), which combine later
 merges with the callee's exit state $r$ (the theories call $q$ the
-continuation). @fig:return-stores shows $q$, $e$, $r$ and the state combine
+continuation). @fig:return-stores shows $q$, $e$, $r$, and the state combine
 computes.
 
 // The call `y = inc(x)` on the control-flow graph, as the playground draws it,
@@ -107,15 +104,14 @@ computes.
     #isaconst("combine_collect") does.],
 ) <fig:return-stores>
 
-For soundness, enter must answer a pair of a resume state that covers the
+For soundness, enter must return a pair of a resume state that covers the
 caller's store and an entry state that covers the entered store
-(#isaconst("entry_pairs_cover")). Like Goblint's `enter`, it may answer several
-such pairs. Goblint's
+(#isaconst("entry_pairs_cover")). Like Goblint's `enter`, it may return several such pairs. Goblint's
 #link(
   "https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/lifters/specLifters.ml#L722",
 )[path-sensitivity lifter]
 uses this to return one pair per path @apinis14[§5.7]. Every analysis shipped with Voblint
-answers a single pair, and only a test example of @ch:traces answers two, so
+returns a single pair, and only a test example of @ch:traces returns two, so
 path-sensitive analyses remain future work.
 
 == Facts without a program point #thy-badge("Voblint_Framework", "DG_Manager") <sec:shared-facts>
@@ -134,8 +130,7 @@ accordingly declares a local lattice `D` and a global lattice `G`.
 
 The word _global_ thus has two meanings. A _program global_ is a variable of the VIMP program. An analysis global is a fact the
 analysis keeps flow-insensitively. The two are independent. An analysis may
-track a program global in its local state, and an analysis global need not
-stand for any program variable. By default the numeric analyses keep program
+track a program global in its local state, and an analysis global does not have to stand for any program variable. By default, the numeric analyses keep program
 globals in the local state and use no analysis global (@sec:mixed-flow).
 
 A transfer that uses analysis globals still returns the next local state, but
@@ -171,7 +166,7 @@ that @ch:cooperation uses to let analyses exchange facts.
   placement: none,
   caption: [The declaration of #isatype("dg_spec"), lifted from the theory.
     Every field except the query handler carries, marked $sharp$, the name of the corresponding method of Goblint's `Spec`. A #isatype("call_info")
-    names the callee, its formals, the arguments and the destination of a
+    names the callee, its formals, the arguments, and the destination of a
     call.],
 ) <fig:dg-spec>
 
@@ -197,8 +192,7 @@ is $lbot$ at every unknown it does not publish to.
 whose resume state is $q$ and whose exit state is $r$. Third, $cal(G)$ marks
 the program globals, which #isaconst("combine_collect") takes from the callee.
 
-#isathm("analysis_contract.gammaDG_mono") requires that a larger state or
-environment describes more stores. This turns the solver's inequalities
+#isathm("analysis_contract.gammaDG_mono") requires that a larger state or environment describe more stores. This turns the solver's inequalities
 between values into inclusions between sets of stores, as $conc$ does for a
 domain (@ch:domains). #isathm("analysis_contract.step_sound") is the abstract counterpart of
 #oblig("INTRA"). Every store the edge produces from a store described under
@@ -206,7 +200,7 @@ $e$ is described by the returned state under $e$ joined with the publications.
 A transfer that publishes nothing thus meets the condition of @sec:calls with
 $e$ as a fixed parameter. #isathm("analysis_contract.combine_sound") is the counterpart of
 #oblig("RETURN") in the same shape. Finally,
-#isaconst("dg_spec_wf") requires that the program of every operation runs
+#isaconst("dg_spec_wf") requires that the program of every operation run
 its continuation exactly once, so what it publishes is well defined. Beyond
 these laws, the contract asks the domains only for a join semilattice with a
 least element, and never for a map from variables to abstract values
@@ -255,7 +249,7 @@ run ends with `y = 1`. Flow-sensitively, Sign carries #signval("+") from
 placement can thus cost precision. A guard on such a global refines nothing,
 since the guard writes no global, as in Goblint's non-relational
 thread-modular analyses @saan26phd[§5.6.2].
-The placement suits multi-threaded programs, where the simplest thread-modular
+The placement suits multithreaded programs, where the simplest thread-modular
 analysis keeps shared globals flow-insensitively @seidl26[§1, Ex. 4] @saan26phd[§5.3.1]. VIMP has no threads, but an extension with threads could build on it
 (@sec:outlook-extending).
 
@@ -268,6 +262,6 @@ state does (#isathm("mcp_keyed_dg_analysis")), so #isathm("run_voblint_source_so
 covers it.
 
 The interface is modular, since an analysis proves facts about its own
-operations only, while context handling, equation construction and solving are
+operations only, while context handling, equation construction, and solving are
 implemented and proved once by the framework. @ch:cooperation combines
 several analyses.

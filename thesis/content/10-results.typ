@@ -33,7 +33,7 @@ a report with one verdict for every `__voblint_check` and a diagnostic wherever
 a division may fail. The chapter shows how the analyzer derives this report
 from the solution and why every verdict in it is sound. Neither verdict claims its
 check is reached. #verdict("PROVED") says the condition holds whenever a run
-reaches the check, #verdict("REFUTED") that it fails there (@sec:verdict-meaning).
+reaches the check, and #verdict("REFUTED") says that it fails there (@sec:verdict-meaning).
 
 == From solution to report #thy-badge("Voblint_CLI", "Analysis_Run") <sec:report>
 
@@ -92,7 +92,7 @@ The union drops the contexts on purpose. A context is not part of the
 program's state. It is a label the analysis attaches to procedure activations, possibly
 several to one activation, to keep different calls apart, and the context policy decides which labels
 exist (@sec:eq-routing). A source execution consists of the remaining
-program, a store and a stack of frames, so there is no context it could be
+program, a store, and a stack of frames, so there is no context it could be
 compared with. A user asks what holds at a program point, whichever call led there, and
 a guarantee per CFG node answers exactly this question. Inside the proof the
 contexts still matter: each per-context state over-approximates the activation
@@ -104,12 +104,10 @@ for inspection, and the Analysis view displays them.
 
 The command-line tool prints the report through its checks: each check at $v$
 receives one of four verdicts, #verdict("PROVED"), #verdict("REFUTED"),
-#verdict("UNKNOWN") or #verdict("DEAD"). The
+#verdict("UNKNOWN"), or #verdict("DEAD"). The
 #link(playground-base)[browser playground] shows the same verdicts inline in
-the editor and beside the graph, together with the state of every node and
-context and a replay of the solve (@sec:ocaml-boundary, @sec:tracing). Each
-verdict is printed at the source position of its check, whose uniqueness the
-text report checks (#isathm("run_voblint_labelled_check_sound")).
+the editor and beside the graph, together with the state of every node and context, and a replay of the solve (@sec:ocaml-boundary, @sec:tracing). Each
+verdict is printed at the source position of its check, and the text report checks that these positions are unique (#isathm("run_voblint_labelled_check_sound")).
 
 *How a verdict is computed.* Each state $d$ in
 #isai("report_states_at res v") gives its own verdict for a check:
@@ -120,7 +118,7 @@ The state #ctor("Bot") gives #verdict("DEAD"). Any other state is classified
 by #isaconst("mcp_classify"), which asks every active analysis for the truth
 value of the check's condition through the query system of @sec:coop-queries and combines the
 answers by meet: an exact $1$ gives #verdict("PROVED"), an exact $0$ gives
-#verdict("REFUTED"), and anything else #verdict("UNKNOWN"). A definite answer
+#verdict("REFUTED"), and any other answer gives #verdict("UNKNOWN"). A definite answer
 holds in every store the state describes (#isathm("mcp_classify_proved"),
 #isathm("mcp_classify_refuted")).
 
@@ -145,14 +143,13 @@ into the set of stores consistent with them, the _verdict set_
 #isai("\<V>\<^bsub>res\<^esub> v"). If $v$ carries the check `x > 0` with
 verdict #verdict("PROVED"), the verdict set is $setcomp(s, s(x) > 0)$: the verdict
 tells the user that $x$ is positive there and nothing else.
-#verdict("REFUTED") gives the stores in which the condition fails, and
-#verdict("UNKNOWN") every store:
+#verdict("REFUTED") gives the stores in which the condition fails, and #verdict("UNKNOWN") gives every store:
 
 #thy("verdict_holds")
 
 A #verdict("DEAD") check says nothing about the values in a store. It claims
 that no store arrives at $v$, which is a statement about reachability, and
-@sec:verdict-meaning treats it there. As a set of stores it therefore admits
+@sec:verdict-meaning treats it. As a set of stores it therefore admits
 every store and leaves the claims of the other checks at $v$ untouched:
 
 #thy("check_stores")
@@ -218,7 +215,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
 )))
 The first step places a store that a finite source run reaches: it lies in the
 node collecting semantics at some node $v$ that simulates the run's
-execution configuration (the node need not be unique, @sec:csim). The second step holds for a policy with a cover that meets all
+execution configuration (the node is not necessarily unique, @sec:csim). The second step holds for a policy with a cover that meets all
 five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts #isai("adm")
 admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
@@ -229,9 +226,8 @@ states at $v$, without saying which state covers a given store. The fourth is
 the inclusion of @sec:verdicts and depends only on the report and its
 consistency.
 
-The program of @fig:chain calls `f` twice. The first call passes $1$; the
-second passes an input $x$ with $1 <= x <= 3$, if the input is in that range.
-So `m` is $2$, $4$ or $6$ at the checks: `m >= 2` always holds, and `m == 2`
+The program of @fig:chain calls `f` twice. The first call passes $1$. The second passes an input $x$ with $1 <= x <= 3$, if the input is in that range.
+So `m` is $2$, $4$, or $6$ at the checks: `m >= 2` always holds, and `m == 2`
 holds at the first call and fails at the second call when $x$ is $2$ or $3$.
 
 #let _snap = claim-snapshot("chain-split-entry")
@@ -346,7 +342,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
 holds for every admitted store in both, so its verdict is #verdict(_vge). The
 check `m == 2` sees the same sets, but the contexts disagree. The first call
 enters with $n = 1$, and the check is #verdict(_v1) there. The second enters
-with $n in [1, 3]$; its state #raw(_m2) also admits $3$ and $5$, and the check
+with $n in [1, 3]$. Its state #raw(_m2) also admits $3$ and $5$, and the check
 is #verdict(_v2), the only sound answer, since the run with $x = 1$ satisfies
 it and the runs with $x = 2$ and $x = 3$ violate it.
 
@@ -393,7 +389,7 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     (@sec:termination).
 ]
 
-It concludes that some node $v$ of $g$ and frame stack $"stk"$ exist with:
+It concludes that there exist a node $v$ of $g$ and a frame stack $"stk"$ such that:
 
 #[
   #set enum(numbering: n => "(S" + str(n) + ")")
@@ -418,8 +414,7 @@ assumptions.
 
 == What a verdict says about executions #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:verdict-meaning>
 
-*What the four verdicts mean.* Read through the theorem of @sec:headline,
-each verdict of a report #isaconst("run_voblint") returned becomes a claim
+*What the four verdicts mean.* By the theorem of @sec:headline, each verdict of a report that #isaconst("run_voblint") returned becomes a claim
 about _covered executions_: finite runs of `main` from an initial store in
 #isaconst("cinit_stores"), stopped at any point. Because the report's states
 may also describe stores that no execution reaches, a verdict can only claim
@@ -432,7 +427,7 @@ what holds whenever an execution reaches its check.
 - #verdict("UNKNOWN"): the analysis decides neither.
 - #verdict("DEAD"): no covered execution reaches the check: nothing is
   collected at its node (#isathm("run_voblint_dead_check_unreached")), and a
-  reaching execution never finds #verdict("DEAD") (#isathm("run_voblint_check_sound")).
+  check that an execution reaches is never #verdict("DEAD") (#isathm("run_voblint_check_sound")).
 #verdict("PROVED") and #verdict("REFUTED") hold vacuously when no execution
 reaches the check, and only #verdict("DEAD") claims anything about
 reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REFUTED") is:
@@ -466,7 +461,7 @@ $x equiv 0 med (mod 3)$, finds the state empty, and reports
   ```)
 ]
 
-So an unreached check need not be #verdict("DEAD"). The analyzer reports
+So an unreached check is not necessarily #verdict("DEAD"). The analyzer reports
 #verdict("DEAD") only where its emptiness test recognizes every state at the
 node as describing no store. The test is sound
 (#isathm("sound_emptiness_DEAD")) but not exact: two analyses can each admit
@@ -480,8 +475,7 @@ is classified like any other, and the verdict is sound.
 *Arithmetic diagnostics.* Division by zero needs no check in the program. At
 every division and remainder the analyzer asks the query system of
 @sec:coop-queries whether the divisor can be zero. If the analyses show that
-it is zero, the analyzer reports an error; if they cannot exclude zero, a
-warning; otherwise it prints nothing. At a node without a diagnostic, every
+it is zero, the analyzer reports an error. If they cannot exclude zero, it reports a warning, and otherwise it prints nothing. At a node without a diagnostic, every
 collected store has nonzero divisors (#isathm("run_voblint_arithmetic_safe")).
 An error carries the dual guarantee: whenever a covered execution reaches its
 node, the divisor is zero.

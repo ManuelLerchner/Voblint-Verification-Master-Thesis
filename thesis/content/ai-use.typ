@@ -66,8 +66,7 @@ errors. The non-vacuity instances of @sec:nonvacuity now demonstrate that the
 premises of the main theorems can in fact be satisfied.
 
 Agents also wrote much of the supporting tooling around the formalization,
-including the checks that keep the theories, the generated material, the
-analyzer, the website and this thesis in sync (@sec:voblint-repo). These checks
+including the checks that keep the theories, the generated material, the analyzer, the website, and this thesis in sync (@sec:voblint-repo). These checks
 proved especially useful because they replaced repeated manual inspection with
 conditions that every change had to satisfy, and they exposed errors that
 manual reading had missed.
