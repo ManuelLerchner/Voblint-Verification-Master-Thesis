@@ -597,7 +597,7 @@ proof -
       by (rule frag_okI_frag[OF main_decl cb ent])
          (simp_all add: pfn_def)
   next
-    fix t a v s'
+    fix t :: activation_trace and a v s'
     assume ht: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps u"
       and e: "(sink_node t, a, v) \<in> intra ?g"
     have "frag_ok \<Pi> ps t" using ch callers_refl by blast
@@ -605,7 +605,7 @@ proof -
       by (rule frag_ok_snoc[OF ht _ _ frag_edge_intra[OF wf _ _ _ _ e]])
          (use e in \<open>auto dest: compile_prog_entry_declared[OF wf]\<close>)
   next
-    fix caller dst pars args p cont
+    fix caller :: activation_trace and dst pars args p cont
     assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     show "frag_ok \<Pi> ps (Call caller
             [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
@@ -622,7 +622,7 @@ proof -
         by (rule frag_okI_frag[OF Some cb ent]) (simp_all add: pfn_def)
     qed
   next
-    fix callee caller p dst pars args cont
+    fix callee caller :: activation_trace and p dst pars args cont
     assume cvcallee: "callee \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
       and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps u"
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"

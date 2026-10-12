@@ -28,53 +28,52 @@ text \<open>\<open>node_collect\<close> is the concrete collecting view: the sin
   those whose trace may carry the queried context; the context type is not required
   finite, and a bucket is not claimed to be an exact activation identity.\<close>
 
-definition node_collect ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set"
-    ("\<C>\<^bsub>_,_,_\<^esub>") where
-  "\<C>\<^bsub>\<G>,g,S\<^esub> v =
-     {sink_store t | t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v}"
+locale collect_sem = ctx_sem ev rv conv glob
+  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool"
+begin
+
+definition gnode_collect ::
+    "('v, 'e) gcfg \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> cfg_node \<Rightarrow> ('v \<Rightarrow> int) set" where
+  "gnode_collect g S v =
+     {sink_store t | t. t \<in> gvalid_activation_trace g S \<and> sink_node t = v}"
 
 text \<open>Up to the inhabitation witness, every lemma concerns one graph and one set of
   initial stores, so the block fixes \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close> and writes
-  \<open>\<T>\<close> and \<open>\<C> v\<close> for \<open>\<T>\<^bsub>\<G>,g,S\<^esub>\<close> and
+  \<open>(gvalid_activation_trace g S)\<close> and \<open>(gnode_collect g S) v\<close> for \<open>gvalid_activation_trace g S\<close> and
   \<open>\<C>\<^bsub>\<G>,g,S\<^esub> v\<close>.\<close>
 
 context
-  fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
+  fixes g :: "('v, 'e) gcfg" and S :: "('v \<Rightarrow> int) set"
 begin
 
-private abbreviation (input) traces :: "activation_trace set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
-private abbreviation (input) collect :: "cfg_node \<Rightarrow> store set"
-  where "collect \<equiv> \<C>\<^bsub>\<G>,g,S\<^esub>"
-notation traces ("\<T>") and collect ("\<C>")
-
 lemma node_collect_I [intro]:
-  "t \<in> \<T> \<Longrightarrow> sink_store t \<in> \<C> (sink_node t)"
-  unfolding node_collect_def by blast
+  "t \<in> (gvalid_activation_trace g S) \<Longrightarrow> sink_store t \<in> (gnode_collect g S) (sink_node t)"
+  unfolding gnode_collect_def by blast
 
 text \<open>Every collected state has a valid activation trace witness.\<close>
 lemma node_collect_E [elim]:
-  assumes "s \<in> \<C> v"
-  obtains t where "t \<in> \<T>" "sink_node t = v" "sink_store t = s"
-  using assms unfolding node_collect_def by blast
+  assumes "s \<in> (gnode_collect g S) v"
+  obtains t where "t \<in> (gvalid_activation_trace g S)" "sink_node t = v" "sink_store t = s"
+  using assms unfolding gnode_collect_def by blast
 
 text \<open>
-  \<^const>\<open>node_collect\<close> is closed under intra flow: extending a witness trace by one
-  \<^const>\<open>intra\<close> edge is \<open>valid_activation_trace.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close>
-  steps is deliberately absent here --- \<open>valid_activation_trace.ret\<close> requires the popped activation to be the
+  \<open>node_collect\<close> is closed under intra flow: extending a witness trace by one
+  \<^const>\<open>intra\<close> edge is \<open>gvalid_activation_trace.intra\<close>.  Closure under \<^emph>\<open>call\<close> and \<^emph>\<open>return\<close>
+  steps is deliberately absent here --- \<open>gvalid_activation_trace.ret\<close> requires the popped activation to be the
   witness trace's own caller, which a bare CFG step does not supply.
 \<close>
 
 lemma node_collect_intra_step:
-  assumes s: "s \<in> \<C> u"
+  assumes s: "s \<in> (gnode_collect g S) u"
     and e: "(u, a, v) \<in> intra g"
-    and st: "s' \<in> edge_step a s"
-  shows "s' \<in> \<C> v"
+    and st: "s' \<in> gedge_step a s"
+  shows "s' \<in> (gnode_collect g S) v"
 proof -
-  from s obtain t where t: "t \<in> \<T>" and n: "sink_node t = u" and w: "sink_store t = s"
+  from s obtain t where t: "t \<in> (gvalid_activation_trace g S)" and n: "sink_node t = u" and w: "sink_store t = s"
     by (rule node_collect_E)
-  have "extend t (v, s') \<in> \<T>"
-    by (rule valid_activation_trace.intra[OF t]) (use e st n w in simp_all)
+  have "extend t (v, s') \<in> (gvalid_activation_trace g S)"
+    by (rule gvalid_activation_trace.intra[OF t]) (use e st n w in simp_all)
   from node_collect_I[OF this] show ?thesis by simp
 qed
 
@@ -86,8 +85,8 @@ text \<open>
 \<close>
 
 lemma valid_activation_trace_intra_path_extend_pair:
-  "intra_path g x y \<Longrightarrow> t \<in> \<T> \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
-   \<Longrightarrow> \<exists>t'. t' \<in> \<T> \<and> sink_node t' = fst y \<and> sink_store t' = snd y
+  "star (gcfg_intra_step g) x y \<Longrightarrow> t \<in> (gvalid_activation_trace g S) \<Longrightarrow> sink_node t = fst x \<Longrightarrow> sink_store t = snd x
+   \<Longrightarrow> \<exists>t'. t' \<in> (gvalid_activation_trace g S) \<and> sink_node t' = fst y \<and> sink_store t' = snd y
             \<and> caller_of t' = caller_of t \<and> fst (hd (path_of t')) = fst (hd (path_of t))"
 proof (induction arbitrary: t rule: star.induct)
   case (refl x)
@@ -97,60 +96,60 @@ next
   obtain u s where x: "x = (u, s)" by (cases x)
   obtain w s1 where y: "y = (w, s1)" by (cases y)
   from step.hyps(1) x y obtain a where
-    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> edge_step a s"
+    e: "(u, a, w) \<in> intra g" and st: "s1 \<in> gedge_step a s"
     by auto
-  have ext: "extend t (w, s1) \<in> \<T>"
-    by (rule valid_activation_trace.intra[OF step.prems(1)])
+  have ext: "extend t (w, s1) \<in> (gvalid_activation_trace g S)"
+    by (rule gvalid_activation_trace.intra[OF step.prems(1)])
        (use e st step.prems(2,3) x in simp_all)
   have hd_ext: "fst (hd (path_of (extend t (w, s1)))) = fst (hd (path_of t))"
     using valid_activation_trace_path_nonempty[OF step.prems(1)] by simp
   from step.IH[OF ext] y obtain t' where
-    "t' \<in> \<T>" "sink_node t' = fst z" "sink_store t' = snd z"
+    "t' \<in> (gvalid_activation_trace g S)" "sink_node t' = fst z" "sink_store t' = snd z"
     "caller_of t' = caller_of (extend t (w, s1))"
     "fst (hd (path_of t')) = fst (hd (path_of (extend t (w, s1))))" by auto
   then show ?case using hd_ext by auto
 qed
 
 lemma valid_activation_trace_intra_path_extend:
-  assumes p: "intra_path g (sink_node t, sink_store t) (v, s')"
-    and t: "t \<in> \<T>"
-  obtains t' where "t' \<in> \<T>" "sink_node t' = v" "sink_store t' = s'"
+  assumes p: "star (gcfg_intra_step g) (sink_node t, sink_store t) (v, s')"
+    and t: "t \<in> (gvalid_activation_trace g S)"
+  obtains t' where "t' \<in> (gvalid_activation_trace g S)" "sink_node t' = v" "sink_store t' = s'"
     "caller_of t' = caller_of t" "fst (hd (path_of t')) = fst (hd (path_of t))"
   using valid_activation_trace_intra_path_extend_pair[OF p t] by auto
 
 text \<open>
   A call and its matching return \<^emph>\<open>do\<close> compose, which is what makes the missing
   single-step closure above harmless in practice.  The callee trace is built from
-  the caller's by \<open>valid_activation_trace.call\<close>, so \<open>valid_activation_trace.ret\<close>'s side condition --- that the
+  the caller's by \<open>gvalid_activation_trace.call\<close>, so \<open>gvalid_activation_trace.ret\<close>'s side condition --- that the
   activation being popped is this trace's own caller --- holds by construction,
   and running the callee to its \<^const>\<open>FunctionResult\<close> along \<^const>\<open>intra_path\<close>
   preserves it.  What a caller supplies is the call edge and an intra path through
-  the callee; what it gets back is the continuation node with the combined store.
+  the callee; what it gets back is the continuation node with the combined ('v \<Rightarrow> int).
 \<close>
 
 lemma node_collect_call_return_step:
-  assumes s: "s \<in> \<C> u"
+  assumes s: "s \<in> (gnode_collect g S) u"
       and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
-      and body: "intra_path g (FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)
+      and body: "star (gcfg_intra_step g) (FunctionEntry q, gcall_enter (CallEdge dst pars args) s)
                    (FunctionResult q, t)"
-  shows "combine_collect \<G> dst s t \<in> \<C> cont"
+  shows "gcombine_collect dst s t \<in> (gnode_collect g S) cont"
 proof -
-  from s obtain caller where cv: "caller \<in> \<T>"
+  from s obtain caller where cv: "caller \<in> (gvalid_activation_trace g S)"
     and cn: "sink_node caller = u" and cs: "sink_store caller = s"
     by (rule node_collect_E)
-  let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
-  have ev: "?entered \<in> \<T>"
-    using valid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
+  let ?entered = "Call caller [(FunctionEntry q, gcall_enter (CallEdge dst pars args) s)]"
+  have ev: "?entered \<in> (gvalid_activation_trace g S)"
+    using gvalid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
-  obtain callee where dv: "callee \<in> \<T>"
+  obtain callee where dv: "callee \<in> (gvalid_activation_trace g S)"
     and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
     and dc: "caller_of callee = caller_of ?entered"
     by (rule valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   have "Resume caller callee
-          (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])
-          \<in> \<T>"
-    by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
+          (path_of caller @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))])
+          \<in> (gvalid_activation_trace g S)"
+    by (rule gvalid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   from node_collect_I [OF this] show ?thesis
     using cs ds by (simp add: sink_node_def sink_store_def)
 qed
@@ -159,19 +158,19 @@ subsection \<open>Collecting equations\<close>
 
 text \<open>(1) Initial stores are collected at \<^const>\<open>cfg_entry\<close>.\<close>
 lemma node_collect_init:
-  "s \<in> S \<Longrightarrow> s \<in> \<C> (cfg_entry g)"
-  using node_collect_I[OF valid_activation_trace.root] by simp
+  "s \<in> S \<Longrightarrow> s \<in> (gnode_collect g S) (cfg_entry g)"
+  using node_collect_I[OF gvalid_activation_trace.root] by simp
 
 subsection \<open>Context-sensitive / context-insensitive bridge\<close>
 
 text \<open>Bridge (1): every context bucket, and so their union, is included in the
   context-insensitive collection.\<close>
 theorem activation_collect_le_node_collect:
-  "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> \<C> v"
-  unfolding activation_collect_def node_collect_def by blast
+  "gactivation_collect adm c\<^sub>0 g S v c \<subseteq> (gnode_collect g S) v"
+  unfolding gactivation_collect_def gnode_collect_def by blast
 
 theorem Union_activation_collect_le_node_collect:
-  "(\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
+  "(\<Union>c. gactivation_collect adm c\<^sub>0 g S v c) \<subseteq> (gnode_collect g S) v"
   using activation_collect_le_node_collect by blast
 
 text \<open>Bridge (2): the converse needs every valid activation trace to carry some context.  That premise is
@@ -180,30 +179,46 @@ text \<open>Bridge (2): the converse needs every valid activation trace to carry
   \<^const>\<open>activation_context_of\<close> is total; a relational one earns it from conditional totality, which is
   \<open>Activation_Trace_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem node_collect_eq_Union_activation_of_has_context:
-  assumes has_ctx: "\<And>t. t \<in> \<T> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
-  shows "\<C> v = (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
+  assumes has_ctx: "\<And>t. t \<in> (gvalid_activation_trace g S) \<Longrightarrow> \<exists>c. gactivation_context_rel adm c\<^sub>0 g t c"
+  shows "(gnode_collect g S) v = (\<Union>c. gactivation_collect adm c\<^sub>0 g S v c)"
 proof
-  show "\<C> v \<subseteq> (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
+  show "(gnode_collect g S) v \<subseteq> (\<Union>c. gactivation_collect adm c\<^sub>0 g S v c)"
   proof
-    fix x assume "x \<in> \<C> v"
-    then obtain t where t: "t \<in> \<T>" "sink_node t = v" "sink_store t = x"
+    fix x assume "x \<in> (gnode_collect g S) v"
+    then obtain t where t: "t \<in> (gvalid_activation_trace g S)" "sink_node t = v" "sink_store t = x"
       by (rule node_collect_E)
-    from has_ctx [OF t(1)] obtain c where "activation_context_rel \<G> adm c\<^sub>0 g t c" ..
-    with t show "x \<in> (\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c)"
+    from has_ctx [OF t(1)] obtain c where "gactivation_context_rel adm c\<^sub>0 g t c" ..
+    with t show "x \<in> (\<Union>c. gactivation_collect adm c\<^sub>0 g S v c)"
       by blast
   qed
 next
-  show "(\<Union>c. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c) \<subseteq> \<C> v"
+  show "(\<Union>c. gactivation_collect adm c\<^sub>0 g S v c) \<subseteq> (gnode_collect g S) v"
     by (rule Union_activation_collect_le_node_collect)
 qed
 
 theorem node_collect_eq_Union_activation_of_fun:
-  "\<C> v
-     = (\<Union>c. \<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,g,S\<^esub> v c)"
+  "(gnode_collect g S) v
+     = (\<Union>c. gactivation_collect (context_policy_of_fun f) c\<^sub>0 g S v c)"
   by (rule node_collect_eq_Union_activation_of_has_context)
      (simp add: activation_context_rel_of_fun_iff)
 
 end
+
+end
+
+text \<open>The untyped node collection is the instance at source names and untyped expressions.\<close>
+
+definition node_collect ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> store set"
+    ("\<C>\<^bsub>_,_,_\<^esub>") where
+  "node_collect \<G> = collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G>"
+
+global_interpretation untyped?: collect_sem aval ret_var "\<lambda>_ n. n" \<G>
+    rewrites "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp add: node_collect_def)
+
+
 
 
 section \<open>The collecting semantics is inhabited\<close>
@@ -234,7 +249,7 @@ lemma activation_trace_witness_root:
   "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
 proof -
   have "Root [(cfg_entry activation_trace_witness_cfg, s)] \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
-    by (rule valid_activation_trace.root) simp
+    by (rule gvalid_activation_trace.root) simp
   then show ?thesis by simp
 qed
 
@@ -248,7 +263,7 @@ proof -
     using node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
   have "extend (Root [(Statement 0, s)]) (Statement 1, s(STR ''x'' := 1))
           \<in> \<T>\<^bsub>\<G>,activation_trace_witness_cfg,{s}\<^esub>"
-    by (rule valid_activation_trace.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
+    by (rule gvalid_activation_trace.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
                                         and v = "Statement 1"])
        (simp_all add: activation_trace_witness_cfg_def sink_node_def sink_store_def)
   from node_collect_I[OF this]

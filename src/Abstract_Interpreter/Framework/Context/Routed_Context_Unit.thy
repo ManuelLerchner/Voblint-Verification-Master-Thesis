@@ -47,6 +47,6 @@ text \<open>
 
 lemma activation_collect_unit_eq_node_collect:
   "\<A>\<^bsub>\<G>,context_policy_of_fun enterc_unit,(),g,S\<^esub> v () = \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  unfolding activation_collect_of_fun node_collect_def by simp
+  unfolding activation_collect_of_fun gnode_collect_def by simp
 
 end

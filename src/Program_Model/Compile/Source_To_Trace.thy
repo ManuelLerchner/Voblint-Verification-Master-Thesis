@@ -60,7 +60,7 @@ subsection \<open>The return step\<close>
 text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops the top frame; \<open>stack_repr\<close>
   identifies the caller \<open>c\<close> (\<^const>\<open>caller_of\<close> recovers it) and its spawning \<^const>\<open>calls\<close>
   edge, whose callee \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
-  \<open>valid_activation_trace_entry_result_eq\<close> --- so the trace composes by \<open>valid_activation_trace.ret\<close>, and the combined
+  \<open>valid_activation_trace_entry_result_eq\<close> --- so the trace composes by \<open>gvalid_activation_trace.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
 lemma activation_trace_repr_Return:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
@@ -89,7 +89,7 @@ proof -
   have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
     using edge pq by simp
   have valid': "?t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
-    using valid_activation_trace.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
+    using gvalid_activation_trace.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
   have sn': "sink_node ?t' = cont" by (simp add: sink_node_def)
   have ss': "sink_store ?t' = ?r" by (simp add: sink_store_def)
   have entry': "fst (hd (path_of ?t')) = fst (hd (path_of c))"
@@ -119,7 +119,7 @@ proof (cases rule: gcstep.cases)
     using Intra by (auto simp: activation_trace_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
   have e2: "s' \<in> edge_step a (sink_store t)" using Intra ss by simp
-  have "extend t (v, s') \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace.intra[OF tv e1 e2] .
+  have "extend t (v, s') \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using gvalid_activation_trace.intra[OF tv e1 e2] .
   moreover have "stack_repr ?g stk' (extend t (v, s'))"
     using stack_repr_cong[OF str] valid_activation_trace_path_nonempty[OF tv] by simp
   ultimately have "activation_trace_repr \<G> ?g S (v, s', stk') (extend t (v, s'))"
@@ -136,7 +136,7 @@ next
     using Call sn by simp
   let ?child = "Call t [(FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s)]"
   have child_valid: "?child \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
-    using valid_activation_trace.call[OF tv edge] ss by simp
+    using gvalid_activation_trace.call[OF tv edge] ss by simp
   have "stack_repr ?g ((cont, dst, s) # stk') ?child"
   proof (rule stack_repr.frame)
     show "caller_of ?child = Some t" by simp
@@ -166,7 +166,7 @@ proof -
   have "activation_trace_repr \<G> g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
     using assms
     by (auto simp: activation_trace_repr_def sink_node_def sink_store_def
-      valid_activation_trace.root)
+      gvalid_activation_trace.root)
   then show ?thesis by (auto simp: located_activation_trace_def)
 qed
 

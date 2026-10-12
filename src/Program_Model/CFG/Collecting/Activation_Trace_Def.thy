@@ -38,38 +38,41 @@ text \<open>
 text \<open>An \<open>activation_path\<close> lists the nodes one activation passed and the store it held at
   each.  An activation trace carries the path of its own activation, with the surrounding activations beside it rather than on it.\<close>
 
-type_synonym activation_path = "(cfg_node \<times> store) list"
+type_synonym 'v gactivation_path = "(cfg_node \<times> ('v \<Rightarrow> int)) list"
 
-datatype activation_trace =
-    Root activation_path
-  | Call (activation_trace_caller: activation_trace) activation_path
-  | Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace)
-    activation_path
+datatype 'v gactivation_trace =
+    Root "'v gactivation_path"
+  | Call (activation_trace_caller: "'v gactivation_trace") "'v gactivation_path"
+  | Resume (activation_trace_current: "'v gactivation_trace")
+    (activation_trace_callee: "'v gactivation_trace") "'v gactivation_path"
+
+type_synonym activation_path = "vname gactivation_path"
+type_synonym activation_trace = "vname gactivation_trace"
 
 subsection \<open>Observers\<close>
 
 text \<open>\<open>path_of\<close> is the activation path.  \<open>sink_node\<close> and \<open>sink_store\<close>
   return its final program point and final store.\<close>
 
-fun path_of :: "activation_trace \<Rightarrow> activation_path" where
+fun path_of :: "'v gactivation_trace \<Rightarrow> 'v gactivation_path" where
   "path_of (Root p)       = p"
 | "path_of (Call _ p)     = p"
 | "path_of (Resume _ _ p) = p"
 
-definition entry_store :: "activation_trace \<Rightarrow> store" where
+definition entry_store :: "'v gactivation_trace \<Rightarrow> ('v \<Rightarrow> int)" where
   "entry_store t = snd (hd (path_of t))"
 
-definition sink_node :: "activation_trace \<Rightarrow> cfg_node" where
+definition sink_node :: "'v gactivation_trace \<Rightarrow> cfg_node" where
   "sink_node t = fst (last (path_of t))"
 
-definition sink_store :: "activation_trace \<Rightarrow> store" where
+definition sink_store :: "'v gactivation_trace \<Rightarrow> ('v \<Rightarrow> int)" where
   "sink_store t = snd (last (path_of t))"
 
 text \<open>\<open>caller_of\<close> recovers the creating caller of an activation.  It descends the frozen
   \<open>caller\<close> field of a \<^const>\<open>Resume\<close>, so it works uniformly for a returned callee of any
   constructor --- this is what makes nested and recursive returns compose.\<close>
 
-fun caller_of :: "activation_trace \<Rightarrow> activation_trace option" where
+fun caller_of :: "'v gactivation_trace \<Rightarrow> 'v gactivation_trace option" where
   "caller_of (Root _)             = None"
 | "caller_of (Call caller _)      = Some caller"
 | "caller_of (Resume current _ _) = caller_of current"
@@ -78,7 +81,7 @@ subsection \<open>Extension and context projection\<close>
 
 text \<open>\<open>extend\<close> appends one step to the innermost local path; it never touches an outer
   constructor's caller/callee fields.\<close>
-fun extend :: "activation_trace \<Rightarrow> (cfg_node * store) \<Rightarrow> activation_trace" where
+fun extend :: "'v gactivation_trace \<Rightarrow> (cfg_node * ('v \<Rightarrow> int)) \<Rightarrow> 'v gactivation_trace" where
   "extend (Root p) x       = Root (p @ [x])"
 | "extend (Call c p) x     = Call c (p @ [x])"
 | "extend (Resume c d p) x = Resume c d (p @ [x])"
@@ -97,46 +100,52 @@ text \<open>
   compatible context.
 \<close>
 
-inductive_set valid_activation_trace ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> activation_trace set"
-    ("\<T>\<^bsub>_,_,_\<^esub>")
-  for \<G> and g and S where
+locale trace_sem = cfg_transfer_sem ev rv conv glob
+  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool"
+begin
+
+inductive_set gvalid_activation_trace ::
+    "('v, 'e) gcfg \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> 'v gactivation_trace set"
+  for g and S where
   root:
     "s \<in> S
-     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> gvalid_activation_trace g S"
 | intra:
-    "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "t \<in> gvalid_activation_trace g S
      \<Longrightarrow> (sink_node t, a, v) \<in> intra g
-     \<Longrightarrow> s' \<in> edge_step a (sink_store t)
-     \<Longrightarrow> extend t (v, s') \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+     \<Longrightarrow> s' \<in> gedge_step a (sink_store t)
+     \<Longrightarrow> extend t (v, s') \<in> gvalid_activation_trace g S"
 | call:
-    "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "caller \<in> gvalid_activation_trace g S
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
      \<Longrightarrow> Call caller
            [(FunctionEntry p,
-             call_enter \<G> (CallEdge dst pars args) (sink_store caller))]
-         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+             gcall_enter (CallEdge dst pars args) (sink_store caller))]
+         \<in> gvalid_activation_trace g S"
 | ret:
-    "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "callee \<in> gvalid_activation_trace g S
      \<Longrightarrow> caller_of callee = Some caller
      \<Longrightarrow> sink_node callee = FunctionResult p
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
      \<Longrightarrow> Resume caller callee
            (path_of caller
-              @ [(cont, combine_collect \<G> dst
+              @ [(cont, gcombine_collect dst
                           (sink_store caller) (sink_store callee))])
-         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+         \<in> gvalid_activation_trace g S"
 
 inductive_cases valid_activation_trace_RootE [elim]:
-  "Root p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+  "Root p \<in> gvalid_activation_trace g S"
 
 inductive_cases valid_activation_trace_CallE [elim]:
-  "Call caller p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+  "Call caller p \<in> gvalid_activation_trace g S"
 
 inductive_cases valid_activation_trace_ResumeE [elim]:
-  "Resume caller callee p \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+  "Resume caller callee p \<in> gvalid_activation_trace g S"
+
+end
 
 subsection \<open>Structural lemmas\<close>
 
@@ -162,16 +171,12 @@ text \<open>The lemmas up to the caller-chain closure all speak about the traces
   \<open>\<T>\<close> for \<open>\<T>\<^bsub>\<G>,g,S\<^esub>\<close>.  Outside the block every lemma holds
   for arbitrary \<open>\<G>\<close>, \<open>g\<close> and \<open>S\<close>.\<close>
 
-context
-  fixes \<G> :: "vname \<Rightarrow> bool" and g :: cfg and S :: "store set"
+context trace_sem
 begin
 
-private abbreviation (input) traces :: "activation_trace set" where "traces \<equiv> \<T>\<^bsub>\<G>,g,S\<^esub>"
-notation traces ("\<T>")
-
 lemma valid_activation_trace_path_nonempty:
-  "t \<in> \<T> \<Longrightarrow> path_of t \<noteq> []"
-  by (induction t rule: valid_activation_trace.induct) auto
+  "t \<in> (gvalid_activation_trace g S) \<Longrightarrow> path_of t \<noteq> []"
+  by (induction t rule: gvalid_activation_trace.induct) auto
 
 lemma entry_store_extend [simp]:
   assumes "path_of t \<noteq> []"
@@ -183,8 +188,8 @@ subsection \<open>Design invariants\<close>
 text \<open>A valid \<^const>\<open>Call\<close> activation has a valid caller, even after intra steps have
   extended its local path.\<close>
 lemma valid_activation_trace_Call_caller_valid:
-  "u \<in> \<T> \<Longrightarrow> u = Call cc q \<Longrightarrow> cc \<in> \<T>"
-proof (induction arbitrary: cc q rule: valid_activation_trace.induct)
+  "u \<in> (gvalid_activation_trace g S) \<Longrightarrow> u = Call cc q \<Longrightarrow> cc \<in> (gvalid_activation_trace g S)"
+proof (induction arbitrary: cc q rule: gvalid_activation_trace.induct)
   case (intra t a v s')
   from intra.prems obtain q' where "t = Call cc q'"
     by (cases t) auto
@@ -194,9 +199,9 @@ qed auto
 text \<open>A valid \<^const>\<open>Resume\<close> retains its callee as a valid activation trace, and its frozen caller is
   forced to be exactly \<open>caller_of callee\<close> --- a return cannot invent a caller.\<close>
 lemma valid_activation_trace_Resume_fields:
-  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q
-   \<Longrightarrow> dd \<in> \<T> \<and> caller_of dd = Some cc"
-proof (induction arbitrary: cc dd q rule: valid_activation_trace.induct)
+  "u \<in> (gvalid_activation_trace g S) \<Longrightarrow> u = Resume cc dd q
+   \<Longrightarrow> dd \<in> (gvalid_activation_trace g S) \<and> caller_of dd = Some cc"
+proof (induction arbitrary: cc dd q rule: gvalid_activation_trace.induct)
   case (intra t a v s')
   from intra.prems obtain q' where "t = Resume cc dd q'"
     by (cases t) auto
@@ -205,20 +210,20 @@ qed auto
 
 text \<open>Every caller recovered from a valid activation trace by \<^const>\<open>caller_of\<close> is itself valid.\<close>
 lemma valid_activation_trace_caller_valid:
-  "t \<in> \<T> \<Longrightarrow> caller_of t = Some c \<Longrightarrow> c \<in> \<T>"
+  "t \<in> (gvalid_activation_trace g S) \<Longrightarrow> caller_of t = Some c \<Longrightarrow> c \<in> (gvalid_activation_trace g S)"
 proof (induction t arbitrary: c)
   case (Root x)
   then show ?case by simp
 next
   case (Call caller p)
-  have "caller \<in> \<T>"
+  have "caller \<in> (gvalid_activation_trace g S)"
     using valid_activation_trace_Call_caller_valid[OF Call.prems(1) refl] .
   with Call.prems(2) show ?case by simp
 next
   case (Resume caller callee p)
   from valid_activation_trace_Resume_fields[OF Resume.prems(1) refl]
-  have cd: "callee \<in> \<T>" "caller_of callee = Some caller" by auto
-  have cv: "caller \<in> \<T>" using Resume.IH(2)[OF cd(1)] cd(2) by simp
+  have cd: "callee \<in> (gvalid_activation_trace g S)" "caller_of callee = Some caller" by auto
+  have cv: "caller \<in> (gvalid_activation_trace g S)" using Resume.IH(2)[OF cd(1)] cd(2) by simp
   from Resume.prems(2) have "caller_of caller = Some c" by simp
   then show ?case using Resume.IH(1)[OF cv] by simp
 qed
@@ -226,8 +231,8 @@ qed
 text \<open>A \<^const>\<open>Root\<close> activation starts at \<^const>\<open>cfg_entry\<close>: \<open>root\<close> creates it there and
   \<open>intra\<close> only appends.\<close>
 lemma valid_activation_trace_Root_entry:
-  "u \<in> \<T> \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
-proof (induction arbitrary: p rule: valid_activation_trace.induct)
+  "u \<in> (gvalid_activation_trace g S) \<Longrightarrow> u = Root p \<Longrightarrow> fst (hd p) = cfg_entry g"
+proof (induction arbitrary: p rule: gvalid_activation_trace.induct)
   case (intra t a v s')
   from intra.prems obtain p' where t: "t = Root p'" and p: "p = p' @ [(v, s')]"
     by (cases t) auto
@@ -238,8 +243,8 @@ qed auto
 
 text \<open>A \<^const>\<open>Resume\<close> extends its caller's own local path, so both share a head node.\<close>
 lemma valid_activation_trace_Resume_path:
-  "u \<in> \<T> \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path_of cc @ xs \<and> xs \<noteq> []"
-proof (induction arbitrary: cc dd q rule: valid_activation_trace.induct)
+  "u \<in> (gvalid_activation_trace g S) \<Longrightarrow> u = Resume cc dd q \<Longrightarrow> \<exists>xs. q = path_of cc @ xs \<and> xs \<noteq> []"
+proof (induction arbitrary: cc dd q rule: gvalid_activation_trace.induct)
   case (intra t a v s')
   from intra.prems obtain q' where t: "t = Resume cc dd q'" and q: "q = q' @ [(v, s')]"
     by (cases t) auto
@@ -251,7 +256,7 @@ text \<open>A callerless activation is the root one, and its local \<^const>\<op
   \<^const>\<open>cfg_entry\<close>.  The \<^const>\<open>Resume\<close> case needs the caller's own entry, which term
   induction supplies (the caller is a subterm) --- rule induction would only offer the callee.\<close>
 lemma valid_activation_trace_caller_None_entry:
-  "t \<in> \<T> \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path_of t)) = cfg_entry g"
+  "t \<in> (gvalid_activation_trace g S) \<Longrightarrow> caller_of t = None \<Longrightarrow> fst (hd (path_of t)) = cfg_entry g"
 proof (induction t)
   case (Root p)
   then show ?case using valid_activation_trace_Root_entry[OF Root.prems(1) refl] by simp
@@ -261,8 +266,8 @@ next
 next
   case (Resume caller callee q)
   from valid_activation_trace_Resume_fields[OF Resume.prems(1) refl]
-  have cd: "callee \<in> \<T>" "caller_of callee = Some caller" by auto
-  have cv: "caller \<in> \<T>" using Resume.IH(2)[OF cd(1)] cd(2)
+  have cd: "callee \<in> (gvalid_activation_trace g S)" "caller_of callee = Some caller" by auto
+  have cv: "caller \<in> (gvalid_activation_trace g S)" using Resume.IH(2)[OF cd(1)] cd(2)
     using valid_activation_trace_caller_valid[OF cd(1) cd(2)] by simp
   from Resume.prems(2) have "caller_of caller = None" by simp
   with Resume.IH(1)[OF cv] have hcaller: "fst (hd (path_of caller)) = cfg_entry g" by simp
@@ -271,16 +276,18 @@ next
   show ?case using hcaller q valid_activation_trace_path_nonempty[OF cv] by simp
 qed
 
+end
+
 subsection \<open>Caller ancestry\<close>
 
 text \<open>\<open>ancestors t\<close> is the \<^const>\<open>caller_of\<close> chain above \<open>t\<close>; \<open>callers t\<close> adds \<open>t\<close>
   itself and is the set a caller-chain invariant ranges over.\<close>
-fun ancestors :: "activation_trace \<Rightarrow> activation_trace set" where
+fun ancestors :: "'v gactivation_trace \<Rightarrow> 'v gactivation_trace set" where
   "ancestors (Root _) = {}"
 | "ancestors (Call caller _) = insert caller (ancestors caller)"
 | "ancestors (Resume current _ _) = ancestors current"
 
-abbreviation callers :: "activation_trace \<Rightarrow> activation_trace set" where
+abbreviation callers :: "'v gactivation_trace \<Rightarrow> 'v gactivation_trace set" where
   "callers t \<equiv> insert t (ancestors t)"
 
 lemma ancestors_extend [simp]: "ancestors (extend t x) = ancestors t"
@@ -295,6 +302,9 @@ lemma ancestors_caller: "caller_of t = Some c \<Longrightarrow> callers c \<subs
 lemma callers_caller_subset: "caller_of t = Some c \<Longrightarrow> callers c \<subseteq> callers t"
   using ancestors_caller by blast
 
+context trace_sem
+begin
+
 subsection \<open>Generic caller-chain closure\<close>
 
 text \<open>
@@ -306,26 +316,26 @@ text \<open>
 \<close>
 
 lemma caller_chain_closure:
-  fixes P :: "activation_trace \<Rightarrow> bool"
+  fixes P :: "'v gactivation_trace \<Rightarrow> bool"
   assumes Root: "\<And>s. s \<in> S \<Longrightarrow> P (Root [(cfg_entry g, s)])"
-    and Intra: "\<And>t a v s'. t \<in> \<T> \<Longrightarrow> (\<forall>u \<in> callers t. P u)
-        \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a (sink_store t)
+    and Intra: "\<And>t a v s'. t \<in> (gvalid_activation_trace g S) \<Longrightarrow> (\<forall>u \<in> callers t. P u)
+        \<Longrightarrow> (sink_node t, a, v) \<in> intra g \<Longrightarrow> s' \<in> gedge_step a (sink_store t)
         \<Longrightarrow> P (extend t (v, s'))"
-    and Call: "\<And>caller dst pars args p cont. caller \<in> \<T>
+    and Call: "\<And>caller dst pars args p cont. caller \<in> (gvalid_activation_trace g S)
         \<Longrightarrow> (\<forall>u \<in> callers caller. P u)
         \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
         \<Longrightarrow> P (Call caller
-                 [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
-    and Ret: "\<And>callee caller p dst pars args cont. callee \<in> \<T>
+                 [(FunctionEntry p, gcall_enter (CallEdge dst pars args) (sink_store caller))])"
+    and Ret: "\<And>callee caller p dst pars args cont. callee \<in> (gvalid_activation_trace g S)
         \<Longrightarrow> (\<forall>u \<in> callers callee. P u)
         \<Longrightarrow> caller_of callee = Some caller \<Longrightarrow> sink_node callee = FunctionResult p
         \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
         \<Longrightarrow> P (Resume caller callee (path_of caller
-                 @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
-  shows "t \<in> \<T> \<Longrightarrow> \<forall>u \<in> callers t. P u"
-proof (induction rule: valid_activation_trace.induct)
+                 @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))]))"
+  shows "t \<in> (gvalid_activation_trace g S) \<Longrightarrow> \<forall>u \<in> callers t. P u"
+proof (induction rule: gvalid_activation_trace.induct)
   case (root s)
   then show ?case using Root[OF root] by simp
 next
@@ -348,14 +358,39 @@ text \<open>An activation's entry store is fixed once it starts: a call names th
   begins with, and resuming a caller keeps the caller's own first store rather than adopting
   the callee's.  Context policies that read the entry store rely on this -- otherwise the
   context a trace carries could change under it as the trace grows.\<close>
-definition call_enter_store :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "call_enter_store \<G> g c s t \<longleftrightarrow>
+context trace_sem
+begin
+
+definition gcall_enter_store ::
+    "('v, 'e) gcfg \<Rightarrow> cfg_node \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> bool" where
+  "gcall_enter_store g c s t \<longleftrightarrow>
      (\<exists>dst pars args p cont. (c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g
-        \<and> t = call_enter \<G> (CallEdge dst pars args) s)"
+        \<and> t = gcall_enter (CallEdge dst pars args) s)"
+
+end
 
 lemma entry_store_Resume_caller:
   "path_of caller \<noteq> [] \<Longrightarrow>
      entry_store (Resume caller callee (path_of caller @ [x])) = entry_store caller"
   by (simp add: entry_store_def hd_append)
+
+
+text \<open>The untyped activation traces and entry stores are the instances at source names
+  and untyped expressions.\<close>
+
+definition valid_activation_trace ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> activation_trace set"
+    ("\<T>\<^bsub>_,_,_\<^esub>") where
+  "valid_activation_trace \<G> = trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G>"
+
+definition call_enter_store ::
+    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
+  "call_enter_store \<G> = trace_sem.gcall_enter_store aval \<G>"
+
+global_interpretation untyped?: trace_sem aval ret_var "\<lambda>_ n. n" \<G>
+    rewrites "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
+      and "trace_sem.gcall_enter_store aval \<G> = call_enter_store \<G>"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp_all add: valid_activation_trace_def call_enter_store_def)
 
 end

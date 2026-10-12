@@ -444,7 +444,7 @@ lemma ret_weak_obligations:
               \<longrightarrow> combine_collect (declared_global ret_prog) dst s t \<in> ret_cover cont c1"
     and "call_context_total_on ret_cover ret_R (declared_global ret_prog) (prog_cfg ret_prog)"
   by (auto simp: ret_entry ret_intra ret_calls ret_cover_def ret_R_def ret_enter
-                 call_context_total_on_def)
+                 gcall_context_total_on_def)
 
 lemma ret_not_coverage:
   "\<not> activation_coverage (prog_cfg ret_prog) (cinit_stores (declared_global ret_prog)) ret_cover
@@ -462,7 +462,7 @@ proof
                (Statement 2) 0 (STR ''f'') (\<lambda>_. 0)
                (call_enter (declared_global ret_prog)
                   (CallEdge (Some (STR ''a'')) [STR ''n''] [N 1]) (\<lambda>_. 0)) 1"
-    unfolding admits_call_context_def
+    unfolding gadmits_call_context_def
     by (rule exI [of _ "Some (STR ''a'')"], rule exI [of _ "[STR ''n'']"],
         rule exI [of _ "[N 1]"], rule exI [of _ "Statement 3"])
        (simp add: e ret_R_def ret_enter)
@@ -552,7 +552,7 @@ proof -
     by (rule activation_collect_E)
   let ?entered = "Call caller [(FunctionEntry q, call_enter \<G> (CallEdge dst pars args) s)]"
   have ev: "?entered \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    using valid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
+    using gvalid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
   obtain callee where dv: "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
@@ -562,7 +562,7 @@ proof -
   let ?r = "Resume caller callee
               (path_of caller @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))])"
   have rv: "?r \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-    by (rule valid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
+    by (rule gvalid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
   have "sink_store ?r \<in> \<A>\<^bsub>\<G>,adm,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
@@ -598,8 +598,8 @@ lemma tot_weak_obligations:
               \<longrightarrow> t \<in> tot_cover (FunctionResult p) c'
               \<longrightarrow> combine_collect (declared_global ret_prog) dst s t \<in> tot_cover cont c1"
     and "\<not> call_context_total_on tot_cover tot_R (declared_global ret_prog) (prog_cfg ret_prog)"
-  by (auto simp: ret_entry ret_intra ret_calls tot_cover_def tot_R_def admits_call_context_def
-                 call_context_total_on_def)
+  by (auto simp: ret_entry ret_intra ret_calls tot_cover_def tot_R_def gadmits_call_context_def
+                 gcall_context_total_on_def)
 
 text \<open>
   The claim meets INIT, INTRA, CALL and RETURN and fails only TOTAL. The run resumes at
@@ -616,13 +616,13 @@ proof
   let ?S = "cinit_stores (declared_global ret_prog)"
   let ?t0 = "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0)]"
   have v0: "?t0 \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_activation_trace.root
+    using gvalid_activation_trace.root
       [where s = "\<lambda>_. 0" and S = ?S and \<G> = "declared_global ret_prog"
                                 and g = "prog_cfg ret_prog"]
     by (simp add: ret_entry cinit_stores_def)
   have v1: "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)]
               \<in> \<T>\<^bsub>declared_global ret_prog,prog_cfg ret_prog,?S\<^esub>"
-    using valid_activation_trace.intra
+    using gvalid_activation_trace.intra
       [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2"
                                   and s' = "\<lambda>_. 0"]
     by (simp add: ret_intra sink_node_def sink_store_def)

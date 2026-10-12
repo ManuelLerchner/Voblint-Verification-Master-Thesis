@@ -565,7 +565,7 @@ text \<open>
 
 lemma routed_call_context_total:
   "call_context_total_on cover adm \<G> g"
-  unfolding call_context_total_on_def
+  unfolding gcall_context_total_on_def
 proof (intro allI impI)
   fix u dst pars args p cont ctx s
   assume ce: "(u, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
