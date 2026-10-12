@@ -312,7 +312,7 @@
           <li><a href="#semantics" data-target="semantics">What a run is</a></li>
           <li class="doc-toc-part">III · How it works</li>
           <li><a href="#solver" data-target="solver">From a graph to equations to values</a></li>
-          <li><a href="#settings" data-target="settings">Procedures: how many copies to keep apart</a></li>
+          <li><a href="#settings" data-target="settings">How many copies of a procedure to keep apart</a></li>
           <li><a href="#unknowns" data-target="unknowns">The implicit equation system</a></li>
           <li><a href="#globals" data-target="globals">Merging calls</a></li>
           <li class="doc-toc-part">IV · Why you can trust it</li>
@@ -585,8 +585,8 @@
         <figcaption>The shaded region is what the analysis reports. It may contain values no real run has, which costs precision. It may never leave out a value a real run has.</figcaption>
       </figure>
 
-      <h3 class="setting-title">Many runs in, one interval per node out</h3>
-      <p class="setting-copy">Here is the idea on a real program. The figure shows part of its control-flow graph, from the first branch on: one node per program point and one edge per step. Each run appears as a dot at every node it reaches, placed at the value <code>x</code> has there. Switch to the abstract view and the dots are replaced by the one interval the analysis keeps per node. No interval leaves out a dot; that is soundness.</p>
+      <h3 class="setting-title">Concrete runs and one interval per node</h3>
+      <p class="setting-copy">The figure applies this to a real program. It shows part of the program's control-flow graph, from the first branch on: one node per program point and one edge per step. Each run appears as a dot at every node it reaches, placed at the value <code>x</code> has there. The abstract view replaces the dots with the one interval the analysis keeps per node. Soundness means that no interval leaves out a dot.</p>
         <p class="setting-copy">The intervals are not exact, though. The runs only ever reach multiples of three, and an interval cannot express that, so every band also covers integers no run has. On the left this makes a node look reachable although no run reaches it. On the right the guard rules out every value in the interval, and the analysis marks the check <code>DEAD</code>.</p>
         <p class="setting-copy">Each check gets one of four verdicts, and each states what the analysis established. <code>PROVED</code>: the check holds in every run that reaches it. <code>REFUTED</code>: it fails in every run that reaches it. <code>DEAD</code>: no run reaches it. <code>UNKNOWN</code>: the intervals are too coarse to decide. A check that no run reaches can still come out <code>UNKNOWN</code>, as <code>pp4</code> does here, because <code>DEAD</code> means the analysis <em>proved</em> the point unreachable, not merely that it happens to be.</p>
 
@@ -687,7 +687,7 @@
           there.
         </p>
         <p class="section-intro">The analyzer computes with these abstract values instead of with single integers; it never handles the sets themselves, only their descriptions. Where one run holds <code>x = 7</code> and executes <code>x = x + 1</code>, the analyzer holds the interval <code>[0, 9]</code> for <code>x</code> and computes <code>[1, 10]</code>. This single step of interval arithmetic covers every run in which <code>x</code> lies between 0 and 9.</p>
-        <p class="section-intro">The price is precision. A domain can name only some sets, so the answer is usually wider than the truth. The exact set of values at a point may not be nameable at all, and even when it is, the analyzer may not find it. This is not a weakness of one particular domain. For general programs, many semantic questions we would like to decide exactly are undecidable. A sound analyzer that always terminates therefore has to lose information somewhere. The rest of this page asks whether a wide answer still settles the questions you care about.</p>
+        <p class="section-intro">Computing with descriptions costs precision. A domain can name only some sets, so the answer is usually wider than the exact set of values. That exact set may not be nameable at all, and even when it is, the analyzer may not find it. A different domain would not avoid this. For general programs, many semantic questions we would like to decide exactly are undecidable, so a sound analyzer that always terminates has to lose information somewhere. The rest of this page asks whether a wide answer still settles the questions you care about.</p>
       </div>
 
       <figure class="scene scene-gamma" data-preset="0">
@@ -702,14 +702,14 @@
         <noscript><p class="gamma-note">This figure needs JavaScript.</p></noscript>
         <figcaption>
           Pick a value and see which integers it stands for. Only −12 to 12 are drawn; a set
-          marked with <code>…</code> continues the same way beyond them. Note how differently the
-          domains carve up the same integers: <code>even</code> and <code>1 (mod 3)</code> name
+          marked with <code>…</code> continues the same way beyond them. The domains divide the
+          same integers in different ways. <code>even</code> and <code>1 (mod 3)</code> name
           sets no interval can name, and no single one of them names <code>{1, 7}</code>, which is
           why the Int-product preset combines several of them to pin it down.
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">Five numeric domains, five kinds of description</h3>
+      <h3 class="setting-title">The five numeric domains</h3>
       <div class="domain-grid">
         <article class="domain-card">
           <svg viewBox="0 0 200 124" role="img"
@@ -790,11 +790,11 @@
             </g>
           </svg>
           <h4>Int</h4>
-          <p>All four at once. Its components sharpen one another after every arithmetic operation and every guard, so four weak facts can decide a check.</p>
+          <p>All four at once. Its components sharpen one another after every arithmetic operation and every guard, so together they can decide a check that none of them decides alone.</p>
         </article>
       </div>
 
-      <h3 class="setting-title">Four domains, one value: reduction</h3>
+      <h3 class="setting-title">Reduction inside the Int product</h3>
       <p class="setting-copy">An Int value describes the integers that all four of its components allow. Each component on its own can miss what another one knows, so the product lets them sharpen one another. A sharpening step never changes the set of integers the value describes. It only finds a smaller description of the same set, and a smaller description can decide a check that the larger one could not. Even a component that starts out knowing nothing can contribute, once the others have told it something.</p>
       <figure class="scene scene-reduce" data-step="0">
         <div class="reduce-layout">
@@ -871,12 +871,12 @@
 <span class="ml proved">    __voblint_check(a == 5);<span class="mb">✓ PROVED</span></span>
 <span class="ml">  }</span>
 <span class="ml">}</span></pre>
-        <figcaption>No. In C, a remainder takes the sign of its dividend, so <code>n = −1</code> gives <code>x = −1</code> and <code>x % 6 = −1</code>. That run is real, and a bound without <code>−1</code> would be unsound; this is why <code>a &gt;= 0</code> comes back <code>UNKNOWN</code>. The bound is also reduction at work, and no single component reaches it. Interval alone stops at <code>[−5, 5]</code>, because it never learns <code>x ≡ 5 (mod 6)</code>. Congruence keeps that class but knows nothing about magnitude, so the sign guard tells it nothing. Under <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Domain/Parity_Lattice.html#Parity_Lattice.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Domain/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a> alone, both arms come back <code>UNKNOWN</code>. Together, the class and the bounds leave <code>{−1, 5}</code>, which the guard splits into one value per arm.
+        <figcaption>No. In C, a remainder takes the sign of its dividend, so <code>n = −1</code> gives <code>x = −1</code> and <code>x % 6 = −1</code>. That run is real, and a bound without <code>−1</code> would be unsound; this is why <code>a &gt;= 0</code> comes back <code>UNKNOWN</code>. The bound also comes from reduction; no single component reaches it. Interval alone stops at <code>[−5, 5]</code>, because it never learns <code>x ≡ 5 (mod 6)</code>. Congruence keeps that class but knows nothing about magnitude, so the sign guard tells it nothing. Under <code>interval</code>, <code>congruence</code>, <a href="Voblint/Voblint_Domain/Parity_Lattice.html#Parity_Lattice.parity%7Ctype"><code>parity</code></a> or <a href="Voblint/Voblint_Domain/Sign_Lattice.html#Sign_Lattice.sign%7Ctype"><code>sign</code></a> alone, both arms come back <code>UNKNOWN</code>. Together, the class and the bounds leave <code>{−1, 5}</code>, which the guard splits into one value per arm.
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/45-remainder_sign_split.vimp&amp;analysis=int&amp;context=none">Run it in the playground ↗</a></figcaption>
       </figure>
       </details>
 
-      <h3 class="setting-title">Two analyses, one question</h3>
+      <h3 class="setting-title">Combining two analyses through queries</h3>
       <p class="setting-copy">Int combines four numeric domains inside one value. Separate analyses can also exchange information while the fixpoint is being computed. In the first program below, both guards hold at the assignment, so <code>x = y</code> and <code>z</code> is <code>1</code>. Interval keeps one range per variable, and after the guards both <code>x</code> and <code>y</code> are still unbounded. The order analysis keeps a set of pairs, each meaning that one variable is at most another. It knows <code>x = y</code>, but it tracks no value for <code>z</code>. Neither can prove the check alone. Run together, Interval's assignment asks all active analyses what <code>x == y</code> evaluates to, and the order analysis answers <code>1</code>.</p>
 
       <figure class="scene scene-coop" data-prog="eq" data-sel="both">
@@ -988,14 +988,14 @@
       <div class="section-heading">
         <p class="eyebrow">The foundation</p>
         <h2 id="trace-heading">A trace, and why it follows one activation</h2>
-        <p class="section-intro">To say that an answer covers every run, we first need a precise object that a run is. The soundness theorems on this page are statements about traces. A trace is the record a single run leaves behind: the nodes control passed through, and the store at each of them. One trace is one concrete run, written down. Nothing is approximated yet, and nothing is quantified over yet.</p>
+        <p class="section-intro">To say that an answer covers every run, we first need a precise object that a run is. The soundness theorems on this page are statements about traces. A trace is the record a single run leaves behind: the nodes control passed through, and the store at each of them. A trace records one concrete run. It approximates nothing and quantifies over nothing.</p>
         <p class="section-intro">
           If you have stepped through a program in a debugger, you have watched one being made.
           Every press of <em>step</em> moves control one node on and leaves the store at whatever
           the last statement made of it; the line the debugger highlights and the variables panel
           beside it are one <code>(node, store)</code> pair. A trace is that whole sequence,
           recorded instead of watched. The one panel a plain sequence throws away is the call
-          stack, and that turns out to be the panel the proofs need.
+          stack, and the proofs need that panel.
         </p>
         <p class="section-intro">For a program that is one long sequence of statements, a list of <code>(node, store)</code> pairs tells the whole story, and the run below would be exactly that list. Procedures make it insufficient.</p>
       </div>
@@ -1135,7 +1135,7 @@
           </div>
           <p class="nest-note">Twenty-seven steps in the order they happened, coloured by the activation each belongs to. <code>entry_sum</code> occurs three times and <code>entry_dec</code> twice. The list itself does not record which occurrence belongs to which activation; only the colouring added for this figure does.</p>
         </div>
-        <figcaption>The order is right and nothing is missing. But a proof about one activation would first have to recover, occurrence by occurrence, which entries of this list belong to it.</figcaption>
+        <figcaption>The list has every step, in the right order. A proof about one activation would first have to recover, occurrence by occurrence, which entries of this list belong to it.</figcaption>
       </figure>
 
       <div class="prose-block">
@@ -1218,7 +1218,7 @@
             next, and no steps of that box appear on this path.
           </p>
         </div>
-        <figcaption>Exactly the steps of the list above, in the same order. The flat list leaves the grouping into activations for the reader to reconstruct. The nested form stores it in the value itself.</figcaption>
+        <figcaption>The steps are those of the list above, in the same order. The nested form stores the grouping into activations in the value itself, where the flat list leaves it for the reader to reconstruct.</figcaption>
       </figure>
 
       <div class="prose-block">
@@ -1229,7 +1229,7 @@
           records it. The callee still runs and its effect is still in the store when you land,
           but none of its steps appear on your line. The coloured bars in the figure above are the
           points where you pressed <em>step over</em>, and the box beneath each bar is the run you
-          stepped over, kept rather than discarded.
+          stepped over, which the trace keeps.
         </p>
       </div>
 
@@ -1372,12 +1372,12 @@ datatype activation_trace =
       </details>
 
 
-        <p>The nesting pays off in the question every soundness proof has to ask: “Which runs can be standing at node <code>v</code>, and what does memory hold there?” With activation traces, the answer is the end of one path. With the flat list, you would have to scan an interleaved sequence and decide, for every occurrence of <code>v</code>, whether it belongs to the activation you are reasoning about. The analysis answers per program point, and per point and context once a policy keeps copies of a procedure apart. Activation traces are shaped so that this per-point question can be read off directly instead of being reconstructed.</p>
+        <p>The nesting simplifies the question every soundness proof has to ask: “Which runs can be standing at node <code>v</code>, and what does memory hold there?” With activation traces, the answer is the end of one path. With the flat list, you would have to scan an interleaved sequence and decide, for every occurrence of <code>v</code>, whether it belongs to the activation you are reasoning about. The analysis answers per program point, and per point and context once a policy keeps copies of a procedure apart. Activation traces are shaped so that this per-point question can be read off directly instead of being reconstructed.</p>
         <p>Grouping by activation instead of by procedure has one more consequence. In this run, <code>sum</code> is one procedure with three activations, and the trace keeps all three apart because each is its own box. The analysis cannot keep every activation apart. It has to decide in advance how many copies of <code>sum</code> to reason about separately, and a <a href="#settings">context</a> is the result of that decision. Because the concrete side distinguishes every activation, the proofs can check that whatever the abstract side merges is still covered.</p>
 
       <div class="prose-block">
-        <h3>It is never built</h3>
-        <p>The analyzer never builds one, and it could not usefully do so. Every trace is finite, but nothing bounds its length or how deeply it nests: a recursion has one activation per level, and as soon as the program reads an unconstrained input, the set of all traces is infinite.</p>
+        <h3>The analyzer never builds a trace</h3>
+        <p>It could not usefully do so. Every trace is finite, but nothing bounds its length or how deeply it nests: a recursion has one activation per level, and as soon as the program reads an unconstrained input, the set of all traces is infinite.</p>
         <p>An activation trace exists only as a value in the logic. It gives soundness something to be a statement <em>about</em>, and the proofs quantify over the set of traces without anything ever enumerating it. The generated code confirms this: of the <span data-stat="generated_ocaml">—</span> lines of OCaml exported from these theories, none mentions <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> or <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>. The specification is not part of the analyzer.</p>
       </div>
     </section>
@@ -1386,7 +1386,7 @@ datatype activation_trace =
     <section class="section" id="semantics" aria-labelledby="semantics-heading">
       <div class="section-heading">
         <p class="eyebrow">The meaning</p>
-        <h2 id="semantics-heading">What a run is: source, graph, activation trace</h2>
+        <h2 id="semantics-heading">What a run is</h2>
         <p class="section-intro">A semantics is a rule for what a program does: given a state, which states may come next. Writing it down turns “what the program really does” from an appeal to intuition into a set you can quantify over.</p>
         <p class="section-intro">Voblint relates two small-step semantics to a third, trace-based description of executions, because the three objects it has to relate have different shapes. A <strong>source</strong> step (<a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a>) rewrites a program that is still program text, carrying the store and a stack of caller frames. A <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through a control-flow graph, carrying a stack of return points. The third does not take steps. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a> is the activation trace from the previous section, and <strong><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></strong> is a rule that says which of those values the graph admits. It judges one activation with its whole history at once, instead of moving from one state to the next.</p>
         <p class="section-intro">Soundness is stated against the third, because of what the analysis answers. It gives one value per program point, so the soundness claim has the form “at node <code>v</code>, this value covers every store a run can hold there”. <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> has no notion of a node, so the claim cannot even be stated against it. <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> has nodes, but its state is a whole configuration including the call stack, and while it holds the current activation's store, it does not record which activation that is, so contexts, which are read off the activation, cannot be stated against it. Activation traces can: the traces whose path ends at <code>v</code> are exactly the activations standing there, one box each, and each holds the store at the end of its path.</p>
@@ -1559,7 +1559,7 @@ datatype activation_trace =
       </figure>
 
       <div class="prose-block">
-        <p>The semantics differ in the three stacks below the figure. At an open call, the source keeps a <code>Frame</code>: the caller's store and the variable to assign. The graph keeps the same and the node to return to. An activation trace keeps the caller itself, whole, as a field. Soundness has to name a program point, say which stores can be there, and do so one activation at a time, so the table asks all three the same four questions. A fourth candidate comes along at no cost: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> is a list of pairs, and one such list for the whole run, instead of one per activation, is the flat list from the trace section.</p>
+        <p>The semantics differ in the three stacks below the figure. At an open call, the source keeps a <code>Frame</code>: the caller's store and the variable to assign. The graph keeps the same and the node to return to. An activation trace keeps the caller itself, whole, as a field. Soundness has to name a program point, say which stores can be there, and do so one activation at a time, so the table asks all three the same four questions. The table adds a fourth candidate: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> is a list of pairs, and one such list for the whole run, instead of one per activation, is the flat list from the trace section.</p>
         <div class="table-wrap">
           <table class="obs-table">
             <thead>
@@ -1703,7 +1703,7 @@ datatype activation_trace =
           shown: the stores a real run holds there, activation forgotten. The right column is what
           <code>voblint --analysis interval --context none</code> will answer at those nodes once
           the next sections have built it. Every answer is wider than the set beside it, and none
-          of them misses a store: that containment, at every node, is soundness.
+          of them misses a store. Soundness is this containment at every node.
         </figcaption>
       </figure>
 
@@ -1721,7 +1721,7 @@ datatype activation_trace =
         <p class="section-intro">The compiler turns a program into a control-flow graph, and the analysis turns that graph into equations. In this single-procedure example, there is one unknown per node and one term per incoming edge, and each term applies that edge's action to the value at the edge's source. With procedures, unknowns will be keyed by node and context. Starting from the requested result, the solver computes values for the unknowns that result depends on. To the rest of the pipeline the solver is a black box: equations and a query go in, and one abstract value per unknown it reached comes out.</p>
       </div>
 
-      <h3 class="setting-title">Watch the compiler take a program apart</h3>
+      <h3 class="setting-title">How the compiler builds the graph</h3>
       <p class="setting-copy">The compiler reads a procedure one statement at a time and turns each statement into a numbered node with outgoing edges. Each statement is compiled with the number of the statement that follows it, so its target is known before it is compiled. The figure replays this on the counting loop, with the node numbers and edge labels the real compiler produces.</p>
 
       <figure class="scene scene-source-morph" data-step="7">
@@ -2043,7 +2043,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         </div>
 
         <figcaption>
-          Every node is built the same way whether it sits on a straight edge, a join, or a call: one program per contribution, folded, compiled. Only the contributions differ: a compiled edge for an intra edge, a whole call for a call site, and a seed read at a procedure entry.</figcaption>
+          Every node is built the same way, whether it sits on a straight edge, a join, or a call. The generator makes one program per contribution, folds them into one, and compiles that. The contributions depend on the node: a compiled edge for an intra edge, a whole call for a call site, and a seed read at a procedure entry.</figcaption>
       </figure>
 
       <div class="prose-block">
@@ -2090,7 +2090,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
       </div>
 
       <figure class="scene scene-eqs">
-        <p class="eqs-said">Everything so far was construction; none of it computed a value. Handing the finished system to the solver is a single call, and what comes back is one abstract value per unknown the solver reached.</p>
+        <p class="eqs-said">The steps so far built the system and computed no value. Handing the finished system to the solver is a single call, and what comes back is one abstract value per unknown the solver reached.</p>
 
         <div class="pipe eqs-run">
           <span class="pipe-stage"><code>eqsT</code><small>the counting loop's four</small></span>
@@ -2286,7 +2286,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
       </figure>
       </details>
       <div class="prose-block">
-        <p><strong>Watch the real solver run.</strong> The playground can record the generated analyzer's solver trace and replay it on the graph: each query and its answer, each value stored, each side effect into a seed, each update and the readers it destabilizes, and the context each call is routed to. The trace is an unverified observation of the verified computation, not part of any theorem. The <a href="#replay">section on watching the solver</a> says how it is recorded.</p>
+        <p><strong>Replaying the real solver.</strong> The playground can record the generated analyzer's solver trace and replay it on the graph: each query and its answer, each value stored, each side effect into a seed, each update and the readers it destabilizes, and the context each call is routed to. The trace is an unverified observation of the verified computation, not part of any theorem. The <a href="#replay">section on watching the solver</a> says how it is recorded.</p>
       </div>
     </section>
 
@@ -2294,7 +2294,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
     <section class="section" id="settings" aria-labelledby="settings-heading">
       <div class="section-heading">
         <p class="eyebrow">Procedures</p>
-        <h2 id="settings-heading">Procedures: how many copies to keep apart</h2>
+        <h2 id="settings-heading">How many copies of a procedure to keep apart</h2>
         <p class="section-intro">A procedure can be analysed once for all its callers, or separately for different calling situations, and that choice trades precision for cost. Everything so far had one procedure, and a call breaks two assumptions at once. The callee's entry state now arrives from somewhere else in the equation system, and several call sites can reach the same copy of the callee. The solver's side effects handle both, and two settings tune them. The first decides how many separate copies of a procedure the analysis keeps apart. The second decides how the values that several call sites send into one copy are combined. This section covers the first; the second follows once the system those copies live in is clear. Both settings affect precision and whether a run finishes, never soundness.</p>
       </div>
 
@@ -2513,7 +2513,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           </svg>
         </div>
 
-        <figcaption>Every box is a context, and every unknown a call touches is a pair of a node and the context it belongs to. <code>main</code> has one context, because nothing calls it. Its two call sites each publish the entry of a copy of <code>f</code> and query that copy's exit, and each copy of <code>f</code> reaches <code>g</code> in the same way. The first copy calls <code>g</code> from two sites of its own, so it alone accounts for <code>c&#8323;</code> and <code>c&#8324;</code>. Copies therefore multiply down the call tree; there is not simply one per procedure. Which call sites end up sharing a key depends on the strategy, which the next subsection compares.</figcaption>
+        <figcaption>Every box is a context, and every unknown a call touches is a pair of a node and the context it belongs to. <code>main</code> has one context, because nothing calls it. Its two call sites each publish the entry of a copy of <code>f</code> and query that copy's exit, and each copy of <code>f</code> reaches <code>g</code> in the same way. The first copy calls <code>g</code> from two sites of its own, so it alone accounts for <code>c&#8323;</code> and <code>c&#8324;</code>. Copies therefore multiply down the call tree, and one procedure can have several. Which call sites end up sharing a key depends on the strategy, which the next subsection compares.</figcaption>
       </figure>
 
       <p class="setting-copy"><code>c</code> is <code>main</code>'s own context. <code>c&#8321;</code> and <code>c&#8322;</code> are the keys the strategy returned at the two call sites, and each appears in exactly two places: the key the call publishes under, and the exit it queries. The rest of the equation stays as before.</p>
@@ -2789,12 +2789,12 @@ fun main() {
         </dl>
         <figcaption>
           A joined value is at least <code>[1, 4]</code>; a solver may widen it further. More
-          contexts buy precision with more work.
+          contexts mean more work and can make the result more precise.
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">The price of precision</h3>
-      <p class="setting-copy">Every context is another copy of a procedure to solve. Of the two measurements below, the first counts the nodes of the solved graph and the second counts the contexts themselves. Both grow with the call-string depth until it is long enough to tell every call path apart. The numbers are measured with the analyzer on this site (Interval, Warrow). More contexts usually buy precision, but not always.</p>
+      <h3 class="setting-title">What more contexts cost</h3>
+      <p class="setting-copy">Every context is another copy of a procedure to solve. Of the two measurements below, the first counts the nodes of the solved graph and the second counts the contexts themselves. Both grow with the call-string depth until it is long enough to tell every call path apart. The numbers are measured with the analyzer on this site (Interval, Warrow). More contexts usually improve precision, but not always.</p>
 
       <details class="blackbox deepdive">
         <summary>
@@ -2951,9 +2951,9 @@ fun main() {
     <!-- ================================================================== -->
     <section class="section" id="unknowns" aria-labelledby="unknowns-heading">
       <div class="section-heading">
-        <p class="eyebrow">The system nobody can write down</p>
+        <p class="eyebrow">The equation system</p>
         <h2 id="unknowns-heading">How the solver explores an implicit equation system</h2>
-        <p class="section-intro">Every figure so far showed a handful of equations, which makes a system easy to picture as a list someone wrote out. It is not one. The generator is a total function from a program point and a context to a right-hand side, defined on the whole type of nodes and contexts, so there is no finite table of equations to hand over. A fixed program has only finitely many nodes that matter, but the contexts its calls create need not be finite. A run produces only the part that its query reached.</p>
+        <p class="section-intro">Every figure so far showed a handful of equations, as if the system were a list someone wrote out. The generator is a total function from a program point and a context to a right-hand side, defined on the whole type of nodes and contexts, so there is no finite table of equations to hand over. A fixed program has only finitely many nodes that matter, but the contexts its calls create need not be finite. A run produces only the part that its query reached.</p>
       </div>
 
       <details class="blackbox deepdive">
@@ -3507,7 +3507,7 @@ fun main() {
       </details>
 
       <div class="prose-block">
-        <p>Nothing builds this system. An equation system is an <a href="Unsorted/TD/Basics_side.html#Basics_side.eqsT%7Ctype"><code>eqsT</code></a>, and <code>eqsT</code> is a function type, <code>'x &#8658; strategy_tree</code>, from an unknown to its right-hand side. <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a> defines one such function, and a function in Isabelle/HOL is total: it has a value at every argument of its type. So the right-hand side for every pair of a program point and a context is already defined. Nobody constructs it; the solver evaluates it when it needs it, and the infinite size of the system costs nothing.</p>
+        <p>Nothing builds this system. An equation system is an <a href="Unsorted/TD/Basics_side.html#Basics_side.eqsT%7Ctype"><code>eqsT</code></a>, and <code>eqsT</code> is a function type, <code>'x &#8658; strategy_tree</code>, from an unknown to its right-hand side. <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a> defines one such function, and a function in Isabelle/HOL is total: it has a value at every argument of its type. So the right-hand side for every pair of a program point and a context is already defined. Nobody constructs it. The solver evaluates it when it needs it, so the infinite size of the system has no run-time cost.</p>
         <p>Only a query produces something finite. The solver receives the system and one unknown, and returns a <em>partial post-solution</em> (<a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst"><code>part_post_solution</code></a>): every unknown it stabilised is at least what that unknown's equation computes, over the set of keys it reached. That set is finite because the run terminated; the system itself is infinite.</p>
         <p>A key the solver never touched reads as bottom. The theorem shows that this loses nothing: the solved keys contain the root query and are closed under every step a run can take (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact"><code>live_unknowns_cover</code></a>), so every key a run reaches is among them, and every answer in the result table is covered, including bottom at points no run reaches.</p>
       </div>
@@ -3519,7 +3519,7 @@ fun main() {
     <section class="section" id="globals" aria-labelledby="globals-heading">
       <div class="section-heading">
         <p class="eyebrow">Shared state</p>
-        <h2 id="globals-heading">Merging calls: when several callers share an entry</h2>
+        <h2 id="globals-heading">When several callers share an entry</h2>
         <p class="section-intro">The two settings change different things in the same picture. Context sensitivity decides the columns: which unknowns exist, and how many copies of a procedure there are. This setting decides what a cell holds when several writers publish to the same key. It never adds or removes a key. It can therefore stop a value from growing forever, but it cannot stop the number of copies from growing.</p>
       </div>
 
@@ -3629,7 +3629,7 @@ fun main() {
         <p>Widening only helps where a key is shared. Run <code>f(x) { f(x + 1); }</code> from <code>f(0)</code> with <code>--context none</code>, and Warrow finishes with <code>x = [0, +&#8734;]</code>: one key receives every contribution, and widening stops the climb. Run the same program with entry-state contexts and no setting here finishes. Each new argument is a new context, hence a new key with a single writer, and none of these rules has anything to widen against. Limiting the number of copies is the job of the context setting.</p>
       </div>
 
-      <h3 class="setting-title">One key, five rules</h3>
+      <h3 class="setting-title">Five rules for combining writes to one key</h3>
 
       <p class="setting-copy">
         A site sends the state its call binds the callee's parameters to, so
@@ -3725,7 +3725,7 @@ fun main() {
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">Why not always Join, then</h3>
+      <h3 class="setting-title">Why not always use Join?</h3>
       <p class="setting-copy">Because the cost of joining grows with the length of the chain. A joining rule never widens, so a value that keeps growing is followed one step at a time, and the solver needs a round for each step; widening covers the same chain in one step. On <code>f(x) { if (x &lt; N) f(x + 1); }</code>, started from <code>f(0)</code>, every rule proves <code>x &lt;= N</code>. But as <code>N</code> grows from 64 to 4096, the two joining rules go from 5&nbsp;ms to about 240&nbsp;ms, while the three widening rules stay at 4&nbsp;ms. Without the bound, the growth never ends, which is the <em>no answer</em> in the table below.</p>
 
       <h3 class="setting-title">Which Globals setting should you pick?</h3>
@@ -3848,9 +3848,9 @@ fun main() {
       </figure>
 
       <h3 class="setting-title">Both settings at once</h3>
-      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate cleanly. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing lose only <code>s</code>'s check, and only with no contexts. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that gives no answer within the time limit on a recursion whose argument keeps growing.</p>
+      <p class="setting-copy">Run every combination of the two settings on the program above, and their effects separate. Cost changes only between rows: the solved graph has 24 nodes with no contexts, 34 at either call-string depth and 38 under entry states, and within a row the count stays the same, because this setting adds and removes no unknowns. Precision changes along both axes, and the coarser the context, the more a widening loses. Warrow proves one of the three checks with no contexts and all three once entry states keep the writers apart. Warrow per origin and Bounded narrowing lose only <code>s</code>'s check, and only with no contexts. Both joining rules prove all three everywhere. The cheapest fully precise cells are <code>None</code> with either joining rule. <code>Join</code> is also the rule that gives no answer within the time limit on a recursion whose argument keeps growing.</p>
 
-      <h3 class="setting-title">A call that never stops calling</h3>
+      <h3 class="setting-title">Recursion with a growing argument</h3>
       <p class="setting-copy">
         Both settings meet in recursion. <code>f(x)</code> calls <code>f(x + 1)</code> forever, so
         real runs wind outward on an endless spiral: <code>f(0)</code>, <code>f(1)</code>,
@@ -3943,10 +3943,10 @@ fun main() {
         </figcaption>
       </figure>
 
-      <h3 class="setting-title" id="program-globals">Program globals: carried along, or one unknown each</h3>
+      <h3 class="setting-title" id="program-globals">Where program globals live</h3>
       <p class="setting-copy">So far a VIMP <code>global</code> has behaved like a local that every procedure can see. It travels inside each point's state: into a callee with the caller's state, and back out through <code>combine</code>. The playground's <strong>Program globals</strong> setting (<code>--program-globals</code> on the command line, <a href="Voblint/Voblint_CLI/Analysis_Run.html#Analysis_Run.program_globals%7Ctype"><code>program_globals</code></a> in the theories) offers a second placement, the one the <a href="#ref-seidl-2026">FM 2026 tutorial</a> calls flow-insensitive.</p>
       <p class="setting-copy">Under <strong>Flow-insensitive</strong>, each declared global gets a global unknown of its own, and the points stop carrying it. An edge that assigns <code>g</code> publishes the new value of <code>g</code> to that unknown, an edge whose expressions mention <code>g</code> reads it, and a call reads only the globals its arguments mention. A point that touches no global depends on none, and a write to <code>g</code> re-runs only the points that read <code>g</code> (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Global_Footprint.html#Example_Keyed_Global_Footprint.read_g_depends_on_g_only%7Cfact"><code>read_g_depends_on_g_only</code></a> and <a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Global_Footprint.html#Example_Keyed_Global_Footprint.write_h_publishes_h_only%7Cfact"><code>write_h_publishes_h_only</code></a> check this on one reading and one writing edge). The initial value 0 is published by the program's entry like any other write.</p>
-      <p class="setting-copy">The price is precision. One value has to cover everything the global ever holds, at every point. Take <code>set()</code> writing <code>Gx = 1</code> and <code>get()</code> returning <code>Gx</code>, called in that order from <code>main</code>. Flow-sensitively, Sign carries <code>Gx = +</code> from <code>set</code>'s exit into <code>get</code> and proves <code>0 &lt; y</code>. Flow-insensitively, the unknown of <code>Gx</code> joins the initial 0 with the written 1, Sign can only say <code>Gx &#8805; 0</code>, and <code>0 &lt; y</code> stays UNKNOWN. Run it <a href="playground.html?fixture=07-sign-precision/precision/19-callee_reads_global_after_setter.vimp&amp;analysis=sign&amp;globals=join">flow-sensitively</a> and <a href="playground.html?fixture=07-sign-precision/precision/21-callee_reads_shared_global_after_setter.vimp&amp;analysis=sign&amp;globals=join&amp;placement=flow-insensitive&amp;graph=analysis">flow-insensitively</a> to compare.</p>
+      <p class="setting-copy">This placement costs precision, because one value has to cover everything the global ever holds, at every point. Take <code>set()</code> writing <code>Gx = 1</code> and <code>get()</code> returning <code>Gx</code>, called in that order from <code>main</code>. Flow-sensitively, Sign carries <code>Gx = +</code> from <code>set</code>'s exit into <code>get</code> and proves <code>0 &lt; y</code>. Flow-insensitively, the unknown of <code>Gx</code> joins the initial 0 with the written 1, Sign can only say <code>Gx &#8805; 0</code>, and <code>0 &lt; y</code> stays UNKNOWN. Run it <a href="playground.html?fixture=07-sign-precision/precision/19-callee_reads_global_after_setter.vimp&amp;analysis=sign&amp;globals=join">flow-sensitively</a> and <a href="playground.html?fixture=07-sign-precision/precision/21-callee_reads_shared_global_after_setter.vimp&amp;analysis=sign&amp;globals=join&amp;placement=flow-insensitive&amp;graph=analysis">flow-insensitively</a> to compare.</p>
       <p class="setting-copy">So why offer it? For a sequential VIMP program it only loses precision, as it does here. The reason is the language VIMP could grow into. The <a href="#ref-seidl-2026">FM 2026 tutorial</a> names multi-threaded code as a main source of mixed flow-sensitivity: a thread-modular analysis collects the values threads exchange through shared globals flow-insensitively, so it can track each thread's own state flow-sensitively without considering every thread that may run beside it. Goblint analyzes concurrent C this way. VIMP has no threads, so here the setting shows something narrower: the framework and its end-to-end theorem already carry a mixed flow-sensitive analysis. An extension with threads would reuse this machinery and add a thread semantics and synchronization.</p>
       <figure class="scene scene-placement">
         <svg viewBox="0 0 860 350" role="img"
@@ -4359,8 +4359,8 @@ fun main() {
     <section class="section" id="chain" aria-labelledby="chain-heading">
       <div class="section-heading">
         <p class="eyebrow">The argument</p>
-        <h2 id="chain-heading">The proof chain: each set inside the next</h2>
-        <p class="section-intro">The previous section drew the boundary. This one shows why the guarantee follows inside it. Soundness is a chain of set inclusions. At one program point, start from the stores real runs have there, and widen step by step: first to the stores the graph's activation traces reach, then to those traces split by context, then to what the solver's answer concretizes to. Each link is a theorem of its own. The analysis may lose precision at every link, but it may not lose a store. One last step turns the final set into the verdict you see. Below, the chain is drawn for <code>n</code> at <code>pp0</code>, the <code>if (n &lt; 2)</code> of this program:</p>
+        <h2 id="chain-heading">The proof chain</h2>
+        <p class="section-intro">Inside the boundary drawn in the previous section, soundness is a chain of set inclusions. At one program point, start from the stores real runs have there, and widen step by step: first to the stores the graph's activation traces reach, then to those traces split by context, then to what the solver's answer concretizes to. Each link is a theorem of its own. The analysis may lose precision at every link, but it may not lose a store. One last step turns the final set into the verdict you see. Below, the chain is drawn for <code>n</code> at <code>pp0</code>, the <code>if (n &lt; 2)</code> of this program:</p>
         <pre class="prose-code" data-lang="vimp"><code>fun f(n) {
   if (n &lt; 2) {
     return 1;
@@ -4488,7 +4488,7 @@ fun main() {
         </figcaption>
       </figure>
 
-      <h3 class="setting-title">Take a pillar away</h3>
+      <h3 class="setting-title">The five facts the chain rests on</h3>
       <p class="setting-copy">The chain connects real runs to the verdicts, and five facts support it: two theorems and three obligations the analyzer has to discharge. Remove one to see which answers stop being covered.</p>
 
       <figure class="scene scene-bridge" data-broken="">
@@ -4537,7 +4537,7 @@ fun main() {
           <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_local_spec</code></button>
           <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routing_adequate</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
-          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Honest verdicts <code>classify_proved</code></button>
+          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Verdict classification <code>classify_proved</code></button>
         </div>
 
         <p class="bridge-caption" aria-live="polite">
@@ -4587,7 +4587,7 @@ fun main() {
         </summary>
         <div class="prose-block">
           <ul>
-            <li><strong>Soundness alone is cheap.</strong> An analyzer that answers <code>UNKNOWN</code> at every check satisfies the soundness statement (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unknown_everywhere_sound%7Cfact"><code>unknown_everywhere_sound</code></a>), while one that answers <code>PROVED</code> everywhere violates it (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.proved_everywhere_unsound%7Cfact"><code>proved_everywhere_unsound</code></a>). This is why the theorems come with non-vacuity witnesses: evaluated verdicts that are actually decided (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
+            <li><strong>An analyzer that decides nothing is sound.</strong> An analyzer that answers <code>UNKNOWN</code> at every check satisfies the soundness statement (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unknown_everywhere_sound%7Cfact"><code>unknown_everywhere_sound</code></a>), while one that answers <code>PROVED</code> everywhere violates it (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.proved_everywhere_unsound%7Cfact"><code>proved_everywhere_unsound</code></a>). This is why the theorems come with non-vacuity witnesses: evaluated verdicts that are actually decided (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.nv_check_proved_sound%7Cfact"><code>nv_check_proved_sound</code></a>).</li>
             <li><strong>A domain obligation rules out the Goblint bug for every operand.</strong> Any abstract remainder that returns the constant <code>1</code> for the class <code>1+2ℤ</code> modulo <code>2</code> violates the statement that the shipped congruence remainder satisfies, at <code>−5</code> (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.prefix_congruence_mod_unsound%7Cfact"><code>prefix_congruence_mod_unsound</code></a>). Goblint's regression test samples one program; the obligation covers all of them. This is machine-checked; the upstream behaviour is documented, not re-run here.</li>
             <li><strong>Entry states must be covered in pairs.</strong> When <code>enter</code> returns several alternatives, each pair of caller continuation and callee entry has to cover the run together. Covering the caller store with one pair and the entered store with another lets the combined result exclude the run's real value (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unpaired_entry_cover_unsound%7Cfact"><code>unpaired_entry_cover_unsound</code></a>).</li>
             <li><strong>Publish to a global unknown only complete contributions.</strong> The solver's update rules record one contribution per origin, so the equations buffer their writes (see the <a href="#buffering">buffering</a> above). Where the buffer flushes only at the answer, each key is published once per evaluation; a flush before a local read gives that up for keys written again afterwards. The buffered system terminates on a regression whose equation would otherwise publish twice in one evaluation (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.keyed_multiwrite_buffered_terminates%7Cfact"><code>keyed_multiwrite_buffered_terminates</code></a>). That the unbuffered system does not terminate is expected, but neither proved nor evaluated.</li>
@@ -4621,6 +4621,7 @@ fun main() {
           <tr><td class="nl-sym">𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em></td><td><a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst"><code>psteps</code></a></td></tr>
           <tr><td class="nl-sym">𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em> in <em>g</em></td><td><a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst"><code>csteps</code></a></td></tr>
           <tr><td class="nl-sym">Π,g,p ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
+          <tr><td class="nl-sym">p,s0 ⊢ c ⊳ v</td><td>from <em>s₀</em>, <em>c</em> is observed at node <em>v</em> in <em>p</em></td><td><a href="Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst"><code>at_node</code></a></td></tr>
           <tr><td class="nl-sym">skip<sup>♯</sup> S / assign<sup>♯</sup> S / special<sup>♯</sup> S / branch<sup>♯</sup> S / body<sup>♯</sup> S / return<sup>♯</sup> S / event<sup>♯</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
           <tr><td class="nl-sym">enter<sup>♯</sup> S / combine_env<sup>♯</sup> S / combine_assign<sup>♯</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
           <tr><td class="nl-sym">combine<sup>♯</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
@@ -4643,8 +4644,8 @@ fun main() {
           <button type="button" role="tab" data-theorem="source" aria-selected="true">Any run, stopped anywhere</button>
           <button type="button" role="tab" data-theorem="check" aria-selected="false">A check about to run</button>
           <button type="button" role="tab" data-theorem="dead" aria-selected="false">DEAD means unreachable</button>
-          <button type="button" role="tab" data-theorem="arith" aria-selected="false">No warning, no division by zero</button>
-          <button type="button" role="tab" data-theorem="sites" aria-selected="false">No check goes missing</button>
+          <button type="button" role="tab" data-theorem="arith" aria-selected="false">Nodes without a warning</button>
+          <button type="button" role="tab" data-theorem="sites" aria-selected="false">Every check is listed</button>
         </div>
 
         <div class="thm-layout">
@@ -4654,26 +4655,28 @@ fun main() {
             <div class="rule" aria-label="Inference rule">
               <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
               <div class="rule-bar"><span class="rule-name">source_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>point c</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect (point c)</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ℛ<sub>res</sub> (point c)</code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱<sub>res</sub> (point c)</code></span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">observed at some <code>v</code>: <code>(residual, s, frs) ⊳ v</code></span><span class="rule-item" tabindex="0" data-ref="coll">at every such <code>v</code>: <code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ℛ<sub>res</sub> v</code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱<sub>res</sub> v</code></span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
               Run the program from any initial store whose globals start at zero, and stop
               anywhere. If the analyzer answers <code>Analysed res</code>, the store is one the
-              program's semantics really reaches at the node where the run stopped, some state the
+              program's semantics really reaches at every node where the run is observed, some state the
               report holds there describes it, and every definite verdict the report gives there
               holds of it. Termination is not a premise: the analyzer runs the executable solver,
               and an answer means that solve finished.
             </p>
             <p class="thm-plain">
-              The theorem also identifies that node. The program text alone does not determine
-              it, because in <code>if (b) { x = 1; } else { x = 1; }</code> both branches leave
-              the same command behind at different nodes. The proof therefore reads the run
-              through the program's <em>elaboration</em>, which annotates every statement with
-              the nodes the compiler emits for it and compiles to the same graph. The annotated
-              command <code>c</code> at which the run stopped determines the node
-              <code>point c</code>. The elaboration is used only in the proof, and the analyzer
-              runs the program as written.
+              The theorem also says where the run is observed, written
+              <code>p, s0 ⊢ (residual, s, frs) ⊳ v</code>, and its guarantees hold at every
+              such node. The residual command alone does not determine the node, because in <code>if (b) { x = 1; } else { x = 1; }</code> both
+              branches leave the same command behind at different nodes. The relation therefore
+              reads the run through the program's <em>elaboration</em>, which annotates every
+              statement with the nodes the compiler emits for it and compiles to the same graph.
+              The annotated command at which the run stopped names <code>v</code>, and the
+              compiler's simulation relates the source state to it. A configuration
+              reachable along two paths can be observed at two nodes. The elaboration is used only
+              in the proof, and the analyzer runs the program as written.
             </p>
             <details>
               <summary>Isabelle statement</summary>
@@ -4682,14 +4685,11 @@ fun main() {
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "run_voblint config p = Analysed res"
-  shows "∃c stk. erase c = residual
-           ∧ declared_global p, Π<sub>e</sub> ⊢ (main_body Π<sub>e</sub>, s0, []) →<sub>p</sub><sup>*</sup> (c, s, frs)
-           ∧ Π<sub>e</sub>, prog_cfg p, prog_main_name ⊢ (c, s, frs) ≈ (point c, s, stk)
-           ∧ prog_table p, prog_cfg p, prog_main_name ⊢ (residual, s, frs) ≈ (point c, s, stk)
-           ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (point c)
-           ∧ s ∈ ℛ<sub>res</sub> (point c)
-           ∧ s ∈ 𝒱<sub>res</sub> (point c)"
-  (* Π<sub>e</sub> = elab_pt (prog_table p) (prog_procs p) *)</pre>
+  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
+       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
+                s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
+              ∧ s ∈ ℛ<sub>res</sub> v
+              ∧ s ∈ 𝒱<sub>res</sub> v)"</pre>
             </details>
           </article>
 
@@ -4922,7 +4922,7 @@ fun main() {
       </figure>
 
       <div class="prose-block">
-        <h3>Zoom into one PROVED</h3>
+        <h3>From one PROVED verdict down to the proof</h3>
         <p>A verdict on the screen rests on a stack of claims. The zoom below starts at the verdict for the counting loop's check and follows one real run, the one that leaves the loop with <code>i = 5</code>, down to the arithmetic lemma it depends on and the proof that Isabelle checks.</p>
       </div>
 
@@ -5220,7 +5220,7 @@ qed</code></pre>
           too. What
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>
           adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
-          purpose: the bridge runs forwards, placing each run at its node <code>point c</code>, so it
+          purpose: the bridge runs forwards, placing each run at the nodes it is observed at (<code>p, s0 ⊢ … ⊳ v</code>), so it
           cannot be read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
           forwards from the hub, at every collected store.
         </p>
@@ -5389,11 +5389,11 @@ qed</code></pre>
     <section class="section" id="limits" aria-labelledby="limits-heading">
       <div class="section-heading">
         <p class="eyebrow">The fine print</p>
-        <h2 id="limits-heading">What Voblint can't do, and why proving is hard</h2>
-        <p class="section-intro">A theorem guarantees exactly what its statement says. Voblint's soundness theorems hold for a small language under a fixed set of assumptions, and this section is about what lies outside them.</p>
+        <h2 id="limits-heading">What Voblint can't do</h2>
+        <p class="section-intro">Voblint's soundness theorems hold for a small language under a fixed set of assumptions. This section describes what lies outside them.</p>
       </div>
 
-      <h3 class="setting-title">A small island in a large language</h3>
+      <h3 class="setting-title">How much of C VIMP covers</h3>
       <p class="setting-copy">
         Goblint analyzes C. Voblint analyzes VIMP, a language small enough that its semantics
         could be written down and every analysis step proved against it. Hover a region to see
@@ -5489,7 +5489,7 @@ qed</code></pre>
       </div>
 
       <h3 class="setting-title">Why this takes so long to prove</h3>
-      <p class="setting-copy">The analyzer that runs is the visible tip. Most of the work lies underneath: definitions of what a program means, and proofs that every step of the analysis respects them.</p>
+      <p class="setting-copy">The analyzer that runs is a small part of the project. Most of the work went into definitions of what a program means and into proofs that every step of the analysis respects them.</p>
 
       <figure class="scene scene-iceberg">
         <svg viewBox="0 0 1000 700" role="img"

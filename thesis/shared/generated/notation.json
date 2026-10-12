@@ -235,7 +235,7 @@
       "group": "operator",
       "kind": "notation",
       "reads": "_c_ is matched with _c′_",
-      "meaning": "the compiler's simulation relation between a source configuration _c_ of procedure _p_ and a configuration _c′_ of the compiled graph _g_",
+      "meaning": "the compiler's simulation relation between a source configuration _c_ whose outermost activation runs procedure _p_ and a configuration _c′_ of the compiled graph _g_",
       "forms": [
         {
           "const": "csim",
@@ -251,6 +251,32 @@
           "theory": "Simulation_Relation",
           "file": "src/Program_Model/Compile/Simulation/Simulation_Relation.thy",
           "href": "Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst",
+          "session": "Voblint_Compile"
+        }
+      ],
+      "local": null
+    },
+    {
+      "id": "at_node",
+      "group": "operator",
+      "kind": "notation",
+      "reads": "from _s₀_, _c_ is observed at node _v_ in _p_",
+      "meaning": "some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes",
+      "forms": [
+        {
+          "const": "at_node",
+          "cite": {
+            "kind": "const",
+            "name": "at_node"
+          },
+          "symbol": "p,s0 \\<turnstile> c \\<rhd> v",
+          "mixfix": "(_,_ \\<turnstile>/ _ \\<rhd>/ _)",
+          "declaration": "fun",
+          "scope": "global",
+          "pretty_printed": true,
+          "theory": "Elaborated_Compilation",
+          "file": "src/Program_Model/Compile/Elaborated_Compilation.thy",
+          "href": "Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst",
           "session": "Voblint_Compile"
         }
       ],
@@ -866,6 +892,10 @@
     {
       "kind": "const",
       "name": "csim"
+    },
+    {
+      "kind": "const",
+      "name": "at_node"
     },
     {
       "kind": "const",

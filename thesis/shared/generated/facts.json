@@ -94,7 +94,7 @@
       "oracles": [
         "Code_Generator.holds_by_evaluation"
       ],
-      "statement": "\\<exists>res c stk.\n   run_voblint nv_config nv_prog = Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (report_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   erase c =\n   Seq (Check () (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n    (Check () (0, 0) (exp.Eq (V STR ''b'') (N 5))) \\<and>\n   declared_global\n    nv_prog,elab_pt (prog_table nv_prog) (prog_procs nv_prog) \\<turnstile>\n   (main_body (elab_pt (prog_table nv_prog) (prog_procs nv_prog)),\n    \\<lambda>_. 0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n   (c, nv_final, []) \\<and>\n   elab_pt (prog_table nv_prog)\n    (prog_procs nv_prog),prog_cfg nv_prog,prog_main_name \\<turnstile>\n   (c, nv_final, []) \\<approx> (point c, nv_final, stk) \\<and>\n   prog_table nv_prog,prog_cfg nv_prog,prog_main_name \\<turnstile>\n   (Seq (Check () (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n     (Check () (0, 0) (exp.Eq (V STR ''b'') (N 5))),\n    nv_final, []) \\<approx>\n   (point c, nv_final, stk) \\<and>\n   nv_final\n   \\<in> \\<C>\\<^bsub>declared_global\n                      nv_prog,prog_cfg\n                               nv_prog,cinit_stores\n  (declared_global nv_prog)\\<^esub>\n          (point c) \\<and>\n   nv_final \\<in> \\<R>\\<^bsub>res\\<^esub> (point c) \\<and>\n   nv_final \\<in> \\<V>\\<^bsub>res\\<^esub> (point c)",
+      "statement": "\\<exists>res v.\n   run_voblint nv_config nv_prog = Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (report_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   nv_prog,(\\<lambda>_. 0) \\<turnstile>\n   (Seq (Check () (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n     (Check () (0, 0) (exp.Eq (V STR ''b'') (N 5))),\n    nv_final, []) \\<rhd>\n   v \\<and>\n   nv_final\n   \\<in> \\<C>\\<^bsub>declared_global\n                      nv_prog,prog_cfg\n                               nv_prog,cinit_stores\n  (declared_global nv_prog)\\<^esub>\n          v \\<and>\n   nv_final \\<in> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n   nv_final \\<in> \\<V>\\<^bsub>res\\<^esub> v",
       "theory": "Example_Non_Vacuity",
       "why": "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
     },
@@ -156,11 +156,11 @@
       "theory": "DG_Indexed_Generator",
       "why": "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
     },
-    "run_voblint_arithmetic_refuted": {
+    "run_voblint_arithmetic_intra_safe": {
       "oracles": [],
-      "statement": "\\<lbrakk>run_voblint config p = Analysed res;\n d \\<in> set (report_diagnostics res); diagnostic_verdict d = Check_Refuted;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          (diagnostic_point d)\\<rbrakk>\n\\<Longrightarrow> \\<lbrakk>arithmetic_divisor\n                            (diagnostic_obligation d)\\<rbrakk>\\<^sub>e\n                   s =\n                  0",
+      "statement": "\\<lbrakk>run_voblint config p = Analysed res;\n s \\<in> \\<C>\\<^bsub>declared_global\n                      p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n          v;\n \\<forall>d\\<in>set (report_diagnostics res). diagnostic_point d \\<noteq> v;\n (v, action, w) \\<in> intra (prog_cfg p);\n e \\<in> set (edge_expressions action);\n divisor \\<in> expression_divisors e\\<rbrakk>\n\\<Longrightarrow> \\<lbrakk>divisor\\<rbrakk>\\<^sub>e s \\<noteq> 0",
       "theory": "Analysis_Certified",
-      "why": "Results chapter: an arithmetic error means a zero divisor in every covered execution reaching it."
+      "why": "Results chapter: at a node without a diagnostic, no collected store divides by zero."
     },
     "run_voblint_arithmetic_safe": {
       "oracles": [],
@@ -188,7 +188,7 @@
     },
     "run_voblint_source_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>c stk.\n                     erase c = residual \\<and>\n                     declared_global\n                      p,elab_pt (prog_table p) (prog_procs p) \\<turnstile>\n                     (main_body (elab_pt (prog_table p) (prog_procs p)),\n                      s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n                     (c, s, frs) \\<and>\n                     elab_pt (prog_table p)\n                      (prog_procs p),prog_cfg p,prog_main_name \\<turnstile>\n                     (c, s, frs) \\<approx> (point c, s, stk) \\<and>\n                     prog_table p,prog_cfg p,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (point c, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>declared_global\n    p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              (point c) \\<and>\n                     s \\<in> \\<R>\\<^bsub>res\\<^esub> (point c) \\<and>\n                     s \\<in> \\<V>\\<^bsub>res\\<^esub> (point c)",
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res\\<rbrakk>\n\\<Longrightarrow> (\\<exists>v.\n                      p,s0.0 \\<turnstile> (residual, s, frs) \\<rhd>\n                      v) \\<and>\n                  (\\<forall>v.\n                      p,s0.0 \\<turnstile> (residual, s, frs) \\<rhd>\n                      v \\<longrightarrow>\n                      s \\<in> \\<C>\\<^bsub>declared_global\n     p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                               v \\<and>\n                      s \\<in> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                      s \\<in> \\<V>\\<^bsub>res\\<^esub> v)",
       "theory": "Analysis_Certified",
       "why": "The introduction states the source-level soundness result with its actual premises."
     },

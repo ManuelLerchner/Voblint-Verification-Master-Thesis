@@ -199,7 +199,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   column-gutter: 10pt,
   row-gutter: 8pt,
   align: (right + horizon, center + horizon, left + horizon),
-  [a store $s$ a source run reaches, \ at the run's node $v$],
+  [a store $s$ a source run reaches, \ at a node $v$ it is observed at],
   _step(sym.in, isathm("source_reaches_node_collect")),
   isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
 
@@ -213,9 +213,9 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   _step(sym.subset.eq, isathm("analysis_report_verdicts_sound")),
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
-The first step places a store that a finite source run reaches: it lies in the
-node collecting semantics at the node $v$ at which the run stands. The
-elaboration of @sec:csim determines this node. The second step holds for a policy with a cover that meets all
+The first step places a store that a finite source run reaches in the node
+collecting semantics, at every node $v$ at which the run is observed
+(@sec:csim). The second step holds for a policy with a cover that meets all
 five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts #isai("adm")
 admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
@@ -356,12 +356,11 @@ context policy decides.
 
 == The source-level theorem #thy-badge("Voblint_CLI", "Analysis_Certified") <sec:headline>
 
-One theorem states the chain at one store for the exported analyzer. It quantifies over an
-arbitrary analysis configuration and program, the arguments of
-#isaconst("run_voblint") (@sec:report), so no separate theorem is needed per
-analysis or context policy: whenever the analyzer returns a report, every
-store a finite source execution reaches is covered by that report and
-satisfies its definite verdicts. The theorem is about #isaconst("run_voblint")
+One theorem states the chain at one store for the exported analyzer. It
+quantifies over an arbitrary analysis configuration and program, the arguments
+of #isaconst("run_voblint") (@sec:report). Whenever the analyzer returns a
+report, every store a finite source execution reaches is covered by that report
+and satisfies its definite verdicts. The theorem is about #isaconst("run_voblint")
 itself, the constant that code generation exports, so it concerns the analyzer
 the tools run, up to the trusted code generator and target toolchains
 (@sec:codegen, @sec:trust-boundary).
@@ -389,17 +388,23 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     (@sec:termination).
 ]
 
-The abbreviation #isai("\<Pi>\<^sub>e") stands for the elaboration
-#isaconst("elab_pt") of the table (@sec:csim). The theorem concludes that there exist an annotated command
-$c$ and a frame stack $"stk"$ such that, for the node $v = #isaconst("point", thy: "Elaborated_Compilation") thin c$:
+The conclusions are stated at graph nodes, but a source configuration names
+none. Its residual command can occur at several places of the program, so the
+node has to come from the run. The relation
+$p, s_0 tack.r ("residual", s, "frs") gt.closed v$ of @sec:csim
+(#isaconst("at_node")) supplies it. It holds when some run of the elaboration
+from $s_0$ reaches an annotated command that erases to the residual and names
+$v$, and the simulation #isaconst("csim") relates that configuration to $v$
+with the same store. We then say that the configuration is _observed_ at $v$.
+The relation is not functional, since a configuration reachable along two
+paths can be observed at two nodes.
+
+The theorem has two halves. The first states that the configuration is
+observed at some node. The second states that at every node $v$ where it is
+observed
 
 #[
   #set enum(numbering: n => "(S" + str(n) + ")")
-  + $c$ erases to the residual, and the elaborated program runs from `main` to
-    $c$ with the same store and frames, so the run lifts to the elaboration;
-  + both the elaborated and the original configuration are related by the
-    simulation #isaconst("csim") of @sec:csim to $(v, s, "stk")$, so $v$ is the
-    node the compiled program stands at when the source run reaches $s$;
   + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node;
   + #isai("s \<in> \<R>\<^bsub>res\<^esub> v"): some state the report
     holds at $v$, under one of its contexts, describes $s$;
@@ -407,8 +412,12 @@ $c$ and a frame stack $"stk"$ such that, for the node $v = #isaconst("point", th
     holds in $s$, and every #verdict("REFUTED") check is false in $s$.
 ]
 
-The last two conclusions are the chain of @sec:chain read at one store. The
-statement mentions no activation and no context. Source executions carry
+Whenever the analyzer returns a report, every store that a run of `main`
+reaches is thus collected, covered by the report and consistent with its
+verdicts at every node where the run is observed. This is the chain of
+@sec:chain read at one store.
+
+The statement mentions no activation and no context. Source executions carry
 neither, and the report states its guarantee per CFG node (@sec:report), so
 both appear only inside the proof, at the second inclusion of the chain.
 #isathm("run_voblint_spine") keeps them visible: it states the chain once for
@@ -471,21 +480,21 @@ node as describing no store. The test is sound
 (#isathm("sound_emptiness_DEAD")) but not exact: two analyses can each admit
 stores while no store satisfies both (#isathm("mcp_empty_v_not_exact"),
 #isathm("DEAD_not_exact"), the latter on a constructed report).
-An unreached check can thus miss #verdict("DEAD") for two reasons. Its state
-may describe stores that no run reaches, as Interval's state above does, or it
-may describe no store without the test recognizing this. Either way the state
-is classified like any other, and the verdict is sound.
+An unreached check can thus miss #verdict("DEAD") because its state describes
+stores that no run reaches, as Interval's state above does, or because the test
+does not recognize that it describes none. The verdict is sound either way.
 
 *Arithmetic diagnostics.* Division by zero needs no check in the program. At
 every division and remainder the analyzer asks the query system of
-@sec:coop-queries whether the divisor can be zero. If the analyses show that
-it is zero, the analyzer reports an error. If they cannot exclude zero, it reports a warning, and otherwise it prints nothing. At a node without a diagnostic, every
-collected store has nonzero divisors (#isathm("run_voblint_arithmetic_safe")).
-An error carries the dual guarantee: whenever a covered execution reaches its
-node, the divisor is zero.
+@sec:coop-queries whether the divisor can be zero. It reports an error if the analyses
+show that it is zero, a warning if they cannot exclude zero, and nothing
+otherwise. An error is sound as well. Whenever a covered execution reaches its
+node, the divisor is zero
+(#isathm("run_voblint_arithmetic_refuted")). A warning means only that the
+analysis could not exclude a zero divisor. At a node $v$ without a diagnostic,
+every divisor in an expression on an intraprocedural edge leaving $v$ is
+nonzero in every store collected at $v$
+(#isathm("run_voblint_arithmetic_safe") also covers the arguments of calls
+leaving $v$):
 
-#proved("run_voblint_arithmetic_refuted")
-
-A warning means only that the analysis could not exclude a zero divisor. In
-practice warnings can be frequent, since the analysis has to warn wherever it
-is too weak to rule out zero.
+#proved("run_voblint_arithmetic_intra_safe")

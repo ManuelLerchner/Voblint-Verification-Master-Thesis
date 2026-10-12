@@ -282,14 +282,16 @@
     "elaboration",
     "elaboration",
     _prog,
-    isa: [#isaconst("elab_pt"), #isaconst("point", thy: "Elaborated_Compilation"), #isathm("psteps_lift")],
+    isa: [#isaconst("elab_pt"), #isaconst("point", thy: "Elaborated_Compilation"), #isaconst("at_node"), #isathm("psteps_lift")],
     see: <sec:csim>,
   )[
     The elaboration annotates every statement with the nodes the compiler emits
     for it. The elaborated program compiles to the same graph, its residual
     command names its node (#isaconst("point", thy: "Elaborated_Compilation")), and every run of the program as
-    written is the erasure of one of its runs. The elaboration exists only in
-    the proof.
+    written is the erasure of one of its runs. A source configuration is observed
+    at the node its lift names ($gt.closed$, #isaconst("at_node")), and a
+    configuration reachable along two paths can be observed at two nodes. The elaboration
+    exists only in the proof.
   ],
 
   // ----------------------------------------------------------------- traces --
@@ -761,11 +763,10 @@
     see: <sec:headline>,
   )[
     For every finite source run from an initial store, if the analyzer returns
-    a report, the run lifts to a run of the elaboration, and the command of the
-    lifted run names the node $v$ at which the run stopped. The store is
-    collected there, the report describes it there in some context, and every definite
-    verdict listed there holds of it: every `PROVED` condition holds and every
-    `REFUTED` condition fails.
+    a report, the reached configuration is observed at some node
+    ($gt.closed$, #isaconst("at_node")). At every node where it is observed, the
+    store is collected, the report describes it in some context, every `PROVED`
+    condition listed there holds of it, and every `REFUTED` condition fails.
   ],
 
   // ------------------------------------------------------- Isabelle, trust --

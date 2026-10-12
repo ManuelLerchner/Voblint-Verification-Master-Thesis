@@ -1,6 +1,6 @@
 {
   /*
-   * Two analyses, one question. The markup shows the combined run of the first
+   * Combining two analyses through queries. The markup shows the combined run of the first
    * program; the tabs pick the program and the selection of analyses, and each
    * pair has its own pre-rendered view.
    */

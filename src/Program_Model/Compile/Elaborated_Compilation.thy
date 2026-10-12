@@ -781,4 +781,34 @@ next
     using csim.Returning[OF _ _ c1 c2 compiled_at_erase[OF Returning(5)]] by simp
 qed
 
+subsection \<open>The nodes a source configuration is observed at\<close>
+
+text \<open>A source configuration reached from \<open>s0\<close> is observed at node \<open>v\<close> when some run of the
+  elaboration from \<open>s0\<close> reaches an annotated configuration that erases to it, names \<open>v\<close>, and
+  is related to \<open>v\<close> by the simulation.  The relation is not functional: a configuration
+  reachable along two paths can be observed at two nodes.\<close>
+
+fun at_node :: "imp_prog \<Rightarrow> store \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> cfg_node \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rhd>/ _)" [51, 51, 51, 51] 50) where
+  "p, s0 \<turnstile> (r, s, frs) \<rhd> v \<longleftrightarrow>
+     (\<exists>c stk. erase c = r \<and> v = point c
+        \<and> declared_global p, elab_pt (prog_table p) (prog_procs p)
+            \<turnstile> (main_body (elab_pt (prog_table p) (prog_procs p)), s0, []) \<rightarrow>\<^sub>p\<^sup>* (c, s, frs)
+        \<and> elab_pt (prog_table p) (prog_procs p), prog_cfg p, prog_main_name
+            \<turnstile> (c, s, frs) \<approx> (v, s, stk))"
+
+text \<open>Erased, the simulation relates the plain configuration to the same node.\<close>
+
+lemma at_node_csim:
+  assumes wf: "wf_program_compile_input p" and at: "p, s0 \<turnstile> (r, s, frs) \<rhd> v"
+  shows "\<exists>stk. prog_table p, prog_cfg p, prog_main_name \<turnstile> (r, s, frs) \<approx> (v, s, stk)"
+proof -
+  from at obtain c stk where ec: "erase c = r"
+    and m: "elab_pt (prog_table p) (prog_procs p), prog_cfg p, prog_main_name
+              \<turnstile> (c, s, frs) \<approx> (v, s, stk)"
+    by auto
+  from csim_erase [OF m] ec erase_elab_pt(1) [OF wf]
+  show ?thesis by auto
+qed
+
 end

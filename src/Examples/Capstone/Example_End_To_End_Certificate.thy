@@ -508,12 +508,12 @@ text \<open>
 \<close>
 
 theorem certificate_demo_source_certified:
-  "\<exists>res v stk.
+  "\<exists>res v.
      run_voblint certificate_config
        certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved)]
-   \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog, prog_main_name \<turnstile> (SKIP (), (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
+   \<and> certificate_demo_prog, (\<lambda>_. 0) \<turnstile> (SKIP (), (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<rhd> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> v
@@ -525,7 +525,14 @@ proof (cases "run_voblint certificate_config
                        = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report by simp
   from run_voblint_source_sound [OF certificate_demo_init certificate_demo_run Analysed]
-  show ?thesis using Analysed checks by meson
+  obtain v where "certificate_demo_prog, (\<lambda>_. 0)
+                    \<turnstile> (SKIP (), (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<rhd> v"
+    and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
+           \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v"
+    and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> v"
+    and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> v"
+    by blast
+  with Analysed checks show ?thesis by - (intro exI conjI; assumption)
 qed (use certificate_demo_report in simp_all)
 
 text \<open>

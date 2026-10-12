@@ -475,18 +475,15 @@ L12 NON-VACUITY AND EXPORT
 ```isabelle
 theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
-  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p"
-      and "Πₑ ≡ elab_pt (prog_table p) (prog_procs p)" and "g ≡ prog_cfg p"
+  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
   assumes s0: "s0 ∈ cinit_stores 𝒢"
       and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "∃c stk. erase c = residual
-               ∧ 𝒢, Πₑ ⊢ (main_body Πₑ, s0, []) →⇩p⇧* (c, s, frs)
-               ∧ Πₑ, g, prog_main_name ⊢ (c, s, frs) ≈ (point c, s, stk)
-               ∧ Π, g, prog_main_name ⊢ (residual, s, frs) ≈ (point c, s, stk)
-               ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ (point c)
-               ∧ s ∈ ℛ⇘res⇙ (point c)
-               ∧ s ∈ 𝒱⇘res⇙ (point c)"
+  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
+       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
+                s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
+              ∧ s ∈ ℛ⇘res⇙ v
+              ∧ s ∈ 𝒱⇘res⇙ v)"
 ```
 
 There is no termination premise: `run_voblint` solves with the executable
@@ -500,8 +497,10 @@ Four things about this statement deserve a paragraph each in the thesis.
 not determine a CFG node, because in `if (b) { x = 1; } else { x = 1; }` both
 branches leave `x = 1`. The run lifts to a run of the elaboration `elab_pt`
 (`psteps_lift`), and the annotated command `c` of that run determines the node
-`point c` (`csim_point_compile_prog`). The theorem therefore quantifies over `c`
-rather than over a node.
+`point c` (`csim_point_compile_prog`). `at_node` (`p, s0 ⊢ cfg ⊳ v`) packages
+the lifted run and the elaborated simulation. It is relational: a configuration
+reachable along two paths is observed at two nodes, so the theorem states that
+some node exists and that every observed node is covered.
 
 *The context is existential too.* Under entry-state routing one store may be
 admitted at several contexts; under call strings at exactly one. A statement
@@ -2011,8 +2010,8 @@ and renderable by Typst's `image()` directly.
 | `recursion-spiral` | A call that never stops calling | 7.8, 14.3 |
 | `trust`, `iceberg` | Where the proof starts and stops | 1.3, 11.4 |
 | `timeline` | What a run is: source, graph, trace | 3.2, 4.3 |
-| `chain`, `strata` | The proof chain: each set inside the next | 4, 9, 12 |
-| `bridge` (“Take a pillar away”) | five facts hold the chain up; remove one and an honest-looking answer becomes a lie | **12.6** |
+| `chain`, `strata` | The proof chain | 4, 9, 12 |
+| `bridge` (“The five facts the chain rests on”) | five facts hold the chain up; remove one and an honest-looking answer becomes a lie | **12.6** |
 | `theorems` | The flagship theorems | 9.7 |
 | `build` | From Isabelle to your browser tab | 11.1 |
 | `align` | Voblint and Goblint, side by side | 12.7 |
@@ -2372,7 +2371,7 @@ where they are, but open §3.2 with the three-way statement so the reader knows
 two more are coming.
 → Re-verify: nothing; `csim_step` and `source_run_has_activation_trace` are stated correctly.
 
-**`chain` — "The proof chain: each set inside the next"**
+**`chain` — "The proof chain"**
 → *Soundness is a chain of set inclusions: the stores real runs have, the stores
 the graph's traces reach, those traces split by context, what the solver's answer
 concretizes to. Each link is its own theorem.*

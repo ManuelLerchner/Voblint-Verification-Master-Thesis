@@ -46,9 +46,8 @@ Interval, entry-state contexts, and warrowing. The theory builds the source run 
 It computes the answer by evaluation: both checks are #verdict("PROVED").
 #isathm("nv_source_certified") instantiates
 #isathm("run_voblint_source_sound") with every premise discharged. Its
-conclusion is the full one, including the lifted run of the elaboration and the
-node #isaconst("point", thy: "Elaborated_Compilation") of its command, and the
-evaluated answer adds that both checks are #verdict("PROVED"). In the same way,
+conclusion gives a node at which the run is observed (#isaconst("at_node"))
+together with the three memberships there. In the same way,
 #isathm("nv_check_proved_sound") instantiates
 #isathm("run_voblint_check_sound") at the check `a == 6`. For the reachability
 claim, a second program sets `x = 1` and guards a check by `x < 0`; the

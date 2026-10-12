@@ -1,4 +1,4 @@
-/* The proof chain: each set inside the next */
+/* The proof chain */
 
 :where(.scene-chain) .chain-line .dot-in {
   fill: var(--primary);

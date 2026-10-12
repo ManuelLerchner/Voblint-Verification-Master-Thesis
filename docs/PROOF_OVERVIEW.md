@@ -34,8 +34,8 @@ ordinary local edges, and a separate call relation. Compiler certificates and
 locality lemmas expose node ownership, procedure ranges, call continuations, and
 matching result boundaries.
 
-The located execution relation associates a source configuration of a running
-procedure with a CFG node, store, and activation stack. Control simulation shows that each source
+The simulation relation `csim` associates a source configuration, indexed by the
+procedure of its outermost activation, with a CFG node, store, and activation stack. Control simulation shows that each source
 step has a matching located CFG execution.
 
 ## Activation-trace semantics
@@ -93,8 +93,8 @@ through the analysis-defined global interface.
 
 The source theorem composes:
 
-- lifting the run to the program's elaboration, whose command names its node
-  (`psteps_lift`, `csim_point_compile_prog`);
+- lifting the run to the program's elaboration, whose command names a node the
+  configuration is observed at (`at_node`, `psteps_lift`, `csim_point_compile_prog`);
 - source/CFG simulation;
 - construction of a valid activation trace;
 - membership in the appropriate collector;

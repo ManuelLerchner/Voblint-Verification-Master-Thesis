@@ -13,7 +13,7 @@ text \<open>
   definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
   congruence remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
-  or weakening each admits an answer that misses a concrete execution.
+  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: pstep.IfTrue pstep.IfFalse)+cution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
   \<^const>\<open>pstep\<close> models the intended language.
@@ -149,44 +149,38 @@ text \<open>
 \<close>
 
 theorem nv_source_certified:
-  "\<exists>res c stk.
+  "\<exists>res v.
      run_voblint nv_config nv_prog
        = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved),
           (Statement 5, Decided Check_Proved)]
-   \<and> erase c = VIMP_Proc.gcom.Seq
-                  (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-                  (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))
-   \<and> declared_global nv_prog, elab_pt (prog_table nv_prog) (prog_procs nv_prog)
-       \<turnstile> (main_body (elab_pt (prog_table nv_prog) (prog_procs nv_prog)), \<lambda>_. 0, [])
-         \<rightarrow>\<^sub>p\<^sup>* (c, nv_final, [])
-   \<and> elab_pt (prog_table nv_prog) (prog_procs nv_prog), prog_cfg nv_prog, prog_main_name
-       \<turnstile> (c, nv_final, []) \<approx> (point c, nv_final, stk)
-   \<and> prog_table nv_prog, prog_cfg nv_prog, prog_main_name \<turnstile>
+   \<and> nv_prog, (\<lambda>_. 0) \<turnstile>
        (VIMP_Proc.gcom.Seq
           (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
           (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<approx>
-       (point c, nv_final, stk)
+        nv_final, []) \<rhd> v
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                   cinit_stores (declared_global nv_prog)\<^esub> (point c)
-   \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> (point c)
-   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> (point c)"
+                   cinit_stores (declared_global nv_prog)\<^esub> v
+   \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
+   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
   obtain res where ans: "run_voblint nv_config nv_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  show ?thesis
-    using run_voblint_source_sound [OF nv_init nv_to_check ans]
-    apply (elim exE conjE)
-    apply (intro exI conjI)
-            apply (rule ans)
-           apply (rule checks)
-          apply assumption+
-    done
+  from run_voblint_source_sound [OF nv_init nv_to_check ans]
+  obtain v where "nv_prog, (\<lambda>_. 0) \<turnstile>
+       (VIMP_Proc.gcom.Seq
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
+        nv_final, []) \<rhd> v"
+    and "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
+                     cinit_stores (declared_global nv_prog)\<^esub> v"
+    and "nv_final \<in> \<R>\<^bsub>res\<^esub> v" and "nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+    by blast
+  with ans checks show ?thesis by - (intro exI conjI; assumption)
 qed
 
 text \<open>

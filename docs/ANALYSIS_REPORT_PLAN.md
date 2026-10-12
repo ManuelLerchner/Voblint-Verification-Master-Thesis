@@ -202,9 +202,8 @@ run_voblint_source_sound:
   s0 ∈ cinit_stores 𝒢
   𝒢, Π ⊢ (main_body Π, s0, []) →p* (c, s, frs)
   run_voblint config p = Analysed res
-  ⟹ ∃ c' stk. erase c' = c ∧ (elaborated run to c') ∧ v = point c'
-             ∧ Π, g, prog_main_name ⊢ (c, s, frs) ≈ (v, s, stk)
-             ∧ s ∈ 𝒞 v ∧ s ∈ ℛ⇘res⇙ v ∧ s ∈ 𝒱(res, v)
+  ⟹ (∃v. p, s0 ⊢ (c, s, frs) ⊳ v)
+     ∧ (∀v. p, s0 ⊢ (c, s, frs) ⊳ v ⟶ s ∈ 𝒞 v ∧ s ∈ ℛ⇘res⇙ v ∧ s ∈ 𝒱(res, v))
 run_voblint_check_sound, run_voblint_dead_unreached,
 run_voblint_arithmetic_safe: the existing corollaries, restated over res.
 ```
