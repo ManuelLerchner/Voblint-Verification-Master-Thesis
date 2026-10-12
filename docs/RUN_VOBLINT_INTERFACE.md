@@ -157,7 +157,7 @@ The endpoints, all in `Analysis_Certified.thy`, have no termination premise:
 | `run_voblint_report_contract` | an analysed report answers a valid configuration and a well-formed program, is for exactly that configuration and `prog_cfg p`, is `well_formed_report` and `sound_report`; the theorems below are its consequences |
 | `run_voblint_covers` | `𝒞 v ⊆ ℛ⇘res⇙ v` |
 | `run_voblint_collect_sound` | `𝒞 v ⊆ 𝒱⇘res⇙ v` |
-| `run_voblint_source_sound` | a source run stopped anywhere sits at a node `v` (`csim`) with its store in `𝒞 v`, `ℛ⇘res⇙ v` and `𝒱⇘res⇙ v` |
+| `run_voblint_source_sound` | a source run stopped anywhere lifts to an elaborated run whose command `c` names the node `v = point c` (`csim`), with its store in `𝒞 v`, `ℛ⇘res⇙ v` and `𝒱⇘res⇙ v` |
 | `run_voblint_check_sound` | a run about to execute `Check e` finds a listed check for `e` at a node it reaches, not `Dead`, whose verdict holds |
 | `run_voblint_proved`, `run_voblint_refuted` | a definite verdict holds at every collected store |
 | `run_voblint_dead_unreached`, `run_voblint_dead_check_unreached` | a `DEAD` point collects no store |

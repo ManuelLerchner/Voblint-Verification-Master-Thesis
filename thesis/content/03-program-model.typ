@@ -227,13 +227,19 @@ Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
 execution.
 
-#definition(name: [Commands], isa: "com", cmd: "datatype")[
+#definition(name: [Commands], isa: "gcom", cmd: "datatype")[
   $
     c ::= & #skipC | x := e | #keyw("check") (e) | c";" c
             | #keyw("if") (e) {c} #keyw("else") {c} | #keyw("while") (e) {c} \
         | & [x :=] thin p(e, ..., e) | #keyw("return") e? | #ctor("Restore") | #ctor("Unwind")
   $
 ]
+
+Every constructor except sequencing also carries an _annotation_ whose type is
+a parameter of #isatype("gcom"). The semantics never reads it. A parsed program
+carries the unit annotation, and its commands form the type #isatype("com").
+@sec:csim uses the annotations to record where the compiler places each
+statement. Until then, the notation leaves them out.
 
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
@@ -397,7 +403,11 @@ store, says which names are global. A call needs this information because it res
 #isai("\<G>, \<Pi> \<turnstile> \<kappa> \<rightarrow>\<^sub>p \<kappa>'") for
 configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
-rules. The
+rules. Each rule passes the annotation of the command it rewrites on to the
+result. An assignment, for example, leaves a #skipC with its own annotation,
+and a call leaves a #ctor("Restore") that carries the call's annotation.
+Because no rule inspects an annotation, a run of the program as written and a
+run of an annotated copy take the same steps. The
 #link(
   "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics",
 )[explainer page]
@@ -824,8 +834,9 @@ run of the graph from its entry (@ch:traces), and every source run is matched by
 
 #definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
   #isaconst("csim"), written
-  #isai("\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
-  source configuration to a graph configuration holding the same store.
+  #isai("\<Pi>, g, p \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
+  source configuration to a graph configuration holding the same store, where
+  $p$ is the procedure whose body is running.
 ]
 
 #figure(
@@ -851,21 +862,37 @@ beneath both stacks. On the source side the caller is the wrapper
 commands $italic("afters")$, which #isaconst("seq_after") sequences after it. On
 the graph side it is a frame, and the caller's remaining work
 #isaconst("seq_after") #skipC $italic("afters")$ lies at the frame's
-continuation node $italic("cont")$. $sans("Returning")$ covers
+continuation node $italic("cont")$. Both suspended-caller rules also locate the
+call that opened the activation. A second #isaconst("control_at") premise
+places #isaconst("seq_after") $(ctor("Call", thy: "VIMP_Proc") thin q ...)$ $italic("afters")$ in
+the caller's body. This premise names the callee $q$, whose body the inner
+activation runs, and the index of the relation changes from $q$ to the
+caller's procedure. $sans("Returning")$ covers
 the moment after a callee finishes. The graph has reached
-$ctor("FunctionResult") thin p$, while the source still holds the
+$ctor("FunctionResult") thin q$ of that callee, while the source still holds the
 #ctor("Restore") of the activation, possibly behind an #ctor("Unwind") that is
-propagating toward it (#isaconst("pop_ready")).
+propagating toward it (#isaconst("pop_ready")). The #ctor("Restore") carries the
+annotation of its call (#isaconst("pop_ann")), which is the annotation that the
+call-site premise refers to.
 
-The relation is not functional. It only asks that the running command belong
-to some compiled body, so the same source configuration can be related to
-several nodes, for instance to a second, uncalled copy of a body. The simulation therefore yields _some_ related graph node, and the
-source-level theorem inherits this and states its conclusions at an
-existentially chosen node (@sec:headline). @sec:source-bridge pairs the
-relation with a trace that starts at the entry, so the chosen node is
-reachable. As future work, an elaboration phase could annotate every statement
-with the node the compiler emits for it, which would determine the node and
-remove the existential (@sec:outlook-extending).
+On a program as written, the relation does not determine the node. A source
+configuration records only the residual command, and equal commands can occur
+at different places. In `if (b) { x = 1; } else { x = 1; }`, for example, the
+residual `x = 1` of either branch is related to both branch nodes. The proof
+therefore reads every run through the program's _elaboration_
+(#isaconst("elab_pt")), which annotates each statement with the nodes the
+compiler emits for it. These are the node at which the statement starts, the
+node that control reaches after it, and the result node that a return through
+it reaches. The elaborated program compiles to the same graph
+(#isathm("compile_prog_elab_pt")), and on it the relation is functional. Its
+related node is the one that #isaconst("point", thy: "Elaborated_Compilation") reads off the annotation of the
+residual (#isathm("csim_point_compile_prog")). Every run of the program as
+written is the image of a run of its elaboration under the erasure of
+annotations (#isathm("psteps_lift")). Such a lifted run exists for every source
+run, and the lifted run determines its node, even though the raw residual alone
+need not. The annotations exist only in the proof, and the analyzer compiles
+the program as written. @sec:source-bridge pairs the relation with a trace
+that starts at the entry, so that the node is reachable.
 
 #theorem(name: [One step is matched], isa: "csim_step")[
   If a source configuration and a graph configuration are related by

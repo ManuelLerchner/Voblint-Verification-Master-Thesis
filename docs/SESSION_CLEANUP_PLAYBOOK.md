@@ -33,7 +33,7 @@ Scripts that helped (recreate under the scratchpad as needed):
   weight.** `proc_decl_of xs c` was `\<lparr>formals = xs, body = c\<rparr>`;
   every site unfolded `proc_decl_of_def`. Deleting it removed 21 unfold
   citations and the two selector lemmas that existed only to service it.
-  The OCaml side constructs `Proc_decl_ext (xs, c, ())` directly.
+  The OCaml side constructs the record directly (now `Gproc_decl_ext (xs, c, ())`).
 - **Polymorphic abbreviation instead of a concrete definition plus an
   abstract copy.** `bind_formals` (concrete) and `bind_formals_abs`
   (abstract) were the same `fold` over `zip`. One abbreviation at type

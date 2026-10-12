@@ -26,31 +26,31 @@
     },
     "compile.simps(5)": {
       "oracles": [],
-      "statement": "compile \\<Pi> p (com.If b c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c1.0 k (Suc n);\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k n1\n in (n2, Statement n,\n     {(Statement n, EA_Assume b, if c1.0 = SKIP then k else en1),\n      (Statement n, EA_AssumeNot b,\n       if c2.0 = SKIP then k else en2)} \\<union>\n     (if c1.0 = SKIP then {} else E1) \\<union>\n     (if c2.0 = SKIP then {} else E2),\n     K1 \\<union> K2))",
+      "statement": "compile \\<Pi> p (gcom.If i b c1.0 c2.0) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c1.0 k (Suc n);\n     (n2, en2, E2, K2) = compile \\<Pi> p c2.0 k n1\n in (n2, Statement n,\n     {(Statement n, EA_Assume b, if is_SKIP c1.0 then k else en1),\n      (Statement n, EA_AssumeNot b,\n       if is_SKIP c2.0 then k else en2)} \\<union>\n     (if is_SKIP c1.0 then {} else E1) \\<union>\n     (if is_SKIP c2.0 then {} else E2),\n     K1 \\<union> K2))",
       "theory": "VIMP_Proc_to_CFG",
       "why": "Program-model chapter: both branches of a conditional compile against one continuation."
     },
     "compile.simps(6)": {
       "oracles": [],
-      "statement": "compile \\<Pi> p (While b c) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c (Statement n) (Suc n)\n in (n1, Statement n,\n     {(Statement n, EA_Assume b, en1),\n      (Statement n, EA_AssumeNot b, k)} \\<union>\n     E1,\n     K1))",
+      "statement": "compile \\<Pi> p (While i b c) k n =\n(let (n1, en1, E1, K1) = compile \\<Pi> p c (Statement n) (Suc n)\n in (n1, Statement n,\n     {(Statement n, EA_Assume b, en1),\n      (Statement n, EA_AssumeNot b, k)} \\<union>\n     E1,\n     K1))",
       "theory": "VIMP_Proc_to_CFG",
       "why": "Program-model chapter: a loop body compiles against the loop head."
     },
     "compile.simps(8)": {
       "oracles": [],
-      "statement": "compile \\<Pi> p (Return e) k n =\n(Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})",
+      "statement": "compile \\<Pi> p (Return i e) k n =\n(Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})",
       "theory": "VIMP_Proc_to_CFG",
       "why": "Program-model chapter: a return edge targets the procedure's result node."
     },
     "csim_star": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi>,g \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p\\<^sup>*\n src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g \\<turnstile> src' \\<approx> cfg'",
+      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p\\<^sup>*\n src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
       "theory": "Simulation_Preservation",
       "why": "Main-statements appendix: simulation of source runs by the compiled graph."
     },
     "csim_step": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi>,g \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g \\<turnstile> src' \\<approx> cfg'",
+      "statement": "\\<lbrakk>\\<Pi>,g,\\<rho> \\<turnstile> (c, s, frs) \\<approx> (v, t, stk);\n procs_embedded \\<Pi> g; return_safe c;\n \\<G>,\\<Pi> \\<turnstile> (c, s, frs) \\<rightarrow>\\<^sub>p src'\\<rbrakk>\n\\<Longrightarrow> \\<exists>cfg'.\n                     \\<G>,g \\<turnstile>\n                     (v, t, stk) \\<rightarrow>\\<^sub>c\\<^sup>* cfg' \\<and>\n                     \\<Pi>,g,\\<rho> \\<turnstile> src' \\<approx> cfg'",
       "theory": "Simulation_Preservation",
       "why": "Program-model chapter: one source step is matched by the compiled graph."
     },
@@ -94,7 +94,7 @@
       "oracles": [
         "Code_Generator.holds_by_evaluation"
       ],
-      "statement": "\\<exists>res v stk.\n   run_voblint nv_config nv_prog = Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (report_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   prog_table nv_prog,prog_cfg nv_prog \\<turnstile>\n   (Seq (Check (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n     (Check (0, 0) (exp.Eq (V STR ''b'') (N 5))),\n    nv_final, []) \\<approx>\n   (v, nv_final, stk) \\<and>\n   nv_final\n   \\<in> \\<C>\\<^bsub>declared_global\n                      nv_prog,prog_cfg\n                               nv_prog,cinit_stores\n  (declared_global nv_prog)\\<^esub>\n          v \\<and>\n   nv_final \\<in> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n   nv_final \\<in> \\<V>\\<^bsub>res\\<^esub> v",
+      "statement": "\\<exists>res c stk.\n   run_voblint nv_config nv_prog = Analysed res \\<and>\n   map (\\<lambda>chk. (check_point chk, check_verdict chk))\n    (report_checks res) =\n   [(Statement 4, Decided Check_Proved),\n    (Statement 5, Decided Check_Proved)] \\<and>\n   erase c =\n   Seq (Check () (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n    (Check () (0, 0) (exp.Eq (V STR ''b'') (N 5))) \\<and>\n   declared_global\n    nv_prog,elab_pt (prog_table nv_prog) (prog_procs nv_prog) \\<turnstile>\n   (main_body (elab_pt (prog_table nv_prog) (prog_procs nv_prog)),\n    \\<lambda>_. 0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n   (c, nv_final, []) \\<and>\n   elab_pt (prog_table nv_prog)\n    (prog_procs nv_prog),prog_cfg nv_prog,prog_main_name \\<turnstile>\n   (c, nv_final, []) \\<approx> (point c, nv_final, stk) \\<and>\n   prog_table nv_prog,prog_cfg nv_prog,prog_main_name \\<turnstile>\n   (Seq (Check () (0, 0) (exp.Eq (V STR ''a'') (N 6)))\n     (Check () (0, 0) (exp.Eq (V STR ''b'') (N 5))),\n    nv_final, []) \\<approx>\n   (point c, nv_final, stk) \\<and>\n   nv_final\n   \\<in> \\<C>\\<^bsub>declared_global\n                      nv_prog,prog_cfg\n                               nv_prog,cinit_stores\n  (declared_global nv_prog)\\<^esub>\n          (point c) \\<and>\n   nv_final \\<in> \\<R>\\<^bsub>res\\<^esub> (point c) \\<and>\n   nv_final \\<in> \\<V>\\<^bsub>res\\<^esub> (point c)",
       "theory": "Example_Non_Vacuity",
       "why": "Non-vacuity section of the evaluation: the endpoint's premises hold for one program."
     },
@@ -108,25 +108,25 @@
     },
     "pstep.Call": {
       "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl);\n vals = map (\\<lambda>e. \\<lbrakk>e\\<rbrakk>\\<^sub>e s) actuals;\n callee = bind_formals (formals decl) vals (enter_state \\<G> s)\\<rbrakk>\n\\<Longrightarrow> \\<G>,\\<Pi> \\<turnstile>\n                  (com.Call dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) Restore, callee, Frame s dst # frs)",
+      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl);\n vals = map (\\<lambda>e. \\<lbrakk>e\\<rbrakk>\\<^sub>e s) actuals;\n callee = bind_formals (formals decl) vals (enter_state \\<G> s)\\<rbrakk>\n\\<Longrightarrow> \\<G>,\\<Pi> \\<turnstile>\n                  (gcom.Call i dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) (Restore i), callee, Frame s dst # frs)",
       "theory": "VIMP_Proc",
       "why": "Program-model chapter: the source step rule for a call."
     },
     "pstep.RestoreStep": {
       "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Restore, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Restore i, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
       "theory": "VIMP_Proc",
       "why": "Program-model chapter: the source step rule that restores the caller's frame."
     },
     "pstep.ReturnSome": {
       "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile> (Return (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind, s(ret_var := \\<lbrakk>e\\<rbrakk>\\<^sub>e s), frs)",
+      "statement": "\\<G>,\\<Pi> \\<turnstile> (Return i (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind i, s(ret_var := \\<lbrakk>e\\<rbrakk>\\<^sub>e s), frs)",
       "theory": "VIMP_Proc",
       "why": "Program-model chapter: the source step rule for returning a value."
     },
     "pstep.UnwindAct": {
       "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Seq Unwind Restore, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Seq (Unwind j) (Restore i), s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
       "theory": "VIMP_Proc",
       "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
     },
@@ -188,31 +188,31 @@
     },
     "run_voblint_source_sound": {
       "oracles": [],
-      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk.\n                     prog_table p,prog_cfg p \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>declared_global\n    p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v \\<and>\n                     s \\<in> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                     s \\<in> \\<V>\\<^bsub>res\\<^esub> v",
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res\\<rbrakk>\n\\<Longrightarrow> \\<exists>c stk.\n                     erase c = residual \\<and>\n                     declared_global\n                      p,elab_pt (prog_table p) (prog_procs p) \\<turnstile>\n                     (main_body (elab_pt (prog_table p) (prog_procs p)),\n                      s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n                     (c, s, frs) \\<and>\n                     elab_pt (prog_table p)\n                      (prog_procs p),prog_cfg p,prog_main_name \\<turnstile>\n                     (c, s, frs) \\<approx> (point c, s, stk) \\<and>\n                     prog_table p,prog_cfg p,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (point c, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>declared_global\n    p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              (point c) \\<and>\n                     s \\<in> \\<R>\\<^bsub>res\\<^esub> (point c) \\<and>\n                     s \\<in> \\<V>\\<^bsub>res\\<^esub> (point c)",
       "theory": "Analysis_Certified",
       "why": "The introduction states the source-level soundness result with its actual premises."
     },
     "run_voblint_spine": {
       "oracles": [],
-      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res;\n \\<And>t.\n    t \\<in> \\<T>\\<^bsub>declared_global\n                         p,prog_cfg\n                            p,cinit_stores\n                               (declared_global p)\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       activation_context_rel (declared_global p) adm c\\<^sub>0 (prog_cfg p)\n        t c;\n \\<And>v.\n    \\<Union>\n     (range\n       (\\<A>\\<^bsub>declared_global\n                     p,adm,c\\<^sub>0,prog_cfg\np,cinit_stores (declared_global p)\\<^esub>\n         v)) =\n    \\<C>\\<^bsub>declared_global\n                 p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n     v\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     prog_table p,prog_cfg p \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr (declared_global p) (prog_cfg p)\n                      (cinit_stores (declared_global p)) (v, s, stk)\n                      t \\<and>\n                     activation_context_rel (declared_global p) adm\n                      c\\<^sub>0 (prog_cfg p) t c \\<and>\n                     s \\<in> \\<A>\\<^bsub>declared_global\n    p,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>declared_global\np,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                          v)) =\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v \\<and>\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v\n                     \\<subseteq> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                     \\<R>\\<^bsub>res\\<^esub> v\n                     \\<subseteq> \\<V>\\<^bsub>res\\<^esub> v",
+      "statement": "\\<lbrakk>s0.0 \\<in> cinit_stores (declared_global p);\n declared_global p,prog_table p \\<turnstile>\n (main_body (prog_table p), s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs);\n run_voblint config p = Analysed res;\n \\<And>t.\n    t \\<in> \\<T>\\<^bsub>declared_global\n                         p,prog_cfg\n                            p,cinit_stores\n                               (declared_global p)\\<^esub> \\<Longrightarrow>\n    \\<exists>c.\n       activation_context_rel (declared_global p) adm c\\<^sub>0 (prog_cfg p)\n        t c;\n \\<And>v.\n    \\<Union>\n     (range\n       (\\<A>\\<^bsub>declared_global\n                     p,adm,c\\<^sub>0,prog_cfg\np,cinit_stores (declared_global p)\\<^esub>\n         v)) =\n    \\<C>\\<^bsub>declared_global\n                 p,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n     v\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t c.\n                     prog_table p,prog_cfg p,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr (declared_global p) (prog_cfg p)\n                      (cinit_stores (declared_global p)) (v, s, stk)\n                      t \\<and>\n                     activation_context_rel (declared_global p) adm\n                      c\\<^sub>0 (prog_cfg p) t c \\<and>\n                     s \\<in> \\<A>\\<^bsub>declared_global\n    p,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                              v c \\<and>\n                     \\<Union>\n                      (range\n                        (\\<A>\\<^bsub>declared_global\np,adm,c\\<^sub>0,prog_cfg p,cinit_stores (declared_global p)\\<^esub>\n                          v)) =\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v \\<and>\n                     \\<C>\\<^bsub>declared_global\n                                  p,prog_cfg\n                                     p,cinit_stores\n  (declared_global p)\\<^esub>\n                      v\n                     \\<subseteq> \\<R>\\<^bsub>res\\<^esub> v \\<and>\n                     \\<R>\\<^bsub>res\\<^esub> v\n                     \\<subseteq> \\<V>\\<^bsub>res\\<^esub> v",
       "theory": "Analysis_Certified",
       "why": "Results chapter: a source run's trace, its context and the chain to the verdicts, once for every policy."
     },
     "source_progress": {
       "oracles": [],
-      "statement": "\\<lbrakk>wf_source_program \\<G> \\<Pi>;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (c, s, frs)\\<rbrakk>\n\\<Longrightarrow> c = SKIP \\<and> frs = [] \\<or>\n                  (\\<exists>cfg'.\n                      \\<G>,\\<Pi> \\<turnstile>\n                      (c, s, frs) \\<rightarrow>\\<^sub>p cfg')",
+      "statement": "\\<lbrakk>wf_source_program \\<G> \\<Pi>;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (c, s, frs)\\<rbrakk>\n\\<Longrightarrow> is_SKIP c \\<and> frs = [] \\<or>\n                  (\\<exists>cfg'.\n                      \\<G>,\\<Pi> \\<turnstile>\n                      (c, s, frs) \\<rightarrow>\\<^sub>p cfg')",
       "theory": "Source_Progress",
       "why": "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
     },
     "source_reaches_node_collect": {
       "oracles": [],
-      "statement": "\\<lbrakk>wf_compile_input \\<G> Pi ps; s0.0 \\<in> S;\n \\<G>,Pi \\<turnstile> (main_body Pi, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk.\n                     Pi,compile_prog Pi ps \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>\\<G>,compile_prog Pi ps,S\\<^esub> v",
+      "statement": "\\<lbrakk>wf_compile_input \\<G> Pi ps; s0.0 \\<in> S;\n \\<G>,Pi \\<turnstile> (main_body Pi, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk.\n                     Pi,compile_prog Pi ps,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     s \\<in> \\<C>\\<^bsub>\\<G>,compile_prog Pi ps,S\\<^esub> v",
       "theory": "Source_Activation_Sound",
       "why": "Chapter 4: source-reachable stores are collected."
     },
     "source_run_has_activation_trace": {
       "oracles": [],
-      "statement": "\\<lbrakk>wf_compile_input \\<G> \\<Pi> ps; s0.0 \\<in> S;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t.\n                     \\<Pi>,compile_prog \\<Pi> ps \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr \\<G> (compile_prog \\<Pi> ps) S\n                      (v, s, stk) t",
+      "statement": "\\<lbrakk>wf_compile_input \\<G> \\<Pi> ps; s0.0 \\<in> S;\n \\<G>,\\<Pi> \\<turnstile>\n (main_body \\<Pi>, s0.0, []) \\<rightarrow>\\<^sub>p\\<^sup>*\n (residual, s, frs)\\<rbrakk>\n\\<Longrightarrow> \\<exists>v stk t.\n                     \\<Pi>,compile_prog \\<Pi> ps,prog_main_name \\<turnstile>\n                     (residual, s, frs) \\<approx> (v, s, stk) \\<and>\n                     activation_trace_repr \\<G> (compile_prog \\<Pi> ps) S\n                      (v, s, stk) t",
       "theory": "Source_To_Trace",
       "why": "Main-statements appendix: source runs are represented by valid traces."
     },

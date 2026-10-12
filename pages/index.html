@@ -4620,7 +4620,7 @@ fun main() {
           <tr><td class="nl-sym">γ d</td><td>the stores the abstract state <em>d</em> represents</td><td><a href="Voblint/Voblint_Domain/State_Concretization.html#State_Concretization.gamma_S%7Cconst"><code>gamma_S</code></a></td></tr>
           <tr><td class="nl-sym">𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em></td><td><a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst"><code>pstep</code></a> <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst"><code>psteps</code></a></td></tr>
           <tr><td class="nl-sym">𝒢,g ⊢ c →<sub>c</sub> c' / 𝒢,g ⊢ c →<sub>c</sub><sup>*</sup> c'</td><td><em>c</em> steps to <em>c′</em> in <em>g</em></td><td><a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.csteps%7Cconst"><code>csteps</code></a></td></tr>
-          <tr><td class="nl-sym">Π,g ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
+          <tr><td class="nl-sym">Π,g,p ⊢ c ≈ c'</td><td><em>c</em> is matched with <em>c′</em></td><td><a href="Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst"><code>csim</code></a></td></tr>
           <tr><td class="nl-sym">skip<sup>♯</sup> S / assign<sup>♯</sup> S / special<sup>♯</sup> S / branch<sup>♯</sup> S / body<sup>♯</sup> S / return<sup>♯</sup> S / event<sup>♯</sup> S</td><td>the <em>op</em> transfer of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst"><code>dgs_skip</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst"><code>dgs_assign</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst"><code>dgs_special</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst"><code>dgs_branch</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst"><code>dgs_body</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst"><code>dgs_return</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst"><code>dgs_event</code></a></td></tr>
           <tr><td class="nl-sym">enter<sup>♯</sup> S / combine_env<sup>♯</sup> S / combine_assign<sup>♯</sup> S</td><td>the call-boundary transfers of specification <em>S</em></td><td><a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst"><code>dgs_enter</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst"><code>dgs_combine_env</code></a> <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst"><code>dgs_combine_assign</code></a></td></tr>
           <tr><td class="nl-sym">combine<sup>♯</sup> 𝒢 dst σc σe</td><td>the abstract return of <em>σe</em> into <em>σc</em></td><td><a href="Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst"><code>combine_collect_abs</code></a></td></tr>
@@ -4654,17 +4654,26 @@ fun main() {
             <div class="rule" aria-label="Inference rule">
               <div class="rule-premises"><span class="rule-item" tabindex="0" data-ref="run">a run reaches store <code>s</code></span><span class="rule-item" tabindex="0" data-ref="ans"><code>run_voblint … = Analysed res</code></span></div>
               <div class="rule-bar"><span class="rule-name">source_sound</span></div>
-              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>v</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect v</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ℛ<sub>res</sub> v</code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱⇘res⇙ v</code></span></div>
+              <div class="rule-conclusions"><span class="rule-item" tabindex="0" data-ref="v">node <code>point c</code> matches the run</span><span class="rule-item" tabindex="0" data-ref="coll"><code>s ∈ node_collect (point c)</code></span><span class="rule-item" tabindex="0" data-ref="cover"><code>s ∈ ℛ<sub>res</sub> (point c)</code></span><span class="rule-item" tabindex="0" data-ref="checks"><code>s ∈ 𝒱<sub>res</sub> (point c)</code></span></div>
             </div>
             <div class="rule-explain" aria-live="polite"><p class="rule-explain-idle">Hover or focus a premise or conclusion for what it says exactly.</p></div>
             <p class="thm-plain">
               Run the program from any initial store whose globals start at zero, and stop
-              anywhere. If the analyzer answers <code>Analysed res</code>, then a node
-              <code>v</code> of the compiled graph matches where the run stopped, the store is one
-              the program's semantics really reaches at <code>v</code>, some state the report
-              holds at <code>v</code> describes it, and every definite verdict the report gives at
-              <code>v</code> holds of it. Termination is not a premise: the analyzer runs the
-              executable solver, and an answer means that solve finished.
+              anywhere. If the analyzer answers <code>Analysed res</code>, the store is one the
+              program's semantics really reaches at the node where the run stopped, some state the
+              report holds there describes it, and every definite verdict the report gives there
+              holds of it. Termination is not a premise: the analyzer runs the executable solver,
+              and an answer means that solve finished.
+            </p>
+            <p class="thm-plain">
+              The theorem also identifies that node. The program text alone does not determine
+              it, because in <code>if (b) { x = 1; } else { x = 1; }</code> both branches leave
+              the same command behind at different nodes. The proof therefore reads the run
+              through the program's <em>elaboration</em>, which annotates every statement with
+              the nodes the compiler emits for it and compiles to the same graph. The annotated
+              command <code>c</code> at which the run stopped determines the node
+              <code>point c</code>. The elaboration is used only in the proof, and the analyzer
+              runs the program as written.
             </p>
             <details>
               <summary>Isabelle statement</summary>
@@ -4673,10 +4682,14 @@ fun main() {
       and "declared_global p, prog_table p
              ⊢ (main_body (prog_table p), s0, []) →<sub>p</sub><sup>*</sup> (residual, s, frs)"
       and "run_voblint config p = Analysed res"
-  shows "∃v stk. prog_table p, prog_cfg p ⊢ (residual, s, frs) ≈ (v, s, stk)
-           ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> v
-           ∧ s ∈ ℛ<sub>res</sub> v
-           ∧ s ∈ 𝒱<sub>res</sub> v"</pre>
+  shows "∃c stk. erase c = residual
+           ∧ declared_global p, Π<sub>e</sub> ⊢ (main_body Π<sub>e</sub>, s0, []) →<sub>p</sub><sup>*</sup> (c, s, frs)
+           ∧ Π<sub>e</sub>, prog_cfg p, prog_main_name ⊢ (c, s, frs) ≈ (point c, s, stk)
+           ∧ prog_table p, prog_cfg p, prog_main_name ⊢ (residual, s, frs) ≈ (point c, s, stk)
+           ∧ s ∈ 𝒞<sub>declared_global p,prog_cfg p,cinit_stores (declared_global p)</sub> (point c)
+           ∧ s ∈ ℛ<sub>res</sub> (point c)
+           ∧ s ∈ 𝒱<sub>res</sub> (point c)"
+  (* Π<sub>e</sub> = elab_pt (prog_table p) (prog_procs p) *)</pre>
             </details>
           </article>
 
@@ -5167,7 +5180,7 @@ qed</code></pre>
 
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_check_sound%7Cfact" data-name="run_voblint_check_sound" data-theory="Voblint_CLI.Analysis_Certified" data-info="PROVED means the check holds, REFUTED that it fails, in every run that reaches it. It reaches the hub through run_voblint_source_sound, and uses the compiler a second time on top of that: csim_next_check_edge says the check the source is about to run is an edge at the matched node, which no result-line fact can know.">
               <rect x="1010" y="366" width="76" height="28" rx="6"/><text x="1048" y="385">PROVED</text></a>
-            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_covers, not through the source bridge: that bridge only says some node matches the run, so it cannot be read backwards into no run reaching a given node.">
+            <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_dead_check_unreached%7Cfact" data-name="run_voblint_dead_check_unreached" data-theory="Voblint_CLI.Analysis_Certified" data-info="DEAD means no run reaches the check. Proved forwards from run_voblint_covers, not through the source bridge: that bridge runs forwards, placing each run at its node, so it cannot be read backwards into no run reaching a given node.">
               <rect x="1010" y="426" width="76" height="28" rx="6"/><text x="1048" y="445">DEAD</text></a>
             <a class="metro-station metro-terminal" href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_arithmetic_safe%7Cfact" data-name="run_voblint_arithmetic_safe" data-theory="Voblint_CLI.Analysis_Certified" data-info="No diagnostic means no division by zero in any reached store. Stated at the node, over the collecting semantics, so it needs the semantics line but not the source bridge.">
               <rect x="1010" y="486" width="76" height="28" rx="6"/><text x="1048" y="505">SAFE</text></a>
@@ -5207,8 +5220,8 @@ qed</code></pre>
           too. What
           <a href="Voblint/Voblint_CLI/Analysis_Certified.html#Analysis_Certified.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>
           adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
-          purpose: the bridge says only that <em>some</em> node matches the run, so it cannot be
-          read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
+          purpose: the bridge runs forwards, placing each run at its node <code>point c</code>, so it
+          cannot be read backwards into &ldquo;no run reaches this node&rdquo;. That claim is proved
           forwards from the hub, at every collected store.
         </p>
         </figcaption>

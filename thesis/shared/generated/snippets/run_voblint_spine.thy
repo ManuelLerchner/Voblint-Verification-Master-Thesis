@@ -10,7 +10,7 @@ theorem run_voblint_spine:
       and ans: "run_voblint config p = Analysed res"
       and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
       and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c

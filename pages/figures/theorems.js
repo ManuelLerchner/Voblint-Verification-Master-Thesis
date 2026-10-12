@@ -59,8 +59,9 @@
       linkText: "run_voblint",
     },
     v: {
-      clause: "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)",
-      text: "The compiler's simulation relation matches the source state to a node `v` of the compiled graph, with the same store `s` and a matching stack `stk`. This is the forward simulation proved for the compiler.",
+      clause:
+        "∃c stk. erase c = residual ∧ … ∧ Πₑ, prog_cfg p, prog_main_name ⊢ (c, s, frs) ≈ (point c, s, stk)",
+      text: "The run lifts to a run of the program's elaboration `Πₑ`, which annotates every statement with the nodes the compiler emits for it. The annotated command `c` that this run reaches erases to the residual and determines the node `point c`. The compiler's simulation relates the state to that node, with the same store `s` and a matching stack `stk`, and the remaining conclusions hold at `v = point c`.",
       link: isaConst("Voblint_Compile", "Simulation_Relation", "csim"),
       linkText: "csim",
     },
@@ -205,6 +206,10 @@
     "main_body",
     "run_voblint",
     "csim",
+    "erase",
+    "elab_pt",
+    "point",
+    "prog_main_name",
     "prog_cfg",
     "node_collect",
     "cinit_stores",

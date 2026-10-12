@@ -475,14 +475,18 @@ L12 NON-VACUITY AND EXPORT
 ```isabelle
 theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
-  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
+  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p"
+      and "Πₑ ≡ elab_pt (prog_table p) (prog_procs p)" and "g ≡ prog_cfg p"
   assumes s0: "s0 ∈ cinit_stores 𝒢"
       and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
-                 ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-                 ∧ s ∈ ℛ⇘res⇙ v
-                 ∧ s ∈ 𝒱⇘res⇙ v"
+  shows "∃c stk. erase c = residual
+               ∧ 𝒢, Πₑ ⊢ (main_body Πₑ, s0, []) →⇩p⇧* (c, s, frs)
+               ∧ Πₑ, g, prog_main_name ⊢ (c, s, frs) ≈ (point c, s, stk)
+               ∧ Π, g, prog_main_name ⊢ (residual, s, frs) ≈ (point c, s, stk)
+               ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ (point c)
+               ∧ s ∈ ℛ⇘res⇙ (point c)
+               ∧ s ∈ 𝒱⇘res⇙ (point c)"
 ```
 
 There is no termination premise: `run_voblint` solves with the executable
@@ -492,9 +496,12 @@ its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res
 
 Four things about this statement deserve a paragraph each in the thesis.
 
-*The node is existential.* A source configuration does not determine a CFG
-node — `x := 1` in `main` and in an unused procedure match structurally. `csim`
-records the structural match; `node_collect` picks the reachable witness.
+*The node is determined through elaboration.* A raw source configuration does
+not determine a CFG node, because in `if (b) { x = 1; } else { x = 1; }` both
+branches leave `x = 1`. The run lifts to a run of the elaboration `elab_pt`
+(`psteps_lift`), and the annotated command `c` of that run determines the node
+`point c` (`csim_point_compile_prog`). The theorem therefore quantifies over `c`
+rather than over a node.
 
 *The context is existential too.* Under entry-state routing one store may be
 admitted at several contexts; under call strings at exactly one. A statement
@@ -1342,7 +1349,7 @@ PART III — THE ANALYZER
   9.5 Assembling one analysis: dg_analysis
   9.6 The monovariant case as an instance, not a special case
   9.7 run_voblint and its soundness theorem
-  9.8 Reading the theorem: the two existentials and the one premise
+  9.8 Reading the theorem: the lifted run, the context existential and the one premise
 
 PART IV — INSTANCES AND PRACTICE
 10 Five domains and an order analysis                           [8%]
@@ -2574,8 +2581,9 @@ that proved it, which would be a true statement about VIMP and not about C.
    exact one (`DEAD_not_exact`).
 7. **`wf_source_program`.** Every theorem assumes it. What does accepting fewer
    programs buy, and does it exclude anything interesting?
-8. **`csim` is structural and not functional**, so the source-level theorems are
-   existential in their node. Is that existential doing hidden work?
+8. **`csim` is not functional on raw programs**, so the headline names its node
+   through the elaboration. Why is the existential over the annotated command
+   harmless, and what does `psteps_lift` guarantee?
 9. **The result reader takes the global environment.** `rd` in
    `dg_analysis_adapter` reads a local value together with the solved global
    environment (`genv global_of`) through the placement's recombination

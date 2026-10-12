@@ -17,9 +17,10 @@ facts carry the whole guarantee:
 
 `PROVED` and `REFUTED` constrain the stores inside `ℛ⇘res⇙ v`; `DEAD` says there are
 none. With the first fact, `DEAD` gives `𝒞 v ⊆ ℛ⇘res⇙ v = ∅`. The source-level theorem
-keeps its existential node: a finite `pstep` run reaches some `v` related by `csim`,
-and its store lies in `𝒞 v`. No set of "source stores at `v`" is introduced, since
-the simulation is not functional.
+names its node through the elaboration. A finite `pstep` run lifts to a run of
+`elab_pt`, the annotated command `c` of that run gives `v = point c`, and the
+store lies in `𝒞 v`. No set of "source stores at `v`" is introduced, since on the program as
+written the simulation is not functional.
 
 The third fact is one direction only. A `Lifted` entry passed the product's
 emptiness test, which is sound and incomplete: `mcp_empty_v` reports a state empty
@@ -201,7 +202,8 @@ run_voblint_source_sound:
   s0 ∈ cinit_stores 𝒢
   𝒢, Π ⊢ (main_body Π, s0, []) →p* (c, s, frs)
   run_voblint config p = Analysed res
-  ⟹ ∃ v stk. Π, g ⊢ (c, s, frs) ≈ (v, s, stk)
+  ⟹ ∃ c' stk. erase c' = c ∧ (elaborated run to c') ∧ v = point c'
+             ∧ Π, g, prog_main_name ⊢ (c, s, frs) ≈ (v, s, stk)
              ∧ s ∈ 𝒞 v ∧ s ∈ ℛ⇘res⇙ v ∧ s ∈ 𝒱(res, v)
 run_voblint_check_sound, run_voblint_dead_unreached,
 run_voblint_arithmetic_safe: the existing corollaries, restated over res.

@@ -1,6 +1,6 @@
 (* src/Program_Model/Compile/VIMP_Proc_to_CFG.thy *)
 definition compile_proc ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
+  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a gproc_decl \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where

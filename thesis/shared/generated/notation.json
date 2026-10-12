@@ -235,7 +235,7 @@
       "group": "operator",
       "kind": "notation",
       "reads": "_c_ is matched with _c′_",
-      "meaning": "the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_",
+      "meaning": "the compiler's simulation relation between a source configuration _c_ of procedure _p_ and a configuration _c′_ of the compiled graph _g_",
       "forms": [
         {
           "const": "csim",
@@ -243,8 +243,8 @@
             "kind": "const",
             "name": "csim"
           },
-          "symbol": "\\<Pi>,g \\<turnstile> c \\<approx> c'",
-          "mixfix": "(_,_ \\<turnstile>/ _ \\<approx>/ _)",
+          "symbol": "\\<Pi>,g,p \\<turnstile> c \\<approx> c'",
+          "mixfix": "(_,_,_ \\<turnstile>/ _ \\<approx>/ _)",
           "declaration": "inductive",
           "scope": "global",
           "pretty_printed": true,

@@ -199,7 +199,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   column-gutter: 10pt,
   row-gutter: 8pt,
   align: (right + horizon, center + horizon, left + horizon),
-  [a store $s$ a source run reaches, \ at a node $v$ simulating the run],
+  [a store $s$ a source run reaches, \ at the run's node $v$],
   _step(sym.in, isathm("source_reaches_node_collect")),
   isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
 
@@ -214,8 +214,8 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
 The first step places a store that a finite source run reaches: it lies in the
-node collecting semantics at some node $v$ that simulates the run's
-execution configuration (the node is not necessarily unique, @sec:csim). The second step holds for a policy with a cover that meets all
+node collecting semantics at the node $v$ at which the run stands. The
+elaboration of @sec:csim determines this node. The second step holds for a policy with a cover that meets all
 five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts #isai("adm")
 admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
@@ -389,13 +389,17 @@ table #isaconst("prog_table") $p$. The theorem assumes three premises:
     (@sec:termination).
 ]
 
-It concludes that there exist a node $v$ of $g$ and a frame stack $"stk"$ such that:
+The abbreviation #isai("\<Pi>\<^sub>e") stands for the elaboration
+#isaconst("elab_pt") of the table (@sec:csim). The theorem concludes that there exist an annotated command
+$c$ and a frame stack $"stk"$ such that, for the node $v = #isaconst("point", thy: "Elaborated_Compilation") thin c$:
 
 #[
   #set enum(numbering: n => "(S" + str(n) + ")")
-  + the source configuration and the graph configuration $(v, s, "stk")$ are
-    related by the simulation #isaconst("csim") of @sec:csim, so $v$ is a node
-    at which the compiled program can stand when the source run reaches $s$;
+  + $c$ erases to the residual, and the elaborated program runs from `main` to
+    $c$ with the same store and frames, so the run lifts to the elaboration;
+  + both the elaborated and the original configuration are related by the
+    simulation #isaconst("csim") of @sec:csim to $(v, s, "stk")$, so $v$ is the
+    node the compiled program stands at when the source run reaches $s$;
   + #isai("s \<in> \<C>\<^bsub>\<G>,g,S\<^esub> v"): the store is collected at that node;
   + #isai("s \<in> \<R>\<^bsub>res\<^esub> v"): some state the report
     holds at $v$, under one of its contexts, describes $s$;

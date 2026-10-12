@@ -791,7 +791,7 @@ $tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
 #isai("'a") for a type variable, and $lambda x. t$ for the function that maps
 $x$ to $t$. A _datatype_ declares a type by its constructors and comes with
 case distinction and structural induction. VIMP's commands
-#isatype("com") are one (@sec:vimp). A _record_ is a tuple with named fields.
+#isatype("gcom") are one (@sec:vimp). A _record_ is a tuple with named fields.
 The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
 
 Every HOL function is total, so an ordinary recursive definition needs a
@@ -839,12 +839,13 @@ its premises after #isai("assumes") and states its conclusion after
 // deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
 #proved("run_voblint_source_sound")
 It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
-program's global variables, procedure table and graph as $cal(G)$, $Pi$ and
-$g$, and assumes an initial store, a source run $scripts(->)_p^*$ from it and an
-answer of the analyzer. It shows that some graph node $v$ and stack correspond
-to the reached configuration and that the reached store lies in the collecting
-semantics, in the state the report gives at $v$, and in the stores its
-verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
+program's global variables, procedure table, the table's elaboration and the
+graph as $cal(G)$, $Pi$, $Pi_e$ and $g$, and assumes an initial store, a source
+run $scripts(->)_p^*$ from it and an answer of the analyzer. It shows that the
+run lifts to a run of the elaboration, that the command $c$ this run reaches
+names the graph node $v = #isaconst("point", thy: "Elaborated_Compilation") thin c$ the reached configuration
+corresponds to, and that the reached store lies in the collecting semantics, in
+the state the report gives at $v$, and in the stores its verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
 $and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
 such as $tack.r$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.

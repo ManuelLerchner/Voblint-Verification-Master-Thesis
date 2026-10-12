@@ -117,8 +117,8 @@ forms = [
 [[entry]]
 group = "operator"
 reads = "_c_ is matched with _c′_"
-meaning = "the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_"
-forms = [{ const = "csim", args = ['\<Pi>', "g", "c", "c'"] }]
+meaning = "the compiler's simulation relation between a source configuration _c_ of procedure _p_ and a configuration _c′_ of the compiled graph _g_"
+forms = [{ const = "csim", args = ['\<Pi>', "g", "p", "c", "c'"] }]
 
 [[entry]]
 group = "operator"

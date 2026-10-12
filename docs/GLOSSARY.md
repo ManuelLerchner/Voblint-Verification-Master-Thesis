@@ -44,9 +44,11 @@ names.
 
 | Term | Meaning | Source |
 | --- | --- | --- |
-| `com` | Procedural command language: structured commands, calls, explicit returns, and internal restoration commands. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
-| `proc_decl` | Procedure declaration containing formal parameters and a body. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
-| `proc_table` | Partial map from procedure names to declarations. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
+| `gcom` / `acom` / `com` | Procedural command language: structured commands, calls, explicit returns, and internal restoration commands. Every constructor except `Seq` carries an annotation that the semantics never reads. `'a acom` fixes the variable and expression types, and a parsed program has type `com = unit acom`. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
+| `gproc_decl` / `proc_decl` | Procedure declaration containing formal parameters and a body. A parsed program uses `proc_decl = unit gproc_decl`. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
+| `ptable` / `proc_table` | Partial map from procedure names to declarations. A parsed program uses `proc_table = unit ptable`. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
+| `csim` | Simulation relation `Π, g, p ⊢ (c, s, frs) ≈ (v, s, stk)` between a source configuration and a graph configuration, where `p` is the procedure whose body is running. | `src/Program_Model/Compile/Simulation/Simulation_Relation.thy` |
+| `erase` / `elab_pt` / `point` | The elaboration `elab_pt` annotates every statement with the CFG nodes the compiler emits for it and compiles to the same graph. `erase` forgets the annotations, and `point c` reads the node off an annotated residual. Every plain run is the erasure of an elaborated run (`psteps_lift`). The elaboration is used only in the proof. | `src/Program_Model/Compile/Elaborated_Compilation.thy` |
 | `frame` | Saved caller store and optional return destination. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
 | `pstep` / `psteps` | Small-step execution over a command, store, and activation-frame stack. | `src/Program_Model/VIMP/VIMP_Proc.thy` |
 | `pcompletes` | Terminating source execution with an empty frame stack. | `src/Program_Model/VIMP/VIMP_Proc.thy` |

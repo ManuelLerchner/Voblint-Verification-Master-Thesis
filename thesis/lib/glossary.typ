@@ -278,6 +278,19 @@
     frame. Forward simulation matches every source run by a graph run that
     preserves it; the converse is not proved, and soundness does not need it.
   ],
+  term(
+    "elaboration",
+    "elaboration",
+    _prog,
+    isa: [#isaconst("elab_pt"), #isaconst("point", thy: "Elaborated_Compilation"), #isathm("psteps_lift")],
+    see: <sec:csim>,
+  )[
+    The elaboration annotates every statement with the nodes the compiler emits
+    for it. The elaborated program compiles to the same graph, its residual
+    command names its node (#isaconst("point", thy: "Elaborated_Compilation")), and every run of the program as
+    written is the erasure of one of its runs. The elaboration exists only in
+    the proof.
+  ],
 
   // ----------------------------------------------------------------- traces --
   term("activation", "activation", _trace, see: <sec:why-traces>)[
@@ -748,8 +761,9 @@
     see: <sec:headline>,
   )[
     For every finite source run from an initial store, if the analyzer returns
-    a report, some node matches where the run stopped, the store is collected
-    there, the report describes it there in some context, and every definite
+    a report, the run lifts to a run of the elaboration, and the command of the
+    lifted run names the node $v$ at which the run stopped. The store is
+    collected there, the report describes it there in some context, and every definite
     verdict listed there holds of it: every `PROVED` condition holds and every
     `REFUTED` condition fails.
   ],
