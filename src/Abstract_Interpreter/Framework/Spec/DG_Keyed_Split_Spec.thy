@@ -383,10 +383,10 @@ proof -
     proof
       fix s' assume "s' \<in> edge_collect a (gm (cmb ?d (full_view rg xs ?e)))"
       then obtain s where s: "s \<in> gm (cmb ?d (full_view rg xs ?e))" and st: "s' \<in> edge_step a s"
-        by (auto simp: edge_collect_def)
+        by (auto simp: gedge_collect_def)
       have "s \<in> gm (cmb ?d ?g)"
         using s gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
-      then have "s' \<in> edge_collect a (gm (cmb ?d ?g))" using st by (auto simp: edge_collect_def)
+      then have "s' \<in> edge_collect a (gm (cmb ?d ?g))" using st by (auto simp: gedge_collect_def)
       then have r: "s' \<in> gm ?r" using closed_step_sound[OF sound] by blast
       have fr: "\<forall>x. \<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> s' x = s x"
         using edge_step_frame[OF st] by auto

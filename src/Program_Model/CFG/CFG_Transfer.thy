@@ -16,41 +16,49 @@ text \<open>
   All the payload comes from the edge itself, so none of these needs the procedure table.
 \<close>
 
-definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
-  "edge_collect a S = {t. \<exists>s\<in>S. t \<in> edge_step a s}"
+locale cfg_transfer_sem = cfg_edge_sem ev rv conv
+  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" +
+  fixes glob :: "'v \<Rightarrow> bool"
+begin
+
+definition gedge_collect :: "('v, 'e) gedge_action \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> ('v \<Rightarrow> int) set" where
+  "gedge_collect a S = {t. \<exists>s\<in>S. t \<in> gedge_step a s}"
 
 lemma edge_collect_simps [simp]:
-  "edge_collect EA_Nop S = S"
-  "edge_collect (EA_Assign x a) S = {s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) | s. s \<in> S}"
-  "edge_collect (EA_Special sc x) S = {t. \<exists>s\<in>S. t \<in> special_step sc x s}"
-  "edge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
-  "edge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)}"
-  "edge_collect (EA_Body p) S = S"
-  "edge_collect (EA_Ret e p) S =
-     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s)) | s. s \<in> S}"
-  "edge_collect (EA_Check l c) S = S"
-  unfolding edge_collect_def by (auto split: if_splits)
+  "gedge_collect EA_Nop S = S"
+  "gedge_collect (EA_Assign x a) S = {s(x := conv (Some x) (ev a s)) | s. s \<in> S}"
+  "gedge_collect (EA_Special sc x) S = {t. \<exists>s\<in>S. t \<in> gspecial_step sc x s}"
+  "gedge_collect (EA_Assume b) S = {s. s \<in> S \<and> truthy (ev b s)}"
+  "gedge_collect (EA_AssumeNot b) S = {s. s \<in> S \<and> \<not> truthy (ev b s)}"
+  "gedge_collect (EA_Body p) S = S"
+  "gedge_collect (EA_Ret e p) S =
+     {s(rv := (case e of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s)) | s. s \<in> S}"
+  "gedge_collect (EA_Check l c) S = S"
+  unfolding gedge_collect_def by (auto split: if_splits)
 
 lemma edge_collect_single:
-  "edge_collect a {s} = edge_step a s"
+  "gedge_collect a {s} = gedge_step a s"
   by (cases a) (auto split: if_splits)
 
-lemma edge_collect_empty_set [simp]: "edge_collect a {} = {}"
+lemma edge_collect_empty_set [simp]: "gedge_collect a {} = {}"
   by (cases a) auto
 
 lemma edge_collect_mono:
   assumes "S \<subseteq> T"
-  shows "edge_collect a S \<subseteq> edge_collect a T"
+  shows "gedge_collect a S \<subseteq> gedge_collect a T"
   using assms by (cases a) auto
 
 subsection \<open>Return-value transfer\<close>
 
-text \<open>Return-value rehydration at the caller: write the callee's \<open>ret_var\<close> into the
-  destination over the combined store (callee globals, caller locals).  It is fixed by the
-  call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already records --- no side lookup.\<close>
+text \<open>Return-value rehydration at the caller: write the callee's return slot into the
+  destination over the combined store (callee globals, caller locals), converted to the
+  destination.  It is fixed by the call's destination \<open>dst\<close>, which the \<open>CallEdge\<close> already
+  records --- no side lookup.\<close>
 
-definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
-  "combine_collect \<G> dst s t = combine_assign dst (t ret_var) (combine_env \<G> s t)"
+definition gcombine_collect ::
+    "'v option \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int)" where
+  "gcombine_collect dst s t = combine_assign dst (conv dst (t rv)) (combine_env glob s t)"
 
 subsection \<open>Call-entry transfer\<close>
 
@@ -60,51 +68,76 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
   transfer needs no procedure table.  This is exactly the entered store produced by the
   source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
 
-definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter \<G> ca s =
+definition gcall_enter :: "('v, 'e) gcall_action \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int)" where
+  "gcall_enter ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        enter_binding \<G> 0 aval pars actuals s)"
+        enter_binding glob 0 ev pars actuals s)"
 
 lemma call_enter_CallEdge:
-  "call_enter \<G> (CallEdge dst pars actuals) s
-     = bind_formals pars (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
-  by (simp add: call_enter_def enter_binding_def enter_state_def)
+  "gcall_enter (CallEdge dst pars actuals) s
+     = bind_formals pars (map (\<lambda>e. ev e s) actuals) (enter_state glob s)"
+  by (simp add: gcall_enter_def enter_binding_def enter_state_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>
 lemma call_enter_Nil [simp]:
-  "call_enter \<G> (CallEdge dst [] []) s = enter_state \<G> s"
+  "gcall_enter (CallEdge dst [] []) s = enter_state glob s"
   by (simp add: call_enter_CallEdge)
 
-subsection \<open>What an edge reads and what it may change\<close>
+subsection \<open>What an edge may change\<close>
 
-text \<open>An edge reads the variables of its expressions. It may change only the
-  variable it assigns, and a return only its result slot.\<close>
+text \<open>An edge may change only the variable it assigns, and a return only its result slot.\<close>
 
-definition edge_reads :: "edge_action \<Rightarrow> vname list" where
-  "edge_reads a = sorted_list_of_set (\<Union> (exp_vnames ` set (edge_expressions a)))"
-
-fun edge_writes :: "edge_action \<Rightarrow> vname list" where
-  "edge_writes (EA_Assign x a) = [x]"
-| "edge_writes (EA_Special sc x) = [x]"
-| "edge_writes (EA_Ret e p) = [ret_var]"
-| "edge_writes _ = []"
+fun gedge_writes :: "('v, 'e) gedge_action \<Rightarrow> 'v list" where
+  "gedge_writes (EA_Assign x a) = [x]"
+| "gedge_writes (EA_Special sc x) = [x]"
+| "gedge_writes (EA_Ret e p) = [rv]"
+| "gedge_writes _ = []"
 
 text \<open>The frame each concrete step respects: a name outside its write set keeps
   its value. A call entry may only bind its formals, and a return takes every
   global from the callee except the destination it assigns.\<close>
 
 lemma edge_step_frame:
-  "t \<in> edge_step a s \<Longrightarrow> x \<notin> set (edge_writes a) \<Longrightarrow> t x = s x"
+  "t \<in> gedge_step a s \<Longrightarrow> x \<notin> set (gedge_writes a) \<Longrightarrow> t x = s x"
   by (cases a) (auto split: if_splits)
 
 lemma call_enter_frame:
-  "\<G> x \<Longrightarrow> x \<notin> set pars \<Longrightarrow> call_enter \<G> (CallEdge dst pars args) s x = s x"
+  "glob x \<Longrightarrow> x \<notin> set pars \<Longrightarrow> gcall_enter (CallEdge dst pars args) s x = s x"
   by (simp add: call_enter_CallEdge bind_formals_other enter_state_def)
 
 lemma combine_collect_frame:
-  "\<G> x \<Longrightarrow> dst \<noteq> Some x \<Longrightarrow> combine_collect \<G> dst s t x = t x"
-  by (cases dst) (auto simp: combine_collect_def)
+  "glob x \<Longrightarrow> dst \<noteq> Some x \<Longrightarrow> gcombine_collect dst s t x = t x"
+  by (cases dst) (auto simp: gcombine_collect_def)
+
+end
+
+definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
+  "edge_collect = cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n)"
+
+definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> store \<Rightarrow> store \<Rightarrow> store" where
+  "combine_collect \<G> = cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G>"
+
+definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
+  "call_enter \<G> = cfg_transfer_sem.gcall_enter aval \<G>"
+
+definition edge_writes :: "edge_action \<Rightarrow> vname list" where
+  "edge_writes = cfg_transfer_sem.gedge_writes ret_var"
+
+global_interpretation untyped?: cfg_transfer_sem aval ret_var "\<lambda>_ n. n" \<G>
+  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
+    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
+    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_transfer_sem.gedge_writes ret_var = edge_writes"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_writes_def)
+
+subsection \<open>What an edge reads\<close>
+
+text \<open>An edge reads the variables of its expressions.\<close>
+
+definition edge_reads :: "edge_action \<Rightarrow> vname list" where
+  "edge_reads a = sorted_list_of_set (\<Union> (exp_vnames ` set (edge_expressions a)))"
 
 subsection \<open>Finite global footprints\<close>
 

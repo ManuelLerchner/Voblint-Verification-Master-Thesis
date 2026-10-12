@@ -94,7 +94,7 @@ lemma pstep_frame_restrict:
   "\<G>, \<Pi> \<turnstile> (c, s, fr) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow> fr = frs @ extra \<Longrightarrow> frs \<noteq> [] \<Longrightarrow>
    \<exists>frs''. frs' = frs'' @ extra \<and> \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
-       arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
+       arbitrary: c s fr frs c' s' frs' rule: gpstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.hyps(2)[OF Seq2.prems] obtain frs'' where
     ih: "f1' = frs'' @ extra" "\<G>, \<Pi> \<turnstile> (c1, s1, frs) \<rightarrow>\<^sub>p (c1', s1', frs'')" by blast
@@ -122,7 +122,7 @@ lemma pstep_call_frame_restrict:
   "\<G>, \<Pi> \<turnstile> (c, s, fr) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow> head_call c \<Longrightarrow> fr = frs @ extra \<Longrightarrow>
    \<exists>frs''. frs' = frs'' @ extra \<and> \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs'')"
 proof (induction "(c, s, fr)" "(c', s', frs')"
-       arbitrary: c s fr frs c' s' frs' rule: pstep.induct)
+       arbitrary: c s fr frs c' s' frs' rule: gpstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2 frs)
   from Seq2.prems(1) have "head_call c1" by simp
   from Seq2.hyps(2)[OF this Seq2.prems(2)] obtain frs'' where
@@ -139,7 +139,7 @@ text \<open>The CFG dual: a \<^const>\<open>cstep\<close> also touches only the 
 lemma cstep_frame_extend:
   "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (u', s', stk') \<Longrightarrow>
    \<G>, g \<turnstile> (u, s, stk @ E) \<rightarrow>\<^sub>c (u', s', stk' @ E)"
-  by (erule cstep.cases) auto
+  by (erule gcstep.cases) auto
 
 lemma cstep_star_frame_extend:
   assumes "\<G>, g \<turnstile> c \<rightarrow>\<^sub>c\<^sup>* c'"
@@ -234,7 +234,7 @@ proof -
                 \<in> calls g" using edgeK Ksub by (auto simp: decl)
   have cstep1: "\<G>, g \<turnstile> (Statement j, s, [])
            \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst (formals decl) actuals) s,
-            [(w, dst, s)])" by (rule cstep.Call[OF edge])
+            [(w, dst, s)])" by (rule gcstep.Call[OF edge])
   have ce: "call_enter \<G> (CallEdge dst (formals decl) actuals) s = ?callee"
     by (rule call_enter_CallEdge)
   obtain kq m en_q where
@@ -408,7 +408,7 @@ next
       by (rule control_at_skip_to_exit[OF ctrl _ comp Esub]) simp
     have "\<G>, g \<turnstile> (kin, s0, [(cont, dst, caller)])
             \<rightarrow>\<^sub>c (FunctionResult q, s0, [(cont, dst, caller)])"
-      using cstep.Intra[OF exitedge edge_step_EA_Ret_ret_store_mem] by simp
+      using gcstep.Intra[OF exitedge edge_step_EA_Ret_ret_store_mem] by simp
     with star1 have star: "\<G>, g \<turnstile> (v0, s0, [(cont, dst, caller)])
                              \<rightarrow>\<^sub>c\<^sup>* (FunctionResult q, s0, [(cont, dst, caller)])"
       by (rule star_trans[OF _ star_step1])
@@ -506,7 +506,7 @@ next
       using edge Esub by blast
     have cstep1: "\<G>, g \<turnstile> (Statement j, s0, [(cont, dst, caller)])
                           \<rightarrow>\<^sub>c (FunctionResult q, ret_store e s0, [(cont, dst, caller)])"
-      using cstep.Intra[OF edgeg edge_step_EA_Ret_ret_store_mem] .
+      using gcstep.Intra[OF edgeg edge_step_EA_Ret_ret_store_mem] .
     \<comment> \<open>the enclosing wrapper becomes @{text Returning}\<close>
     have rel: "\<Pi>, g, pc \<turnstile> (seq_after (Seq (seq_after (Unwind ir) cafters) (Restore i)) afters, ret_store e s0,
          [Frame caller dst]) \<approx> (FunctionResult q, ret_store e s0, [(cont, dst, caller)])"
@@ -572,9 +572,9 @@ proof -
   proof (rule disjE)
     assume "(h', s', frs') =
               (SKIP i, combine_assign dst (callee ret_var) (combine_env \<G> caller callee), [])"
-    hence h': "h' = SKIP i" "s' = ?rs" "frs' = []" by (auto simp: combine_collect_def)
+    hence h': "h' = SKIP i" "s' = ?rs" "frs' = []" by (auto simp: gcombine_collect_def)
     have "\<G>, g \<turnstile> (FunctionResult q, callee, [(cont, dst, caller)]) \<rightarrow>\<^sub>c (cont, ?rs, [])"
-      by (rule cstep.Return)
+      by (rule gcstep.Return)
     moreover have "\<Pi>, g, pc \<turnstile> (seq_after (SKIP i) afters, ?rs, []) \<approx> (cont, ?rs, [])"
       by (rule csim.Base[OF loc cacc])
     ultimately show ?thesis using src' h' by auto

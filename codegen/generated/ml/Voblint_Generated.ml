@@ -115,8 +115,8 @@ module Generated : sig
     While of 'a * 'c * ('a, 'b, 'c) gcom |
     Call of 'a * 'b option * string * 'c list | Return of 'a * 'c option |
     Restore of 'a | Unwind of 'a
-  type ('a, 'b) gproc_decl_ext =
-    Gproc_decl_ext of string list * ('a, string, exp) gcom * 'b
+  type ('a, 'b, 'c, 'd) gproc_decl_ext =
+    Gproc_decl_ext of 'b list * ('a, 'b, 'c) gcom * 'd
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
   type ('a, 'b, 'c) gcfg_ext
@@ -174,7 +174,8 @@ module Generated : sig
   val cfg_entry : ('a, 'b, 'c) gcfg_ext -> cfg_node
   val declared_global_vars : 'a imp_prog_ext -> string list
   val prog_table :
-    unit imp_prog_ext -> string -> (unit, unit) gproc_decl_ext option
+    unit imp_prog_ext ->
+      string -> (unit, string, exp, unit) gproc_decl_ext option
   val prog_procs : unit imp_prog_ext -> string list
   val arithmetic_divisor : arithmetic_obligation -> exp
   val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
@@ -182,7 +183,7 @@ module Generated : sig
     unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val mk_program :
-    (string * (unit, unit) gproc_decl_ext) list ->
+    (string * (unit, string, exp, unit) gproc_decl_ext) list ->
       (unit, string, exp) gcom -> string list -> unit imp_prog_ext
   val run_voblint :
     analysis_config ->
@@ -4591,17 +4592,18 @@ let rec equal_gcom _A _B _C
         eq _A x21 y21 && (eq _B x22 y22 && eq _C x23 y23)
     | SKIP x1, SKIP y1 -> eq _A x1 y1;;
 
-type ('a, 'b) gproc_decl_ext =
-  Gproc_decl_ext of string list * ('a, string, exp) gcom * 'b;;
+type ('a, 'b, 'c, 'd) gproc_decl_ext =
+  Gproc_decl_ext of 'b list * ('a, 'b, 'c) gcom * 'd;;
 
-let rec equal_gproc_decl_exta _A _B
+let rec equal_gproc_decl_exta _A _B _C _D
   (Gproc_decl_ext (formalsa, bodya, morea))
     (Gproc_decl_ext (formals, body, more)) =
-    equal_lista equal_literal formalsa formals &&
-      (equal_gcom _A equal_literal equal_exp bodya body && eq _B morea more);;
+    equal_lista _B formalsa formals &&
+      (equal_gcom _A _B _C bodya body && eq _D morea more);;
 
-let rec equal_gproc_decl_ext _A _B =
-  ({equal = equal_gproc_decl_exta _A _B} : ('a, 'b) gproc_decl_ext equal);;
+let rec equal_gproc_decl_ext _A _B _C _D =
+  ({equal = equal_gproc_decl_exta _A _B _C _D} :
+    ('a, 'b, 'c, 'd) gproc_decl_ext equal);;
 
 type color = R | B;;
 
@@ -4824,7 +4826,8 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
 
 type 'a imp_prog_ext =
   Imp_prog_ext of
-    (string * (unit, unit) gproc_decl_ext) list * string list * 'a;;
+    (string * (unit, string, exp, unit) gproc_decl_ext) list * string list *
+      'a;;
 
 type ('a, 'b, 'c, 'd) solved_run_ext =
   Solved_run_ext of
@@ -13116,7 +13119,9 @@ let rec wf_program_compile_input_exec
             (equal_set equal_literal (Set (prog_procs p))
                (remove equal_literal prog_main_name (Set (map fst procs))) &&
               (not (membera equal_literal (prog_procs p) prog_main_name) &&
-                (equal_option (equal_gproc_decl_ext equal_unit equal_unit)
+                (equal_option
+                   (equal_gproc_decl_ext equal_unit equal_literal equal_exp
+                     equal_unit)
                    (pi prog_main_name)
                    (Some (Gproc_decl_ext ([], prog_main p, ()))) &&
                   (wf_source_com pi (prog_main p) &&

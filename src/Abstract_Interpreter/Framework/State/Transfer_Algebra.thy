@@ -157,7 +157,7 @@ proof (rule enter_binding_sound_list_all2[OF sv reset_full])
 qed
 
 lemma enter_binding_mono:
-  fixes reset_val :: "'a::order"
+  fixes reset_val :: "'a::order" and d1 d2 :: "'a abs_state"
   assumes state_le: "d1 \<le> d2"
     and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
   shows "enter_binding \<G> reset_val aval_abs xs es d1
@@ -241,7 +241,7 @@ lemma combine_collect_sound [intro]:
   fixes dc de :: "'a::numeric_domain abs_state"
   assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
   shows "combine_collect \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
-  unfolding combine_collect_def combine_collect_abs_def
+  unfolding gcombine_collect_def combine_collect_abs_def
   using combine_env_sound[OF sc se] gamma_stateD[OF se]
   by (cases dst) (auto simp add: gamma_state_upd)
 

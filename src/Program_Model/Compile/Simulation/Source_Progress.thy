@@ -67,7 +67,7 @@ next
     with Call.prems obtain sc x where
       sc: "classify_special desc actuals = Some sc" and dst: "dst = Some x"
       by (auto split: option.splits)
-    obtain v where "special_result sc s v" using special_result_ex by blast
+    obtain v where "special_result aval sc s v" using special_result_ex [of aval sc s] by blast
     with Some sc show ?thesis unfolding dst by blast
   qed
 qed auto

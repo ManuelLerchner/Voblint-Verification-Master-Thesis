@@ -62,7 +62,7 @@ locale sound_nonrelational_transfer =
   assumes tf_sound_assign_for[intro]:
     "s \<in> \<gamma> d \<Longrightarrow> s(x := \<lbrakk>a\<rbrakk>\<^sub>e s) \<in> \<gamma> (asn x a d)"
   assumes tf_sound_special_for[intro]:
-    "s \<in> \<gamma> d \<Longrightarrow> special_result sc s v \<Longrightarrow> s(x := v) \<in> \<gamma> (sp sc x d)"
+    "s \<in> \<gamma> d \<Longrightarrow> special_result aval sc s v \<Longrightarrow> s(x := v) \<in> \<gamma> (sp sc x d)"
   assumes tf_sound_branch_for[intro]:
     "s \<in> \<gamma> d \<Longrightarrow> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol \<Longrightarrow> s \<in> \<gamma> (br b pol d)"
   assumes tf_sound_skip_for[intro]:

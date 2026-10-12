@@ -58,16 +58,16 @@ why = "Non-vacuity section of the evaluation: the endpoint's premises hold for o
 session = "Voblint_Examples"
 theory = "Voblint_Examples.Example_Non_Vacuity"
 
-[facts."pstep.Call"]
+[facts."gpstep.Call"]
 why = "Program-model chapter: the source step rule for a call."
 
-[facts."pstep.ReturnSome"]
+[facts."gpstep.ReturnSome"]
 why = "Program-model chapter: the source step rule for returning a value."
 
-[facts."pstep.RestoreStep"]
+[facts."gpstep.RestoreStep"]
 why = "Program-model chapter: the source step rule that restores the caller's frame."
 
-[facts."pstep.UnwindAct"]
+[facts."gpstep.UnwindAct"]
 why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
 
 [facts."compile.simps(4)"]

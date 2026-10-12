@@ -169,7 +169,7 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   relies on (\<open>prog_node_reaches\<close>).\<close>
 
 definition compile_proc ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a gproc_decl \<Rightarrow> nat
+  "'a ptable \<Rightarrow> pname \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where

@@ -360,7 +360,7 @@ lemma ret_guarded_pstep:
   shows "ret_guarded allow_return c'"
   using step assms(3)
 proof (induction "(c, s, frs)" "(c', s', frs')"
-       arbitrary: c s frs c' s' frs' allow_return rule: pstep.induct)
+       arbitrary: c s frs c' s' frs' allow_return rule: gpstep.induct)
   case Call
   then show ?case using bodies ret_guarded_True_source by auto
 next
@@ -410,14 +410,14 @@ lemma intra_step_not_returning:
 
 text \<open>A declared procedure's name is never one \<^const>\<open>special_table\<close> also classifies: the
   same disjointness \<open>procs_embedded\<close> bundles in the next theory, supplied directly since this
-  lemma sits upstream of that definition.  Without it the \<open>pstep.Call\<close> case cannot rule out
-  \<open>c\<close> also matching \<open>pstep.Special\<close>, which \<^const>\<open>head_call\<close> excludes.\<close>
+  lemma sits upstream of that definition.  Without it the \<open>gpstep.Call\<close> case cannot rule out
+  \<open>c\<close> also matching \<open>gpstep.Special\<close>, which \<^const>\<open>head_call\<close> excludes.\<close>
 lemma pstep_intra_classify:
   assumes disj: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> special_table p = None"
   shows "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow> \<not> head_call c \<Longrightarrow> \<not> head_return c \<Longrightarrow>
    \<not> is_returning c \<Longrightarrow> intra_step \<Pi> (c, s, frs) (c', s', frs')"
 proof (induction "(c, s, frs)" "(c', s', frs')"
-       arbitrary: c s frs c' s' frs' rule: pstep.induct)
+       arbitrary: c s frs c' s' frs' rule: gpstep.induct)
   case (Seq2 c1 s1 f1 c1' s1' f1' c2)
   from Seq2.prems have "\<not> head_call c1" "\<not> head_return c1" "\<not> is_returning c1" by auto
   from Seq2.hyps(2)[OF this] have ih: "intra_step \<Pi> (c1, s1, f1) (c1', s1', f1')" .

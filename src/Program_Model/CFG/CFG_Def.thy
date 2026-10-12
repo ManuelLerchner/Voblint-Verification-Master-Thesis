@@ -151,27 +151,79 @@ text \<open>
   callers reasoning about an as-yet-unclassified \<open>sc\<close> case-split on it instead.
 \<close>
 
-fun special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
-  "special_step sc x s = {s(x := v) |v. special_result sc s v}"
+text \<open>The edge semantics is generic in the language, with the parameters of
+  \<^locale>\<open>vimp_sem\<close> that an edge needs: the evaluator, the return slot, and the conversion
+  at a written destination.\<close>
 
-lemma special_step_nonempty [simp]: "special_step sc x s \<noteq> {}"
+locale cfg_edge_sem =
+  fixes ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int"
+    and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int"
+begin
+
+fun gspecial_step :: "'e gspecial_call \<Rightarrow> 'v \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) set" where
+  "gspecial_step sc x s = {s(x := conv (Some x) v) |v. special_result ev sc s v}"
+
+lemma special_step_nonempty [simp]: "gspecial_step sc x s \<noteq> {}"
   by (cases sc) auto
 
 text \<open>\<open>edge_step\<close> is the single primitive semantics of an intra action.  It is defined for
   every constructor and has no call case; guards are the only source of an empty result.\<close>
 
-fun edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
-  "edge_step EA_Nop s = {s}"
-| "edge_step (EA_Assign x a) s = {s(x := \<lbrakk>a\<rbrakk>\<^sub>e s)}"
-| "edge_step (EA_Special sc x) s = special_step sc x s"
-| "edge_step (EA_Assume b) s = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then {s} else {})"
-| "edge_step (EA_AssumeNot b) s = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then {} else {s})"
-| "edge_step (EA_Body p) s = {s}"
-| "edge_step (EA_Ret e p) s =
-     {s(ret_var := (case e of None \<Rightarrow> s ret_var | Some a \<Rightarrow> \<lbrakk>a\<rbrakk>\<^sub>e s))}"
-| "edge_step (EA_Check l c) s = {s}"
+fun gedge_step :: "('v, 'e) gedge_action \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) set" where
+  "gedge_step EA_Nop s = {s}"
+| "gedge_step (EA_Assign x a) s = {s(x := conv (Some x) (ev a s))}"
+| "gedge_step (EA_Special sc x) s = gspecial_step sc x s"
+| "gedge_step (EA_Assume b) s = (if truthy (ev b s) then {s} else {})"
+| "gedge_step (EA_AssumeNot b) s = (if truthy (ev b s) then {} else {s})"
+| "gedge_step (EA_Body p) s = {s}"
+| "gedge_step (EA_Ret e p) s =
+     {s(rv := (case e of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s))}"
+| "gedge_step (EA_Check l c) s = {s}"
 
-subsection \<open>Intra-only execution paths\<close>
+text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open>intra_path\<close> is its \<^const>\<open>star\<close>, so
+  reflexivity, transitivity and the induction rule come from \<^theory>\<open>HOL-IMP.Star\<close> rather than
+  from a bespoke closure.  The name avoids \<open>intra_step\<close>, which is the \<^emph>\<open>source\<close>-level
+  \<^const>\<open>pstep\<close> fragment.\<close>
+
+definition gcfg_intra_step ::
+    "('v, 'e) gcfg \<Rightarrow> cfg_node \<times> ('v \<Rightarrow> int) \<Rightarrow> cfg_node \<times> ('v \<Rightarrow> int) \<Rightarrow> bool" where
+  "gcfg_intra_step g p q \<longleftrightarrow>
+     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> snd q \<in> gedge_step a (snd p))"
+
+lemma cfg_intra_stepI [intro]:
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> gedge_step a s \<Longrightarrow> gcfg_intra_step g (u, s) (v, s')"
+  by (auto simp: gcfg_intra_step_def)
+
+lemma cfg_intra_stepE [elim]:
+  assumes "gcfg_intra_step g (u, s) (v, s')"
+  obtains a where "(u, a, v) \<in> intra g" "s' \<in> gedge_step a s"
+  using assms by (auto simp: gcfg_intra_step_def)
+
+lemma intra_path_single:
+  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> gedge_step a s \<Longrightarrow> star (gcfg_intra_step g) (u, s) (v, s')"
+  by (intro star_step1 cfg_intra_stepI)
+
+lemma intra_path_nop:
+  "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> star (gcfg_intra_step g) (u, s) (v, s)"
+  by (rule intra_path_single[where a = EA_Nop]) simp_all
+
+end
+
+definition special_step :: "special_call \<Rightarrow> vname \<Rightarrow> store \<Rightarrow> store set" where
+  "special_step = cfg_edge_sem.gspecial_step aval (\<lambda>_ n. n)"
+
+definition edge_step :: "edge_action \<Rightarrow> store \<Rightarrow> store set" where
+  "edge_step = cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n)"
+
+definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
+  "cfg_intra_step = cfg_edge_sem.gcfg_intra_step aval ret_var (\<lambda>_ n. n)"
+
+global_interpretation untyped?: cfg_edge_sem aval ret_var "\<lambda>_ n. n"
+  rewrites "cfg_edge_sem.gspecial_step aval (\<lambda>_ n. n) = special_step"
+    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
+    and "cfg_edge_sem.gcfg_intra_step aval ret_var (\<lambda>_ n. n) = cfg_intra_step"
+  by (simp_all add: special_step_def edge_step_def cfg_intra_step_def)
 
 text \<open>
   \<open>intra_path\<close> is the reflexive-transitive closure of \<^const>\<open>edge_step\<close> along \<^const>\<open>intra\<close>
@@ -180,35 +232,8 @@ text \<open>
   stack-representation side condition, and to a stack-preserving CFG run at any stack.
 \<close>
 
-text \<open>One intra transition on a \<open>(node, store)\<close> pair.  \<open>intra_path\<close> is its \<^const>\<open>star\<close>, so
-  reflexivity, transitivity and the induction rule come from \<^theory>\<open>HOL-IMP.Star\<close> rather than
-  from a bespoke closure.  The name avoids \<open>intra_step\<close>, which is the \<^emph>\<open>source\<close>-level
-  \<^const>\<open>pstep\<close> fragment.\<close>
-
-definition cfg_intra_step :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
-  "cfg_intra_step g p q \<longleftrightarrow>
-     (\<exists>a. (fst p, a, fst q) \<in> intra g \<and> snd q \<in> edge_step a (snd p))"
-
 abbreviation intra_path :: "cfg \<Rightarrow> cfg_node \<times> store \<Rightarrow> cfg_node \<times> store \<Rightarrow> bool" where
   "intra_path g \<equiv> star (cfg_intra_step g)"
-
-lemma cfg_intra_stepI [intro]:
-  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> cfg_intra_step g (u, s) (v, s')"
-  by (auto simp: cfg_intra_step_def)
-
-lemma cfg_intra_stepE [elim]:
-  assumes "cfg_intra_step g (u, s) (v, s')"
-  obtains a where "(u, a, v) \<in> intra g" "s' \<in> edge_step a s"
-  using assms by (auto simp: cfg_intra_step_def)
-
-lemma intra_path_single:
-  "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow> intra_path g (u, s) (v, s')"
-  by (intro star_step1 cfg_intra_stepI)
-
-lemma intra_path_nop:
-  "(u, EA_Nop, v) \<in> intra g \<Longrightarrow> intra_path g (u, s) (v, s)"
-  by (rule intra_path_single[where a = EA_Nop]) simp_all
-
 
 subsection \<open>Node set (derived, not stored)\<close>
 

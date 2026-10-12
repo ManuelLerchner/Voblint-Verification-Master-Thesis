@@ -97,7 +97,7 @@ text \<open>
 \<close>
 
 lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.gcom.Check () l cond) s s"
-  by (rule star.step) (rule pstep.Check, rule star.refl)
+  by (rule star.step) (rule gpstep.Check, rule star.refl)
 
 lemma pcompletes_Call_return:
   assumes p: "\<Pi> p = Some decl"
@@ -122,11 +122,11 @@ proof -
     using arity bd dist p pstep_Call by fastforce
   have c2: "\<G>, \<Pi> \<turnstile> (?entered, ?callee, [Frame s dst])
               \<rightarrow>\<^sub>p (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])"
-    by (rule pstep.Seq2) (rule pstep.ReturnSome)
+    by (rule gpstep.Seq2) (rule gpstep.ReturnSome)
   have c3: "\<G>, \<Pi> \<turnstile> (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])
               \<rightarrow>\<^sub>p (VIMP_Proc.gcom.SKIP (),
                combine_assign dst (\<lbrakk>e\<rbrakk>\<^sub>e ?callee) (combine_env \<G> s ?callee), [])"
-    using pstep.UnwindAct [where \<G> = \<G> and \<Pi> = \<Pi> and dst = dst and fr = s and frs = "[]"
+    using gpstep.UnwindAct [where \<G> = \<G> and \<Pi> = \<Pi> and dst = dst and fr = s and frs = "[]"
                              and s = "?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee)"]
     by (simp add: glob)
   show ?thesis
@@ -287,7 +287,7 @@ lemma certificate_demo_enter:
 lemma certificate_demo_combine:
   "combine_collect (declared_global certificate_demo_prog) (Some x) s
      (((\<lambda>_. 0)(STR ''n'' := k))(ret_var := v)) = s(x := v)"
-  by (simp add: certificate_demo_no_globals combine_collect_def combine_env_def
+  by (simp add: certificate_demo_no_globals gcombine_collect_def combine_env_def
       ret_var_def fun_eq_iff)
 
 lemma certificate_demo_reaches_check:

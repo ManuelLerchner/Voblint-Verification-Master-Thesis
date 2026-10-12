@@ -380,22 +380,24 @@ before the end of the body, becomes the marker #ctor("Unwind"), which
 discards the commands after it until it meets the #ctor("Restore") of its
 call. Each suspended activation keeps its data in a _frame_.
 
-#definition(name: [Source execution], isa: "pstep", cmd: "inductive")[
+#definition(name: [Source execution], isa: "gpstep", cmd: "inductive")[
   A source configuration is a triple $(c, s, italic("frs"))$ of the command that
   remains to run, a store $s$, and a list $italic("frs")$ of
   #isatype("frame") values for the suspended activations. Each frame records
   the caller's store and the variable, if any, that receives the result. The
-  step relation #isaconst("pstep") relates a configuration to its successor.
+  step relation #isaconst("pstep") relates a configuration to its successor. It
+  is the instance of the generic relation in @fig:pstep at #isaconst("aval"), the
+  return slot #isaconst("ret_var"), and no conversion of written values.
 ]
 
 #figure(
   {
     show raw.where(block: true): set text(size: 6.2pt)
-    thy("pstep")
+    thy("gpstep")
   },
   kind: image,
   placement: none,
-  caption: [The declaration of #isaconst("pstep"), lifted from the theory.],
+  caption: [The declaration of the generic step relation, lifted from the theory.],
 ) <fig:pstep>
 
 A classifier #isai("\<G> :: vname \<Rightarrow> bool"), separate from the
@@ -552,7 +554,7 @@ because a loop may run arbitrarily often, but its unfolding revisits the same
 command forms. Recursion is different, because a recursive call can nest
 another #ctor("Restore") wrapper at every call depth. Residual commands
 therefore do not form the finite, fixed set of locations that Voblint needs. An assignment is also not a transition between fixed program points. Inside a sequence it steps through the rule
-#isathm("pstep.Seq2"), which rebuilds the surrounding residual command. So the same assignment is executed by a different derivation inside every surrounding command.
+#isathm("gpstep.Seq2"), which rebuilds the surrounding residual command. So the same assignment is executed by a different derivation inside every surrounding command.
 Finally, nothing names the entry of a procedure, its result, or the point where
 a caller resumes. The schematic control-flow graph of @fig:counting-loop solves
 the first two problems. It has finitely many nodes and one transfer per edge.
@@ -784,7 +786,7 @@ exactly those procedures, without repetition.
 === Graph execution #thy-badge("Voblint_CFG", "CFG_Exec") <sec:cstep>
 
 #block(breakable: false)[
-  #definition(name: [Graph execution], isa: "cstep", cmd: "inductive")[
+  #definition(name: [Graph execution], isa: "gcstep", cmd: "inductive")[
     A graph configuration (#isatype("cconf")) is a triple of a node, a store,
     and a stack of suspended callers (#isatype("cframe")). Each entry records
     where to resume, which variable receives the result, and the caller's store.
@@ -796,11 +798,11 @@ exactly those procedures, without repetition.
   #figure(
     {
       show raw.where(block: true): set text(size: 6.2pt)
-      thy("cstep")
+      thy("gcstep")
     },
     kind: image,
     placement: none,
-    caption: [The declaration of #isaconst("cstep"), lifted from the theory.],
+    caption: [The declaration of the generic graph step, whose instance is #isaconst("cstep").],
   ) <fig:cstep>
 ]
 

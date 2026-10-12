@@ -26,7 +26,7 @@ definition combine_env ::
 definition enter_frame :: "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
   "enter_frame \<G> reset_val s = combine_env \<G> (\<lambda>_. reset_val) s"
 
-definition enter_state :: "(vname \<Rightarrow> bool) \<Rightarrow> store \<Rightarrow> store" where
+definition enter_state :: "('k \<Rightarrow> bool) \<Rightarrow> ('k \<Rightarrow> int) \<Rightarrow> ('k \<Rightarrow> int)" where
   "enter_state \<G> s = enter_frame \<G> 0 s"
 
 lemma combine_query [simp]:

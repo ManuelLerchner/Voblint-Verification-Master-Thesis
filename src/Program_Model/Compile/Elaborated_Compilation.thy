@@ -13,7 +13,7 @@ subsection \<open>Erasure\<close>
 definition erase :: "'a acom \<Rightarrow> com" where
   "erase = map_gcom (\<lambda>_. ()) id id"
 
-definition erase_decl :: "'a gproc_decl \<Rightarrow> proc_decl" where
+definition erase_decl :: "('a, vname, exp) gproc_decl \<Rightarrow> proc_decl" where
   "erase_decl d = \<lparr>formals = formals d, body = erase (body d)\<rparr>"
 
 definition erase_pt :: "'a ptable \<Rightarrow> proc_table" where
@@ -328,7 +328,8 @@ text \<open>A table is elaborated procedure by procedure, each body at the offse
 lemma erase_elab [simp]: "erase (elab p k n c) = erase c"
   by (induction p k n c rule: elab.induct) (simp_all, safe, simp_all)
 
-definition elab_decl :: "pname \<Rightarrow> nat \<Rightarrow> 'a gproc_decl \<Rightarrow> loc gproc_decl" where
+definition elab_decl :: "pname \<Rightarrow> nat \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> (loc, vname, exp) gproc_decl"
+  where
   "elab_decl p n d =
      \<lparr>formals = formals d, body = elab p (Statement (n + csize (body d))) n (body d)\<rparr>"
 
@@ -636,16 +637,16 @@ next
             \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
                bind_formals (formals decl0) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) args) (enter_state \<G> s),
                Frame s dst # frs)"
-      by (rule pstep.Call[where decl = decl]) (use len dist d in simp_all)
+      by (rule gpstep.Call[where decl = decl]) (use len dist d in simp_all)
     then show ?thesis
       using c' d(2) by (intro exI[of _ "Seq (body decl) (Restore i)"] conjI) simp_all
   next
     fix desc sc v x
     assume dx: "dst = Some x" and c': "(c0', s', frs') = (SKIP (), s(x := v), frs)"
       and st: "special_table p = Some desc" and cl: "classify_special desc args = Some sc"
-      and sr: "special_result sc s v"
+      and sr: "special_result aval sc s v"
     have step: "\<G>, \<Pi> \<turnstile> (gcom.Call i (Some x) p args, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := v), frs)"
-      by (rule pstep.Special[OF st cl sr])
+      by (rule gpstep.Special[OF st cl sr])
     from c' have eqs: "c0' = SKIP ()" "s' = s(x := v)" "frs' = frs" by simp_all
     show ?thesis unfolding eqs dx by (rule exI[of _ "SKIP i"], rule conjI[OF step]) simp
   qed

@@ -13,7 +13,7 @@ text \<open>
   definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
   congruence remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
-  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: pstep.IfTrue pstep.IfFalse)+cution.
+  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: gpstep.IfTrue gpstep.IfFalse)+cution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
   \<^const>\<open>pstep\<close> models the intended language.
@@ -514,7 +514,7 @@ proof -
     using ret_f_body [where k = 1] by (simp add: ret_enter)
   show ?thesis
     using node_collect_call_return_step [OF s2 ce bd]
-    by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
+    by (simp add: ret_no_globals gcombine_collect_def combine_env_def ret_var_def fun_eq_iff)
 qed
 
 text \<open>
@@ -646,7 +646,7 @@ proof
   show "(\<lambda>_. 0)(STR ''a'' := 1)
           \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub> (Statement 3) 0"
     using resume_keeps_context [OF s2 ce bd]
-    by (simp add: ret_no_globals combine_collect_def combine_env_def ret_var_def fun_eq_iff)
+    by (simp add: ret_no_globals gcombine_collect_def combine_env_def ret_var_def fun_eq_iff)
   show "(\<lambda>_. 0)(STR ''a'' := 1) \<notin> tot_cover (Statement 3) 0"
     by (simp add: tot_cover_def)
 qed
@@ -684,6 +684,6 @@ theorem unpaired_entry_cover_unsound:
            (STR ''y'') = 1"
   by (auto simp: s_def s'_def unpaired_answer_def pairwise_contribution_def
                  entry_pairs_cover_def call_enter_CallEdge enter_binding_def enter_frame_def
-                 combine_collect_def combine_env_def ret_var_def fun_eq_iff)
+                 gcombine_collect_def combine_env_def ret_var_def fun_eq_iff)
 
 end

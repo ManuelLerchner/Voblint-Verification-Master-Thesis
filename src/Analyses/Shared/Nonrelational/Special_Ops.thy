@@ -81,7 +81,7 @@ text \<open>
 \<close>
 
 lemma special_transfer_sound:
-  assumes \<G>: "s \<in> \<gamma> d" and sr: "special_result sc s v"
+  assumes \<G>: "s \<in> \<gamma> d" and sr: "special_result aval sc s v"
   shows "s(x := v) \<in> \<gamma> (special_transfer sc x d)"
 proof -
   show ?thesis

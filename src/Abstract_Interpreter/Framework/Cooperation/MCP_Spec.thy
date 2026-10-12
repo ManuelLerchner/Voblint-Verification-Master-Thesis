@@ -231,7 +231,7 @@ proof
   assume step: ?step
   have at: "t \<in> gm (ls_step c ch a x)"
     if "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> edge_step a s" for ch a x s t
-    using step that unfolding edge_collect_def by blast
+    using step that unfolding gedge_collect_def by blast
   have pol: "s \<in> gm (ls_branch c ch b pol x)"
     if "s \<in> gm x" "eval_query.channel_holds ch s" "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) = pol" for ch b pol x s
   proof (cases pol)
@@ -252,7 +252,7 @@ proof
   have special: "t \<in> gm (ls_special c ch sc y x)"
     if "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> special_step sc y s" for ch x s sc y t
     using at[OF that(1,2), where a = "EA_Special sc y" and t = t] that(3)
-    by (simp only: edge_step.simps ls_step_simps)
+    by (simp only: gedge_step.simps ls_step_simps)
   show ?fields
     unfolding sound_skip_def sound_assign_def sound_special_def sound_branch_def sound_body_def
       sound_return_def sound_event_def
@@ -266,11 +266,11 @@ next
     fix ch a x t
     assume "t \<in> edge_collect a (gm x \<inter> Collect (eval_query.channel_holds ch))"
     then obtain s where s: "s \<in> gm x" "eval_query.channel_holds ch s" "t \<in> edge_step a s"
-      unfolding edge_collect_def by blast
+      unfolding gedge_collect_def by blast
     show "t \<in> gm (ls_step c ch a x)"
     proof (cases a)
       case (EA_Special sc y)
-      have "t \<in> special_step sc y s" using s(3) EA_Special by (simp only: edge_step.simps)
+      have "t \<in> special_step sc y s" using s(3) EA_Special by (simp only: gedge_step.simps)
       then show ?thesis
         using F s(1,2) EA_Special unfolding sound_special_def by (simp only: ls_step_simps)
     next

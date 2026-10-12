@@ -60,6 +60,30 @@
       "theory": "Source_To_Trace",
       "why": "Chapter 4: one graph step is matched by a trace rule."
     },
+    "gpstep.Call": {
+      "oracles": [],
+      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl);\n vals = map (\\<lambda>e. \\<lbrakk>e\\<rbrakk>\\<^sub>e s) actuals;\n callee = bind_formals (formals decl) vals (enter_state \\<G> s)\\<rbrakk>\n\\<Longrightarrow> \\<G>,\\<Pi> \\<turnstile>\n                  (gcom.Call i dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) (Restore i), callee, Frame s dst # frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule for a call."
+    },
+    "gpstep.RestoreStep": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Restore i, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule that restores the caller's frame."
+    },
+    "gpstep.ReturnSome": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile> (Return i (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind i, s(ret_var := \\<lbrakk>e\\<rbrakk>\\<^sub>e s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule for returning a value."
+    },
+    "gpstep.UnwindAct": {
+      "oracles": [],
+      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Seq (Unwind j) (Restore i), s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
+      "theory": "VIMP_Proc",
+      "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+    },
     "ls_channel_sound": {
       "oracles": [],
       "statement": "\\<lbrakk>sound_local_spec \\<G> \\<gamma>\\<^sub>c c;\n s \\<in> \\<gamma>\\<^sub>c x\\<rbrakk>\n\\<Longrightarrow> eval_query.channel_holds (ls_channel c x) s",
@@ -105,30 +129,6 @@
       "statement": "dg_local (snd ov_empty_sol (Inl (Statement 4, []))) = Bot",
       "theory": "Example_Sign_DG_Overlapping_Enter",
       "why": "Chapter 4: without paired entry coverage an executed point is declared unreachable."
-    },
-    "pstep.Call": {
-      "oracles": [],
-      "statement": "\\<lbrakk>\\<Pi> p = Some decl; length actuals = length (formals decl);\n distinct (formals decl);\n vals = map (\\<lambda>e. \\<lbrakk>e\\<rbrakk>\\<^sub>e s) actuals;\n callee = bind_formals (formals decl) vals (enter_state \\<G> s)\\<rbrakk>\n\\<Longrightarrow> \\<G>,\\<Pi> \\<turnstile>\n                  (gcom.Call i dst p actuals, s, frs) \\<rightarrow>\\<^sub>p\n                  (Seq (body decl) (Restore i), callee, Frame s dst # frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule for a call."
-    },
-    "pstep.RestoreStep": {
-      "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Restore i, s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule that restores the caller's frame."
-    },
-    "pstep.ReturnSome": {
-      "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile> (Return i (Some e), s, frs) \\<rightarrow>\\<^sub>p\n(Unwind i, s(ret_var := \\<lbrakk>e\\<rbrakk>\\<^sub>e s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule for returning a value."
-    },
-    "pstep.UnwindAct": {
-      "oracles": [],
-      "statement": "\\<G>,\\<Pi> \\<turnstile>\n(Seq (Unwind j) (Restore i), s, Frame fr dst # frs) \\<rightarrow>\\<^sub>p\n(SKIP i, combine_assign dst (s ret_var) (combine_env \\<G> fr s), frs)",
-      "theory": "VIMP_Proc",
-      "why": "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
     },
     "relc_branch_step_sound": {
       "oracles": [],

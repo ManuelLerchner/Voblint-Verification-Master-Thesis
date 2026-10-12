@@ -589,7 +589,7 @@ inductive intra_step ::
   "'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
   IAssign [intro]: "intra_step \<Pi> (Assign i x a, s, frs) ((SKIP i), s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
 | ISpecial [intro]: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
-             special_result sc s v \<Longrightarrow>
+             special_result aval sc s v \<Longrightarrow>
              intra_step \<Pi> (Call i (Some x) q actuals, s, frs) ((SKIP i), s(x := v), frs)"
 | ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) ((SKIP i), s, frs)"
 | ISeq1 [intro]:   "intra_step \<Pi> (Seq (SKIP i) c2, s, frs) (c2, s, frs)"
@@ -651,7 +651,7 @@ proof -
     jw: "v = Statement j" "(Statement j, a, w) \<in> E"
         "control_at \<Pi> p c0 k n (SKIP (stmt_ann r)) w" by blast
   have "(Statement j, a, w) \<in> intra g" using jw(2) sub by blast
-  from cstep.Intra[OF this stp] have "\<G>, g \<turnstile> (Statement j, s, stk) \<rightarrow>\<^sub>c (w, s', stk)" .
+  from gcstep.Intra[OF this stp] have "\<G>, g \<turnstile> (Statement j, s, stk) \<rightarrow>\<^sub>c (w, s', stk)" .
   then show ?thesis using jw(1) jw(3) that by auto
 qed
 
@@ -840,7 +840,7 @@ next
   case (CallHead i dst q actuals k n0)
   from CallHead.prems(1) obtain x desc sc v where
     out: "dst = Some x" "special_table q = Some desc" "classify_special desc actuals = Some sc"
-         "special_result sc s v" "c' = (SKIP i)" "s' = s(x := v)" "frs' = frs"
+         "special_result aval sc s v" "c' = (SKIP i)" "s' = s(x := v)" "frs' = frs"
     by auto
   have act: "emitted_action (Call i (Some x) q actuals) = Some (EA_Special sc x)"
     using out(2,3) by simp

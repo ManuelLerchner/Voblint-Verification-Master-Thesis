@@ -23,7 +23,7 @@ why = "Background, Isabelle mechanisms: a type class, the solver's widening oper
 [snippets.sound_intersection]
 why = "Background, Isabelle mechanisms: a small locale with one parameter and three assumptions; Chapter 5, the domain interface figure."
 
-[snippets.pstep]
+[snippets.gpstep]
 why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
 
 [snippets.gcfg]
@@ -32,7 +32,7 @@ why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry 
 [snippets.compile_proc]
 why = "Chapter 3, compilation: a procedure body between its entry node and its epilogue."
 
-[snippets.cstep]
+[snippets.gcstep]
 why = "Chapter 3, graph execution: every rule of the control-flow-graph semantics."
 
 [snippets.csim]

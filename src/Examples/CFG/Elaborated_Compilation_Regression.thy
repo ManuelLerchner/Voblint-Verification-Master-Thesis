@@ -102,11 +102,11 @@ proof -
       \<rightarrow>\<^sub>p (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call),
            bind_formals [] [] (enter_state (declared_global fg_prog) s),
            [Frame s (Some (STR ''x''))])"
-    using pstep.Call [where \<Pi> = fg_pi and p = "STR ''one''" and decl = decl and actuals = "[]"
+    using gpstep.Call [where \<Pi> = fg_pi and p = "STR ''one''" and decl = decl and actuals = "[]"
         and \<G> = "declared_global fg_prog" and s = s and i = fg_call and dst = "Some (STR ''x'')"
         and frs = "[]", OF d] f b by simp
   show ?thesis unfolding mb
-    using call pstep.Seq2 [OF pstep.ReturnSome] pstep.UnwindAct by blast
+    using call gpstep.Seq2 [OF gpstep.ReturnSome] gpstep.UnwindAct by blast
 qed
 
 lemma fg_call_return_points:

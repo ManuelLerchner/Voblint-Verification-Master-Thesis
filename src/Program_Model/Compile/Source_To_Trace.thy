@@ -110,7 +110,7 @@ lemma cstep_preserves_activation_trace_repr:
     and rep: "activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf t"
   shows "\<exists>t'. activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf' t'"
   using step rep
-proof (cases rule: cstep.cases)
+proof (cases rule: gcstep.cases)
   case (Intra u a v s' s stk')
   let ?g = "compile_prog \<Pi> ps"
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = u"

@@ -53,11 +53,11 @@ lemma is_Restore_iff [simp]: "is_Restore c \<longleftrightarrow> (\<exists>i. c 
 
 text \<open>Activation -- fresh locals and formal binding -- happens at the call site,
   so a declaration records only what a call site looks up by name.\<close>
-record 'a gproc_decl =
-  formals :: "vname list"
-  body    :: "'a acom"
+record ('a, 'v, 'e) gproc_decl =
+  formals :: "'v list"
+  body    :: "('a, 'v, 'e) gcom"
 
-type_synonym proc_decl = "unit gproc_decl"
+type_synonym proc_decl = "(unit, vname, exp) gproc_decl"
 
 text \<open>The reserved local \<open>ret_var\<close> carries a published result to the restore
   boundary. It is absent from source programs, so a value-less completion
@@ -65,10 +65,13 @@ text \<open>The reserved local \<open>ret_var\<close> carries a published result
 definition ret_var :: vname where
   "ret_var = STR ''#ret''"
 
-type_synonym 'a ptable = "pname \<Rightarrow> 'a gproc_decl option"
+type_synonym ('a, 'v, 'e) gptable = "pname \<Rightarrow> ('a, 'v, 'e) gproc_decl option"
+type_synonym 'a ptable = "('a, vname, exp) gptable"
 type_synonym proc_table = "unit ptable"
 
-datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
+datatype 'v gframe = Frame (frame_store: "'v \<Rightarrow> int") (frame_dest: "'v option")
+
+type_synonym frame = "vname gframe"
 
 text \<open>Formal binding is the same fold over the concrete store, over every abstract
   state, and over a typed store keyed by variable identities, so it is one
@@ -93,8 +96,8 @@ text \<open>Whole procedure entry, for the same reason: reset every local to a c
   evaluator and its own \<open>top\<close> -- so it is one definition, not a concrete one
   with an \<open>_abs\<close> copy beside it.\<close>
 definition enter_binding ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> (exp \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> 'a)
-   \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)"
+  "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('e \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> 'a)
+   \<Rightarrow> 'k list \<Rightarrow> 'e list \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)"
 where
   "enter_binding \<G> reset_val ev xs es s =
      bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame \<G> reset_val s)"
@@ -111,7 +114,7 @@ text \<open>The return-slot write is a pure per-variable update, generic in the 
   the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
   domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating
   an \<open>_abs\<close> copy of it.\<close>
-fun combine_assign :: "vname option \<Rightarrow> 'a \<Rightarrow> (vname \<Rightarrow> 'a) \<Rightarrow> (vname \<Rightarrow> 'a)" where
+fun combine_assign :: "'k option \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
 
@@ -123,77 +126,95 @@ text \<open>The reference semantics every soundness claim is ultimately about.  
   \<open>Unwind\<close>, which discards the rest of the callee body until that \<open>Restore\<close> pops the frame.
   \<open>Restore\<close> and \<open>Unwind\<close> exist only here, in configurations the semantics builds; no source
   program contains them.\<close>
-inductive
-  pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
-                       \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
-  for \<G> :: "vname \<Rightarrow> bool" and \<Pi> :: "'a ptable"
+text \<open>
+  The semantics is stated once for any language whose commands use the generic command
+  syntax: \<open>ev\<close> evaluates an expression, \<open>glob\<close> classifies the variables a call keeps,
+  \<open>rv\<close> is the return slot (Goblint's single \<^verbatim>\<open>return_varinfo\<close>), and \<open>conv\<close> converts a
+  value written to a destination, as Goblint converts a stored value to its target's
+  declared type. \<open>conv\<close> takes the destination as an option so that the instance without
+  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules of the untyped semantics. Arguments
+  and return values are not converted here: elaboration has already converted them, as
+  CIL does.
+\<close>
+
+locale vimp_sem =
+  fixes ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int"
+    and glob :: "'v \<Rightarrow> bool"
+    and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int"
+begin
+
+inductive gpstep :: "('a, 'v, 'e) gptable
+    \<Rightarrow> ('a, 'v, 'e) gcom \<times> ('v \<Rightarrow> int) \<times> 'v gframe list
+    \<Rightarrow> ('a, 'v, 'e) gcom \<times> ('v \<Rightarrow> int) \<times> 'v gframe list \<Rightarrow> bool"
+  for \<Pi> :: "('a, 'v, 'e) gptable"
 where
-  Assign:  "\<G>, \<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
-| Check:   "\<G>, \<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p (SKIP i, s, frs)"
-| Seq1:    "\<G>, \<Pi> \<turnstile> (Seq (SKIP i) c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
-| Seq2:    "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')
-             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p (Seq c1' c2, s', frs')"
-| IfTrue:  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c1, s, frs)"
-| IfFalse: "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
-| While:   "\<G>, \<Pi> \<turnstile> (While i b c, s, frs)
-                      \<rightarrow>\<^sub>p (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
+  Assign:  "gpstep \<Pi> (Assign i x a, s, frs) (SKIP i, s(x := conv (Some x) (ev a s)), frs)"
+| Check:   "gpstep \<Pi> (Check i l c, s, frs) (SKIP i, s, frs)"
+| Seq1:    "gpstep \<Pi> (Seq (SKIP i) c2, s, frs) (c2, s, frs)"
+| Seq2:    "gpstep \<Pi> (c1, s, frs) (c1', s', frs')
+             \<Longrightarrow> gpstep \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+| IfTrue:  "truthy (ev b s) \<Longrightarrow> gpstep \<Pi> (If i b c1 c2, s, frs) (c1, s, frs)"
+| IfFalse: "\<not> truthy (ev b s) \<Longrightarrow> gpstep \<Pi> (If i b c1 c2, s, frs) (c2, s, frs)"
+| While:   "gpstep \<Pi> (While i b c, s, frs) (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
 | Call:    "\<Pi> p = Some decl
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
-             \<Longrightarrow> vals = map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals
-             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state \<G> s)
-             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs)
-                 \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
-                  callee,
-                  Frame s dst # frs)"
+             \<Longrightarrow> vals = map (\<lambda>e. ev e s) actuals
+             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state glob s)
+             \<Longrightarrow> gpstep \<Pi> (Call i dst p actuals, s, frs)
+                   (Seq (body decl) (Restore i), callee, Frame s dst # frs)"
 | Special: "special_table p = Some desc
              \<Longrightarrow> classify_special desc actuals = Some sc
-             \<Longrightarrow> special_result sc s v
-             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call i (Some x) p actuals, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := v), frs)"
+             \<Longrightarrow> special_result ev sc s v
+             \<Longrightarrow> gpstep \<Pi> (Call i (Some x) p actuals, s, frs) (SKIP i, s(x := conv (Some x) v), frs)"
 | RestoreStep:
-    "\<G>, \<Pi> \<turnstile> (Restore i, s, Frame fr dst # frs)
-       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
+    "gpstep \<Pi> (Restore i, s, Frame fr dst # frs)
+       (SKIP i, combine_assign dst (conv dst (s rv)) (combine_env glob fr s), frs)"
 | ReturnSome:
-    "\<G>, \<Pi> \<turnstile> (Return i (Some e), s, frs)
-       \<rightarrow>\<^sub>p (Unwind i, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), frs)"
+    "gpstep \<Pi> (Return i (Some e), s, frs) (Unwind i, s(rv := ev e s), frs)"
 | ReturnNone:
-    "\<G>, \<Pi> \<turnstile> (Return i None, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
+    "gpstep \<Pi> (Return i None, s, frs) (Unwind i, s, frs)"
 | UnwindDead:
-    "\<not> is_Restore c2
-     \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq (Unwind i) c2, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
+    "\<not> is_Restore c2 \<Longrightarrow> gpstep \<Pi> (Seq (Unwind i) c2, s, frs) (Unwind i, s, frs)"
 | UnwindAct:
-    "\<G>, \<Pi> \<turnstile> (Seq (Unwind j) (Restore i), s, Frame fr dst # frs)
-       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
+    "gpstep \<Pi> (Seq (Unwind j) (Restore i), s, Frame fr dst # frs)
+       (SKIP i, combine_assign dst (conv dst (s rv)) (combine_env glob fr s), frs)"
+
+inductive_cases SkipSE[elim!]: "gpstep \<Pi> (SKIP i, s, frs) cfg"
+inductive_cases AssignSE[elim!]: "gpstep \<Pi> (Assign i x a, s, frs) cfg"
+inductive_cases CheckSE[elim!]: "gpstep \<Pi> (Check i l c, s, frs) cfg"
+inductive_cases SeqSE[elim]: "gpstep \<Pi> (Seq c1 c2, s, frs) cfg"
+inductive_cases IfSE[elim!]: "gpstep \<Pi> (If i b c1 c2, s, frs) cfg"
+inductive_cases WhileSE[elim]: "gpstep \<Pi> (While i b c, s, frs) cfg"
+inductive_cases CallSE[elim]: "gpstep \<Pi> (Call i dst p actuals, s, frs) cfg"
+inductive_cases RestoreSE[elim!]: "gpstep \<Pi> (Restore i, s, frs) cfg"
+inductive_cases ReturnSE[elim!]: "gpstep \<Pi> (Return i e, s, frs) cfg"
+inductive_cases UnwindSE[elim!]: "gpstep \<Pi> (Unwind i, s, frs) cfg"
+
+declare gpstep.intros [simp, intro]
+
+end
+
+text \<open>The untyped semantics is the instance at source names and untyped expressions, with no
+  conversion. Its rules are the generic ones with these parameters substituted, so they read
+  exactly as the untyped semantics has always been stated.\<close>
+
+definition pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
+                       \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
+  where "pstep \<G> = vimp_sem.gpstep aval \<G> ret_var (\<lambda>_ n. n)"
+
+global_interpretation untyped?: vimp_sem aval \<G> ret_var "\<lambda>_ n. n"
+    rewrites "vimp_sem.gpstep aval \<G> ret_var (\<lambda>_ n. n) = pstep \<G>"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp add: pstep_def)
 
 abbreviation
   psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
                         \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p\<^sup>*/ _)" [51, 51, 51, 51] 50)
 where "psteps \<G> \<Pi> x y \<equiv> star (pstep \<G> \<Pi>) x y"
-
-declare pstep.intros [simp, intro]
-
-inductive_cases SkipSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (SKIP i, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases AssignSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases CheckSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases SeqSE[elim]:
-  "\<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases IfSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases WhileSE[elim]:
-  "\<G>, \<Pi> \<turnstile> (While i b c, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases CallSE[elim]:
-  "\<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases RestoreSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Restore i, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases ReturnSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Return i e, s, frs) \<rightarrow>\<^sub>p cfg"
-inductive_cases UnwindSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Unwind i, s, frs) \<rightarrow>\<^sub>p cfg"
 
 lemmas star_pstep_induct =
   star.induct[of "pstep \<G> \<Pi>", split_format(complete), case_names refl step]
@@ -242,7 +263,7 @@ lemma pstep_frame_extend:
   "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow>
    \<G>, \<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p (c', s', frs' @ extra)"
   by (induction "(c, s, frs)" "(c', s', frs')"
-        arbitrary: c s frs c' s' frs' rule: pstep.induct)
+        arbitrary: c s frs c' s' frs' rule: gpstep.induct)
      auto
 
 lemma psteps_frame_extend:
@@ -442,7 +463,7 @@ fun no_return :: "'a acom \<Rightarrow> bool" where
 | "no_return (Return _ _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a gproc_decl \<Rightarrow> bool" where
+definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> bool" where
   "wf_proc_decl \<G> \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
      list_all (valid_formal \<G>) (formals decl) \<and>

@@ -423,7 +423,7 @@ text \<open>A library call returns the same values on both sides, because its ar
 
 lemma tspecial_lower:
   assumes "tspecial desc es t n" and "\<And>e. e \<in> set es \<Longrightarrow> teval e t = \<lbrakk>lower e\<rbrakk>\<^sub>e s"
-  shows "\<exists>sc. classify_special desc (map lower es) = Some sc \<and> special_result sc s n"
+  shows "\<exists>sc. classify_special desc (map lower es) = Some sc \<and> special_result aval sc s n"
   using assms by (cases "(desc, es, t, n)" rule: tspecial.cases) auto
 
 lemma args_ok_range:
@@ -482,7 +482,7 @@ proof (induction arbitrary: L R s fs rule: tstep_induct)
     using aval_lower_in_range [of e s] wt by simp
   have step: "\<G>, \<Pi> \<turnstile> (lower_com (Assign i v e), s, fs)
       \<rightarrow>\<^sub>p (lower_com (SKIP i), s(var_name v := \<lbrakk>lower e\<rbrakk>\<^sub>e s), fs)"
-    by (simp only: gcom.map id_apply) (rule pstep.Assign)
+    by (simp only: gcom.map id_apply) (rule gpstep.Assign)
   have "srel \<kappa> \<G> q (t(v := teval e t)) (s(var_name v := \<lbrakk>lower e\<rbrakk>\<^sub>e s))"
     unfolding ev by (rule srel_update_in_range [OF TAssign.prems(3) [unfolded cur] sc(1) rng])
   moreover have "tok \<kappa> \<G> T [q] (SKIP i)" by (simp add: tok.base)
@@ -603,7 +603,7 @@ next
            bind_formals (formals \<lparr>formals = ys, body = lower_com b\<rparr>)
              (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) (map lower es)) (enter_state \<G> s),
            Frame s (map_option var_name dst) # fs)"
-    by (rule pstep.Call [where \<Pi> = \<Pi> and p = p, OF decl]) (use TCall.hyps(2) xs dys in auto)
+    by (rule gpstep.Call [where \<Pi> = \<Pi> and p = p, OF decl]) (use TCall.hyps(2) xs dys in auto)
   then have step: "\<G>, \<Pi> \<turnstile> (lower_com (Call i dst p es), s, fs)
       \<rightarrow>\<^sub>p (lower_com (Seq b (Restore i)),
            bind_formals ys (map (\<lambda>e. \<lbrakk>lower e\<rbrakk>\<^sub>e s) es) (enter_state \<G> s),
@@ -626,10 +626,10 @@ next
   have "\<And>e. e \<in> set es \<Longrightarrow> teval e t = \<lbrakk>lower e\<rbrakk>\<^sub>e s"
     using wt esc TSpecial.prems(3) cur by (auto simp: list_all_iff intro: teval_lower_scoped)
   from tspecial_lower [OF TSpecial.hyps(2) this] obtain sc
-    where "classify_special desc (map lower es) = Some sc" "special_result sc s n" by blast
+    where "classify_special desc (map lower es) = Some sc" "special_result aval sc s n" by blast
   with TSpecial.hyps(1) have "\<G>, \<Pi> \<turnstile> (lower_com (Call i (Some v) p es), s, fs)
       \<rightarrow>\<^sub>p (lower_com (SKIP i), s(var_name v := n), fs)"
-    by (auto intro: pstep.Special)
+    by (auto intro: gpstep.Special)
   moreover have "tok \<kappa> \<G> T [q] (SKIP i)" by (simp add: tok.base)
   ultimately show ?case
     using srel_update [OF TSpecial.prems(3) [unfolded cur] dsc, of n] TSpecial.prems(2,4) L cur

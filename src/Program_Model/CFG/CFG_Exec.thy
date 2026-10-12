@@ -17,31 +17,49 @@ text \<open>
   duplicated nodes.  Nothing here mentions the compiler: this is the execution of any
   graph, just as \<open>valid_activation_trace\<close> is the activation-trace semantics of any graph.
 \<close>
-type_synonym cframe = "cfg_node \<times> vname option \<times> store"
-type_synonym cconf = "cfg_node \<times> store \<times> cframe list"
+type_synonym 'v gcframe = "cfg_node \<times> 'v option \<times> ('v \<Rightarrow> int)"
+type_synonym 'v gcconf = "cfg_node \<times> ('v \<Rightarrow> int) \<times> 'v gcframe list"
+type_synonym cframe = "vname gcframe"
+type_synonym cconf = "vname gcconf"
 
-inductive cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) for \<G> and g where
+text \<open>Graph execution is generic in the language like the edge and transfer semantics it
+  runs; the untyped \<open>cstep\<close> is its instance at source names and untyped expressions.\<close>
+
+locale cfg_exec_sem = cfg_transfer_sem ev rv conv glob
+  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool"
+begin
+
+inductive gcstep :: "('v, 'e) gcfg \<Rightarrow> 'v gcconf \<Rightarrow> 'v gcconf \<Rightarrow> bool" for g where
   Intra [intro]:
-    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> edge_step a s \<Longrightarrow>
-     \<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s', stk)"
+    "(u, a, v) \<in> intra g \<Longrightarrow> s' \<in> gedge_step a s \<Longrightarrow> gcstep g (u, s, stk) (v, s', stk)"
 | Call [intro]:
     "(u, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls g \<Longrightarrow>
-     \<G>, g \<turnstile> (u, s, stk)
-       \<rightarrow>\<^sub>c (FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
+     gcstep g (u, s, stk)
+       (FunctionEntry q, gcall_enter (CallEdge dst pars actuals) s, (cont, dst, s) # stk)"
 | Return [intro]:
-    "\<G>, g \<turnstile> (FunctionResult q, t, (cont, dst, caller) # stk)
-       \<rightarrow>\<^sub>c (cont, combine_collect \<G> dst caller t, stk)"
-
-
-abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)
-  where "csteps \<G> g x y \<equiv> star (cstep \<G> g) x y"
+    "gcstep g (FunctionResult q, t, (cont, dst, caller) # stk)
+       (cont, gcombine_collect dst caller t, stk)"
 
 text \<open>One inversion rule, because the three clauses are told apart by the edge taken rather
   than by the shape of the configuration.  It stays plain \<open>[elim]\<close> so the classical reasoner
   does not split every \<open>cstep\<close> hypothesis three ways before trying anything else.\<close>
-inductive_cases cstep_E [elim]: "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c y"
+inductive_cases cstep_E [elim]: "gcstep g (u, s, stk) y"
+
+end
+
+definition cstep :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50)
+  where "cstep \<G> = cfg_exec_sem.gcstep aval ret_var (\<lambda>_ n. n) \<G>"
+
+global_interpretation untyped?: cfg_exec_sem aval ret_var "\<lambda>_ n. n" \<G>
+    rewrites "cfg_exec_sem.gcstep aval ret_var (\<lambda>_ n. n) \<G> = cstep \<G>"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp add: cstep_def)
+
+abbreviation csteps :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cconf \<Rightarrow> cconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50)
+  where "csteps \<G> g x y \<equiv> star (cstep \<G> g) x y"
 
 subsection \<open>Single-step and small-step lemmas\<close>
 
@@ -53,22 +71,22 @@ text \<open>
 lemma cstep_body:
   assumes "(u, EA_Body p, v) \<in> intra g"
   shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
-  by (rule cstep.Intra[OF assms]) simp
+  by (rule gcstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
   assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
-  by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
+  by (rule gcstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
   assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
   shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
-  by (rule cstep.Intra[OF assms(1)]) (use assms(2) in simp)
+  by (rule gcstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 subsection \<open>Intra-only paths as stack-preserving runs\<close>
 
 text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
-  \<open>cstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
+  \<open>gcstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
   along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
 lemma intra_path_imp_cstep_star:
   "intra_path g x y \<Longrightarrow> \<G>, g \<turnstile> (fst x, snd x, stk) \<rightarrow>\<^sub>c\<^sup>* (fst y, snd y, stk)"
@@ -79,7 +97,7 @@ next
   obtain ua sa where a: "a = (ua, sa)" by (cases a)
   obtain ub sb where b: "b = (ub, sb)" by (cases b)
   from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
-  hence "\<G>, g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule cstep.Intra)
+  hence "\<G>, g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule gcstep.Intra)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
 
