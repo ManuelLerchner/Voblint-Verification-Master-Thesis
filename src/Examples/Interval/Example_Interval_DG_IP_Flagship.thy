@@ -147,7 +147,7 @@ lemma twice_wf: "wf_compile_input twice_gs twice_pi twice_procs"
 theorem twice_source_run_sound:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s, []) \<rightarrow>\<^sub>p\<^sup>* src'"
       and init: "s \<in> cinit_stores twice_gs"
-  shows "\<exists>v t stk. twice_pi, twice_cfg \<turnstile> src' \<approx> (v, t, stk)
+  shows "\<exists>v t stk. twice_pi, twice_cfg, prog_main_name \<turnstile> src' \<approx> (v, t, stk)
                    \<and> t \<in> \<gamma> (twice_at v)"
 proof -
   obtain residual t frs where src': "src' = (residual, t, frs)" by (cases src')
@@ -158,7 +158,7 @@ proof -
     using twice_wf by (simp add: twice_pi_def twice_procs_def)
   have unit_route: "\<And>u ctx d ca s. route_unit u ctx d ca = enterc_unit u ctx s" by simp
   have cert:
-    "\<exists>v stk. twice_pi, twice_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
+    "\<exists>v stk. twice_pi, twice_cfg, prog_main_name \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
        \<and> t \<in> \<gamma> (twice_at v)"
     using interval_rule.fun_route_source_sound[OF unit_route wf twice_terminates init run']
     by (simp add: twice_cfg_prog_cfg twice_pi_def)

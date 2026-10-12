@@ -96,16 +96,16 @@ text \<open>
   the frame writing the destination.
 \<close>
 
-lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.com.Check l cond) s s"
+lemma pcompletes_Check: "pcompletes \<G> \<Pi> (VIMP_Proc.gcom.Check () l cond) s s"
   by (rule star.step) (rule pstep.Check, rule star.refl)
 
 lemma pcompletes_Call_return:
   assumes p: "\<Pi> p = Some decl"
-      and bd: "body decl = VIMP_Proc.com.Return (Some e)"
+      and bd: "body decl = VIMP_Proc.gcom.Return () (Some e)"
       and arity: "length actuals = length (formals decl)"
       and dist: "distinct (formals decl)"
       and glob: "\<not> \<G> ret_var"
-  shows "pcompletes \<G> \<Pi> (VIMP_Proc.com.Call dst p actuals) s
+  shows "pcompletes \<G> \<Pi> (VIMP_Proc.gcom.Call () dst p actuals) s
            (combine_assign dst
               (\<lbrakk>e\<rbrakk>\<^sub>e (bind_formals (formals decl) (map (\<lambda>a. \<lbrakk>a\<rbrakk>\<^sub>e s) actuals)
                          (enter_state \<G> s)))
@@ -114,16 +114,17 @@ lemma pcompletes_Call_return:
                     (enter_state \<G> s))))"
 proof -
   let ?callee = "bind_formals (formals decl) (map (\<lambda>a. \<lbrakk>a\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)"
-  let ?entered = "VIMP_Proc.com.Seq (VIMP_Proc.com.Return (Some e)) VIMP_Proc.com.Restore"
-  let ?unwinding = "VIMP_Proc.com.Seq VIMP_Proc.com.Unwind VIMP_Proc.com.Restore"
-  have c1: "\<G>, \<Pi> \<turnstile> (VIMP_Proc.com.Call dst p actuals, s, [])
+  let ?entered =
+    "VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Return () (Some e)) (VIMP_Proc.gcom.Restore ())"
+  let ?unwinding = "VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Unwind ()) (VIMP_Proc.gcom.Restore ())"
+  have c1: "\<G>, \<Pi> \<turnstile> (VIMP_Proc.gcom.Call () dst p actuals, s, [])
               \<rightarrow>\<^sub>p (?entered, ?callee, [Frame s dst])"
     using arity bd dist p pstep_Call by fastforce
   have c2: "\<G>, \<Pi> \<turnstile> (?entered, ?callee, [Frame s dst])
               \<rightarrow>\<^sub>p (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])"
     by (rule pstep.Seq2) (rule pstep.ReturnSome)
   have c3: "\<G>, \<Pi> \<turnstile> (?unwinding, ?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee), [Frame s dst])
-              \<rightarrow>\<^sub>p (VIMP_Proc.com.SKIP,
+              \<rightarrow>\<^sub>p (VIMP_Proc.gcom.SKIP (),
                combine_assign dst (\<lbrakk>e\<rbrakk>\<^sub>e ?callee) (combine_env \<G> s ?callee), [])"
     using pstep.UnwindAct [where \<G> = \<G> and \<Pi> = \<Pi> and dst = dst and fr = s and frs = "[]"
                              and s = "?callee(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e ?callee)"]
@@ -135,15 +136,15 @@ qed
 lemma certificate_demo_table:
   "prog_table certificate_demo_prog (STR ''bump'')
      = Some \<lparr>formals = [STR ''n''],
-              body = VIMP_Proc.com.Return (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
+              body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
   by (simp add: certificate_demo_prog_def prog_main_name_def)
 
 lemma certificate_demo_main:
   "main_body (prog_table certificate_demo_prog)
-     = VIMP_Proc.com.Seq
-         (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 1])
-            (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 41]))
-         (VIMP_Proc.com.Check (0, 0) (Less (N 0) (V (STR ''b''))))"
+     = VIMP_Proc.gcom.Seq
+         (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 1])
+            (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 41]))
+         (VIMP_Proc.gcom.Check () (0, 0) (Less (N 0) (V (STR ''b''))))"
   by (simp add: certificate_demo_prog_def main_body_def prog_main_name_def)
 
 lemma certificate_demo_no_globals: "declared_global certificate_demo_prog = (\<lambda>_. False)"
@@ -151,11 +152,11 @@ lemma certificate_demo_no_globals: "declared_global certificate_demo_prog = (\<l
 
 lemma certificate_demo_call:
   "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
-     (VIMP_Proc.com.Call (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
+     (VIMP_Proc.gcom.Call () (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
   using pcompletes_Call_return
           [where \<Pi> = "prog_table certificate_demo_prog" and p = "STR ''bump''"
              and decl = "\<lparr>formals = [STR ''n''],
-                          body = VIMP_Proc.com.Return (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
+                          body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
              and e = "Plus (V (STR ''n'')) (N 1)" and actuals = "[N k]" and dst = "Some x"
              and \<G> = "declared_global certificate_demo_prog" and s = s,
            OF certificate_demo_table]
@@ -163,18 +164,18 @@ lemma certificate_demo_call:
 
 lemma certificate_demo_calls:
   "pcompletes (declared_global certificate_demo_prog) (prog_table certificate_demo_prog)
-     (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 1])
-        (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 41]))
+     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 1])
+        (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 41]))
      (\<lambda>_. 0) ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
 proof -
   have c1: "pcompletes (declared_global certificate_demo_prog)
               (prog_table certificate_demo_prog)
-              (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 1]) (\<lambda>_. 0)
+              (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 1]) (\<lambda>_. 0)
               ((\<lambda>_. 0)(STR ''a'' := 2))"
     using certificate_demo_call [where x = "STR ''a''" and k = 1 and s = "\<lambda>_. 0"] by simp
   have c2: "pcompletes (declared_global certificate_demo_prog)
               (prog_table certificate_demo_prog)
-              (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 41])
+              (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 41])
               ((\<lambda>_. 0)(STR ''a'' := 2))
               ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))"
     using certificate_demo_call
@@ -191,11 +192,11 @@ lemma certificate_demo_run:
   by (rule pcompletes_Seq [OF certificate_demo_calls pcompletes_Check])
 
 text \<open>The same run stopped one step short of the check: both calls are done and
-  \<^const>\<open>VIMP_Proc.com.Check\<close> is the command about to run.\<close>
+  \<^const>\<open>VIMP_Proc.gcom.Check\<close> is the command about to run.\<close>
 
 lemma certificate_demo_to_check:
   "declared_global certificate_demo_prog, prog_table certificate_demo_prog \<turnstile> (main_body (prog_table certificate_demo_prog), \<lambda>_. 0, [])
-     \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.com.Check (0, 0) (Less (N 0) (V (STR ''b''))),
+     \<rightarrow>\<^sub>p\<^sup>* (VIMP_Proc.gcom.Check () (0, 0) (Less (N 0) (V (STR ''b''))),
       (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), [])"
   unfolding certificate_demo_main
   using psteps_Seq2 [OF certificate_demo_calls] by (meson Seq1 star.step star.refl star_trans)
@@ -512,7 +513,7 @@ theorem certificate_demo_source_certified:
        certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved)]
-   \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog \<turnstile> (SKIP, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
+   \<and> prog_table certificate_demo_prog, prog_cfg certificate_demo_prog, prog_main_name \<turnstile> (SKIP (), (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<approx> (v, (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), stk)
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> v

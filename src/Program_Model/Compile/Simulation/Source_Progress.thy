@@ -11,7 +11,7 @@ text \<open>
   either has finished --- \<^const>\<open>SKIP\<close> with no caller frame left --- or can take a step.
 
   The shapes that could get stuck are the runtime markers: a bare \<^const>\<open>Unwind\<close>, and a
-  \<^const>\<open>Restore\<close> or \<^term>\<open>Seq Unwind Restore\<close> with no frame to pop.  \<^const>\<open>csim\<close> already
+  \<^const>\<open>Restore\<close> or \<^term>\<open>Seq (Unwind j) (Restore i)\<close> with no frame to pop.  \<^const>\<open>csim\<close> already
   pairs every \<^const>\<open>Restore\<close> with its frame and confines \<^const>\<open>Unwind\<close> to the returning
   phase, so it is reused here as the invariant; the only additional fact is that call sites
   are well formed.
@@ -30,14 +30,15 @@ text \<open>A well-formed source command is \<^const>\<open>SKIP\<close> or step
 lemma wf_source_com_progress:
   assumes distinct_formals: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> distinct (formals decl)"
       and "wf_source_com \<Pi> c"
-  shows "c = SKIP \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
+  shows "is_SKIP c \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
   using assms(2)
 proof (induction c)
   case (Seq c1 c2)
   from Seq.prems have "wf_source_com \<Pi> c1" by simp
   from Seq.IH(1)[OF this] show ?case
   proof
-    assume "c1 = SKIP"
+    assume "is_SKIP c1"
+    then obtain j where "c1 = SKIP j" by auto
     then show ?thesis by blast
   next
     assume "\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p cfg'"
@@ -45,13 +46,13 @@ proof (induction c)
     then show ?thesis by blast
   qed
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   show ?case by (cases "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)") blast+
 next
-  case (Return e)
+  case (Return i e)
   show ?case by (cases e) blast+
 next
-  case (Call dst p actuals)
+  case (Call i dst p actuals)
   show ?case
   proof (cases "special_table p")
     case None
@@ -83,19 +84,24 @@ text \<open>
 \<close>
 
 lemma unwinding_progress:
-  "unwinding u \<Longrightarrow> u \<noteq> Unwind \<Longrightarrow> \<exists>u'. \<G>, \<Pi> \<turnstile> (u, s, frs) \<rightarrow>\<^sub>p (u', s, frs)"
+  "unwinding u \<Longrightarrow> (\<And>j. u \<noteq> Unwind j) \<Longrightarrow> \<exists>u'. \<G>, \<Pi> \<turnstile> (u, s, frs) \<rightarrow>\<^sub>p (u', s, frs)"
 proof (induction u)
   case (Seq u1 c2)
-  then have u1: "unwinding u1" and c2: "c2 \<noteq> Restore" by simp_all
+  then have u1: "unwinding u1" and c2: "\<not> is_Restore c2" by simp_all
   show ?case
-  proof (cases "u1 = Unwind")
+  proof (cases "\<exists>j. u1 = Unwind j")
     case True
+    then obtain j where "u1 = Unwind j" by blast
     then show ?thesis using c2 by blast
   next
     case False
-    from Seq.IH(1)[OF u1 False] obtain u1' where "\<G>, \<Pi> \<turnstile> (u1, s, frs) \<rightarrow>\<^sub>p (u1', s, frs)" ..
+    then have "u1 \<noteq> Unwind j" for j by blast
+    from Seq.IH(1)[OF u1 this] obtain u1' where "\<G>, \<Pi> \<turnstile> (u1, s, frs) \<rightarrow>\<^sub>p (u1', s, frs)" ..
     then show ?thesis by blast
   qed
+next
+  case (Unwind x)
+  then show ?case by blast
 qed simp_all
 
 text \<open>The frame a \<open>Returning\<close> configuration carries is what lets it pop.\<close>
@@ -110,12 +116,14 @@ next
   case (2 u)
   with assms have uw: "unwinding u" by simp
   show ?thesis
-  proof (cases "u = Unwind")
+  proof (cases "\<exists>j. u = Unwind j")
     case True
+    then obtain j where "u = Unwind j" by blast
     then show ?thesis using 2 by blast
   next
     case False
-    from unwinding_progress[OF uw False] obtain u' where
+    then have "u \<noteq> Unwind j" for j by blast
+    from unwinding_progress[OF uw this] obtain u' where
       "\<G>, \<Pi> \<turnstile> (u, s, Frame fr dst # frs) \<rightarrow>\<^sub>p (u', s, Frame fr dst # frs)" ..
     then show ?thesis using 2 by blast
   qed
@@ -127,9 +135,9 @@ text \<open>Only a \<open>Base\<close> activation can have finished: \<open>Nest
   caller frame and a pending \<^const>\<open>Restore\<close> that will pop it.  No graph fact is used, so
   the relation serves here purely as a shape invariant.\<close>
 lemma csim_progress_cfg:
-  assumes "\<Pi>, g \<turnstile> cfg \<approx> dg"
+  assumes "\<Pi>, g, \<rho> \<turnstile> cfg \<approx> dg"
       and wf_decls: "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
-  shows "(fst cfg = SKIP \<and> snd (snd cfg) = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> cfg \<rightarrow>\<^sub>p cfg')"
+  shows "(is_SKIP (fst cfg) \<and> snd (snd cfg) = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> cfg \<rightarrow>\<^sub>p cfg')"
   using assms(1)
 proof (induction rule: csim.induct)
   case (Base p body_p k n c v s)
@@ -142,24 +150,25 @@ proof (induction rule: csim.induct)
   from wf_source_com_progress[OF _ this, of \<G> s "[]"] wf_decls
   show ?case by (auto simp: wf_proc_decl_def)
 next
-  case (Nested inner s frs v stk pc body_pc kc nc afters cont caller dst)
+  case (Nested q inner s frs v stk pc body_pc kc nc i afters cont dst args site caller)
   let ?F = "[Frame caller dst]"
-  have "\<exists>w'. \<G>, \<Pi> \<turnstile> (Seq inner Restore, s, frs @ ?F) \<rightarrow>\<^sub>p w'"
+  have "\<exists>w'. \<G>, \<Pi> \<turnstile> (Seq inner (Restore i), s, frs @ ?F) \<rightarrow>\<^sub>p w'"
     using Nested.IH
   proof
-    assume "fst (inner, s, frs) = SKIP \<and> snd (snd (inner, s, frs)) = []"
-    then show ?thesis by auto
+    assume "is_SKIP (fst (inner, s, frs)) \<and> snd (snd (inner, s, frs)) = []"
+    then obtain j where "inner = SKIP j" by auto
+    then show ?thesis by blast
   next
     assume "\<exists>cfg'. \<G>, \<Pi> \<turnstile> (inner, s, frs) \<rightarrow>\<^sub>p cfg'"
     then obtain i' s' f' where "\<G>, \<Pi> \<turnstile> (inner, s, frs) \<rightarrow>\<^sub>p (i', s', f')" by auto
     from pstep_frame_extend[OF this, of ?F]
     show ?thesis by blast
   qed
-  then obtain w' s' f' where "\<G>, \<Pi> \<turnstile> (Seq inner Restore, s, frs @ ?F) \<rightarrow>\<^sub>p (w', s', f')"
+  then obtain w' s' f' where "\<G>, \<Pi> \<turnstile> (Seq inner (Restore i), s, frs @ ?F) \<rightarrow>\<^sub>p (w', s', f')"
     by auto
   from pstep_seq_after_lift[OF this, of afters] show ?case by auto
 next
-  case (Returning w pc body_pc kc nc afters cont callee caller dst p)
+  case (Returning w i pc body_pc kc nc afters cont dst p args site callee caller)
   from pop_ready_progress[OF Returning.hyps(1), of \<G> \<Pi> callee caller dst "[]"]
   obtain w' s' f' where "\<G>, \<Pi> \<turnstile> (w, callee, [Frame caller dst]) \<rightarrow>\<^sub>p (w', s', f')"
     by auto
@@ -167,9 +176,9 @@ next
 qed
 
 theorem csim_progress:
-  assumes "\<Pi>, g \<turnstile> (c, s, frs) \<approx> dg"
+  assumes "\<Pi>, g, \<rho> \<turnstile> (c, s, frs) \<approx> dg"
       and "\<And>p decl. \<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
-  shows "(c = SKIP \<and> frs = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
+  shows "(is_SKIP c \<and> frs = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
   using csim_progress_cfg[OF assms] by simp
 
 subsection \<open>Progress for accepted programs\<close>
@@ -184,7 +193,7 @@ text \<open>
 theorem source_progress:
   assumes wf: "wf_source_program \<G> \<Pi>"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (c, s, frs)"
-  shows "(c = SKIP \<and> frs = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
+  shows "(is_SKIP c \<and> frs = []) \<or> (\<exists>cfg'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p cfg')"
 proof -
   define g :: cfg where
     "g = \<lparr>intra = UNIV, calls = UNIV, cfg_entry = FunctionEntry prog_main_name, checks = {}\<rparr>"
@@ -193,7 +202,7 @@ proof -
   proof (intro allI impI)
     fix p decl assume pd: "\<Pi> p = Some decl"
     obtain n' en E K where
-      cb: "compile \<Pi> p (body decl) (FunctionResult p) 0 = (n', en, E, K)"
+      cb: "compile \<Pi> p (body decl) (Statement (0 + csize (body decl))) 0 = (n', en, E, K)"
       by (metis prod_cases4)
     have "source_com (body decl)" "special_table p = None"
       using wf_source_programD(6,7)[OF wf] pd by (auto simp: source_pi_def)
@@ -201,9 +210,10 @@ proof -
           \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
           \<and> (FunctionEntry p, EA_Body p, en) \<in> intra g
           \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g
+          \<and> k = Statement (n + csize (body decl))
           \<and> source_com (body decl) \<and> special_table p = None"
-      by (intro exI[of _ "FunctionResult p"] exI[of _ "0 :: nat"] exI[of _ n'] exI[of _ en]
-            exI[of _ E] exI[of _ K])
+      by (intro exI[of _ "Statement (0 + csize (body decl))"] exI[of _ "0 :: nat"] exI[of _ n']
+            exI[of _ en] exI[of _ E] exI[of _ K])
          (simp add: g_def)
   qed
   have main_decl: "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
@@ -213,11 +223,11 @@ proof -
     and ctrl: "control_at \<Pi> prog_main_name (body \<lparr>formals = [], body = main_body \<Pi>\<rparr>) k n
                  (body \<lparr>formals = [], body = main_body \<Pi>\<rparr>) en"
     by (rule procs_embedded_activation[OF pc main_decl])
-  have base: "\<Pi>, g \<turnstile> (main_body \<Pi>, s0, []) \<approx> (en, s0, [])"
+  have base: "\<Pi>, g, prog_main_name \<turnstile> (main_body \<Pi>, s0, []) \<approx> (en, s0, [])"
     using csim.Base[OF ctrl cacc] by simp
   have safe: "return_safe (main_body \<Pi>)"
     using wf_source_programD(8,4)[OF wf] by (rule return_safe_if_no_return)
-  from csim_star[OF base pc safe run] obtain dg where "\<Pi>, g \<turnstile> (c, s, frs) \<approx> dg"
+  from csim_star[OF base pc safe run] obtain dg where "\<Pi>, g, prog_main_name \<turnstile> (c, s, frs) \<approx> dg"
     by blast
   then show ?thesis
     by (rule csim_progress) (rule wf_source_programD(5)[OF wf])

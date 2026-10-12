@@ -25,7 +25,7 @@ text \<open>
 subsection \<open>Every check column is a contextual verdict report\<close>
 
 lemma finite_intra_prog_cfg [simp]: "finite (intra (prog_cfg p))"
-  unfolding prog_cfg_def using compile_prog_finite by simp
+  unfolding prog_cfg_def by (simp add: compile_prog_finite)
 
 text \<open>
   Forgetting the labels, the check column is the contextual verdict report itself.

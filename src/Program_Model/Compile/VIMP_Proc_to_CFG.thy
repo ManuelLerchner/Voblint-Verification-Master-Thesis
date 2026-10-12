@@ -40,17 +40,17 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
   node of \<open>c2\<close> --- the continuation it hands to \<open>c1\<close> --- and that node is
   \<open>Statement (n + csize c1)\<close>.  \<open>compile_next_id\<close> below ties the two together, so the two
   definitions cannot drift apart silently.\<close>
-fun csize :: "com \<Rightarrow> nat" where
-  "csize SKIP = 1"
-| "csize (Assign x a) = 1"
-| "csize (Check l c) = 1"
+fun csize :: "'a acom \<Rightarrow> nat" where
+  "csize (SKIP i) = 1"
+| "csize (Assign i x a) = 1"
+| "csize (Check i l c) = 1"
 | "csize (Seq c1 c2) = csize c1 + csize c2"
-| "csize (If b c1 c2) = 1 + csize c1 + csize c2"
-| "csize (While b c) = 1 + csize c"
-| "csize (Call dst q actuals) = 1"
-| "csize (Return e) = 1"
-| "csize Restore = 1"
-| "csize Unwind = 1"
+| "csize (If i b c1 c2) = 1 + csize c1 + csize c2"
+| "csize (While i b c) = 1 + csize c"
+| "csize (Call i dst q actuals) = 1"
+| "csize (Return i e) = 1"
+| "csize (Restore i) = 1"
+| "csize (Unwind i) = 1"
 
 lemma csize_pos: "0 < csize c"
   by (induction c) auto
@@ -91,42 +91,42 @@ text \<open>
   statements about compiled call edges cite \<open>call_formals\<close> instead of restating the
   case split; the \<open>[simp]\<close> tag keeps it transparent to existing automation.
 \<close>
-definition call_formals :: "proc_table \<Rightarrow> pname \<Rightarrow> vname list" where
+definition call_formals :: "'a ptable \<Rightarrow> pname \<Rightarrow> vname list" where
   [simp]: "call_formals \<Pi> q =
     (case \<Pi> q of
        Some decl \<Rightarrow> formals decl
      | None \<Rightarrow> Code.abort (STR ''call_formals: call to an undeclared procedure'') (\<lambda>_. []))"
 
 fun compile ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat
+  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
         \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
-  "compile \<Pi> p SKIP k n =
+  "compile \<Pi> p (SKIP i) k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
-| "compile \<Pi> p (Assign x a) k n =
+| "compile \<Pi> p (Assign i x a) k n =
      (Suc n, Statement n, {(Statement n, EA_Assign x a, k)}, {})"
-| "compile \<Pi> p (Check l c) k n =
+| "compile \<Pi> p (Check i l c) k n =
      (Suc n, Statement n, {(Statement n, EA_Check l c, k)}, {})"
 | "compile \<Pi> p (Seq c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 (Statement (n + csize c1)) n;
           (n2, en2, E2, K2) = compile \<Pi> p c2 k (n + csize c1)
       in (n2, en1, E1 \<union> E2, K1 \<union> K2))"
-| "compile \<Pi> p (If b c1 c2) k n =
+| "compile \<Pi> p (If i b c1 c2) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c1 k (Suc n);
           (n2, en2, E2, K2) = compile \<Pi> p c2 k n1
       in (n2, Statement n,
-          {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
-           (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
-            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2),
+          {(Statement n, EA_Assume b, if is_SKIP c1 then k else en1),
+           (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else en2)}
+            \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2),
           K1 \<union> K2))"
-| "compile \<Pi> p (While b c) k n =
+| "compile \<Pi> p (While i b c) k n =
      (let (n1, en1, E1, K1) = compile \<Pi> p c (Statement n) (Suc n)
       in (n1, Statement n,
           {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1,
           K1))"
-| "compile \<Pi> p (Call dst q actuals) k n =
+| "compile \<Pi> p (Call i dst q actuals) k n =
      (case special_table q of
         Some desc \<Rightarrow>
           (case classify_special desc actuals of
@@ -142,11 +142,11 @@ where
            {(Statement n,
              CallEdge dst (call_formals \<Pi> q) actuals,
              FunctionEntry q, k)}))"
-| "compile \<Pi> p (Return e) k n =
+| "compile \<Pi> p (Return i e) k n =
      (Suc n, Statement n, {(Statement n, EA_Ret e p, FunctionResult p)}, {})"
-| "compile \<Pi> p Restore k n =
+| "compile \<Pi> p (Restore i) k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
-| "compile \<Pi> p Unwind k n =
+| "compile \<Pi> p (Unwind i) k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
 
 subsection \<open>Procedure and program compilation\<close>
@@ -169,7 +169,7 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   relies on (\<open>prog_node_reaches\<close>).\<close>
 
 definition compile_proc ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> proc_decl \<Rightarrow> nat
+  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a gproc_decl \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
@@ -182,7 +182,7 @@ where
           K))"
 
 fun compile_procs ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> nat
+  "'a ptable \<Rightarrow> pname list \<Rightarrow> nat
    \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
         \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
 where
@@ -207,7 +207,7 @@ text \<open>\<open>checks\<close> is not collected by a separate counter-threadi
   itself --- so this field cannot drift from it by construction, not merely by
   a separately proved agreement lemma.\<close>
 definition compile_prog ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> cfg"
+  "'a ptable \<Rightarrow> pname list \<Rightarrow> cfg"
 where
   "compile_prog \<Pi> ps =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;
@@ -254,7 +254,7 @@ text \<open>A fragment allocates exactly \<open>csize c\<close> indices.  This i
 
 lemma compile_next_id:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> n' = n + csize c"
-proof (induction c arbitrary: k n n' en E K rule: com.induct)
+proof (induction c arbitrary: k n n' en E K rule: gcom.induct)
   case (Seq c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -263,14 +263,14 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
     by (auto simp: Let_def split: prod.splits)
   from Seq.IH(2)[OF c2] n' show ?case by simp
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)" and n': "n' = n2"
     by (auto split: prod.splits)
   from If.IH(1)[OF c1] If.IH(2)[OF c2] n' show ?case by simp
 next
-  case (While b c)
+  case (While i b c)
   then obtain n1 en1 E1 K1 where
     c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)" and n': "n' = n1"
     by (auto split: prod.splits)
@@ -283,7 +283,7 @@ text \<open>Every fragment enters at its base counter.  Handing the continuation
 
 lemma compile_entry:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> en = Statement n"
-  by (induction c arbitrary: k n n' en E K rule: com.induct)
+  by (induction c arbitrary: k n n' en E K rule: gcom.induct)
      (auto simp: Let_def split: prod.splits option.splits)
 
 subsection \<open>Fragment decomposition\<close>
@@ -314,13 +314,13 @@ proof -
 qed
 
 lemma compile_IfE [elim]:
-  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
+  assumes "compile \<Pi> p (If i b c1 c2) k n = (n', en, E, K)"
   obtains n1 E1 K1 n2 E2 K2 where
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     "K = K1 \<union> K2"
 proof -
   obtain n1 en1 E1 K1 where c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
@@ -332,15 +332,15 @@ proof -
   have e2: "en2 = Statement (Suc n + csize c1)" using compile_entry[OF c2] i1 by simp
   from assms c1 c2 e1 e2
   have "en = Statement n"
-    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     "K = K1 \<union> K2"
     by (auto simp: Let_def)
   with c1 c2 e1 e2 i1 show ?thesis by (auto intro: that)
 qed
 
 lemma compile_WhileE [elim]:
-  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  assumes "compile \<Pi> p (While i b c) k n = (n', en, E, K)"
   obtains n1 E1 K1 where
     "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "en = Statement n"
@@ -397,8 +397,8 @@ proof -
 qed
 
 lemma compile_If_leftE [elim]:
-  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
-      and "c1 \<noteq> SKIP"
+  assumes "compile \<Pi> p (If i b c1 c2) k n = (n', en, E, K)"
+      and "\<not> is_SKIP c1"
   obtains m F L where
     "compile \<Pi> p c1 k (Suc n) = (m, Statement (Suc n), F, L)"
     "F \<subseteq> E" "L \<subseteq> K"
@@ -407,16 +407,16 @@ proof -
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
   with assms(2) show ?thesis by (intro that) auto
 qed
 
 lemma compile_If_rightE [elim]:
-  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
-      and "c2 \<noteq> SKIP"
+  assumes "compile \<Pi> p (If i b c1 c2) k n = (n', en, E, K)"
+      and "\<not> is_SKIP c2"
   obtains m F L where
     "compile \<Pi> p c2 k (Suc n + csize c1) = (m, Statement (Suc n + csize c1), F, L)"
     "F \<subseteq> E" "L \<subseteq> K"
@@ -425,15 +425,15 @@ proof -
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-          (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+          (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
   with assms(2) show ?thesis by (intro that) auto
 qed
 
 lemma compile_While_bodyE [elim]:
-  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  assumes "compile \<Pi> p (While i b c) k n = (n', en, E, K)"
   obtains m F L where
     "compile \<Pi> p c (Statement n) (Suc n) = (m, Statement (Suc n), F, L)"
     "F \<subseteq> E" "L \<subseteq> K"
@@ -453,25 +453,26 @@ text \<open>A branching fragment's own two edges, for the callers that want them
   beyond its branches.\<close>
 
 lemma compile_If_assume_edges:
-  assumes "compile \<Pi> p (If b c1 c2) k n = (n', en, E, K)"
-  shows "(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)) \<in> E"
-        "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E"
+  assumes "compile \<Pi> p (If i b c1 c2) k n = (n', en, E, K)"
+  shows "(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)) \<in> E"
+        "(Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1)) \<in> E"
 proof -
   from assms obtain n1 E1 K1 n2 E2 K2 where
     "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     "en = Statement n"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     "K = K1 \<union> K2"
     by (rule compile_IfE)
-  show "(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)) \<in> E" using E by blast
-  show "(Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1)) \<in> E"
+  show "(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)) \<in> E" using E
+    by blast
+  show "(Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1)) \<in> E"
     using E by blast
 qed
 
 lemma compile_While_assume_edges:
-  assumes "compile \<Pi> p (While b c) k n = (n', en, E, K)"
+  assumes "compile \<Pi> p (While i b c) k n = (n', en, E, K)"
   shows "(Statement n, EA_Assume b, Statement (Suc n)) \<in> E"
         "(Statement n, EA_AssumeNot b, k) \<in> E"
 proof -

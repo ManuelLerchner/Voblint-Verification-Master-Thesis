@@ -40,7 +40,7 @@ proof (induction c arbitrary: k n n' en E K)
     by (rule compile_SeqE)
   from Seq.prems(2) K show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] by auto
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1)
@@ -49,7 +49,7 @@ next
     by (rule compile_IfE)
   from If.prems(2) K show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] by auto
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 E1 K1 where
     c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and K: "K = K1"
@@ -521,7 +521,7 @@ text \<open>\<open>frag_ok u\<close>: the activation \<open>u\<close> either lie
   (declared body, entry wiring, all path nodes in the fragment) or is a single-node activation
   stuck at an undeclared \<^term>\<open>FunctionEntry\<close> --- which can never advance and never reaches a
   \<^term>\<open>FunctionResult\<close>.\<close>
-definition frag_ok :: "proc_table \<Rightarrow> pname list \<Rightarrow> activation_trace \<Rightarrow> bool" where
+definition frag_ok :: "'a ptable \<Rightarrow> pname list \<Rightarrow> activation_trace \<Rightarrow> bool" where
   "frag_ok \<Pi> ps u \<longleftrightarrow>
      (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
         \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)

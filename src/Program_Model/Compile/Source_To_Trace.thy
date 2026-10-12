@@ -210,7 +210,7 @@ lemma compile_prog_main_base:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
   obtains en where
     "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra (compile_prog \<Pi> ps)"
-    "\<Pi>, compile_prog \<Pi> ps \<turnstile> (main_body \<Pi>, s, []) \<approx> (en, s, [])"
+    "\<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (main_body \<Pi>, s, []) \<approx> (en, s, [])"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
@@ -223,7 +223,7 @@ proof -
       and entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
     by (rule procs_embedded_activation[OF pc main_decl])
   have bodyeq: "body (\<lparr>formals = [], body = (main_body \<Pi>)\<rparr>) = (main_body \<Pi>)" by simp
-  have base: "\<Pi>, ?g \<turnstile> (main_body \<Pi>, s, []) \<approx> (en, s, [])"
+  have base: "\<Pi>, ?g, prog_main_name \<turnstile> (main_body \<Pi>, s, []) \<approx> (en, s, [])"
     by (rule csim.Base[OF ctrl[unfolded bodyeq] cacc[unfolded bodyeq]])
   from entry base show ?thesis ..
 qed
@@ -252,14 +252,14 @@ theorem source_run_has_activation_trace:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-  shows "\<exists>v stk t. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
   have swf: "return_safe (main_body \<Pi>)" by (rule wf_compile_input_return_safe[OF wf])
   obtain en where entry: "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra ?g"
-    and base: "\<Pi>, ?g \<turnstile> (main_body \<Pi>, s0, []) \<approx> (en, s0, [])"
+    and base: "\<Pi>, ?g, prog_main_name \<turnstile> (main_body \<Pi>, s0, []) \<approx> (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
   have loc0:
     "located_activation_trace \<G> (compile_prog \<Pi> ps) S (FunctionEntry prog_main_name, s0, [])"
@@ -270,7 +270,7 @@ proof -
     by (rule cstep_preserves_located_activation_trace[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
     where run_c: "\<G>, ?g \<turnstile> (en, s0, []) \<rightarrow>\<^sub>c\<^sup>* cf'"
-      and sim': "\<Pi>, ?g \<turnstile> (residual, s, frs) \<approx> cf'"
+      and sim': "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
   have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
@@ -292,14 +292,14 @@ theorem source_store_in_activation_collect:
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>
                    \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 (compile_prog \<Pi> ps) t c"
-  shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
                    \<and> activation_context_rel \<G> adm c\<^sub>0 (compile_prog \<Pi> ps) t c
                    \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
-    where sim: "\<Pi>, ?g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+    where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
@@ -316,14 +316,14 @@ corollary source_store_in_activation_collect_of_fun:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-  shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
                    \<and> activation_context_of f c\<^sub>0 t = c
                    \<and> s \<in> \<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
-    where sim: "\<Pi>, ?g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+    where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
   from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
@@ -344,12 +344,12 @@ theorem source_toplevel_in_activation_collect:
   assumes wf: "wf_compile_input \<G> \<Pi> ps"
     and s0: "s0 \<in> S"
     and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
-  shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps \<turnstile> (residual, s, []) \<approx> (v, s, [])
+  shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, [])
              \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c\<^sub>0"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
-    where sim: "\<Pi>, ?g \<turnstile> (residual, s, []) \<approx> (v, s, stk)"
+    where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, stk)"
       and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using sim by blast
   from rep stk0 have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
@@ -371,7 +371,7 @@ text \<open>\<open>source_run_has_activation_trace\<close> and the collecting co
   an actual \<^const>\<open>valid_activation_trace\<close> witness, so none of the above is vacuously true.\<close>
 
 theorem source_run_has_activation_trace_witness:
-  "\<exists>v stk t. witness_pi, witness_cfg \<turnstile> (SKIP, s0, []) \<approx> (v, s0, stk)
+  "\<exists>v stk t. witness_pi, witness_cfg, prog_main_name \<turnstile> (SKIP (), s0, []) \<approx> (v, s0, stk)
            \<and> activation_trace_repr (\<lambda>_. False) witness_cfg {s0} (v, s0, stk) t"
   using source_run_has_activation_trace[OF witness_wf singletonI star.refl] by simp
 

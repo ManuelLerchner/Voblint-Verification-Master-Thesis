@@ -67,17 +67,17 @@ let close_definition header_start header_end ((name, formals, body) as decl) =
 %right NOT UMINUS
 
 %type <Voblint.exp> exp
-%type <Voblint.com> stmt
-%type <Voblint.com> if_stmt
-%type <Voblint.com> stmts
-%type <Voblint.com> stmts_opt
+%type <(unit, string, Voblint.exp) Voblint.gcom> stmt
+%type <(unit, string, Voblint.exp) Voblint.gcom> if_stmt
+%type <(unit, string, Voblint.exp) Voblint.gcom> stmts
+%type <(unit, string, Voblint.exp) Voblint.gcom> stmts_opt
 %type <Voblint.exp list> actuals
 %type <string list> formals
 %type <string list> ids
 %type <string list> globals_decl
 %type <string list> globals_opt
-%type <string * string list * Voblint.com> function_decl
-%type <(string * string list * Voblint.com) list> function_decl_star
+%type <string * string list * (unit, string, Voblint.exp) Voblint.gcom> function_decl
+%type <(string * string list * (unit, string, Voblint.exp) Voblint.gcom) list> function_decl_star
 
 %start <unit Voblint.imp_prog_ext> program
 %%
@@ -132,31 +132,31 @@ exp:
 (* stmt: *)
 stmt:
   | v0 = SKIP v1 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.SKIP) }
+      { record_stmt_pos $startpos $endpos (Voblint.SKIP ()) }
   | v0 = IDENT v1 = ASSIGN v2 = exp v3 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Assign (v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
   | v0 = RETURN v1 = exp v2 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Return (Some v1)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Return ((), (Some v1))) }
   | v0 = RETURN v1 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Return None) }
+      { record_stmt_pos $startpos $endpos (Voblint.Return ((), None)) }
   | v0 = CHECK v1 = LPAREN v2 = exp v3 = RPAREN v4 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Check ((source_label $startpos), v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Check ((), (source_label $startpos), v2)) }
   | v0 = if_stmt
       { v0 }
   | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint.While (v2, v5)) }
+      { record_stmt_pos $startpos $endpos (Voblint.While ((), v2, v5)) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN v4 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Call (None, v0, v2)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Call ((), None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN v6 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Call ((Some v0), v2, v4)) }
+      { record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
 (* if_stmt: *)
 if_stmt:
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, v9)) }
+      { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v9)) }
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
-      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, (record_stmt_pos $endpos $endpos (Voblint.SKIP)))) }
+      { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, (record_stmt_pos $endpos $endpos (Voblint.SKIP ())))) }
   | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = if_stmt
-      { record_stmt_pos $startpos $endpos (Voblint.If (v2, v5, v8)) }
+      { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v8)) }
 (* stmts: *)
 stmts:
   | x = stmt
@@ -166,7 +166,7 @@ stmts:
 (* stmts_opt: *)
 stmts_opt:
   | (* empty *)
-      { record_stmt_pos $startpos $endpos (Voblint.SKIP) }
+      { record_stmt_pos $startpos $endpos (Voblint.SKIP ()) }
   | cs = stmts
       { cs }
 (* actuals: *)
@@ -211,7 +211,7 @@ program:
           | _ -> failwith "more than one 'fun main()'"
         in
         Voblint.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint.Proc_decl_ext (formals, b, ()))) procs)
+          (List.map (fun (n, formals, b) -> (n, Voblint.Gproc_decl_ext (formals, b, ()))) procs)
           main_body g }
 
 globals_opt:

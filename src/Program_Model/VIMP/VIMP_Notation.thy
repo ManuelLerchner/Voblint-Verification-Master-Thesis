@@ -55,7 +55,7 @@ syntax
 
 parse_translation \<open>
   let
-    val c_proc_decl_ext = "VIMP_Proc.proc_decl.proc_decl_ext"
+    val c_proc_decl_ext = "VIMP_Proc.gproc_decl.gproc_decl_ext"
     val c_Unity   = "Product_Type.Unity"
     val c_imp_prog = "VIMP_Program.mk_program"
     val c_Pair    = "Product_Type.Pair"
@@ -163,28 +163,28 @@ text \<open>Four translations, each stated as the term it elaborates to: a branc
   which no theorem elsewhere would notice -- nothing in the proved pipeline reads concrete
   syntax.\<close>
 lemma "imp \<lbrakk> if (x < 10) { x = 0; } else { x = 1; } \<rbrakk>
-  = com.If (Less (V STR ''x'') (N 10)) (Assign STR ''x'' (N 0))
-    (Assign STR ''x'' (N 1))"
+  = gcom.If () (Less (V STR ''x'') (N 10)) (Assign () STR ''x'' (N 0))
+    (Assign () STR ''x'' (N 1))"
   by eval
-lemma "imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk>
-  = Check (0, 0) (exp.Not (exp.Eq (V STR ''x'') (N 0)))"
+lemma "(imp \<lbrakk> __voblint_check(!(x == 0)); \<rbrakk> :: com)
+  = Check () (0, 0) (exp.Not (exp.Eq (V STR ''x'') (N 0)))"
   by eval
 lemma "(program { global Gx; fun ping() { Gx = Gx + 1; } fun main() { ping(); } } :: imp_prog)
   = \<lparr>proc_rep =
-    [(STR ''main'', \<lparr>formals = [], body = Call None STR ''ping'' []\<rparr>),
+    [(STR ''main'', \<lparr>formals = [], body = Call () None STR ''ping'' []\<rparr>),
     (STR ''ping'',
     \<lparr>formals = [],
-    body = Assign STR ''Gx'' (Plus (V STR ''Gx'') (N 1))\<rparr>)],
+    body = Assign () STR ''Gx'' (Plus (V STR ''Gx'') (N 1))\<rparr>)],
     declared_global_vars = [STR ''Gx'']\<rparr>"
   by eval
 lemma "(program { fun add(a, b) { skip; return a + b; } fun main() { r = add(1, 2); } } :: imp_prog)
   = \<lparr>proc_rep =
     [(STR ''main'',
-    \<lparr>formals = [], body = Call (Some STR ''r'') STR ''add'' [N 1, N 2]\<rparr>),
+    \<lparr>formals = [], body = Call () (Some STR ''r'') STR ''add'' [N 1, N 2]\<rparr>),
     (STR ''add'',
     \<lparr>formals = [STR ''a'', STR ''b''],
     body =
-    Seq SKIP (Return (Some (Plus (V STR ''a'') (V STR ''b''))))\<rparr>)],
+    Seq (SKIP ()) (Return () (Some (Plus (V STR ''a'') (V STR ''b''))))\<rparr>)],
     declared_global_vars = []\<rparr>"
   by eval
 

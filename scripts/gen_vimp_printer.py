@@ -116,21 +116,21 @@ let rec com_lines depth c =
   let pad = indent depth in
   match c with
   | {G}.Seq (a, b) -> com_lines depth a @ com_lines depth b
-  | {G}.SKIP -> [pad ^ "skip;"]
-  | {G}.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
-  | {G}.Return None -> [pad ^ "return;"]
-  | {G}.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
-  | {G}.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
-  | {G}.Call (None, f, args) ->
+  | {G}.SKIP _ -> [pad ^ "skip;"]
+  | {G}.Assign (_, x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
+  | {G}.Return (_, None) -> [pad ^ "return;"]
+  | {G}.Return (_, Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
+  | {G}.Check (_, _, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
+  | {G}.Call (_, None, f, args) ->
     [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | {G}.Call (Some x, f, args) ->
+  | {G}.Call (_, Some x, f, args) ->
     [pad ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | {G}.While (b, body) ->
+  | {G}.While (_, b, body) ->
     [pad ^ "while (" ^ string_of_exp b ^ ") {{"] @ com_lines (depth + 1) body @ [pad ^ "}}"]
-  | {G}.If (b, t, e) ->
+  | {G}.If (_, b, t, e) ->
     [pad ^ "if (" ^ string_of_exp b ^ ") {{"] @ com_lines (depth + 1) t
     @ (match e with
-       | {G}.SKIP -> [pad ^ "}}"]
+       | {G}.SKIP _ -> [pad ^ "}}"]
        | _ -> [pad ^ "}} else {{"] @ com_lines (depth + 1) e @ [pad ^ "}}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
@@ -155,8 +155,8 @@ let string_of_program ~globals ~procs =
 let string_of_imp_prog p =
   let proc name =
     match {G}.prog_table p name with
-    | Some ({G}.Proc_decl_ext (formals, body, ())) -> (name, formals, body)
-    | None -> (name, [], {G}.SKIP)
+    | Some ({G}.Gproc_decl_ext (formals, body, ())) -> (name, formals, body)
+    | None -> (name, [], {G}.SKIP ())
   in
   string_of_program ~globals:({G}.declared_global_vars p)
     ~procs:(("main", [], {G}.prog_main p) :: List.map proc ({G}.prog_procs p))

@@ -1,5 +1,5 @@
 theory Analysis_Certified
-  imports Analysis_Report
+  imports Analysis_Report "Voblint_Compile.Elaborated_Compilation"
 begin
 
 section \<open>What an analysis report guarantees about the program\<close>
@@ -152,39 +152,64 @@ corollary run_voblint_check_sites:
            = check_sites (prog_cfg p)"
   using run_voblint_sound[OF assms] unfolding sound_report_def by blast
 
+lemma run_voblint_wf:
+  "run_voblint config p = Analysed res \<Longrightarrow> wf_program_compile_input p"
+  by (blast intro: wf_program_compile_input_exec_sound)
+
 subsection \<open>The endpoint\<close>
 
 text \<open>
-  Run the source program, stop wherever you like, and ask any configuration for a
-  report: there is a graph node and frame stack for where you stopped, the store in
-  your hands is one the collecting semantics admits there, the report's semantics
-  contains it, and every definite verdict the report gives there holds of it.
+  Run the program, stop wherever you like, and ask any configuration for a report. The run is
+  read through the program's elaboration \<^const>\<open>elab_pt\<close>, which annotates every statement
+  with the nodes the compiler emits for it and compiles to the same graph
+  (\<open>compile_prog_elab_pt\<close>). The run is the erasure of a run of the elaboration, and the
+  annotated command \<open>c\<close> where that run stopped names its node, \<^term>\<open>point c\<close>; the residual
+  alone could not, since two equal branches leave equal residuals at different nodes. At that
+  node the plain simulation holds too, the store in your hands is one the collecting semantics
+  admits there, the report's semantics contains it, and every definite verdict the report
+  gives there holds of it.
 \<close>
 
 theorem run_voblint_source_sound:
   fixes p :: imp_prog and s0 s :: store
   defines G_def: "\<G> \<equiv> declared_global p"
       and Pi_def: "\<Pi> \<equiv> prog_table p"
+      and E_def: "\<Pi>\<^sub>e \<equiv> elab_pt (prog_table p) (prog_procs p)"
       and g_def: "g \<equiv> prog_cfg p"
   assumes s0: "s0 \<in> cinit_stores \<G>"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
-                 \<and> s \<in> \<R>\<^bsub>res\<^esub> v
-                 \<and> s \<in> \<V>\<^bsub>res\<^esub> v"
+  shows "\<exists>c stk. erase c = residual
+               \<and> \<G>, \<Pi>\<^sub>e \<turnstile> (main_body \<Pi>\<^sub>e, s0, []) \<rightarrow>\<^sub>p\<^sup>* (c, s, frs)
+               \<and> \<Pi>\<^sub>e, g, prog_main_name \<turnstile> (c, s, frs) \<approx> (point c, s, stk)
+               \<and> \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (point c, s, stk)
+               \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> (point c)
+               \<and> s \<in> \<R>\<^bsub>res\<^esub> (point c)
+               \<and> s \<in> \<V>\<^bsub>res\<^esub> (point c)"
 proof -
-  have cfg: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)" by (rule prog_cfg_def)
-  from ans have "wf_program_compile_input_exec p" by (rule run_voblint_AnalysedE)
+  from ans have wf: "wf_program_compile_input p" by (rule run_voblint_wf)
+  have cfg: "compile_prog \<Pi>\<^sub>e (prog_procs p) = g"
+    unfolding E_def g_def prog_cfg_def by (rule compile_prog_elab_pt[OF wf])
+  have ept: "erase_pt \<Pi>\<^sub>e = \<Pi>" and mb: "erase (main_body \<Pi>\<^sub>e) = main_body \<Pi>"
+    unfolding E_def Pi_def by (rule erase_elab_pt [OF wf])+
+  from psteps_lift [of \<G> \<Pi>\<^sub>e, unfolded ept, OF run mb]
+  obtain c where runc: "\<G>, \<Pi>\<^sub>e \<turnstile> (main_body \<Pi>\<^sub>e, s0, []) \<rightarrow>\<^sub>p\<^sup>* (c, s, frs)"
+    and ec: "erase c = residual"
+    by blast
   from source_reaches_node_collect
-         [OF wf_program_compile_input_exec_sound [OF this] s0 [unfolded G_def]
-             run [unfolded G_def Pi_def]]
+         [OF wf_compile_input_elab_pt [OF wf, folded E_def] s0 [unfolded G_def]
+             runc [unfolded G_def]]
   obtain v stk
-    where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
+    where m: "\<Pi>\<^sub>e, g, prog_main_name \<turnstile> (c, s, frs) \<approx> (v, s, stk)"
+      and mem: "s \<in> \<C>\<^bsub>declared_global p,g,cinit_stores (declared_global p)\<^esub> v"
     unfolding cfg by blast
-  with run_voblint_covers[OF ans] run_voblint_collect_sound[OF ans] show ?thesis
-    unfolding G_def Pi_def g_def by blast
+  have v: "v = point c"
+    by (rule csim_point_compile_prog [OF wf m [unfolded E_def g_def prog_cfg_def
+          compile_prog_elab_pt [OF wf, symmetric]]])
+  from csim_erase [OF m] ec ept
+  have raw: "\<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)" by simp
+  from ec runc m raw mem v run_voblint_covers [OF ans] run_voblint_collect_sound [OF ans]
+  show ?thesis unfolding G_def g_def by blast
 qed
 
 text \<open>
@@ -200,7 +225,7 @@ corollary run_voblint_source_sound_joined:
   assumes s0: "s0 \<in> cinit_stores \<G>"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                  \<and> s \<in> \<gamma>\<^bsub>res\<^esub> (report_point_join res v)"
   using run_voblint_source_sound[OF s0[unfolded G_def] run[unfolded G_def Pi_def] ans]
     report_sem_point_join
@@ -229,7 +254,7 @@ theorem run_voblint_check_sound:
 proof -
   from run_voblint_source_sound [OF s0 [unfolded G_def] run [unfolded G_def Pi_def] ans]
   obtain v stk
-    where m: "prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+    where m: "prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
       and sem: "s \<in> \<R>\<^bsub>res\<^esub> v"
       and verdicts: "s \<in> \<V>\<^bsub>res\<^esub> v"
@@ -321,10 +346,6 @@ text \<open>
   policy's own, so there is one statement per policy.
 \<close>
 
-lemma run_voblint_wf:
-  "run_voblint config p = Analysed res \<Longrightarrow> wf_program_compile_input p"
-  by (blast intro: wf_program_compile_input_exec_sound)
-
 text \<open>
   The chain for any context policy, given what the policy owes: every valid
   activation trace carries some context, and the buckets together are the collecting
@@ -342,7 +363,7 @@ theorem run_voblint_spine:
       and ans: "run_voblint config p = Analysed res"
       and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 g t c"
       and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v"
-  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c
@@ -354,7 +375,7 @@ proof -
     unfolding g_def Pi_def by (rule prog_cfg_def)
   from source_store_in_activation_collect
          [OF run_voblint_wf [OF ans, folded G_def Pi_def] s0 run has_ctx [unfolded cfg]]
-  have witness: "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  have witness: "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm c\<^sub>0 g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
@@ -374,7 +395,7 @@ theorem run_voblint_call_string_chain:
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r (Ctx_CallString k) pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm [] g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,[],g,S\<^esub> v c
@@ -404,7 +425,7 @@ theorem run_voblint_unit_chain:
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r Ctx_None pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm () g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,(),g,S\<^esub> v c
@@ -478,7 +499,7 @@ theorem run_voblint_entry_state_chain:
   assumes s0: "s0 \<in> S"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
-  shows "\<exists>v stk t c. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk t c. \<Pi>, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_trace_repr \<G> g S (v, s, stk) t
            \<and> activation_context_rel \<G> adm mcp_root_ctx g t c
            \<and> s \<in> \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c

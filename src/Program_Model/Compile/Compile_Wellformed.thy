@@ -34,7 +34,7 @@ text \<open>
 lemma compile_calls_source_range:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, act, ce, af) \<in> K
    \<Longrightarrow> \<exists>j. u = Statement j \<and> n \<le> j \<and> j < n'"
-proof (induction c arbitrary: k n n' en E K rule: com.induct)
+proof (induction c arbitrary: k n n' en E K rule: gcom.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -51,7 +51,7 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
     case R with Seq.IH(2)[OF c2 R] i1 i2 show ?thesis unfolding n' by auto
   qed
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
@@ -67,7 +67,7 @@ next
     case R with If.IH(2)[OF c2 R] i1 i2 show ?thesis unfolding n' by auto
   qed
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
       c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and n': "n' = n1" and K: "K = K1"
@@ -95,7 +95,7 @@ lemma calls_source_unique_Un:
 lemma compile_calls_source_unique:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> (u, ca1, ce1, af1) \<in> K \<Longrightarrow> (u, ca2, ce2, af2) \<in> K
    \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-proof (induction c arbitrary: k n n' en E K rule: com.induct)
+proof (induction c arbitrary: k n n' en E K rule: gcom.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       cc1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -108,7 +108,7 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
        (use compile_calls_source_range[OF cc1] compile_calls_source_range[OF cc2] i1
             Seq.prems(2,3) K in \<open>fastforce+\<close>)
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       cc1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and cc2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
@@ -119,7 +119,7 @@ next
        (use compile_calls_source_range[OF cc1] compile_calls_source_range[OF cc2]
             If.prems(2,3) K in \<open>fastforce+\<close>)
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
       cc1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and K: "K = K1"
@@ -434,7 +434,7 @@ lemma frag_stmts_K_tgtI [intro]:
 
 lemma compile_frag_stmts_range:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> frag_stmts E K \<subseteq> {n..<n'} \<union> kstmt k"
-proof (induction c arbitrary: k n n' en E K rule: com.induct)
+proof (induction c arbitrary: k n n' en E K rule: gcom.induct)
   case (Seq c1 c2)
   from Seq.prems obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -449,18 +449,18 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
     using r1 r2 i1 i2 csize_pos[of c2]
     unfolding E K n' by (simp only: frag_stmts_Un) auto
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems obtain n1 E1 K1 n2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) =
       (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-      (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))}
-      \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+      (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))}
+      \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
   have ids: "n1 = Suc n + csize c1" "n2 = Suc n + csize c1 + csize c2"
-    "n' = n + csize (If b c1 c2)"
+    "n' = n + csize (If i b c1 c2)"
     using compile_next_id[OF c1] compile_next_id[OF c2] compile_next_id[OF If.prems]
     by simp_all
   have sub: "frag_stmts E K \<subseteq> frag_stmts E1 K1 \<union> frag_stmts E2 K2
@@ -470,7 +470,7 @@ next
     using sub If.IH(1)[OF c1] If.IH(2)[OF c2] ids csize_pos[of c1] csize_pos[of c2]
     by fastforce
 next
-  case (While b c)
+  case (While i b c)
   from While.prems obtain n1 en1 E1 K1 where
     c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and n': "n' = n1"
@@ -498,7 +498,7 @@ text \<open>Each pass emits finitely many edges.  Everything downstream that fol
 
 lemma compile_finite:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> finite E \<and> finite K"
-  by (induction c arbitrary: k n n' en E K rule: com.induct)
+  by (induction c arbitrary: k n n' en E K rule: gcom.induct)
      (auto simp: Let_def split: prod.splits option.splits)
 
 lemma compile_proc_finite:
@@ -566,17 +566,17 @@ proof (induction c arbitrary: k n n' en E K)
     case R from Seq.IH(2)[OF c2 R] show ?thesis by auto
   qed
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   then obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else en1), (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
-                  \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else en1), (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else en2)}
+                  \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     by (auto split: prod.splits)
   have e1: "en1 = Statement (Suc n)" using compile_entry[OF c1] .
   have e2: "en2 = Statement n1" using compile_entry[OF c2] .
-  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
-                                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}"
+  consider (Guard) "(u, a, v) \<in> {(Statement n, EA_Assume b, if is_SKIP c1 then k else en1),
+                                 (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else en2)}"
     | (L) "(u, a, v) \<in> E1" | (R) "(u, a, v) \<in> E2"
     using If.prems(2) E by (auto split: if_splits)
   then show ?case
@@ -588,7 +588,7 @@ next
     case R from If.IH(2)[OF c2 R] show ?thesis by auto
   qed
 next
-  case (While b c)
+  case (While i b c)
   then obtain n1 en1 E1 K1 where
     c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
@@ -675,7 +675,7 @@ text \<open>A worked example names its graph with a definition and then wants th
   five at once, already phrased in the example's own name.\<close>
 
 locale compiled_cfg = finite_cfg g
-  for \<Pi> :: proc_table and ps :: "pname list" and g :: cfg +
+  for \<Pi> :: "'a ptable" and ps :: "pname list" and g :: cfg +
   assumes cfg_eq: "g = compile_prog \<Pi> ps"
 begin
 

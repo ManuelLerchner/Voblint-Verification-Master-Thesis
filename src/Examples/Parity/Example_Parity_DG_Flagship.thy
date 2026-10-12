@@ -192,7 +192,7 @@ lemma parity_main_body [simp]: "main_body parity_pi = parity_prog"
 theorem parity_source_run_sound:
   assumes run: "parity_gs, parity_pi \<turnstile> (parity_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores parity_gs"
-  shows "\<exists>v stk. parity_pi, parity_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
+  shows "\<exists>v stk. parity_pi, parity_cfg, prog_main_name \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<gamma> (parity_rule.state_at Globals_Join parity_gs parity_program () v)"
 proof -
   have run':

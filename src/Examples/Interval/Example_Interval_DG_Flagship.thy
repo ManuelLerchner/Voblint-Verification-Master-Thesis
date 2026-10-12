@@ -131,7 +131,7 @@ theorem flagship_source_run_sound:
   assumes run:
     "flagship_gs, flagship_pi \<turnstile> (prog_main flagship_prog, s, []) \<rightarrow>\<^sub>p\<^sup>* (residual, t, frs)"
       and init: "s \<in> cinit_stores flagship_gs"
-  shows "\<exists>v stk. flagship_pi, flagship_cfg \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
+  shows "\<exists>v stk. flagship_pi, flagship_cfg, prog_main_name \<turnstile> (residual, t, frs) \<approx> (v, t, stk)
                  \<and> t \<in> \<gamma> (flagship_at v)"
 proof -
   have run':

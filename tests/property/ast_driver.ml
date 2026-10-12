@@ -78,17 +78,17 @@ let int_of_atom s = Int_of_integer (Z.of_string s)
 let unlabelled = (nat_of_integer Z.zero, nat_of_integer Z.zero)
 
 let rec erase_labels = function
-  | Check (_, e) -> Check (unlabelled, e)
+  | Check (a, _, e) -> Check (a, unlabelled, e)
   | Seq (c1, c2) -> Seq (erase_labels c1, erase_labels c2)
-  | If (b, c1, c2) -> If (b, erase_labels c1, erase_labels c2)
-  | While (b, c) -> While (b, erase_labels c)
+  | If (a, b, c1, c2) -> If (a, b, erase_labels c1, erase_labels c2)
+  | While (a, b, c) -> While (a, b, erase_labels c)
   | c -> c
 
 let erase_program_labels prog =
   let proc f =
     match prog_table prog f with
-    | Some (Proc_decl_ext (formals, body, ())) ->
-        (f, Proc_decl_ext (formals, erase_labels body, ()))
+    | Some (Gproc_decl_ext (formals, body, ())) ->
+        (f, Gproc_decl_ext (formals, erase_labels body, ()))
     | None -> failwith ("ast_driver: undeclared procedure " ^ f)
   in
   mk_program
@@ -130,17 +130,18 @@ and build_actuals = function
   | s -> failwith ("ast_driver: bad actuals sexp: " ^ show_sexp s)
 
 and build_com = function
-  | Atom "Skip" -> SKIP
-  | Slist [ Atom "Assign"; Atom x; a ] -> Assign (x, build_exp a)
-  | Slist [ Atom "Random"; Atom x ] -> Call (Some x, "__voblint_nondet_int", [])
-  | Slist [ Atom "Check"; b ] -> Check (unlabelled, build_exp b)
+  | Atom "Skip" -> SKIP ()
+  | Slist [ Atom "Assign"; Atom x; a ] -> Assign ((), x, build_exp a)
+  | Slist [ Atom "Random"; Atom x ] ->
+      Call ((), Some x, "__voblint_nondet_int", [])
+  | Slist [ Atom "Check"; b ] -> Check ((), unlabelled, build_exp b)
   | Slist [ Atom "Seq"; c1; c2 ] -> Seq (build_com c1, build_com c2)
   | Slist [ Atom "If"; b; c1; c2 ] ->
-      If (build_exp b, build_com c1, build_com c2)
-  | Slist [ Atom "While"; b; c ] -> While (build_exp b, build_com c)
+      If ((), build_exp b, build_com c1, build_com c2)
+  | Slist [ Atom "While"; b; c ] -> While ((), build_exp b, build_com c)
   | Slist [ Atom "Call"; dst; Atom p; actuals ] ->
-      Call (build_dst_opt dst, p, build_actuals actuals)
-  | Slist [ Atom "Return"; aopt ] -> Return (build_exp_opt aopt)
+      Call ((), build_dst_opt dst, p, build_actuals actuals)
+  | Slist [ Atom "Return"; aopt ] -> Return ((), build_exp_opt aopt)
   | s -> failwith ("ast_driver: bad com sexp: " ^ show_sexp s)
 
 and show_sexp = function
@@ -156,7 +157,7 @@ let build_names = function
 
 let build_proc = function
   | Slist [ Atom name; formals; body ] ->
-      (name, Proc_decl_ext (build_names formals, build_com body, ()))
+      (name, Gproc_decl_ext (build_names formals, build_com body, ()))
   | s -> failwith ("ast_driver: bad proc sexp: " ^ show_sexp s)
 
 let build_program = function

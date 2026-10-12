@@ -95,8 +95,9 @@ text \<open>
 theorem compiled_call_string_gk_finite:
   "finite ({Global} \<union> (\<Union>p \<in> cfg_nodes (compile_prog Pi ps). Seed p `
         {cs::call_string. set cs \<subseteq> cfg_nodes (compile_prog Pi ps) \<and> length cs \<le> k}))"
-  using compiled_call_strings_finite
-    cfg_nodes_finite[OF compile_prog_finite[THEN conjunct1] compile_prog_finite[THEN conjunct2]]
+  using compiled_call_strings_finite[of Pi ps k]
+    cfg_nodes_finite[OF compile_prog_finite[of Pi ps, THEN conjunct1]
+      compile_prog_finite[of Pi ps, THEN conjunct2]]
   by auto
 
 section \<open>The monovariant policy\<close>

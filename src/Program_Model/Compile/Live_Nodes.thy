@@ -75,7 +75,7 @@ proof (induction c arbitrary: k n n' en E K)
     by (rule compile_SeqE)
   show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] Seq.prems(2,3) K by auto
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
@@ -83,7 +83,7 @@ next
     by (rule compile_IfE)
   show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] If.prems(2,3) K by auto
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 E1 K1 where
       c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and K: "K = K1"
@@ -167,27 +167,27 @@ proof (induction c arbitrary: k n n' en E K u a v ca ce)
     from Seq.IH(2)[OF c2 sub(3,4) 2] show ?thesis .
   qed
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
   have subK: "K1 \<subseteq> calls g" "K2 \<subseteq> calls g" using If.prems(3) K by auto
-  have subE1: "c1 \<noteq> SKIP \<Longrightarrow> E1 \<subseteq> intra g" and subE2: "c2 \<noteq> SKIP \<Longrightarrow> E2 \<subseteq> intra g"
+  have subE1: "\<not> is_SKIP c1 \<Longrightarrow> E1 \<subseteq> intra g" and subE2: "\<not> is_SKIP c2 \<Longrightarrow> E2 \<subseteq> intra g"
     using If.prems(2) E by auto
-  have K1_skip: "c1 = SKIP \<Longrightarrow> K1 = {}" using c1 by auto
-  have K2_skip: "c2 = SKIP \<Longrightarrow> K2 = {}" using c2 by auto
-  have e1: "c1 \<noteq> SKIP \<Longrightarrow> local_reaches g (Statement (Suc n)) k
+  have K1_skip: "is_SKIP c1 \<Longrightarrow> K1 = {}" using c1 by auto
+  have K2_skip: "is_SKIP c2 \<Longrightarrow> K2 = {}" using c2 by auto
+  have e1: "\<not> is_SKIP c1 \<Longrightarrow> local_reaches g (Statement (Suc n)) k
              \<or> local_reaches g (Statement (Suc n)) (FunctionResult p)"
     using compile_reaches[OF c1 subE1 subK(1)] by blast
-  have e2: "c2 \<noteq> SKIP \<Longrightarrow> local_reaches g (Statement (Suc n + csize c1)) k
+  have e2: "\<not> is_SKIP c2 \<Longrightarrow> local_reaches g (Statement (Suc n + csize c1)) k
              \<or> local_reaches g (Statement (Suc n + csize c1)) (FunctionResult p)"
     using compile_reaches[OF c2 subE2 subK(2)] by blast
   have head: "local_reaches g (Statement n) k \<or> local_reaches g (Statement n) (FunctionResult p)"
-  proof (cases "c1 = SKIP")
+  proof (cases "is_SKIP c1")
     case True
     then show ?thesis using If.prems(2) E by (auto intro: local_reaches_intra_step)
   next
@@ -197,8 +197,8 @@ next
     with e1[OF False] show ?thesis by (blast intro: local_reaches_intra_step)
   qed
   from If.prems(4) E K consider "u = Statement n"
-    | "c1 \<noteq> SKIP" "(u, a, v) \<in> E1 \<or> (u, ca, ce, v) \<in> K1"
-    | "c2 \<noteq> SKIP" "(u, a, v) \<in> E2 \<or> (u, ca, ce, v) \<in> K2"
+    | "\<not> is_SKIP c1" "(u, a, v) \<in> E1 \<or> (u, ca, ce, v) \<in> K1"
+    | "\<not> is_SKIP c2" "(u, a, v) \<in> E2 \<or> (u, ca, ce, v) \<in> K2"
     using K1_skip K2_skip by (auto split: if_splits)
   then show ?case
   proof cases
@@ -209,7 +209,7 @@ next
     case 3 from If.IH(2)[OF c2 subE2[OF 3(1)] subK(2) 3(2)] show ?thesis .
   qed
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 E1 K1 where
       c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
@@ -269,27 +269,27 @@ proof (induction c arbitrary: k n n' en E K u a v ca ce)
     from Seq.IH(2)[OF c2 2] E K show ?thesis by blast
   qed
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 E1 K1 n2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
-                 (Statement n, EA_AssumeNot b, if c2 = SKIP then k else Statement (Suc n + csize c1))} \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
+                 (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else Statement (Suc n + csize c1))} \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     and K: "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have K1_skip: "c1 = SKIP \<Longrightarrow> K1 = {}" using c1 by auto
-  have K2_skip: "c2 = SKIP \<Longrightarrow> K2 = {}" using c2 by auto
+  have K1_skip: "is_SKIP c1 \<Longrightarrow> K1 = {}" using c1 by auto
+  have K2_skip: "is_SKIP c2 \<Longrightarrow> K2 = {}" using c2 by auto
   have s1:
-    "c1 \<noteq> SKIP \<Longrightarrow> (\<exists>a w. (Statement (Suc n), a, w) \<in> E) \<or> (\<exists>ca ce w. (Statement (Suc n), ca, ce, w) \<in> K)"
+    "\<not> is_SKIP c1 \<Longrightarrow> (\<exists>a w. (Statement (Suc n), a, w) \<in> E) \<or> (\<exists>ca ce w. (Statement (Suc n), ca, ce, w) \<in> K)"
     using compile_entry_src[OF c1] E K by auto
-  have s2: "c2 \<noteq> SKIP \<Longrightarrow> (\<exists>a w. (Statement (Suc n + csize c1), a, w) \<in> E)
+  have s2: "\<not> is_SKIP c2 \<Longrightarrow> (\<exists>a w. (Statement (Suc n + csize c1), a, w) \<in> E)
               \<or> (\<exists>ca ce w. (Statement (Suc n + csize c1), ca, ce, w) \<in> K)"
     using compile_entry_src[OF c2] E K by auto
   from If.prems(2) E K consider
-      "u = Statement n" "v = (if c1 = SKIP then k else Statement (Suc n))"
-    | "u = Statement n" "v = (if c2 = SKIP then k else Statement (Suc n + csize c1))"
-    | "c1 \<noteq> SKIP" "(u, a, v) \<in> E1 \<or> (u, ca, ce, v) \<in> K1"
-    | "c2 \<noteq> SKIP" "(u, a, v) \<in> E2 \<or> (u, ca, ce, v) \<in> K2"
+      "u = Statement n" "v = (if is_SKIP c1 then k else Statement (Suc n))"
+    | "u = Statement n" "v = (if is_SKIP c2 then k else Statement (Suc n + csize c1))"
+    | "\<not> is_SKIP c1" "(u, a, v) \<in> E1 \<or> (u, ca, ce, v) \<in> K1"
+    | "\<not> is_SKIP c2" "(u, a, v) \<in> E2 \<or> (u, ca, ce, v) \<in> K2"
     using K1_skip K2_skip by (auto split: if_splits)
   then show ?case
   proof cases
@@ -302,7 +302,7 @@ next
     case 4 from If.IH(2)[OF c2 4(2)] E K 4(1) show ?thesis by auto
   qed
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 E1 K1 where
       c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and E: "E = {(Statement n, EA_Assume b, Statement (Suc n)),
@@ -383,7 +383,7 @@ lemma proc_nodes_pfn:
   using x compile_proc_intra_pfn[OF cp] compile_proc_calls_pfn[OF cp]
   unfolding proc_nodes_def by blast
 
-definition prog_node :: "proc_table \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> cfg_node \<Rightarrow> bool" where
+definition prog_node :: "'a ptable \<Rightarrow> pname list \<Rightarrow> pname \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "prog_node \<Pi> ps q x \<longleftrightarrow>
      (\<exists>d m m' Ep Kp. \<Pi> q = Some d \<and> compile_proc \<Pi> q d m = (m', Ep, Kp)
         \<and> (FunctionEntry q, EA_Body q, Statement m) \<in> intra (compile_prog \<Pi> ps)

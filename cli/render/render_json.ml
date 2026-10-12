@@ -198,7 +198,7 @@ let procedure_json program returns_value
     (name, (line, column, end_line, end_column)) =
   let formals =
     match C.prog_table program name with
-    | Some (C.Proc_decl_ext (formals, _, ())) when name <> "main" -> formals
+    | Some (C.Gproc_decl_ext (formals, _, ())) when name <> "main" -> formals
     | _ -> []
   in
   Printf.sprintf
@@ -587,18 +587,18 @@ let rec exp_json e =
   | C.Not a -> tagged "Not" [ exp_json a ]
 
 let rec com_json = function
-  | C.SKIP -> tagged "SKIP" []
-  | C.Assign (x, e) -> tagged "Assign" [ json_string x; exp_json e ]
-  | C.Check (l, e) -> tagged "Check" [ check_label_json l; exp_json e ]
+  | C.SKIP _ -> tagged "SKIP" []
+  | C.Assign (_, x, e) -> tagged "Assign" [ json_string x; exp_json e ]
+  | C.Check (_, l, e) -> tagged "Check" [ check_label_json l; exp_json e ]
   | C.Seq (c, d) -> tagged "Seq" [ com_json c; com_json d ]
-  | C.If (b, c, d) -> tagged "If" [ exp_json b; com_json c; com_json d ]
-  | C.While (b, c) -> tagged "While" [ exp_json b; com_json c ]
-  | C.Call (dst, f, args) ->
+  | C.If (_, b, c, d) -> tagged "If" [ exp_json b; com_json c; com_json d ]
+  | C.While (_, b, c) -> tagged "While" [ exp_json b; com_json c ]
+  | C.Call (_, dst, f, args) ->
       tagged "Call"
         [ json_option json_string dst; json_string f; json_list exp_json args ]
-  | C.Return e -> tagged "Return" [ json_option exp_json e ]
-  | C.Restore -> tagged "Restore" []
-  | C.Unwind -> tagged "Unwind" []
+  | C.Return (_, e) -> tagged "Return" [ json_option exp_json e ]
+  | C.Restore _ -> tagged "Restore" []
+  | C.Unwind _ -> tagged "Unwind" []
 
 let cfg_node_json = function
   | C.Statement n -> tagged "Statement" [ nat_json n ]
@@ -790,7 +790,7 @@ let program_globals_json = function
 let program_json p =
   let decl name =
     match C.prog_table p name with
-    | Some (C.Proc_decl_ext (formals, body, ())) ->
+    | Some (C.Gproc_decl_ext (formals, body, ())) ->
         json_object
           [
             ("formals", json_list json_string formals); ("body", com_json body);
@@ -891,7 +891,7 @@ let seeds_json program result (graph : G.t) =
   let shown f name =
     let formals =
       match C.prog_table program f with
-      | Some (C.Proc_decl_ext (formals, _, ())) -> formals
+      | Some (C.Gproc_decl_ext (formals, _, ())) -> formals
       | None -> []
     in
     List.mem name formals || List.mem name globals

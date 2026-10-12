@@ -95,7 +95,7 @@ sublocale routed: routed_context S "\<lambda>d e. \<gamma>\<^sub>D\<^sub>G d (e 
   route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed
   "static_resolve (compile_prog Pi ps)" is_bot \<gamma>\<^sub>M entry_context_rel
 proof unfold_locales
-  show "finite (calls (compile_prog Pi ps))" using compile_prog_finite by simp
+  show "finite (calls (compile_prog Pi ps))" by (simp add: compile_prog_finite)
 next
   show "calls_source_unique (compile_prog Pi ps)"
     unfolding calls_source_unique_def using compile_prog_calls_source_unique by blast

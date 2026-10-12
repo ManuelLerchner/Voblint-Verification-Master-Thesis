@@ -894,7 +894,7 @@ proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC C
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
-  case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
+  case FinE show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
 next
   case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp_routed[OF solves]])
 next

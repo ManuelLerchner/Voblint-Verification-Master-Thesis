@@ -165,7 +165,7 @@ lemma sol_vars_dep_closed:
   using pp_routed[OF solves] x y by blast
 
 lemma prog_cfg_finite: "finite (intra (prog_cfg p))" "finite (calls (prog_cfg p))"
-  unfolding prog_cfg_def using compile_prog_finite by simp_all
+  unfolding prog_cfg_def by (simp_all add: compile_prog_finite)
 
 lemma sol_vars_back_intra:
   assumes solves: "terminates (declared_global p) p"
@@ -366,7 +366,7 @@ proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC C
 next
   case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
 next
-  case FinE show ?case unfolding prog_cfg_def using compile_prog_finite by simp
+  case FinE show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
 next
   case PP show ?case
     by (rule post_bounded_subset[OF post_bounded_of_part_post_solution[OF pp_routed[OF solves]]
@@ -596,7 +596,7 @@ theorem fun_route_report_proved_sound:
                  prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have fin: "finite (intra (prog_cfg p))"
-    unfolding prog_cfg_def using compile_prog_finite by simp
+    unfolding prog_cfg_def by (simp add: compile_prog_finite)
   show ?thesis
     by (rule classify_checks_proved_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
@@ -616,7 +616,7 @@ theorem fun_route_report_refuted_sound:
                  prog_cfg p,cinit_stores (declared_global p)\<^esub> v ctx. \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
   have fin: "finite (intra (prog_cfg p))"
-    unfolding prog_cfg_def using compile_prog_finite by simp
+    unfolding prog_cfg_def by (simp add: compile_prog_finite)
   show ?thesis
     by (rule classify_checks_refuted_sound
           [where g = "prog_cfg p" and env = "state_at (declared_global p) p ctx"
@@ -634,12 +634,12 @@ theorem fun_route_source_sound:
     and s0: "s0 \<in> cinit_stores (declared_global p)"
     and run: "declared_global p, prog_table p \<turnstile> (main_body (prog_table p), s0, [])
                 \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-  shows "\<exists>v stk ctx. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  shows "\<exists>v stk ctx. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> s \<in> \<gamma>\<^sub>V (state_at (declared_global p) p ctx v)"
 proof -
   have cfg_eq: "prog_cfg p = compile_prog (prog_table p) (prog_procs p)"
     by (rule prog_cfg_def)
-  have "\<exists>v stk. prog_table p, prog_cfg p \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+  have "\<exists>v stk. prog_table p, prog_cfg p, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
           \<and> s \<in> (\<Union>ctx. \<gamma>\<^sub>V (state_at (declared_global p) p ctx v))"
     unfolding cfg_eq
     by (rule source_sound_from_node_collect_cap[OF wf s0 run])

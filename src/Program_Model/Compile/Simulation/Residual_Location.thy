@@ -29,19 +29,19 @@ text \<open>\<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> h
   remains is performed by \<open>cstep\<close> popping a frame, not by any fragment node.\<close>
 
 inductive control_at ::
-  "proc_table \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> bool"
-  for \<Pi> :: proc_table and p :: pname
+  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> bool"
+  for \<Pi> :: "'a ptable" and p :: pname
 where
   Skip [intro]:
-    "control_at \<Pi> p SKIP k n SKIP (Statement n)"
+    "control_at \<Pi> p (SKIP i) k n (SKIP i) (Statement n)"
 | Assign [intro]:
-    "control_at \<Pi> p (Assign x a) k n (Assign x a) (Statement n)"
+    "control_at \<Pi> p (Assign i x a) k n (Assign i x a) (Statement n)"
 | AssignDone [intro]:
-    "control_at \<Pi> p (Assign x a) k n SKIP k"
+    "control_at \<Pi> p (Assign i x a) k n (SKIP i) k"
 | Check [intro]:
-    "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n (VIMP_Proc.com.Check l c) (Statement n)"
+    "control_at \<Pi> p (VIMP_Proc.gcom.Check i l c) k n (VIMP_Proc.gcom.Check i l c) (Statement n)"
 | CheckDone [intro]:
-    "control_at \<Pi> p (VIMP_Proc.com.Check l c) k n SKIP k"
+    "control_at \<Pi> p (VIMP_Proc.gcom.Check i l c) k n (SKIP i) k"
 | SeqLeft [intro]:
     "control_at \<Pi> p c1 (Statement (n + csize c1)) n r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n (Seq r c2) v"
@@ -49,31 +49,31 @@ where
     "control_at \<Pi> p c2 k (n + csize c1) r v \<Longrightarrow>
      control_at \<Pi> p (Seq c1 c2) k n r v"
 | IfHead [intro]:
-    "control_at \<Pi> p (If b c1 c2) k n (If b c1 c2) (Statement n)"
+    "control_at \<Pi> p (If i b c1 c2) k n (If i b c1 c2) (Statement n)"
 | IfLeft [intro]:
-    "control_at \<Pi> p c1 k (Suc n) r v \<Longrightarrow> c1 \<noteq> SKIP \<Longrightarrow>
-     control_at \<Pi> p (If b c1 c2) k n r v"
+    "control_at \<Pi> p c1 k (Suc n) r v \<Longrightarrow> \<not> is_SKIP c1 \<Longrightarrow>
+     control_at \<Pi> p (If i b c1 c2) k n r v"
 | IfRight [intro]:
-    "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow> c2 \<noteq> SKIP \<Longrightarrow>
-     control_at \<Pi> p (If b c1 c2) k n r v"
+    "control_at \<Pi> p c2 k (Suc n + csize c1) r v \<Longrightarrow> \<not> is_SKIP c2 \<Longrightarrow>
+     control_at \<Pi> p (If i b c1 c2) k n r v"
 | IfDone [intro]:
-    "control_at \<Pi> p (If b c1 c2) k n SKIP k"
+    "c1 = SKIP j \<or> c2 = SKIP j \<Longrightarrow> control_at \<Pi> p (If i b c1 c2) k n (SKIP j) k"
 | WhileHead [intro]:
-    "control_at \<Pi> p (While b c) k n (While b c) (Statement n)"
+    "control_at \<Pi> p (While i b c) k n (While i b c) (Statement n)"
 | WhileUnfolded [intro]:
-    "control_at \<Pi> p (While b c) k n
-       (If b (Seq c (While b c)) SKIP) (Statement n)"
+    "control_at \<Pi> p (While i b c) k n
+       (If i b (Seq c (While i b c)) (SKIP i)) (Statement n)"
 | WhileBody [intro]:
     "control_at \<Pi> p c (Statement n) (Suc n) r v \<Longrightarrow>
-     control_at \<Pi> p (While b c) k n (Seq r (While b c)) v"
+     control_at \<Pi> p (While i b c) k n (Seq r (While i b c)) v"
 | WhileDone [intro]:
-    "control_at \<Pi> p (While b c) k n SKIP k"
+    "control_at \<Pi> p (While i b c) k n (SKIP i) k"
 | CallHead [intro]:
-    "control_at \<Pi> p (Call dst q actuals) k n (Call dst q actuals) (Statement n)"
+    "control_at \<Pi> p (Call i dst q actuals) k n (Call i dst q actuals) (Statement n)"
 | CallDone [intro]:
-    "control_at \<Pi> p (Call dst q actuals) k n SKIP k"
+    "control_at \<Pi> p (Call i dst q actuals) k n (SKIP i) k"
 | ReturnHead [intro]:
-    "control_at \<Pi> p (Return e) k n (Return e) (Statement n)"
+    "control_at \<Pi> p (Return i e) k n (Return i e) (Statement n)"
 
 
 text \<open>Inversion by the shape of the fragment \<open>c0\<close>, which is what every consumer knows and
@@ -81,18 +81,18 @@ text \<open>Inversion by the shape of the fragment \<open>c0\<close>, which is w
   clauses recurse into a sub-fragment, and an eager rule would chase the nesting; the rest
   are \<open>[elim!]\<close>.  \<^const>\<open>Restore\<close> and \<^const>\<open>Unwind\<close> have no clause at all, so inverting
   them is outright refutation --- that is what makes \<open>control_at_not_unwind\<close> a one-liner.\<close>
-inductive_cases control_at_SkipE [elim!]:    "control_at \<Pi> p SKIP k n r v"
-inductive_cases control_at_AssignE [elim!]:  "control_at \<Pi> p (Assign x a) k n r v"
+inductive_cases control_at_SkipE [elim!]:    "control_at \<Pi> p (SKIP i) k n r v"
+inductive_cases control_at_AssignE [elim!]:  "control_at \<Pi> p (Assign i x a) k n r v"
 inductive_cases control_at_CheckE [elim!]:
-  "control_at \<Pi> p (VIMP_Proc.com.Check l b) k n r v"
+  "control_at \<Pi> p (VIMP_Proc.gcom.Check i l b) k n r v"
 inductive_cases control_at_SeqE [elim]:      "control_at \<Pi> p (Seq c1 c2) k n r v"
-inductive_cases control_at_IfE [elim]:       "control_at \<Pi> p (If b c1 c2) k n r v"
-inductive_cases control_at_WhileE [elim]:    "control_at \<Pi> p (While b c) k n r v"
+inductive_cases control_at_IfE [elim]:       "control_at \<Pi> p (If i b c1 c2) k n r v"
+inductive_cases control_at_WhileE [elim]:    "control_at \<Pi> p (While i b c) k n r v"
 inductive_cases control_at_CallE [elim!]:
-  "control_at \<Pi> p (Call dst q actuals) k n r v"
-inductive_cases control_at_ReturnE [elim!]:  "control_at \<Pi> p (Return e) k n r v"
-inductive_cases control_at_RestoreE [elim!]: "control_at \<Pi> p Restore k n r v"
-inductive_cases control_at_UnwindE [elim!]:  "control_at \<Pi> p Unwind k n r v"
+  "control_at \<Pi> p (Call i dst q actuals) k n r v"
+inductive_cases control_at_ReturnE [elim!]:  "control_at \<Pi> p (Return i e) k n r v"
+inductive_cases control_at_RestoreE [elim!]: "control_at \<Pi> p (Restore i) k n r v"
+inductive_cases control_at_UnwindE [elim!]:  "control_at \<Pi> p (Unwind i) k n r v"
 
 
 subsection \<open>Initial location\<close>
@@ -109,9 +109,9 @@ text \<open>A completed residual is at the continuation already, except for a so
   branches of a conditional are compiled with the same continuation, so a completed branch
   is at \<open>k\<close> directly.\<close>
 lemma compile_control_at_SKIP_exit_path:
-  "control_at \<Pi> p c0 k n SKIP v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
+  "control_at \<Pi> p c0 k n (SKIP i) v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
    \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> intra_path g (v, s) (k, s)"
-proof (induction c0 k n "SKIP :: com" v arbitrary: n' en E K rule: control_at.induct)
+proof (induction c0 k n "(SKIP i) :: 'a acom" v arbitrary: n' en E K rule: control_at.induct)
   case (Skip k n)
   then have "(Statement n, EA_Nop, k) \<in> intra g" by auto
   then show ?case by (rule intra_path_nop)
@@ -123,13 +123,13 @@ next
     by (rule compile_SeqE) blast
   with SeqRight.prems(2) show ?case by (intro SeqRight.hyps(2)[OF c2]) blast
 next
-  case (IfLeft c1 k n v b c2)
+  case (IfLeft c1 k n v i b c2)
   from IfLeft.prems(1) obtain n1 E1 K1 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)" and "E1 \<subseteq> E"
     by (rule compile_If_leftE[OF _ IfLeft.hyps(3)]) blast
   with IfLeft.prems(2) show ?case by (intro IfLeft.hyps(2)[OF c1]) blast
 next
-  case (IfRight c2 k n c1 v b)
+  case (IfRight c2 k n c1 v i b)
   from IfRight.prems(1) obtain n2 E2 K2 where
     c2: "compile \<Pi> p c2 k (Suc n + csize c1) = (n2, Statement (Suc n + csize c1), E2, K2)"
     and "E2 \<subseteq> E"
@@ -149,7 +149,7 @@ lemma control_at_source_com:
   by (induction rule: control_at.induct) auto
 
 lemma source_com_no_Restore:
-  "source_com c \<Longrightarrow> c \<noteq> Restore"
+  "source_com c \<Longrightarrow> \<not> is_Restore c"
   by auto
 
 end

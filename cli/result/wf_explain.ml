@@ -39,16 +39,16 @@ let source_exp a = not (List.mem ret_var (exp_vars a))
 
 let rec may_fallthrough = function
   | C.Seq (c1, c2) -> may_fallthrough c1 && may_fallthrough c2
-  | C.If (_, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
-  | C.Return _ | C.Restore | C.Unwind -> false
-  | C.SKIP | C.Assign _ | C.Check _ | C.While _ | C.Call _ -> true
+  | C.If (_, _, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
+  | C.Return _ | C.Restore _ | C.Unwind _ -> false
+  | C.SKIP _ | C.Assign _ | C.Check _ | C.While _ | C.Call _ -> true
 
 let rec may_return returns = function
   | C.Seq (c1, c2) ->
       may_return returns c1 || (may_fallthrough c1 && may_return returns c2)
-  | C.If (_, c1, c2) -> may_return returns c1 || may_return returns c2
-  | C.While (_, c) -> may_return returns c
-  | C.Return e -> returns e
+  | C.If (_, _, c1, c2) -> may_return returns c1 || may_return returns c2
+  | C.While (_, _, c) -> may_return returns c
+  | C.Return (_, e) -> returns e
   | _ -> false
 
 let value_providing body =
@@ -57,8 +57,8 @@ let value_providing body =
   && may_return Option.is_some body
 
 let rec has_return = function
-  | C.Seq (c1, c2) | C.If (_, c1, c2) -> has_return c1 || has_return c2
-  | C.While (_, c) -> has_return c
+  | C.Seq (c1, c2) | C.If (_, _, c1, c2) -> has_return c1 || has_return c2
+  | C.While (_, _, c) -> has_return c
   | C.Return _ -> true
   | _ -> false
 
@@ -71,21 +71,21 @@ let plural n word = Printf.sprintf "%d %s%s" n word (if n = 1 then "" else "s")
 
 (* The first fault in one command, [where] naming the procedure it sits in. *)
 let rec com_fault program where = function
-  | C.SKIP | C.Restore | C.Unwind -> None
-  | C.Assign (x, a) ->
+  | C.SKIP _ | C.Restore _ | C.Unwind _ -> None
+  | C.Assign (_, x, a) ->
       if x = ret_var || not (source_exp a) then
         Some (where ^ ": assignment to a reserved name")
       else None
-  | C.Check (_, c) ->
+  | C.Check (_, _, c) ->
       if source_exp c then None
       else Some (where ^ ": check reads a reserved name")
-  | C.Seq (c1, c2) | C.If (_, c1, c2) -> (
+  | C.Seq (c1, c2) | C.If (_, _, c1, c2) -> (
       match com_fault program where c1 with
       | Some _ as fault -> fault
       | None -> com_fault program where c2)
-  | C.While (_, c) -> com_fault program where c
+  | C.While (_, _, c) -> com_fault program where c
   | C.Return _ -> None
-  | C.Call (dst, callee, actuals) -> (
+  | C.Call (_, dst, callee, actuals) -> (
       let given = List.length actuals in
       match (special_arity callee, C.prog_table program callee) with
       | Some arity, _ when given <> arity ->
@@ -99,7 +99,7 @@ let rec com_fault program where = function
       | None, None ->
           Some
             (Printf.sprintf "%s: call to undefined procedure %s" where callee)
-      | None, Some (C.Proc_decl_ext (formals, body, ())) ->
+      | None, Some (C.Gproc_decl_ext (formals, body, ())) ->
           let expected = List.length formals in
           if given <> expected then
             Some
@@ -119,7 +119,7 @@ let explain program =
   let globals = C.declared_global_vars program in
   let decl name =
     match C.prog_table program name with
-    | Some (C.Proc_decl_ext (formals, body, ())) -> Some (formals, body)
+    | Some (C.Gproc_decl_ext (formals, body, ())) -> Some (formals, body)
     | None -> None
   in
   let proc_fault name =

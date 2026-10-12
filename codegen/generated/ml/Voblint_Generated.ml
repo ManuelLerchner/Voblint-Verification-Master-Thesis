@@ -104,12 +104,16 @@ module Generated : sig
     Int_Analysis of refine_mode | Congruence_Analysis | Order_Analysis
   type congruence
   type 'a int_dom_ext
-  type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
-    Seq of com * com | If of exp * com * com | While of exp * com |
-    Call of string option * string * exp list | Return of exp option | Restore |
-    Unwind
-  type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a
   type ('a, 'b) analysis_product
+  type ('a, 'b, 'c) gcom = SKIP of 'a | Assign of 'a * 'b * 'c |
+    Check of 'a * (nat * nat) * 'c |
+    Seq of ('a, 'b, 'c) gcom * ('a, 'b, 'c) gcom |
+    If of 'a * 'c * ('a, 'b, 'c) gcom * ('a, 'b, 'c) gcom |
+    While of 'a * 'c * ('a, 'b, 'c) gcom |
+    Call of 'a * 'b option * string * 'c list | Return of 'a * 'c option |
+    Restore of 'a | Unwind of 'a
+  type ('a, 'b) gproc_decl_ext =
+    Gproc_decl_ext of string list * ('a, string, exp) gcom * 'b
   type 'a cfg_ext
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
@@ -165,7 +169,8 @@ module Generated : sig
   type 'a analysis_report_ext
   val cfg_entry : 'a cfg_ext -> cfg_node
   val declared_global_vars : 'a imp_prog_ext -> string list
-  val prog_table : unit imp_prog_ext -> string -> unit proc_decl_ext option
+  val prog_table :
+    unit imp_prog_ext -> string -> (unit, unit) gproc_decl_ext option
   val prog_procs : unit imp_prog_ext -> string list
   val cfg_intra_list :
     unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
@@ -174,10 +179,10 @@ module Generated : sig
   val cfg_node_list : unit cfg_ext -> cfg_node list
   val arithmetic_divisor : arithmetic_obligation -> exp
   val prog_cfg : unit imp_prog_ext -> unit cfg_ext
-  val prog_main : unit imp_prog_ext -> com
+  val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val mk_program :
-    (string * unit proc_decl_ext) list ->
-      com -> string list -> unit imp_prog_ext
+    (string * (unit, unit) gproc_decl_ext) list ->
+      (unit, string, exp) gcom -> string list -> unit imp_prog_ext
   val run_voblint :
     analysis_config ->
       unit imp_prog_ext -> unit analysis_report_ext analysis_answer
@@ -3941,129 +3946,6 @@ let rec executable_domain_int_dom_ext (_A1, _A2) =
      to_string = to_string_int_dom_ext (_A1, _A2)}
     : 'a int_dom_ext executable_domain);;
 
-type com = SKIP | Assign of string * exp | Check of (nat * nat) * exp |
-  Seq of com * com | If of exp * com * com | While of exp * com |
-  Call of string option * string * exp list | Return of exp option | Restore |
-  Unwind;;
-
-let rec equal_com
-  x0 x1 = match x0, x1 with Restore, Unwind -> false
-    | Unwind, Restore -> false
-    | Return x8, Unwind -> false
-    | Unwind, Return x8 -> false
-    | Return x8, Restore -> false
-    | Restore, Return x8 -> false
-    | Call (x71, x72, x73), Unwind -> false
-    | Unwind, Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Restore -> false
-    | Restore, Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Return x8 -> false
-    | Return x8, Call (x71, x72, x73) -> false
-    | While (x61, x62), Unwind -> false
-    | Unwind, While (x61, x62) -> false
-    | While (x61, x62), Restore -> false
-    | Restore, While (x61, x62) -> false
-    | While (x61, x62), Return x8 -> false
-    | Return x8, While (x61, x62) -> false
-    | While (x61, x62), Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), While (x61, x62) -> false
-    | If (x51, x52, x53), Unwind -> false
-    | Unwind, If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Restore -> false
-    | Restore, If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Return x8 -> false
-    | Return x8, If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), If (x51, x52, x53) -> false
-    | If (x51, x52, x53), While (x61, x62) -> false
-    | While (x61, x62), If (x51, x52, x53) -> false
-    | Seq (x41, x42), Unwind -> false
-    | Unwind, Seq (x41, x42) -> false
-    | Seq (x41, x42), Restore -> false
-    | Restore, Seq (x41, x42) -> false
-    | Seq (x41, x42), Return x8 -> false
-    | Return x8, Seq (x41, x42) -> false
-    | Seq (x41, x42), Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Seq (x41, x42) -> false
-    | Seq (x41, x42), While (x61, x62) -> false
-    | While (x61, x62), Seq (x41, x42) -> false
-    | Seq (x41, x42), If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Seq (x41, x42) -> false
-    | Check (x31, x32), Unwind -> false
-    | Unwind, Check (x31, x32) -> false
-    | Check (x31, x32), Restore -> false
-    | Restore, Check (x31, x32) -> false
-    | Check (x31, x32), Return x8 -> false
-    | Return x8, Check (x31, x32) -> false
-    | Check (x31, x32), Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Check (x31, x32) -> false
-    | Check (x31, x32), While (x61, x62) -> false
-    | While (x61, x62), Check (x31, x32) -> false
-    | Check (x31, x32), If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Check (x31, x32) -> false
-    | Check (x31, x32), Seq (x41, x42) -> false
-    | Seq (x41, x42), Check (x31, x32) -> false
-    | Assign (x21, x22), Unwind -> false
-    | Unwind, Assign (x21, x22) -> false
-    | Assign (x21, x22), Restore -> false
-    | Restore, Assign (x21, x22) -> false
-    | Assign (x21, x22), Return x8 -> false
-    | Return x8, Assign (x21, x22) -> false
-    | Assign (x21, x22), Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), Assign (x21, x22) -> false
-    | Assign (x21, x22), While (x61, x62) -> false
-    | While (x61, x62), Assign (x21, x22) -> false
-    | Assign (x21, x22), If (x51, x52, x53) -> false
-    | If (x51, x52, x53), Assign (x21, x22) -> false
-    | Assign (x21, x22), Seq (x41, x42) -> false
-    | Seq (x41, x42), Assign (x21, x22) -> false
-    | Assign (x21, x22), Check (x31, x32) -> false
-    | Check (x31, x32), Assign (x21, x22) -> false
-    | SKIP, Unwind -> false
-    | Unwind, SKIP -> false
-    | SKIP, Restore -> false
-    | Restore, SKIP -> false
-    | SKIP, Return x8 -> false
-    | Return x8, SKIP -> false
-    | SKIP, Call (x71, x72, x73) -> false
-    | Call (x71, x72, x73), SKIP -> false
-    | SKIP, While (x61, x62) -> false
-    | While (x61, x62), SKIP -> false
-    | SKIP, If (x51, x52, x53) -> false
-    | If (x51, x52, x53), SKIP -> false
-    | SKIP, Seq (x41, x42) -> false
-    | Seq (x41, x42), SKIP -> false
-    | SKIP, Check (x31, x32) -> false
-    | Check (x31, x32), SKIP -> false
-    | SKIP, Assign (x21, x22) -> false
-    | Assign (x21, x22), SKIP -> false
-    | Return x8, Return y8 -> equal_option equal_exp x8 y8
-    | Call (x71, x72, x73), Call (y71, y72, y73) ->
-        equal_option equal_literal x71 y71 &&
-          (((x72 : string) = y72) && equal_lista equal_exp x73 y73)
-    | While (x61, x62), While (y61, y62) ->
-        equal_expa x61 y61 && equal_com x62 y62
-    | If (x51, x52, x53), If (y51, y52, y53) ->
-        equal_expa x51 y51 && (equal_com x52 y52 && equal_com x53 y53)
-    | Seq (x41, x42), Seq (y41, y42) -> equal_com x41 y41 && equal_com x42 y42
-    | Check (x31, x32), Check (y31, y32) ->
-        equal_proda equal_nat equal_nat x31 y31 && equal_expa x32 y32
-    | Assign (x21, x22), Assign (y21, y22) ->
-        ((x21 : string) = y21) && equal_expa x22 y22
-    | Unwind, Unwind -> true
-    | Restore, Restore -> true
-    | SKIP, SKIP -> true;;
-
-type 'a proc_decl_ext = Proc_decl_ext of string list * com * 'a;;
-
-let rec equal_proc_decl_exta _A
-  (Proc_decl_ext (formalsa, bodya, morea)) (Proc_decl_ext (formals, body, more))
-    = equal_lista equal_literal formalsa formals &&
-        (equal_com bodya body && eq _A morea more);;
-
-let rec equal_proc_decl_ext _A =
-  ({equal = equal_proc_decl_exta _A} : 'a proc_decl_ext equal);;
-
 type ('a, 'b) analysis_product = Product of 'a * 'b;;
 
 let rec equal_analysis_producta _A _B
@@ -4220,6 +4102,139 @@ let rec equal_global_unknowna _A _B
 
 let rec equal_global_unknown _A _B =
   ({equal = equal_global_unknowna _A _B} : ('a, 'b) global_unknown equal);;
+
+type ('a, 'b, 'c) gcom = SKIP of 'a | Assign of 'a * 'b * 'c |
+  Check of 'a * (nat * nat) * 'c | Seq of ('a, 'b, 'c) gcom * ('a, 'b, 'c) gcom
+  | If of 'a * 'c * ('a, 'b, 'c) gcom * ('a, 'b, 'c) gcom |
+  While of 'a * 'c * ('a, 'b, 'c) gcom |
+  Call of 'a * 'b option * string * 'c list | Return of 'a * 'c option |
+  Restore of 'a | Unwind of 'a;;
+
+let rec equal_gcom _A _B _C
+  x0 x1 = match x0, x1 with Restore x9, Unwind x10 -> false
+    | Unwind x10, Restore x9 -> false
+    | Return (x81, x82), Unwind x10 -> false
+    | Unwind x10, Return (x81, x82) -> false
+    | Return (x81, x82), Restore x9 -> false
+    | Restore x9, Return (x81, x82) -> false
+    | Call (x71, x72, x73, x74), Unwind x10 -> false
+    | Unwind x10, Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), Restore x9 -> false
+    | Restore x9, Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), Return (x81, x82) -> false
+    | Return (x81, x82), Call (x71, x72, x73, x74) -> false
+    | While (x61, x62, x63), Unwind x10 -> false
+    | Unwind x10, While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Restore x9 -> false
+    | Restore x9, While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Return (x81, x82) -> false
+    | Return (x81, x82), While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), While (x61, x62, x63) -> false
+    | If (x51, x52, x53, x54), Unwind x10 -> false
+    | Unwind x10, If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Restore x9 -> false
+    | Restore x9, If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Return (x81, x82) -> false
+    | Return (x81, x82), If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), While (x61, x62, x63) -> false
+    | While (x61, x62, x63), If (x51, x52, x53, x54) -> false
+    | Seq (x41, x42), Unwind x10 -> false
+    | Unwind x10, Seq (x41, x42) -> false
+    | Seq (x41, x42), Restore x9 -> false
+    | Restore x9, Seq (x41, x42) -> false
+    | Seq (x41, x42), Return (x81, x82) -> false
+    | Return (x81, x82), Seq (x41, x42) -> false
+    | Seq (x41, x42), Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), Seq (x41, x42) -> false
+    | Seq (x41, x42), While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Seq (x41, x42) -> false
+    | Seq (x41, x42), If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Seq (x41, x42) -> false
+    | Check (x31, x32, x33), Unwind x10 -> false
+    | Unwind x10, Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), Restore x9 -> false
+    | Restore x9, Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), Return (x81, x82) -> false
+    | Return (x81, x82), Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), Seq (x41, x42) -> false
+    | Seq (x41, x42), Check (x31, x32, x33) -> false
+    | Assign (x21, x22, x23), Unwind x10 -> false
+    | Unwind x10, Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), Restore x9 -> false
+    | Restore x9, Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), Return (x81, x82) -> false
+    | Return (x81, x82), Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), While (x61, x62, x63) -> false
+    | While (x61, x62, x63), Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), Seq (x41, x42) -> false
+    | Seq (x41, x42), Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), Assign (x21, x22, x23) -> false
+    | SKIP x1, Unwind x10 -> false
+    | Unwind x10, SKIP x1 -> false
+    | SKIP x1, Restore x9 -> false
+    | Restore x9, SKIP x1 -> false
+    | SKIP x1, Return (x81, x82) -> false
+    | Return (x81, x82), SKIP x1 -> false
+    | SKIP x1, Call (x71, x72, x73, x74) -> false
+    | Call (x71, x72, x73, x74), SKIP x1 -> false
+    | SKIP x1, While (x61, x62, x63) -> false
+    | While (x61, x62, x63), SKIP x1 -> false
+    | SKIP x1, If (x51, x52, x53, x54) -> false
+    | If (x51, x52, x53, x54), SKIP x1 -> false
+    | SKIP x1, Seq (x41, x42) -> false
+    | Seq (x41, x42), SKIP x1 -> false
+    | SKIP x1, Check (x31, x32, x33) -> false
+    | Check (x31, x32, x33), SKIP x1 -> false
+    | SKIP x1, Assign (x21, x22, x23) -> false
+    | Assign (x21, x22, x23), SKIP x1 -> false
+    | Unwind x10, Unwind y10 -> eq _A x10 y10
+    | Restore x9, Restore y9 -> eq _A x9 y9
+    | Return (x81, x82), Return (y81, y82) ->
+        eq _A x81 y81 && equal_option _C x82 y82
+    | Call (x71, x72, x73, x74), Call (y71, y72, y73, y74) ->
+        eq _A x71 y71 &&
+          (equal_option _B x72 y72 &&
+            (((x73 : string) = y73) && equal_lista _C x74 y74))
+    | While (x61, x62, x63), While (y61, y62, y63) ->
+        eq _A x61 y61 && (eq _C x62 y62 && equal_gcom _A _B _C x63 y63)
+    | If (x51, x52, x53, x54), If (y51, y52, y53, y54) ->
+        eq _A x51 y51 &&
+          (eq _C x52 y52 &&
+            (equal_gcom _A _B _C x53 y53 && equal_gcom _A _B _C x54 y54))
+    | Seq (x41, x42), Seq (y41, y42) ->
+        equal_gcom _A _B _C x41 y41 && equal_gcom _A _B _C x42 y42
+    | Check (x31, x32, x33), Check (y31, y32, y33) ->
+        eq _A x31 y31 &&
+          (equal_proda equal_nat equal_nat x32 y32 && eq _C x33 y33)
+    | Assign (x21, x22, x23), Assign (y21, y22, y23) ->
+        eq _A x21 y21 && (eq _B x22 y22 && eq _C x23 y23)
+    | SKIP x1, SKIP y1 -> eq _A x1 y1;;
+
+type ('a, 'b) gproc_decl_ext =
+  Gproc_decl_ext of string list * ('a, string, exp) gcom * 'b;;
+
+let rec equal_gproc_decl_exta _A _B
+  (Gproc_decl_ext (formalsa, bodya, morea))
+    (Gproc_decl_ext (formals, body, more)) =
+    equal_lista equal_literal formalsa formals &&
+      (equal_gcom _A equal_literal equal_exp bodya body && eq _B morea more);;
+
+let rec equal_gproc_decl_ext _A _B =
+  ({equal = equal_gproc_decl_exta _A _B} : ('a, 'b) gproc_decl_ext equal);;
 
 type color = R | B;;
 
@@ -4431,7 +4446,8 @@ type ('a, 'b, 'c, 'd) ug_state_ext =
   Ug_state_ext of ('b -> ('a, 'c) fmap) * 'd;;
 
 type 'a imp_prog_ext =
-  Imp_prog_ext of (string * unit proc_decl_ext) list * string list * 'a;;
+  Imp_prog_ext of
+    (string * (unit, unit) gproc_decl_ext) list * string list * 'a;;
 
 type ('a, 'b, 'c, 'd) solved_run_ext =
   Solved_run_ext of
@@ -5475,26 +5491,27 @@ let rec dg_spec_of _A
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
-let prog_main_name : string = "main";;
+let rec body (Gproc_decl_ext (formals, body, more)) = body;;
 
-let rec body (Proc_decl_ext (formals, body, more)) = body;;
+let prog_main_name : string = "main";;
 
 let rec main_body
   pi = (match pi prog_main_name
          with None ->
-           failwith "main_body: entry procedure not declared" (fun _ -> SKIP)
+           failwith "main_body: entry procedure not declared"
+             (fun _ -> SKIP (failwith "undefined"))
          | Some a -> body a);;
 
 let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
-                    | If (uu, c1, c2) -> no_return c1 && no_return c2
-                    | While (uv, c) -> no_return c
-                    | Return uw -> false
-                    | SKIP -> true
-                    | Assign (v, va) -> true
-                    | Check (v, va) -> true
-                    | Call (v, va, vb) -> true
-                    | Restore -> true
-                    | Unwind -> true;;
+                    | If (uu, uv, c1, c2) -> no_return c1 && no_return c2
+                    | While (uw, ux, c) -> no_return c
+                    | Return (uy, uz) -> false
+                    | SKIP v -> true
+                    | Assign (v, vb, vc) -> true
+                    | Check (v, vb, vc) -> true
+                    | Call (v, vb, vc, vd) -> true
+                    | Restore v -> true
+                    | Unwind v -> true;;
 
 let rec fmlookup _A (Fmap_of_list m) = map_of _A m;;
 
@@ -8675,7 +8692,7 @@ let rec order_spec
              (fun _ _ -> forget_relc) (fun _ eo _ -> relc_ret eo)
              (fun _ _ p -> [(fst p, top_relc)]) (fun _ _ _ _ -> top_relc)));;
 
-let rec formals (Proc_decl_ext (formals, body, more)) = formals;;
+let rec formals (Gproc_decl_ext (formals, body, more)) = formals;;
 
 let rec proc_rep
   (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
@@ -8703,22 +8720,22 @@ let rec exp_vnames
     | Or (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2);;
 
 let rec com_vnames
-  = function SKIP -> bot_set
-    | Assign (x, a) -> inserta equal_literal x (exp_vnames a)
-    | Check (l, c) -> exp_vnames c
+  = function SKIP uu -> bot_set
+    | Assign (uv, x, a) -> inserta equal_literal x (exp_vnames a)
+    | Check (uw, l, c) -> exp_vnames c
     | Seq (c1, c2) -> sup_set equal_literal (com_vnames c1) (com_vnames c2)
-    | If (b, c1, c2) ->
+    | If (ux, b, c1, c2) ->
         sup_set equal_literal
           (sup_set equal_literal (exp_vnames b) (com_vnames c1)) (com_vnames c2)
-    | While (b, c) -> sup_set equal_literal (exp_vnames b) (com_vnames c)
-    | Call (dst, uu, actuals) ->
+    | While (uy, b, c) -> sup_set equal_literal (exp_vnames b) (com_vnames c)
+    | Call (uz, dst, va, actuals) ->
         sup_set equal_literal
           (match dst with None -> bot_set
             | Some x -> inserta equal_literal x bot_set)
           (sup_seta equal_literal (Set (map exp_vnames actuals)))
-    | Return e -> (match e with None -> bot_set | Some a -> exp_vnames a)
-    | Restore -> bot_set
-    | Unwind -> bot_set;;
+    | Return (vb, e) -> (match e with None -> bot_set | Some a -> exp_vnames a)
+    | Restore vc -> bot_set
+    | Unwind vd -> bot_set;;
 
 let rec scope_vnames
   p owner =
@@ -9583,16 +9600,16 @@ let rec mcp_combine
 
 let rec called (State_ext (called, infl, stabl, sigma, more)) = called;;
 
-let rec source_com = function SKIP -> true
-                     | Assign (x, a) -> true
-                     | Check (l, c) -> true
+let rec source_com = function SKIP uu -> true
+                     | Assign (uv, x, a) -> true
+                     | Check (uw, l, c) -> true
                      | Seq (c1, c2) -> source_com c1 && source_com c2
-                     | If (b, c1, c2) -> source_com c1 && source_com c2
-                     | While (b, c) -> source_com c
-                     | Call (dst, p, actuals) -> true
-                     | Return e -> true
-                     | Restore -> false
-                     | Unwind -> false;;
+                     | If (ux, b, c1, c2) -> source_com c1 && source_com c2
+                     | While (uy, b, c) -> source_com c
+                     | Call (uz, dst, p, actuals) -> true
+                     | Return (va, e) -> true
+                     | Restore vb -> false
+                     | Unwind vc -> false;;
 
 let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
@@ -9891,20 +9908,31 @@ let rec special_table
                       else None)));;
 
 let rec csize
-  = function SKIP -> one_nat
-    | Assign (x, a) -> one_nat
-    | Check (l, c) -> one_nat
+  = function SKIP i -> one_nat
+    | Assign (i, x, a) -> one_nat
+    | Check (i, l, c) -> one_nat
     | Seq (c1, c2) -> plus_nat (csize c1) (csize c2)
-    | If (b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
-    | While (b, c) -> plus_nat one_nat (csize c)
-    | Call (dst, q, actuals) -> one_nat
-    | Return e -> one_nat
-    | Restore -> one_nat
-    | Unwind -> one_nat;;
+    | If (i, b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
+    | While (i, b, c) -> plus_nat one_nat (csize c)
+    | Call (i, dst, q, actuals) -> one_nat
+    | Return (i, e) -> one_nat
+    | Restore i -> one_nat
+    | Unwind i -> one_nat;;
+
+let rec is_SKIP = function SKIP x1 -> true
+                  | Assign (x21, x22, x23) -> false
+                  | Check (x31, x32, x33) -> false
+                  | Seq (x41, x42) -> false
+                  | If (x51, x52, x53, x54) -> false
+                  | While (x61, x62, x63) -> false
+                  | Call (x71, x72, x73, x74) -> false
+                  | Return (x81, x82) -> false
+                  | Restore x9 -> false
+                  | Unwind x10 -> false;;
 
 let rec compile
   pi p x2 k n = match pi, p, x2, k, n with
-    pi, p, SKIP, k, n ->
+    pi, p, SKIP i, k, n ->
       (suc n,
         (Statement n,
           (inserta
@@ -9912,7 +9940,7 @@ let rec compile
                (equal_prod equal_edge_action equal_cfg_node))
              (Statement n, (EA_Nop, k)) bot_set,
             bot_set)))
-    | pi, p, Assign (x, a), k, n ->
+    | pi, p, Assign (i, x, a), k, n ->
         (suc n,
           (Statement n,
             (inserta
@@ -9920,7 +9948,7 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Assign (x, a), k)) bot_set,
               bot_set)))
-    | pi, p, Check (l, c), k, n ->
+    | pi, p, Check (i, l, c), k, n ->
         (suc n,
           (Statement n,
             (inserta
@@ -9941,7 +9969,7 @@ let rec compile
                            (equal_prod equal_call_action
                              (equal_prod equal_cfg_node equal_cfg_node)))
                          k1 k2))))
-    | pi, p, If (b, c1, c2), k, n ->
+    | pi, p, If (i, b, c1, c2), k, n ->
         (let (n1, (en1, (e1, k1))) = compile pi p c1 k (suc n) in
          let (n2, (en2, (e2, k2))) = compile pi p c2 k n1 in
           (n2, (Statement n,
@@ -9955,22 +9983,21 @@ let rec compile
                         (equal_prod equal_cfg_node
                           (equal_prod equal_edge_action equal_cfg_node))
                         (Statement n,
-                          (EA_Assume b, (if equal_com c1 SKIP then k else en1)))
+                          (EA_Assume b, (if is_SKIP c1 then k else en1)))
                         (inserta
                           (equal_prod equal_cfg_node
                             (equal_prod equal_edge_action equal_cfg_node))
                           (Statement n,
-                            (EA_AssumeNot b,
-                              (if equal_com c2 SKIP then k else en2)))
+                            (EA_AssumeNot b, (if is_SKIP c2 then k else en2)))
                           bot_set))
-                      (if equal_com c1 SKIP then bot_set else e1))
-                    (if equal_com c2 SKIP then bot_set else e2),
+                      (if is_SKIP c1 then bot_set else e1))
+                    (if is_SKIP c2 then bot_set else e2),
                    sup_set
                      (equal_prod equal_cfg_node
                        (equal_prod equal_call_action
                          (equal_prod equal_cfg_node equal_cfg_node)))
                      k1 k2))))
-    | pi, p, While (b, c), k, n ->
+    | pi, p, While (i, b, c), k, n ->
         (let (n1, (en1, (e1, k1))) = compile pi p c (Statement n) (suc n) in
           (n1, (Statement n,
                  (sup_set
@@ -9986,7 +10013,7 @@ let rec compile
                         (Statement n, (EA_AssumeNot b, k)) bot_set))
                     e1,
                    k1))))
-    | pi, p, Call (dst, q, actuals), k, n ->
+    | pi, p, Call (i, dst, q, actuals), k, n ->
         (match special_table q
           with None ->
             (suc n,
@@ -10028,7 +10055,7 @@ let rec compile
                              (equal_prod equal_edge_action equal_cfg_node))
                            (Statement n, (EA_Special (sc, x), k)) bot_set,
                           bot_set))))))
-    | pi, p, Return e, k, n ->
+    | pi, p, Return (i, e), k, n ->
         (suc n,
           (Statement n,
             (inserta
@@ -10036,7 +10063,7 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
               bot_set)))
-    | pi, p, Restore, k, n ->
+    | pi, p, Restore i, k, n ->
         (suc n,
           (Statement n,
             (inserta
@@ -10044,7 +10071,7 @@ let rec compile
                  (equal_prod equal_edge_action equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)))
-    | pi, p, Unwind, k, n ->
+    | pi, p, Unwind i, k, n ->
         (suc n,
           (Statement n,
             (inserta
@@ -10089,7 +10116,7 @@ let rec compile_prog
   pi ps =
     (let (n1, (eprocs, kprocs)) = compile_procs pi ps zero_nat in
      let (_, (emain, kmain)) =
-       compile_proc pi prog_main_name (Proc_decl_ext ([], main_body pi, ())) n1
+       compile_proc pi prog_main_name (Gproc_decl_ext ([], main_body pi, ())) n1
        in
       Cfg_ext
         (sup_set
@@ -10235,44 +10262,44 @@ let rec sigma (State_ext (called, infl, stabl, sigma, more)) = sigma;;
 let rec valid_formal g x = not (g x) && not ((x : string) = ret_var);;
 
 let rec may_fallthrough
-  = function SKIP -> true
-    | Assign (uu, uv) -> true
-    | Check (uw, ux) -> true
+  = function SKIP uu -> true
+    | Assign (uv, uw, ux) -> true
+    | Check (uy, uz, va) -> true
     | Seq (c1, c2) -> may_fallthrough c1 && may_fallthrough c2
-    | If (uy, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
-    | While (uz, va) -> true
-    | Call (vb, vc, vd) -> true
-    | Return ve -> false
-    | Restore -> false
-    | Unwind -> false;;
+    | If (vb, vc, c1, c2) -> may_fallthrough c1 || may_fallthrough c2
+    | While (vd, ve, vf) -> true
+    | Call (vg, vh, vi, vj) -> true
+    | Return (vk, vl) -> false
+    | Restore vm -> false
+    | Unwind vn -> false;;
 
 let rec may_return_value
   = function
     Seq (c1, c2) ->
       may_return_value c1 || may_fallthrough c1 && may_return_value c2
-    | If (uu, c1, c2) -> may_return_value c1 || may_return_value c2
-    | While (uv, c) -> may_return_value c
-    | Return e -> not (is_none e)
-    | SKIP -> false
-    | Assign (v, va) -> false
-    | Check (v, va) -> false
-    | Call (v, va, vb) -> false
-    | Restore -> false
-    | Unwind -> false;;
+    | If (uu, uv, c1, c2) -> may_return_value c1 || may_return_value c2
+    | While (uw, ux, c) -> may_return_value c
+    | Return (uy, e) -> not (is_none e)
+    | SKIP v -> false
+    | Assign (v, va, vb) -> false
+    | Check (v, va, vb) -> false
+    | Call (v, va, vb, vc) -> false
+    | Restore v -> false
+    | Unwind v -> false;;
 
 let rec may_return_none
   = function
     Seq (c1, c2) ->
       may_return_none c1 || may_fallthrough c1 && may_return_none c2
-    | If (uu, c1, c2) -> may_return_none c1 || may_return_none c2
-    | While (uv, c) -> may_return_none c
-    | Return e -> is_none e
-    | SKIP -> false
-    | Assign (v, va) -> false
-    | Check (v, va) -> false
-    | Call (v, va, vb) -> false
-    | Restore -> false
-    | Unwind -> false;;
+    | If (uu, uv, c1, c2) -> may_return_none c1 || may_return_none c2
+    | While (uw, ux, c) -> may_return_none c
+    | Return (uy, e) -> is_none e
+    | SKIP v -> false
+    | Assign (v, va, vb) -> false
+    | Check (v, va, vb) -> false
+    | Call (v, va, vb, vc) -> false
+    | Restore v -> false
+    | Unwind v -> false;;
 
 let rec value_providing
   c = source_com c &&
@@ -10280,14 +10307,14 @@ let rec value_providing
           (not (may_return_none c) && may_return_value c));;
 
 let rec wf_source_com
-  pi x1 = match pi, x1 with pi, SKIP -> true
-    | pi, Assign (x, a) -> not ((x : string) = ret_var) && source_exp a
-    | pi, Check (l, c) -> source_exp c
+  pi x1 = match pi, x1 with pi, SKIP uu -> true
+    | pi, Assign (uv, x, a) -> not ((x : string) = ret_var) && source_exp a
+    | pi, Check (uw, l, c) -> source_exp c
     | pi, Seq (c1, c2) -> wf_source_com pi c1 && wf_source_com pi c2
-    | pi, If (b, c1, c2) ->
+    | pi, If (ux, b, c1, c2) ->
         source_exp b && (wf_source_com pi c1 && wf_source_com pi c2)
-    | pi, While (b, c) -> source_exp b && wf_source_com pi c
-    | pi, Call (dst, p, actuals) ->
+    | pi, While (uy, b, c) -> source_exp b && wf_source_com pi c
+    | pi, Call (uz, dst, p, actuals) ->
         (match special_table p
           with None ->
             (match pi p with None -> false
@@ -10303,9 +10330,9 @@ let rec wf_source_com
               (list_all source_exp actuals &&
                 (match dst with None -> false
                   | Some x -> not ((x : string) = ret_var))))
-    | pi, Return e -> (match e with None -> true | Some a -> source_exp a)
-    | pi, Restore -> false
-    | pi, Unwind -> false;;
+    | pi, Return (va, e) -> (match e with None -> true | Some a -> source_exp a)
+    | pi, Restore vb -> false
+    | pi, Unwind vc -> false;;
 
 let rec wf_proc_decl
   g pi decl =
@@ -11186,7 +11213,7 @@ let rec make
     Imp_prog_ext (proc_rep, declared_global_vars, ());;
 
 let rec mk_program
-  ps m gv = make ((prog_main_name, Proc_decl_ext ([], m, ())) :: ps) gv;;
+  ps m gv = make ((prog_main_name, Gproc_decl_ext ([], m, ())) :: ps) gv;;
 
 let rec init_state (_C1, _C2)
   = State_ext
@@ -12268,9 +12295,9 @@ let rec wf_program_compile_input_exec
             (equal_set equal_literal (Set (prog_procs p))
                (remove equal_literal prog_main_name (Set (map fst procs))) &&
               (not (membera equal_literal (prog_procs p) prog_main_name) &&
-                (equal_option (equal_proc_decl_ext equal_unit)
+                (equal_option (equal_gproc_decl_ext equal_unit equal_unit)
                    (pi prog_main_name)
-                   (Some (Proc_decl_ext ([], prog_main p, ()))) &&
+                   (Some (Gproc_decl_ext ([], prog_main p, ()))) &&
                   (wf_source_com pi (prog_main p) &&
                     (no_return (prog_main p) &&
                       (list_all (fun (_, a) -> wf_proc_decl g pi a) procs &&
@@ -14065,20 +14092,20 @@ let rec res_globals
     = res_globals;;
 
 let rec com_stmt_post_order
-  n x1 = match n, x1 with n, SKIP -> [Statement n]
-    | n, Assign (x, a) -> [Statement n]
-    | n, Check (l, c) -> [Statement n]
+  n x1 = match n, x1 with n, SKIP i -> [Statement n]
+    | n, Assign (i, x, a) -> [Statement n]
+    | n, Check (i, l, c) -> [Statement n]
     | n, Seq (c1, c2) ->
         com_stmt_post_order n c1 @
           com_stmt_post_order (plus_nat n (csize c1)) c2
-    | n, If (b, c1, c2) ->
+    | n, If (i, b, c1, c2) ->
         com_stmt_post_order (suc n) c1 @
           com_stmt_post_order (plus_nat (suc n) (csize c1)) c2 @ [Statement n]
-    | n, While (b, c) -> com_stmt_post_order (suc n) c @ [Statement n]
-    | n, Call (dst, q, actuals) -> [Statement n]
-    | n, Return e -> [Statement n]
-    | n, Restore -> [Statement n]
-    | n, Unwind -> [Statement n];;
+    | n, While (i, b, c) -> com_stmt_post_order (suc n) c @ [Statement n]
+    | n, Call (i, dst, q, actuals) -> [Statement n]
+    | n, Return (i, e) -> [Statement n]
+    | n, Restore i -> [Statement n]
+    | n, Unwind i -> [Statement n];;
 
 let rec res_contexts
   (Run_result_ext

@@ -49,9 +49,11 @@ let demo_prog =
   mk_program []
     (Seq
        ( Seq
-           ( Seq (Assign ("y", N (mk_int 1)), Check (unlabelled, check_cond)),
-             Assign ("y", Minus (N (mk_int 0), N (mk_int 1))) ),
-         Check (unlabelled, check_cond) ))
+           ( Seq
+               ( Assign ((), "y", N (mk_int 1)),
+                 Check ((), unlabelled, check_cond) ),
+             Assign ((), "y", Minus (N (mk_int 0), N (mk_int 1))) ),
+         Check ((), unlabelled, check_cond) ))
     []
 
 (* Conditions are compared as show_exp_compact renders them below. *)
@@ -83,18 +85,18 @@ let proc_demo_prog =
   mk_program
     [
       ( "inc",
-        Proc_decl_ext ([ "n" ], Assign ("total", Plus (V "total", V "n")), ())
-      );
+        Gproc_decl_ext
+          ([ "n" ], Assign ((), "total", Plus (V "total", V "n")), ()) );
     ]
     (Seq
        ( Seq
            ( Seq
                ( Seq
-                   ( Assign ("total", N (mk_int 0)),
-                     Call (None, "inc", [ N (mk_int 3) ]) ),
-                 Call (None, "inc", [ N (mk_int 4) ]) ),
-             Check (unlabelled, Less (N (mk_int 0), V "total")) ),
-         Check (unlabelled, Less (V "total", N (mk_int 100))) ))
+                   ( Assign ((), "total", N (mk_int 0)),
+                     Call ((), None, "inc", [ N (mk_int 3) ]) ),
+                 Call ((), None, "inc", [ N (mk_int 4) ]) ),
+             Check ((), unlabelled, Less (N (mk_int 0), V "total")) ),
+         Check ((), unlabelled, Less (V "total", N (mk_int 100))) ))
     [ "total" ]
 
 let expected_proc_demo_sign =
@@ -122,9 +124,9 @@ let no_call_global_self_ref_prog =
   mk_program []
     (Seq
        ( Seq
-           ( Assign ("total", N (mk_int 0)),
-             Assign ("total", Plus (V "total", N (mk_int 3))) ),
-         Check (unlabelled, Less (N (mk_int 0), V "total")) ))
+           ( Assign ((), "total", N (mk_int 0)),
+             Assign ((), "total", Plus (V "total", N (mk_int 3))) ),
+         Check ((), unlabelled, Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_no_call_global_self_ref_interval =
@@ -140,13 +142,14 @@ let one_call_prog =
   mk_program
     [
       ( "inc",
-        Proc_decl_ext ([ "n" ], Assign ("total", Plus (V "total", V "n")), ())
-      );
+        Gproc_decl_ext
+          ([ "n" ], Assign ((), "total", Plus (V "total", V "n")), ()) );
     ]
     (Seq
        ( Seq
-           (Assign ("total", N (mk_int 0)), Call (None, "inc", [ N (mk_int 3) ])),
-         Check (unlabelled, Less (N (mk_int 0), V "total")) ))
+           ( Assign ((), "total", N (mk_int 0)),
+             Call ((), None, "inc", [ N (mk_int 3) ]) ),
+         Check ((), unlabelled, Less (N (mk_int 0), V "total")) ))
     [ "total" ]
 
 let expected_one_call_interval =

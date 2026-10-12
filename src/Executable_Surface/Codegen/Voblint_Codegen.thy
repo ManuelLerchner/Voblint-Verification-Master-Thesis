@@ -165,8 +165,8 @@ export_code
   Ctx_None Ctx_EntryState Ctx_CallString
 
   \<comment> \<open>Program: what the frontend builds an input out of\<close>
-  mk_program proc_decl_ext
-  SKIP Assign Seq com.If While Return Check com.Call
+  mk_program gproc_decl_ext
+  SKIP Assign Seq gcom.If While Return Check gcom.Call
   N V Plus Minus Times Div Mod
   exp.Not And Or Less exp.Eq
   Statement FunctionEntry FunctionResult
