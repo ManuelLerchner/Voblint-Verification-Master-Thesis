@@ -22,23 +22,42 @@ text \<open>
 
 type_synonym check_label = "nat \<times> nat"
 
-datatype com =
-    SKIP
-  | Assign (assign_var: vname) (assign_rhs: exp)
-  | Check  check_label (check_cond: exp)
-  | Seq    (seq_first: com) (seq_second: com)
-  | If     (if_cond: exp) (if_then: com) (if_else: com)
-  | While  (while_cond: exp) (while_body: com)
-  | Call   (call_dest: "vname option") (call_proc: pname) (call_args: "exp list")
-  | Return (return_val: "exp option")
-  | Restore
-  | Unwind
+text \<open>Every statement carries an annotation \<open>'a\<close>. Source programs written by hand or
+  produced by the parser carry \<open>()\<close>; elaboration replaces it with a statement identity.
+  The semantics never reads it: a step copies the annotation of the command it reduces
+  onto what it leaves behind, so a residual still names the statement it came from. The
+  variable and expression payloads are parameters too, so a later resolved or typed
+  front end instantiates the same command syntax.\<close>
+datatype ('a, 'v, 'e) gcom =
+    is_SKIP: SKIP 'a
+  | Assign 'a (assign_var: 'v) (assign_rhs: 'e)
+  | Check  'a check_label (check_cond: 'e)
+  | Seq    (seq_first: "('a, 'v, 'e) gcom") (seq_second: "('a, 'v, 'e) gcom")
+  | If     'a (if_cond: 'e) (if_then: "('a, 'v, 'e) gcom") (if_else: "('a, 'v, 'e) gcom")
+  | While  'a (while_cond: 'e) (while_body: "('a, 'v, 'e) gcom")
+  | Call   'a (call_dest: "'v option") (call_proc: pname) (call_args: "'e list")
+  | Return 'a (return_val: "'e option")
+  | is_Restore: Restore 'a
+  | Unwind 'a
+
+type_synonym 'a acom = "('a, vname, exp) gcom"
+type_synonym com = "unit acom"
+
+text \<open>The discriminators read as the equations they replace, so automation that used to
+  substitute \<open>c = SKIP\<close> still finds the constructor.\<close>
+lemma is_SKIP_iff [simp]: "is_SKIP c \<longleftrightarrow> (\<exists>i. c = SKIP i)"
+  by (cases c) auto
+
+lemma is_Restore_iff [simp]: "is_Restore c \<longleftrightarrow> (\<exists>i. c = Restore i)"
+  by (cases c) auto
 
 text \<open>Activation -- fresh locals and formal binding -- happens at the call site,
   so a declaration records only what a call site looks up by name.\<close>
-record proc_decl =
+record 'a gproc_decl =
   formals :: "vname list"
-  body    :: com
+  body    :: "'a acom"
+
+type_synonym proc_decl = "unit gproc_decl"
 
 text \<open>The reserved local \<open>ret_var\<close> carries a published result to the restore
   boundary. It is absent from source programs, so a value-less completion
@@ -46,7 +65,8 @@ text \<open>The reserved local \<open>ret_var\<close> carries a published result
 definition ret_var :: vname where
   "ret_var = STR ''#ret''"
 
-type_synonym proc_table = "pname \<Rightarrow> proc_decl option"
+type_synonym 'a ptable = "pname \<Rightarrow> 'a gproc_decl option"
+type_synonym proc_table = "unit ptable"
 
 datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
 
@@ -103,76 +123,76 @@ text \<open>The reference semantics every soundness claim is ultimately about.  
   \<open>Restore\<close> and \<open>Unwind\<close> exist only here, in configurations the semantics builds; no source
   program contains them.\<close>
 inductive
-  pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
-                       \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
+  pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
+                       \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
-  for \<G> :: "vname \<Rightarrow> bool" and \<Pi> :: proc_table
+  for \<G> :: "vname \<Rightarrow> bool" and \<Pi> :: "'a ptable"
 where
-  Assign:  "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
-| Check:   "\<G>, \<Pi> \<turnstile> (Check l c, s, frs) \<rightarrow>\<^sub>p (SKIP, s, frs)"
-| Seq1:    "\<G>, \<Pi> \<turnstile> (Seq SKIP c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+  Assign:  "\<G>, \<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
+| Check:   "\<G>, \<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p (SKIP i, s, frs)"
+| Seq1:    "\<G>, \<Pi> \<turnstile> (Seq (SKIP i) c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
 | Seq2:    "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')
              \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p (Seq c1' c2, s', frs')"
-| IfTrue:  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p (c1, s, frs)"
-| IfFalse: "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
-| While:   "\<G>, \<Pi> \<turnstile> (While b c, s, frs)
-                      \<rightarrow>\<^sub>p (If b (Seq c (While b c)) SKIP, s, frs)"
+| IfTrue:  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c1, s, frs)"
+| IfFalse: "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> \<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p (c2, s, frs)"
+| While:   "\<G>, \<Pi> \<turnstile> (While i b c, s, frs)
+                      \<rightarrow>\<^sub>p (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
 | Call:    "\<Pi> p = Some decl
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
              \<Longrightarrow> vals = map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals
              \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state \<G> s)
-             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs)
-                 \<rightarrow>\<^sub>p (Seq (body decl) Restore,
+             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs)
+                 \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
                   callee,
                   Frame s dst # frs)"
 | Special: "special_table p = Some desc
              \<Longrightarrow> classify_special desc actuals = Some sc
              \<Longrightarrow> special_result sc s v
-             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call (Some x) p actuals, s, frs) \<rightarrow>\<^sub>p (SKIP, s(x := v), frs)"
+             \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Call i (Some x) p actuals, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := v), frs)"
 | RestoreStep:
-    "\<G>, \<Pi> \<turnstile> (Restore, s, Frame fr dst # frs)
-       \<rightarrow>\<^sub>p (SKIP, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Restore i, s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
 | ReturnSome:
-    "\<G>, \<Pi> \<turnstile> (Return (Some e), s, frs)
-       \<rightarrow>\<^sub>p (Unwind, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Return i (Some e), s, frs)
+       \<rightarrow>\<^sub>p (Unwind i, s(ret_var := \<lbrakk>e\<rbrakk>\<^sub>e s), frs)"
 | ReturnNone:
-    "\<G>, \<Pi> \<turnstile> (Return None, s, frs) \<rightarrow>\<^sub>p (Unwind, s, frs)"
+    "\<G>, \<Pi> \<turnstile> (Return i None, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
 | UnwindDead:
-    "c2 \<noteq> Restore
-     \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq Unwind c2, s, frs) \<rightarrow>\<^sub>p (Unwind, s, frs)"
+    "\<not> is_Restore c2
+     \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq (Unwind i) c2, s, frs) \<rightarrow>\<^sub>p (Unwind i, s, frs)"
 | UnwindAct:
-    "\<G>, \<Pi> \<turnstile> (Seq Unwind Restore, s, Frame fr dst # frs)
-       \<rightarrow>\<^sub>p (SKIP, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
+    "\<G>, \<Pi> \<turnstile> (Seq (Unwind j) (Restore i), s, Frame fr dst # frs)
+       \<rightarrow>\<^sub>p (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)"
 
 abbreviation
-  psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<times> store \<times> frame list
-                        \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool"
+  psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
+                        \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p\<^sup>*/ _)" [51, 51, 51, 51] 50)
 where "psteps \<G> \<Pi> x y \<equiv> star (pstep \<G> \<Pi>) x y"
 
 declare pstep.intros [simp, intro]
 
 inductive_cases SkipSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (SKIP, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (SKIP i, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases AssignSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Assign x a, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Assign i x a, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases CheckSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Check l c, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Check i l c, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases SeqSE[elim]:
   "\<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases IfSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (If b c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (If i b c1 c2, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases WhileSE[elim]:
-  "\<G>, \<Pi> \<turnstile> (While b c, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (While i b c, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases CallSE[elim]:
-  "\<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases RestoreSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Restore, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Restore i, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases ReturnSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Return e, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Return i e, s, frs) \<rightarrow>\<^sub>p cfg"
 inductive_cases UnwindSE[elim!]:
-  "\<G>, \<Pi> \<turnstile> (Unwind, s, frs) \<rightarrow>\<^sub>p cfg"
+  "\<G>, \<Pi> \<turnstile> (Unwind i, s, frs) \<rightarrow>\<^sub>p cfg"
 
 lemmas star_pstep_induct =
   star.induct[of "pstep \<G> \<Pi>", split_format(complete), case_names refl step]
@@ -182,16 +202,16 @@ subsection \<open>Completing runs\<close>
 text \<open>A run completes when it reaches \<open>SKIP\<close> with the frame stack it started
   with; \<open>SKIP\<close> under a non-empty stack is stuck, not finished.\<close>
 abbreviation pcompletes :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pcompletes \<G> \<Pi> c s t \<equiv> \<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  "pcompletes \<G> \<Pi> c s t \<equiv> \<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])"
 
-lemma pcompletes_skip: "pcompletes \<G> \<Pi> SKIP s s"
+lemma pcompletes_skip: "pcompletes \<G> \<Pi> (SKIP ()) s s"
   by (rule star.refl)
 
-lemma pcompletes_assign: "pcompletes \<G> \<Pi> (Assign x a) s (s(x := \<lbrakk>a\<rbrakk>\<^sub>e s))"
+lemma pcompletes_assign: "pcompletes \<G> \<Pi> (Assign () x a) s (s(x := \<lbrakk>a\<rbrakk>\<^sub>e s))"
   by simp
 
 lemma pcompletes_special_nondet_int:
-  "pcompletes \<G> \<Pi> (Call (Some x) special_pname_nondet_int []) s (s(x := v))"
+  "pcompletes \<G> \<Pi> (Call () (Some x) special_pname_nondet_int []) s (s(x := v))"
   by (simp add: special_table_def)
 
 lemma psteps_Seq2:
@@ -205,11 +225,11 @@ lemma pcompletes_Seq:
   using psteps_Seq2[OF assms(1)] assms(2) by (meson Seq1 star.step star_trans)
 
 lemma pcompletes_IfTrue:
-  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c1 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If b c1 c2) s t"
+  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c1 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If () b c1 c2) s t"
   by (meson IfTrue star.step)
 
 lemma pcompletes_IfFalse:
-  "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c2 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If b c1 c2) s t"
+  "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c2 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If () b c1 c2) s t"
   by (meson IfFalse star.step)
 
 subsection \<open>Frame-stack extension\<close>
@@ -230,8 +250,8 @@ lemma psteps_frame_extend:
   by (induction rule: star_pstep_induct) (auto intro: pstep_frame_extend star.step)
 
 lemma psteps_frame_mono:
-  "\<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, []) \<Longrightarrow>
-   \<G>, \<Pi> \<turnstile> (c, s, extra) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, extra)"
+  "\<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t, []) \<Longrightarrow>
+   \<G>, \<Pi> \<turnstile> (c, s, extra) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t, extra)"
   using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
   by simp
 
@@ -245,27 +265,28 @@ lemma combine_env_ret_var_irrelevant [simp]:
   by (rule ext) simp
 
 lemma psteps_Seq_Restore_body:
-  assumes "\<G>, \<Pi> \<turnstile> (c, s0, [Frame fr dst]) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t', [Frame fr dst])"
-  shows "\<G>, \<Pi> \<turnstile> (Seq c Restore, s0, [Frame fr dst])
-           \<rightarrow>\<^sub>p\<^sup>* (SKIP, combine_assign dst (t' ret_var) (combine_env \<G> fr t'), [])"
+  assumes "\<G>, \<Pi> \<turnstile> (c, s0, [Frame fr dst]) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t', [Frame fr dst])"
+  shows "\<G>, \<Pi> \<turnstile> (Seq c (Restore j), s0, [Frame fr dst])
+           \<rightarrow>\<^sub>p\<^sup>* (SKIP j, combine_assign dst (t' ret_var) (combine_env \<G> fr t'), [])"
   using psteps_Seq2[OF assms] by (meson Seq1 RestoreStep star.refl star.step star_trans)
 
 lemma pstep_Call:
   assumes "\<Pi> p = Some decl"
       and "length actuals = length (formals decl)"
       and "distinct (formals decl)"
-  shows "\<G>, \<Pi> \<turnstile> (Call dst p actuals, s, frs)
-           \<rightarrow>\<^sub>p (Seq (body decl) Restore,
+  shows "\<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs)
+           \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
             bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s),
             Frame s dst # frs)"
   using assms by (rule Call) (rule refl)+
 
 lemma pstep_Call_parameterless [intro]:
   assumes "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
-  shows "\<G>, \<Pi> \<turnstile> (Call dst p [], s, frs) \<rightarrow>\<^sub>p (Seq c Restore, enter_state \<G> s, Frame s dst # frs)"
+  shows
+    "\<G>, \<Pi> \<turnstile> (Call i dst p [], s, frs) \<rightarrow>\<^sub>p (Seq c (Restore i), enter_state \<G> s, Frame s dst # frs)"
 proof -
-  have "\<G>, \<Pi> \<turnstile> (Call dst p [], s, frs)
-          \<rightarrow>\<^sub>p (Seq (body (\<lparr>formals = [], body = c\<rparr>)) Restore,
+  have "\<G>, \<Pi> \<turnstile> (Call i dst p [], s, frs)
+          \<rightarrow>\<^sub>p (Seq (body (\<lparr>formals = [], body = c\<rparr>)) (Restore i),
            bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
              (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) []) (enter_state \<G> s),
            Frame s dst # frs)"
@@ -281,7 +302,7 @@ lemma pcompletes_Call:
       and distinct_formals: "distinct (formals decl)"
       and body: "pcompletes \<G> \<Pi> (body decl)
                    (bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)) t'"
-  shows "pcompletes \<G> \<Pi> (Call dst p actuals) s
+  shows "pcompletes \<G> \<Pi> (Call () dst p actuals) s
            (combine_assign dst (t' ret_var) (combine_env \<G> s t'))"
   by (rule star.step, rule pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals])
      (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
@@ -297,37 +318,37 @@ text \<open>
 
 subsection \<open>Finite syntactic variable sets\<close>
 
-fun com_vnames :: "com \<Rightarrow> vname set" where
-  "com_vnames SKIP = {}"
-| "com_vnames (Assign x a) = insert x (exp_vnames a)"
-| "com_vnames (Check l c) = exp_vnames c"
+fun com_vnames :: "'a acom \<Rightarrow> vname set" where
+  "com_vnames (SKIP _) = {}"
+| "com_vnames (Assign _ x a) = insert x (exp_vnames a)"
+| "com_vnames (Check _ l c) = exp_vnames c"
 | "com_vnames (Seq c1 c2) = com_vnames c1 \<union> com_vnames c2"
-| "com_vnames (If b c1 c2) =
+| "com_vnames (If _ b c1 c2) =
     exp_vnames b \<union> com_vnames c1 \<union> com_vnames c2"
-| "com_vnames (While b c) = exp_vnames b \<union> com_vnames c"
-| "com_vnames (Call dst _ actuals) =
+| "com_vnames (While _ b c) = exp_vnames b \<union> com_vnames c"
+| "com_vnames (Call _ dst _ actuals) =
     (case dst of None \<Rightarrow> {} | Some x \<Rightarrow> {x}) \<union>
     \<Union> (set (map exp_vnames actuals))"
-| "com_vnames (Return e) = (case e of None \<Rightarrow> {} | Some a \<Rightarrow> exp_vnames a)"
-| "com_vnames Restore = {}"
-| "com_vnames Unwind = {}"
+| "com_vnames (Return _ e) = (case e of None \<Rightarrow> {} | Some a \<Rightarrow> exp_vnames a)"
+| "com_vnames (Restore _) = {}"
+| "com_vnames (Unwind _) = {}"
 
 lemma finite_com_vnames [simp]: "finite (com_vnames c)"
   by (induction c) (auto split: option.splits)
 
-fun source_com :: "com \<Rightarrow> bool" where
-  "source_com SKIP = True"
-| "source_com (Assign x a) = True"
-| "source_com (Check l c) = True"
+fun source_com :: "'a acom \<Rightarrow> bool" where
+  "source_com (SKIP _) = True"
+| "source_com (Assign _ x a) = True"
+| "source_com (Check _ l c) = True"
 | "source_com (Seq c1 c2) = (source_com c1 \<and> source_com c2)"
-| "source_com (If b c1 c2) = (source_com c1 \<and> source_com c2)"
-| "source_com (While b c) = source_com c"
-| "source_com (Call dst p actuals) = True"
-| "source_com (Return e) = True"
-| "source_com Restore = False"
-| "source_com Unwind = False"
+| "source_com (If _ b c1 c2) = (source_com c1 \<and> source_com c2)"
+| "source_com (While _ b c) = source_com c"
+| "source_com (Call _ dst p actuals) = True"
+| "source_com (Return _ e) = True"
+| "source_com (Restore _) = False"
+| "source_com (Unwind _) = False"
 
-definition source_pi :: "proc_table \<Rightarrow> bool" where
+definition source_pi :: "'a ptable \<Rightarrow> bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
 definition source_exp :: "exp \<Rightarrow> bool" where
@@ -345,35 +366,35 @@ text \<open>
   false, and a call resumes normally after its callee completes.
 \<close>
 
-fun may_fallthrough :: "com \<Rightarrow> bool" where
-  "may_fallthrough SKIP = True"
-| "may_fallthrough (Assign _ _) = True"
-| "may_fallthrough (Check _ _) = True"
+fun may_fallthrough :: "'a acom \<Rightarrow> bool" where
+  "may_fallthrough (SKIP _) = True"
+| "may_fallthrough (Assign _ _ _) = True"
+| "may_fallthrough (Check _ _ _) = True"
 | "may_fallthrough (Seq c1 c2) = (may_fallthrough c1 \<and> may_fallthrough c2)"
-| "may_fallthrough (If _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
-| "may_fallthrough (While _ _) = True"
-| "may_fallthrough (Call _ _ _) = True"
-| "may_fallthrough (Return _) = False"
-| "may_fallthrough Restore = False"
-| "may_fallthrough Unwind = False"
+| "may_fallthrough (If _ _ c1 c2) = (may_fallthrough c1 \<or> may_fallthrough c2)"
+| "may_fallthrough (While _ _ _) = True"
+| "may_fallthrough (Call _ _ _ _) = True"
+| "may_fallthrough (Return _ _) = False"
+| "may_fallthrough (Restore _) = False"
+| "may_fallthrough (Unwind _) = False"
 
-fun may_return_none :: "com \<Rightarrow> bool" where
+fun may_return_none :: "'a acom \<Rightarrow> bool" where
   "may_return_none (Seq c1 c2) =
      (may_return_none c1 \<or> (may_fallthrough c1 \<and> may_return_none c2))"
-| "may_return_none (If _ c1 c2) = (may_return_none c1 \<or> may_return_none c2)"
-| "may_return_none (While _ c) = may_return_none c"
-| "may_return_none (Return e) = (e = None)"
+| "may_return_none (If _ _ c1 c2) = (may_return_none c1 \<or> may_return_none c2)"
+| "may_return_none (While _ _ c) = may_return_none c"
+| "may_return_none (Return _ e) = (e = None)"
 | "may_return_none _ = False"
 
-fun may_return_value :: "com \<Rightarrow> bool" where
+fun may_return_value :: "'a acom \<Rightarrow> bool" where
   "may_return_value (Seq c1 c2) =
      (may_return_value c1 \<or> (may_fallthrough c1 \<and> may_return_value c2))"
-| "may_return_value (If _ c1 c2) = (may_return_value c1 \<or> may_return_value c2)"
-| "may_return_value (While _ c) = may_return_value c"
-| "may_return_value (Return e) = (e \<noteq> None)"
+| "may_return_value (If _ _ c1 c2) = (may_return_value c1 \<or> may_return_value c2)"
+| "may_return_value (While _ _ c) = may_return_value c"
+| "may_return_value (Return _ e) = (e \<noteq> None)"
 | "may_return_value _ = False"
 
-definition value_providing :: "com \<Rightarrow> bool" where
+definition value_providing :: "'a acom \<Rightarrow> bool" where
   "value_providing c \<longleftrightarrow>
      source_com c \<and> \<not> may_fallthrough c \<and>
      \<not> may_return_none c \<and> may_return_value c"
@@ -387,15 +408,15 @@ text \<open>
   distinguished root command contains no return.
 \<close>
 
-fun wf_source_com :: "proc_table \<Rightarrow> com \<Rightarrow> bool" where
-  "wf_source_com \<Pi> SKIP = True"
-| "wf_source_com \<Pi> (Assign x a) = (x \<noteq> ret_var \<and> source_exp a)"
-| "wf_source_com \<Pi> (Check l c) = source_exp c"
+fun wf_source_com :: "'a ptable \<Rightarrow> 'a acom \<Rightarrow> bool" where
+  "wf_source_com \<Pi> (SKIP _) = True"
+| "wf_source_com \<Pi> (Assign _ x a) = (x \<noteq> ret_var \<and> source_exp a)"
+| "wf_source_com \<Pi> (Check _ l c) = source_exp c"
 | "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
-| "wf_source_com \<Pi> (If b c1 c2) =
+| "wf_source_com \<Pi> (If _ b c1 c2) =
      (source_exp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
-| "wf_source_com \<Pi> (While b c) = (source_exp b \<and> wf_source_com \<Pi> c)"
-| "wf_source_com \<Pi> (Call dst p actuals) =
+| "wf_source_com \<Pi> (While _ b c) = (source_exp b \<and> wf_source_com \<Pi> c)"
+| "wf_source_com \<Pi> (Call _ dst p actuals) =
      (case special_table p of
         Some desc \<Rightarrow>
           classify_special desc actuals \<noteq> None \<and> list_all source_exp actuals \<and>
@@ -409,18 +430,18 @@ fun wf_source_com :: "proc_table \<Rightarrow> com \<Rightarrow> bool" where
                (case dst of
                   None \<Rightarrow> True
                 | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl))))"
-| "wf_source_com \<Pi> (Return e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_exp a)"
-| "wf_source_com \<Pi> Restore = False"
-| "wf_source_com \<Pi> Unwind = False"
+| "wf_source_com \<Pi> (Return _ e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_exp a)"
+| "wf_source_com \<Pi> (Restore _) = False"
+| "wf_source_com \<Pi> (Unwind _) = False"
 
-fun no_return :: "com \<Rightarrow> bool" where
+fun no_return :: "'a acom \<Rightarrow> bool" where
   "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (If _ c1 c2) = (no_return c1 \<and> no_return c2)"
-| "no_return (While _ c) = no_return c"
-| "no_return (Return _) = False"
+| "no_return (If _ _ c1 c2) = (no_return c1 \<and> no_return c2)"
+| "no_return (While _ _ c) = no_return c"
+| "no_return (Return _ _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> proc_decl \<Rightarrow> bool" where
+definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a gproc_decl \<Rightarrow> bool" where
   "wf_proc_decl \<G> \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
      list_all (valid_formal \<G>) (formals decl) \<and>
@@ -439,16 +460,16 @@ text \<open>The entry body, looked up rather than passed alongside the table.  T
   fail where \<open>wf_source_program\<close> holds --- its second conjunct is exactly that the entry is
   declared --- so an undeclared entry is an invariant violation, and aborts in generated code
   rather than compiling to a plausible empty program.\<close>
-definition main_body :: "proc_table \<Rightarrow> com" where
+definition main_body :: "'a ptable \<Rightarrow> 'a acom" where
   "main_body \<Pi> =
      (case \<Pi> prog_main_name of
         Some decl \<Rightarrow> body decl
-      | None \<Rightarrow> Code.abort (STR ''main_body: entry procedure not declared'') (\<lambda>_. SKIP))"
+      | None \<Rightarrow> Code.abort (STR ''main_body: entry procedure not declared'') (\<lambda>_. SKIP undefined))"
 
 text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
   this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
-definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> bool" where
+definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> bool" where
   "wf_source_program \<G> \<Pi> \<longleftrightarrow>
      reserved_ret_var \<G> \<and>
      \<Pi> prog_main_name = Some (\<lparr>formals = [], body = main_body \<Pi>\<rparr>) \<and>
@@ -495,11 +516,11 @@ text \<open>
 
 definition witness_ret1_pi :: proc_table where
   "witness_ret1_pi p =
-     (if p = STR ''ret1'' then Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr> else None)"
+     (if p = STR ''ret1'' then Some \<lparr>formals = [], body = Return () (Some (N 1))\<rparr> else None)"
 
 theorem pcompletes_witness:
   "\<exists>t. pcompletes (\<lambda>_. False) witness_ret1_pi
-         (Call (Some (STR ''x'')) (STR ''ret1'') []) s t
+         (Call () (Some (STR ''x'')) (STR ''ret1'') []) s t
      \<and> t (STR ''x'') = 1"
 proof -
   let ?\<G> = "\<lambda>_ :: vname. False"
@@ -507,18 +528,18 @@ proof -
   let ?en = "enter_state ?\<G> s"
   let ?s' = "?en(ret_var := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
   let ?t  = "(combine_env ?\<G> s ?s')(STR ''x'' := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
-  have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return (Some (N 1))\<rparr>"
+  have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return () (Some (N 1))\<rparr>"
     by (simp add: witness_ret1_pi_def)
-  have s1: "?\<G>, witness_ret1_pi \<turnstile> (Call (Some (STR ''x'')) (STR ''ret1'') [], s, [])
-              \<rightarrow>\<^sub>p (Seq (Return (Some (N 1))) Restore, ?en, ?fr)"
+  have s1: "?\<G>, witness_ret1_pi \<turnstile> (Call () (Some (STR ''x'')) (STR ''ret1'') [], s, [])
+              \<rightarrow>\<^sub>p (Seq (Return () (Some (N 1))) (Restore ()), ?en, ?fr)"
     using q by (rule pstep_Call_parameterless)
-  have s2: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Return (Some (N 1))) Restore, ?en, ?fr)
-              \<rightarrow>\<^sub>p (Seq Unwind Restore, ?s', ?fr)"
+  have s2: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Return () (Some (N 1))) (Restore ()), ?en, ?fr)
+              \<rightarrow>\<^sub>p (Seq (Unwind ()) (Restore ()), ?s', ?fr)"
     by (intro Seq2 ReturnSome)
-  have s3: "?\<G>, witness_ret1_pi \<turnstile> (Seq Unwind Restore, ?s', ?fr) \<rightarrow>\<^sub>p (SKIP, ?t, [])"
-    using UnwindAct[of ?\<G> witness_ret1_pi ?s' s "Some (STR ''x'')" "[]"] by simp
+  have s3: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Unwind ()) (Restore ()), ?s', ?fr) \<rightarrow>\<^sub>p (SKIP (), ?t, [])"
+    using UnwindAct[of ?\<G> witness_ret1_pi "()" "()" ?s' s "Some (STR ''x'')" "[]"] by simp
   from s1 s2 s3
-  have "pcompletes ?\<G> witness_ret1_pi (Call (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
+  have "pcompletes ?\<G> witness_ret1_pi (Call () (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
     by (meson star.refl star.step)
   moreover have "?t (STR ''x'') = 1" by simp
   ultimately show ?thesis by blast

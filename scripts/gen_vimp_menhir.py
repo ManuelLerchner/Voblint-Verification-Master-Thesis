@@ -67,11 +67,18 @@ def render_lower_arg(arg: dict) -> str:
     raise ValueError(f"unrecognized lower arg shape: {arg}")
 
 
+# Commands the parser builds carry the unit annotation; elaboration assigns
+# locations only inside the proof. Seq carries none.
+ANNOTATED_CTORS = {"SKIP", "Assign", "Check", "If", "While", "Call", "Return"}
+
+
 def render_lower(lower: dict) -> str:
     if "tuple" in lower:
         return "(" + ", ".join(f"v{i}" for i in lower["tuple"]) + ")"
     ctor = f"Voblint.{lower['ctor']}"
     args = [render_lower_arg(a) for a in lower.get("args", [])]
+    if lower["ctor"].split(".")[-1] in ANNOTATED_CTORS:
+        args = ["()"] + args
     if not args:
         return ctor
     if len(args) == 1:
@@ -152,17 +159,17 @@ rule token = parse
 # Dune/Menhir versions; every nonterminal's OCaml type is stated upfront.
 NONTERMINAL_TYPES = {
     "exp": "Voblint.exp",
-    "stmt": "Voblint.com",
-    "if_stmt": "Voblint.com",
-    "stmts": "Voblint.com",
-    "stmts_opt": "Voblint.com",
+    "stmt": "(unit, string, Voblint.exp) Voblint.gcom",
+    "if_stmt": "(unit, string, Voblint.exp) Voblint.gcom",
+    "stmts": "(unit, string, Voblint.exp) Voblint.gcom",
+    "stmts_opt": "(unit, string, Voblint.exp) Voblint.gcom",
     "actuals": "Voblint.exp list",
     "formals": "string list",
     "ids": "string list",
     "globals_decl": "string list",
     "globals_opt": "string list",
-    "function_decl": "string * string list * Voblint.com",
-    "function_decl_star": "(string * string list * Voblint.com) list",
+    "function_decl": "string * string list * (unit, string, Voblint.exp) Voblint.gcom",
+    "function_decl_star": "(string * string list * (unit, string, Voblint.exp) Voblint.gcom) list",
 }
 
 
@@ -248,6 +255,8 @@ def gen_list_rule(prod: dict) -> str:
         base = prod["result"].removesuffix("_opt")
         empty = prod.get("empty", "[]")
         empty_action = f"Voblint.{empty}" if empty[0].isupper() else empty
+        if empty in ANNOTATED_CTORS:
+            empty_action = f"{empty_action} ()"
         return (
             f"{name}:\n"
             f"  | (* empty *)\n"
@@ -293,7 +302,7 @@ def gen_program_rule() -> str:
           | _ -> failwith "more than one 'fun main()'"
         in
         Voblint.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint.Proc_decl_ext (formals, b, ()))) procs)
+          (List.map (fun (n, formals, b) -> (n, Voblint.Gproc_decl_ext (formals, b, ()))) procs)
           main_body g }
 
 globals_opt:

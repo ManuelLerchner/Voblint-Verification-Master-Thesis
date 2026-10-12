@@ -118,13 +118,12 @@ A richer source language, up to a subset of C, needs the new obligations that
 also needs a semantics and a preservation argument per construct at every
 layer.
 
-Such a language would benefit from an elaboration phase between the parser and
-the compiler. Even for VIMP, the source-level theorem only asserts that
-_some_ node $v$ is related to the reached source configuration
-(@sec:headline). A residual command records nothing about the occurrence it
-came from (@sec:csim). An elaboration phase would annotate every statement with
-the node the compiler emits for it. Each source configuration would then name
-its node, and the theorem could drop the existential. The same phase is where a front end for C resolves names, types, and expressions and makes conversions explicit.
+Such a language would extend the elaboration of @sec:csim. For VIMP,
+elaboration only records where the compiler places each statement, and erasure
+relates the elaborated runs to the runs of the program as written. A front end
+for C would use the same annotated syntax to resolve names, types, and
+expressions and to make conversions explicit, with erasure again connecting the
+result to the source.
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be

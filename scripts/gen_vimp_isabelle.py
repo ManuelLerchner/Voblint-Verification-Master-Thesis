@@ -496,14 +496,14 @@ TR_CONST = {
     "Not": "VIMP_Syntax.exp.Not",
     "And": "VIMP_Syntax.exp.And",
     "Or": "VIMP_Syntax.exp.Or",
-    "SKIP": "VIMP_Proc.com.SKIP",
-    "Seq": "VIMP_Proc.com.Seq",
-    "Assign": "VIMP_Proc.com.Assign",
-    "Return": "VIMP_Proc.com.Return",
-    "Check": "VIMP_Proc.com.Check",
-    "If": "VIMP_Proc.com.If",
-    "While": "VIMP_Proc.com.While",
-    "Call": "VIMP_Proc.com.Call",
+    "SKIP": "VIMP_Proc.gcom.SKIP",
+    "Seq": "VIMP_Proc.gcom.Seq",
+    "Assign": "VIMP_Proc.gcom.Assign",
+    "Return": "VIMP_Proc.gcom.Return",
+    "Check": "VIMP_Proc.gcom.Check",
+    "If": "VIMP_Proc.gcom.If",
+    "While": "VIMP_Proc.gcom.While",
+    "Call": "VIMP_Proc.gcom.Call",
 }
 
 # lower.ctor name -> the `c_X` val bound to that same qualified constant in
@@ -768,21 +768,27 @@ val c_Not    = "VIMP_Syntax.exp.Not"
 val c_And    = "VIMP_Syntax.exp.And"
 val c_Or     = "VIMP_Syntax.exp.Or"
 
-val c_SKIP   = "VIMP_Proc.com.SKIP"
-val c_Assign = "VIMP_Proc.com.Assign"
-val c_Seq    = "VIMP_Proc.com.Seq"
-val c_If     = "VIMP_Proc.com.If"
-val c_While  = "VIMP_Proc.com.While"
-val c_Call   = "VIMP_Proc.com.Call"
-val c_Return = "VIMP_Proc.com.Return"
-val c_Check  = "VIMP_Proc.com.Check"
+val c_SKIP   = "VIMP_Proc.gcom.SKIP"
+val c_Assign = "VIMP_Proc.gcom.Assign"
+val c_Seq    = "VIMP_Proc.gcom.Seq"
+val c_If     = "VIMP_Proc.gcom.If"
+val c_While  = "VIMP_Proc.gcom.While"
+val c_Call   = "VIMP_Proc.gcom.Call"
+val c_Return = "VIMP_Proc.gcom.Return"
+val c_Check  = "VIMP_Proc.gcom.Check"
 
 val c_None   = "Option.option.None"
 val c_Some   = "Option.option.Some"
 val c_Cons   = "List.list.Cons"
 val c_Nil    = "List.list.Nil"
 
-fun K name = Const (name, dummyT)"""
+(* Parsed statements carry the unit annotation; elaboration assigns identities later. *)
+val annotated_ctors = [c_SKIP, c_Assign, c_If, c_While, c_Call, c_Return, c_Check]
+
+fun K name =
+  if member (op =) annotated_ctors name
+  then Const (name, dummyT) $ Const ("Product_Type.Unity", dummyT)
+  else Const (name, dummyT)"""
 
 # Numeral decoding (special: integer_literal) and the compositional
 # unary-minus rule (special: unary_minus) stay hand-written -- see the

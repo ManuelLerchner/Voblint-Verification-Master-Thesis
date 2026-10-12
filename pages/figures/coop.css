@@ -1,4 +1,4 @@
-/* Two analyses, one question */
+/* Combining two analyses through queries */
 
 :where(.scene-coop) .coop-controls {
   display: flex;

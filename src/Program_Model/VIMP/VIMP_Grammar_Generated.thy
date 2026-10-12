@@ -112,21 +112,27 @@ struct
   val c_And    = "VIMP_Syntax.exp.And"
   val c_Or     = "VIMP_Syntax.exp.Or"
 
-  val c_SKIP   = "VIMP_Proc.com.SKIP"
-  val c_Assign = "VIMP_Proc.com.Assign"
-  val c_Seq    = "VIMP_Proc.com.Seq"
-  val c_If     = "VIMP_Proc.com.If"
-  val c_While  = "VIMP_Proc.com.While"
-  val c_Call   = "VIMP_Proc.com.Call"
-  val c_Return = "VIMP_Proc.com.Return"
-  val c_Check  = "VIMP_Proc.com.Check"
+  val c_SKIP   = "VIMP_Proc.gcom.SKIP"
+  val c_Assign = "VIMP_Proc.gcom.Assign"
+  val c_Seq    = "VIMP_Proc.gcom.Seq"
+  val c_If     = "VIMP_Proc.gcom.If"
+  val c_While  = "VIMP_Proc.gcom.While"
+  val c_Call   = "VIMP_Proc.gcom.Call"
+  val c_Return = "VIMP_Proc.gcom.Return"
+  val c_Check  = "VIMP_Proc.gcom.Check"
 
   val c_None   = "Option.option.None"
   val c_Some   = "Option.option.Some"
   val c_Cons   = "List.list.Cons"
   val c_Nil    = "List.list.Nil"
 
-  fun K name = Const (name, dummyT)
+  (* Parsed statements carry the unit annotation; elaboration assigns identities later. *)
+  val annotated_ctors = [c_SKIP, c_Assign, c_If, c_While, c_Call, c_Return, c_Check]
+
+  fun K name =
+    if member (op =) annotated_ctors name
+    then Const (name, dummyT) $ Const ("Product_Type.Unity", dummyT)
+    else Const (name, dummyT)
 
   (* Decode Isabelle's Num binary structure: One=1, Bit0 n=2n, Bit1 n=2n+1.
      Leaf may also be a decimal-string Const (e.g. Const("20",_)) from the

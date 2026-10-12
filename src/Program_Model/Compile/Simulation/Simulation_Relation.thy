@@ -8,7 +8,7 @@ text \<open>
   \<open>csim\<close> relates a source configuration \<^term>\<open>(c, s, frs)\<close> to a CFG configuration
   \<^term>\<open>(v, s, stk)\<close> holding the very same store.  The two represent suspended callers
   differently: the source nests each caller's continuation inside the single command \<open>c\<close>,
-  as \<^term>\<open>Seq (Seq inner Restore) after\<close> wrappings, while the CFG keeps them as
+  as \<^term>\<open>Seq (Seq inner (Restore i)) after\<close> wrappings, while the CFG keeps them as
   continuation nodes on its frame stack.  \<open>csim\<close> pairs the two off, one layer per
   suspended caller.
 
@@ -46,8 +46,8 @@ lemma edge_step_EA_Ret_ret_store_mem [simp]: "ret_store e s \<in> edge_step (EA_
 subsection \<open>Bare Unwind is stuck\<close>
 
 text \<open>A lone \<^const>\<open>Unwind\<close> has no source step: only the \<^const>\<open>Seq\<close> rules propagate it, and
-  the frame pop it is heading for fires on \<^term>\<open>Seq Unwind Restore\<close>.\<close>
-lemma pstep_Unwind_stuck: "\<not> \<G>, \<Pi> \<turnstile> (Unwind, s, frs) \<rightarrow>\<^sub>p x"
+  the frame pop it is heading for fires on \<^term>\<open>Seq (Unwind j) (Restore i)\<close>.\<close>
+lemma pstep_Unwind_stuck: "\<not> \<G>, \<Pi> \<turnstile> ((Unwind i), s, frs) \<rightarrow>\<^sub>p x"
   by auto
 
 text \<open>
@@ -55,22 +55,22 @@ text \<open>
   nowhere to unwind to, so a run that starts at \<open>Unwind\<close> or \<open>Return\<close> never completes.
 \<close>
 
-lemma Unwind_not_pcompletes: "\<not> pcompletes \<G> \<Pi> Unwind s t"
+lemma Unwind_not_pcompletes: "\<not> pcompletes \<G> \<Pi> (Unwind ()) s t"
 proof (rule notI)
-  assume "\<G>, \<Pi> \<turnstile> (Unwind, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  assume "\<G>, \<Pi> \<turnstile> (Unwind (), s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])"
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
 
-lemma Return_empty_not_pcompletes: "\<not> pcompletes \<G> \<Pi> (Return e) s t"
+lemma Return_empty_not_pcompletes: "\<not> pcompletes \<G> \<Pi> (Return () e) s t"
 proof (rule notI)
-  assume "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
-  then obtain y where step: "\<G>, \<Pi> \<turnstile> (Return e, s, []) \<rightarrow>\<^sub>p y"
-      and rest: "\<G>, \<Pi> \<turnstile> y \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])"
+  assume "\<G>, \<Pi> \<turnstile> (Return () e, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])"
+  then obtain y where step: "\<G>, \<Pi> \<turnstile> (Return () e, s, []) \<rightarrow>\<^sub>p y"
+      and rest: "\<G>, \<Pi> \<turnstile> y \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])"
     by (cases rule: star.cases) auto
-  from step have "y = (Unwind, ret_store e s, [])"
+  from step have "y = (Unwind (), ret_store e s, [])"
     by (cases e) (auto simp: ret_store_def)
-  with rest have "\<G>, \<Pi> \<turnstile> (Unwind, ret_store e s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP, t, [])" by simp
+  with rest have "\<G>, \<Pi> \<turnstile> (Unwind (), ret_store e s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])" by simp
   then show False
     by (cases rule: star.cases) (auto simp: pstep_Unwind_stuck)
 qed
@@ -87,23 +87,30 @@ text \<open>
   \<open>cstep\<close> return; \<open>unwinding\<close> propagation is matched by \<^emph>\<open>no\<close> CFG step, because the CFG
   waits at \<^term>\<open>FunctionResult p\<close>.
 \<close>
-fun unwinding :: "com \<Rightarrow> bool" where
-  "unwinding Unwind = True"
-| "unwinding (Seq u c2) = (unwinding u \<and> c2 \<noteq> Restore)"
+fun unwinding :: "'a acom \<Rightarrow> bool" where
+  "unwinding (Unwind i) = True"
+| "unwinding (Seq u c2) = (unwinding u \<and> \<not> is_Restore c2)"
 | "unwinding _ = False"
 
-fun pop_ready :: "com \<Rightarrow> bool" where
-  "pop_ready Restore = True"
-| "pop_ready (Seq u Restore) = unwinding u"
+fun pop_ready :: "'a acom \<Rightarrow> bool" where
+  "pop_ready (Restore i) = True"
+| "pop_ready (Seq u (Restore i)) = unwinding u"
 | "pop_ready _ = False"
 
-lemma unwinding_not_SKIP: "unwinding u \<Longrightarrow> u \<noteq> SKIP"
+text \<open>The annotation of the \<^const>\<open>Restore\<close> a returning activation pops: the call it
+  came from, which is also the annotation of the \<^const>\<open>SKIP\<close> the pop leaves behind.\<close>
+fun pop_ann :: "'a acom \<Rightarrow> 'a option" where
+  "pop_ann (Restore i) = Some i"
+| "pop_ann (Seq u (Restore i)) = Some i"
+| "pop_ann _ = None"
+
+lemma unwinding_not_SKIP: "unwinding u \<Longrightarrow> \<not> is_SKIP u"
   by (cases u) auto
 
-lemma pop_ready_not_SKIP: "pop_ready w \<Longrightarrow> w \<noteq> SKIP"
+lemma pop_ready_not_SKIP: "pop_ready w \<Longrightarrow> \<not> is_SKIP w"
   by (cases w rule: pop_ready.cases) auto
 
-lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> Unwind"
+lemma pop_ready_not_Unwind: "pop_ready w \<Longrightarrow> w \<noteq> (Unwind i)"
   by (cases w rule: pop_ready.cases) auto
 
 subsection \<open>Compile-into-\<open>g\<close> evidence for an active fragment\<close>
@@ -122,19 +129,27 @@ text \<open>
 
   A procedure body's continuation is its epilogue node, which is why the fall-through return
   edge is stated from \<open>k\<close>.  \<^const>\<open>compile_proc\<close> emits that edge for every body.
+
+  The offset itself is anchored to the graph: the body enters at the target of \<open>p\<close>'s
+  \<^term>\<open>EA_Body\<close> edge, and \<open>k\<close> is the epilogue right after the body.  Without the anchor the
+  body's edges could be matched at a shifted offset, and the relation would locate a residual
+  at a node no execution of \<open>p\<close> uses.
 \<close>
 definition compiled_at ::
-  "proc_table \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> com \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> bool" where
+  "'a ptable \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> bool" where
   "compiled_at \<Pi> g p body_p k n \<longleftrightarrow>
      (\<exists>decl n' en E K. \<Pi> p = Some decl \<and> body_p = body decl
         \<and> compile \<Pi> p body_p k n = (n', en, E, K)
         \<and> E \<subseteq> intra g \<and> K \<subseteq> calls g
-        \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g)"
+        \<and> (k, EA_Ret None p, FunctionResult p) \<in> intra g
+        \<and> (FunctionEntry p, EA_Body p, Statement n) \<in> intra g
+        \<and> k = Statement (n + csize body_p))"
 
 lemma compiled_atI [intro]:
   "\<Pi> p = Some decl \<Longrightarrow> body_p = body decl \<Longrightarrow>
    compile \<Pi> p body_p k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> K \<subseteq> calls g \<Longrightarrow>
    (k, EA_Ret None p, FunctionResult p) \<in> intra g \<Longrightarrow>
+   (FunctionEntry p, EA_Body p, Statement n) \<in> intra g \<Longrightarrow> k = Statement (n + csize body_p) \<Longrightarrow>
    compiled_at \<Pi> g p body_p k n"
   unfolding compiled_at_def by blast
 
@@ -162,36 +177,41 @@ subsection \<open>The simulation relation\<close>
 text \<open>What it means for a source configuration and a graph configuration to be at the same
   place.  Three shapes, one per stack situation: a single activation, a call in progress with
   the caller recorded on both stacks, and the moment between a return and the frame pop.  All
-  three carry the same store, so the relation constrains position and stack only.\<close>
-inductive csim :: "proc_table \<Rightarrow> cfg \<Rightarrow> com \<times> store \<times> frame list
+  three carry the same store, so the relation constrains position and stack only.
+
+  The index \<open>p\<close> in \<open>\<Pi>, g, p \<turnstile> cfg \<approx> dg\<close> is the procedure of the outermost activation of
+  \<open>cfg\<close>, the one with no caller below it in the relation.  \<open>Nested\<close> and \<open>Returning\<close> record the
+  call that suspended that activation, \<^term>\<open>Call i dst q args\<close>: the activation inside
+  \<^term>\<open>Seq inner (Restore i)\<close> runs \<open>q\<close>, and a returning activation is at \<^term>\<open>FunctionResult q\<close>
+  of that same \<open>q\<close>.  Recursion is harmless because the index belongs to an activation, not to a
+  body.\<close>
+inductive csim :: "'a ptable \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> 'a acom \<times> store \<times> frame list
                     \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<approx>/ _)" [51, 51, 51, 51] 50) for \<Pi> g where
+    ("(_,_,_ \<turnstile>/ _ \<approx>/ _)" [51, 51, 51, 51, 51] 50) for \<Pi> g where
   Base:
     "control_at \<Pi> p body_p k n c v \<Longrightarrow> compiled_at \<Pi> g p body_p k n \<Longrightarrow>
-     \<Pi>, g \<turnstile> (c, s, []) \<approx> (v, s, [])"
+     \<Pi>, g, p \<turnstile> (c, s, []) \<approx> (v, s, [])"
 | Nested:
-    "\<Pi>, g \<turnstile> (inner, s, frs) \<approx> (v, s, stk) \<Longrightarrow>
-     control_at \<Pi> pc body_pc kc nc (seq_after SKIP afters) cont \<Longrightarrow>
+    "\<Pi>, g, q \<turnstile> (inner, s, frs) \<approx> (v, s, stk) \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after (SKIP i) afters) cont \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after (Call i dst q args) afters) site \<Longrightarrow>
      compiled_at \<Pi> g pc body_pc kc nc \<Longrightarrow>
-     \<Pi>, g \<turnstile> (seq_after (Seq inner Restore) afters, s, frs @ [Frame caller dst])
+     \<Pi>, g, pc \<turnstile> (seq_after (Seq inner (Restore i)) afters, s, frs @ [Frame caller dst])
        \<approx> (v, s, stk @ [(cont, dst, caller)])"
 | Returning:
-    "pop_ready w \<Longrightarrow>
-     control_at \<Pi> pc body_pc kc nc (seq_after SKIP afters) cont \<Longrightarrow>
+    "pop_ready w \<Longrightarrow> pop_ann w = Some i \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after (SKIP i) afters) cont \<Longrightarrow>
+     control_at \<Pi> pc body_pc kc nc (seq_after (Call i dst q args) afters) site \<Longrightarrow>
      compiled_at \<Pi> g pc body_pc kc nc \<Longrightarrow>
-     \<Pi>, g \<turnstile> (seq_after w afters, callee, [Frame caller dst])
-       \<approx> (FunctionResult p, callee, [(cont, dst, caller)])"
+     \<Pi>, g, pc \<turnstile> (seq_after w afters, callee, [Frame caller dst])
+       \<approx> (FunctionResult q, callee, [(cont, dst, caller)])"
 text \<open>
-  \<^const>\<open>csim\<close> is a \<^emph>\<open>structural\<close> correspondence, not a reachability one, and it is not
-  functional.  \<open>compiled_at\<close> asks only that the body belongs to some procedure compiled into
-  the graph; it never asks whether that procedure is ever called.  So a program whose main
-  body is duplicated as an uncalled procedure relates one source configuration to two nodes,
-  one of them in dead code.  Do not try to prove a node unique, and do not read \<open>csim x v\<close> as
-  "the execution is at \<open>v\<close>": it says \<open>v\<close> \<^emph>\<open>can represent\<close> this control state.
-
-  A caller that needs the semantic node pairs this with membership in \<open>node_collect\<close> at the
-  same node, which the dead witness cannot satisfy --- no valid activation trace reaches it.  That
-  pairing, not uniqueness, is what the source-level endpoints are stated over.
+  On its own \<^const>\<open>csim\<close> is a \<^emph>\<open>structural\<close> correspondence, not a reachability one.  For an
+  unannotated program it is not functional either: a residual carries no record of which
+  occurrence it came from, so two textually equal statements share every location.  A caller
+  that needs the semantic node pairs it with membership in \<open>node_collect\<close> at the same node.
+  Annotated programs whose annotations are the compiler's own locations are the case where the
+  node is determined.
 \<close>
 
 text \<open>Inversion at an empty source frame stack.  Only \<open>Base\<close> can produce one --- \<open>Nested\<close> and
@@ -199,25 +219,25 @@ text \<open>Inversion at an empty source frame stack.  Only \<open>Base\<close> 
   and the whole activation certificate comes back.  \<open>csim\<close>'s introduction rules stay
   undeclared: choosing between \<open>Base\<close>, \<open>Nested\<close> and \<open>Returning\<close> is the step each preservation
   proof exists to make, and it belongs in the proof text rather than in a search.\<close>
-inductive_cases csim_empty_stackE [elim]: "\<Pi>, g \<turnstile> (c, s, []) \<approx> (v, t, stk)"
+inductive_cases csim_empty_stackE [elim]: "\<Pi>, g, p \<turnstile> (c, s, []) \<approx> (v, t, stk)"
 
 text \<open>\<open>Nested\<close> and \<open>Returning\<close> both locate the \<^emph>\<open>resumed caller\<close> --- the ordinary residual
-  \<^term>\<open>seq_after SKIP afters\<close> that the return will land in --- at the continuation node
+  \<^term>\<open>seq_after (SKIP i) afters\<close> that the return will land in --- at the continuation node
   \<open>cont\<close>.  \<open>Returning\<close> carries exactly the one frame the return pops; outer callers are
   consumed by the \<open>Nested\<close> layers wrapping it, and after the pop the caller resumes as a
   \<open>Base\<close> activation with that wrapping untouched.\<close>
 
 lemma csim_store_eq:
-  "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> s = t"
+  "\<Pi>, g, \<rho> \<turnstile> (c, s, frs) \<approx> (v, t, stk) \<Longrightarrow> s = t"
   by (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c frs v stk rule: csim.induct) auto
 
 subsection \<open>Returning commands and the frame-pop phase\<close>
 
 text \<open>\<open>is_returning c\<close> holds when the leftmost-innermost of \<open>c\<close> is \<^const>\<open>Restore\<close> or
   \<^const>\<open>Unwind\<close>: the shape of every returning-phase command, ordinary or \<open>Nested\<close>-wrapped.\<close>
-fun is_returning :: "com \<Rightarrow> bool" where
-  "is_returning Restore = True"
-| "is_returning Unwind = True"
+fun is_returning :: "'a acom \<Rightarrow> bool" where
+  "is_returning (Restore i) = True"
+| "is_returning (Unwind i) = True"
 | "is_returning (Seq c1 c2) = is_returning c1"
 | "is_returning _ = False"
 
@@ -232,8 +252,8 @@ text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<op
   \<^const>\<open>pstep\<close> pushes a frame.  A call \<^const>\<open>special_table\<close> classifies resolves in place
   instead (\<^const>\<open>intra_step\<close>'s \<open>ISpecial\<close>), so it is deliberately excluded here, mirroring
   \<^const>\<open>intra_step\<close>'s own exclusion of \<^const>\<open>Call\<close>.\<close>
-fun head_call :: "com \<Rightarrow> bool" where
-  "head_call (Call dst q actuals) = (special_table q = None)"
+fun head_call :: "'a acom \<Rightarrow> bool" where
+  "head_call (Call i dst q actuals) = (special_table q = None)"
 | "head_call (Seq c1 c2) = head_call c1"
 | "head_call _ = False"
 
@@ -241,21 +261,21 @@ lemma head_call_seq_after [simp]:
   "head_call (seq_after c afters) = head_call c"
   by (induction afters arbitrary: c) auto
 
-lemma head_call_not_SKIP: "head_call c \<Longrightarrow> c \<noteq> SKIP"
+lemma head_call_not_SKIP: "head_call c \<Longrightarrow> \<not> is_SKIP c"
   by (cases c) auto
 
-lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> Unwind"
+lemma head_call_not_Unwind: "head_call c \<Longrightarrow> c \<noteq> (Unwind i)"
   by (cases c) auto
 
 lemma head_call_seq_after_form:
-  "head_call c \<Longrightarrow> \<exists>dst q actuals afters.
-     c = seq_after (Call dst q actuals) afters \<and> special_table q = None"
+  "head_call c \<Longrightarrow> \<exists>i dst q actuals afters.
+     c = seq_after (Call i dst q actuals) afters \<and> special_table q = None"
 proof (induction c)
   case (Seq c1 c2)
   from Seq.prems have "head_call c1" by simp
-  from Seq.IH(1)[OF this] obtain dst q actuals afters where
-    "c1 = seq_after (Call dst q actuals) afters" "special_table q = None" by blast
-  then have "Seq c1 c2 = seq_after (Call dst q actuals) (afters @ [c2])"
+  from Seq.IH(1)[OF this] obtain i dst q actuals afters where
+    "c1 = seq_after (Call i dst q actuals) afters" "special_table q = None" by blast
+  then have "Seq c1 c2 = seq_after (Call i dst q actuals) (afters @ [c2])"
              "special_table q = None"
     by (simp_all add: seq_after_snoc)
   then show ?case by blast
@@ -271,8 +291,8 @@ subsection \<open>The return-initiation source shape\<close>
 
 text \<open>\<open>head_return c\<close> holds when the leftmost-innermost of \<open>c\<close> is a source \<^const>\<open>Return\<close>:
   the shape whose next \<^const>\<open>pstep\<close> initiates a return.\<close>
-fun head_return :: "com \<Rightarrow> bool" where
-  "head_return (Return e) = True"
+fun head_return :: "'a acom \<Rightarrow> bool" where
+  "head_return (Return i e) = True"
 | "head_return (Seq c1 c2) = head_return c1"
 | "head_return _ = False"
 
@@ -280,16 +300,16 @@ lemma head_return_seq_after [simp]:
   "head_return (seq_after c afters) = head_return c"
   by (induction afters arbitrary: c) auto
 
-lemma head_return_not_SKIP: "head_return c \<Longrightarrow> c \<noteq> SKIP"
+lemma head_return_not_SKIP: "head_return c \<Longrightarrow> \<not> is_SKIP c"
   by (cases c) auto
 
 lemma head_return_seq_after_form:
-  "head_return c \<Longrightarrow> \<exists>e afters. c = seq_after (Return e) afters"
+  "head_return c \<Longrightarrow> \<exists>i e afters. c = seq_after (Return i e) afters"
 proof (induction c)
   case (Seq c1 c2)
   from Seq.prems have "head_return c1" by simp
-  from Seq.IH(1)[OF this] obtain e afters where "c1 = seq_after (Return e) afters" by blast
-  then have "Seq c1 c2 = seq_after (Return e) (afters @ [c2])" by (simp add: seq_after_snoc)
+  from Seq.IH(1)[OF this] obtain i e afters where "c1 = seq_after (Return i e) afters" by blast
+  then have "Seq c1 c2 = seq_after (Return i e) (afters @ [c2])" by (simp add: seq_after_snoc)
   then show ?case by blast
 qed auto
 
@@ -311,20 +331,20 @@ text \<open>\<open>ret_guarded allow_return c\<close> is the deep source-only we
   boundaries: a \<^const>\<open>Return\<close> hidden in a base-activation continuation is rejected, which a
   head-only check misses --- exactly the configuration a frame pop would later surface at the
   base.\<close>
-fun ret_guarded :: "bool \<Rightarrow> com \<Rightarrow> bool" where
-  "ret_guarded allow_return SKIP = True"
-| "ret_guarded allow_return (Assign x a) = True"
-| "ret_guarded allow_return (VIMP_Proc.com.Check l b) = True"
+fun ret_guarded :: "bool \<Rightarrow> 'a acom \<Rightarrow> bool" where
+  "ret_guarded allow_return (SKIP i) = True"
+| "ret_guarded allow_return (Assign i x a) = True"
+| "ret_guarded allow_return (VIMP_Proc.gcom.Check i l b) = True"
 | "ret_guarded allow_return (Seq c1 c2) =
-     (if c2 = Restore then ret_guarded True c1
+     (if is_Restore c2 then ret_guarded True c1
       else ret_guarded allow_return c1 \<and> ret_guarded allow_return c2)"
-| "ret_guarded allow_return (If b c1 c2) =
+| "ret_guarded allow_return (If i b c1 c2) =
      (ret_guarded allow_return c1 \<and> ret_guarded allow_return c2)"
-| "ret_guarded allow_return (While b c) = ret_guarded allow_return c"
-| "ret_guarded allow_return (Call dst p actuals) = True"
-| "ret_guarded allow_return (Return e) = allow_return"
-| "ret_guarded allow_return Restore = True"
-| "ret_guarded allow_return Unwind = allow_return"
+| "ret_guarded allow_return (While i b c) = ret_guarded allow_return c"
+| "ret_guarded allow_return (Call i dst p actuals) = True"
+| "ret_guarded allow_return (Return i e) = allow_return"
+| "ret_guarded allow_return (Restore i) = True"
+| "ret_guarded allow_return (Unwind i) = allow_return"
 
 lemma ret_guarded_True_source: "source_com c \<Longrightarrow> ret_guarded True c"
   by (induction c) (auto split: if_splits)
@@ -352,7 +372,7 @@ text \<open>The runtime invariant \<open>csim_step\<close> asks for: the active 
   call has opened an activation for it.  Only the command matters --- neither the store nor
   the frame stack --- and unlike a head-only guard this survives a \<^const>\<open>pstep\<close>, because it
   already forbids the base-activation returns that a frame pop would expose.\<close>
-definition return_safe :: "com \<Rightarrow> bool" where
+definition return_safe :: "'a acom \<Rightarrow> bool" where
   "return_safe c \<longleftrightarrow> ret_guarded False c"
 
 lemma return_safe_if_no_return:
@@ -374,7 +394,7 @@ lemma return_safe_pstep:
   using ret_guarded_pstep[OF bodies step] wf by (simp add: return_safe_def)
 
 lemma unwinding_seq_after_Unwind:
-  "(\<forall>a \<in> set afters. a \<noteq> Restore) \<Longrightarrow> unwinding (seq_after Unwind afters)"
+  "(\<forall>a \<in> set afters. \<not> is_Restore a) \<Longrightarrow> unwinding (seq_after (Unwind i) afters)"
   by (induction afters rule: rev_induct) (auto simp: seq_after_snoc)
 
 subsection \<open>Source-step classification\<close>
@@ -403,7 +423,7 @@ proof (induction "(c, s, frs)" "(c', s', frs')"
   from Seq2.hyps(2)[OF this] have ih: "intra_step \<Pi> (c1, s1, f1) (c1', s1', f1')" .
   from intra_step_frame_eq[OF ih] ih show ?case by auto
 next
-  case (Call p decl actuals dst vals callee s1 frs0)
+  case (Call i p decl actuals dst vals callee s1 frs0)
   then show ?case using disj by simp
 qed auto
 
@@ -412,7 +432,7 @@ lemma control_at_not_returning:
   by (induction rule: control_at.induct) auto
 
 lemma control_at_not_unwind:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r \<noteq> Unwind"
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r \<noteq> (Unwind i)"
   using control_at_not_returning by fastforce
 
 text \<open>\<open>is_returning\<close> classifies the active head.  The \<open>unwinding\<close> and \<open>pop_ready\<close> predicates
@@ -431,7 +451,7 @@ text \<open>A source configuration about to run a check is, under \<^const>\<ope
   whose \<^const>\<open>EA_Check\<close> edge carries that check.  Suspended callers only wrap the
   running residual, and the frame-pop phase runs no check.\<close>
 lemma csim_next_check_edge:
-  assumes "\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, t, stk)" and "next_check c = Some (l, e)"
+  assumes "\<Pi>, g, \<rho> \<turnstile> (c, s, frs) \<approx> (v, t, stk)" and "next_check c = Some (l, e)"
   shows "\<exists>w. (v, EA_Check l e, w) \<in> intra g"
   using assms
 proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: csim.induct)
@@ -441,7 +461,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk rule: cs
     by blast
   with control_at_next_check_edge [OF Base.hyps(1) Base.prems] show ?case by blast
 next
-  case (Returning w pc body_pc kc nc afters cont callee caller dst p)
+  case (Returning w i pc body_pc kc nc afters cont callee caller dst p)
   then show ?case by (simp add: is_returning_next_check pop_ready_is_returning)
 qed simp
 
@@ -456,9 +476,9 @@ lemma pstep_unwinding:
   using assms
 proof (induction u arbitrary: u' s' frs')
   case (Seq u1 c2)
-  from Seq.prems(1) have u1w: "unwinding u1" and c2R: "c2 \<noteq> Restore" by auto
+  from Seq.prems(1) have u1w: "unwinding u1" and c2R: "\<not> is_Restore c2" by auto
   from Seq.prems(2) consider
-      (dead) "u' = Unwind" "s' = s" "frs' = frs"
+      (dead) j where "u' = Unwind j" "s' = s" "frs' = frs"
     | (step) c1' where "u' = Seq c1' c2" "\<G>, \<Pi> \<turnstile> (u1, s, frs) \<rightarrow>\<^sub>p (c1', s', frs')"
     using c2R unwinding_not_SKIP[OF u1w] by auto
   then show ?case
@@ -470,39 +490,40 @@ proof (induction u arbitrary: u' s' frs')
     then show ?thesis using step(1) c2R by simp
   qed
 next
-  case SKIP    from SKIP.prems(1)   show ?case by simp
+  case SKIP    from SKIP.prems(1)    show ?case by simp
 next
-  case Assign  from Assign.prems(1) show ?case by simp
+  case Assign  from Assign.prems(1)  show ?case by simp
 next
-  case Check   from Check.prems(1)  show ?case by simp
+  case Check   from Check.prems(1)   show ?case by simp
 next
-  case If      from If.prems(1)     show ?case by simp
+  case If      from If.prems(1)      show ?case by simp
 next
-  case While   from While.prems(1)  show ?case by simp
+  case While   from While.prems(1)   show ?case by simp
 next
-  case Call    from Call.prems(1)   show ?case by simp
+  case Call    from Call.prems(1)    show ?case by simp
 next
-  case Return  from Return.prems(1) show ?case by simp
+  case Return  from Return.prems(1)  show ?case by simp
 next
   case Restore from Restore.prems(1) show ?case by simp
 next
-  case Unwind
+  case (Unwind i)
   from Unwind.prems(2) show ?case using pstep_Unwind_stuck by blast
 qed
 
 lemma pstep_pop_ready_head:
-  assumes "pop_ready w" and "\<G>, \<Pi> \<turnstile> (w, s, Frame fr dst # frs) \<rightarrow>\<^sub>p x"
-  shows "x = (SKIP, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)
-       \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w')"
+  assumes "pop_ready w" and "pop_ann w = Some i"
+      and "\<G>, \<Pi> \<turnstile> (w, s, Frame fr dst # frs) \<rightarrow>\<^sub>p x"
+  shows "x = (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frs)
+       \<or> (\<exists>w'. x = (w', s, Frame fr dst # frs) \<and> pop_ready w' \<and> pop_ann w' = Some i)"
   using assms
 proof (cases w rule: pop_ready.cases)
   case 1
-  with assms(2) show ?thesis by auto
+  with assms(2,3) show ?thesis by auto
 next
   case (2 u)
   hence uw: "unwinding u" using assms(1) by simp
-  from assms(2) show ?thesis
-    unfolding 2
+  from assms(3) show ?thesis
+    unfolding 2 using assms(2) unfolding 2
     by (elim SeqSE) (auto dest: pstep_unwinding[OF uw] simp: unwinding_not_SKIP[OF uw])
 qed (use assms(1) in auto)
 
@@ -513,7 +534,7 @@ text \<open>A step of a \<^const>\<open>seq_after\<close> spine is a step of its
   because those relocate into the spine instead of stepping in place.\<close>
 lemma pstep_seq_after_headE [elim]:
   assumes step: "\<G>, \<Pi> \<turnstile> (seq_after w afters, s, frs) \<rightarrow>\<^sub>p src'"
-      and wsk: "w \<noteq> SKIP" and wunw: "w \<noteq> Unwind"
+      and wsk: "\<not> is_SKIP w" and wunw: "\<And>i. w \<noteq> Unwind i"
   obtains h' s' fz where
     "src' = (seq_after h' afters, s', fz)"
     "\<G>, \<Pi> \<turnstile> (w, s, frs) \<rightarrow>\<^sub>p (h', s', fz)"

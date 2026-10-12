@@ -12,17 +12,17 @@ text \<open>
   claim rests on, in place of evaluating the compiled set.
 \<close>
 
-primrec no_proc_call :: "com \<Rightarrow> bool" where
-  "no_proc_call SKIP = True"
-| "no_proc_call (Assign x a) = True"
-| "no_proc_call (Check l c) = True"
+primrec no_proc_call :: "'a acom \<Rightarrow> bool" where
+  "no_proc_call (SKIP _) = True"
+| "no_proc_call (Assign _ x a) = True"
+| "no_proc_call (Check _ l c) = True"
 | "no_proc_call (Seq c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
-| "no_proc_call (If b c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
-| "no_proc_call (While b c) = no_proc_call c"
-| "no_proc_call (Call dst q actuals) = (special_table q \<noteq> None)"
-| "no_proc_call (Return e) = True"
-| "no_proc_call Restore = True"
-| "no_proc_call Unwind = True"
+| "no_proc_call (If _ b c1 c2) = (no_proc_call c1 \<and> no_proc_call c2)"
+| "no_proc_call (While _ b c) = no_proc_call c"
+| "no_proc_call (Call _ dst q actuals) = (special_table q \<noteq> None)"
+| "no_proc_call (Return _ e) = True"
+| "no_proc_call (Restore _) = True"
+| "no_proc_call (Unwind _) = True"
 
 lemma compile_no_proc_call_K_empty:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> no_proc_call c \<Longrightarrow> K = {}"
@@ -35,7 +35,7 @@ proof (induction c arbitrary: k n n' en E K)
     by (auto simp: Let_def split: prod.splits)
   show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] Seq.prems(2) K by simp
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
@@ -43,14 +43,14 @@ next
     by (auto simp: Let_def split: prod.splits)
   show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] If.prems(2) K by simp
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
       c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and K: "K = K1"
     by (auto simp: Let_def split: prod.splits)
   show ?case using While.IH[OF c1] While.prems(2) K by simp
 next
-  case (Call dst q actuals)
+  case (Call i dst q actuals)
   then show ?case by (auto split: option.splits)
 qed auto
 

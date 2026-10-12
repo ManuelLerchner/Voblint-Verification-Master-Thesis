@@ -791,7 +791,7 @@ $tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
 #isai("'a") for a type variable, and $lambda x. t$ for the function that maps
 $x$ to $t$. A _datatype_ declares a type by its constructors and comes with
 case distinction and structural induction. VIMP's commands
-#isatype("com") are one (@sec:vimp). A _record_ is a tuple with named fields.
+#isatype("gcom") are one (@sec:vimp). A _record_ is a tuple with named fields.
 The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
 
 Every HOL function is total, so an ordinary recursive definition needs a
@@ -815,22 +815,21 @@ assumptions for an instance and yields its theorems @ballarin14. Unlike a
 class, a locale can be interpreted several times for one type. Voblint states
 its soundness obligations as locale assumptions, so an analysis becomes sound
 by interpreting the locale. #isalocale("sound_intersection"), for instance,
-fixes an intersection operator that keeps every value both operands admit and
-lies below both:
+fixes an intersection that keeps every value both operands admit and lies
+below both:
 #thy("sound_intersection")
 
 An _inductive definition_ is the least relation closed under its rules, and
 #isacmd("inductive_set") defines a set the same way. Its _rule induction_
-proves a property of every element by one case per rule: the property holds
-for the rule's conclusion if it holds for the rule's premises.
-The solver's verification defines #isaconst("reach"), the unknowns on which a
+proves a property of every element with one case per rule. The solver's
+verification defines #isaconst("reach"), the unknowns on which a
 query $x$ transitively depends, by two rules:
 #thy("reach")
 Source execution #isaconst("pstep") (@fig:pstep), graph execution
-#isaconst("cstep") (@fig:cstep) and the valid activation traces
-#isaconst("valid_activation_trace") are defined by rules as well. So is the
-reflexive–transitive closure $scripts(->)^*$ of a step relation $->$. A source run is written
-$scripts(->)_p^*$ (#isaconst("psteps")).
+#isaconst("cstep") (@fig:cstep), the valid activation traces
+#isaconst("valid_activation_trace") and the reflexive–transitive closure
+$scripts(->)^*$ of a step relation are defined by rules as well, and a source
+run is written $scripts(->)_p^*$ (#isaconst("psteps")).
 
 A theorem declares its variables and their types after #isai("fixes"),
 introduces abbreviations local to the statement after #isai("defines"), lists
@@ -839,12 +838,12 @@ its premises after #isai("assumes") and states its conclusion after
 // deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
 #proved("run_voblint_source_sound")
 It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
-program's global variables, procedure table and graph as $cal(G)$, $Pi$ and
-$g$, and assumes an initial store, a source run $scripts(->)_p^*$ from it and an
-answer of the analyzer. It shows that some graph node $v$ and stack correspond
-to the reached configuration and that the reached store lies in the collecting
-semantics, in the state the report gives at $v$, and in the stores its
-verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
+program's globals classifier, procedure table and graph, and assumes an initial
+store, a source run $scripts(->)_p^*$ from it and an answer of the analyzer. It
+shows that the reached configuration is observed at some graph node $v$
+(written $gt.closed$, #isaconst("at_node"), @sec:csim), and that at every such
+node the reached store lies in the collecting semantics, in the state the
+report gives there, and in the stores its verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
 $and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
 such as $tack.r$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.

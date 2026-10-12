@@ -7,7 +7,8 @@ theorem run_voblint_source_sound:
   assumes s0: "s0 \<in> cinit_stores \<G>"
       and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "\<exists>v stk. \<Pi>, g \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
-                 \<and> s \<in> \<R>\<^bsub>res\<^esub> v
-                 \<and> s \<in> \<V>\<^bsub>res\<^esub> v"
+  shows "(\<exists>v. p, s0 \<turnstile> (residual, s, frs) \<rhd> v)
+       \<and> (\<forall>v. p, s0 \<turnstile> (residual, s, frs) \<rhd> v \<longrightarrow>
+                s \<in> \<C>\<^bsub>\<G>,g,cinit_stores \<G>\<^esub> v
+              \<and> s \<in> \<R>\<^bsub>res\<^esub> v
+              \<and> s \<in> \<V>\<^bsub>res\<^esub> v)"

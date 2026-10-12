@@ -248,12 +248,12 @@ definition labelled_checks_prog :: imp_prog where
      mk_program
        [(STR ''f'',
          \<lparr>formals = [],
-          body = VIMP_Proc.com.Seq (VIMP_Proc.com.Assign (STR ''x'') (exp.N 2))
-                   (VIMP_Proc.com.Check (6, 3) (exp.Eq (V (STR ''x'')) (exp.N 1)))\<rparr>)]
-       (VIMP_Proc.com.Seq
-          (VIMP_Proc.com.Seq (VIMP_Proc.com.Assign (STR ''x'') (exp.N 1))
-             (VIMP_Proc.com.Check (2, 3) (exp.Eq (V (STR ''x'')) (exp.N 1))))
-          (VIMP_Proc.com.Call None (STR ''f'') []))
+          body = VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Assign () (STR ''x'') (exp.N 2))
+                   (VIMP_Proc.gcom.Check () (6, 3) (exp.Eq (V (STR ''x'')) (exp.N 1)))\<rparr>)]
+       (VIMP_Proc.gcom.Seq
+          (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Assign () (STR ''x'') (exp.N 1))
+             (VIMP_Proc.gcom.Check () (2, 3) (exp.Eq (V (STR ''x'')) (exp.N 1))))
+          (VIMP_Proc.gcom.Call () None (STR ''f'') []))
        []"
 
 lemma labelled_checks_rows:

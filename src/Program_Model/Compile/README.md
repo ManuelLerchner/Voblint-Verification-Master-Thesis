@@ -70,6 +70,7 @@ over-approximate.
 | `Simulation/Simulation_Preservation.thy` | Does that agreement survive every step, and every run? (`csim_star`) |
 | `Procedure_Ownership.thy` | Can an activation wander into another procedure's nodes? (no) |
 | `Source_To_Trace.thy` | Is a source run a valid activation trace? (yes — and this is what soundness consumes) |
+| `Elaborated_Compilation.thy` | Which node is a source configuration observed at? (`elab_pt`, `psteps_lift`, `csim_point_compile_prog`, `at_node`) |
 
 ## Shape of the session
 
@@ -85,4 +86,6 @@ VIMP_Proc_to_CFG ──► Compile_Wellformed ──► Compile_Invariants
         └─► …Simulation_Relation ──────────► …Simulation_Preservation ────┤
                                                                           ▼
                                                                    Source_To_Trace
+                                                                          ▼
+                                                                Elaborated_Compilation
 ```

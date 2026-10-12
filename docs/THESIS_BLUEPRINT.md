@@ -373,6 +373,8 @@ L1  COMPILATION AND SIMULATION
     compile_prog_wf / _finite / _calls_source_unique   Compile_Wellformed
     control_at, csim                               Residual_Location, Simulation_Relation
     csim_step, csim_star                           Simulation_Preservation
+    elab_pt, point, erase, at_node                 Elaborated_Compilation
+    psteps_lift, csim_point_compile_prog           Elaborated_Compilation
              │  source_run_has_activation_trace
              v
 L2  CONCRETE INTERPROCEDURAL SEMANTICS
@@ -479,10 +481,11 @@ theorem run_voblint_source_sound:
   assumes s0: "s0 ∈ cinit_stores 𝒢"
       and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
-                 ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-                 ∧ s ∈ ℛ⇘res⇙ v
-                 ∧ s ∈ 𝒱⇘res⇙ v"
+  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
+       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
+                s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
+              ∧ s ∈ ℛ⇘res⇙ v
+              ∧ s ∈ 𝒱⇘res⇙ v)"
 ```
 
 There is no termination premise: `run_voblint` solves with the executable
@@ -492,9 +495,14 @@ its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res
 
 Four things about this statement deserve a paragraph each in the thesis.
 
-*The node is existential.* A source configuration does not determine a CFG
-node — `x := 1` in `main` and in an unused procedure match structurally. `csim`
-records the structural match; `node_collect` picks the reachable witness.
+*The node is determined through elaboration.* A raw source configuration does
+not determine a CFG node, because in `if (b) { x = 1; } else { x = 1; }` both
+branches leave `x = 1`. The run lifts to a run of the elaboration `elab_pt`
+(`psteps_lift`), and the annotated command `c` of that run determines the node
+`point c` (`csim_point_compile_prog`). `at_node` (`p, s0 ⊢ cfg ⊳ v`) packages
+the lifted run and the elaborated simulation. It is relational: a configuration
+reachable along two paths can be observed at two nodes, so the theorem states that
+some node exists and that every observed node is covered.
 
 *The context is existential too.* Under entry-state routing one store may be
 admitted at several contexts; under call strings at exactly one. A statement
@@ -1342,7 +1350,7 @@ PART III — THE ANALYZER
   9.5 Assembling one analysis: dg_analysis
   9.6 The monovariant case as an instance, not a special case
   9.7 run_voblint and its soundness theorem
-  9.8 Reading the theorem: the two existentials and the one premise
+  9.8 Reading the theorem: the lifted run, the context existential and the one premise
 
 PART IV — INSTANCES AND PRACTICE
 10 Five domains and an order analysis                           [8%]
@@ -1543,7 +1551,7 @@ thesis section → theories → central definitions → central theorems.
 | 3.4 | `Voblint_VIMP.VIMP_Proc`, `Voblint_Compile.Compile_Invariants` | `source_com`, `wf_source_com`, `value_providing`, `wf_source_program`, `wf_compile_input`, `wf_program_compile_input_exec` | `wf_source_programD`, `wf_compile_inputD` |
 | 3.5 | `Voblint_CFG.CFG_Def`, `CFG_Transfer`, `CFG_Exec` | `cfg_node`, `edge_action`, `call_action`, `intra`, `calls`, `wf_cfg`, `edge_step`, `edge_collect`, `call_enter`, `combine_collect`, `cstep` | `cfg_nodes_finite` |
 | 3.6 | `Voblint_Compile.VIMP_Proc_to_CFG` | `compile`, `compile_proc`, `compile_prog`, `prog_cfg` | — |
-| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location` | `csim`, `control_at`, `procs_embedded` | `csim_step`, `csim_star`, `procs_embedded_compile_prog` |
+| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location`, `Elaborated_Compilation` | `csim`, `control_at`, `procs_embedded`, `elab_pt`, `point`, `erase`, `at_node` | `csim_step`, `csim_star`, `procs_embedded_compile_prog`, `psteps_lift`, `csim_point_compile_prog`, `compile_prog_elab_pt` |
 | 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_activation_trace_entry_result_eq`, `prog_live_reaches` |
 | 4.2–4.4 | `Voblint_CFG.Activation_Trace_Def`, `Activation_Trace_Collect` | `activation_trace`, `activation_path`, `path_of`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_activation_trace`, `node_collect` | `node_collect_I`, `node_collect_E` |
 | 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `context_policy`, `context_policy_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
@@ -2004,8 +2012,8 @@ and renderable by Typst's `image()` directly.
 | `recursion-spiral` | A call that never stops calling | 7.8, 14.3 |
 | `trust`, `iceberg` | Where the proof starts and stops | 1.3, 11.4 |
 | `timeline` | What a run is: source, graph, trace | 3.2, 4.3 |
-| `chain`, `strata` | The proof chain: each set inside the next | 4, 9, 12 |
-| `bridge` (“Take a pillar away”) | five facts hold the chain up; remove one and an honest-looking answer becomes a lie | **12.6** |
+| `chain`, `strata` | The proof chain | 4, 9, 12 |
+| `bridge` (“The five facts the chain rests on”) | five facts hold the chain up; remove one and an honest-looking answer becomes a lie | **12.6** |
 | `theorems` | The flagship theorems | 9.7 |
 | `build` | From Isabelle to your browser tab | 11.1 |
 | `align` | Voblint and Goblint, side by side | 12.7 |
@@ -2365,7 +2373,7 @@ where they are, but open §3.2 with the three-way statement so the reader knows
 two more are coming.
 → Re-verify: nothing; `csim_step` and `source_run_has_activation_trace` are stated correctly.
 
-**`chain` — "The proof chain: each set inside the next"**
+**`chain` — "The proof chain"**
 → *Soundness is a chain of set inclusions: the stores real runs have, the stores
 the graph's traces reach, those traces split by context, what the solver's answer
 concretizes to. Each link is its own theorem.*
@@ -2574,8 +2582,9 @@ that proved it, which would be a true statement about VIMP and not about C.
    exact one (`DEAD_not_exact`).
 7. **`wf_source_program`.** Every theorem assumes it. What does accepting fewer
    programs buy, and does it exclude anything interesting?
-8. **`csim` is structural and not functional**, so the source-level theorems are
-   existential in their node. Is that existential doing hidden work?
+8. **`csim` is not functional on raw programs**, so the headline names its node
+   through the elaboration. Why is the existential over the annotated command
+   harmless, and what does `psteps_lift` guarantee?
 9. **The result reader takes the global environment.** `rd` in
    `dg_analysis_adapter` reads a local value together with the solved global
    environment (`genv global_of`) through the placement's recombination

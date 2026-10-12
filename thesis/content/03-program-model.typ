@@ -227,7 +227,7 @@ Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
 execution.
 
-#definition(name: [Commands], isa: "com", cmd: "datatype")[
+#definition(name: [Commands], isa: "gcom", cmd: "datatype")[
   $
     c ::= & #skipC | x := e | #keyw("check") (e) | c";" c
             | #keyw("if") (e) {c} #keyw("else") {c} | #keyw("while") (e) {c} \
@@ -235,13 +235,18 @@ execution.
   $
 ]
 
+Every constructor except sequencing also carries an _annotation_, whose type is
+a parameter of #isatype("gcom"). The commands of a parsed program carry the unit annotation and have type
+#isatype("com"). The grammar above omits
+annotations, which @fig:pstep writes as $i$.
+
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
 expression grammar above. A check states a condition for the analyzer to
 decide (@sec:verdicts) and does not influence the execution. It behaves like
 #skipC whatever value $e$ has, so it neither stops the run nor refines the
-store. Its constructor also carries the source position. The semantics ignores it,
-and the analyzer's report uses it to name the check.
+store. Its constructor also carries the source position, which only the report
+uses, to name the check.
 
 Calls come in two kinds. A call of a declared procedure starts an
 _activation_, one execution of the procedure body from its call to its return.
@@ -249,7 +254,8 @@ VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`, and
 #isaconst("special_table") recognizes their names, and
 #isaconst("special_result") gives the values they may return: any integer for
 `__voblint_nondet_int`, and the minimum or maximum of the arguments for `min`
-and `max`. A library call finishes in one step and stores its value, so, unlike a call of a declared procedure, it enters no activation and pushes no frame (@sec:pstep). The
+and `max`. A library call finishes in one step and stores its value, without
+an activation or a frame (@sec:pstep). The
 remaining constructors, #ctor("Restore") and #ctor("Unwind"), are not source
 syntax (#isaconst("source_com") excludes them). They appear only during
 execution, where @sec:pstep uses them for calls and returns.
@@ -393,11 +399,13 @@ call. Each suspended activation keeps its data in a _frame_.
 ) <fig:pstep>
 
 A classifier #isai("\<G> :: vname \<Rightarrow> bool"), separate from the
-store, says which names are global. A call needs this information because it resets only the locals. For a program it is #isaconst("declared_global"). The relation is written
+store, says which names are global, because a call resets only the locals. For
+a program it is #isaconst("declared_global"). The relation is written
 #isai("\<G>, \<Pi> \<turnstile> \<kappa> \<rightarrow>\<^sub>p \<kappa>'") for
 configurations $kappa$, $kappa'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
-rules. The
+rules. No rule inspects an annotation. The rules only copy annotations, from
+the rewritten command or from the procedure table. The
 #link(
   "https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/index.html#semantics",
 )[explainer page]
@@ -420,9 +428,8 @@ the configuration $(#isaconst("main_body") thin Pi, s_0, [])$, with an initial
 store $s_0$ in #isaconst("cinit_stores") (@sec:vimp-vs-c).
 
 Just as Nipkow and Klein show that well-typed programs do not get stuck
-@nipkow14[§9.1.2], we show that well-formed VIMP programs do not get stuck. A
-stuck run would never reach the program points after it, so every claim about
-those points would hold vacuously. For a program satisfying
+@nipkow14[§9.1.2], we show that well-formed VIMP programs do not, since claims
+about the points after a stuck run would hold vacuously. For a program satisfying
 #isaconst("wf_source_program"), every reachable configuration has either
 finished, as #skipC with an empty frame stack, or can step:
 
@@ -433,14 +440,12 @@ library call has a result (#isathm("special_result_ex")).
 
 == Scope and adequacy of the source semantics <sec:vimp-vs-c>
 
-A source-level guarantee means only as much as the semantics it is stated
-over. Every source-level guarantee in this thesis is interpreted against the
-executions of
-#isaconst("pstep"), the reference semantics of VIMP, so the guarantees cannot
-show that #isaconst("pstep") describes the intended language. This can only be
-argued, and this section collects the argument. @tab:vimp-vs-c compares VIMP
-with C11 @iso-c11, citing clauses of the committee draft N1570, wherever both
-languages have a construct but model it differently.
+Every source-level guarantee in this thesis is interpreted against the
+executions of #isaconst("pstep"), the reference semantics of VIMP, so no
+guarantee can show that #isaconst("pstep") describes the intended language.
+This can only be argued, and this section collects the argument.
+@tab:vimp-vs-c compares VIMP with C11 @iso-c11 (committee draft N1570)
+wherever both languages have a construct but model it differently.
 
 #figure(
   {
@@ -824,8 +829,10 @@ run of the graph from its entry (@ch:traces), and every source run is matched by
 
 #definition(name: [Simulation relation], isa: "csim", cmd: "inductive")[
   #isaconst("csim"), written
-  #isai("\<Pi>, g \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
-  source configuration to a graph configuration holding the same store.
+  #isai("\<Pi>, g, p \<turnstile> (c, s, frs) \<approx> (v, s, stk)"), relates a
+  source configuration to a graph configuration holding the same store, where
+  $p$ is the procedure of the outermost activation, `main` for a run of the
+  program.
 ]
 
 #figure(
@@ -851,21 +858,30 @@ beneath both stacks. On the source side the caller is the wrapper
 commands $italic("afters")$, which #isaconst("seq_after") sequences after it. On
 the graph side it is a frame, and the caller's remaining work
 #isaconst("seq_after") #skipC $italic("afters")$ lies at the frame's
-continuation node $italic("cont")$. $sans("Returning")$ covers
+continuation node $italic("cont")$. Both suspended-caller rules also locate the
+call that opened the activation. A second #isaconst("control_at") premise
+places #isaconst("seq_after") $(ctor("Call", thy: "VIMP_Proc") thin q ...)$ $italic("afters")$ in
+the caller's body. This premise names the callee $q$, whose body the inner activation runs. In
+$sans("Nested")$, the index changes from $q$ to the caller's procedure. $sans("Returning")$ covers
 the moment after a callee finishes. The graph has reached
-$ctor("FunctionResult") thin p$, while the source still holds the
+$ctor("FunctionResult") thin q$ of that callee, while the source still holds the
 #ctor("Restore") of the activation, possibly behind an #ctor("Unwind") that is
-propagating toward it (#isaconst("pop_ready")).
+propagating toward it (#isaconst("pop_ready")). The #ctor("Restore") carries the
+annotation of its call (#isaconst("pop_ann")), which is the annotation that the
+call-site premise refers to.
 
-The relation is not functional. It only asks that the running command belong
-to some compiled body, so the same source configuration can be related to
-several nodes, for instance to a second, uncalled copy of a body. The simulation therefore yields _some_ related graph node, and the
-source-level theorem inherits this and states its conclusions at an
-existentially chosen node (@sec:headline). @sec:source-bridge pairs the
-relation with a trace that starts at the entry, so the chosen node is
-reachable. As future work, an elaboration phase could annotate every statement
-with the node the compiler emits for it, which would determine the node and
-remove the existential (@sec:outlook-extending).
+Equal commands can occur at different places, so on a program as written the
+relation does not determine the node. In `if (b) { x = 1; } else { x = 1; }`,
+the residual `x = 1` is related to both branch nodes. The proof therefore runs
+on the program's _elaboration_ (#isaconst("elab_pt")), which annotates each
+statement with the nodes the compiler emits for it and compiles to the same
+graph (#isathm("compile_prog_elab_pt")). On it,
+#isaconst("point", thy: "Elaborated_Compilation") reads the related node off the
+residual's annotation (#isathm("csim_point_compile_prog")). Every run of a well-formed program is the _erasure_ (#isaconst("erase")) of a
+run of its elaboration (#isathm("psteps_lift")). For a program
+$p$, we write $p, s_0 tack.r (c, s, "frs") gt.closed v$ (#isaconst("at_node")) and
+say the configuration is _observed_ at $v$ when such a lifted run from $s_0$
+reaches it at a command that names $v$ and the simulation relates it to $v$. A configuration reachable along two paths can be observed at two nodes.
 
 #theorem(name: [One step is matched], isa: "csim_step")[
   If a source configuration and a graph configuration are related by
@@ -877,36 +893,26 @@ remove the existential (@sec:outlook-extending).
 
 The theorem has two premises beyond the related pair and the source step.
 #isaconst("procs_embedded") $Pi$ $g$ says that every declared body is source
-syntax under a non-library name and lies in $g$ with its entry edge and, if the body can fall
-through, its final return edge. Without it, a source call could enter a body that the graph
-does not contain. #isaconst("return_safe") $c$ says that the running command
-returns only inside an activation that a call opened. It is the runtime form
-of the rule that `main` contains no #keyw("return") (@sec:pstep). Both premises hold for every well-formed program
+syntax under a non-library name and lies in $g$ with its entry and return
+edges, so no source call enters a body missing from the graph. #isaconst("return_safe") $c$ says that the running
+command returns only inside an activation that a call opened, which is the
+runtime form of the rule that `main` contains no #keyw("return") (@sec:pstep).
+Both premises hold for every well-formed program
 (#isathm("procs_embedded_compile_prog"),
 #isathm("wf_compile_input_return_safe")), and every source step preserves the
 second (#isathm("return_safe_pstep")). By induction on the run,
-#isathm("csim_star") extends the theorem to finite source runs.
-
-The proof follows CompCert's simulation diagrams @leroy09[§4.3], in which each
-source step corresponds to a sequence of graph steps, here possibly empty.
+#isathm("csim_star") extends the theorem to finite source runs, as in
+CompCert's simulation diagrams @leroy09[§4.3].
 
 The initial source configuration is related to the node after the
-#isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")), and
-prepending that edge lets the matching graph run start at the entry. Every finite source run of a well-formed program is therefore
-matched by a run of the compiled graph from its entry,
-and the two runs reach corresponding nodes with the same store. This is the
-first inclusion of the soundness chain of @fig:intro-nest. Every store the
-source program can reach at a point is also reached by the graph, so an
-analysis that covers all graph runs covers all source runs. The executable
-analyzer checks well-formedness before it runs and declines to analyze
-programs that violate it (#isaconst("wf_program_compile_input_exec")), so the
-end-to-end theorem needs no separate premise for it.
-
-Graph runs suffice for an analysis with one abstract state per node.
-A context-sensitive analysis, however, computes separate states for the activations of a
-procedure entered in different calling contexts, and for this purpose the runs are too _flat_. A run is one long sequence of steps across all
-activations, so it does not group the steps of one activation or link each step to
-the store with which its activation started. @ch:traces therefore regroups graph runs into activation
-traces, one per procedure activation
-(#isathm("source_run_has_activation_trace")), and defines on them the
-coverage obligations used to establish soundness.
+#isaconst("EA_Body") edge of `main` (#isathm("compile_prog_main_base")).
+Every finite source run of a well-formed program is therefore matched by a
+graph run from the entry that reaches corresponding nodes with the same store. This gives the first inclusion of the soundness chain of
+@fig:intro-nest, so an analysis that covers all graph runs covers all source
+runs. The executable analyzer rejects ill-formed programs
+(#isaconst("wf_program_compile_input_exec")), so the end-to-end theorem needs
+no such premise. A context-sensitive analysis needs more structure than these
+flat runs offer.
+@ch:traces therefore regroups graph runs into activation traces
+(#isathm("source_run_has_activation_trace")) and defines on them the coverage
+obligations used to establish soundness.

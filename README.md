@@ -13,50 +13,67 @@
 
 ## What is verified?
 
-Voblint proves an end-to-end soundness result:
-whenever `run_voblint` returns a report, every reachable source state is covered by that report, and every definite verdict it gives holds concretely.
+Voblint proves end-to-end soundness of its executable analyzer. Whenever `run_voblint`
+returns a report, every reachable source configuration can be observed at one or more CFG
+nodes. At every such node, the report covers the reached store, and every definite verdict
+holds concretely.
 
 ```math
 \underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{source run}}
 \;\Longrightarrow\;
-\exists v.\;\;
-(r, s, \mathit{fs}) \approx v
-\;\;\wedge\;\;
-s \in
-\underbrace{\mathcal{C}(v) \;=\; \bigcup_{c} \mathcal{A}(v, c)}_{\text{collecting semantics}}
-\;\subseteq\;
-\underbrace{[\![\, \mathit{res} \,]\!]_{v}}_{\text{analyzer report}}
-\;\subseteq\;
-\underbrace{\mathcal{V}_{\mathit{res}}(v)}_{\text{verdicts}}
+\underbrace{\exists v.\; (r, s, \mathit{fs}) \rhd v}_{\text{observed at a node}}
+\;\wedge\;
+\forall v.\; (r, s, \mathit{fs}) \rhd v \Longrightarrow
+\underbrace{s \in \mathcal{C}(v)}_{\text{collecting semantics}}
+\;\wedge\;
+\underbrace{\mathcal{C}(v) \subseteq [\![\, \mathit{res} \,]\!]_{v}}_{\text{analysis soundness}}
+\;\wedge\;
+\underbrace{[\![\, \mathit{res} \,]\!]_{v} \subseteq \mathcal{V}_{\mathit{res}}(v)}_{\text{verdict soundness}}
 ```
 
-Every store $s$ a source run from an initial store $s_0$ reaches is collected at
-a CFG node $v$ that
-simulates the run's configuration ($\approx$), is represented by the analyzer's
-report at $v$, and satisfies every definite verdict reported there.
+Every configuration a source run from an initial store $s_0$ reaches is
+observed at some CFG node, written $(r, s, \mathit{fs}) \rhd v$. In full the
+relation reads $p, s_0 \vdash (r, s, \mathit{fs}) \rhd v$: it also depends on the
+program $p$ and the initial store $s_0$ of the run. At every node
+$v$ where it is observed, the store $s$ is collected, is represented by the
+analyzer's report, and satisfies every definite verdict reported there.
 
-The node is existential because the simulation relation is structural rather
-than functional: the same residual source command may match several compiled
-nodes, for instance in an uncalled procedure with the same body. Membership in
-$\mathcal{C}(v)$ selects a node the execution actually reaches. The equality
-is lossless: the context-indexed sets $\mathcal{A}(v, c)$ cover the collecting
-semantics, and their union recovers $\mathcal{C}(v)$ exactly. The two inclusions
-are one-way guarantees: the report may describe stores no run reaches, and the
-verdict semantics keeps only what the definite verdicts assert.
+The residual command $r$ is not enough to determine a node, because equal
+commands can occur at different places. In `if (b) { x = 1; } else { x = 1; }`,
+for example, both branches leave the command `x = 1` behind, but the compiler
+places the two assignments at different nodes. The relation $\rhd$ therefore
+uses an elaboration of the program, which annotates every statement with the
+nodes the compiler emits for it and compiles to the same graph. Every run of the
+program lifts to a run of its elaboration, and the annotated command at which
+that run stops names $v$. A configuration reachable along two paths can be
+observed at two nodes, and the theorem covers each of them. The elaboration is
+used only in the proof, and `run_voblint` analyzes the program as written. The
+[headline theorem](#the-headline-theorem) gives the exact statement.
+
+The context-indexed sets $\mathcal{A}(v, \kappa)$ cover the collecting
+semantics without loss, so their union
+$\mathcal{C}(v) = \bigcup_{\kappa} \mathcal{A}(v, \kappa)$ recovers it
+exactly. The two inclusions hold for every successful analyzer run, independently of
+any particular store, and the headline theorem uses them to conclude that the reached
+store is a member of all three sets. They are one-way guarantees. The report may describe
+stores that no run reaches, and the verdict semantics keeps only what the
+definite verdicts assert.
 
 Each step is an Isabelle theorem:
+[`psteps_lift`](src/Program_Model/Compile/Elaborated_Compilation.thy),
+[`csim_point_compile_prog`](src/Program_Model/Compile/Elaborated_Compilation.thy),
 [`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
 [`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
 [`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
 [`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy).
 
 [`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-states the whole chain for every run that returns a report.
+states the whole chain for every run that returns a report, at every node the run is observed at.
 
 The report's states at $v$ can also be joined over their contexts. Every store
 the report describes at $v$ lies in the concretization of that join,
 $`[\![\, \mathit{res} \,]\!]_{v}
-\subseteq \gamma\big(\bigsqcup_{c} \mathit{res}(v,c)\big)`$
+\subseteq \gamma\big(\bigsqcup_{\kappa} \mathit{res}(v,\kappa)\big)`$
 ([`report_sem_point_join`](src/Executable_Surface/CLI/Analysis_Report.thy)),
 so [`run_voblint_source_sound_joined`](src/Executable_Surface/CLI/Analysis_Certified.thy)
 gives the same guarantee for the one state per point that the playground's
@@ -230,7 +247,7 @@ store such traces hold at each CFG node, adapting thread-modular local traces
 ### The headline theorem
 
 [`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy) relates any finite source execution
-to the report:
+to the report, at every CFG node the execution is observed at:
 
 ```isabelle
 theorem run_voblint_source_sound:
@@ -239,10 +256,11 @@ theorem run_voblint_source_sound:
   assumes s0: "s0 ∈ cinit_stores 𝒢"
       and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
       and ans: "run_voblint config p = Analysed res"
-  shows "∃v stk. Π, g ⊢ (residual, s, frs) ≈ (v, s, stk)
-                 ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-                 ∧ s ∈ ℛ⇘res⇙ v
-                 ∧ s ∈ 𝒱⇘res⇙ v"
+  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
+       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
+                s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
+              ∧ s ∈ ℛ⇘res⇙ v
+              ∧ s ∈ 𝒱⇘res⇙ v)"
 ```
 
 | Premise | Meaning |
@@ -251,35 +269,54 @@ theorem run_voblint_source_sound:
 | `run` | Any finite execution prefix from `main`; the program need not terminate. |
 | `ans` | `run_voblint` accepted the configuration and the program, and its solve finished. |
 
-`→⇩p⇧*` is `psteps`, `≈` is `csim`, and `𝒞`, `ℛ⇘res⇙ v` and `𝒱` are `node_collect`,
+`→⇩p⇧*` is `psteps`, `⊳` is `at_node`, and `𝒞`, `ℛ⇘res⇙ v` and `𝒱` are `node_collect`,
 `report_sem` and `verdict_stores`; the [notation table](#notation) lists each symbol.
 
 | Conclusion | Guarantee |
 | --- | --- |
-| `Π, g ⊢ … ≈ (v, s, stk)` | The compiler's forward simulation relates the source state to CFG node `v`. |
-| `s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v` | A valid activation trace reaches `v` with store `s`. |
+| `∃v. … ⊳ v` | The reached configuration is observed at some CFG node. |
+| `s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v` | At every such `v`, a valid activation trace reaches `v` with store `s`. |
 | `s ∈ ℛ⇘res⇙ v` | Some state the report holds at `v`, under one of its contexts, describes `s`. |
 | `s ∈ 𝒱⇘res⇙ v` | Every `PROVED` or `REFUTED` verdict at `v` holds for `s`. |
+
+A residual command alone does not determine its node, since equal commands occur at
+different places. [`at_node`](src/Program_Model/Compile/Elaborated_Compilation.thy)
+therefore reads the node off the program's elaboration `elab_pt`, which annotates every
+statement with the nodes the compiler emits for it and compiles to the same graph
+(`compile_prog_elab_pt`). `p, s0 ⊢ (residual, s, frs) ⊳ v` holds when some run of the
+elaboration from `s0` reaches an annotated configuration that erases to the source one,
+names `v` (`point`, `csim_point_compile_prog`) and is related to `v` by the compiler's
+simulation with the same store. Erased, the simulation relates the source configuration
+to `v` too (`at_node_csim`). The relation is not functional: a configuration reachable
+along two paths can be observed at two nodes, and the second half of the theorem covers
+every one of them. The elaboration is used only in the proof, and `run_voblint` runs the
+program as written.
 
 `config` names a nonempty list of distinct analyses among Sign, Interval, Parity,
 Congruence, Int and Order, run together, one of the globals rules, and one
 context policy: no contexts, entry states, or call strings of any length.
 
-The last two conclusions are two inclusions: `𝒞 v ⊆ ℛ⇘res⇙ v`
+The theorem concludes membership of the reached store in all three sets. The
+inclusions between the sets are separate theorems about a successful analyzer run:
+`𝒞 v ⊆ ℛ⇘res⇙ v`
 needs the run that built the report
 ([`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy)), and
 `ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v` holds for the report alone
 ([`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
 
 <details>
-<summary>Why the node is existential</summary>
+<summary>Why the raw residual needs the annotated run</summary>
 
-A source state need not determine one CFG node: in `main() { x := 1; }` and
-`unused() { x := 1; }` the command `x := 1` structurally matches a node in each
-procedure, but only `main`'s is reached with the running store. `csim` records
-the structural match and `node_collect` picks the reachable witness. Contexts are
-existential for the same reason: a call string is a function of the call history,
-but entry-state routing may admit several contexts.
+A source residual alone need not name a single CFG node. In
+`if (b) { x = 1; } else { x = 1; }`, the residual `x = 1` is the same command in both
+branches, but the two branches compile to different nodes. The elaboration gives each
+occurrence its own annotation, so that the annotated residual determines its node
+([`csim_point_compile_prog`](src/Program_Model/Compile/Elaborated_Compilation.thy)). Every
+run of the program as written lifts to an annotated run
+([`psteps_lift`](src/Program_Model/Compile/Elaborated_Compilation.thy)). `at_node`
+quantifies existentially over the annotated command and the stack, and `v = point c` is
+fixed by that command. Contexts remain
+existential, because entry-state routing may admit several contexts for one activation.
 
 </details>
 
@@ -385,7 +422,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | --- | --- | --- | --- |
 | γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
 | 𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ | [`pstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst) / [`psteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst) | one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure |
-| Π,g ⊢ c ≈ c' | _c_ is matched with _c′_ | [`csim`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Simulation_Relation.html#Simulation_Relation.csim%7Cconst) | the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_ |
+| p,s0 ⊢ c ⊳ v | from _s₀_, _c_ is observed at node _v_ in _p_ | [`at_node`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst) | some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes |
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
 | 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |

@@ -30,10 +30,25 @@ text \<open>A \<^emph>\<open>base\<close> residual is one the compiler turns int
   \<^const>\<open>Call\<close> has none, because it is compiled to a call edge instead; a \<^const>\<open>Call\<close> that
   \<^const>\<open>special_table\<close> classifies is resolved in place, and \<open>wf_source_com\<close> fixes its
   destination to \<^term>\<open>Some x\<close>, so only that shape emits an action.\<close>
-fun emitted_action :: "com \<Rightarrow> edge_action option" where
-  "emitted_action (Assign x a) = Some (EA_Assign x a)"
-| "emitted_action (VIMP_Proc.com.Check l c) = Some (EA_Check l c)"
-| "emitted_action (Call (Some x) q actuals) =
+text \<open>The annotation of the statement a residual runs next. A step leaves the annotation of
+  the command it reduces on the \<^const>\<open>SKIP\<close> it produces, so this is what the completed
+  residual carries.\<close>
+fun stmt_ann :: "'a acom \<Rightarrow> 'a" where
+  "stmt_ann (SKIP i) = i"
+| "stmt_ann (Assign i x a) = i"
+| "stmt_ann (VIMP_Proc.gcom.Check i l c) = i"
+| "stmt_ann (Seq c1 c2) = stmt_ann c1"
+| "stmt_ann (If i b c1 c2) = i"
+| "stmt_ann (While i b c) = i"
+| "stmt_ann (Call i dst q actuals) = i"
+| "stmt_ann (Return i e) = i"
+| "stmt_ann (Restore i) = i"
+| "stmt_ann (Unwind i) = i"
+
+fun emitted_action :: "'a acom \<Rightarrow> edge_action option" where
+  "emitted_action (Assign i x a) = Some (EA_Assign x a)"
+| "emitted_action (VIMP_Proc.gcom.Check i l c) = Some (EA_Check l c)"
+| "emitted_action (Call i (Some x) q actuals) =
      (case special_table q of
         None \<Rightarrow> None
       | Some desc \<Rightarrow> map_option (\<lambda>sc. EA_Special sc x) (classify_special desc actuals))"
@@ -46,15 +61,15 @@ lemma control_at_emitted_edge:
   "control_at \<Pi> p c0 k n r v \<Longrightarrow> emitted_action r = Some a \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j w. v = Statement j \<and> (Statement j, a, w) \<in> E
-       \<and> control_at \<Pi> p c0 k n SKIP w"
+       \<and> control_at \<Pi> p c0 k n (SKIP (stmt_ann r)) w"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
-  case (Assign x' a' k n0)
+  case (Assign i x' a' k n0)
   then show ?case by auto
 next
-  case (Check l b' k n0)
+  case (Check i l b' k n0)
   then show ?case by auto
 next
-  case (CallHead dst' q' actuals' k n0)
+  case (CallHead i dst' q' actuals' k n0)
   show ?case
   proof (cases dst')
     case None with CallHead.prems(1) show ?thesis by simp
@@ -76,23 +91,24 @@ next
     by (rule compile_Seq_rightE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E2"
-        "control_at \<Pi> p c2 k (n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (Seq c1 c2) k n0 SKIP w"
+        "control_at \<Pi> p c2 k (n0 + csize c1) (SKIP (stmt_ann r)) w" by blast
+  have "control_at \<Pi> p (Seq c1 c2) k n0 (SKIP (stmt_ann r)) w"
     using control_at.SeqRight[OF jw(3)] .
   then show ?case using jw sub by blast
 next
-  case (IfLeft c1 k n0 r v b c2)
+  case (IfLeft c1 k n0 r v i b c2)
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
     by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) c1c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E1"
-        "control_at \<Pi> p c1 k (Suc n0) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfLeft[OF jw(3) IfLeft.hyps(2)] .
+        "control_at \<Pi> p c1 k (Suc n0) (SKIP (stmt_ann r)) w" by blast
+  have "control_at \<Pi> p (If i b c1 c2) k n0 (SKIP (stmt_ann r)) w"
+    using control_at.IfLeft[OF jw(3) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
-  case (IfRight c2 k n0 c1 r v b)
+  case (IfRight c2 k n0 c1 r v i b)
   from IfRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
@@ -100,17 +116,17 @@ next
     by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) c2c] obtain j w where
     jw: "v = Statement j" "(Statement j, a, w) \<in> E2"
-        "control_at \<Pi> p c2 k (Suc n0 + csize c1) SKIP w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 SKIP w" using control_at.IfRight[OF jw(3) IfRight.hyps(2)]
-    .
+        "control_at \<Pi> p c2 k (Suc n0 + csize c1) (SKIP (stmt_ann r)) w" by blast
+  have "control_at \<Pi> p (If i b c1 c2) k n0 (SKIP (stmt_ann r)) w"
+    using control_at.IfRight[OF jw(3) IfRight.hyps(2)] .
   then show ?case using jw sub by blast
 qed simp_all
 
 text \<open>The check a residual runs next, when its leftmost command is one.  A located residual
   about to run a check sits at that check's \<^const>\<open>EA_Check\<close> edge, however much sequencing
   wraps it.\<close>
-fun next_check :: "com \<Rightarrow> (check_label \<times> exp) option" where
-  "next_check (VIMP_Proc.com.Check l c) = Some (l, c)"
+fun next_check :: "'a acom \<Rightarrow> (check_label \<times> exp) option" where
+  "next_check (VIMP_Proc.gcom.Check i l c) = Some (l, c)"
 | "next_check (Seq c1 c2) = next_check c1"
 | "next_check _ = None"
 
@@ -132,20 +148,20 @@ next
     by (rule compile_Seq_rightE)
   with SeqRight.IH SeqRight.prems(1) show ?case by blast
 next
-  case (IfLeft c1 k n0 r v b c2)
+  case (IfLeft c1 k n0 r v i b c2)
   from IfLeft.prems(2) obtain m F L
     where "compile \<Pi> p c1 k (Suc n0) = (m, Statement (Suc n0), F, L)" and "F \<subseteq> E"
     by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   with IfLeft.IH IfLeft.prems(1) show ?case by blast
 next
-  case (IfRight c2 k n0 c1 r v b)
+  case (IfRight c2 k n0 c1 r v i b)
   from IfRight.prems(2) obtain m F L
     where "compile \<Pi> p c2 k (Suc n0 + csize c1) = (m, Statement (Suc n0 + csize c1), F, L)"
       and "F \<subseteq> E"
     by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   with IfRight.IH IfRight.prems(1) show ?case by blast
 next
-  case (WhileBody c n0 r v b k)
+  case (WhileBody c n0 r v i b k)
   from WhileBody.prems(2) obtain m F L
     where "compile \<Pi> p c (Statement n0) (Suc n0) = (m, Statement (Suc n0), F, L)"
       and "F \<subseteq> E"
@@ -158,26 +174,26 @@ text \<open>A located conditional also arises from a loop unfolding (\<^const>\<
   re-locates the loop body followed by the loop, the false branch re-locates \<^const>\<open>SKIP\<close> at
   the loop's continuation.\<close>
 lemma control_at_if_edges:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = If b c1 c2 \<Longrightarrow> source_com r \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = If i b c1 c2 \<Longrightarrow> source_com r \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j en1 en2. v = Statement j
        \<and> (Statement j, EA_Assume b, en1) \<in> E \<and> (Statement j, EA_AssumeNot b, en2) \<in> E
        \<and> control_at \<Pi> p c0 k n c1 en1 \<and> control_at \<Pi> p c0 k n c2 en2"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
-  case (IfHead b' c1' c2' k n0)
+  case (IfHead i b' c1' c2' k n0)
   from IfHead.prems(1) have r: "b' = b" "c1' = c1" "c2' = c2" by auto
   note E = compile_If_assume_edges[OF IfHead.prems(3)]
   from IfHead.prems(2) r have src: "source_com c1'" "source_com c2'" by auto
-  have ca1: "control_at \<Pi> p (If b' c1' c2') k n0 c1'
-      (if c1' = SKIP then k else Statement (Suc n0))"
-    using src(1) by (cases "c1' = SKIP") (auto intro: control_at_initial)
-  have ca2: "control_at \<Pi> p (If b' c1' c2') k n0 c2'
-      (if c2' = SKIP then k else Statement (Suc n0 + csize c1'))"
-  proof (cases "c2' = SKIP")
+  have ca1: "control_at \<Pi> p (If i b' c1' c2') k n0 c1'
+      (if is_SKIP c1' then k else Statement (Suc n0))"
+    using src(1) by (cases "is_SKIP c1'") (auto intro: control_at_initial)
+  have ca2: "control_at \<Pi> p (If i b' c1' c2') k n0 c2'
+      (if is_SKIP c2' then k else Statement (Suc n0 + csize c1'))"
+  proof (cases "is_SKIP c2'")
     case True then show ?thesis by auto
   next
     case False
-    have "control_at \<Pi> p (If b' c1' c2') k n0 c2'
+    have "control_at \<Pi> p (If i b' c1' c2') k n0 c2'
         (Statement (Suc n0 + csize c1'))"
       by (rule control_at.IfRight[OF control_at_initial[OF src(2)] False])
     with False show ?thesis by simp
@@ -199,7 +215,7 @@ next
           control_at.SeqRight[OF jw(5)] .
   then show ?case using jw sub by blast
 next
-  case (IfLeft c1' k n0 r v b' c2')
+  case (IfLeft c1' k n0 r v i b' c2')
   from IfLeft.prems(3) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1' k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
@@ -208,11 +224,11 @@ next
     jw: "v = Statement j" "(Statement j, EA_Assume b, e1) \<in> E1"
         "(Statement j, EA_AssumeNot b, e2) \<in> E1"
         "control_at \<Pi> p c1' k (Suc n0) c1 e1" "control_at \<Pi> p c1' k (Suc n0) c2 e2" by blast
-  have "control_at \<Pi> p (If b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If b' c1' c2') k n0 c2 e2"
+  have "control_at \<Pi> p (If i b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If i b' c1' c2') k n0 c2 e2"
     using control_at.IfLeft[OF jw(4) IfLeft.hyps(2)] control_at.IfLeft[OF jw(5) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
-  case (IfRight c2' k n0 c1' r v b')
+  case (IfRight c2' k n0 c1' r v i b')
   from IfRight.prems(3) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2' k (Suc n0 + csize c1')
             = (n2, Statement (Suc n0 + csize c1'), E2, K2)"
@@ -223,19 +239,19 @@ next
         "(Statement j, EA_AssumeNot b, e2) \<in> E2"
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c1 e1"
         "control_at \<Pi> p c2' k (Suc n0 + csize c1') c2 e2" by blast
-  have "control_at \<Pi> p (If b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If b' c1' c2') k n0 c2 e2"
+  have "control_at \<Pi> p (If i b' c1' c2') k n0 c1 e1" "control_at \<Pi> p (If i b' c1' c2') k n0 c2 e2"
     using control_at.IfRight[OF jw(4) IfRight.hyps(2)] control_at.IfRight[OF jw(5) IfRight.hyps(2)]
     .
   then show ?case using jw sub by blast
 next
-  case (WhileUnfolded b'' c'' k n0)
+  case (WhileUnfolded i b'' c'' k n0)
   from WhileUnfolded.prems(1)
-  have r: "b'' = b" "Seq c'' (While b'' c'') = c1" "SKIP = c2" by auto
+  have r: "b'' = b" "Seq c'' (While i b'' c'') = c1" "(SKIP i) = c2" by auto
   note E = compile_While_assume_edges[OF WhileUnfolded.prems(3)]
   from WhileUnfolded.prems(2) have src: "source_com c''" by auto
-  have ca1: "control_at \<Pi> p (While b'' c'') k n0 (Seq c'' (While b'' c'')) (Statement (Suc n0))"
+  have ca1: "control_at \<Pi> p (While i b'' c'') k n0 (Seq c'' (While i b'' c'')) (Statement (Suc n0))"
     by (rule control_at.WhileBody[OF control_at_initial[OF src]])
-  have ca2: "control_at \<Pi> p (While b'' c'') k n0 SKIP k"
+  have ca2: "control_at \<Pi> p (While i b'' c'') k n0 (SKIP i) k"
     by (rule control_at.WhileDone)
   from E ca1 ca2 r show ?case by auto
 qed simp_all
@@ -248,13 +264,17 @@ text \<open>A located \<^const>\<open>SKIP\<close> --- a completed sub-command -
   store-preserving \<^const>\<open>intra_path\<close>; an intra path never touches the activation stack, so
   \<open>intra_path_imp_cstep_star\<close> reads it back as a \<open>cstep\<close> run at whatever stack is current.\<close>
 lemma control_at_skip_to_exit:
-  assumes "control_at \<Pi> p c0 k n r v" and "r = SKIP"
+  assumes "control_at \<Pi> p c0 k n r v" and "is_SKIP r"
       and "compile \<Pi> p c0 k n = (n', en, E, K)" and "E \<subseteq> intra g"
   shows "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (k, s, stk)"
-  using intra_path_imp_cstep_star[
-          OF compile_control_at_SKIP_exit_path[OF assms(1)[unfolded assms(2)] assms(3,4)],
-          where stk = stk]
-  by simp
+proof -
+  from assms(2) obtain j where r: "r = SKIP j" by auto
+  show ?thesis
+    using intra_path_imp_cstep_star[
+            OF compile_control_at_SKIP_exit_path[OF assms(1)[unfolded r] assms(3,4)],
+            where stk = stk]
+    by simp
+qed
 
 subsection \<open>Completed-head sequence relocation\<close>
 
@@ -262,37 +282,35 @@ text \<open>Under continuation passing the head's own last edge already targets 
   \<^term>\<open>c2\<close> --- or, when the continuation is the enclosing \<^const>\<open>While\<close>, the loop head ---
   so relocation is exactly \<open>control_at_skip_to_exit\<close>.\<close>
 lemma control_at_seq_skip_reloc:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Seq SKIP c2 \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Seq (SKIP i) c2 \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> source_com c0 \<Longrightarrow>
    \<exists>v'. control_at \<Pi> p c0 k n c2 v' \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s, stk)"
 proof (induction arbitrary: n' en E K rule: control_at.induct)
   case (SeqLeft c1 n0 r_in v c2r k)
-  from SeqLeft.prems(1) have ri: "r_in = SKIP" and c2eq: "c2r = c2" by auto
+  from SeqLeft.prems(1) have ri: "is_SKIP r_in" and c2eq: "c2r = c2" by auto
   from SeqLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
     and sub: "E1 \<subseteq> E"
     by (rule compile_Seq_leftE)
   have src2: "source_com c2r" using SeqLeft.prems(4) by simp
-  have skipc1: "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 SKIP v"
-    using SeqLeft.hyps ri by simp
-  from control_at_skip_to_exit[OF skipc1 refl c1c subset_trans[OF sub SeqLeft.prems(3)]]
+  from control_at_skip_to_exit[OF SeqLeft.hyps(1) ri c1c subset_trans[OF sub SeqLeft.prems(3)]]
   have sk: "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (Statement (n0 + csize c1), s, stk)" .
   have "control_at \<Pi> p (Seq c1 c2r) k n0 c2r (Statement (n0 + csize c1))"
     by (rule control_at.SeqRight[OF control_at_initial[OF src2]])
   then have "control_at \<Pi> p (Seq c1 c2r) k n0 c2 (Statement (n0 + csize c1))" using c2eq by simp
   with sk show ?case by blast
 next
-  case (WhileBody c n0 r_in v b k)
-  from WhileBody.prems(1) have ri: "r_in = SKIP" and c2eq: "c2 = While b c" by auto
+  case (WhileBody c n0 r_in v i b k)
+  from WhileBody.prems(1) have ri: "is_SKIP r_in" and c2eq: "c2 = While i b c" by auto
   from WhileBody.prems(2) obtain n1 E1 K1 where
     cc: "compile \<Pi> p c (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
     by (rule compile_While_bodyE)
-  have "control_at \<Pi> p c (Statement n0) (Suc n0) SKIP v" using WhileBody.hyps ri by simp
-  from control_at_skip_to_exit[OF this refl cc subset_trans[OF sub WhileBody.prems(3)]]
+  from control_at_skip_to_exit[OF WhileBody.hyps(1) ri cc subset_trans[OF sub WhileBody.prems(3)]]
   have sk: "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (Statement n0, s, stk)" .
-  have "control_at \<Pi> p (While b c) k n0 (While b c) (Statement n0)" by (rule control_at.WhileHead)
-  then have "control_at \<Pi> p (While b c) k n0 c2 (Statement n0)" using c2eq by simp
+  have "control_at \<Pi> p (While i b c) k n0 (While i b c) (Statement n0)"
+    by (rule control_at.WhileHead)
+  then have "control_at \<Pi> p (While i b c) k n0 c2 (Statement n0)" using c2eq by simp
   with sk show ?case by blast
 next
   case (SeqRight c2' k n0 c1 r v)
@@ -308,7 +326,7 @@ next
     using control_at.SeqRight[OF v'(1)] .
   with v'(2) show ?case by blast
 next
-  case (IfLeft c1 k n0 r v b c2')
+  case (IfLeft c1 k n0 r v i b c2')
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
@@ -317,10 +335,11 @@ next
   from IfLeft.IH[OF IfLeft.prems(1) c1c subset_trans[OF sub IfLeft.prems(3)] src1]
   obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c2 v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s, stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)] .
+  have "control_at \<Pi> p (If i b c1 c2') k n0 c2 v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)]
+    .
   with v'(2) show ?case by blast
 next
-  case (IfRight c2' k n0 c1 r v b)
+  case (IfRight c2' k n0 c1 r v i b)
   from IfRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2' k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
@@ -330,7 +349,8 @@ next
   from IfRight.IH[OF IfRight.prems(1) c2c subset_trans[OF sub IfRight.prems(3)] src2]
   obtain v' where v': "control_at \<Pi> p c2' k (Suc n0 + csize c1) c2 v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s, stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2') k n0 c2 v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)]
+  have "control_at \<Pi> p (If i b c1 c2') k n0 c2 v'"
+    using control_at.IfRight[OF v'(1) IfRight.hyps(2)]
     .
   with v'(2) show ?case by blast
 qed simp_all
@@ -346,7 +366,7 @@ text \<open>
   holds pending commands \<^emph>\<open>inside one activation\<close>; suspended \<^emph>\<open>caller activations\<close> are
   the recursive nesting of \<open>csim\<close> instead.
 \<close>
-fun seq_after :: "com \<Rightarrow> com list \<Rightarrow> com" where
+fun seq_after :: "'a acom \<Rightarrow> 'a acom list \<Rightarrow> 'a acom" where
   "seq_after c [] = c"
 | "seq_after c (a # as) = seq_after (Seq c a) as"
 
@@ -363,24 +383,24 @@ text \<open>A \<^const>\<open>seq_after\<close> spine equals a non-\<^const>\<op
   continuation list is empty.  These discriminators close the leaf cases of the spine
   inductions.\<close>
 lemma seq_after_eq_iff [simp]:
-  "(seq_after c afters = SKIP) = (c = SKIP \<and> afters = [])"
-  "(SKIP = seq_after c afters) = (c = SKIP \<and> afters = [])"
-  "(seq_after c afters = Restore) = (c = Restore \<and> afters = [])"
-  "(Restore = seq_after c afters) = (c = Restore \<and> afters = [])"
-  "(seq_after c afters = Unwind) = (c = Unwind \<and> afters = [])"
-  "(Unwind = seq_after c afters) = (c = Unwind \<and> afters = [])"
-  "(seq_after c afters = Assign x a) = (c = Assign x a \<and> afters = [])"
-  "(Assign x a = seq_after c afters) = (c = Assign x a \<and> afters = [])"
-  "(seq_after c afters = VIMP_Proc.com.Check l b) = (c = VIMP_Proc.com.Check l b \<and> afters = [])"
-  "(VIMP_Proc.com.Check l b = seq_after c afters) = (c = VIMP_Proc.com.Check l b \<and> afters = [])"
-  "(seq_after c afters = If b c1 c2) = (c = If b c1 c2 \<and> afters = [])"
-  "(If b c1 c2 = seq_after c afters) = (c = If b c1 c2 \<and> afters = [])"
-  "(seq_after c afters = While b cw) = (c = While b cw \<and> afters = [])"
-  "(While b cw = seq_after c afters) = (c = While b cw \<and> afters = [])"
-  "(seq_after c afters = Return e) = (c = Return e \<and> afters = [])"
-  "(Return e = seq_after c afters) = (c = Return e \<and> afters = [])"
-  "(seq_after c afters = Call dst q actuals) = (c = Call dst q actuals \<and> afters = [])"
-  "(Call dst q actuals = seq_after c afters) = (c = Call dst q actuals \<and> afters = [])"
+  "(seq_after c afters = SKIP i) = (c = SKIP i \<and> afters = [])"
+  "(SKIP i = seq_after c afters) = (c = SKIP i \<and> afters = [])"
+  "(seq_after c afters = Restore i) = (c = Restore i \<and> afters = [])"
+  "(Restore i = seq_after c afters) = (c = Restore i \<and> afters = [])"
+  "(seq_after c afters = Unwind i) = (c = Unwind i \<and> afters = [])"
+  "(Unwind i = seq_after c afters) = (c = Unwind i \<and> afters = [])"
+  "(seq_after c afters = Assign i x a) = (c = Assign i x a \<and> afters = [])"
+  "(Assign i x a = seq_after c afters) = (c = Assign i x a \<and> afters = [])"
+  "(seq_after c afters = VIMP_Proc.gcom.Check i l b) = (c = VIMP_Proc.gcom.Check i l b \<and> afters = [])"
+  "(VIMP_Proc.gcom.Check i l b = seq_after c afters) = (c = VIMP_Proc.gcom.Check i l b \<and> afters = [])"
+  "(seq_after c afters = If i b c1 c2) = (c = If i b c1 c2 \<and> afters = [])"
+  "(If i b c1 c2 = seq_after c afters) = (c = If i b c1 c2 \<and> afters = [])"
+  "(seq_after c afters = While i b cw) = (c = While i b cw \<and> afters = [])"
+  "(While i b cw = seq_after c afters) = (c = While i b cw \<and> afters = [])"
+  "(seq_after c afters = Return i e) = (c = Return i e \<and> afters = [])"
+  "(Return i e = seq_after c afters) = (c = Return i e \<and> afters = [])"
+  "(seq_after c afters = Call i dst q actuals) = (c = Call i dst q actuals \<and> afters = [])"
+  "(Call i dst q actuals = seq_after c afters) = (c = Call i dst q actuals \<and> afters = [])"
   by (induction afters arbitrary: c; auto)+
 
 lemma source_com_seq_afterD [dest]:
@@ -399,34 +419,34 @@ next
 qed
 
 lemma control_at_head_return_afters_no_Restore:
-  assumes "control_at \<Pi> p c0 k n (seq_after (Return e) afters) v"
+  assumes "control_at \<Pi> p c0 k n (seq_after (Return i e) afters) v"
       and "source_com c0"
-  shows "\<forall>a \<in> set afters. a \<noteq> Restore"
+  shows "\<forall>a \<in> set afters. \<not> is_Restore a"
 proof (rule ballI)
   fix a
   assume ain: "a \<in> set afters"
   from control_at_source_com[OF assms] source_com_seq_afterD
   have "source_com a" using ain by blast
-  then show "a \<noteq> Restore" by (rule source_com_no_Restore)
+  then show "\<not> is_Restore a" by (rule source_com_no_Restore)
 qed
 
 text \<open>A \<^const>\<open>Call\<close> at the bottom-left of a \<^const>\<open>seq_after\<close> spine still sits on the call
   edge the compiler emitted at the call node, and the source step re-locates
-  \<^term>\<open>seq_after SKIP afters\<close> at the call's continuation node.  The \<open>SeqLeft\<close> / \<open>WhileBody\<close>
+  \<^term>\<open>seq_after (SKIP i) afters\<close> at the call's continuation node.  The \<open>SeqLeft\<close> / \<open>WhileBody\<close>
   cases peel the outermost continuation, the passthrough cases keep it.\<close>
 lemma control_at_seq_after_call_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Call dst q actuals) afters \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Call i dst q actuals) afters \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow> special_table q = None \<Longrightarrow>
    \<exists>j w. v = Statement j
        \<and> (Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
           FunctionEntry q, w) \<in> K
-       \<and> control_at \<Pi> p c0 k n (seq_after SKIP afters) w"
+       \<and> control_at \<Pi> p c0 k n (seq_after (SKIP i) afters) w"
 proof (induction arbitrary: afters n' en E K rule: control_at.induct)
-  case (CallHead dst' q' actuals' k n0 afters)
+  case (CallHead ia dst' q' actuals' k n0 afters)
   then show ?case by (auto simp: Let_def split: prod.splits)
 next
   case (SeqLeft c1 n0 r v c2 k afters)
-  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Call dst q actuals) xs"
+  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Call i dst q actuals) xs"
     using SeqLeft.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
   from SeqLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
@@ -436,8 +456,8 @@ next
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
-       "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 (seq_after SKIP xs) w" by blast
-  have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after SKIP afters) w"
+       "control_at \<Pi> p c1 (Statement (n0 + csize c1)) n0 (seq_after (SKIP i) xs) w" by blast
+  have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after (SKIP i) afters) w"
     using control_at.SeqLeft[OF jw(3)] by (simp add: afx seq_after_snoc)
   then show ?case using jw sub by blast
 next
@@ -450,12 +470,12 @@ next
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
-       "control_at \<Pi> p c2 k (n0 + csize c1) (seq_after SKIP afters) w" by blast
-  have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after SKIP afters) w"
+       "control_at \<Pi> p c2 k (n0 + csize c1) (seq_after (SKIP i) afters) w" by blast
+  have "control_at \<Pi> p (Seq c1 c2) k n0 (seq_after (SKIP i) afters) w"
     using control_at.SeqRight[OF jw(3)] .
   then show ?case using jw sub by blast
 next
-  case (IfLeft c1 k n0 r v b c2 afters)
+  case (IfLeft c1 k n0 r v ia b c2 afters)
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "K1 \<subseteq> K"
@@ -464,12 +484,12 @@ next
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
-       "control_at \<Pi> p c1 k (Suc n0) (seq_after SKIP afters) w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
+       "control_at \<Pi> p c1 k (Suc n0) (seq_after (SKIP i) afters) w" by blast
+  have "control_at \<Pi> p (If ia b c1 c2) k n0 (seq_after (SKIP i) afters) w"
     using control_at.IfLeft[OF jw(3) IfLeft.hyps(2)] .
   then show ?case using jw sub by blast
 next
-  case (IfRight c2 k n0 c1 r v b afters)
+  case (IfRight c2 k n0 c1 r v ia b afters)
   from IfRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
@@ -479,14 +499,14 @@ next
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K2"
-       "control_at \<Pi> p c2 k (Suc n0 + csize c1) (seq_after SKIP afters) w" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 (seq_after SKIP afters) w"
+       "control_at \<Pi> p c2 k (Suc n0 + csize c1) (seq_after (SKIP i) afters) w" by blast
+  have "control_at \<Pi> p (If ia b c1 c2) k n0 (seq_after (SKIP i) afters) w"
     using control_at.IfRight[OF jw(3) IfRight.hyps(2)] .
   then show ?case using jw sub by blast
 next
-  case (WhileBody c n0 r v b k afters)
-  obtain xs where afx: "afters = xs @ [While b c]"
-      and req: "r = seq_after (Call dst q actuals) xs"
+  case (WhileBody c n0 r v ia b k afters)
+  obtain xs where afx: "afters = xs @ [While ia b c]"
+      and req: "r = seq_after (Call i dst q actuals) xs"
     using WhileBody.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
   from WhileBody.prems(2) obtain n1 E1 K1 where
     cc: "compile \<Pi> p c (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
@@ -496,22 +516,22 @@ next
     jw: "v = Statement j"
        "(Statement j, CallEdge dst (call_formals \<Pi> q) actuals,
          FunctionEntry q, w) \<in> K1"
-       "control_at \<Pi> p c (Statement n0) (Suc n0) (seq_after SKIP xs) w" by blast
-  have "control_at \<Pi> p (While b c) k n0 (seq_after SKIP afters) w"
+       "control_at \<Pi> p c (Statement n0) (Suc n0) (seq_after (SKIP i) xs) w" by blast
+  have "control_at \<Pi> p (While ia b c) k n0 (seq_after (SKIP i) afters) w"
     using control_at.WhileBody[OF jw(3)] by (simp add: afx seq_after_snoc)
   then show ?case using jw sub by blast
 qed simp_all
 
 lemma control_at_seq_after_return_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Return e) afters \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = seq_after (Return i e) afters \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j. v = Statement j \<and> (Statement j, EA_Ret e p, FunctionResult p) \<in> E"
 proof (induction arbitrary: afters n' en E K rule: control_at.induct)
-  case (ReturnHead e' k n0 afters)
+  case (ReturnHead i e' k n0 afters)
   then show ?case by auto
 next
   case (SeqLeft c1 n0 r v c2 k afters)
-  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Return e) xs"
+  obtain xs where afx: "afters = xs @ [c2]" and req: "r = seq_after (Return i e) xs"
     using SeqLeft.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
   from SeqLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 (Statement (n0 + csize c1)) n0 = (n1, Statement n0, E1, K1)"
@@ -526,14 +546,14 @@ next
     by (rule compile_Seq_rightE)
   from SeqRight.IH[OF SeqRight.prems(1) c2c] show ?case using sub by blast
 next
-  case (IfLeft c1 k n0 r v b c2 afters)
+  case (IfLeft c1 k n0 r v i b c2 afters)
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
     by (rule compile_If_leftE[OF _ IfLeft.hyps(2)])
   from IfLeft.IH[OF IfLeft.prems(1) c1c] show ?case using sub by blast
 next
-  case (IfRight c2 k n0 c1 r v b afters)
+  case (IfRight c2 k n0 c1 r v i b afters)
   from IfRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
@@ -541,8 +561,8 @@ next
     by (rule compile_If_rightE[OF _ IfRight.hyps(2)])
   from IfRight.IH[OF IfRight.prems(1) c2c] show ?case using sub by blast
 next
-  case (WhileBody c n0 r v b k afters)
-  obtain xs where afx: "afters = xs @ [While b c]" and req: "r = seq_after (Return e) xs"
+  case (WhileBody c n0 r v ia b k afters)
+  obtain xs where afx: "afters = xs @ [While ia b c]" and req: "r = seq_after (Return i e) xs"
     using WhileBody.prems(1) by (cases afters rule: rev_cases) (auto simp: seq_after_snoc)
   from WhileBody.prems(2) obtain n1 E1 K1 where
     cc: "compile \<Pi> p c (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
@@ -552,7 +572,7 @@ next
 qed simp_all
 
 lemma control_at_return_edge:
-  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Return e \<Longrightarrow>
+  "control_at \<Pi> p c0 k n r v \<Longrightarrow> r = Return i e \<Longrightarrow>
    compile \<Pi> p c0 k n = (n', en, E, K) \<Longrightarrow>
    \<exists>j. v = Statement j \<and> (Statement j, EA_Ret e p, FunctionResult p) \<in> E"
   by (rule control_at_seq_after_return_edge[where afters = "[]"]) simp_all
@@ -566,37 +586,38 @@ text \<open>\<open>intra_step\<close> is the fragment of \<^const>\<open>pstep\<
   steps.  Every intra step preserves the frame stack and keeps the residual source-shaped.\<close>
 
 inductive intra_step ::
-  "proc_table \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> com \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
-  IAssign [intro]: "intra_step \<Pi> (Assign x a, s, frs) (SKIP, s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
+  "'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool" for \<Pi> where
+  IAssign [intro]: "intra_step \<Pi> (Assign i x a, s, frs) ((SKIP i), s(x := \<lbrakk>a\<rbrakk>\<^sub>e s), frs)"
 | ISpecial [intro]: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
              special_result sc s v \<Longrightarrow>
-             intra_step \<Pi> (Call (Some x) q actuals, s, frs) (SKIP, s(x := v), frs)"
-| ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) (SKIP, s, frs)"
-| ISeq1 [intro]:   "intra_step \<Pi> (Seq SKIP c2, s, frs) (c2, s, frs)"
+             intra_step \<Pi> (Call i (Some x) q actuals, s, frs) ((SKIP i), s(x := v), frs)"
+| ICheck [intro]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) ((SKIP i), s, frs)"
+| ISeq1 [intro]:   "intra_step \<Pi> (Seq (SKIP i) c2, s, frs) (c2, s, frs)"
 | ISeq2 [intro]:   "intra_step \<Pi> (c1, s, frs) (c1', s', frs) \<Longrightarrow>
             intra_step \<Pi> (Seq c1 c2, s, frs) (Seq c1' c2, s', frs)"
-| IIfTrue [intro]: "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c1, s, frs)"
-| IIfFalse [intro]:"\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If b c1 c2, s, frs) (c2, s, frs)"
-| IWhile [intro]:  "intra_step \<Pi> (While b c, s, frs) (If b (Seq c (While b c)) SKIP, s, frs)"
+| IIfTrue [intro]: "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If i b c1 c2, s, frs) (c1, s, frs)"
+| IIfFalse [intro]:"\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> intra_step \<Pi> (If i b c1 c2, s, frs) (c2, s, frs)"
+| IWhile [intro]:
+  "intra_step \<Pi> (While i b c, s, frs) (If i b (Seq c (While i b c)) (SKIP i), s, frs)"
 
 
-inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> (SKIP, s, frs) y"
-inductive_cases intra_AssignE [elim!]: "intra_step \<Pi> (Assign x a, s, frs) y"
-inductive_cases intra_CheckE [elim!]:  "intra_step \<Pi> (VIMP_Proc.com.Check l b, s, frs) y"
+inductive_cases intra_SkipE [elim!]:   "intra_step \<Pi> ((SKIP i), s, frs) y"
+inductive_cases intra_AssignE [elim!]: "intra_step \<Pi> (Assign i x a, s, frs) y"
+inductive_cases intra_CheckE [elim!]:  "intra_step \<Pi> (VIMP_Proc.gcom.Check i l b, s, frs) y"
 inductive_cases intra_SeqE [elim]:    "intra_step \<Pi> (Seq c1 c2, s, frs) y"
-inductive_cases intra_IfE [elim!]:     "intra_step \<Pi> (If b c1 c2, s, frs) y"
-inductive_cases intra_WhileE [elim]:  "intra_step \<Pi> (While b c, s, frs) y"
-inductive_cases intra_CallE [elim]:   "intra_step \<Pi> (Call dst q actuals, s, frs) y"
-inductive_cases intra_ReturnE [elim!]: "intra_step \<Pi> (Return e, s, frs) y"
+inductive_cases intra_IfE [elim!]:     "intra_step \<Pi> (If i b c1 c2, s, frs) y"
+inductive_cases intra_WhileE [elim]:  "intra_step \<Pi> (While i b c, s, frs) y"
+inductive_cases intra_CallE [elim]:   "intra_step \<Pi> (Call i dst q actuals, s, frs) y"
+inductive_cases intra_ReturnE [elim!]: "intra_step \<Pi> (Return i e, s, frs) y"
 
 lemma intra_Seq_cases:
   "intra_step \<Pi> (Seq c1 c2, s, frs) (c', s', frs') \<Longrightarrow>
-   (c1 = SKIP \<and> c' = c2 \<and> s' = s \<and> frs' = frs) \<or>
+   (is_SKIP c1 \<and> c' = c2 \<and> s' = s \<and> frs' = frs) \<or>
    (\<exists>c1'. c' = Seq c1' c2 \<and> frs' = frs \<and> intra_step \<Pi> (c1, s, frs) (c1', s', frs))"
   by auto
 
 lemma intra_If_cases:
-  "intra_step \<Pi> (If b c1 c2, s, frs) (c', s', frs') \<Longrightarrow>
+  "intra_step \<Pi> (If i b c1 c2, s, frs) (c', s', frs') \<Longrightarrow>
    (truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<and> c' = c1 \<and> s' = s \<and> frs' = frs) \<or>
    (\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<and> c' = c2 \<and> s' = s \<and> frs' = frs)"
   by auto
@@ -623,11 +644,12 @@ lemma control_at_base_step:
       and sub: "E \<subseteq> intra g"
       and stp: "s' \<in> edge_step a s"
   obtains w where
-    "control_at \<Pi> p c0 k n SKIP w"
+    "control_at \<Pi> p c0 k n (SKIP (stmt_ann r)) w"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (w, s', stk)"
 proof -
   from control_at_emitted_edge[OF loc act cmp] obtain j w where
-    jw: "v = Statement j" "(Statement j, a, w) \<in> E" "control_at \<Pi> p c0 k n SKIP w" by blast
+    jw: "v = Statement j" "(Statement j, a, w) \<in> E"
+        "control_at \<Pi> p c0 k n (SKIP (stmt_ann r)) w" by blast
   have "(Statement j, a, w) \<in> intra g" using jw(2) sub by blast
   from cstep.Intra[OF this stp] have "\<G>, g \<turnstile> (Statement j, s, stk) \<rightarrow>\<^sub>c (w, s', stk)" .
   then show ?thesis using jw(1) jw(3) that by auto
@@ -636,11 +658,11 @@ qed
 text \<open>A located conditional takes whichever assume edge the store selects and lands on the
   branch located at that edge's target.  \<^const>\<open>If\<close> heads and loop unfoldings both reach it.\<close>
 lemma control_at_if_step:
-  assumes loc: "control_at \<Pi> p c0 k n (If b c1 c2) v"
-      and stp: "intra_step \<Pi> (If b c1 c2, s, frs) (c', s', frs')"
+  assumes loc: "control_at \<Pi> p c0 k n (If i b c1 c2) v"
+      and stp: "intra_step \<Pi> (If i b c1 c2, s, frs) (c', s', frs')"
       and cmp: "compile \<Pi> p c0 k n = (n', en, E, K)"
       and sub: "E \<subseteq> intra g"
-      and src: "source_com (If b c1 c2)"
+      and src: "source_com (If i b c1 c2)"
   shows "frs' = frs
          \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v' \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk))"
 proof -
@@ -678,8 +700,9 @@ lemma control_at_seq_step:
          \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v' \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk))"
   using intra_Seq_cases[OF stp]
 proof (elim disjE exE conjE)
-  assume r: "r = SKIP" and out: "c' = c2" "s' = s" "frs' = frs"
-  from control_at_seq_skip_reloc[OF loc[unfolded r] refl cmp sub src] show ?thesis
+  assume r: "is_SKIP r" and out: "c' = c2" "s' = s" "frs' = frs"
+  then obtain j where rj: "r = SKIP j" by auto
+  from control_at_seq_skip_reloc[OF loc[unfolded rj] refl cmp sub src] show ?thesis
     using out by blast
 next
   fix r' assume "c' = Seq r' c2" "frs' = frs" "intra_step \<Pi> (r, s, frs) (r', s', frs)"
@@ -697,33 +720,33 @@ theorem intra_step_simulation:
    \<and> (\<exists>v'. control_at \<Pi> p c0 k n c' v'
         \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk))"
 proof (induction arbitrary: c' s' frs' n' en E K rule: control_at.induct)
-  case (Skip k n0) then show ?case by blast
+  case (Skip i k n0) then show ?case by blast
 next
-  case (Assign x a k n0)
-  from Assign.prems(1) have out: "c' = SKIP" "s' = s(x := \<lbrakk>a\<rbrakk>\<^sub>e s)" "frs' = frs"
+  case (Assign i x a k n0)
+  from Assign.prems(1) have out: "c' = (SKIP i)" "s' = s(x := \<lbrakk>a\<rbrakk>\<^sub>e s)" "frs' = frs"
     by auto
-  have act: "emitted_action (Assign x a) = Some (EA_Assign x a)" by simp
+  have act: "emitted_action (Assign i x a) = Some (EA_Assign x a)" by simp
   have mem: "s' \<in> edge_step (EA_Assign x a) s" using out(2) by simp
-  obtain w where "control_at \<Pi> p (Assign x a) k n0 SKIP w"
+  obtain w where "control_at \<Pi> p (Assign i x a) k n0 (SKIP i) w"
       and "\<G>, g \<turnstile> (Statement n0, s, stk) \<rightarrow>\<^sub>c\<^sup>* (w, s', stk)"
     by (rule control_at_base_step[OF control_at.Assign act Assign.prems(2)
-                                     Assign.prems(3) mem])
+                                     Assign.prems(3) mem]) auto
   then show ?case using out(1,3) by auto
 next
-  case (AssignDone x a k n0) then show ?case by blast
+  case (AssignDone i x a k n0) then show ?case by blast
 next
-  case (Check l b k n0)
-  from Check.prems(1) have out: "c' = SKIP" "s' = s" "frs' = frs"
+  case (Check i l b k n0)
+  from Check.prems(1) have out: "c' = (SKIP i)" "s' = s" "frs' = frs"
     by auto
-  have act: "emitted_action (VIMP_Proc.com.Check l b) = Some (EA_Check l b)" by simp
+  have act: "emitted_action (VIMP_Proc.gcom.Check i l b) = Some (EA_Check l b)" by simp
   have mem: "s' \<in> edge_step (EA_Check l b) s" using out(2) by simp
-  obtain w where "control_at \<Pi> p (VIMP_Proc.com.Check l b) k n0 SKIP w"
+  obtain w where "control_at \<Pi> p (VIMP_Proc.gcom.Check i l b) k n0 (SKIP i) w"
       and "\<G>, g \<turnstile> (Statement n0, s, stk) \<rightarrow>\<^sub>c\<^sup>* (w, s', stk)"
     by (rule control_at_base_step[OF control_at.Check act Check.prems(2)
-                                     Check.prems(3) mem])
+                                     Check.prems(3) mem]) auto
   then show ?case using out(1,3) by auto
 next
-  case (CheckDone l b k n0) then show ?case by blast
+  case (CheckDone i l b k n0) then show ?case by blast
 next
   case (SeqLeft c1 n0 r v c2 k)
   from SeqLeft.prems(2) obtain n1 E1 K1 where
@@ -751,10 +774,10 @@ next
     using control_at.SeqRight[OF v'(1)] .
   with fr v'(2) show ?case by blast
 next
-  case (IfHead b c1 c2 k n0)
+  case (IfHead i b c1 c2 k n0)
   show ?case by (rule control_at_if_step[OF control_at.IfHead IfHead.prems])
 next
-  case (IfLeft c1 k n0 r v b c2)
+  case (IfLeft c1 k n0 r v i b c2)
   from IfLeft.prems(2) obtain n1 E1 K1 where
     c1c: "compile \<Pi> p c1 k (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub1: "E1 \<subseteq> E"
@@ -766,10 +789,10 @@ next
           \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c1 k (Suc n0) c' v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)] .
+  have "control_at \<Pi> p (If i b c1 c2) k n0 c' v'" using control_at.IfLeft[OF v'(1) IfLeft.hyps(2)] .
   with fr v'(2) show ?case by blast
 next
-  case (IfRight c2 k n0 c1 r v b)
+  case (IfRight c2 k n0 c1 r v i b)
   from IfRight.prems(2) obtain n2 E2 K2 where
     c2c: "compile \<Pi> p c2 k (Suc n0 + csize c1)
             = (n2, Statement (Suc n0 + csize c1), E2, K2)"
@@ -782,24 +805,27 @@ next
           \<and> \<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk)" by auto
   then obtain v' where v': "control_at \<Pi> p c2 k (Suc n0 + csize c1) c' v'"
     "\<G>, g \<turnstile> (v, s, stk) \<rightarrow>\<^sub>c\<^sup>* (v', s', stk)" by blast
-  have "control_at \<Pi> p (If b c1 c2) k n0 c' v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)] .
+  have "control_at \<Pi> p (If i b c1 c2) k n0 c' v'" using control_at.IfRight[OF v'(1) IfRight.hyps(2)]
+    .
   with fr v'(2) show ?case by blast
 next
-  case (IfDone b c1 c2 k n0) then show ?case by blast
+  case (IfDone i b c1 j c2 k n0) then show ?case by blast
 next
-  case (WhileHead b cW k n0)
-  from WhileHead.prems(1) have out: "c' = If b (Seq cW (While b cW)) SKIP" "s' = s" "frs' = frs"
+  case (WhileHead i b cW k n0)
+  from WhileHead.prems(1)
+  have out: "c' = If i b (Seq cW (While i b cW)) (SKIP i)" "s' = s" "frs' = frs"
     by auto
-  have "control_at \<Pi> p (While b cW) k n0 (If b (Seq cW (While b cW)) SKIP) (Statement n0)"
+  have "control_at \<Pi> p (While i b cW) k n0 (If i b (Seq cW (While i b cW)) (SKIP i)) (Statement n0)"
     by (rule control_at.WhileUnfolded)
   then show ?case using out by auto
 next
-  case (WhileUnfolded b cW k n0)
-  have srcif: "source_com (If b (Seq cW (While b cW)) SKIP)" using WhileUnfolded.prems(4) by simp
+  case (WhileUnfolded i b cW k n0)
+  have srcif: "source_com (If i b (Seq cW (While i b cW)) (SKIP i))" using WhileUnfolded.prems(4)
+    by simp
   show ?case
     by (rule control_at_if_step[OF control_at.WhileUnfolded WhileUnfolded.prems(1-3) srcif])
 next
-  case (WhileBody cW n0 r v b k)
+  case (WhileBody cW n0 r v i b k)
   from WhileBody.prems(2) obtain n1 E1 K1 where
     cc: "compile \<Pi> p cW (Statement n0) (Suc n0) = (n1, Statement (Suc n0), E1, K1)"
     and sub: "E1 \<subseteq> E"
@@ -809,25 +835,25 @@ next
     by (rule control_at_seq_step[OF control_at.WhileBody[OF WhileBody.hyps] WhileBody.prems])
        (use WhileBody.IH[OF _ cc subset_trans[OF sub WhileBody.prems(3)] srcW] in blast)
 next
-  case (WhileDone b cW k n0) then show ?case by blast
+  case (WhileDone i b cW k n0) then show ?case by blast
 next
-  case (CallHead dst q actuals k n0)
+  case (CallHead i dst q actuals k n0)
   from CallHead.prems(1) obtain x desc sc v where
     out: "dst = Some x" "special_table q = Some desc" "classify_special desc actuals = Some sc"
-         "special_result sc s v" "c' = SKIP" "s' = s(x := v)" "frs' = frs"
+         "special_result sc s v" "c' = (SKIP i)" "s' = s(x := v)" "frs' = frs"
     by auto
-  have act: "emitted_action (Call (Some x) q actuals) = Some (EA_Special sc x)"
+  have act: "emitted_action (Call i (Some x) q actuals) = Some (EA_Special sc x)"
     using out(2,3) by simp
   have mem: "s' \<in> edge_step (EA_Special sc x) s" using out(4,6) by auto
-  obtain w where "control_at \<Pi> p (Call (Some x) q actuals) k n0 SKIP w"
+  obtain w where "control_at \<Pi> p (Call i (Some x) q actuals) k n0 (SKIP i) w"
       and "\<G>, g \<turnstile> (Statement n0, s, stk) \<rightarrow>\<^sub>c\<^sup>* (w, s', stk)"
     by (rule control_at_base_step[OF control_at.CallHead act
-              CallHead.prems(2)[unfolded out(1)] CallHead.prems(3) mem])
+              CallHead.prems(2)[unfolded out(1)] CallHead.prems(3) mem]) auto
   then show ?case using out(1,5,7) by auto
 next
-  case (CallDone dst q actuals k n0) then show ?case by blast
+  case (CallDone i dst q actuals k n0) then show ?case by blast
 next
-  case (ReturnHead e k n0) then show ?case by blast
+  case (ReturnHead i e k n0) then show ?case by blast
 qed
 
 end

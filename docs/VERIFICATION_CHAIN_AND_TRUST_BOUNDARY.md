@@ -112,9 +112,10 @@ solver layer beyond ordinary code-generation trust.
 ## 5. Soundness endpoints
 
 The chain ends at `run_voblint_source_sound` (`Analysis_Certified.thy`):
-for every activation list, global update rule and context policy, a source run's
-store lies in the report's semantics `ℛ⇘res⇙ v` at a genuinely reachable node, and
-every definite verdict listed there holds for that store.
+for every activation list, global update rule and context policy, the configuration a
+source run reaches is observed at some node (`at_node`), and at every such node `v` the
+store lies in `𝒞 v` and in the report's semantics `ℛ⇘res⇙ v`, and every definite verdict
+listed there holds for it.
 `run_voblint_dead_check_unreached`, beside it, states separately that a dead check's
 point is unreachable, at every configuration. The caller owes nothing about termination: `run_voblint`
 solves with the executable `solve_c`, and an analysed answer exists only where it

@@ -85,7 +85,7 @@ let scope prog g owner_of =
     if owner = main_name then []
     else
       match C.prog_table prog owner with
-      | Some (C.Proc_decl_ext (formals, _, ())) -> formals
+      | Some (C.Gproc_decl_ext (formals, _, ())) -> formals
       | None -> []
   in
   let assigned owner =

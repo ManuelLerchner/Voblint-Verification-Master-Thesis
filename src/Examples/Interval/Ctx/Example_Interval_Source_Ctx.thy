@@ -31,7 +31,7 @@ theorem twice_source_ctx_run_sound:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and init: "s0 \<in> cinit_stores twice_gs"
   shows "\<exists>v stk t c.
-           twice_pi, compile_prog twice_pi twice_procs \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           twice_pi, compile_prog twice_pi twice_procs, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> activation_context_rel twice_gs
                (interval_es_rule.admitted_contexts Globals_Warrow twice_gs twice_program)
                [] (compile_prog twice_pi twice_procs) t c
@@ -57,7 +57,7 @@ text \<open>The witness-free specialisation: a \<open>twice\<close> store reache
 theorem twice_source_toplevel_at_bot:
   assumes run: "twice_gs, twice_pi \<turnstile> (twice_main, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
     and init: "s0 \<in> cinit_stores twice_gs"
-  shows "\<exists>v. twice_pi, compile_prog twice_pi twice_procs \<turnstile> (residual, s, []) \<approx> (v, s, [])
+  shows "\<exists>v. twice_pi, compile_prog twice_pi twice_procs, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, [])
              \<and> s \<in> twice_ctx_gamma (twice_ctx_sg (Inl (v, [])))"
 proof -
   have run': "twice_gs, twice_pi \<turnstile> (main_body twice_pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"

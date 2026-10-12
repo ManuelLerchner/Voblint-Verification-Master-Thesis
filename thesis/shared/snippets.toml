@@ -135,8 +135,8 @@ why = "Results chapter: the contract of an analysed report."
 [snippets.run_voblint_check_sound]
 why = "Main-statements appendix: the check-verdict endpoint."
 
-[snippets.run_voblint_arithmetic_refuted]
-why = "Results chapter: an arithmetic error means a zero divisor in every covered execution reaching it."
+[snippets.run_voblint_arithmetic_intra_safe]
+why = "Results chapter: at a node without a diagnostic, no collected store divides by zero."
 
 [snippets.run_voblint_dead_check_unreached]
 why = "Main-statements appendix: the unreachability endpoint."

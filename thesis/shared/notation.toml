@@ -117,8 +117,14 @@ forms = [
 [[entry]]
 group = "operator"
 reads = "_c_ is matched with _c′_"
-meaning = "the compiler's simulation relation between a source configuration _c_ and a configuration _c′_ of the compiled graph _g_"
-forms = [{ const = "csim", args = ['\<Pi>', "g", "c", "c'"] }]
+meaning = "the compiler's simulation relation between a source configuration _c_ whose outermost activation runs procedure _p_ and a configuration _c′_ of the compiled graph _g_"
+forms = [{ const = "csim", args = ['\<Pi>', "g", "p", "c", "c'"] }]
+
+[[entry]]
+group = "operator"
+reads = "from _s₀_, _c_ is observed at node _v_ in _p_"
+meaning = "some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes"
+forms = [{ const = "at_node", args = ["p", "s0", "c", "v"] }]
 
 [[entry]]
 group = "operator"

@@ -27,7 +27,7 @@ text \<open>\<open>prog_main_name\<close> names the distinguished entry procedur
   collide with a callee's, yet \<open>FunctionEntry prog_main_name\<close> is an ordinary activation of a
   declared procedure like any other.\<close>
 definition wf_compile_input ::
-  "(vname => bool) => proc_table => pname list => bool" where
+  "(vname => bool) => 'a ptable => pname list => bool" where
   "wf_compile_input \<G> \<Pi> ps \<longleftrightarrow>
      distinct ps \<and>
      set ps = {p. \<Pi> p ~= None} - {prog_main_name} \<and>
@@ -163,11 +163,11 @@ text \<open>\<open>returns_in\<close> asks a purely syntactic question -- does t
   \<open>Return\<close> of exactly this expression -- which is the shape the compiler lemmas below need.
   They induct over the source command, so their hypothesis has to be readable off the
   syntax rather than off the graph the compiler produced from it.\<close>
-fun returns_in :: "exp option \<Rightarrow> com \<Rightarrow> bool" where
-  "returns_in e (Return e') = (e = e')"
+fun returns_in :: "exp option \<Rightarrow> 'a acom \<Rightarrow> bool" where
+  "returns_in e (Return i e') = (e = e')"
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
-| "returns_in e (If _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
-| "returns_in e (While _ c) = returns_in e c"
+| "returns_in e (If i _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
+| "returns_in e (While i _ c) = returns_in e c"
 | "returns_in e _ = False"
 
 subsection \<open>Return edges and call-freeness\<close>
@@ -177,7 +177,7 @@ text \<open>Every source \<open>Return e\<close> in procedure \<open>p\<close> c
 lemma compile_return_edge:
   "compile \<Pi> p c k n = (n', en, E, K) \<Longrightarrow> returns_in e c
    \<Longrightarrow> \<exists>j. (Statement j, EA_Ret e p, FunctionResult p) \<in> E"
-proof (induction c arbitrary: k n n' en E K rule: com.induct)
+proof (induction c arbitrary: k n n' en E K rule: gcom.induct)
   case (Seq c1 c2)
   from Seq.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 (Statement (n + csize c1)) n = (n1, en1, E1, K1)"
@@ -187,19 +187,19 @@ proof (induction c arbitrary: k n n' en E K rule: com.induct)
   from Seq.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
   then show ?case using Seq.IH(1)[OF c1] Seq.IH(2)[OF c2] E by auto
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 en1 E1 K1 n2 en2 E2 K2 where
     c1: "compile \<Pi> p c1 k (Suc n) = (n1, en1, E1, K1)"
     and c2: "compile \<Pi> p c2 k n1 = (n2, en2, E2, K2)"
-    and E: "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else en1),
-                  (Statement n, EA_AssumeNot b, if c2 = SKIP then k else en2)}
-                  \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+    and E: "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else en1),
+                  (Statement n, EA_AssumeNot b, if is_SKIP c2 then k else en2)}
+                  \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
     by (auto split: prod.splits)
   from If.prems(2) have "returns_in e c1 \<or> returns_in e c2" by simp
   then show ?case using If.IH(1)[OF c1] If.IH(2)[OF c2] E
     by (auto split: if_splits)
 next
-  case (While b c)
+  case (While i b c)
   from While.prems(1) obtain n1 en1 E1 K1 where
     c1: "compile \<Pi> p c (Statement n) (Suc n) = (n1, en1, E1, K1)"
     and E: "E = {(Statement n, EA_Assume b, en1), (Statement n, EA_AssumeNot b, k)} \<union> E1"
@@ -207,7 +207,7 @@ next
   from While.prems(2) have "returns_in e c" by simp
   then show ?case using While.IH[OF c1] E by auto
 next
-  case (Return e') then show ?case by (auto split: if_splits)
+  case (Return i e') then show ?case by (auto split: if_splits)
 qed auto
 
 subsection \<open>Public compiler invariants\<close>
@@ -215,7 +215,7 @@ subsection \<open>Public compiler invariants\<close>
 text \<open>A \<open>Return\<close> fragment ignores its continuation: it emits its result edge and nothing
   else, so no node exists to carry a control flow the source does not have.\<close>
 theorem compile_Return_ignores_continuation:
-  "compile \<Pi> p (Return e) k n = compile \<Pi> p (Return e) k' n"
+  "compile \<Pi> p (Return i e) k n = compile \<Pi> p (Return i e) k' n"
   by simp
 
 section \<open>Where each statement index came from in the source\<close>
@@ -237,20 +237,20 @@ text \<open>
   this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic.
 \<close>
 
-fun com_stmt_post_order :: "nat \<Rightarrow> com \<Rightarrow> cfg_node list" where
-  "com_stmt_post_order n SKIP = [Statement n]"
-| "com_stmt_post_order n (Assign x a) = [Statement n]"
-| "com_stmt_post_order n (Check l c) = [Statement n]"
+fun com_stmt_post_order :: "nat \<Rightarrow> 'a acom \<Rightarrow> cfg_node list" where
+  "com_stmt_post_order n (SKIP i) = [Statement n]"
+| "com_stmt_post_order n (Assign i x a) = [Statement n]"
+| "com_stmt_post_order n (Check i l c) = [Statement n]"
 | "com_stmt_post_order n (Seq c1 c2) =
      com_stmt_post_order n c1 @ com_stmt_post_order (n + csize c1) c2"
-| "com_stmt_post_order n (If b c1 c2) =
+| "com_stmt_post_order n (If i b c1 c2) =
      com_stmt_post_order (Suc n) c1 @ com_stmt_post_order (Suc n + csize c1) c2
        @ [Statement n]"
-| "com_stmt_post_order n (While b c) = com_stmt_post_order (Suc n) c @ [Statement n]"
-| "com_stmt_post_order n (Call dst q actuals) = [Statement n]"
-| "com_stmt_post_order n (Return e) = [Statement n]"
-| "com_stmt_post_order n Restore = [Statement n]"
-| "com_stmt_post_order n Unwind = [Statement n]"
+| "com_stmt_post_order n (While i b c) = com_stmt_post_order (Suc n) c @ [Statement n]"
+| "com_stmt_post_order n (Call i dst q actuals) = [Statement n]"
+| "com_stmt_post_order n (Return i e) = [Statement n]"
+| "com_stmt_post_order n (Restore i) = [Statement n]"
+| "com_stmt_post_order n (Unwind i) = [Statement n]"
 
 text \<open>The enumeration has one entry per index the fragment allocates: a shorter or
   longer list would silently misalign every position after it.\<close>
@@ -271,7 +271,7 @@ text \<open>
   clause \<^const>\<open>compile_procs\<close> skips.
 \<close>
 
-fun procs_stmt_next :: "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
+fun procs_stmt_next :: "'a ptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
   "procs_stmt_next \<Pi> [] n = n"
 | "procs_stmt_next \<Pi> (p # ps) n =
      (case \<Pi> p of
@@ -287,7 +287,7 @@ text \<open>
 \<close>
 
 fun defs_stmt_post_order ::
-  "proc_table \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> (pname \<times> cfg_node list) list"
+  "'a ptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> (pname \<times> cfg_node list) list"
 where
   "defs_stmt_post_order \<Pi> [] n = []"
 | "defs_stmt_post_order \<Pi> (p # ps) n =
@@ -348,20 +348,20 @@ proof (induction c arbitrary: k n n' en E K)
     using Seq.IH(2)[OF c2] Seq.prems res by auto
   from h1 h2 show ?case unfolding res(1) by (blast intro: local_reaches_trans)
 next
-  case (If b c1 c2)
+  case (If i b c1 c2)
   from If.prems(1) obtain n1 E1 K1 E2 K2 where
       c1: "compile \<Pi> p c1 k (Suc n) = (n1, Statement (Suc n), E1, K1)"
     and res: "en = Statement n"
-      "E = {(Statement n, EA_Assume b, if c1 = SKIP then k else Statement (Suc n)),
+      "E = {(Statement n, EA_Assume b, if is_SKIP c1 then k else Statement (Suc n)),
             (Statement n, EA_AssumeNot b,
-              if c2 = SKIP then k else Statement (Suc n + csize c1))}
-            \<union> (if c1 = SKIP then {} else E1) \<union> (if c2 = SKIP then {} else E2)"
+              if is_SKIP c2 then k else Statement (Suc n + csize c1))}
+            \<union> (if is_SKIP c1 then {} else E1) \<union> (if is_SKIP c2 then {} else E2)"
       "K = K1 \<union> K2"
     by (rule compile_IfE)
-  have b1: "local_reaches g (Statement n) (if c1 = SKIP then k else Statement (Suc n))"
+  have b1: "local_reaches g (Statement n) (if is_SKIP c1 then k else Statement (Suc n))"
     using res(2) If.prems(2) by (blast intro: local_reaches_intra_sub)
   show ?case
-  proof (cases "c1 = SKIP")
+  proof (cases "is_SKIP c1")
     case True with b1 res(1) show ?thesis by simp
   next
     case False

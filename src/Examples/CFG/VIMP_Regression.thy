@@ -14,8 +14,8 @@ text \<open>Each snippet elaborates to a fixed \<open>com\<close> term or to its
 
 lemma notation_if_without_else:
   "imp \<lbrakk> if (x < 0) { x = -x; } \<rbrakk> =
-    If (Less (V (STR ''x'')) (N 0))
-      (Assign (STR ''x'') (Minus (N 0) (V (STR ''x'')))) SKIP"
+    If () (Less (V (STR ''x'')) (N 0))
+      (Assign () (STR ''x'') (Minus (N 0) (V (STR ''x'')))) (SKIP ())"
   by simp
 
 lemma notation_else_if_chain:
@@ -35,16 +35,16 @@ lemma notation_else_if_chain:
 
 lemma notation_else_if_final_else:
   "imp \<lbrakk> if (x) { } else if (y) { skip; } else { x = 1; } \<rbrakk> =
-    If (V (STR ''x'')) SKIP
-      (If (V (STR ''y'')) SKIP (Assign (STR ''x'') (N 1)))"
+    If () (V (STR ''x'')) (SKIP ())
+      (If () (V (STR ''y'')) (SKIP ()) (Assign () (STR ''x'') (N 1)))"
   by simp
 
 lemma notation_block_statement_boundaries:
   "imp \<lbrakk> x = 0; while (x < 2) { x = x + 1; } if (x) { } \<rbrakk> =
-    Seq (Seq (Assign (STR ''x'') (N 0))
-      (While (Less (V (STR ''x'')) (N 2))
-        (Assign (STR ''x'') (Plus (V (STR ''x'')) (N 1)))))
-      (If (V (STR ''x'')) SKIP SKIP)"
+    Seq (Seq (Assign () (STR ''x'') (N 0))
+      (While () (Less (V (STR ''x'')) (N 2))
+        (Assign () (STR ''x'') (Plus (V (STR ''x'')) (N 1)))))
+      (If () (V (STR ''x'')) (SKIP ()) (SKIP ()))"
   by simp
 
 lemma notation_fun_call_return:
@@ -53,43 +53,43 @@ lemma notation_fun_call_return:
       fun ping() { return; }
       fun main() { x = id(1); ping(); }
     }) =
-    Seq (Call (Some (STR ''x'')) (STR ''id'') [N 1])
-      (Call None (STR ''ping'') [])"
+    Seq (Call () (Some (STR ''x'')) (STR ''id'') [N 1])
+      (Call () None (STR ''ping'') [])"
   by simp
 
 lemma notation_comparison_less:
   "imp \<lbrakk> __voblint_check(x < y); \<rbrakk> =
-    Check (0, 0) (Less (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (Less (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_less_eq:
   "imp \<lbrakk> __voblint_check(x <= y); \<rbrakk> =
-    Check (0, 0) (LessEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (LessEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_greater:
   "imp \<lbrakk> __voblint_check(x > y); \<rbrakk> =
-    Check (0, 0) (Greater (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (Greater (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_greater_eq:
   "imp \<lbrakk> __voblint_check(x >= y); \<rbrakk> =
-    Check (0, 0) (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (GreaterEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_eq:
   "imp \<lbrakk> __voblint_check(x == y); \<rbrakk> =
-    Check (0, 0) (Eq (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (Eq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_not_eq:
   "imp \<lbrakk> __voblint_check(x != y); \<rbrakk> =
-    Check (0, 0) (NotEq (V (STR ''x'')) (V (STR ''y'')))"
+    Check () (0, 0) (NotEq (V (STR ''x'')) (V (STR ''y'')))"
   by simp
 
 lemma notation_comparison_precedence:
   "imp \<lbrakk> __voblint_check(x + 1 <= y * 2 && x != y); \<rbrakk> =
-    Check (0, 0) (And
+    Check () (0, 0) (And
       (LessEq (Plus (V (STR ''x'')) (N 1)) (Times (V (STR ''y'')) (N 2)))
       (NotEq (V (STR ''x'')) (V (STR ''y''))))"
   by simp
@@ -105,14 +105,14 @@ lemma notation_relational_before_equality:
 
 lemma notation_division_remainder:
   "imp \<lbrakk> x = a / b; y = a % b; \<rbrakk> =
-    Seq (Assign (STR ''x'') (Div (V (STR ''a'')) (V (STR ''b''))))
-      (Assign (STR ''y'') (Mod (V (STR ''a'')) (V (STR ''b''))))"
+    Seq (Assign () (STR ''x'') (Div (V (STR ''a'')) (V (STR ''b''))))
+      (Assign () (STR ''y'') (Mod (V (STR ''a'')) (V (STR ''b''))))"
   by simp
 
 lemma notation_multiplicative_precedence:
   "imp \<lbrakk> x = 20 / 3 % 4 * 2 + 1; \<rbrakk> =
     imp \<lbrakk> x = (((20 / 3) % 4) * 2) + 1; \<rbrakk>"
-  "imp \<lbrakk> x = -7 / 3; \<rbrakk> = Assign (STR ''x'') (Div (N (-7)) (N 3))"
+  "imp \<lbrakk> x = -7 / 3; \<rbrakk> = Assign () (STR ''x'') (Div (N (-7)) (N 3))"
   "imp \<lbrakk> __voblint_check(1 == 20 / 3 % 4 < 3); \<rbrakk> =
     imp \<lbrakk> __voblint_check(1 == (((20 / 3) % 4) < 3)); \<rbrakk>"
   by simp_all

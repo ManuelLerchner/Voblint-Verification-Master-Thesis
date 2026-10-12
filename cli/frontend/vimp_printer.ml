@@ -44,21 +44,21 @@ let rec com_lines depth c =
   let pad = indent depth in
   match c with
   | Voblint.Seq (a, b) -> com_lines depth a @ com_lines depth b
-  | Voblint.SKIP -> [pad ^ "skip;"]
-  | Voblint.Assign (x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
-  | Voblint.Return None -> [pad ^ "return;"]
-  | Voblint.Return (Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
-  | Voblint.Check (_, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
-  | Voblint.Call (None, f, args) ->
+  | Voblint.SKIP _ -> [pad ^ "skip;"]
+  | Voblint.Assign (_, x, e) -> [pad ^ x ^ " = " ^ string_of_exp e ^ ";"]
+  | Voblint.Return (_, None) -> [pad ^ "return;"]
+  | Voblint.Return (_, Some e) -> [pad ^ "return " ^ string_of_exp e ^ ";"]
+  | Voblint.Check (_, _, e) -> [pad ^ "__voblint_check(" ^ string_of_exp e ^ ");"]
+  | Voblint.Call (_, None, f, args) ->
     [pad ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | Voblint.Call (Some x, f, args) ->
+  | Voblint.Call (_, Some x, f, args) ->
     [pad ^ x ^ " = " ^ f ^ "(" ^ String.concat ", " (List.map string_of_exp args) ^ ");"]
-  | Voblint.While (b, body) ->
+  | Voblint.While (_, b, body) ->
     [pad ^ "while (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) body @ [pad ^ "}"]
-  | Voblint.If (b, t, e) ->
+  | Voblint.If (_, b, t, e) ->
     [pad ^ "if (" ^ string_of_exp b ^ ") {"] @ com_lines (depth + 1) t
     @ (match e with
-       | Voblint.SKIP -> [pad ^ "}"]
+       | Voblint.SKIP _ -> [pad ^ "}"]
        | _ -> [pad ^ "} else {"] @ com_lines (depth + 1) e @ [pad ^ "}"])
   | _ -> [pad ^ "(* runtime-only command *)"]
 
@@ -83,8 +83,8 @@ let string_of_program ~globals ~procs =
 let string_of_imp_prog p =
   let proc name =
     match Voblint.prog_table p name with
-    | Some (Voblint.Proc_decl_ext (formals, body, ())) -> (name, formals, body)
-    | None -> (name, [], Voblint.SKIP)
+    | Some (Voblint.Gproc_decl_ext (formals, body, ())) -> (name, formals, body)
+    | None -> (name, [], Voblint.SKIP ())
   in
   string_of_program ~globals:(Voblint.declared_global_vars p)
     ~procs:(("main", [], Voblint.prog_main p) :: List.map proc (Voblint.prog_procs p))

@@ -59,10 +59,10 @@
       linkText: "run_voblint",
     },
     v: {
-      clause: "∃v stk. csim (prog_table p) (prog_cfg p) (residual, s, frs) (v, s, stk)",
-      text: "The compiler's simulation relation matches the source state to a node `v` of the compiled graph, with the same store `s` and a matching stack `stk`. This is the forward simulation proved for the compiler.",
-      link: isaConst("Voblint_Compile", "Simulation_Relation", "csim"),
-      linkText: "csim",
+      clause: "∃v. p, s0 ⊢ (residual, s, frs) ⊳ v",
+      text: "The reached configuration is observed at some CFG node `v`: a run of the program's elaboration, which annotates every statement with the nodes the compiler emits for it, reaches an annotated command that names `v`, and the compiler's simulation relates it to `v` with the same store `s`. A configuration reachable along two paths can be observed at two nodes, and the remaining conclusions hold at every one of them.",
+      link: isaConst("Voblint_Compile", "Elaborated_Compilation", "at_node"),
+      linkText: "at_node",
     },
     coll: {
       clause: "s ∈ 𝒞 v",
@@ -205,6 +205,8 @@
     "main_body",
     "run_voblint",
     "csim",
+    "at_node",
+    "prog_main_name",
     "prog_cfg",
     "node_collect",
     "cinit_stores",

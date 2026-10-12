@@ -14,7 +14,7 @@ subsection \<open>Returns and self-calls\<close>
 text \<open>Both branches of a conditional return keep their own result edge, and a self-call of
   an ordinary procedure is a call edge into its own entry.\<close>
 theorem compile_multi_return_converge:
-  assumes "compile \<Pi> p (If b (Return e1) (Return e2)) k n = (n', en, E, K)"
+  assumes "compile \<Pi> p (If () b (Return () e1) (Return () e2)) k n = (n', en, E, K)"
   shows "(\<exists>j. (Statement j, EA_Ret e1 p, FunctionResult p) \<in> E)
        \<and> (\<exists>j. (Statement j, EA_Ret e2 p, FunctionResult p) \<in> E)"
   using compile_return_edge[OF assms, of e1] compile_return_edge[OF assms, of e2] by simp
@@ -26,7 +26,7 @@ text \<open>A self-call targets the procedure's own entry node; its call site is
 theorem compile_self_call_edge:
   assumes "special_table p = None"
   shows "(Statement n, CallEdge None (call_formals \<Pi> p) [], FunctionEntry p, k)
-           \<in> snd (snd (snd (compile \<Pi> p (Call None p []) k n)))"
+           \<in> snd (snd (snd (compile \<Pi> p (Call () None p []) k n)))"
   using assms by simp
 
 end

@@ -9,3 +9,4 @@ session Voblint_Examples_CFG in "." = "Voblint_Compile" +
     Example_Compile_Call_Free
     VIMP_Regression
     Compile_Regression
+    Elaborated_Compilation_Regression

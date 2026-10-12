@@ -13,7 +13,7 @@ text \<open>
   definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
   congruence remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
-  or weakening each admits an answer that misses a concrete execution.
+  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: pstep.IfTrue pstep.IfFalse)+cution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
   \<^const>\<open>pstep\<close> models the intended language.
@@ -75,27 +75,27 @@ lemma nv_no_globals: "declared_global nv_prog = (\<lambda>_. False)"
 lemma nv_table:
   "prog_table nv_prog (STR ''bump'')
      = Some \<lparr>formals = [STR ''n''],
-              body = VIMP_Proc.com.Return (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
+              body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
   by (simp add: nv_prog_def prog_main_name_def)
 
 lemma nv_main:
   "main_body (prog_table nv_prog)
-     = VIMP_Proc.com.Seq
-         (VIMP_Proc.com.Seq
-            (VIMP_Proc.com.Seq
-               (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
-               (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
-            (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))))
-         (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5)))"
+     = VIMP_Proc.gcom.Seq
+         (VIMP_Proc.gcom.Seq
+            (VIMP_Proc.gcom.Seq
+               (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
+               (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
+            (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))))
+         (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))"
   by (simp add: nv_prog_def main_body_def prog_main_name_def)
 
 lemma nv_call:
   "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.com.Call (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
+     (VIMP_Proc.gcom.Call () (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
   using pcompletes_Call_return
           [where \<Pi> = "prog_table nv_prog" and p = "STR ''bump''"
              and decl = "\<lparr>formals = [STR ''n''],
-                          body = VIMP_Proc.com.Return (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
+                          body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
              and e = "Plus (V (STR ''n'')) (N 1)" and actuals = "[N k]" and dst = "Some x"
              and \<G> = "declared_global nv_prog" and s = s,
            OF nv_table]
@@ -106,16 +106,16 @@ abbreviation nv_final :: store where
 
 lemma nv_calls:
   "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
-        (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
+     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
+        (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
      (\<lambda>_. 0) nv_final"
 proof -
   have c1: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5]) (\<lambda>_. 0)
+              (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5]) (\<lambda>_. 0)
               ((\<lambda>_. 0)(STR ''a'' := 6))"
     using nv_call [where x = "STR ''a''" and k = 5 and s = "\<lambda>_. 0"] by simp
   have c2: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4])
+              (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4])
               ((\<lambda>_. 0)(STR ''a'' := 6)) nv_final"
     using nv_call [where x = "STR ''b''" and k = 4 and s = "(\<lambda>_. 0)(STR ''a'' := 6)"]
     by simp
@@ -127,15 +127,15 @@ text \<open>The source run, stopped with the first check about to execute.\<clos
 lemma nv_to_check:
   "declared_global nv_prog, prog_table nv_prog \<turnstile>
      (main_body (prog_table nv_prog), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-     (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
-        (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
+     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
+        (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
 proof -
   have "declared_global nv_prog, prog_table nv_prog \<turnstile>
-          (VIMP_Proc.com.Seq
-             (VIMP_Proc.com.Seq (VIMP_Proc.com.Call (Some (STR ''a'')) (STR ''bump'') [N 5])
-                (VIMP_Proc.com.Call (Some (STR ''b'')) (STR ''bump'') [N 4]))
-             (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
+          (VIMP_Proc.gcom.Seq
+             (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
+                (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
+             (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
     using psteps_Seq2 [OF nv_calls] by (meson Seq1 star.step star.refl star_trans)
   then show ?thesis unfolding nv_main by (rule psteps_Seq2)
 qed
@@ -149,18 +149,17 @@ text \<open>
 \<close>
 
 theorem nv_source_certified:
-  "\<exists>res v stk.
+  "\<exists>res v.
      run_voblint nv_config nv_prog
        = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved),
           (Statement 5, Decided Check_Proved)]
-   \<and> prog_table nv_prog, prog_cfg nv_prog \<turnstile>
-       (VIMP_Proc.com.Seq
-          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<approx>
-       (v, nv_final, stk)
+   \<and> nv_prog, (\<lambda>_. 0) \<turnstile>
+       (VIMP_Proc.gcom.Seq
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
+        nv_final, []) \<rhd> v
    \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                    cinit_stores (declared_global nv_prog)\<^esub> v
    \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
@@ -172,7 +171,16 @@ proof -
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
   from run_voblint_source_sound [OF nv_init nv_to_check ans]
-  show ?thesis using ans checks by meson
+  obtain v where "nv_prog, (\<lambda>_. 0) \<turnstile>
+       (VIMP_Proc.gcom.Seq
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
+          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
+        nv_final, []) \<rhd> v"
+    and "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
+                     cinit_stores (declared_global nv_prog)\<^esub> v"
+    and "nv_final \<in> \<R>\<^bsub>res\<^esub> v" and "nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+    by blast
+  with ans checks show ?thesis by - (intro exI conjI; assumption)
 qed
 
 text \<open>
@@ -193,8 +201,8 @@ proof -
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  have nc: "next_check (VIMP_Proc.com.Seq (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''a'')) (N 6)))
-              (VIMP_Proc.com.Check (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
+  have nc: "next_check (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
+              (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
     by simp
   from run_voblint_check_sound [OF nv_init nv_to_check nc ans]
   obtain chk
