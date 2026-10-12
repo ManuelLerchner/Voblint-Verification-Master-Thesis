@@ -841,9 +841,9 @@ lemma main_body_witness [simp]: "main_body witness_pi = SKIP ()"
   by (simp add: main_body_def witness_pi_def prog_main_name_def)
 
 lemma witness_wf: "wf_compile_input (\<lambda>_. False) witness_pi []"
-  by (auto simp: wf_compile_input_def wf_source_program_def witness_pi_def
+  by (auto simp: gwf_compile_input_def gwf_source_program_def witness_pi_def
         main_body_def prog_main_name_def
-        wf_proc_decl_def reserved_ret_var_def ret_var_def
+        gwf_proc_decl_def greserved_ret_var_def ret_var_def
         special_table_def special_pname_nondet_int_def
         special_pname_min_def special_pname_max_def)
 

@@ -144,11 +144,11 @@ proof (induction rule: csim.induct)
   from Base.hyps(2) obtain decl where decl: "\<Pi> p = Some decl" and body_p: "body_p = body decl"
     by (rule compiled_at_decl)
   have "wf_source_com \<Pi> body_p"
-    using wf_decls[OF decl] body_p by (simp add: wf_proc_decl_def)
+    using wf_decls[OF decl] body_p by (simp add: gwf_proc_decl_def)
   from control_at_wf_source_com[OF Base.hyps(1) this]
   have "wf_source_com \<Pi> c" .
   from wf_source_com_progress[OF _ this, of \<G> s "[]"] wf_decls
-  show ?case by (auto simp: wf_proc_decl_def)
+  show ?case by (auto simp: gwf_proc_decl_def)
 next
   case (Nested q inner s frs v stk pc body_pc kc nc i afters cont dst args site caller)
   let ?F = "[Frame caller dst]"

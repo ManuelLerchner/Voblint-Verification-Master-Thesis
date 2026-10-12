@@ -37,11 +37,11 @@ theorem run_voblint_typed_sound:
 proof -
   have GP: "declared_global P = \<G>" by (simp add: P_def G_def)
   from run_voblint_wf [OF ans] have "wf_source_program \<G> (prog_table P)"
-    by (simp add: wf_compile_input_def GP [symmetric])
+    by (simp add: gwf_compile_input_def GP [symmetric])
   then have wf: "wf_source_program (declared_global p) (prog_table (typed_prog p ds))"
     by (simp add: P_def G_def)
   have nr: "\<not> \<G> ret_var"
-    using wf_source_programD(1) [OF wf] by (simp add: reserved_ret_var_def G_def)
+    using wf_source_programD(1) [OF wf] by (simp add: greserved_ret_var_def G_def)
   have tab: "tab_rel \<kappa> \<G> (typed_table p ds) (prog_table P)"
     unfolding k_def G_def P_def by (rule tab_rel_typed_table [OF wf])
   note main = typed_main_table [OF wf]

@@ -45,7 +45,7 @@ definition fg_pi :: "loc ptable" where
   "fg_pi = elab_pt (prog_table fg_prog) (prog_procs fg_prog)"
 
 lemma fg_wf: "wf_program_compile_input fg_prog"
-  unfolding wf_compile_input_def
+  unfolding gwf_compile_input_def
   by (auto simp: wf_compile_input_simps fg_prog_def split: if_splits)
 
 lemma fg_bodies:
@@ -195,7 +195,7 @@ lemma regression_wf:
   "wf_program_compile_input recursion_prog"
   "wf_program_compile_input mutual_prog"
   "wf_program_compile_input fg_prog"
-  unfolding wf_compile_input_def
+  unfolding gwf_compile_input_def
   by (auto simp: wf_compile_input_simps nested_if_prog_def nested_while_prog_def
       skip_only_prog_def consecutive_prog_def recursion_prog_def mutual_prog_def fg_prog_def
       split: if_splits)

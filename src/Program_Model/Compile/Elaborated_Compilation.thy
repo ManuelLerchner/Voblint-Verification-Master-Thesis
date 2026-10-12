@@ -413,7 +413,7 @@ theorem located_compile_prog:
   shows "located (elab_pt \<Pi> ps) (compile_prog (elab_pt \<Pi> ps) ps)"
 proof -
   from wf have setps: "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
-    by (simp add: wf_compile_input_def)
+    by (simp add: gwf_compile_input_def)
   have g: "compile_prog (elab_pt \<Pi> ps) ps = compile_prog \<Pi> ps"
     by (rule compile_prog_erase_cong) (rule erase_pt_elab_pt[OF setps])
   obtain n1 Eprocs Kprocs n2 Emain Kmain where
@@ -428,7 +428,7 @@ proof -
   proof (cases "p = prog_main_name")
     case True
     from wf have md: "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
-      by (simp add: wf_compile_input_def wf_source_program_def)
+      by (simp add: gwf_compile_input_def gwf_source_program_def)
     with that True procs
     have "decl = elab_decl prog_main_name n1 \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
       by (simp add: elab_pt_def)
@@ -454,7 +454,7 @@ proof -
       by (rule compile_prog_entry_out_unique[OF wf ent ent'])
     then have nm: "n = m" by simp
     from wf d(1) have "wf_source_com \<Pi> (body d)"
-      by (simp add: wf_compile_input_def wf_source_program_def wf_proc_decl_def)
+      by (simp add: gwf_compile_input_def gwf_source_program_def gwf_proc_decl_def)
     then have src: "source_com (body d)" by (rule wf_source_com_source_com)
     have "b = elab p k n (body d)"
       using decl(2) d(2) k nm by (simp add: elab_decl_def)
@@ -503,7 +503,7 @@ lemma main_body_erase_pt [simp]: "main_body (erase_pt \<Pi>) = erase (main_body 
 
 lemma wf_proc_decl_erase:
   "wf_proc_decl \<G> (erase_pt \<Pi>) (erase_decl d) = wf_proc_decl \<G> \<Pi> d"
-  by (simp add: wf_proc_decl_def wf_source_com_erase)
+  by (simp add: gwf_proc_decl_def wf_source_com_erase)
 
 lemma wf_source_program_erase_pt:
   "wf_source_program \<G> (erase_pt \<Pi>) = wf_source_program \<G> \<Pi>"
@@ -530,12 +530,12 @@ proof -
       \<longleftrightarrow> (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
     by (simp add: erase_pt_def)
   show ?thesis
-    unfolding wf_source_program_def main procs dom by (simp add: wf_source_com_erase)
+    unfolding gwf_source_program_def main procs dom by (simp add: wf_source_com_erase)
 qed
 
 lemma wf_compile_input_erase_pt:
   "wf_compile_input \<G> (erase_pt \<Pi>) ps = wf_compile_input \<G> \<Pi> ps"
-  by (simp add: wf_compile_input_def wf_source_program_erase_pt erase_pt_apply)
+  by (simp add: gwf_compile_input_def wf_source_program_erase_pt erase_pt_apply)
 
 lemma wf_compile_input_elab_pt:
   assumes "wf_compile_input \<G> \<Pi> ps"

@@ -373,11 +373,21 @@ fun source_com :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
 definition source_pi :: "('a, 'v, 'e) gptable \<Rightarrow> bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
-definition source_exp :: "exp \<Rightarrow> bool" where
-  "source_exp a \<longleftrightarrow> ret_var \<notin> exp_vnames a"
+text \<open>Well-formedness is stated once for any language: \<open>vars\<close> gives the variables an
+  expression reads, and \<open>rv\<close> is the reserved return slot. The untyped predicates are the
+  instances at \<^const>\<open>exp_vnames\<close> and \<^const>\<open>ret_var\<close>.\<close>
 
-definition valid_formal :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
-  "valid_formal \<G> x \<longleftrightarrow> \<not> \<G> x \<and> x \<noteq> ret_var"
+definition gsource_exp :: "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> 'e \<Rightarrow> bool" where
+  "gsource_exp vars rv a \<longleftrightarrow> rv \<notin> vars a"
+
+abbreviation source_exp :: "exp \<Rightarrow> bool" where
+  "source_exp \<equiv> gsource_exp exp_vnames ret_var"
+
+definition gvalid_formal :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> 'v \<Rightarrow> bool" where
+  "gvalid_formal rv \<G> x \<longleftrightarrow> \<not> \<G> x \<and> x \<noteq> rv"
+
+abbreviation valid_formal :: "(vname \<Rightarrow> bool) \<Rightarrow> vname \<Rightarrow> bool" where
+  "valid_formal \<equiv> gvalid_formal ret_var"
 
 subsection \<open>Procedure result contract\<close>
 
@@ -430,31 +440,35 @@ text \<open>
   distinguished root command contains no return.
 \<close>
 
-fun wf_source_com :: "'a ptable \<Rightarrow> 'a acom \<Rightarrow> bool" where
-  "wf_source_com \<Pi> (SKIP _) = True"
-| "wf_source_com \<Pi> (Assign _ x a) = (x \<noteq> ret_var \<and> source_exp a)"
-| "wf_source_com \<Pi> (Check _ l c) = source_exp c"
-| "wf_source_com \<Pi> (Seq c1 c2) = (wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
-| "wf_source_com \<Pi> (If _ b c1 c2) =
-     (source_exp b \<and> wf_source_com \<Pi> c1 \<and> wf_source_com \<Pi> c2)"
-| "wf_source_com \<Pi> (While _ b c) = (source_exp b \<and> wf_source_com \<Pi> c)"
-| "wf_source_com \<Pi> (Call _ dst p actuals) =
+fun gwf_source_com ::
+    "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> ('a, 'v, 'e) gptable \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> bool" where
+  "gwf_source_com vars rv \<Pi> (SKIP _) = True"
+| "gwf_source_com vars rv \<Pi> (Assign _ x a) = (x \<noteq> rv \<and> gsource_exp vars rv a)"
+| "gwf_source_com vars rv \<Pi> (Check _ l c) = gsource_exp vars rv c"
+| "gwf_source_com vars rv \<Pi> (Seq c1 c2) = (gwf_source_com vars rv \<Pi> c1 \<and> gwf_source_com vars rv \<Pi> c2)"
+| "gwf_source_com vars rv \<Pi> (If _ b c1 c2) =
+     (gsource_exp vars rv b \<and> gwf_source_com vars rv \<Pi> c1 \<and> gwf_source_com vars rv \<Pi> c2)"
+| "gwf_source_com vars rv \<Pi> (While _ b c) = (gsource_exp vars rv b \<and> gwf_source_com vars rv \<Pi> c)"
+| "gwf_source_com vars rv \<Pi> (Call _ dst p actuals) =
      (case special_table p of
         Some desc \<Rightarrow>
-          classify_special desc actuals \<noteq> None \<and> list_all source_exp actuals \<and>
-          (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> ret_var)
+          classify_special desc actuals \<noteq> None \<and> list_all (gsource_exp vars rv) actuals \<and>
+          (case dst of None \<Rightarrow> False | Some x \<Rightarrow> x \<noteq> rv)
       | None \<Rightarrow>
           (case \<Pi> p of
              None \<Rightarrow> False
            | Some decl \<Rightarrow>
                length actuals = length (formals decl) \<and>
-               list_all source_exp actuals \<and>
+               list_all (gsource_exp vars rv) actuals \<and>
                (case dst of
                   None \<Rightarrow> True
-                | Some x \<Rightarrow> x \<noteq> ret_var \<and> value_providing (body decl))))"
-| "wf_source_com \<Pi> (Return _ e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> source_exp a)"
-| "wf_source_com \<Pi> (Restore _) = False"
-| "wf_source_com \<Pi> (Unwind _) = False"
+                | Some x \<Rightarrow> x \<noteq> rv \<and> value_providing (body decl))))"
+| "gwf_source_com vars rv \<Pi> (Return _ e) = (case e of None \<Rightarrow> True | Some a \<Rightarrow> gsource_exp vars rv a)"
+| "gwf_source_com vars rv \<Pi> (Restore _) = False"
+| "gwf_source_com vars rv \<Pi> (Unwind _) = False"
+
+abbreviation wf_source_com :: "'a ptable \<Rightarrow> 'a acom \<Rightarrow> bool" where
+  "wf_source_com \<equiv> gwf_source_com exp_vnames ret_var"
 
 fun no_return :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
@@ -463,14 +477,22 @@ fun no_return :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
 | "no_return (Return _ _) = False"
 | "no_return _ = True"
 
-definition wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> bool" where
-  "wf_proc_decl \<G> \<Pi> decl \<longleftrightarrow>
+definition gwf_proc_decl ::
+    "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> ('a, 'v, 'e) gptable
+       \<Rightarrow> ('a, 'v, 'e) gproc_decl \<Rightarrow> bool" where
+  "gwf_proc_decl vars rv \<G> \<Pi> decl \<longleftrightarrow>
      distinct (formals decl) \<and>
-     list_all (valid_formal \<G>) (formals decl) \<and>
-     wf_source_com \<Pi> (body decl)"
+     list_all (gvalid_formal rv \<G>) (formals decl) \<and>
+     gwf_source_com vars rv \<Pi> (body decl)"
 
-definition reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" where
-  "reserved_ret_var \<G> \<longleftrightarrow> \<not> \<G> ret_var"
+abbreviation wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> bool" where
+  "wf_proc_decl \<equiv> gwf_proc_decl exp_vnames ret_var"
+
+definition greserved_ret_var :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> bool" where
+  "greserved_ret_var rv \<G> \<longleftrightarrow> \<not> \<G> rv"
+
+abbreviation reserved_ret_var :: "(vname \<Rightarrow> bool) \<Rightarrow> bool" where
+  "reserved_ret_var \<equiv> greserved_ret_var ret_var"
 
 text \<open>The entry procedure is fixed: a program has exactly one, it is called \<open>main\<close>, and the
   parser rejects formals on it.  Naming it here rather than threading it as a parameter means
@@ -491,13 +513,17 @@ definition main_body :: "('a, 'v, 'e) gptable \<Rightarrow> ('a, 'v, 'e) gcom" w
 text \<open>Deliberately not \<open>[simp]\<close>: \<open>wf_source_program\<close>'s entry conjunct has the shape
   \<open>\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>\<close>, against which
   this rule would rewrite \<open>main_body \<Pi>\<close> to itself.\<close>
-definition wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> bool" where
-  "wf_source_program \<G> \<Pi> \<longleftrightarrow>
-     reserved_ret_var \<G> \<and>
+definition gwf_source_program ::
+    "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> ('a, 'v, 'e) gptable \<Rightarrow> bool" where
+  "gwf_source_program vars rv \<G> \<Pi> \<longleftrightarrow>
+     greserved_ret_var rv \<G> \<and>
      \<Pi> prog_main_name = Some (\<lparr>formals = [], body = main_body \<Pi>\<rparr>) \<and>
-     wf_source_com \<Pi> (main_body \<Pi>) \<and> no_return (main_body \<Pi>) \<and>
-     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> \<Pi> decl) \<and>
+     gwf_source_com vars rv \<Pi> (main_body \<Pi>) \<and> no_return (main_body \<Pi>) \<and>
+     (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> gwf_proc_decl vars rv \<G> \<Pi> decl) \<and>
      (\<forall>p. \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)"
+
+abbreviation wf_source_program :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> bool" where
+  "wf_source_program \<equiv> gwf_source_program exp_vnames ret_var"
 
 text \<open>The compiler-input well-formedness defined in the compiler session unfolds
   through this pair before reaching \<^const>\<open>wf_source_com\<close>; every site
@@ -506,25 +532,25 @@ text \<open>The compiler-input well-formedness defined in the compiler session u
 named_theorems wf_compile_input_simps
 
 declare
-  wf_proc_decl_def [wf_compile_input_simps]
-  wf_source_program_def [wf_compile_input_simps]
+  gwf_proc_decl_def [wf_compile_input_simps]
+  gwf_source_program_def [wf_compile_input_simps]
 
 lemma wf_source_com_source_com:
-  "wf_source_com \<Pi> c \<Longrightarrow> source_com c"
+  "gwf_source_com vars rv \<Pi> c \<Longrightarrow> source_com c"
   by (induction c) (auto split: option.splits)
 
 lemma wf_source_programD:
-  assumes "wf_source_program \<G> \<Pi>"
-  shows "reserved_ret_var \<G>"
+  assumes "gwf_source_program vars rv \<G> \<Pi>"
+  shows "greserved_ret_var rv \<G>"
     and "\<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
-    and "wf_source_com \<Pi> (main_body \<Pi>)"
+    and "gwf_source_com vars rv \<Pi> (main_body \<Pi>)"
     and "no_return (main_body \<Pi>)"
-    and "\<Pi> p = Some decl \<Longrightarrow> wf_proc_decl \<G> \<Pi> decl"
+    and "\<Pi> p = Some decl \<Longrightarrow> gwf_proc_decl vars rv \<G> \<Pi> decl"
     and "\<Pi> p = Some decl \<Longrightarrow> special_table p = None"
     and "source_pi \<Pi>"
     and "source_com (main_body \<Pi>)"
-  using assms wf_source_com_source_com
-  unfolding wf_source_program_def source_pi_def wf_proc_decl_def by blast+
+  using assms wf_source_com_source_com [of vars rv \<Pi>]
+  unfolding gwf_source_program_def source_pi_def gwf_proc_decl_def by blast+
 
 
 section \<open>The semantics is inhabited\<close>

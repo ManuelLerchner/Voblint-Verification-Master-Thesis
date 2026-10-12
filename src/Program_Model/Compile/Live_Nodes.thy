@@ -117,7 +117,7 @@ proof -
                = (m + csize (body decl), Statement m, Eb, Kp)"
       by (rule compile_procE)
     have "wf_source_com \<Pi> (body decl)"
-      using wf_compile_inputD(5)[OF wf decl] by (simp add: wf_proc_decl_def)
+      using wf_compile_inputD(5)[OF wf decl] by (simp add: gwf_proc_decl_def)
     from compile_calls_target_declared[OF cb this eK] show ?thesis .
   next
     case M

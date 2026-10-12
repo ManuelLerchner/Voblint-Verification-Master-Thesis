@@ -307,7 +307,7 @@ lemma srel_enter:
   unfolding srel_def
 proof (intro conjI allI impI)
   have ys: "y \<in> set ys \<Longrightarrow> \<not> \<G> y \<and> y \<noteq> ret_var" for y
-    using assms(3) by (auto simp: list_all_iff valid_formal_def)
+    using assms(3) by (auto simp: list_all_iff gvalid_formal_def)
   fix x assume x: "x \<noteq> ret_var"
   show "bind_formals (map (ScopedId p) ys) ns (enter_frame tglobal 0 t) (resolve_var \<G> p x)
           = ik_norm (\<kappa> (resolve_var \<G> p x)) (bind_formals ys ns (enter_state \<G> s) x)"
@@ -328,7 +328,7 @@ proof (intro conjI allI impI)
   qed
 next
   have "ReturnId p \<notin> set (map (ScopedId p) ys)" "ret_var \<notin> set ys"
-    using assms(3) by (auto simp: list_all_iff valid_formal_def)
+    using assms(3) by (auto simp: list_all_iff gvalid_formal_def)
   with assms(2) show "bind_formals (map (ScopedId p) ys) ns (enter_frame tglobal 0 t) (ReturnId p)
                         = bind_formals ys ns (enter_state \<G> s) ret_var"
     by (simp add: bind_formals_other enter_frame_def enter_state_def tglobal_def)
@@ -763,7 +763,7 @@ proof
   have "var_name v \<in> exp_vnames (lower e)"
     using v by (simp add: exp_vnames_lower)
   with x assms(2) have "x \<noteq> ret_var"
-    by (auto simp: source_exp_def)
+    by (auto simp: gsource_exp_def)
   with x show "\<exists>x. v = resolve_var \<G> q x \<and> x \<noteq> ret_var" by blast
 qed
 
@@ -815,9 +815,9 @@ proof (intro allI impI)
   from wf_source_programD(5) [OF assms tq]
   have vf: "list_all (valid_formal (declared_global p)) (formals d)"
     and wfb: "wf_source_com (prog_table (typed_prog p ds)) (lower_com b)"
-    by (simp_all add: wf_proc_decl_def)
+    by (simp_all add: gwf_proc_decl_def)
   have "xs = map (ScopedId q) (formals d)"
-    using vf by (auto simp: xs list_all_iff valid_formal_def resolve_var_def)
+    using vf by (auto simp: xs list_all_iff gvalid_formal_def resolve_var_def)
   moreover have "cok (kenv_of ds) (declared_global p) (typed_table p ds) q b"
     unfolding cok_def tfids_typed_table b
     using wt_tcom_elab_com tscoped_elab_com [OF wfb [unfolded b]] by blast
