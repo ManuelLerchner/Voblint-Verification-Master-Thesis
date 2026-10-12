@@ -61,6 +61,36 @@ let rec com_vars acc = function
         es
   | Voblint.Return (_, e) -> Option.fold ~none:acc ~some:(exp_vars acc) e
 
+(* Every integer literal of a command. *)
+let rec exp_literals acc = function
+  | Voblint.N (Voblint.Int_of_integer n) -> n :: acc
+  | Voblint.V _ -> acc
+  | Voblint.Plus (a, b)
+  | Voblint.Minus (a, b)
+  | Voblint.Times (a, b)
+  | Voblint.Div (a, b)
+  | Voblint.Mod (a, b)
+  | Voblint.Less (a, b)
+  | Voblint.LessEq (a, b)
+  | Voblint.Greater (a, b)
+  | Voblint.GreaterEq (a, b)
+  | Voblint.NotEq (a, b)
+  | Voblint.Eq (a, b)
+  | Voblint.And (a, b)
+  | Voblint.Or (a, b) ->
+      exp_literals (exp_literals acc a) b
+  | Voblint.Not a | Voblint.Cast (_, a) -> exp_literals acc a
+
+let rec com_literals acc = function
+  | Voblint.SKIP _ | Voblint.Restore _ | Voblint.Unwind _ -> acc
+  | Voblint.Assign (_, _, e) | Voblint.Check (_, _, e) -> exp_literals acc e
+  | Voblint.Seq (c1, c2) -> com_literals (com_literals acc c1) c2
+  | Voblint.If (_, b, c1, c2) ->
+      com_literals (com_literals (exp_literals acc b) c1) c2
+  | Voblint.While (_, b, c) -> com_literals (exp_literals acc b) c
+  | Voblint.Call (_, _, _, es) -> List.fold_left exp_literals acc es
+  | Voblint.Return (_, e) -> Option.fold ~none:acc ~some:(exp_literals acc) e
+
 let rec returns_value = function
   | Voblint.Return (_, Some _) -> true
   | Voblint.Seq (c1, c2) | Voblint.If (_, _, c1, c2) ->
@@ -76,6 +106,15 @@ let is_typed globals defs =
        defs
 
 let fail fmt = Printf.ksprintf failwith fmt
+
+(* C gives an unsuffixed decimal literal the first of int, long, long long that
+   holds it and has no type for a larger one. The typed semantics would wrap
+   such a literal at i64, so a typed program may not write one. *)
+let check_literal n =
+  let i64_min = Z.neg (Z.shift_left Z.one 63)
+  and i64_max = Z.pred (Z.shift_left Z.one 63) in
+  if Z.lt n i64_min || Z.gt n i64_max then
+    fail "literal %s does not fit i64, the widest kind" (Z.to_string n)
 
 let check_distinct what names =
   let rec go seen = function
@@ -122,6 +161,7 @@ let kind_decls globals defs =
         if not (List.mem x gnames || List.mem x fnames || List.mem x lnames)
         then fail "undeclared variable '%s' in '%s'" x name)
       (com_vars [] body);
+    List.iter check_literal (com_literals [] body);
     (match ret with
     | None when returns_value body ->
         fail "'%s' returns a value but declares no return kind" name

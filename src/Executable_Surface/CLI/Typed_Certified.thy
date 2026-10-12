@@ -12,7 +12,10 @@ text \<open>
   to the typed store by \<^const>\<open>srel\<close>, and a node the report describes. In the running
   activation, every variable's typed value is its lowered value converted to the
   variable's kind, so a well-typed expression of that activation has the same value on
-  both sides (\<open>teval_lower_scoped\<close>).
+  both sides (\<open>teval_lower_scoped\<close>). The guarantee is about the lowered store: the
+  theorem does not place the typed store in a typed collecting semantics, and a verdict
+  is read over the lowered store, which \<open>teval_lower_scoped\<close> relates to the typed one
+  for each well-typed expression of the running activation.
 \<close>
 
 theorem run_voblint_typed_sound:

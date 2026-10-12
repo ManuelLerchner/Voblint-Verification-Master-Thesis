@@ -1,0 +1,251 @@
+# Goblint-aligned typed analyzer: plan and reference
+
+Status: roadmap adopted; stage 0 (this reference) done, stages 1 and 2 next.
+Nothing below stage 0 is implemented yet beyond the typed front end of
+`docs/TYPED_IR.md`.
+
+Goal: Voblint becomes a verified, Goblint-style machine-integer analyzer. Typed
+expressions and static variable identities reach a typed CFG with no casts on
+reads; abstract values keep their kinds; numeric operations take the kind as
+Goblint's do; widening is bounded by the kind; one executable pipeline carries an
+end-to-end theorem. The mathematical-integer analyzer stays a supported instance
+with its proofs.
+
+Normative reference: `goblint/analyzer` at `0dc12d355`, checked out at
+`../analyzer`. Every Goblint reference below was read in that checkout. Secondary
+references: PR #351 (this branch's typed IR and lowering), PR #350 (generic
+commands, location elaboration), PR #172 (`Kind_Tagged.thy`, `IKIND_MIGRATION.md`).
+
+Each row of the tables says which of three things a design point is:
+
+- **G**: Goblint's behavior, reproduced.
+- **I**: an adaptation Isabelle needs (class laws, totality, the solver's
+  interface).
+- **V**: a deliberate VIMP language difference.
+
+## 1. Stage 0: Goblint reference
+
+### 1.1 Expressions, variables, CFG
+
+| Goblint | Source | Voblint target | Kind |
+| --- | --- | --- | --- |
+| Every CIL expression carries its type: `BinOp(op,e1,e2,t)`, `CastE(k,t,e)`, `CInt(n,ik,_)`, lvalues through their varinfo; `typeOf`, `get_ikind_exp` | `common/util/cilfacade.ml:256-262,335-369,459` | `texp` nodes carry their kind (`texp_kind`) | G |
+| CIL inserts `CastE` for promotion and arithmetic conversion, assignment, arguments, return | goblint-cil `cabs2cil.ml:1363-1460,3529,4477,6991` | `elaborate`, `elab_com`, `elab_args` insert `TCast` at the same places | G |
+| A varinfo is one variable; locals are per function (`fundec.slocals`) | CIL | `var_id` with `GlobalId`, `ScopedId`, `ReturnId` | G |
+| One return variable `return_varinfo ()`, written with the function's return type as `t_override` | `analyses/base.ml:2078-2109` | return slot per procedure (`ReturnId p`), value already converted by elaboration | I (the frame stack must find the slot without the callee's fundec) |
+| CFG edges `Assign`, `Proc`, `Entry`, `Ret`, `Test`, `Skip` over typed `exp` | `common/framework/edge.ml:10-35` | `edge_action`, `call_action` over `var_id`, `texp` | G |
+| Global initializers become `Assign` edges; no initializer means a zero initializer | `common/framework/cfgTools.ml:680-720` | globals start at zero in the initial store set | G (as a set, not as edges) |
+| `x = f()` with a type mismatch becomes `tmp = f(); x = (T)tmp` | `cabs2cil.ml:4831-4847` | the destination write converts (`l_store`) | I (no temporary; same value) |
+
+### 1.2 Integer domain signature (`IntDomain.S`)
+
+`cdomain/value/cdomains/intDomain_intf.ml`:
+
+| Operation | Signature | Line |
+| --- | --- | --- |
+| `add sub mul div neg` | `?no_ov:bool -> Cil.ikind -> t -> t -> t` | 213-217 |
+| `rem`, `lt le gt ge eq ne`, `logand ...` | `Cil.ikind -> t -> t -> t` (from `ArithIkind`) | 72-136 |
+| `cast_to` | `?suppress_ovwarn -> kind:castkind -> ?from_ik:Cil.ikind -> ?no_ov:bool -> Cil.ikind -> t -> t` | 218 |
+| `join meet widen narrow` | `Cil.ikind -> t -> t -> t` | 223-226 |
+| `leq` | `t -> t -> bool`, no kind (`Lattice.PO`) | `domain/lattice.ml:16-28` |
+| `top_of bot_of` | `Cil.ikind -> t` | 139-179 |
+| `of_int of_bool of_interval starting ending` | `Cil.ikind -> ... -> t` | 230-240 |
+| `refine_with_interval/_congruence/...` | `Cil.ikind -> t -> ... -> t` | 243-249 |
+
+Voblint target: a locale `int_domain_ik` with exactly these operations and kind
+arguments, minus the bit operations, shifts, exclusion lists and bitfields VIMP
+has no syntax for (V). `?no_ov` and `?suppress_ovwarn` belong to overflow warnings,
+which come later (§1.6).
+
+### 1.3 Normalization and Interval
+
+| Goblint | Source | Voblint target | Kind |
+| --- | --- | --- | --- |
+| `should_wrap ik`: unsigned, or signed with `signed_overflow = "assume_wraparound"` | `intDomain0.ml:67` | `should_wrap pol ik` with policy `Wrap` or `Top` | G |
+| `Size.range ik`, `Size.cast ik` (modular) | `intDomain0.ml:284-353` | `ik_range`, `ik_norm` | G |
+| `norm ik`: empty stays empty; in range unchanged; on overflow, if `should_wrap`: width above range gives `top_of ik`, else cast both bounds and give `top_of ik` if they cross; otherwise clamp under `assume_none`, else `top_of ik` | `int/intervalDomain.ml:35-69` | `ivl_norm pol ik`, same case split, no `assume_none` branch | G, minus V (`assume_none` is unsound for wrapping semantics) |
+| `top_of ik = Some (range ik)`, `bot_of ik = None` | `intervalDomain.ml:12-24` | `ivl_top_of ik`, `ivl_bot` | G |
+| `join ik` and `meet ik` normalize the plain join and meet | `intervalDomain.ml:77-87` | same | G |
+| arithmetic: unbounded `IArith` then `norm ik` | `intervalDomain.ml:307-316`, `intDomain0.ml:400-496` | the existing mathematical interval operations, then `ivl_norm` | G (and no second arithmetic: the typed one is built on the mathematical one) |
+| `cast_to = norm ~cast:true` (no clamp) | `intervalDomain.ml:140` | `ivl_cast_to pol ik` | G |
+| `widen ik`: keep a bound that did not grow, else jump to `min_ik`/`max_ik` (or a threshold), then `norm` | `intervalDomain.ml:142-162` | `ivl_widen ik`, thresholds left out at first | G for in-range operands; I for operands outside the range (§2.2) |
+| `narrow ik`: improve a bound only if it is the type bound or a threshold | `intervalDomain.ml:164-179` | `ivl_narrow ik` | G |
+
+### 1.4 Kind-carrying values
+
+| Goblint | Source | Voblint target | Kind |
+| --- | --- | --- | --- |
+| `IntDomLifter`: `{v; ikind}`; operations use the value's own kind | `intDomain0.ml:170-268` | `KD ik a` | G |
+| `join meet widen narrow` raise `IncompatibleIKinds` on a kind mismatch | `intDomain0.ml:181,194-197` | defined results (below) | I (totality) |
+| `bot ()`, `top ()` fail; only `bot_of ik`, `top_of ik` exist | `intDomain0.ml:184-189` | `KD ik (bot_of ik)`, `KD ik (top_of ik)` | G |
+| `leq` ignores the kind | `intDomain0.ml:191-193` | `KD k a ≤ KD l b` requires `k = l` | I (antisymmetry) |
+| The value domain around it: `Bot`, `Int of ID.t`, `Top`; Int join and widen catch `IncompatibleIKinds` and give `Top` | `valueDomain.ml:612-650` | `'a kd` with `KBot`, `KD ikind 'a`, `KTop`; mismatched join and widen give `KTop` | G |
+| Value-domain meet and narrow of mismatched Ints raise (no catch) | `valueDomain.ml:705-736` | mismatched meet and narrow keep the left operand | I (totality; sound because meet is only used to refine) |
+| `cast_to` is the only operation that changes the kind | `intDomain0.ml:261` | same | G |
+
+`'a kd` is PR #172's `Kind_Tagged.thy` representation. Its two extra
+constructors are the value domain's `Bot` and `Top`, not inventions for the class
+laws. What changes against PR #172: widening calls the component's `widen ik`
+(Goblint's code) instead of clamping a mathematical widening.
+
+### 1.5 Transfers and initialization
+
+| Goblint | Source | Voblint target | Kind |
+| --- | --- | --- | --- |
+| Binary operation: compute in the operand kind, then `cast_to Internal result_ik` | `base.ml:392-394` | typed abstract evaluator, same order | G |
+| A store converts to the declared type at the target (`update_offset`) | `valueDomain.ml:1089-1095`, `base.ml:1693-1834` | `l_store` concretely; abstract assign converts to `κ x` | G |
+| A read casts to the static address type | `base.ml:573-591` | no read conversion; the kind-consistency invariant makes it the identity | G in effect |
+| Locals start at `init_value`: `Int (top_of ik)` | `valueDomain.ml:197-215`, `base.ml:2072-2076` | abstract entry seeds locals with `KD (κ x) (top_of)` | G |
+| Arguments bound without conversion at entry | `base.ml:2179-2214` | same; elaboration converted them | G |
+| Guard through `CastE` to an int type refines the operand only if the cast is dynamically safe for its current value | `analyses/baseInvariant.ml:847-864` | backward refinement through `TCast` under the same condition | G |
+| Relational: assert type bounds after assign, at entry for formals and locals, after combine; injective casts dropped, others fall back | `relationAnalysis.apron.ml:199-259,348-350,446`, `sharedFunctions.apron.ml:177-203` | Order: same three points; casts that cannot change the value are transparent | G |
+
+### 1.6 Overflow
+
+| Goblint | Source | Voblint target | Kind |
+| --- | --- | --- | --- |
+| `sem.int.signed_overflow`: `assume_top` (default), `assume_wraparound`, `assume_none` | `config/options.schema.json:1629-1636` | abstract policies `Top` and `Wrap` | G |
+| `assume_none` assumes no signed overflow | `intDomain0.ml:71` | not offered | V: the concrete semantics wraps, so assuming no overflow is unsound |
+| Unsigned always wraps | `intDomain0.ml:67` | same in both policies | G |
+| Overflow warnings from `IntDomTuple.check_ov` | `int/intDomTuple.ml:64-90` | later, as a diagnostic outside the theorem | deferred |
+
+The concrete semantics is fixed: every kind wraps (V, the `-fwrapv` reading).
+`Top` and `Wrap` are abstract policies; both over-approximate that semantics.
+
+### 1.7 Not modeled
+
+Bit operations and shifts, floats, pointers, bitfields, exclusion lists and
+`Enums`, `IntervalSet`, `Bitfield`, `DefExc` (V: VIMP has no syntax or no domain
+for them).
+
+## 2. Design
+
+### 2.1 Generic semantic core (stage 1)
+
+The command datatype is generic. The CFG, compiler, step semantics, simulation
+and collecting semantics become generic in the variable type `'v` and the
+expression type `'e`. A small record carries what the instances differ in; a
+locale states the laws the simulation proofs need. Both are Isabelle machinery
+(I), not Goblint architecture. Fields beyond these four are added only when a
+proof needs them.
+
+```isabelle
+record ('v, 'e) lang =
+  l_eval   :: "'e ⇒ ('v ⇒ int) ⇒ int"   (* aval    | teval *)
+  l_global :: "'v ⇒ bool"                (* 𝒢      | tglobal *)
+  l_ret    :: "pname ⇒ 'v"               (* λ_. ret_var | ReturnId *)
+  l_store  :: "'v ⇒ int ⇒ int"           (* λ_ n. n | λv. ik_norm (κ v) *)
+
+locale lang_laws =
+  fixes L :: "('v, 'e) lang"
+  assumes ret_local:  "¬ l_global L (l_ret L p)"
+      and store_idem: "l_store L v (l_store L v n) = l_store L v n"
+```
+
+Candidate generic signatures, to be confirmed on the vertical slice:
+
+```isabelle
+datatype ('v, 'e) gedge_action = EA_Nop | EA_Assign 'v 'e | EA_Special "'e gspecial" 'v
+  | EA_Assume 'e | EA_AssumeNot 'e | EA_Body pname | EA_Ret "'e option" pname
+  | EA_Check check_label 'e
+datatype ('v, 'e) gcall_action = CallEdge "'v option" "'v list" "'e list"
+record ('v, 'e) gcfg = intra :: "(cfg_node × ('v,'e) gedge_action × cfg_node) set"
+  calls :: "(cfg_node × ('v,'e) gcall_action × cfg_node × cfg_node) set"
+  cfg_entry :: cfg_node   checks :: "(cfg_node × 'e) set"
+
+edge_step  :: "('v,'e) lang ⇒ ('v,'e) gedge_action ⇒ ('v ⇒ int) ⇒ ('v ⇒ int) set"
+pstep      :: "('v,'e) lang ⇒ ('a,'v,'e) gptable ⇒ ('a,'v,'e) gcom × ('v ⇒ int) × 'v gframe list ⇒ ... ⇒ bool"
+cstep      :: "('v,'e) lang ⇒ ('v,'e) gcfg ⇒ cfg_node × ('v ⇒ int) × 'v gcframe list ⇒ ... ⇒ bool"
+compile    :: "('a,'v,'e) gptable ⇒ pname ⇒ ('a,'v,'e) gcom ⇒ cfg_node ⇒ nat ⇒ nat × cfg_node × ... set × ... set"
+csim       :: "('a,'v,'e) gptable ⇒ ('v,'e) gcfg ⇒ pname ⇒ ... ⇒ ... ⇒ bool"
+```
+
+Frames record the callee so that a return reaches `l_ret` of the right
+procedure. The current names (`edge_action`, `cfg`, `pstep 𝒢`, ...) become the
+instance at `untyped_lang 𝒢 = ⦇aval, 𝒢, λ_. ret_var, λ_ n. n⦈`, and the existing
+theorem names stay available at that instance.
+
+Acceptance for stage 1: every existing theorem still holds under its name; the
+untyped compiler builds the same graphs (pinned by evaluating `prog_cfg` on the
+compile regressions before and after); `csim_star`, `compile_prog_elab_pt`,
+`csim_point_compile_prog`, `at_node` and the ∃/∀ `run_voblint_source_sound` are
+unchanged; codegen output differs only in type parameters.
+
+Order of work: a vertical slice first (generic `CFG_Def` edge types and
+`edge_step`, untyped abbreviations, full build green, commit), then `pstep` and
+frames, then the compiler and simulation, then collecting semantics.
+
+### 2.2 Kind-tagged values (stage 4)
+
+`'a kd = KBot | KD ikind 'a | KTop` with:
+
+- order: `KBot` least, `KTop` greatest, `KD k a ≤ KD l b ⟷ k = l ∧ a ≤ b`;
+- join: same kind joins componentwise with `join k`; different kinds give `KTop`
+  (Goblint's value-domain catch);
+- widen: same kind widens with the component's `widen k`; different kinds give
+  `KTop`; `KBot` is neutral;
+- narrow and meet: same kind uses the component's operation at `k`; different
+  kinds keep the left operand;
+- `γ (KD k a) = γ a ∩ ik_range k`, `γ KBot = {}`, `γ KTop = UNIV`.
+
+The component widening must satisfy the class laws for every operand, while
+Goblint's `widen ik` can shrink an operand that lies outside the range (its `norm`
+would). For in-range operands, which every kind-consistent state contains, the
+Voblint operation is Goblint's code; for out-of-range operands it keeps the
+operand's bound instead of jumping (I). Narrowing likewise.
+
+Kind consistency: a state is consistent when the value at `x` is `KBot` or
+`KD (κ x) a` with `a` in the range of `κ x`. Initial states, transfers, joins,
+widening and narrowing preserve it, so `KTop` never occurs at a declared variable.
+
+### 2.3 Mathematical integers
+
+`ikind` keeps its eight finite machine kinds. The mathematical analyzer keeps the
+existing kind-free domain interface. The typed operations are built on top of it
+the way Goblint's `IntervalFunctor` builds `add ik` from `IArith.add` and
+`norm ik`, so the two analyzers share one arithmetic and differ only in the
+normalization. There is no `IMath` kind (V for the mathematical mode; it has no
+Goblint counterpart).
+
+### 2.4 Initialization
+
+Three distinct things:
+
+1. Frame initialization (concrete): at a call, every non-global identity is
+   reset to 0, then formals are bound. This is VIMP's existing `enter_state`.
+2. Declaration initialization (concrete): the frontend starts each declared
+   local with `x = __voblint_nondet_int()`, which the destination conversion
+   turns into an arbitrary value of `κ x`.
+3. Abstract entry: locals are seeded with `top_of (κ x)`, as Goblint's
+   `init_value`. That covers both 1 and 2.
+
+Globals start at zero concretely and abstractly.
+
+## 3. Stages
+
+| Stage | Content | Exit |
+| --- | --- | --- |
+| 0 | Goblint reference (this document) | done |
+| 1 | Generic CFG, compiler, `pstep`/`cstep`, simulation, collecting semantics; untyped instance | all existing theorems and outputs unchanged |
+| 2 | Typed instance: compile `elab_com` output directly; generalize location elaboration; typed simulation, traces, collecting | typed source runs simulated by the typed CFG; no read casts |
+| 3 | Concrete `styped` preservation (assign, entry, binding, return, restore, call destinations, library and nondeterministic results); abstract kind consistency | invariants proved |
+| 4 | `int_domain_ik`, `'a kd`, Interval with `norm`, `cast_to`, `widen`, `narrow`, kind-aware arithmetic, guard refinement through casts; typed Interval end to end | executable typed Interval with its own soundness theorem |
+| 5 | Congruence, Sign, Parity, Int product, Order | every configuration sound; precision changes classified |
+| 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem | the CLI's typed analysis is the one the theorem covers |
+
+Review boundary: after stage 2. The typed-to-lowered simulation (`tstep_sim`,
+`run_voblint_typed_sound`) and the mathematical analyzer stay until a separate
+review decides otherwise.
+
+Every checkpoint: full batch build, `isar-check`, codegen and drift checks, CLI,
+regression and property tests; no `sorry`, `oops` or new axioms; local commit;
+no push without approval.
+
+## 4. Risks
+
+- Stage 1 touches about 9,000 lines of proved compiler and simulation theories
+  and the generated code's type parameters. The vertical slice comes first so a
+  wrong interface shows up early.
+- Location elaboration (`elab`, `elab_pt`, `point`) is over `'a acom`; the typed
+  instance needs it over `('a, var_id, texp) gcom`.
+- Frames gaining a callee field touch every proof that matches `Frame s dst`.

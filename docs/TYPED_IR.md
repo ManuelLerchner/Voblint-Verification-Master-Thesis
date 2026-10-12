@@ -43,7 +43,11 @@ Globals start at zero, as C's static storage does. A declared local starts at an
 arbitrary value of its kind: the parser begins the body with
 `x = __voblint_nondet_int();` for each declared local, so the typed semantics
 converts that value to the local's kind. `(k) e` converts explicitly in any
-program. The Isabelle `program { ... }` notation reads untyped programs only; a
+program. A literal of a typed program must fit `i64`, the widest kind an
+unsuffixed C decimal literal can take; the frontend rejects a larger one, which
+the typed semantics would wrap. The printer (`vimp_printer.ml`) prints VIMP, so a
+typed program prints as its lowering, with its conversions and without its
+declarations; it does not reproduce typed source. The Isabelle `program { ... }` notation reads untyped programs only; a
 typed program in a theory is written `typed_prog p ds`.
 
 ## What is defined and proved
@@ -97,6 +101,12 @@ untyped run of the lowering reaches `(lower_com c, s, fs)`, with `s` related to
 collecting semantics, the report and every definite verdict admit `s`. Through
 `srel`, a well-typed expression of the running activation has the same value on
 `t` and on `s` (`teval_lower_scoped`).
+
+The guarantee is about the lowered store `s`. The theorem does not state that
+`t` lies in a typed collecting semantics, and a verdict is read over `s`, not
+over `t`. Reading it over `t` needs the check expression's correspondence:
+`teval_lower_scoped` gives it for a well-typed expression of the running
+activation.
 
 The theorem needs no CFG, trace semantics or analyzer for the typed language.
 The simulation transfers typed runs to the lowered program, and the existing
