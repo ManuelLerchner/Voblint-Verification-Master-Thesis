@@ -783,6 +783,47 @@ lemma congruence_mod_mono:
 
 subsection \<open>Abstract expression evaluation\<close>
 
+text \<open>A conversion to a machine kind maps a singleton class to the converted constant.
+  Wraparound shifts a value by a multiple of \<open>2 ^ bits\<close>, which keeps a class only when
+  its modulus divides that power, so any other nonempty class becomes top.\<close>
+
+definition congruence_cast :: "ikind \<Rightarrow> congruence \<Rightarrow> congruence" where
+  "congruence_cast ik a =
+     (if is_empty a then bot
+      else case congruence_singleton a of
+             Some c \<Rightarrow> congruence_of_int (ik_norm ik c)
+           | None \<Rightarrow> top)"
+
+lemma congruence_cast_sound:
+  assumes "i \<in> gamma_congruence a"
+  shows "ik_norm ik i \<in> gamma_congruence (congruence_cast ik a)"
+proof -
+  have ne: "\<not> is_empty a" using assms is_empty_correct [of a] by auto
+  show ?thesis
+  proof (cases "congruence_singleton a")
+    case (Some c)
+    with congruence_singleton_sound [OF Some assms] ne show ?thesis
+      by (simp add: congruence_cast_def)
+  qed (use ne in \<open>simp add: congruence_cast_def\<close>)
+qed
+
+lemma congruence_cast_mono:
+  assumes le: "a1 \<le> a2"
+  shows "congruence_cast ik a1 \<le> congruence_cast ik a2"
+proof (cases "is_empty a1")
+  case True
+  then show ?thesis by (simp add: congruence_cast_def)
+next
+  case False
+  then have ne2: "\<not> is_empty a2" using is_empty_antimono [OF le] by blast
+  show ?thesis
+  proof (cases "congruence_singleton a2")
+    case (Some c)
+    with congruence_singleton_le [OF False le Some] False ne2 show ?thesis
+      by (simp add: congruence_cast_def)
+  qed (use False ne2 in \<open>simp add: congruence_cast_def\<close>)
+qed
+
 text \<open>
   \<open>aval_congruence\<close> evaluates an expression bottom-up with the congruence operations above.
   A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
@@ -844,13 +885,14 @@ where
       else of_bool_option congruence_of_int
              (or_opt (congruence_tobool (aval_congruence e1 sigma))
                 (congruence_tobool (aval_congruence e2 sigma))))"
+| "aval_congruence (Cast ik e) sigma = congruence_cast ik (aval_congruence e sigma)"
 
 interpretation congruence_arith: mono_arith_ops
     aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod
-    congruence_lt congruence_eqb congruence_tobool
+    congruence_lt congruence_eqb congruence_tobool congruence_cast
   apply unfold_locales
   apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
-    congruence_div_sound congruence_mod_sound
+    congruence_div_sound congruence_mod_sound congruence_cast_sound congruence_cast_mono
                         congruence_plus_mono congruence_minus_mono congruence_times_mono
                           congruence_div_mono congruence_mod_mono
                         congruence_lt_sound congruence_eqb_sound

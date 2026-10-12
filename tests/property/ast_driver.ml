@@ -113,7 +113,19 @@ let rec build_exp = function
   | Slist [ Atom "Not"; a ] -> Not (build_exp a)
   | Slist [ Atom "And"; a; b ] -> And (build_exp a, build_exp b)
   | Slist [ Atom "Or"; a; b ] -> Or (build_exp a, build_exp b)
+  | Slist [ Atom "Cast"; Atom k; a ] -> Cast (build_kind k, build_exp a)
   | s -> failwith ("ast_driver: bad exp sexp: " ^ show_sexp s)
+
+and build_kind = function
+  | "i8" -> I8
+  | "u8" -> U8
+  | "i16" -> I16
+  | "u16" -> U16
+  | "i32" -> I32
+  | "u32" -> U32
+  | "i64" -> I64
+  | "u64" -> U64
+  | k -> failwith ("ast_driver: bad kind: " ^ k)
 
 and build_exp_opt = function
   | Atom "None" -> None

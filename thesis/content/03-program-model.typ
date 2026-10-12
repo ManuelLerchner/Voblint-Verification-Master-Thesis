@@ -150,11 +150,11 @@ calls `bump(5)` and `bump(4)`, is a running example throughout the remaining cha
 VIMP (@fig:vimp-island) is the small imperative language with C-like syntax
 that the formalization analyzes. It is kept small because every construct needs a
 semantics, compiler clauses, and a transfer function proved sound in every
-abstract domain. It has unbounded integer variables, locals and globals,
-procedures with value parameters, direct calls with an optional result,
-recursion, assignment, sequencing, conditionals, `while` loops,
-nondeterministic input, and checks. It omits machine integers, pointers and the
-heap, arrays and structs, indirect calls, threads, floating point, `goto`,
+abstract domain. It has integer variables, which are unbounded unless the
+program declares machine kinds, locals and globals, procedures with value
+parameters, direct calls with an optional result, recursion, assignment,
+sequencing, conditionals, `while` loops, nondeterministic input, and checks. It
+omits pointers and the heap, arrays and structs, indirect calls, threads, floating point, `goto`,
 `break`, `continue`, and exceptions. Each of these would need its own
 preservation argument at every layer (@ch:conclusion discusses the heap).
 @sec:vimp-vs-c compares the fragment with C and with Goblint's input.
@@ -457,8 +457,7 @@ wherever both languages have a construct but model it differently.
       inset: (x: 3.5pt, y: 2.2pt),
       table.hline(),
       [], [*VIMP*], [*C11*],
-      table.hline(stroke: 0.5pt),
-      [integers], [unbounded],
+      table.hline(stroke: 0.5pt), [integers], [unbounded; wraps at a kind],
       [signed overflow undefined (#c11("6.5p5"))],
       [], [], [unsigned arithmetic wraps (#c11("6.2.5p9"))],
       [`a / 0`, `a % 0`], [$0$ and $a$], [undefined (#c11("6.5.5p5"))],
@@ -483,8 +482,8 @@ wherever both languages have a construct but model it differently.
 ) <tab:vimp-vs-c>
 
 Each row is a place where a statement true of a VIMP program does not necessarily hold for
-the corresponding C program. Unbounded integers and defined division by zero
-can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
+the corresponding C program. Unbounded integers, wrapping signed overflow and
+defined division by zero can flip a verdict. After `z = 5 / 0;` the check `z == 0` holds in VIMP, so a
 #verdict("PROVED") verdict on a program that divides by zero says nothing about C. The
 analyzer therefore reports a possible zero divisor as a separate diagnostic,
 and its absence at a reached node proves the divisor nonzero there
@@ -495,6 +494,19 @@ and issue #link("https://github.com/goblint/analyzer/issues/1156")[1156]
 (@sec:eval-1161). Evaluating both
 operands of `&&` is harmless, because expressions are total and have no
 effects. It gives the short-circuit value. Only the division diagnostic differs. It warns about the divisor in `x != 0 && 10 / x > 1`.
+
+A program can instead declare machine kinds. Declarations give a C integer type
+such as `u8` to a global, to a formal or local of one procedure, or to a
+procedure's return value, and `(k) e` converts explicitly. Such a program is not
+analyzed as written. The verified #isaconst("typed_prog") resolves every name to a
+static identity, computes every operation at its C type under integer promotion
+and the usual arithmetic conversions, and lowers the result to an ordinary VIMP
+program in which every conversion is a #ctor("Cast") node that wraps a value into
+the range of its kind. On every store, the lowered expressions compute the typed
+meaning of the source expressions (#isathm("lower_elaborate"),
+#isathm("lower_com_meaning")), so the analyzer and its theorem apply to the
+lowered program unchanged. Signed overflow then wraps, which C leaves undefined
+(#c11("6.5p5")).
 
 The initial values that VIMP fixes are ones C leaves open. Every source-level
 theorem assumes an initial store from #isaconst("cinit_stores"), with globals

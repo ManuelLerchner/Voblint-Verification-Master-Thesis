@@ -367,6 +367,8 @@ next
   case (And e1 e2) then show ?case by simp
 next
   case (Or e1 e2) then show ?case by simp
+next
+  case (Cast ik e) then show ?case by simp
 qed
 
 text \<open>
@@ -540,6 +542,8 @@ next
   case (And e1 e2) then show ?case by (simp add: live_default_st_def)
 next
   case (Or e1 e2) then show ?case by (simp add: live_default_st_def)
+next
+  case (Cast ik e) then show ?case by (simp add: live_default_st_def)
 qed
 
 lemma bfilter_st_lift_correct:
@@ -666,6 +670,10 @@ next
     show ?case
       by (simp add: Let_def case_prod_beta bind_lift_left_identity
           afilter_lift_step[OF afilter_st_lift_correct afilter_st_lift_correct[OF NotEq.prems]])
+next
+  case (Cast ik e)
+  then show ?case
+    by (simp add: Let_def case_prod_beta bind_lift_left_identity live_default_st_def)
 qed
 
 text \<open>

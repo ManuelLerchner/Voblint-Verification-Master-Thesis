@@ -1,0 +1,9 @@
+// PARAM: --analysis interval
+// At u8, 250 + 10 is computed at i32 (260) and converted back to u8, which
+// wraps it to 4.
+fun main() {
+  u8 x;
+  x = 250;
+  x = x + 10;
+  __voblint_check(x == 4); // PROVED
+}

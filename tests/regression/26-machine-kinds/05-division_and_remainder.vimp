@@ -1,0 +1,12 @@
+// PARAM: --analysis interval
+// Signed division truncates toward zero. INT_MIN / -1 overflows, which C
+// leaves undefined; here it wraps back to INT_MIN.
+fun main() {
+  i32 x;
+  i32 y;
+  x = -2147483648;
+  y = x / -1;
+  __voblint_check(y == -2147483648); // PROVED
+  __voblint_check(-7 / 2 == -3); // PROVED
+  __voblint_check(-7 % 2 == -1); // PROVED
+}

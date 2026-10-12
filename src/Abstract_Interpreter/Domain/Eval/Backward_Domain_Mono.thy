@@ -314,6 +314,8 @@ next
   case (And e1 e2) then show ?case by simp
 next
   case (Or e1 e2) then show ?case by simp
+next
+  case (Cast ik e) then show ?case by simp
 qed
 
 text \<open>

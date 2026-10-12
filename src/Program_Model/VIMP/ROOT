@@ -18,6 +18,7 @@ session Voblint_VIMP in "." = "HOL-Library" +
        session and would otherwise each elaborate it. This is their nearest
        common ancestor. *)
     "HOL-Computational_Algebra.Euclidean_Algorithm"
+    Machine_Kind
     VIMP_Syntax
     VIMP_Globals
     VIMP_Expr

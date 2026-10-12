@@ -187,7 +187,7 @@ let exp_vars e =
   let rec go acc = function
     | C.N _ -> acc
     | C.V x -> if List.mem x acc then acc else acc @ [ x ]
-    | C.Not a -> go acc a
+    | C.Not a | C.Cast (_, a) -> go acc a
     | C.Plus (a, b)
     | C.Minus (a, b)
     | C.Times (a, b)

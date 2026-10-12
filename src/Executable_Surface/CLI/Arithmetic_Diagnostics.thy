@@ -44,6 +44,7 @@ fun arithmetic_obligations :: "exp \<Rightarrow> arithmetic_obligation list" whe
      arithmetic_obligations a @ arithmetic_obligations b"
 | "arithmetic_obligations (NotEq a b) =
      arithmetic_obligations a @ arithmetic_obligations b"
+| "arithmetic_obligations (Cast _ a) = arithmetic_obligations a"
 
 text \<open>The set specification ignores occurrence numbering and names every denominator
   appearing anywhere in an expression. The extraction theorem connects it to the
@@ -79,6 +80,7 @@ fun expression_divisors :: "exp \<Rightarrow> exp set" where
      expression_divisors a \<union> expression_divisors b"
 | "expression_divisors (NotEq a b) =
      expression_divisors a \<union> expression_divisors b"
+| "expression_divisors (Cast _ a) = expression_divisors a"
 
 lemma arithmetic_obligations_divisors:
   "arithmetic_divisor ` set (arithmetic_obligations e) = expression_divisors e"

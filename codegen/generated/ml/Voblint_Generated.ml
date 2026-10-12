@@ -77,14 +77,17 @@ module Generated : sig
   val integer_of_int : int -> Z.t
   type 'a set
   type nat
-  val nat_of_integer : Z.t -> nat
   val integer_of_nat : nat -> Z.t
+  val nat_of_integer : Z.t -> nat
   type ('a, 'b) sum = Inl of 'a | Inr of 'b
+  type var_id = GlobalId of string | ScopedId of string * string |
+    ReturnId of string
+  type ikind = I8 | U8 | I16 | U16 | I32 | U32 | I64 | U64
   type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
     Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp
     | LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
     NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
-    Or of exp * exp
+    Or of exp * exp | Cast of ikind * exp
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
   type sign
@@ -179,6 +182,8 @@ module Generated : sig
   val cfg_node_list : unit cfg_ext -> cfg_node list
   val arithmetic_divisor : arithmetic_obligation -> exp
   val prog_cfg : unit imp_prog_ext -> unit cfg_ext
+  val typed_prog :
+    unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val mk_program :
     (string * (unit, unit) gproc_decl_ext) list ->
@@ -941,11 +946,48 @@ type 'a linorder = {order_linorder : 'a order};;
 
 let linorder_int = ({order_linorder = order_int} : int linorder);;
 
+type 'a semiring_parity =
+  {semiring_modulo_semiring_parity : 'a semiring_modulo};;
+
+type 'a ring_parity =
+  {semiring_parity_ring_parity : 'a semiring_parity;
+    comm_ring_1_ring_parity : 'a comm_ring_1};;
+
+let semiring_parity_int =
+  ({semiring_modulo_semiring_parity = semiring_modulo_int} :
+    int semiring_parity);;
+
+let ring_parity_int =
+  ({semiring_parity_ring_parity = semiring_parity_int;
+     comm_ring_1_ring_parity = comm_ring_1_int}
+    : int ring_parity);;
+
+type nat = Nat of Z.t;;
+
+let rec integer_of_nat (Nat x) = x;;
+
+let rec push_bit_integer n k = Bit_Shifts.push (integer_of_nat n) k;;
+
+let rec bit_integer
+  k n = not (Z.equal (Z.logand k (push_bit_integer n (Z.of_int 1))) Z.zero);;
+
+let rec bit_int (Int_of_integer k) n = bit_integer k n;;
+
+type 'a semiring_bits =
+  {semiring_parity_semiring_bits : 'a semiring_parity;
+    semiring_modulo_trivial_semiring_bits : 'a semiring_modulo_trivial;
+    bit : 'a -> nat -> bool};;
+let bit _A = _A.bit;;
+
+let semiring_bits_int =
+  ({semiring_parity_semiring_bits = semiring_parity_int;
+     semiring_modulo_trivial_semiring_bits = semiring_modulo_trivial_int;
+     bit = bit_int}
+    : int semiring_bits);;
+
 let rec comp f g = (fun x -> f (g x));;
 
 let rec max _A a b = (if less_eq _A a b then b else a);;
-
-type nat = Nat of Z.t;;
 
 let ord_integer = ({less_eq = Z.leq; less = Z.lt} : Z.t ord);;
 
@@ -1001,6 +1043,84 @@ let factorial_ring_gcd_int =
      idom_divide_factorial_ring_gcd = idom_divide_int}
     : int factorial_ring_gcd);;
 
+let rec unset_bit_integer
+  n k = Z.logand k (Z.lognot (push_bit_integer n (Z.of_int 1)));;
+
+let rec unset_bit_int
+  n (Int_of_integer k) = Int_of_integer (unset_bit_integer n k);;
+
+let rec mask_integer n = Z.sub (push_bit_integer n (Z.of_int 1)) (Z.of_int 1);;
+
+let rec take_bit_integer n k = Z.logand k (mask_integer n);;
+
+let rec take_bit_int
+  n (Int_of_integer k) = Int_of_integer (take_bit_integer n k);;
+
+let rec push_bit_int
+  n (Int_of_integer k) = Int_of_integer (push_bit_integer n k);;
+
+let rec flip_bit_integer n k = Z.logxor k (push_bit_integer n (Z.of_int 1));;
+
+let rec flip_bit_int
+  n (Int_of_integer k) = Int_of_integer (flip_bit_integer n k);;
+
+let rec drop_bit_integer n k = Bit_Shifts.drop (integer_of_nat n) k;;
+
+let rec drop_bit_int
+  n (Int_of_integer k) = Int_of_integer (drop_bit_integer n k);;
+
+let rec set_bit_integer n k = Z.logor k (push_bit_integer n (Z.of_int 1));;
+
+let rec set_bit_int
+  n (Int_of_integer k) = Int_of_integer (set_bit_integer n k);;
+
+let rec mask_int n = Int_of_integer (mask_integer n);;
+
+let rec xor_int
+  (Int_of_integer k) (Int_of_integer l) = Int_of_integer (Z.logxor k l);;
+
+let rec and_int
+  (Int_of_integer k) (Int_of_integer l) = Int_of_integer (Z.logand k l);;
+
+let rec or_int
+  (Int_of_integer k) (Int_of_integer l) = Int_of_integer (Z.logor k l);;
+
+type 'a semiring_bit_operations =
+  {semiring_bits_semiring_bit_operations : 'a semiring_bits;
+    anda : 'a -> 'a -> 'a; ora : 'a -> 'a -> 'a; xor : 'a -> 'a -> 'a;
+    mask : nat -> 'a; set_bit : nat -> 'a -> 'a; unset_bit : nat -> 'a -> 'a;
+    flip_bit : nat -> 'a -> 'a; push_bit : nat -> 'a -> 'a;
+    drop_bit : nat -> 'a -> 'a; take_bit : nat -> 'a -> 'a};;
+let anda _A = _A.anda;;
+let ora _A = _A.ora;;
+let xor _A = _A.xor;;
+let mask _A = _A.mask;;
+let set_bit _A = _A.set_bit;;
+let unset_bit _A = _A.unset_bit;;
+let flip_bit _A = _A.flip_bit;;
+let push_bit _A = _A.push_bit;;
+let drop_bit _A = _A.drop_bit;;
+let take_bit _A = _A.take_bit;;
+
+let rec not_int (Int_of_integer k) = Int_of_integer (Z.lognot k);;
+
+type 'a ring_bit_operations =
+  {semiring_bit_operations_ring_bit_operations : 'a semiring_bit_operations;
+    ring_parity_ring_bit_operations : 'a ring_parity; nota : 'a -> 'a};;
+let nota _A = _A.nota;;
+
+let semiring_bit_operations_int =
+  ({semiring_bits_semiring_bit_operations = semiring_bits_int; anda = and_int;
+     ora = or_int; xor = xor_int; mask = mask_int; set_bit = set_bit_int;
+     unset_bit = unset_bit_int; flip_bit = flip_bit_int;
+     push_bit = push_bit_int; drop_bit = drop_bit_int; take_bit = take_bit_int}
+    : int semiring_bit_operations);;
+
+let ring_bit_operations_int =
+  ({semiring_bit_operations_ring_bit_operations = semiring_bit_operations_int;
+     ring_parity_ring_bit_operations = ring_parity_int; nota = not_int}
+    : int ring_bit_operations);;
+
 type 'a normalization_euclidean_semiring =
   {euclidean_semiring_normalization_euclidean_semiring : 'a euclidean_semiring;
     factorial_semiring_normalization_euclidean_semiring :
@@ -1034,8 +1154,6 @@ let euclidean_ring_gcd_int =
      euclidean_ring_euclidean_ring_gcd = euclidean_ring_int;
      factorial_ring_gcd_euclidean_ring_gcd = factorial_ring_gcd_int}
     : int euclidean_ring_gcd);;
-
-let rec integer_of_nat (Nat x) = x;;
 
 let rec equal_nata m n = Z.equal (integer_of_nat m) (integer_of_nat n);;
 
@@ -1079,6 +1197,23 @@ let rec equal_suma _A _B x0 x1 = match x0, x1 with Inl x1, Inr x2 -> false
 
 let rec equal_sum _A _B = ({equal = equal_suma _A _B} : ('a, 'b) sum equal);;
 
+type var_id = GlobalId of string | ScopedId of string * string |
+  ReturnId of string;;
+
+let rec equal_var_ida
+  x0 x1 = match x0, x1 with ScopedId (x21, x22), ReturnId x3 -> false
+    | ReturnId x3, ScopedId (x21, x22) -> false
+    | GlobalId x1, ReturnId x3 -> false
+    | ReturnId x3, GlobalId x1 -> false
+    | GlobalId x1, ScopedId (x21, x22) -> false
+    | ScopedId (x21, x22), GlobalId x1 -> false
+    | ReturnId x3, ReturnId y3 -> ((x3 : string) = y3)
+    | ScopedId (x21, x22), ScopedId (y21, y22) ->
+        ((x21 : string) = y21) && ((x22 : string) = y22)
+    | GlobalId x1, GlobalId y1 -> ((x1 : string) = y1);;
+
+let equal_var_id = ({equal = equal_var_ida} : var_id equal);;
+
 let equal_literal = ({equal = (fun a b -> ((a : string) = b))} : string equal);;
 
 let ord_literal =
@@ -1092,25 +1227,102 @@ let order_literal = ({preorder_order = preorder_literal} : string order);;
 
 let linorder_literal = ({order_linorder = order_literal} : string linorder);;
 
+type ikind = I8 | U8 | I16 | U16 | I32 | U32 | I64 | U64;;
+
+let rec equal_ikind x0 x1 = match x0, x1 with I64, U64 -> false
+                      | U64, I64 -> false
+                      | U32, U64 -> false
+                      | U64, U32 -> false
+                      | U32, I64 -> false
+                      | I64, U32 -> false
+                      | I32, U64 -> false
+                      | U64, I32 -> false
+                      | I32, I64 -> false
+                      | I64, I32 -> false
+                      | I32, U32 -> false
+                      | U32, I32 -> false
+                      | U16, U64 -> false
+                      | U64, U16 -> false
+                      | U16, I64 -> false
+                      | I64, U16 -> false
+                      | U16, U32 -> false
+                      | U32, U16 -> false
+                      | U16, I32 -> false
+                      | I32, U16 -> false
+                      | I16, U64 -> false
+                      | U64, I16 -> false
+                      | I16, I64 -> false
+                      | I64, I16 -> false
+                      | I16, U32 -> false
+                      | U32, I16 -> false
+                      | I16, I32 -> false
+                      | I32, I16 -> false
+                      | I16, U16 -> false
+                      | U16, I16 -> false
+                      | U8, U64 -> false
+                      | U64, U8 -> false
+                      | U8, I64 -> false
+                      | I64, U8 -> false
+                      | U8, U32 -> false
+                      | U32, U8 -> false
+                      | U8, I32 -> false
+                      | I32, U8 -> false
+                      | U8, U16 -> false
+                      | U16, U8 -> false
+                      | U8, I16 -> false
+                      | I16, U8 -> false
+                      | I8, U64 -> false
+                      | U64, I8 -> false
+                      | I8, I64 -> false
+                      | I64, I8 -> false
+                      | I8, U32 -> false
+                      | U32, I8 -> false
+                      | I8, I32 -> false
+                      | I32, I8 -> false
+                      | I8, U16 -> false
+                      | U16, I8 -> false
+                      | I8, I16 -> false
+                      | I16, I8 -> false
+                      | I8, U8 -> false
+                      | U8, I8 -> false
+                      | U64, U64 -> true
+                      | I64, I64 -> true
+                      | U32, U32 -> true
+                      | I32, I32 -> true
+                      | U16, U16 -> true
+                      | I16, I16 -> true
+                      | U8, U8 -> true
+                      | I8, I8 -> true;;
+
 type exp = N of int | V of string | Plus of exp * exp | Minus of exp * exp |
   Times of exp * exp | Div of exp * exp | Mod of exp * exp | Less of exp * exp |
   LessEq of exp * exp | Greater of exp * exp | GreaterEq of exp * exp |
   NotEq of exp * exp | Eq of exp * exp | Not of exp | And of exp * exp |
-  Or of exp * exp;;
+  Or of exp * exp | Cast of ikind * exp;;
 
 let rec equal_expa
-  x0 x1 = match x0, x1 with And (x151, x152), Or (x161, x162) -> false
+  x0 x1 = match x0, x1 with Or (x161, x162), Cast (x171, x172) -> false
+    | Cast (x171, x172), Or (x161, x162) -> false
+    | And (x151, x152), Cast (x171, x172) -> false
+    | Cast (x171, x172), And (x151, x152) -> false
+    | And (x151, x152), Or (x161, x162) -> false
     | Or (x161, x162), And (x151, x152) -> false
+    | Not x14, Cast (x171, x172) -> false
+    | Cast (x171, x172), Not x14 -> false
     | Not x14, Or (x161, x162) -> false
     | Or (x161, x162), Not x14 -> false
     | Not x14, And (x151, x152) -> false
     | And (x151, x152), Not x14 -> false
+    | Eq (x131, x132), Cast (x171, x172) -> false
+    | Cast (x171, x172), Eq (x131, x132) -> false
     | Eq (x131, x132), Or (x161, x162) -> false
     | Or (x161, x162), Eq (x131, x132) -> false
     | Eq (x131, x132), And (x151, x152) -> false
     | And (x151, x152), Eq (x131, x132) -> false
     | Eq (x131, x132), Not x14 -> false
     | Not x14, Eq (x131, x132) -> false
+    | NotEq (x121, x122), Cast (x171, x172) -> false
+    | Cast (x171, x172), NotEq (x121, x122) -> false
     | NotEq (x121, x122), Or (x161, x162) -> false
     | Or (x161, x162), NotEq (x121, x122) -> false
     | NotEq (x121, x122), And (x151, x152) -> false
@@ -1119,6 +1331,8 @@ let rec equal_expa
     | Not x14, NotEq (x121, x122) -> false
     | NotEq (x121, x122), Eq (x131, x132) -> false
     | Eq (x131, x132), NotEq (x121, x122) -> false
+    | GreaterEq (x111, x112), Cast (x171, x172) -> false
+    | Cast (x171, x172), GreaterEq (x111, x112) -> false
     | GreaterEq (x111, x112), Or (x161, x162) -> false
     | Or (x161, x162), GreaterEq (x111, x112) -> false
     | GreaterEq (x111, x112), And (x151, x152) -> false
@@ -1129,6 +1343,8 @@ let rec equal_expa
     | Eq (x131, x132), GreaterEq (x111, x112) -> false
     | GreaterEq (x111, x112), NotEq (x121, x122) -> false
     | NotEq (x121, x122), GreaterEq (x111, x112) -> false
+    | Greater (x101, x102), Cast (x171, x172) -> false
+    | Cast (x171, x172), Greater (x101, x102) -> false
     | Greater (x101, x102), Or (x161, x162) -> false
     | Or (x161, x162), Greater (x101, x102) -> false
     | Greater (x101, x102), And (x151, x152) -> false
@@ -1141,6 +1357,8 @@ let rec equal_expa
     | NotEq (x121, x122), Greater (x101, x102) -> false
     | Greater (x101, x102), GreaterEq (x111, x112) -> false
     | GreaterEq (x111, x112), Greater (x101, x102) -> false
+    | LessEq (x91, x92), Cast (x171, x172) -> false
+    | Cast (x171, x172), LessEq (x91, x92) -> false
     | LessEq (x91, x92), Or (x161, x162) -> false
     | Or (x161, x162), LessEq (x91, x92) -> false
     | LessEq (x91, x92), And (x151, x152) -> false
@@ -1155,6 +1373,8 @@ let rec equal_expa
     | GreaterEq (x111, x112), LessEq (x91, x92) -> false
     | LessEq (x91, x92), Greater (x101, x102) -> false
     | Greater (x101, x102), LessEq (x91, x92) -> false
+    | Less (x81, x82), Cast (x171, x172) -> false
+    | Cast (x171, x172), Less (x81, x82) -> false
     | Less (x81, x82), Or (x161, x162) -> false
     | Or (x161, x162), Less (x81, x82) -> false
     | Less (x81, x82), And (x151, x152) -> false
@@ -1171,6 +1391,8 @@ let rec equal_expa
     | Greater (x101, x102), Less (x81, x82) -> false
     | Less (x81, x82), LessEq (x91, x92) -> false
     | LessEq (x91, x92), Less (x81, x82) -> false
+    | Mod (x71, x72), Cast (x171, x172) -> false
+    | Cast (x171, x172), Mod (x71, x72) -> false
     | Mod (x71, x72), Or (x161, x162) -> false
     | Or (x161, x162), Mod (x71, x72) -> false
     | Mod (x71, x72), And (x151, x152) -> false
@@ -1189,6 +1411,8 @@ let rec equal_expa
     | LessEq (x91, x92), Mod (x71, x72) -> false
     | Mod (x71, x72), Less (x81, x82) -> false
     | Less (x81, x82), Mod (x71, x72) -> false
+    | Div (x61, x62), Cast (x171, x172) -> false
+    | Cast (x171, x172), Div (x61, x62) -> false
     | Div (x61, x62), Or (x161, x162) -> false
     | Or (x161, x162), Div (x61, x62) -> false
     | Div (x61, x62), And (x151, x152) -> false
@@ -1209,6 +1433,8 @@ let rec equal_expa
     | Less (x81, x82), Div (x61, x62) -> false
     | Div (x61, x62), Mod (x71, x72) -> false
     | Mod (x71, x72), Div (x61, x62) -> false
+    | Times (x51, x52), Cast (x171, x172) -> false
+    | Cast (x171, x172), Times (x51, x52) -> false
     | Times (x51, x52), Or (x161, x162) -> false
     | Or (x161, x162), Times (x51, x52) -> false
     | Times (x51, x52), And (x151, x152) -> false
@@ -1231,6 +1457,8 @@ let rec equal_expa
     | Mod (x71, x72), Times (x51, x52) -> false
     | Times (x51, x52), Div (x61, x62) -> false
     | Div (x61, x62), Times (x51, x52) -> false
+    | Minus (x41, x42), Cast (x171, x172) -> false
+    | Cast (x171, x172), Minus (x41, x42) -> false
     | Minus (x41, x42), Or (x161, x162) -> false
     | Or (x161, x162), Minus (x41, x42) -> false
     | Minus (x41, x42), And (x151, x152) -> false
@@ -1255,6 +1483,8 @@ let rec equal_expa
     | Div (x61, x62), Minus (x41, x42) -> false
     | Minus (x41, x42), Times (x51, x52) -> false
     | Times (x51, x52), Minus (x41, x42) -> false
+    | Plus (x31, x32), Cast (x171, x172) -> false
+    | Cast (x171, x172), Plus (x31, x32) -> false
     | Plus (x31, x32), Or (x161, x162) -> false
     | Or (x161, x162), Plus (x31, x32) -> false
     | Plus (x31, x32), And (x151, x152) -> false
@@ -1281,6 +1511,8 @@ let rec equal_expa
     | Times (x51, x52), Plus (x31, x32) -> false
     | Plus (x31, x32), Minus (x41, x42) -> false
     | Minus (x41, x42), Plus (x31, x32) -> false
+    | V x2, Cast (x171, x172) -> false
+    | Cast (x171, x172), V x2 -> false
     | V x2, Or (x161, x162) -> false
     | Or (x161, x162), V x2 -> false
     | V x2, And (x151, x152) -> false
@@ -1309,6 +1541,8 @@ let rec equal_expa
     | Minus (x41, x42), V x2 -> false
     | V x2, Plus (x31, x32) -> false
     | Plus (x31, x32), V x2 -> false
+    | N x1, Cast (x171, x172) -> false
+    | Cast (x171, x172), N x1 -> false
     | N x1, Or (x161, x162) -> false
     | Or (x161, x162), N x1 -> false
     | N x1, And (x151, x152) -> false
@@ -1339,6 +1573,8 @@ let rec equal_expa
     | Plus (x31, x32), N x1 -> false
     | N x1, V x2 -> false
     | V x2, N x1 -> false
+    | Cast (x171, x172), Cast (y171, y172) ->
+        equal_ikind x171 y171 && equal_expa x172 y172
     | Or (x161, x162), Or (y161, y162) ->
         equal_expa x161 y161 && equal_expa x162 y162
     | And (x151, x152), And (y151, y152) ->
@@ -2066,6 +2302,71 @@ let rec comparator_list
         (match comp_a x y with Eqa -> comparator_list comp_a xa ya | Lt -> Lt
           | Gt -> Gt);;
 
+let rec comparator_ikind x0 x1 = match x0, x1 with I8, I8 -> Eqa
+                           | I8, U8 -> Lt
+                           | I8, I16 -> Lt
+                           | I8, U16 -> Lt
+                           | I8, I32 -> Lt
+                           | I8, U32 -> Lt
+                           | I8, I64 -> Lt
+                           | I8, U64 -> Lt
+                           | U8, I8 -> Gt
+                           | U8, U8 -> Eqa
+                           | U8, I16 -> Lt
+                           | U8, U16 -> Lt
+                           | U8, I32 -> Lt
+                           | U8, U32 -> Lt
+                           | U8, I64 -> Lt
+                           | U8, U64 -> Lt
+                           | I16, I8 -> Gt
+                           | I16, U8 -> Gt
+                           | I16, I16 -> Eqa
+                           | I16, U16 -> Lt
+                           | I16, I32 -> Lt
+                           | I16, U32 -> Lt
+                           | I16, I64 -> Lt
+                           | I16, U64 -> Lt
+                           | U16, I8 -> Gt
+                           | U16, U8 -> Gt
+                           | U16, I16 -> Gt
+                           | U16, U16 -> Eqa
+                           | U16, I32 -> Lt
+                           | U16, U32 -> Lt
+                           | U16, I64 -> Lt
+                           | U16, U64 -> Lt
+                           | I32, I8 -> Gt
+                           | I32, U8 -> Gt
+                           | I32, I16 -> Gt
+                           | I32, U16 -> Gt
+                           | I32, I32 -> Eqa
+                           | I32, U32 -> Lt
+                           | I32, I64 -> Lt
+                           | I32, U64 -> Lt
+                           | U32, I8 -> Gt
+                           | U32, U8 -> Gt
+                           | U32, I16 -> Gt
+                           | U32, U16 -> Gt
+                           | U32, I32 -> Gt
+                           | U32, U32 -> Eqa
+                           | U32, I64 -> Lt
+                           | U32, U64 -> Lt
+                           | I64, I8 -> Gt
+                           | I64, U8 -> Gt
+                           | I64, I16 -> Gt
+                           | I64, U16 -> Gt
+                           | I64, I32 -> Gt
+                           | I64, U32 -> Gt
+                           | I64, I64 -> Eqa
+                           | I64, U64 -> Lt
+                           | U64, I8 -> Gt
+                           | U64, U8 -> Gt
+                           | U64, I16 -> Gt
+                           | U64, U16 -> Gt
+                           | U64, I32 -> Gt
+                           | U64, U32 -> Gt
+                           | U64, I64 -> Gt
+                           | U64, U64 -> Eqa;;
+
 let rec comparator_exp
   x0 x1 = match x0, x1 with
     N x, N y -> comparator_of (equal_int, linorder_int) x y
@@ -2084,6 +2385,7 @@ let rec comparator_exp
     | N x, Not yx -> Lt
     | N x, And (yy, yz) -> Lt
     | N x, Or (za, zb) -> Lt
+    | N x, Cast (zc, zd) -> Lt
     | V x, N y -> Gt
     | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
     | V x, Plus (yb, yc) -> Lt
@@ -2100,6 +2402,7 @@ let rec comparator_exp
     | V x, Not yx -> Lt
     | V x, And (yy, yz) -> Lt
     | V x, Or (za, zb) -> Lt
+    | V x, Cast (zc, zd) -> Lt
     | Plus (x, xa), N y -> Gt
     | Plus (x, xa), V ya -> Gt
     | Plus (x, xa), Plus (yb, yc) ->
@@ -2118,6 +2421,7 @@ let rec comparator_exp
     | Plus (x, xa), Not yx -> Lt
     | Plus (x, xa), And (yy, yz) -> Lt
     | Plus (x, xa), Or (za, zb) -> Lt
+    | Plus (x, xa), Cast (zc, zd) -> Lt
     | Minus (x, xa), N y -> Gt
     | Minus (x, xa), V ya -> Gt
     | Minus (x, xa), Plus (yb, yc) -> Gt
@@ -2136,6 +2440,7 @@ let rec comparator_exp
     | Minus (x, xa), Not yx -> Lt
     | Minus (x, xa), And (yy, yz) -> Lt
     | Minus (x, xa), Or (za, zb) -> Lt
+    | Minus (x, xa), Cast (zc, zd) -> Lt
     | Times (x, xa), N y -> Gt
     | Times (x, xa), V ya -> Gt
     | Times (x, xa), Plus (yb, yc) -> Gt
@@ -2154,6 +2459,7 @@ let rec comparator_exp
     | Times (x, xa), Not yx -> Lt
     | Times (x, xa), And (yy, yz) -> Lt
     | Times (x, xa), Or (za, zb) -> Lt
+    | Times (x, xa), Cast (zc, zd) -> Lt
     | Div (x, xa), N y -> Gt
     | Div (x, xa), V ya -> Gt
     | Div (x, xa), Plus (yb, yc) -> Gt
@@ -2172,6 +2478,7 @@ let rec comparator_exp
     | Div (x, xa), Not yx -> Lt
     | Div (x, xa), And (yy, yz) -> Lt
     | Div (x, xa), Or (za, zb) -> Lt
+    | Div (x, xa), Cast (zc, zd) -> Lt
     | Mod (x, xa), N y -> Gt
     | Mod (x, xa), V ya -> Gt
     | Mod (x, xa), Plus (yb, yc) -> Gt
@@ -2190,6 +2497,7 @@ let rec comparator_exp
     | Mod (x, xa), Not yx -> Lt
     | Mod (x, xa), And (yy, yz) -> Lt
     | Mod (x, xa), Or (za, zb) -> Lt
+    | Mod (x, xa), Cast (zc, zd) -> Lt
     | Less (x, xa), N y -> Gt
     | Less (x, xa), V ya -> Gt
     | Less (x, xa), Plus (yb, yc) -> Gt
@@ -2208,6 +2516,7 @@ let rec comparator_exp
     | Less (x, xa), Not yx -> Lt
     | Less (x, xa), And (yy, yz) -> Lt
     | Less (x, xa), Or (za, zb) -> Lt
+    | Less (x, xa), Cast (zc, zd) -> Lt
     | LessEq (x, xa), N y -> Gt
     | LessEq (x, xa), V ya -> Gt
     | LessEq (x, xa), Plus (yb, yc) -> Gt
@@ -2226,6 +2535,7 @@ let rec comparator_exp
     | LessEq (x, xa), Not yx -> Lt
     | LessEq (x, xa), And (yy, yz) -> Lt
     | LessEq (x, xa), Or (za, zb) -> Lt
+    | LessEq (x, xa), Cast (zc, zd) -> Lt
     | Greater (x, xa), N y -> Gt
     | Greater (x, xa), V ya -> Gt
     | Greater (x, xa), Plus (yb, yc) -> Gt
@@ -2244,6 +2554,7 @@ let rec comparator_exp
     | Greater (x, xa), Not yx -> Lt
     | Greater (x, xa), And (yy, yz) -> Lt
     | Greater (x, xa), Or (za, zb) -> Lt
+    | Greater (x, xa), Cast (zc, zd) -> Lt
     | GreaterEq (x, xa), N y -> Gt
     | GreaterEq (x, xa), V ya -> Gt
     | GreaterEq (x, xa), Plus (yb, yc) -> Gt
@@ -2262,6 +2573,7 @@ let rec comparator_exp
     | GreaterEq (x, xa), Not yx -> Lt
     | GreaterEq (x, xa), And (yy, yz) -> Lt
     | GreaterEq (x, xa), Or (za, zb) -> Lt
+    | GreaterEq (x, xa), Cast (zc, zd) -> Lt
     | NotEq (x, xa), N y -> Gt
     | NotEq (x, xa), V ya -> Gt
     | NotEq (x, xa), Plus (yb, yc) -> Gt
@@ -2280,6 +2592,7 @@ let rec comparator_exp
     | NotEq (x, xa), Not yx -> Lt
     | NotEq (x, xa), And (yy, yz) -> Lt
     | NotEq (x, xa), Or (za, zb) -> Lt
+    | NotEq (x, xa), Cast (zc, zd) -> Lt
     | Eq (x, xa), N y -> Gt
     | Eq (x, xa), V ya -> Gt
     | Eq (x, xa), Plus (yb, yc) -> Gt
@@ -2298,6 +2611,7 @@ let rec comparator_exp
     | Eq (x, xa), Not yx -> Lt
     | Eq (x, xa), And (yy, yz) -> Lt
     | Eq (x, xa), Or (za, zb) -> Lt
+    | Eq (x, xa), Cast (zc, zd) -> Lt
     | Not x, N y -> Gt
     | Not x, V ya -> Gt
     | Not x, Plus (yb, yc) -> Gt
@@ -2314,6 +2628,7 @@ let rec comparator_exp
     | Not x, Not yx -> comparator_exp x yx
     | Not x, And (yy, yz) -> Lt
     | Not x, Or (za, zb) -> Lt
+    | Not x, Cast (zc, zd) -> Lt
     | And (x, xa), N y -> Gt
     | And (x, xa), V ya -> Gt
     | And (x, xa), Plus (yb, yc) -> Gt
@@ -2332,6 +2647,7 @@ let rec comparator_exp
         (match comparator_exp x yy with Eqa -> comparator_exp xa yz | Lt -> Lt
           | Gt -> Gt)
     | And (x, xa), Or (za, zb) -> Lt
+    | And (x, xa), Cast (zc, zd) -> Lt
     | Or (x, xa), N y -> Gt
     | Or (x, xa), V ya -> Gt
     | Or (x, xa), Plus (yb, yc) -> Gt
@@ -2349,6 +2665,26 @@ let rec comparator_exp
     | Or (x, xa), And (yy, yz) -> Gt
     | Or (x, xa), Or (za, zb) ->
         (match comparator_exp x za with Eqa -> comparator_exp xa zb | Lt -> Lt
+          | Gt -> Gt)
+    | Or (x, xa), Cast (zc, zd) -> Lt
+    | Cast (x, xa), N y -> Gt
+    | Cast (x, xa), V ya -> Gt
+    | Cast (x, xa), Plus (yb, yc) -> Gt
+    | Cast (x, xa), Minus (yd, ye) -> Gt
+    | Cast (x, xa), Times (yf, yg) -> Gt
+    | Cast (x, xa), Div (yh, yi) -> Gt
+    | Cast (x, xa), Mod (yj, yk) -> Gt
+    | Cast (x, xa), Less (yl, ym) -> Gt
+    | Cast (x, xa), LessEq (yn, yo) -> Gt
+    | Cast (x, xa), Greater (yp, yq) -> Gt
+    | Cast (x, xa), GreaterEq (yr, ys) -> Gt
+    | Cast (x, xa), NotEq (yt, yu) -> Gt
+    | Cast (x, xa), Eq (yv, yw) -> Gt
+    | Cast (x, xa), Not yx -> Gt
+    | Cast (x, xa), And (yy, yz) -> Gt
+    | Cast (x, xa), Or (za, zb) -> Gt
+    | Cast (x, xa), Cast (zc, zd) ->
+        (match comparator_ikind x zc with Eqa -> comparator_exp xa zd | Lt -> Lt
           | Gt -> Gt);;
 
 let rec comparator_call_action
@@ -4245,6 +4581,15 @@ type ('b, 'a) rbt = RBT of ('b, 'a) rbta;;
 
 type 'a fset = Abs_fset of 'a set;;
 
+type aop = AAdd | ASub | AMul | ADiv | AMod;;
+
+type cop = CLt | CLe | CGt | CGe | CEq | CNe;;
+
+type texp = TN of ikind * int | TVar of ikind * var_id |
+  TArith of ikind * aop * texp * texp | TCast of ikind * texp |
+  TCmp of cop * texp * texp | TNot of texp | TAnd of texp * texp |
+  TOr of texp * texp;;
+
 type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
 
 type phase = Widening | Narrowing;;
@@ -4918,6 +5263,85 @@ let rec enumerate n x1 = match n, x1 with n, [] -> []
 let rec is_none = function None -> true
                   | Some x -> false;;
 
+let rec ik_unsigned_of = function I8 -> U8
+                         | U8 -> U8
+                         | I16 -> U16
+                         | U16 -> U16
+                         | I32 -> U32
+                         | U32 -> U32
+                         | I64 -> U64
+                         | U64 -> U64;;
+
+let rec ik_bits = function I8 -> nat_of_integer (Z.of_int 8)
+                  | U8 -> nat_of_integer (Z.of_int 8)
+                  | I16 -> nat_of_integer (Z.of_int 16)
+                  | U16 -> nat_of_integer (Z.of_int 16)
+                  | I32 -> nat_of_integer (Z.of_int 32)
+                  | U32 -> nat_of_integer (Z.of_int 32)
+                  | I64 -> nat_of_integer (Z.of_int 64)
+                  | U64 -> nat_of_integer (Z.of_int 64);;
+
+let rec ik_promote
+  ik = (if less_nat (ik_bits ik) (ik_bits I32) then I32 else ik);;
+
+let rec ik_signed = function I8 -> true
+                    | U8 -> false
+                    | I16 -> true
+                    | U16 -> false
+                    | I32 -> true
+                    | U32 -> false
+                    | I64 -> true
+                    | U64 -> false;;
+
+let rec power _A
+  a n = (if equal_nata n zero_nat then one _A.one_power
+          else times _A.times_power a (power _A a (minus_nat n one_nat)));;
+
+let rec ik_half
+  ik = power power_int (Int_of_integer (Z.of_int 2))
+         (minus_nat (ik_bits ik) one_nat);;
+
+let rec ik_mod ik = power power_int (Int_of_integer (Z.of_int 2)) (ik_bits ik);;
+
+let rec ik_max
+  ik = (if ik_signed ik then minus_inta (ik_half ik) one_inta
+         else minus_inta (ik_mod ik) one_inta);;
+
+let rec usual_kind
+  a0 b0 =
+    (let a = ik_promote a0 in
+     let b = ik_promote b0 in
+      (if equal_ikind a b then a
+        else (if equal_boola (ik_signed a) (ik_signed b)
+               then (if less_nat (ik_bits a) (ik_bits b) then b else a)
+               else (let s = (if ik_signed a then a else b) in
+                     let u = (if ik_signed a then b else a) in
+                      (if less_eq_nat (ik_bits s) (ik_bits u) then u
+                        else (if less_eq_int (ik_max u) (ik_max s) then s
+                               else ik_unsigned_of s))))));;
+
+let rec ik_of_lit
+  n = (if less_eq_int (abs_int n) (ik_max I32) then I32 else I64);;
+
+let rec esyn
+  gamma x1 = match gamma, x1 with gamma, N n -> ik_of_lit n
+    | gamma, V x -> gamma x
+    | gamma, Plus (a, b) -> usual_kind (esyn gamma a) (esyn gamma b)
+    | gamma, Minus (a, b) -> usual_kind (esyn gamma a) (esyn gamma b)
+    | gamma, Times (a, b) -> usual_kind (esyn gamma a) (esyn gamma b)
+    | gamma, Div (a, b) -> usual_kind (esyn gamma a) (esyn gamma b)
+    | gamma, Mod (a, b) -> usual_kind (esyn gamma a) (esyn gamma b)
+    | gamma, Less (a, b) -> I32
+    | gamma, LessEq (a, b) -> I32
+    | gamma, Greater (a, b) -> I32
+    | gamma, GreaterEq (a, b) -> I32
+    | gamma, NotEq (a, b) -> I32
+    | gamma, Eq (a, b) -> I32
+    | gamma, Not a -> I32
+    | gamma, And (a, b) -> I32
+    | gamma, Or (a, b) -> I32
+    | gamma, Cast (ik, a) -> ik;;
+
 let rec map_filter
   f x1 = match f, x1 with f, [] -> []
     | f, x :: xs ->
@@ -4932,6 +5356,12 @@ let rec c_div
 let rec c_mod
   a b = (if equal_inta b zero_inta then a
           else minus_inta a (times_inta (c_div a b) b));;
+
+let ret_var : string = "#ret";;
+
+let rec var_name = function GlobalId x -> x
+                   | ScopedId (uu, x) -> x
+                   | ReturnId uv -> ret_var;;
 
 let rec cfg_entry
   (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
@@ -5172,7 +5602,65 @@ let rec ls_query_update
 
 let rec with_qry h c = ls_query_update (fun _ -> h) c;;
 
-let ret_var : string = "#ret";;
+let rec aop_exp = function AAdd -> (fun a b -> Plus (a, b))
+                  | ASub -> (fun a b -> Minus (a, b))
+                  | AMul -> (fun a b -> Times (a, b))
+                  | ADiv -> (fun a b -> Div (a, b))
+                  | AMod -> (fun a b -> Mod (a, b));;
+
+let rec cop_exp = function CLt -> (fun a b -> Less (a, b))
+                  | CLe -> (fun a b -> LessEq (a, b))
+                  | CGt -> (fun a b -> Greater (a, b))
+                  | CGe -> (fun a b -> GreaterEq (a, b))
+                  | CEq -> (fun a b -> Eq (a, b))
+                  | CNe -> (fun a b -> NotEq (a, b));;
+
+let rec ik_min
+  ik = (if ik_signed ik then uminus_inta (ik_half ik) else zero_inta);;
+
+let rec ik_widens
+  k ik =
+    less_eq_int (ik_min ik) (ik_min k) && less_eq_int (ik_max k) (ik_max ik);;
+
+let rec signed_take_bit _A
+  n a = (let l =
+           take_bit _A.semiring_bit_operations_ring_bit_operations (suc n) a in
+          (if bit _A.semiring_bit_operations_ring_bit_operations.semiring_bits_semiring_bit_operations
+                l n
+            then plus _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.semigroup_add_numeral.plus_semigroup_add
+                   l (push_bit _A.semiring_bit_operations_ring_bit_operations
+                       (suc n)
+                       (uminus
+                         _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.group_add_neg_numeral.uminus_group_add
+                         (one _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.one_numeral)))
+            else l));;
+
+let rec ik_norm
+  ik n =
+    (if ik_signed ik
+      then signed_take_bit ring_bit_operations_int
+             (minus_nat (ik_bits ik) one_nat) n
+      else take_bit_int (ik_bits ik) n);;
+
+let rec texp_kind = function TN (ik, uu) -> ik
+                    | TVar (ik, uv) -> ik
+                    | TArith (ik, uw, ux, uy) -> ik
+                    | TCast (ik, uz) -> ik
+                    | TCmp (va, vb, vc) -> I32
+                    | TNot vd -> I32
+                    | TAnd (ve, vf) -> I32
+                    | TOr (vg, vh) -> I32;;
+
+let rec lower
+  = function TN (ik, n) -> N (ik_norm ik n)
+    | TVar (ik, v) -> Cast (ik, V (var_name v))
+    | TArith (ik, op, a, b) -> Cast (ik, aop_exp op (lower a) (lower b))
+    | TCast (ik, a) ->
+        (if ik_widens (texp_kind a) ik then lower a else Cast (ik, lower a))
+    | TCmp (op, a, b) -> cop_exp op (lower a) (lower b)
+    | TNot a -> Not (lower a)
+    | TAnd (a, b) -> And (lower a, lower b)
+    | TOr (a, b) -> Or (lower a, lower b);;
 
 let rec genv key tau v = dg_global (tau (Inr (key v)));;
 
@@ -5211,6 +5699,125 @@ let rec mcp_rd
                                     slot8 r)))))));;
 
 let rec infl (State_ext (called, infl, stabl, sigma, more)) = infl;;
+
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
+
+let rec tcast_to ik k a = (if equal_ikind ik k then a else TCast (ik, a));;
+
+let rec elaborate
+  rho kappa ik x3 = match rho, kappa, ik, x3 with
+    rho, kappa, ik, N n -> TN (ik, n)
+    | rho, kappa, ik, V x ->
+        tcast_to ik (kappa (rho x)) (TVar (kappa (rho x), rho x))
+    | rho, kappa, ik, Plus (a, b) ->
+        (let k = esyn (comp kappa rho) (Plus (a, b)) in
+          tcast_to ik k
+            (TArith
+              (k, AAdd, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Minus (a, b) ->
+        (let k = esyn (comp kappa rho) (Minus (a, b)) in
+          tcast_to ik k
+            (TArith
+              (k, ASub, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Times (a, b) ->
+        (let k = esyn (comp kappa rho) (Times (a, b)) in
+          tcast_to ik k
+            (TArith
+              (k, AMul, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Div (a, b) ->
+        (let k = esyn (comp kappa rho) (Div (a, b)) in
+          tcast_to ik k
+            (TArith
+              (k, ADiv, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Mod (a, b) ->
+        (let k = esyn (comp kappa rho) (Mod (a, b)) in
+          tcast_to ik k
+            (TArith
+              (k, AMod, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Less (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CLt, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, LessEq (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CLe, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Greater (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CGt, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, GreaterEq (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CGe, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, NotEq (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CNe, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Eq (a, b) ->
+        (let k = usual_kind (esyn (comp kappa rho) a) (esyn (comp kappa rho) b)
+           in
+          tcast_to ik I32
+            (TCmp (CEq, elaborate rho kappa k a, elaborate rho kappa k b)))
+    | rho, kappa, ik, Not a ->
+        tcast_to ik I32 (TNot (elaborate rho kappa (esyn (comp kappa rho) a) a))
+    | rho, kappa, ik, And (a, b) ->
+        tcast_to ik I32
+          (TAnd (elaborate rho kappa (esyn (comp kappa rho) a) a,
+                  elaborate rho kappa (esyn (comp kappa rho) b) b))
+    | rho, kappa, ik, Or (a, b) ->
+        tcast_to ik I32
+          (TOr (elaborate rho kappa (esyn (comp kappa rho) a) a,
+                 elaborate rho kappa (esyn (comp kappa rho) b) b))
+    | rho, kappa, ik, Cast (k, a) ->
+        tcast_to ik k
+          (TCast (k, elaborate rho kappa (esyn (comp kappa rho) a) a));;
+
+let rec elaborate_syn
+  rho kappa e = elaborate rho kappa (esyn (comp kappa rho) e) e;;
+
+let rec elab_args
+  rho kappa x2 es = match rho, kappa, x2, es with
+    rho, kappa, f :: fs, e :: es ->
+      elaborate rho kappa (kappa f) e :: elab_args rho kappa fs es
+    | rho, kappa, [], es -> map (elaborate_syn rho kappa) es
+    | rho, kappa, v :: va, [] -> [];;
+
+let rec resolve_var g q x = (if g x then GlobalId x else ScopedId (q, x));;
+
+let rec elab_com
+  g fm kappa q x4 = match g, fm, kappa, q, x4 with
+    g, fm, kappa, q, SKIP i -> SKIP i
+    | g, fm, kappa, q, Assign (i, x, e) ->
+        Assign
+          (i, resolve_var g q x,
+            elaborate (resolve_var g q) kappa (kappa (resolve_var g q x)) e)
+    | g, fm, kappa, q, Check (i, l, c) ->
+        Check (i, l, elaborate_syn (resolve_var g q) kappa c)
+    | g, fm, kappa, q, Seq (c1, c2) ->
+        Seq (elab_com g fm kappa q c1, elab_com g fm kappa q c2)
+    | g, fm, kappa, q, If (i, b, c1, c2) ->
+        If (i, elaborate_syn (resolve_var g q) kappa b,
+             elab_com g fm kappa q c1, elab_com g fm kappa q c2)
+    | g, fm, kappa, q, While (i, b, c) ->
+        While (i, elaborate_syn (resolve_var g q) kappa b,
+                elab_com g fm kappa q c)
+    | g, fm, kappa, q, Call (i, dst, p, es) ->
+        Call (i, map_option (resolve_var g q) dst, p,
+               elab_args (resolve_var g q) kappa (map (resolve_var g p) (fm p))
+                 es)
+    | g, fm, kappa, q, Return (i, e) ->
+        Return
+          (i, map_option
+                (elaborate (resolve_var g q) kappa (kappa (ReturnId q))) e)
+    | g, fm, kappa, q, Restore i -> Restore i
+    | g, fm, kappa, q, Unwind i -> Unwind i;;
 
 let rec sp_publish g d k = Side (g, d, k ());;
 
@@ -5491,6 +6098,9 @@ let rec dg_spec_of _A
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
+let rec kenv_of
+  ds v = (match map_of equal_var_id ds v with None -> I32 | Some k -> k);;
+
 let rec body (Gproc_decl_ext (formals, body, more)) = body;;
 
 let prog_main_name : string = "main";;
@@ -5761,6 +6371,12 @@ let rec times_congruence
 
 let rec congruence_of_int n = mk_congruence n zero_inta;;
 
+let rec congruence_cast
+  ik a =
+    (if is_empty_congruence a then bot_congruencea
+      else (match congruence_singleton a with None -> top_congruencea
+             | Some c -> congruence_of_int (ik_norm ik c)));;
+
 let rec congruence_exact_binop
   f fallback a b =
     (if is_empty_congruence a || is_empty_congruence b then bot_congruencea
@@ -5803,9 +6419,6 @@ let rec of_bool_option _A
   lit x1 = match lit, x1 with
     lit, Some b -> lit (if b then one_inta else zero_inta)
     | lit, None -> sup _A (lit zero_inta) (lit one_inta);;
-
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
 
 let rec bin_log
   f ann x y =
@@ -5892,7 +6505,8 @@ let rec aval_congruence
           else of_bool_option sup_congruence congruence_of_int
                  (bin_log (fun a b -> a || b) true
                    (congruence_tobool (aval_congruence e1 sigma))
-                   (congruence_tobool (aval_congruence e2 sigma))));;
+                   (congruence_tobool (aval_congruence e2 sigma))))
+    | Cast (ik, e), sigma -> congruence_cast ik (aval_congruence e sigma);;
 
 let congruence_ops : (congruence, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -5952,7 +6566,8 @@ let rec congruence_check_query
     | Minus (v, va), d -> congruence_truthy_query (Minus (v, va)) d
     | Times (v, va), d -> congruence_truthy_query (Times (v, va)) d
     | Div (v, va), d -> congruence_truthy_query (Div (v, va)) d
-    | Mod (v, va), d -> congruence_truthy_query (Mod (v, va)) d;;
+    | Mod (v, va), d -> congruence_truthy_query (Mod (v, va)) d
+    | Cast (v, va), d -> congruence_truthy_query (Cast (v, va)) d;;
 
 let rec bool_valued = function Not uu -> true
                       | And (uv, uw) -> true
@@ -5969,7 +6584,8 @@ let rec bool_valued = function Not uu -> true
                       | Minus (v, va) -> false
                       | Times (v, va) -> false
                       | Div (v, va) -> false
-                      | Mod (v, va) -> false;;
+                      | Mod (v, va) -> false
+                      | Cast (v, va) -> false;;
 
 let rec answer_of_ivl
   i = QLifted
@@ -6222,6 +6838,25 @@ let rec ivl_mod
                    (ivl_mod_bound b))
           else bot_ivla);;
 
+let rec ivl_wrap
+  ik uu uv = match ik, uu, uv with
+    ik, Fin x, Fin y ->
+      (if less_eq_int (minus_inta y x) (minus_inta (ik_max ik) (ik_min ik)) &&
+            less_eq_int (ik_norm ik x) (ik_norm ik y)
+        then Ivl (Fin (ik_norm ik x), Fin (ik_norm ik y))
+        else Ivl (Fin (ik_min ik), Fin (ik_max ik)))
+    | ik, MinInf, uv -> Ivl (Fin (ik_min ik), Fin (ik_max ik))
+    | ik, PlusInf, uv -> Ivl (Fin (ik_min ik), Fin (ik_max ik))
+    | ik, uu, MinInf -> Ivl (Fin (ik_min ik), Fin (ik_max ik))
+    | ik, uu, PlusInf -> Ivl (Fin (ik_min ik), Fin (ik_max ik));;
+
+let rec ivl_cast
+  ik a =
+    (let Ivl (l, u) = a in
+      (if not (eint_le l u) then bot_ivla
+        else (if eint_le (Fin (ik_min ik)) l && eint_le u (Fin (ik_max ik))
+               then a else ivl_wrap ik l u)));;
+
 let rec aval_ivl
   x0 d = match x0, d with N n, d -> ivl_of_int n
     | V x, d -> d x
@@ -6277,7 +6912,8 @@ let rec aval_ivl
           else of_bool_option sup_ivl ivl_of_int
                  (bin_log (fun aa ba -> aa || ba) true
                    (interval_tobool (aval_ivl a d))
-                   (interval_tobool (aval_ivl b d))));;
+                   (interval_tobool (aval_ivl b d))))
+    | Cast (ik, a), d -> ivl_cast ik (aval_ivl a d);;
 
 let ivl_ops : (ivl, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -6331,7 +6967,8 @@ let rec interval_check_query
     | Minus (v, va), d -> interval_truthy_query (Minus (v, va)) d
     | Times (v, va), d -> interval_truthy_query (Times (v, va)) d
     | Div (v, va), d -> interval_truthy_query (Div (v, va)) d
-    | Mod (v, va), d -> interval_truthy_query (Mod (v, va)) d;;
+    | Mod (v, va), d -> interval_truthy_query (Mod (v, va)) d
+    | Cast (v, va), d -> interval_truthy_query (Cast (v, va)) d;;
 
 let rec interval_eval_answer
   d (EvalInt e) =
@@ -6461,7 +7098,8 @@ let rec afilter_st_lift_with _A
     | ev, ops, g, Eq (v, va), a, x_lift -> x_lift
     | ev, ops, g, Not v, a, x_lift -> x_lift
     | ev, ops, g, And (v, va), a, x_lift -> x_lift
-    | ev, ops, g, Or (v, va), a, x_lift -> x_lift;;
+    | ev, ops, g, Or (v, va), a, x_lift -> x_lift
+    | ev, ops, g, Cast (v, va), a, x_lift -> x_lift;;
 
 let rec r_inv_eq
   (Refine_ops_ext
@@ -6727,7 +7365,22 @@ let rec bfilter_st_lift_with _A
                      _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
                      g s))
                in
-              afilter_st_lift_with _A ev ops g (Mod (v, va)) a1 (Lifted s)));;
+              afilter_st_lift_with _A ev ops g (Mod (v, va)) a1 (Lifted s)))
+    | ev, ops, g, Cast (v, va), res, x_lift ->
+        bind_lift x_lift
+          (fun s ->
+            (let (a1, _) =
+               r_inv_eq ops (not res)
+                 (ev (Cast (v, va))
+                   (default_st_to_fun
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     g s))
+                 (ev (N zero_inta)
+                   (default_st_to_fun
+                     _A.bounded_semilattice_sup_bot_executable_domain.order_bot_bounded_semilattice_sup_bot.bot_order_bot
+                     g s))
+               in
+              afilter_st_lift_with _A ev ops g (Cast (v, va)) a1 (Lifted s)));;
 
 let rec collapse_lift _A = function Bot -> bot _A
                            | Lifted a -> a;;
@@ -7092,7 +7745,8 @@ let rec aval_parity
           else of_bool_option sup_parity parity_of_int
                  (bin_log (fun aa ba -> aa || ba) true
                    (parity_tobool (aval_parity a d))
-                   (parity_tobool (aval_parity b d))));;
+                   (parity_tobool (aval_parity b d))))
+    | Cast (ik, a), d -> aval_parity a d;;
 
 let parity_ops : (parity, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -7146,7 +7800,8 @@ let rec parity_check_query
     | Minus (v, va), d -> parity_truthy_query (Minus (v, va)) d
     | Times (v, va), d -> parity_truthy_query (Times (v, va)) d
     | Div (v, va), d -> parity_truthy_query (Div (v, va)) d
-    | Mod (v, va), d -> parity_truthy_query (Mod (v, va)) d;;
+    | Mod (v, va), d -> parity_truthy_query (Mod (v, va)) d
+    | Cast (v, va), d -> parity_truthy_query (Cast (v, va)) d;;
 
 let rec parity_eval_answer
   d (EvalInt e) =
@@ -7417,6 +8072,12 @@ let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
                     | STop, SPos -> STop
                     | STop, STop -> STop;;
 
+let rec sign_cast
+  ik a =
+    (if equal_signa a SBot then SBot
+      else (if equal_signa a SZero then SZero
+             else (if ik_signed ik then STop else SNonNeg)));;
+
 let rec sign_mod
   a b = (if equal_signa a SBot || equal_signa b SBot then SBot
           else (if equal_signa b SZero then a else sup_signa a SZero));;
@@ -7493,8 +8154,8 @@ let rec aval_sign
           then bot_signa
           else of_bool_option sup_sign sign_of_int
                  (bin_log (fun aa ba -> aa || ba) true
-                   (sign_tobool (aval_sign a d))
-                   (sign_tobool (aval_sign b d))));;
+                   (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))
+    | Cast (ik, a), d -> sign_cast ik (aval_sign a d);;
 
 let sign_ops : (sign, unit) nonrelational_ops_ext
   = Nonrelational_ops_ext
@@ -7548,7 +8209,8 @@ let rec sign_check_query
     | Minus (v, va), d -> sign_truthy_query (Minus (v, va)) d
     | Times (v, va), d -> sign_truthy_query (Times (v, va)) d
     | Div (v, va), d -> sign_truthy_query (Div (v, va)) d
-    | Mod (v, va), d -> sign_truthy_query (Mod (v, va)) d;;
+    | Mod (v, va), d -> sign_truthy_query (Mod (v, va)) d
+    | Cast (v, va), d -> sign_truthy_query (Cast (v, va)) d;;
 
 let rec sign_eval_answer
   d (EvalInt e) =
@@ -7874,6 +8536,16 @@ let rec plus_int_dom_raw
 
 let rec plus_int_dom mode a b = refine mode (plus_int_dom_raw a b);;
 
+let rec cast_int_dom_raw
+  ik a =
+    int_congruence_update (fun _ -> congruence_cast ik (int_congruence a))
+      (int_parity_update (fun _ -> int_parity a)
+        (int_ivl_update (fun _ -> ivl_cast ik (int_ivl a))
+          (int_sign_update (fun _ -> sign_cast ik (int_sign a))
+            (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec cast_int_dom mode ik a = refine mode (cast_int_dom_raw ik a);;
+
 let rec mod_int_dom_raw
   a b = int_congruence_update
           (fun _ -> congruence_mod (int_congruence a) (int_congruence b))
@@ -8009,7 +8681,9 @@ let rec aval_int_dom
             else of_bool_option (sup_int_dom_ext bounded_lattice_unit)
                    int_dom_of_int
                    (bin_log (fun aa ba -> aa || ba) true (int_dom_tobool a)
-                     (int_dom_tobool b))));;
+                     (int_dom_tobool b))))
+    | mode, Cast (ik, e), sigma ->
+        cast_int_dom mode ik (aval_int_dom mode e sigma);;
 
 let rec int_less_false
   a b = sign_less_false (int_sign a) (int_sign b) ||
@@ -8153,7 +8827,8 @@ let rec int_check_query
     | mode, Minus (v, va), d -> int_truthy_query mode (Minus (v, va)) d
     | mode, Times (v, va), d -> int_truthy_query mode (Times (v, va)) d
     | mode, Div (v, va), d -> int_truthy_query mode (Div (v, va)) d
-    | mode, Mod (v, va), d -> int_truthy_query mode (Mod (v, va)) d;;
+    | mode, Mod (v, va), d -> int_truthy_query mode (Mod (v, va)) d
+    | mode, Cast (v, va), d -> int_truthy_query mode (Cast (v, va)) d;;
 
 let rec int_eval_answer
   mode d (EvalInt e) =
@@ -8255,6 +8930,7 @@ let rec assume_not_step
               | Less (V _, Eq (_, _)) -> RelC ps | Less (V _, Not _) -> RelC ps
               | Less (V _, And (_, _)) -> RelC ps
               | Less (V _, Or (_, _)) -> RelC ps
+              | Less (V _, Cast (_, _)) -> RelC ps
               | Less (Plus (_, _), _) -> RelC ps
               | Less (Minus (_, _), _) -> RelC ps
               | Less (Times (_, _), _) -> RelC ps
@@ -8267,7 +8943,8 @@ let rec assume_not_step
               | Less (NotEq (_, _), _) -> RelC ps
               | Less (Eq (_, _), _) -> RelC ps | Less (Not _, _) -> RelC ps
               | Less (And (_, _), _) -> RelC ps | Less (Or (_, _), _) -> RelC ps
-              | LessEq (N _, _) -> RelC ps | LessEq (V _, N _) -> RelC ps
+              | Less (Cast (_, _), _) -> RelC ps | LessEq (N _, _) -> RelC ps
+              | LessEq (V _, N _) -> RelC ps
               | LessEq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (y, x)
                        ps)
@@ -8285,6 +8962,7 @@ let rec assume_not_step
               | LessEq (V _, Not _) -> RelC ps
               | LessEq (V _, And (_, _)) -> RelC ps
               | LessEq (V _, Or (_, _)) -> RelC ps
+              | LessEq (V _, Cast (_, _)) -> RelC ps
               | LessEq (Plus (_, _), _) -> RelC ps
               | LessEq (Minus (_, _), _) -> RelC ps
               | LessEq (Times (_, _), _) -> RelC ps
@@ -8297,7 +8975,8 @@ let rec assume_not_step
               | LessEq (NotEq (_, _), _) -> RelC ps
               | LessEq (Eq (_, _), _) -> RelC ps | LessEq (Not _, _) -> RelC ps
               | LessEq (And (_, _), _) -> RelC ps
-              | LessEq (Or (_, _), _) -> RelC ps | Greater (N _, _) -> RelC ps
+              | LessEq (Or (_, _), _) -> RelC ps
+              | LessEq (Cast (_, _), _) -> RelC ps | Greater (N _, _) -> RelC ps
               | Greater (V _, N _) -> RelC ps
               | Greater (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (x, y)
@@ -8316,6 +8995,7 @@ let rec assume_not_step
               | Greater (V _, Not _) -> RelC ps
               | Greater (V _, And (_, _)) -> RelC ps
               | Greater (V _, Or (_, _)) -> RelC ps
+              | Greater (V _, Cast (_, _)) -> RelC ps
               | Greater (Plus (_, _), _) -> RelC ps
               | Greater (Minus (_, _), _) -> RelC ps
               | Greater (Times (_, _), _) -> RelC ps
@@ -8330,6 +9010,7 @@ let rec assume_not_step
               | Greater (Not _, _) -> RelC ps
               | Greater (And (_, _), _) -> RelC ps
               | Greater (Or (_, _), _) -> RelC ps
+              | Greater (Cast (_, _), _) -> RelC ps
               | GreaterEq (N _, _) -> RelC ps | GreaterEq (V _, N _) -> RelC ps
               | GreaterEq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (x, y)
@@ -8348,6 +9029,7 @@ let rec assume_not_step
               | GreaterEq (V _, Not _) -> RelC ps
               | GreaterEq (V _, And (_, _)) -> RelC ps
               | GreaterEq (V _, Or (_, _)) -> RelC ps
+              | GreaterEq (V _, Cast (_, _)) -> RelC ps
               | GreaterEq (Plus (_, _), _) -> RelC ps
               | GreaterEq (Minus (_, _), _) -> RelC ps
               | GreaterEq (Times (_, _), _) -> RelC ps
@@ -8361,8 +9043,9 @@ let rec assume_not_step
               | GreaterEq (Eq (_, _), _) -> RelC ps
               | GreaterEq (Not _, _) -> RelC ps
               | GreaterEq (And (_, _), _) -> RelC ps
-              | GreaterEq (Or (_, _), _) -> RelC ps | NotEq (N _, _) -> RelC ps
-              | NotEq (V _, N _) -> RelC ps
+              | GreaterEq (Or (_, _), _) -> RelC ps
+              | GreaterEq (Cast (_, _), _) -> RelC ps
+              | NotEq (N _, _) -> RelC ps | NotEq (V _, N _) -> RelC ps
               | NotEq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (x, y)
                        (inserta (equal_prod equal_literal equal_literal) (y, x)
@@ -8381,6 +9064,7 @@ let rec assume_not_step
               | NotEq (V _, Not _) -> RelC ps
               | NotEq (V _, And (_, _)) -> RelC ps
               | NotEq (V _, Or (_, _)) -> RelC ps
+              | NotEq (V _, Cast (_, _)) -> RelC ps
               | NotEq (Plus (_, _), _) -> RelC ps
               | NotEq (Minus (_, _), _) -> RelC ps
               | NotEq (Times (_, _), _) -> RelC ps
@@ -8393,9 +9077,10 @@ let rec assume_not_step
               | NotEq (NotEq (_, _), _) -> RelC ps
               | NotEq (Eq (_, _), _) -> RelC ps | NotEq (Not _, _) -> RelC ps
               | NotEq (And (_, _), _) -> RelC ps
-              | NotEq (Or (_, _), _) -> RelC ps | Eq (_, _) -> RelC ps
-              | Not _ -> RelC ps | And (_, _) -> RelC ps
-              | Or (_, _) -> RelC ps));;
+              | NotEq (Or (_, _), _) -> RelC ps
+              | NotEq (Cast (_, _), _) -> RelC ps | Eq (_, _) -> RelC ps
+              | Not _ -> RelC ps | And (_, _) -> RelC ps | Or (_, _) -> RelC ps
+              | Cast (_, _) -> RelC ps));;
 
 let rec assume_step
   b d = (match d with RelBot -> RelBot
@@ -8421,6 +9106,7 @@ let rec assume_step
               | Less (V _, Eq (_, _)) -> RelC ps | Less (V _, Not _) -> RelC ps
               | Less (V _, And (_, _)) -> RelC ps
               | Less (V _, Or (_, _)) -> RelC ps
+              | Less (V _, Cast (_, _)) -> RelC ps
               | Less (Plus (_, _), _) -> RelC ps
               | Less (Minus (_, _), _) -> RelC ps
               | Less (Times (_, _), _) -> RelC ps
@@ -8433,7 +9119,8 @@ let rec assume_step
               | Less (NotEq (_, _), _) -> RelC ps
               | Less (Eq (_, _), _) -> RelC ps | Less (Not _, _) -> RelC ps
               | Less (And (_, _), _) -> RelC ps | Less (Or (_, _), _) -> RelC ps
-              | LessEq (N _, _) -> RelC ps | LessEq (V _, N _) -> RelC ps
+              | Less (Cast (_, _), _) -> RelC ps | LessEq (N _, _) -> RelC ps
+              | LessEq (V _, N _) -> RelC ps
               | LessEq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (x, y)
                        ps)
@@ -8451,6 +9138,7 @@ let rec assume_step
               | LessEq (V _, Not _) -> RelC ps
               | LessEq (V _, And (_, _)) -> RelC ps
               | LessEq (V _, Or (_, _)) -> RelC ps
+              | LessEq (V _, Cast (_, _)) -> RelC ps
               | LessEq (Plus (_, _), _) -> RelC ps
               | LessEq (Minus (_, _), _) -> RelC ps
               | LessEq (Times (_, _), _) -> RelC ps
@@ -8463,7 +9151,8 @@ let rec assume_step
               | LessEq (NotEq (_, _), _) -> RelC ps
               | LessEq (Eq (_, _), _) -> RelC ps | LessEq (Not _, _) -> RelC ps
               | LessEq (And (_, _), _) -> RelC ps
-              | LessEq (Or (_, _), _) -> RelC ps | Greater (N _, _) -> RelC ps
+              | LessEq (Or (_, _), _) -> RelC ps
+              | LessEq (Cast (_, _), _) -> RelC ps | Greater (N _, _) -> RelC ps
               | Greater (V _, N _) -> RelC ps
               | Greater (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (y, x)
@@ -8482,6 +9171,7 @@ let rec assume_step
               | Greater (V _, Not _) -> RelC ps
               | Greater (V _, And (_, _)) -> RelC ps
               | Greater (V _, Or (_, _)) -> RelC ps
+              | Greater (V _, Cast (_, _)) -> RelC ps
               | Greater (Plus (_, _), _) -> RelC ps
               | Greater (Minus (_, _), _) -> RelC ps
               | Greater (Times (_, _), _) -> RelC ps
@@ -8496,6 +9186,7 @@ let rec assume_step
               | Greater (Not _, _) -> RelC ps
               | Greater (And (_, _), _) -> RelC ps
               | Greater (Or (_, _), _) -> RelC ps
+              | Greater (Cast (_, _), _) -> RelC ps
               | GreaterEq (N _, _) -> RelC ps | GreaterEq (V _, N _) -> RelC ps
               | GreaterEq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (y, x)
@@ -8514,6 +9205,7 @@ let rec assume_step
               | GreaterEq (V _, Not _) -> RelC ps
               | GreaterEq (V _, And (_, _)) -> RelC ps
               | GreaterEq (V _, Or (_, _)) -> RelC ps
+              | GreaterEq (V _, Cast (_, _)) -> RelC ps
               | GreaterEq (Plus (_, _), _) -> RelC ps
               | GreaterEq (Minus (_, _), _) -> RelC ps
               | GreaterEq (Times (_, _), _) -> RelC ps
@@ -8527,7 +9219,8 @@ let rec assume_step
               | GreaterEq (Eq (_, _), _) -> RelC ps
               | GreaterEq (Not _, _) -> RelC ps
               | GreaterEq (And (_, _), _) -> RelC ps
-              | GreaterEq (Or (_, _), _) -> RelC ps | NotEq (_, _) -> RelC ps
+              | GreaterEq (Or (_, _), _) -> RelC ps
+              | GreaterEq (Cast (_, _), _) -> RelC ps | NotEq (_, _) -> RelC ps
               | Eq (N _, _) -> RelC ps | Eq (V _, N _) -> RelC ps
               | Eq (V x, V y) ->
                 RelC (inserta (equal_prod equal_literal equal_literal) (x, y)
@@ -8545,6 +9238,7 @@ let rec assume_step
               | Eq (V _, NotEq (_, _)) -> RelC ps
               | Eq (V _, Eq (_, _)) -> RelC ps | Eq (V _, Not _) -> RelC ps
               | Eq (V _, And (_, _)) -> RelC ps | Eq (V _, Or (_, _)) -> RelC ps
+              | Eq (V _, Cast (_, _)) -> RelC ps
               | Eq (Plus (_, _), _) -> RelC ps | Eq (Minus (_, _), _) -> RelC ps
               | Eq (Times (_, _), _) -> RelC ps | Eq (Div (_, _), _) -> RelC ps
               | Eq (Mod (_, _), _) -> RelC ps | Eq (Less (_, _), _) -> RelC ps
@@ -8553,8 +9247,9 @@ let rec assume_step
               | Eq (GreaterEq (_, _), _) -> RelC ps
               | Eq (NotEq (_, _), _) -> RelC ps | Eq (Eq (_, _), _) -> RelC ps
               | Eq (Not _, _) -> RelC ps | Eq (And (_, _), _) -> RelC ps
-              | Eq (Or (_, _), _) -> RelC ps | Not _ -> RelC ps
-              | And (_, _) -> RelC ps | Or (_, _) -> RelC ps));;
+              | Eq (Or (_, _), _) -> RelC ps | Eq (Cast (_, _), _) -> RelC ps
+              | Not _ -> RelC ps | And (_, _) -> RelC ps | Or (_, _) -> RelC ps
+              | Cast (_, _) -> RelC ps));;
 
 let rec relc_branch_step
   b pol d = (if pol then assume_step b d else assume_not_step b d);;
@@ -8631,7 +9326,8 @@ let rec var_of = function V x -> Some x
                  | Eq (v, va) -> None
                  | Not v -> None
                  | And (v, va) -> None
-                 | Or (v, va) -> None;;
+                 | Or (v, va) -> None
+                 | Cast (v, va) -> None;;
 
 let rec relc_has
   x y xa2 = match x, y, xa2 with x, y, RelBot -> true
@@ -8680,6 +9376,8 @@ let rec relc_eval
           | And (_, _) ->
             top_query_lifta (order_int_dom_ext bounded_lattice_unit)
           | Or (_, _) ->
+            top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+          | Cast (_, _) ->
             top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
 let rec relc_qry d (EvalInt e) = relc_eval d e;;
@@ -8717,7 +9415,8 @@ let rec exp_vnames
     | Eq (a, b) -> sup_set equal_literal (exp_vnames a) (exp_vnames b)
     | Not b -> exp_vnames b
     | And (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2)
-    | Or (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2);;
+    | Or (b1, b2) -> sup_set equal_literal (exp_vnames b1) (exp_vnames b2)
+    | Cast (uv, a) -> exp_vnames a;;
 
 let rec com_vnames
   = function SKIP uu -> bot_set
@@ -9763,7 +10462,8 @@ let rec arithmetic_obligations
     | Greater (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | GreaterEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | Eq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b;;
+    | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Cast (uu, a) -> arithmetic_obligations a;;
 
 let rec arithmetic_sites
   g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
@@ -10259,6 +10959,49 @@ let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
 let rec sigma (State_ext (called, infl, stabl, sigma, more)) = sigma;;
 
+let rec body_update
+  bodya (Gproc_decl_ext (formals, body, more)) =
+    Gproc_decl_ext (formals, bodya body, more);;
+
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
+
+let rec prog_formals
+  p q = (match prog_table p q with None -> [] | Some a -> formals a);;
+
+let rec map_gcom
+  f1 f2 f3 x3 = match f1, f2, f3, x3 with f1, f2, f3, SKIP x1 -> SKIP (f1 x1)
+    | f1, f2, f3, Assign (x21, x22, x23) -> Assign (f1 x21, f2 x22, f3 x23)
+    | f1, f2, f3, Check (x31, x32, x33) -> Check (f1 x31, x32, f3 x33)
+    | f1, f2, f3, Seq (x41, x42) ->
+        Seq (map_gcom f1 f2 f3 x41, map_gcom f1 f2 f3 x42)
+    | f1, f2, f3, If (x51, x52, x53, x54) ->
+        If (f1 x51, f3 x52, map_gcom f1 f2 f3 x53, map_gcom f1 f2 f3 x54)
+    | f1, f2, f3, While (x61, x62, x63) ->
+        While (f1 x61, f3 x62, map_gcom f1 f2 f3 x63)
+    | f1, f2, f3, Call (x71, x72, x73, x74) ->
+        Call (f1 x71, map_option f2 x72, x73, map f3 x74)
+    | f1, f2, f3, Return (x81, x82) -> Return (f1 x81, map_option f3 x82)
+    | f1, f2, f3, Restore x9 -> Restore (f1 x9)
+    | f1, f2, f3, Unwind x10 -> Unwind (f1 x10);;
+
+let rec typed_proc
+  p ds q d =
+    body_update
+      (fun _ ->
+        map_gcom id var_name lower
+          (elab_com (declared_global p) (prog_formals p) (kenv_of ds) q
+            (body d)))
+      d;;
+
+let rec proc_rep_update
+  proc_repa (Imp_prog_ext (proc_rep, declared_global_vars, more)) =
+    Imp_prog_ext (proc_repa proc_rep, declared_global_vars, more);;
+
+let rec typed_prog
+  p ds =
+    proc_rep_update
+      (fun _ -> map (fun (q, d) -> (q, typed_proc p ds q d)) (proc_rep p)) p;;
+
 let rec valid_formal g x = not (g x) && not ((x : string) = ret_var);;
 
 let rec may_fallthrough
@@ -10397,8 +11140,6 @@ let rec call_global_reads
     global_names_in g
       (sorted_list_of_set (equal_literal, linorder_literal)
         (sup_seta equal_literal (image exp_vnames (Set es))));;
-
-let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
 
 let rec view_of _A
   rg xs e acc = fold (fun x -> sup _A.sup_semilattice_sup (rg x (e x))) xs acc;;

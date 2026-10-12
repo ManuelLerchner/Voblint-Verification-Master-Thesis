@@ -1,0 +1,13 @@
+chapter Voblint
+
+session Voblint_Typed in "." = "Voblint_VIMP" +
+  description
+    "Machine-integer kinds, static variable identities, and the typed elaboration of
+     VIMP expressions and commands, with its correspondence to a source-level typed
+     semantics"
+  theories
+    Var_Id
+    Typed_Exp
+    Typed_Com
+    Typed_Lower
+    Typed_Semantics

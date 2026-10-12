@@ -4,9 +4,13 @@ session Voblint_Examples_CFG in "." = "Voblint_Compile" +
   description
     "Domain-independent compiler witness: the call-free compilation theorem every
      domain's flagship run reuses, plus regression assertions pinning VIMP
-     concrete syntax, precedence, expression semantics and compiled edges"
+     concrete syntax, precedence, expression semantics, compiled edges and typed
+     elaboration"
+  sessions
+    "Voblint_Typed"
   theories
     Example_Compile_Call_Free
     VIMP_Regression
     Compile_Regression
     Elaborated_Compilation_Regression
+    Typed_Regression

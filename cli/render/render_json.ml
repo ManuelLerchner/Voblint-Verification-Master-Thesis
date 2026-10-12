@@ -566,6 +566,16 @@ let int_json (C.Int_of_integer z) =
   let exact = Z.shift_left Z.one 53 in
   if Z.lt (Z.abs z) exact then Z.to_string z else json_string (Z.to_string z)
 
+let kind_name = function
+  | C.I8 -> "i8"
+  | C.U8 -> "u8"
+  | C.I16 -> "i16"
+  | C.U16 -> "u16"
+  | C.I32 -> "i32"
+  | C.U32 -> "u32"
+  | C.I64 -> "i64"
+  | C.U64 -> "u64"
+
 let rec exp_json e =
   let bin tag a b = tagged tag [ exp_json a; exp_json b ] in
   match e with
@@ -585,6 +595,7 @@ let rec exp_json e =
   | C.And (a, b) -> bin "And" a b
   | C.Or (a, b) -> bin "Or" a b
   | C.Not a -> tagged "Not" [ exp_json a ]
+  | C.Cast (k, a) -> tagged "Cast" [ json_string (kind_name k); exp_json a ]
 
 let rec com_json = function
   | C.SKIP _ -> tagged "SKIP" []

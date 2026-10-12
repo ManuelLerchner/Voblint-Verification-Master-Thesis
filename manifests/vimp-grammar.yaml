@@ -35,6 +35,14 @@
 # part of this grammar. VIMP_Notation.thy's prog_tr checks it at parse time;
 # the CLI relies on the well-formedness gate `wf_program_compile_input_exec`.
 #
+# Machine-kind declarations are CLI-only and written in scripts/gen_vimp_menhir.py
+# (gen_program_rule): `global u8 g;`, `fun u16 f(u8 n) { u8 x; ... }`. A program
+# that writes no kind is untyped and keeps mathematical integers; one that writes
+# any kind is typed and goes to the analyzer as the verified `typed_prog p ds`
+# (cli/frontend/vimp_typing.ml). The Isabelle notation reads untyped programs
+# only; a theory states a typed program as `typed_prog p ds`. The kind keywords
+# below also serve the `(k) e` cast, which both targets share.
+#
 # Every production's AST-construction is exactly one of three shapes:
 #
 #   lower: {ctor: Name, args: [...]}
@@ -102,6 +110,14 @@ keywords:
   while: WHILE
   "true": BOOL_TRUE
   "false": BOOL_FALSE
+  i8: KW_I8
+  u8: KW_U8
+  i16: KW_I16
+  u16: KW_U16
+  i32: KW_I32
+  u32: KW_U32
+  i64: KW_I64
+  u64: KW_U64
 
 punctuation:
   "=": ASSIGN
@@ -176,6 +192,19 @@ productions:
   # property-test generator may produce: any exp tree is
   # source-expressible, not just left-associated ones.
   - {name: exp_paren,  result: exp, rhs: [LPAREN, exp, RPAREN],   passthrough: 1}
+  # A C-style conversion to a machine kind. The kind keywords cannot start an
+  # expression, so a parenthesized kind is never confused with a parenthesized
+  # expression.
+  - {name: exp_cast, result: exp, rhs: [LPAREN, kind, RPAREN, exp], precedence: UMINUS,
+     lower: {ctor: Cast, args: [{rhs: 1}, {rhs: 3}]}}
+  - {name: kind_i8,  result: kind, rhs: [KW_I8],  lower: {ctor: I8, args: []}}
+  - {name: kind_u8,  result: kind, rhs: [KW_U8],  lower: {ctor: U8, args: []}}
+  - {name: kind_i16, result: kind, rhs: [KW_I16], lower: {ctor: I16, args: []}}
+  - {name: kind_u16, result: kind, rhs: [KW_U16], lower: {ctor: U16, args: []}}
+  - {name: kind_i32, result: kind, rhs: [KW_I32], lower: {ctor: I32, args: []}}
+  - {name: kind_u32, result: kind, rhs: [KW_U32], lower: {ctor: U32, args: []}}
+  - {name: kind_i64, result: kind, rhs: [KW_I64], lower: {ctor: I64, args: []}}
+  - {name: kind_u64, result: kind, rhs: [KW_U64], lower: {ctor: U64, args: []}}
 
   # Simple statements consume SEMI; braced statements need no terminator.
   # A missing else lowers to SKIP, preserving the command AST.

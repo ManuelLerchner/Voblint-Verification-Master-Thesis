@@ -118,6 +118,7 @@ fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^
   | "\<lbrakk>Not b\<rbrakk>\<^sub>e     s  = (if truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) then 0 else 1)"
   | "\<lbrakk>And b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<and> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
   | "\<lbrakk>Or  b1 b2\<rbrakk>\<^sub>e s  = (if truthy (\<lbrakk>b1\<rbrakk>\<^sub>e s) \<or> truthy (\<lbrakk>b2\<rbrakk>\<^sub>e s) then 1 else 0)"
+  | "\<lbrakk>Cast ik a\<rbrakk>\<^sub>e s = ik_norm ik (\<lbrakk>a\<rbrakk>\<^sub>e s)"
 
 text \<open>
   \<open>truthy\<close> of a compiled comparison or Boolean expression restated in plain
@@ -184,6 +185,7 @@ fun exp_vnames :: "exp \<Rightarrow> vname set" where
 | "exp_vnames (Not b) = exp_vnames b"
 | "exp_vnames (And b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
 | "exp_vnames (Or b1 b2) = exp_vnames b1 \<union> exp_vnames b2"
+| "exp_vnames (Cast _ a) = exp_vnames a"
 
 lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto

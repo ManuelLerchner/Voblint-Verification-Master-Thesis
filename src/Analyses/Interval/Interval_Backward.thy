@@ -151,6 +151,145 @@ qed
 
 subsection \<open>Abstract expression evaluation\<close>
 
+text \<open>A conversion to a machine kind leaves an interval inside the kind's range unchanged.
+  A finite interval that is narrower than the range and whose wrapped endpoints stay
+  ordered is shifted as a whole (@{thm ik_norm_interval_shift}); anything else becomes the
+  whole range. An empty interval stays empty.\<close>
+
+fun ivl_wrap :: "ikind \<Rightarrow> eint \<Rightarrow> eint \<Rightarrow> ivl" where
+  "ivl_wrap ik (Fin x) (Fin y) =
+     (if y - x \<le> ik_max ik - ik_min ik \<and> ik_norm ik x \<le> ik_norm ik y
+      then Ivl (Fin (ik_norm ik x)) (Fin (ik_norm ik y))
+      else Ivl (Fin (ik_min ik)) (Fin (ik_max ik)))"
+| "ivl_wrap ik _ _ = Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+
+definition ivl_cast :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_cast ik a =
+     (case a of Ivl l u \<Rightarrow>
+        if \<not> eint_le l u then bot
+        else if eint_le (Fin (ik_min ik)) l \<and> eint_le u (Fin (ik_max ik)) then a
+        else ivl_wrap ik l u)"
+
+lemma ivl_cast_sound: "i \<in> gamma_ivl a \<Longrightarrow> ik_norm ik i \<in> gamma_ivl (ivl_cast ik a)"
+proof (cases a)
+  case (Ivl l u)
+  assume "i \<in> gamma_ivl a"
+  with Ivl have li: "eint_le l (Fin i)" and iu: "eint_le (Fin i) u" by simp_all
+  then have lu: "eint_le l u" by (rule eint_le_trans)
+  show ?thesis
+  proof (cases "eint_le (Fin (ik_min ik)) l \<and> eint_le u (Fin (ik_max ik))")
+    case True
+    then have "ik_min ik \<le> i \<and> i \<le> ik_max ik"
+      using eint_le_trans [OF _ li, of "Fin (ik_min ik)"] eint_le_trans
+        [OF iu, of "Fin (ik_max ik)"]
+      by auto
+    then show ?thesis using True Ivl li iu lu by (simp add: ivl_cast_def ik_norm_id)
+  next
+    case False
+    show ?thesis
+    proof (cases "\<exists>x y. l = Fin x \<and> u = Fin y \<and> y - x \<le> ik_max ik - ik_min ik
+                    \<and> ik_norm ik x \<le> ik_norm ik y")
+      case True
+      then obtain x y where l: "l = Fin x" and u: "u = Fin y"
+        and w: "y - x \<le> ik_max ik - ik_min ik" and o: "ik_norm ik x \<le> ik_norm ik y" by blast
+      from li iu l u have xi: "x \<le> i" and iy: "i \<le> y" by simp_all
+      have si: "ik_norm ik i = ik_norm ik x + (i - x)"
+        by (rule ik_norm_interval_shift [OF w o]) (use xi iy in linarith)+
+      have sy: "ik_norm ik y = ik_norm ik x + (y - x)"
+        by (rule ik_norm_interval_shift [OF w o]) (use xi iy in linarith)+
+      have "ik_norm ik x \<le> ik_norm ik i \<and> ik_norm ik i \<le> ik_norm ik y"
+        using si sy xi iy by linarith
+      with False Ivl lu l u w o show ?thesis by (auto simp: ivl_cast_def)
+    next
+      case nw: False
+      have "ivl_wrap ik l u = Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+        using nw by (cases l; cases u) auto
+      with False Ivl lu show ?thesis by (auto simp: ivl_cast_def)
+    qed
+  qed
+qed
+
+lemma ivl_cast_le_range: "ivl_cast ik a \<le> Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+proof (cases a)
+  case (Ivl l u)
+  have wrap: "ivl_wrap ik l u \<le> Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+    by (cases "(ik, l, u)" rule: ivl_wrap.cases) (auto simp: less_eq_ivl_def)
+  show ?thesis using Ivl wrap by (auto simp: ivl_cast_def less_eq_ivl_def bot_ivl_def)
+qed
+
+lemma ivl_cast_mono:
+  assumes le: "a1 \<le> a2"
+  shows "ivl_cast ik a1 \<le> ivl_cast ik a2"
+proof (cases a1)
+  case (Ivl l1 u1)
+  note a1 = this
+  show ?thesis
+  proof (cases a2)
+    case (Ivl l2 u2)
+    note a2 = this
+    from le a1 a2 have l21: "eint_le l2 l1" and u12: "eint_le u1 u2"
+      by (simp_all add: less_eq_ivl_def)
+    show ?thesis
+    proof (cases "eint_le l1 u1")
+      case False
+      then show ?thesis using a1
+        by (simp add: ivl_cast_def bot_ivl_def less_eq_ivl_def split: ivl.split)
+    next
+      case lu1: True
+      have lu2: "eint_le l2 u2" using l21 lu1 u12 by (blast intro: eint_le_trans)
+      show ?thesis
+      proof (cases "eint_le (Fin (ik_min ik)) l2 \<and> eint_le u2 (Fin (ik_max ik))")
+        case True
+        then have "eint_le (Fin (ik_min ik)) l1 \<and> eint_le u1 (Fin (ik_max ik))"
+          using l21 u12 by (blast intro: eint_le_trans)
+        with True a1 a2 lu1 lu2 le show ?thesis by (simp add: ivl_cast_def)
+      next
+        case out2: False
+        show ?thesis
+        proof (cases "\<exists>x y. l2 = Fin x \<and> u2 = Fin y \<and> y - x \<le> ik_max ik - ik_min ik
+                        \<and> ik_norm ik x \<le> ik_norm ik y")
+          case False
+          have "ivl_wrap ik l2 u2 = Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+            using False by (cases l2; cases u2) auto
+          then have "ivl_cast ik a2 = Ivl (Fin (ik_min ik)) (Fin (ik_max ik))"
+            using a2 lu2 out2 by (auto simp: ivl_cast_def)
+          then show ?thesis using ivl_cast_le_range by simp
+        next
+          case True
+          then obtain x2 y2 where l2: "l2 = Fin x2" and u2: "u2 = Fin y2"
+            and w: "y2 - x2 \<le> ik_max ik - ik_min ik" and o: "ik_norm ik x2 \<le> ik_norm ik y2"
+            by blast
+          obtain x1 y1 where l1: "l1 = Fin x1" and u1: "u1 = Fin y1"
+            using l21 u12 lu1 l2 u2 by (cases l1; cases u1) auto
+          from l21 u12 lu1 l1 u1 l2 u2 have x: "x2 \<le> x1" "x1 \<le> y1" "y1 \<le> y2" by simp_all
+          have sx: "ik_norm ik x1 = ik_norm ik x2 + (x1 - x2)"
+            by (rule ik_norm_interval_shift [OF w o]) (use x in linarith)+
+          have sy: "ik_norm ik y1 = ik_norm ik x2 + (y1 - x2)"
+            by (rule ik_norm_interval_shift [OF w o]) (use x in linarith)+
+          have r2: "ivl_cast ik a2 = Ivl (Fin (ik_norm ik x2)) (Fin (ik_norm ik y2))"
+            using a2 lu2 out2 l2 u2 w o by (auto simp: ivl_cast_def)
+          have sy2: "ik_norm ik y2 = ik_norm ik x2 + (y2 - x2)"
+            by (rule ik_norm_interval_shift [OF w o]) (use x in linarith)+
+          show ?thesis
+          proof (cases "eint_le (Fin (ik_min ik)) l1 \<and> eint_le u1 (Fin (ik_max ik))")
+            case True
+            then have "ik_norm ik x1 = x1" "ik_norm ik y1 = y1"
+              using l1 u1 x by (simp_all add: ik_norm_id)
+            then show ?thesis
+              using True a1 lu1 l1 u1 r2 sx sy sy2 x by (simp add: ivl_cast_def less_eq_ivl_def)
+          next
+            case False
+            have "y1 - x1 \<le> ik_max ik - ik_min ik" "ik_norm ik x1 \<le> ik_norm ik y1"
+              using w x sx sy by simp_all
+            then show ?thesis
+              using False a1 lu1 l1 u1 r2 sx sy sy2 x by (auto simp: ivl_cast_def less_eq_ivl_def)
+          qed
+        qed
+      qed
+    qed
+  qed
+qed
+
 text \<open>
   \<open>aval_ivl\<close> evaluates an expression bottom-up with the interval operations above.
   A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
@@ -198,12 +337,14 @@ fun aval_ivl :: "exp => (vname => ivl) => ivl" where
        (if is_empty (aval_ivl a d) \<or> is_empty (aval_ivl b d) then bot
         else of_bool_option ivl_of_int
                (or_opt (interval_tobool (aval_ivl a d)) (interval_tobool (aval_ivl b d))))"
+  | "aval_ivl (Cast ik a) d = ivl_cast ik (aval_ivl a d)"
 
 interpretation ivl_arith: mono_arith_ops
     aval_ivl ivl_of_int "(+)" "(-)" "(*)" ivl_div ivl_mod
-    interval_less interval_eq interval_tobool
+    interval_less interval_eq interval_tobool ivl_cast
   by unfold_locales
-     (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound ivl_mod_sound
+     (simp_all add: ivl_cast_sound ivl_cast_mono ivl_plus_sound ivl_minus_sound ivl_times_sound
+       ivl_div_sound ivl_mod_sound
                      ivl_plus_mono ivl_minus_mono ivl_times_mono ivl_div_mono ivl_mod_mono
                      interval_less_ivl_sound interval_eq_ivl_sound
                      interval_tobool_sound[unfolded truthy_def]

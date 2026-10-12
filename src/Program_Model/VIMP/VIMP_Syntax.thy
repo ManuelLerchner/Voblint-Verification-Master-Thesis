@@ -1,5 +1,5 @@
 theory VIMP_Syntax
-  imports Main "HOL-Library.Countable" "Deriving.Compare_Order_Instances"
+  imports Machine_Kind
 begin
 
 section \<open>Source-language expressions\<close>
@@ -8,6 +8,9 @@ text \<open>
   One integer-valued expression language, as in C: comparisons and logical
   operators are ordinary constructors evaluating to \<open>0\<close>/\<open>1\<close>, and source
   \<open>true\<close>/\<open>false\<close> lower to \<open>N 1\<close>/\<open>N 0\<close> in the grammar.
+  \<open>Cast ik e\<close> converts the value of \<open>e\<close> to the machine kind \<open>ik\<close> by wraparound.
+  A program without machine kinds contains none, and its expressions compute over
+  mathematical integers.
 \<close>
 
 type_synonym vname = String.literal
@@ -30,6 +33,7 @@ datatype exp =
   | Not (exp_arg: exp)
   | And (exp_lhs: exp) (exp_rhs: exp)
   | Or (exp_lhs: exp) (exp_rhs: exp)
+  | Cast (cast_kind: ikind) (cast_arg: exp)
 
 instance exp :: countable
   by countable_datatype

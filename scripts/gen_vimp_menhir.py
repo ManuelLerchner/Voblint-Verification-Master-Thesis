@@ -164,12 +164,16 @@ NONTERMINAL_TYPES = {
     "stmts": "(unit, string, Voblint.exp) Voblint.gcom",
     "stmts_opt": "(unit, string, Voblint.exp) Voblint.gcom",
     "actuals": "Voblint.exp list",
-    "formals": "string list",
     "ids": "string list",
-    "globals_decl": "string list",
-    "globals_opt": "string list",
-    "function_decl": "string * string list * (unit, string, Voblint.exp) Voblint.gcom",
-    "function_decl_star": "(string * string list * (unit, string, Voblint.exp) Voblint.gcom) list",
+    "kind": "Voblint.ikind",
+    "global_line": "Vimp_typing.global_line",
+    "global_line_star": "Vimp_typing.global_line list",
+    "tformal": "Vimp_typing.formal",
+    "tformals": "Vimp_typing.formal list",
+    "local_decl": "(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list",
+    "local_decl_star": "(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list",
+    "function_decl": "Vimp_typing.definition",
+    "function_decl_star": "Vimp_typing.definition list",
 }
 
 
@@ -224,7 +228,9 @@ def owns_stmt_index(prod: dict) -> bool:
 
 def render_alt(prod: dict) -> str:
     pattern = rhs_pattern(prod["rhs"])
-    is_uminus = prod.get("special") == "unary_minus"
+    # A prefix form whose rightmost terminal carries no level of its own (unary
+    # minus, a cast's closing parenthesis) states its level explicitly.
+    is_uminus = prod.get("special") == "unary_minus" or prod.get("name") == "exp_cast"
     # Only uminus needs an explicit %prec override: every other rule's own
     # operator token (PLUS/STAR/AND/...) already sits at the end of its rhs,
     # so Menhir's default "rightmost terminal" rule picks the right level
@@ -286,30 +292,69 @@ def gen_list_rule(prod: dict) -> str:
 
 
 def gen_program_rule() -> str:
-    # Every function parses uniformly via function_decl*; "main" is picked
-    # out by string equality in this action, matching VIMP_Notation.thy's
-    # prog_tr -- see
-    # manifests/vimp-grammar.yaml's header comment on why this stays a parse-time
-    # diagnostic rather than a deferred well-formedness check.
+    # Declarations are the one part of the surface syntax the Isabelle
+    # notation does not share: kinds reach a theory as `typed_prog p ds`, not
+    # through `program { ... }`. Every function parses uniformly via
+    # function_decl*; Vimp_typing.program picks out "main" by string equality,
+    # matching VIMP_Notation.thy's prog_tr, and decides whether the program is
+    # typed. See manifests/vimp-grammar.yaml's header comment on why "main" stays
+    # a parse-time diagnostic rather than a deferred well-formedness check.
     return """program:
-  | g = globals_opt fs = function_decl_star EOF
-      { let mains, procs = List.partition (fun (n, _, _) -> n = "main") fs in
-        let main_body =
-          match mains with
-          | [ (_, [], b) ] -> b
-          | [ (_, _ :: _, _) ] -> failwith "'main' must have no formals"
-          | [] -> failwith "missing 'fun main() { ... }'"
-          | _ -> failwith "more than one 'fun main()'"
-        in
-        Voblint.mk_program
-          (List.map (fun (n, formals, b) -> (n, Voblint.Gproc_decl_ext (formals, b, ()))) procs)
-          main_body g }
+  | gs = global_line_star fs = function_decl_star EOF
+      { Vimp_typing.program gs fs }
 
-globals_opt:
+global_line_star:
   | (* empty *)
       { [] }
-  | gs = globals_decl
-      { gs }
+  | g = global_line gs = global_line_star
+      { g :: gs }
+
+global_line:
+  | GLOBAL xs = ids SEMI
+      { (xs, None) }
+  | GLOBAL k = kind xs = ids SEMI
+      { (xs, Some k) }
+
+tformal:
+  | x = IDENT
+      { (x, None) }
+  | k = kind x = IDENT
+      { (x, Some k) }
+
+tformals:
+  | (* empty *)
+      { [] }
+  | f = tformal
+      { [f] }
+  | fs = tformals COMMA f = tformal
+      { fs @ [f] }
+
+(* A local declaration starts its variable at an arbitrary value of its kind,
+   written out as a library call so the semantics, not the parser, says what
+   that value may be. *)
+local_decl:
+  | k = kind xs = ids SEMI
+      { List.map
+          (fun x ->
+            (x, k,
+             record_stmt_pos $startpos $endpos
+               (Voblint.Call ((), Some x, "__voblint_nondet_int", []))))
+          xs }
+
+local_decl_star:
+  | (* empty *)
+      { [] }
+  | l = local_decl ls = local_decl_star
+      { l @ ls }
+
+(* Locals are declared before the first statement, as CIL's fundec.slocals
+   lists them, so every local is in scope throughout its procedure. *)
+function_decl:
+  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN
+    LBRACE ls = local_decl_star b = stmts_opt RBRACE
+      { let body = List.fold_right (fun (_, _, c) acc -> Voblint.Seq (c, acc)) ls b in
+        close_definition $startpos $endpos(rp)
+          (name, fs, rk, List.map (fun (x, k, _) -> (x, k)) ls, body) }
 
 function_decl_star:
   | (* empty *)
@@ -318,26 +363,13 @@ function_decl_star:
       { f :: fs }"""
 
 
-def gen_named_rule(prod: dict) -> str:
-    action = render_action(prod)
-    # A definition boundary. Statement indices are allocated procedure by
-    # procedure with main compiled last, whatever order the definitions appear
-    # in, so positions have to be grouped by the definition they came from
-    # rather than left in one flat list. This production reduces at its own
-    # closing brace, with its name in scope.
-    if prod["name"] == "function_decl":
-        # The header span, `fun` through the formals' closing parenthesis, is
-        # where the browser shows parameter values.
-        rparen = f"v{prod['rhs'].index('RPAREN')}"
-        action = f"close_definition $startpos $endpos({rparen}) ({action})"
-    return f"{prod['name']}:\n  | {rhs_pattern(prod['rhs'])}\n      {{ {action} }}"
-
-
 def gen_parser(g: dict) -> str:
     productions = g["productions"]
     list_prods, regular_by_result = [], {}
     for p in productions:
-        if p.get("list_of") or p.get("optional_list_of"):
+        if p["name"] == "formals":
+            pass  # the CLI reads typed formals (tformals, in gen_program_rule)
+        elif p.get("list_of") or p.get("optional_list_of"):
             list_prods.append(p)
         elif p.get("special") == "program_structure":
             pass  # hardcoded via gen_program_rule
@@ -354,10 +386,6 @@ def gen_parser(g: dict) -> str:
     for p in list_prods:
         rule_blocks.append(gen_list_rule(p))
 
-    globals_prod = next(p for p in productions if p["name"] == "globals_decl")
-    rule_blocks.append(gen_named_rule(globals_prod))
-    function_prod = next(p for p in productions if p["name"] == "function_decl")
-    rule_blocks.append(gen_named_rule(function_prod))
     rule_blocks.append(gen_program_rule())
 
     return (
@@ -377,12 +405,11 @@ let source_label p =
   ( Voblint.nat_of_integer (Z.of_int line),
     Voblint.nat_of_integer (Z.of_int column) )
 
-(* A function_decl's action builds (name, formals, body); closing the bucket
-   here keeps the name, its header and its positions together without a second
-   traversal. *)
-let close_definition header_start header_end ((name, formals, body) as decl) =
+(* A function_decl's action builds its Vimp_typing.definition; closing the
+   bucket here keeps the name, its header and its positions together without a
+   second traversal. *)
+let close_definition header_start header_end ((name, _, _, _, _) as decl) =
   Vimp_positions.close name header_start header_end;
-  ignore formals; ignore body;
   decl
 %}}
 

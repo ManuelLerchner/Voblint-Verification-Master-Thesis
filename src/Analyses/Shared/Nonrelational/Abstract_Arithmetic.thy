@@ -73,7 +73,8 @@ locale sound_arith_ops =
     and rem :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and lt :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and eqb :: "'a \<Rightarrow> 'a \<Rightarrow> bool option"
-    and tobool :: "'a \<Rightarrow> bool option" +
+    and tobool :: "'a \<Rightarrow> bool option"
+    and cst :: "ikind \<Rightarrow> 'a \<Rightarrow> 'a" +
   assumes ev_N[simp]: "\<lbrakk>N n\<rbrakk>\<^sup>\<sharp> sigma = lit n"
     and ev_V[simp]: "\<lbrakk>V x\<rbrakk>\<^sup>\<sharp> sigma = sigma x"
     and ev_Plus[simp]: "\<lbrakk>Plus e1 e2\<rbrakk>\<^sup>\<sharp> sigma = pls (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> sigma) (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> sigma)"
@@ -108,6 +109,7 @@ locale sound_arith_ops =
     and ev_Or[simp]: "\<lbrakk>Or e1 e2\<rbrakk>\<^sup>\<sharp> sigma =
          (if is_empty (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> sigma) \<or> is_empty (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> sigma) then bot
           else of_bool_option lit (or_opt (tobool (\<lbrakk>e1\<rbrakk>\<^sup>\<sharp> sigma)) (tobool (\<lbrakk>e2\<rbrakk>\<^sup>\<sharp> sigma))))"
+    and ev_Cast[simp]: "\<lbrakk>Cast ik e\<rbrakk>\<^sup>\<sharp> sigma = cst ik (\<lbrakk>e\<rbrakk>\<^sup>\<sharp> sigma)"
     and lit_sound[simp]: "n \<in> \<gamma> (lit n)"
     and plus_sound[intro]:
       "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> i + j \<in> \<gamma> (pls p q)"
@@ -119,6 +121,7 @@ locale sound_arith_ops =
       "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_div i j \<in> \<gamma> (dvs p q)"
     and mod_sound[intro]:
       "i \<in> \<gamma> (p::'a) \<Longrightarrow> j \<in> \<gamma> q \<Longrightarrow> c_mod i j \<in> \<gamma> (rem p q)"
+    and cast_sound[intro]: "i \<in> \<gamma> (p::'a) \<Longrightarrow> ik_norm ik i \<in> \<gamma> (cst ik p)"
 begin
 
 text \<open>
@@ -229,6 +232,7 @@ locale mono_arith_ops = sound_arith_ops + mono_truth_test tobool +
       "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> dvs p1 q1 \<le> dvs p2 q2"
     and mod_mono[intro]:
       "p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow> rem p1 q1 \<le> rem p2 q2"
+    and cast_mono[intro]: "p1 \<le> p2 \<Longrightarrow> cst ik p1 \<le> cst ik p2"
     and lt_mono:
       "\<not> is_empty p1 \<Longrightarrow> \<not> is_empty q1 \<Longrightarrow> p1 \<le> p2 \<Longrightarrow> q1 \<le> q2 \<Longrightarrow>
        lt p2 q2 = Some b \<Longrightarrow> lt p1 q1 = Some b"

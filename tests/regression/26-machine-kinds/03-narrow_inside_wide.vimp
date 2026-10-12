@@ -1,0 +1,8 @@
+// PARAM: --analysis interval
+// u + 1 is an unsigned 32-bit addition and wraps to 0 before the comparison,
+// which is computed at 64 bits because the literal does not fit 32 bits.
+fun main() {
+  u32 u;
+  u = 4294967295;
+  __voblint_check(4294967295 < u + 1); // REFUTED
+}

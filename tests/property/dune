@@ -17,6 +17,12 @@
   (copy %{deps} %{targets})))
 
 (rule
+ (targets vimp_typing.ml)
+ (deps ../../cli/frontend/vimp_typing.ml)
+ (action
+  (copy %{deps} %{targets})))
+
+(rule
  (targets vimp_parser.mly)
  (deps ../../cli/frontend/vimp_parser.mly)
  (action
@@ -57,7 +63,7 @@
 (library
  (name ast_driver_grammar)
  (wrapped false)
- (modules Voblint_Generated voblint vimp_parser vimp_lexer)
+ (modules Voblint_Generated voblint vimp_typing vimp_parser vimp_lexer)
  (libraries ast_driver_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))

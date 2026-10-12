@@ -1,0 +1,18 @@
+// PARAM: --analysis interval
+// f and g both take a formal n, at u8 and at i64. The same argument 300 wraps
+// to 44 for f and passes unchanged to g; each return converts to its
+// procedure's return kind.
+fun u8 f(u8 n) {
+  return n;
+}
+fun i64 g(i64 n) {
+  return n;
+}
+fun main() {
+  i32 a;
+  i64 b;
+  a = f(300);
+  __voblint_check(a == 44); // PROVED
+  b = g(300);
+  __voblint_check(b == 300); // PROVED
+}

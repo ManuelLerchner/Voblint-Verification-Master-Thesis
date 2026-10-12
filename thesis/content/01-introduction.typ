@@ -268,7 +268,8 @@ soundness obligation excludes inside the proof boundary.
 The table also shows the price of the proof. The unverified analyzers accept
 C, C++, or Python, and Astrée and IKOS have been applied to safety-critical
 control software @blanchet03 @brat14[§3]. Voblint's theorem covers VIMP
-(@sec:vimp), which has no pointers, heap, or machine integers, and the proof
+(@sec:vimp), which has no pointers or heap and wraps signed overflow at declared
+machine kinds, and the proof
 covers only the definitions it is about. Whether they model the intended
 language is the adequacy question of @sec:vimp-vs-c.
 
@@ -583,7 +584,9 @@ Schwarz et al. @schwarz21 to procedure activations. Isabelle's code generator
 
 The theorem has the following limits. @sec:limitations discusses each of them.
 
-- _Language._ VIMP has no pointers, heap, or threads. Its integers are unbounded, and division by zero is defined, so a verdict does not necessarily transfer to
+- _Language._ VIMP has no pointers, heap, or threads. Its integers are unbounded
+  or wrap at declared kinds, and division by zero is defined, so a verdict does
+  not necessarily transfer to
   a C program with the same text (@sec:vimp-vs-c).
 - _Properties._ Voblint checks assertions and division by zero.
   Goblint also checks overflows, data races, memory safety, memory leaks, and program termination @saan26phd[§3.3].
@@ -631,10 +634,9 @@ these parts into the source-level theorem.
 #partref(<part:instances>) puts the theorem to use. @ch:instances
 instantiates it for five domains and an order analysis, and @ch:executable
 follows #isaconst("run_voblint") to the delivered tools and their trust
-boundary. @ch:evaluation asks whether the premises can hold together and
-whether the obligations exclude real errors. It also shows the precision
-reached and describes how the unverified code is tested. @ch:tooling describes
-the tooling.
+boundary. @ch:evaluation asks whether the premises can hold together and the
+obligations exclude real errors, shows the precision reached, and describes how
+the unverified code is tested. @ch:tooling describes the tooling.
 
 #partref(<part:assessment>) closes the thesis. @ch:related compares Voblint's
 mechanisms with the closest prior constructions, and @ch:conclusion discusses

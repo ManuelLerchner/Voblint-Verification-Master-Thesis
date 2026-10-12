@@ -219,13 +219,20 @@ fun aval_parity :: "exp => (vname => parity) => parity" where
        (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
         else of_bool_option parity_of_int
                (or_opt (parity_tobool (aval_parity a d)) (parity_tobool (aval_parity b d))))"
+  | "aval_parity (Cast ik a) d = aval_parity a d"
+
+text \<open>A conversion to a machine kind preserves parity (@{thm even_ik_norm_iff}), so the
+  parity cast is the identity.\<close>
+
+lemma parity_cast_sound: "i \<in> gamma_parity a \<Longrightarrow> ik_norm ik i \<in> gamma_parity a"
+  by (cases a) simp_all
 
 interpretation parity_arith: mono_arith_ops
     aval_parity parity_of_int "(+)" "(-)" "(*)" parity_div parity_mod
-    parity_lt parity_eqb parity_tobool
+    parity_lt parity_eqb parity_tobool "\<lambda>_ a. a"
   apply unfold_locales
   apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
-    parity_div_sound parity_mod_sound
+    parity_div_sound parity_mod_sound parity_cast_sound
                         parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
                           parity_div_mono parity_mod_mono
                         parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]

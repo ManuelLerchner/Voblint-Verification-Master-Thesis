@@ -121,6 +121,20 @@ lemma sign_mod_mono:
   by (cases a1; cases a2; cases b1; cases b2;
       simp add: sign_mod_def sup_sign_def less_eq_sign_def)
 
+text \<open>A conversion to a machine kind keeps zero and the empty value. At an unsigned
+  kind every value is nonnegative; at a signed kind wraparound can change any sign.\<close>
+
+definition sign_cast :: "ikind \<Rightarrow> sign \<Rightarrow> sign" where
+  "sign_cast ik a =
+     (if a = SBot then SBot else if a = SZero then SZero
+      else if ik_signed ik then STop else SNonNeg)"
+
+lemma sign_cast_sound: "i \<in> gamma_sign a \<Longrightarrow> ik_norm ik i \<in> gamma_sign (sign_cast ik a)"
+  by (cases a) (auto simp: sign_cast_def ik_norm_nonneg_unsigned)
+
+lemma sign_cast_mono: "a1 \<le> a2 \<Longrightarrow> sign_cast ik a1 \<le> sign_cast ik a2"
+  by (cases a1; cases a2; simp add: sign_cast_def less_eq_sign_def)
+
 subsection \<open>Comparison and truthiness queries\<close>
 
 text \<open>
@@ -284,6 +298,7 @@ fun aval_sign :: "exp => (vname => sign) => sign" where
        (if is_empty (aval_sign a d) \<or> is_empty (aval_sign b d) then bot
         else of_bool_option sign_of_int
                (or_opt (sign_tobool (aval_sign a d)) (sign_tobool (aval_sign b d))))"
+  | "aval_sign (Cast ik a) d = sign_cast ik (aval_sign a d)"
 
 lemma sign_plus_sound:
   assumes "i \<in> gamma_sign a" "j \<in> gamma_sign b"
@@ -345,9 +360,10 @@ lemma sign_times_combine_mono:
 
 interpretation sign_arith: mono_arith_ops
     aval_sign sign_of_int "(+)" "(-)" "(*)" sign_div sign_mod sign_lt sign_eqb sign_tobool
+    sign_cast
   apply unfold_locales
   apply (simp_all add: sign_of_int_gamma sign_plus_sound sign_minus_sound sign_times_sound
-    sign_div_sound sign_mod_sound
+    sign_div_sound sign_mod_sound sign_cast_sound sign_cast_mono
                         sign_plus_combine_mono sign_minus_combine_mono sign_times_combine_mono
                           sign_div_mono sign_mod_mono
                         sign_lt_sound sign_eqb_sound sign_tobool_sound[unfolded truthy_def]

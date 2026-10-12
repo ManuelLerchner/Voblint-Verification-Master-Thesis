@@ -50,13 +50,13 @@ theorem that the contexts exhaust the node collecting semantics, and the
 composition of @sec:eq-discharge. The step functions and every proof that
 unfolds them would have to be redone.
 
-Machine integers fit this case. They change the step functions, the generic
-derivation in #isalocale("sound_nonrelational_ops"), and each domain's
-soundness proofs for its primitives. Routing and the solver certificate do not
-mention arithmetic. For signed overflow, a domain could keep its ideal-integer
-bounds and report an overflow when they exceed the type, as Goblint does
-@saan26phd[§3.3.2]. Unsigned wrap-around would need domain variants, since
-classical numeric domains describe ideal integers @mine13. A C-like treatment of division
+Machine integers are covered in a restricted form that avoids this redo. A
+program that declares kinds is lowered to explicit conversions (@sec:vimp), so
+the step functions, the routing and the certificate stay unchanged, and each
+domain only adds a sound conversion of its values. Signed overflow wraps there,
+where C leaves it undefined. Reporting it instead, as Goblint does
+@saan26phd[§3.3.2], would let a domain keep its ideal-integer bounds and check
+them against the type. A C-like treatment of division
 by zero changes more. The semantics would need an error outcome, and the verdicts of @sec:verdict-meaning would need a meaning for it.
 
 Pointers into the stack break the assumption that activations do not
@@ -79,7 +79,9 @@ as CIL would join the parser in the trust boundary unless it is verified.
 The first limits concern what the theorem covers. It is a partial-correctness
 result and covers every answer the analyzer returns. Termination is not proved for the solve or for the reduction of Int, and regression programs
 exist whose solves do not finish (@sec:termination, @sec:reduced-product). The
-theorem concerns VIMP, a scalar language without pointers, heap, or memory model. VIMP has unbounded integers, defined division by zero, and zero-initialized callee locals, so a verdict about a VIMP program does not
+theorem concerns VIMP, a scalar language without pointers, heap, or memory model. VIMP has unbounded integers unless kinds are declared, wrapping signed
+overflow at declared kinds, defined division by zero, and zero-initialized
+callee locals, so a verdict about a VIMP program does not
 transfer to a C program with the same text (@sec:vimp-vs-c). We argue, but do not prove, that #isaconst("pstep") models the intended language. The
 simulation from source runs to graph runs and the representation of graph runs
 by valid traces are proved in the forward direction only (@sec:csim,
@@ -114,7 +116,7 @@ search rather than a systematic review (@ch:related).
 === Extending Voblint <sec:outlook-extending>
 
 A richer source language, up to a subset of C, needs the new obligations that
-@sec:discussion names for machine integers, pointers, a heap, and threads. It
+@sec:discussion names for C's signed overflow, pointers, a heap, and threads. It
 also needs a semantics and a preservation argument per construct at every
 layer.
 
@@ -207,7 +209,8 @@ In the other direction, a verified component exported as OCaml could replace
 its unverified counterpart in Goblint. That needs more than the export. It
 needs the data refinement of @sec:limitations, a correspondence between the
 component's interface and Goblint's, and soundness for C's integers, since the
-component's proofs assume VIMP's unbounded ones (@sec:vimp-vs-c).
+component's proofs assume VIMP's integers, which are unbounded or wrap at a
+declared kind (@sec:vimp-vs-c).
 
 Voblint verifies neither Goblint nor an analyzer for C. It establishes a
 smaller result. For a Goblint-style architecture with recursive procedures,

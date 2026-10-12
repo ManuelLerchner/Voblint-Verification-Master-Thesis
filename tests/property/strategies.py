@@ -45,6 +45,9 @@ def sexp(x) -> str:
 # -- exp: arbitrary nesting over all ten constructors (see module docstring) -
 
 
+KIND_NAMES = ["i8", "u8", "i16", "u16", "i32", "u32", "i64", "u64"]
+
+
 def exps(max_leaves=5):
     leaves = st.one_of(
         st.integers(min_value=-1000, max_value=1000).map(lambda n: ("N", str(n))),
@@ -67,6 +70,7 @@ def exps(max_leaves=5):
             children.map(lambda e: ("Not", e)),
             st.tuples(st.just("And"), children, children),
             st.tuples(st.just("Or"), children, children),
+            st.tuples(st.just("Cast"), st.sampled_from(KIND_NAMES), children),
         ),
         max_leaves=max_leaves,
     )

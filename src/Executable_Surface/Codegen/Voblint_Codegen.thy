@@ -1,6 +1,7 @@
 theory Voblint_Codegen
   imports
     "Voblint_CLI.Trace_Run"
+    "Voblint_Typed.Typed_Lower"
 begin
 
 section "Code export surface"
@@ -168,7 +169,10 @@ export_code
   mk_program gproc_decl_ext
   SKIP Assign Seq gcom.If While Return Check gcom.Call
   N V Plus Minus Times Div Mod
-  exp.Not And Or Less exp.Eq
+  exp.Not And Or Less exp.Eq Cast
+
+  \<comment> \<open>Typed programs: kind declarations per identity, elaborated and lowered\<close>
+  typed_prog GlobalId ScopedId ReturnId I8 U8 I16 U16 I32 U32 I64 U64
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat
 

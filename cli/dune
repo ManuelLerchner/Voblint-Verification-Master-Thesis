@@ -30,7 +30,7 @@
 (library
  (name voblint_grammar)
  (wrapped false)
- (modules Voblint_Generated voblint vimp_parser vimp_lexer)
+ (modules Voblint_Generated voblint vimp_typing vimp_parser vimp_lexer)
  (libraries voblint_positions voblint_trace_hook menhirLib str zarith)
  (flags
   (:standard -w -a)))

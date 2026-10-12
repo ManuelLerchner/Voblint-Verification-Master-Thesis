@@ -61,11 +61,25 @@ definition mod_int_dom_raw :: "int_dom => int_dom => int_dom" where
        int_congruence := congruence_mod (int_congruence a) (int_congruence b)
      \<rparr>"
 
+text \<open>A conversion to a machine kind converts every component; parity needs no change.\<close>
+
+definition cast_int_dom_raw :: "ikind => int_dom => int_dom" where
+  "cast_int_dom_raw ik a =
+     (top :: int_dom)\<lparr>
+       int_sign := sign_cast ik (int_sign a),
+       int_ivl := ivl_cast ik (int_ivl a),
+       int_parity := int_parity a,
+       int_congruence := congruence_cast ik (int_congruence a)
+     \<rparr>"
+
 definition plus_int_dom ::
     "refine_mode => int_dom => int_dom => int_dom"
 where
   "plus_int_dom mode a b =
      refine mode (plus_int_dom_raw a b)"
+
+definition cast_int_dom :: "refine_mode => ikind => int_dom => int_dom" where
+  "cast_int_dom mode ik a = refine mode (cast_int_dom_raw ik a)"
 
 definition minus_int_dom ::
     "refine_mode => int_dom => int_dom => int_dom"
@@ -138,6 +152,13 @@ lemma div_int_dom_raw_sound:
         intro: sign_div_sound ivl_div_sound
           parity_div_sound congruence_div_sound)
 
+lemma cast_int_dom_raw_sound:
+  assumes "x : gamma_int_dom a"
+  shows "ik_norm ik x : gamma_int_dom (cast_int_dom_raw ik a)"
+  using assms
+  by (auto simp: gamma_int_dom_def cast_int_dom_raw_def
+        intro: sign_cast_sound ivl_cast_sound parity_cast_sound congruence_cast_sound)
+
 lemma mod_int_dom_raw_sound:
   assumes "x : gamma_int_dom a"
       and "y : gamma_int_dom b"
@@ -180,6 +201,13 @@ lemma div_int_dom_raw_mono:
         intro: sign_div_mono ivl_div_mono
           parity_div_mono congruence_div_mono)
 
+
+lemma cast_int_dom_raw_mono:
+  assumes "a1 <= a2"
+  shows "cast_int_dom_raw ik a1 <= cast_int_dom_raw ik a2"
+  using assms
+  by (auto simp: cast_int_dom_raw_def less_eq_int_dom_ext_def
+        intro: sign_cast_mono ivl_cast_mono congruence_cast_mono)
 
 lemma mod_int_dom_raw_mono:
   assumes "a1 <= a2" and "b1 <= b2"
@@ -243,6 +271,17 @@ proof -
     by (rule div_int_dom_raw_sound[OF assms])
   then show ?thesis
     unfolding div_int_dom_def
+    using refine_exact by simp
+qed
+
+lemma cast_int_dom_sound:
+  assumes "x : gamma_int_dom a"
+  shows "ik_norm ik x : gamma_int_dom (cast_int_dom mode ik a)"
+proof -
+  have "ik_norm ik x : gamma_int_dom (cast_int_dom_raw ik a)"
+    by (rule cast_int_dom_raw_sound[OF assms])
+  then show ?thesis
+    unfolding cast_int_dom_def
     using refine_exact by simp
 qed
 
@@ -332,6 +371,12 @@ proof -
     by (rule monoD[OF refine_nonfixpoint_mono[OF assms(1)] raw])
 qed
 
+
+lemma cast_int_dom_mono:
+  assumes "mode ~= Refine_Fixpoint" and "a1 <= a2"
+  shows "cast_int_dom mode ik a1 <= cast_int_dom mode ik a2"
+  unfolding cast_int_dom_def
+  by (rule monoD[OF refine_nonfixpoint_mono[OF assms(1)] cast_int_dom_raw_mono[OF assms(2)]])
 
 lemma mod_int_dom_mono:
   assumes "mode ~= Refine_Fixpoint"
@@ -713,6 +758,7 @@ where
      (let a = aval_int_dom mode e1 sigma; b = aval_int_dom mode e2 sigma
       in if is_empty a \<or> is_empty b then bot
          else of_bool_option int_dom_of_int (or_opt (int_dom_tobool a) (int_dom_tobool b)))"
+| "aval_int_dom mode (Cast ik e) sigma = cast_int_dom mode ik (aval_int_dom mode e sigma)"
 
 text \<open>
   \<open>aval_int_dom\<close> has exactly the shape \<open>sound_arith_ops\<close> assumes, once
@@ -740,10 +786,10 @@ interpretation int_arith: sound_arith_ops
     "aval_int_dom mode" int_dom_of_int
     "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
       "mod_int_dom mode"
-    int_dom_lt int_dom_eqb int_dom_tobool
+    int_dom_lt int_dom_eqb int_dom_tobool "cast_int_dom mode"
   by unfold_locales
      (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
-       div_int_dom_sound mod_int_dom_sound
+       div_int_dom_sound mod_int_dom_sound cast_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound)
 
 lemma int_dom_sound_evaluator: "sound_evaluator gamma_state (aval_int_dom mode)"
@@ -760,11 +806,12 @@ interpretation int_arith_mono: mono_arith_ops
     "aval_int_dom mode" int_dom_of_int
     "plus_int_dom mode" "minus_int_dom mode" "times_int_dom mode" "div_int_dom mode"
       "mod_int_dom mode"
-    int_dom_lt int_dom_eqb int_dom_tobool
+    int_dom_lt int_dom_eqb int_dom_tobool "cast_int_dom mode"
   by unfold_locales
      (simp_all add: Let_def plus_int_dom_sound minus_int_dom_sound times_int_dom_sound
-       div_int_dom_sound mod_int_dom_sound
+       div_int_dom_sound mod_int_dom_sound cast_int_dom_sound
                     int_dom_lt_sound int_dom_eqb_sound int_dom_tobool_sound
+                    cast_int_dom_mono[OF mode_nonfixpoint]
                     plus_int_dom_mono[OF mode_nonfixpoint]
                     minus_int_dom_mono[OF mode_nonfixpoint]
                     times_int_dom_mono[OF mode_nonfixpoint]

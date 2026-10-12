@@ -3,6 +3,7 @@ section \<open>Voblint: a verified abstract interpreter for VIMP\<close>
 theory Voblint
   imports
     "Voblint_Examples_Sign.Exec_Sign_DG_Run"
+    "Voblint_CLI.Typed_Certified"
     Example_End_To_End_Certificate
     "Voblint_Examples_Sign.Example_Sign_DG_CallString_K2"
     "Voblint_Examples_Interval.Example_Interval_Source_Ctx"
@@ -531,6 +532,8 @@ text \<open>
       @{theory Voblint_CLI.Analysis_Certified} states
       @{thm [source] run_voblint_source_sound} and
       @{thm [source] run_voblint_check_sound} once for every configuration.
+      @{theory Voblint_CLI.Typed_Certified} carries the endpoint to runs of the typed
+      semantics of a program with machine kinds (@{thm [source] run_voblint_typed_sound}).
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
       equations of \<^const>\<open>run_voblint\<close> and everything it transitively calls, down to the

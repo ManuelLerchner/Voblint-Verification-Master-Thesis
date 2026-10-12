@@ -4591,7 +4591,7 @@ fun main() {
             <li><strong>A domain obligation rules out the Goblint bug for every operand.</strong> Any abstract remainder that returns the constant <code>1</code> for the class <code>1+2ℤ</code> modulo <code>2</code> violates the statement that the shipped congruence remainder satisfies, at <code>−5</code> (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.prefix_congruence_mod_unsound%7Cfact"><code>prefix_congruence_mod_unsound</code></a>). Goblint's regression test samples one program; the obligation covers all of them. This is machine-checked; the upstream behaviour is documented, not re-run here.</li>
             <li><strong>Entry states must be covered in pairs.</strong> When <code>enter</code> returns several alternatives, each pair of caller continuation and callee entry has to cover the run together. Covering the caller store with one pair and the entered store with another lets the combined result exclude the run's real value (<a href="Voblint/Voblint_Examples/Example_Non_Vacuity.html#Example_Non_Vacuity.unpaired_entry_cover_unsound%7Cfact"><code>unpaired_entry_cover_unsound</code></a>).</li>
             <li><strong>Publish to a global unknown only complete contributions.</strong> The solver's update rules record one contribution per origin, so the equations buffer their writes (see the <a href="#buffering">buffering</a> above). Where the buffer flushes only at the answer, each key is published once per evaluation; a flush before a local read gives that up for keys written again afterwards. The buffered system terminates on a regression whose equation would otherwise publish twice in one evaluation (<a href="Voblint/Voblint_Examples_Tooling/Example_Keyed_Solver_Update_Rule_Regression.html#Example_Keyed_Solver_Update_Rule_Regression.keyed_multiwrite_buffered_terminates%7Cfact"><code>keyed_multiwrite_buffered_terminates</code></a>). That the unbuffered system does not terminate is expected, but neither proved nor evaluated.</li>
-            <li><strong>A verdict is about VIMP.</strong> VIMP's integers are unbounded and division by zero is defined, so a verdict about a VIMP program does not automatically transfer to a corresponding C program. The theorem is only as meaningful as the semantics it is stated against; the <a href="#limits">limits</a> section returns to this.</li>
+            <li><strong>A verdict is about VIMP.</strong> VIMP's integers are unbounded unless the program declares machine kinds, signed overflow then wraps, and division by zero is defined, so a verdict about a VIMP program does not automatically transfer to a corresponding C program. The theorem is only as meaningful as the semantics it is stated against; the <a href="#limits">limits</a> section returns to this.</li>
           </ul>
         </div>
       </details>
@@ -5323,11 +5323,11 @@ qed</code></pre>
             <a class="align-voblint" href="Voblint/Voblint_Domain/Int_Lattice.html#Int_Lattice.int_dom%7Ctype" title="Definition in the formalization">Int: sign × interval × parity × congruence</a>
             <span class="align-note">Goblint combines six optional integer domains; only interval and congruence have counterparts here, and sign and parity have none upstream. A DefExc-style exclusion component cannot form the required lattice over unbounded integers; that argument is recorded in the alignment register, not machine-checked.</span>
           </li>
-          <li class="align-row absent">
+          <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intervalDomain.ml#L35-L69" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Machine integers (ikind)</a>
-            <span class="align-link" aria-label="absent"><span>absent</span></span>
-            <span class="align-voblint">Mathematical integers</span>
-            <span class="align-note">No soundness theorem here covers wrap-around arithmetic.</span>
+            <span class="align-link" aria-label="simplified"><span>simplified</span></span>
+            <a class="align-voblint" href="Voblint/Voblint_Typed/Typed_Lower.html#Typed_Lower.typed_prog%7Cconst" title="Definition in the formalization">Declared kinds, lowered to casts</a>
+            <span class="align-note">A program that declares kinds is elaborated and lowered to explicit conversions by the verified typed_prog, and every domain converts its values soundly. Signed overflow wraps, where Goblint follows sem.int.signed_overflow, and no overflow warnings are reported. Undeclared programs keep mathematical integers.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/domains/queries.ml#L88-L167" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Queries (ask)</a>
@@ -5415,7 +5415,7 @@ qed</code></pre>
           <g class="region" tabindex="0" data-note="Threads and data races. VIMP is single-threaded, so there is no interleaving and no need for Goblint&#x27;s `sync`.">
             <ellipse cx="640" cy="110" rx="78" ry="40"/><text x="640" y="115">threads</text>
           </g>
-          <g class="region" tabindex="0" data-note="Machine integers wrap around. VIMP's integers are mathematical and never overflow, and no theorem here covers wrapping arithmetic.">
+          <g class="region" tabindex="0" data-note="Machine integers wrap around. VIMP's integers are mathematical unless a program declares machine kinds; declared kinds are lowered to explicit conversions with wrapping signed overflow, which C leaves undefined.">
             <ellipse cx="770" cy="220" rx="80" ry="44"/><text x="770" y="216">machine</text><text x="770" y="234">integers</text>
           </g>
           <g class="region" tabindex="0" data-note="Floating point is absent: every VIMP value is an integer.">

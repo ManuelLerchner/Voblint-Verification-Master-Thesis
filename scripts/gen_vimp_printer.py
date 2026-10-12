@@ -76,6 +76,12 @@ def render(grammar: dict) -> str:
             f"  | {G}.{ctor} (a, b) -> paren ctx {level} "
             f'(exp_at {left} a ^ " {text} " ^ exp_at {right} b)'
         )
+    keyword_text = {token: word for word, token in grammar["keywords"].items()}
+    kind_cases = "\n".join(
+        f'  | {G}.{p["lower"]["ctor"]} -> "{keyword_text[p["rhs"][0]]}"'
+        for p in grammar["productions"]
+        if p.get("result") == "kind"
+    )
     unary_cases = [
         f'  | {G}.{ctor} a -> paren ctx {level} ("{text}" ^ exp_at {level} a)'
         for ctor, text, level in unary
@@ -92,9 +98,13 @@ let paren ctx level text = if level < ctx then "(" ^ text ^ ")" else text
 
 let string_of_int_lit n = Z.to_string ({G}.integer_of_int n)
 
+let string_of_kind = function
+{kind_cases}
+
 let rec exp_at ctx = function
   | {G}.N n -> paren ctx {atom_level} (string_of_int_lit n)
   | {G}.V x -> x
+  | {G}.Cast (k, a) -> paren ctx {uminus_level} ("(" ^ string_of_kind k ^ ") " ^ exp_at {uminus_level} a)
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
   | {G}.Minus ({G}.N z, ({G}.N _ as b)) when Z.equal ({G}.integer_of_int z) Z.zero ->

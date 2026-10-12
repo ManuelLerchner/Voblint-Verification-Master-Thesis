@@ -1,0 +1,7 @@
+// PARAM: --analysis interval
+// A program that declares no kind keeps mathematical integers: nothing wraps.
+fun main() {
+  x = 2147483647;
+  x = x + 1;
+  __voblint_check(x == 2147483648); // PROVED
+}

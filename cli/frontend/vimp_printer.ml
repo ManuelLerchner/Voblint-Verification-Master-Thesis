@@ -8,9 +8,20 @@ let paren ctx level text = if level < ctx then "(" ^ text ^ ")" else text
 
 let string_of_int_lit n = Z.to_string (Voblint.integer_of_int n)
 
+let string_of_kind = function
+  | Voblint.I8 -> "i8"
+  | Voblint.U8 -> "u8"
+  | Voblint.I16 -> "i16"
+  | Voblint.U16 -> "u16"
+  | Voblint.I32 -> "i32"
+  | Voblint.U32 -> "u32"
+  | Voblint.I64 -> "i64"
+  | Voblint.U64 -> "u64"
+
 let rec exp_at ctx = function
   | Voblint.N n -> paren ctx 8 (string_of_int_lit n)
   | Voblint.V x -> x
+  | Voblint.Cast (k, a) -> paren ctx 7 ("(" ^ string_of_kind k ^ ") " ^ exp_at 7 a)
   (* [0 - e] parses back to itself only when [e] is not a literal: the parser folds
      a negated literal into a negative one, so print that case as a subtraction. *)
   | Voblint.Minus (Voblint.N z, (Voblint.N _ as b)) when Z.equal (Voblint.integer_of_int z) Z.zero ->

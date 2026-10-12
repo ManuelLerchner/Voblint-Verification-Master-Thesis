@@ -70,9 +70,10 @@ type_synonym proc_table = "unit ptable"
 
 datatype frame = Frame (frame_store: store) (frame_dest: "vname option")
 
-text \<open>Formal binding is the same fold over the concrete store and over every
-  abstract state, so it is one polymorphic abbreviation.\<close>
-abbreviation bind_formals :: "vname list \<Rightarrow> 'v list \<Rightarrow> (vname \<Rightarrow> 'v) \<Rightarrow> vname \<Rightarrow> 'v" where
+text \<open>Formal binding is the same fold over the concrete store, over every abstract
+  state, and over a typed store keyed by variable identities, so it is one
+  polymorphic abbreviation.\<close>
+abbreviation bind_formals :: "'k list \<Rightarrow> 'v list \<Rightarrow> ('k \<Rightarrow> 'v) \<Rightarrow> 'k \<Rightarrow> 'v" where
   "bind_formals xs vs s \<equiv> fold (\<lambda>(x, v) st. st(x := v)) (zip xs vs) s"
 
 lemma bind_formals_other:

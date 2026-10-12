@@ -228,6 +228,38 @@ zero, not that a zero-divisor execution exists; an `error` does not prove its
 point reachable. The [arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md)
 pin the findings and describe the expectation syntax.
 
+### Machine integers
+
+VIMP integers are mathematical unless a program declares machine kinds. Kinds
+are written C-style: on a `global` line, on a formal, as a procedure's return
+kind, and on locals declared before a body's first statement. A program that
+writes any kind must declare every variable; a declared local starts at an
+arbitrary value of its kind, and `(k) e` converts explicitly:
+
+```c
+global u8 g;
+fun u8 f(u8 n) { return n + 1; }
+fun main() {
+  g = f(300);
+  __voblint_check(g == 45); // PROVED: 300 wraps to 44 at u8, then 44 + 1
+}
+```
+
+The frontend hands such a program to the verified
+[`typed_prog`](src/Program_Model/Typed/Typed_Lower.thy). It resolves every name
+to a static identity, computes every operation at its C kind (integer promotion
+and the usual arithmetic conversions), inserts a conversion wherever a value is
+written to a place of another kind, and lowers the result back to VIMP with
+explicit `Cast` nodes. `run_voblint` then analyzes the lowered program, so the
+[headline theorem](#the-headline-theorem) covers it. `lower_elaborate` and
+`lower_com_meaning` state what the lowered expressions compute: the typed
+meaning `taval` of the source expressions, on every store. Signed overflow wraps
+(the `-fwrapv` reading), which C leaves undefined. Every domain converts its
+values soundly; Interval tracks exact wraparound for narrow intervals.
+[`docs/TYPED_IR.md`](docs/TYPED_IR.md) has the details and the
+[machine-kind fixtures](tests/regression/26-machine-kinds/README.md) the
+examples.
+
 ## What Voblint proves
 
 For every selection of analyses, globals rule and context policy, the report
@@ -404,6 +436,7 @@ not be `DEAD`.
 | Compilation to the procedure-aware CFG | Lexing and parsing |
 | Equation generation and the computed post-solution | Isabelle code generation, the OCaml compiler and runtime |
 | The report's states, check rows under their labels, arithmetic safety at quiet points, zero divisors at errors | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
+| Elaboration and lowering of a typed program, and the typed semantics it simulates (`run_voblint_typed_sound`) | That the parsed declarations are the ones the source wrote |
 | | Completeness and precision |
 
 [`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
@@ -423,6 +456,7 @@ Theorem statements use a few symbols the theories declare. Each name links to it
 | γ a | gamma of _a_ | [`gamma`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Domain/Abstract_Domain.html#Abstract_Domain.numeric_domain_class.gamma%7Cconst) | the integers the abstract value _a_ represents |
 | 𝒢,Π ⊢ c →<sub>p</sub> c' / 𝒢,Π ⊢ c →<sub>p</sub><sup>&#42;</sup> c' | _c_ steps to _c′_ | [`pstep`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst) / [`psteps`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst) | one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure |
 | p,s0 ⊢ c ⊳ v | from _s₀_, _c_ is observed at node _v_ in _p_ | [`at_node`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst) | some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes |
+| a ∇ b / a Δ b | _a_ widened by _b_, _a_ narrowed by _b_ | [`widen`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.widening_class.widen%7Cconst) / [`narrow`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Unsorted/TD/Warrowing.html#Warrowing.narrowing_class.narrow%7Cconst) | the solver's widening, an upper bound of both arguments, and its narrowing, which stays between _b_ and _a_ when _b_ ≤ _a_ |
 | 𝒢 | the globals classifier | [`declared_global`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst) | the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter |
 | 𝒯<sub>𝒢,g,S</sub><br>Within `activation_coverage`, the fixed parameters are omitted: 𝒯 | the valid activation traces of _g_ from _S_ | [`valid_activation_trace`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst) | the activation traces of graph _g_ from initial stores _S_ |
 | 𝒞<sub>𝒢,g,S</sub> v<br>Within `activation_coverage`, the fixed parameters are omitted: 𝒞 v | the stores collected at _v_ | [`node_collect`](https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst) | the stores valid activation traces reach at node _v_ |

@@ -1,0 +1,15 @@
+// PARAM: --analysis interval
+// Globals carry kinds on their declaration line and start at zero, as C's
+// static storage does. A call result converts to the destination's kind.
+global u8 g;
+global i16 h;
+fun i32 big() {
+  return 70000;
+}
+fun main() {
+  __voblint_check(g == 0); // PROVED
+  h = big();
+  __voblint_check(h == 4464); // PROVED
+  g = h;
+  __voblint_check(g == 112); // PROVED
+}
