@@ -25,7 +25,7 @@ text \<open>
 
 subsection \<open>The structural successor relation\<close>
 
-definition cfg_succ_rel :: "cfg \<Rightarrow> (cfg_node \<times> cfg_node) set" where
+definition cfg_succ_rel :: "('v, 'e) gcfg \<Rightarrow> (cfg_node \<times> cfg_node) set" where
   "cfg_succ_rel g =
      {(u, v) | u a v. (u, a, v) \<in> intra g}
    \<union> {(c, ce) | c ca ce k. (c, ca, ce, k) \<in> calls g}
@@ -62,7 +62,7 @@ subsection \<open>Reachability: reflexive-transitive closure of the successor re
 text \<open>Reachability over that successor relation.  Because the relation already relates a
   caller to its continuation and a callee result to the same continuation, this closure
   crosses procedure boundaries without any separate interprocedural notion.\<close>
-definition cfg_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
+definition cfg_reaches :: "('v, 'e) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "cfg_reaches g v v0 \<longleftrightarrow> (v, v0) \<in> (cfg_succ_rel g)\<^sup>*"
 
 subsection \<open>Reachability inside one activation\<close>
@@ -71,12 +71,12 @@ text \<open>The same closure without entering callees: a call site steps straigh
   continuation.  These are the steps a routed equation reads backwards, so this is the
   reachability the solver's coverage argument needs.\<close>
 
-definition local_succ_rel :: "cfg \<Rightarrow> (cfg_node \<times> cfg_node) set" where
+definition local_succ_rel :: "('v, 'e) gcfg \<Rightarrow> (cfg_node \<times> cfg_node) set" where
   "local_succ_rel g =
      {(u, v). \<exists>a. (u, a, v) \<in> intra g}
      \<union> {(u, k). \<exists>ca q. (u, ca, FunctionEntry q, k) \<in> calls g}"
 
-definition local_reaches :: "cfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
+definition local_reaches :: "('v, 'e) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> bool" where
   "local_reaches g u v \<longleftrightarrow> (u, v) \<in> (local_succ_rel g)\<^sup>*"
 
 lemma local_reaches_refl [simp]: "local_reaches g v v"

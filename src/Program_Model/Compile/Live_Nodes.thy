@@ -334,8 +334,8 @@ text \<open>
 \<close>
 
 definition proc_nodes ::
-  "(cfg_node \<times> edge_action \<times> cfg_node) set
-   \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> cfg_node set"
+  "(cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+   \<Rightarrow> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set \<Rightarrow> cfg_node set"
 where
   "proc_nodes E K =
      {u. \<exists>a v. (u, a, v) \<in> E} \<union> {v. \<exists>u a. (u, a, v) \<in> E}

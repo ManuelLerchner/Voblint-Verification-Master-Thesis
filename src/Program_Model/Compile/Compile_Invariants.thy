@@ -163,7 +163,7 @@ text \<open>\<open>returns_in\<close> asks a purely syntactic question -- does t
   \<open>Return\<close> of exactly this expression -- which is the shape the compiler lemmas below need.
   They induct over the source command, so their hypothesis has to be readable off the
   syntax rather than off the graph the compiler produced from it.\<close>
-fun returns_in :: "exp option \<Rightarrow> 'a acom \<Rightarrow> bool" where
+fun returns_in :: "'e option \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "returns_in e (Return i e') = (e = e')"
 | "returns_in e (Seq c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
 | "returns_in e (If i _ c1 c2) = (returns_in e c1 \<or> returns_in e c2)"
@@ -237,7 +237,7 @@ text \<open>
   this list's \<open>k\<close>th index without reproducing \<^const>\<open>compile\<close>'s counter arithmetic.
 \<close>
 
-fun com_stmt_post_order :: "nat \<Rightarrow> 'a acom \<Rightarrow> cfg_node list" where
+fun com_stmt_post_order :: "nat \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node list" where
   "com_stmt_post_order n (SKIP i) = [Statement n]"
 | "com_stmt_post_order n (Assign i x a) = [Statement n]"
 | "com_stmt_post_order n (Check i l c) = [Statement n]"
@@ -271,7 +271,7 @@ text \<open>
   clause \<^const>\<open>compile_procs\<close> skips.
 \<close>
 
-fun procs_stmt_next :: "'a ptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
+fun procs_stmt_next :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> nat" where
   "procs_stmt_next \<Pi> [] n = n"
 | "procs_stmt_next \<Pi> (p # ps) n =
      (case \<Pi> p of

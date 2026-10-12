@@ -40,7 +40,7 @@ text \<open>\<open>csize c\<close> is the number of \<open>Statement\<close> ind
   node of \<open>c2\<close> --- the continuation it hands to \<open>c1\<close> --- and that node is
   \<open>Statement (n + csize c1)\<close>.  \<open>compile_next_id\<close> below ties the two together, so the two
   definitions cannot drift apart silently.\<close>
-fun csize :: "'a acom \<Rightarrow> nat" where
+fun csize :: "('a, 'v, 'e) gcom \<Rightarrow> nat" where
   "csize (SKIP i) = 1"
 | "csize (Assign i x a) = 1"
 | "csize (Check i l c) = 1"
@@ -91,17 +91,17 @@ text \<open>
   statements about compiled call edges cite \<open>call_formals\<close> instead of restating the
   case split; the \<open>[simp]\<close> tag keeps it transparent to existing automation.
 \<close>
-definition call_formals :: "'a ptable \<Rightarrow> pname \<Rightarrow> vname list" where
+definition call_formals :: "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> 'v list" where
   [simp]: "call_formals \<Pi> q =
     (case \<Pi> q of
        Some decl \<Rightarrow> formals decl
      | None \<Rightarrow> Code.abort (STR ''call_formals: call to an undeclared procedure'') (\<lambda>_. []))"
 
 fun compile ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> 'a acom \<Rightarrow> cfg_node \<Rightarrow> nat
+  "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> cfg_node \<Rightarrow> nat
    \<Rightarrow> nat \<times> cfg_node
-        \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+        \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile \<Pi> p (SKIP i) k n =
      (Suc n, Statement n, {(Statement n, EA_Nop, k)}, {})"
@@ -169,9 +169,9 @@ text \<open>A procedure wraps its body between \<open>FunctionEntry p\<close> an
   relies on (\<open>prog_node_reaches\<close>).\<close>
 
 definition compile_proc ::
-  "'a ptable \<Rightarrow> pname \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> nat
-   \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname \<Rightarrow> ('a, 'v, 'e) gproc_decl \<Rightarrow> nat
+   \<Rightarrow> nat \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile_proc \<Pi> p decl n =
      (let r = n + csize (body decl);
@@ -182,9 +182,9 @@ where
           K))"
 
 fun compile_procs ::
-  "'a ptable \<Rightarrow> pname list \<Rightarrow> nat
-   \<Rightarrow> nat \<times> (cfg_node \<times> edge_action \<times> cfg_node) set
-        \<times> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> nat
+   \<Rightarrow> nat \<times> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set
+        \<times> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
 where
   "compile_procs \<Pi> [] n = (n, {}, {})"
 | "compile_procs \<Pi> (p # ps) n =
@@ -207,7 +207,7 @@ text \<open>\<open>checks\<close> is not collected by a separate counter-threadi
   itself --- so this field cannot drift from it by construction, not merely by
   a separately proved agreement lemma.\<close>
 definition compile_prog ::
-  "'a ptable \<Rightarrow> pname list \<Rightarrow> cfg"
+  "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> ('v, 'e) gcfg"
 where
   "compile_prog \<Pi> ps =
      (let (n1, Eprocs, Kprocs) = compile_procs \<Pi> ps 0;

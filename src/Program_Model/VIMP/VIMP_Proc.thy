@@ -482,7 +482,7 @@ text \<open>The entry body, looked up rather than passed alongside the table.  T
   fail where \<open>wf_source_program\<close> holds --- its second conjunct is exactly that the entry is
   declared --- so an undeclared entry is an invariant violation, and aborts in generated code
   rather than compiling to a plausible empty program.\<close>
-definition main_body :: "'a ptable \<Rightarrow> 'a acom" where
+definition main_body :: "('a, 'v, 'e) gptable \<Rightarrow> ('a, 'v, 'e) gcom" where
   "main_body \<Pi> =
      (case \<Pi> prog_main_name of
         Some decl \<Rightarrow> body decl
