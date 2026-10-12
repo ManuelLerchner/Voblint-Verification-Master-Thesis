@@ -17,7 +17,7 @@ separation, and a frame-stack small-step semantics.
 
 ## Procedure behavior
 
-`Call dst p args` evaluates the actual parameters in the caller, initializes a
+`Call i dst p args` evaluates the actual parameters in the caller, initializes a
 fresh callee store, binds the formals of `p`, and saves the caller store and
 optional destination in a frame.
 

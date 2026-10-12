@@ -236,9 +236,9 @@ execution.
 ]
 
 Every constructor except sequencing also carries an _annotation_, whose type is
-a parameter of #isatype("gcom"). The commands of a parsed program carry the
-unit annotation and have type #isatype("com"). The notation leaves annotations out until
-@sec:csim, which uses them.
+a parameter of #isatype("gcom"). The commands of a parsed program carry the unit annotation and have type
+#isatype("com"). The grammar above omits
+annotations, which @fig:pstep writes as $i$.
 
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
@@ -861,9 +861,8 @@ the graph side it is a frame, and the caller's remaining work
 continuation node $italic("cont")$. Both suspended-caller rules also locate the
 call that opened the activation. A second #isaconst("control_at") premise
 places #isaconst("seq_after") $(ctor("Call", thy: "VIMP_Proc") thin q ...)$ $italic("afters")$ in
-the caller's body. This premise names the callee $q$, whose body the inner
-activation runs, and the index of the relation changes from $q$ to the
-caller's procedure. $sans("Returning")$ covers
+the caller's body. This premise names the callee $q$, whose body the inner activation runs. In
+$sans("Nested")$, the index changes from $q$ to the caller's procedure. $sans("Returning")$ covers
 the moment after a callee finishes. The graph has reached
 $ctor("FunctionResult") thin q$ of that callee, while the source still holds the
 #ctor("Restore") of the activation, possibly behind an #ctor("Unwind") that is
@@ -878,14 +877,11 @@ on the program's _elaboration_ (#isaconst("elab_pt")), which annotates each
 statement with the nodes the compiler emits for it and compiles to the same
 graph (#isathm("compile_prog_elab_pt")). On it,
 #isaconst("point", thy: "Elaborated_Compilation") reads the related node off the
-residual's annotation (#isathm("csim_point_compile_prog")). Every run of a
-well-formed program is the _erasure_ of a run of its elaboration, with the
-annotations dropped (#isaconst("erase"), #isathm("psteps_lift")). For a program
+residual's annotation (#isathm("csim_point_compile_prog")). Every run of a well-formed program is the _erasure_ (#isaconst("erase")) of a
+run of its elaboration (#isathm("psteps_lift")). For a program
 $p$, we write $p, s_0 tack.r (c, s, "frs") gt.closed v$ (#isaconst("at_node")) and
 say the configuration is _observed_ at $v$ when such a lifted run from $s_0$
-reaches it at a command that names $v$. A configuration reachable along two
-paths can be observed at two nodes. @sec:source-bridge adds a trace from the
-entry, so that the node is reachable.
+reaches it at a command that names $v$ and the simulation relates it to $v$. A configuration reachable along two paths can be observed at two nodes.
 
 #theorem(name: [One step is matched], isa: "csim_step")[
   If a source configuration and a graph configuration are related by
@@ -896,9 +892,9 @@ entry, so that the node is reachable.
 #proved("csim_step")
 
 The theorem has two premises beyond the related pair and the source step.
-#isaconst("procs_embedded") $Pi$ $g$ says that every declared body lies in $g$
-with its entry edge and, if it can fall through, its return edge, so no source
-call enters a body missing from the graph. #isaconst("return_safe") $c$ says that the running
+#isaconst("procs_embedded") $Pi$ $g$ says that every declared body is source
+syntax under a non-library name and lies in $g$ with its entry and return
+edges, so no source call enters a body missing from the graph. #isaconst("return_safe") $c$ says that the running
 command returns only inside an activation that a call opened, which is the
 runtime form of the rule that `main` contains no #keyw("return") (@sec:pstep).
 Both premises hold for every well-formed program

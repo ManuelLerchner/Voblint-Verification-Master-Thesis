@@ -373,6 +373,8 @@ L1  COMPILATION AND SIMULATION
     compile_prog_wf / _finite / _calls_source_unique   Compile_Wellformed
     control_at, csim                               Residual_Location, Simulation_Relation
     csim_step, csim_star                           Simulation_Preservation
+    elab_pt, point, erase, at_node                 Elaborated_Compilation
+    psteps_lift, csim_point_compile_prog           Elaborated_Compilation
              │  source_run_has_activation_trace
              v
 L2  CONCRETE INTERPROCEDURAL SEMANTICS
@@ -499,7 +501,7 @@ branches leave `x = 1`. The run lifts to a run of the elaboration `elab_pt`
 (`psteps_lift`), and the annotated command `c` of that run determines the node
 `point c` (`csim_point_compile_prog`). `at_node` (`p, s0 ⊢ cfg ⊳ v`) packages
 the lifted run and the elaborated simulation. It is relational: a configuration
-reachable along two paths is observed at two nodes, so the theorem states that
+reachable along two paths can be observed at two nodes, so the theorem states that
 some node exists and that every observed node is covered.
 
 *The context is existential too.* Under entry-state routing one store may be
@@ -1549,7 +1551,7 @@ thesis section → theories → central definitions → central theorems.
 | 3.4 | `Voblint_VIMP.VIMP_Proc`, `Voblint_Compile.Compile_Invariants` | `source_com`, `wf_source_com`, `value_providing`, `wf_source_program`, `wf_compile_input`, `wf_program_compile_input_exec` | `wf_source_programD`, `wf_compile_inputD` |
 | 3.5 | `Voblint_CFG.CFG_Def`, `CFG_Transfer`, `CFG_Exec` | `cfg_node`, `edge_action`, `call_action`, `intra`, `calls`, `wf_cfg`, `edge_step`, `edge_collect`, `call_enter`, `combine_collect`, `cstep` | `cfg_nodes_finite` |
 | 3.6 | `Voblint_Compile.VIMP_Proc_to_CFG` | `compile`, `compile_proc`, `compile_prog`, `prog_cfg` | — |
-| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location` | `csim`, `control_at`, `procs_embedded` | `csim_step`, `csim_star`, `procs_embedded_compile_prog` |
+| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location`, `Elaborated_Compilation` | `csim`, `control_at`, `procs_embedded`, `elab_pt`, `point`, `erase`, `at_node` | `csim_step`, `csim_star`, `procs_embedded_compile_prog`, `psteps_lift`, `csim_point_compile_prog`, `compile_prog_elab_pt` |
 | 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_activation_trace_entry_result_eq`, `prog_live_reaches` |
 | 4.2–4.4 | `Voblint_CFG.Activation_Trace_Def`, `Activation_Trace_Collect` | `activation_trace`, `activation_path`, `path_of`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_activation_trace`, `node_collect` | `node_collect_I`, `node_collect_E` |
 | 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `context_policy`, `context_policy_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |

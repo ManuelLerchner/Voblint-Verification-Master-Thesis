@@ -199,7 +199,7 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   column-gutter: 10pt,
   row-gutter: 8pt,
   align: (right + horizon, center + horizon, left + horizon),
-  [a store $s$ a source run reaches, \ at a node $v$ it is observed at],
+  [a store $s$ a source run reaches, \ at a node $v$ related to the run],
   _step(sym.in, isathm("source_reaches_node_collect")),
   isai("\<C>\<^bsub>\<G>,g,S\<^esub> v"),
 
@@ -214,8 +214,9 @@ two sets of the report, #isai("\<R>\<^bsub>res\<^esub> v") and
   isai("\<V>\<^bsub>res\<^esub> v"),
 )))
 The first step places a store that a finite source run reaches in the node
-collecting semantics, at every node $v$ at which the run is observed
-(@sec:csim). The second step holds for a policy with a cover that meets all
+collecting semantics, at a node $v$ the simulation relates to the run. On the
+elaboration this is every node at which the run is observed
+(#isathm("csim_point_compile_prog"), @sec:csim). The second step holds for a policy with a cover that meets all
 five obligations of @ch:traces: #isaconst("node_collect") is the
 union of #isaconst("activation_collect") over the contexts #isai("adm")
 admits, with `main` in #isai("c\<^sub>0") (@sec:contexts). Contexts enter the
