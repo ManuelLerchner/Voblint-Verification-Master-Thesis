@@ -67,6 +67,64 @@ lemma fg_return_at_callee:
   shows "v = FunctionResult (STR ''one'')"
   using csim_point_compile_prog[OF fg_wf assms(1)[unfolded fg_pi_def]] assms(2) by simp
 
+text \<open>The call from \<open>main\<close> followed through its return.  At each configuration the
+  elaborated residual names the node the simulation must relate it to: the call site, the
+  callee's return statement, the callee's result node while \<open>Unwind\<close> meets \<open>Restore\<close>, and the
+  call's continuation once the frame is popped.\<close>
+
+abbreviation fg_call :: loc where
+  "fg_call \<equiv> (stmt_loc prog_main_name (Statement 5) 4)\<lparr>loc_exit := FunctionResult (STR ''one'')\<rparr>"
+
+abbreviation fg_ret :: loc where
+  "fg_ret \<equiv> stmt_loc (STR ''one'') (Statement 1) 0"
+
+lemma fg_one_decl: "fg_pi (STR ''one'') \<noteq> None" "formals (the (fg_pi (STR ''one''))) = []"
+  "body (the (fg_pi (STR ''one''))) = gcom.Return fg_ret (Some (N 1))"
+  by eval+
+
+lemma fg_call_return_run:
+  "\<exists>s1 s2 s3.
+     declared_global fg_prog, fg_pi \<turnstile> (main_body fg_pi, s, [])
+       \<rightarrow>\<^sub>p (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
+   \<and> declared_global fg_prog, fg_pi
+       \<turnstile> (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
+       \<rightarrow>\<^sub>p (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
+   \<and> declared_global fg_prog, fg_pi
+       \<turnstile> (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
+       \<rightarrow>\<^sub>p (SKIP fg_call, s3, [])"
+proof -
+  obtain decl where d: "fg_pi (STR ''one'') = Some decl" using fg_one_decl(1) by blast
+  with fg_one_decl have f: "formals decl = []"
+    and b: "body decl = gcom.Return fg_ret (Some (N 1))" by simp_all
+  have mb: "main_body fg_pi = gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') []" by eval
+  have call: "declared_global fg_prog, fg_pi
+      \<turnstile> (gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') [], s, [])
+      \<rightarrow>\<^sub>p (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call),
+           bind_formals [] [] (enter_state (declared_global fg_prog) s),
+           [Frame s (Some (STR ''x''))])"
+    using pstep.Call [where \<Pi> = fg_pi and p = "STR ''one''" and decl = decl and actuals = "[]"
+        and \<G> = "declared_global fg_prog" and s = s and i = fg_call and dst = "Some (STR ''x'')"
+        and frs = "[]", OF d] f b by simp
+  show ?thesis unfolding mb
+    using call pstep.Seq2 [OF pstep.ReturnSome] pstep.UnwindAct by blast
+qed
+
+lemma fg_call_return_points:
+  "point (gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') []) = Statement 4"
+  "point (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call)) = Statement 0"
+  "point (Seq (Unwind fg_ret) (Restore fg_call)) = FunctionResult (STR ''one'')"
+  "point (SKIP fg_call) = Statement 5"
+  by (simp_all add: stmt_loc_def)
+
+lemma fg_call_return_nodes:
+  assumes "fg_pi, compile_prog fg_pi (prog_procs fg_prog), p \<turnstile> (c, t, frs) \<approx> (v, t', stk)"
+  shows "c = gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') [] \<Longrightarrow> v = Statement 4"
+    and "c = Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call) \<Longrightarrow> v = Statement 0"
+    and "c = Seq (Unwind fg_ret) (Restore fg_call) \<Longrightarrow> v = FunctionResult (STR ''one'')"
+    and "c = SKIP fg_call \<Longrightarrow> v = Statement 5"
+  using csim_point_compile_prog [OF fg_wf assms [unfolded fg_pi_def]] fg_call_return_points
+  by simp_all
+
 subsection \<open>Annotations agree with the emitted edges\<close>
 
 text \<open>An independent check of what each annotation means: the edge or call the compiler
