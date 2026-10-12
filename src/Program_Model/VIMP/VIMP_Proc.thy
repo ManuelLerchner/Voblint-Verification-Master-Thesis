@@ -358,7 +358,7 @@ fun com_vnames :: "'a acom \<Rightarrow> vname set" where
 lemma finite_com_vnames [simp]: "finite (com_vnames c)"
   by (induction c) (auto split: option.splits)
 
-fun source_com :: "'a acom \<Rightarrow> bool" where
+fun source_com :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "source_com (SKIP _) = True"
 | "source_com (Assign _ x a) = True"
 | "source_com (Check _ l c) = True"
@@ -370,7 +370,7 @@ fun source_com :: "'a acom \<Rightarrow> bool" where
 | "source_com (Restore _) = False"
 | "source_com (Unwind _) = False"
 
-definition source_pi :: "'a ptable \<Rightarrow> bool" where
+definition source_pi :: "('a, 'v, 'e) gptable \<Rightarrow> bool" where
   "source_pi \<Pi> = (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> source_com (body decl))"
 
 definition source_exp :: "exp \<Rightarrow> bool" where
@@ -388,7 +388,7 @@ text \<open>
   false, and a call resumes normally after its callee completes.
 \<close>
 
-fun may_fallthrough :: "'a acom \<Rightarrow> bool" where
+fun may_fallthrough :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "may_fallthrough (SKIP _) = True"
 | "may_fallthrough (Assign _ _ _) = True"
 | "may_fallthrough (Check _ _ _) = True"
@@ -400,7 +400,7 @@ fun may_fallthrough :: "'a acom \<Rightarrow> bool" where
 | "may_fallthrough (Restore _) = False"
 | "may_fallthrough (Unwind _) = False"
 
-fun may_return_none :: "'a acom \<Rightarrow> bool" where
+fun may_return_none :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "may_return_none (Seq c1 c2) =
      (may_return_none c1 \<or> (may_fallthrough c1 \<and> may_return_none c2))"
 | "may_return_none (If _ _ c1 c2) = (may_return_none c1 \<or> may_return_none c2)"
@@ -408,7 +408,7 @@ fun may_return_none :: "'a acom \<Rightarrow> bool" where
 | "may_return_none (Return _ e) = (e = None)"
 | "may_return_none _ = False"
 
-fun may_return_value :: "'a acom \<Rightarrow> bool" where
+fun may_return_value :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "may_return_value (Seq c1 c2) =
      (may_return_value c1 \<or> (may_fallthrough c1 \<and> may_return_value c2))"
 | "may_return_value (If _ _ c1 c2) = (may_return_value c1 \<or> may_return_value c2)"
@@ -416,7 +416,7 @@ fun may_return_value :: "'a acom \<Rightarrow> bool" where
 | "may_return_value (Return _ e) = (e \<noteq> None)"
 | "may_return_value _ = False"
 
-definition value_providing :: "'a acom \<Rightarrow> bool" where
+definition value_providing :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "value_providing c \<longleftrightarrow>
      source_com c \<and> \<not> may_fallthrough c \<and>
      \<not> may_return_none c \<and> may_return_value c"
@@ -456,7 +456,7 @@ fun wf_source_com :: "'a ptable \<Rightarrow> 'a acom \<Rightarrow> bool" where
 | "wf_source_com \<Pi> (Restore _) = False"
 | "wf_source_com \<Pi> (Unwind _) = False"
 
-fun no_return :: "'a acom \<Rightarrow> bool" where
+fun no_return :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "no_return (Seq c1 c2) = (no_return c1 \<and> no_return c2)"
 | "no_return (If _ _ c1 c2) = (no_return c1 \<and> no_return c2)"
 | "no_return (While _ _ c) = no_return c"

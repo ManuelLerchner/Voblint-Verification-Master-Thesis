@@ -68,55 +68,58 @@ text \<open>
   through: body, assume and assume-not.
 \<close>
 
+context cfg_exec_sem
+begin
+
 lemma cstep_body:
   assumes "(u, EA_Body p, v) \<in> intra g"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  shows "gcstep g (u, s, stk) (v, s, stk)"
   by (rule gcstep.Intra[OF assms]) simp
 
 lemma cstep_assume:
-  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  assumes "(u, EA_Assume b, v) \<in> intra g" and "truthy (ev b s)"
+  shows "gcstep g (u, s, stk) (v, s, stk)"
   by (rule gcstep.Intra[OF assms(1)]) (use assms(2) in simp)
 
 lemma cstep_assume_not:
-  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)"
-  shows "\<G>, g \<turnstile> (u, s, stk) \<rightarrow>\<^sub>c (v, s, stk)"
+  assumes "(u, EA_AssumeNot b, v) \<in> intra g" and "\<not> truthy (ev b s)"
+  shows "gcstep g (u, s, stk) (v, s, stk)"
   by (rule gcstep.Intra[OF assms(1)]) (use assms(2) in simp)
-
-subsection \<open>Intra-only paths as stack-preserving runs\<close>
 
 text \<open>An \<^const>\<open>intra_path\<close> is a \<open>cstep\<close> run at any stack: every \<^const>\<open>cfg_intra_step\<close> is a
   \<open>gcstep.Intra\<close>, which passes the stack through untouched.  Callers that only need to move
   along local edges can therefore reason on \<open>(node, store)\<close> pairs and lift the result here.\<close>
 lemma intra_path_imp_cstep_star:
-  "intra_path g x y \<Longrightarrow> \<G>, g \<turnstile> (fst x, snd x, stk) \<rightarrow>\<^sub>c\<^sup>* (fst y, snd y, stk)"
+  "star (gcfg_intra_step g) x y \<Longrightarrow> star (gcstep g) (fst x, snd x, stk) (fst y, snd y, stk)"
 proof (induction rule: star.induct)
   case (refl a) show ?case by simp
 next
   case (step a b c)
   obtain ua sa where a: "a = (ua, sa)" by (cases a)
   obtain ub sb where b: "b = (ub, sb)" by (cases b)
-  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> edge_step e sa" by auto
-  hence "\<G>, g \<turnstile> (ua, sa, stk) \<rightarrow>\<^sub>c (ub, sb, stk)" by (rule gcstep.Intra)
+  from step.hyps(1) a b obtain e where "(ua, e, ub) \<in> intra g" "sb \<in> gedge_step e sa" by auto
+  hence "gcstep g (ua, sa, stk) (ub, sb, stk)" by (rule gcstep.Intra)
   with step.IH a b show ?case by (auto intro: star.step)
 qed
+
+end
 
 subsection \<open>Activation-stack matching\<close>
 
 text \<open>Both stacks record procedure activations.  \<open>act_frames\<close> removes the CFG-only
   continuation component and retains the caller store and destination used by the source.\<close>
 
-fun act_frames :: "frame list \<Rightarrow> (store \<times> vname option) list" where
+fun act_frames :: "'v gframe list \<Rightarrow> (('v \<Rightarrow> int) \<times> 'v option) list" where
   "act_frames [] = []"
 | "act_frames (Frame s d # frs) = (s, d) # act_frames frs"
 
-definition cframe_act :: "cframe \<Rightarrow> store \<times> vname option" where
+definition cframe_act :: "'v gcframe \<Rightarrow> ('v \<Rightarrow> int) \<times> 'v option" where
   "cframe_act cf = (case cf of (cont, d, s) \<Rightarrow> (s, d))"
 
 text \<open>\<open>frames_match\<close> ties a source frame stack to a CFG activation stack: the activation
   frames agree, in order, on caller store and destination (the continuation node is the CFG's
   own bookkeeping and is not visible to the source).\<close>
-definition frames_match :: "frame list \<Rightarrow> cframe list \<Rightarrow> bool" where
+definition frames_match :: "'v gframe list \<Rightarrow> 'v gcframe list \<Rightarrow> bool" where
   "frames_match frs stk = (act_frames frs = map cframe_act stk)"
 
 lemma frames_match_Nil [simp]: "frames_match [] []"
