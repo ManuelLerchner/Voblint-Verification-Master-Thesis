@@ -62,23 +62,30 @@ text \<open>
   trace kernel independent of the source declaration environment.
 \<close>
 
-datatype edge_action =
+text \<open>Both action types are generic in the variable type \<open>'v\<close> and the expression type
+  \<open>'e\<close>, as the commands they are compiled from are. \<open>edge_action\<close> and \<open>call_action\<close>
+  are the instances at source names and untyped expressions.\<close>
+
+datatype ('v, 'e) gedge_action =
     EA_Nop
-  | EA_Assign   (ea_var: vname) (ea_rhs: exp)
-  | EA_Special  (ea_special_op: special_call) (ea_special_dst: vname)
-  | EA_Assume    (ea_cond: exp)
-  | EA_AssumeNot (ea_cond: exp)
+  | EA_Assign   (ea_var: 'v) (ea_rhs: 'e)
+  | EA_Special  (ea_special_op: "'e gspecial_call") (ea_special_dst: 'v)
+  | EA_Assume    (ea_cond: 'e)
+  | EA_AssumeNot (ea_cond: 'e)
   | EA_Body     (ea_body_proc: pname)
-  | EA_Ret      (ea_ret_val: "exp option") (ea_ret_proc: pname)
-  | EA_Check    (ea_check_label: check_label) (ea_check_cond: exp)
+  | EA_Ret      (ea_ret_val: "'e option") (ea_ret_proc: pname)
+  | EA_Check    (ea_check_label: check_label) (ea_check_cond: 'e)
 
-datatype call_action =
-    CallEdge (ce_dst: "vname option") (ce_formals: "vname list") (ce_args: "exp list")
+datatype ('v, 'e) gcall_action =
+    CallEdge (ce_dst: "'v option") (ce_formals: "'v list") (ce_args: "'e list")
 
-instance edge_action :: countable
+type_synonym edge_action = "(vname, exp) gedge_action"
+type_synonym call_action = "(vname, exp) gcall_action"
+
+instance gedge_action :: (countable, countable) countable
   by countable_datatype
 
-instance call_action :: countable
+instance gcall_action :: (countable, countable) countable
   by countable_datatype
 
 text \<open>
@@ -95,13 +102,15 @@ text \<open>
   belongs to the routed-analysis layer rather than to a transfer-record field, and
   \<open>Queries.ask\<close> over the callee exit has none: there is no query bus.
 \<close>
-record call_info =
-  ci_dst     :: "vname option"
+record ('v, 'e) gcall_info =
+  ci_dst     :: "'v option"
   ci_callee  :: pname
-  ci_formals :: "vname list"
-  ci_args    :: "exp list"
+  ci_formals :: "'v list"
+  ci_args    :: "'e list"
 
-definition call_info_of :: "call_action \<Rightarrow> pname \<Rightarrow> call_info" where
+type_synonym call_info = "(vname, exp) gcall_info"
+
+definition call_info_of :: "('v, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> ('v, 'e) gcall_info" where
   "call_info_of ca p =
      \<lparr> ci_dst = ce_dst ca, ci_callee = p,
        ci_formals = ce_formals ca, ci_args = ce_args ca \<rparr>"
@@ -122,11 +131,13 @@ text \<open>
   every fact quantified over \<open>intra\<close> is verbatim a flat-CFG fact.
 \<close>
 
-record cfg =
-  intra     :: "(cfg_node \<times> edge_action \<times> cfg_node) set"
-  calls     :: "(cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) set"
+record ('v, 'e) gcfg =
+  intra     :: "(cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) set"
+  calls     :: "(cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
   cfg_entry :: cfg_node
-  checks    :: "(cfg_node \<times> exp) set"
+  checks    :: "(cfg_node \<times> 'e) set"
+
+type_synonym cfg = "(vname, exp) gcfg"
 
 subsection \<open>Intra edge execution\<close>
 
@@ -204,7 +215,7 @@ subsection \<open>Node set (derived, not stored)\<close>
 text \<open>\<open>cfg_nodes\<close> is reconstructed from the endpoints of \<open>intra\<close>, every node occurring in
   \<open>calls\<close>, and \<open>cfg_entry\<close>.  It is not a record field.\<close>
 
-definition cfg_nodes :: "cfg \<Rightarrow> cfg_node set" where
+definition cfg_nodes :: "('v, 'e) gcfg \<Rightarrow> cfg_node set" where
   "cfg_nodes g =
      {u. \<exists>a v. (u, a, v) \<in> intra g}
      \<union> {v. \<exists>u a. (u, a, v) \<in> intra g}
@@ -216,7 +227,7 @@ definition cfg_nodes :: "cfg \<Rightarrow> cfg_node set" where
 text \<open>Whole-program completion is the entry procedure's \<open>FunctionResult\<close>.  A graph whose
   entry is not a procedure entry is never compiled; the fallback keeps the function total
   and aborts in generated code.\<close>
-definition cfg_exit :: "cfg \<Rightarrow> cfg_node" where
+definition cfg_exit :: "('v, 'e) gcfg \<Rightarrow> cfg_node" where
   "cfg_exit g =
     (case cfg_entry g of
        FunctionEntry p \<Rightarrow> FunctionResult p
@@ -229,7 +240,7 @@ text \<open>\<open>wf_cfg\<close> is structural only: call edges enter procedure
   action lands on the matching procedure result.  No compiler-correctness or
   source-semantic property is included.\<close>
 
-definition wf_cfg :: "cfg \<Rightarrow> bool" where
+definition wf_cfg :: "('v, 'e) gcfg \<Rightarrow> bool" where
   "wf_cfg g \<longleftrightarrow>
      (\<forall>u act ce after. (u, act, ce, after) \<in> calls g \<longrightarrow> (\<exists>p. ce = FunctionEntry p))
    \<and> (\<forall>u a v. (u, a, v) \<in> intra g \<longrightarrow> (\<forall>p. v \<noteq> FunctionEntry p))
@@ -241,7 +252,7 @@ text \<open>\<open>calls_source_unique\<close> is a separate, optional side cond
   routed table does need it, to match the edge a return reads against the one its callee
   was entered through; compiled programs satisfy it by construction.\<close>
 
-definition calls_source_unique :: "cfg \<Rightarrow> bool" where
+definition calls_source_unique :: "('v, 'e) gcfg \<Rightarrow> bool" where
   "calls_source_unique g \<longleftrightarrow>
      (\<forall>u ca1 ce1 af1 ca2 ce2 af2.
         (u, ca1, ce1, af1) \<in> calls g \<longrightarrow> (u, ca2, ce2, af2) \<in> calls g
@@ -292,9 +303,9 @@ subsection \<open>Executable orders\<close>
 text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
   enumeration of intra and call relations. They affect only solver representation, not
   CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
-derive linorder special_call
-derive linorder edge_action
-derive linorder call_action
+derive linorder gspecial_call
+derive linorder gedge_action
+derive linorder gcall_action
 derive linorder cfg_node
 
 subsection \<open>Executable enumeration\<close>
@@ -307,7 +318,8 @@ text \<open>Stable list views for the TD bridge: the intra and call edge sets so
   framework session's own equation-generation enumerations, so any consumer of this session alone
   --- a compiled graph's \<open>finite_cfg\<close> interpretation among them --- gets them for free.\<close>
 
-definition cfg_intra_list :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
+definition cfg_intra_list ::
+    "('v::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node \<times> ('v, 'e) gedge_action \<times> cfg_node) list" where
   "cfg_intra_list g =
      (if finite (intra g) then sorted_list_of_set (intra g)
       else Code.abort (STR ''cfg_intra_list: infinite intra edge set'') (\<lambda>_. []))"
@@ -317,7 +329,8 @@ lemma cfg_intra_list_code [code]:
   unfolding cfg_intra_list_def by (cases "finite (intra g)") auto
 
 definition cfg_calls_list ::
-    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
+    "('v::linorder, 'e::linorder) gcfg
+       \<Rightarrow> (cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) list" where
   "cfg_calls_list g =
      (if finite (calls g) then sorted_list_of_set (calls g)
       else Code.abort (STR ''cfg_calls_list: infinite calls edge set'') (\<lambda>_. []))"
@@ -339,7 +352,7 @@ text \<open>Every \<^const>\<open>cfg_nodes\<close> element, listed once: the in
   canonical finite node enumeration a public per-node result table draws its key domain from,
   distinct from \<^const>\<open>cfg_intra_list\<close>'s edge-indexed view.\<close>
 
-definition cfg_node_list :: "cfg \<Rightarrow> cfg_node list" where
+definition cfg_node_list :: "('v::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node list" where
   "cfg_node_list g =
      remdups
        (concat (map (\<lambda>(u, a, v). [u, v]) (cfg_intra_list g)) @
@@ -358,7 +371,7 @@ text \<open>A \<open>cfg\<close> whose two transition relations are finite.  Bun
   needs, so a caller states one assumption instead of two, and \<open>finite_nodes\<close>
   becomes derivable rather than re-proved at each instance.\<close>
 locale finite_cfg =
-  fixes g :: cfg
+  fixes g :: "('v, 'e) gcfg"
   assumes finite_intra [intro, simp]: "finite (intra g)"
     and finite_calls [intro, simp]: "finite (calls g)"
 begin
@@ -370,7 +383,7 @@ end
 
 text \<open>Expressions observed by an edge, shared by diagnostics and transfer footprints.\<close>
 
-fun edge_expressions :: "edge_action \<Rightarrow> exp list" where
+fun edge_expressions :: "('v, 'e) gedge_action \<Rightarrow> 'e list" where
   "edge_expressions (EA_Assign x e) = [e]"
 | "edge_expressions (EA_Assume e) = [e]"
 | "edge_expressions (EA_AssumeNot e) = [e]"

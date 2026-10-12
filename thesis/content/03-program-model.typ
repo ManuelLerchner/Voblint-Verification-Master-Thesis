@@ -582,11 +582,12 @@ et al. @tilscher26, which Voblint includes as a submodule with a few changes
 
 === Nodes and edges #thy-badge("Voblint_CFG", "CFG_Def") <sec:cfg>
 
-#definition(name: [Control-flow graph], isa: "cfg", cmd: "record")[
-  A graph $g$ is a record of type #isatype("cfg"):
+#definition(name: [Control-flow graph], isa: "gcfg", cmd: "record")[
+  A graph $g$ is a record of type #isatype("cfg"), the instance of the record below
+  at source names and expressions:
   #{
     show raw.where(block: true): set text(size: 6.5pt)
-    thy("cfg")
+    thy("gcfg")
   }
   #isaconst("intra") holds the _local edges_ $(u, a, v)$, each labeled by an
   #isatype("edge_action") $a$. #isaconst("calls") holds the _call edges_

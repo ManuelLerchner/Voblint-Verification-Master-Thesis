@@ -133,6 +133,22 @@ text \<open>
     they must be public.
 \<close>
 
+text \<open>
+  The CFG enumerations are generic in the variable and expression types and need their
+  orders, which generated code would take as dictionary arguments. The CLI reads graphs of
+  source programs only, so it gets the enumerations at that instance.
+\<close>
+
+definition cfg_intra_edges :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
+  "cfg_intra_edges = cfg_intra_list"
+
+definition cfg_call_edges ::
+    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
+  "cfg_call_edges = cfg_calls_list"
+
+definition cfg_points :: "cfg \<Rightarrow> cfg_node list" where
+  "cfg_points = cfg_node_list"
+
 export_code
 
   \<comment> \<open>Run\<close>
@@ -155,7 +171,7 @@ export_code
   arithmetic_operation arithmetic_divisor
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
-  cfg_entry cfg_node_list
+  cfg_entry cfg_points
 
   \<comment> \<open>Ask: configuration of domains, global update rule, context, program globals\<close>
   Analysis_Config
@@ -179,7 +195,7 @@ export_code
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>
   declared_global_vars
   prog_table prog_main prog_procs
-  prog_cfg cfg_intra_list cfg_calls_list prog_stmt_post_order
+  prog_cfg cfg_intra_edges cfg_call_edges prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check
   CallEdge Nondet_Int
 

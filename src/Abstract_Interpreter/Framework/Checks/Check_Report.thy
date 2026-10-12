@@ -40,8 +40,8 @@ lemma classify_checks_mem_iff:
      \<longleftrightarrow> (\<exists>l tgt. (v, EA_Check l c, tgt) \<in> intra g) \<and> r = classify c (env v)"
   unfolding classify_checks_def set_map set_filter
   using set_cfg_intra_list[OF assms]
-  by (auto simp: image_iff split: edge_action.splits)
-     (metis edge_action.collapse surjective_pairing)
+  by (auto simp: image_iff split: gedge_action.splits)
+     (metis gedge_action.collapse surjective_pairing)
 
 text \<open>
   Soundness bridge: a \<^term>\<open>Check_Proved\<close> report entry's condition genuinely

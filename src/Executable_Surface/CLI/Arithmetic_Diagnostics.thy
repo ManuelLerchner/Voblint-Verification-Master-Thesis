@@ -161,7 +161,7 @@ proof -
   show ?thesis
   proof (cases "\<exists>e. a = EA_AssumeNot e")
     case False
-    with mem show ?thesis by (intro kept[of a w]) (auto split: edge_action.splits)
+    with mem show ?thesis by (intro kept[of a w]) (auto split: gedge_action.splits)
   next
     case True
     then obtain e where a: "a = EA_AssumeNot e" by blast

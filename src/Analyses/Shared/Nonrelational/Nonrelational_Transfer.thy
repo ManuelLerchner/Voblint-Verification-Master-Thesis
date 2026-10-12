@@ -184,7 +184,7 @@ proof (rule ext, rule ext)
   fix a :: edge_action and d :: "'a abs_state"
   show "tf_abs a d = generic_tf_abs ops backward.branch a d"
     by (cases a)
-       (simp_all add: op_defs split: special_call.splits option.splits)
+       (simp_all add: op_defs split: gspecial_call.splits option.splits)
 qed
 
 text \<open>

@@ -139,12 +139,13 @@ let call_text callee (C.CallEdge (_, _, args)) =
   ^ String.concat ", " (List.map Vimp_printer.string_of_exp args)
   ^ ")"
 
-let intra_edges g = List.map (fun (u, (a, v)) -> (u, a, v)) (C.cfg_intra_list g)
+let intra_edges g =
+  List.map (fun (u, (a, v)) -> (u, a, v)) (C.cfg_intra_edges g)
 
 let call_edges g =
   List.map
     (fun (u, (ca, (entry, after))) -> (u, ca, entry, after))
-    (C.cfg_calls_list g)
+    (C.cfg_call_edges g)
 
 (* The procedure a CFG node belongs to. Intra edges and a call's step to its own
    continuation never leave a procedure, so everything connected to a procedure's
@@ -167,7 +168,7 @@ let owners g =
       List.iter (visit edges owner) (Hashtbl.find_all edges node)
     end
   in
-  let nodes = C.cfg_node_list g in
+  let nodes = C.cfg_points g in
   List.iter
     (function
       | C.FunctionEntry p as entry -> visit successors p entry | _ -> ())

@@ -32,7 +32,7 @@ Each row of the tables says which of three things a design point is:
 | Every CIL expression carries its type: `BinOp(op,e1,e2,t)`, `CastE(k,t,e)`, `CInt(n,ik,_)`, lvalues through their varinfo; `typeOf`, `get_ikind_exp` | `common/util/cilfacade.ml:256-262,335-369,459` | `texp` nodes carry their kind (`texp_kind`) | G |
 | CIL inserts `CastE` for promotion and arithmetic conversion, assignment, arguments, return | goblint-cil `cabs2cil.ml:1363-1460,3529,4477,6991` | `elaborate`, `elab_com`, `elab_args` insert `TCast` at the same places | G |
 | A varinfo is one variable; locals are per function (`fundec.slocals`) | CIL | `var_id` with `GlobalId`, `ScopedId`, `ReturnId` | G |
-| One return variable `return_varinfo ()`, written with the function's return type as `t_override` | `analyses/base.ml:2078-2109` | return slot per procedure (`ReturnId p`), value already converted by elaboration | I (the frame stack must find the slot without the callee's fundec) |
+| One return variable `return_varinfo ()`, written with the function's return type as `t_override` | `analyses/base.ml:2078-2109` | one return slot `l_ret`; the value is converted to the return kind by elaboration (CIL's cast at return), and its abstract value carries that kind | G |
 | CFG edges `Assign`, `Proc`, `Entry`, `Ret`, `Test`, `Skip` over typed `exp` | `common/framework/edge.ml:10-35` | `edge_action`, `call_action` over `var_id`, `texp` | G |
 | Global initializers become `Assign` edges; no initializer means a zero initializer | `common/framework/cfgTools.ml:680-720` | globals start at zero in the initial store set | G (as a set, not as edges) |
 | `x = f()` with a type mismatch becomes `tmp = f(); x = (T)tmp` | `cabs2cil.ml:4831-4847` | the destination write converts (`l_store`) | I (no temporary; same value) |
@@ -133,12 +133,12 @@ proof needs them.
 record ('v, 'e) lang =
   l_eval   :: "'e ⇒ ('v ⇒ int) ⇒ int"   (* aval    | teval *)
   l_global :: "'v ⇒ bool"                (* 𝒢      | tglobal *)
-  l_ret    :: "pname ⇒ 'v"               (* λ_. ret_var | ReturnId *)
+  l_ret    :: "'v"                       (* ret_var | the typed return slot *)
   l_store  :: "'v ⇒ int ⇒ int"           (* λ_ n. n | λv. ik_norm (κ v) *)
 
 locale lang_laws =
   fixes L :: "('v, 'e) lang"
-  assumes ret_local:  "¬ l_global L (l_ret L p)"
+  assumes ret_local:  "¬ l_global L (l_ret L)"
       and store_idem: "l_store L v (l_store L v n) = l_store L v n"
 ```
 
@@ -160,8 +160,11 @@ compile    :: "('a,'v,'e) gptable ⇒ pname ⇒ ('a,'v,'e) gcom ⇒ cfg_node ⇒
 csim       :: "('a,'v,'e) gptable ⇒ ('v,'e) gcfg ⇒ pname ⇒ ... ⇒ ... ⇒ bool"
 ```
 
-Frames record the callee so that a return reaches `l_ret` of the right
-procedure. The current names (`edge_action`, `cfg`, `pstep 𝒢`, ...) become the
+There is one return slot, as in Goblint, so frames keep their shape. The
+generic semantics is a locale over these parameters rather than a record: the
+untyped instance is a global interpretation without a prefix, whose rules are
+beta-reduced to exactly the current ones, so every existing fact keeps its name
+and statement. The current names (`edge_action`, `cfg`, `pstep 𝒢`, ...) become the
 instance at `untyped_lang 𝒢 = ⦇aval, 𝒢, λ_. ret_var, λ_ n. n⦈`, and the existing
 theorem names stay available at that instance.
 
@@ -248,4 +251,7 @@ no push without approval.
   wrong interface shows up early.
 - Location elaboration (`elab`, `elab_pt`, `point`) is over `'a acom`; the typed
   instance needs it over `('a, var_id, texp) gcom`.
-- Frames gaining a callee field touch every proof that matches `Frame s dst`.
+- Datatype generalization done (checkpoint 3): `gedge_action`, `gcall_action`,
+  `gcall_info`, `gcfg`, `gspecial_call`, with the old names as type synonyms.
+  The generated enumerations need orders, so the export gets monomorphic roots
+  (`cfg_intra_edges`, `cfg_call_edges`, `cfg_points`).

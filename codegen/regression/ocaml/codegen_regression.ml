@@ -186,6 +186,16 @@ let show_cfg_node_compact = function
 (* `exp` is one unified integer-valued expression language (no separate
    aexp/bexp split -- see VIMP_Syntax.thy), so a single recursive renderer
    covers arithmetic and comparison/logical constructors alike. *)
+let show_kind = function
+  | I8 -> "i8"
+  | U8 -> "u8"
+  | I16 -> "i16"
+  | U16 -> "u16"
+  | I32 -> "i32"
+  | U32 -> "u32"
+  | I64 -> "i64"
+  | U64 -> "u64"
+
 let rec show_exp_compact = function
   | N i -> show_int i
   | V s -> s
@@ -203,6 +213,7 @@ let rec show_exp_compact = function
   | GreaterEq (a, b) -> show_exp_compact a ^ ">=" ^ show_exp_compact b
   | Eq (a, b) -> show_exp_compact a ^ "==" ^ show_exp_compact b
   | NotEq (a, b) -> show_exp_compact a ^ "!=" ^ show_exp_compact b
+  | Cast (k, a) -> "(" ^ show_kind k ^ ")" ^ show_exp_compact a
 
 (* One analysis run, reduced to the column this driver compares: the check
    point, the condition, and the lifted verdict. Every program here is
@@ -323,8 +334,10 @@ let () =
   let actual_proc_demo_sign = report Sign_Analysis proc_demo_prog in
   let actual_proc_demo_interval = report Interval_Analysis proc_demo_prog in
   let proc_demo_cfg = prog_cfg proc_demo_prog in
-  let actual_proc_demo_intra = show_intra_list (cfg_intra_list proc_demo_cfg) in
-  let actual_proc_demo_calls = show_calls_list (cfg_calls_list proc_demo_cfg) in
+  let actual_proc_demo_intra =
+    show_intra_list (cfg_intra_edges proc_demo_cfg)
+  in
+  let actual_proc_demo_calls = show_calls_list (cfg_call_edges proc_demo_cfg) in
   let actual_no_call_global_self_ref_interval =
     report Interval_Analysis no_call_global_self_ref_prog
   in

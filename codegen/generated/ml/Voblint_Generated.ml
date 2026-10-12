@@ -92,12 +92,12 @@ module Generated : sig
     FunctionResult of string
   type sign
   type relc
-  type call_action = CallEdge of string option * string list * exp list
-  type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp
-  type edge_action = EA_Nop | EA_Assign of string * exp |
-    EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp
-    | EA_Body of string | EA_Ret of exp option * string |
-    EA_Check of (nat * nat) * exp
+  type ('a, 'b) gcall_action = CallEdge of 'a option * 'a list * 'b list
+  type 'a gspecial_call = Nondet_Int | Min of 'a * 'a | Max of 'a * 'a
+  type ('a, 'b) gedge_action = EA_Nop | EA_Assign of 'a * 'b |
+    EA_Special of 'b gspecial_call * 'a | EA_Assume of 'b | EA_AssumeNot of 'b |
+    EA_Body of string | EA_Ret of 'b option * string |
+    EA_Check of (nat * nat) * 'b
   type ivl
   type parity
   type 'a lifted = Bot | Lifted of 'a
@@ -117,9 +117,9 @@ module Generated : sig
     Restore of 'a | Unwind of 'a
   type ('a, 'b) gproc_decl_ext =
     Gproc_decl_ext of string list * ('a, string, exp) gcom * 'b
-  type 'a cfg_ext
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
+  type ('a, 'b, 'c) gcfg_ext
   type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c
   type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
     Context_Call_String of cfg_node list
@@ -155,9 +155,10 @@ module Generated : sig
   type analysis_config =
     Analysis_Config of
       analysis_domain list * globals_rule * context_mode * program_globals
-  type analysis_edge = Intra_Dep of edge_action | Enter_Dep of call_action |
-    Combine_Dep of call_action | Continue_Dep of call_action | Global_Read |
-    Global_Write
+  type analysis_edge = Intra_Dep of (string, exp) gedge_action |
+    Enter_Dep of (string, exp) gcall_action |
+    Combine_Dep of (string, exp) gcall_action |
+    Continue_Dep of (string, exp) gcall_action | Global_Read | Global_Write
   type result_global_unknown = Global_Named of string |
     Global_Seed of string * nat option
   type 'a imp_prog_ext
@@ -170,18 +171,13 @@ module Generated : sig
   type 'a result_check_ext
   type ('a, 'b) run_result_ext
   type 'a analysis_report_ext
-  val cfg_entry : 'a cfg_ext -> cfg_node
+  val cfg_entry : ('a, 'b, 'c) gcfg_ext -> cfg_node
   val declared_global_vars : 'a imp_prog_ext -> string list
   val prog_table :
     unit imp_prog_ext -> string -> (unit, unit) gproc_decl_ext option
   val prog_procs : unit imp_prog_ext -> string list
-  val cfg_intra_list :
-    unit cfg_ext -> (cfg_node * (edge_action * cfg_node)) list
-  val cfg_calls_list :
-    unit cfg_ext -> (cfg_node * (call_action * (cfg_node * cfg_node))) list
-  val cfg_node_list : unit cfg_ext -> cfg_node list
   val arithmetic_divisor : arithmetic_obligation -> exp
-  val prog_cfg : unit imp_prog_ext -> unit cfg_ext
+  val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
   val typed_prog :
     unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
@@ -194,6 +190,7 @@ module Generated : sig
   val route_targets : 'a call_route_ext -> nat list
   val route_context : 'a call_route_ext -> nat
   val route_point : 'a call_route_ext -> cfg_node
+  val cfg_points : (string, exp, unit) gcfg_ext -> cfg_node list
   val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
   val state_point : ('a, 'b) result_state_ext -> cfg_node
   val state_value : ('a, 'b) result_state_ext -> 'a lifted
@@ -208,7 +205,13 @@ module Generated : sig
   val render_report :
     (abstract_value -> 'a) ->
       unit analysis_report_ext -> ('a, unit) run_result_ext
-  val res_cfg : ('a, 'b) run_result_ext -> unit cfg_ext
+  val cfg_call_edges :
+    (string, exp, unit) gcfg_ext ->
+      (cfg_node * ((string, exp) gcall_action * (cfg_node * cfg_node))) list
+  val cfg_intra_edges :
+    (string, exp, unit) gcfg_ext ->
+      (cfg_node * ((string, exp) gedge_action * cfg_node)) list
+  val res_cfg : ('a, 'b) run_result_ext -> (string, exp, unit) gcfg_ext
   val check_exp : 'a result_check_ext -> exp
   val res_graph : ('a, 'b) run_result_ext -> unit analysis_graph_ext
   val route_callee : 'a call_route_ext -> string
@@ -1605,6 +1608,415 @@ let rec equal_expa
 
 let equal_exp = ({equal = equal_expa} : exp equal);;
 
+type ordera = Eqa | Lt | Gt;;
+
+let rec comparator_of (_A1, _A2)
+  x y = (if less _A2.order_linorder.preorder_order.ord_preorder x y then Lt
+          else (if eq _A1 x y then Eqa else Gt));;
+
+let rec comparator_ikind x0 x1 = match x0, x1 with I8, I8 -> Eqa
+                           | I8, U8 -> Lt
+                           | I8, I16 -> Lt
+                           | I8, U16 -> Lt
+                           | I8, I32 -> Lt
+                           | I8, U32 -> Lt
+                           | I8, I64 -> Lt
+                           | I8, U64 -> Lt
+                           | U8, I8 -> Gt
+                           | U8, U8 -> Eqa
+                           | U8, I16 -> Lt
+                           | U8, U16 -> Lt
+                           | U8, I32 -> Lt
+                           | U8, U32 -> Lt
+                           | U8, I64 -> Lt
+                           | U8, U64 -> Lt
+                           | I16, I8 -> Gt
+                           | I16, U8 -> Gt
+                           | I16, I16 -> Eqa
+                           | I16, U16 -> Lt
+                           | I16, I32 -> Lt
+                           | I16, U32 -> Lt
+                           | I16, I64 -> Lt
+                           | I16, U64 -> Lt
+                           | U16, I8 -> Gt
+                           | U16, U8 -> Gt
+                           | U16, I16 -> Gt
+                           | U16, U16 -> Eqa
+                           | U16, I32 -> Lt
+                           | U16, U32 -> Lt
+                           | U16, I64 -> Lt
+                           | U16, U64 -> Lt
+                           | I32, I8 -> Gt
+                           | I32, U8 -> Gt
+                           | I32, I16 -> Gt
+                           | I32, U16 -> Gt
+                           | I32, I32 -> Eqa
+                           | I32, U32 -> Lt
+                           | I32, I64 -> Lt
+                           | I32, U64 -> Lt
+                           | U32, I8 -> Gt
+                           | U32, U8 -> Gt
+                           | U32, I16 -> Gt
+                           | U32, U16 -> Gt
+                           | U32, I32 -> Gt
+                           | U32, U32 -> Eqa
+                           | U32, I64 -> Lt
+                           | U32, U64 -> Lt
+                           | I64, I8 -> Gt
+                           | I64, U8 -> Gt
+                           | I64, I16 -> Gt
+                           | I64, U16 -> Gt
+                           | I64, I32 -> Gt
+                           | I64, U32 -> Gt
+                           | I64, I64 -> Eqa
+                           | I64, U64 -> Lt
+                           | U64, I8 -> Gt
+                           | U64, U8 -> Gt
+                           | U64, I16 -> Gt
+                           | U64, U16 -> Gt
+                           | U64, I32 -> Gt
+                           | U64, U32 -> Gt
+                           | U64, I64 -> Gt
+                           | U64, U64 -> Eqa;;
+
+let rec comparator_exp
+  x0 x1 = match x0, x1 with
+    N x, N y -> comparator_of (equal_int, linorder_int) x y
+    | N x, V ya -> Lt
+    | N x, Plus (yb, yc) -> Lt
+    | N x, Minus (yd, ye) -> Lt
+    | N x, Times (yf, yg) -> Lt
+    | N x, Div (yh, yi) -> Lt
+    | N x, Mod (yj, yk) -> Lt
+    | N x, Less (yl, ym) -> Lt
+    | N x, LessEq (yn, yo) -> Lt
+    | N x, Greater (yp, yq) -> Lt
+    | N x, GreaterEq (yr, ys) -> Lt
+    | N x, NotEq (yt, yu) -> Lt
+    | N x, Eq (yv, yw) -> Lt
+    | N x, Not yx -> Lt
+    | N x, And (yy, yz) -> Lt
+    | N x, Or (za, zb) -> Lt
+    | N x, Cast (zc, zd) -> Lt
+    | V x, N y -> Gt
+    | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
+    | V x, Plus (yb, yc) -> Lt
+    | V x, Minus (yd, ye) -> Lt
+    | V x, Times (yf, yg) -> Lt
+    | V x, Div (yh, yi) -> Lt
+    | V x, Mod (yj, yk) -> Lt
+    | V x, Less (yl, ym) -> Lt
+    | V x, LessEq (yn, yo) -> Lt
+    | V x, Greater (yp, yq) -> Lt
+    | V x, GreaterEq (yr, ys) -> Lt
+    | V x, NotEq (yt, yu) -> Lt
+    | V x, Eq (yv, yw) -> Lt
+    | V x, Not yx -> Lt
+    | V x, And (yy, yz) -> Lt
+    | V x, Or (za, zb) -> Lt
+    | V x, Cast (zc, zd) -> Lt
+    | Plus (x, xa), N y -> Gt
+    | Plus (x, xa), V ya -> Gt
+    | Plus (x, xa), Plus (yb, yc) ->
+        (match comparator_exp x yb with Eqa -> comparator_exp xa yc | Lt -> Lt
+          | Gt -> Gt)
+    | Plus (x, xa), Minus (yd, ye) -> Lt
+    | Plus (x, xa), Times (yf, yg) -> Lt
+    | Plus (x, xa), Div (yh, yi) -> Lt
+    | Plus (x, xa), Mod (yj, yk) -> Lt
+    | Plus (x, xa), Less (yl, ym) -> Lt
+    | Plus (x, xa), LessEq (yn, yo) -> Lt
+    | Plus (x, xa), Greater (yp, yq) -> Lt
+    | Plus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Plus (x, xa), NotEq (yt, yu) -> Lt
+    | Plus (x, xa), Eq (yv, yw) -> Lt
+    | Plus (x, xa), Not yx -> Lt
+    | Plus (x, xa), And (yy, yz) -> Lt
+    | Plus (x, xa), Or (za, zb) -> Lt
+    | Plus (x, xa), Cast (zc, zd) -> Lt
+    | Minus (x, xa), N y -> Gt
+    | Minus (x, xa), V ya -> Gt
+    | Minus (x, xa), Plus (yb, yc) -> Gt
+    | Minus (x, xa), Minus (yd, ye) ->
+        (match comparator_exp x yd with Eqa -> comparator_exp xa ye | Lt -> Lt
+          | Gt -> Gt)
+    | Minus (x, xa), Times (yf, yg) -> Lt
+    | Minus (x, xa), Div (yh, yi) -> Lt
+    | Minus (x, xa), Mod (yj, yk) -> Lt
+    | Minus (x, xa), Less (yl, ym) -> Lt
+    | Minus (x, xa), LessEq (yn, yo) -> Lt
+    | Minus (x, xa), Greater (yp, yq) -> Lt
+    | Minus (x, xa), GreaterEq (yr, ys) -> Lt
+    | Minus (x, xa), NotEq (yt, yu) -> Lt
+    | Minus (x, xa), Eq (yv, yw) -> Lt
+    | Minus (x, xa), Not yx -> Lt
+    | Minus (x, xa), And (yy, yz) -> Lt
+    | Minus (x, xa), Or (za, zb) -> Lt
+    | Minus (x, xa), Cast (zc, zd) -> Lt
+    | Times (x, xa), N y -> Gt
+    | Times (x, xa), V ya -> Gt
+    | Times (x, xa), Plus (yb, yc) -> Gt
+    | Times (x, xa), Minus (yd, ye) -> Gt
+    | Times (x, xa), Times (yf, yg) ->
+        (match comparator_exp x yf with Eqa -> comparator_exp xa yg | Lt -> Lt
+          | Gt -> Gt)
+    | Times (x, xa), Div (yh, yi) -> Lt
+    | Times (x, xa), Mod (yj, yk) -> Lt
+    | Times (x, xa), Less (yl, ym) -> Lt
+    | Times (x, xa), LessEq (yn, yo) -> Lt
+    | Times (x, xa), Greater (yp, yq) -> Lt
+    | Times (x, xa), GreaterEq (yr, ys) -> Lt
+    | Times (x, xa), NotEq (yt, yu) -> Lt
+    | Times (x, xa), Eq (yv, yw) -> Lt
+    | Times (x, xa), Not yx -> Lt
+    | Times (x, xa), And (yy, yz) -> Lt
+    | Times (x, xa), Or (za, zb) -> Lt
+    | Times (x, xa), Cast (zc, zd) -> Lt
+    | Div (x, xa), N y -> Gt
+    | Div (x, xa), V ya -> Gt
+    | Div (x, xa), Plus (yb, yc) -> Gt
+    | Div (x, xa), Minus (yd, ye) -> Gt
+    | Div (x, xa), Times (yf, yg) -> Gt
+    | Div (x, xa), Div (yh, yi) ->
+        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
+          | Gt -> Gt)
+    | Div (x, xa), Mod (yj, yk) -> Lt
+    | Div (x, xa), Less (yl, ym) -> Lt
+    | Div (x, xa), LessEq (yn, yo) -> Lt
+    | Div (x, xa), Greater (yp, yq) -> Lt
+    | Div (x, xa), GreaterEq (yr, ys) -> Lt
+    | Div (x, xa), NotEq (yt, yu) -> Lt
+    | Div (x, xa), Eq (yv, yw) -> Lt
+    | Div (x, xa), Not yx -> Lt
+    | Div (x, xa), And (yy, yz) -> Lt
+    | Div (x, xa), Or (za, zb) -> Lt
+    | Div (x, xa), Cast (zc, zd) -> Lt
+    | Mod (x, xa), N y -> Gt
+    | Mod (x, xa), V ya -> Gt
+    | Mod (x, xa), Plus (yb, yc) -> Gt
+    | Mod (x, xa), Minus (yd, ye) -> Gt
+    | Mod (x, xa), Times (yf, yg) -> Gt
+    | Mod (x, xa), Div (yh, yi) -> Gt
+    | Mod (x, xa), Mod (yj, yk) ->
+        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
+          | Gt -> Gt)
+    | Mod (x, xa), Less (yl, ym) -> Lt
+    | Mod (x, xa), LessEq (yn, yo) -> Lt
+    | Mod (x, xa), Greater (yp, yq) -> Lt
+    | Mod (x, xa), GreaterEq (yr, ys) -> Lt
+    | Mod (x, xa), NotEq (yt, yu) -> Lt
+    | Mod (x, xa), Eq (yv, yw) -> Lt
+    | Mod (x, xa), Not yx -> Lt
+    | Mod (x, xa), And (yy, yz) -> Lt
+    | Mod (x, xa), Or (za, zb) -> Lt
+    | Mod (x, xa), Cast (zc, zd) -> Lt
+    | Less (x, xa), N y -> Gt
+    | Less (x, xa), V ya -> Gt
+    | Less (x, xa), Plus (yb, yc) -> Gt
+    | Less (x, xa), Minus (yd, ye) -> Gt
+    | Less (x, xa), Times (yf, yg) -> Gt
+    | Less (x, xa), Div (yh, yi) -> Gt
+    | Less (x, xa), Mod (yj, yk) -> Gt
+    | Less (x, xa), Less (yl, ym) ->
+        (match comparator_exp x yl with Eqa -> comparator_exp xa ym | Lt -> Lt
+          | Gt -> Gt)
+    | Less (x, xa), LessEq (yn, yo) -> Lt
+    | Less (x, xa), Greater (yp, yq) -> Lt
+    | Less (x, xa), GreaterEq (yr, ys) -> Lt
+    | Less (x, xa), NotEq (yt, yu) -> Lt
+    | Less (x, xa), Eq (yv, yw) -> Lt
+    | Less (x, xa), Not yx -> Lt
+    | Less (x, xa), And (yy, yz) -> Lt
+    | Less (x, xa), Or (za, zb) -> Lt
+    | Less (x, xa), Cast (zc, zd) -> Lt
+    | LessEq (x, xa), N y -> Gt
+    | LessEq (x, xa), V ya -> Gt
+    | LessEq (x, xa), Plus (yb, yc) -> Gt
+    | LessEq (x, xa), Minus (yd, ye) -> Gt
+    | LessEq (x, xa), Times (yf, yg) -> Gt
+    | LessEq (x, xa), Div (yh, yi) -> Gt
+    | LessEq (x, xa), Mod (yj, yk) -> Gt
+    | LessEq (x, xa), Less (yl, ym) -> Gt
+    | LessEq (x, xa), LessEq (yn, yo) ->
+        (match comparator_exp x yn with Eqa -> comparator_exp xa yo | Lt -> Lt
+          | Gt -> Gt)
+    | LessEq (x, xa), Greater (yp, yq) -> Lt
+    | LessEq (x, xa), GreaterEq (yr, ys) -> Lt
+    | LessEq (x, xa), NotEq (yt, yu) -> Lt
+    | LessEq (x, xa), Eq (yv, yw) -> Lt
+    | LessEq (x, xa), Not yx -> Lt
+    | LessEq (x, xa), And (yy, yz) -> Lt
+    | LessEq (x, xa), Or (za, zb) -> Lt
+    | LessEq (x, xa), Cast (zc, zd) -> Lt
+    | Greater (x, xa), N y -> Gt
+    | Greater (x, xa), V ya -> Gt
+    | Greater (x, xa), Plus (yb, yc) -> Gt
+    | Greater (x, xa), Minus (yd, ye) -> Gt
+    | Greater (x, xa), Times (yf, yg) -> Gt
+    | Greater (x, xa), Div (yh, yi) -> Gt
+    | Greater (x, xa), Mod (yj, yk) -> Gt
+    | Greater (x, xa), Less (yl, ym) -> Gt
+    | Greater (x, xa), LessEq (yn, yo) -> Gt
+    | Greater (x, xa), Greater (yp, yq) ->
+        (match comparator_exp x yp with Eqa -> comparator_exp xa yq | Lt -> Lt
+          | Gt -> Gt)
+    | Greater (x, xa), GreaterEq (yr, ys) -> Lt
+    | Greater (x, xa), NotEq (yt, yu) -> Lt
+    | Greater (x, xa), Eq (yv, yw) -> Lt
+    | Greater (x, xa), Not yx -> Lt
+    | Greater (x, xa), And (yy, yz) -> Lt
+    | Greater (x, xa), Or (za, zb) -> Lt
+    | Greater (x, xa), Cast (zc, zd) -> Lt
+    | GreaterEq (x, xa), N y -> Gt
+    | GreaterEq (x, xa), V ya -> Gt
+    | GreaterEq (x, xa), Plus (yb, yc) -> Gt
+    | GreaterEq (x, xa), Minus (yd, ye) -> Gt
+    | GreaterEq (x, xa), Times (yf, yg) -> Gt
+    | GreaterEq (x, xa), Div (yh, yi) -> Gt
+    | GreaterEq (x, xa), Mod (yj, yk) -> Gt
+    | GreaterEq (x, xa), Less (yl, ym) -> Gt
+    | GreaterEq (x, xa), LessEq (yn, yo) -> Gt
+    | GreaterEq (x, xa), Greater (yp, yq) -> Gt
+    | GreaterEq (x, xa), GreaterEq (yr, ys) ->
+        (match comparator_exp x yr with Eqa -> comparator_exp xa ys | Lt -> Lt
+          | Gt -> Gt)
+    | GreaterEq (x, xa), NotEq (yt, yu) -> Lt
+    | GreaterEq (x, xa), Eq (yv, yw) -> Lt
+    | GreaterEq (x, xa), Not yx -> Lt
+    | GreaterEq (x, xa), And (yy, yz) -> Lt
+    | GreaterEq (x, xa), Or (za, zb) -> Lt
+    | GreaterEq (x, xa), Cast (zc, zd) -> Lt
+    | NotEq (x, xa), N y -> Gt
+    | NotEq (x, xa), V ya -> Gt
+    | NotEq (x, xa), Plus (yb, yc) -> Gt
+    | NotEq (x, xa), Minus (yd, ye) -> Gt
+    | NotEq (x, xa), Times (yf, yg) -> Gt
+    | NotEq (x, xa), Div (yh, yi) -> Gt
+    | NotEq (x, xa), Mod (yj, yk) -> Gt
+    | NotEq (x, xa), Less (yl, ym) -> Gt
+    | NotEq (x, xa), LessEq (yn, yo) -> Gt
+    | NotEq (x, xa), Greater (yp, yq) -> Gt
+    | NotEq (x, xa), GreaterEq (yr, ys) -> Gt
+    | NotEq (x, xa), NotEq (yt, yu) ->
+        (match comparator_exp x yt with Eqa -> comparator_exp xa yu | Lt -> Lt
+          | Gt -> Gt)
+    | NotEq (x, xa), Eq (yv, yw) -> Lt
+    | NotEq (x, xa), Not yx -> Lt
+    | NotEq (x, xa), And (yy, yz) -> Lt
+    | NotEq (x, xa), Or (za, zb) -> Lt
+    | NotEq (x, xa), Cast (zc, zd) -> Lt
+    | Eq (x, xa), N y -> Gt
+    | Eq (x, xa), V ya -> Gt
+    | Eq (x, xa), Plus (yb, yc) -> Gt
+    | Eq (x, xa), Minus (yd, ye) -> Gt
+    | Eq (x, xa), Times (yf, yg) -> Gt
+    | Eq (x, xa), Div (yh, yi) -> Gt
+    | Eq (x, xa), Mod (yj, yk) -> Gt
+    | Eq (x, xa), Less (yl, ym) -> Gt
+    | Eq (x, xa), LessEq (yn, yo) -> Gt
+    | Eq (x, xa), Greater (yp, yq) -> Gt
+    | Eq (x, xa), GreaterEq (yr, ys) -> Gt
+    | Eq (x, xa), NotEq (yt, yu) -> Gt
+    | Eq (x, xa), Eq (yv, yw) ->
+        (match comparator_exp x yv with Eqa -> comparator_exp xa yw | Lt -> Lt
+          | Gt -> Gt)
+    | Eq (x, xa), Not yx -> Lt
+    | Eq (x, xa), And (yy, yz) -> Lt
+    | Eq (x, xa), Or (za, zb) -> Lt
+    | Eq (x, xa), Cast (zc, zd) -> Lt
+    | Not x, N y -> Gt
+    | Not x, V ya -> Gt
+    | Not x, Plus (yb, yc) -> Gt
+    | Not x, Minus (yd, ye) -> Gt
+    | Not x, Times (yf, yg) -> Gt
+    | Not x, Div (yh, yi) -> Gt
+    | Not x, Mod (yj, yk) -> Gt
+    | Not x, Less (yl, ym) -> Gt
+    | Not x, LessEq (yn, yo) -> Gt
+    | Not x, Greater (yp, yq) -> Gt
+    | Not x, GreaterEq (yr, ys) -> Gt
+    | Not x, NotEq (yt, yu) -> Gt
+    | Not x, Eq (yv, yw) -> Gt
+    | Not x, Not yx -> comparator_exp x yx
+    | Not x, And (yy, yz) -> Lt
+    | Not x, Or (za, zb) -> Lt
+    | Not x, Cast (zc, zd) -> Lt
+    | And (x, xa), N y -> Gt
+    | And (x, xa), V ya -> Gt
+    | And (x, xa), Plus (yb, yc) -> Gt
+    | And (x, xa), Minus (yd, ye) -> Gt
+    | And (x, xa), Times (yf, yg) -> Gt
+    | And (x, xa), Div (yh, yi) -> Gt
+    | And (x, xa), Mod (yj, yk) -> Gt
+    | And (x, xa), Less (yl, ym) -> Gt
+    | And (x, xa), LessEq (yn, yo) -> Gt
+    | And (x, xa), Greater (yp, yq) -> Gt
+    | And (x, xa), GreaterEq (yr, ys) -> Gt
+    | And (x, xa), NotEq (yt, yu) -> Gt
+    | And (x, xa), Eq (yv, yw) -> Gt
+    | And (x, xa), Not yx -> Gt
+    | And (x, xa), And (yy, yz) ->
+        (match comparator_exp x yy with Eqa -> comparator_exp xa yz | Lt -> Lt
+          | Gt -> Gt)
+    | And (x, xa), Or (za, zb) -> Lt
+    | And (x, xa), Cast (zc, zd) -> Lt
+    | Or (x, xa), N y -> Gt
+    | Or (x, xa), V ya -> Gt
+    | Or (x, xa), Plus (yb, yc) -> Gt
+    | Or (x, xa), Minus (yd, ye) -> Gt
+    | Or (x, xa), Times (yf, yg) -> Gt
+    | Or (x, xa), Div (yh, yi) -> Gt
+    | Or (x, xa), Mod (yj, yk) -> Gt
+    | Or (x, xa), Less (yl, ym) -> Gt
+    | Or (x, xa), LessEq (yn, yo) -> Gt
+    | Or (x, xa), Greater (yp, yq) -> Gt
+    | Or (x, xa), GreaterEq (yr, ys) -> Gt
+    | Or (x, xa), NotEq (yt, yu) -> Gt
+    | Or (x, xa), Eq (yv, yw) -> Gt
+    | Or (x, xa), Not yx -> Gt
+    | Or (x, xa), And (yy, yz) -> Gt
+    | Or (x, xa), Or (za, zb) ->
+        (match comparator_exp x za with Eqa -> comparator_exp xa zb | Lt -> Lt
+          | Gt -> Gt)
+    | Or (x, xa), Cast (zc, zd) -> Lt
+    | Cast (x, xa), N y -> Gt
+    | Cast (x, xa), V ya -> Gt
+    | Cast (x, xa), Plus (yb, yc) -> Gt
+    | Cast (x, xa), Minus (yd, ye) -> Gt
+    | Cast (x, xa), Times (yf, yg) -> Gt
+    | Cast (x, xa), Div (yh, yi) -> Gt
+    | Cast (x, xa), Mod (yj, yk) -> Gt
+    | Cast (x, xa), Less (yl, ym) -> Gt
+    | Cast (x, xa), LessEq (yn, yo) -> Gt
+    | Cast (x, xa), Greater (yp, yq) -> Gt
+    | Cast (x, xa), GreaterEq (yr, ys) -> Gt
+    | Cast (x, xa), NotEq (yt, yu) -> Gt
+    | Cast (x, xa), Eq (yv, yw) -> Gt
+    | Cast (x, xa), Not yx -> Gt
+    | Cast (x, xa), And (yy, yz) -> Gt
+    | Cast (x, xa), Or (za, zb) -> Gt
+    | Cast (x, xa), Cast (zc, zd) ->
+        (match comparator_ikind x zc with Eqa -> comparator_exp xa zd | Lt -> Lt
+          | Gt -> Gt);;
+
+let rec le_of_comp
+  acomp x y = (match acomp x y with Eqa -> true | Lt -> true | Gt -> false);;
+
+let rec less_eq_exp x = le_of_comp comparator_exp x;;
+
+let rec lt_of_comp
+  acomp x y = (match acomp x y with Eqa -> false | Lt -> true | Gt -> false);;
+
+let rec less_exp x = lt_of_comp comparator_exp x;;
+
+let ord_exp = ({less_eq = less_eq_exp; less = less_exp} : exp ord);;
+
+let preorder_exp = ({ord_preorder = ord_exp} : exp preorder);;
+
+let order_exp = ({preorder_order = preorder_exp} : exp order);;
+
+let linorder_exp = ({order_linorder = order_exp} : exp linorder);;
+
 type cfg_node = Statement of nat | FunctionEntry of string |
   FunctionResult of string;;
 
@@ -1621,12 +2033,6 @@ let rec equal_cfg_nodea
 
 let equal_cfg_node = ({equal = equal_cfg_nodea} : cfg_node equal);;
 
-type ordera = Eqa | Lt | Gt;;
-
-let rec comparator_of (_A1, _A2)
-  x y = (if less _A2.order_linorder.preorder_order.ord_preorder x y then Lt
-          else (if eq _A1 x y then Eqa else Gt));;
-
 let rec comparator_cfg_node
   x0 x1 = match x0, x1 with
     Statement x, Statement y -> comparator_of (equal_nat, linorder_nat) x y
@@ -1641,13 +2047,7 @@ let rec comparator_cfg_node
     | FunctionResult x, FunctionResult yb ->
         comparator_of (equal_literal, linorder_literal) x yb;;
 
-let rec le_of_comp
-  acomp x y = (match acomp x y with Eqa -> true | Lt -> true | Gt -> false);;
-
 let rec less_eq_cfg_node x = le_of_comp comparator_cfg_node x;;
-
-let rec lt_of_comp
-  acomp x y = (match acomp x y with Eqa -> false | Lt -> true | Gt -> false);;
 
 let rec less_cfg_node x = lt_of_comp comparator_cfg_node x;;
 
@@ -2274,19 +2674,25 @@ let bounded_semilattice_sup_bot_relc =
      order_bot_bounded_semilattice_sup_bot = order_bot_relc}
     : relc bounded_semilattice_sup_bot);;
 
+type query = EvalInt of exp;;
+
+let rec equal_querya (EvalInt x) (EvalInt ya) = equal_expa x ya;;
+
+let equal_query = ({equal = equal_querya} : query equal);;
+
 let rec equal_option _A x0 x1 = match x0, x1 with None, Some x2 -> false
                           | Some x2, None -> false
                           | Some x2, Some y2 -> eq _A x2 y2
                           | None, None -> true;;
 
-type call_action = CallEdge of string option * string list * exp list;;
+type ('a, 'b) gcall_action = CallEdge of 'a option * 'a list * 'b list;;
 
-let rec equal_call_actiona
+let rec equal_gcall_actiona _A _B
   (CallEdge (x1, x2, x3)) (CallEdge (y1, y2, y3)) =
-    equal_option equal_literal x1 y1 &&
-      (equal_lista equal_literal x2 y2 && equal_lista equal_exp x3 y3);;
+    equal_option _A x1 y1 && (equal_lista _A x2 y2 && equal_lista _B x3 y3);;
 
-let equal_call_action = ({equal = equal_call_actiona} : call_action equal);;
+let rec equal_gcall_action _A _B =
+  ({equal = equal_gcall_actiona _A _B} : ('a, 'b) gcall_action equal);;
 
 let rec comparator_option
   comp_a x1 x2 = match comp_a, x1, x2 with comp_a, None, None -> Eqa
@@ -2302,438 +2708,60 @@ let rec comparator_list
         (match comp_a x y with Eqa -> comparator_list comp_a xa ya | Lt -> Lt
           | Gt -> Gt);;
 
-let rec comparator_ikind x0 x1 = match x0, x1 with I8, I8 -> Eqa
-                           | I8, U8 -> Lt
-                           | I8, I16 -> Lt
-                           | I8, U16 -> Lt
-                           | I8, I32 -> Lt
-                           | I8, U32 -> Lt
-                           | I8, I64 -> Lt
-                           | I8, U64 -> Lt
-                           | U8, I8 -> Gt
-                           | U8, U8 -> Eqa
-                           | U8, I16 -> Lt
-                           | U8, U16 -> Lt
-                           | U8, I32 -> Lt
-                           | U8, U32 -> Lt
-                           | U8, I64 -> Lt
-                           | U8, U64 -> Lt
-                           | I16, I8 -> Gt
-                           | I16, U8 -> Gt
-                           | I16, I16 -> Eqa
-                           | I16, U16 -> Lt
-                           | I16, I32 -> Lt
-                           | I16, U32 -> Lt
-                           | I16, I64 -> Lt
-                           | I16, U64 -> Lt
-                           | U16, I8 -> Gt
-                           | U16, U8 -> Gt
-                           | U16, I16 -> Gt
-                           | U16, U16 -> Eqa
-                           | U16, I32 -> Lt
-                           | U16, U32 -> Lt
-                           | U16, I64 -> Lt
-                           | U16, U64 -> Lt
-                           | I32, I8 -> Gt
-                           | I32, U8 -> Gt
-                           | I32, I16 -> Gt
-                           | I32, U16 -> Gt
-                           | I32, I32 -> Eqa
-                           | I32, U32 -> Lt
-                           | I32, I64 -> Lt
-                           | I32, U64 -> Lt
-                           | U32, I8 -> Gt
-                           | U32, U8 -> Gt
-                           | U32, I16 -> Gt
-                           | U32, U16 -> Gt
-                           | U32, I32 -> Gt
-                           | U32, U32 -> Eqa
-                           | U32, I64 -> Lt
-                           | U32, U64 -> Lt
-                           | I64, I8 -> Gt
-                           | I64, U8 -> Gt
-                           | I64, I16 -> Gt
-                           | I64, U16 -> Gt
-                           | I64, I32 -> Gt
-                           | I64, U32 -> Gt
-                           | I64, I64 -> Eqa
-                           | I64, U64 -> Lt
-                           | U64, I8 -> Gt
-                           | U64, U8 -> Gt
-                           | U64, I16 -> Gt
-                           | U64, U16 -> Gt
-                           | U64, I32 -> Gt
-                           | U64, U32 -> Gt
-                           | U64, I64 -> Gt
-                           | U64, U64 -> Eqa;;
-
-let rec comparator_exp
-  x0 x1 = match x0, x1 with
-    N x, N y -> comparator_of (equal_int, linorder_int) x y
-    | N x, V ya -> Lt
-    | N x, Plus (yb, yc) -> Lt
-    | N x, Minus (yd, ye) -> Lt
-    | N x, Times (yf, yg) -> Lt
-    | N x, Div (yh, yi) -> Lt
-    | N x, Mod (yj, yk) -> Lt
-    | N x, Less (yl, ym) -> Lt
-    | N x, LessEq (yn, yo) -> Lt
-    | N x, Greater (yp, yq) -> Lt
-    | N x, GreaterEq (yr, ys) -> Lt
-    | N x, NotEq (yt, yu) -> Lt
-    | N x, Eq (yv, yw) -> Lt
-    | N x, Not yx -> Lt
-    | N x, And (yy, yz) -> Lt
-    | N x, Or (za, zb) -> Lt
-    | N x, Cast (zc, zd) -> Lt
-    | V x, N y -> Gt
-    | V x, V ya -> comparator_of (equal_literal, linorder_literal) x ya
-    | V x, Plus (yb, yc) -> Lt
-    | V x, Minus (yd, ye) -> Lt
-    | V x, Times (yf, yg) -> Lt
-    | V x, Div (yh, yi) -> Lt
-    | V x, Mod (yj, yk) -> Lt
-    | V x, Less (yl, ym) -> Lt
-    | V x, LessEq (yn, yo) -> Lt
-    | V x, Greater (yp, yq) -> Lt
-    | V x, GreaterEq (yr, ys) -> Lt
-    | V x, NotEq (yt, yu) -> Lt
-    | V x, Eq (yv, yw) -> Lt
-    | V x, Not yx -> Lt
-    | V x, And (yy, yz) -> Lt
-    | V x, Or (za, zb) -> Lt
-    | V x, Cast (zc, zd) -> Lt
-    | Plus (x, xa), N y -> Gt
-    | Plus (x, xa), V ya -> Gt
-    | Plus (x, xa), Plus (yb, yc) ->
-        (match comparator_exp x yb with Eqa -> comparator_exp xa yc | Lt -> Lt
-          | Gt -> Gt)
-    | Plus (x, xa), Minus (yd, ye) -> Lt
-    | Plus (x, xa), Times (yf, yg) -> Lt
-    | Plus (x, xa), Div (yh, yi) -> Lt
-    | Plus (x, xa), Mod (yj, yk) -> Lt
-    | Plus (x, xa), Less (yl, ym) -> Lt
-    | Plus (x, xa), LessEq (yn, yo) -> Lt
-    | Plus (x, xa), Greater (yp, yq) -> Lt
-    | Plus (x, xa), GreaterEq (yr, ys) -> Lt
-    | Plus (x, xa), NotEq (yt, yu) -> Lt
-    | Plus (x, xa), Eq (yv, yw) -> Lt
-    | Plus (x, xa), Not yx -> Lt
-    | Plus (x, xa), And (yy, yz) -> Lt
-    | Plus (x, xa), Or (za, zb) -> Lt
-    | Plus (x, xa), Cast (zc, zd) -> Lt
-    | Minus (x, xa), N y -> Gt
-    | Minus (x, xa), V ya -> Gt
-    | Minus (x, xa), Plus (yb, yc) -> Gt
-    | Minus (x, xa), Minus (yd, ye) ->
-        (match comparator_exp x yd with Eqa -> comparator_exp xa ye | Lt -> Lt
-          | Gt -> Gt)
-    | Minus (x, xa), Times (yf, yg) -> Lt
-    | Minus (x, xa), Div (yh, yi) -> Lt
-    | Minus (x, xa), Mod (yj, yk) -> Lt
-    | Minus (x, xa), Less (yl, ym) -> Lt
-    | Minus (x, xa), LessEq (yn, yo) -> Lt
-    | Minus (x, xa), Greater (yp, yq) -> Lt
-    | Minus (x, xa), GreaterEq (yr, ys) -> Lt
-    | Minus (x, xa), NotEq (yt, yu) -> Lt
-    | Minus (x, xa), Eq (yv, yw) -> Lt
-    | Minus (x, xa), Not yx -> Lt
-    | Minus (x, xa), And (yy, yz) -> Lt
-    | Minus (x, xa), Or (za, zb) -> Lt
-    | Minus (x, xa), Cast (zc, zd) -> Lt
-    | Times (x, xa), N y -> Gt
-    | Times (x, xa), V ya -> Gt
-    | Times (x, xa), Plus (yb, yc) -> Gt
-    | Times (x, xa), Minus (yd, ye) -> Gt
-    | Times (x, xa), Times (yf, yg) ->
-        (match comparator_exp x yf with Eqa -> comparator_exp xa yg | Lt -> Lt
-          | Gt -> Gt)
-    | Times (x, xa), Div (yh, yi) -> Lt
-    | Times (x, xa), Mod (yj, yk) -> Lt
-    | Times (x, xa), Less (yl, ym) -> Lt
-    | Times (x, xa), LessEq (yn, yo) -> Lt
-    | Times (x, xa), Greater (yp, yq) -> Lt
-    | Times (x, xa), GreaterEq (yr, ys) -> Lt
-    | Times (x, xa), NotEq (yt, yu) -> Lt
-    | Times (x, xa), Eq (yv, yw) -> Lt
-    | Times (x, xa), Not yx -> Lt
-    | Times (x, xa), And (yy, yz) -> Lt
-    | Times (x, xa), Or (za, zb) -> Lt
-    | Times (x, xa), Cast (zc, zd) -> Lt
-    | Div (x, xa), N y -> Gt
-    | Div (x, xa), V ya -> Gt
-    | Div (x, xa), Plus (yb, yc) -> Gt
-    | Div (x, xa), Minus (yd, ye) -> Gt
-    | Div (x, xa), Times (yf, yg) -> Gt
-    | Div (x, xa), Div (yh, yi) ->
-        (match comparator_exp x yh with Eqa -> comparator_exp xa yi | Lt -> Lt
-          | Gt -> Gt)
-    | Div (x, xa), Mod (yj, yk) -> Lt
-    | Div (x, xa), Less (yl, ym) -> Lt
-    | Div (x, xa), LessEq (yn, yo) -> Lt
-    | Div (x, xa), Greater (yp, yq) -> Lt
-    | Div (x, xa), GreaterEq (yr, ys) -> Lt
-    | Div (x, xa), NotEq (yt, yu) -> Lt
-    | Div (x, xa), Eq (yv, yw) -> Lt
-    | Div (x, xa), Not yx -> Lt
-    | Div (x, xa), And (yy, yz) -> Lt
-    | Div (x, xa), Or (za, zb) -> Lt
-    | Div (x, xa), Cast (zc, zd) -> Lt
-    | Mod (x, xa), N y -> Gt
-    | Mod (x, xa), V ya -> Gt
-    | Mod (x, xa), Plus (yb, yc) -> Gt
-    | Mod (x, xa), Minus (yd, ye) -> Gt
-    | Mod (x, xa), Times (yf, yg) -> Gt
-    | Mod (x, xa), Div (yh, yi) -> Gt
-    | Mod (x, xa), Mod (yj, yk) ->
-        (match comparator_exp x yj with Eqa -> comparator_exp xa yk | Lt -> Lt
-          | Gt -> Gt)
-    | Mod (x, xa), Less (yl, ym) -> Lt
-    | Mod (x, xa), LessEq (yn, yo) -> Lt
-    | Mod (x, xa), Greater (yp, yq) -> Lt
-    | Mod (x, xa), GreaterEq (yr, ys) -> Lt
-    | Mod (x, xa), NotEq (yt, yu) -> Lt
-    | Mod (x, xa), Eq (yv, yw) -> Lt
-    | Mod (x, xa), Not yx -> Lt
-    | Mod (x, xa), And (yy, yz) -> Lt
-    | Mod (x, xa), Or (za, zb) -> Lt
-    | Mod (x, xa), Cast (zc, zd) -> Lt
-    | Less (x, xa), N y -> Gt
-    | Less (x, xa), V ya -> Gt
-    | Less (x, xa), Plus (yb, yc) -> Gt
-    | Less (x, xa), Minus (yd, ye) -> Gt
-    | Less (x, xa), Times (yf, yg) -> Gt
-    | Less (x, xa), Div (yh, yi) -> Gt
-    | Less (x, xa), Mod (yj, yk) -> Gt
-    | Less (x, xa), Less (yl, ym) ->
-        (match comparator_exp x yl with Eqa -> comparator_exp xa ym | Lt -> Lt
-          | Gt -> Gt)
-    | Less (x, xa), LessEq (yn, yo) -> Lt
-    | Less (x, xa), Greater (yp, yq) -> Lt
-    | Less (x, xa), GreaterEq (yr, ys) -> Lt
-    | Less (x, xa), NotEq (yt, yu) -> Lt
-    | Less (x, xa), Eq (yv, yw) -> Lt
-    | Less (x, xa), Not yx -> Lt
-    | Less (x, xa), And (yy, yz) -> Lt
-    | Less (x, xa), Or (za, zb) -> Lt
-    | Less (x, xa), Cast (zc, zd) -> Lt
-    | LessEq (x, xa), N y -> Gt
-    | LessEq (x, xa), V ya -> Gt
-    | LessEq (x, xa), Plus (yb, yc) -> Gt
-    | LessEq (x, xa), Minus (yd, ye) -> Gt
-    | LessEq (x, xa), Times (yf, yg) -> Gt
-    | LessEq (x, xa), Div (yh, yi) -> Gt
-    | LessEq (x, xa), Mod (yj, yk) -> Gt
-    | LessEq (x, xa), Less (yl, ym) -> Gt
-    | LessEq (x, xa), LessEq (yn, yo) ->
-        (match comparator_exp x yn with Eqa -> comparator_exp xa yo | Lt -> Lt
-          | Gt -> Gt)
-    | LessEq (x, xa), Greater (yp, yq) -> Lt
-    | LessEq (x, xa), GreaterEq (yr, ys) -> Lt
-    | LessEq (x, xa), NotEq (yt, yu) -> Lt
-    | LessEq (x, xa), Eq (yv, yw) -> Lt
-    | LessEq (x, xa), Not yx -> Lt
-    | LessEq (x, xa), And (yy, yz) -> Lt
-    | LessEq (x, xa), Or (za, zb) -> Lt
-    | LessEq (x, xa), Cast (zc, zd) -> Lt
-    | Greater (x, xa), N y -> Gt
-    | Greater (x, xa), V ya -> Gt
-    | Greater (x, xa), Plus (yb, yc) -> Gt
-    | Greater (x, xa), Minus (yd, ye) -> Gt
-    | Greater (x, xa), Times (yf, yg) -> Gt
-    | Greater (x, xa), Div (yh, yi) -> Gt
-    | Greater (x, xa), Mod (yj, yk) -> Gt
-    | Greater (x, xa), Less (yl, ym) -> Gt
-    | Greater (x, xa), LessEq (yn, yo) -> Gt
-    | Greater (x, xa), Greater (yp, yq) ->
-        (match comparator_exp x yp with Eqa -> comparator_exp xa yq | Lt -> Lt
-          | Gt -> Gt)
-    | Greater (x, xa), GreaterEq (yr, ys) -> Lt
-    | Greater (x, xa), NotEq (yt, yu) -> Lt
-    | Greater (x, xa), Eq (yv, yw) -> Lt
-    | Greater (x, xa), Not yx -> Lt
-    | Greater (x, xa), And (yy, yz) -> Lt
-    | Greater (x, xa), Or (za, zb) -> Lt
-    | Greater (x, xa), Cast (zc, zd) -> Lt
-    | GreaterEq (x, xa), N y -> Gt
-    | GreaterEq (x, xa), V ya -> Gt
-    | GreaterEq (x, xa), Plus (yb, yc) -> Gt
-    | GreaterEq (x, xa), Minus (yd, ye) -> Gt
-    | GreaterEq (x, xa), Times (yf, yg) -> Gt
-    | GreaterEq (x, xa), Div (yh, yi) -> Gt
-    | GreaterEq (x, xa), Mod (yj, yk) -> Gt
-    | GreaterEq (x, xa), Less (yl, ym) -> Gt
-    | GreaterEq (x, xa), LessEq (yn, yo) -> Gt
-    | GreaterEq (x, xa), Greater (yp, yq) -> Gt
-    | GreaterEq (x, xa), GreaterEq (yr, ys) ->
-        (match comparator_exp x yr with Eqa -> comparator_exp xa ys | Lt -> Lt
-          | Gt -> Gt)
-    | GreaterEq (x, xa), NotEq (yt, yu) -> Lt
-    | GreaterEq (x, xa), Eq (yv, yw) -> Lt
-    | GreaterEq (x, xa), Not yx -> Lt
-    | GreaterEq (x, xa), And (yy, yz) -> Lt
-    | GreaterEq (x, xa), Or (za, zb) -> Lt
-    | GreaterEq (x, xa), Cast (zc, zd) -> Lt
-    | NotEq (x, xa), N y -> Gt
-    | NotEq (x, xa), V ya -> Gt
-    | NotEq (x, xa), Plus (yb, yc) -> Gt
-    | NotEq (x, xa), Minus (yd, ye) -> Gt
-    | NotEq (x, xa), Times (yf, yg) -> Gt
-    | NotEq (x, xa), Div (yh, yi) -> Gt
-    | NotEq (x, xa), Mod (yj, yk) -> Gt
-    | NotEq (x, xa), Less (yl, ym) -> Gt
-    | NotEq (x, xa), LessEq (yn, yo) -> Gt
-    | NotEq (x, xa), Greater (yp, yq) -> Gt
-    | NotEq (x, xa), GreaterEq (yr, ys) -> Gt
-    | NotEq (x, xa), NotEq (yt, yu) ->
-        (match comparator_exp x yt with Eqa -> comparator_exp xa yu | Lt -> Lt
-          | Gt -> Gt)
-    | NotEq (x, xa), Eq (yv, yw) -> Lt
-    | NotEq (x, xa), Not yx -> Lt
-    | NotEq (x, xa), And (yy, yz) -> Lt
-    | NotEq (x, xa), Or (za, zb) -> Lt
-    | NotEq (x, xa), Cast (zc, zd) -> Lt
-    | Eq (x, xa), N y -> Gt
-    | Eq (x, xa), V ya -> Gt
-    | Eq (x, xa), Plus (yb, yc) -> Gt
-    | Eq (x, xa), Minus (yd, ye) -> Gt
-    | Eq (x, xa), Times (yf, yg) -> Gt
-    | Eq (x, xa), Div (yh, yi) -> Gt
-    | Eq (x, xa), Mod (yj, yk) -> Gt
-    | Eq (x, xa), Less (yl, ym) -> Gt
-    | Eq (x, xa), LessEq (yn, yo) -> Gt
-    | Eq (x, xa), Greater (yp, yq) -> Gt
-    | Eq (x, xa), GreaterEq (yr, ys) -> Gt
-    | Eq (x, xa), NotEq (yt, yu) -> Gt
-    | Eq (x, xa), Eq (yv, yw) ->
-        (match comparator_exp x yv with Eqa -> comparator_exp xa yw | Lt -> Lt
-          | Gt -> Gt)
-    | Eq (x, xa), Not yx -> Lt
-    | Eq (x, xa), And (yy, yz) -> Lt
-    | Eq (x, xa), Or (za, zb) -> Lt
-    | Eq (x, xa), Cast (zc, zd) -> Lt
-    | Not x, N y -> Gt
-    | Not x, V ya -> Gt
-    | Not x, Plus (yb, yc) -> Gt
-    | Not x, Minus (yd, ye) -> Gt
-    | Not x, Times (yf, yg) -> Gt
-    | Not x, Div (yh, yi) -> Gt
-    | Not x, Mod (yj, yk) -> Gt
-    | Not x, Less (yl, ym) -> Gt
-    | Not x, LessEq (yn, yo) -> Gt
-    | Not x, Greater (yp, yq) -> Gt
-    | Not x, GreaterEq (yr, ys) -> Gt
-    | Not x, NotEq (yt, yu) -> Gt
-    | Not x, Eq (yv, yw) -> Gt
-    | Not x, Not yx -> comparator_exp x yx
-    | Not x, And (yy, yz) -> Lt
-    | Not x, Or (za, zb) -> Lt
-    | Not x, Cast (zc, zd) -> Lt
-    | And (x, xa), N y -> Gt
-    | And (x, xa), V ya -> Gt
-    | And (x, xa), Plus (yb, yc) -> Gt
-    | And (x, xa), Minus (yd, ye) -> Gt
-    | And (x, xa), Times (yf, yg) -> Gt
-    | And (x, xa), Div (yh, yi) -> Gt
-    | And (x, xa), Mod (yj, yk) -> Gt
-    | And (x, xa), Less (yl, ym) -> Gt
-    | And (x, xa), LessEq (yn, yo) -> Gt
-    | And (x, xa), Greater (yp, yq) -> Gt
-    | And (x, xa), GreaterEq (yr, ys) -> Gt
-    | And (x, xa), NotEq (yt, yu) -> Gt
-    | And (x, xa), Eq (yv, yw) -> Gt
-    | And (x, xa), Not yx -> Gt
-    | And (x, xa), And (yy, yz) ->
-        (match comparator_exp x yy with Eqa -> comparator_exp xa yz | Lt -> Lt
-          | Gt -> Gt)
-    | And (x, xa), Or (za, zb) -> Lt
-    | And (x, xa), Cast (zc, zd) -> Lt
-    | Or (x, xa), N y -> Gt
-    | Or (x, xa), V ya -> Gt
-    | Or (x, xa), Plus (yb, yc) -> Gt
-    | Or (x, xa), Minus (yd, ye) -> Gt
-    | Or (x, xa), Times (yf, yg) -> Gt
-    | Or (x, xa), Div (yh, yi) -> Gt
-    | Or (x, xa), Mod (yj, yk) -> Gt
-    | Or (x, xa), Less (yl, ym) -> Gt
-    | Or (x, xa), LessEq (yn, yo) -> Gt
-    | Or (x, xa), Greater (yp, yq) -> Gt
-    | Or (x, xa), GreaterEq (yr, ys) -> Gt
-    | Or (x, xa), NotEq (yt, yu) -> Gt
-    | Or (x, xa), Eq (yv, yw) -> Gt
-    | Or (x, xa), Not yx -> Gt
-    | Or (x, xa), And (yy, yz) -> Gt
-    | Or (x, xa), Or (za, zb) ->
-        (match comparator_exp x za with Eqa -> comparator_exp xa zb | Lt -> Lt
-          | Gt -> Gt)
-    | Or (x, xa), Cast (zc, zd) -> Lt
-    | Cast (x, xa), N y -> Gt
-    | Cast (x, xa), V ya -> Gt
-    | Cast (x, xa), Plus (yb, yc) -> Gt
-    | Cast (x, xa), Minus (yd, ye) -> Gt
-    | Cast (x, xa), Times (yf, yg) -> Gt
-    | Cast (x, xa), Div (yh, yi) -> Gt
-    | Cast (x, xa), Mod (yj, yk) -> Gt
-    | Cast (x, xa), Less (yl, ym) -> Gt
-    | Cast (x, xa), LessEq (yn, yo) -> Gt
-    | Cast (x, xa), Greater (yp, yq) -> Gt
-    | Cast (x, xa), GreaterEq (yr, ys) -> Gt
-    | Cast (x, xa), NotEq (yt, yu) -> Gt
-    | Cast (x, xa), Eq (yv, yw) -> Gt
-    | Cast (x, xa), Not yx -> Gt
-    | Cast (x, xa), And (yy, yz) -> Gt
-    | Cast (x, xa), Or (za, zb) -> Gt
-    | Cast (x, xa), Cast (zc, zd) ->
-        (match comparator_ikind x zc with Eqa -> comparator_exp xa zd | Lt -> Lt
-          | Gt -> Gt);;
-
-let rec comparator_call_action
-  (CallEdge (x, xa, xb)) (CallEdge (y, ya, yb)) =
-    (match
-      comparator_option (comparator_of (equal_literal, linorder_literal)) x y
+let rec comparator_gcall_action
+  comp_v comp_e (CallEdge (x, xa, xb)) (CallEdge (y, ya, yb)) =
+    (match comparator_option comp_v x y
       with Eqa ->
-        (match
-          comparator_list (comparator_of (equal_literal, linorder_literal)) xa
-            ya
-          with Eqa -> comparator_list comparator_exp xb yb | Lt -> Lt
-          | Gt -> Gt)
+        (match comparator_list comp_v xa ya
+          with Eqa -> comparator_list comp_e xb yb | Lt -> Lt | Gt -> Gt)
       | Lt -> Lt | Gt -> Gt);;
 
-let rec less_eq_call_action x = le_of_comp comparator_call_action x;;
+let rec less_eq_gcall_action (_A1, _A2) (_B1, _B2)
+  = le_of_comp
+      (comparator_gcall_action (comparator_of (_A1, _A2))
+        (comparator_of (_B1, _B2)));;
 
-let rec less_call_action x = lt_of_comp comparator_call_action x;;
+let rec less_gcall_action (_A1, _A2) (_B1, _B2)
+  = lt_of_comp
+      (comparator_gcall_action (comparator_of (_A1, _A2))
+        (comparator_of (_B1, _B2)));;
 
-let ord_call_action =
-  ({less_eq = less_eq_call_action; less = less_call_action} : call_action ord);;
+let rec ord_gcall_action (_A1, _A2) (_B1, _B2) =
+  ({less_eq = less_eq_gcall_action (_A1, _A2) (_B1, _B2);
+     less = less_gcall_action (_A1, _A2) (_B1, _B2)}
+    : ('a, 'b) gcall_action ord);;
 
-let preorder_call_action =
-  ({ord_preorder = ord_call_action} : call_action preorder);;
+let rec preorder_gcall_action (_A1, _A2) (_B1, _B2) =
+  ({ord_preorder = (ord_gcall_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gcall_action preorder);;
 
-let order_call_action =
-  ({preorder_order = preorder_call_action} : call_action order);;
+let rec order_gcall_action (_A1, _A2) (_B1, _B2) =
+  ({preorder_order = (preorder_gcall_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gcall_action order);;
 
-let linorder_call_action =
-  ({order_linorder = order_call_action} : call_action linorder);;
+let rec linorder_gcall_action (_A1, _A2) (_B1, _B2) =
+  ({order_linorder = (order_gcall_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gcall_action linorder);;
 
-type special_call = Nondet_Int | Min of exp * exp | Max of exp * exp;;
+type 'a gspecial_call = Nondet_Int | Min of 'a * 'a | Max of 'a * 'a;;
 
-let rec equal_special_call
+let rec equal_gspecial_call _A
   x0 x1 = match x0, x1 with Min (x21, x22), Max (x31, x32) -> false
     | Max (x31, x32), Min (x21, x22) -> false
     | Nondet_Int, Max (x31, x32) -> false
     | Max (x31, x32), Nondet_Int -> false
     | Nondet_Int, Min (x21, x22) -> false
     | Min (x21, x22), Nondet_Int -> false
-    | Max (x31, x32), Max (y31, y32) -> equal_expa x31 y31 && equal_expa x32 y32
-    | Min (x21, x22), Min (y21, y22) -> equal_expa x21 y21 && equal_expa x22 y22
+    | Max (x31, x32), Max (y31, y32) -> eq _A x31 y31 && eq _A x32 y32
+    | Min (x21, x22), Min (y21, y22) -> eq _A x21 y21 && eq _A x22 y22
     | Nondet_Int, Nondet_Int -> true;;
 
-type edge_action = EA_Nop | EA_Assign of string * exp |
-  EA_Special of special_call * string | EA_Assume of exp | EA_AssumeNot of exp |
-  EA_Body of string | EA_Ret of exp option * string |
-  EA_Check of (nat * nat) * exp;;
+type ('a, 'b) gedge_action = EA_Nop | EA_Assign of 'a * 'b |
+  EA_Special of 'b gspecial_call * 'a | EA_Assume of 'b | EA_AssumeNot of 'b |
+  EA_Body of string | EA_Ret of 'b option * string |
+  EA_Check of (nat * nat) * 'b;;
 
-let rec equal_edge_actiona
+let rec equal_gedge_actiona _A _B
   x0 x1 = match x0, x1 with EA_Ret (x71, x72), EA_Check (x81, x82) -> false
     | EA_Check (x81, x82), EA_Ret (x71, x72) -> false
     | EA_Body x6, EA_Check (x81, x82) -> false
@@ -2791,139 +2819,142 @@ let rec equal_edge_actiona
     | EA_Nop, EA_Assign (x21, x22) -> false
     | EA_Assign (x21, x22), EA_Nop -> false
     | EA_Check (x81, x82), EA_Check (y81, y82) ->
-        equal_proda equal_nat equal_nat x81 y81 && equal_expa x82 y82
+        equal_proda equal_nat equal_nat x81 y81 && eq _B x82 y82
     | EA_Ret (x71, x72), EA_Ret (y71, y72) ->
-        equal_option equal_exp x71 y71 && ((x72 : string) = y72)
+        equal_option _B x71 y71 && ((x72 : string) = y72)
     | EA_Body x6, EA_Body y6 -> ((x6 : string) = y6)
-    | EA_AssumeNot x5, EA_AssumeNot y5 -> equal_expa x5 y5
-    | EA_Assume x4, EA_Assume y4 -> equal_expa x4 y4
+    | EA_AssumeNot x5, EA_AssumeNot y5 -> eq _B x5 y5
+    | EA_Assume x4, EA_Assume y4 -> eq _B x4 y4
     | EA_Special (x31, x32), EA_Special (y31, y32) ->
-        equal_special_call x31 y31 && ((x32 : string) = y32)
+        equal_gspecial_call _B x31 y31 && eq _A x32 y32
     | EA_Assign (x21, x22), EA_Assign (y21, y22) ->
-        ((x21 : string) = y21) && equal_expa x22 y22
+        eq _A x21 y21 && eq _B x22 y22
     | EA_Nop, EA_Nop -> true;;
 
-let equal_edge_action = ({equal = equal_edge_actiona} : edge_action equal);;
+let rec equal_gedge_action _A _B =
+  ({equal = equal_gedge_actiona _A _B} : ('a, 'b) gedge_action equal);;
 
 let rec comparator_prod
   comp_a comp_b (x, xa) (y, ya) =
     (match comp_a x y with Eqa -> comp_b xa ya | Lt -> Lt | Gt -> Gt);;
 
-let rec comparator_special_call
-  x0 x1 = match x0, x1 with Nondet_Int, Nondet_Int -> Eqa
-    | Nondet_Int, Min (y, ya) -> Lt
-    | Nondet_Int, Max (yb, yc) -> Lt
-    | Min (x, xa), Nondet_Int -> Gt
-    | Min (x, xa), Min (y, ya) ->
-        (match comparator_exp x y with Eqa -> comparator_exp xa ya | Lt -> Lt
-          | Gt -> Gt)
-    | Min (x, xa), Max (yb, yc) -> Lt
-    | Max (x, xa), Nondet_Int -> Gt
-    | Max (x, xa), Min (y, ya) -> Gt
-    | Max (x, xa), Max (yb, yc) ->
-        (match comparator_exp x yb with Eqa -> comparator_exp xa yc | Lt -> Lt
-          | Gt -> Gt);;
+let rec comparator_gspecial_call
+  comp_e x1 x2 = match comp_e, x1, x2 with comp_e, Nondet_Int, Nondet_Int -> Eqa
+    | comp_e, Nondet_Int, Min (y, ya) -> Lt
+    | comp_e, Nondet_Int, Max (yb, yc) -> Lt
+    | comp_e, Min (x, xa), Nondet_Int -> Gt
+    | comp_e, Min (x, xa), Min (y, ya) ->
+        (match comp_e x y with Eqa -> comp_e xa ya | Lt -> Lt | Gt -> Gt)
+    | comp_e, Min (x, xa), Max (yb, yc) -> Lt
+    | comp_e, Max (x, xa), Nondet_Int -> Gt
+    | comp_e, Max (x, xa), Min (y, ya) -> Gt
+    | comp_e, Max (x, xa), Max (yb, yc) ->
+        (match comp_e x yb with Eqa -> comp_e xa yc | Lt -> Lt | Gt -> Gt);;
 
-let rec comparator_edge_action
-  x0 x1 = match x0, x1 with EA_Nop, EA_Nop -> Eqa
-    | EA_Nop, EA_Assign (y, ya) -> Lt
-    | EA_Nop, EA_Special (yb, yc) -> Lt
-    | EA_Nop, EA_Assume yd -> Lt
-    | EA_Nop, EA_AssumeNot ye -> Lt
-    | EA_Nop, EA_Body yf -> Lt
-    | EA_Nop, EA_Ret (yg, yh) -> Lt
-    | EA_Nop, EA_Check (yi, yj) -> Lt
-    | EA_Assign (x, xa), EA_Nop -> Gt
-    | EA_Assign (x, xa), EA_Assign (y, ya) ->
-        (match comparator_of (equal_literal, linorder_literal) x y
-          with Eqa -> comparator_exp xa ya | Lt -> Lt | Gt -> Gt)
-    | EA_Assign (x, xa), EA_Special (yb, yc) -> Lt
-    | EA_Assign (x, xa), EA_Assume yd -> Lt
-    | EA_Assign (x, xa), EA_AssumeNot ye -> Lt
-    | EA_Assign (x, xa), EA_Body yf -> Lt
-    | EA_Assign (x, xa), EA_Ret (yg, yh) -> Lt
-    | EA_Assign (x, xa), EA_Check (yi, yj) -> Lt
-    | EA_Special (x, xa), EA_Nop -> Gt
-    | EA_Special (x, xa), EA_Assign (y, ya) -> Gt
-    | EA_Special (x, xa), EA_Special (yb, yc) ->
-        (match comparator_special_call x yb
-          with Eqa -> comparator_of (equal_literal, linorder_literal) xa yc
+let rec comparator_gedge_action
+  comp_v comp_e x2 x3 = match comp_v, comp_e, x2, x3 with
+    comp_v, comp_e, EA_Nop, EA_Nop -> Eqa
+    | comp_v, comp_e, EA_Nop, EA_Assign (y, ya) -> Lt
+    | comp_v, comp_e, EA_Nop, EA_Special (yb, yc) -> Lt
+    | comp_v, comp_e, EA_Nop, EA_Assume yd -> Lt
+    | comp_v, comp_e, EA_Nop, EA_AssumeNot ye -> Lt
+    | comp_v, comp_e, EA_Nop, EA_Body yf -> Lt
+    | comp_v, comp_e, EA_Nop, EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_Nop, EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Nop -> Gt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Assign (y, ya) ->
+        (match comp_v x y with Eqa -> comp_e xa ya | Lt -> Lt | Gt -> Gt)
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Special (yb, yc) -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Assume yd -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_AssumeNot ye -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Body yf -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_Assign (x, xa), EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Nop -> Gt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Special (yb, yc) ->
+        (match comparator_gspecial_call comp_e x yb with Eqa -> comp_v xa yc
           | Lt -> Lt | Gt -> Gt)
-    | EA_Special (x, xa), EA_Assume yd -> Lt
-    | EA_Special (x, xa), EA_AssumeNot ye -> Lt
-    | EA_Special (x, xa), EA_Body yf -> Lt
-    | EA_Special (x, xa), EA_Ret (yg, yh) -> Lt
-    | EA_Special (x, xa), EA_Check (yi, yj) -> Lt
-    | EA_Assume x, EA_Nop -> Gt
-    | EA_Assume x, EA_Assign (y, ya) -> Gt
-    | EA_Assume x, EA_Special (yb, yc) -> Gt
-    | EA_Assume x, EA_Assume yd -> comparator_exp x yd
-    | EA_Assume x, EA_AssumeNot ye -> Lt
-    | EA_Assume x, EA_Body yf -> Lt
-    | EA_Assume x, EA_Ret (yg, yh) -> Lt
-    | EA_Assume x, EA_Check (yi, yj) -> Lt
-    | EA_AssumeNot x, EA_Nop -> Gt
-    | EA_AssumeNot x, EA_Assign (y, ya) -> Gt
-    | EA_AssumeNot x, EA_Special (yb, yc) -> Gt
-    | EA_AssumeNot x, EA_Assume yd -> Gt
-    | EA_AssumeNot x, EA_AssumeNot ye -> comparator_exp x ye
-    | EA_AssumeNot x, EA_Body yf -> Lt
-    | EA_AssumeNot x, EA_Ret (yg, yh) -> Lt
-    | EA_AssumeNot x, EA_Check (yi, yj) -> Lt
-    | EA_Body x, EA_Nop -> Gt
-    | EA_Body x, EA_Assign (y, ya) -> Gt
-    | EA_Body x, EA_Special (yb, yc) -> Gt
-    | EA_Body x, EA_Assume yd -> Gt
-    | EA_Body x, EA_AssumeNot ye -> Gt
-    | EA_Body x, EA_Body yf ->
+    | comp_v, comp_e, EA_Special (x, xa), EA_Assume yd -> Lt
+    | comp_v, comp_e, EA_Special (x, xa), EA_AssumeNot ye -> Lt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Body yf -> Lt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_Special (x, xa), EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Assume x, EA_Nop -> Gt
+    | comp_v, comp_e, EA_Assume x, EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_Assume x, EA_Special (yb, yc) -> Gt
+    | comp_v, comp_e, EA_Assume x, EA_Assume yd -> comp_e x yd
+    | comp_v, comp_e, EA_Assume x, EA_AssumeNot ye -> Lt
+    | comp_v, comp_e, EA_Assume x, EA_Body yf -> Lt
+    | comp_v, comp_e, EA_Assume x, EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_Assume x, EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Nop -> Gt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Special (yb, yc) -> Gt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Assume yd -> Gt
+    | comp_v, comp_e, EA_AssumeNot x, EA_AssumeNot ye -> comp_e x ye
+    | comp_v, comp_e, EA_AssumeNot x, EA_Body yf -> Lt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_AssumeNot x, EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Body x, EA_Nop -> Gt
+    | comp_v, comp_e, EA_Body x, EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_Body x, EA_Special (yb, yc) -> Gt
+    | comp_v, comp_e, EA_Body x, EA_Assume yd -> Gt
+    | comp_v, comp_e, EA_Body x, EA_AssumeNot ye -> Gt
+    | comp_v, comp_e, EA_Body x, EA_Body yf ->
         comparator_of (equal_literal, linorder_literal) x yf
-    | EA_Body x, EA_Ret (yg, yh) -> Lt
-    | EA_Body x, EA_Check (yi, yj) -> Lt
-    | EA_Ret (x, xa), EA_Nop -> Gt
-    | EA_Ret (x, xa), EA_Assign (y, ya) -> Gt
-    | EA_Ret (x, xa), EA_Special (yb, yc) -> Gt
-    | EA_Ret (x, xa), EA_Assume yd -> Gt
-    | EA_Ret (x, xa), EA_AssumeNot ye -> Gt
-    | EA_Ret (x, xa), EA_Body yf -> Gt
-    | EA_Ret (x, xa), EA_Ret (yg, yh) ->
-        (match comparator_option comparator_exp x yg
+    | comp_v, comp_e, EA_Body x, EA_Ret (yg, yh) -> Lt
+    | comp_v, comp_e, EA_Body x, EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Nop -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Special (yb, yc) -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Assume yd -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_AssumeNot ye -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Body yf -> Gt
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Ret (yg, yh) ->
+        (match comparator_option comp_e x yg
           with Eqa -> comparator_of (equal_literal, linorder_literal) xa yh
           | Lt -> Lt | Gt -> Gt)
-    | EA_Ret (x, xa), EA_Check (yi, yj) -> Lt
-    | EA_Check (x, xa), EA_Nop -> Gt
-    | EA_Check (x, xa), EA_Assign (y, ya) -> Gt
-    | EA_Check (x, xa), EA_Special (yb, yc) -> Gt
-    | EA_Check (x, xa), EA_Assume yd -> Gt
-    | EA_Check (x, xa), EA_AssumeNot ye -> Gt
-    | EA_Check (x, xa), EA_Body yf -> Gt
-    | EA_Check (x, xa), EA_Ret (yg, yh) -> Gt
-    | EA_Check (x, xa), EA_Check (yi, yj) ->
+    | comp_v, comp_e, EA_Ret (x, xa), EA_Check (yi, yj) -> Lt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Nop -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Assign (y, ya) -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Special (yb, yc) -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Assume yd -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_AssumeNot ye -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Body yf -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Ret (yg, yh) -> Gt
+    | comp_v, comp_e, EA_Check (x, xa), EA_Check (yi, yj) ->
         (match
           comparator_prod (comparator_of (equal_nat, linorder_nat))
             (comparator_of (equal_nat, linorder_nat)) x yi
-          with Eqa -> comparator_exp xa yj | Lt -> Lt | Gt -> Gt);;
+          with Eqa -> comp_e xa yj | Lt -> Lt | Gt -> Gt);;
 
-let rec less_eq_edge_action x = le_of_comp comparator_edge_action x;;
+let rec less_eq_gedge_action (_A1, _A2) (_B1, _B2)
+  = le_of_comp
+      (comparator_gedge_action (comparator_of (_A1, _A2))
+        (comparator_of (_B1, _B2)));;
 
-let rec less_edge_action x = lt_of_comp comparator_edge_action x;;
+let rec less_gedge_action (_A1, _A2) (_B1, _B2)
+  = lt_of_comp
+      (comparator_gedge_action (comparator_of (_A1, _A2))
+        (comparator_of (_B1, _B2)));;
 
-let ord_edge_action =
-  ({less_eq = less_eq_edge_action; less = less_edge_action} : edge_action ord);;
+let rec ord_gedge_action (_A1, _A2) (_B1, _B2) =
+  ({less_eq = less_eq_gedge_action (_A1, _A2) (_B1, _B2);
+     less = less_gedge_action (_A1, _A2) (_B1, _B2)}
+    : ('a, 'b) gedge_action ord);;
 
-let preorder_edge_action =
-  ({ord_preorder = ord_edge_action} : edge_action preorder);;
+let rec preorder_gedge_action (_A1, _A2) (_B1, _B2) =
+  ({ord_preorder = (ord_gedge_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gedge_action preorder);;
 
-let order_edge_action =
-  ({preorder_order = preorder_edge_action} : edge_action order);;
+let rec order_gedge_action (_A1, _A2) (_B1, _B2) =
+  ({preorder_order = (preorder_gedge_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gedge_action order);;
 
-let linorder_edge_action =
-  ({order_linorder = order_edge_action} : edge_action linorder);;
-
-type query = EvalInt of exp;;
-
-let rec equal_querya (EvalInt x) (EvalInt ya) = equal_expa x ya;;
-
-let equal_query = ({equal = equal_querya} : query equal);;
+let rec linorder_gedge_action (_A1, _A2) (_B1, _B2) =
+  ({order_linorder = (order_gedge_action (_A1, _A2) (_B1, _B2))} :
+    ('a, 'b) gedge_action linorder);;
 
 type eint = MinInf | Fin of int | PlusInf;;
 
@@ -4594,14 +4625,14 @@ type ('a, 'b) fmap = Fmap_of_list of ('a * 'b) list;;
 
 type phase = Widening | Narrowing;;
 
-type 'a cfg_ext =
-  Cfg_ext of
-    (cfg_node * (edge_action * cfg_node)) set *
-      (cfg_node * (call_action * (cfg_node * cfg_node))) set * cfg_node *
-      (cfg_node * exp) set * 'a;;
-
 type 'a trace_key = Trace_Buffer | Trace_Global of string |
   Trace_Seed of cfg_node * 'a;;
+
+type ('a, 'b, 'c) gcfg_ext =
+  Gcfg_ext of
+    (cfg_node * (('a, 'b) gedge_action * cfg_node)) set *
+      (cfg_node * (('a, 'b) gcall_action * (cfg_node * cfg_node))) set *
+      cfg_node * (cfg_node * 'b) set * 'c;;
 
 type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
 
@@ -4687,8 +4718,8 @@ type report_context = Report_Unit |
       analysis_product
   | Report_Call_String of cfg_node list;;
 
-type 'a call_info_ext =
-  Call_info_ext of string option * string * string list * exp list * 'a;;
+type ('a, 'b, 'c) gcall_info_ext =
+  Gcall_info_ext of 'a option * string * 'a list * 'b list * 'c;;
 
 type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
   Dg_spec_ext of
@@ -4700,7 +4731,7 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
           ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
             ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
               ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
-      (special_call ->
+      (exp gspecial_call ->
         string ->
           ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
             ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
@@ -4719,7 +4750,7 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
           ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
             ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
               ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
-      (unit call_info_ext ->
+      ((string, exp, unit) gcall_info_ext ->
         ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
           (('d * 'd) list -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
             ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
@@ -4727,11 +4758,11 @@ type ('a, 'b, 'c, 'd, 'e, 'f) dg_spec_ext =
         ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
           ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
             ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
-      (unit call_info_ext ->
+      ((string, exp, unit) gcall_info_ext ->
         ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
           'd -> ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
                   ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
-      (unit call_info_ext ->
+      ((string, exp, unit) gcall_info_ext ->
         ('a, 'b, 'c, 'd, 'e, unit) man_ext ->
           'd -> ('d -> ('a, 'b, ('d, 'e) dg_state) strategy_tree) ->
                   ('a, 'b, ('d, 'e) dg_state) strategy_tree) *
@@ -4756,9 +4787,10 @@ type analysis_config =
   Analysis_Config of
     analysis_domain list * globals_rule * context_mode * program_globals;;
 
-type analysis_edge = Intra_Dep of edge_action | Enter_Dep of call_action |
-  Combine_Dep of call_action | Continue_Dep of call_action | Global_Read |
-  Global_Write;;
+type analysis_edge = Intra_Dep of (string, exp) gedge_action |
+  Enter_Dep of (string, exp) gcall_action |
+  Combine_Dep of (string, exp) gcall_action |
+  Continue_Dep of (string, exp) gcall_action | Global_Read | Global_Write;;
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
@@ -4772,19 +4804,19 @@ type ('a, 'b) local_spec_ext =
       ((query -> unit int_dom_ext query_lift) -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) -> string -> exp -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) ->
-        special_call -> string -> 'a -> 'a) *
+        exp gspecial_call -> string -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) -> exp -> bool -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) -> string -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) ->
         exp option -> string -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) -> analysis_event -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) ->
-        unit call_info_ext -> 'a * 'a -> ('a * 'a) list) *
+        (string, exp, unit) gcall_info_ext -> 'a * 'a -> ('a * 'a) list) *
       ((query -> unit int_dom_ext query_lift) ->
         (query -> unit int_dom_ext query_lift) ->
-          unit call_info_ext -> 'a -> 'a -> 'a) *
+          (string, exp, unit) gcall_info_ext -> 'a -> 'a -> 'a) *
       ((query -> unit int_dom_ext query_lift) ->
-        unit call_info_ext -> 'a -> 'a -> 'a) *
+        (string, exp, unit) gcall_info_ext -> 'a -> 'a -> 'a) *
       'b;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
@@ -4797,8 +4829,9 @@ type 'a imp_prog_ext =
 type ('a, 'b, 'c, 'd) solved_run_ext =
   Solved_run_ext of
     ('a, 'c) solved_table * ('b -> 'c lifted) * (string -> 'a -> 'c lifted) *
-      (cfg_node -> 'a -> edge_action -> 'c lifted) *
-      (cfg_node -> 'a -> call_action -> string -> 'a option) * 'd;;
+      (cfg_node -> 'a -> (string, exp) gedge_action -> 'c lifted) *
+      (cfg_node -> 'a -> (string, exp) gcall_action -> string -> 'a option) *
+      'd;;
 
 type 'a call_route_ext =
   Call_route_ext of cfg_node * nat * string * nat list * 'a;;
@@ -4838,7 +4871,7 @@ type 'a result_check_ext =
 
 type ('a, 'b) run_result_ext =
   Run_result_ext of
-    unit cfg_ext * 'a analysis_context list *
+    (string, exp, unit) gcfg_ext * 'a analysis_context list *
       (((analysis_domain * 'a field_state) list), unit) result_state_ext list *
       (cfg_node *
         (((analysis_domain * 'a field_state) list) lifted *
@@ -4865,7 +4898,8 @@ type ('a, 'b, 'c, 'd) func_state =
 
 type 'a analysis_report_ext =
   Analysis_report_ext of
-    analysis_config * string list * unit cfg_ext * report_context list *
+    analysis_config * string list * (string, exp, unit) gcfg_ext *
+      report_context list *
       (((string -> sign) lifted,
          ((string -> ivl) lifted,
            ((string -> parity) lifted,
@@ -5364,7 +5398,7 @@ let rec var_name = function GlobalId x -> x
                    | ReturnId uv -> ret_var;;
 
 let rec cfg_entry
-  (Cfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
+  (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
 
 let rec cfg_exit
   g = (match cfg_entry g
@@ -5540,10 +5574,6 @@ let rec mcp_qry
              (ls_query c ch x q))
       cs (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
-let rec calls (Cfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
-
-let rec intra (Cfg_ext (intra, calls, cfg_entry, checks, more)) = intra;;
-
 let bot_set : 'a set = Set [];;
 
 let query_depth : nat = nat_of_integer (Z.of_int 1024);;
@@ -5661,6 +5691,10 @@ let rec lower
     | TNot a -> Not (lower a)
     | TAnd (a, b) -> And (lower a, lower b)
     | TOr (a, b) -> Or (lower a, lower b);;
+
+let rec calls (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
+
+let rec intra (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = intra;;
 
 let rec genv key tau v = dg_global (tau (Inr (key v)));;
 
@@ -6138,7 +6172,7 @@ let rec ce_args (CallEdge (x1, x2, x3)) = x3;;
 let rec ce_dst (CallEdge (x1, x2, x3)) = x1;;
 
 let rec call_info_of
-  ca p = Call_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
+  ca p = Gcall_info_ext (ce_dst ca, p, ce_formals ca, ce_args ca, ());;
 
 let rec sp_read_global g k = QueryG (g, k);;
 
@@ -6633,10 +6667,10 @@ let rec bind_formals_default_st _A
     Abs_default_st (bind_formals_default_st_rep _A xc xb xa x);;
 
 let rec ci_formals
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
+  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_formals;;
 
 let rec ci_args
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
+  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_args;;
 
 let rec generic_enter_st_for (_A1, _A2)
   ops g ci s =
@@ -7526,7 +7560,7 @@ let rec transfer_lift
 let rec top_fun _B x = top _B;;
 
 let rec ci_dst
-  (Call_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
+  (Gcall_info_ext (ci_dst, ci_callee, ci_formals, ci_args, more)) = ci_dst;;
 
 let rec exec_local_spec _A
   g empty_pred tf_st enter_st =
@@ -10312,29 +10346,31 @@ let rec source_com = function SKIP uu -> true
 
 let rec source_exp a = not (member equal_literal ret_var (exp_vnames a));;
 
-let rec cfg_intra_list
+let rec cfg_intra_list (_A1, _A2) (_B1, _B2)
   g = sorted_list_of_set
         ((equal_prod equal_cfg_node
-           (equal_prod equal_edge_action equal_cfg_node)),
+           (equal_prod (equal_gedge_action _A1 _B1) equal_cfg_node)),
           (linorder_prod linorder_cfg_node
-            (linorder_prod linorder_edge_action linorder_cfg_node)))
+            (linorder_prod (linorder_gedge_action (_A1, _A2) (_B1, _B2))
+              linorder_cfg_node)))
         (intra g);;
 
-let rec cfg_calls_list
+let rec cfg_calls_list (_A1, _A2) (_B1, _B2)
   g = sorted_list_of_set
         ((equal_prod equal_cfg_node
-           (equal_prod equal_call_action
+           (equal_prod (equal_gcall_action _A1 _B1)
              (equal_prod equal_cfg_node equal_cfg_node))),
           (linorder_prod linorder_cfg_node
-            (linorder_prod linorder_call_action
+            (linorder_prod (linorder_gcall_action (_A1, _A2) (_B1, _B2))
               (linorder_prod linorder_cfg_node linorder_cfg_node))))
         (calls g);;
 
-let rec cfg_node_list
+let rec cfg_node_list (_A1, _A2) (_B1, _B2)
   g = remdups equal_cfg_node
-        (maps (fun (u, (_, v)) -> [u; v]) (cfg_intra_list g) @
+        (maps (fun (u, (_, v)) -> [u; v])
+           (cfg_intra_list (_A1, _A2) (_B1, _B2) g) @
           maps (fun (u, (_, (ce, after))) -> [u; ce; after])
-            (cfg_calls_list g) @
+            (cfg_calls_list (_A1, _A2) (_B1, _B2) g) @
             [cfg_entry g]);;
 
 let rec sp_read_local x k = QueryL (x, k);;
@@ -10421,7 +10457,10 @@ let rec edge_expressions = function EA_Assign (x, e) -> [e]
                            | EA_Ret (None, va) -> [];;
 
 let rec arithmetic_expression_sites
-  g = (let edges = cfg_intra_list g in
+  g = (let edges =
+         cfg_intra_list (equal_literal, linorder_literal)
+           (equal_exp, linorder_exp) g
+         in
         map_filter
           (fun x ->
             (if (match x with (_, (EA_Nop, _)) -> true
@@ -10432,7 +10471,8 @@ let rec arithmetic_expression_sites
                     not (list_ex
                           (fun (ua, (a, _)) ->
                             equal_cfg_nodea u ua &&
-                              equal_edge_actiona a (EA_Assume e))
+                              equal_gedge_actiona equal_literal equal_exp a
+                                (EA_Assume e))
                           edges)
                   | (_, (EA_Body _, _)) -> true
                   | (_, (EA_Ret (_, _), _)) -> true
@@ -10440,7 +10480,9 @@ let rec arithmetic_expression_sites
               then Some (let (u, (a, _)) = x in (u, edge_expressions a))
               else None))
           edges) @
-        map (fun (u, (ca, (_, _))) -> (u, ce_args ca)) (cfg_calls_list g);;
+        map (fun (u, (ca, (_, _))) -> (u, ce_args ca))
+          (cfg_calls_list (equal_literal, linorder_literal)
+            (equal_exp, linorder_exp) g);;
 
 let rec arithmetic_obligations
   = function N n -> []
@@ -10518,23 +10560,15 @@ let rec group_by_key _B
                 insert _B (key_of x) (y :: group_lookup _B m (key_of x)) m))
       xs (empty _B);;
 
+let rec ea_check_cond (EA_Check (x81, x82)) = x82;;
+
 let rec run_shared
   (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
     run_shared;;
 
-let rec ea_check_cond (EA_Check (x81, x82)) = x82;;
-
 let rec run_table
   (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
     run_table;;
-
-let rec run_succ
-  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
-    run_succ;;
-
-let rec run_seed
-  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
-    run_seed;;
 
 let rec is_EA_Check = function EA_Nop -> false
                       | EA_Assign (x21, x22) -> false
@@ -10544,6 +10578,14 @@ let rec is_EA_Check = function EA_Nop -> false
                       | EA_Body x6 -> false
                       | EA_Ret (x71, x72) -> false
                       | EA_Check (x81, x82) -> true;;
+
+let rec run_succ
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_succ;;
+
+let rec run_seed
+  (Solved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more)) =
+    run_seed;;
 
 let rec ea_check_label (EA_Check (x81, x82)) = x81;;
 
@@ -10557,7 +10599,8 @@ let rec result_checks_of _A
                         (u, ea_check_label a, ea_check_cond a,
                           point_verdict _A r classify u (ea_check_cond a), ()))
           else None))
-      (cfg_intra_list g);;
+      (cfg_intra_list (equal_literal, linorder_literal)
+        (equal_exp, linorder_exp) g);;
 
 let rec minus_set _A
   a x1 = match a, x1 with a, Set xs -> fold (remove _A) xs a
@@ -10637,7 +10680,8 @@ let rec compile
         (Statement n,
           (inserta
              (equal_prod equal_cfg_node
-               (equal_prod equal_edge_action equal_cfg_node))
+               (equal_prod (equal_gedge_action equal_literal equal_exp)
+                 equal_cfg_node))
              (Statement n, (EA_Nop, k)) bot_set,
             bot_set)))
     | pi, p, Assign (i, x, a), k, n ->
@@ -10645,7 +10689,8 @@ let rec compile
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
+                 (equal_prod (equal_gedge_action equal_literal equal_exp)
+                   equal_cfg_node))
                (Statement n, (EA_Assign (x, a), k)) bot_set,
               bot_set)))
     | pi, p, Check (i, l, c), k, n ->
@@ -10653,7 +10698,8 @@ let rec compile
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
+                 (equal_prod (equal_gedge_action equal_literal equal_exp)
+                   equal_cfg_node))
                (Statement n, (EA_Check (l, c), k)) bot_set,
               bot_set)))
     | pi, p, Seq (c1, c2), k, n ->
@@ -10662,11 +10708,14 @@ let rec compile
          let (n2, (_, (e2, k2))) = compile pi p c2 k (plus_nat n (csize c1)) in
           (n2, (en1, (sup_set
                         (equal_prod equal_cfg_node
-                          (equal_prod equal_edge_action equal_cfg_node))
+                          (equal_prod
+                            (equal_gedge_action equal_literal equal_exp)
+                            equal_cfg_node))
                         e1 e2,
                        sup_set
                          (equal_prod equal_cfg_node
-                           (equal_prod equal_call_action
+                           (equal_prod
+                             (equal_gcall_action equal_literal equal_exp)
                              (equal_prod equal_cfg_node equal_cfg_node)))
                          k1 k2))))
     | pi, p, If (i, b, c1, c2), k, n ->
@@ -10675,18 +10724,24 @@ let rec compile
           (n2, (Statement n,
                  (sup_set
                     (equal_prod equal_cfg_node
-                      (equal_prod equal_edge_action equal_cfg_node))
+                      (equal_prod (equal_gedge_action equal_literal equal_exp)
+                        equal_cfg_node))
                     (sup_set
                       (equal_prod equal_cfg_node
-                        (equal_prod equal_edge_action equal_cfg_node))
+                        (equal_prod (equal_gedge_action equal_literal equal_exp)
+                          equal_cfg_node))
                       (inserta
                         (equal_prod equal_cfg_node
-                          (equal_prod equal_edge_action equal_cfg_node))
+                          (equal_prod
+                            (equal_gedge_action equal_literal equal_exp)
+                            equal_cfg_node))
                         (Statement n,
                           (EA_Assume b, (if is_SKIP c1 then k else en1)))
                         (inserta
                           (equal_prod equal_cfg_node
-                            (equal_prod equal_edge_action equal_cfg_node))
+                            (equal_prod
+                              (equal_gedge_action equal_literal equal_exp)
+                              equal_cfg_node))
                           (Statement n,
                             (EA_AssumeNot b, (if is_SKIP c2 then k else en2)))
                           bot_set))
@@ -10694,7 +10749,7 @@ let rec compile
                     (if is_SKIP c2 then bot_set else e2),
                    sup_set
                      (equal_prod equal_cfg_node
-                       (equal_prod equal_call_action
+                       (equal_prod (equal_gcall_action equal_literal equal_exp)
                          (equal_prod equal_cfg_node equal_cfg_node)))
                      k1 k2))))
     | pi, p, While (i, b, c), k, n ->
@@ -10702,14 +10757,18 @@ let rec compile
           (n1, (Statement n,
                  (sup_set
                     (equal_prod equal_cfg_node
-                      (equal_prod equal_edge_action equal_cfg_node))
+                      (equal_prod (equal_gedge_action equal_literal equal_exp)
+                        equal_cfg_node))
                     (inserta
                       (equal_prod equal_cfg_node
-                        (equal_prod equal_edge_action equal_cfg_node))
+                        (equal_prod (equal_gedge_action equal_literal equal_exp)
+                          equal_cfg_node))
                       (Statement n, (EA_Assume b, en1))
                       (inserta
                         (equal_prod equal_cfg_node
-                          (equal_prod equal_edge_action equal_cfg_node))
+                          (equal_prod
+                            (equal_gedge_action equal_literal equal_exp)
+                            equal_cfg_node))
                         (Statement n, (EA_AssumeNot b, k)) bot_set))
                     e1,
                    k1))))
@@ -10721,7 +10780,7 @@ let rec compile
                 (bot_set,
                   inserta
                     (equal_prod equal_cfg_node
-                      (equal_prod equal_call_action
+                      (equal_prod (equal_gcall_action equal_literal equal_exp)
                         (equal_prod equal_cfg_node equal_cfg_node)))
                     (Statement n,
                       (CallEdge (dst, call_formals pi q, actuals),
@@ -10734,7 +10793,9 @@ let rec compile
                   (Statement n,
                     (inserta
                        (equal_prod equal_cfg_node
-                         (equal_prod equal_edge_action equal_cfg_node))
+                         (equal_prod
+                           (equal_gedge_action equal_literal equal_exp)
+                           equal_cfg_node))
                        (Statement n, (EA_Nop, k)) bot_set,
                       bot_set)))
               | Some sc ->
@@ -10744,7 +10805,9 @@ let rec compile
                       (Statement n,
                         (inserta
                            (equal_prod equal_cfg_node
-                             (equal_prod equal_edge_action equal_cfg_node))
+                             (equal_prod
+                               (equal_gedge_action equal_literal equal_exp)
+                               equal_cfg_node))
                            (Statement n, (EA_Nop, k)) bot_set,
                           bot_set)))
                   | Some x ->
@@ -10752,7 +10815,9 @@ let rec compile
                       (Statement n,
                         (inserta
                            (equal_prod equal_cfg_node
-                             (equal_prod equal_edge_action equal_cfg_node))
+                             (equal_prod
+                               (equal_gedge_action equal_literal equal_exp)
+                               equal_cfg_node))
                            (Statement n, (EA_Special (sc, x), k)) bot_set,
                           bot_set))))))
     | pi, p, Return (i, e), k, n ->
@@ -10760,7 +10825,8 @@ let rec compile
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
+                 (equal_prod (equal_gedge_action equal_literal equal_exp)
+                   equal_cfg_node))
                (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
               bot_set)))
     | pi, p, Restore i, k, n ->
@@ -10768,7 +10834,8 @@ let rec compile
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
+                 (equal_prod (equal_gedge_action equal_literal equal_exp)
+                   equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)))
     | pi, p, Unwind i, k, n ->
@@ -10776,7 +10843,8 @@ let rec compile
           (Statement n,
             (inserta
                (equal_prod equal_cfg_node
-                 (equal_prod equal_edge_action equal_cfg_node))
+                 (equal_prod (equal_gedge_action equal_literal equal_exp)
+                   equal_cfg_node))
                (Statement n, (EA_Nop, k)) bot_set,
               bot_set)));;
 
@@ -10787,11 +10855,13 @@ let rec compile_proc
       (suc r,
         (inserta
            (equal_prod equal_cfg_node
-             (equal_prod equal_edge_action equal_cfg_node))
+             (equal_prod (equal_gedge_action equal_literal equal_exp)
+               equal_cfg_node))
            (FunctionEntry p, (EA_Body p, ben))
            (inserta
              (equal_prod equal_cfg_node
-               (equal_prod equal_edge_action equal_cfg_node))
+               (equal_prod (equal_gedge_action equal_literal equal_exp)
+                 equal_cfg_node))
              (Statement r, (EA_Ret (None, p), FunctionResult p)) e),
           k)));;
 
@@ -10804,11 +10874,13 @@ let rec compile_procs
              let (n2, (ea, ka)) = compile_procs pi ps n1 in
               (n2, (sup_set
                       (equal_prod equal_cfg_node
-                        (equal_prod equal_edge_action equal_cfg_node))
+                        (equal_prod (equal_gedge_action equal_literal equal_exp)
+                          equal_cfg_node))
                       e ea,
                      sup_set
                        (equal_prod equal_cfg_node
-                         (equal_prod equal_call_action
+                         (equal_prod
+                           (equal_gcall_action equal_literal equal_exp)
                            (equal_prod equal_cfg_node equal_cfg_node)))
                        k ka))));;
 
@@ -10818,14 +10890,15 @@ let rec compile_prog
      let (_, (emain, kmain)) =
        compile_proc pi prog_main_name (Gproc_decl_ext ([], main_body pi, ())) n1
        in
-      Cfg_ext
+      Gcfg_ext
         (sup_set
            (equal_prod equal_cfg_node
-             (equal_prod equal_edge_action equal_cfg_node))
+             (equal_prod (equal_gedge_action equal_literal equal_exp)
+               equal_cfg_node))
            eprocs emain,
           sup_set
             (equal_prod equal_cfg_node
-              (equal_prod equal_call_action
+              (equal_prod (equal_gcall_action equal_literal equal_exp)
                 (equal_prod equal_cfg_node equal_cfg_node)))
             kprocs kmain,
           FunctionEntry prog_main_name,
@@ -10833,7 +10906,8 @@ let rec compile_prog
             (filter (fun (_, (a, _)) -> is_EA_Check a)
               (sup_set
                 (equal_prod equal_cfg_node
-                  (equal_prod equal_edge_action equal_cfg_node))
+                  (equal_prod (equal_gedge_action equal_literal equal_exp)
+                    equal_cfg_node))
                 eprocs emain)),
           ()));;
 
@@ -10878,12 +10952,17 @@ let rec report_of _A
        in
      let indexed = enumerate zero_nat ctxs in
      let nodes =
-       cfg_node_list g @
+       cfg_node_list (equal_literal, linorder_literal) (equal_exp, linorder_exp)
+         g @
          sorted_list_of_set (equal_cfg_node, linorder_cfg_node)
            (minus_set equal_cfg_node (image fst (covered_keys r))
-             (Set (cfg_node_list g)))
+             (Set (cfg_node_list (equal_literal, linorder_literal)
+                    (equal_exp, linorder_exp) g)))
        in
-     let intra = cfg_intra_list g in
+     let intra =
+       cfg_intra_list (equal_literal, linorder_literal)
+         (equal_exp, linorder_exp) g
+       in
      let steps =
        group_by_key linorder_cfg_node (fun (u, (_, _)) -> u)
          (fun (_, (a, w)) -> Some (a, w)) intra
@@ -10945,7 +11024,8 @@ let rec report_of _A
                        then Some (let (a, b) = x in route_at u ca ce a b)
                        else None))
                    indexed)
-            (cfg_calls_list g),
+            (cfg_calls_list (equal_literal, linorder_literal)
+              (equal_exp, linorder_exp) g),
           result_checks_of _A g r classify,
           (match config_globals config with Program_Globals_Flow_Sensitive -> []
             | Program_Globals_Flow_Insensitive ->
@@ -13208,7 +13288,9 @@ let rec mcp_ctx_values
 
 let rec intra_predecessor_index
   g = group_by_key linorder_cfg_node (fun (_, (_, w)) -> w)
-        (fun (u, (a, _)) -> Some (u, a)) (cfg_intra_list g);;
+        (fun (u, (a, _)) -> Some (u, a))
+        (cfg_intra_list (equal_literal, linorder_literal)
+          (equal_exp, linorder_exp) g);;
 
 let rec routed_entry_seed_programs _C _D
   seed route ctx v =
@@ -13322,7 +13404,8 @@ let rec call_target_at
 let rec call_target_index
   g = group_by_key linorder_cfg_node (fun (_, (_, (_, k))) -> k)
         (fun (c, (ca, (ce, k))) -> call_target_at k (c, (ca, (ce, k))))
-        (cfg_calls_list g);;
+        (cfg_calls_list (equal_literal, linorder_literal)
+          (equal_exp, linorder_exp) g);;
 
 let rec dgs_combine_assign
   (Dg_spec_ext
@@ -13451,7 +13534,9 @@ let rec compiled_routed_eqs_for _A (_D1, _D2) _E
           map (fun (u, a) -> (Inl (u, ctx), a))
             (group_lookup linorder_cfg_node preds v))
         (fun _ v ->
-          remdups (equal_prod equal_cfg_node equal_call_action)
+          remdups
+            (equal_prod equal_cfg_node
+              (equal_gcall_action equal_literal equal_exp))
             (map (fun (c, (ca, _)) -> (c, ca))
               (group_lookup linorder_cfg_node targets v)))
         (fun _ -> global) route
@@ -13465,7 +13550,8 @@ let rec compiled_routed_eqs_for _A (_D1, _D2) _E
             map_filter
               (fun x ->
                 (if (let (c, (a, _)) = x in
-                      equal_cfg_nodea c cc && equal_call_actiona a ca)
+                      equal_cfg_nodea c cc &&
+                        equal_gcall_actiona equal_literal equal_exp a ca)
                   then Some (let (_, (_, p)) = x in p) else None))
               (group_lookup linorder_cfg_node targets v))
           (fun d ->
@@ -14495,6 +14581,10 @@ let rec intra_deps
                    (edge_global_writes g a)
         else []));;
 
+let rec cfg_points
+  x = cfg_node_list (equal_literal, linorder_literal) (equal_exp, linorder_exp)
+        x;;
+
 let rec report_diagnostics
   (Analysis_report_ext
     (report_config, report_vars, report_cfg, report_contexts, report_states,
@@ -14668,10 +14758,12 @@ let rec analysis_graph_of
             (map (fun (a, b) -> Local_Node (a, b)) rows @
                map (fun a -> Global_Node a) names,
               maps (fun e -> maps (fun (u, c) -> intra_deps ga rows u c e) rows)
-                (cfg_intra_list g) @
+                (cfg_intra_list (equal_literal, linorder_literal)
+                  (equal_exp, linorder_exp) g) @
                 maps (fun e ->
                        maps (fun (u, c) -> call_deps res ga rows u c e) rows)
-                  (cfg_calls_list g) @
+                  (cfg_calls_list (equal_literal, linorder_literal)
+                    (equal_exp, linorder_exp) g) @
                   maps (fun (u, c) ->
                          (if equal_cfg_nodea u (cfg_entry g)
                            then map (fun x ->
@@ -14725,7 +14817,8 @@ let rec render_report
                 (v, (map_lift state (report_point_join res v),
                       map (fun (w, s) -> (w, map_lift state s))
                         (report_steps_join res v))))
-            (cfg_node_list (report_cfg res)),
+            (cfg_node_list (equal_literal, linorder_literal)
+              (equal_exp, linorder_exp) (report_cfg res)),
           report_routes res, report_checks res,
           map (map_result_global state) (report_globals res),
           report_diagnostics res, analysis_graph_of res, ()));;
@@ -14736,6 +14829,14 @@ let rec string_of_pairs
     | (x, y) :: p :: ps ->
         (((((x ^ "<le>") ^ y) ^ " ") ^ "<and>") ^ " ") ^
           string_of_pairs (p :: ps);;
+
+let rec cfg_call_edges
+  x = cfg_calls_list (equal_literal, linorder_literal) (equal_exp, linorder_exp)
+        x;;
+
+let rec cfg_intra_edges
+  x = cfg_intra_list (equal_literal, linorder_literal) (equal_exp, linorder_exp)
+        x;;
 
 let rec res_cfg
   (Run_result_ext

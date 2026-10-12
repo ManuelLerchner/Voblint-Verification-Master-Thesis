@@ -14,15 +14,20 @@ text \<open>
 
 datatype special_desc = SD_Nondet_Int | SD_Min | SD_Max
 
-datatype special_call =
-    Nondet_Int
-  | Min exp exp
-  | Max exp exp
+text \<open>A classified call is generic in its argument expressions, so a typed CFG carries
+  typed arguments; \<open>special_call\<close> is the instance at \<^typ>\<open>exp\<close>.\<close>
 
-instance special_call :: countable
+datatype 'e gspecial_call =
+    Nondet_Int
+  | Min 'e 'e
+  | Max 'e 'e
+
+type_synonym special_call = "exp gspecial_call"
+
+instance gspecial_call :: (countable) countable
   by countable_datatype
 
-fun classify_special :: "special_desc \<Rightarrow> exp list \<Rightarrow> special_call option" where
+fun classify_special :: "special_desc \<Rightarrow> 'e list \<Rightarrow> 'e gspecial_call option" where
   "classify_special SD_Nondet_Int [] = Some Nondet_Int"
 | "classify_special SD_Min [a, b] = Some (Min a b)"
 | "classify_special SD_Max [a, b] = Some (Max a b)"

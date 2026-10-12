@@ -359,7 +359,7 @@ let cfg_view_json prog result (graph : G.t) =
   let owner_of = A.owners g in
   let names_of = Context_graph.scope prog g owner_of in
   let id p = "cfg_" ^ A.point_name p in
-  let points = C.cfg_node_list g in
+  let points = C.cfg_points g in
   (* The program's own procedure first, then the others as the CFG lists them. *)
   let owners =
     List.fold_left
@@ -660,17 +660,17 @@ let cfg_json g =
   json_object
     [
       ("cfg_entry", cfg_node_json (C.cfg_entry g));
-      ("cfg_node_list", json_list cfg_node_json (C.cfg_node_list g));
+      ("cfg_node_list", json_list cfg_node_json (C.cfg_points g));
       ( "cfg_intra_list",
         json_list
           (json_pair cfg_node_json (json_pair edge_action_json cfg_node_json))
-          (C.cfg_intra_list g) );
+          (C.cfg_intra_edges g) );
       ( "cfg_calls_list",
         json_list
           (json_pair cfg_node_json
              (json_pair call_action_json
                 (json_pair cfg_node_json cfg_node_json)))
-          (C.cfg_calls_list g) );
+          (C.cfg_call_edges g) );
     ]
 
 let context_json = function

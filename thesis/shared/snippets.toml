@@ -26,7 +26,7 @@ why = "Background, Isabelle mechanisms: a small locale with one parameter and th
 [snippets.pstep]
 why = "Chapter 3, source execution: every rule of the VIMP small-step semantics."
 
-[snippets.cfg]
+[snippets.gcfg]
 why = "Chapter 3, the control-flow-graph record: local edges, call edges, entry and checks."
 
 [snippets.compile_proc]

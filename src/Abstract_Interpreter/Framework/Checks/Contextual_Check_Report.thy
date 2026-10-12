@@ -270,8 +270,8 @@ lemma classify_checks_ctx_mem_iff:
          \<and> vs = (\<lambda>ctx. (ctx, classify_point classify c (lookup_table r v ctx))) ` table_contexts r v"
   unfolding classify_checks_ctx_def set_map set_filter
   using set_cfg_intra_list[OF assms]
-  by (auto simp: image_iff split: edge_action.splits)
-     (metis edge_action.collapse surjective_pairing)
+  by (auto simp: image_iff split: gedge_action.splits)
+     (metis gedge_action.collapse surjective_pairing)
 
 subsection \<open>Contextual proved/refuted soundness\<close>
 
