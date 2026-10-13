@@ -103,6 +103,8 @@ module Generated : sig
     EA_Special of 'b gspecial_call * 'a | EA_Assume of 'b | EA_AssumeNot of 'b |
     EA_Body of string | EA_Ret of 'b option * string |
     EA_Check of (nat * nat) * 'b
+  type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int |
+    Typed_Order | Typed_Sign | Typed_Parity
   type 'a lifted = Bot | Lifted of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
@@ -124,8 +126,6 @@ module Generated : sig
   type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c
   type typed_answer = Typed_Malformed | Typed_Unsupported | Typed_No_Answer |
     Typed_Analysed of (cfg_node * (texp * check_result)) list
-  type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int |
-    Typed_Order | Typed_Sign | Typed_Parity
   type typed_context = Typed_Call_String of nat | Typed_Entry_State
   type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
     Context_Call_String of cfg_node list
@@ -4723,6 +4723,49 @@ let rec top_query_lifta _A = QTop;;
 
 let rec top_query_lift _A = ({top = top_query_lifta _A} : 'a query_lift top);;
 
+type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order
+  | Typed_Sign | Typed_Parity;;
+
+let rec equal_typed_domaina
+  x0 x1 = match x0, x1 with Typed_Sign, Typed_Parity -> false
+    | Typed_Parity, Typed_Sign -> false
+    | Typed_Order, Typed_Parity -> false
+    | Typed_Parity, Typed_Order -> false
+    | Typed_Order, Typed_Sign -> false
+    | Typed_Sign, Typed_Order -> false
+    | Typed_Int, Typed_Parity -> false
+    | Typed_Parity, Typed_Int -> false
+    | Typed_Int, Typed_Sign -> false
+    | Typed_Sign, Typed_Int -> false
+    | Typed_Int, Typed_Order -> false
+    | Typed_Order, Typed_Int -> false
+    | Typed_Congruence, Typed_Parity -> false
+    | Typed_Parity, Typed_Congruence -> false
+    | Typed_Congruence, Typed_Sign -> false
+    | Typed_Sign, Typed_Congruence -> false
+    | Typed_Congruence, Typed_Order -> false
+    | Typed_Order, Typed_Congruence -> false
+    | Typed_Congruence, Typed_Int -> false
+    | Typed_Int, Typed_Congruence -> false
+    | Typed_Interval, Typed_Parity -> false
+    | Typed_Parity, Typed_Interval -> false
+    | Typed_Interval, Typed_Sign -> false
+    | Typed_Sign, Typed_Interval -> false
+    | Typed_Interval, Typed_Order -> false
+    | Typed_Order, Typed_Interval -> false
+    | Typed_Interval, Typed_Int -> false
+    | Typed_Int, Typed_Interval -> false
+    | Typed_Interval, Typed_Congruence -> false
+    | Typed_Congruence, Typed_Interval -> false
+    | Typed_Parity, Typed_Parity -> true
+    | Typed_Sign, Typed_Sign -> true
+    | Typed_Order, Typed_Order -> true
+    | Typed_Int, Typed_Int -> true
+    | Typed_Congruence, Typed_Congruence -> true
+    | Typed_Interval, Typed_Interval -> true;;
+
+let equal_typed_domain = ({equal = equal_typed_domaina} : typed_domain equal);;
+
 let rec rep_congruence (Abs_congruence x) = x;;
 
 let rec equal_congruencea
@@ -6514,9 +6557,6 @@ type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
 type typed_answer = Typed_Malformed | Typed_Unsupported | Typed_No_Answer |
   Typed_Analysed of (cfg_node * (texp * check_result)) list;;
 
-type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order
-  | Typed_Sign | Typed_Parity;;
-
 type 'a ganalysis_event = Check_Event of (nat * nat) * 'a;;
 
 type ('a, 'b, 'c, 'd) state_ext =
@@ -7459,9 +7499,6 @@ let rec ls_query_update
           more);;
 
 let rec with_qry h c = ls_query_update (fun _ -> h) c;;
-
-let rec pmap f g x2 = match f, g, x2 with f, g, Bot -> Bot
-               | f, g, Lifted (Product (a, b)) -> Lifted (Product (f a, g b));;
 
 let rec aop_exp = function AAdd -> (fun a b -> Plus (a, b))
                   | ASub -> (fun a b -> Minus (a, b))
@@ -8515,13 +8552,106 @@ let rec verdict_report (_A1, _A2) (_C1, _C2) (_D1, _D2) _F _H
         place_rg place_inits pcfg pentry g p)
       classify;;
 
-let rec location_of
-  g x = (if g x then Global_Location x else Local_Location x);;
+let rec answer_const = function QLifted d -> int_dom_constant d
+                       | QBot -> None
+                       | QTop -> None;;
 
-let rec default_st_to_fun _A _B
-  g s x = default_st_get _A _B s (location_of g x);;
+let rec classify_answer
+  = function QBot -> Bot
+    | QLifted v ->
+        (if equal_option equal_int (answer_const (QLifted v)) (Some one_inta)
+          then Lifted Check_Proved
+          else (if equal_option equal_int (answer_const (QLifted v))
+                     (Some zero_inta)
+                 then Lifted Check_Refuted else Lifted Check_Unknown))
+    | QTop ->
+        (if equal_option equal_int (answer_const QTop) (Some one_inta)
+          then Lifted Check_Proved
+          else (if equal_option equal_int (answer_const QTop) (Some zero_inta)
+                 then Lifted Check_Refuted else Lifted Check_Unknown));;
 
-let rec truth_ik _A a = cmp_ik _A CNe a (of_int_ik _A I32 zero_inta);;
+let rec answer_check
+  tx q c v =
+    (match classify_answer (q v (EvalInt (tx c))) with Bot -> Check_Unknown
+      | Lifted r -> r);;
+
+let rec truth_texp c = TCmp (CNe, c, TN (I32, zero_inta));;
+
+let rec ord_le
+  d x y =
+    (match d with OBot -> false
+      | OFacts ps ->
+        equal_var_ida x y ||
+          member (equal_prod equal_var_id equal_var_id) (x, y) ps);;
+
+let rec ord_decide
+  xa0 d x y = match xa0, d, x, y with
+    CLe, d, x, y -> (if ord_le d x y then Some true else None)
+    | CGe, d, x, y -> (if ord_le d y x then Some true else None)
+    | CLt, d, x, y -> (if ord_le d y x then Some false else None)
+    | CGt, d, x, y -> (if ord_le d x y then Some false else None)
+    | CEq, d, x, y -> (if ord_le d x y && ord_le d y x then Some true else None)
+    | CNe, d, x, y ->
+        (if ord_le d x y && ord_le d y x then Some false else None);;
+
+let rec int_dom_of_int
+  n = int_congruence_update (fun _ -> congruence_of_int n)
+        (int_parity_update (fun _ -> parity_of_int n)
+          (int_ivl_update (fun _ -> Ivl (Fin n, Fin n))
+            (int_sign_update (fun _ -> sign_of_int n)
+              (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec answer_of_int n = QLifted (int_dom_of_int n);;
+
+let rec ord_query
+  ch d q = match ch, d, q with
+    ch, Lifted d, EvalInt (TCmp (c, TVar (ka, x), TVar (k, y))) ->
+      (match ord_decide c d x y
+        with None -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+        | Some b -> answer_of_int (if b then one_inta else zero_inta))
+    | ch, Bot, q -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TN (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TVar (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TArith (va, vb, vc, vd)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCast (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TN (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TArith (vd, ve, vf, vg), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TCast (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TCmp (vd, ve, vf), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TNot vd, vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TAnd (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TOr (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TN (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TArith (vd, ve, vf, vg))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TCast (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TCmp (vd, ve, vf))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TNot vd)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TAnd (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TOr (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TNot va) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TAnd (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TOr (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit);;
 
 let rec src_kind
   kappa e =
@@ -8533,6 +8663,8 @@ let rec src_kind
       | TCast (_, _) -> Some (texp_kind e)
       | TCmp (_, _, _) -> Some (texp_kind e) | TNot _ -> Some (texp_kind e)
       | TAnd (_, _) -> Some (texp_kind e) | TOr (_, _) -> Some (texp_kind e));;
+
+let rec truth_ik _A a = cmp_ik _A CNe a (of_int_ik _A I32 zero_inta);;
 
 let rec kd_val _A
   = function
@@ -8633,49 +8765,193 @@ and taeval_ask _A
           | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
           | QTop -> taeval _A kappa ch e sigma));;
 
-let rec tclassify _A
-  kappa c d =
-    (match d with TTop -> Check_Unknown
-      | TL sigma ->
-        (match
-          truth_ik _A
-            (taeval _A kappa
-              (fun _ ->
-                top_query_lifta (order_int_dom_ext bounded_lattice_unit))
-              c sigma)
-          with None -> Check_Unknown | Some true -> Check_Proved
-          | Some false -> Check_Refuted));;
+let rec tquery _A
+  kappa ch x2 q = match kappa, ch, x2, q with
+    kappa, ch, TTop, q ->
+      top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | kappa, ch, TL sigma, EvalInt e ->
+        answer_ik _A (taeval _A kappa ch e sigma);;
 
-let rec typed_es _A
-  g d ca =
-    (let CallEdge (_, pars, _) = ca in
-      (match d
-        with Bot -> map (fun _ -> bot_kda _A.ik_domain_kind_int_domain) pars
-        | Lifted TTop -> map (fun _ -> KTop) pars
-        | Lifted (TL st) ->
-          map (default_st_to_fun equal_var_id
-                (bot_kd _A.ik_domain_kind_int_domain) g st)
-            pars));;
+let rec tt_answer _A
+  kappa x ch q =
+    (match x
+      with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+      | Lifted d -> tquery _A kappa ch d q);;
 
-let rec tinit_st _A
-  ds = TL (Abs_default_st
-            ((KTop, []),
-              (KD (I32, of_int_ik _A I32 zero_inta),
-                map (fun (v, k) -> (v, KD (k, of_int_ik _A k zero_inta)))
-                  ds)));;
+let rec tslot6 r = pright (pright (pright (pright (pright r))));;
 
-let rec map_toplift f x1 = match f, x1 with f, TTop -> TTop
-                      | f, TL x2 -> TL (f x2);;
+let rec tslot5 r = pleft (pright (pright (pright (pright r))));;
 
-let rec transfer_lift2
-  empty_pred f x y =
-    bind_lift x
-      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
+let rec tslot4 r = pleft (pright (pright (pright r)));;
+
+let rec tslot3 r = pleft (pright (pright r));;
+
+let rec tslot2 r = pleft (pright r);;
+
+let rec tslot1 r = pleft r;;
+
+let rec tanswer
+  kappa x1 v ch = match kappa, x1, v, ch with
+    kappa, Typed_Interval, v, ch ->
+      tt_answer kind_int_domain_ivl kappa (tslot1 v) ch
+    | kappa, Typed_Congruence, v, ch ->
+        tt_answer kind_int_domain_congruence kappa (tslot2 v) ch
+    | kappa, Typed_Int, v, ch ->
+        tt_answer kind_int_domain_int_tuple kappa (tslot3 v) ch
+    | kappa, Typed_Sign, v, ch ->
+        tt_answer kind_int_domain_sign kappa (tslot4 v) ch
+    | kappa, Typed_Parity, v, ch ->
+        tt_answer kind_int_domain_parity kappa (tslot5 v) ch
+    | kappa, Typed_Order, v, ch -> ord_query ch (tslot6 v);;
+
+let rec kenv_of
+  ds v = (match map_of equal_var_id ds v with None -> I32 | Some k -> k);;
+
+let rec tmcp_answer
+  ds asa ch v q =
+    fold (fun a r ->
+           inf_query_lift (inf_int_dom_ext bounded_lattice_unit) r
+             (tanswer (kenv_of ds) a v ch q))
+      asa (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
+
+let rec tmcp_ask
+  ds asa v = ask_rec equal_texp (tmcp_answer ds asa) query_depth bot_set v;;
+
+let rec tmcp_classify ds asa = answer_check truth_texp (tmcp_ask ds asa);;
+
+let prog_main_name : string = "main";;
+
+let rec verdict_result v = (match v with Bot -> Check_Unknown | Lifted r -> r);;
 
 let rec tglobal = function GlobalId uu -> true
                   | ScopedId (v, va) -> false
                   | ReturnId v -> false
                   | ReturnVar -> false;;
+
+let rec location_of
+  g x = (if g x then Global_Location x else Local_Location x);;
+
+let rec default_st_to_fun _A _B
+  g s x = default_st_get _A _B s (location_of g x);;
+
+let rec map_toplift f x1 = match f, x1 with f, TTop -> TTop
+                      | f, TL x2 -> TL (f x2);;
+
+let rec tmcp_rd
+  g r = Product
+          (map_lift
+             (map_toplift
+               (default_st_to_fun equal_var_id (bot_kd ik_domain_ivl) g))
+             (tslot1 r),
+            Product
+              (map_lift
+                 (map_toplift
+                   (default_st_to_fun equal_var_id (bot_kd ik_domain_congruence)
+                     g))
+                 (tslot2 r),
+                Product
+                  (map_lift
+                     (map_toplift
+                       (default_st_to_fun equal_var_id
+                         (bot_kd ik_domain_int_tuple) g))
+                     (tslot3 r),
+                    Product
+                      (map_lift
+                         (map_toplift
+                           (default_st_to_fun equal_var_id
+                             (bot_kd ik_domain_sign) g))
+                         (tslot4 r),
+                        Product
+                          (map_lift
+                             (map_toplift
+                               (default_st_to_fun equal_var_id
+                                 (bot_kd ik_domain_parity) g))
+                             (tslot5 r),
+                            tslot6 r)))));;
+
+let rec tpart_answer
+  ds g a ch x q =
+    (match x
+      with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+      | Lifted r -> tanswer (kenv_of ds) a (tmcp_rd g r) ch q);;
+
+let top_order_rel : 'a order_rel = OFacts bot_set;;
+
+let rec ord_forget _A
+  x xa1 = match x, xa1 with x, OBot -> OBot
+    | x, OFacts ps ->
+        OFacts (filter (fun (a, b) -> not (eq _A a x) && not (eq _A b x)) ps);;
+
+let rec cmp_facts _A
+  xa0 xa1 x y = match xa0, xa1, x, y with
+    CLt, true, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
+    | CLe, true, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
+    | CGt, true, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
+    | CGe, true, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
+    | CEq, true, x, y ->
+        inserta (equal_prod _A _A) (x, y)
+          (inserta (equal_prod _A _A) (y, x) bot_set)
+    | CNe, true, x, y -> bot_set
+    | CLt, false, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
+    | CLe, false, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
+    | CGt, false, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
+    | CGe, false, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
+    | CEq, false, x, y -> bot_set
+    | CNe, false, x, y ->
+        inserta (equal_prod _A _A) (x, y)
+          (inserta (equal_prod _A _A) (y, x) bot_set);;
+
+let rec sup_set _A
+  x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
+    | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
+
+let rec ord_branch
+  x0 pol d = match x0, pol, d with
+    TCmp (c, TVar (ka, x), TVar (k, y)), pol, OFacts ps ->
+      OFacts
+        (sup_set (equal_prod equal_var_id equal_var_id) ps
+          (cmp_facts equal_var_id c pol x y))
+    | TNot b, pol, d -> ord_branch b (not pol) d
+    | TN (v, va), uv, d -> d
+    | TVar (v, va), uv, d -> d
+    | TArith (v, va, vb, vc), uv, d -> d
+    | TCast (v, va), uv, d -> d
+    | TCmp (v, TN (vc, vd), vb), uv, d -> d
+    | TCmp (v, TArith (vc, vd, ve, vf), vb), uv, d -> d
+    | TCmp (v, TCast (vc, vd), vb), uv, d -> d
+    | TCmp (v, TCmp (vc, vd, ve), vb), uv, d -> d
+    | TCmp (v, TNot vc, vb), uv, d -> d
+    | TCmp (v, TAnd (vc, vd), vb), uv, d -> d
+    | TCmp (v, TOr (vc, vd), vb), uv, d -> d
+    | TCmp (v, va, TN (vc, vd)), uv, d -> d
+    | TCmp (v, va, TArith (vc, vd, ve, vf)), uv, d -> d
+    | TCmp (v, va, TCast (vc, vd)), uv, d -> d
+    | TCmp (v, va, TCmp (vc, vd, ve)), uv, d -> d
+    | TCmp (v, va, TNot vc), uv, d -> d
+    | TCmp (v, va, TAnd (vc, vd)), uv, d -> d
+    | TCmp (v, va, TOr (vc, vd)), uv, d -> d
+    | TAnd (v, va), uv, d -> d
+    | TOr (v, va), uv, d -> d
+    | TCmp (v, va, vb), uv, OBot -> OBot;;
+
+let rec combine_env_identity cha ch ci x de = x;;
+
+let ord_spec : (var_id, texp, var_id order_rel lifted, unit) glocal_spec_ext
+  = Glocal_spec_ext
+      (ord_query, (fun _ d -> d),
+        (fun _ x _ -> map_lift (ord_forget equal_var_id x)),
+        (fun _ _ x -> map_lift (ord_forget equal_var_id x)),
+        (fun _ b pol -> map_lift (ord_branch b pol)), (fun _ _ d -> d),
+        (fun _ r _ d ->
+          (match r with None -> d
+            | Some _ -> map_lift (ord_forget equal_var_id ReturnVar) d)),
+        (fun _ _ d -> d), (fun _ _ p -> [(fst p, Lifted top_order_rel)]),
+        combine_env_identity, (fun _ _ _ _ -> Lifted top_order_rel), ());;
+
+let rec transfer_lift2
+  empty_pred f x y =
+    bind_lift x
+      (fun a -> bind_lift y (fun b -> normalize_lift empty_pred (f a b)));;
 
 let rec tcombine_assign_st _A
   kappa dst st ste =
@@ -8727,13 +9003,6 @@ let rec tspecial_st _A
             special_val _A kappa ch sc x
               (default_st_to_fun equal_var_id
                 (bot_kd _A.ik_domain_kind_int_domain) tglobal st)));;
-
-let rec tquery _A
-  kappa ch x2 q = match kappa, ch, x2, q with
-    kappa, ch, TTop, q ->
-      top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | kappa, ch, TL sigma, EvalInt e ->
-        answer_ik _A (taeval _A kappa ch e sigma);;
 
 let rec tl_map f x1 = match f, x1 with f, TTop -> TTop
                  | f, TL a -> TL (f a);;
@@ -8979,12 +9248,479 @@ let rec typed_exec_spec _A
             (tl_map2 (tcombine_assign_st _A kappa (ci_dst ci)))),
         ());;
 
-let prog_main_name : string = "main";;
+let rec set_tslot6
+  r v = Product
+          (pleft r,
+            Product
+              (pleft (pright r),
+                Product
+                  (pleft (pright (pright r)),
+                    Product
+                      (pleft (pright (pright (pright r))),
+                        Product
+                          (pleft (pright (pright (pright (pright r)))), v)))));;
 
-let rec verdict_result v = (match v with Bot -> Check_Unknown | Lifted r -> r);;
+let rec set_tslot5
+  r v = Product
+          (pleft r,
+            Product
+              (pleft (pright r),
+                Product
+                  (pleft (pright (pright r)),
+                    Product
+                      (pleft (pright (pright (pright r))),
+                        Product
+                          (v, pright
+                                (pright (pright (pright (pright r)))))))));;
 
-let rec kenv_of
-  ds v = (match map_of equal_var_id ds v with None -> I32 | Some k -> k);;
+let rec set_tslot4
+  r v = Product
+          (pleft r,
+            Product
+              (pleft (pright r),
+                Product
+                  (pleft (pright (pright r)),
+                    Product (v, pright (pright (pright (pright r)))))));;
+
+let rec set_tslot3
+  r v = Product
+          (pleft r,
+            Product
+              (pleft (pright r), Product (v, pright (pright (pright r)))));;
+
+let rec set_tslot2 r v = Product (pleft r, Product (v, pright (pright r)));;
+
+let rec set_tslot1 r v = Product (v, pright r);;
+
+let rec tfield
+  kappa a =
+    (match a
+      with Typed_Interval ->
+        lens_of
+          (lift_get
+            (bot_lifted
+              (semilattice_sup_toplift
+                (semilattice_sup_gdefault_st (infinite_key_var_id, equal_var_id)
+                  (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+            tslot1)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted
+               (equal_toplift
+                 (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                   ((equal_kd equal_ivl),
+                     (bounded_semilattice_sup_bot_kd
+                       ik_domain_ivl).order_bot_bounded_semilattice_sup_bot)))),
+              (bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl)))))
+            set_tslot1)
+          (typed_exec_spec kind_int_domain_ivl kappa)
+      | Typed_Congruence ->
+        lens_of
+          (lift_get
+            (bot_lifted
+              (semilattice_sup_toplift
+                (semilattice_sup_gdefault_st (infinite_key_var_id, equal_var_id)
+                  (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+            tslot2)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted
+               (equal_toplift
+                 (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                   ((equal_kd equal_congruence),
+                     (bounded_semilattice_sup_bot_kd
+                       ik_domain_congruence).order_bot_bounded_semilattice_sup_bot)))),
+              (bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_congruence)))))
+            set_tslot2)
+          (typed_exec_spec kind_int_domain_congruence kappa)
+      | Typed_Int ->
+        lens_of
+          (lift_get
+            (bot_lifted
+              (semilattice_sup_toplift
+                (semilattice_sup_gdefault_st (infinite_key_var_id, equal_var_id)
+                  (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+            tslot3)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted
+               (equal_toplift
+                 (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                   ((equal_kd equal_int_tuple),
+                     (bounded_semilattice_sup_bot_kd
+                       ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot)))),
+              (bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_int_tuple)))))
+            set_tslot3)
+          (typed_exec_spec kind_int_domain_int_tuple kappa)
+      | Typed_Order ->
+        lens_of
+          (lift_get (bot_lifted (semilattice_sup_order_rel equal_var_id))
+            tslot6)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted (equal_order_rel equal_var_id)),
+              (bot_lifted (semilattice_sup_order_rel equal_var_id)))
+            set_tslot6)
+          ord_spec
+      | Typed_Sign ->
+        lens_of
+          (lift_get
+            (bot_lifted
+              (semilattice_sup_toplift
+                (semilattice_sup_gdefault_st (infinite_key_var_id, equal_var_id)
+                  (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+            tslot4)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted
+               (equal_toplift
+                 (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                   ((equal_kd equal_sign),
+                     (bounded_semilattice_sup_bot_kd
+                       ik_domain_sign).order_bot_bounded_semilattice_sup_bot)))),
+              (bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_sign)))))
+            set_tslot4)
+          (typed_exec_spec kind_int_domain_sign kappa)
+      | Typed_Parity ->
+        lens_of
+          (lift_get
+            (bot_lifted
+              (semilattice_sup_toplift
+                (semilattice_sup_gdefault_st (infinite_key_var_id, equal_var_id)
+                  (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+            tslot5)
+          (lift_put
+            (bot_analysis_product
+              (order_bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+              (order_bot_analysis_product
+                (order_bot_lifted
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd ik_domain_congruence))))
+                (order_bot_analysis_product
+                  (order_bot_lifted
+                    (semilattice_sup_toplift
+                      (semilattice_sup_gdefault_st
+                        (infinite_key_var_id, equal_var_id)
+                        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))))
+                  (order_bot_analysis_product
+                    (order_bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_sign))))
+                    (order_bot_analysis_product
+                      (order_bot_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd ik_domain_parity))))
+                      (order_bot_lifted
+                        (semilattice_sup_order_rel equal_var_id)))))))
+            ((equal_lifted
+               (equal_toplift
+                 (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                   ((equal_kd equal_parity),
+                     (bounded_semilattice_sup_bot_kd
+                       ik_domain_parity).order_bot_bounded_semilattice_sup_bot)))),
+              (bot_lifted
+                (semilattice_sup_toplift
+                  (semilattice_sup_gdefault_st
+                    (infinite_key_var_id, equal_var_id)
+                    (bounded_semilattice_sup_bot_kd ik_domain_parity)))))
+            set_tslot5)
+          (typed_exec_spec kind_int_domain_parity kappa));;
+
+let rec tmcp_field
+  ds g p a = with_qry (tpart_answer ds g a) (tfield (kenv_of ds) a);;
+
+let rec tlive
+  x0 r = match x0, r with
+    Typed_Interval, r ->
+      not (equal_lifteda
+            (equal_toplift
+              (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                ((equal_kd equal_ivl), (order_bot_kd ik_domain_ivl))))
+            (tslot1 r) Bot)
+    | Typed_Congruence, r ->
+        not (equal_lifteda
+              (equal_toplift
+                (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                  ((equal_kd equal_congruence),
+                    (order_bot_kd ik_domain_congruence))))
+              (tslot2 r) Bot)
+    | Typed_Int, r ->
+        not (equal_lifteda
+              (equal_toplift
+                (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                  ((equal_kd equal_int_tuple),
+                    (order_bot_kd ik_domain_int_tuple))))
+              (tslot3 r) Bot)
+    | Typed_Sign, r ->
+        not (equal_lifteda
+              (equal_toplift
+                (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                  ((equal_kd equal_sign), (order_bot_kd ik_domain_sign))))
+              (tslot4 r) Bot)
+    | Typed_Parity, r ->
+        not (equal_lifteda
+              (equal_toplift
+                (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                  ((equal_kd equal_parity), (order_bot_kd ik_domain_parity))))
+              (tslot5 r) Bot)
+    | Typed_Order, r ->
+        not (equal_lifteda (equal_order_rel equal_var_id) (tslot6 r) Bot);;
+
+let rec tmcp_norm
+  asa x =
+    (match x with Bot -> Bot
+      | Lifted r -> (if list_all (fun a -> tlive a r) asa then x else Bot));;
+
+let rec map_local_spec
+  k c = make_local_spec (ls_query c) (fun ch a x -> k (ls_step c ch a x))
+          (fun ch ci p -> map (fun (q, e) -> (q, k e)) (ls_enter c ch ci p))
+          (ls_combine_env c)
+          (fun ch ci x de -> k (ls_combine_assign c ch ci x de));;
+
+let rec mcp_en_from
+  cs ch ci p = fold (fun c -> maps (ls_enter c ch ci)) cs [p];;
+
+let rec mcp_combine
+  = function [c] -> c
+    | [] -> make_local_spec (mcp_qry []) (mcp_step []) (mcp_en_from [])
+              (mcp_comb []) (fun _ _ dc _ -> dc)
+    | v :: vb :: vc ->
+        make_local_spec (mcp_qry (v :: vb :: vc)) (mcp_step (v :: vb :: vc))
+          (mcp_en_from (v :: vb :: vc)) (mcp_comb (v :: vb :: vc))
+          (fun _ _ dc _ -> dc);;
+
+let rec tmcp_comp
+  ds asa g p =
+    map_local_spec (tmcp_norm asa) (mcp_combine (map (tmcp_field ds g p) asa));;
+
+let rec tst_lift_empty _A
+  x = (match x with Bot -> true | Lifted a -> tst_empty _A a);;
+
+let rec tfield_empty
+  x0 r = match x0, r with
+    Typed_Interval, r -> tst_lift_empty kind_int_domain_ivl (tslot1 r)
+    | Typed_Congruence, r ->
+        tst_lift_empty kind_int_domain_congruence (tslot2 r)
+    | Typed_Int, r -> tst_lift_empty kind_int_domain_int_tuple (tslot3 r)
+    | Typed_Sign, r -> tst_lift_empty kind_int_domain_sign (tslot4 r)
+    | Typed_Parity, r -> tst_lift_empty kind_int_domain_parity (tslot5 r)
+    | Typed_Order, r ->
+        equal_lifteda (equal_order_rel equal_var_id) (tslot6 r) Bot;;
+
+let rec tmcp_emp asa p r = list_ex (fun a -> tfield_empty a r) asa;;
+
+let rec tactivation
+  asa = (if null asa then [Typed_Interval]
+          else remdups equal_typed_domain asa);;
+
+let rec tinit_st _A
+  ds = TL (Abs_default_st
+            ((KTop, []),
+              (KD (I32, of_int_ik _A I32 zero_inta),
+                map (fun (v, k) -> (v, KD (k, of_int_ik _A k zero_inta)))
+                  ds)));;
+
+let rec tmcp_init
+  ds asa =
+    Product
+      ((if membera equal_typed_domain asa Typed_Interval
+         then Lifted (tinit_st kind_int_domain_ivl ds) else Bot),
+        Product
+          ((if membera equal_typed_domain asa Typed_Congruence
+             then Lifted (tinit_st kind_int_domain_congruence ds) else Bot),
+            Product
+              ((if membera equal_typed_domain asa Typed_Int
+                 then Lifted (tinit_st kind_int_domain_int_tuple ds) else Bot),
+                Product
+                  ((if membera equal_typed_domain asa Typed_Sign
+                     then Lifted (tinit_st kind_int_domain_sign ds) else Bot),
+                    Product
+                      ((if membera equal_typed_domain asa Typed_Parity
+                         then Lifted (tinit_st kind_int_domain_parity ds)
+                         else Bot),
+                        (if membera equal_typed_domain asa Typed_Order
+                          then Lifted top_order_rel else Bot))))));;
 
 let rec body (Gproc_decl_ext (formals, body, more)) = body;;
 
@@ -9022,10 +9758,6 @@ let rec special_table
         else (if ((p : string) = special_pname_min) then Some SD_Min
                else (if ((p : string) = special_pname_max) then Some SD_Max
                       else None)));;
-
-let rec sup_set _A
-  x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
-    | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
 
 let rec csize
   = function SKIP i -> one_nat
@@ -9613,6 +10345,1593 @@ let rec dg_spec_of _B _C
                             (fun _ -> local_transfer (closed_step _B c EA_Nop))
                             local_dg_spec_template))))))))));;
 
+let rec mcp_run
+  asa r k ds p =
+    (if is_none
+          (tD_side_rule_Interp_solve_c
+            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+            (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+            ((equal_dg_state
+               (equal_lifted
+                 (equal_analysis_product
+                   (equal_lifted
+                     (equal_toplift
+                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                         ((equal_kd equal_ivl),
+                           (bounded_semilattice_sup_bot_kd
+                             ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                   (equal_analysis_product
+                     (equal_lifted
+                       (equal_toplift
+                         (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                           ((equal_kd equal_congruence),
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                     (equal_analysis_product
+                       (equal_lifted
+                         (equal_toplift
+                           (equal_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             ((equal_kd equal_int_tuple),
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                       (equal_analysis_product
+                         (equal_lifted
+                           (equal_toplift
+                             (equal_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               ((equal_kd equal_sign),
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                         (equal_analysis_product
+                           (equal_lifted
+                             (equal_toplift
+                               (equal_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 ((equal_kd equal_parity),
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                           (equal_lifted (equal_order_rel equal_var_id))))))))
+               (equal_lifted
+                 (equal_analysis_product
+                   (equal_lifted
+                     (equal_toplift
+                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                         ((equal_kd equal_ivl),
+                           (bounded_semilattice_sup_bot_kd
+                             ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                   (equal_analysis_product
+                     (equal_lifted
+                       (equal_toplift
+                         (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                           ((equal_kd equal_congruence),
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                     (equal_analysis_product
+                       (equal_lifted
+                         (equal_toplift
+                           (equal_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             ((equal_kd equal_int_tuple),
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                       (equal_analysis_product
+                         (equal_lifted
+                           (equal_toplift
+                             (equal_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               ((equal_kd equal_sign),
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                         (equal_analysis_product
+                           (equal_lifted
+                             (equal_toplift
+                               (equal_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 ((equal_kd equal_parity),
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                           (equal_lifted (equal_order_rel equal_var_id))))))))),
+              (bounded_semilattice_sup_bot_dg_state
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_analysis_product
+                    (bounded_semilattice_sup_bot_lifted
+                      (bounded_semilattice_sup_bot_toplift
+                        (bounded_semilattice_sup_bot_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd
+                            ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                    (bounded_semilattice_sup_bot_analysis_product
+                      (bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_toplift
+                          (bounded_semilattice_sup_bot_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd
+                              ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                      (bounded_semilattice_sup_bot_analysis_product
+                        (bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_toplift
+                            (bounded_semilattice_sup_bot_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd
+                                ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                        (bounded_semilattice_sup_bot_analysis_product
+                          (bounded_semilattice_sup_bot_lifted
+                            (bounded_semilattice_sup_bot_toplift
+                              (bounded_semilattice_sup_bot_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                          (bounded_semilattice_sup_bot_analysis_product
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_toplift
+                                (bounded_semilattice_sup_bot_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_order_rel
+                                equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot)
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_analysis_product
+                    (bounded_semilattice_sup_bot_lifted
+                      (bounded_semilattice_sup_bot_toplift
+                        (bounded_semilattice_sup_bot_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd
+                            ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                    (bounded_semilattice_sup_bot_analysis_product
+                      (bounded_semilattice_sup_bot_lifted
+                        (bounded_semilattice_sup_bot_toplift
+                          (bounded_semilattice_sup_bot_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd
+                              ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                      (bounded_semilattice_sup_bot_analysis_product
+                        (bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_toplift
+                            (bounded_semilattice_sup_bot_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd
+                                ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                        (bounded_semilattice_sup_bot_analysis_product
+                          (bounded_semilattice_sup_bot_lifted
+                            (bounded_semilattice_sup_bot_toplift
+                              (bounded_semilattice_sup_bot_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                          (bounded_semilattice_sup_bot_analysis_product
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_toplift
+                                (bounded_semilattice_sup_bot_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_order_rel
+                                equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot)),
+              (warrowing_dg_state
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_analysis_product
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_toplift
+                         (bounded_semilattice_sup_bot_gdefault_st
+                           (infinite_key_var_id, equal_var_id)
+                           (bounded_semilattice_sup_bot_kd
+                             ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                     (bounded_semilattice_sup_bot_analysis_product
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_analysis_product
+                         (bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_order_rel
+                                 equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_analysis_product
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_analysis_product
+                         (bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_order_rel
+                                   equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))),
+                      (warrowing_analysis_product
+                        ((bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot),
+                          (warrowing_lifted
+                            ((bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_ivl))),
+                              (warrowing_toplift
+                                (warrowing_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  ((bounded_semilattice_sup_bot_kd
+                                     ik_domain_ivl),
+                                    (warrowing_kd ik_domain_ivl)))))))
+                        ((bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_order_rel
+                                     equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))))),
+                          (warrowing_analysis_product
+                            ((bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot),
+                              (warrowing_lifted
+                                ((bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_congruence))),
+                                  (warrowing_toplift
+                                    (warrowing_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      ((bounded_semilattice_sup_bot_kd
+ ik_domain_congruence),
+(warrowing_kd ik_domain_congruence)))))))
+                            ((bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_order_rel
+                                       equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))),
+                              (warrowing_analysis_product
+                                ((bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot),
+                                  (warrowing_lifted
+                                    ((bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))),
+                                      (warrowing_toplift
+(warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+  ((bounded_semilattice_sup_bot_kd ik_domain_int_tuple),
+    (warrowing_kd ik_domain_int_tuple)))))))
+                                ((bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_analysis_product
+                                     (bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_toplift
+ (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+   (bounded_semilattice_sup_bot_kd
+     ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                     (bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_order_rel
+ equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))),
+                                  (warrowing_analysis_product
+                                    ((bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_toplift
+ (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+   (bounded_semilattice_sup_bot_kd
+     ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot),
+                                      (warrowing_lifted
+((bounded_semilattice_sup_bot_toplift
+   (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+     (bounded_semilattice_sup_bot_kd ik_domain_sign))),
+  (warrowing_toplift
+    (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+      ((bounded_semilattice_sup_bot_kd ik_domain_sign),
+        (warrowing_kd ik_domain_sign)))))))
+                                    ((bounded_semilattice_sup_bot_analysis_product
+                                       (bounded_semilattice_sup_bot_lifted
+ (bounded_semilattice_sup_bot_toplift
+   (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+     (bounded_semilattice_sup_bot_kd
+       ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                       (bounded_semilattice_sup_bot_lifted
+ (bounded_semilattice_sup_bot_order_rel
+   equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
+                                      (warrowing_analysis_product
+((bounded_semilattice_sup_bot_lifted
+   (bounded_semilattice_sup_bot_toplift
+     (bounded_semilattice_sup_bot_gdefault_st
+       (infinite_key_var_id, equal_var_id)
+       (bounded_semilattice_sup_bot_kd
+         ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot),
+  (warrowing_lifted
+    ((bounded_semilattice_sup_bot_toplift
+       (bounded_semilattice_sup_bot_gdefault_st
+         (infinite_key_var_id, equal_var_id)
+         (bounded_semilattice_sup_bot_kd ik_domain_parity))),
+      (warrowing_toplift
+        (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+          ((bounded_semilattice_sup_bot_kd ik_domain_parity),
+            (warrowing_kd ik_domain_parity)))))))
+((bounded_semilattice_sup_bot_lifted
+   (bounded_semilattice_sup_bot_order_rel
+     equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
+  (warrowing_lifted
+    ((bounded_semilattice_sup_bot_order_rel equal_var_id),
+      (warrowing_order_rel equal_var_id))))))))))))))))
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_analysis_product
+                     (bounded_semilattice_sup_bot_lifted
+                       (bounded_semilattice_sup_bot_toplift
+                         (bounded_semilattice_sup_bot_gdefault_st
+                           (infinite_key_var_id, equal_var_id)
+                           (bounded_semilattice_sup_bot_kd
+                             ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                     (bounded_semilattice_sup_bot_analysis_product
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_analysis_product
+                         (bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_order_rel
+                                 equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_analysis_product
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_analysis_product
+                         (bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_order_rel
+                                   equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))),
+                      (warrowing_analysis_product
+                        ((bounded_semilattice_sup_bot_lifted
+                           (bounded_semilattice_sup_bot_toplift
+                             (bounded_semilattice_sup_bot_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot),
+                          (warrowing_lifted
+                            ((bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_ivl))),
+                              (warrowing_toplift
+                                (warrowing_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  ((bounded_semilattice_sup_bot_kd
+                                     ik_domain_ivl),
+                                    (warrowing_kd ik_domain_ivl)))))))
+                        ((bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_order_rel
+                                     equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))))),
+                          (warrowing_analysis_product
+                            ((bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot),
+                              (warrowing_lifted
+                                ((bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_congruence))),
+                                  (warrowing_toplift
+                                    (warrowing_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      ((bounded_semilattice_sup_bot_kd
+ ik_domain_congruence),
+(warrowing_kd ik_domain_congruence)))))))
+                            ((bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_order_rel
+                                       equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))),
+                              (warrowing_analysis_product
+                                ((bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot),
+                                  (warrowing_lifted
+                                    ((bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))),
+                                      (warrowing_toplift
+(warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+  ((bounded_semilattice_sup_bot_kd ik_domain_int_tuple),
+    (warrowing_kd ik_domain_int_tuple)))))))
+                                ((bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_analysis_product
+                                     (bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_toplift
+ (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+   (bounded_semilattice_sup_bot_kd
+     ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                     (bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_order_rel
+ equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))),
+                                  (warrowing_analysis_product
+                                    ((bounded_semilattice_sup_bot_lifted
+                                       (bounded_semilattice_sup_bot_toplift
+ (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+   (bounded_semilattice_sup_bot_kd
+     ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot),
+                                      (warrowing_lifted
+((bounded_semilattice_sup_bot_toplift
+   (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+     (bounded_semilattice_sup_bot_kd ik_domain_sign))),
+  (warrowing_toplift
+    (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+      ((bounded_semilattice_sup_bot_kd ik_domain_sign),
+        (warrowing_kd ik_domain_sign)))))))
+                                    ((bounded_semilattice_sup_bot_analysis_product
+                                       (bounded_semilattice_sup_bot_lifted
+ (bounded_semilattice_sup_bot_toplift
+   (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+     (bounded_semilattice_sup_bot_kd
+       ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                       (bounded_semilattice_sup_bot_lifted
+ (bounded_semilattice_sup_bot_order_rel
+   equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
+                                      (warrowing_analysis_product
+((bounded_semilattice_sup_bot_lifted
+   (bounded_semilattice_sup_bot_toplift
+     (bounded_semilattice_sup_bot_gdefault_st
+       (infinite_key_var_id, equal_var_id)
+       (bounded_semilattice_sup_bot_kd
+         ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot),
+  (warrowing_lifted
+    ((bounded_semilattice_sup_bot_toplift
+       (bounded_semilattice_sup_bot_gdefault_st
+         (infinite_key_var_id, equal_var_id)
+         (bounded_semilattice_sup_bot_kd ik_domain_parity))),
+      (warrowing_toplift
+        (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+          ((bounded_semilattice_sup_bot_kd ik_domain_parity),
+            (warrowing_kd ik_domain_parity)))))))
+((bounded_semilattice_sup_bot_lifted
+   (bounded_semilattice_sup_bot_order_rel
+     equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
+  (warrowing_lifted
+    ((bounded_semilattice_sup_bot_order_rel equal_var_id),
+      (warrowing_order_rel equal_var_id))))))))))))))))))
+            r (equations (equal_var_id, linorder_var_id)
+                (equal_texp, linorder_texp)
+                ((equal_analysis_product
+                   (equal_lifted
+                     (equal_toplift
+                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                         ((equal_kd equal_ivl),
+                           (bounded_semilattice_sup_bot_kd
+                             ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                   (equal_analysis_product
+                     (equal_lifted
+                       (equal_toplift
+                         (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                           ((equal_kd equal_congruence),
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                     (equal_analysis_product
+                       (equal_lifted
+                         (equal_toplift
+                           (equal_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             ((equal_kd equal_int_tuple),
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                       (equal_analysis_product
+                         (equal_lifted
+                           (equal_toplift
+                             (equal_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               ((equal_kd equal_sign),
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                         (equal_analysis_product
+                           (equal_lifted
+                             (equal_toplift
+                               (equal_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 ((equal_kd equal_parity),
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                           (equal_lifted (equal_order_rel equal_var_id))))))),
+                  (semilattice_sup_analysis_product
+                    (semilattice_sup_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+                    (semilattice_sup_analysis_product
+                      (semilattice_sup_lifted
+                        (semilattice_sup_toplift
+                          (semilattice_sup_gdefault_st
+                            (infinite_key_var_id, equal_var_id)
+                            (bounded_semilattice_sup_bot_kd
+                              ik_domain_congruence))))
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_toplift
+                            (semilattice_sup_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd
+                                ik_domain_int_tuple))))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_toplift
+                              (semilattice_sup_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  ik_domain_sign))))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_toplift
+                                (semilattice_sup_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_parity))))
+                            (semilattice_sup_lifted
+                              (semilattice_sup_order_rel equal_var_id))))))))
+                (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+                (equal_list equal_cfg_node) (tmcp_comp ds (tactivation asa))
+                (tmcp_init ds (tactivation asa)) (Analysis_Global ())
+                (fun a -> Analysis_Global a) (fun a b -> Activation_Seed (a, b))
+                (fun _ u ctx _ _ -> take k (u :: ctx)) []
+                (fun _ ->
+                  dg_spec_of equal_texp
+                    (bot_lifted
+                      (semilattice_sup_analysis_product
+                        (semilattice_sup_lifted
+                          (semilattice_sup_toplift
+                            (semilattice_sup_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+                        (semilattice_sup_analysis_product
+                          (semilattice_sup_lifted
+                            (semilattice_sup_toplift
+                              (semilattice_sup_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  ik_domain_congruence))))
+                          (semilattice_sup_analysis_product
+                            (semilattice_sup_lifted
+                              (semilattice_sup_toplift
+                                (semilattice_sup_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_int_tuple))))
+                            (semilattice_sup_analysis_product
+                              (semilattice_sup_lifted
+                                (semilattice_sup_toplift
+                                  (semilattice_sup_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_sign))))
+                              (semilattice_sup_analysis_product
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_toplift
+                                    (semilattice_sup_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_parity))))
+                                (semilattice_sup_lifted
+                                  (semilattice_sup_order_rel
+                                    equal_var_id)))))))))
+                (fun _ _ -> Bot) (fun _ _ -> []) (fun pa -> typed_cfg pa ds)
+                (fun _ -> FunctionEntry prog_main_name) tglobal p)
+            (cfg_exit (typed_cfg p ds), []))
+      then Typed_No_Answer
+      else Typed_Analysed
+             (map (fun (u, (c, v)) -> (u, (c, verdict_result v)))
+               (verdict_report (equal_var_id, linorder_var_id)
+                 (equal_texp, linorder_texp)
+                 ((equal_analysis_product
+                    (equal_lifted
+                      (equal_toplift
+                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                          ((equal_kd equal_ivl),
+                            (bounded_semilattice_sup_bot_kd
+                              ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                    (equal_analysis_product
+                      (equal_lifted
+                        (equal_toplift
+                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                            ((equal_kd equal_congruence),
+                              (bounded_semilattice_sup_bot_kd
+                                ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                      (equal_analysis_product
+                        (equal_lifted
+                          (equal_toplift
+                            (equal_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              ((equal_kd equal_int_tuple),
+                                (bounded_semilattice_sup_bot_kd
+                                  ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                        (equal_analysis_product
+                          (equal_lifted
+                            (equal_toplift
+                              (equal_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                ((equal_kd equal_sign),
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                          (equal_analysis_product
+                            (equal_lifted
+                              (equal_toplift
+                                (equal_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  ((equal_kd equal_parity),
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                            (equal_lifted (equal_order_rel equal_var_id))))))),
+                   (semilattice_sup_analysis_product
+                     (semilattice_sup_lifted
+                       (semilattice_sup_toplift
+                         (semilattice_sup_gdefault_st
+                           (infinite_key_var_id, equal_var_id)
+                           (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+                     (semilattice_sup_analysis_product
+                       (semilattice_sup_lifted
+                         (semilattice_sup_toplift
+                           (semilattice_sup_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               ik_domain_congruence))))
+                       (semilattice_sup_analysis_product
+                         (semilattice_sup_lifted
+                           (semilattice_sup_toplift
+                             (semilattice_sup_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd
+                                 ik_domain_int_tuple))))
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_toplift
+                               (semilattice_sup_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_sign))))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_toplift
+                                 (semilattice_sup_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_parity))))
+                             (semilattice_sup_lifted
+                               (semilattice_sup_order_rel equal_var_id))))))))
+                 (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+                 (equal_list equal_cfg_node) (tmcp_comp ds (tactivation asa))
+                 (tmcp_emp (tactivation asa)) tmcp_rd
+                 (tmcp_init ds (tactivation asa)) (Analysis_Global ())
+                 (fun a -> Analysis_Global a)
+                 (fun a b -> Activation_Seed (a, b))
+                 (fun _ u ctx _ _ -> take k (u :: ctx)) []
+                 (tD_side_rule_Interp_solve
+                   (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+                   (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+                   ((equal_dg_state
+                      (equal_lifted
+                        (equal_analysis_product
+                          (equal_lifted
+                            (equal_toplift
+                              (equal_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                ((equal_kd equal_ivl),
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                          (equal_analysis_product
+                            (equal_lifted
+                              (equal_toplift
+                                (equal_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  ((equal_kd equal_congruence),
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                            (equal_analysis_product
+                              (equal_lifted
+                                (equal_toplift
+                                  (equal_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    ((equal_kd equal_int_tuple),
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                              (equal_analysis_product
+                                (equal_lifted
+                                  (equal_toplift
+                                    (equal_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      ((equal_kd equal_sign),
+(bounded_semilattice_sup_bot_kd
+  ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                                (equal_analysis_product
+                                  (equal_lifted
+                                    (equal_toplift
+                                      (equal_gdefault_st
+(infinite_key_var_id, equal_var_id)
+((equal_kd equal_parity),
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                                  (equal_lifted
+                                    (equal_order_rel equal_var_id))))))))
+                      (equal_lifted
+                        (equal_analysis_product
+                          (equal_lifted
+                            (equal_toplift
+                              (equal_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                ((equal_kd equal_ivl),
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_ivl).order_bot_bounded_semilattice_sup_bot))))
+                          (equal_analysis_product
+                            (equal_lifted
+                              (equal_toplift
+                                (equal_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  ((equal_kd equal_congruence),
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_congruence).order_bot_bounded_semilattice_sup_bot))))
+                            (equal_analysis_product
+                              (equal_lifted
+                                (equal_toplift
+                                  (equal_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    ((equal_kd equal_int_tuple),
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_int_tuple).order_bot_bounded_semilattice_sup_bot))))
+                              (equal_analysis_product
+                                (equal_lifted
+                                  (equal_toplift
+                                    (equal_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      ((equal_kd equal_sign),
+(bounded_semilattice_sup_bot_kd
+  ik_domain_sign).order_bot_bounded_semilattice_sup_bot))))
+                                (equal_analysis_product
+                                  (equal_lifted
+                                    (equal_toplift
+                                      (equal_gdefault_st
+(infinite_key_var_id, equal_var_id)
+((equal_kd equal_parity),
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_parity).order_bot_bounded_semilattice_sup_bot))))
+                                  (equal_lifted
+                                    (equal_order_rel equal_var_id))))))))),
+                     (bounded_semilattice_sup_bot_dg_state
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_order_rel
+                                       equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_analysis_product
+                           (bounded_semilattice_sup_bot_lifted
+                             (bounded_semilattice_sup_bot_toplift
+                               (bounded_semilattice_sup_bot_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                           (bounded_semilattice_sup_bot_analysis_product
+                             (bounded_semilattice_sup_bot_lifted
+                               (bounded_semilattice_sup_bot_toplift
+                                 (bounded_semilattice_sup_bot_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                             (bounded_semilattice_sup_bot_analysis_product
+                               (bounded_semilattice_sup_bot_lifted
+                                 (bounded_semilattice_sup_bot_toplift
+                                   (bounded_semilattice_sup_bot_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                               (bounded_semilattice_sup_bot_analysis_product
+                                 (bounded_semilattice_sup_bot_lifted
+                                   (bounded_semilattice_sup_bot_toplift
+                                     (bounded_semilattice_sup_bot_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                 (bounded_semilattice_sup_bot_analysis_product
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_toplift
+                                       (bounded_semilattice_sup_bot_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ (bounded_semilattice_sup_bot_kd
+   ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                   (bounded_semilattice_sup_bot_lifted
+                                     (bounded_semilattice_sup_bot_order_rel
+                                       equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot)),
+                     (warrowing_dg_state
+                       ((bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_analysis_product
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_toplift
+                                (bounded_semilattice_sup_bot_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                            (bounded_semilattice_sup_bot_analysis_product
+                              (bounded_semilattice_sup_bot_lifted
+                                (bounded_semilattice_sup_bot_toplift
+                                  (bounded_semilattice_sup_bot_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                              (bounded_semilattice_sup_bot_analysis_product
+                                (bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                (bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_order_rel
+equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot),
+                         (warrowing_lifted
+                           ((bounded_semilattice_sup_bot_analysis_product
+                              (bounded_semilattice_sup_bot_lifted
+                                (bounded_semilattice_sup_bot_toplift
+                                  (bounded_semilattice_sup_bot_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                              (bounded_semilattice_sup_bot_analysis_product
+                                (bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                                (bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_order_rel
+  equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))),
+                             (warrowing_analysis_product
+                               ((bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot),
+                                 (warrowing_lifted
+                                   ((bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd ik_domain_ivl))),
+                                     (warrowing_toplift
+                                       (warrowing_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ ((bounded_semilattice_sup_bot_kd ik_domain_ivl),
+   (warrowing_kd ik_domain_ivl)))))))
+                               ((bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_analysis_product
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_order_rel
+    equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))))),
+                                 (warrowing_analysis_product
+                                   ((bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot),
+                                     (warrowing_lifted
+                                       ((bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd ik_domain_congruence))),
+ (warrowing_toplift
+   (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+     ((bounded_semilattice_sup_bot_kd ik_domain_congruence),
+       (warrowing_kd ik_domain_congruence)))))))
+                                   ((bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_analysis_product
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+(bounded_semilattice_sup_bot_analysis_product
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd
+          ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_order_rel
+      equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))),
+                                     (warrowing_analysis_product
+                                       ((bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot),
+ (warrowing_lifted
+   ((bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))),
+     (warrowing_toplift
+       (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+         ((bounded_semilattice_sup_bot_kd ik_domain_int_tuple),
+           (warrowing_kd ik_domain_int_tuple)))))))
+                                       ((bounded_semilattice_sup_bot_analysis_product
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd
+          ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+  (bounded_semilattice_sup_bot_analysis_product
+    (bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_toplift
+        (bounded_semilattice_sup_bot_gdefault_st
+          (infinite_key_var_id, equal_var_id)
+          (bounded_semilattice_sup_bot_kd
+            ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+    (bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_order_rel
+        equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))),
+ (warrowing_analysis_product
+   ((bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_toplift
+        (bounded_semilattice_sup_bot_gdefault_st
+          (infinite_key_var_id, equal_var_id)
+          (bounded_semilattice_sup_bot_kd
+            ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot),
+     (warrowing_lifted
+       ((bounded_semilattice_sup_bot_toplift
+          (bounded_semilattice_sup_bot_gdefault_st
+            (infinite_key_var_id, equal_var_id)
+            (bounded_semilattice_sup_bot_kd ik_domain_sign))),
+         (warrowing_toplift
+           (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+             ((bounded_semilattice_sup_bot_kd ik_domain_sign),
+               (warrowing_kd ik_domain_sign)))))))
+   ((bounded_semilattice_sup_bot_analysis_product
+      (bounded_semilattice_sup_bot_lifted
+        (bounded_semilattice_sup_bot_toplift
+          (bounded_semilattice_sup_bot_gdefault_st
+            (infinite_key_var_id, equal_var_id)
+            (bounded_semilattice_sup_bot_kd
+              ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+      (bounded_semilattice_sup_bot_lifted
+        (bounded_semilattice_sup_bot_order_rel
+          equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
+     (warrowing_analysis_product
+       ((bounded_semilattice_sup_bot_lifted
+          (bounded_semilattice_sup_bot_toplift
+            (bounded_semilattice_sup_bot_gdefault_st
+              (infinite_key_var_id, equal_var_id)
+              (bounded_semilattice_sup_bot_kd
+                ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot),
+         (warrowing_lifted
+           ((bounded_semilattice_sup_bot_toplift
+              (bounded_semilattice_sup_bot_gdefault_st
+                (infinite_key_var_id, equal_var_id)
+                (bounded_semilattice_sup_bot_kd ik_domain_parity))),
+             (warrowing_toplift
+               (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+                 ((bounded_semilattice_sup_bot_kd ik_domain_parity),
+                   (warrowing_kd ik_domain_parity)))))))
+       ((bounded_semilattice_sup_bot_lifted
+          (bounded_semilattice_sup_bot_order_rel
+            equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
+         (warrowing_lifted
+           ((bounded_semilattice_sup_bot_order_rel equal_var_id),
+             (warrowing_order_rel equal_var_id))))))))))))))))
+                       ((bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_analysis_product
+                            (bounded_semilattice_sup_bot_lifted
+                              (bounded_semilattice_sup_bot_toplift
+                                (bounded_semilattice_sup_bot_gdefault_st
+                                  (infinite_key_var_id, equal_var_id)
+                                  (bounded_semilattice_sup_bot_kd
+                                    ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                            (bounded_semilattice_sup_bot_analysis_product
+                              (bounded_semilattice_sup_bot_lifted
+                                (bounded_semilattice_sup_bot_toplift
+                                  (bounded_semilattice_sup_bot_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                              (bounded_semilattice_sup_bot_analysis_product
+                                (bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                (bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_order_rel
+equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))).semilattice_sup_bounded_semilattice_sup_bot),
+                         (warrowing_lifted
+                           ((bounded_semilattice_sup_bot_analysis_product
+                              (bounded_semilattice_sup_bot_lifted
+                                (bounded_semilattice_sup_bot_toplift
+                                  (bounded_semilattice_sup_bot_gdefault_st
+                                    (infinite_key_var_id, equal_var_id)
+                                    (bounded_semilattice_sup_bot_kd
+                                      ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot)
+                              (bounded_semilattice_sup_bot_analysis_product
+                                (bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                                (bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_order_rel
+  equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))))),
+                             (warrowing_analysis_product
+                               ((bounded_semilattice_sup_bot_lifted
+                                  (bounded_semilattice_sup_bot_toplift
+                                    (bounded_semilattice_sup_bot_gdefault_st
+                                      (infinite_key_var_id, equal_var_id)
+                                      (bounded_semilattice_sup_bot_kd
+ik_domain_ivl))).semilattice_sup_bounded_semilattice_sup_bot),
+                                 (warrowing_lifted
+                                   ((bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd ik_domain_ivl))),
+                                     (warrowing_toplift
+                                       (warrowing_gdefault_st
+ (infinite_key_var_id, equal_var_id)
+ ((bounded_semilattice_sup_bot_kd ik_domain_ivl),
+   (warrowing_kd ik_domain_ivl)))))))
+                               ((bounded_semilattice_sup_bot_analysis_product
+                                  (bounded_semilattice_sup_bot_lifted
+                                    (bounded_semilattice_sup_bot_toplift
+                                      (bounded_semilattice_sup_bot_gdefault_st
+(infinite_key_var_id, equal_var_id)
+(bounded_semilattice_sup_bot_kd
+  ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot)
+                                  (bounded_semilattice_sup_bot_analysis_product
+                                    (bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                    (bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_analysis_product
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_order_rel
+    equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))))),
+                                 (warrowing_analysis_product
+                                   ((bounded_semilattice_sup_bot_lifted
+                                      (bounded_semilattice_sup_bot_toplift
+(bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+  (bounded_semilattice_sup_bot_kd
+    ik_domain_congruence))).semilattice_sup_bounded_semilattice_sup_bot),
+                                     (warrowing_lifted
+                                       ((bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd ik_domain_congruence))),
+ (warrowing_toplift
+   (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+     ((bounded_semilattice_sup_bot_kd ik_domain_congruence),
+       (warrowing_kd ik_domain_congruence)))))))
+                                   ((bounded_semilattice_sup_bot_analysis_product
+                                      (bounded_semilattice_sup_bot_lifted
+(bounded_semilattice_sup_bot_toplift
+  (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+    (bounded_semilattice_sup_bot_kd
+      ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot)
+                                      (bounded_semilattice_sup_bot_analysis_product
+(bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+(bounded_semilattice_sup_bot_analysis_product
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd
+          ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_order_rel
+      equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)))),
+                                     (warrowing_analysis_product
+                                       ((bounded_semilattice_sup_bot_lifted
+  (bounded_semilattice_sup_bot_toplift
+    (bounded_semilattice_sup_bot_gdefault_st (infinite_key_var_id, equal_var_id)
+      (bounded_semilattice_sup_bot_kd
+        ik_domain_int_tuple))).semilattice_sup_bounded_semilattice_sup_bot),
+ (warrowing_lifted
+   ((bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd ik_domain_int_tuple))),
+     (warrowing_toplift
+       (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+         ((bounded_semilattice_sup_bot_kd ik_domain_int_tuple),
+           (warrowing_kd ik_domain_int_tuple)))))))
+                                       ((bounded_semilattice_sup_bot_analysis_product
+  (bounded_semilattice_sup_bot_lifted
+    (bounded_semilattice_sup_bot_toplift
+      (bounded_semilattice_sup_bot_gdefault_st
+        (infinite_key_var_id, equal_var_id)
+        (bounded_semilattice_sup_bot_kd
+          ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot)
+  (bounded_semilattice_sup_bot_analysis_product
+    (bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_toplift
+        (bounded_semilattice_sup_bot_gdefault_st
+          (infinite_key_var_id, equal_var_id)
+          (bounded_semilattice_sup_bot_kd
+            ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+    (bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_order_rel
+        equal_var_id).semilattice_sup_bounded_semilattice_sup_bot))),
+ (warrowing_analysis_product
+   ((bounded_semilattice_sup_bot_lifted
+      (bounded_semilattice_sup_bot_toplift
+        (bounded_semilattice_sup_bot_gdefault_st
+          (infinite_key_var_id, equal_var_id)
+          (bounded_semilattice_sup_bot_kd
+            ik_domain_sign))).semilattice_sup_bounded_semilattice_sup_bot),
+     (warrowing_lifted
+       ((bounded_semilattice_sup_bot_toplift
+          (bounded_semilattice_sup_bot_gdefault_st
+            (infinite_key_var_id, equal_var_id)
+            (bounded_semilattice_sup_bot_kd ik_domain_sign))),
+         (warrowing_toplift
+           (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+             ((bounded_semilattice_sup_bot_kd ik_domain_sign),
+               (warrowing_kd ik_domain_sign)))))))
+   ((bounded_semilattice_sup_bot_analysis_product
+      (bounded_semilattice_sup_bot_lifted
+        (bounded_semilattice_sup_bot_toplift
+          (bounded_semilattice_sup_bot_gdefault_st
+            (infinite_key_var_id, equal_var_id)
+            (bounded_semilattice_sup_bot_kd
+              ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot)
+      (bounded_semilattice_sup_bot_lifted
+        (bounded_semilattice_sup_bot_order_rel
+          equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
+     (warrowing_analysis_product
+       ((bounded_semilattice_sup_bot_lifted
+          (bounded_semilattice_sup_bot_toplift
+            (bounded_semilattice_sup_bot_gdefault_st
+              (infinite_key_var_id, equal_var_id)
+              (bounded_semilattice_sup_bot_kd
+                ik_domain_parity))).semilattice_sup_bounded_semilattice_sup_bot),
+         (warrowing_lifted
+           ((bounded_semilattice_sup_bot_toplift
+              (bounded_semilattice_sup_bot_gdefault_st
+                (infinite_key_var_id, equal_var_id)
+                (bounded_semilattice_sup_bot_kd ik_domain_parity))),
+             (warrowing_toplift
+               (warrowing_gdefault_st (infinite_key_var_id, equal_var_id)
+                 ((bounded_semilattice_sup_bot_kd ik_domain_parity),
+                   (warrowing_kd ik_domain_parity)))))))
+       ((bounded_semilattice_sup_bot_lifted
+          (bounded_semilattice_sup_bot_order_rel
+            equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
+         (warrowing_lifted
+           ((bounded_semilattice_sup_bot_order_rel equal_var_id),
+             (warrowing_order_rel equal_var_id))))))))))))))))))
+                   r)
+                 (tmcp_classify ds (tactivation asa))
+                 (fun _ ->
+                   dg_spec_of equal_texp
+                     (bot_lifted
+                       (semilattice_sup_analysis_product
+                         (semilattice_sup_lifted
+                           (semilattice_sup_toplift
+                             (semilattice_sup_gdefault_st
+                               (infinite_key_var_id, equal_var_id)
+                               (bounded_semilattice_sup_bot_kd ik_domain_ivl))))
+                         (semilattice_sup_analysis_product
+                           (semilattice_sup_lifted
+                             (semilattice_sup_toplift
+                               (semilattice_sup_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 (bounded_semilattice_sup_bot_kd
+                                   ik_domain_congruence))))
+                           (semilattice_sup_analysis_product
+                             (semilattice_sup_lifted
+                               (semilattice_sup_toplift
+                                 (semilattice_sup_gdefault_st
+                                   (infinite_key_var_id, equal_var_id)
+                                   (bounded_semilattice_sup_bot_kd
+                                     ik_domain_int_tuple))))
+                             (semilattice_sup_analysis_product
+                               (semilattice_sup_lifted
+                                 (semilattice_sup_toplift
+                                   (semilattice_sup_gdefault_st
+                                     (infinite_key_var_id, equal_var_id)
+                                     (bounded_semilattice_sup_bot_kd
+                                       ik_domain_sign))))
+                               (semilattice_sup_analysis_product
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_toplift
+                                     (semilattice_sup_gdefault_st
+                                       (infinite_key_var_id, equal_var_id)
+                                       (bounded_semilattice_sup_bot_kd
+ ik_domain_parity))))
+                                 (semilattice_sup_lifted
+                                   (semilattice_sup_order_rel
+                                     equal_var_id)))))))))
+                 (fun _ d _ -> d) (fun _ _ -> Bot) (fun _ _ -> [])
+                 (fun pa -> typed_cfg pa ds)
+                 (fun _ -> FunctionEntry prog_main_name) tglobal p)));;
+
+let rec tclassify _A
+  kappa c d =
+    (match d with TTop -> Check_Unknown
+      | TL sigma ->
+        (match
+          truth_ik _A
+            (taeval _A kappa
+              (fun _ ->
+                top_query_lifta (order_int_dom_ext bounded_lattice_unit))
+              c sigma)
+          with None -> Check_Unknown | Some true -> Check_Proved
+          | Some false -> Check_Refuted));;
+
+let rec typed_es _A
+  g d ca =
+    (let CallEdge (_, pars, _) = ca in
+      (match d
+        with Bot -> map (fun _ -> bot_kda _A.ik_domain_kind_int_domain) pars
+        | Lifted TTop -> map (fun _ -> KTop) pars
+        | Lifted (TL st) ->
+          map (default_st_to_fun equal_var_id
+                (bot_kd _A.ik_domain_kind_int_domain) g st)
+            pars));;
+
 let rec nonrel_es_run (_A1, _A2)
   t r ds p =
     (if is_none
@@ -10032,25 +12351,6 @@ let rec nonrel_ctx_run (_A1, _A2)
     (match cx with Typed_Call_String k -> nonrel_run (_A1, _A2) t r k ds p
       | Typed_Entry_State -> nonrel_es_run (_A1, _A2) t r ds p);;
 
-let top_order_rel : 'a order_rel = OFacts bot_set;;
-
-let rec ord_le
-  d x y =
-    (match d with OBot -> false
-      | OFacts ps ->
-        equal_var_ida x y ||
-          member (equal_prod equal_var_id equal_var_id) (x, y) ps);;
-
-let rec ord_decide
-  xa0 d x y = match xa0, d, x, y with
-    CLe, d, x, y -> (if ord_le d x y then Some true else None)
-    | CGe, d, x, y -> (if ord_le d y x then Some true else None)
-    | CLt, d, x, y -> (if ord_le d y x then Some false else None)
-    | CGt, d, x, y -> (if ord_le d x y then Some false else None)
-    | CEq, d, x, y -> (if ord_le d x y && ord_le d y x then Some true else None)
-    | CNe, d, x, y ->
-        (if ord_le d x y && ord_le d y x then Some false else None);;
-
 let rec ord_classify
   x0 d = match x0, d with
     TCmp (c, TVar (ka, x), TVar (k, y)), d ->
@@ -10107,132 +12407,6 @@ let rec report (_A1, _A2) (_C1, _C2) (_D1, _D2) _F _H
         buffer_key global_of seed route root_ctx solve place_spec place_cmb
         place_rg place_inits pcfg pentry g)
       bot_state classify pcfg;;
-
-let rec ord_forget _A
-  x xa1 = match x, xa1 with x, OBot -> OBot
-    | x, OFacts ps ->
-        OFacts (filter (fun (a, b) -> not (eq _A a x) && not (eq _A b x)) ps);;
-
-let rec cmp_facts _A
-  xa0 xa1 x y = match xa0, xa1, x, y with
-    CLt, true, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
-    | CLe, true, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
-    | CGt, true, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
-    | CGe, true, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
-    | CEq, true, x, y ->
-        inserta (equal_prod _A _A) (x, y)
-          (inserta (equal_prod _A _A) (y, x) bot_set)
-    | CNe, true, x, y -> bot_set
-    | CLt, false, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
-    | CLe, false, x, y -> inserta (equal_prod _A _A) (y, x) bot_set
-    | CGt, false, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
-    | CGe, false, x, y -> inserta (equal_prod _A _A) (x, y) bot_set
-    | CEq, false, x, y -> bot_set
-    | CNe, false, x, y ->
-        inserta (equal_prod _A _A) (x, y)
-          (inserta (equal_prod _A _A) (y, x) bot_set);;
-
-let rec ord_branch
-  x0 pol d = match x0, pol, d with
-    TCmp (c, TVar (ka, x), TVar (k, y)), pol, OFacts ps ->
-      OFacts
-        (sup_set (equal_prod equal_var_id equal_var_id) ps
-          (cmp_facts equal_var_id c pol x y))
-    | TNot b, pol, d -> ord_branch b (not pol) d
-    | TN (v, va), uv, d -> d
-    | TVar (v, va), uv, d -> d
-    | TArith (v, va, vb, vc), uv, d -> d
-    | TCast (v, va), uv, d -> d
-    | TCmp (v, TN (vc, vd), vb), uv, d -> d
-    | TCmp (v, TArith (vc, vd, ve, vf), vb), uv, d -> d
-    | TCmp (v, TCast (vc, vd), vb), uv, d -> d
-    | TCmp (v, TCmp (vc, vd, ve), vb), uv, d -> d
-    | TCmp (v, TNot vc, vb), uv, d -> d
-    | TCmp (v, TAnd (vc, vd), vb), uv, d -> d
-    | TCmp (v, TOr (vc, vd), vb), uv, d -> d
-    | TCmp (v, va, TN (vc, vd)), uv, d -> d
-    | TCmp (v, va, TArith (vc, vd, ve, vf)), uv, d -> d
-    | TCmp (v, va, TCast (vc, vd)), uv, d -> d
-    | TCmp (v, va, TCmp (vc, vd, ve)), uv, d -> d
-    | TCmp (v, va, TNot vc), uv, d -> d
-    | TCmp (v, va, TAnd (vc, vd)), uv, d -> d
-    | TCmp (v, va, TOr (vc, vd)), uv, d -> d
-    | TAnd (v, va), uv, d -> d
-    | TOr (v, va), uv, d -> d
-    | TCmp (v, va, vb), uv, OBot -> OBot;;
-
-let rec int_dom_of_int
-  n = int_congruence_update (fun _ -> congruence_of_int n)
-        (int_parity_update (fun _ -> parity_of_int n)
-          (int_ivl_update (fun _ -> Ivl (Fin n, Fin n))
-            (int_sign_update (fun _ -> sign_of_int n)
-              (top_int_dom_exta bounded_lattice_unit))));;
-
-let rec answer_of_int n = QLifted (int_dom_of_int n);;
-
-let rec ord_query
-  ch d q = match ch, d, q with
-    ch, Lifted d, EvalInt (TCmp (c, TVar (ka, x), TVar (k, y))) ->
-      (match ord_decide c d x y
-        with None -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-        | Some b -> answer_of_int (if b then one_inta else zero_inta))
-    | ch, Bot, q -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TN (va, vb)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TVar (va, vb)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TArith (va, vb, vc, vd)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCast (va, vb)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TN (vd, ve), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TArith (vd, ve, vf, vg), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TCast (vd, ve), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TCmp (vd, ve, vf), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TNot vd, vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TAnd (vd, ve), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, TOr (vd, ve), vc)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TN (vd, ve))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TArith (vd, ve, vf, vg))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TCast (vd, ve))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TCmp (vd, ve, vf))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TNot vd)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TAnd (vd, ve))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TCmp (va, vb, TOr (vd, ve))) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TNot va) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TAnd (va, vb)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-    | ch, d, EvalInt (TOr (va, vb)) ->
-        top_query_lifta (order_int_dom_ext bounded_lattice_unit);;
-
-let rec combine_env_identity cha ch ci x de = x;;
-
-let ord_spec : (var_id, texp, var_id order_rel lifted, unit) glocal_spec_ext
-  = Glocal_spec_ext
-      (ord_query, (fun _ d -> d),
-        (fun _ x _ -> map_lift (ord_forget equal_var_id x)),
-        (fun _ _ x -> map_lift (ord_forget equal_var_id x)),
-        (fun _ b pol -> map_lift (ord_branch b pol)), (fun _ _ d -> d),
-        (fun _ r _ d ->
-          (match r with None -> d
-            | Some _ -> map_lift (ord_forget equal_var_id ReturnVar) d)),
-        (fun _ _ d -> d), (fun _ _ p -> [(fst p, Lifted top_order_rel)]),
-        combine_env_identity, (fun _ _ _ _ -> Lifted top_order_rel), ());;
 
 let rec order_run
   r ds p =
@@ -10365,13 +12539,6 @@ let rec mcp_rd
                                      (slot7 r),
                                     slot8 r)))))));;
 
-let rec pmap2
-  f g x2 uu = match f, g, x2, uu with
-    f, g, Lifted (Product (aa, ba)), Lifted (Product (a, b)) ->
-      Lifted (Product (f aa a, g ba b))
-    | f, g, Lifted (Product (a, b)), Bot -> Lifted (Product (f a Bot, g b Bot))
-    | f, g, Bot, uu -> Bot;;
-
 let rec parity_eq_false
   a b = match a, b with PEven, POdd -> true
     | POdd, PEven -> true
@@ -10432,14 +12599,6 @@ let rec int_eq_true
 let rec int_eq
   a b = (if int_eq_true a b then Some true
           else (if int_eq_false a b then Some false else None));;
-
-let rec penter
-  xs ys =
-    maps (fun (x1, y1) ->
-           map (fun (x2, y2) ->
-                 (Lifted (Product (x1, x2)), Lifted (Product (y1, y2))))
-             ys)
-      xs;;
 
 let rec greserved_ret_var rv g = not (g rv);;
 
@@ -10597,566 +12756,14 @@ let rec wf_program_compile_input_exec
                         list_all (fun (q, _) -> is_none (special_table q))
                           procs))))))));;
 
-let rec no_readback _A
-  g (Product (a, b)) =
-    Product
-      (map_lift
-         (map_toplift
-           (default_st_to_fun equal_var_id (bot_kd _A.ik_domain_kind_int_domain)
-             g))
-         a,
-        b);;
-
-let rec no_rd_query _A
-  kappa ch (Product (a, b)) q =
-    inf_query_lift (inf_int_dom_ext bounded_lattice_unit)
-      (match a
-        with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-        | Lifted x -> tquery _A kappa ch x q)
-      (ord_query ch b q);;
-
-let rec no_classify _A
-  kappa c d =
-    (match
-      truth_ik _A
-        (of_answer_ik _A None
-          (ask_rec equal_texp (no_rd_query _A kappa) query_depth bot_set d
-            (EvalInt c)))
-      with None -> Check_Unknown | Some true -> Check_Proved
-      | Some false -> Check_Refuted);;
-
-let rec no_empty _A _B
-  (Product (a, b)) = equal_lifteda _A a Bot || equal_lifteda _B b Bot;;
-
-let rec pright_of = function Bot -> Bot
-                    | Lifted (Product (a, b)) -> b;;
-
-let rec pleft_of = function Bot -> Bot
-                   | Lifted (Product (a, b)) -> a;;
-
-let rec spec_product
-  c1 c2 =
-    Glocal_spec_ext
-      ((fun ch d q ->
-         (match d
-           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
-           | Lifted (Product (a, b)) ->
-             inf_query_lift (inf_int_dom_ext bounded_lattice_unit)
-               (ls_query c1 ch a q) (ls_query c2 ch b q))),
-        (fun ch -> pmap (ls_skip c1 ch) (ls_skip c2 ch)),
-        (fun ch x e -> pmap (ls_assign c1 ch x e) (ls_assign c2 ch x e)),
-        (fun ch sc x -> pmap (ls_special c1 ch sc x) (ls_special c2 ch sc x)),
-        (fun ch b pol -> pmap (ls_branch c1 ch b pol) (ls_branch c2 ch b pol)),
-        (fun ch q -> pmap (ls_body c1 ch q) (ls_body c2 ch q)),
-        (fun ch r q -> pmap (ls_return c1 ch r q) (ls_return c2 ch r q)),
-        (fun ch ev -> pmap (ls_event c1 ch ev) (ls_event c2 ch ev)),
-        (fun ch ci p ->
-          (match fst p with Bot -> [p]
-            | Lifted (Product (a1, a2)) ->
-              penter (ls_enter c1 ch ci (a1, pleft_of (snd p)))
-                (ls_enter c2 ch ci (a2, pright_of (snd p))))),
-        (fun ch cha ci ->
-          pmap2 (ls_combine_env c1 ch cha ci) (ls_combine_env c2 ch cha ci)),
-        (fun ch ci ->
-          pmap2 (ls_combine_assign c1 ch ci) (ls_combine_assign c2 ch ci)),
-        ());;
-
-let rec no_spec _A kappa = spec_product (typed_exec_spec _A kappa) ord_spec;;
-
-let rec no_init _A
-  ds = Product (Lifted (tinit_st _A ds), Lifted top_order_rel);;
-
-let rec nonrel_order_run (_A1, _A2)
-  t r k ds p =
-    (if is_none
-          (tD_side_rule_Interp_solve_c
-            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-            (equal_global_unknown equal_unit (equal_list equal_cfg_node))
-            ((equal_dg_state
-               (equal_lifted
-                 (equal_analysis_product
-                   (equal_lifted
-                     (equal_toplift
-                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
-                         ((equal_kd _A1),
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                   (equal_lifted (equal_order_rel equal_var_id))))
-               (equal_lifted
-                 (equal_analysis_product
-                   (equal_lifted
-                     (equal_toplift
-                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
-                         ((equal_kd _A1),
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                   (equal_lifted (equal_order_rel equal_var_id))))),
-              (bounded_semilattice_sup_bot_dg_state
-                (bounded_semilattice_sup_bot_lifted
-                  (bounded_semilattice_sup_bot_analysis_product
-                    (bounded_semilattice_sup_bot_lifted
-                      (bounded_semilattice_sup_bot_toplift
-                        (bounded_semilattice_sup_bot_gdefault_st
-                          (infinite_key_var_id, equal_var_id)
-                          (bounded_semilattice_sup_bot_kd
-                            _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                    (bounded_semilattice_sup_bot_lifted
-                      (bounded_semilattice_sup_bot_order_rel
-                        equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot)
-                (bounded_semilattice_sup_bot_lifted
-                  (bounded_semilattice_sup_bot_analysis_product
-                    (bounded_semilattice_sup_bot_lifted
-                      (bounded_semilattice_sup_bot_toplift
-                        (bounded_semilattice_sup_bot_gdefault_st
-                          (infinite_key_var_id, equal_var_id)
-                          (bounded_semilattice_sup_bot_kd
-                            _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                    (bounded_semilattice_sup_bot_lifted
-                      (bounded_semilattice_sup_bot_order_rel
-                        equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot)),
-              (warrowing_dg_state
-                ((bounded_semilattice_sup_bot_lifted
-                   (bounded_semilattice_sup_bot_analysis_product
-                     (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_toplift
-                         (bounded_semilattice_sup_bot_gdefault_st
-                           (infinite_key_var_id, equal_var_id)
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                     (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_order_rel
-                         equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot),
-                  (warrowing_lifted
-                    ((bounded_semilattice_sup_bot_analysis_product
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_toplift
-                           (bounded_semilattice_sup_bot_gdefault_st
-                             (infinite_key_var_id, equal_var_id)
-                             (bounded_semilattice_sup_bot_kd
-                               _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_order_rel
-                           equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
-                      (warrowing_analysis_product
-                        ((bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_toplift
-                             (bounded_semilattice_sup_bot_gdefault_st
-                               (infinite_key_var_id, equal_var_id)
-                               (bounded_semilattice_sup_bot_kd
-                                 _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
-                          (warrowing_lifted
-                            ((bounded_semilattice_sup_bot_toplift
-                               (bounded_semilattice_sup_bot_gdefault_st
-                                 (infinite_key_var_id, equal_var_id)
-                                 (bounded_semilattice_sup_bot_kd
-                                   _A2.ik_domain_kind_int_domain))),
-                              (warrowing_toplift
-                                (warrowing_gdefault_st
-                                  (infinite_key_var_id, equal_var_id)
-                                  ((bounded_semilattice_sup_bot_kd
-                                     _A2.ik_domain_kind_int_domain),
-                                    (warrowing_kd
-                                      _A2.ik_domain_kind_int_domain)))))))
-                        ((bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_order_rel
-                             equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
-                          (warrowing_lifted
-                            ((bounded_semilattice_sup_bot_order_rel
-                               equal_var_id),
-                              (warrowing_order_rel equal_var_id))))))))
-                ((bounded_semilattice_sup_bot_lifted
-                   (bounded_semilattice_sup_bot_analysis_product
-                     (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_toplift
-                         (bounded_semilattice_sup_bot_gdefault_st
-                           (infinite_key_var_id, equal_var_id)
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                     (bounded_semilattice_sup_bot_lifted
-                       (bounded_semilattice_sup_bot_order_rel
-                         equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot),
-                  (warrowing_lifted
-                    ((bounded_semilattice_sup_bot_analysis_product
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_toplift
-                           (bounded_semilattice_sup_bot_gdefault_st
-                             (infinite_key_var_id, equal_var_id)
-                             (bounded_semilattice_sup_bot_kd
-                               _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_order_rel
-                           equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
-                      (warrowing_analysis_product
-                        ((bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_toplift
-                             (bounded_semilattice_sup_bot_gdefault_st
-                               (infinite_key_var_id, equal_var_id)
-                               (bounded_semilattice_sup_bot_kd
-                                 _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
-                          (warrowing_lifted
-                            ((bounded_semilattice_sup_bot_toplift
-                               (bounded_semilattice_sup_bot_gdefault_st
-                                 (infinite_key_var_id, equal_var_id)
-                                 (bounded_semilattice_sup_bot_kd
-                                   _A2.ik_domain_kind_int_domain))),
-                              (warrowing_toplift
-                                (warrowing_gdefault_st
-                                  (infinite_key_var_id, equal_var_id)
-                                  ((bounded_semilattice_sup_bot_kd
-                                     _A2.ik_domain_kind_int_domain),
-                                    (warrowing_kd
-                                      _A2.ik_domain_kind_int_domain)))))))
-                        ((bounded_semilattice_sup_bot_lifted
-                           (bounded_semilattice_sup_bot_order_rel
-                             equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
-                          (warrowing_lifted
-                            ((bounded_semilattice_sup_bot_order_rel
-                               equal_var_id),
-                              (warrowing_order_rel equal_var_id))))))))))
-            r (equations (equal_var_id, linorder_var_id)
-                (equal_texp, linorder_texp)
-                ((equal_analysis_product
-                   (equal_lifted
-                     (equal_toplift
-                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
-                         ((equal_kd _A1),
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                   (equal_lifted (equal_order_rel equal_var_id))),
-                  (semilattice_sup_analysis_product
-                    (semilattice_sup_lifted
-                      (semilattice_sup_toplift
-                        (semilattice_sup_gdefault_st
-                          (infinite_key_var_id, equal_var_id)
-                          (bounded_semilattice_sup_bot_kd
-                            _A2.ik_domain_kind_int_domain))))
-                    (semilattice_sup_lifted
-                      (semilattice_sup_order_rel equal_var_id))))
-                (equal_global_unknown equal_unit (equal_list equal_cfg_node))
-                (equal_list equal_cfg_node)
-                (fun _ _ -> no_spec _A2 (kenv_of ds)) (no_init _A2 ds)
-                (Analysis_Global ()) (fun a -> Analysis_Global a)
-                (fun a b -> Activation_Seed (a, b))
-                (fun _ u ctx _ _ -> take k (u :: ctx)) []
-                (fun _ ->
-                  dg_spec_of equal_texp
-                    (bot_lifted
-                      (semilattice_sup_analysis_product
-                        (semilattice_sup_lifted
-                          (semilattice_sup_toplift
-                            (semilattice_sup_gdefault_st
-                              (infinite_key_var_id, equal_var_id)
-                              (bounded_semilattice_sup_bot_kd
-                                _A2.ik_domain_kind_int_domain))))
-                        (semilattice_sup_lifted
-                          (semilattice_sup_order_rel equal_var_id)))))
-                (fun _ _ -> Bot) (fun _ _ -> []) (fun pa -> typed_cfg pa ds)
-                (fun _ -> FunctionEntry prog_main_name) tglobal p)
-            (cfg_exit (typed_cfg p ds), []))
-      then Typed_No_Answer
-      else Typed_Analysed
-             (map (fun (u, (c, v)) -> (u, (c, verdict_result v)))
-               (verdict_report (equal_var_id, linorder_var_id)
-                 (equal_texp, linorder_texp)
-                 ((equal_analysis_product
-                    (equal_lifted
-                      (equal_toplift
-                        (equal_gdefault_st (infinite_key_var_id, equal_var_id)
-                          ((equal_kd _A1),
-                            (bounded_semilattice_sup_bot_kd
-                              _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                    (equal_lifted (equal_order_rel equal_var_id))),
-                   (semilattice_sup_analysis_product
-                     (semilattice_sup_lifted
-                       (semilattice_sup_toplift
-                         (semilattice_sup_gdefault_st
-                           (infinite_key_var_id, equal_var_id)
-                           (bounded_semilattice_sup_bot_kd
-                             _A2.ik_domain_kind_int_domain))))
-                     (semilattice_sup_lifted
-                       (semilattice_sup_order_rel equal_var_id))))
-                 (equal_global_unknown equal_unit (equal_list equal_cfg_node))
-                 (equal_list equal_cfg_node)
-                 (fun _ _ -> no_spec _A2 (kenv_of ds))
-                 (fun _ ->
-                   no_empty
-                     (equal_toplift
-                       (equal_gdefault_st (infinite_key_var_id, equal_var_id)
-                         ((equal_kd _A1),
-                           (order_bot_kd _A2.ik_domain_kind_int_domain))))
-                     (equal_order_rel equal_var_id))
-                 (no_readback _A2) (no_init _A2 ds) (Analysis_Global ())
-                 (fun a -> Analysis_Global a)
-                 (fun a b -> Activation_Seed (a, b))
-                 (fun _ u ctx _ _ -> take k (u :: ctx)) []
-                 (tD_side_rule_Interp_solve
-                   (equal_prod equal_cfg_node (equal_list equal_cfg_node))
-                   (equal_global_unknown equal_unit (equal_list equal_cfg_node))
-                   ((equal_dg_state
-                      (equal_lifted
-                        (equal_analysis_product
-                          (equal_lifted
-                            (equal_toplift
-                              (equal_gdefault_st
-                                (infinite_key_var_id, equal_var_id)
-                                ((equal_kd _A1),
-                                  (bounded_semilattice_sup_bot_kd
-                                    _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                          (equal_lifted (equal_order_rel equal_var_id))))
-                      (equal_lifted
-                        (equal_analysis_product
-                          (equal_lifted
-                            (equal_toplift
-                              (equal_gdefault_st
-                                (infinite_key_var_id, equal_var_id)
-                                ((equal_kd _A1),
-                                  (bounded_semilattice_sup_bot_kd
-                                    _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
-                          (equal_lifted (equal_order_rel equal_var_id))))),
-                     (bounded_semilattice_sup_bot_dg_state
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_analysis_product
-                           (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_toplift
-                               (bounded_semilattice_sup_bot_gdefault_st
-                                 (infinite_key_var_id, equal_var_id)
-                                 (bounded_semilattice_sup_bot_kd
-                                   _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                           (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_order_rel
-                               equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot)
-                       (bounded_semilattice_sup_bot_lifted
-                         (bounded_semilattice_sup_bot_analysis_product
-                           (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_toplift
-                               (bounded_semilattice_sup_bot_gdefault_st
-                                 (infinite_key_var_id, equal_var_id)
-                                 (bounded_semilattice_sup_bot_kd
-                                   _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                           (bounded_semilattice_sup_bot_lifted
-                             (bounded_semilattice_sup_bot_order_rel
-                               equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot)),
-                     (warrowing_dg_state
-                       ((bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_analysis_product
-                            (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_toplift
-                                (bounded_semilattice_sup_bot_gdefault_st
-                                  (infinite_key_var_id, equal_var_id)
-                                  (bounded_semilattice_sup_bot_kd
-                                    _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                            (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_order_rel
-                                equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot),
-                         (warrowing_lifted
-                           ((bounded_semilattice_sup_bot_analysis_product
-                              (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_toplift
-                                  (bounded_semilattice_sup_bot_gdefault_st
-                                    (infinite_key_var_id, equal_var_id)
-                                    (bounded_semilattice_sup_bot_kd
-                                      _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                              (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_order_rel
-                                  equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
-                             (warrowing_analysis_product
-                               ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_toplift
-                                    (bounded_semilattice_sup_bot_gdefault_st
-                                      (infinite_key_var_id, equal_var_id)
-                                      (bounded_semilattice_sup_bot_kd
-_A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
-                                 (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_toplift
-                                      (bounded_semilattice_sup_bot_gdefault_st
-(infinite_key_var_id, equal_var_id)
-(bounded_semilattice_sup_bot_kd _A2.ik_domain_kind_int_domain))),
-                                     (warrowing_toplift
-                                       (warrowing_gdefault_st
- (infinite_key_var_id, equal_var_id)
- ((bounded_semilattice_sup_bot_kd _A2.ik_domain_kind_int_domain),
-   (warrowing_kd _A2.ik_domain_kind_int_domain)))))))
-                               ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_order_rel
-                                    equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
-                                 (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_order_rel
-                                      equal_var_id),
-                                     (warrowing_order_rel equal_var_id))))))))
-                       ((bounded_semilattice_sup_bot_lifted
-                          (bounded_semilattice_sup_bot_analysis_product
-                            (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_toplift
-                                (bounded_semilattice_sup_bot_gdefault_st
-                                  (infinite_key_var_id, equal_var_id)
-                                  (bounded_semilattice_sup_bot_kd
-                                    _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                            (bounded_semilattice_sup_bot_lifted
-                              (bounded_semilattice_sup_bot_order_rel
-                                equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)).semilattice_sup_bounded_semilattice_sup_bot),
-                         (warrowing_lifted
-                           ((bounded_semilattice_sup_bot_analysis_product
-                              (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_toplift
-                                  (bounded_semilattice_sup_bot_gdefault_st
-                                    (infinite_key_var_id, equal_var_id)
-                                    (bounded_semilattice_sup_bot_kd
-                                      _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
-                              (bounded_semilattice_sup_bot_lifted
-                                (bounded_semilattice_sup_bot_order_rel
-                                  equal_var_id).semilattice_sup_bounded_semilattice_sup_bot)),
-                             (warrowing_analysis_product
-                               ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_toplift
-                                    (bounded_semilattice_sup_bot_gdefault_st
-                                      (infinite_key_var_id, equal_var_id)
-                                      (bounded_semilattice_sup_bot_kd
-_A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
-                                 (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_toplift
-                                      (bounded_semilattice_sup_bot_gdefault_st
-(infinite_key_var_id, equal_var_id)
-(bounded_semilattice_sup_bot_kd _A2.ik_domain_kind_int_domain))),
-                                     (warrowing_toplift
-                                       (warrowing_gdefault_st
- (infinite_key_var_id, equal_var_id)
- ((bounded_semilattice_sup_bot_kd _A2.ik_domain_kind_int_domain),
-   (warrowing_kd _A2.ik_domain_kind_int_domain)))))))
-                               ((bounded_semilattice_sup_bot_lifted
-                                  (bounded_semilattice_sup_bot_order_rel
-                                    equal_var_id).semilattice_sup_bounded_semilattice_sup_bot),
-                                 (warrowing_lifted
-                                   ((bounded_semilattice_sup_bot_order_rel
-                                      equal_var_id),
-                                     (warrowing_order_rel equal_var_id))))))))))
-                   r)
-                 (no_classify _A2 (kenv_of ds))
-                 (fun _ ->
-                   dg_spec_of equal_texp
-                     (bot_lifted
-                       (semilattice_sup_analysis_product
-                         (semilattice_sup_lifted
-                           (semilattice_sup_toplift
-                             (semilattice_sup_gdefault_st
-                               (infinite_key_var_id, equal_var_id)
-                               (bounded_semilattice_sup_bot_kd
-                                 _A2.ik_domain_kind_int_domain))))
-                         (semilattice_sup_lifted
-                           (semilattice_sup_order_rel equal_var_id)))))
-                 (fun _ d _ -> d) (fun _ _ -> Bot) (fun _ _ -> [])
-                 (fun pa -> typed_cfg pa ds)
-                 (fun _ -> FunctionEntry prog_main_name) tglobal p)));;
-
-let rec run_with_order
-  d r k ds p =
-    (match d
-      with Typed_Interval ->
-        nonrel_order_run (equal_ivl, kind_int_domain_ivl) Type r k ds p
-      | Typed_Congruence ->
-        nonrel_order_run (equal_congruence, kind_int_domain_congruence) Type r k
-          ds p
-      | Typed_Int ->
-        nonrel_order_run (equal_int_tuple, kind_int_domain_int_tuple) Type r k
-          ds p
-      | Typed_Order -> order_run r ds p
-      | Typed_Sign ->
-        nonrel_order_run (equal_sign, kind_int_domain_sign) Type r k ds p
-      | Typed_Parity ->
-        nonrel_order_run (equal_parity, kind_int_domain_parity) Type r k ds p);;
-
 let rec run_typed
   asa r cx ds p =
     (if not (wf_program_compile_input_exec p) then Typed_Malformed
-      else (match (asa, cx) with ([], _) -> Typed_Unsupported
-             | ([Typed_Interval], _) -> run_one Typed_Interval r cx ds p
-             | (Typed_Interval :: Typed_Interval :: _, _) -> Typed_Unsupported
-             | (Typed_Interval :: Typed_Congruence :: _, _) -> Typed_Unsupported
-             | (Typed_Interval :: Typed_Int :: _, _) -> Typed_Unsupported
-             | ([Typed_Interval; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Interval r k ds p
-             | ([Typed_Interval; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Interval :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
-             | (Typed_Interval :: Typed_Sign :: _, _) -> Typed_Unsupported
-             | (Typed_Interval :: Typed_Parity :: _, _) -> Typed_Unsupported
-             | ([Typed_Congruence], _) -> run_one Typed_Congruence r cx ds p
-             | (Typed_Congruence :: Typed_Interval :: _, _) -> Typed_Unsupported
-             | (Typed_Congruence :: Typed_Congruence :: _, _) ->
-               Typed_Unsupported
-             | (Typed_Congruence :: Typed_Int :: _, _) -> Typed_Unsupported
-             | ([Typed_Congruence; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Congruence r k ds p
-             | ([Typed_Congruence; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Congruence :: Typed_Order :: _ :: _, _) ->
-               Typed_Unsupported
-             | (Typed_Congruence :: Typed_Sign :: _, _) -> Typed_Unsupported
-             | (Typed_Congruence :: Typed_Parity :: _, _) -> Typed_Unsupported
-             | ([Typed_Int], _) -> run_one Typed_Int r cx ds p
-             | (Typed_Int :: Typed_Interval :: _, _) -> Typed_Unsupported
-             | (Typed_Int :: Typed_Congruence :: _, _) -> Typed_Unsupported
-             | (Typed_Int :: Typed_Int :: _, _) -> Typed_Unsupported
-             | ([Typed_Int; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Int r k ds p
-             | ([Typed_Int; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Int :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
-             | (Typed_Int :: Typed_Sign :: _, _) -> Typed_Unsupported
-             | (Typed_Int :: Typed_Parity :: _, _) -> Typed_Unsupported
-             | ([Typed_Order], _) -> run_one Typed_Order r cx ds p
-             | ([Typed_Order; Typed_Interval], Typed_Call_String k) ->
-               run_with_order Typed_Interval r k ds p
-             | ([Typed_Order; Typed_Interval], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Interval :: _ :: _, _) -> Typed_Unsupported
-             | ([Typed_Order; Typed_Congruence], Typed_Call_String k) ->
-               run_with_order Typed_Congruence r k ds p
-             | ([Typed_Order; Typed_Congruence], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Congruence :: _ :: _, _) ->
-               Typed_Unsupported
-             | ([Typed_Order; Typed_Int], Typed_Call_String k) ->
-               run_with_order Typed_Int r k ds p
-             | ([Typed_Order; Typed_Int], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Int :: _ :: _, _) -> Typed_Unsupported
-             | ([Typed_Order; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Order r k ds p
-             | ([Typed_Order; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
-             | ([Typed_Order; Typed_Sign], Typed_Call_String k) ->
-               run_with_order Typed_Sign r k ds p
-             | ([Typed_Order; Typed_Sign], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Sign :: _ :: _, _) -> Typed_Unsupported
-             | ([Typed_Order; Typed_Parity], Typed_Call_String k) ->
-               run_with_order Typed_Parity r k ds p
-             | ([Typed_Order; Typed_Parity], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Order :: Typed_Parity :: _ :: _, _) -> Typed_Unsupported
-             | ([Typed_Sign], _) -> run_one Typed_Sign r cx ds p
-             | (Typed_Sign :: Typed_Interval :: _, _) -> Typed_Unsupported
-             | (Typed_Sign :: Typed_Congruence :: _, _) -> Typed_Unsupported
-             | (Typed_Sign :: Typed_Int :: _, _) -> Typed_Unsupported
-             | ([Typed_Sign; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Sign r k ds p
-             | ([Typed_Sign; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Sign :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
-             | (Typed_Sign :: Typed_Sign :: _, _) -> Typed_Unsupported
-             | (Typed_Sign :: Typed_Parity :: _, _) -> Typed_Unsupported
-             | ([Typed_Parity], _) -> run_one Typed_Parity r cx ds p
-             | (Typed_Parity :: Typed_Interval :: _, _) -> Typed_Unsupported
-             | (Typed_Parity :: Typed_Congruence :: _, _) -> Typed_Unsupported
-             | (Typed_Parity :: Typed_Int :: _, _) -> Typed_Unsupported
-             | ([Typed_Parity; Typed_Order], Typed_Call_String k) ->
-               run_with_order Typed_Parity r k ds p
-             | ([Typed_Parity; Typed_Order], Typed_Entry_State) ->
-               Typed_Unsupported
-             | (Typed_Parity :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
-             | (Typed_Parity :: Typed_Sign :: _, _) -> Typed_Unsupported
-             | (Typed_Parity :: Typed_Parity :: _, _) -> Typed_Unsupported));;
+      else (match cx with Typed_Call_String k -> mcp_run asa r k ds p
+             | Typed_Entry_State ->
+               (match asa with [] -> Typed_Unsupported
+                 | [d] -> run_one d r cx ds p
+                 | _ :: _ :: _ -> Typed_Unsupported)));;
 
 let rec value_answer
   (Analysis_registration_ext
@@ -13269,10 +14876,6 @@ let rec ls_assign_update
           ls_body, ls_return, ls_event, ls_enter, ls_combine_env,
           ls_combine_assign, more);;
 
-let rec answer_const = function QLifted d -> int_dom_constant d
-                       | QBot -> None
-                       | QTop -> None;;
-
 let rec assign_ask
   asn ch x e d =
     (match answer_const (ch (EvalInt e)) with None -> asn ch x e d
@@ -14742,18 +16345,6 @@ bounded_lattice_unit))),
   Order_Analysis
                                       then top_relc else bot_relca))))))));;
 
-let rec mcp_en_from
-  cs ch ci p = fold (fun c -> maps (ls_enter c ch ci)) cs [p];;
-
-let rec mcp_combine
-  = function [c] -> c
-    | [] -> make_local_spec (mcp_qry []) (mcp_step []) (mcp_en_from [])
-              (mcp_comb []) (fun _ _ dc _ -> dc)
-    | v :: vb :: vc ->
-        make_local_spec (mcp_qry (v :: vb :: vc)) (mcp_step (v :: vb :: vc))
-          (mcp_en_from (v :: vb :: vc)) (mcp_comb (v :: vb :: vc))
-          (fun _ _ dc _ -> dc);;
-
 let rec cfg_node_list (_A1, _A2) (_B1, _B2)
   g = remdups equal_cfg_node
         (maps (fun (u, (_, v)) -> [u; v])
@@ -14761,12 +16352,6 @@ let rec cfg_node_list (_A1, _A2) (_B1, _B2)
           maps (fun (u, (_, (ce, after))) -> [u; ce; after])
             (cfg_calls_list (_A1, _A2) (_B1, _B2) g) @
             [cfg_entry g]);;
-
-let rec map_local_spec
-  k c = make_local_spec (ls_query c) (fun ch a x -> k (ls_step c ch a x))
-          (fun ch ci p -> map (fun (q, e) -> (q, k e)) (ls_enter c ch ci p))
-          (ls_combine_env c)
-          (fun ch ci x de -> k (ls_combine_assign c ch ci x de));;
 
 let rec field_spec
   (Analysis_registration_ext
@@ -18030,25 +19615,6 @@ let rec entry_ctx_key
 
 let rec check_truth_exp
   c = (if bool_valued c then c else NotEq (c, N zero_inta));;
-
-let rec classify_answer
-  = function QBot -> Bot
-    | QLifted v ->
-        (if equal_option equal_int (answer_const (QLifted v)) (Some one_inta)
-          then Lifted Check_Proved
-          else (if equal_option equal_int (answer_const (QLifted v))
-                     (Some zero_inta)
-                 then Lifted Check_Refuted else Lifted Check_Unknown))
-    | QTop ->
-        (if equal_option equal_int (answer_const QTop) (Some one_inta)
-          then Lifted Check_Proved
-          else (if equal_option equal_int (answer_const QTop) (Some zero_inta)
-                 then Lifted Check_Refuted else Lifted Check_Unknown));;
-
-let rec answer_check
-  tx q c v =
-    (match classify_answer (q v (EvalInt (tx c))) with Bot -> Check_Unknown
-      | Lifted r -> r);;
 
 let rec mcp_classify asa = answer_check check_truth_exp (mcp_ask asa);;
 

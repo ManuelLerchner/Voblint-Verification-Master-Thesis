@@ -37,10 +37,10 @@ CASES = [
         "01-cooperation.vimp:6:5: unknown",
     ),
     (
-        "--typed rejects a combination it cannot run",
-        ["--typed", "interval,sign", COOP_FILE],
+        "--typed rejects several analyses at entry-state contexts",
+        ["--typed", "interval,sign", "--context", "entry-state", COOP_FILE],
         1,
-        "--typed runs one analysis, or one with order",
+        "--typed runs several analyses at call-string contexts only",
     ),
     (
         # Entry state separates f(100, 0) from f(0, 100): y is exactly 0 there.

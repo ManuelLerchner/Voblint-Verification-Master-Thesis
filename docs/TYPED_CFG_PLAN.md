@@ -330,17 +330,19 @@ and the globals placement at `var_id`/`texp` with the typed domains.
 
 ### Stage 6 order
 
-Landed: one solve for two components (`spec_product`), `EvalInt` queries consulted by every
-typed transfer and met across components, the Interval–Order cooperation regression, and
-`run_typed` over an activation list (one analysis, or a non-relational domain with order).
+Landed: `EvalInt` queries consulted by every typed transfer; typed entry-state contexts
+for one non-relational analysis (`typed_nonrel_es`); the language-generic registry
+`mcp_registry`, which the untyped analyses and the typed analyses (`Typed_Carrier`) both
+interpret, so any activated list runs as one component with one soundness proof;
+`typed_mcp`, the typed registry in the certified pipeline at call-string contexts, with
+`typed_mcp_verdict_sound`; `run_typed` over an activation list; and the Interval–Order
+cooperation regression reproduced through the registry.
 
 Remaining, in this order:
 
-1. Typed entry-state contexts, reusing the routed-context and collecting-soundness
-   theorems the untyped entry-state instances use.
-2. `spec_product` generalized to finite lists of components, sound by induction over the
-   list; a component's answer is met once, and activation order does not change the
-   result beyond scheduling and widening.
+1. The registry's entry-state route on the typed path, so several analyses run at
+   entry-state contexts.
+2. (done: the n-ary combination is the shared registry.)
 3. `run_voblint` on the typed pipeline, with the public end-to-end theorem covering the
    executable result; the untyped entry point stays under a legacy name until stage 7.
 4. CLI parity on the typed path: JSON, HTML, graph snapshots, relational witnesses.

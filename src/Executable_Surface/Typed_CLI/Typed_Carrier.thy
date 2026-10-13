@@ -1,5 +1,5 @@
 theory Typed_Carrier
-  imports Typed_Run "Voblint_Framework.MCP_Registry"
+  imports Typed_Run "Voblint_Framework.MCP_Registry" "Voblint_Framework.Local_Spec_Product"
 begin
 
 section \<open>The combined state of the typed analyses\<close>

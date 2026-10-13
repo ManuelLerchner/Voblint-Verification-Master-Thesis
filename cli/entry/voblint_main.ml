@@ -43,7 +43,7 @@ let usage =
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order|sign|parity[,order] [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
+   voblint --typed interval|congruence|int|order|sign|parity[,...] [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -454,7 +454,7 @@ let run_typed_and_exit path stmt_positions domain rule context =
       exit 3
   | C.Typed_Unsupported ->
       prerr_endline
-        "voblint: --typed runs one analysis, or one with order at call strings";
+        "voblint: --typed runs several analyses at call-string contexts only";
       exit 1
   | C.Typed_No_Answer ->
       prerr_endline "voblint: the solver returned no answer";

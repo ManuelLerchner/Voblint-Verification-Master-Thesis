@@ -239,19 +239,20 @@ integral subexpression it evaluates and replaces the value by the answer
 `eval_rv_no_ask_evalint`, which does not ask the outermost expression back. MCP meets
 the answers of all analyses and answers top on a query cycle. `taeval_ask` and `taeval`
 in `src/Analyses/Typed_Nonrel/Typed_Nonrel.thy` follow this, and every typed transfer
-evaluates through the channel it receives; `spec_product`
-(`src/Analyses/Typed_Nonrel/Spec_Product.thy`) meets its components' answers, and
-`ask_rec` answers top on a cycle. One difference: on a top answer Goblint uses
+evaluates through the channel it receives. The activated analyses, typed and untyped
+alike, run as one through `mcp_registry`
+(`src/Abstract_Interpreter/Framework/Cooperation/MCP_Registry.thy`), which meets their
+answers, and `ask_rec` answers top on a cycle. One difference: on a top answer Goblint uses
 `top_of ik`, while `taeval_ask` falls back to its own evaluation, which is sound and at
 least as precise. The order component answers `EvalInt` of a comparison between two
 variables from its own facts and asks nobody, as `varEq.ml` (line 595) and
 `expRelation.ml` (lines 53–70) answer comparisons; it has no Goblint counterpart as an
 analysis. `relationAnalysis.apron.ml` answers `EvalInt` from its own state (line 646)
 and uses `EvalInt` answers only to convert casts and check overflow
-(`sharedFunctions.apron.ml`, lines 110–125). A check in the product
-(`src/Analyses/Typed_Order/Nonrel_Order_Product.thy`) is decided by asking the
-product, as `assert.ml` (line 21) decides through `Queries.eval_bool`, which asks
-`EvalInt` of the condition cast to `_Bool` (`queries.ml`, lines 537–541).
+(`sharedFunctions.apron.ml`, lines 110–125). A check is decided by asking the
+registry through the channel it closes over itself (`mcp_classify`), as `assert.ml`
+(line 21) decides through `Queries.eval_bool`, which asks `EvalInt` of the condition
+cast to `_Bool` (`queries.ml`, lines 537–541).
 
 ## Boundary examples
 

@@ -161,4 +161,78 @@ qed
 
 end
 
+section \<open>The typed entry point\<close>
+
+text \<open>
+  The experimental typed counterpart of \<open>run_voblint\<close>: it analyzes a program under its
+  kind declarations with the activated typed analyses, as Goblint's \<^verbatim>\<open>ana.activated\<close>
+  selects them, and answers the verdicts of the program's checks. At call-string contexts
+  the active analyses run as one through the registry, each asking the others through
+  \<open>EvalInt\<close>. At entry-state contexts one non-relational analysis runs alone; the
+  registry's entry-state route is not there yet. The entry point sits beside the untyped
+  one, which analyzes the lowered program, so the two can be compared on the same input.
+\<close>
+
+definition mcp_run ::
+    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "mcp_run as r k ds p =
+     (if TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+           (cfg_exit (typed_cfg p ds), []) = None
+      then Typed_No_Answer
+      else Typed_Analysed (map (\<lambda>(u, c, v). (u, c, verdict_result v))
+             (typed_mcp.verdict_report ds as k r tglobal p)))"
+
+definition run_typed ::
+    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "run_typed as r cx ds p =
+     (if \<not> wf_program_compile_input_exec p then Typed_Malformed
+      else case cx of
+        Typed_Call_String k \<Rightarrow> mcp_run as r k ds p
+      | Typed_Entry_State \<Rightarrow> (case as of [d] \<Rightarrow> run_one d r cx ds p | _ \<Rightarrow> Typed_Unsupported))"
+
+lemma mcp_run_sound:
+  assumes wf: "wf_program_compile_input p"
+  shows "run_sound (mcp_run as r k ds p) ds p"
+proof (intro allI impI)
+  fix rs v c res
+  assume run: "mcp_run as r k ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
+  have solved: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+      (cfg_exit (typed_cfg p ds), []) \<noteq> None"
+    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v)) (typed_mcp.verdict_report ds as k r tglobal p)"
+    using run by (simp_all add: mcp_run_def split: if_splits)
+  have stops: "typed_mcp.terminates ds as k r tglobal p"
+    unfolding typed_mcp.terminates_code
+    using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
+  obtain w where w: "(v, c, w) \<in> set (typed_mcp.verdict_report ds as k r tglobal p)"
+    and res: "res = verdict_result w"
+    using mem rs by auto
+  show "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
+       \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
+  proof (cases w)
+    case (Lifted r')
+    then show ?thesis
+      using typed_mcp_verdict_sound[OF wf stops, of v c r'] w res
+      by (auto simp: verdict_result_def)
+  qed (simp add: res verdict_result_def)
+qed
+
+theorem run_typed_sound:
+  assumes run: "run_typed as r cx ds p = Typed_Analysed rs"
+    and mem: "(v, c, res) \<in> set rs"
+  shows run_typed_proved_sound:
+      "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
+    and run_typed_refuted_sound:
+      "res = Check_Refuted \<Longrightarrow> \<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)"
+proof -
+  have exec: "wf_program_compile_input_exec p"
+    using run by (simp add: run_typed_def split: if_splits)
+  note wf = wf_program_compile_input_exec_sound[OF exec]
+  have "run_sound (run_typed as r cx ds p) ds p"
+    using run_one_sound[OF wf] mcp_run_sound[OF wf] exec
+    by (simp add: run_typed_def split: list.splits typed_context.splits)
+  then show "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
+    and "res = Check_Refuted \<Longrightarrow> \<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)"
+    using run mem by blast+
+qed
+
 end
