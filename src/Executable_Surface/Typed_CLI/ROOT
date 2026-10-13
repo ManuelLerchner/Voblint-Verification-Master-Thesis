@@ -10,3 +10,4 @@ session Voblint_Typed_CLI in "." = "Voblint_Typed_Int" +
   theories
     Typed_Run
     Typed_Run_Regression
+    Cooperation_Regression

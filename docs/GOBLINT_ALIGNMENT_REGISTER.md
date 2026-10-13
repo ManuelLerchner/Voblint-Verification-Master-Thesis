@@ -233,6 +233,26 @@ such a class at the first operation (`odd_step_prog` in
 unequal. `narrow` is the meet, as in Goblint; widening is the join. Shifts and bitwise
 operations are not part of the typed language.
 
+**Queries between analyses.** `base.ml` asks `EvalInt` for every non-constant
+integral subexpression it evaluates and replaces the value by the answer
+(`eval_rv_ask_evalint`, lines 803–825); it answers `EvalInt` itself through
+`eval_rv_no_ask_evalint`, which does not ask the outermost expression back. MCP meets
+the answers of all analyses and answers top on a query cycle. `taeval_ask` and `taeval`
+in `src/Analyses/Typed_Nonrel/Typed_Nonrel.thy` follow this, and every typed transfer
+evaluates through the channel it receives; `spec_product`
+(`src/Analyses/Typed_Nonrel/Spec_Product.thy`) meets its components' answers, and
+`ask_rec` answers top on a cycle. One difference: on a top answer Goblint uses
+`top_of ik`, while `taeval_ask` falls back to its own evaluation, which is sound and at
+least as precise. The order component answers `EvalInt` of a comparison between two
+variables from its own facts and asks nobody, as `varEq.ml` (line 595) and
+`expRelation.ml` (lines 53–70) answer comparisons; it has no Goblint counterpart as an
+analysis. `relationAnalysis.apron.ml` answers `EvalInt` from its own state (line 646)
+and uses `EvalInt` answers only to convert casts and check overflow
+(`sharedFunctions.apron.ml`, lines 110–125). A check in the product
+(`src/Analyses/Typed_Order/Nonrel_Order_Product.thy`) is decided by asking the
+product, as `assert.ml` (line 21) decides through `Queries.eval_bool`, which asks
+`EvalInt` of the condition cast to `_Bool` (`queries.ml`, lines 537–541).
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration
