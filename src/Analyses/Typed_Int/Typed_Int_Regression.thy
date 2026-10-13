@@ -8,12 +8,12 @@ definition it_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" w
   "it_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
 
 abbreviation it_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> int_tuple tabs toplift" where
-  "it_state_at ds p \<equiv> typed_nonrel.state_at ds Globals_Join tglobal p ()"
+  "it_state_at ds p \<equiv> typed_nonrel.state_at ds 0 Globals_Join tglobal p []"
 
-abbreviation it_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> unit \<Rightarrow>
-    (cfg_node \<times> unit, (unit, unit) global_unknown,
+abbreviation it_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
+    (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
      (int_tuple tst toplift lifted, int_tuple tst toplift lifted) dg_state) strategy_tree" where
-  "it_equations ds p \<equiv> typed_nonrel.equations ds tglobal p"
+  "it_equations ds p \<equiv> typed_nonrel.equations ds 0 tglobal p"
 
 abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
@@ -37,11 +37,11 @@ definition odd_step_prog :: imp_prog where
 
 lemma odd_step_terminates_c:
   "TD_side_rule_Interp_solve_c Globals_Join (it_equations [] odd_step_prog)
-     (cfg_exit (typed_cfg odd_step_prog []), ()) \<noteq> None"
+     (cfg_exit (typed_cfg odd_step_prog []), []) \<noteq> None"
   by eval
 
 lemma odd_step_terminates:
-  "typed_nonrel.terminates TYPE(int_tuple) [] Globals_Join tglobal odd_step_prog"
+  "typed_nonrel.terminates TYPE(int_tuple) [] 0 Globals_Join tglobal odd_step_prog"
   unfolding typed_nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF odd_step_terminates_c] by simp
 

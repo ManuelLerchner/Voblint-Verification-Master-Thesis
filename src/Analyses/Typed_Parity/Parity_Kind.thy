@@ -140,7 +140,7 @@ definition parity_prog :: imp_prog where
      fun main() { f(); } }"
 
 lemma parity_value:
-  "(case typed_nonrel.state_at [(ScopedId (STR ''f'') (STR ''x''), U8)] Globals_Join tglobal parity_prog ()
+  "(case typed_nonrel.state_at [(ScopedId (STR ''f'') (STR ''x''), U8)] 0 Globals_Join tglobal parity_prog []
           (Statement 1) of
       TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> (ScopedId (STR ''f'') (STR ''x'')))
      = KD U8 PEven"

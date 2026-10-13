@@ -20,21 +20,26 @@ datatype typed_answer =
   | Typed_No_Answer
   | Typed_Analysed "(pp \<times> texp \<times> check_result) list"
 
-type_synonym 's typed_eqs =
-  "cfg_node \<times> unit \<Rightarrow> (cfg_node \<times> unit, (unit, unit) global_unknown,
+type_synonym ('c, 's) typed_eqs =
+  "cfg_node \<times> 'c \<Rightarrow> (cfg_node \<times> 'c, (unit, 'c) global_unknown,
      ('s lifted, 's lifted) dg_state) strategy_tree"
+
+text \<open>The non-relational analyses run without call strings, at bound \<open>0\<close> and the empty
+  root context; the order analysis runs at the unit context.\<close>
 
 definition nonrel_run ::
     "'a::kind_int_domain itself \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
   "nonrel_run T r ds p =
-     (if TD_side_rule_Interp_solve_c r (typed_nonrel.equations ds tglobal p :: 'a tst toplift typed_eqs)
-           (cfg_exit (typed_cfg p ds), ()) = None
+     (if TD_side_rule_Interp_solve_c r
+           (typed_nonrel.equations ds 0 tglobal p :: (cfg_node list, 'a tst toplift) typed_eqs)
+           (cfg_exit (typed_cfg p ds), []) = None
       then Typed_No_Answer
-      else Typed_Analysed (typed_nonrel.report TYPE('a) ds r tglobal p ()))"
+      else Typed_Analysed (typed_nonrel.report TYPE('a) ds 0 r tglobal p []))"
 
 definition order_run :: "globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
   "order_run r ds p =
-     (if TD_side_rule_Interp_solve_c r (typed_order.equations ds tglobal p :: var_id order_rel typed_eqs)
+     (if TD_side_rule_Interp_solve_c r
+           (typed_order.equations ds tglobal p :: (unit, var_id order_rel) typed_eqs)
            (cfg_exit (typed_cfg p ds), ()) = None
       then Typed_No_Answer
       else Typed_Analysed (typed_order.report r ds tglobal p ()))"
@@ -66,11 +71,12 @@ lemma nonrel_run_sound:
   shows "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
        \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
 proof -
-  have solved: "TD_side_rule_Interp_solve_c r (typed_nonrel.equations ds tglobal p :: 'a tst toplift typed_eqs)
-      (cfg_exit (typed_cfg p ds), ()) \<noteq> None"
-    and rs: "rs = typed_nonrel.report TYPE('a) ds r tglobal p ()"
+  have solved: "TD_side_rule_Interp_solve_c r
+      (typed_nonrel.equations ds 0 tglobal p :: (cfg_node list, 'a tst toplift) typed_eqs)
+      (cfg_exit (typed_cfg p ds), []) \<noteq> None"
+    and rs: "rs = typed_nonrel.report TYPE('a) ds 0 r tglobal p []"
     using run by (simp_all add: nonrel_run_def split: if_splits)
-  have stops: "typed_nonrel.terminates TYPE('a) ds r tglobal p"
+  have stops: "typed_nonrel.terminates TYPE('a) ds 0 r tglobal p"
     unfolding typed_nonrel.terminates_code
     using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
   show ?thesis
@@ -85,7 +91,8 @@ lemma order_run_sound:
   shows "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
        \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
 proof -
-  have solved: "TD_side_rule_Interp_solve_c r (typed_order.equations ds tglobal p :: var_id order_rel typed_eqs)
+  have solved: "TD_side_rule_Interp_solve_c r
+      (typed_order.equations ds tglobal p :: (unit, var_id order_rel) typed_eqs)
       (cfg_exit (typed_cfg p ds), ()) \<noteq> None"
     and rs: "rs = typed_order.report r ds tglobal p ()"
     using run by (simp_all add: order_run_def split: if_splits)

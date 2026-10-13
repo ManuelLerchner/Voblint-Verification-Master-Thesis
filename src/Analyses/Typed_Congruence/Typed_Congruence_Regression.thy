@@ -8,7 +8,7 @@ definition ct_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" w
   "ct_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
 
 abbreviation cong_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> congruence tabs toplift" where
-  "cong_state_at ds p \<equiv> typed_nonrel.state_at ds Globals_Join tglobal p ()"
+  "cong_state_at ds p \<equiv> typed_nonrel.state_at ds 0 Globals_Join tglobal p []"
 
 abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
@@ -17,10 +17,10 @@ abbreviation f_result :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> vname 
   "f_result ds p x \<equiv> ct_at (cong_state_at ds p (FunctionResult (STR ''f''))) (f_var x)"
 
 
-abbreviation cong_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> unit \<Rightarrow>
-    (cfg_node \<times> unit, (unit, unit) global_unknown,
+abbreviation cong_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
+    (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
      (congruence tst toplift lifted, congruence tst toplift lifted) dg_state) strategy_tree" where
-  "cong_equations ds p \<equiv> typed_nonrel.equations ds tglobal p"
+  "cong_equations ds p \<equiv> typed_nonrel.equations ds 0 tglobal p"
 
 subsection \<open>Constants\<close>
 
@@ -56,10 +56,10 @@ definition odd_step_prog :: imp_prog where
 
 lemma pow2_terminates_c:
   "TD_side_rule_Interp_solve_c Globals_Join (cong_equations [] pow2_prog)
-     (cfg_exit (typed_cfg pow2_prog []), ()) \<noteq> None"
+     (cfg_exit (typed_cfg pow2_prog []), []) \<noteq> None"
   by eval
 
-lemma pow2_terminates: "typed_nonrel.terminates TYPE(congruence) [] Globals_Join tglobal pow2_prog"
+lemma pow2_terminates: "typed_nonrel.terminates TYPE(congruence) [] 0 Globals_Join tglobal pow2_prog"
   unfolding typed_nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF pow2_terminates_c] by simp
 

@@ -9917,8 +9917,9 @@ let rec typed_exec_spec _A
 let rec nonrel_run (_A1, _A2)
   t r ds p =
     (if is_none
-          (tD_side_rule_Interp_solve_c (equal_prod equal_cfg_node equal_unit)
-            (equal_global_unknown equal_unit equal_unit)
+          (tD_side_rule_Interp_solve_c
+            (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+            (equal_global_unknown equal_unit (equal_list equal_cfg_node))
             ((equal_dg_state
                (equal_lifted
                  (equal_toplift
@@ -9994,10 +9995,12 @@ let rec nonrel_run (_A1, _A2)
                       (infinite_key_var_id, equal_var_id)
                       (bounded_semilattice_sup_bot_kd
                         _A2.ik_domain_kind_int_domain))))
-                (equal_global_unknown equal_unit equal_unit) equal_unit
+                (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+                (equal_list equal_cfg_node)
                 (fun _ _ -> typed_exec_spec _A2 (kenv_of ds)) (tinit_st _A2 ds)
                 (Analysis_Global ()) (fun a -> Analysis_Global a)
-                (fun a b -> Activation_Seed (a, b)) (fun _ _ _ _ _ -> ()) ()
+                (fun a b -> Activation_Seed (a, b))
+                (fun _ u ctx _ _ -> take zero_nat (u :: ctx)) []
                 (fun _ ->
                   dg_spec_of equal_texp
                     (bot_lifted
@@ -10008,7 +10011,7 @@ let rec nonrel_run (_A1, _A2)
                             _A2.ik_domain_kind_int_domain)))))
                 (fun _ _ -> Bot) (fun _ _ -> []) (fun pa -> typed_cfg pa ds)
                 (fun _ -> FunctionEntry prog_main_name) tglobal p)
-            (cfg_exit (typed_cfg p ds), ()))
+            (cfg_exit (typed_cfg p ds), []))
       then Typed_No_Answer
       else Typed_Analysed
              (report (equal_var_id, linorder_var_id) (equal_texp, linorder_texp)
@@ -10022,7 +10025,8 @@ let rec nonrel_run (_A1, _A2)
                      (infinite_key_var_id, equal_var_id)
                      (bounded_semilattice_sup_bot_kd
                        _A2.ik_domain_kind_int_domain))))
-               (equal_global_unknown equal_unit equal_unit) equal_unit
+               (equal_global_unknown equal_unit (equal_list equal_cfg_node))
+               (equal_list equal_cfg_node)
                (fun _ _ -> typed_exec_spec _A2 (kenv_of ds))
                (fun _ -> tst_empty _A2)
                (fun g ->
@@ -10031,9 +10035,10 @@ let rec nonrel_run (_A1, _A2)
                      (bot_kd _A2.ik_domain_kind_int_domain) g))
                (tinit_st _A2 ds) (Analysis_Global ())
                (fun a -> Analysis_Global a) (fun a b -> Activation_Seed (a, b))
-               (fun _ _ _ _ _ -> ()) ()
-               (tD_side_rule_Interp_solve (equal_prod equal_cfg_node equal_unit)
-                 (equal_global_unknown equal_unit equal_unit)
+               (fun _ u ctx _ _ -> take zero_nat (u :: ctx)) []
+               (tD_side_rule_Interp_solve
+                 (equal_prod equal_cfg_node (equal_list equal_cfg_node))
+                 (equal_global_unknown equal_unit (equal_list equal_cfg_node))
                  ((equal_dg_state
                     (equal_lifted
                       (equal_toplift
@@ -10112,7 +10117,7 @@ let rec nonrel_run (_A1, _A2)
                            _A2.ik_domain_kind_int_domain)))))
                (fun _ d _ -> d) (fun _ _ -> Bot) (fun _ _ -> [])
                (fun pa -> typed_cfg pa ds)
-               (fun _ -> FunctionEntry prog_main_name) tglobal p ()));;
+               (fun _ -> FunctionEntry prog_main_name) tglobal p []));;
 
 let rec run_typed
   d r ds p =
