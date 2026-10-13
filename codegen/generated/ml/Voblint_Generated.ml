@@ -170,8 +170,8 @@ module Generated : sig
   type 'a imp_prog_ext
   type 'a call_route_ext
   type 'a analysis_graph_ext
-  type arithmetic_obligation
-  type arithmetic_diagnostic
+  type 'a arithmetic_obligation
+  type 'a arithmetic_diagnostic
   type ('a, 'b) result_global_ext
   type ('a, 'b) result_state_ext
   type 'a result_check_ext
@@ -189,7 +189,7 @@ module Generated : sig
       globals_rule ->
         typed_context ->
           (var_id * ikind) list -> unit imp_prog_ext -> typed_answer
-  val arithmetic_divisor : arithmetic_obligation -> exp
+  val arithmetic_divisor : 'a arithmetic_obligation -> 'a
   val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
   val typed_prog :
     unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
@@ -211,7 +211,7 @@ module Generated : sig
   val global_state : ('a, 'b) result_global_ext -> 'a lifted
   val state_diagnostics :
     ('a, 'b) result_state_ext ->
-      (arithmetic_obligation * check_result lifted) list
+      (exp arithmetic_obligation * check_result lifted) list
   val state_checks :
     ('a, 'b) result_state_ext -> (exp * check_result lifted) list
   val render_report :
@@ -251,14 +251,16 @@ module Generated : sig
     'a analysis_graph_ext ->
       (unknown_node * (analysis_edge * unknown_node)) list
   val graph_nodes : 'a analysis_graph_ext -> unknown_node list
-  val res_diagnostics : ('a, 'b) run_result_ext -> arithmetic_diagnostic list
+  val res_diagnostics :
+    ('a, 'b) run_result_ext -> exp arithmetic_diagnostic list
   val map_analysis_answer :
     ('a -> 'b) -> 'a analysis_answer -> 'b analysis_answer
-  val diagnostic_point : arithmetic_diagnostic -> cfg_node
-  val diagnostic_verdict : arithmetic_diagnostic -> check_result
-  val arithmetic_operation : arithmetic_obligation -> exp
-  val diagnostic_obligation : arithmetic_diagnostic -> arithmetic_obligation
-  val diagnostic_occurrence : arithmetic_diagnostic -> nat
+  val diagnostic_point : 'a arithmetic_diagnostic -> cfg_node
+  val diagnostic_verdict : 'a arithmetic_diagnostic -> check_result
+  val arithmetic_operation : 'a arithmetic_obligation -> 'a
+  val diagnostic_obligation :
+    'a arithmetic_diagnostic -> 'a arithmetic_obligation
+  val diagnostic_occurrence : 'a arithmetic_diagnostic -> nat
 end = struct
 
 type 'a sup = {sup : 'a -> 'a -> 'a};;
@@ -6774,11 +6776,11 @@ type 'a analysis_graph_ext =
     unknown_node list * (unknown_node * (analysis_edge * unknown_node)) list *
       'a;;
 
-type arithmetic_obligation = Arithmetic_Obligation of exp * exp;;
+type 'a arithmetic_obligation = Arithmetic_Obligation of 'a * 'a;;
 
-type arithmetic_diagnostic =
+type 'a arithmetic_diagnostic =
   Arithmetic_Diagnostic of
-    cfg_node * nat * arithmetic_obligation * check_result;;
+    cfg_node * nat * 'a arithmetic_obligation * check_result;;
 
 type ('a, 'b) result_global_ext =
   Result_global_ext of result_global_unknown * 'a lifted * 'b;;
@@ -6786,7 +6788,7 @@ type ('a, 'b) result_global_ext =
 type ('a, 'b) result_state_ext =
   Result_state_ext of
     cfg_node * nat * 'a lifted * (exp * check_result lifted) list *
-      (arithmetic_obligation * check_result lifted) list *
+      (exp arithmetic_obligation * check_result lifted) list *
       (cfg_node * 'a lifted) list * 'b;;
 
 type 'a result_check_ext =
@@ -6802,7 +6804,7 @@ type ('a, 'b) run_result_ext =
             ((analysis_domain * 'a field_state) list) lifted) list)) list *
       unit call_route_ext list * unit result_check_ext list *
       (((analysis_domain * 'a field_state) list), unit) result_global_ext list *
-      arithmetic_diagnostic list * unit analysis_graph_ext * 'b;;
+      exp arithmetic_diagnostic list * unit analysis_graph_ext * 'b;;
 
 type ('a, 'b) query_ops_ext =
   Query_ops_ext of ('a -> 'a -> bool option) * ('a -> 'a -> bool option) * 'b;;
@@ -6854,7 +6856,7 @@ type 'a analysis_report_ext =
          analysis_product,
         unit)
         result_global_ext list *
-      arithmetic_diagnostic list * 'a;;
+      exp arithmetic_diagnostic list * 'a;;
 
 type ('a, 'b, 'c) ug_state_with_gas_ext =
   Ug_state_with_gas_ext of ('b -> 'a -> phase * nat) * 'c;;
@@ -17564,10 +17566,27 @@ let rec arithmetic_diagnostic_of
     | v, i, obligation, Bot -> []
     | v, i, obligation, Lifted Check_Proved -> [];;
 
+let rec point_verdict _A
+  r classify v e =
+    aggregate_verdicts
+      (image (fun ctx -> classify_point classify e (lookup_table _A r v ctx))
+        (table_contexts r v));;
+
+let rec arithmetic_diagnostics _B
+  sites cond r classify =
+    maps (fun (v, obligations) ->
+           maps (fun (i, obligation) ->
+                  arithmetic_diagnostic_of v i obligation
+                    (point_verdict _B r classify v (cond obligation)))
+             (zip (upt zero_nat (size_list obligations)) obligations))
+      sites;;
+
 let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
 
 let rec arithmetic_condition
   obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
+
+let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
 
 let rec edge_expressions = function EA_Assign (x, e) -> [e]
                            | EA_Assume e -> [e]
@@ -17635,24 +17654,6 @@ let rec arithmetic_obligations
 let rec arithmetic_sites
   g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
         (arithmetic_expression_sites g);;
-
-let rec point_verdict _A
-  r classify v e =
-    aggregate_verdicts
-      (image (fun ctx -> classify_point classify e (lookup_table _A r v ctx))
-        (table_contexts r v));;
-
-let rec arithmetic_diagnostics _A
-  g r classify =
-    maps (fun (v, obligations) ->
-           maps (fun (i, obligation) ->
-                  arithmetic_diagnostic_of v i obligation
-                    (point_verdict _A r classify v
-                      (arithmetic_condition obligation)))
-             (zip (upt zero_nat (size_list obligations)) obligations))
-      (arithmetic_sites g);;
-
-let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
 
 let rec run_shared
   (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
@@ -17823,7 +17824,9 @@ let rec report_of _A
                     Result_global_ext (Global_Named x, run_shared sr x, ()))
                 (declared_global_vars p)) @
             maps seeds_of (prog_main_name :: prog_procs p),
-          arithmetic_diagnostics _A g r classify, ()));;
+          arithmetic_diagnostics _A (arithmetic_sites g) arithmetic_condition r
+            classify,
+          ()));;
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 

@@ -8,11 +8,11 @@ text \<open>Diagnostics inspect all expression operands, matching VIMP's total,
   pure expression model. They neither change execution nor assume short-circuit
   evaluation for logical operators. Lists retain repeated syntactically equal occurrences.\<close>
 
-datatype arithmetic_obligation = Arithmetic_Obligation
-  (arithmetic_operation: exp)
-  (arithmetic_divisor: exp)
+datatype 'e arithmetic_obligation = Arithmetic_Obligation
+  (arithmetic_operation: 'e)
+  (arithmetic_divisor: 'e)
 
-fun arithmetic_obligations :: "exp \<Rightarrow> arithmetic_obligation list" where
+fun arithmetic_obligations :: "exp \<Rightarrow> exp arithmetic_obligation list" where
   "arithmetic_obligations (N n) = []"
 | "arithmetic_obligations (V x) = []"
 | "arithmetic_obligations (Not a) = arithmetic_obligations a"
@@ -86,7 +86,7 @@ lemma arithmetic_obligations_divisors:
   "arithmetic_divisor ` set (arithmetic_obligations e) = expression_divisors e"
   by (induction e) auto
 
-definition arithmetic_condition :: "arithmetic_obligation \<Rightarrow> exp" where
+definition arithmetic_condition :: "exp arithmetic_obligation \<Rightarrow> exp" where
   "arithmetic_condition obligation = NotEq (arithmetic_divisor obligation) (N 0)"
 
 lemma arithmetic_condition_safe:
@@ -115,20 +115,24 @@ definition arithmetic_expression_sites :: "cfg \<Rightarrow> (pp \<times> exp li
              | _ \<Rightarrow> True) edges)) @
        map (\<lambda>(u, ca, ce, k). (u, ce_args ca)) (cfg_calls_list g)"
 
-definition arithmetic_sites :: "cfg \<Rightarrow> (pp \<times> arithmetic_obligation list) list" where
+definition arithmetic_sites :: "cfg \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
   "arithmetic_sites g =
      map (\<lambda>(v, es). (v, concat (map arithmetic_obligations es)))
        (arithmetic_expression_sites g)"
 
-datatype arithmetic_diagnostic = Arithmetic_Diagnostic
+text \<open>A diagnostic names an obligation of a site list, read through the condition that
+  makes it safe. The site list and the condition depend on the expression language;
+  the classification does not.\<close>
+
+datatype 'e arithmetic_diagnostic = Arithmetic_Diagnostic
   (diagnostic_point: pp)
   (diagnostic_occurrence: nat)
-  (diagnostic_obligation: arithmetic_obligation)
+  (diagnostic_obligation: "'e arithmetic_obligation")
   (diagnostic_verdict: check_result)
 
 fun arithmetic_diagnostic_of ::
-    "pp \<Rightarrow> nat \<Rightarrow> arithmetic_obligation \<Rightarrow> contextual_verdict
-       \<Rightarrow> arithmetic_diagnostic list" where
+    "pp \<Rightarrow> nat \<Rightarrow> 'e arithmetic_obligation \<Rightarrow> contextual_verdict
+       \<Rightarrow> 'e arithmetic_diagnostic list" where
   "arithmetic_diagnostic_of v i obligation (Lifted Check_Refuted) =
      [Arithmetic_Diagnostic v i obligation Check_Refuted]"
 | "arithmetic_diagnostic_of v i obligation (Lifted Check_Unknown) =
@@ -136,14 +140,15 @@ fun arithmetic_diagnostic_of ::
 | "arithmetic_diagnostic_of v i obligation _ = []"
 
 definition arithmetic_diagnostics ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> arithmetic_diagnostic list" where
-  "arithmetic_diagnostics g r classify =
+    "(pp \<times> 'e arithmetic_obligation list) list \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
+       \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> 'e arithmetic_diagnostic list" where
+  "arithmetic_diagnostics sites cond r classify =
      concat (map (\<lambda>(v, obligations).
        concat (map (\<lambda>(i, obligation).
          arithmetic_diagnostic_of v i obligation
-           (point_verdict r classify v (arithmetic_condition obligation)))
-         (zip [0..<length obligations] obligations))) (arithmetic_sites g))"
+           (point_verdict r classify v (cond obligation)))
+         (zip [0..<length obligations] obligations))) sites)"
 
 lemma arithmetic_expression_sites_intra:
   assumes "finite (intra g)" and "(v, a, w) \<in> intra g"
@@ -202,11 +207,11 @@ proof -
 qed
 
 lemma arithmetic_diagnostics_absent:
-  assumes site: "(v, obligations) \<in> set (arithmetic_sites g)"
+  assumes site: "(v, obligations) \<in> set sites"
     and ob: "obligation \<in> set obligations"
-    and absent: "\<forall>d \<in> set (arithmetic_diagnostics g r classify). diagnostic_point d \<noteq> v"
-  shows "point_verdict r classify v (arithmetic_condition obligation) = Bot \<or>
-    point_verdict r classify v (arithmetic_condition obligation) = Lifted Check_Proved"
+    and absent: "\<forall>d \<in> set (arithmetic_diagnostics sites cond r classify). diagnostic_point d \<noteq> v"
+  shows "point_verdict r classify v (cond obligation) = Bot \<or>
+    point_verdict r classify v (cond obligation) = Lifted Check_Proved"
 proof -
   have "obligation \<in> set (map snd (zip [0..<length obligations] obligations))"
     using ob by simp
@@ -218,9 +223,9 @@ proof -
   define i where "i = fst pair"
   have indexed: "(i, obligation) \<in> set (zip [0..<length obligations] obligations)"
     using indexed unfolding i_def .
-  let ?verdict = "point_verdict r classify v (arithmetic_condition obligation)"
+  let ?verdict = "point_verdict r classify v (cond obligation)"
   have included: "set (arithmetic_diagnostic_of v i obligation ?verdict)
-      \<subseteq> set (arithmetic_diagnostics g r classify)"
+      \<subseteq> set (arithmetic_diagnostics sites cond r classify)"
     using site indexed
     unfolding arithmetic_diagnostics_def
     by (force simp only: set_concat set_map image_iff case_prod_beta)
@@ -242,7 +247,7 @@ proof -
     using included point absent
     by (meson empty_subsetI set_empty2 subset_antisym subset_iff)
   show ?thesis
-  proof (cases "point_verdict r classify v (arithmetic_condition obligation)")
+  proof (cases "point_verdict r classify v (cond obligation)")
     case Bot
     then show ?thesis by simp
   next
@@ -261,10 +266,10 @@ lemma arithmetic_diagnostic_of_refuted:
   using assms by (cases "(v, i, obligation, verdict)" rule: arithmetic_diagnostic_of.cases) auto
 
 lemma arithmetic_diagnostics_refuted:
-  assumes "d \<in> set (arithmetic_diagnostics g r classify)"
+  assumes "d \<in> set (arithmetic_diagnostics sites cond r classify)"
     and "diagnostic_verdict d = Check_Refuted"
   shows "point_verdict r classify (diagnostic_point d)
-      (arithmetic_condition (diagnostic_obligation d)) = Lifted Check_Refuted"
+      (cond (diagnostic_obligation d)) = Lifted Check_Refuted"
   using assms unfolding arithmetic_diagnostics_def
   by (auto dest!: arithmetic_diagnostic_of_refuted)
 

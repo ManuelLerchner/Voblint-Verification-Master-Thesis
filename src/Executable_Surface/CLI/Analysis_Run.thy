@@ -43,7 +43,7 @@ record 's result_state =
   state_context :: nat
   state_value :: "'s lifted"
   state_checks :: "(exp \<times> contextual_verdict) list"
-  state_diagnostics :: "(arithmetic_obligation \<times> contextual_verdict) list"
+  state_diagnostics :: "(exp arithmetic_obligation \<times> contextual_verdict) list"
   state_steps :: "(pp \<times> 's lifted) list"
 
 record call_route =
@@ -135,7 +135,7 @@ record analysis_report =
   report_routes :: "call_route list"
   report_checks :: "result_check list"
   report_globals :: "mcp_val result_global list"
-  report_diagnostics :: "arithmetic_diagnostic list"
+  report_diagnostics :: "exp arithmetic_diagnostic list"
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -237,7 +237,7 @@ text \<open>
 
 definition report_row ::
     "('c, vname, mcp_val) solved_run \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result)
-       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, arithmetic_obligation list list) rbt
+       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, exp arithmetic_obligation list list) rbt
        \<Rightarrow> (pp, (edge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> mcp_val result_state" where
   "report_row sr classify conds obls edges i ctx v =
      (let state = lookup_table (run_table sr) v ctx
@@ -312,7 +312,8 @@ definition report_of ::
                   map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
                     (declared_global_vars p))
                @ concat (map seeds_of (prog_main_name # prog_procs p)),
-           report_diagnostics = arithmetic_diagnostics g r classify \<rparr>)"
+           report_diagnostics =
+             arithmetic_diagnostics (arithmetic_sites g) arithmetic_condition r classify \<rparr>)"
 
 subsection \<open>One configuration, one report\<close>
 

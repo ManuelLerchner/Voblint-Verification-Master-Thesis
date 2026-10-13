@@ -228,7 +228,7 @@ record 'v run_result =
   res_routes :: "call_route list"
   res_checks :: "result_check list"
   res_globals :: "'v analysis_view result_global list"
-  res_diagnostics :: "arithmetic_diagnostic list"
+  res_diagnostics :: "exp arithmetic_diagnostic list"
   res_graph :: analysis_graph
 
 definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_view \<Rightarrow> 'w analysis_view" where

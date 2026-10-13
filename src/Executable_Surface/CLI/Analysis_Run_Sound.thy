@@ -168,7 +168,8 @@ text \<open>
 \<close>
 
 lemma arithmetic_safe:
-  assumes absent: "\<forall>d \<in> set (arithmetic_diagnostics (prog_cfg p) r classify).
+  assumes absent: "\<forall>d \<in> set (arithmetic_diagnostics (arithmetic_sites (prog_cfg p))
+      arithmetic_condition r classify).
       diagnostic_point d \<noteq> v"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"

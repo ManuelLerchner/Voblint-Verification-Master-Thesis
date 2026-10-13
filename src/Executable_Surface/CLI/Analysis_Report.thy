@@ -426,7 +426,8 @@ lemma report_of_simps [simp]:
   "report_checks (report_of config ctx_key ctx_tag classify sr p)
      = result_checks_of (prog_cfg p) (run_table sr) classify"
   "report_diagnostics (report_of config ctx_key ctx_tag classify sr p)
-     = arithmetic_diagnostics (prog_cfg p) (run_table sr) classify"
+     = arithmetic_diagnostics (arithmetic_sites (prog_cfg p)) arithmetic_condition
+         (run_table sr) classify"
   by (simp_all add: report_of_def Let_def)
 
 text \<open>
@@ -650,7 +651,7 @@ text \<open>
   soundness theorem needs this; a renderer does.
 \<close>
 
-definition obligations_at :: "cfg \<Rightarrow> pp \<Rightarrow> arithmetic_obligation list" where
+definition obligations_at :: "cfg \<Rightarrow> pp \<Rightarrow> exp arithmetic_obligation list" where
   "obligations_at g v = concat (map snd (filter (\<lambda>(u, obs). u = v) (arithmetic_sites g)))"
 
 lemma group_lookup_arithmetic_sites:
@@ -659,7 +660,7 @@ lemma group_lookup_arithmetic_sites:
 proof -
   have "List.map_filter (\<lambda>x. if fst x = v then (Some \<circ> snd) x else None) xs
           = map snd (filter (\<lambda>(u, obs). u = v) xs)"
-    for xs :: "(pp \<times> arithmetic_obligation list) list"
+    for xs :: "(pp \<times> exp arithmetic_obligation list) list"
     by (induction xs) (auto simp: List.map_filter_simps)
   then show ?thesis unfolding group_lookup_group_by_key obligations_at_def by simp
 qed
