@@ -202,6 +202,39 @@ theorem typed_nonrel_report_ctx_sound:
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k"]
   by simp_all
 
+text \<open>The aggregate a caller prints: one verdict per check over every context the solved
+  table covers at its node. A decided verdict holds at every typed store reaching the
+  node, whichever context reached it.\<close>
+
+theorem typed_nonrel_verdict_sound:
+  assumes wf: "wf_program_compile_input p"
+    and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) ds k r tglobal p"
+    and mem: "(v, c, Decided res) \<in> set (typed_nonrel.verdict_report TYPE('a) ds k r tglobal p)"
+    and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+  shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+proof -
+  obtain ctx where sc:
+    "s \<in> gamma_tt (kenv_of ds) (typed_nonrel.state_at ds k r tglobal p ctx v :: 'a tabs toplift)"
+    using typed_nonrel_node_sound[OF wf solves] s by blast
+  have decided: "tclassify (kenv_of ds) c (typed_nonrel.state_at ds k r tglobal p ctx v :: 'a tabs toplift) = res"
+    if known: "res \<noteq> Check_Unknown"
+  proof (cases "lookup_table (typed_nonrel.result ds k r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+    case Bot
+    then show ?thesis using sc by (simp add: typed_nonrel.state_at_unfold)
+  next
+    case (Lifted st)
+    have fin: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
+    show ?thesis
+      using classify_checks_ctx_decided_sound[OF fin
+          mem[unfolded typed_nonrel.verdict_report_def] Lifted known] Lifted
+      by (simp add: typed_nonrel.state_at_unfold)
+  qed
+  show "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    using decided tclassify_proved[OF sc] by auto
+  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+    using decided tclassify_refuted[OF sc] by auto
+qed
 end
 
 text \<open>A proved check holds at every typed store reaching its node; a refuted one fails at

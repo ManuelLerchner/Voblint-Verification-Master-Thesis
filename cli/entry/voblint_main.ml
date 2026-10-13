@@ -43,7 +43,7 @@ let usage =
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order|sign|parity [--globals RULE] FILE.vimp\n\n\
+   voblint --typed interval|congruence|int|order|sign|parity [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -423,7 +423,15 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
    under its kind declarations, through the certified entry point run_typed. Each
    check is printed with its source line, so a run can be compared with the untyped
    analysis of the same file. *)
-let run_typed_and_exit path stmt_positions domain rule =
+let run_typed_and_exit path stmt_positions domain rule context =
+  let depth =
+    match context with
+    | C.Ctx_None -> C.nat_of_integer Z.zero
+    | C.Ctx_CallString k -> k
+    | C.Ctx_EntryState ->
+        prerr_endline "voblint: --typed supports --context none and call-string only";
+        exit 1
+  in
   let p, decls =
     match !Vimp_typing.source_program with
     | Some pd -> pd
@@ -442,7 +450,7 @@ let run_typed_and_exit path stmt_positions domain rule =
         | None -> Printf.sprintf "%s:statement %d" path i)
     | _ -> path
   in
-  match C.run_typed domain rule decls p with
+  match C.run_typed domain rule depth decls p with
   | C.Typed_Malformed ->
       prerr_endline "voblint: the program is not admissible";
       exit 3
@@ -698,7 +706,7 @@ let () =
   (match !typed_domain with
   | None -> ()
   | Some d ->
-      run_typed_and_exit path stmt_positions d !globals);
+      run_typed_and_exit path stmt_positions d !globals context);
   if !ast then begin
     print_endline (Render_json.program_json prog);
     exit 0
