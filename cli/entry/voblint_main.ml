@@ -43,7 +43,7 @@ let usage =
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order|sign|parity [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
+   voblint --typed interval|congruence|int|order|sign|parity[,order] [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -419,8 +419,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           wait_loop 0.0005)
 
 
-(* The experimental typed run: one typed analysis of the program before lowering,
-   under its kind declarations, through the certified entry point run_typed. Each
+(* The experimental typed run: the activated typed analyses on the program before
+   lowering, under its kind declarations, through the certified entry point run_typed. Each
    check is printed with its source line, so a run can be compared with the untyped
    analysis of the same file. *)
 let run_typed_and_exit path stmt_positions domain rule context =
@@ -454,6 +454,9 @@ let run_typed_and_exit path stmt_positions domain rule context =
   | C.Typed_Malformed ->
       prerr_endline "voblint: the program is not admissible";
       exit 3
+  | C.Typed_Unsupported ->
+      prerr_endline "voblint: --typed runs one analysis, or one with order";
+      exit 1
   | C.Typed_No_Answer ->
       prerr_endline "voblint: the solver returned no answer";
       exit 4
@@ -591,17 +594,18 @@ let () =
         trace_output := Some v;
         parse_args rest
     | "--typed" :: v :: rest ->
-        (typed_domain :=
-           match v with
-           | "interval" -> Some C.Typed_Interval
-           | "congruence" -> Some C.Typed_Congruence
-           | "int" -> Some C.Typed_Int
-           | "order" -> Some C.Typed_Order
-           | "sign" -> Some C.Typed_Sign
-           | "parity" -> Some C.Typed_Parity
-           | _ ->
-               prerr_endline ("unknown --typed value: " ^ v);
-               exit 1);
+        let domain = function
+          | "interval" -> C.Typed_Interval
+          | "congruence" -> C.Typed_Congruence
+          | "int" -> C.Typed_Int
+          | "order" -> C.Typed_Order
+          | "sign" -> C.Typed_Sign
+          | "parity" -> C.Typed_Parity
+          | n ->
+              prerr_endline ("unknown --typed value: " ^ n);
+              exit 1
+        in
+        typed_domain := Some (List.map domain (String.split_on_char ',' v));
         parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v

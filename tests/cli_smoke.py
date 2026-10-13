@@ -21,8 +21,27 @@ from run import REPO_ROOT, VOBLINT, bold, green, red
 
 MISSING_FILE = "tests/regression/00-sanity/does-not-exist.vimp"
 SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp"
+COOP_FILE = "tests/typed/01-cooperation.vimp"
 
 CASES = [
+    (
+        "--typed interval,order proves a check that needs both analyses",
+        ["--typed", "interval,order", COOP_FILE],
+        0,
+        "01-cooperation.vimp:6:5: proved",
+    ),
+    (
+        "--typed interval alone leaves that check unknown",
+        ["--typed", "interval", COOP_FILE],
+        0,
+        "01-cooperation.vimp:6:5: unknown",
+    ),
+    (
+        "--typed rejects a combination it cannot run",
+        ["--typed", "interval,sign", COOP_FILE],
+        1,
+        "--typed runs one analysis, or one with order",
+    ),
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),
     (

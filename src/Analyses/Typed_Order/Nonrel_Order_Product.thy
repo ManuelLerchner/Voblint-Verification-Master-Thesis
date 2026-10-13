@@ -175,4 +175,56 @@ next
   case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
 qed
 
+subsection \<open>End-to-end soundness\<close>
+
+text \<open>As for one typed analysis: a terminating solve bounds every typed store reaching a
+  node by the node's state under some context, and a decided verdict, aggregated over the
+  contexts, holds at every such store. Neither verdict says the node is reached.\<close>
+
+context
+  fixes ds :: kind_decls and r :: globals_rule and k :: nat
+begin
+
+lemma nonrel_order_node_sound:
+  assumes wf: "wf_program_compile_input p"
+    and solves: "nonrel_order.terminates TYPE('a::kind_int_domain) ds k r tglobal p"
+  shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
+           \<subseteq> (\<Union>ctx. no_gamma (kenv_of ds)
+                 (nonrel_order.state_at ds k r tglobal p ctx v :: 'a no_rd))"
+  using nonrel_order.gfun_route_result_node_sound
+      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
+  by (simp add: tnode_collect_def)
+
+theorem nonrel_order_verdict_sound:
+  assumes wf: "wf_program_compile_input p"
+    and solves: "nonrel_order.terminates TYPE('a::kind_int_domain) ds k r tglobal p"
+    and mem: "(v, c, Decided res) \<in> set (nonrel_order.verdict_report TYPE('a) ds k r tglobal p)"
+    and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+  shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+proof -
+  obtain ctx where sc:
+    "s \<in> no_gamma (kenv_of ds) (nonrel_order.state_at ds k r tglobal p ctx v :: 'a no_rd)"
+    using nonrel_order_node_sound[OF wf solves] s by blast
+  have decided: "no_classify (kenv_of ds) c (nonrel_order.state_at ds k r tglobal p ctx v :: 'a no_rd) = res"
+    if known: "res \<noteq> Check_Unknown"
+  proof (cases "lookup_table (nonrel_order.result ds k r tglobal p :: (_, 'a no_rd) solved_table) v ctx")
+    case Bot
+    then show ?thesis using sc by (simp add: nonrel_order.state_at_unfold)
+  next
+    case (Lifted st)
+    have fin: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
+    show ?thesis
+      using classify_checks_ctx_decided_sound[OF fin
+          mem[unfolded nonrel_order.verdict_report_def] Lifted known] Lifted
+      by (simp add: nonrel_order.state_at_unfold)
+  qed
+  show "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    using decided no_classify_proved[OF sc] by auto
+  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+    using decided no_classify_refuted[OF sc] by auto
+qed
+
+end
+
 end

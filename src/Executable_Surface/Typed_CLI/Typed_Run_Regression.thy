@@ -16,12 +16,12 @@ definition verdicts :: "typed_answer \<Rightarrow> check_result list" where
   "verdicts a = (case a of Typed_Analysed rs \<Rightarrow> map (\<lambda>(_, _, r). r) rs | _ \<Rightarrow> [])"
 
 lemma step_verdicts:
-  "verdicts (run_typed Typed_Interval Globals_Join 0 [] step_prog) = [Check_Unknown]"
-  "verdicts (run_typed Typed_Congruence Globals_Join 0 [] step_prog) = [Check_Unknown]"
-  "verdicts (run_typed Typed_Int Globals_Join 0 [] step_prog) = [Check_Proved]"
-  "verdicts (run_typed Typed_Order Globals_Join 0 [] step_prog) = [Check_Unknown]"
-  "verdicts (run_typed Typed_Sign Globals_Join 0 [] step_prog) = [Check_Unknown]"
-  "verdicts (run_typed Typed_Parity Globals_Join 0 [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed [Typed_Interval] Globals_Join 0 [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed [Typed_Congruence] Globals_Join 0 [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed [Typed_Int] Globals_Join 0 [] step_prog) = [Check_Proved]"
+  "verdicts (run_typed [Typed_Order] Globals_Join 0 [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed [Typed_Sign] Globals_Join 0 [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed [Typed_Parity] Globals_Join 0 [] step_prog) = [Check_Unknown]"
   by eval+
 
 subsection \<open>Call-string contexts\<close>
@@ -36,8 +36,8 @@ definition calls_prog :: imp_prog where
      fun main() { a = inc(1); __voblint_check(a == 2); b = inc(10); __voblint_check(b == 11); } }"
 
 lemma call_string_verdicts:
-  "verdicts (run_typed Typed_Interval Globals_Join 0 [] calls_prog) = [Check_Unknown, Check_Unknown]"
-  "verdicts (run_typed Typed_Interval Globals_Join 1 [] calls_prog) = [Check_Proved, Check_Proved]"
+  "verdicts (run_typed [Typed_Interval] Globals_Join 0 [] calls_prog) = [Check_Unknown, Check_Unknown]"
+  "verdicts (run_typed [Typed_Interval] Globals_Join 1 [] calls_prog) = [Check_Proved, Check_Proved]"
   by eval+
 
 end
