@@ -1,0 +1,8 @@
+chapter Voblint
+
+session Voblint_Typed_Order in "." = "Voblint_Typed_Nonrel" +
+  description "The order relational domain over typed variable identities, run by the
+    D/G pipeline over the typed CFG"
+  theories
+    Typed_Order_Analysis
+    Typed_Order_Regression

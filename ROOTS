@@ -18,6 +18,7 @@ src/Analyses/Parity
 src/Analyses/Congruence
 src/Analyses/Typed_Congruence
 src/Analyses/Relational
+src/Analyses/Typed_Order
 src/Analyses/Int
 src/Analyses/Typed_Int
 src/Executable_Surface/CLI

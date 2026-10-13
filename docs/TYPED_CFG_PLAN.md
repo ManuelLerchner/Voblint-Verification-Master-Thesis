@@ -4,7 +4,7 @@ Status: stages 0 to 4 landed on `feat/typed-ir` (typed Interval end to end, with
 backward refinement and Goblint's unsigned wrap); stage 5 in progress: one generic
 typed pipeline (`Voblint_Typed_Nonrel`) with end-to-end theorems for every
 `kind_int_domain`, instantiated at Interval, Congruence and their reduced product
-(`int_tuple`); Order is next.
+(`int_tuple`); the order domain runs over typed variables (`Voblint_Typed_Order`). The experimental typed CLI path is next.
 
 Goal: Voblint becomes a verified, Goblint-style machine-integer analyzer. Typed
 expressions and static variable identities reach a typed CFG with no casts on
