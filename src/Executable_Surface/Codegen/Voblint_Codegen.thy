@@ -1,7 +1,7 @@
 theory Voblint_Codegen
   imports
     "Voblint_CLI.Trace_Run"
-    "Voblint_Typed_CLI.Typed_MCP"
+    "Voblint_CLI.Run_Voblint"
 begin
 
 section "Code export surface"
@@ -60,7 +60,7 @@ text \<open>
   signature unchanged: the root list still decides what the facade can expose, and the
   facade is the one place a later, narrower surface would be stated.
 
-  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the
+  Analysis entry goes through \<^const>\<open>run_voblint_legacy\<close> alone, which checks the
   activation list and well-formedness and runs the requested analyses, update rule and
   context policy. Every combination is answered, so the CLI never decides legality.
 
@@ -103,7 +103,7 @@ text \<open>
   The list below is grouped by what each name is \<^emph>\<open>for\<close>, because the groups answer
   different questions and only one of them is an operation.
 
-  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
+  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint_legacy\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
   \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
@@ -151,8 +151,8 @@ definition cfg_points :: "cfg \<Rightarrow> cfg_node list" where
 
 export_code
 
-  \<comment> \<open>Run\<close>
-  run_voblint
+  \<comment> \<open>Run: the typed analyzer, and the analyzer over mathematical integers it replaces\<close>
+  run_voblint run_voblint_legacy
 
   \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
      diagnostics, the analysis graph\<close>

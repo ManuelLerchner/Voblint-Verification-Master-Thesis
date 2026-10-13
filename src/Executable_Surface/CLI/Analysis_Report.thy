@@ -180,7 +180,7 @@ subsection \<open>A consistent report\<close>
 text \<open>
   A report is consistent when each check's verdict is the aggregate of the
   report's own classifier over the report's own states at the check's point. Every
-  report \<^const>\<open>run_voblint\<close> returns is consistent.
+  report \<^const>\<open>run_voblint_legacy\<close> returns is consistent.
 \<close>
 
 definition consistent_report :: "vimp_report \<Rightarrow> bool" where

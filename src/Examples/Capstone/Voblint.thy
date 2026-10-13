@@ -51,7 +51,7 @@ text \<open>
 
   \<^bold>\<open>Where the chain ends.\<close>  At the operation the CLI actually calls and code
   generation actually exports, not at an internal solved system.
-  @{thm [source] run_voblint_source_sound}, in
+  @{thm [source] run_voblint_legacy_source_sound}, in
   \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, says: run the source program, stop
   wherever you like, and ask any configuration --- a list of active analyses, a global
   update rule, a context policy and a placement of program globals --- for a report.
@@ -65,9 +65,9 @@ text \<open>
   under entry-state routing; quantifying over every covered context would be false,
   since another activation's state need not describe this store. Joining the states
   of all contexts at the node gives one state that does describe it
-  (@{thm [source] run_voblint_source_sound_joined}), at the price of precision.
+  (@{thm [source] run_voblint_legacy_source_sound_joined}), at the price of precision.
 
-  A caller owes nothing beyond the answer itself.  \<^const>\<open>run_voblint\<close> solves with the
+  A caller owes nothing beyond the answer itself.  \<^const>\<open>run_voblint_legacy\<close> solves with the
   executable solver, which answers only where the solve terminates, so an analysed
   answer carries termination; coverage of the solve follows from the solve, and a
   malformed program answers \<open>Malformed_Program\<close>.  The context policy is read in one
@@ -142,7 +142,7 @@ subsection \<open>Checks\<close>
 
 text \<open>
   A compiled \<open>__voblint_check(...)\<close> condition gets one verdict per report:
-  @{thm [source] run_voblint_proved} and @{thm [source] run_voblint_refuted} state what a
+  @{thm [source] run_voblint_legacy_proved} and @{thm [source] run_voblint_legacy_refuted} state what a
   \<open>PROVED\<close> and a \<open>REFUTED\<close> verdict guarantee at every reachable store.  The regression
   corpus pins the verdicts themselves, one proved, one refuted and one unknown check per
   domain, e.g. \<^verbatim>\<open>tests/regression/05-checks/precision/04-guarded_interval_trio.vimp\<close>,
@@ -443,10 +443,10 @@ text \<open>
       \<^emph>\<open>returns\<close>, typically \<^theory_text>\<open>by eval\<close>.
     \<^item> @{theory Voblint_CLI.Analysis_Certified} --- one soundness statement for
       every configuration the dispatcher answers with a report
-      (@{thm [source] run_voblint_source_sound}), and the dead-check and
+      (@{thm [source] run_voblint_legacy_source_sound}), and the dead-check and
       arithmetic-error guarantees at the same entry point
-      (@{thm [source] run_voblint_dead_check_unreached},
-      @{thm [source] run_voblint_arithmetic_refuted}).
+      (@{thm [source] run_voblint_legacy_dead_check_unreached},
+      @{thm [source] run_voblint_legacy_arithmetic_refuted}).
     \<^item> @{theory Voblint_Examples.Example_End_To_End_Certificate} --- that
       statement instantiated at one program, with its answer evaluated.
 
@@ -493,7 +493,7 @@ text \<open>
       program reads: @{thm dep_dg_edge_program_at} names the source address and the
       one global slot, nothing else.
     \<^item> \<^bold>\<open>Rendering\<close> --- the text report, DOT and HTML are produced by the OCaml
-      renderers from \<^const>\<open>run_voblint\<close>'s structured result, outside any theory.
+      renderers from \<^const>\<open>run_voblint_legacy\<close>'s structured result, outside any theory.
       A rendering asserts nothing that a \<^verbatim>\<open>writeln\<close> could check, so the
       fixtures under \<^verbatim>\<open>tests/regression/\<close> carry it instead --- \<^verbatim>\<open>08-tooling\<close> for
       \<^verbatim>\<open>--dot\<close>, \<^verbatim>\<open>13-full-state-dot\<close> for the per-node states, and
@@ -512,7 +512,7 @@ text \<open>
     \<^item> @{theory Voblint_Solver.Globals_Rule} --- the rule that merges contributions to a
       side-effected global, as a value: one solver interpretation serves all four, and
       every domain registers each context policy once over it.
-    \<^item> @{theory Voblint_CLI.Analysis_Run} --- \<^const>\<open>run_voblint\<close>, the one operation
+    \<^item> @{theory Voblint_CLI.Analysis_Run} --- \<^const>\<open>run_voblint_legacy\<close>, the one operation
       code generation exports: a configuration of analyses, a global update rule and a
       context policy, and a program. Every combination is analysed; the answer is a
       report of semantic states, and its rendering (@{theory Voblint_CLI.Analysis_Render})
@@ -527,19 +527,19 @@ text \<open>
       \<^theory>\<open>Voblint_CLI.MCP_Analyses\<close>.
       @{theory Voblint_CLI.Analysis_Report} reads a report through \<open>\<R>\<^bsub>res\<^esub> v\<close> and
       \<^const>\<open>verdict_stores\<close> and proves, by one case split over the tables, that
-      every report \<^const>\<open>run_voblint\<close> returns is sound
+      every report \<^const>\<open>run_voblint_legacy\<close> returns is sound
       (@{thm [source] analysis_report_of_sound}).
       @{theory Voblint_CLI.Analysis_Certified} states
-      @{thm [source] run_voblint_source_sound} and
-      @{thm [source] run_voblint_check_sound} once for every configuration.
+      @{thm [source] run_voblint_legacy_source_sound} and
+      @{thm [source] run_voblint_legacy_check_sound} once for every configuration.
       @{theory Voblint_CLI.Typed_Certified} carries the endpoint to runs of the typed
-      semantics of a program with machine kinds (@{thm [source] run_voblint_typed_sound}).
+      semantics of a program with machine kinds (@{thm [source] run_voblint_legacy_typed_sound}).
 
       \<^bold>\<open>What the proof attaches to.\<close> \<^verbatim>\<open>export_code\<close> translates the executable
-      equations of \<^const>\<open>run_voblint\<close> and everything it transitively calls, down to the
+      equations of \<^const>\<open>run_voblint_legacy\<close> and everything it transitively calls, down to the
       solver itself. It is not proving one function and exporting a different,
       hand-written one: the generated operation is a translation of the same equations
-      @{thm [source] run_voblint_source_sound} is proved about. That theorem asks for no
+      @{thm [source] run_voblint_legacy_source_sound} is proved about. That theorem asks for no
       termination premise: an analysed answer exists only where the executable solve
       returned. It is partial correctness; nothing proves the solve returns on every
       program. \<^theory>\<open>Voblint_Examples.Example_End_To_End_Certificate\<close> evaluates

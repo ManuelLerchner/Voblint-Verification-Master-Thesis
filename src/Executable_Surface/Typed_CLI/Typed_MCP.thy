@@ -282,7 +282,7 @@ end
 section \<open>The typed entry point\<close>
 
 text \<open>
-  The experimental typed counterpart of \<open>run_voblint\<close>: it analyzes a program under its
+  The experimental typed counterpart of \<open>run_voblint_legacy\<close>: it analyzes a program under its
   kind declarations with the activated typed analyses, as Goblint's \<^verbatim>\<open>ana.activated\<close>
   selects them, and answers the verdicts of the program's checks. At call-string contexts
   and at entry-state contexts the active analyses run as one through the registry, each

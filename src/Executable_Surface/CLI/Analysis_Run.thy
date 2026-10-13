@@ -499,10 +499,10 @@ datatype 'r analysis_answer =
   | No_Answer
   | Analysed 'r
 
-definition run_voblint ::
+definition run_voblint_legacy ::
   "analysis_config \<Rightarrow> imp_prog \<Rightarrow> vimp_report analysis_answer"
 where
-  "run_voblint config p =
+  "run_voblint_legacy config p =
      (if \<not> valid_config config then Invalid_Activation
       else if \<not> wf_program_compile_input_exec p then Malformed_Program
       else case analysis_report_of config p of

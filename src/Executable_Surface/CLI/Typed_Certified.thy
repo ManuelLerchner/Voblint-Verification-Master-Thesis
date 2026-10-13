@@ -6,7 +6,7 @@ section \<open>What a report guarantees about a typed program\<close>
 
 text \<open>
   A typed program is analyzed as its lowering, \<^term>\<open>typed_prog p ds\<close>, and
-  \<open>run_voblint_source_sound\<close> speaks about runs of that lowering. The theorem below
+  \<open>run_voblint_legacy_source_sound\<close> speaks about runs of that lowering. The theorem below
   speaks about runs of the typed semantics \<^const>\<open>tstep\<close> instead. Every typed run is
   matched by a run of the lowering that ends in the lowered command, a store related
   to the typed store by \<^const>\<open>srel\<close>, and a node the report describes. In the running
@@ -18,14 +18,14 @@ text \<open>
   for each well-typed expression of the running activation.
 \<close>
 
-theorem run_voblint_typed_sound:
+theorem run_voblint_legacy_typed_sound:
   fixes p :: imp_prog and ds :: kind_decls
   defines G_def: "\<G> \<equiv> declared_global p"
       and k_def: "\<kappa> \<equiv> kenv_of ds"
       and P_def: "P \<equiv> typed_prog p ds"
   assumes t0: "t0 \<in> tinit_stores \<kappa>"
       and run: "\<kappa>, typed_table p ds \<turnstile> (typed_main p ds, t0, []) \<rightarrow>\<^sub>t\<^sup>* (c, t, tfs)"
-      and ans: "run_voblint config P = Analysed res"
+      and ans: "run_voblint_legacy config P = Analysed res"
   shows "\<exists>s0 s fs. s0 \<in> cinit_stores \<G>
        \<and> \<G>, prog_table P \<turnstile> (main_body (prog_table P), s0, []) \<rightarrow>\<^sub>p\<^sup>* (lower_com c, s, fs)
        \<and> srel \<kappa> \<G> (cur_proc tfs) t s
@@ -36,7 +36,7 @@ theorem run_voblint_typed_sound:
               \<and> s \<in> \<V>\<^bsub>res\<^esub> v)"
 proof -
   have GP: "declared_global P = \<G>" by (simp add: P_def G_def)
-  from run_voblint_wf [OF ans] have "wf_source_program \<G> (prog_table P)"
+  from run_voblint_legacy_wf [OF ans] have "wf_source_program \<G> (prog_table P)"
     by (simp add: gwf_compile_input_def GP [symmetric])
   then have wf: "wf_source_program (declared_global p) (prog_table (typed_prog p ds))"
     by (simp add: P_def G_def)
@@ -58,7 +58,7 @@ proof -
   have lrun': "\<G>, prog_table P \<turnstile> (main_body (prog_table P), s0, []) \<rightarrow>\<^sub>p\<^sup>* (lower_com c, s, fs)"
     using lrun main(2) by (simp add: P_def)
   from simc have sr: "srel \<kappa> \<G> (cur_proc tfs) t s" by (simp add: sim_def)
-  from run_voblint_source_sound [OF s0 [folded GP] lrun' [folded GP] ans]
+  from run_voblint_legacy_source_sound [OF s0 [folded GP] lrun' [folded GP] ans]
   show ?thesis using s0 lrun' sr unfolding GP by blast
 qed
 

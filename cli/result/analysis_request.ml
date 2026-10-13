@@ -172,6 +172,6 @@ let resolve (r : request) : (resolved, request_error) result =
    semantic, and the adapters read its rendering. *)
 let analyse ~analyses ~globals ~context ~program_globals program =
   Value_symbols.render_answer
-    (C.run_voblint
+    (C.run_voblint_legacy
        (config ~analyses ~globals ~context ~program_globals)
        program)

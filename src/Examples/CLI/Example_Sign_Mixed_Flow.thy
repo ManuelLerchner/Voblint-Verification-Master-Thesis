@@ -10,7 +10,7 @@ text \<open>
   the calls only through the global. With program globals on the shared channel the
   analyzer keeps \<open>Gx\<close> in one flow-insensitive value every point reads: the seed
   \<open>0\<close> and the write \<open>1\<close> join to non-negative, while \<open>x\<close> stays a flow-sensitive
-  local. The run is the public \<^const>\<open>run_voblint\<close>, so its soundness is the
+  local. The run is the public \<^const>\<open>run_voblint_legacy\<close>, so its soundness is the
   published theorem and nothing here is proved about the placement itself.
 \<close>
 
@@ -32,7 +32,7 @@ abbreviation mf_config :: analysis_config where
   "mf_config \<equiv> Analysis_Config [Sign_Analysis] Globals_Join Ctx_None Program_Globals_Flow_Insensitive"
 
 lemma mf_report:
-  "(case run_voblint mf_config mf_program of
+  "(case run_voblint_legacy mf_config mf_program of
       Analysed res \<Rightarrow>
         map check_verdict (report_checks res) = [Decided Check_Proved, Decided Check_Proved]
     | _ \<Rightarrow> False)"
@@ -41,7 +41,7 @@ lemma mf_report:
 text \<open>
   Every check a source run reaches holds there. The verdicts are computed; that a
   \<^const>\<open>Check_Proved\<close> verdict holds of the run's store is
-  \<open>run_voblint_check_sound\<close>.
+  \<open>run_voblint_legacy_check_sound\<close>.
 \<close>
 
 theorem mf_checks_hold:
@@ -52,11 +52,11 @@ theorem mf_checks_hold:
     and chk: "next_check residual = Some (l, e)"
   shows "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
 proof -
-  obtain res where ans: "run_voblint mf_config mf_program = Analysed res"
+  obtain res where ans: "run_voblint_legacy mf_config mf_program = Analysed res"
     and verdicts: "map check_verdict (report_checks res)
                      = [Decided Check_Proved, Decided Check_Proved]"
-    using mf_report by (cases "run_voblint mf_config mf_program") auto
-  from run_voblint_check_sound [OF s0 run chk ans]
+    using mf_report by (cases "run_voblint_legacy mf_config mf_program") auto
+  from run_voblint_legacy_check_sound [OF s0 run chk ans]
   obtain c where listed: "c \<in> set (report_checks res)"
     and proved: "check_verdict c = Decided Check_Proved \<longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
     by blast

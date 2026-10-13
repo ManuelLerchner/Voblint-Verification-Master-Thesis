@@ -32,4 +32,5 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     Analysis_Certified
     Typed_Certified
     Typed_Report
+    Run_Voblint
     Trace_Run

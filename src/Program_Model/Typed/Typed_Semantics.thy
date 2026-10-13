@@ -746,7 +746,7 @@ end
 subsection \<open>Typed programs\<close>
 
 text \<open>The table of a typed program meets the simulation's requirements whenever its
-  lowering is a well-formed source program, which \<open>run_voblint\<close> checks.\<close>
+  lowering is a well-formed source program, which \<open>run_voblint_legacy\<close> checks.\<close>
 
 lemma tvars_elaborate: "tvars (elaborate \<rho> \<kappa> ik e) \<subseteq> range \<rho>"
   by (induction e arbitrary: ik) (auto simp: Let_def tcast_to_def)

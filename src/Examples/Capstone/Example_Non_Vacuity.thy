@@ -43,7 +43,7 @@ abbreviation nv_config :: analysis_config where
      Program_Globals_Flow_Sensitive"
 
 lemma nv_report:
-  "(case run_voblint nv_config nv_prog of
+  "(case run_voblint_legacy nv_config nv_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
           = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
@@ -52,11 +52,11 @@ lemma nv_report:
 
 lemma nv_analysed:
   obtains res where
-    "run_voblint nv_config nv_prog = Analysed res"
+    "run_voblint_legacy nv_config nv_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
   using nv_report
-  by (cases "run_voblint nv_config nv_prog") auto
+  by (cases "run_voblint_legacy nv_config nv_prog") auto
 
 subsection \<open>The premises, discharged\<close>
 
@@ -143,14 +143,14 @@ qed
 subsection \<open>The endpoints, instantiated\<close>
 
 text \<open>
-  With the premises discharged, \<open>run_voblint_source_sound\<close> and its siblings apply to
+  With the premises discharged, \<open>run_voblint_legacy_source_sound\<close> and its siblings apply to
   \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are
   \<open>Check_Proved\<close> and \<open>Dead\<close>.
 \<close>
 
 theorem nv_source_certified:
   "\<exists>res v.
-     run_voblint nv_config nv_prog
+     run_voblint_legacy nv_config nv_prog
        = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved),
@@ -165,12 +165,12 @@ theorem nv_source_certified:
    \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
    \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
 proof -
-  obtain res where ans: "run_voblint nv_config nv_prog
+  obtain res where ans: "run_voblint_legacy nv_config nv_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  from run_voblint_source_sound [OF nv_init nv_to_check ans]
+  from run_voblint_legacy_source_sound [OF nv_init nv_to_check ans]
   obtain v where "nv_prog, (\<lambda>_. 0) \<turnstile>
        (VIMP_Proc.gcom.Seq
           (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
@@ -189,14 +189,14 @@ text \<open>
 \<close>
 
 theorem nv_check_proved_sound:
-  "\<exists>res. run_voblint nv_config nv_prog = Analysed res
+  "\<exists>res. run_voblint_legacy nv_config nv_prog = Analysed res
      \<and> (\<exists>chk \<in> set (report_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
           \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
                           cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
 proof -
-  obtain res where ans: "run_voblint nv_config nv_prog
+  obtain res where ans: "run_voblint_legacy nv_config nv_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
@@ -204,7 +204,7 @@ proof -
   have nc: "next_check (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
               (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
     by simp
-  from run_voblint_check_sound [OF nv_init nv_to_check nc ans]
+  from run_voblint_legacy_check_sound [OF nv_init nv_to_check nc ans]
   obtain chk
     where listed: "chk \<in> set (report_checks res)"
       and re: "check_exp chk = Eq (V (STR ''a'')) (N 6)"
@@ -234,7 +234,7 @@ abbreviation nv_dead_config :: analysis_config where
      Program_Globals_Flow_Sensitive"
 
 lemma nv_dead_report:
-  "(case run_voblint nv_dead_config nv_dead_prog of
+  "(case run_voblint_legacy nv_dead_config nv_dead_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
           = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
@@ -244,18 +244,18 @@ lemma nv_dead_report:
 
 lemma nv_dead_analysed:
   obtains res where
-    "run_voblint nv_dead_config nv_dead_prog = Analysed res"
+    "run_voblint_legacy nv_dead_config nv_dead_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
        = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
           (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
   using nv_dead_report
-  by (cases "run_voblint nv_dead_config nv_dead_prog") auto
+  by (cases "run_voblint_legacy nv_dead_config nv_dead_prog") auto
 
 theorem nv_dead_unreached:
   "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
      cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
 proof -
-  obtain res where ans: "run_voblint nv_dead_config nv_dead_prog
+  obtain res where ans: "run_voblint_legacy nv_dead_config nv_dead_prog
                            = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
                    = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
@@ -264,7 +264,7 @@ proof -
   then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 3"
       "check_verdict chk = Dead"
     by (cases "report_checks res" rule: remdups_adj.cases) auto
-  with run_voblint_dead_check_unreached [OF ans] show ?thesis by metis
+  with run_voblint_legacy_dead_check_unreached [OF ans] show ?thesis by metis
 qed
 
 section \<open>Load-bearing conditions\<close>
@@ -279,7 +279,7 @@ subsection \<open>Soundness alone is cheap\<close>
 text \<open>
   \<^const>\<open>verdict_stores\<close> constrains only definite verdicts, so a report that answers
   \<^const>\<open>Check_Unknown\<close> at every check admits every store at every node. The
-  endpoint is informative because the verdicts \<^const>\<open>run_voblint\<close> actually returns
+  endpoint is informative because the verdicts \<^const>\<open>run_voblint_legacy\<close> actually returns
   above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
 \<close>
 
@@ -328,7 +328,7 @@ proof -
 qed
 
 theorem proved_everywhere_unsound:
-  assumes "run_voblint nv_dead_config nv_dead_prog = Analysed res"
+  assumes "run_voblint_legacy nv_dead_config nv_dead_prog = Analysed res"
   shows "(\<lambda>_. 0)(STR ''x'' := 1)
            \<notin> \<V>\<^bsub>answer_all (Decided Check_Proved) res\<^esub> (Statement 1)"
 proof -

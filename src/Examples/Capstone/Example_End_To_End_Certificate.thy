@@ -5,7 +5,7 @@ begin
 section \<open>One configuration, one program, no premise left standing\<close>
 
 text \<open>
-  \<open>run_voblint_source_sound\<close> is stated for an arbitrary configuration
+  \<open>run_voblint_legacy_source_sound\<close> is stated for an arbitrary configuration
   and an arbitrary program, so on its own it says nothing about any particular
   run: a caller still owes the answer. This theory computes it, by evaluation,
   for one program at one configuration --- the
@@ -60,7 +60,7 @@ text \<open>
 \<close>
 
 lemma certificate_demo_report:
-  "(case run_voblint certificate_config
+  "(case run_voblint_legacy certificate_config
             certificate_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
@@ -75,12 +75,12 @@ text \<open>
 \<close>
 
 lemma certificate_demo_analysed:
-  "\<exists>res. run_voblint certificate_config
+  "\<exists>res. run_voblint_legacy certificate_config
            certificate_demo_prog = Analysed res
        \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
            = [(Statement 4, Decided Check_Proved)]"
   using certificate_demo_report
-  by (cases "run_voblint certificate_config
+  by (cases "run_voblint_legacy certificate_config
                certificate_demo_prog")
      auto
 
@@ -378,7 +378,7 @@ text \<open>
 \<close>
 
 lemma certificate_demo_report_full:
-  "(case run_voblint certificate_config
+  "(case run_voblint_legacy certificate_config
             certificate_demo_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
@@ -387,7 +387,7 @@ lemma certificate_demo_report_full:
   by eval
 
 lemma certificate_demo_check:
-  assumes ans: "run_voblint certificate_config
+  assumes ans: "run_voblint_legacy certificate_config
                   certificate_demo_prog = Analysed res"
   shows "\<exists>chk. report_checks res = [chk] \<and> check_point chk = Statement 4
              \<and> check_exp chk = Less (N 0) (V (STR ''b''))
@@ -420,9 +420,9 @@ text \<open>
 \<close>
 
 lemma certificate_demo_report_covers_at_check:
-  assumes ans: "run_voblint certificate_config certificate_demo_prog = Analysed res"
+  assumes ans: "run_voblint_legacy certificate_config certificate_demo_prog = Analysed res"
   shows "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> (Statement 4)"
-  using run_voblint_covers [OF ans] certificate_demo_reaches_check by blast
+  using run_voblint_legacy_covers [OF ans] certificate_demo_reaches_check by blast
 
 text \<open>
   And the endpoint's verdict conjunct at the same node: the \<^const>\<open>Check_Proved\<close> the
@@ -431,15 +431,15 @@ text \<open>
 \<close>
 
 lemma certificate_demo_verdicts_at_check:
-  assumes ans: "run_voblint certificate_config
+  assumes ans: "run_voblint_legacy certificate_config
                   certificate_demo_prog = Analysed res"
       and mem:
         "s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4)"
   shows "s \<in> \<V>\<^bsub>res\<^esub> (Statement 4)"
-  using run_voblint_collect_sound [OF ans] mem by blast
+  using run_voblint_legacy_collect_sound [OF ans] mem by blast
 
 theorem certificate_demo_check_semantically_true:
-  assumes ans: "run_voblint certificate_config
+  assumes ans: "run_voblint_legacy certificate_config
                   certificate_demo_prog = Analysed res"
   shows "\<forall>s \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> (Statement 4).
            truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e s)"
@@ -460,14 +460,14 @@ text \<open>
   Everything above, in one place and with every witness named. The generic endpoint
   is existential in the node and the frame stack because \<^const>\<open>csim\<close> is
   structural; here the node is \<open>Statement 4\<close>, the store is the one the program
-  computes, and the answer is the one \<^const>\<open>run_voblint\<close> returns --- so each
+  computes, and the answer is the one \<^const>\<open>run_voblint_legacy\<close> returns --- so each
   conjunct of the headline theorem can be read off separately rather than inferred
   from an existential.
 \<close>
 
 theorem certificate_demo_full_certificate:
   obtains res where
-    "run_voblint certificate_config
+    "run_voblint_legacy certificate_config
        certificate_demo_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Less (N 0) (V (STR ''b'')), Decided Check_Proved)]"
@@ -479,7 +479,7 @@ theorem certificate_demo_full_certificate:
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> (Statement 4)"
     "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> (Statement 4)"
     "truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)))"
-proof (cases "run_voblint certificate_config
+proof (cases "run_voblint_legacy certificate_config
                 certificate_demo_prog")
   case (Analysed res)
   then have checks:
@@ -510,7 +510,7 @@ text \<open>
 
 theorem certificate_demo_source_certified:
   "\<exists>res v.
-     run_voblint certificate_config
+     run_voblint_legacy certificate_config
        certificate_demo_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved)]
@@ -519,13 +519,13 @@ theorem certificate_demo_source_certified:
        \<in> \<C>\<^bsub>declared_global certificate_demo_prog,prog_cfg certificate_demo_prog,cinit_stores (declared_global certificate_demo_prog)\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<R>\<^bsub>res\<^esub> v
    \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42) \<in> \<V>\<^bsub>res\<^esub> v"
-proof (cases "run_voblint certificate_config
+proof (cases "run_voblint_legacy certificate_config
                 certificate_demo_prog")
   case (Analysed res)
   then have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                        = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report by simp
-  from run_voblint_source_sound [OF certificate_demo_init certificate_demo_run Analysed]
+  from run_voblint_legacy_source_sound [OF certificate_demo_init certificate_demo_run Analysed]
   obtain v where "certificate_demo_prog, (\<lambda>_. 0)
                     \<turnstile> (SKIP (), (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42), []) \<rhd> v"
     and "(\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
@@ -543,7 +543,7 @@ text \<open>
 \<close>
 
 theorem certificate_demo_check_listed_sound:
-  "\<exists>res. run_voblint certificate_config
+  "\<exists>res. run_voblint_legacy certificate_config
            certificate_demo_prog = Analysed res
      \<and> (\<exists>chk \<in> set (report_checks res). check_exp chk = Less (N 0) (V (STR ''b''))
           \<and> (\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42)
@@ -551,13 +551,13 @@ theorem certificate_demo_check_listed_sound:
           \<and> check_verdict chk = Decided Check_Proved
           \<and> truthy (\<lbrakk>Less (N 0) (V (STR ''b''))\<rbrakk>\<^sub>e
                      ((\<lambda>_. 0)(STR ''a'' := 2, STR ''b'' := 42))))"
-proof (cases "run_voblint certificate_config
+proof (cases "run_voblint_legacy certificate_config
                 certificate_demo_prog")
   case (Analysed res)
   have checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                   = [(Statement 4, Decided Check_Proved)]"
     using certificate_demo_report Analysed by simp
-  from run_voblint_check_sound
+  from run_voblint_legacy_check_sound
          [OF certificate_demo_init certificate_demo_to_check next_check.simps(1) Analysed]
   obtain chk
     where listed: "chk \<in> set (report_checks res)"

@@ -5,7 +5,7 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint.run_voblint
+       -> Voblint.run_voblint_legacy
             (Analysis_Config (domains, globals, context, program_globals))
           (Isabelle-generated). One call checks the activation and the program and
           runs the analyses the activation list, global update rule and context
