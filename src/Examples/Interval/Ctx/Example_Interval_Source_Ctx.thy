@@ -11,7 +11,7 @@ text \<open>
   \<open>interval_es_rule\<close> at \<^const>\<open>Globals_Warrow\<close>, for an activation admitted for the
   trace that produced it, published and then through the lifted concretization
   \<^const>\<open>gamma_state_lift\<close>.  The admitted-context relation
-  \<^const>\<open>dg_analysis.admitted_contexts\<close> keeps the two calls separate while the
+  \<^const>\<open>gdg_analysis.admitted_contexts\<close> keeps the two calls separate while the
   source/CFG simulation preserves the concrete frame stack; being a relation rather than a
   function, what a trace admits is membership in \<^const>\<open>activation_context_rel\<close>, not an equation.
 \<close>

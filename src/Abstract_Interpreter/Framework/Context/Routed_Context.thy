@@ -788,9 +788,9 @@ text \<open>
 \<close>
 
 definition routed_entry_context_rel ::
-  "(call_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list)
-     \<Rightarrow> ('D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> ('v \<Rightarrow> 'k)
-     \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c context_policy"
+  "(('vr, 'e) gcall_info \<Rightarrow> 'D \<Rightarrow> 'D enter_result list)
+     \<Rightarrow> ('D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> (pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state) \<Rightarrow> ('v \<Rightarrow> 'k)
+     \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c) \<Rightarrow> ('vr, 'e, 'c) gcontext_policy"
 where
   "routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered =
      {ctx'. \<exists>cont entry.

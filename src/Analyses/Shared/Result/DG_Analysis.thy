@@ -454,6 +454,873 @@ text \<open>
   program's own declared globals, the one set the soundness statement uses.
 \<close>
 
+locale gdg_analysis =
+  dg_pipeline comp emp rd init_st buffer_key global_of seed route root_ctx solve solve_dom
+    bot_state classify place_spec place_cmb place_rl place_rg place_inits place_enter pcfg pentry
+  + certified_solver solve solve_dom solve_c
+  for ev :: "'e::linorder \<Rightarrow> ('vr::linorder \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
+    and pconv :: "'p \<Rightarrow> 'vr option \<Rightarrow> int \<Rightarrow> int"
+    and pglob :: "'p \<Rightarrow> 'vr \<Rightarrow> bool"
+    and pinit :: "'p \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and comp :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e, 's::semilattice_sup lifted) glocal_spec"
+    and emp :: "'p \<Rightarrow> 's \<Rightarrow> bool"
+    and rd :: "('vr \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
+    and init_st :: 's
+    and buffer_key :: 'k
+    and global_of :: "'n \<Rightarrow> 'k"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and route :: "('vr \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 's lifted \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
+    and root_ctx :: 'c
+    and solve solve_dom
+    and bot_state :: 'v
+    and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and empty\<^sub>V :: "'v \<Rightarrow> bool"
+    and solve_c :: "(pp \<times> 'c, 'k, ('s lifted, 's lifted) dg_state) eqsT
+                    \<Rightarrow> pp \<times> 'c
+                    \<Rightarrow> ((pp \<times> 'c) set
+                          \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)) option"
+    and place_spec :: "'p \<Rightarrow> ('vr, 'e, 's lifted) glocal_spec
+                        \<Rightarrow> ('vr, 'e, pp \<times> 'c, 'k, 'n, 's lifted, 's lifted) gdg_spec"
+    and place_cmb :: "'p \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
+    and place_rl :: "('vr \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and place_rg :: "('vr \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and place_inits :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('n \<times> 's lifted) list"
+    and place_enter :: "'p \<Rightarrow> ('vr, 'e) gcall_info \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
+    and pcfg :: "'p \<Rightarrow> ('vr, 'e) gcfg"
+    and pentry :: "'p \<Rightarrow> cfg_node" +
+  assumes gcomp_sound:
+      "\<And>p. mcp_sem.gsound_local_spec ev rv (pconv p) (pglob p)
+               (\<lambda>d. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) d))
+               (comp (pglob p) p)"
+    and genter_single:
+      "\<And>p ci d. ls_enter (comp (pglob p) p) (ls_channel (comp (pglob p) p) d)
+                    ci (d, d)
+                  = [(d, comp_entry (pglob p) p ci d)]"
+    and gplace_contract:
+      "\<And>p. ganalysis_contract ev rv (pconv p) (pglob p) (analysis_spec (pglob p) p)
+               (\<lambda>d e. gamma_lift \<gamma>\<^sub>V
+                        (map_lift (rd (pglob p)) (place_cmb p d e)))"
+    and gplace_enter_runs:
+      "\<And>p ci d \<sigma>. \<exists>pub. enter_runs (enter\<^sup>\<sharp> (analysis_spec (pglob p) p) ci)
+          (mk_dg_man d global_of) \<sigma>
+          [entry_alt (pglob p) p ci d (genv global_of \<sigma>)] pub"
+    and gplace_enter_deps:
+      "\<And>p ci d \<sigma>. \<exists>deps. enter_deps (enter\<^sup>\<sharp> (analysis_spec (pglob p) p) ci)
+          (mk_dg_man d global_of) \<sigma>
+          [entry_alt (pglob p) p ci d (genv global_of \<sigma>)] deps"
+    and gplace_entry_sound:
+      "\<And>p ci d \<sigma> pub s.
+         enter_runs (enter\<^sup>\<sharp> (analysis_spec (pglob p) p) ci)
+           (mk_dg_man d global_of) \<sigma>
+           [entry_alt (pglob p) p ci d (genv global_of \<sigma>)] pub
+         \<Longrightarrow> genv global_of pub \<le> genv global_of \<sigma>
+         \<Longrightarrow> s \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+              (place_cmb p d (genv global_of \<sigma>)))
+         \<Longrightarrow> s \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+                   (place_cmb p
+                      (fst (entry_alt (pglob p) p ci d (genv global_of \<sigma>)))
+                      (genv global_of \<sigma>)))
+           \<and> cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+               \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+                   (place_cmb p
+                      (snd (entry_alt (pglob p) p ci d (genv global_of \<sigma>)))
+                      (genv global_of \<sigma>)))"
+    and gplace_cmb_bot: "\<And>p e. place_cmb p Bot e = Bot"
+    and gplace_init:
+      "\<And>p. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) (Lifted init_st))
+         \<subseteq> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+              (place_cmb p (Lifted init_st) (init_env (pglob p) p)))"
+    and gempty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (pglob p) s)"
+    and gempty\<^sub>V_sound: "sound_emptiness empty\<^sub>V \<gamma>\<^sub>V"
+    and gseed_ne_buffer_key: "\<And>v ctx. seed v ctx \<noteq> buffer_key"
+    and gseed_ne_global_of: "\<And>v ctx n. seed v ctx \<noteq> global_of n"
+    and gclassify_proved:
+      "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (ev c s)"
+    and gclassify_refuted:
+      "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d
+         \<Longrightarrow> \<not> truthy (ev c s)"
+    and gbot_state_empty: "\<gamma>\<^sub>V bot_state = {}"
+    and ginit_sound:
+      "\<And>p. pinit p \<subseteq> \<gamma>\<^sub>V (rd (pglob p) init_st)"
+    and gpentry: "\<And>p. pentry p = cfg_entry (pcfg p)"
+    and gpcfg_fin_intra: "\<And>p. finite (intra (pcfg p))"
+    and gpcfg_fin_calls: "\<And>p. finite (calls (pcfg p))"
+    and gpcfg_calls_unique: "\<And>p. calls_source_unique (pcfg p)"
+begin
+
+text \<open>The generic contract asks the published emptiness test only to be sound: a
+  product of analyses may describe nothing without any one of them saying so. A
+  particular instance may still be exact.\<close>
+
+lemmas empty\<^sub>V_soundD = sound_emptinessD [OF gempty\<^sub>V_sound]
+
+text \<open>
+  Termination is a per-program side condition, and this is how a caller decides
+  it: run the solver's own executable termination check on this program's
+  equations. The premise stays \<open>solve_dom\<close> everywhere else, so nothing in the
+  soundness argument depends on the check having been run.
+\<close>
+
+lemma terminates_of_solve_c:
+  assumes "solve_c (equations \<G> p) (root_query p) \<noteq> None"
+  shows "terminates \<G> p"
+  unfolding terminates_def by (rule dom_of_solve_c[OF assms])
+
+text \<open>
+  An answer of the executable solver is the solve itself, so a run built from that
+  answer is \<^const>\<open>run\<close>, and its program needs no separate termination premise.
+\<close>
+
+lemma solve_c_run:
+  assumes "solve_c (equations \<G> p) (root_query p) = Some sol"
+  shows "terminates \<G> p" and "solved_run_of \<G> p sol = run \<G> p"
+  using assms terminates_of_solve_c solve_of_solve_c[OF assms]
+  by (simp_all add: run_def solution_def)
+
+lemma vars_finite_of_terminates:
+  assumes "terminates \<G> p"
+  shows "finite (sol_vars \<G> p)"
+  using solve_fin[OF assms[unfolded terminates_def]]
+  by (simp add: sol_vars_def solution_def)
+
+text \<open>
+  The contexts a concrete call is admitted at under an entry-state policy: every
+  context the entered state routes to. This is a top-level constant rather than
+  something read out of a per-program interpretation, because an analysis
+  publishes it -- a caller stating a context-indexed collecting fact has to name
+  the relation those contexts are indexed by, and an example checking a routing
+  decision has to name it too.
+
+  With one alternative per call it is one context per abstract caller state; it
+  is still a relation and not a function because several concrete callers sharing
+  one abstract state reach the same context.
+\<close>
+
+definition admitted_contexts :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e, 'c) gcontext_policy" where
+  "admitted_contexts \<G> p =
+     routed_entry_context_rel
+       (\<lambda>ci d. [entry_alt \<G> p ci d (sol_global \<G> p)])
+       (\<lambda>d e. gamma_lift \<gamma>\<^sub>V (map_lift (rd \<G>) (place_cmb p d e)))
+       (sol_env \<G> p) global_of (route \<G>)"
+
+subsection \<open>What the assembly derives, for one program\<close>
+
+text \<open>
+  Fixing one program \<open>p\<close>, this part equates the published table with the solved
+  reader, puts the solver's answer in the routed spine's shape, and states routed
+  soundness for any relation of admitted contexts.
+\<close>
+
+context
+  fixes p :: 'p
+begin
+
+abbreviation (input) pgs :: "'vr \<Rightarrow> bool" where "pgs \<equiv> pglob p"
+  \<comment> \<open>input-only, so interpreted facts print \<open>declared_global p\<close>\<close>
+
+text \<open>What a carrier state describes, published and concretized, and what a point's
+  two halves describe once recombined against the solved global.\<close>
+
+abbreviation cgam :: "'s lifted \<Rightarrow> ('vr \<Rightarrow> int) set" where
+  "cgam d \<equiv> gamma_lift \<gamma>\<^sub>V (map_lift (rd pgs) d)"
+
+abbreviation (input) pgam :: "'s lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> ('vr \<Rightarrow> int) set" where
+  "pgam d e \<equiv> cgam (place_cmb p d e)"
+
+abbreviation (input) gsol :: "'n \<Rightarrow> 's lifted" where
+  "gsol \<equiv> sol_global pgs p"
+
+abbreviation entered :: "('vr, 'e) gcall_info \<Rightarrow> 's lifted \<Rightarrow> 's lifted" where
+  "entered ci d \<equiv> entry_of pgs p ci d gsol"
+
+lemma empty_rd_exact: "emp p s = empty\<^sub>V (rd pgs s)"
+  by (simp add: gempty_rd)
+
+lemma dg_spec_wf_analysis_spec [intro, simp]: "dg_spec_wf (analysis_spec pgs p)"
+  by (rule ganalysis_contract.gspec_wf[OF gplace_contract])
+
+lemma pgam_Bot [simp]: "pgam Bot g = {}"
+  by (simp add: gplace_cmb_bot)
+
+text \<open>
+  The published table and the solved reader describe the same stores at every
+  key. A caller states soundness against \<^const>\<open>lookup_table\<close> of the result
+  table, while the routed endpoints are stated against the reader; this is the
+  equation between them, and it needs no coverage premise. At a covered key it
+  is publication commuting with the normalization; at an uncovered one it is
+  \<^const>\<open>Bot\<close> against \<^const>\<open>Bot\<close>, and both describe nothing.
+\<close>
+
+lemma gamma_reader_eq_lookup:
+  "pgam (reader pgs p (Inl (v, ctx))) gsol
+     = gamma_lift \<gamma>\<^sub>V (lookup_table (result pgs p) v ctx)"
+proof -
+  have gc: "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x" for x
+    by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_soundD)
+  show ?thesis
+  proof (cases "(v, ctx) \<in> sol_vars pgs p")
+    case True
+    then show ?thesis
+      by (simp add: reader_def result_def sol_vars_def sol_env_def sol_global_def gc
+          map_lift_canonicalize_lift[of "emp p" "empty\<^sub>V" "rd pgs", OF empty_rd_exact])
+  next
+    case False
+    then show ?thesis by (simp add: reader_def result_def sol_vars_def bot_lifted_eq)
+  qed
+qed
+
+subsubsection \<open>The solver's answer, in the shape the routed spine consumes\<close>
+
+text \<open>
+  An analysis solves the buffered generator -- a node with several intra
+  predecessors or several returning calls publishes its analysis-wide
+  contribution once per evaluation rather than once per contribution -- while the
+  framework states its soundness over the unbuffered one. \<open>pp_routed\<close> is that
+  reconciliation at this pipeline's own equations, which the placement owes.
+\<close>
+
+lemma pp_buffered:
+  assumes solves: "terminates pgs p"
+  shows "part_post_solution (equations pgs p) (root_query p)
+           (sol_env pgs p) (sol_vars pgs p)"
+  using solve_pp[OF solves[unfolded terminates_def]]
+  by (simp add: sol_env_def sol_vars_def solution_def)
+
+theorem pp_routed:
+  assumes solves: "terminates pgs p"
+  shows "part_post_solution
+     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) (route pgs)
+        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
+        (routed_call_program (analysis_spec pgs p) global_of seed
+           (static_resolve (pcfg p)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed)
+        (pcfg p) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)))
+     (root_query p) (sol_env pgs p) (sol_vars pgs p)"
+  using part_post_solution_with_init[OF pp_buffered[OF solves, unfolded equations_def]]
+  unfolding compiled_routed_eqs_for_def bot_lifted_eq
+  by (rule pp_routed_of_buffered[OF dg_spec_wf_analysis_spec gseed_ne_buffer_key])
+
+text \<open>
+  The run starts below the solved environment once the solve covers the program
+  entry: the entry node publishes the placement's initial global part at its own
+  key, and each listed initial value at its name's key.
+\<close>
+
+lemma init_publication_le_sol:
+  assumes solves: "terminates pgs p"
+    and entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+    and mem: "(n, d) \<in> set (place_inits pgs p)"
+  shows "d \<le> gsol n"
+proof -
+  have pp: "part_post_solution (equations pgs p) (root_query p) (sol_env pgs p) (sol_vars pgs p)"
+    by (rule pp_buffered[OF solves])
+  have "DG Bot d \<le> sol_env pgs p (Inr (global_of n))"
+    by (rule post_bounded_with_init_at[OF post_bounded_of_part_post_solution[OF pp,
+          unfolded equations_def] entry_cov])
+       (use mem in \<open>auto simp: init_publications_def gpentry\<close>)
+  then show ?thesis by (simp add: sol_global_def less_eq_dg_state_def)
+qed
+
+lemma foldr_init_le:
+  "\<forall>(m, d) \<in> set xs. d \<le> f m
+     \<Longrightarrow> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) xs. d) \<le> (f n :: 's lifted)"
+  by (induction xs) auto
+
+lemma init_env_le_sol:
+  assumes solves: "terminates pgs p"
+    and entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+    and own: "place_rg pgs (Lifted init_st) \<le> dg_global (sol_env pgs p (Inr buffer_key))"
+  shows "init_env pgs p \<le> gsol"
+proof (rule le_funI)
+  fix n
+  have "(\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) (place_inits pgs p). d) \<le> gsol n"
+    by (rule foldr_init_le) (use init_publication_le_sol[OF solves entry_cov] in blast)
+  moreover have "(if global_of n = buffer_key then place_rg pgs (Lifted init_st) else Bot)
+                   \<le> gsol n"
+    using own by (auto simp: sol_global_def)
+  ultimately show "init_env pgs p n \<le> gsol n"
+    unfolding init_env_def by simp
+qed
+
+subsubsection \<open>The one entry alternative this carrier answers with\<close>
+
+text \<open>
+  The specification's entry answers with a single alternative, the recombined
+  caller state and the callee frame entered from it, each split back by the
+  placement. \<open>entry_cover\<close> is the only fact about it any context policy needs,
+  namely that a concrete call from a described caller lands in the described
+  callee.
+\<close>
+
+text \<open>
+  What a call publishes on entry is below the solved global, once the node the
+  call returns to is solved: that node's equation runs the call, and a
+  post-solution bounds what every solved equation publishes.
+\<close>
+
+lemma enter_pub_le_sol:
+  assumes solves: "terminates pgs p"
+    and cont: "(k, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, ca, FunctionEntry q, k) \<in> calls (pcfg p)"
+    and R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) (call_info_of ca q))
+              (mk_dg_man (dg_local (sol_env pgs p (Inl (u, ctx)))) global_of)
+              (sol_env pgs p) pairs pub"
+  shows "genv global_of pub \<le> gsol"
+proof (rule le_funI)
+  fix n
+  let ?K = "Inr (global_of n)"
+  let ?\<sigma> = "sol_env pgs p"
+  let ?callee = "routed_callee_call_program (analysis_spec pgs p) global_of seed (route pgs)
+                   (\<lambda>d. d = Bot) ctx ca u (dg_local (?\<sigma> (Inl (u, ctx)))) q"
+  let ?call = "routed_call_program (analysis_spec pgs p) global_of seed
+                 (static_resolve (pcfg p)) (\<lambda>d. d = Bot) (route pgs) ctx ca u k"
+  let ?contribs = "routed_contribution_programs intra_predecessor_addr_list call_site_list (route pgs)
+        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
+        (routed_call_program (analysis_spec pgs p) global_of seed
+           (static_resolve (pcfg p)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed) (pcfg p) ctx k"
+  let ?rhs = "routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) (route pgs)
+        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
+        (routed_call_program (analysis_spec pgs p) global_of seed
+           (static_resolve (pcfg p)) (\<lambda>d. d = Bot))
+        (routed_entry_seed_programs seed)
+        (pcfg p) Bot (Lifted init_st) (place_rg pgs (Lifted init_st))"
+  have fin: "finite (calls (pcfg p))"
+    by (simp add: gpcfg_fin_intra gpcfg_fin_calls)
+  have wf: "\<forall>t \<in> set ?contribs. sp_wf t"
+    by (rule routed_contribution_programs_wf) auto
+  have "pub ?K \<le> sides_of_program ?callee ?\<sigma> ?K"
+    unfolding routed_callee_call_program_def
+    by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
+  also have "\<dots> \<le> sides_of_program ?call ?\<sigma> ?K"
+    by (rule routed_call_program_sides_ge_at[OF dg_spec_wf_analysis_spec])
+       (use ce fin in simp)
+  also have "\<dots> \<le> sides_of_program (side_rhs_fold_dg
+      (if k = cfg_entry (pcfg p) then Bot \<squnion> Lifted init_st else Bot) ?contribs)
+      ?\<sigma> ?K"
+  proof (rule sides_le_side_rhs_fold_dg[OF wf])
+    have "(u, ca) \<in> set (call_site_list (pcfg p) k)" using ce fin by auto
+    then show "?call \<in> set ?contribs" by (rule routed_contribution_programs_combineI)
+  qed
+  also have "\<dots> \<le> sides_of_rhs (?rhs (k, ctx)) ?\<sigma> ?K"
+    unfolding routed_node_rhs_def Let_def
+    by (cases "k = cfg_entry (pcfg p)") (auto simp: Let_def)
+  also have "\<dots> \<le> ?\<sigma> ?K"
+    using pp_routed[OF solves] cont by (blast dest: le_funD)
+  finally show "genv global_of pub n \<le> gsol n"
+    unfolding sol_global_def by (simp add: less_eq_dg_state_def)
+qed
+
+lemma entry_cover:
+  assumes solves: "terminates pgs p"
+    and cont: "(k, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, k) \<in> calls (pcfg p)"
+    and sin: "s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol"
+  shows "entry_pairs_cover (\<lambda>d. pgam d gsol) s (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)
+           [entry_alt pgs p (call_info_of (CallEdge dst pars args) q)
+              (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol]"
+proof -
+  let ?ci = "call_info_of (CallEdge dst pars args) q"
+  let ?d = "dg_local (sol_env pgs p (Inl (u, ctx)))"
+  let ?alt = "entry_alt pgs p ?ci ?d gsol"
+  obtain pub where R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
+      (mk_dg_man ?d global_of) (sol_env pgs p)
+      [entry_alt pgs p ?ci ?d (genv global_of (sol_env pgs p))] pub"
+    using gplace_enter_runs by blast
+  have le: "genv global_of pub \<le> genv global_of (sol_env pgs p)"
+    using enter_pub_le_sol[OF solves cont ce R] by (simp add: sol_global_def)
+  have "s \<in> pgam (fst ?alt) gsol \<and> cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s \<in> pgam (snd ?alt) gsol"
+    using gplace_entry_sound[OF R le sin[unfolded sol_global_def]]
+    unfolding sol_global_def by (simp)
+  then show ?thesis
+    by (intro entry_pairs_coverI[of "fst ?alt" "snd ?alt"]) simp_all
+qed
+
+subsubsection \<open>The routed soundness statement, at any admitted-context relation\<close>
+
+text \<open>
+  Which contexts a concrete call is admitted at is the one thing a context policy
+  still chooses, so \<open>adm\<close> is a parameter here rather than a derived object. What
+  the policy owes about it is exactly two facts: a context \<open>adm\<close> admits is the one
+  this pipeline's route computes on the entered state, at a covered unknown
+  (\<open>cover_R\<close>); and \<open>adm\<close> admits at least one context for every concrete call at a
+  covered call site (\<open>total_R\<close>). Everything else below is fixed by the pipeline.
+\<close>
+
+text \<open>
+  The specification is sound for the recombined concretization; the placement
+  owes this, so the routed statement below never re-derives it.
+\<close>
+
+interpretation dg_base: ganalysis_contract ev rv "pconv p" pgs "analysis_spec pgs p"
+    "\<lambda>d e. pgam d e"
+  by (rule gplace_contract)
+
+lemma routed_analysis_sound_of_live:
+  fixes adm :: "('vr, 'e, 'c) gcontext_policy"
+  assumes solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> dg_local (sol_env pgs p (Inl (u, ctx))) \<noteq> Bot
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+              (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)
+        \<Longrightarrow> entered (call_info_of (CallEdge dst pars args) q)
+              (dg_local (sol_env pgs p (Inl (u, ctx)))) \<noteq> Bot
+        \<Longrightarrow> route pgs u ctx
+                (entered (call_info_of (CallEdge dst pars args) q)
+                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
+                (CallEdge dst pars args) = ctx'
+            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    and total_R: "\<And>u ctx dst pars args q cont s.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
+        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) \<noteq> {}"
+  shows "grouted_analysis ev rv (pconv p) pgs (analysis_spec pgs p) (\<lambda>d e. pgam d e) (pcfg p)
+     buffer_key global_of
+     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
+     (sol_vars pgs p) (root_query p)
+     seed (\<lambda>d. d = Bot) adm (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V
+     classify"
+proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
+    SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
+    EmptyExact ClProved ClRefuted VarsFin)
+  case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
+next
+  case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
+next
+  case FinE show ?case by (simp add: gpcfg_fin_intra gpcfg_fin_calls)
+next
+  case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp_routed[OF solves]])
+next
+  case (SgCov v c) then show ?case by simp
+next
+  case (SgUncov v c) then show ?case by (simp add: bot_lifted_eq)
+next
+  case (Fwd u a v c)
+  have "dg_local (sol_env pgs p (Inl (u, c))) \<noteq> Bot"
+    using Fwd(2) by auto
+  with Fwd(1,3) show ?case by (blast intro: fwd_ok)
+next
+  case FinC show ?case by (simp add: gpcfg_fin_intra gpcfg_fin_calls)
+next
+  case CallsUnique show ?case by (rule gpcfg_calls_unique)
+next
+  case (SeedUnknown q ctx) show ?case by (rule gseed_ne_buffer_key)
+next
+  case (SeedNeGlobal q ctx v) show ?case by (rule gseed_ne_global_of)
+next
+  case IsBotBot show ?case by simp
+next
+  case (IsBotSound d g') then show ?case by simp
+next
+  case (ResolveSound u ctx dst pars args q cont s)
+  then show ?case by (simp add: gpcfg_fin_intra gpcfg_fin_calls)
+next
+  case (EnterCover u ctx dst pars args q cont s ctx')
+  let ?ci = "call_info_of (CallEdge dst pars args) q"
+  let ?caller = "dg_local (sol_env pgs p (Inl (u, ctx)))"
+  let ?g = "genv global_of (sol_env pgs p)"
+  have sin: "s \<in> pgam ?caller gsol"
+    using EnterCover(3) by (simp add: sol_global_def)
+  have cov: "entry_pairs_cover (\<lambda>d. pgam d gsol) s
+      (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) [entry_alt pgs p ?ci ?caller gsol]"
+    by (rule entry_cover[OF solves comb_fwd_ok[OF EnterCover(1,2)] EnterCover(2) sin])
+  obtain c e where ce: "entry_alt pgs p ?ci ?caller gsol = (c, e)"
+    by (cases "entry_alt pgs p ?ci ?caller gsol")
+  have nbE: "entered ?ci ?caller \<noteq> Bot"
+  proof
+    assume "entered ?ci ?caller = Bot"
+    with cov ce show False by (simp add: entry_pairs_cover_def entry_of_def gplace_cmb_bot)
+  qed
+  have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
+    and covE: "(FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    using cover_R[OF EnterCover(1,2,4) nbE] by blast+
+  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
+      (mk_dg_man ?caller global_of) (sol_env pgs p)
+      [entry_alt pgs p ?ci ?caller ?g] pub"
+    using gplace_enter_runs by blast
+  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
+      (mk_dg_man ?caller global_of) (sol_env pgs p)
+      [entry_alt pgs p ?ci ?caller ?g] deps"
+    using gplace_enter_deps by blast
+  have ce': "entry_alt pgs p ?ci ?caller ?g = (c, e)"
+    using ce by (simp add: sol_global_def)
+  have sc: "s \<in> pgam c ?g" and ec: "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s \<in> pgam e ?g"
+    using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
+  have re: "route pgs u ctx e (CallEdge dst pars args) = ctx'"
+    using req ce by (simp add: entry_of_def)
+  show ?case
+    using runs deps sc ec re covE unfolding ce' by fastforce
+next
+  case (EnterTotal u ctx dst pars args q cont s)
+  then show ?case by (intro total_R) (simp_all add: sol_global_def)
+next
+  case (CombFwd cl c1 dst pars args q cont)
+  then show ?case by (rule comb_fwd_ok)
+next
+  case (GammaRd d g') show ?case by simp
+next
+  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_soundD)
+next
+  case (ClProved c d s) then show ?case by (rule gclassify_proved)
+next
+  case (ClRefuted c d s) then show ?case by (rule gclassify_refuted)
+next
+  case VarsFin show ?case by (rule vars_finite_of_terminates[OF solves])
+qed
+
+lemma routed_analysis_sound_of:
+  fixes adm :: "('vr, 'e, 'c) gcontext_policy"
+  assumes solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+              (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)
+        \<Longrightarrow> route pgs u ctx
+                (entered (call_info_of (CallEdge dst pars args) q)
+                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
+                (CallEdge dst pars args) = ctx'
+            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    and total_R: "\<And>u ctx dst pars args q cont s.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
+        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) \<noteq> {}"
+  shows "grouted_analysis ev rv (pconv p) pgs (analysis_spec pgs p) (\<lambda>d e. pgam d e) (pcfg p)
+     buffer_key global_of
+     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
+     (sol_vars pgs p) (root_query p)
+     seed (\<lambda>d. d = Bot) adm (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V
+     classify"
+  by (rule routed_analysis_sound_of_live [where adm = adm, OF solves _ comb_fwd_ok _ total_R])
+     (blast intro: fwd_ok dest: cover_R)+
+
+subsubsection \<open>The published endpoint, under termination and coverage\<close>
+
+text \<open>
+  Under termination and closure of the solved keys, \<open>activation_collect_sound_of\<close>
+  bounds every admitted activation by the solved table's entry at its context.
+\<close>
+
+lemma cinit_le_init: "pinit p \<subseteq> pgam (Lifted init_st) (init_env pgs p)"
+  using ginit_sound[of p] gplace_init[of p] by auto
+
+text \<open>
+  Every activation the activation-trace semantics admits at a context is described by the
+  solved table's entry for that context. The coverage premises are the shape a
+  solver's own reachable set supplies: an edge out of an unknown the solve
+  visited lands on one it also visited.
+\<close>
+
+lemma activation_collect_sound_of:
+  fixes adm :: "('vr, 'e, 'c) gcontext_policy"
+  assumes solves: "terminates pgs p"
+    and entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+              (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)
+        \<Longrightarrow> route pgs u ctx
+                (entered (call_info_of (CallEdge dst pars args) q)
+                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
+                (CallEdge dst pars args) = ctx'
+            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    and total_R: "\<And>u ctx dst pars args q cont s.
+        (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
+        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
+                      (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) \<noteq> {}"
+  shows "ctx_sem.gactivation_collect ev rv (pconv p) pgs (adm) root_ctx (pcfg p) (pinit p) v ctx
+           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
+proof -
+  interpret adapter: grouted_analysis ev rv "pconv p" pgs "analysis_spec pgs p" "\<lambda>d e. pgam d e"
+      "pcfg p" buffer_key global_of "route pgs" Bot "Lifted init_st"
+      "place_rg pgs (Lifted init_st)" "sol_env pgs p" "sol_vars pgs p" "root_query p" seed
+      "\<lambda>d. d = Bot" adm "\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)" \<gamma>\<^sub>V empty\<^sub>V classify
+    by (rule routed_analysis_sound_of
+          [where adm = adm, OF solves fwd_ok comb_fwd_ok cover_R total_R])
+  have init_env_le: "init_env pgs p \<le> genv global_of (sol_env pgs p)"
+    using init_env_le_sol[OF solves entry_cov adapter.pp_entry_init_global_bound[OF entry_cov]]
+    by (simp add: sol_global_def)
+  show ?thesis
+    using adapter.activation_collect_dg_sound[OF entry_cov _ init_env_le, of "pinit p" v
+      ctx]
+      cinit_le_init
+    by (simp add: reader_def sol_global_def)
+qed
+
+subsubsection \<open>The two context policies this assembly supports\<close>
+
+text \<open>
+  \<open>entry_context_rel\<close> is the relation an entry-state policy induces: a concrete
+  call is admitted at every context some covering alternative of the entry answer
+  routes to. With one alternative per call that is a single context per abstract
+  caller state, but several concrete callers sharing an abstract state may still
+  reach one context, which is exactly why a relation and not a function.
+\<close>
+
+lemma admitted_contexts_alt:
+  "admitted_contexts pgs p =
+     routed_entry_context_rel (\<lambda>ci d. [entry_alt pgs p ci d gsol]) (\<lambda>d e. pgam d e)
+       (sol_env pgs p) global_of (route pgs)"
+  by (simp add: admitted_contexts_def)
+
+abbreviation entry_context_rel :: "('vr, 'e, 'c) gcontext_policy" where
+  "entry_context_rel \<equiv> admitted_contexts pgs p"
+
+text \<open>
+  How a caller shows that this call is admitted at the context it computed: the
+  concrete caller store is described by the recombined caller, and the entered
+  store by the callee frame entered from it, each recombined against the solved
+  global. The single alternative means a witness never has to name the
+  alternatives list.
+\<close>
+
+lemma admitted_contextsI:
+  assumes caller: "s \<in> pgam (fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol))
+                     gsol"
+    and entered_in: "s' \<in> pgam (entered ci (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
+  shows "route pgs u ctx (entered ci (dg_local (sol_env pgs p (Inl (u, ctx)))))
+             (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))
+           \<in> entry_context_rel u ctx ci s s'"
+  unfolding admitted_contexts_alt
+  by (rule routed_entry_context_relI
+        [where cont = "fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)"])
+     (use caller entered_in in \<open>simp_all add: entry_of_def sol_global_def\<close>)
+
+text \<open>
+  The same fact with the call action spelled as the caller has it. A witness
+  names a literal \<^const>\<open>CallEdge\<close>, while the rule above reconstructs one from
+  the \<^type>\<open>call_info\<close>'s three projections, and \<^theory_text>\<open>rule\<close> does not reduce the
+  projections. Every concrete instance wants this shape.
+\<close>
+
+lemma admitted_contextsI_call:
+  assumes caller: "s \<in> pgam (fst (entry_alt pgs p (call_info_of (CallEdge dst pars args) q)
+                       (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)) gsol"
+    and entered_in: "s' \<in> pgam (entered (call_info_of (CallEdge dst pars args) q)
+                           (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
+  shows "route pgs u ctx
+             (entered (call_info_of (CallEdge dst pars args) q)
+                (dg_local (sol_env pgs p (Inl (u, ctx)))))
+             (CallEdge dst pars args)
+           \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s s'"
+  using admitted_contextsI[OF caller entered_in] by simp
+
+lemma entry_state_routed_analysis_sound:
+  assumes solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (FunctionEntry q,
+               route pgs u ctx
+                 (entered (call_info_of (CallEdge dst pars args) q)
+                    (dg_local (sol_env pgs p (Inl (u, ctx)))))
+                 (CallEdge dst pars args))
+              \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+  shows "grouted_analysis ev rv (pconv p) pgs (analysis_spec pgs p) (\<lambda>d e. pgam d e) (pcfg p)
+     buffer_key global_of
+     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
+     (sol_vars pgs p) (root_query p)
+     seed (\<lambda>d. d = Bot) entry_context_rel
+     (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V classify"
+proof (rule routed_analysis_sound_of
+    [where adm = entry_context_rel, OF solves fwd_ok comb_fwd_ok])
+  fix u ctx dst pars args q cont and s :: "'vr \<Rightarrow> int" and ctx'
+  assume covV: "(u, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
+    and Rc: "ctx' \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s
+               (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)"
+  let ?ci = "call_info_of (CallEdge dst pars args) q"
+  let ?caller = "dg_local (sol_env pgs p (Inl (u, ctx)))"
+  from Rc[unfolded admitted_contexts_alt] obtain cont' entry
+    where mem: "(cont', entry) \<in> set [entry_alt pgs p ?ci ?caller gsol]"
+      and req0: "ctx' = route pgs u ctx entry
+                   (CallEdge (ci_dst ?ci) (ci_formals ?ci) (ci_args ?ci))"
+    by (rule routed_entry_context_relE)
+  have "entry = entered ?ci ?caller" using mem by (simp add: entry_of_def) (metis snd_conv)
+  with req0 have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
+    by simp
+  show "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'
+          \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    using req call_fwd_ok[OF covV ce] by simp
+next
+  fix u ctx dst pars args q cont and s :: "'vr \<Rightarrow> int"
+  assume covV: "(u, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
+    and sin: "s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol"
+  show "entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s
+                 (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) \<noteq> {}"
+    unfolding admitted_contexts_alt
+    by (rule routed_entry_context_rel_total)
+       (use entry_cover[OF solves comb_fwd_ok[OF covV ce] ce sin]
+         in \<open>simp add: sol_global_def\<close>)
+qed
+
+text \<open>
+  The two endpoints an entry-state caller consumes: the per-context collecting
+  bound, and the existence of a context for every valid activation trace, which a
+  source-level caller needs to name a context witness at all. Both are the
+  routed spine's own theorems at the interpretation just established.
+\<close>
+
+context
+  assumes solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (FunctionEntry q,
+               route pgs u ctx
+                 (entered (call_info_of (CallEdge dst pars args) q)
+                    (dg_local (sol_env pgs p (Inl (u, ctx)))))
+                 (CallEdge dst pars args))
+              \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+begin
+
+interpretation entry: grouted_analysis ev rv "pconv p" pgs "analysis_spec pgs p" "\<lambda>d e. pgam d e"
+    "pcfg p" buffer_key global_of "route pgs" Bot "Lifted init_st"
+    "place_rg pgs (Lifted init_st)" "sol_env pgs p" "sol_vars pgs p" "root_query p" seed
+    "\<lambda>d. d = Bot" entry_context_rel "\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)"
+    \<gamma>\<^sub>V empty\<^sub>V classify
+  by (rule entry_state_routed_analysis_sound [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
+
+lemma entry_init_env_le:
+  assumes entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+  shows "init_env pgs p \<le> genv global_of (sol_env pgs p)"
+  using init_env_le_sol[OF solves entry_cov entry.pp_entry_init_global_bound[OF entry_cov]]
+  by (simp add: sol_global_def)
+
+corollary entry_state_activation_collect_sound:
+  assumes entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+  shows "ctx_sem.gactivation_collect ev rv (pconv p) pgs (entry_context_rel) root_ctx (pcfg p) (pinit p) v ctx
+           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
+  using entry.activation_collect_dg_sound
+      [OF entry_cov _ entry_init_env_le[OF entry_cov], of "pinit p" v ctx]
+    cinit_le_init
+  by (simp add: reader_def sol_global_def)
+
+theorem entry_state_has_context:
+  assumes entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+    and trace: "t \<in> trace_sem.gvalid_activation_trace ev rv (pconv p) pgs (pcfg p) (pinit p)"
+  shows "\<exists>c. ctx_sem.gactivation_context_rel ev pgs entry_context_rel root_ctx (pcfg p) t c"
+  using entry.routed_valid_activation_trace_has_context
+      [OF entry_cov _ entry_init_env_le[OF entry_cov] trace] cinit_le_init
+  by simp
+
+text \<open>
+  The two together: covering the entry is enough for the activation buckets to
+  exhaust the context-insensitive collection, so a caller holding only a
+  \<^const>\<open>node_collect\<close> membership -- which is what a source run delivers -- can
+  pass to the bucket its own call history produced.  Without this the per-context
+  bounds above say nothing about a run whose context is not known in advance.
+\<close>
+
+theorem entry_state_node_collect_eq_Union:
+  assumes entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+  shows "collect_sem.gnode_collect ev rv (pconv p) pgs (pcfg p) (pinit p) v
+           = (\<Union>ctx. ctx_sem.gactivation_collect ev rv (pconv p) pgs (entry_context_rel) root_ctx (pcfg p) (pinit p) v ctx)"
+  by (rule collect_sem.node_collect_eq_Union_activation_of_has_context)
+     (rule entry_state_has_context [OF entry_cov])
+
+end
+
+text \<open>
+  A route that never reads the state it is handed is a function of the call site
+  and the caller's context alone, so the contexts it admits are the graph of a
+  context function on concrete stores -- the shape the call-string and
+  context-insensitive policies both publish. \<open>route_const\<close> is the whole of what
+  such a policy owes; \<open>ctx_fun\<close> is its trace-semantic counterpart.
+\<close>
+
+corollary fun_route_activation_collect_sound:
+  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> 'c"
+  assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
+    and solves: "terminates pgs p"
+    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, a, v) \<in> intra (pcfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
+    and call_fwd_ok: "\<And>u ctx dst pars args q cont d. (u, ctx) \<in> sol_vars pgs p
+        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (FunctionEntry q, route pgs u ctx d (CallEdge dst pars args))
+              \<in> sol_vars pgs p"
+    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
+        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
+        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
+    and entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
+  shows "ctx_sem.gactivation_collect ev rv (pconv p) pgs (context_policy_of_fun ctx_fun) root_ctx (pcfg p) (pinit p) v ctx
+           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
+proof (rule activation_collect_sound_of[OF solves entry_cov fwd_ok comb_fwd_ok])
+  fix u ctx dst pars args q cont and s :: "'vr \<Rightarrow> int" and ctx'
+  assume covV: "(u, ctx) \<in> sol_vars pgs p"
+    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
+    and Rc: "ctx' \<in> context_policy_of_fun ctx_fun u ctx
+               (call_info_of (CallEdge dst pars args) q) s
+               (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)"
+  have req: "route pgs u ctx d (CallEdge dst pars args) = ctx'" for d
+    using Rc
+    by (simp add: route_const[of _ _ _ _ "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s"])
+  show "route pgs u ctx
+          (entered (call_info_of (CallEdge dst pars args) q)
+             (dg_local (sol_env pgs p (Inl (u, ctx)))))
+          (CallEdge dst pars args) = ctx'
+        \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
+    using req call_fwd_ok[OF covV ce] by simp
+next
+  fix u ctx dst pars args q cont and s :: "'vr \<Rightarrow> int"
+  show "context_policy_of_fun ctx_fun u ctx
+                 (call_info_of (CallEdge dst pars args) q) s
+                 (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s) \<noteq> {}"
+    by simp
+qed
+
+text \<open>
+  The functional route's counterpart of the entry-state union. It needs nothing
+  at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
+  any coverage having been established.
+\<close>
+
+theorem fun_route_node_collect_eq_Union:
+  "collect_sem.gnode_collect ev rv (pconv p) pgs (pcfg p) (pinit p) v
+     = (\<Union>ctx. ctx_sem.gactivation_collect ev rv (pconv p) pgs (context_policy_of_fun ctx_fun) root_ctx (pcfg p) (pinit p) v ctx)"
+  by (rule collect_sem.node_collect_eq_Union_activation_of_fun)
+
+end
+
+end
+
+
+text \<open>The untyped analysis: the same contracts over source names and untyped expressions.\<close>
+
 locale dg_analysis =
   dg_pipeline comp emp rd init_st buffer_key global_of seed route root_ctx solve solve_dom
     bot_state classify place_spec place_cmb place_rl place_rg place_inits place_enter
@@ -539,777 +1406,79 @@ locale dg_analysis =
     and bot_state_empty: "\<gamma>\<^sub>V bot_state = {}"
     and init_sound:
       "\<And>p. cinit_stores (declared_global p) \<subseteq> \<gamma>\<^sub>V (rd (declared_global p) init_st)"
-begin
 
-text \<open>The generic contract asks the published emptiness test only to be sound: a
-  product of analyses may describe nothing without any one of them saying so. A
-  particular instance may still be exact.\<close>
+lemma prog_cfg_calls_source_unique: "calls_source_unique (prog_cfg p)"
+  unfolding calls_source_unique_def prog_cfg_def using compile_prog_calls_source_unique by blast
 
-lemmas empty\<^sub>V_soundD = sound_emptinessD [OF empty\<^sub>V_sound]
-
-text \<open>
-  Termination is a per-program side condition, and this is how a caller decides
-  it: run the solver's own executable termination check on this program's
-  equations. The premise stays \<open>solve_dom\<close> everywhere else, so nothing in the
-  soundness argument depends on the check having been run.
-\<close>
-
-lemma terminates_of_solve_c:
-  assumes "solve_c (equations \<G> p) (root_query p) \<noteq> None"
-  shows "terminates \<G> p"
-  unfolding terminates_def by (rule dom_of_solve_c[OF assms])
-
-text \<open>
-  An answer of the executable solver is the solve itself, so a run built from that
-  answer is \<^const>\<open>run\<close>, and its program needs no separate termination premise.
-\<close>
-
-lemma solve_c_run:
-  assumes "solve_c (equations \<G> p) (root_query p) = Some sol"
-  shows "terminates \<G> p" and "solved_run_of \<G> p sol = run \<G> p"
-  using assms terminates_of_solve_c solve_of_solve_c[OF assms]
-  by (simp_all add: run_def solution_def)
-
-lemma vars_finite_of_terminates:
-  assumes "terminates \<G> p"
-  shows "finite (sol_vars \<G> p)"
-  using solve_fin[OF assms[unfolded terminates_def]]
-  by (simp add: sol_vars_def solution_def)
-
-text \<open>
-  The contexts a concrete call is admitted at under an entry-state policy: every
-  context the entered state routes to. This is a top-level constant rather than
-  something read out of a per-program interpretation, because an analysis
-  publishes it -- a caller stating a context-indexed collecting fact has to name
-  the relation those contexts are indexed by, and an example checking a routing
-  decision has to name it too.
-
-  With one alternative per call it is one context per abstract caller state; it
-  is still a relation and not a function because several concrete callers sharing
-  one abstract state reach the same context.
-\<close>
-
-definition admitted_contexts :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'c context_policy" where
-  "admitted_contexts \<G> p =
-     routed_entry_context_rel
-       (\<lambda>ci d. [entry_alt \<G> p ci d (sol_global \<G> p)])
-       (\<lambda>d e. gamma_lift \<gamma>\<^sub>V (map_lift (rd \<G>) (place_cmb p d e)))
-       (sol_env \<G> p) global_of (route \<G>)"
-
-subsection \<open>What the assembly derives, for one program\<close>
-
-text \<open>
-  Fixing one program \<open>p\<close>, this part equates the published table with the solved
-  reader, puts the solver's answer in the routed spine's shape, and states routed
-  soundness for any relation of admitted contexts.
-\<close>
-
-context
-  fixes p :: imp_prog
-begin
-
-abbreviation (input) pgs :: "vname \<Rightarrow> bool" where "pgs \<equiv> declared_global p"
-  \<comment> \<open>input-only, so interpreted facts print \<open>declared_global p\<close>\<close>
-
-text \<open>What a carrier state describes, published and concretized, and what a point's
-  two halves describe once recombined against the solved global.\<close>
-
-abbreviation cgam :: "'s lifted \<Rightarrow> store set" where
-  "cgam d \<equiv> gamma_lift \<gamma>\<^sub>V (map_lift (rd pgs) d)"
-
-abbreviation (input) pgam :: "'s lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> store set" where
-  "pgam d e \<equiv> cgam (place_cmb p d e)"
-
-abbreviation (input) gsol :: "'n \<Rightarrow> 's lifted" where
-  "gsol \<equiv> sol_global pgs p"
-
-abbreviation entered :: "call_info \<Rightarrow> 's lifted \<Rightarrow> 's lifted" where
-  "entered ci d \<equiv> entry_of pgs p ci d gsol"
-
-lemma empty_rd_exact: "emp p s = empty\<^sub>V (rd pgs s)"
-  by (simp add: empty_rd)
-
-lemma dg_spec_wf_analysis_spec [intro, simp]: "dg_spec_wf (analysis_spec pgs p)"
-  by (rule analysis_contract.spec_wf[OF place_contract])
-
-lemma pgam_Bot [simp]: "pgam Bot g = {}"
-  by (simp add: place_cmb_bot)
-
-text \<open>
-  The published table and the solved reader describe the same stores at every
-  key. A caller states soundness against \<^const>\<open>lookup_table\<close> of the result
-  table, while the routed endpoints are stated against the reader; this is the
-  equation between them, and it needs no coverage premise. At a covered key it
-  is publication commuting with the normalization; at an uncovered one it is
-  \<^const>\<open>Bot\<close> against \<^const>\<open>Bot\<close>, and both describe nothing.
-\<close>
-
-lemma gamma_reader_eq_lookup:
-  "pgam (reader pgs p (Inl (v, ctx))) gsol
-     = gamma_lift \<gamma>\<^sub>V (lookup_table (result pgs p) v ctx)"
+sublocale dg_analysis \<subseteq>
+  gdg_analysis aval ret_var "\<lambda>_ _ n. n" declared_global "\<lambda>p. cinit_stores (declared_global p)"
+    comp emp rd init_st buffer_key global_of seed route root_ctx solve solve_dom bot_state classify
+    \<gamma>\<^sub>V empty\<^sub>V solve_c place_spec place_cmb place_rl place_rg place_inits place_enter
+    prog_cfg "\<lambda>_. FunctionEntry prog_main_name"
+  rewrites "mcp_sem.gsound_local_spec aval ret_var (\<lambda>_ n. n) \<G> = sound_local_spec \<G>"
+    and "ganalysis_contract aval ret_var (\<lambda>_ n. n) \<G> = (\<lambda>S gm. analysis_contract S gm \<G>)"
+    and "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
+    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
+    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
+    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
+    and "ctx_sem.gadmits_call_context aval \<G> = admits_call_context \<G>"
+    and "ctx_sem.gactivation_context_rel aval \<G> = activation_context_rel \<G>"
+    and "ctx_sem.gcall_context_total_on aval \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
+    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
+    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
 proof -
-  have gc: "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x" for x
-    by (rule gamma_lift_canonicalize_lift) (rule empty\<^sub>V_soundD)
-  show ?thesis
-  proof (cases "(v, ctx) \<in> sol_vars pgs p")
-    case True
-    then show ?thesis
-      by (simp add: reader_def result_def sol_vars_def sol_env_def sol_global_def gc
-          map_lift_canonicalize_lift[of "emp p" "empty\<^sub>V" "rd pgs", OF empty_rd_exact])
+  show "gdg_analysis aval ret_var (\<lambda>_ _ n. n) declared_global (\<lambda>p. cinit_stores (declared_global p))
+      comp emp rd init_st buffer_key global_of seed solve solve_dom bot_state classify
+      \<gamma>\<^sub>V empty\<^sub>V solve_c place_spec place_cmb place_rl place_rg place_inits place_enter
+      prog_cfg (\<lambda>_. FunctionEntry prog_main_name)"
+  proof (rule gdg_analysis.intro[OF certified_solver_axioms gdg_analysis_axioms.intro],
+      goal_cases)
+    case (1 p) show ?case using comp_sound[of p] by (simp add: sound_local_spec_inst)
   next
-    case False
-    then show ?thesis by (simp add: reader_def result_def sol_vars_def bot_lifted_eq)
+    case (2 p ci d) show ?case by (rule enter_single)
+  next
+    case (3 p) show ?case using place_contract[of p] by (simp add: analysis_contract_iff)
+  next
+    case (4 p ci d \<sigma>) show ?case by (rule place_enter_runs)
+  next
+    case (5 p ci d \<sigma>) show ?case by (rule place_enter_deps)
+  next
+    case (6 p ci d \<sigma> pub s) then show ?case
+      using place_entry_sound[OF 6] by (simp add: call_enter_def)
+  next
+    case (7 p e) show ?case by (rule place_cmb_bot)
+  next
+    case (8 p) show ?case by (rule place_init)
+  next
+    case (9 p s) show ?case by (rule empty_rd)
+  next
+    case 10 show ?case by (rule empty\<^sub>V_sound)
+  next
+    case (11 v ctx) show ?case by (rule seed_ne_buffer_key)
+  next
+    case (12 v ctx n) show ?case by (rule seed_ne_global_of)
+  next
+    case (13 c d s) then show ?case by (rule classify_proved)
+  next
+    case (14 c d s) then show ?case by (rule classify_refuted)
+  next
+    case 15 show ?case by (rule bot_state_empty)
+  next
+    case (16 p) show ?case by (rule init_sound)
+  next
+    case (17 p) show ?case by (simp add: prog_cfg_def)
+  next
+    case (18 p) show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  next
+    case (19 p) show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
+  next
+    case (20 p) show ?case by (rule prog_cfg_calls_source_unique)
   qed
-qed
-
-subsubsection \<open>The solver's answer, in the shape the routed spine consumes\<close>
-
-text \<open>
-  An analysis solves the buffered generator -- a node with several intra
-  predecessors or several returning calls publishes its analysis-wide
-  contribution once per evaluation rather than once per contribution -- while the
-  framework states its soundness over the unbuffered one. \<open>pp_routed\<close> is that
-  reconciliation at this pipeline's own equations, which the placement owes.
-\<close>
-
-lemma pp_buffered:
-  assumes solves: "terminates pgs p"
-  shows "part_post_solution (equations pgs p) (root_query p)
-           (sol_env pgs p) (sol_vars pgs p)"
-  using solve_pp[OF solves[unfolded terminates_def]]
-  by (simp add: sol_env_def sol_vars_def solution_def)
-
-theorem pp_routed:
-  assumes solves: "terminates pgs p"
-  shows "part_post_solution
-     (routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) (route pgs)
-        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
-        (routed_call_program (analysis_spec pgs p) global_of seed
-           (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed)
-        (prog_cfg p) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)))
-     (root_query p) (sol_env pgs p) (sol_vars pgs p)"
-  using part_post_solution_with_init[OF pp_buffered[OF solves, unfolded equations_def]]
-  unfolding compiled_routed_eqs_for_def bot_lifted_eq
-  by (rule pp_routed_of_buffered[OF dg_spec_wf_analysis_spec seed_ne_buffer_key])
-
-text \<open>
-  The run starts below the solved environment once the solve covers the program
-  entry: the entry node publishes the placement's initial global part at its own
-  key, and each listed initial value at its name's key.
-\<close>
-
-lemma init_publication_le_sol:
-  assumes solves: "terminates pgs p"
-    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-    and mem: "(n, d) \<in> set (place_inits pgs p)"
-  shows "d \<le> gsol n"
-proof -
-  have pp: "part_post_solution (equations pgs p) (root_query p) (sol_env pgs p) (sol_vars pgs p)"
-    by (rule pp_buffered[OF solves])
-  have "DG Bot d \<le> sol_env pgs p (Inr (global_of n))"
-    by (rule post_bounded_with_init_at[OF post_bounded_of_part_post_solution[OF pp,
-          unfolded equations_def] entry_cov])
-       (use mem in \<open>auto simp: init_publications_def prog_cfg_def\<close>)
-  then show ?thesis by (simp add: sol_global_def less_eq_dg_state_def)
-qed
-
-lemma foldr_init_le:
-  "\<forall>(m, d) \<in> set xs. d \<le> f m
-     \<Longrightarrow> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) xs. d) \<le> (f n :: 's lifted)"
-  by (induction xs) auto
-
-lemma init_env_le_sol:
-  assumes solves: "terminates pgs p"
-    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-    and own: "place_rg pgs (Lifted init_st) \<le> dg_global (sol_env pgs p (Inr buffer_key))"
-  shows "init_env pgs p \<le> gsol"
-proof (rule le_funI)
-  fix n
-  have "(\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) (place_inits pgs p). d) \<le> gsol n"
-    by (rule foldr_init_le) (use init_publication_le_sol[OF solves entry_cov] in blast)
-  moreover have "(if global_of n = buffer_key then place_rg pgs (Lifted init_st) else Bot)
-                   \<le> gsol n"
-    using own by (auto simp: sol_global_def)
-  ultimately show "init_env pgs p n \<le> gsol n"
-    unfolding init_env_def by simp
-qed
-
-subsubsection \<open>The one entry alternative this carrier answers with\<close>
-
-text \<open>
-  The specification's entry answers with a single alternative, the recombined
-  caller state and the callee frame entered from it, each split back by the
-  placement. \<open>entry_cover\<close> is the only fact about it any context policy needs,
-  namely that a concrete call from a described caller lands in the described
-  callee.
-\<close>
-
-text \<open>
-  What a call publishes on entry is below the solved global, once the node the
-  call returns to is solved: that node's equation runs the call, and a
-  post-solution bounds what every solved equation publishes.
-\<close>
-
-lemma enter_pub_le_sol:
-  assumes solves: "terminates pgs p"
-    and cont: "(k, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, ca, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-    and R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) (call_info_of ca q))
-              (mk_dg_man (dg_local (sol_env pgs p (Inl (u, ctx)))) global_of)
-              (sol_env pgs p) pairs pub"
-  shows "genv global_of pub \<le> gsol"
-proof (rule le_funI)
-  fix n
-  let ?K = "Inr (global_of n)"
-  let ?\<sigma> = "sol_env pgs p"
-  let ?callee = "routed_callee_call_program (analysis_spec pgs p) global_of seed (route pgs)
-                   (\<lambda>d. d = Bot) ctx ca u (dg_local (?\<sigma> (Inl (u, ctx)))) q"
-  let ?call = "routed_call_program (analysis_spec pgs p) global_of seed
-                 (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot) (route pgs) ctx ca u k"
-  let ?contribs = "routed_contribution_programs intra_predecessor_addr_list call_site_list (route pgs)
-        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
-        (routed_call_program (analysis_spec pgs p) global_of seed
-           (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed) (prog_cfg p) ctx k"
-  let ?rhs = "routed_node_rhs intra_predecessor_addr_list call_site_list (\<lambda>_. buffer_key) (route pgs)
-        (\<lambda>ctx' src a. dg_spec_edge_program (analysis_spec pgs p) a src global_of)
-        (routed_call_program (analysis_spec pgs p) global_of seed
-           (static_resolve (prog_cfg p)) (\<lambda>d. d = Bot))
-        (routed_entry_seed_programs seed)
-        (prog_cfg p) Bot (Lifted init_st) (place_rg pgs (Lifted init_st))"
-  have fin: "finite (calls (prog_cfg p))"
-    unfolding prog_cfg_def by (simp add: compile_prog_finite)
-  have wf: "\<forall>t \<in> set ?contribs. sp_wf t"
-    by (rule routed_contribution_programs_wf) auto
-  have "pub ?K \<le> sides_of_program ?callee ?\<sigma> ?K"
-    unfolding routed_callee_call_program_def
-    by (simp add: sp_compile_bind sp_wf_observes enter_runsD_sides[OF R] sup_fun_def)
-  also have "\<dots> \<le> sides_of_program ?call ?\<sigma> ?K"
-    by (rule routed_call_program_sides_ge_at[OF dg_spec_wf_analysis_spec])
-       (use ce fin in simp)
-  also have "\<dots> \<le> sides_of_program (side_rhs_fold_dg
-      (if k = cfg_entry (prog_cfg p) then Bot \<squnion> Lifted init_st else Bot) ?contribs)
-      ?\<sigma> ?K"
-  proof (rule sides_le_side_rhs_fold_dg[OF wf])
-    have "(u, ca) \<in> set (call_site_list (prog_cfg p) k)" using ce fin by auto
-    then show "?call \<in> set ?contribs" by (rule routed_contribution_programs_combineI)
-  qed
-  also have "\<dots> \<le> sides_of_rhs (?rhs (k, ctx)) ?\<sigma> ?K"
-    unfolding routed_node_rhs_def Let_def
-    by (cases "k = cfg_entry (prog_cfg p)") (auto simp: Let_def)
-  also have "\<dots> \<le> ?\<sigma> ?K"
-    using pp_routed[OF solves] cont by (blast dest: le_funD)
-  finally show "genv global_of pub n \<le> gsol n"
-    unfolding sol_global_def by (simp add: less_eq_dg_state_def)
-qed
-
-lemma entry_cover:
-  assumes solves: "terminates pgs p"
-    and cont: "(k, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, k) \<in> calls (prog_cfg p)"
-    and sin: "s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol"
-  shows "entry_pairs_cover (\<lambda>d. pgam d gsol) s (call_enter pgs (CallEdge dst pars args) s)
-           [entry_alt pgs p (call_info_of (CallEdge dst pars args) q)
-              (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol]"
-proof -
-  let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?d = "dg_local (sol_env pgs p (Inl (u, ctx)))"
-  let ?alt = "entry_alt pgs p ?ci ?d gsol"
-  obtain pub where R: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
-      (mk_dg_man ?d global_of) (sol_env pgs p)
-      [entry_alt pgs p ?ci ?d (genv global_of (sol_env pgs p))] pub"
-    using place_enter_runs by blast
-  have le: "genv global_of pub \<le> genv global_of (sol_env pgs p)"
-    using enter_pub_le_sol[OF solves cont ce R] by (simp add: sol_global_def)
-  have "s \<in> pgam (fst ?alt) gsol \<and> call_enter pgs (CallEdge dst pars args) s \<in> pgam (snd ?alt) gsol"
-    using place_entry_sound[OF R le sin[unfolded sol_global_def]]
-    unfolding sol_global_def by (simp del: declared_global_iff)
-  then show ?thesis
-    by (intro entry_pairs_coverI[of "fst ?alt" "snd ?alt"]) simp_all
-qed
-
-subsubsection \<open>The routed soundness statement, at any admitted-context relation\<close>
-
-text \<open>
-  Which contexts a concrete call is admitted at is the one thing a context policy
-  still chooses, so \<open>adm\<close> is a parameter here rather than a derived object. What
-  the policy owes about it is exactly two facts: a context \<open>adm\<close> admits is the one
-  this pipeline's route computes on the entered state, at a covered unknown
-  (\<open>cover_R\<close>); and \<open>adm\<close> admits at least one context for every concrete call at a
-  covered call site (\<open>total_R\<close>). Everything else below is fixed by the pipeline.
-\<close>
-
-text \<open>
-  The specification is sound for the recombined concretization; the placement
-  owes this, so the routed statement below never re-derives it.
-\<close>
-
-interpretation dg_base: analysis_contract "analysis_spec pgs p" "\<lambda>d e. pgam d e" pgs
-  by (rule place_contract)
-
-lemma routed_analysis_sound_of_live:
-  fixes adm :: "'c context_policy"
-  assumes solves: "terminates pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> dg_local (sol_env pgs p (Inl (u, ctx))) \<noteq> Bot
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter pgs (CallEdge dst pars args) s)
-        \<Longrightarrow> entered (call_info_of (CallEdge dst pars args) q)
-              (dg_local (sol_env pgs p (Inl (u, ctx)))) \<noteq> Bot
-        \<Longrightarrow> route pgs u ctx
-                (entered (call_info_of (CallEdge dst pars args) q)
-                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
-                (CallEdge dst pars args) = ctx'
-            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    and total_R: "\<And>u ctx dst pars args q cont s.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
-        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter pgs (CallEdge dst pars args) s) \<noteq> {}"
-  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d e. pgam d e) pgs (prog_cfg p)
-     buffer_key global_of
-     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
-     (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) adm (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V
-     classify"
-proof (unfold_locales, goal_cases CmbWf ExtraWf FinE PP SgCov SgUncov Fwd FinC CallsUnique
-    SeedUnknown SeedNeGlobal IsBotBot IsBotSound ResolveSound EnterCover EnterTotal CombFwd GammaRd
-    EmptyExact ClProved ClRefuted VarsFin)
-  case CmbWf show ?case by (rule sp_wf_routed_call_program[OF dg_spec_wf_analysis_spec])
-next
-  case ExtraWf then show ?case by (rule sp_wf_routed_entry_seed_programs)
-next
-  case FinE show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
-next
-  case PP show ?case by (rule post_bounded_of_part_post_solution[OF pp_routed[OF solves]])
-next
-  case (SgCov v c) then show ?case by simp
-next
-  case (SgUncov v c) then show ?case by (simp add: bot_lifted_eq)
-next
-  case (Fwd u a v c)
-  have "dg_local (sol_env pgs p (Inl (u, c))) \<noteq> Bot"
-    using Fwd(2) by auto
-  with Fwd(1,3) show ?case by (blast intro: fwd_ok)
-next
-  case FinC show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
-next
-  case CallsUnique show ?case
-    unfolding calls_source_unique_def prog_cfg_def
-    using compile_prog_calls_source_unique by blast
-next
-  case (SeedUnknown q ctx) show ?case by (rule seed_ne_buffer_key)
-next
-  case (SeedNeGlobal q ctx v) show ?case by (rule seed_ne_global_of)
-next
-  case IsBotBot show ?case by simp
-next
-  case (IsBotSound d g') then show ?case by simp
-next
-  case (ResolveSound u ctx dst pars args q cont s)
-  then show ?case unfolding prog_cfg_def by (simp add: compile_prog_finite)
-next
-  case (EnterCover u ctx dst pars args q cont s ctx')
-  let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?caller = "dg_local (sol_env pgs p (Inl (u, ctx)))"
-  let ?g = "genv global_of (sol_env pgs p)"
-  have sin: "s \<in> pgam ?caller gsol"
-    using EnterCover(3) by (simp add: sol_global_def)
-  have cov: "entry_pairs_cover (\<lambda>d. pgam d gsol) s
-      (call_enter pgs (CallEdge dst pars args) s) [entry_alt pgs p ?ci ?caller gsol]"
-    by (rule entry_cover[OF solves comb_fwd_ok[OF EnterCover(1,2)] EnterCover(2) sin])
-  obtain c e where ce: "entry_alt pgs p ?ci ?caller gsol = (c, e)"
-    by (cases "entry_alt pgs p ?ci ?caller gsol")
-  have nbE: "entered ?ci ?caller \<noteq> Bot"
-  proof
-    assume "entered ?ci ?caller = Bot"
-    with cov ce show False by (simp add: entry_pairs_cover_def entry_of_def place_cmb_bot)
-  qed
-  have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
-    and covE: "(FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    using cover_R[OF EnterCover(1,2,4) nbE] by blast+
-  obtain pub where runs: "enter_runs (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
-      (mk_dg_man ?caller global_of) (sol_env pgs p)
-      [entry_alt pgs p ?ci ?caller ?g] pub"
-    using place_enter_runs by blast
-  obtain deps where deps: "enter_deps (enter\<^sup>\<sharp> (analysis_spec pgs p) ?ci)
-      (mk_dg_man ?caller global_of) (sol_env pgs p)
-      [entry_alt pgs p ?ci ?caller ?g] deps"
-    using place_enter_deps by blast
-  have ce': "entry_alt pgs p ?ci ?caller ?g = (c, e)"
-    using ce by (simp add: sol_global_def)
-  have sc: "s \<in> pgam c ?g" and ec: "call_enter pgs (CallEdge dst pars args) s \<in> pgam e ?g"
-    using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
-  have re: "route pgs u ctx e (CallEdge dst pars args) = ctx'"
-    using req ce by (simp add: entry_of_def)
-  show ?case
-    using runs deps sc ec re covE unfolding ce' by fastforce
-next
-  case (EnterTotal u ctx dst pars args q cont s)
-  then show ?case by (intro total_R) (simp_all add: sol_global_def)
-next
-  case (CombFwd cl c1 dst pars args q cont)
-  then show ?case by (rule comb_fwd_ok)
-next
-  case (GammaRd d g') show ?case by simp
-next
-  case (EmptyExact v) then show ?case by (rule empty\<^sub>V_soundD)
-next
-  case (ClProved c d s) then show ?case by (rule classify_proved)
-next
-  case (ClRefuted c d s) then show ?case by (rule classify_refuted)
-next
-  case VarsFin show ?case by (rule vars_finite_of_terminates[OF solves])
-qed
-
-lemma routed_analysis_sound_of:
-  fixes adm :: "'c context_policy"
-  assumes solves: "terminates pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter pgs (CallEdge dst pars args) s)
-        \<Longrightarrow> route pgs u ctx
-                (entered (call_info_of (CallEdge dst pars args) q)
-                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
-                (CallEdge dst pars args) = ctx'
-            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    and total_R: "\<And>u ctx dst pars args q cont s.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
-        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter pgs (CallEdge dst pars args) s) \<noteq> {}"
-  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d e. pgam d e) pgs (prog_cfg p)
-     buffer_key global_of
-     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
-     (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) adm (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V
-     classify"
-  by (rule routed_analysis_sound_of_live [where adm = adm, OF solves _ comb_fwd_ok _ total_R])
-     (blast intro: fwd_ok dest: cover_R)+
-
-subsubsection \<open>The published endpoint, under termination and coverage\<close>
-
-text \<open>
-  Under termination and closure of the solved keys, \<open>activation_collect_sound_of\<close>
-  bounds every admitted activation by the solved table's entry at its context.
-\<close>
-
-lemma cinit_le_init: "cinit_stores pgs \<subseteq> pgam (Lifted init_st) (init_env pgs p)"
-  using init_sound[of p] place_init[of p] by auto
-
-text \<open>
-  Every activation the activation-trace semantics admits at a context is described by the
-  solved table's entry for that context. The coverage premises are the shape a
-  solver's own reachable set supplies: an edge out of an unknown the solve
-  visited lands on one it also visited.
-\<close>
-
-lemma activation_collect_sound_of:
-  fixes adm :: "'c context_policy"
-  assumes solves: "terminates pgs p"
-    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-    and cover_R: "\<And>u ctx dst pars args q cont s ctx'.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (call_enter pgs (CallEdge dst pars args) s)
-        \<Longrightarrow> route pgs u ctx
-                (entered (call_info_of (CallEdge dst pars args) q)
-                   (dg_local (sol_env pgs p (Inl (u, ctx)))))
-                (CallEdge dst pars args) = ctx'
-            \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    and total_R: "\<And>u ctx dst pars args q cont s.
-        (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol
-        \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (call_enter pgs (CallEdge dst pars args) s) \<noteq> {}"
-  shows "\<A>\<^bsub>pgs,adm,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
-proof -
-  interpret adapter: routed_analysis "analysis_spec pgs p" "\<lambda>d e. pgam d e" pgs
-      "prog_cfg p" buffer_key global_of "route pgs" Bot "Lifted init_st"
-      "place_rg pgs (Lifted init_st)" "sol_env pgs p" "sol_vars pgs p" "root_query p" seed
-      "\<lambda>d. d = Bot" adm "\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)" \<gamma>\<^sub>V empty\<^sub>V classify
-    by (rule routed_analysis_sound_of
-          [where adm = adm, OF solves fwd_ok comb_fwd_ok cover_R total_R])
-  have init_env_le: "init_env pgs p \<le> genv global_of (sol_env pgs p)"
-    using init_env_le_sol[OF solves entry_cov adapter.pp_entry_init_global_bound[OF entry_cov]]
-    by (simp add: sol_global_def)
-  show ?thesis
-    using adapter.activation_collect_dg_sound[OF entry_cov _ init_env_le, of "cinit_stores pgs" v
-      ctx]
-      cinit_le_init
-    by (simp add: reader_def sol_global_def)
-qed
-
-subsubsection \<open>The two context policies this assembly supports\<close>
-
-text \<open>
-  \<open>entry_context_rel\<close> is the relation an entry-state policy induces: a concrete
-  call is admitted at every context some covering alternative of the entry answer
-  routes to. With one alternative per call that is a single context per abstract
-  caller state, but several concrete callers sharing an abstract state may still
-  reach one context, which is exactly why a relation and not a function.
-\<close>
-
-lemma admitted_contexts_alt:
-  "admitted_contexts pgs p =
-     routed_entry_context_rel (\<lambda>ci d. [entry_alt pgs p ci d gsol]) (\<lambda>d e. pgam d e)
-       (sol_env pgs p) global_of (route pgs)"
-  by (simp add: admitted_contexts_def)
-
-abbreviation entry_context_rel :: "'c context_policy" where
-  "entry_context_rel \<equiv> admitted_contexts pgs p"
-
-text \<open>
-  How a caller shows that this call is admitted at the context it computed: the
-  concrete caller store is described by the recombined caller, and the entered
-  store by the callee frame entered from it, each recombined against the solved
-  global. The single alternative means a witness never has to name the
-  alternatives list.
-\<close>
-
-lemma admitted_contextsI:
-  assumes caller: "s \<in> pgam (fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol))
-                     gsol"
-    and entered_in: "s' \<in> pgam (entered ci (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
-  shows "route pgs u ctx (entered ci (dg_local (sol_env pgs p (Inl (u, ctx)))))
-             (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))
-           \<in> entry_context_rel u ctx ci s s'"
-  unfolding admitted_contexts_alt
-  by (rule routed_entry_context_relI
-        [where cont = "fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)"])
-     (use caller entered_in in \<open>simp_all add: entry_of_def sol_global_def\<close>)
-
-text \<open>
-  The same fact with the call action spelled as the caller has it. A witness
-  names a literal \<^const>\<open>CallEdge\<close>, while the rule above reconstructs one from
-  the \<^type>\<open>call_info\<close>'s three projections, and \<^theory_text>\<open>rule\<close> does not reduce the
-  projections. Every concrete instance wants this shape.
-\<close>
-
-lemma admitted_contextsI_call:
-  assumes caller: "s \<in> pgam (fst (entry_alt pgs p (call_info_of (CallEdge dst pars args) q)
-                       (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)) gsol"
-    and entered_in: "s' \<in> pgam (entered (call_info_of (CallEdge dst pars args) q)
-                           (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
-  shows "route pgs u ctx
-             (entered (call_info_of (CallEdge dst pars args) q)
-                (dg_local (sol_env pgs p (Inl (u, ctx)))))
-             (CallEdge dst pars args)
-           \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s s'"
-  using admitted_contextsI[OF caller entered_in] by simp
-
-lemma entry_state_routed_analysis_sound:
-  assumes solves: "terminates pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (FunctionEntry q,
-               route pgs u ctx
-                 (entered (call_info_of (CallEdge dst pars args) q)
-                    (dg_local (sol_env pgs p (Inl (u, ctx)))))
-                 (CallEdge dst pars args))
-              \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-  shows "routed_analysis (analysis_spec pgs p) (\<lambda>d e. pgam d e) pgs (prog_cfg p)
-     buffer_key global_of
-     (route pgs) Bot (Lifted init_st) (place_rg pgs (Lifted init_st)) (sol_env pgs p)
-     (sol_vars pgs p) (root_query p)
-     seed (\<lambda>d. d = Bot) entry_context_rel
-     (\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)) \<gamma>\<^sub>V empty\<^sub>V classify"
-proof (rule routed_analysis_sound_of
-    [where adm = entry_context_rel, OF solves fwd_ok comb_fwd_ok])
-  fix u ctx dst pars args q cont and s :: store and ctx'
-  assume covV: "(u, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and Rc: "ctx' \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s
-               (call_enter pgs (CallEdge dst pars args) s)"
-  let ?ci = "call_info_of (CallEdge dst pars args) q"
-  let ?caller = "dg_local (sol_env pgs p (Inl (u, ctx)))"
-  from Rc[unfolded admitted_contexts_alt] obtain cont' entry
-    where mem: "(cont', entry) \<in> set [entry_alt pgs p ?ci ?caller gsol]"
-      and req0: "ctx' = route pgs u ctx entry
-                   (CallEdge (ci_dst ?ci) (ci_formals ?ci) (ci_args ?ci))"
-    by (rule routed_entry_context_relE)
-  have "entry = entered ?ci ?caller" using mem by (simp add: entry_of_def) (metis snd_conv)
-  with req0 have req: "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'"
-    by simp
-  show "route pgs u ctx (entered ?ci ?caller) (CallEdge dst pars args) = ctx'
-          \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    using req call_fwd_ok[OF covV ce] by simp
-next
-  fix u ctx dst pars args q cont and s :: store
-  assume covV: "(u, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and sin: "s \<in> pgam (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol"
-  show "entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter pgs (CallEdge dst pars args) s) \<noteq> {}"
-    unfolding admitted_contexts_alt
-    by (rule routed_entry_context_rel_total)
-       (use entry_cover[OF solves comb_fwd_ok[OF covV ce] ce sin]
-         in \<open>simp add: sol_global_def del: declared_global_iff\<close>)
-qed
-
-text \<open>
-  The two endpoints an entry-state caller consumes: the per-context collecting
-  bound, and the existence of a context for every valid activation trace, which a
-  source-level caller needs to name a context witness at all. Both are the
-  routed spine's own theorems at the interpretation just established.
-\<close>
-
-context
-  assumes solves: "terminates pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and call_fwd_ok: "\<And>u ctx dst pars args q cont. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (FunctionEntry q,
-               route pgs u ctx
-                 (entered (call_info_of (CallEdge dst pars args) q)
-                    (dg_local (sol_env pgs p (Inl (u, ctx)))))
-                 (CallEdge dst pars args))
-              \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-begin
-
-interpretation entry: routed_analysis "analysis_spec pgs p" "\<lambda>d e. pgam d e" pgs
-    "prog_cfg p" buffer_key global_of "route pgs" Bot "Lifted init_st"
-    "place_rg pgs (Lifted init_st)" "sol_env pgs p" "sol_vars pgs p" "root_query p" seed
-    "\<lambda>d. d = Bot" entry_context_rel "\<lambda>d e. map_lift (rd pgs) (place_cmb p d e)"
-    \<gamma>\<^sub>V empty\<^sub>V classify
-  by (rule entry_state_routed_analysis_sound [OF solves fwd_ok call_fwd_ok comb_fwd_ok])
-
-lemma entry_init_env_le:
-  assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "init_env pgs p \<le> genv global_of (sol_env pgs p)"
-  using init_env_le_sol[OF solves entry_cov entry.pp_entry_init_global_bound[OF entry_cov]]
-  by (simp add: sol_global_def)
-
-corollary entry_state_activation_collect_sound:
-  assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "\<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
-  using entry.activation_collect_dg_sound
-      [OF entry_cov _ entry_init_env_le[OF entry_cov], of "cinit_stores pgs" v ctx]
-    cinit_le_init
-  by (simp add: reader_def sol_global_def)
-
-theorem entry_state_has_context:
-  assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-    and trace: "t \<in> \<T>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub>"
-  shows "\<exists>c. activation_context_rel pgs entry_context_rel root_ctx (prog_cfg p) t c"
-  using entry.routed_valid_activation_trace_has_context
-      [OF entry_cov _ entry_init_env_le[OF entry_cov] trace] cinit_le_init
-  by simp
-
-text \<open>
-  The two together: covering the entry is enough for the activation buckets to
-  exhaust the context-insensitive collection, so a caller holding only a
-  \<^const>\<open>node_collect\<close> membership -- which is what a source run delivers -- can
-  pass to the bucket its own call history produced.  Without this the per-context
-  bounds above say nothing about a run whose context is not known in advance.
-\<close>
-
-theorem entry_state_node_collect_eq_Union:
-  assumes entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-           = (\<Union>ctx. \<A>\<^bsub>pgs,entry_context_rel,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule node_collect_eq_Union_activation_of_has_context)
-     (rule entry_state_has_context [OF entry_cov])
-
-end
-
-text \<open>
-  A route that never reads the state it is handed is a function of the call site
-  and the caller's context alone, so the contexts it admits are the graph of a
-  context function on concrete stores -- the shape the call-string and
-  context-insensitive policies both publish. \<open>route_const\<close> is the whole of what
-  such a policy owes; \<open>ctx_fun\<close> is its trace-semantic counterpart.
-\<close>
-
-corollary fun_route_activation_collect_sound:
-  fixes ctx_fun :: "cfg_node \<Rightarrow> 'c \<Rightarrow> store \<Rightarrow> 'c"
-  assumes route_const: "\<And>u ctx d ca s. route pgs u ctx d ca = ctx_fun u ctx s"
-    and solves: "terminates pgs p"
-    and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, a, v) \<in> intra (prog_cfg p) \<Longrightarrow> (v, ctx) \<in> sol_vars pgs p"
-    and call_fwd_ok: "\<And>u ctx dst pars args q cont d. (u, ctx) \<in> sol_vars pgs p
-        \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (FunctionEntry q, route pgs u ctx d (CallEdge dst pars args))
-              \<in> sol_vars pgs p"
-    and comb_fwd_ok: "\<And>cl c1 dst pars args q cont. (cl, c1) \<in> sol_vars pgs p
-        \<Longrightarrow> (cl, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)
-        \<Longrightarrow> (cont, c1) \<in> sol_vars pgs p"
-    and entry_cov: "(cfg_entry (prog_cfg p), root_ctx) \<in> sol_vars pgs p"
-  shows "\<A>\<^bsub>pgs,context_policy_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx
-           \<subseteq> pgam (reader pgs p (Inl (v, ctx))) gsol"
-proof (rule activation_collect_sound_of[OF solves entry_cov fwd_ok comb_fwd_ok])
-  fix u ctx dst pars args q cont and s :: store and ctx'
-  assume covV: "(u, ctx) \<in> sol_vars pgs p"
-    and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (prog_cfg p)"
-    and Rc: "ctx' \<in> context_policy_of_fun ctx_fun u ctx
-               (call_info_of (CallEdge dst pars args) q) s
-               (call_enter pgs (CallEdge dst pars args) s)"
-  have req: "route pgs u ctx d (CallEdge dst pars args) = ctx'" for d
-    using Rc
-    by (simp add: route_const[of _ _ _ _ "call_enter pgs (CallEdge dst pars args) s"])
-  show "route pgs u ctx
-          (entered (call_info_of (CallEdge dst pars args) q)
-             (dg_local (sol_env pgs p (Inl (u, ctx)))))
-          (CallEdge dst pars args) = ctx'
-        \<and> (FunctionEntry q, ctx') \<in> sol_vars pgs p"
-    using req call_fwd_ok[OF covV ce] by simp
-next
-  fix u ctx dst pars args q cont and s :: store
-  show "context_policy_of_fun ctx_fun u ctx
-                 (call_info_of (CallEdge dst pars args) q) s
-                 (call_enter pgs (CallEdge dst pars args) s) \<noteq> {}"
-    by simp
-qed
-
-text \<open>
-  The functional route's counterpart of the entry-state union. It needs nothing
-  at all: \<^const>\<open>activation_context_of\<close> is total, so every valid activation trace carries a context without
-  any coverage having been established.
-\<close>
-
-theorem fun_route_node_collect_eq_Union:
-  "\<C>\<^bsub>pgs,prog_cfg p,cinit_stores pgs\<^esub> v
-     = (\<Union>ctx. \<A>\<^bsub>pgs,context_policy_of_fun ctx_fun,root_ctx,prog_cfg p,cinit_stores pgs\<^esub> v ctx)"
-  by (rule node_collect_eq_Union_activation_of_fun)
-
-end
-
-end
+qed (simp_all add: sound_local_spec_inst analysis_contract_iff fun_eq_iff edge_collect_def
+       combine_collect_def call_enter_def edge_step_def valid_activation_trace_def
+       admits_call_context_def activation_context_rel_def call_context_total_on_def
+       activation_collect_def node_collect_def)
 
 subsection \<open>Every variable in the local half\<close>
 
