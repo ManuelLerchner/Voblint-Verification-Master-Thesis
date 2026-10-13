@@ -5,4 +5,5 @@ session Voblint_Typed_Order in "." = "Voblint_Typed_Nonrel" +
     D/G pipeline over the typed CFG"
   theories
     Typed_Order_Analysis
+    Nonrel_Order_Product
     Typed_Order_Regression
