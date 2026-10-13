@@ -22,6 +22,7 @@ src/Analyses/Typed_Order
 src/Analyses/Int
 src/Analyses/Typed_Int
 src/Executable_Surface/CLI
+src/Executable_Surface/Typed_CLI
 src/Examples/CFG
 src/Examples/Congruence
 src/Examples/Sign
