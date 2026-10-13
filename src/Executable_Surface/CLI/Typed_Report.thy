@@ -53,4 +53,42 @@ definition typed_report_run ::
        (TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
           (cfg_exit (typed_cfg p ds), []))"
 
+subsection \<open>Soundness of the check column\<close>
+
+text \<open>
+  A check row of a typed report is sound for every typed store that reaches its node
+  from a store whose globals are zero at their kinds: a proved check holds there and a
+  refuted one fails. The column is the verdict report of the solve the report was read
+  from (\<open>result_checks_of_verdicts\<close>), and the executable solve's answer is that run
+  (\<open>solve_c_run\<close>), so the typed verdict theorem applies to it.
+\<close>
+
+theorem typed_report_check_sound:
+  assumes wf: "wf_program_compile_input p"
+    and run: "typed_report_run as r k ds p = Some res"
+    and chk: "chk \<in> set (report_checks res)"
+    and s: "s \<in> reaching ds p (check_point chk)"
+  shows "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
+    and "check_verdict chk = Decided Check_Refuted \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
+proof -
+  from run obtain sol where
+    sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+            (typed_mcp.root_query ds p) = Some sol"
+    and res: "res = typed_cs_report as r k ds p sol"
+    by (auto simp: typed_report_run_def dg_pipeline.root_query_def)
+  note solved = typed_mcp.solve_c_run[OF sol]
+  have checks: "report_checks res
+      = result_checks_of (typed_cfg p ds) (typed_mcp.result ds as k r tglobal p)
+          (tmcp_classify ds (tactivation as))"
+    using solved(2) by (simp add: res typed_cs_report_def report_of_def Let_def)
+  have "(check_point chk, check_exp chk, check_verdict chk)
+          \<in> set (typed_mcp.verdict_report ds as k r tglobal p)"
+    using chk result_checks_of_verdicts[of "typed_cfg p ds"]
+    unfolding checks typed_mcp.verdict_report_def
+    by (metis (no_types, lifting) image_eqI list.set_map)
+  then show "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
+    and "check_verdict chk = Decided Check_Refuted \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
+    using typed_mcp_verdict_sound[OF wf solved(1) _ s] by auto
+qed
+
 end
