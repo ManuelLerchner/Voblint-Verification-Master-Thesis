@@ -1,5 +1,5 @@
 theory Typed_Run_Regression
-  imports Typed_MCP "Voblint_VIMP.VIMP_Notation"
+  imports Typed_MCP
 begin
 
 section \<open>Regression: the typed entry point\<close>

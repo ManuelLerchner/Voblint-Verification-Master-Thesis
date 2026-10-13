@@ -1,6 +1,5 @@
 theory Cooperation_Regression
-  imports "Voblint_Typed_Interval.Interval_Kind" Typed_MCP
-    "Voblint_VIMP.VIMP_Notation"
+  imports Typed_MCP
 begin
 
 section \<open>Regression: two analyses that ask each other\<close>

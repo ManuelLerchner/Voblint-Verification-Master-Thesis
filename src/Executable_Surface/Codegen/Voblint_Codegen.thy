@@ -1,7 +1,6 @@
 theory Voblint_Codegen
   imports
     "Voblint_CLI.Trace_Run"
-    "Voblint_Typed.Typed_Lower"
     "Voblint_Typed_CLI.Typed_MCP"
 begin
 
