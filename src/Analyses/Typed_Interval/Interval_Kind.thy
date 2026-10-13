@@ -206,35 +206,6 @@ lemma ivl_aop_sound:
   by (cases op) (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound
       ivl_mod_sound)
 
-definition ivl_lt :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "ivl_lt a b =
-     (if interval_less_true a b then Some True
-      else if interval_less_false a b then Some False else None)"
-
-definition ivl_eq :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "ivl_eq a b =
-     (if interval_eq_true a b then Some True
-      else if interval_eq_false a b then Some False else None)"
-
-lemma ivl_lt_sound: "ivl_lt a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> (m < n) = r"
-  by (auto simp: ivl_lt_def split: if_splits
-      dest: interval_less_true_sound interval_less_false_sound)
-
-lemma ivl_eq_sound: "ivl_eq a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> (m = n) = r"
-  by (auto simp: ivl_eq_def split: if_splits
-      dest: interval_eq_true_sound interval_eq_false_sound)
-
-fun ivl_cop :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
-  "ivl_cop CLt a b = ivl_lt a b"
-| "ivl_cop CGt a b = ivl_lt b a"
-| "ivl_cop CLe a b = map_option HOL.Not (ivl_lt b a)"
-| "ivl_cop CGe a b = map_option HOL.Not (ivl_lt a b)"
-| "ivl_cop CEq a b = ivl_eq a b"
-| "ivl_cop CNe a b = map_option HOL.Not (ivl_eq a b)"
-
-lemma ivl_cop_sound:
-  "ivl_cop c a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> cop_eval c m n = r"
-  by (cases c) (auto dest: ivl_lt_sound ivl_eq_sound)
 
 fun ivl_lo :: "ivl \<Rightarrow> eint" where "ivl_lo (Ivl l u) = l"
 fun ivl_hi :: "ivl \<Rightarrow> eint" where "ivl_hi (Ivl l u) = u"
@@ -313,7 +284,8 @@ definition cast_ik_ivl :: "ikind option \<Rightarrow> ikind \<Rightarrow> ivl \<
 definition arith_ik_ivl :: "ikind \<Rightarrow> aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "arith_ik_ivl k op a b = norm_ivl_ik k (ivl_aop op a b)"
 
-definition cmp_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where "cmp_ik_ivl = ivl_cop"
+definition cmp_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "cmp_ik_ivl = cop_of interval_less interval_eq"
 
 definition meet_ik_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "meet_ik_ivl a b = a \<sqinter> b"
 
@@ -342,7 +314,8 @@ instance proof
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
     by (simp add: arith_ik_ivl_def norm_ivl_ik_sound ivl_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
-    by (simp add: cmp_ik_ivl_def ivl_cop_sound)
+    unfolding cmp_ik_ivl_def
+    by (rule cop_of_sound[OF interval_numeric_queries.less_sound interval_numeric_queries.eq_sound])
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> m \<in> numeric_domain_class.gamma b
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (meet_ik a b)"
     by (simp add: meet_ik_ivl_def meet_ivl_gamma)
@@ -370,6 +343,6 @@ text \<open>\<^class>\<open>kind_int_domain\<close> extends \<^class>\<open>nume
   typed analysis carries the concretization in its class dictionary. It is never
   called, and its equation is not executable at \<^typ>\<open>int\<close>.\<close>
 
-declare [[code abort: gamma_ivl]] 
+declare [[code abort: gamma_ivl]]
 
 end

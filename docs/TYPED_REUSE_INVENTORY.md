@@ -25,9 +25,9 @@ specializations.
 
 | Existing | Typed | Shared | Typed-specific |
 | --- | --- | --- | --- |
-| Interval (`Interval_Lattice`, `Interval_Arithmetic`) | `Interval_Kind` | arithmetic (`ivl_plus` … `ivl_mod` via `ivl_aop`), comparisons (`interval_less_true` …), `ivl_refine` | kind range `ik_ivl`, normalization `norm_ivl_ik` (wrap), bounded `widen_ivl_ik`/`narrow_ivl_ik` |
-| Congruence | `Congruence_Kind` | lattice, `congruence_of_int`, `cong_least_above` | `norm_cong_ik` (modulus under `2^w`), `cong_aop`/`cong_cop`/`cong_refine` dispatch, `sub_kind` casts |
-| Sign, Parity | `Sign_Kind`, `Parity_Kind` | lattices and concretizations | `sign_aop`, `sign_cop`, `parity_aop`, `parity_cop` restated per `aop`/`cop`; check against the untyped transfer operations before keeping |
+| Interval (`Interval_Lattice`, `Interval_Arithmetic`) | `Interval_Kind` | arithmetic (`ivl_plus` … `ivl_mod` via `ivl_aop`), comparisons (`interval_less`/`interval_eq` via `cop_of`), `ivl_refine` | kind range `ik_ivl`, normalization `norm_ivl_ik` (wrap), bounded `widen_ivl_ik`/`narrow_ivl_ik` |
+| Congruence | `Congruence_Kind` | lattice, `congruence_of_int`, `cong_least_above` | `norm_cong_ik` (modulus under `2^w`), `cong_aop`/`cong_refine` dispatch, comparisons via `cop_of` with the stronger `cong_eq`, `sub_kind` casts |
+| Sign, Parity | `Sign_Kind`, `Parity_Kind` | lattices and concretizations | `sign_aop`, `parity_aop` restated per `aop`; comparisons share `cop_of` (`Typed_Nonrel.thy`) with the untyped queries |
 | Int (`int_dom`, `Int_Refinement`) | `Int_Tuple_Kind` | `refine_ivl_with_congruence` | `cong_refine_with_ivl` and `it_refine` (Goblint `IntDomTuple.refine` once); compare with `refine_interval`/`refine_congruence` before keeping a second reduction |
 
 ## Order of work

@@ -59,14 +59,6 @@ lemma parity_aop_sound:
   by (cases op) (simp_all add: parity_plus_sound parity_minus_sound parity_times_sound
       parity_div_sound parity_mod_sound)
 
-fun parity_cop :: "cop \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> bool option" where
-  "parity_cop CEq a b = parity_eqb a b"
-| "parity_cop CNe a b = map_option HOL.Not (parity_eqb a b)"
-| "parity_cop _ a b = None"
-
-lemma parity_cop_sound:
-  "parity_cop c a b = Some r \<Longrightarrow> m \<in> gamma_parity a \<Longrightarrow> n \<in> gamma_parity b \<Longrightarrow> cop_eval c m n = r"
-  by (cases c) (auto dest: parity_eqb_sound)
 
 instantiation parity :: kind_int_domain
 begin
@@ -83,7 +75,7 @@ definition arith_ik_parity :: "ikind \<Rightarrow> aop \<Rightarrow> parity \<Ri
   "arith_ik_parity k = parity_aop"
 
 definition cmp_ik_parity :: "cop \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> bool option" where
-  "cmp_ik_parity = parity_cop"
+  "cmp_ik_parity = cop_of parity_lt parity_eqb"
 
 definition meet_ik_parity :: "parity \<Rightarrow> parity \<Rightarrow> parity" where
   "meet_ik_parity a b = a \<sqinter> b"
@@ -117,7 +109,7 @@ instance proof
     by (simp add: arith_ik_parity_def parity_cast_sound parity_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
-    by (simp add: cmp_ik_parity_def parity_cop_sound)
+    unfolding cmp_ik_parity_def by simp (rule cop_of_sound[OF parity_lt_sound parity_eqb_sound])
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> m \<in> numeric_domain_class.gamma b
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (meet_ik a b)"
     by (simp add: meet_ik_parity_def)
@@ -135,7 +127,8 @@ instance proof
         gamma_parity_top top_ivl_def gamma_ivl_top)
   show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
       \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: parity)" for sk q
-    by (cases q) (simp_all add: of_answer_ik_parity_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
+    by (cases q)
+      (simp_all add: of_answer_ik_parity_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
 qed
 
 end

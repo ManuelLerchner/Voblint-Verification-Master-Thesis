@@ -1,11 +1,33 @@
 theory Typed_Nonrel
-  imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted" "Voblint_Domain.Top_Lift"
+  imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted"
+    "Voblint_Domain.Top_Lift"
     "Voblint_Framework.Analysis_Query"
 begin
 
 text \<open>Values here are per variable, so \<open>\<gamma>\<close> is the class concretization alone.\<close>
 
 no_notation gamma_S ("\<gamma>")
+
+section \<open>Comparisons from two queries\<close>
+
+text \<open>A domain that decides \<open><\<close> and \<open>=\<close> decides every comparison: the others swap or
+  negate those two answers.\<close>
+
+fun cop_of :: "('a \<Rightarrow> 'a \<Rightarrow> bool option) \<Rightarrow> ('a \<Rightarrow> 'a \<Rightarrow> bool option) \<Rightarrow> cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool option"
+where
+  "cop_of lt eq CLt a b = lt a b"
+| "cop_of lt eq CGt a b = lt b a"
+| "cop_of lt eq CLe a b = map_option HOL.Not (lt b a)"
+| "cop_of lt eq CGe a b = map_option HOL.Not (lt a b)"
+| "cop_of lt eq CEq a b = eq a b"
+| "cop_of lt eq CNe a b = map_option HOL.Not (eq a b)"
+
+lemma cop_of_sound:
+  fixes conc :: "'a \<Rightarrow> int set"
+  assumes lt: "\<And>a b r i j. lt a b = Some r \<Longrightarrow> i \<in> conc a \<Longrightarrow> j \<in> conc b \<Longrightarrow> (i < j) = r"
+    and eq: "\<And>a b r i j. eq a b = Some r \<Longrightarrow> i \<in> conc a \<Longrightarrow> j \<in> conc b \<Longrightarrow> (i = j) = r"
+  shows "cop_of lt eq c a b = Some r \<Longrightarrow> m \<in> conc a \<Longrightarrow> n \<in> conc b \<Longrightarrow> cop_eval c m n = r"
+  by (cases c) (auto dest: lt eq)
 
 section \<open>Kind-aware integer domains\<close>
 
@@ -16,7 +38,7 @@ text \<open>
   \<open>cast_to ?from_ik:sk k\<close>, where \<open>sk\<close> is the operand's kind when it is known, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
   result is normalized to \<open>k\<close>. A comparison answers \<open>Some b\<close> only when every pair of
   operands agrees on \<open>b\<close>. \<open>refine_ik c a b\<close> narrows both operands of a comparison
-  known to hold, as Goblint's \<^verbatim>\<open>invariant\<close> does for a guard. \<open>raw_aop_ik\<close> is
+  known to hold, as \<^verbatim>\<open>inv_bin_int\<close> in Goblint's \<^verbatim>\<open>baseInvariant.ml\<close> does for a guard. \<open>raw_aop_ik\<close> is
   the operation on mathematical integers, which a backward step inverts, and
   \<open>fits_ik k a\<close> says that every value of \<open>a\<close> lies in \<open>k\<close>'s range, so that
   normalizing to \<open>k\<close> changes none of them.

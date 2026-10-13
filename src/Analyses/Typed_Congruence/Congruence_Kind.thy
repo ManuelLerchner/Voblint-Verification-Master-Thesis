@@ -175,18 +175,6 @@ lemma cong_eq_sound:
   by (auto simp: cong_eq_def is_bottom_congruence_correct split: option.splits if_splits
       dest: congruence_eqb_sound)
 
-fun cong_cop :: "cop \<Rightarrow> congruence \<Rightarrow> congruence \<Rightarrow> bool option" where
-  "cong_cop CLt a b = congruence_lt a b"
-| "cong_cop CGt a b = congruence_lt b a"
-| "cong_cop CLe a b = map_option HOL.Not (congruence_lt b a)"
-| "cong_cop CGe a b = map_option HOL.Not (congruence_lt a b)"
-| "cong_cop CEq a b = cong_eq a b"
-| "cong_cop CNe a b = map_option HOL.Not (cong_eq a b)"
-
-lemma cong_cop_sound:
-  "cong_cop c a b = Some r \<Longrightarrow> m \<in> gamma_congruence a \<Longrightarrow> n \<in> gamma_congruence b
-     \<Longrightarrow> cop_eval c m n = r"
-  by (cases c) (auto dest: congruence_lt_sound cong_eq_sound)
 
 fun cong_refine :: "cop \<Rightarrow> congruence \<Rightarrow> congruence \<Rightarrow> congruence \<times> congruence" where
   "cong_refine CEq a b = (a \<sqinter> b, a \<sqinter> b)"
@@ -217,7 +205,7 @@ definition arith_ik_congruence :: "ikind \<Rightarrow> aop \<Rightarrow> congrue
   "arith_ik_congruence k op a b = norm_cong_ik k (cong_aop op a b)"
 
 definition cmp_ik_congruence :: "cop \<Rightarrow> congruence \<Rightarrow> congruence \<Rightarrow> bool option" where
-  "cmp_ik_congruence = cong_cop"
+  "cmp_ik_congruence = cop_of congruence_lt cong_eq"
 
 definition meet_ik_congruence :: "congruence \<Rightarrow> congruence \<Rightarrow> congruence" where
   "meet_ik_congruence a b = a \<sqinter> b"
@@ -256,7 +244,8 @@ instance proof
     by (simp add: arith_ik_congruence_def norm_cong_ik_sound cong_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
-    by (simp add: cmp_ik_congruence_def cong_cop_sound)
+    unfolding cmp_ik_congruence_def
+    by simp (rule cop_of_sound[OF congruence_lt_sound cong_eq_sound])
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> m \<in> numeric_domain_class.gamma b
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (meet_ik a b)"
     by (simp add: meet_ik_congruence_def)
@@ -275,7 +264,8 @@ instance proof
         gamma_parity_top top_ivl_def gamma_ivl_top)
   show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
       \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: congruence)" for sk q
-    by (cases q) (simp_all add: of_answer_ik_congruence_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
+    by (cases q)
+      (simp_all add: of_answer_ik_congruence_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
 qed
 
 end

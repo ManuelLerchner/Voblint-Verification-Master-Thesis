@@ -3517,9 +3517,6 @@ let rec sign_eqb
                          sign_le b SPos && sign_le a SNonPos))
                  then Some false else None));;
 
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
-
 let rec sign_lt
   a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
           else (if sign_le a SNonPos && sign_le b SPos then Some true
@@ -3527,14 +3524,18 @@ let rec sign_lt
                         else (if sign_le b SNeg && sign_le a SPos
                                then Some false else None))));;
 
-let rec sign_cop x0 a b = match x0, a, b with CLt, a, b -> sign_lt a b
-                   | CGt, a, b -> sign_lt b a
-                   | CLe, a, b -> map_option not (sign_lt b a)
-                   | CGe, a, b -> map_option not (sign_lt a b)
-                   | CEq, a, b -> sign_eqb a b
-                   | CNe, a, b -> map_option not (sign_eqb a b);;
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
 
-let rec cmp_ik_sign x = sign_cop x;;
+let rec cop_of
+  lt eq x2 a b = match lt, eq, x2, a, b with lt, eq, CLt, a, b -> lt a b
+    | lt, eq, CGt, a, b -> lt b a
+    | lt, eq, CLe, a, b -> map_option not (lt b a)
+    | lt, eq, CGe, a, b -> map_option not (lt a b)
+    | lt, eq, CEq, a, b -> eq a b
+    | lt, eq, CNe, a, b -> map_option not (eq a b);;
+
+let rec cmp_ik_sign x = cop_of sign_lt sign_eqb x;;
 
 let kind_int_domain_sign =
   ({ik_domain_kind_int_domain = ik_domain_sign; top_ik = top_ik_sign;
@@ -4388,7 +4389,7 @@ let rec interval_less_true
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     not (less_eq_eint l1 u1) || (not (less_eq_eint l2 u2) || less_eint u1 l2);;
 
-let rec ivl_lt
+let rec interval_less
   a b = (if interval_less_true a b then Some true
           else (if interval_less_false a b then Some false else None));;
 
@@ -4403,18 +4404,11 @@ let rec interval_eq_true
       (not (less_eq_eint l2 u2) ||
         equal_eint l1 u1 && (equal_eint l2 u2 && equal_eint l1 l2));;
 
-let rec ivl_eq
+let rec interval_eq
   a b = (if interval_eq_true a b then Some true
           else (if interval_eq_false a b then Some false else None));;
 
-let rec ivl_cop x0 a b = match x0, a, b with CLt, a, b -> ivl_lt a b
-                  | CGt, a, b -> ivl_lt b a
-                  | CLe, a, b -> map_option not (ivl_lt b a)
-                  | CGe, a, b -> map_option not (ivl_lt a b)
-                  | CEq, a, b -> ivl_eq a b
-                  | CNe, a, b -> map_option not (ivl_eq a b);;
-
-let rec cmp_ik_ivl x = ivl_cop x;;
+let rec cmp_ik_ivl x = cop_of interval_less interval_eq x;;
 
 let kind_int_domain_ivl =
   ({ik_domain_kind_int_domain = ik_domain_ivl; top_ik = top_ik_ivl;
@@ -4703,14 +4697,9 @@ let rec parity_eqb uu uv = match uu, uv with PEven, POdd -> Some false
                      | PEven, PEven -> None
                      | uu, PTop -> None;;
 
-let rec parity_cop x0 a b = match x0, a, b with CEq, a, b -> parity_eqb a b
-                     | CNe, a, b -> map_option not (parity_eqb a b)
-                     | CLt, a, b -> None
-                     | CLe, a, b -> None
-                     | CGt, a, b -> None
-                     | CGe, a, b -> None;;
+let rec parity_lt uu uv = None;;
 
-let rec cmp_ik_parity x = parity_cop x;;
+let rec cmp_ik_parity x = cop_of parity_lt parity_eqb x;;
 
 let kind_int_domain_parity =
   ({ik_domain_kind_int_domain = ik_domain_parity; top_ik = top_ik_parity;
@@ -5329,14 +5318,7 @@ let rec cong_eq
               else None)
           | Some aa -> Some aa);;
 
-let rec cong_cop x0 a b = match x0, a, b with CLt, a, b -> congruence_lt a b
-                   | CGt, a, b -> congruence_lt b a
-                   | CLe, a, b -> map_option not (congruence_lt b a)
-                   | CGe, a, b -> map_option not (congruence_lt a b)
-                   | CEq, a, b -> cong_eq a b
-                   | CNe, a, b -> map_option not (cong_eq a b);;
-
-let rec cmp_ik_congruence x = cong_cop x;;
+let rec cmp_ik_congruence x = cop_of congruence_lt cong_eq x;;
 
 let rec cmp_ik_int_tuple
   c a b =
@@ -14244,14 +14226,6 @@ let rec generic_enter_st_for (_A1, _A2)
         (ci_args ci))
       (enter_frame_D_default_st _A1 (top _A2) s);;
 
-let rec interval_less
-  a b = (if interval_less_true a b then Some true
-          else (if interval_less_false a b then Some false else None));;
-
-let rec interval_eq
-  a b = (if interval_eq_true a b then Some true
-          else (if interval_eq_false a b then Some false else None));;
-
 let rec ivl_min
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
     normalize_ivl (Ivl (min ord_eint l1 l2, min ord_eint u1 u2));;
@@ -15057,8 +15031,6 @@ let parity_refine_ops : (parity, unit) refine_ops_ext
 let rec parity_eq
   a b = (if parity_eq_true a b then Some true
           else (if parity_eq_false a b then Some false else None));;
-
-let rec parity_lt uu uv = None;;
 
 let rec aval_parity
   x0 d = match x0, d with N n, d -> parity_of_int n

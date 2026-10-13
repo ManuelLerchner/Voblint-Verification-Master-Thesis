@@ -41,7 +41,8 @@ instance proof
   proof
     assume "empty_ik k a"
     then show "numeric_domain_class.gamma a \<inter> ik_range k = {}"
-      using unsigned_range_nonneg[of k] by (fastforce simp: empty_ik_sign_def simp del: ik_range_iff)
+      using unsigned_range_nonneg[of k]
+      by (fastforce simp: empty_ik_sign_def simp del: ik_range_iff)
   next
     assume e: "numeric_domain_class.gamma a \<inter> ik_range k = {}"
     have "0 \<notin> gamma_sign a" "1 \<notin> gamma_sign a" "ik_signed k \<Longrightarrow> - 1 \<notin> gamma_sign a"
@@ -65,17 +66,6 @@ lemma sign_aop_sound:
   by (cases op) (simp_all add: sign_plus_sound sign_minus_sound sign_times_sound
       sign_div_sound sign_mod_sound)
 
-fun sign_cop :: "cop \<Rightarrow> sign \<Rightarrow> sign \<Rightarrow> bool option" where
-  "sign_cop CLt a b = sign_lt a b"
-| "sign_cop CGt a b = sign_lt b a"
-| "sign_cop CLe a b = map_option HOL.Not (sign_lt b a)"
-| "sign_cop CGe a b = map_option HOL.Not (sign_lt a b)"
-| "sign_cop CEq a b = sign_eqb a b"
-| "sign_cop CNe a b = map_option HOL.Not (sign_eqb a b)"
-
-lemma sign_cop_sound:
-  "sign_cop c a b = Some r \<Longrightarrow> m \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> cop_eval c m n = r"
-  by (cases c) (auto dest: sign_lt_sound sign_eqb_sound simp del: sign_lt.simps sign_eqb.simps)
 
 instantiation sign :: kind_int_domain
 begin
@@ -96,7 +86,7 @@ definition arith_ik_sign :: "ikind \<Rightarrow> aop \<Rightarrow> sign \<Righta
   "arith_ik_sign k op a b = sign_cast k (sign_aop op a b)"
 
 definition cmp_ik_sign :: "cop \<Rightarrow> sign \<Rightarrow> sign \<Rightarrow> bool option" where
-  "cmp_ik_sign = sign_cop"
+  "cmp_ik_sign = cop_of sign_lt sign_eqb"
 
 definition meet_ik_sign :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
   "meet_ik_sign a b = a \<sqinter> b"
@@ -130,7 +120,7 @@ instance proof
     by (simp add: arith_ik_sign_def sign_cast_sound sign_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
-    by (simp add: cmp_ik_sign_def sign_cop_sound)
+    unfolding cmp_ik_sign_def by simp (rule cop_of_sound[OF sign_lt_sound sign_eqb_sound])
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> m \<in> numeric_domain_class.gamma b
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (meet_ik a b)"
     by (simp add: meet_ik_sign_def)
@@ -148,7 +138,8 @@ instance proof
         gamma_parity_top top_ivl_def gamma_ivl_top)
   show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
       \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: sign)" for sk q
-    by (cases q) (simp_all add: of_answer_ik_sign_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
+    by (cases q)
+      (simp_all add: of_answer_ik_sign_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
 qed
 
 end
