@@ -44,7 +44,7 @@ lemma loop_values:
 subsection \<open>An unsigned char that wraps\<close>
 
 text \<open>\<open>x\<close> is a \<^const>\<open>U8\<close>; \<open>x + 10\<close> is computed at \<^const>\<open>I32\<close> and converted back.
-  The value \<open>260\<close> leaves the range of \<^const>\<open>U8\<close>, so the conversion answers the whole range.\<close>
+  The value \<open>260\<close> leaves the range of \<^const>\<open>U8\<close> and wraps to \<open>4\<close>, as in Goblint.\<close>
 
 definition wrap_prog :: imp_prog where
   "wrap_prog = program { fun main() { x = 250; x = x + 10; } }"
@@ -62,7 +62,26 @@ abbreviation wrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
 
 lemma wrap_values:
   "tt_at (wrap_at (Statement 1)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 250) (Fin 250))"
-  "tt_at (wrap_at (Statement 2)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 0) (Fin 255))"
+  "tt_at (wrap_at (Statement 2)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 4) (Fin 4))"
   by eval+
+
+
+subsection \<open>A signed char that overflows\<close>
+
+text \<open>A signed kind does not wrap under Goblint's default overflow policy: converting
+  \<open>130\<close> to \<^const>\<open>I8\<close> answers the whole range.\<close>
+
+definition swrap_prog :: imp_prog where
+  "swrap_prog = program { fun main() { x = 120; x = x + 10; } }"
+
+definition swrap_kinds :: kind_decls where
+  "swrap_kinds = [(main_var (STR ''x''), I8)]"
+
+abbreviation swrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
+  "swrap_at \<equiv> typed_interval.state_at swrap_kinds Globals_Join tglobal swrap_prog ()"
+
+lemma swrap_values:
+  "tt_at (swrap_at (Statement 2)) (main_var (STR ''x'')) = KD I8 (Ivl (Fin (-128)) (Fin 127))"
+  by eval
 
 end

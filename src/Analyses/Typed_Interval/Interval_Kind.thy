@@ -90,9 +90,9 @@ section \<open>Intervals as a kind-aware integer domain\<close>
 
 text \<open>
   An operation at kind \<open>k\<close> computes the mathematical interval and keeps it when it lies
-  in \<open>k\<close>'s range; otherwise the normalized result may lie anywhere in the range, and the
-  answer is \<open>top_of k\<close>. This is Goblint's interval behaviour under the \<open>top\<close> overflow
-  policy, without its wrap of representable overflows.
+  in \<open>k\<close>'s range. Otherwise it normalizes the interval as Goblint does: an unsigned kind
+  wraps it when the wrapped interval is exact, and every other overflow answers
+  \<open>top_of k\<close>.
 \<close>
 
 definition ik_ivl :: "ikind \<Rightarrow> ivl" where "ik_ivl k = Ivl (ik_lo k) (ik_hi k)"
@@ -100,8 +100,75 @@ definition ik_ivl :: "ikind \<Rightarrow> ivl" where "ik_ivl k = Ivl (ik_lo k) (
 lemma gamma_ik_ivl [simp]: "gamma_ivl (ik_ivl k) = ik_range k"
   by (auto simp: ik_ivl_def ik_lo_def ik_hi_def less_eq_eint_def)
 
+text \<open>
+  Truncation keeps the order of a block of fewer than \<open>M\<close> consecutive integers
+  whenever it keeps the order of the block's ends: the block then does not cross a
+  multiple of \<open>M\<close>.
+\<close>
+
+lemma mod_interval_wrap:
+  fixes x y n M :: int
+  assumes M: "0 < M" and xn: "x \<le> n" and ny: "n \<le> y" and w: "y - x < M"
+    and ord: "x mod M \<le> y mod M"
+  shows "x mod M \<le> n mod M \<and> n mod M \<le> y mod M"
+proof -
+  define r where "r = x mod M"
+  have r0: "0 \<le> r" "r < M" using M by (simp_all add: r_def)
+  have shift: "(x + d) mod M = (r + d) mod M" for d
+    by (simp add: r_def mod_add_left_eq)
+  have fits: "r + (y - x) < M"
+  proof (rule ccontr)
+    assume "\<not> r + (y - x) < M"
+    then have ge: "M \<le> r + (y - x)" by simp
+    have "(r + (y - x)) mod M = ((r + (y - x) - M) + M) mod M" by simp
+    also have "\<dots> = (r + (y - x) - M) mod M" by (rule mod_add_self2)
+    also have "\<dots> = r + (y - x) - M"
+      by (rule mod_pos_pos_trivial) (use ge r0 w in auto)
+    finally have "(r + (y - x)) mod M = r + (y - x) - M" .
+    moreover have "y mod M = (r + (y - x)) mod M" using shift[of "y - x"] by simp
+    ultimately show False using ord w r_def by simp
+  qed
+  have yv: "y mod M = r + (y - x)"
+    using shift[of "y - x"] fits r0 xn ny by simp
+  have nv: "n mod M = r + (n - x)"
+    using shift[of "n - x"] fits r0 xn ny by simp
+  show ?thesis using yv nv xn ny r_def by simp
+qed
+
+text \<open>
+  An unsigned kind wraps a finite interval that spans less than its modulus and whose
+  wrapped ends stay ordered; any other overflow gives the kind's whole range. This is
+  Goblint's \<^verbatim>\<open>norm\<close> in \<^verbatim>\<open>intervalDomain.ml\<close> under its default policy
+  \<^verbatim>\<open>sem.int.signed_overflow = assume_top\<close>, where a signed kind does not wrap.
+  Goblint treats a cast and an arithmetic result alike there; they differ only under
+  \<^verbatim>\<open>assume_none\<close>, which assumes that no signed overflow occurs.
+\<close>
+
+definition wrap_ivl_ik :: "ikind \<Rightarrow> int \<Rightarrow> int \<Rightarrow> ivl" where
+  "wrap_ivl_ik k x y =
+     (if y - x < ik_mod k \<and> ik_norm k x \<le> ik_norm k y
+      then Ivl (Fin (ik_norm k x)) (Fin (ik_norm k y)) else ik_ivl k)"
+
 definition norm_ivl_ik :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "norm_ivl_ik k a = (if a \<le> ik_ivl k then a else ik_ivl k)"
+  "norm_ivl_ik k a =
+     (if a \<le> ik_ivl k then a
+      else case a of
+        Ivl (Fin x) (Fin y) \<Rightarrow> if ik_signed k then ik_ivl k else wrap_ivl_ik k x y
+      | _ \<Rightarrow> ik_ivl k)"
+
+lemma ik_norm_unsigned: "\<not> ik_signed k \<Longrightarrow> ik_norm k n = n mod ik_mod k"
+  by (simp add: ik_norm_def ik_mod_def take_bit_eq_mod)
+
+lemma wrap_ivl_ik_sound:
+  assumes "\<not> ik_signed k" and "x \<le> n" and "n \<le> y"
+  shows "ik_norm k n \<in> gamma_ivl (wrap_ivl_ik k x y)"
+proof (cases "y - x < ik_mod k \<and> ik_norm k x \<le> ik_norm k y")
+  case True
+  have "0 < ik_mod k" by (simp add: ik_mod_def)
+  with True assms have "ik_norm k x \<le> ik_norm k n \<and> ik_norm k n \<le> ik_norm k y"
+    by (simp add: ik_norm_unsigned mod_interval_wrap)
+  with True show ?thesis by (simp add: wrap_ivl_ik_def less_eq_eint_def)
+qed (auto simp: wrap_ivl_ik_def)
 
 lemma norm_ivl_ik_sound:
   assumes "n \<in> gamma_ivl a"
@@ -110,7 +177,22 @@ proof (cases "a \<le> ik_ivl k")
   case True
   then have "n \<in> ik_range k" using gamma_ivl_mono[OF True] assms by auto
   with True assms show ?thesis by (simp add: norm_ivl_ik_def)
-qed (simp add: norm_ivl_ik_def)
+next
+  case False
+  obtain l u where a: "a = Ivl l u" by (cases a)
+  show ?thesis
+  proof (cases "\<exists>x y. l = Fin x \<and> u = Fin y \<and> \<not> ik_signed k")
+    case True
+    then obtain x y where l: "l = Fin x" and u: "u = Fin y" and k: "\<not> ik_signed k" by blast
+    have "x \<le> n" "n \<le> y" using assms by (simp_all add: a l u less_eq_eint_def)
+    with False k show ?thesis by (simp add: norm_ivl_ik_def a l u wrap_ivl_ik_sound)
+  next
+    case nw: False
+    then have "norm_ivl_ik k a = ik_ivl k"
+      using False by (cases l; cases u) (auto simp: norm_ivl_ik_def a)
+    then show ?thesis by simp
+  qed
+qed
 
 fun ivl_aop :: "aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "ivl_aop AAdd a b = a + b"
