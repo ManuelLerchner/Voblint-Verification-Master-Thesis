@@ -100,7 +100,8 @@ definition tatom :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain t
           (let (al, ar) = refine_ik (if pol then c else neg_cop c)
                             (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)
            in refine_var l al (refine_var r ar \<sigma>))
-      | _ \<Rightarrow> \<sigma>)"
+      | _ \<Rightarrow> refine_var e (fst (refine_ik (if pol then CNe else CEq)
+                         (taeval_ask \<kappa> ch e \<sigma>) (of_int_ik (texp_kind e) 0))) \<sigma>)"
 
 definition tfeas :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> bool" where
   "tfeas e pol \<sigma> = (truth_ik (taeval_ask \<kappa> ch e \<sigma>) \<noteq> Some (\<not> pol))"
@@ -277,6 +278,18 @@ lemma trefine_sound:
   shows "t \<in> gamma_tabs \<kappa> (trefine b pol \<sigma>)"
 proof -
   let ?\<gamma> = "\<lambda>\<sigma>. gamma_tabs \<kappa> \<sigma> \<inter> Collect (geval_query.channel_holds teval ch)"
+  have bare: "t \<in> ?\<gamma> (refine_var e (fst (refine_ik (if pol then CNe else CEq)
+                 (taeval_ask \<kappa> ch e \<sigma>) (of_int_ik (texp_kind e) 0))) \<sigma>)"
+    if "t \<in> ?\<gamma> \<sigma>" and "(teval e t \<noteq> 0) = pol" for e pol \<sigma> t
+  proof -
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds teval ch t" using that(1) by auto
+    have holds: "cop_eval (if pol then CNe else CEq) (teval e t) 0" using that(2) by auto
+    have "teval e t \<in> numeric_domain_class.gamma
+            (fst (refine_ik (if pol then CNe else CEq) (taeval_ask \<kappa> ch e \<sigma>) (of_int_ik (texp_kind e) 0)))"
+      using refine_ik_sound[OF holds taeval_ask_sound[OF g h, of e]
+              of_int_ik_sound[of "texp_kind e" 0, unfolded ik_norm_zero]] by simp
+    then show ?thesis using h by (simp add: refine_var_sound[OF g h])
+  qed
   have atom: "t \<in> ?\<gamma> (tatom e pol \<sigma>)"
     if "t \<in> ?\<gamma> \<sigma>" and "(teval e t \<noteq> 0) = pol" for e pol \<sigma> t
   proof (cases e)
@@ -290,7 +303,7 @@ proof -
     have "teval l t \<in> numeric_domain_class.gamma al" "teval r t \<in> numeric_domain_class.gamma ar"
       using refine_ik_sound[OF holds taeval_ask_sound[OF g h] taeval_ask_sound[OF g h]] ref by simp_all
     then show ?thesis using ref g h TCmp by (simp add: tatom_def refine_var_sound)
-  qed (use that in \<open>simp_all add: tatom_def\<close>)
+  qed (use bare[OF that] in \<open>simp_all add: tatom_def\<close>)
   have feas: "tfeas e pol \<sigma>" if "t \<in> ?\<gamma> \<sigma>" and "(teval e t \<noteq> 0) = pol" for e pol \<sigma> t
   proof -
     have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds teval ch t" using that(1) by auto
@@ -652,7 +665,9 @@ lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_co
   unfolding trefine_def
   apply (rule bool_refine.brefine_inv[OF tbool_locale, where P = "\<lambda>_. True" and Q = "kind_consistent \<kappa>"])
   apply (simp_all add: kind_consistent_sup)
-  subgoal for e pol \<sigma>' by (cases e) (simp_all add: tatom_def refine_var_kind split: prod.split)
+  subgoal for e pol \<sigma>'
+    unfolding tatom_def Let_def case_prod_beta
+    by (cases e) (auto intro!: refine_var_kind simp del: refine_var.simps)
   done
 
 lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> ch b pol \<sigma>)"

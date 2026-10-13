@@ -9248,15 +9248,55 @@ let rec neg_cop = function CLt -> CGe
 
 let rec tatom _A
   kappa ch e pol sigma =
-    (match e with TN (_, _) -> sigma | TVar (_, _) -> sigma
-      | TArith (_, _, _, _) -> sigma | TCast (_, _) -> sigma
+    (match e
+      with TN (_, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
+      | TVar (_, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
+      | TArith (_, _, _, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
+      | TCast (_, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
       | TCmp (c, l, r) ->
         (let (al, ar) =
            refine_ik _A (if pol then c else neg_cop c)
              (taeval_ask _A kappa ch l sigma) (taeval_ask _A kappa ch r sigma)
            in
           refine_var _A kappa ch l al (refine_var _A kappa ch r ar sigma))
-      | TNot _ -> sigma | TAnd (_, _) -> sigma | TOr (_, _) -> sigma);;
+      | TNot _ ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
+      | TAnd (_, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma
+      | TOr (_, _) ->
+        refine_var _A kappa ch e
+          (fst (refine_ik _A (if pol then CNe else CEq)
+                 (taeval_ask _A kappa ch e sigma)
+                 (of_int_ik _A (texp_kind e) zero_inta)))
+          sigma);;
 
 let rec trefine_exec _A
   kappa ch e pol sigma =
