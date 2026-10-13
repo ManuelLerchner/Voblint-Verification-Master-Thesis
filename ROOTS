@@ -12,6 +12,7 @@ src/Analyses/Shared/Result
 src/Analyses/Shared/Nonrelational
 src/Analyses/Sign
 src/Analyses/Interval
+src/Analyses/Typed_Interval
 src/Analyses/Parity
 src/Analyses/Congruence
 src/Analyses/Relational

@@ -1,0 +1,7 @@
+chapter Voblint
+
+session Voblint_Typed_Interval in "." = "Voblint_Analysis_Interval" +
+  description "The Interval domain at machine kinds: kind-indexed widening and narrowing,
+    and kind-tagged interval values"
+  theories
+    Interval_Kind
