@@ -175,6 +175,12 @@ let kind_decls globals defs =
   List.map (fun (x, k) -> (Voblint.GlobalId x, k)) global_kinds
   @ List.concat_map proc_decls defs
 
+(* The last program before lowering, with its kind declarations: the experimental
+   typed run (--typed) analyzes this pair, not the lowered program. *)
+let source_program :
+    (unit Voblint.imp_prog_ext * (Voblint.var_id * Voblint.ikind) list) option ref =
+  ref None
+
 let program (globals : global_line list) (defs : definition list) :
     unit Voblint.imp_prog_ext =
   let mains, procs = List.partition (fun (n, _, _, _, _) -> n = "main") defs in
@@ -194,5 +200,12 @@ let program (globals : global_line list) (defs : definition list) :
       main_body
       (List.concat_map fst globals)
   in
-  if is_typed globals defs then Voblint.typed_prog p (kind_decls globals defs)
-  else p
+  if is_typed globals defs then begin
+    let ds = kind_decls globals defs in
+    source_program := Some (p, ds);
+    Voblint.typed_prog p ds
+  end
+  else begin
+    source_program := Some (p, []);
+    p
+  end

@@ -2,6 +2,7 @@ theory Voblint_Codegen
   imports
     "Voblint_CLI.Trace_Run"
     "Voblint_Typed.Typed_Lower"
+    "Voblint_Typed_CLI.Typed_Run"
 begin
 
 section "Code export surface"
@@ -191,6 +192,10 @@ export_code
   typed_prog GlobalId ScopedId ReturnId I8 U8 I16 U16 I32 U32 I64 U64
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat
+
+  \<comment> \<open>Typed run, experimental: a typed analysis of a program under its kind declarations\<close>
+  run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order
+  Typed_Malformed Typed_No_Answer Typed_Analysed
 
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>
   declared_global_vars

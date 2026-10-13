@@ -42,7 +42,8 @@ let usage =
   \  [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
-   voblint --ast FILE.vimp\n\n\
+   voblint --ast FILE.vimp\n\
+   voblint --typed interval|congruence|int|order [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -417,6 +418,43 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           in
           wait_loop 0.0005)
 
+
+(* The experimental typed run: one typed analysis of the program before lowering,
+   under its kind declarations, through the certified entry point run_typed. Each
+   check is printed with its source line, so a run can be compared with the untyped
+   analysis of the same file. *)
+let run_typed_and_exit path stmt_positions domain rule =
+  let p, decls =
+    match !Vimp_typing.source_program with
+    | Some pd -> pd
+    | None -> failwith "voblint: no program was parsed"
+  in
+  let verdict = function
+    | C.Check_Proved -> "proved"
+    | C.Check_Refuted -> "refuted"
+    | C.Check_Unknown -> "unknown"
+  in
+  let location = function
+    | C.Statement k -> (
+        let i = Z.to_int (C.integer_of_nat k) in
+        match List.assoc_opt i stmt_positions with
+        | Some (line, col, _, _) -> Printf.sprintf "%s:%d:%d" path line col
+        | None -> Printf.sprintf "%s:statement %d" path i)
+    | _ -> path
+  in
+  match C.run_typed domain rule decls p with
+  | C.Typed_Malformed ->
+      prerr_endline "voblint: the program is not admissible";
+      exit 3
+  | C.Typed_No_Answer ->
+      prerr_endline "voblint: the solver returned no answer";
+      exit 4
+  | C.Typed_Analysed rows ->
+      List.iter
+        (fun (pt, (_, r)) -> Printf.printf "%s: %s\n" (location pt) (verdict r))
+        rows;
+      exit 0
+
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
@@ -447,6 +485,7 @@ let () =
   let globals_name = ref None in
   let program_globals_name = ref "flow-sensitive" in
   let file = ref None in
+  let typed_domain = ref None in
   let rec parse_args = function
     | [] -> ()
     | "--help" :: _ ->
@@ -542,6 +581,17 @@ let () =
     | "--output" :: v :: rest ->
         trace := true;
         trace_output := Some v;
+        parse_args rest
+    | "--typed" :: v :: rest ->
+        (typed_domain :=
+           match v with
+           | "interval" -> Some C.Typed_Interval
+           | "congruence" -> Some C.Typed_Congruence
+           | "int" -> Some C.Typed_Int
+           | "order" -> Some C.Typed_Order
+           | _ ->
+               prerr_endline ("unknown --typed value: " ^ v);
+               exit 1);
         parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v
@@ -643,6 +693,10 @@ let () =
       exit 2
   in
   if !parse_only then exit 0;
+  (match !typed_domain with
+  | None -> ()
+  | Some d ->
+      run_typed_and_exit path stmt_positions d !globals);
   if !ast then begin
     print_endline (Render_json.program_json prog);
     exit 0
