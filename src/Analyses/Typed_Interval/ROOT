@@ -9,3 +9,6 @@ session Voblint_Typed_Interval in "." = "Voblint_Analysis_Interval" +
     Typed_Nonrel
     Typed_Transfer
     Interval_Kind
+    Typed_Exec
+    Typed_Interval_Analysis
+    Typed_Interval_Regression

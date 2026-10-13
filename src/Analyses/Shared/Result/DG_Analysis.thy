@@ -155,7 +155,8 @@ text \<open>
 \<close>
 
 locale dg_pipeline =
-  fixes comp :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr::linorder, 'e::linorder, 's::semilattice_sup lifted) glocal_spec"
+  fixes comp ::
+    "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr::linorder, 'e::linorder, 's::semilattice_sup lifted) glocal_spec"
     and emp :: "'p \<Rightarrow> 's \<Rightarrow> bool"
     and rd :: "('vr \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
     and init_st :: 's
@@ -954,7 +955,8 @@ next
     using gplace_enter_deps by blast
   have ce': "entry_alt pgs p ?ci ?caller ?g = (c, e)"
     using ce by (simp add: sol_global_def)
-  have sc: "s \<in> pgam c ?g" and ec: "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s \<in> pgam e ?g"
+  have sc: "s \<in> pgam c ?g" and ec:
+    "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s \<in> pgam e ?g"
     using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
   have re: "route pgs u ctx e (CallEdge dst pars args) = ctx'"
     using req ce by (simp add: entry_of_def)
@@ -1288,7 +1290,8 @@ proof (rule activation_collect_sound_of[OF solves entry_cov fwd_ok comb_fwd_ok])
                (cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s)"
   have req: "route pgs u ctx d (CallEdge dst pars args) = ctx'" for d
     using Rc
-    by (simp add: route_const[of _ _ _ _ "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s"])
+    by (simp add:
+      route_const[of _ _ _ _ "cfg_transfer_sem.gcall_enter ev pgs (CallEdge dst pars args) s"])
   show "route pgs u ctx
           (entered (call_info_of (CallEdge dst pars args) q)
              (dg_local (sol_env pgs p (Inl (u, ctx)))))
@@ -1424,7 +1427,8 @@ sublocale dg_analysis \<subseteq>
     and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
     and "ctx_sem.gadmits_call_context aval \<G> = admits_call_context \<G>"
     and "ctx_sem.gactivation_context_rel aval \<G> = activation_context_rel \<G>"
-    and "ctx_sem.gcall_context_total_on aval \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
+    and
+      "ctx_sem.gcall_context_total_on aval \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
     and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
     and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
 proof -
@@ -1567,6 +1571,97 @@ next
   case BotState show ?case by (rule bot_state_empty)
 next
   case (InitSound p) show ?case by (rule init_sound)
+qed
+
+text \<open>The same placement for any program representation.\<close>
+
+theorem gdg_analysis_whole_stateI:
+  fixes comp ::
+    "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr::linorder, 'e::linorder, 's::semilattice_sup lifted) glocal_spec"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+  assumes solver: "certified_solver solve solve_dom solve_c"
+    and comp_sound:
+      "\<And>p. mcp_sem.gsound_local_spec ev rv (pconv p) (pglob p)
+               (\<lambda>d. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) d))
+               (comp (pglob p) p)"
+    and enter_single:
+      "\<And>p ci d. ls_enter (comp (pglob p) p) (ls_channel (comp (pglob p) p) d)
+                    ci (d, d)
+                  = [(d, dg_pipeline.comp_entry comp (pglob p) p ci d)]"
+    and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (pglob p) s)"
+    and empty\<^sub>V_sound: "sound_emptiness empty\<^sub>V \<gamma>\<^sub>V"
+    and seed_ne: "\<And>v ctx. seed v ctx \<noteq> buffer_key"
+    and classify_proved:
+      "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (ev c s)"
+    and classify_refuted:
+      "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (ev c s)"
+    and bot_state_empty: "\<gamma>\<^sub>V bot_state = {}"
+    and init_sound: "\<And>p. pinit p \<subseteq> \<gamma>\<^sub>V (rd (pglob p) init_st)"
+    and seed_ne_global: "\<And>v ctx n. seed v ctx \<noteq> global_of n"
+    and pentry: "\<And>p. pentry p = cfg_entry (pcfg p)"
+    and fin_intra: "\<And>p. finite (intra (pcfg p))"
+    and fin_calls: "\<And>p. finite (calls (pcfg p))"
+    and calls_unique: "\<And>p. calls_source_unique (pcfg p)"
+  shows "gdg_analysis ev rv pconv pglob pinit comp emp rd init_st buffer_key global_of seed
+           solve solve_dom bot_state classify \<gamma>\<^sub>V empty\<^sub>V solve_c
+           (\<lambda>\<G> c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>\<G> d. d) (\<lambda>\<G> d. Bot) (\<lambda>\<G> p. [])
+           (\<lambda>p ci d e. d) pcfg pentry"
+proof (rule gdg_analysis.intro[OF solver gdg_analysis_axioms.intro], goal_cases CompSound
+    EnterSingle Contract Runs Deps EntrySound CmbBot Init EmptyRd EmptyV SeedNe SeedNeGlobal
+    ClProved ClRefuted BotState InitSound PEntry FinIntra FinCalls CallsUnique)
+  case (CompSound p) show ?case by (rule comp_sound)
+next
+  case (EnterSingle p ci d) show ?case by (rule enter_single)
+next
+  case (Contract p) show ?case
+    unfolding dg_pipeline.analysis_spec_def by (rule mcp_sem.dg_spec_of_contract[OF comp_sound])
+next
+  case (Runs p ci d \<sigma>) show ?case
+    by (rule exI, simp add: dg_pipeline.analysis_spec_def dg_spec_of_def enter_single
+        dg_pipeline.entry_alt_def, rule enter_runs_local_enter_transfer_mk_dg_man)
+next
+  case (Deps p ci d \<sigma>) show ?case
+    by (rule exI, simp add: dg_pipeline.analysis_spec_def dg_spec_of_def enter_single
+        dg_pipeline.entry_alt_def, rule enter_deps_local_enter_transfer_mk_dg_man)
+next
+  case (EntrySound p ci d \<sigma> pub s)
+  let ?c = "comp (pglob p) p"
+  obtain q where "q \<in> set (ls_enter ?c (ls_channel ?c d) ci (d, d))"
+      "s \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) (fst q))"
+      "cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci)) s
+         \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) (snd q))"
+    using comp_sound[of p] EntrySound(3) mcp_sem.ls_channel_sound[OF comp_sound[of p]]
+    unfolding mcp_sem.gsound_local_spec_def by (metis fst_conv)
+  then show ?case
+    by (simp add: enter_single dg_pipeline.entry_alt_def)
+next
+  case (CmbBot p g) show ?case by simp
+next
+  case (Init p) show ?case by simp
+next
+  case (EmptyRd p s) show ?case by (rule empty_rd)
+next
+  case EmptyV show ?case by (rule empty\<^sub>V_sound)
+next
+  case (SeedNe v ctx) show ?case by (rule seed_ne)
+next
+  case (SeedNeGlobal v ctx n) show ?case by (rule seed_ne_global)
+next
+  case (ClProved c d s) then show ?case by (rule classify_proved)
+next
+  case (ClRefuted c d s) then show ?case by (rule classify_refuted)
+next
+  case BotState show ?case by (rule bot_state_empty)
+next
+  case (InitSound p) show ?case by (rule init_sound)
+next
+  case (PEntry p) show ?case by (rule pentry)
+next
+  case (FinIntra p) show ?case by (rule fin_intra)
+next
+  case (FinCalls p) show ?case by (rule fin_calls)
+next
+  case (CallsUnique p) show ?case by (rule calls_unique)
 qed
 
 subsection \<open>Program globals keyed by name\<close>

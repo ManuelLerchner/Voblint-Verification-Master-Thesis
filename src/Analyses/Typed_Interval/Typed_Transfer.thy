@@ -1,5 +1,5 @@
 theory Typed_Transfer
-  imports Typed_Nonrel "Voblint_Framework.MCP_Spec" "Voblint_Typed_CFG.Typed_CFG"
+  imports Typed_Nonrel "Voblint_Framework.MCP_Spec"
 begin
 
 section \<open>The typed non-relational transfer\<close>
@@ -7,7 +7,7 @@ section \<open>The typed non-relational transfer\<close>
 text \<open>
   What one CFG edge does to a typed abstract state, after Goblint's \<^verbatim>\<open>base\<close>
   analysis. An assignment evaluates its right-hand side and converts the value to the
-  destination's kind (\<open>cast_to\<close>); a library call writes its result at the
+  destination's kind (\<^verbatim>\<open>cast_to\<close>); a library call writes its result at the
   destination's kind; a guard is dropped when its condition is decided against it; a
   return writes the returned value into the return slot; a call resets the callee's
   locals to their kinds' whole ranges and binds the formals; and the return combine
@@ -17,6 +17,30 @@ text \<open>
   CFG has no such call, and its entered store need not be typed. Every operation keeps
   \<^const>\<open>TTop\<close>.
 \<close>
+
+fun neg_cop :: "cop \<Rightarrow> cop" where
+  "neg_cop CLt = CGe" | "neg_cop CLe = CGt" | "neg_cop CGt = CLe" | "neg_cop CGe = CLt"
+| "neg_cop CEq = CNe" | "neg_cop CNe = CEq"
+
+lemma cop_eval_neg_cop [simp]: "cop_eval (neg_cop c) m n \<longleftrightarrow> \<not> cop_eval c m n"
+  by (cases c) auto
+
+text \<open>A conversion to \<open>ik\<close> keeps every value of kind \<open>k\<close> when the range of \<open>ik\<close>
+  contains that of \<open>k\<close>.\<close>
+
+definition preserves_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
+  "preserves_kind k ik \<longleftrightarrow> ik_min ik \<le> ik_min k \<and> ik_max k \<le> ik_max ik"
+
+lemma preserves_kind_norm:
+  "preserves_kind k ik \<Longrightarrow> n \<in> ik_range k \<Longrightarrow> ik_norm ik n = n"
+  by (auto simp: preserves_kind_def intro!: ik_norm_id)
+
+text \<open>An actual fits a formal when every typed store gives it a value in the formal's
+  range: it is a variable of the formal's kind, or an operation at that kind.\<close>
+
+definition arg_fits :: "kenv \<Rightarrow> var_id \<Rightarrow> texp \<Rightarrow> bool" where
+  "arg_fits \<kappa> p e \<longleftrightarrow> p \<noteq> ReturnVar \<and>
+     (case e of TVar ik v \<Rightarrow> v \<noteq> ReturnVar \<and> \<kappa> v = \<kappa> p | _ \<Rightarrow> texp_kind e = \<kappa> p)"
 
 context
   fixes \<kappa> :: kenv
@@ -40,20 +64,6 @@ text \<open>
   the variable's own, so that the conversion keeps every value. A negation flips the
   polarity, a conjunction that holds and a disjunction that fails narrow by both sides.
 \<close>
-
-fun neg_cop :: "cop \<Rightarrow> cop" where
-  "neg_cop CLt = CGe" | "neg_cop CLe = CGt" | "neg_cop CGt = CLe" | "neg_cop CGe = CLt"
-| "neg_cop CEq = CNe" | "neg_cop CNe = CEq"
-
-lemma cop_eval_neg_cop [simp]: "cop_eval (neg_cop c) m n \<longleftrightarrow> \<not> cop_eval c m n"
-  by (cases c) auto
-
-definition preserves_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
-  "preserves_kind k ik \<longleftrightarrow> ik_min ik \<le> ik_min k \<and> ik_max k \<le> ik_max ik"
-
-lemma preserves_kind_norm:
-  "preserves_kind k ik \<Longrightarrow> n \<in> ik_range k \<Longrightarrow> ik_norm ik n = n"
-  by (auto simp: preserves_kind_def intro!: ik_norm_id)
 
 definition narrow_var :: "var_id \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
   "narrow_var v a \<sigma> =
@@ -91,20 +101,13 @@ definition ret_kd :: "texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 
 definition treturn :: "texp option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "treturn r \<sigma> = (case r of None \<Rightarrow> \<sigma> | Some e \<Rightarrow> \<sigma>(ReturnVar := ret_kd e \<sigma>))"
 
-text \<open>An actual fits a formal when every typed store gives it a value in the formal's
-  range: it is a variable of the formal's kind, or an operation at that kind.\<close>
-
-definition arg_fits :: "var_id \<Rightarrow> texp \<Rightarrow> bool" where
-  "arg_fits p e \<longleftrightarrow> p \<noteq> ReturnVar \<and>
-     (case e of TVar ik v \<Rightarrow> v \<noteq> ReturnVar \<and> \<kappa> v = \<kappa> p | _ \<Rightarrow> texp_kind e = \<kappa> p)"
-
 definition tenter_frame :: "'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tenter_frame \<sigma> = enter_frame tglobal KTop \<sigma>"
 
 definition tenter_state ::
     "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs toplift" where
   "tenter_state ps es \<sigma> =
-     (if list_all (\<lambda>(p, e). arg_fits p e) (zip ps es)
+     (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
       then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
              (tenter_frame \<sigma>))
       else TTop)"
@@ -115,6 +118,9 @@ definition tcombine_assign :: "var_id option \<Rightarrow> 'a::kind_int_domain t
       | Some x \<Rightarrow> \<sigma>(x := KD (\<kappa> x) (cast_ik (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))))"
 
 subsection \<open>Soundness of each operation\<close>
+
+text \<open>Each operation's result describes the store its edge produces from any typed
+  store the input state describes.\<close>
 
 lemma tstyped_upd:
   "tstyped \<kappa> t \<Longrightarrow> (x \<noteq> ReturnVar \<Longrightarrow> n \<in> ik_range (\<kappa> x)) \<Longrightarrow> tstyped \<kappa> (t(x := n))"
@@ -283,12 +289,8 @@ next
   with gamma_tabs_upd[OF assms ret_kd_sound[OF assms]] show ?thesis by (simp add: treturn_def)
 qed
 
-lemma enter_state_tstyped:
-  "tstyped \<kappa> t \<Longrightarrow> tstyped \<kappa> (enter_state tglobal t)"
-  by (auto simp: tstyped_def enter_state_def enter_frame_def combine_env_def)
-
 lemma arg_fits_range:
-  assumes "arg_fits p e" and "tstyped \<kappa> t"
+  assumes "arg_fits \<kappa> p e" and "tstyped \<kappa> t"
   shows "teval e t \<in> ik_range (\<kappa> p)"
 proof (cases "\<exists>ik v. e = TVar ik v")
   case True
@@ -301,7 +303,7 @@ next
 qed
 
 lemma bind_formals_fit:
-  assumes "list_all (\<lambda>(p, e). arg_fits p e) (zip ps es)"
+  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)"
     and t: "t \<in> gamma_tabs \<kappa> \<sigma>"
     and "tstyped \<kappa> s" and "\<And>y. s y \<in> numeric_domain_class.gamma (\<sigma>' y)"
   shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)
@@ -319,14 +321,15 @@ next
     case Nil with Cons.prems show ?thesis by simp
   next
     case (Cons e es')
-    with Cons.prems(1) have fit: "arg_fits p e"
-      and rest: "list_all (\<lambda>(p, e). arg_fits p e) (zip ps es')" by simp_all
+    with Cons.prems(1) have fit: "arg_fits \<kappa> p e"
+      and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
     have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF t] .
     have rng: "teval e t \<in> ik_range (\<kappa> p)" by (rule arg_fits_range[OF fit ty])
     have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>)))"
       using cast_ik_sound[OF taeval_sound[OF t], of "\<kappa> p" e] rng by simp
     have "p \<noteq> ReturnVar" using fit by (simp add: arg_fits_def)
-    then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng by (rule_tac tstyped_upd) auto
+    then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng
+      by (rule_tac tstyped_upd) auto
     have gu: "\<And>y. (s(p := teval e t)) y \<in> numeric_domain_class.gamma
         ((\<sigma>'(p := KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>)))) y)"
       using val Cons.prems(3) by simp
@@ -339,13 +342,13 @@ lemma tenter_state_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
            \<in> gamma_tt \<kappa> (tenter_state ps es \<sigma>)"
-proof (cases "list_all (\<lambda>(p, e). arg_fits p e) (zip ps es)")
+proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
   case True
   have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF assms] .
   have frame: "\<And>y. enter_state tglobal t y \<in> numeric_domain_class.gamma (tenter_frame \<sigma> y)"
     using gamma_tabsD(2)[OF assms]
     by (simp add: enter_state_def tenter_frame_def enter_frame_def combine_env_def)
-  note fit = bind_formals_fit[OF True assms enter_state_tstyped[OF ty] frame]
+  note fit = bind_formals_fit[OF True assms tstyped_enter_state[OF ty] frame]
   have "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
       \<in> gamma_tabs \<kappa> (bind_formals ps
            (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
@@ -366,7 +369,8 @@ proof -
     using gamma_tabsD(2)[OF assms(1)] gamma_tabsD(2)[OF assms(2)] by blast+
   have cty: "tstyped \<kappa> (combine_env tglobal s t)"
     using tys by (auto simp: tstyped_def combine_env_def)
-  have cvs: "\<And>v. combine_env tglobal s t v \<in> numeric_domain_class.gamma (combine_env tglobal \<sigma> \<sigma>\<^sub>e v)"
+  have cvs:
+    "\<And>v. combine_env tglobal s t v \<in> numeric_domain_class.gamma (combine_env tglobal \<sigma> \<sigma>\<^sub>e v)"
     using vs by (simp add: combine_env_def)
   show ?thesis
   proof (cases dst)
@@ -386,6 +390,7 @@ proof -
 qed
 
 end
+
 
 subsection \<open>The typed component\<close>
 
@@ -457,7 +462,8 @@ proof -
       apply (intro allI impI)
       subgoal for ch s ci p
         by (cases "fst p")
-           (auto simp: typed_spec_def cfg_transfer_sem.call_enter_CallEdge intro: tenter_state_sound)
+           (auto simp: typed_spec_def cfg_transfer_sem.call_enter_CallEdge intro:
+             tenter_state_sound)
       done
     show "T.gsound_combine (gamma_tt \<kappa>) (ls_combine_env (typed_spec \<kappa>))
         (ls_combine_assign (typed_spec \<kappa>))"

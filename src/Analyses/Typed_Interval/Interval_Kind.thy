@@ -1,5 +1,6 @@
 theory Interval_Kind
-  imports "Voblint_Analysis_Interval.Interval_Warrowing" "Voblint_Analysis_Interval.Interval_Arithmetic"
+  imports
+    "Voblint_Analysis_Interval.Interval_Arithmetic"
     "Voblint_Analysis_Interval.Interval_Numeric_Queries" Typed_Nonrel
 begin
 
@@ -257,5 +258,11 @@ instance proof
 qed
 
 end
+
+text \<open>\<^class>\<open>kind_int_domain\<close> extends \<^class>\<open>numeric_domain\<close>, so the code of a
+  typed analysis carries the concretization in its class dictionary. It is never
+  called, and its equation is not executable at \<^typ>\<open>int\<close>.\<close>
+
+declare [[code abort: gamma_ivl]]
 
 end
