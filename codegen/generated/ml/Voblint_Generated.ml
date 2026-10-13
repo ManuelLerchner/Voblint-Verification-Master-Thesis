@@ -6601,7 +6601,7 @@ type ('a, 'b, 'c) gcfg_ext =
   Gcfg_ext of
     (cfg_node * (('a, 'b) gedge_action * cfg_node)) set *
       (cfg_node * (('a, 'b) gcall_action * (cfg_node * cfg_node))) set *
-      cfg_node * (cfg_node * 'b) set * 'c;;
+      cfg_node * 'c;;
 
 type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
 
@@ -7282,8 +7282,7 @@ let rec var_name = function GlobalId x -> x
                    | ReturnId uv -> ret_var
                    | ReturnVar -> ret_var;;
 
-let rec cfg_entry
-  (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = cfg_entry;;
+let rec cfg_entry (Gcfg_ext (intra, calls, cfg_entry, more)) = cfg_entry;;
 
 let rec cfg_exit
   g = (match cfg_entry g
@@ -8072,7 +8071,7 @@ let rec sort_key _B
 let rec sorted_list_of_set (_A1, _A2)
   (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
 
-let rec intra (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = intra;;
+let rec intra (Gcfg_ext (intra, calls, cfg_entry, more)) = intra;;
 
 let rec cfg_intra_list (_A1, _A2) (_B1, _B2)
   g = sorted_list_of_set
@@ -8252,7 +8251,7 @@ let rec call_target_at _A _B
     | v, (va, (vc, (Statement vg, vf))) -> None
     | v, (va, (vc, (FunctionResult vg, vf))) -> None;;
 
-let rec calls (Gcfg_ext (intra, calls, cfg_entry, checks, more)) = calls;;
+let rec calls (Gcfg_ext (intra, calls, cfg_entry, more)) = calls;;
 
 let rec cfg_calls_list (_A1, _A2) (_B1, _B2)
   g = sorted_list_of_set
@@ -10052,14 +10051,7 @@ let rec compile_prog _B _C
               (equal_prod (equal_gcall_action _B _C)
                 (equal_prod equal_cfg_node equal_cfg_node)))
             kprocs kmain,
-          FunctionEntry prog_main_name,
-          image (fun (u, (a, _)) -> (u, ea_check_cond a))
-            (filter (fun (_, (a, _)) -> is_EA_Check a)
-              (sup_set
-                (equal_prod equal_cfg_node
-                  (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                eprocs emain)),
-          ()));;
+          FunctionEntry prog_main_name, ()));;
 
 let rec proc_rep
   (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
