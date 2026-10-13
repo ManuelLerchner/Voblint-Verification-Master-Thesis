@@ -23,23 +23,23 @@ text \<open>
   \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against the environment \<^term>\<open>genv global_of sigma\<close>.
 \<close>
 
-locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
-  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool" +
-  fixes g :: cfg and buffer_key :: 'k and global_of :: "'v \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
-    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+locale dg_context_base =
+  fixes S :: "('vr::linorder, 'e::linorder, pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) gdg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and g :: "('vr, 'e) gcfg" and buffer_key :: 'k and global_of :: "'v \<Rightarrow> 'k"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
+    and cmb :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c
+                  \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pp \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
       \<comment> \<open>one program per call site: the site's own resolver decides which callees it folds\<close>
-    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+    and extra :: "(pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
                   \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program list"
     and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set" and x0 :: "pp \<times> 'c"
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
-    and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
+    and \<gamma>\<^sub>M :: "'M \<Rightarrow> ('vr \<Rightarrow> int) set"
   assumes cmb_wf: "\<And>c ca cc v. sp_wf (cmb route c ca cc v)"
     and extra_wf: "\<And>c v q. q \<in> set (extra route c v) \<Longrightarrow> sp_wf q"
     and finE: "finite (intra g)"
@@ -56,6 +56,19 @@ locale dg_context_activation = analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G>
         \<Longrightarrow> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (u, c)))) (genv global_of sigma) \<noteq> {}
         \<Longrightarrow> (u, a, v) \<in> intra g
         \<Longrightarrow> (v, c) \<in> vars"
+
+text \<open>The obligations above do not mention the concrete semantics, so the generic and
+  the untyped contract share them.\<close>
+
+locale gdg_context_activation =
+  ganalysis_contract ev rv conv glob S \<gamma>\<^sub>D\<^sub>G +
+  dg_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0
+    sigma vars x0 sg \<gamma>\<^sub>M
+  for ev :: "'e::linorder \<Rightarrow> ('vr::linorder \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
+    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool"
+    and S :: "('vr, 'e, pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) gdg_spec"
+    and \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
 begin
 
 abbreviation Gen :: "(pp \<times> 'c, 'k, ('D, 'G) dg_state) eqsT" where
@@ -74,7 +87,7 @@ abbreviation contribs :: "pp \<Rightarrow> 'c
 text \<open>The reader's claim at a covered point (\<open>sg_cov\<close>) and the manager its call
   programs run under. Input-only, so facts of theory-level interpretations keep printing
   the explicit terms.\<close>
-abbreviation (input) gamma_at :: "pp \<Rightarrow> 'c \<Rightarrow> store set" where
+abbreviation (input) gamma_at :: "pp \<Rightarrow> 'c \<Rightarrow> ('vr \<Rightarrow> int) set" where
   "gamma_at v ctx \<equiv> \<gamma>\<^sub>D\<^sub>G (dg_local (sigma (Inl (v, ctx)))) (genv global_of sigma)"
 
 abbreviation (input) man_at where
@@ -86,7 +99,7 @@ text \<open>Every contribution the routed generator folds here runs its continua
 
 lemma contribs_wf [simp]: "\<forall>q \<in> set (contribs v ctx). sp_wf q"
   by (rule routed_contribution_programs_wf)
-     (auto intro: sp_wf_dg_spec_edge_program[OF spec_wf] cmb_wf extra_wf)
+     (auto intro: sp_wf_dg_spec_edge_program[OF gspec_wf] cmb_wf extra_wf)
 
 subsection \<open>Post-solution elimination\<close>
 
@@ -201,7 +214,7 @@ lemma edge_bound_genv:
 
 theorem dg_ctx_act_edge:
   assumes e: "(u, a, v) \<in> intra g"
-    and sin: "s \<in> \<gamma>\<^sub>M (sg (Inl (u, ctx)))" and st: "s' \<in> edge_step a s"
+    and sin: "s \<in> \<gamma>\<^sub>M (sg (Inl (u, ctx)))" and st: "s' \<in> gedge_step a s"
   shows "s' \<in> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
 proof (cases "(u, ctx) \<in> vars")
   case False
@@ -216,15 +229,15 @@ next
   have cov_v: "(v, ctx) \<in> vars"
     using True _ e by (rule fwd) (use sin' in blast)
   have "{s} \<subseteq> \<gamma>\<^sub>D\<^sub>G ?d ?g" using sin' by simp
-  hence "edge_collect a {s} \<subseteq> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by (rule edge_collect_mono)
-  moreover have "s' \<in> edge_collect a {s}" using st by (simp add: edge_collect_single)
-  ultimately have "s' \<in> edge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
+  hence "gedge_collect a {s} \<subseteq> gedge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by (rule edge_collect_mono)
+  moreover have "s' \<in> gedge_collect a {s}" using st by (simp add: edge_collect_single)
+  ultimately have "s' \<in> gedge_collect a (\<gamma>\<^sub>D\<^sub>G ?d ?g)" by blast
   hence "s' \<in> \<gamma>\<^sub>D\<^sub>G
       (edge_out S a (Inl (u, ctx)) global_of sigma)
       (?g \<squnion> edge_pub S a (Inl (u, ctx)) global_of sigma)"
-    using step_sound[of a sigma "Inl (u, ctx)" global_of] by blast
+    using gstep_sound[of a sigma "Inl (u, ctx)" global_of] by blast
   also have "\<dots> \<subseteq> gamma_at v ctx"
-    by (rule gammaDG_mono[OF edge_bound_local[OF cov_v e]
+    by (rule ggammaDG_mono[OF edge_bound_local[OF cov_v e]
           sup_least[OF order_refl edge_bound_genv[OF cov_v e]]])
   also have "\<dots> = \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     using cov_v by simp
@@ -232,5 +245,26 @@ next
 qed
 
 end
+
+text \<open>The untyped instance: the contract over source names, and the same base.\<close>
+
+locale dg_context_activation =
+  analysis_contract S \<gamma>\<^sub>D\<^sub>G \<G> +
+  dg_context_base S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0
+    sigma vars x0 sg \<gamma>\<^sub>M
+  for S :: "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('v \<Rightarrow> 'G) \<Rightarrow> store set"
+    and \<G> :: "vname \<Rightarrow> bool"
+    and g buffer_key global_of route cmb extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
+
+sublocale dg_context_activation \<subseteq>
+  gdg_context_activation aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route cmb
+    extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
+  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
+    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
+    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
+  by unfold_locales (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def)
 
 end

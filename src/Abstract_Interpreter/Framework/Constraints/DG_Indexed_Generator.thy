@@ -107,7 +107,7 @@ text \<open>The standard predecessor selection: every intra predecessor is carri
   own \<open>(pp, 'c)\<close> local unknown, so its address is \<^const>\<open>Inl\<close> of that pair.\<close>
 
 definition intra_predecessor_addr_list ::
-  "cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list"
+  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> ('vr::linorder, 'e::linorder) gedge_action) list"
 where
   "intra_predecessor_addr_list g v ctx =
      map (\<lambda>(u, a). (Inl (u, ctx), a)) (intra_predecessor_list g v)"
@@ -127,18 +127,18 @@ text \<open>
 \<close>
 
 definition routed_contribution_programs ::
-  "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
-   \<Rightarrow> (cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action) list)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
-   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action
+  "(('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> ('vr::linorder, 'e::linorder) gedge_action) list)
+   \<Rightarrow> (('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> (pp \<times> ('vr::linorder, 'e::linorder) gcall_action) list)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
+   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> ('vr::linorder, 'e::linorder) gedge_action
         \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                            'h::bounded_semilattice_sup_bot) dg_state,
                           ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program list)
-   \<Rightarrow> cfg \<Rightarrow> 'c \<Rightarrow> pp
+   \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'c \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program list"
 where
   "routed_contribution_programs pred_sel site_sel route it cmb extra g ctx v =
@@ -189,26 +189,26 @@ text \<open>
   CFG entry, \<^const>\<open>bot\<close> elsewhere.
 \<close>
 
-abbreviation rhs_init :: "cfg \<Rightarrow> 'd::sup \<Rightarrow> 'd \<Rightarrow> pp \<Rightarrow> 'd" where
+abbreviation rhs_init :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'd::sup \<Rightarrow> 'd \<Rightarrow> pp \<Rightarrow> 'd" where
   "rhs_init g bot0 d\<^sub>0 v \<equiv> (if v = cfg_entry g then bot0 \<squnion> d\<^sub>0 else bot0)"
 
-abbreviation rhs_init_global :: "cfg \<Rightarrow> 'h::bot \<Rightarrow> pp \<Rightarrow> 'h" where
+abbreviation rhs_init_global :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'h::bot \<Rightarrow> pp \<Rightarrow> 'h" where
   "rhs_init_global g g\<^sub>0 v \<equiv> (if v = cfg_entry g then g\<^sub>0 else bot)"
 
 definition routed_node_rhs ::
-  "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
-   \<Rightarrow> (cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action) list)
+  "(('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> ('vr::linorder, 'e::linorder) gedge_action) list)
+   \<Rightarrow> (('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> (pp \<times> ('vr::linorder, 'e::linorder) gcall_action) list)
    \<Rightarrow> ('c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
-   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
+   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> ('vr::linorder, 'e::linorder) gedge_action
         \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                            'h::bounded_semilattice_sup_bot) dg_state,
                           ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program list)
-   \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
+   \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
   "routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 =
@@ -315,19 +315,19 @@ text \<open>
 \<close>
 
 definition routed_node_rhs_buffered ::
-  "(cfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> edge_action) list)
-   \<Rightarrow> (cfg \<Rightarrow> pp \<Rightarrow> (pp \<times> call_action) list)
+  "(('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ((pp \<times> 'c + 'k) \<times> ('vr::linorder, 'e::linorder) gedge_action) list)
+   \<Rightarrow> (('vr::linorder, 'e::linorder) gcfg \<Rightarrow> pp \<Rightarrow> (pp \<times> ('vr::linorder, 'e::linorder) gcall_action) list)
    \<Rightarrow> ('c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c)
-   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> edge_action
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
+   \<Rightarrow> ('c \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> ('vr::linorder, 'e::linorder) gedge_action
         \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                            'h::bounded_semilattice_sup_bot) dg_state,
                           ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program)
-   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
+   \<Rightarrow> ((pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> pp
         \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state, ('d, 'h) dg_state) strategy_program list)
-   \<Rightarrow> cfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
+   \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'd \<Rightarrow> 'd \<Rightarrow> 'h
    \<Rightarrow> (pp \<times> 'c, 'k, ('d, 'h) dg_state) eqsT"
 where
   "routed_node_rhs_buffered pred_sel site_sel buffer_key_at route it_c cmb_c extra g bot0 d\<^sub>0 g\<^sub>0 =
@@ -457,7 +457,7 @@ text \<open>
 
 lemma routed_node_rhs_buffered_correspondence:
   fixes cmb cmb_c ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
        \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                           'h::bounded_semilattice_sup_bot) dg_state,
             ('d, 'h) dg_state) strategy_program"
@@ -738,7 +738,7 @@ text \<open>
 
 lemma part_post_solution_routed_node_rhs_buffered:
   fixes cmb cmb_c ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
        \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                           'h::bounded_semilattice_sup_bot) dg_state,
             ('d, 'h) dg_state) strategy_program"
@@ -818,7 +818,7 @@ text \<open>
 
 lemma routed_node_rhs_buffered_correspondence_answers_local:
   fixes cmb ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
        \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                           'h::bounded_semilattice_sup_bot) dg_state,
             ('d, 'h) dg_state) strategy_program"
@@ -892,7 +892,7 @@ qed
 
 lemma part_post_solution_routed_node_rhs_buffered_answers_local:
   fixes cmb ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+    "(pp \<Rightarrow> 'c \<Rightarrow> 'd \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c) \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
        \<Rightarrow> (pp \<times> 'c, 'k, ('d::bounded_semilattice_sup_bot,
                           'h::bounded_semilattice_sup_bot) dg_state,
             ('d, 'h) dg_state) strategy_program"
@@ -943,7 +943,7 @@ text \<open>
 \<close>
 
 lemma routed_node_rhs_mono_eq:
-  fixes g :: cfg
+  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
   assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g c w). sp_wf p"
   assumes intra_mono: "\<And>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
@@ -991,7 +991,7 @@ proof -
 qed
 
 lemma routed_node_rhs_mono_sides:
-  fixes g :: cfg
+  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
   assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g c w). sp_wf p"
   assumes intra_sides_mono: "\<And>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
@@ -1031,7 +1031,7 @@ proof (unfold mono_sides_def, intro allI)
 qed
 
 lemma routed_node_rhs_mono_deps:
-  fixes g :: cfg
+  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
   assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
                      extra g c w). sp_wf p"
   assumes intra_deps_mono: "\<And>v c src a. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow>

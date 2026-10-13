@@ -31,22 +31,31 @@ text \<open>
   the routed context locale's job downstream, not this theorem's.
 \<close>
 
-theorem activation_collect_sound:
-  assumes "activation_coverage g S cover adm c\<^sub>0 \<G>"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
+theorem (in collect_sem) gactivation_collect_sound:
+  assumes "gactivation_coverage ev rv conv glob g S cover adm c\<^sub>0"
+  shows "gactivation_collect adm c\<^sub>0 g S v c \<subseteq> cover v c"
 proof -
-  interpret G: activation_coverage g S cover adm c\<^sub>0 \<G> by (fact assms)
+  interpret G: gactivation_coverage ev rv conv glob g S cover adm c\<^sub>0 by (fact assms)
   show ?thesis
   proof (rule subsetI)
-    fix st assume "st \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c"
-    then obtain t where t: "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
-      and sn: "sink_node t = v" and kc: "activation_context_rel \<G> adm c\<^sub>0 g t c"
+    fix st assume "st \<in> gactivation_collect adm c\<^sub>0 g S v c"
+    then obtain t where t: "t \<in> gvalid_activation_trace g S"
+      and sn: "sink_node t = v" and kc: "gactivation_context_rel adm c\<^sub>0 g t c"
       and st: "sink_store t = st"
       by (rule activation_collect_E)
     have "sink_store t \<in> cover (sink_node t) c" using G.valid_activation_trace_covered_at[OF t kc]
       .
     then show "st \<in> cover v c" using sn st by simp
   qed
+qed
+
+theorem activation_collect_sound:
+  assumes "activation_coverage g S cover adm c\<^sub>0 \<G>"
+  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S\<^esub> v c \<subseteq> cover v c"
+proof -
+  interpret activation_coverage g S cover adm c\<^sub>0 \<G> by (fact assms)
+  show ?thesis
+    by (rule untyped.gactivation_collect_sound) unfold_locales
 qed
 
 end

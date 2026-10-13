@@ -65,6 +65,32 @@ text \<open>
   check report's proved/refuted verdicts.
 \<close>
 
+locale grouted_analysis =
+  gdg_analysis_adapter ev rv conv glob S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma
+    vars x0 "solved_local_reader vars sigma" seed is_bot
+    "\<lambda>d. gamma_lift \<gamma>\<^sub>V (rd d (genv global_of sigma))"
+    adm rd \<gamma>\<^sub>V empty\<^sub>V classify
+  for ev :: "'e::linorder \<Rightarrow> ('vr::linorder \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
+    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool"
+    and S :: "('vr, 'e, pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) gdg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
+    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
+    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
+    and vars :: "(pp \<times> 'c) set"
+    and x0 :: "pp \<times> 'c"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and is_bot :: "'D \<Rightarrow> bool"
+    and adm :: "('vr, 'e, 'c) gcontext_policy"
+    and rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and empty\<^sub>V :: "'v \<Rightarrow> bool"
+    and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
+
+text \<open>The untyped composition locale, the instance at source names.\<close>
+
 locale routed_analysis =
   dg_analysis_adapter S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0
     "solved_local_reader vars sigma" seed is_bot
@@ -87,5 +113,23 @@ locale routed_analysis =
     and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
     and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+
+sublocale routed_analysis \<subseteq>
+  grouted_analysis aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0
+    sigma vars x0 seed is_bot adm rd \<gamma>\<^sub>V empty\<^sub>V classify
+  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
+    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
+    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
+    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
+    and "ctx_sem.gadmits_call_context aval \<G> = admits_call_context \<G>"
+    and "ctx_sem.gactivation_context_rel aval \<G> = activation_context_rel \<G>"
+    and "ctx_sem.gcall_context_total_on aval \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
+    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
+    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
+  by unfold_locales
+     (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def
+       valid_activation_trace_def admits_call_context_def activation_context_rel_def
+       call_context_total_on_def activation_collect_def node_collect_def)
 
 end

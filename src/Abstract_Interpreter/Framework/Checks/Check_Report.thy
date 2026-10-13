@@ -25,7 +25,8 @@ text \<open>
 type_synonym check_report_entry = "pp \<times> exp \<times> check_result"
 
 definition classify_checks ::
-    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> check_report_entry list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> check_result) list" where
   "classify_checks g env classify =
      map (\<lambda>(u, a, v). (u, ea_check_cond a, classify (ea_check_cond a) (env u)))
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
@@ -55,6 +56,37 @@ text \<open>
   \<^term>\<open>Check_Unknown\<close> gets no counterpart, matching \<open>classify_check\<close> itself.
 \<close>
 
+theorem gclassify_checks_proved_sound:
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> ('vr::linorder \<Rightarrow> int) set" and ev :: "'e::linorder \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int"
+  assumes fin: "finite (intra g)"
+    and mem: "(v, c, Check_Proved) \<in> set (classify_checks g env classify)"
+    and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> truthy (ev c s)"
+    and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
+  shows "\<forall>s \<in> reach v. truthy (ev c s)"
+proof
+  fix s assume s: "s \<in> reach v"
+  have "classify c (env v) = Check_Proved"
+    using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
+  moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
+  ultimately show "truthy (ev c s)" using classify_proved by blast
+qed
+
+theorem gclassify_checks_refuted_sound:
+  fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> ('vr::linorder \<Rightarrow> int) set" and ev :: "'e::linorder \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int"
+  assumes fin: "finite (intra g)"
+    and mem: "(v, c, Check_Refuted) \<in> set (classify_checks g env classify)"
+    and classify_refuted: "\<And>d s. classify c d = Check_Refuted
+                              \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<not> truthy (ev c s)"
+    and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
+  shows "\<forall>s \<in> reach v. \<not> truthy (ev c s)"
+proof
+  fix s assume s: "s \<in> reach v"
+  have "classify c (env v) = Check_Refuted"
+    using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
+  moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
+  ultimately show "\<not> truthy (ev c s)" using classify_refuted by blast
+qed
+
 theorem classify_checks_proved_sound:
   fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
   assumes fin: "finite (intra g)"
@@ -62,13 +94,7 @@ theorem classify_checks_proved_sound:
     and classify_proved: "\<And>d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and node_sound: "reach v \<le> \<gamma>\<^sub>S (env v)"
   shows "\<forall>s \<in> reach v. truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof
-  fix s assume s: "s \<in> reach v"
-  have "classify c (env v) = Check_Proved"
-    using mem classify_checks_mem_iff[OF fin, of v c Check_Proved env classify] by auto
-  moreover have "s \<in> \<gamma>\<^sub>S (env v)" using node_sound s by blast
-  ultimately show "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved by blast
-qed
+  using fin mem classify_proved node_sound by (rule gclassify_checks_proved_sound)
 
 theorem classify_checks_refuted_sound:
   fixes \<gamma>\<^sub>S :: "'s \<Rightarrow> store set"
@@ -78,13 +104,7 @@ theorem classify_checks_refuted_sound:
                               \<Longrightarrow> s \<in> \<gamma>\<^sub>S d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
     and node_sound: "reach v <= \<gamma>\<^sub>S (env v)"
   shows "\<forall>s \<in> reach v. ~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof
-  fix s assume s: "s : reach v"
-  have "classify c (env v) = Check_Refuted"
-    using mem classify_checks_mem_iff[OF fin, of v c Check_Refuted env classify] by auto
-  moreover have "s : \<gamma>\<^sub>S (env v)" using node_sound s by blast
-  ultimately show "~ truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted by blast
-qed
+  using fin mem classify_refuted node_sound by (rule gclassify_checks_refuted_sound)
 
 text \<open>
   State-carrying sibling of \<^const>\<open>classify_checks\<close>: the same traversal and
@@ -97,7 +117,8 @@ text \<open>
 \<close>
 
 definition classify_checks_with_state ::
-    "cfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> (exp \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> (pp \<times> exp \<times> check_result \<times> 's) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (pp \<Rightarrow> 's) \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> check_result \<times> 's) list" where
   "classify_checks_with_state g env classify =
      map (\<lambda>(u, c, r). (u, c, r, env u)) (classify_checks g env classify)"
 

@@ -303,6 +303,13 @@ the framework becomes generic as stage 1 made the program model generic:
   `DG_Local_State_Spec`, `CFG_Enumeration`, generator, `Activation_Backbone`,
   `DG_Ctx_Activation`, `Routed_Context`, `Routed_Analysis_Sound`, checks.
   Untyped names stay as the instance; every existing theorem keeps its statement.
+  Pattern: a generic locale over `cfg_transfer_sem` holds the proofs, its
+  assumptions `g`-prefixed; the untyped locale keeps its text and reaches the
+  generic one by a sublocale with rewrites. Obligations that never mention the
+  semantics sit in a shared base locale (`dg_context_base`,
+  `routed_context_base`), registered once. Landed through
+  `Routed_Analysis_Sound` and the check reports; `Transfer_Algebra` and
+  `DG_Local_State_Spec` move with 4d.
 - 4c. Exec, Routing and Result generic: `default_st` keyed by any linorder type,
   `dg_domain_exec`, `compiled_routed_eqs_for`, `dg_pipeline`/`dg_analysis` over
   a program-shaped parameter instead of `imp_prog`.
@@ -311,6 +318,10 @@ the framework becomes generic as stage 1 made the program model generic:
   backward through dynamically safe casts, entry seeds locals with `top_of (κ x)`,
   call results converted to the destination kind. Abstract kind consistency.
 - 4e. Typed Interval end to end: soundness against `tnode_collect` and typed runs.
+
+Long term the untyped analyzer is removed. The pattern above keeps that removal
+mechanical: deleting the untyped locales, their sublocales and the `aval`
+interpretations leaves the generic development intact.
 
 Review boundary: after stage 2. The typed-to-lowered simulation (`tstep_sim`,
 `run_voblint_typed_sound`) and the mathematical analyzer stay until a separate

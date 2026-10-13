@@ -38,16 +38,16 @@ text \<open>
   instantiates \<open>rd\<close> at a function constant in its second argument.
 \<close>
 
-locale dg_analysis_adapter =
-  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
-    seed
-    "static_resolve g" is_bot \<gamma>\<^sub>M adm
-  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
-              'G::bounded_semilattice_sup_bot) dg_spec"
-    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
-    and \<G> :: "vname \<Rightarrow> bool"
+locale gdg_analysis_adapter =
+  grouted_context ev rv conv glob S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma
+    vars x0 sg seed "static_resolve g" is_bot \<gamma>\<^sub>M adm
+  for ev :: "'e::linorder \<Rightarrow> ('vr::linorder \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
+    and conv :: "'vr option \<Rightarrow> int \<Rightarrow> int" and glob :: "'vr \<Rightarrow> bool"
+    and S :: "('vr, 'e, pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) gdg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> ('vr \<Rightarrow> int) set"
     and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
-    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
     and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
     and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
     and vars :: "(pp \<times> 'c) set"
@@ -55,19 +55,19 @@ locale dg_analysis_adapter =
     and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
     and is_bot :: "'D \<Rightarrow> bool"
-    and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
-    and adm :: "'c context_policy" +
+    and \<gamma>\<^sub>M :: "'M \<Rightarrow> ('vr \<Rightarrow> int) set"
+    and adm :: "('vr, 'e, 'c) gcontext_policy" +
   fixes rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
-    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> ('vr \<Rightarrow> int) set"
     and empty\<^sub>V :: "'v \<Rightarrow> bool"
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')"
-    and empty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
-    and classify_proved:
-    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and classify_refuted:
-    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-    and vars_finite: "finite vars"
+    and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
+  assumes ggammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')"
+    and gempty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
+    and gclassify_proved:
+    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (ev c s)"
+    and gclassify_refuted:
+    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (ev c s)"
+    and gvars_finite: "finite vars"
 begin
 
 
@@ -124,7 +124,7 @@ lemma analyse_result_canonical:
 
 theorem wf_analyse_result: "wf_solved_table empty\<^sub>V analyse_result"
   unfolding wf_solved_table_def finite_solved_table_def
-  using vars_finite analyse_result_canonical by (simp add: analyse_result_def)
+  using gvars_finite analyse_result_canonical by (simp add: analyse_result_def)
 
 text \<open>
   The soundness bridge \<open>\<gamma>\<^sub>M (sg (Inl (v, ctx)))\<close> steps need: a covered
@@ -139,7 +139,7 @@ text \<open>Collapsing a payload that denotes nothing to \<^const>\<open>Bot\<cl
 
 lemma gamma_lift_canonicalize [simp]:
   "gamma_lift \<gamma>\<^sub>V (canonicalize_lift empty\<^sub>V x) = gamma_lift \<gamma>\<^sub>V x"
-  by (cases x) (simp_all add: normalize_lift_def empty_sound)
+  by (cases x) (simp_all add: normalize_lift_def gempty_sound)
 
 lemma gammaM_sg_eq_lookup_table:
   assumes cov: "(v, ctx) \<in> vars"
@@ -150,7 +150,7 @@ proof -
     using cov by simp
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V
                         (rd (dg_local (sigma (Inl (v, ctx)))) (genv global_of sigma))"
-    by (rule gammaDG_rd)
+    by (rule ggammaDG_rd)
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
     using cov unfolding lookup_table_analyse_result by simp
   finally show ?thesis .
@@ -171,14 +171,14 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_sound:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
+  shows "gactivation_collect adm c\<^sub>0 g S0 v ctx
            \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
 proof -
-  have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
+  have "gactivation_collect adm c\<^sub>0 g S0 v ctx
           \<subseteq> \<gamma>\<^sub>M (sg (Inl (v, ctx)))"
     by (rule activation_collect_dg_sound[OF entry_cov init_sound init_env_le])
   also have "\<dots> = gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
@@ -212,12 +212,12 @@ text \<open>
 \<close>
 
 lemma analyse_result_covered_unreachable:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
     and dead: "lookup_coverage analyse_result v ctx = Covered Bot"
-  shows "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx = {}"
+  shows "gactivation_collect adm c\<^sub>0 g S0 v ctx = {}"
   by (rule reported_covered_unreachable_empty
       [OF dead analyse_result_node_sound[OF entry_cov init_sound init_env_le]])
 
@@ -239,16 +239,16 @@ text \<open>
 \<close>
 
 lemma analyse_result_node_unreachable:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c
   assumes entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-    and union: "\<C>\<^bsub>\<G>,g,S0\<^esub> v
-                  = (\<Union>ctx. \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx)"
+    and union: "gnode_collect g S0 v
+                  = (\<Union>ctx. gactivation_collect adm c\<^sub>0 g S0 v ctx)"
     and dead: "result_node_is_bottom analyse_result v"
-  shows "\<C>\<^bsub>\<G>,g,S0\<^esub> v = {}"
+  shows "gnode_collect g S0 v = {}"
 proof -
-  have bucket: "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx = {}" for ctx
+  have bucket: "gactivation_collect adm c\<^sub>0 g S0 v ctx = {}" for ctx
   proof -
     have bot: "lookup_table analyse_result v ctx = Bot"
     proof (cases "(v, ctx) \<in> vars")
@@ -260,7 +260,7 @@ proof -
       case False
       then show ?thesis unfolding lookup_table_analyse_result by simp
     qed
-    have "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
+    have "gactivation_collect adm c\<^sub>0 g S0 v ctx
             \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
       by (rule analyse_result_node_sound[OF entry_cov init_sound init_env_le])
     then show ?thesis unfolding bot by simp
@@ -274,7 +274,7 @@ text \<open>The report the CLI prints, defined at the context-indexed level rath
   join: one verdict per check, aggregated over exactly the contexts the solved table covers
   at that node.  Aggregating first would classify against a joined state and lose the
   precision each context carries.\<close>
-definition analyse_report_ctx :: "(pp \<times> exp \<times> contextual_verdict) list" where
+definition analyse_report_ctx :: "(pp \<times> 'e \<times> contextual_verdict) list" where
   "analyse_report_ctx = classify_checks_verdicts g analyse_result classify"
 
 subsection \<open>Report soundness\<close>
@@ -297,16 +297,16 @@ text \<open>Both endpoints below reach their classifier obligation the same way,
   \<open>classify_proved\<close> or \<open>classify_refuted\<close> afterwards differs.\<close>
 
 lemma analyse_report_ctx_decided:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: 'e
   assumes mem: "(v, c, Decided r) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-    and smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
+    and smem: "s \<in> gactivation_collect adm c\<^sub>0 g S0 v ctx"
     and known: "r \<noteq> Check_Unknown"
   obtains st where "s \<in> \<gamma>\<^sub>V st" and "classify c st = r"
 proof -
-  have node_sound: "\<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
+  have node_sound: "gactivation_collect adm c\<^sub>0 g S0 v ctx
       \<subseteq> gamma_lift \<gamma>\<^sub>V (lookup_table analyse_result v ctx)"
     by (rule analyse_result_node_sound[OF entry_cov init_sound init_env_le])
   obtain st where reach: "lookup_table analyse_result v ctx = Lifted st"
@@ -319,37 +319,92 @@ proof -
 qed
 
 theorem analyse_report_ctx_proved_sound:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: 'e
   assumes mem: "(v, c, Decided Check_Proved) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
-           \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+  shows "\<And>ctx s. s \<in> gactivation_collect adm c\<^sub>0 g S0 v ctx
+           \<Longrightarrow> truthy (ev c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> gactivation_collect adm c\<^sub>0 g S0 v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Proved"
     by (rule analyse_report_ctx_decided[OF mem entry_cov init_sound init_env_le smem]) simp
-  thus "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_proved[OF _ sst] by blast
+  thus "truthy (ev c s)" using gclassify_proved[OF _ sst] by blast
 qed
 
 theorem analyse_report_ctx_refuted_sound:
-  fixes S0 :: "store set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: exp
+  fixes S0 :: "('vr \<Rightarrow> int) set" and c\<^sub>0 :: 'c and v :: cfg_node and c :: 'e
   assumes mem: "(v, c, Decided Check_Refuted) \<in> set analyse_report_ctx"
     and entry_cov: "(cfg_entry g, c\<^sub>0) \<in> vars"
     and init_sound: "S0 \<subseteq> \<gamma>\<^sub>D\<^sub>G d\<^sub>0 e\<^sub>0"
     and init_env_le: "e\<^sub>0 \<le> genv global_of sigma"
-  shows "\<And>ctx s. s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx
-           \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+  shows "\<And>ctx s. s \<in> gactivation_collect adm c\<^sub>0 g S0 v ctx
+           \<Longrightarrow> \<not> truthy (ev c s)"
 proof -
   fix ctx s
-  assume smem: "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,g,S0\<^esub> v ctx"
+  assume smem: "s \<in> gactivation_collect adm c\<^sub>0 g S0 v ctx"
   obtain st where sst: "s \<in> \<gamma>\<^sub>V st" and "classify c st = Check_Refuted"
     by (rule analyse_report_ctx_decided[OF mem entry_cov init_sound init_env_le smem]) simp
-  thus "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)" using classify_refuted[OF _ sst] by blast
+  thus "\<not> truthy (ev c s)" using gclassify_refuted[OF _ sst] by blast
 qed
 
 end
+
+text \<open>The untyped adapter: the same obligations over source names and untyped expressions.\<close>
+
+locale dg_analysis_adapter =
+  routed_context S \<gamma>\<^sub>D\<^sub>G \<G> g buffer_key global_of route bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg
+    seed
+    "static_resolve g" is_bot \<gamma>\<^sub>M adm
+  for S :: "(pp \<times> 'c, 'k, 'n, 'D::bounded_semilattice_sup_bot,
+              'G::bounded_semilattice_sup_bot) dg_spec"
+    and \<gamma>\<^sub>D\<^sub>G :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> store set"
+    and \<G> :: "vname \<Rightarrow> bool"
+    and g buffer_key and global_of :: "'n \<Rightarrow> 'k"
+    and route :: "pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c"
+    and bot0 d\<^sub>0 :: 'D and g\<^sub>0 :: 'G
+    and sigma :: "pp \<times> 'c + 'k \<Rightarrow> ('D, 'G) dg_state"
+    and vars :: "(pp \<times> 'c) set"
+    and x0 :: "pp \<times> 'c"
+    and sg :: "pp \<times> 'c + 'k \<Rightarrow> 'M"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and is_bot :: "'D \<Rightarrow> bool"
+    and \<gamma>\<^sub>M :: "'M \<Rightarrow> store set"
+    and adm :: "'c context_policy" +
+  fixes rd :: "'D \<Rightarrow> ('n \<Rightarrow> 'G) \<Rightarrow> 'v lifted"
+    and \<gamma>\<^sub>V :: "'v \<Rightarrow> store set"
+    and empty\<^sub>V :: "'v \<Rightarrow> bool"
+    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
+  assumes gammaDG_rd: "\<And>d g'. \<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')"
+    and empty_sound: "\<And>v. empty\<^sub>V v \<Longrightarrow> \<gamma>\<^sub>V v = {}"
+    and classify_proved:
+    "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    and classify_refuted:
+    "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
+    and vars_finite: "finite vars"
+
+sublocale dg_analysis_adapter \<subseteq>
+  gdg_analysis_adapter aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0 d\<^sub>0
+    g\<^sub>0 sigma vars x0 sg seed is_bot \<gamma>\<^sub>M adm rd \<gamma>\<^sub>V empty\<^sub>V classify
+  rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
+    and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
+    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
+    and "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
+    and "ctx_sem.gadmits_call_context aval \<G> = admits_call_context \<G>"
+    and "ctx_sem.gactivation_context_rel aval \<G> = activation_context_rel \<G>"
+    and "ctx_sem.gcall_context_total_on aval \<G> cover' adm' g' = call_context_total_on cover' adm' \<G> g'"
+    and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
+    and "collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> = node_collect \<G>"
+proof -
+  show "gdg_analysis_adapter aval ret_var (\<lambda>_ n. n) \<G> S \<gamma>\<^sub>D\<^sub>G g buffer_key global_of route bot0
+      d\<^sub>0 g\<^sub>0 sigma vars x0 sg seed is_bot \<gamma>\<^sub>M adm rd \<gamma>\<^sub>V empty\<^sub>V classify"
+    by unfold_locales
+       (use gammaDG_rd empty_sound classify_proved classify_refuted vars_finite in simp_all)
+qed (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def
+       valid_activation_trace_def admits_call_context_def activation_context_rel_def
+       call_context_total_on_def activation_collect_def node_collect_def)
 
 end

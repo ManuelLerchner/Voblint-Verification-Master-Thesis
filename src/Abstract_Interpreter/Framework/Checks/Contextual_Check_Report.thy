@@ -67,7 +67,7 @@ text \<open>
 \<close>
 
 fun classify_point ::
-  "(exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> exp \<Rightarrow> 'a lifted \<Rightarrow> contextual_verdict"
+  "('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'e \<Rightarrow> 'a lifted \<Rightarrow> contextual_verdict"
 where
   "classify_point classify c Bot = Dead"
 | "classify_point classify c (Lifted st) = Decided (classify c st)"
@@ -234,8 +234,8 @@ text \<open>
 \<close>
 
 definition classify_checks_ctx ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> (pp \<times> exp \<times> ('ctx \<times> contextual_verdict) set) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> ('ctx \<times> contextual_verdict) set) list" where
   "classify_checks_ctx g r classify =
      map (\<lambda>(u, a, v). (u, ea_check_cond a,
             (\<lambda>ctx. (ctx, classify_point classify (ea_check_cond a) (lookup_table r u ctx)))
@@ -243,8 +243,8 @@ definition classify_checks_ctx ::
        (filter (\<lambda>(u, a, v). is_EA_Check a) (cfg_intra_list g))"
 
 definition classify_checks_verdicts ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result)
-       \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+       \<Rightarrow> (pp \<times> 'e \<times> contextual_verdict) list" where
   "classify_checks_verdicts g r classify =
      map (\<lambda>(u, c, vs). (u, c, aggregate_verdicts (snd ` vs))) (classify_checks_ctx g r classify)"
 
@@ -334,7 +334,7 @@ text \<open>
 \<close>
 
 definition point_verdict ::
-    "('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> pp \<Rightarrow> exp
+    "('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> pp \<Rightarrow> 'e
        \<Rightarrow> contextual_verdict" where
   "point_verdict r classify v e =
      aggregate_verdicts

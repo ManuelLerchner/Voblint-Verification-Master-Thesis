@@ -141,12 +141,12 @@ text \<open>
 \<close>
 
 definition routed_call_alternative_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('vr::linorder, 'e::linorder, pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+     'G::bounded_semilattice_sup_bot) gdg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
+   \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pname \<Rightarrow> 'D enter_result
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_call_alternative_program S global_of seed route is_bot ctx ca cc p alt =
@@ -195,12 +195,12 @@ lemma routed_call_alternative_program_nonbot [simp]:
   unfolding routed_call_alternative_program_def using assms by (simp add: Let_def)
 
 definition routed_callee_call_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('vr::linorder, 'e::linorder, pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+     'G::bounded_semilattice_sup_bot) gdg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
+   \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> 'D \<Rightarrow> pname
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_callee_call_program S global_of seed route is_bot ctx ca cc caller p =
@@ -225,13 +225,13 @@ text \<open>
 \<close>
 
 definition routed_call_program ::
-  "(pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
-     'G::bounded_semilattice_sup_bot) dg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
+  "('vr::linorder, 'e::linorder, pp \<times> 'c, 'k, 'v, 'D::bounded_semilattice_sup_bot,
+     'G::bounded_semilattice_sup_bot) gdg_spec \<Rightarrow> ('v \<Rightarrow> 'k)
    \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> pp \<Rightarrow> call_action \<Rightarrow> 'D \<Rightarrow> pname list)
+   \<Rightarrow> (pp \<Rightarrow> pp \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'D \<Rightarrow> pname list)
    \<Rightarrow> ('D \<Rightarrow> bool)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'c)
-   \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pp \<Rightarrow> pp
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
+   \<Rightarrow> 'c \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pp \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G) dg_state, ('D, 'G) dg_state) strategy_program"
 where
   "routed_call_program S global_of seed resolve is_bot route ctx ca cc v =
@@ -248,7 +248,7 @@ text \<open>The seed read-back hook: at a callee entry it reads the seed out of 
   \<open>dg_local\<close> half, matching \<open>routed_call_program\<close>'s write.\<close>
 definition routed_entry_seed_programs ::
   "(pp \<Rightarrow> 'c \<Rightarrow> 'k)
-   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> call_action \<Rightarrow> 'c)
+   \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'D::bounded_semilattice_sup_bot \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'c)
    \<Rightarrow> 'c \<Rightarrow> pp
    \<Rightarrow> (pp \<times> 'c, 'k, ('D, 'G::bounded_semilattice_sup_bot) dg_state,
         ('D, 'G) dg_state) strategy_program list"
