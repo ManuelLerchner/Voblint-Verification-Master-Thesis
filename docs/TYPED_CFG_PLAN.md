@@ -298,6 +298,36 @@ Globals start at zero concretely and abstractly.
 | 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem. An experimental CLI path for the typed Interval and Congruence comes early, beside the untyped CLI, for differential testing | the CLI's typed analysis is the one the theorem covers |
 | 7 | Cleanup, proposed separately once stage 6 is complete: remove the mathematical-integer analyzer, its source semantics and the typed-to-untyped lowering; generalize the generic framework in place at the typed instance, so the parallel typed spine disappears and the `typed`/`Typed_` prefixes go with it (`typed_cfg` becomes the CFG, `Typed_Nonrel` the non-relational analysis); return every generic `g`-prefixed definition to its original name (`gcstep` to `cstep`, `gwf_compile_input` to `wf_compile_input`, `gsound_local_spec` to `sound_local_spec`, and the rest) and delete the `vname` restatements, so the generalization is in place with no lasting rename; restore the mixfix notations on the generic constants (the `𝒯` traces and `𝒞` collect notations that `main` declares in more contexts than the branch); keep reusable domains and proof infrastructure; migrate examples, flagging every one whose properties change under wraparound instead of rewriting its expected results | one source language, one analyzer, no `typed` prefix |
 
+### Stage 6 reference (source-checked 2026-10-13 against `0dc12d355`)
+
+What `run_voblint` on the typed CFG has to reproduce, read in `../analyzer`:
+
+- Combination: `MCP2` (`src/analyses/mCP.ml`) runs the activated analyses on one
+  `DomListLattice` state, componentwise. `inner_man` (377-388) gives each analysis its own
+  context component and tags its globals as `(n, v)` (`v_of`/`g_of`, 24-25), so their
+  global unknowns are disjoint. `map_deadcode` (110-114) replaces a component that raises
+  `Deadcode` by its bottom and re-raises after the others ran. `enter` (528-539) takes the
+  cartesian product of the components' entry alternatives. `query` (264-344) meets all
+  components' answers.
+- Contexts: `Spec.context` (`src/framework/analyses.ml` 196) computes a call's context;
+  `DefaultSpec` keeps the whole state (380). `ana.ctx_sens` and `ana.ctx_insens` both
+  default to `[]`, so every activated analysis is context-sensitive. Call strings are
+  separate analyses (`callstring.ml`, `ana.context.callString_length` default 2), off by
+  default. `FromSpec.tf_normal_call` (`src/framework/constraints.ml` 189-254) enters,
+  computes the context, side-effects the callee entry `(FunctionEntry f, fc)` and reads
+  `(Function f, fc)`.
+- Globals: base reads and writes a global through the privatization only when
+  `exp.earlyglobs` holds or the program has become multithreaded (`base.ml` 540-545,
+  1745-1756); otherwise globals stay flow-sensitive in the local state. The default
+  privatization is `protection-read`.
+- Integers: `ana.int.def_exc` is the only component on by default; `interval`, `congruence`
+  and the rest are off, and `ana.int.refinement` is `never`. Base's context drops
+  intervals by default (`ana.base.context.interval`).
+
+Voblint's untyped `local_spec` already mirrors the combination for local components
+(register row "Multi-analysis manager"). Stage 6 instantiates it, the routed contexts
+and the globals placement at `var_id`/`texp` with the typed domains.
+
 ### Stage 4 breakdown
 
 The typed analysis runs through the same D/G framework as the mathematical one.
