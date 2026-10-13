@@ -328,6 +328,36 @@ Voblint's untyped `local_spec` already mirrors the combination for local compone
 (register row "Multi-analysis manager"). Stage 6 instantiates it, the routed contexts
 and the globals placement at `var_id`/`texp` with the typed domains.
 
+### Stage 6 order
+
+Landed: one solve for two components (`spec_product`), `EvalInt` queries consulted by every
+typed transfer and met across components, the Interval–Order cooperation regression, and
+`run_typed` over an activation list (one analysis, or a non-relational domain with order).
+
+Remaining, in this order:
+
+1. Typed entry-state contexts, reusing the routed-context and collecting-soundness
+   theorems the untyped entry-state instances use.
+2. `spec_product` generalized to finite lists of components, sound by induction over the
+   list; a component's answer is met once, and activation order does not change the
+   result beyond scheduling and widening.
+3. `run_voblint` on the typed pipeline, with the public end-to-end theorem covering the
+   executable result; the untyped entry point stays under a legacy name until stage 7.
+4. CLI parity on the typed path: JSON, HTML, graph snapshots, relational witnesses.
+5. Flow-insensitive globals: the existing placement, ported to `var_id`. Goblint's
+   `protection-read` privatization is out of scope: it serves thread interference, and
+   base keeps globals in the local state while a program is single-threaded and
+   `exp.earlyglobs` is off (`base.ml` 540-545). The language has no threads or
+   synchronization, so there is nothing for it to correspond to.
+6. Cooperation regressions across calls and returns, call-string contexts, query cycles,
+   mixed signedness, and contradictory answers.
+
+Stage 6 is complete when `run_voblint` runs the certified typed pipeline for the supported
+analyses and context policies and reproduces the CLI outputs. Stage 7 then changes no
+semantics: it removes the mathematical source instance and its lowering but keeps the
+generic framework and the integer arithmetic libraries, and it renames in a separate
+change from the switch of the public analyzer.
+
 ### Stage 4 breakdown
 
 The typed analysis runs through the same D/G framework as the mathematical one.
