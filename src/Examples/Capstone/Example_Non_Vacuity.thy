@@ -631,7 +631,7 @@ proof
     have "sink_store (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])
             \<in> \<A>\<^bsub>declared_global ret_prog,tot_R,0,prog_cfg ret_prog,?S\<^esub>
                 (sink_node (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])) 0"
-      by (rule activation_collect_I [OF v1 refl]) simp
+      by (rule activation_collect_I [OF v1]) (simp_all add: sink_node_def)
     then show ?thesis by (simp add: sink_node_def sink_store_def)
   qed
   have ce: "(Statement 2, CallEdge (Some (STR ''a'')) [STR ''n''] [N 1],

@@ -123,23 +123,26 @@ text \<open>
   directly to \<^const>\<open>node_collect\<close> via \<open>activation_collect_le_node_collect\<close>.
 \<close>
 
+context bridge_sem
+begin
+
 theorem source_reaches_node_collect:
-  assumes wf: "wf_compile_input \<G> Pi ps"
+  assumes wf: "gwf_compile_input vars rv glob Pi ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+    and run: "star (gpstep Pi) (main_body Pi, s0, []) (residual, s, frs)"
   shows "\<exists>v stk. Pi, compile_prog Pi ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> \<C>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub> v"
+                 \<and> s \<in> gnode_collect (compile_prog Pi ps) (S) v"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_store_in_activation_collect_of_fun
          [where f = "\<lambda>_ _ _. ()" and c\<^sub>0 = "()",
           OF wf s0 run]
-  obtain v stk t c where m:
+  obtain v stk and t :: "'v gactivation_trace" and c where m:
     "Pi, compile_prog Pi ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
     and "activation_context_of (\<lambda>_ _ _. ()) () t = c"
-    and mem: "s \<in> \<A>\<^bsub>\<G>,context_policy_of_fun (\<lambda>_ _ _. ()),(),?g,S\<^esub> v c"
+    and mem: "s \<in> gactivation_collect (context_policy_of_fun (\<lambda>_ _ _. ())) () ?g S v c"
     by blast
-  have "s \<in> \<C>\<^bsub>\<G>,?g,S\<^esub> v"
+  have "s \<in> gnode_collect (?g) (S) v"
     using mem by (rule subsetD[OF activation_collect_le_node_collect])
   then show ?thesis using m by blast
 qed
@@ -148,6 +151,8 @@ text \<open>The monovariant counterpart of \<open>source_sound_from_collecting_c
   \<^const>\<open>node_collect\<close> alone, so there is no context index for a caller to instantiate.  This is
   the shape a whole-program analysis result supplies, whose per-node bound has already forgotten
   the context.\<close>
+
+end
 
 theorem source_sound_from_node_collect_cap:
   fixes G :: "pp \<Rightarrow> store set"
@@ -182,11 +187,14 @@ text \<open>
   that procedure.
 \<close>
 
+context bridge_sem
+begin
+
 theorem source_completes_valid_activation_trace_result:
-  assumes wf: "wf_compile_input \<G> Pi ps"
+  assumes wf: "gwf_compile_input vars rv glob Pi ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), s, [])"
-  shows "\<exists>t p. t \<in> \<T>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
+    and run: "star (gpstep Pi) (main_body Pi, s0, []) (SKIP (), s, [])"
+  shows "\<exists>t p. t \<in> gvalid_activation_trace (compile_prog Pi ps) (S)
                \<and> caller_of t = None
                \<and> fst (hd (path_of t)) = cfg_entry (compile_prog Pi ps)
                \<and> sink_node t = FunctionResult p
@@ -195,11 +203,11 @@ proof -
   let ?g = "compile_prog Pi ps"
   from source_run_has_activation_trace[OF wf s0 run]
   obtain v stk t where sim: "Pi, ?g, prog_main_name \<turnstile> (SKIP (), s, []) \<approx> (v, s, stk)"
-    and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
+    and rep: "gactivation_trace_repr ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using sim by blast
-  from rep stk0 have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
+  from rep stk0 have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = v"
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
-    by (auto simp: activation_trace_repr_def)
+    by (auto simp: gactivation_trace_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
   have hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
     by (rule valid_activation_trace_caller_None_entry[OF tv cof])
@@ -212,22 +220,22 @@ proof -
     and ret: "(k, EA_Ret None p, FunctionResult p) \<in> intra ?g"
     by blast
   \<comment> \<open>the whole extension is intra flow, so it stays inside this same (root) activation\<close>
-  have path_to_ret: "intra_path ?g (sink_node t, sink_store t) (FunctionResult p, s)"
+  have path_to_ret: "star (gcfg_intra_step ?g) (sink_node t, sink_store t) (FunctionResult p, s)"
   proof -
-    have a: "intra_path ?g (sink_node t, sink_store t) (k, s)"
+    have a: "star (gcfg_intra_step ?g) (sink_node t, sink_store t) (k, s)"
       using compile_control_at_SKIP_exit_path[OF ca cc Esub] sn ss by simp
-    have b: "intra_path ?g (k, s) (FunctionResult p, s)"
+    have b: "star (gcfg_intra_step ?g) (k, s) (FunctionResult p, s)"
       by (rule intra_path_single[OF ret]) simp
     from a b show ?thesis by (rule star_trans)
 
   qed
   from valid_activation_trace_intra_path_extend[OF path_to_ret tv]
-  obtain t' where t'v: "t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and t'n: "sink_node t' = FunctionResult p"
+  obtain t' where t'v: "t' \<in> gvalid_activation_trace (?g) (S)" and t'n: "sink_node t' = FunctionResult p"
     and t's: "sink_store t' = s" and t'c: "caller_of t' = caller_of t"
     and t'h: "fst (hd (path_of t')) = fst (hd (path_of t))" by blast
   show ?thesis
   proof (intro exI conjI)
-    show "t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" by (rule t'v)
+    show "t' \<in> gvalid_activation_trace (?g) (S)" by (rule t'v)
     show "caller_of t' = None" using t'c cof by simp
     show "fst (hd (path_of t')) = cfg_entry ?g" using t'h hd_t by simp
     show "sink_node t' = FunctionResult p" by (rule t'n)
@@ -242,15 +250,15 @@ text \<open>Whole-program completion.  The completing activation is the root one
   \<^emph>\<open>number\<close> of declared procedures is needed: a program may call as many as it likes.\<close>
 
 corollary source_completes_node_collect_exit:
-  assumes wf: "wf_compile_input \<G> Pi ps"
+  assumes wf: "gwf_compile_input vars rv glob Pi ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, Pi \<turnstile> (main_body Pi, s0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), s, [])"
-  shows "s \<in> \<C>\<^bsub>\<G>,compile_prog Pi ps,S\<^esub>
+    and run: "star (gpstep Pi) (main_body Pi, s0, []) (SKIP (), s, [])"
+  shows "s \<in> gnode_collect (compile_prog Pi ps) (S)
               (cfg_exit (compile_prog Pi ps))"
 proof -
   let ?g = "compile_prog Pi ps"
   from source_completes_valid_activation_trace_result[OF wf s0 run]
-  obtain t p where tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
+  obtain t p where tv: "t \<in> gvalid_activation_trace (?g) (S)" and hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
     and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
   have "fst (hd (path_of t)) = FunctionEntry prog_main_name"
     using hd_t by (simp add: compile_prog_def Let_def split: prod.splits)
@@ -258,5 +266,7 @@ proof -
   with sn ss tv show ?thesis
     using node_collect_I by fastforce
 qed
+
+end
 
 end

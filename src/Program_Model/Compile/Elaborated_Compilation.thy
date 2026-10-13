@@ -10,13 +10,13 @@ text \<open>Elaboration annotates each statement with the nodes the compiler emi
 
 subsection \<open>Erasure\<close>
 
-definition erase :: "'a acom \<Rightarrow> com" where
+definition erase :: "('a, 'v, 'e) gcom \<Rightarrow> (unit, 'v, 'e) gcom" where
   "erase = map_gcom (\<lambda>_. ()) id id"
 
-definition erase_decl :: "('a, vname, exp) gproc_decl \<Rightarrow> proc_decl" where
+definition erase_decl :: "('a, 'v, 'e) gproc_decl \<Rightarrow> (unit, 'v, 'e) gproc_decl" where
   "erase_decl d = \<lparr>formals = formals d, body = erase (body d)\<rparr>"
 
-definition erase_pt :: "'a ptable \<Rightarrow> proc_table" where
+definition erase_pt :: "('a, 'v, 'e) gptable \<Rightarrow> (unit, 'v, 'e) gptable" where
   "erase_pt \<Pi> = map_option erase_decl \<circ> \<Pi>"
 
 lemma erase_simps [simp]:
@@ -55,7 +55,7 @@ definition stmt_loc :: "pname \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightar
 text \<open>Offsets are threaded exactly as \<^const>\<open>compile\<close> threads them.  A source \<^const>\<open>SKIP\<close>
   is its own node; a \<^const>\<open>SKIP\<close> branch of an \<^const>\<open>If\<close> emits no edge, so it is done at
   the continuation.  A call's exit is the callee's result node.\<close>
-fun elab :: "pname \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> 'a acom \<Rightarrow> loc acom" where
+fun elab :: "pname \<Rightarrow> cfg_node \<Rightarrow> nat \<Rightarrow> ('a, 'v, 'e) gcom \<Rightarrow> (loc, 'v, 'e) gcom" where
   "elab p k n (SKIP _) = SKIP (stmt_loc p (Statement n) n)"
 | "elab p k n (Assign _ x a) = Assign (stmt_loc p k n) x a"
 | "elab p k n (VIMP_Proc.gcom.Check _ l b) = VIMP_Proc.gcom.Check (stmt_loc p k n) l b"
@@ -89,7 +89,7 @@ lemma csize_elab_branch [simp]:
 
 text \<open>The node a residual occupies.  A \<^const>\<open>Seq\<close> whose head is unwinding into a
   \<^const>\<open>Restore\<close> sits at the call's exit, the callee's result node.\<close>
-fun point :: "loc acom \<Rightarrow> cfg_node" where
+fun point :: "(loc, 'v, 'e) gcom \<Rightarrow> cfg_node" where
   "point (SKIP a) = loc_done a"
 | "point (Seq c1 c2) = (if is_Restore c2 \<and> unwinding c1 then loc_exit (stmt_ann c2) else point c1)"
 | "point (Restore a) = loc_exit a"
@@ -174,7 +174,7 @@ subsection \<open>The simulation determines the node\<close>
 
 text \<open>Every call annotation exits at its callee's result node.  Elaboration establishes it and
   every residual \<^const>\<open>control_at\<close> reaches inherits it.\<close>
-fun calls_ok :: "loc acom \<Rightarrow> bool" where
+fun calls_ok :: "(loc, 'v, 'e) gcom \<Rightarrow> bool" where
   "calls_ok (Seq c1 c2) = (calls_ok c1 \<and> calls_ok c2)"
 | "calls_ok (If _ b c1 c2) = (calls_ok c1 \<and> calls_ok c2)"
 | "calls_ok (While _ b c) = calls_ok c"
@@ -199,14 +199,14 @@ lemma pop_ready_point:
   by (cases w rule: pop_ready.cases) simp_all
 
 text \<open>Every compiled body is the elaboration of a source body at its own offsets.\<close>
-definition located :: "loc ptable \<Rightarrow> cfg \<Rightarrow> bool" where
+definition located :: "(loc, 'v, 'e) gptable \<Rightarrow> ('v, 'e) gcfg \<Rightarrow> bool" where
   "located \<Pi> g \<longleftrightarrow>
      (\<forall>p body k n. compiled_at \<Pi> g p body k n \<longrightarrow>
-        (\<exists>c :: com. source_com c \<and> body = elab p k n c))"
+        (\<exists>c :: (unit, 'v, 'e) gcom. source_com c \<and> body = elab p k n c))"
 
 lemma locatedE:
   assumes "located \<Pi> g" "compiled_at \<Pi> g p b k n"
-  obtains c :: com where "source_com c" "b = elab p k n c"
+  obtains c :: "(unit, 'v, 'e) gcom" where "source_com c" "b = elab p k n c"
   using assms unfolding located_def by blast
 
 text \<open>On a located program the simulation names its node, \<^term>\<open>point c\<close>; that the residual is
@@ -215,7 +215,7 @@ lemma csim_point:
   "\<Pi>, g, p \<turnstile> x \<approx> y \<Longrightarrow> located \<Pi> g \<Longrightarrow> fst y = point (fst x) \<and> \<not> unwinding (fst x)"
 proof (induction rule: csim.induct)
   case (Base p body_p k n c v s)
-  from Base.prems Base.hyps(2) obtain c0 :: com where c0: "source_com c0" "body_p = elab p k n c0"
+  from Base.prems Base.hyps(2) obtain c0 :: "(unit, _, _) gcom" where c0: "source_com c0" "body_p = elab p k n c0"
     by (rule locatedE)
   have "v = point c"
     by (rule control_at_point[OF Base.hyps(1) c0(2) c0(1)])
@@ -227,7 +227,7 @@ next
   from Nested.IH[OF Nested.prems] show ?case by simp
 next
   case (Returning w i pc body_pc kc nc afters cont dst q args site callee caller)
-  from Returning.prems Returning.hyps(5) obtain c0 :: com where c0: "body_pc = elab pc kc nc c0"
+  from Returning.prems Returning.hyps(5) obtain c0 :: "(unit, _, _) gcom" where c0: "body_pc = elab pc kc nc c0"
     by (rule locatedE)
   have "calls_ok (seq_after (gcom.Call i dst q args) afters)"
     by (rule control_at_calls_ok[OF Returning.hyps(4)]) (simp add: c0 calls_ok_elab)
@@ -328,7 +328,7 @@ text \<open>A table is elaborated procedure by procedure, each body at the offse
 lemma erase_elab [simp]: "erase (elab p k n c) = erase c"
   by (induction p k n c rule: elab.induct) (simp_all, safe, simp_all)
 
-definition elab_decl :: "pname \<Rightarrow> nat \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> (loc, vname, exp) gproc_decl"
+definition elab_decl :: "pname \<Rightarrow> nat \<Rightarrow> ('a, 'v, 'e) gproc_decl \<Rightarrow> (loc, 'v, 'e) gproc_decl"
   where
   "elab_decl p n d =
      \<lparr>formals = formals d, body = elab p (Statement (n + csize (body d))) n (body d)\<rparr>"
@@ -337,14 +337,14 @@ lemma erase_decl_elab_decl [simp]: "erase_decl (elab_decl p n d) = erase_decl d"
   by (simp add: elab_decl_def erase_decl_def)
 
 text \<open>Each procedure is elaborated at the offset \<^const>\<open>compile_procs\<close> places it at.\<close>
-fun elab_procs :: "'a ptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> loc ptable" where
+fun elab_procs :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> nat \<Rightarrow> (loc, 'v, 'e) gptable" where
   "elab_procs \<Pi> [] n = Map.empty"
 | "elab_procs \<Pi> (p # ps) n =
      (case \<Pi> p of
         None \<Rightarrow> elab_procs \<Pi> ps n
       | Some d \<Rightarrow> (elab_procs \<Pi> ps (Suc (n + csize (body d))))(p \<mapsto> elab_decl p n d))"
 
-definition elab_pt :: "'a ptable \<Rightarrow> pname list \<Rightarrow> loc ptable" where
+definition elab_pt :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> (loc, 'v, 'e) gptable" where
   "elab_pt \<Pi> ps =
      (elab_procs \<Pi> ps 0)(prog_main_name :=
         map_option (elab_decl prog_main_name (fst (compile_procs \<Pi> ps 0))) (\<Pi> prog_main_name))"
@@ -407,9 +407,12 @@ qed
 
 text \<open>The elaborated table compiles to the same graph as the source table, and every
   procedure's entry edge fixes the offset its body was elaborated at.\<close>
+context bridge_sem
+begin
+
 theorem located_compile_prog:
-  fixes \<Pi> :: proc_table
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  fixes \<Pi> :: "(unit, 'v, 'e) gptable"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
   shows "located (elab_pt \<Pi> ps) (compile_prog (elab_pt \<Pi> ps) ps)"
 proof -
   from wf have setps: "set ps = {p. \<Pi> p \<noteq> None} - {prog_main_name}"
@@ -453,21 +456,23 @@ proof -
     have "Statement n = Statement m"
       by (rule compile_prog_entry_out_unique[OF wf ent ent'])
     then have nm: "n = m" by simp
-    from wf d(1) have "wf_source_com \<Pi> (body d)"
+    from wf d(1) have "gwf_source_com vars rv \<Pi> (body d)"
       by (simp add: gwf_compile_input_def gwf_source_program_def gwf_proc_decl_def)
     then have src: "source_com (body d)" by (rule wf_source_com_source_com)
     have "b = elab p k n (body d)"
       using decl(2) d(2) k nm by (simp add: elab_decl_def)
-    with src show "\<exists>c :: com. source_com c \<and> b = elab p k n c" by blast
+    with src show "\<exists>c :: (unit, 'v, 'e) gcom. source_com c \<and> b = elab p k n c" by blast
   qed
 qed
 
 corollary csim_point_compile_prog:
-  fixes \<Pi> :: proc_table
-  assumes "wf_compile_input \<G> \<Pi> ps"
+  fixes \<Pi> :: "(unit, 'v, 'e) gptable"
+  assumes "gwf_compile_input vars rv glob \<Pi> ps"
     and "elab_pt \<Pi> ps, compile_prog (elab_pt \<Pi> ps) ps, p \<turnstile> (c, s, frs) \<approx> (v, t, stk)"
   shows "v = point c"
   using csim_point[OF assms(2) located_compile_prog[OF assms(1)]] by simp
+
+end
 
 subsection \<open>Well-formedness ignores annotations\<close>
 
@@ -492,8 +497,13 @@ lemma may_return_value_erase [simp]: "may_return_value (erase c) = may_return_va
 lemma value_providing_erase [simp]: "value_providing (erase c) = value_providing c"
   by (simp add: value_providing_def)
 
-lemma wf_source_com_erase: "wf_source_com (erase_pt \<Pi>) (erase c) = wf_source_com \<Pi> c"
+context bridge_sem
+begin
+
+lemma wf_source_com_erase: "gwf_source_com vars rv (erase_pt \<Pi>) (erase c) = gwf_source_com vars rv \<Pi> c"
   by (induction c) (simp_all add: erase_pt_def split: option.split)
+
+end
 
 lemma erase_pt_apply: "erase_pt \<Pi> p = map_option erase_decl (\<Pi> p)"
   by (simp add: erase_pt_def)
@@ -501,12 +511,15 @@ lemma erase_pt_apply: "erase_pt \<Pi> p = map_option erase_decl (\<Pi> p)"
 lemma main_body_erase_pt [simp]: "main_body (erase_pt \<Pi>) = erase (main_body \<Pi>)"
   by (cases "\<Pi> prog_main_name") (simp_all add: main_body_def erase_pt_def unit_eq)
 
+context bridge_sem
+begin
+
 lemma wf_proc_decl_erase:
-  "wf_proc_decl \<G> (erase_pt \<Pi>) (erase_decl d) = wf_proc_decl \<G> \<Pi> d"
+  "gwf_proc_decl vars rv glob (erase_pt \<Pi>) (erase_decl d) = gwf_proc_decl vars rv glob \<Pi> d"
   by (simp add: gwf_proc_decl_def wf_source_com_erase)
 
 lemma wf_source_program_erase_pt:
-  "wf_source_program \<G> (erase_pt \<Pi>) = wf_source_program \<G> \<Pi>"
+  "gwf_source_program vars rv glob (erase_pt \<Pi>) = gwf_source_program vars rv glob \<Pi>"
 proof -
   have main: "erase_pt \<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body (erase_pt \<Pi>)\<rparr>
       \<longleftrightarrow> \<Pi> prog_main_name = Some \<lparr>formals = [], body = main_body \<Pi>\<rparr>"
@@ -514,16 +527,16 @@ proof -
     case (Some d)
     then show ?thesis by (cases d) (simp add: erase_pt_def erase_decl_def main_body_def)
   qed (simp add: erase_pt_def)
-  have procs: "(\<forall>p decl. erase_pt \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> (erase_pt \<Pi>) decl)
-      \<longleftrightarrow> (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> \<Pi> decl)"
+  have procs: "(\<forall>p decl. erase_pt \<Pi> p = Some decl \<longrightarrow> gwf_proc_decl vars rv glob (erase_pt \<Pi>) decl)
+      \<longleftrightarrow> (\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> gwf_proc_decl vars rv glob \<Pi> decl)"
   proof
-    assume l: "\<forall>p decl. erase_pt \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> (erase_pt \<Pi>) decl"
-    show "\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> wf_proc_decl \<G> \<Pi> decl"
+    assume l: "\<forall>p decl. erase_pt \<Pi> p = Some decl \<longrightarrow> gwf_proc_decl vars rv glob (erase_pt \<Pi>) decl"
+    show "\<forall>p decl. \<Pi> p = Some decl \<longrightarrow> gwf_proc_decl vars rv glob \<Pi> decl"
     proof (intro allI impI)
       fix p decl assume "\<Pi> p = Some decl"
-      then have "wf_proc_decl \<G> (erase_pt \<Pi>) (erase_decl decl)"
+      then have "gwf_proc_decl vars rv glob (erase_pt \<Pi>) (erase_decl decl)"
         using l[rule_format, of p "erase_decl decl"] by (simp add: erase_pt_apply)
-      then show "wf_proc_decl \<G> \<Pi> decl" by (simp only: wf_proc_decl_erase)
+      then show "gwf_proc_decl vars rv glob \<Pi> decl" by (simp only: wf_proc_decl_erase)
     qed
   qed (auto simp: erase_pt_apply wf_proc_decl_erase)
   have dom: "(\<forall>p. erase_pt \<Pi> p \<noteq> None \<longrightarrow> special_table p = None)
@@ -534,19 +547,22 @@ proof -
 qed
 
 lemma wf_compile_input_erase_pt:
-  "wf_compile_input \<G> (erase_pt \<Pi>) ps = wf_compile_input \<G> \<Pi> ps"
+  "gwf_compile_input vars rv glob (erase_pt \<Pi>) ps = gwf_compile_input vars rv glob \<Pi> ps"
   by (simp add: gwf_compile_input_def wf_source_program_erase_pt erase_pt_apply)
 
 lemma wf_compile_input_elab_pt:
-  assumes "wf_compile_input \<G> \<Pi> ps"
-  shows "wf_compile_input \<G> (elab_pt \<Pi> ps) ps"
-  using assms wf_compile_input_erase_pt[of \<G> "elab_pt \<Pi> ps" ps] wf_compile_input_erase_pt[of \<G> \<Pi> ps]
+  assumes "gwf_compile_input vars rv glob \<Pi> ps"
+  shows "gwf_compile_input vars rv glob (elab_pt \<Pi> ps) ps"
+  using assms wf_compile_input_erase_pt[where \<Pi> = "elab_pt \<Pi> ps" and ps = ps]
+    wf_compile_input_erase_pt[where \<Pi> = \<Pi> and ps = ps]
     erase_pt_elab_pt[OF wf_compile_inputD(10)[OF assms]]
   by simp
 
 lemma compile_prog_elab_pt:
-  "wf_compile_input \<G> \<Pi> ps \<Longrightarrow> compile_prog (elab_pt \<Pi> ps) ps = compile_prog \<Pi> ps"
+  "gwf_compile_input vars rv glob \<Pi> ps \<Longrightarrow> compile_prog (elab_pt \<Pi> ps) ps = compile_prog \<Pi> ps"
   by (rule compile_prog_erase_cong) (rule erase_pt_elab_pt[OF wf_compile_inputD(10)])
+
+end
 
 subsection \<open>Lifting plain runs to annotated runs\<close>
 
@@ -561,13 +577,16 @@ lemma erase_eq_Restore [simp]: "erase c = Restore u \<longleftrightarrow> (\<exi
 
 text \<open>Every step of the erased program is the erasure of a step of the annotated one.  Frames
   carry no annotation, so only the command is lifted; a call enters the annotated callee body.\<close>
+context bridge_sem
+begin
+
 theorem pstep_lift:
-  assumes "\<G>, erase_pt \<Pi> \<turnstile> (erase c, s, frs) \<rightarrow>\<^sub>p (c0', s', frs')"
-  shows "\<exists>c'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<and> erase c' = c0'"
+  assumes "gpstep (erase_pt \<Pi>) (erase c, s, frs) (c0', s', frs')"
+  shows "\<exists>c'. gpstep \<Pi> (c, s, frs) (c', s', frs') \<and> erase c' = c0'"
   using assms
 proof (induction c arbitrary: c0' s' frs')
   case (Seq c1 c2)
-  from Seq.prems have "\<G>, erase_pt \<Pi> \<turnstile> (Seq (erase c1) (erase c2), s, frs) \<rightarrow>\<^sub>p (c0', s', frs')"
+  from Seq.prems have "gpstep (erase_pt \<Pi>) (Seq (erase c1) (erase c2), s, frs) (c0', s', frs')"
     by simp
   then show ?case
   proof (elim SeqSE)
@@ -578,8 +597,8 @@ proof (induction c arbitrary: c0' s' frs')
   next
     fix c1'' t fs
     assume eq: "(c0', s', frs') = (Seq c1'' (erase c2), t, fs)"
-      and st: "\<G>, erase_pt \<Pi> \<turnstile> (erase c1, s, frs) \<rightarrow>\<^sub>p (c1'', t, fs)"
-    from Seq.IH(1)[OF st] obtain d where "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p (d, t, fs)" "erase d = c1''"
+      and st: "gpstep (erase_pt \<Pi>) (erase c1, s, frs) (c1'', t, fs)"
+    from Seq.IH(1)[OF st] obtain d where "gpstep \<Pi> (c1, s, frs) (d, t, fs)" "erase d = c1''"
       by blast
     with eq show ?thesis by (intro exI[of _ "Seq d c2"] conjI) simp_all
   next
@@ -592,7 +611,7 @@ proof (induction c arbitrary: c0' s' frs')
   next
     fix j i fr dst frsa
     assume h:
-      "(c0', s', frs') = (SKIP i, combine_assign dst (s ret_var) (combine_env \<G> fr s), frsa)"
+      "(c0', s', frs') = (SKIP i, combine_assign dst (conv dst (s rv)) (combine_env glob fr s), frsa)"
       "erase c1 = Unwind j" "erase c2 = Restore i" "frs = Frame fr dst # frsa"
     then obtain j' i' where "c1 = Unwind j'" "c2 = Restore i'" by auto
     with h show ?thesis by (intro exI[of _ "SKIP i'"] conjI) (simp_all add: unit_eq)
@@ -600,10 +619,10 @@ proof (induction c arbitrary: c0' s' frs')
 next
   case (If i b c1 c2)
   from If.prems
-  have step: "\<G>, erase_pt \<Pi> \<turnstile> (If () b (erase c1) (erase c2), s, frs) \<rightarrow>\<^sub>p (c0', s', frs')"
+  have step: "gpstep (erase_pt \<Pi>) (If () b (erase c1) (erase c2), s, frs) (c0', s', frs')"
     by simp
   show ?case
-  proof (cases "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s)")
+  proof (cases "truthy (ev b s)")
     case True
     with step have "c0' = erase c1" "s' = s" "frs' = frs" by auto
     with True show ?thesis by (intro exI[of _ c1] conjI) simp_all
@@ -614,65 +633,67 @@ next
   qed
 next
   case (While i b c)
-  from While.prems have "\<G>, erase_pt \<Pi> \<turnstile> (While () b (erase c), s, frs) \<rightarrow>\<^sub>p (c0', s', frs')"
+  from While.prems have "gpstep (erase_pt \<Pi>) (While () b (erase c), s, frs) (c0', s', frs')"
     by simp
   then have "c0' = erase (If i b (Seq c (While i b c)) (SKIP i))" "s' = s" "frs' = frs"
     by (auto elim: WhileSE[elim_format])
   then show ?case by (intro exI[of _ "If i b (Seq c (While i b c)) (SKIP i)"] conjI) simp_all
 next
   case (Call i dst p args)
-  from Call.prems have "\<G>, erase_pt \<Pi> \<turnstile> (gcom.Call () dst p args, s, frs) \<rightarrow>\<^sub>p (c0', s', frs')"
+  from Call.prems have "gpstep (erase_pt \<Pi>) (gcom.Call () dst p args, s, frs) (c0', s', frs')"
     by simp
   then show ?case
   proof (elim CallSE)
     fix decl0
     assume c': "(c0', s', frs') = (Seq (body decl0) (Restore ()),
-                  bind_formals (formals decl0) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) args) (enter_state \<G> s),
+                  bind_formals (formals decl0) (map (\<lambda>e. ev e s) args) (enter_state glob s),
                   Frame s dst # frs)"
       and d0: "erase_pt \<Pi> p = Some decl0"
       and len: "length args = length (formals decl0)" and dist: "distinct (formals decl0)"
     from d0 obtain decl where d: "\<Pi> p = Some decl" "decl0 = erase_decl decl"
       by (auto simp: erase_pt_apply)
-    have "\<G>, \<Pi> \<turnstile> (gcom.Call i dst p args, s, frs)
-            \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
-               bind_formals (formals decl0) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) args) (enter_state \<G> s),
+    have "gpstep \<Pi> (gcom.Call i dst p args, s, frs) (Seq (body decl) (Restore i),
+               bind_formals (formals decl0) (map (\<lambda>e. ev e s) args) (enter_state glob s),
                Frame s dst # frs)"
       by (rule gpstep.Call[where decl = decl]) (use len dist d in simp_all)
     then show ?thesis
       using c' d(2) by (intro exI[of _ "Seq (body decl) (Restore i)"] conjI) simp_all
   next
     fix desc sc v x
-    assume dx: "dst = Some x" and c': "(c0', s', frs') = (SKIP (), s(x := v), frs)"
+    assume dx: "dst = Some x" and c': "(c0', s', frs') = (SKIP (), s(x := conv (Some x) v), frs)"
       and st: "special_table p = Some desc" and cl: "classify_special desc args = Some sc"
-      and sr: "special_result aval sc s v"
-    have step: "\<G>, \<Pi> \<turnstile> (gcom.Call i (Some x) p args, s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := v), frs)"
+      and sr: "special_result ev sc s v"
+    have step: "gpstep \<Pi> (gcom.Call i (Some x) p args, s, frs) (SKIP i, s(x := conv (Some x) v), frs)"
       by (rule gpstep.Special[OF st cl sr])
-    from c' have eqs: "c0' = SKIP ()" "s' = s(x := v)" "frs' = frs" by simp_all
+    from c' have eqs: "c0' = SKIP ()" "s' = s(x := conv (Some x) v)" "frs' = frs" by simp_all
     show ?thesis unfolding eqs dx by (rule exI[of _ "SKIP i"], rule conjI[OF step]) simp
   qed
 qed auto
 
 theorem psteps_lift:
-  assumes "\<G>, erase_pt \<Pi> \<turnstile> (c0, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c0', s', frs')" and "erase c = c0"
-  shows "\<exists>c'. \<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c', s', frs') \<and> erase c' = c0'"
+  assumes "star (gpstep (erase_pt \<Pi>)) (c0, s, frs) (c0', s', frs')" and "erase c = c0"
+  shows "\<exists>c'. star (gpstep \<Pi>) (c, s, frs) (c', s', frs') \<and> erase c' = c0'"
   using assms
-proof (induction c0 s frs c0' s' frs' arbitrary: c rule: star_pstep_induct)
+proof (induction c0 s frs c0' s' frs' arbitrary: c
+    rule: star.induct[of "gpstep (erase_pt \<Pi>)", split_format(complete), case_names refl step])
   case (refl c0 s frs)
   then show ?case by (intro exI[of _ c] conjI star.refl)
 next
   case (step c0 s frs c1 s1 frs1 c2 s2 frs2)
-  from pstep_lift[of \<G> \<Pi> c s frs c1 s1 frs1] step.hyps(1) step.prems
-  obtain d where d: "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (d, s1, frs1)" "erase d = c1"
+  from pstep_lift[of \<Pi> c s frs c1 s1 frs1] step.hyps(1) step.prems
+  obtain d where d: "gpstep \<Pi> (c, s, frs) (d, s1, frs1)" "erase d = c1"
     by blast
-  from step.IH[OF d(2)] obtain c' where "\<G>, \<Pi> \<turnstile> (d, s1, frs1) \<rightarrow>\<^sub>p\<^sup>* (c', s2, frs2)" "erase c' = c2"
+  from step.IH[OF d(2)] obtain c' where "star (gpstep \<Pi>) (d, s1, frs1) (c', s2, frs2)" "erase c' = c2"
     by blast
   with d(1) show ?case by (blast intro: star.step)
 qed
 
-lemma erase_com [simp]: "erase (c :: com) = c"
+end
+
+lemma erase_com [simp]: "erase (c :: (unit, 'v, 'e) gcom) = c"
   by (induction c) simp_all
 
-lemma erase_pt_proc_table [simp]: "erase_pt (\<Pi> :: proc_table) = \<Pi>"
+lemma erase_pt_proc_table [simp]: "erase_pt (\<Pi> :: (unit, 'v, 'e) gptable) = \<Pi>"
 proof
   fix p
   show "erase_pt \<Pi> p = \<Pi> p"
@@ -684,9 +705,12 @@ qed
 
 text \<open>The elaboration of a plain table erases back to it, so \<open>psteps_lift\<close> lifts every run of
   the plain program from \<open>main\<close> to a run of its elaboration.\<close>
+context bridge_sem
+begin
+
 lemma erase_elab_pt:
-  fixes \<Pi> :: proc_table
-  assumes "wf_compile_input \<G> \<Pi> ps"
+  fixes \<Pi> :: "(unit, 'v, 'e) gptable"
+  assumes "gwf_compile_input vars rv glob \<Pi> ps"
   shows "erase_pt (elab_pt \<Pi> ps) = \<Pi>" and "erase (main_body (elab_pt \<Pi> ps)) = main_body \<Pi>"
 proof -
   show ept: "erase_pt (elab_pt \<Pi> ps) = \<Pi>"
@@ -694,6 +718,8 @@ proof -
   show "erase (main_body (elab_pt \<Pi> ps)) = main_body \<Pi>"
     using main_body_erase_pt[of "elab_pt \<Pi> ps"] ept by simp
 qed
+
+end
 
 subsection \<open>Erasing a simulation\<close>
 
