@@ -23,7 +23,7 @@ lemma run_voblint_AnalysedE [elim]:
 lemma analysis_report_of_fields:
   "analysis_report_of config p = Some res
      \<Longrightarrow> report_config res = config \<and> report_cfg res = prog_cfg p"
-  by (induct config p rule: analysis_report_of.induct) auto
+  by (induct config p rule: analysis_report_of.induct) (auto simp: report_of_def Let_def)
 
 lemma run_voblint_config:
   "run_voblint config p = Analysed res \<Longrightarrow> report_config res = config"

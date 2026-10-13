@@ -38,12 +38,12 @@ text \<open>
   the effect of one statement survives.
 \<close>
 
-record 's result_state =
+record ('e, 's) result_state =
   state_point :: pp
   state_context :: nat
   state_value :: "'s lifted"
-  state_checks :: "(exp \<times> contextual_verdict) list"
-  state_diagnostics :: "(exp arithmetic_obligation \<times> contextual_verdict) list"
+  state_checks :: "('e \<times> contextual_verdict) list"
+  state_diagnostics :: "('e arithmetic_obligation \<times> contextual_verdict) list"
   state_steps :: "(pp \<times> 's lifted) list"
 
 record call_route =
@@ -52,10 +52,10 @@ record call_route =
   route_callee :: pname
   route_targets :: "nat list"
 
-record result_check =
+record 'e result_check =
   check_point :: pp
   check_label :: check_label
-  check_exp :: exp
+  check_exp :: 'e
   check_verdict :: contextual_verdict
 
 text \<open>
@@ -65,15 +65,15 @@ text \<open>
   entered.
 \<close>
 
-datatype result_global_unknown =
-    Global_Named vname
+datatype 'n result_global_unknown =
+    Global_Named 'n
   | Global_Seed pname "nat option"
 
-record 's result_global =
-  global_unknown :: result_global_unknown
+record ('n, 's) result_global =
+  global_unknown :: "'n result_global_unknown"
   global_state :: "'s lifted"
 
-definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_state \<Rightarrow> 't result_state" where
+definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> ('e, 's) result_state \<Rightarrow> ('e, 't) result_state" where
   "map_result_state f st =
      \<lparr> state_point = state_point st,
        state_context = state_context st,
@@ -82,7 +82,7 @@ definition map_result_state :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_st
        state_diagnostics = state_diagnostics st,
        state_steps = map (\<lambda>(w, s). (w, map_lift f s)) (state_steps st) \<rparr>"
 
-definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> 's result_global \<Rightarrow> 't result_global" where
+definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> ('n, 's) result_global \<Rightarrow> ('n, 't) result_global" where
   "map_result_global f g =
      \<lparr> global_unknown = global_unknown g,
        global_state = map_lift f (global_state g) \<rparr>"
@@ -118,7 +118,9 @@ text \<open>
   A context is kept as the policy's own value, tagged by policy, so one report type
   serves every policy. The report also keeps the configuration, which names the
   concretization its states are read through, and the program's variables, which a
-  rendering lists.
+  rendering lists. The configuration, the context tag, the variables, the expressions,
+  the global names and the states are parameters, so one report and one builder serve
+  every language an analysis runs on.
 \<close>
 
 datatype report_context =
@@ -126,16 +128,19 @@ datatype report_context =
   | Report_Entry mcp_ctx
   | Report_Call_String "pp list"
 
-record analysis_report =
-  report_config :: analysis_config
-  report_vars :: "vname list"
-  report_cfg :: cfg
-  report_contexts :: "report_context list"
-  report_states :: "mcp_val result_state list"
+record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
+  report_config :: 'k
+  report_vars :: "'vr list"
+  report_cfg :: "('vr, 'e) gcfg"
+  report_contexts :: "'x list"
+  report_states :: "('e, 's) result_state list"
   report_routes :: "call_route list"
-  report_checks :: "result_check list"
-  report_globals :: "mcp_val result_global list"
-  report_diagnostics :: "exp arithmetic_diagnostic list"
+  report_checks :: "'e result_check list"
+  report_globals :: "('n, 's) result_global list"
+  report_diagnostics :: "'e arithmetic_diagnostic list"
+
+type_synonym vimp_report =
+  "(analysis_config, report_context, vname, exp, vname, mcp_val) analysis_report"
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -202,7 +207,8 @@ text \<open>
 \<close>
 
 definition result_checks_of ::
-    "cfg \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> (exp \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> result_check list"
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> ('ctx, 'a) solved_table
+       \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'e result_check list"
 where
   "result_checks_of g r classify =
      map (\<lambda>(u, a, w).
@@ -217,16 +223,16 @@ text \<open>
 \<close>
 
 definition live_targets ::
-    "(pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option)
-       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c list" where
+    "(pp \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c option)
+       \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c list" where
   "live_targets succ u ctx ca q = (case succ u ctx ca q of None \<Rightarrow> [] | Some ctx' \<Rightarrow> [ctx'])"
 
 text \<open>
-  The globals column lists the global unknowns of the constraint system: with
-  flow-insensitive program globals, one unknown per declared global, then for every
-  procedure the seed of each context its entry was solved at. A procedure entered at
-  no context is listed once, unreachable. Flow-sensitive program globals sit in
-  every point's own state and have no unknown of their own.
+  The globals column lists the global unknowns of the constraint system: one unknown
+  per global name the placement keeps apart, then for every procedure the seed of each
+  context its entry was solved at. A procedure entered at no context is listed once,
+  unreachable. Globals the placement keeps in every point's own state have no unknown
+  of their own.
 \<close>
 
 text \<open>
@@ -236,35 +242,43 @@ text \<open>
 \<close>
 
 definition report_row ::
-    "('c, vname, mcp_val) solved_run \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result)
-       \<Rightarrow> (pp, exp list) rbt \<Rightarrow> (pp, exp arithmetic_obligation list list) rbt
-       \<Rightarrow> (pp, (edge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> mcp_val result_state" where
-  "report_row sr classify conds obls edges i ctx v =
+    "('vr, 'e, 'c, 'n, 's) gsolved_run \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result)
+       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
+       \<Rightarrow> (pp, 'e list) rbt \<Rightarrow> (pp, 'e arithmetic_obligation list list) rbt
+       \<Rightarrow> (pp, (('vr, 'e) gedge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp
+       \<Rightarrow> ('e, 's) result_state" where
+  "report_row sr classify cond conds obls edges i ctx v =
      (let state = lookup_table (run_table sr) v ctx
       in \<lparr> state_point = v, state_context = i,
            state_value = state,
            state_checks =
-             map (\<lambda>cond. (cond, classify_point classify cond state)) (group_lookup conds v),
+             map (\<lambda>c. (c, classify_point classify c state)) (group_lookup conds v),
            state_diagnostics =
-             map (\<lambda>obligation. (obligation,
-                                  classify_point classify (arithmetic_condition obligation) state))
+             map (\<lambda>obligation. (obligation, classify_point classify (cond obligation) state))
                (concat (group_lookup obls v)),
            state_steps = map (\<lambda>(a, w). (w, run_step sr v ctx a)) (group_lookup edges v) \<rparr>)"
 
 lemma report_row_simps [simp]:
-  "state_point (report_row sr classify conds obls edges i ctx v) = v"
-  "state_context (report_row sr classify conds obls edges i ctx v) = i"
-  "state_value (report_row sr classify conds obls edges i ctx v)
+  "state_point (report_row sr classify cond conds obls edges i ctx v) = v"
+  "state_context (report_row sr classify cond conds obls edges i ctx v) = i"
+  "state_value (report_row sr classify cond conds obls edges i ctx v)
      = lookup_table (run_table sr) v ctx"
   by (simp_all add: report_row_def Let_def)
 
+text \<open>
+  The builder reads the program only through what it is handed: its variables, its
+  graph, the global names kept at their own unknowns, the arithmetic obligation sites
+  with the condition that makes one safe, and its procedures.
+\<close>
+
 definition report_of ::
-    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> report_context)
-       \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, vname, mcp_val) solved_run \<Rightarrow> imp_prog
-       \<Rightarrow> analysis_report" where
-  "report_of config ctx_key ctx_tag classify sr p =
-     (let g = prog_cfg p;
-          r = run_table sr;
+    "'k \<Rightarrow> 'vr list \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'n list
+       \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
+       \<Rightarrow> pname list \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> 'x)
+       \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> ('vr, 'e, 'c, 'n, 's) gsolved_run
+       \<Rightarrow> ('k, 'x, 'vr, 'e, 'n, 's) analysis_report" where
+  "report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr =
+     (let r = run_table sr;
           ctxs = ordered_by_key ctx_key (snd ` covered_keys r);
           indexed = enumerate 0 ctxs;
           nodes = cfg_node_list g
@@ -273,8 +287,8 @@ definition report_of ::
           steps = group_by_key (\<lambda>(u, a, w). u) (\<lambda>(u, a, w). Some (a, w)) intra;
           checks = group_by_key (\<lambda>(u, a, w). u)
             (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
-          obligations = group_by_key fst (Some \<circ> snd) (arithmetic_sites g);
-          state_at = report_row sr classify checks obligations steps;
+          obligations = group_by_key fst (Some \<circ> snd) sites;
+          state_at = report_row sr classify cond checks obligations steps;
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
@@ -291,7 +305,7 @@ definition report_of ::
                                    global_state = run_seed sr f ctx \<rparr>)
                    entered))
       in \<lparr> report_config = config,
-           report_vars = program_vars p,
+           report_vars = vars,
            report_cfg = g,
            report_contexts = map ctx_tag ctxs,
            report_states =
@@ -306,14 +320,25 @@ definition report_of ::
                        (cfg_calls_list g)),
            report_checks = result_checks_of g r classify,
            report_globals =
-             (case config_globals config of
-                Program_Globals_Flow_Sensitive \<Rightarrow> []
-              | Program_Globals_Flow_Insensitive \<Rightarrow>
-                  map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
-                    (declared_global_vars p))
-               @ concat (map seeds_of (prog_main_name # prog_procs p)),
-           report_diagnostics =
-             arithmetic_diagnostics (arithmetic_sites g) arithmetic_condition r classify \<rparr>)"
+             map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
+               globals
+             @ concat (map seeds_of procs),
+           report_diagnostics = arithmetic_diagnostics sites cond r classify \<rparr>)"
+
+text \<open>A VIMP program hands over its own variables, graph, declared globals when they
+  are flow-insensitive, division obligations and procedures.\<close>
+
+abbreviation vimp_report_of ::
+    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> report_context)
+       \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, vname, mcp_val) solved_run \<Rightarrow> imp_prog
+       \<Rightarrow> vimp_report" where
+  "vimp_report_of config ctx_key ctx_tag classify sr p \<equiv>
+     report_of config (program_vars p) (prog_cfg p)
+       (case config_globals config of
+          Program_Globals_Flow_Sensitive \<Rightarrow> []
+        | Program_Globals_Flow_Insensitive \<Rightarrow> declared_global_vars p)
+       (arithmetic_sites (prog_cfg p)) arithmetic_condition (prog_main_name # prog_procs p)
+       ctx_key ctx_tag classify sr"
 
 subsection \<open>One configuration, one report\<close>
 
@@ -427,10 +452,10 @@ definition mcp_run_of ::
 lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
 
 
-fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report option" where
+fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> vimp_report option" where
   "analysis_report_of (Analysis_Config as r Ctx_None pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_None pg) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+       (\<lambda>sol. vimp_report_of (Analysis_Config as r Ctx_None pg) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
           (mcp_classify (activation as))
           (mcp_run_of (activation as) pg Analysis_Global Activation_Seed (\<lambda>_. route_unit)
              (declared_global p) p sol) p)
@@ -440,7 +465,7 @@ fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> 
           (cfg_exit (prog_cfg p), ()))"
 | "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r Ctx_EntryState pg)
+       (\<lambda>sol. vimp_report_of (Analysis_Config as r Ctx_EntryState pg)
           (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
           (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
              (mcp_formals_route (activation as)) (declared_global p) p sol) p)
@@ -450,7 +475,7 @@ fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> 
           (cfg_exit (prog_cfg p), mcp_root_ctx))"
 | "analysis_report_of (Analysis_Config as r (Ctx_CallString k) pg) p =
      map_option
-       (\<lambda>sol. report_of (Analysis_Config as r (Ctx_CallString k) pg)
+       (\<lambda>sol. vimp_report_of (Analysis_Config as r (Ctx_CallString k) pg)
           (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
           (mcp_classify (activation as))
           (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
@@ -475,7 +500,7 @@ datatype 'r analysis_answer =
   | Analysed 'r
 
 definition run_voblint ::
-  "analysis_config \<Rightarrow> imp_prog \<Rightarrow> analysis_report analysis_answer"
+  "analysis_config \<Rightarrow> imp_prog \<Rightarrow> vimp_report analysis_answer"
 where
   "run_voblint config p =
      (if \<not> valid_config config then Invalid_Activation

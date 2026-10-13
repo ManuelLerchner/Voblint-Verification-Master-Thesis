@@ -165,18 +165,18 @@ module Generated : sig
     Enter_Dep of (string, exp) gcall_action |
     Combine_Dep of (string, exp) gcall_action |
     Continue_Dep of (string, exp) gcall_action | Global_Read | Global_Write
-  type result_global_unknown = Global_Named of string |
+  type 'a result_global_unknown = Global_Named of 'a |
     Global_Seed of string * nat option
   type 'a imp_prog_ext
   type 'a call_route_ext
   type 'a analysis_graph_ext
   type 'a arithmetic_obligation
   type 'a arithmetic_diagnostic
-  type ('a, 'b) result_global_ext
-  type ('a, 'b) result_state_ext
-  type 'a result_check_ext
+  type ('a, 'b, 'c) result_global_ext
+  type ('a, 'b, 'c) result_state_ext
+  type ('a, 'b) result_check_ext
   type ('a, 'b) run_result_ext
-  type 'a analysis_report_ext
+  type ('a, 'b, 'c, 'd, 'e, 'f, 'g) analysis_report_ext
   val cfg_entry : ('a, 'b, 'c) gcfg_ext -> cfg_node
   val prog_procs : unit imp_prog_ext -> string list
   val declared_global_vars : 'a imp_prog_ext -> string list
@@ -189,34 +189,68 @@ module Generated : sig
       globals_rule ->
         typed_context ->
           (var_id * ikind) list -> unit imp_prog_ext -> typed_answer
-  val arithmetic_divisor : 'a arithmetic_obligation -> 'a
-  val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
   val typed_prog :
     unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
   val mk_program :
     (string * (unit, string, exp, unit) gproc_decl_ext) list ->
       (unit, string, exp) gcom -> string list -> unit imp_prog_ext
+  val arithmetic_divisor : 'a arithmetic_obligation -> 'a
+  val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
   val run_voblint :
     analysis_config ->
-      unit imp_prog_ext -> unit analysis_report_ext analysis_answer
+      unit imp_prog_ext ->
+        (analysis_config, report_context, string, exp, string,
+          ((string -> sign) lifted,
+            ((string -> ivl) lifted,
+              ((string -> parity) lifted,
+                ((string -> unit int_dom_ext) lifted,
+                  ((string -> unit int_dom_ext) lifted,
+                    ((string -> unit int_dom_ext) lifted,
+                      ((string -> congruence) lifted, relc) analysis_product)
+                      analysis_product)
+                    analysis_product)
+                  analysis_product)
+                analysis_product)
+              analysis_product)
+            analysis_product,
+          unit)
+          analysis_report_ext
+          analysis_answer
   val route_targets : 'a call_route_ext -> nat list
   val route_context : 'a call_route_ext -> nat
   val route_point : 'a call_route_ext -> cfg_node
   val cfg_points : (string, exp, unit) gcfg_ext -> cfg_node list
-  val state_steps : ('a, 'b) result_state_ext -> (cfg_node * 'a lifted) list
-  val state_point : ('a, 'b) result_state_ext -> cfg_node
-  val state_value : ('a, 'b) result_state_ext -> 'a lifted
-  val global_unknown : ('a, 'b) result_global_ext -> result_global_unknown
-  val state_context : ('a, 'b) result_state_ext -> nat
-  val global_state : ('a, 'b) result_global_ext -> 'a lifted
+  val state_steps : ('a, 'b, 'c) result_state_ext -> (cfg_node * 'b lifted) list
+  val state_point : ('a, 'b, 'c) result_state_ext -> cfg_node
+  val state_value : ('a, 'b, 'c) result_state_ext -> 'b lifted
+  val global_unknown :
+    ('a, 'b, 'c) result_global_ext -> 'a result_global_unknown
+  val state_context : ('a, 'b, 'c) result_state_ext -> nat
+  val global_state : ('a, 'b, 'c) result_global_ext -> 'b lifted
   val state_diagnostics :
-    ('a, 'b) result_state_ext ->
-      (exp arithmetic_obligation * check_result lifted) list
+    ('a, 'b, 'c) result_state_ext ->
+      ('a arithmetic_obligation * check_result lifted) list
   val state_checks :
-    ('a, 'b) result_state_ext -> (exp * check_result lifted) list
+    ('a, 'b, 'c) result_state_ext -> ('a * check_result lifted) list
   val render_report :
     (abstract_value -> 'a) ->
-      unit analysis_report_ext -> ('a, unit) run_result_ext
+      (analysis_config, report_context, string, exp, string,
+        ((string -> sign) lifted,
+          ((string -> ivl) lifted,
+            ((string -> parity) lifted,
+              ((string -> unit int_dom_ext) lifted,
+                ((string -> unit int_dom_ext) lifted,
+                  ((string -> unit int_dom_ext) lifted,
+                    ((string -> congruence) lifted, relc) analysis_product)
+                    analysis_product)
+                  analysis_product)
+                analysis_product)
+              analysis_product)
+            analysis_product)
+          analysis_product,
+        unit)
+        analysis_report_ext ->
+        ('a, unit) run_result_ext
   val cfg_call_edges :
     (string, exp, unit) gcfg_ext ->
       (cfg_node * ((string, exp) gcall_action * (cfg_node * cfg_node))) list
@@ -224,11 +258,11 @@ module Generated : sig
     (string, exp, unit) gcfg_ext ->
       (cfg_node * ((string, exp) gedge_action * cfg_node)) list
   val res_cfg : ('a, 'b) run_result_ext -> (string, exp, unit) gcfg_ext
-  val check_exp : 'a result_check_ext -> exp
+  val check_exp : ('a, 'b) result_check_ext -> 'a
   val res_graph : ('a, 'b) run_result_ext -> unit analysis_graph_ext
   val route_callee : 'a call_route_ext -> string
   val string_of_abstract_value : abstract_value -> string
-  val res_checks : ('a, 'b) run_result_ext -> unit result_check_ext list
+  val res_checks : ('a, 'b) run_result_ext -> (exp, unit) result_check_ext list
   val res_joined :
     ('a, 'b) run_result_ext ->
       (cfg_node *
@@ -238,14 +272,16 @@ module Generated : sig
   val res_routes : ('a, 'b) run_result_ext -> unit call_route_ext list
   val res_states :
     ('a, 'b) run_result_ext ->
-      (((analysis_domain * 'a field_state) list), unit) result_state_ext list
-  val check_label : 'a result_check_ext -> nat * nat
-  val check_point : 'a result_check_ext -> cfg_node
+      (exp, ((analysis_domain * 'a field_state) list), unit)
+        result_state_ext list
+  val check_label : ('a, 'b) result_check_ext -> nat * nat
+  val check_point : ('a, 'b) result_check_ext -> cfg_node
   val res_globals :
     ('a, 'b) run_result_ext ->
-      (((analysis_domain * 'a field_state) list), unit) result_global_ext list
+      (string, ((analysis_domain * 'a field_state) list), unit)
+        result_global_ext list
   val res_contexts : ('a, 'b) run_result_ext -> 'a analysis_context list
-  val check_verdict : 'a result_check_ext -> check_result lifted
+  val check_verdict : ('a, 'b) result_check_ext -> check_result lifted
   val prog_stmt_post_order : unit imp_prog_ext -> (string * cfg_node list) list
   val graph_edges :
     'a analysis_graph_ext ->
@@ -6700,7 +6736,7 @@ type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h) gdg_spec_ext =
 
 type ('a, 'b) state_exta = State_exta of 'a set * 'b;;
 
-type result_global_unknown = Global_Named of string |
+type 'a result_global_unknown = Global_Named of 'a |
   Global_Seed of string * nat option;;
 
 type ('a, 'b, 'c, 'd) ug_state_ext =
@@ -6764,28 +6800,30 @@ type 'a arithmetic_diagnostic =
   Arithmetic_Diagnostic of
     cfg_node * nat * 'a arithmetic_obligation * check_result;;
 
-type ('a, 'b) result_global_ext =
-  Result_global_ext of result_global_unknown * 'a lifted * 'b;;
+type ('a, 'b, 'c) result_global_ext =
+  Result_global_ext of 'a result_global_unknown * 'b lifted * 'c;;
 
-type ('a, 'b) result_state_ext =
+type ('a, 'b, 'c) result_state_ext =
   Result_state_ext of
-    cfg_node * nat * 'a lifted * (exp * check_result lifted) list *
-      (exp arithmetic_obligation * check_result lifted) list *
-      (cfg_node * 'a lifted) list * 'b;;
+    cfg_node * nat * 'b lifted * ('a * check_result lifted) list *
+      ('a arithmetic_obligation * check_result lifted) list *
+      (cfg_node * 'b lifted) list * 'c;;
 
-type 'a result_check_ext =
-  Result_check_ext of cfg_node * (nat * nat) * exp * check_result lifted * 'a;;
+type ('a, 'b) result_check_ext =
+  Result_check_ext of cfg_node * (nat * nat) * 'a * check_result lifted * 'b;;
 
 type ('a, 'b) run_result_ext =
   Run_result_ext of
     (string, exp, unit) gcfg_ext * 'a analysis_context list *
-      (((analysis_domain * 'a field_state) list), unit) result_state_ext list *
+      (exp, ((analysis_domain * 'a field_state) list), unit)
+        result_state_ext list *
       (cfg_node *
         (((analysis_domain * 'a field_state) list) lifted *
           (cfg_node *
             ((analysis_domain * 'a field_state) list) lifted) list)) list *
-      unit call_route_ext list * unit result_check_ext list *
-      (((analysis_domain * 'a field_state) list), unit) result_global_ext list *
+      unit call_route_ext list * (exp, unit) result_check_ext list *
+      (string, ((analysis_domain * 'a field_state) list), unit)
+        result_global_ext list *
       exp arithmetic_diagnostic list * unit analysis_graph_ext * 'b;;
 
 type ('a, 'b) query_ops_ext =
@@ -6803,42 +6841,12 @@ type ('a, 'b, 'c, 'd) func_state =
                    (('a, 'b, 'c, ('a, unit) state_exta) state_ext *
                      ('a, 'b, 'c, 'd) ug_state_ext))));;
 
-type 'a analysis_report_ext =
+type ('a, 'b, 'c, 'd, 'e, 'f, 'g) analysis_report_ext =
   Analysis_report_ext of
-    analysis_config * string list * (string, exp, unit) gcfg_ext *
-      report_context list *
-      (((string -> sign) lifted,
-         ((string -> ivl) lifted,
-           ((string -> parity) lifted,
-             ((string -> unit int_dom_ext) lifted,
-               ((string -> unit int_dom_ext) lifted,
-                 ((string -> unit int_dom_ext) lifted,
-                   ((string -> congruence) lifted, relc) analysis_product)
-                   analysis_product)
-                 analysis_product)
-               analysis_product)
-             analysis_product)
-           analysis_product)
-         analysis_product,
-        unit)
-        result_state_ext list *
-      unit call_route_ext list * unit result_check_ext list *
-      (((string -> sign) lifted,
-         ((string -> ivl) lifted,
-           ((string -> parity) lifted,
-             ((string -> unit int_dom_ext) lifted,
-               ((string -> unit int_dom_ext) lifted,
-                 ((string -> unit int_dom_ext) lifted,
-                   ((string -> congruence) lifted, relc) analysis_product)
-                   analysis_product)
-                 analysis_product)
-               analysis_product)
-             analysis_product)
-           analysis_product)
-         analysis_product,
-        unit)
-        result_global_ext list *
-      exp arithmetic_diagnostic list * 'a;;
+    'a * 'c list * ('c, 'd, unit) gcfg_ext * 'b list *
+      ('d, 'f, unit) result_state_ext list * unit call_route_ext list *
+      ('d, unit) result_check_ext list * ('e, 'f, unit) result_global_ext list *
+      'd arithmetic_diagnostic list * 'g;;
 
 type ('a, 'b, 'c) ug_state_with_gas_ext =
   Ug_state_with_gas_ext of ('b -> 'a -> phase * nat) * 'c;;
@@ -17553,80 +17561,6 @@ let rec arithmetic_diagnostics _B
              (zip (upt zero_nat (size_list obligations)) obligations))
       sites;;
 
-let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
-
-let rec arithmetic_condition
-  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
-
-let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
-
-let rec edge_expressions = function EA_Assign (x, e) -> [e]
-                           | EA_Assume e -> [e]
-                           | EA_AssumeNot e -> [e]
-                           | EA_Check (l, e) -> [e]
-                           | EA_Ret (Some e, p) -> [e]
-                           | EA_Special (Min (a, b), x) -> [a; b]
-                           | EA_Special (Max (a, b), x) -> [a; b]
-                           | EA_Nop -> []
-                           | EA_Special (Nondet_Int, va) -> []
-                           | EA_Body v -> []
-                           | EA_Ret (None, va) -> [];;
-
-let rec arithmetic_expression_sites
-  g = (let edges =
-         cfg_intra_list (equal_literal, linorder_literal)
-           (equal_exp, linorder_exp) g
-         in
-        map_filter
-          (fun x ->
-            (if (match x with (_, (EA_Nop, _)) -> true
-                  | (_, (EA_Assign (_, _), _)) -> true
-                  | (_, (EA_Special (_, _), _)) -> true
-                  | (_, (EA_Assume _, _)) -> true
-                  | (u, (EA_AssumeNot e, _)) ->
-                    not (list_ex
-                          (fun (ua, (a, _)) ->
-                            equal_cfg_nodea u ua &&
-                              equal_gedge_actiona equal_literal equal_exp a
-                                (EA_Assume e))
-                          edges)
-                  | (_, (EA_Body _, _)) -> true
-                  | (_, (EA_Ret (_, _), _)) -> true
-                  | (_, (EA_Check (_, _), _)) -> true)
-              then Some (let (u, (a, _)) = x in (u, edge_expressions a))
-              else None))
-          edges) @
-        map (fun (u, (ca, (_, _))) -> (u, ce_args ca))
-          (cfg_calls_list (equal_literal, linorder_literal)
-            (equal_exp, linorder_exp) g);;
-
-let rec arithmetic_obligations
-  = function N n -> []
-    | V x -> []
-    | Not a -> arithmetic_obligations a
-    | And (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Or (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Div (a, b) ->
-        arithmetic_obligations a @
-          arithmetic_obligations b @ [Arithmetic_Obligation (Div (a, b), b)]
-    | Mod (a, b) ->
-        arithmetic_obligations a @
-          arithmetic_obligations b @ [Arithmetic_Obligation (Mod (a, b), b)]
-    | Plus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Minus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Times (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Less (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | LessEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Greater (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | GreaterEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Eq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
-    | Cast (uu, a) -> arithmetic_obligations a;;
-
-let rec arithmetic_sites
-  g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
-        (arithmetic_expression_sites g);;
-
 let rec run_shared
   (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
     = run_shared;;
@@ -17645,7 +17579,7 @@ let rec run_seed
 
 let rec ea_check_label (EA_Check (x81, x82)) = x81;;
 
-let rec result_checks_of _A
+let rec result_checks_of (_A1, _A2) (_B1, _B2) _C
   g r classify =
     map_filter
       (fun x ->
@@ -17653,10 +17587,9 @@ let rec result_checks_of _A
           then Some (let (u, (a, _)) = x in
                       Result_check_ext
                         (u, ea_check_label a, ea_check_cond a,
-                          point_verdict _A r classify u (ea_check_cond a), ()))
+                          point_verdict _C r classify u (ea_check_cond a), ()))
           else None))
-      (cfg_intra_list (equal_literal, linorder_literal)
-        (equal_exp, linorder_exp) g);;
+      (cfg_intra_list (_A1, _A2) (_B1, _B2) g);;
 
 let rec minus_set _A
   a x1 = match a, x1 with a, Set xs -> fold (remove _A) xs a
@@ -17673,9 +17606,6 @@ let rec callee_of_entry = function FunctionEntry p -> p
                           | Statement v -> ""
                           | FunctionResult v -> "";;
 
-let rec prog_cfg
-  p = compile_prog equal_literal equal_exp (prog_table p) (prog_procs p);;
-
 let rec ordered_by_key _A (_B1, _B2)
   rank s =
     map (fun k -> the_elem _A (filter (fun x -> eq _B1 (rank x) k) s))
@@ -17689,43 +17619,35 @@ let rec run_step
   (Gsolved_run_ext (run_table, run_shared, run_seed, run_step, run_succ, more))
     = run_step;;
 
-let rec report_row _A
-  sr classify conds obls edges i ctx v =
-    (let state = lookup_table _A (run_table sr) v ctx in
+let rec report_row _C
+  sr classify cond conds obls edges i ctx v =
+    (let state = lookup_table _C (run_table sr) v ctx in
       Result_state_ext
         (v, i, state,
-          map (fun cond -> (cond, classify_point classify cond state))
+          map (fun c -> (c, classify_point classify c state))
             (group_lookup linorder_cfg_node conds v),
           map (fun obligation ->
-                (obligation,
-                  classify_point classify (arithmetic_condition obligation)
-                    state))
+                (obligation, classify_point classify (cond obligation) state))
             (concat (group_lookup linorder_cfg_node obls v)),
           map (fun (a, w) -> (w, run_step sr v ctx a))
             (group_lookup linorder_cfg_node edges v),
           ()));;
 
-let rec report_of _A
-  config ctx_key ctx_tag classify sr p =
-    (let g = prog_cfg p in
-     let r = run_table sr in
+let rec report_of (_B1, _B2) (_C1, _C2) _E
+  config vars g globals sites cond procs ctx_key ctx_tag classify sr =
+    (let r = run_table sr in
      let ctxs =
-       ordered_by_key _A (equal_order_key, linorder_order_key) ctx_key
+       ordered_by_key _E (equal_order_key, linorder_order_key) ctx_key
          (image snd (covered_keys r))
        in
      let indexed = enumerate zero_nat ctxs in
      let nodes =
-       cfg_node_list (equal_literal, linorder_literal) (equal_exp, linorder_exp)
-         g @
+       cfg_node_list (_B1, _B2) (_C1, _C2) g @
          sorted_list_of_set (equal_cfg_node, linorder_cfg_node)
            (minus_set equal_cfg_node (image fst (covered_keys r))
-             (Set (cfg_node_list (equal_literal, linorder_literal)
-                    (equal_exp, linorder_exp) g)))
+             (Set (cfg_node_list (_B1, _B2) (_C1, _C2) g)))
        in
-     let intra =
-       cfg_intra_list (equal_literal, linorder_literal)
-         (equal_exp, linorder_exp) g
-       in
+     let intra = cfg_intra_list (_B1, _B2) (_C1, _C2) g in
      let steps =
        group_by_key linorder_cfg_node (fun (u, (_, _)) -> u)
          (fun (_, (a, w)) -> Some (a, w)) intra
@@ -17737,18 +17659,16 @@ let rec report_of _A
          intra
        in
      let obligations =
-       group_by_key linorder_cfg_node fst (comp (fun a -> Some a) snd)
-         (arithmetic_sites g)
-       in
-     let state_at = report_row _A sr classify checks obligations steps in
+       group_by_key linorder_cfg_node fst (comp (fun a -> Some a) snd) sites in
+     let state_at = report_row _E sr classify cond checks obligations steps in
      let route_at =
        (fun u ca ce i ctx ->
          Call_route_ext
            (u, i, callee_of_entry ce,
-             (match lookup_table _A r u ctx with Bot -> []
+             (match lookup_table _E r u ctx with Bot -> []
                | Lifted _ ->
                  remdups equal_nat
-                   (maps (context_indices _A indexed)
+                   (maps (context_indices _E indexed)
                      (live_targets (run_succ sr) u ctx ca
                        (callee_of_entry ce)))),
              ()))
@@ -17758,7 +17678,7 @@ let rec report_of _A
          (match
            filtera
              (fun (_, ctx) ->
-               member (equal_prod equal_cfg_node _A) (FunctionEntry f, ctx)
+               member (equal_prod equal_cfg_node _E) (FunctionEntry f, ctx)
                  (covered_keys r))
              indexed
            with [] -> [Result_global_ext (Global_Seed (f, None), Bot, ())]
@@ -17769,11 +17689,11 @@ let rec report_of _A
                (a :: lista)))
        in
       Analysis_report_ext
-        (config, program_vars p, g, map ctx_tag ctxs,
+        (config, vars, g, map ctx_tag ctxs,
           maps (fun (i, ctx) ->
                  map_filter
                    (fun x ->
-                     (if member (equal_prod equal_cfg_node _A) (x, ctx)
+                     (if member (equal_prod equal_cfg_node _E) (x, ctx)
                            (covered_keys r)
                        then Some (state_at i ctx x) else None))
                    nodes)
@@ -17782,23 +17702,17 @@ let rec report_of _A
                  map_filter
                    (fun x ->
                      (if (let (_, ctx) = x in
-                           member (equal_prod equal_cfg_node _A) (u, ctx)
+                           member (equal_prod equal_cfg_node _E) (u, ctx)
                              (covered_keys r))
                        then Some (let (a, b) = x in route_at u ca ce a b)
                        else None))
                    indexed)
-            (cfg_calls_list (equal_literal, linorder_literal)
-              (equal_exp, linorder_exp) g),
-          result_checks_of _A g r classify,
-          (match config_globals config with Program_Globals_Flow_Sensitive -> []
-            | Program_Globals_Flow_Insensitive ->
-              map (fun x ->
-                    Result_global_ext (Global_Named x, run_shared sr x, ()))
-                (declared_global_vars p)) @
-            maps seeds_of (prog_main_name :: prog_procs p),
-          arithmetic_diagnostics _A (arithmetic_sites g) arithmetic_condition r
-            classify,
-          ()));;
+            (cfg_calls_list (_B1, _B2) (_C1, _C2) g),
+          result_checks_of (_B1, _B2) (_C1, _C2) _E g r classify,
+          map (fun x -> Result_global_ext (Global_Named x, run_shared sr x, ()))
+            globals @
+            maps seeds_of procs,
+          arithmetic_diagnostics _E sites cond r classify, ()));;
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
@@ -18817,6 +18731,18 @@ let rec mcp_run_of
       (mcp_comp asa) (mcp_emp asa) mcp_rd global seed route (mcp_place_cmb pg)
       (mcp_place_rl pg) (mcp_place_enter pg);;
 
+let rec edge_expressions = function EA_Assign (x, e) -> [e]
+                           | EA_Assume e -> [e]
+                           | EA_AssumeNot e -> [e]
+                           | EA_Check (l, e) -> [e]
+                           | EA_Ret (Some e, p) -> [e]
+                           | EA_Special (Min (a, b), x) -> [a; b]
+                           | EA_Special (Max (a, b), x) -> [a; b]
+                           | EA_Nop -> []
+                           | EA_Special (Nondet_Int, va) -> []
+                           | EA_Body v -> []
+                           | EA_Ret (None, va) -> [];;
+
 let rec edge_reads
   a = sorted_list_of_set (equal_literal, linorder_literal)
         (sup_seta equal_literal (image exp_vnames (Set (edge_expressions a))));;
@@ -19679,6 +19605,68 @@ let rec mcp_solve_c _A _B
   (bounded_semilattice_sup_bot_relc, warrowing_relc)))))))))))))))))))
       r t x;;
 
+let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
+
+let rec arithmetic_condition
+  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
+
+let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
+
+let rec arithmetic_expression_sites
+  g = (let edges =
+         cfg_intra_list (equal_literal, linorder_literal)
+           (equal_exp, linorder_exp) g
+         in
+        map_filter
+          (fun x ->
+            (if (match x with (_, (EA_Nop, _)) -> true
+                  | (_, (EA_Assign (_, _), _)) -> true
+                  | (_, (EA_Special (_, _), _)) -> true
+                  | (_, (EA_Assume _, _)) -> true
+                  | (u, (EA_AssumeNot e, _)) ->
+                    not (list_ex
+                          (fun (ua, (a, _)) ->
+                            equal_cfg_nodea u ua &&
+                              equal_gedge_actiona equal_literal equal_exp a
+                                (EA_Assume e))
+                          edges)
+                  | (_, (EA_Body _, _)) -> true
+                  | (_, (EA_Ret (_, _), _)) -> true
+                  | (_, (EA_Check (_, _), _)) -> true)
+              then Some (let (u, (a, _)) = x in (u, edge_expressions a))
+              else None))
+          edges) @
+        map (fun (u, (ca, (_, _))) -> (u, ce_args ca))
+          (cfg_calls_list (equal_literal, linorder_literal)
+            (equal_exp, linorder_exp) g);;
+
+let rec arithmetic_obligations
+  = function N n -> []
+    | V x -> []
+    | Not a -> arithmetic_obligations a
+    | And (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Or (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Div (a, b) ->
+        arithmetic_obligations a @
+          arithmetic_obligations b @ [Arithmetic_Obligation (Div (a, b), b)]
+    | Mod (a, b) ->
+        arithmetic_obligations a @
+          arithmetic_obligations b @ [Arithmetic_Obligation (Mod (a, b), b)]
+    | Plus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Minus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Times (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Less (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | LessEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Greater (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | GreaterEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Eq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
+    | Cast (uu, a) -> arithmetic_obligations a;;
+
+let rec arithmetic_sites
+  g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
+        (arithmetic_expression_sites g);;
+
 let rec route_unit
   u ctx d ca =
     (let c = () in
@@ -19836,6 +19824,9 @@ let rec cs_route
      let _ = Solver_trace_hook.emit "route" (fun _ -> Ev_Route ((u, ctx), d, c))
        in
       c);;
+
+let rec prog_cfg
+  p = compile_prog equal_literal equal_exp (prog_table p) (prog_procs p);;
 
 let rec context_values
   (Analysis_registration_ext
@@ -20793,13 +20784,19 @@ let rec analysis_report_of
          in
         map_option
           (fun sol ->
-            report_of equal_unit (Analysis_Config (asa, r, Ctx_None, pg))
-              (fun _ -> Key_List []) (fun _ -> Report_Unit)
-              (mcp_classify (activation asa))
+            report_of (equal_literal, linorder_literal)
+              (equal_exp, linorder_exp) equal_unit
+              (Analysis_Config (asa, r, Ctx_None, pg)) (program_vars p)
+              (prog_cfg p)
+              (match config_globals (Analysis_Config (asa, r, Ctx_None, pg))
+                with Program_Globals_Flow_Sensitive -> []
+                | Program_Globals_Flow_Insensitive -> declared_global_vars p)
+              (arithmetic_sites (prog_cfg p)) arithmetic_condition
+              (prog_main_name :: prog_procs p) (fun _ -> Key_List [])
+              (fun _ -> Report_Unit) (mcp_classify (activation asa))
               (mcp_run_of (activation asa) pg (fun a -> Analysis_Global a)
                 (fun a b -> Activation_Seed (a, b)) (fun _ -> route_unit)
-                (declared_global p) p sol)
-              p)
+                (declared_global p) p sol))
           (mcp_solve_c equal_unit
             (equal_global_unknown equal_literal equal_unit) r
             (mcp_equations (equal_global_unknown equal_literal equal_unit)
@@ -20817,7 +20814,8 @@ let rec analysis_report_of
            in
           map_option
             (fun sol ->
-              report_of
+              report_of (equal_literal, linorder_literal)
+                (equal_exp, linorder_exp)
                 (equal_analysis_product (equal_list equal_sign)
                   (equal_analysis_product (equal_list equal_ivl)
                     (equal_analysis_product (equal_list equal_parity)
@@ -20830,14 +20828,20 @@ let rec analysis_report_of
                             (equal_analysis_product
                               (equal_list equal_congruence)
                               (equal_list equal_unit))))))))
-                (Analysis_Config (asa, r, Ctx_EntryState, pg))
+                (Analysis_Config (asa, r, Ctx_EntryState, pg)) (program_vars p)
+                (prog_cfg p)
+                (match
+                  config_globals (Analysis_Config (asa, r, Ctx_EntryState, pg))
+                  with Program_Globals_Flow_Sensitive -> []
+                  | Program_Globals_Flow_Insensitive -> declared_global_vars p)
+                (arithmetic_sites (prog_cfg p)) arithmetic_condition
+                (prog_main_name :: prog_procs p)
                 (entry_ctx_key (activation asa)) (fun a -> Report_Entry a)
                 (mcp_classify (activation asa))
                 (mcp_run_of (activation asa) pg (fun a -> Analysis_Global a)
                   (fun a b -> Activation_Seed (a, b))
                   (mcp_formals_route (activation asa)) (declared_global p) p
-                  sol)
-                p)
+                  sol))
             (mcp_solve_c
               (equal_analysis_product (equal_list equal_sign)
                 (equal_analysis_product (equal_list equal_ivl)
@@ -20903,14 +20907,22 @@ let rec analysis_report_of
            in
           map_option
             (fun sol ->
-              report_of (equal_list equal_cfg_node)
+              report_of (equal_literal, linorder_literal)
+                (equal_exp, linorder_exp) (equal_list equal_cfg_node)
                 (Analysis_Config (asa, r, Ctx_CallString k, pg))
+                (program_vars p) (prog_cfg p)
+                (match
+                  config_globals
+                    (Analysis_Config (asa, r, Ctx_CallString k, pg))
+                  with Program_Globals_Flow_Sensitive -> []
+                  | Program_Globals_Flow_Insensitive -> declared_global_vars p)
+                (arithmetic_sites (prog_cfg p)) arithmetic_condition
+                (prog_main_name :: prog_procs p)
                 (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))
                 (fun a -> Report_Call_String a) (mcp_classify (activation asa))
                 (mcp_run_of (activation asa) pg (fun a -> Analysis_Global a)
                   (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k)
-                  (declared_global p) p sol)
-                p)
+                  (declared_global p) p sol))
             (mcp_solve_c (equal_list equal_cfg_node)
               (equal_global_unknown equal_literal (equal_list equal_cfg_node)) r
               (mcp_equations

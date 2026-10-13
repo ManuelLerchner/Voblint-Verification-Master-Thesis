@@ -19,15 +19,15 @@ text \<open>
 
 subsection \<open>The stores a report describes\<close>
 
-definition report_gamma :: "analysis_report \<Rightarrow> mcp_val \<Rightarrow> store set" where
+definition report_gamma :: "vimp_report \<Rightarrow> mcp_val \<Rightarrow> store set" where
   "report_gamma res = mcp_gamma_v (activation (config_analyses (report_config res)))"
 
-definition report_classify :: "analysis_report \<Rightarrow> exp \<Rightarrow> mcp_val \<Rightarrow> check_result" where
+definition report_classify :: "vimp_report \<Rightarrow> exp \<Rightarrow> mcp_val \<Rightarrow> check_result" where
   "report_classify res = mcp_classify (activation (config_analyses (report_config res)))"
 
 text \<open>The states a report holds at a point, one per context it was solved at.\<close>
 
-definition report_states_at :: "analysis_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted set" where
+definition report_states_at :: "vimp_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted set" where
   "report_states_at res v = state_value ` {st \<in> set (report_states res). state_point st = v}"
 
 lemma finite_report_states_at [simp]: "finite (report_states_at res v)"
@@ -35,10 +35,10 @@ lemma finite_report_states_at [simp]: "finite (report_states_at res v)"
 
 text \<open>The stores one such state describes; \<open>Bot\<close> describes none.\<close>
 
-abbreviation report_conc :: "analysis_report \<Rightarrow> mcp_val lifted \<Rightarrow> store set" ("\<gamma>\<^bsub>_\<^esub>") where
+abbreviation report_conc :: "vimp_report \<Rightarrow> mcp_val lifted \<Rightarrow> store set" ("\<gamma>\<^bsub>_\<^esub>") where
   "\<gamma>\<^bsub>res\<^esub> \<equiv> gamma_lift (report_gamma res)"
 
-definition report_sem :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<R>\<^bsub>_\<^esub>") where
+definition report_sem :: "vimp_report \<Rightarrow> pp \<Rightarrow> store set" ("\<R>\<^bsub>_\<^esub>") where
   "\<R>\<^bsub>res\<^esub> v = (\<Union>d \<in> report_states_at res v. \<gamma>\<^bsub>res\<^esub> d)"
 
 lemma mem_report_sem [simp]:
@@ -111,7 +111,7 @@ text \<open>
   \<open>report_checks_at\<close> selects the checks a report records at one program point.
 \<close>
 
-definition report_checks_at :: "analysis_report \<Rightarrow> pp \<Rightarrow> result_check set" where
+definition report_checks_at :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp result_check set" where
   "report_checks_at res v = {c \<in> set (report_checks res). check_point c = v}"
 
 lemma mem_report_checks_at [simp]:
@@ -133,12 +133,12 @@ text \<open>
   its claim, that the point is unreached, is \<open>DEAD\<close> below.
 \<close>
 
-definition check_stores :: "result_check \<Rightarrow> store set" where
+definition check_stores :: "exp result_check \<Rightarrow> store set" where
   "check_stores c = (case check_verdict c of
                        Decided r \<Rightarrow> {s. verdict_holds r (check_exp c) s}
                      | Dead \<Rightarrow> UNIV)"
 
-definition verdict_stores :: "analysis_report \<Rightarrow> pp \<Rightarrow> store set" ("\<V>\<^bsub>_\<^esub>") where
+definition verdict_stores :: "vimp_report \<Rightarrow> pp \<Rightarrow> store set" ("\<V>\<^bsub>_\<^esub>") where
   "\<V>\<^bsub>res\<^esub> v = (\<Inter>c \<in> report_checks_at res v. check_stores c)"
 
 lemma verdict_stores_eq:
@@ -147,17 +147,17 @@ lemma verdict_stores_eq:
            check_verdict c = Decided r \<longrightarrow> verdict_holds r (check_exp c) s}"
   unfolding verdict_stores_def check_stores_def by (auto split: lifted.splits)
 
-definition HAS_VERDICT :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> check_result \<Rightarrow> bool" where
+definition HAS_VERDICT :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> check_result \<Rightarrow> bool" where
   "HAS_VERDICT res v e r \<longleftrightarrow>
      (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided r)"
 
-abbreviation PROVED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation PROVED :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
   "PROVED res v e \<equiv> HAS_VERDICT res v e Check_Proved"
 
-abbreviation REFUTED :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation REFUTED :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
   "REFUTED res v e \<equiv> HAS_VERDICT res v e Check_Refuted"
 
-abbreviation UNKNOWN :: "analysis_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation UNKNOWN :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
   "UNKNOWN res v e \<equiv> HAS_VERDICT res v e Check_Unknown"
 
 lemma verdict_storesD:
@@ -172,7 +172,7 @@ text \<open>
   for a product of analyses, so the converse of \<open>analysis_report_dead\<close> does not hold.
 \<close>
 
-definition DEAD :: "analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
+definition DEAD :: "vimp_report \<Rightarrow> pp \<Rightarrow> bool" where
   "DEAD res v \<longleftrightarrow> (\<forall>d \<in> report_states_at res v. d = Bot)"
 
 subsection \<open>A consistent report\<close>
@@ -183,7 +183,7 @@ text \<open>
   report \<^const>\<open>run_voblint\<close> returns is consistent.
 \<close>
 
-definition consistent_report :: "analysis_report \<Rightarrow> bool" where
+definition consistent_report :: "vimp_report \<Rightarrow> bool" where
   "consistent_report res \<longleftrightarrow>
      (\<forall>c \<in> set (report_checks res).
         check_verdict c
@@ -273,7 +273,7 @@ text \<open>
   report, not one a run is shown to return.
 \<close>
 
-definition contradiction_report :: "pp \<Rightarrow> analysis_report" where
+definition contradiction_report :: "pp \<Rightarrow> vimp_report" where
   "contradiction_report v =
      \<lparr> report_config = Analysis_Config [Interval_Analysis, Parity_Analysis] Globals_Join Ctx_None
          Program_Globals_Flow_Sensitive,
@@ -373,7 +373,7 @@ lemma row_in_rows:
 
 lemma report_states_at_report_of:
   assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
-  shows "report_states_at (report_of config ctx_key ctx_tag classify sr p) v
+  shows "report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v
            = lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
 proof -
   define r where "r = run_table sr"
@@ -399,7 +399,7 @@ proof -
   show ?thesis
   proof (intro equalityI subsetI)
     fix d
-    assume "d \<in> report_states_at (report_of config ctx_key ctx_tag classify sr p) v"
+    assume "d \<in> report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v"
     then show "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
       unfolding report_states_at_def report_of_def Let_def by (auto simp: table_contexts_iff)
   next
@@ -411,7 +411,7 @@ proof -
     from cov ctxs have "ctx \<in> set ctxs" by force
     then obtain i where i: "(i, ctx) \<in> set (enumerate 0 ctxs)" using indexed by blast
     have w: "v \<in> set nodes" using nodes[OF cov] .
-    show "d \<in> report_states_at (report_of config ctx_key ctx_tag classify sr p) v"
+    show "d \<in> report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v"
       unfolding report_states_at_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
         nodes_def[symmetric]
       apply (simp only: analysis_report.select_convs)
@@ -421,11 +421,11 @@ proof -
 qed
 
 lemma report_of_simps [simp]:
-  "report_config (report_of config ctx_key ctx_tag classify sr p) = config"
-  "report_cfg (report_of config ctx_key ctx_tag classify sr p) = prog_cfg p"
-  "report_checks (report_of config ctx_key ctx_tag classify sr p)
+  "report_config (vimp_report_of config ctx_key ctx_tag classify sr p) = config"
+  "report_cfg (vimp_report_of config ctx_key ctx_tag classify sr p) = prog_cfg p"
+  "report_checks (vimp_report_of config ctx_key ctx_tag classify sr p)
      = result_checks_of (prog_cfg p) (run_table sr) classify"
-  "report_diagnostics (report_of config ctx_key ctx_tag classify sr p)
+  "report_diagnostics (vimp_report_of config ctx_key ctx_tag classify sr p)
      = arithmetic_diagnostics (arithmetic_sites (prog_cfg p)) arithmetic_condition
          (run_table sr) classify"
   by (simp_all add: report_of_def Let_def)
@@ -436,7 +436,7 @@ text \<open>
   point where a divisor may be zero, and its check column lists the program's checks.
 \<close>
 
-definition sound_report :: "imp_prog \<Rightarrow> analysis_report \<Rightarrow> bool" where
+definition sound_report :: "imp_prog \<Rightarrow> vimp_report \<Rightarrow> bool" where
   "sound_report p res \<longleftrightarrow>
      consistent_report res
    \<and> (\<forall>v. \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v \<subseteq> \<R>\<^bsub>res\<^esub> v)
@@ -454,11 +454,11 @@ lemma report_of_sound:
     and fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
     and cl: "classify = mcp_classify (activation (config_analyses config))"
     and gm: "gm = mcp_gamma_v (activation (config_analyses config))"
-  shows "sound_report p (report_of config ctx_key ctx_tag classify sr p)"
+  shows "sound_report p (vimp_report_of config ctx_key ctx_tag classify sr p)"
 proof -
   have st: "sound_table p (run_table sr) classify gm"
     by (rule sound_table.intro [OF cov]) (unfold cl gm, rule mcp_sound_classifier)
-  let ?res = "report_of config ctx_key ctx_tag classify sr p"
+  let ?res = "vimp_report_of config ctx_key ctx_tag classify sr p"
   note rows = report_states_at_report_of[OF fin inj]
   have cons: "consistent_report ?res"
     unfolding consistent_report_def
@@ -527,7 +527,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_rule.equations as (declared_global p) p)
                 (mcp_rule.root_query p) = Some sol"
-        and res: "res = report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+        and res: "res = vimp_report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
                     (mcp_classify (activation as))
                     (mcp_rule.solved_run_of as (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_None Program_Globals_Flow_Sensitive
@@ -545,7 +545,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_split_rule.equations as (declared_global p) p)
                 (mcp_split_rule.root_query p) = Some sol"
-        and res: "res = report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+        and res: "res = vimp_report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
                     (mcp_classify (activation as))
                     (mcp_split_rule.solved_run_of as (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_None Program_Globals_Flow_Insensitive
@@ -568,7 +568,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
                 (mcp_es_rule.root_query p) = Some sol"
-        and res: "res = report_of config (entry_ctx_key (activation as)) Report_Entry
+        and res: "res = vimp_report_of config (entry_ctx_key (activation as)) Report_Entry
                     (mcp_classify (activation as))
                     (mcp_es_rule.solved_run_of as (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Sensitive
@@ -585,7 +585,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_split_es_rule.equations as (declared_global p) p)
                 (mcp_split_es_rule.root_query p) = Some sol"
-        and res: "res = report_of config (entry_ctx_key (activation as)) Report_Entry
+        and res: "res = vimp_report_of config (entry_ctx_key (activation as)) Report_Entry
                     (mcp_classify (activation as))
                     (mcp_split_es_rule.solved_run_of as (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Insensitive
@@ -607,7 +607,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_cs_rule.equations as k (declared_global p) p)
                 (mcp_cs_rule.root_query p) = Some sol"
-        and res: "res = report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
+        and res: "res = vimp_report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
                     (mcp_classify (activation as))
                     (mcp_cs_rule.solved_run_of as k (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Sensitive
@@ -624,7 +624,7 @@ proof (cases config)
       from some obtain sol where
         sol: "TD_side_rule_Interp_solve_c r (mcp_split_cs_rule.equations as k (declared_global p) p)
                 (mcp_split_cs_rule.root_query p) = Some sol"
-        and res: "res = report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
+        and res: "res = vimp_report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
                     (mcp_classify (activation as))
                     (mcp_split_cs_rule.solved_run_of as k (declared_global p) p sol) p"
         by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Insensitive
@@ -665,7 +665,7 @@ proof -
   then show ?thesis unfolding group_lookup_group_by_key obligations_at_def by simp
 qed
 
-definition well_formed_report :: "analysis_report \<Rightarrow> bool" where
+definition well_formed_report :: "vimp_report \<Rightarrow> bool" where
   "well_formed_report res \<longleftrightarrow>
      (\<forall>st \<in> set (report_states res). state_context st < length (report_contexts res))
    \<and> distinct (map (\<lambda>st. (state_point st, state_context st)) (report_states res))
@@ -763,9 +763,9 @@ qed
 
 lemma report_of_well_formed:
   assumes cl: "classify = mcp_classify (activation (config_analyses config))"
-  shows "well_formed_report (report_of config ctx_key ctx_tag classify sr p)"
+  shows "well_formed_report (vimp_report_of config ctx_key ctx_tag classify sr p)"
 proof -
-  let ?res = "report_of config ctx_key ctx_tag classify sr p"
+  let ?res = "vimp_report_of config ctx_key ctx_tag classify sr p"
   define r where "r = run_table sr"
   define g where "g = prog_cfg p"
   define ctxs where "ctxs = ordered_by_key ctx_key (snd ` covered_keys r)"
@@ -781,7 +781,7 @@ proof -
   have contexts: "length (report_contexts ?res) = length ctxs"
     by (simp add: report_of_def Let_def ctxs_def r_def)
   have states: "report_states ?res
-    = concat (map (\<lambda>(i, ctx). map (report_row sr classify checks obls steps i ctx)
+    = concat (map (\<lambda>(i, ctx). map (report_row sr classify arithmetic_condition checks obls steps i ctx)
                                  (filter (\<lambda>v. (v, ctx) \<in> covered_keys r) nodes))
                 (enumerate 0 ctxs))"
     by (simp add: report_of_def Let_def ctxs_def r_def nodes_def g_def checks_def obls_def
@@ -809,7 +809,8 @@ proof -
                       (obligations_at g (state_point st))"
     if "st \<in> set (report_states ?res)" for st
   proof -
-    from that obtain i ctx v where st: "st = report_row sr classify checks obls steps i ctx v"
+    from that obtain i ctx v
+      where st: "st = report_row sr classify arithmetic_condition checks obls steps i ctx v"
       by (auto simp: states)
     have "map check_exp (filter (\<lambda>c. check_point c = v) (report_checks ?res))
             = group_lookup checks v" (is "map check_exp ?cs = _")
@@ -836,6 +837,7 @@ qed
 
 lemma analysis_report_of_well_formed:
   "analysis_report_of config p = Some res \<Longrightarrow> well_formed_report res"
-  by (induct config p rule: analysis_report_of.induct) (auto intro: report_of_well_formed)
+  by (induct config p rule: analysis_report_of.induct)
+     (auto intro: report_of_well_formed[where config = "Analysis_Config _ _ _ _", simplified])
 
 end

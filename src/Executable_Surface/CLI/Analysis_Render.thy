@@ -32,14 +32,14 @@ record analysis_graph =
 
 text \<open>The program globals the report keeps at unknowns of their own.\<close>
 
-definition report_global_names :: "analysis_report \<Rightarrow> vname list" where
+definition report_global_names :: "vimp_report \<Rightarrow> vname list" where
   "report_global_names res =
      concat (map (\<lambda>g. case global_unknown g of Global_Named x \<Rightarrow> [x] | _ \<Rightarrow> []) (report_globals res))"
 
-definition report_rows_of :: "analysis_report \<Rightarrow> (pp \<times> nat) list" where
+definition report_rows_of :: "vimp_report \<Rightarrow> (pp \<times> nat) list" where
   "report_rows_of res = map (\<lambda>st. (state_point st, state_context st)) (report_states res)"
 
-definition report_route_targets :: "analysis_report \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> nat list" where
+definition report_route_targets :: "vimp_report \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> nat list" where
   "report_route_targets res u c =
      concat (map route_targets
        (filter (\<lambda>r. route_point r = u \<and> route_context r = c) (report_routes res)))"
@@ -68,7 +68,7 @@ text \<open>
 \<close>
 
 definition call_deps ::
-    "analysis_report \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat
+    "vimp_report \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat
      \<Rightarrow> pp \<times> call_action \<times> pp \<times> pp \<Rightarrow> (unknown_node \<times> analysis_edge \<times> unknown_node) list" where
   "call_deps res G rows u c e =
      (case e of (u', ca, entry, after) \<Rightarrow>
@@ -90,7 +90,7 @@ definition call_deps ::
                                (global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)))
                  else [])))"
 
-definition analysis_graph_of :: "analysis_report \<Rightarrow> analysis_graph" where
+definition analysis_graph_of :: "vimp_report \<Rightarrow> analysis_graph" where
   "analysis_graph_of res =
      (let g = report_cfg res;
           rows = report_rows_of res;
@@ -199,7 +199,7 @@ end
 instance relc :: join_val_sup
   by standard (simp add: vjoin_relc_def)
 
-definition report_point_join :: "analysis_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted" where
+definition report_point_join :: "vimp_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted" where
   "report_point_join res v =
      fold vjoin (map state_value (filter (\<lambda>st. state_point st = v) (report_states res))) Bot"
 
@@ -209,7 +209,7 @@ text \<open>
   joined position by position.
 \<close>
 
-definition report_steps_join :: "analysis_report \<Rightarrow> pp \<Rightarrow> (pp \<times> mcp_val lifted) list" where
+definition report_steps_join :: "vimp_report \<Rightarrow> pp \<Rightarrow> (pp \<times> mcp_val lifted) list" where
   "report_steps_join res v =
      (case map state_steps (filter (\<lambda>st. state_point st = v) (report_states res)) of
         [] \<Rightarrow> []
@@ -223,11 +223,11 @@ lemma report_point_join_sup:
 record 'v run_result =
   res_cfg :: cfg
   res_contexts :: "'v analysis_context list"
-  res_states :: "'v analysis_view result_state list"
+  res_states :: "(exp, 'v analysis_view) result_state list"
   res_joined :: "(pp \<times> 'v analysis_view lifted \<times> (pp \<times> 'v analysis_view lifted) list) list"
   res_routes :: "call_route list"
-  res_checks :: "result_check list"
-  res_globals :: "'v analysis_view result_global list"
+  res_checks :: "exp result_check list"
+  res_globals :: "(vname, 'v analysis_view) result_global list"
   res_diagnostics :: "exp arithmetic_diagnostic list"
   res_graph :: analysis_graph
 
@@ -250,7 +250,7 @@ where
 | "render_context show as (Report_Entry ctx) = Context_Entry (map show (mcp_ctx_values as ctx))"
 | "render_context show as (Report_Call_String us) = Context_Call_String us"
 
-definition render_report :: "(abstract_value \<Rightarrow> 'v) \<Rightarrow> analysis_report \<Rightarrow> 'v run_result" where
+definition render_report :: "(abstract_value \<Rightarrow> 'v) \<Rightarrow> vimp_report \<Rightarrow> 'v run_result" where
   "render_report show res =
      (let as = activation (config_analyses (report_config res));
           state = map_analysis_view show \<circ> mcp_render as (report_vars res)

@@ -283,7 +283,7 @@ text \<open>
   above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
 \<close>
 
-definition answer_all :: "contextual_verdict \<Rightarrow> analysis_report \<Rightarrow> analysis_report" where
+definition answer_all :: "contextual_verdict \<Rightarrow> vimp_report \<Rightarrow> vimp_report" where
   "answer_all vd res =
      res\<lparr>report_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (report_checks res)\<rparr>"
 
