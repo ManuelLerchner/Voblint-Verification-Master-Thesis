@@ -10,7 +10,8 @@ text \<open>
   at. \<open>top_ik k\<close> is Goblint's \<open>top_of ik\<close>, \<open>of_int_ik\<close> its \<open>of_int ik\<close>, \<open>cast_ik\<close> its
   \<open>cast_to ik\<close>, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
   result is normalized to \<open>k\<close>. A comparison answers \<open>Some b\<close> only when every pair of
-  operands agrees on \<open>b\<close>.
+  operands agrees on \<open>b\<close>. \<open>refine_ik c a b\<close> narrows both operands of a comparison
+  known to hold, as Goblint's \<^verbatim>\<open>invariant\<close> does for a guard.
 \<close>
 
 class kind_int_domain = ik_domain +
@@ -19,6 +20,8 @@ class kind_int_domain = ik_domain +
     and cast_ik :: "ikind \<Rightarrow> 'a \<Rightarrow> 'a"
     and arith_ik :: "ikind \<Rightarrow> aop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and cmp_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool option"
+    and meet_ik :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
+    and refine_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
   assumes top_ik_sound: "n \<in> ik_range k \<Longrightarrow> n \<in> \<gamma> (top_ik k)"
     and of_int_ik_sound: "ik_norm k n \<in> \<gamma> (of_int_ik k n)"
     and cast_ik_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik k a)"
@@ -26,6 +29,10 @@ class kind_int_domain = ik_domain +
       "m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> \<gamma> (arith_ik k op a b)"
     and cmp_ik_sound:
       "cmp_ik c a b = Some r \<Longrightarrow> m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> cop_eval c m n = r"
+    and meet_ik_sound: "m \<in> \<gamma> a \<Longrightarrow> m \<in> \<gamma> b \<Longrightarrow> m \<in> \<gamma> (meet_ik a b)"
+    and refine_ik_sound:
+      "cop_eval c m n \<Longrightarrow> m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b
+         \<Longrightarrow> m \<in> \<gamma> (fst (refine_ik c a b)) \<and> n \<in> \<gamma> (snd (refine_ik c a b))"
 
 section \<open>Typed abstract states\<close>
 

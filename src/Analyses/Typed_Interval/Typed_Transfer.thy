@@ -34,9 +34,51 @@ definition special_val :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow>
 definition tspecial :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tspecial sc x \<sigma> = \<sigma>(x := KD (\<kappa> x) (special_val sc x \<sigma>))"
 
+text \<open>
+  A guard narrows the variables it compares, as Goblint's \<^verbatim>\<open>baseInvariant\<close>
+  does: a variable read directly, or through a conversion to a kind whose range contains
+  the variable's own, so that the conversion keeps every value. A negation flips the
+  polarity, a conjunction that holds and a disjunction that fails narrow by both sides.
+\<close>
+
+fun neg_cop :: "cop \<Rightarrow> cop" where
+  "neg_cop CLt = CGe" | "neg_cop CLe = CGt" | "neg_cop CGt = CLe" | "neg_cop CGe = CLt"
+| "neg_cop CEq = CNe" | "neg_cop CNe = CEq"
+
+lemma cop_eval_neg_cop [simp]: "cop_eval (neg_cop c) m n \<longleftrightarrow> \<not> cop_eval c m n"
+  by (cases c) auto
+
+definition preserves_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
+  "preserves_kind k ik \<longleftrightarrow> ik_min ik \<le> ik_min k \<and> ik_max k \<le> ik_max ik"
+
+lemma preserves_kind_norm:
+  "preserves_kind k ik \<Longrightarrow> n \<in> ik_range k \<Longrightarrow> ik_norm ik n = n"
+  by (auto simp: preserves_kind_def intro!: ik_norm_id)
+
+definition narrow_var :: "var_id \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
+  "narrow_var v a \<sigma> =
+     (if v = ReturnVar then \<sigma> else \<sigma>(v := KD (\<kappa> v) (meet_ik a (read_var \<kappa> \<sigma> v))))"
+
+fun refine_var :: "texp \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
+  "refine_var (TVar ik v) a \<sigma> = narrow_var v a \<sigma>"
+| "refine_var (TCast ik (TVar ik' v)) a \<sigma> =
+     (if preserves_kind (\<kappa> v) ik then narrow_var v a \<sigma> else \<sigma>)"
+| "refine_var e a \<sigma> = \<sigma>"
+
+fun trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
+  "trefine (TCmp c l r) pol \<sigma> =
+     (let (al, ar) = refine_ik (if pol then c else neg_cop c) (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>)
+      in refine_var l al (refine_var r ar \<sigma>))"
+| "trefine (TNot e) pol \<sigma> = trefine e (\<not> pol) \<sigma>"
+| "trefine (TAnd a b) True \<sigma> = trefine b True (trefine a True \<sigma>)"
+| "trefine (TOr a b) False \<sigma> = trefine b False (trefine a False \<sigma>)"
+| "trefine e pol \<sigma> = \<sigma>"
+
 definition tbranch :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tbranch b pol \<sigma> =
-     (case truth_ik (taeval \<kappa> b \<sigma>) of Some r \<Rightarrow> if r = pol then \<sigma> else \<bottom> | None \<Rightarrow> \<sigma>)"
+     (case truth_ik (taeval \<kappa> b \<sigma>) of
+        Some r \<Rightarrow> if r = pol then trefine b pol \<sigma> else \<bottom>
+      | None \<Rightarrow> trefine b pol \<sigma>)"
 
 text \<open>The returned value is tagged with a kind whose range it lies in: a variable's
   declared kind, or the kind an operation normalized it to.\<close>
@@ -126,6 +168,75 @@ lemma tspecial_sound:
   unfolding tspecial_def
   using gamma_tabs_upd[OF assms(1)] special_val_sound[OF assms] by simp
 
+lemma narrow_var_sound:
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "t v \<in> numeric_domain_class.gamma a"
+  shows "t \<in> gamma_tabs \<kappa> (narrow_var v a \<sigma>)"
+proof (cases "v = ReturnVar")
+  case False
+  have rng: "t v \<in> ik_range (\<kappa> v)"
+    using gamma_tabsD(1)[OF assms(1)] False by (simp add: tstyped_def)
+  have "t v \<in> numeric_domain_class.gamma (meet_ik a (read_var \<kappa> \<sigma> v))"
+    by (rule meet_ik_sound[OF assms(2) read_var_sound[OF assms(1)]])
+  with rng have "t(v := t v) \<in> gamma_tabs \<kappa> (\<sigma>(v := KD (\<kappa> v) (meet_ik a (read_var \<kappa> \<sigma> v))))"
+    by (intro gamma_tabs_upd[OF assms(1)]) simp_all
+  with False show ?thesis by (simp add: narrow_var_def)
+qed (use assms in \<open>simp add: narrow_var_def\<close>)
+
+lemma refine_var_sound:
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "teval e t \<in> numeric_domain_class.gamma a"
+  shows "t \<in> gamma_tabs \<kappa> (refine_var e a \<sigma>)"
+proof (cases "\<exists>ik v. e = TVar ik v")
+  case True
+  then obtain ik v where "e = TVar ik v" by blast
+  with assms show ?thesis by (simp add: narrow_var_sound)
+next
+  case False
+  show ?thesis
+  proof (cases "\<exists>ik ik' v. e = TCast ik (TVar ik' v)")
+    case True
+    then obtain ik ik' v where e: "e = TCast ik (TVar ik' v)" by blast
+    show ?thesis
+    proof (cases "preserves_kind (\<kappa> v) ik \<and> v \<noteq> ReturnVar")
+      case pk: True
+      have rng: "t v \<in> ik_range (\<kappa> v)"
+        using gamma_tabsD(1)[OF assms(1)] pk by (simp add: tstyped_def)
+      have "teval e t = t v"
+        using e pk preserves_kind_norm[of "\<kappa> v" ik "t v"] rng by (simp del: ik_range_iff)
+      with assms pk e show ?thesis by (simp add: narrow_var_sound)
+    next
+      case False
+      with assms e show ?thesis by (auto simp: narrow_var_def)
+    qed
+  next
+    case False
+    with \<open>\<not> (\<exists>ik v. e = TVar ik v)\<close> have "refine_var e a \<sigma> = \<sigma>"
+      by (cases "(e, a, \<sigma>)" rule: refine_var.cases) auto
+    with assms show ?thesis by simp
+  qed
+qed
+
+lemma trefine_sound:
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "truthy (teval b t) = pol"
+  shows "t \<in> gamma_tabs \<kappa> (trefine b pol \<sigma>)"
+  using assms
+proof (induction b pol \<sigma> rule: trefine.induct)
+  case (1 c l r pol \<sigma>)
+  let ?c = "if pol then c else neg_cop c"
+  have holds: "cop_eval ?c (teval l t) (teval r t)"
+    using 1(2) by (auto split: if_splits)
+  obtain al ar where ref: "refine_ik ?c (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>) = (al, ar)"
+    by (cases "refine_ik ?c (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>)")
+  have "teval l t \<in> numeric_domain_class.gamma al" "teval r t \<in> numeric_domain_class.gamma ar"
+    using refine_ik_sound[OF holds taeval_sound[OF 1(1)] taeval_sound[OF 1(1)]] ref by simp_all
+  then show ?case using ref 1(1) by (simp add: refine_var_sound)
+next
+  case (2 e pol \<sigma>) then show ?case by (auto split: if_splits)
+next
+  case (3 a b \<sigma>) then show ?case by (auto split: if_splits)
+next
+  case (4 a b \<sigma>) then show ?case by (auto split: if_splits)
+qed simp_all
+
 lemma tbranch_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "truthy (teval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (tbranch b pol \<sigma>)"
@@ -133,8 +244,8 @@ proof (cases "truth_ik (taeval \<kappa> b \<sigma>)")
   case (Some r)
   then have "truthy (teval b t) = r"
     by (rule truth_ik_sound[OF _ taeval_sound[OF assms(1)]])
-  with Some assms show ?thesis by (simp add: tbranch_def)
-qed (use assms in \<open>simp add: tbranch_def\<close>)
+  with Some assms trefine_sound[OF assms] show ?thesis by (simp add: tbranch_def)
+qed (use assms trefine_sound[OF assms] in \<open>simp add: tbranch_def\<close>)
 
 lemma teval_in_range_kind:
   assumes "\<not> (\<exists>ik v. e = TVar ik v)"
@@ -358,5 +469,117 @@ proof -
       done
   qed
 qed
+
+
+subsection \<open>Kind consistency\<close>
+
+text \<open>
+  Concretization alone does not fix the tags: a cell tagged with another kind still
+  describes stores in its variable's range. A Goblint-style state also keeps every tag
+  at the variable's declared kind, so that an operation reading the cell runs at the
+  right kind. The return slot has no declared kind and is exempt. The operations above,
+  the join, the widening and the narrowing all keep the invariant.
+\<close>
+
+definition kd_at :: "ikind \<Rightarrow> 'a kd \<Rightarrow> bool" where
+  "kd_at k d \<longleftrightarrow> (\<forall>l a. d = KD l a \<longrightarrow> l = k)"
+
+lemma kd_at_simps [simp]:
+  "kd_at k KBot" "kd_at k KTop" "kd_at k (KD l a) \<longleftrightarrow> l = k"
+  by (auto simp: kd_at_def)
+
+definition kind_consistent :: "kenv \<Rightarrow> 'a tabs \<Rightarrow> bool" where
+  "kind_consistent \<kappa> \<sigma> \<longleftrightarrow> (\<forall>v. v \<noteq> ReturnVar \<longrightarrow> kd_at (\<kappa> v) (\<sigma> v))"
+
+fun kind_consistent_tt :: "kenv \<Rightarrow> 'a tabs toplift \<Rightarrow> bool" where
+  "kind_consistent_tt \<kappa> TTop \<longleftrightarrow> True"
+| "kind_consistent_tt \<kappa> (TL \<sigma>) \<longleftrightarrow> kind_consistent \<kappa> \<sigma>"
+
+lemma kind_consistent_upd:
+  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> (x \<noteq> ReturnVar \<Longrightarrow> kd_at (\<kappa> x) d)
+     \<Longrightarrow> kind_consistent \<kappa> (\<sigma>(x := d))"
+  by (auto simp: kind_consistent_def)
+
+lemma kd_at_sup: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<squnion> b)"
+  for a b :: "'a::ik_domain kd"
+  by (cases a; cases b) auto
+
+lemma kd_at_widen: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<nabla> b)"
+  for a b :: "'a::ik_domain kd"
+  by (cases a; cases b) auto
+
+lemma kd_at_narrow: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<Delta> b)"
+  for a b :: "'a::ik_domain kd"
+  by (cases a; cases b) auto
+
+lemma kind_consistent_sup:
+  "kind_consistent \<kappa> \<sigma>\<^sub>1 \<Longrightarrow> kind_consistent \<kappa> \<sigma>\<^sub>2 \<Longrightarrow> kind_consistent \<kappa> (\<sigma>\<^sub>1 \<squnion> \<sigma>\<^sub>2)"
+  for \<sigma>\<^sub>1 \<sigma>\<^sub>2 :: "'a::ik_domain tabs"
+  by (simp add: kind_consistent_def kd_at_sup)
+
+lemma kind_consistent_pointwise:
+  assumes "kind_consistent \<kappa> \<sigma>\<^sub>1" "kind_consistent \<kappa> \<sigma>\<^sub>2"
+    and "\<And>k a b. kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (f a b)"
+  shows "kind_consistent \<kappa> (\<lambda>v. f (\<sigma>\<^sub>1 v) (\<sigma>\<^sub>2 v))"
+  using assms by (simp add: kind_consistent_def)
+
+lemma kind_consistent_bot [simp]: "kind_consistent \<kappa> \<bottom>"
+  by (simp add: kind_consistent_def bot_fun_def bot_kd_def)
+
+context
+  fixes \<kappa> :: kenv
+begin
+
+lemma tassign_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tassign \<kappa> x e \<sigma>)"
+  by (simp add: tassign_def kind_consistent_upd)
+
+lemma tspecial_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tspecial \<kappa> sc x \<sigma>)"
+  by (simp add: tspecial_def kind_consistent_upd)
+
+lemma narrow_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (narrow_var \<kappa> v a \<sigma>)"
+  by (simp add: narrow_var_def kind_consistent_upd)
+
+lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (refine_var \<kappa> e a \<sigma>)"
+  by (induction e a \<sigma> rule: refine_var.induct) (simp_all add: narrow_var_kind)
+
+lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (trefine \<kappa> b pol \<sigma>)"
+  by (induction b pol \<sigma> rule: trefine.induct) (simp_all add: refine_var_kind split: prod.splits)
+
+lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> b pol \<sigma>)"
+  by (simp add: tbranch_def trefine_kind split: option.splits)
+
+lemma treturn_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (treturn \<kappa> r \<sigma>)"
+  by (simp add: treturn_def kind_consistent_upd split: option.splits)
+
+lemma tenter_state_kind:
+  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent_tt \<kappa> (tenter_state \<kappa> ps es \<sigma>)"
+proof -
+  assume kc: "kind_consistent \<kappa> \<sigma>"
+  have frame: "kind_consistent \<kappa> (tenter_frame \<sigma>)"
+    using kc by (simp add: kind_consistent_def tenter_frame_def enter_frame_def combine_env_def)
+  have "kind_consistent \<kappa> (bind_formals ps (map2 f ps es) \<tau>)"
+    if "kind_consistent \<kappa> \<tau>" and "\<And>p e. kd_at (\<kappa> p) (f p e)" for f :: "var_id \<Rightarrow> texp \<Rightarrow> 'a kd" and \<tau>
+    using that
+  proof (induction ps arbitrary: es \<tau>)
+    case (Cons p ps)
+    show ?case
+    proof (cases es)
+      case (Cons e es')
+      have "kind_consistent \<kappa> (\<tau>(p := f p e))"
+        using Cons.prems by (simp add: kind_consistent_upd)
+      from Cons.IH[OF this Cons.prems(2), of es'] \<open>es = e # es'\<close> show ?thesis by simp
+    qed (use Cons.prems in simp)
+  qed simp
+  then show ?thesis
+    using frame by (simp add: tenter_state_def)
+qed
+
+lemma tcombine_kind:
+  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> \<sigma>\<^sub>e
+     \<Longrightarrow> kind_consistent \<kappa> (tcombine_assign \<kappa> dst (combine_env tglobal \<sigma> \<sigma>\<^sub>e) \<sigma>\<^sub>e)"
+  by (cases dst)
+     (simp_all add: tcombine_assign_def kind_consistent_def combine_env_def)
+
+end
 
 end

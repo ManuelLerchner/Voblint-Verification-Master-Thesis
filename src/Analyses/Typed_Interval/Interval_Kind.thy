@@ -153,6 +153,69 @@ lemma ivl_cop_sound:
   "ivl_cop c a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> cop_eval c m n = r"
   by (cases c) (auto dest: ivl_lt_sound ivl_eq_sound)
 
+fun ivl_lo :: "ivl \<Rightarrow> eint" where "ivl_lo (Ivl l u) = l"
+fun ivl_hi :: "ivl \<Rightarrow> eint" where "ivl_hi (Ivl l u) = u"
+
+lemma gamma_ivl_bounds:
+  assumes "n \<in> gamma_ivl a"
+  shows "ivl_lo a \<le> Fin n" and "Fin n \<le> ivl_hi a"
+  using assms by (cases a; simp)+
+
+text \<open>The bounds a comparison known to hold puts on its operands: \<open>m < n\<close> bounds \<open>m\<close>
+  by \<open>n\<close>'s upper bound less one and \<open>n\<close> by \<open>m\<close>'s lower bound plus one.\<close>
+
+definition ivl_le_bounds :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+  "ivl_le_bounds a b = (a \<sqinter> Ivl MinInf (ivl_hi b), b \<sqinter> Ivl (ivl_lo a) PlusInf)"
+
+definition ivl_lt_bounds :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+  "ivl_lt_bounds a b =
+     (a \<sqinter> Ivl MinInf (ivl_hi b - Fin 1), b \<sqinter> Ivl (ivl_lo a + Fin 1) PlusInf)"
+
+lemma eint_le_minus_one: "Fin m < Fin n \<Longrightarrow> Fin n \<le> u \<Longrightarrow> Fin m \<le> u - Fin 1"
+  by (cases u) (auto simp: less_eq_eint_def less_eint_def)
+
+lemma eint_plus_one_le: "Fin m < Fin n \<Longrightarrow> l \<le> Fin m \<Longrightarrow> l + Fin 1 \<le> Fin n"
+  by (cases l) (auto simp: less_eq_eint_def less_eint_def)
+
+lemma ivl_le_bounds_sound:
+  assumes "m \<le> n" "m \<in> gamma_ivl a" "n \<in> gamma_ivl b"
+  shows "m \<in> gamma_ivl (fst (ivl_le_bounds a b)) \<and> n \<in> gamma_ivl (snd (ivl_le_bounds a b))"
+proof -
+  have mn: "eint_le (Fin m) (Fin n)" using assms(1) by simp
+  have "Fin m \<le> ivl_hi b" "ivl_lo a \<le> Fin n"
+    using eint_le_trans[OF mn gamma_ivl_bounds(2)[OF assms(3), unfolded less_eq_eint_def]]
+      eint_le_trans[OF gamma_ivl_bounds(1)[OF assms(2), unfolded less_eq_eint_def] mn]
+    by (simp_all add: less_eq_eint_def)
+  then show ?thesis using assms
+    by (auto simp: ivl_le_bounds_def less_eq_eint_def intro!: meet_ivl_gamma)
+qed
+
+lemma ivl_lt_bounds_sound:
+  assumes "m < n" "m \<in> gamma_ivl a" "n \<in> gamma_ivl b"
+  shows "m \<in> gamma_ivl (fst (ivl_lt_bounds a b)) \<and> n \<in> gamma_ivl (snd (ivl_lt_bounds a b))"
+proof -
+  have lt: "Fin m < Fin n" using assms(1) by (simp add: less_eint_def)
+  have "Fin m \<le> ivl_hi b - Fin 1" "ivl_lo a + Fin 1 \<le> Fin n"
+    using eint_le_minus_one[OF lt gamma_ivl_bounds(2)[OF assms(3)]]
+      eint_plus_one_le[OF lt gamma_ivl_bounds(1)[OF assms(2)]] by blast+
+  then show ?thesis using assms
+    by (auto simp: ivl_lt_bounds_def less_eq_eint_def intro!: meet_ivl_gamma)
+qed
+
+fun ivl_refine :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
+  "ivl_refine CLt a b = ivl_lt_bounds a b"
+| "ivl_refine CLe a b = ivl_le_bounds a b"
+| "ivl_refine CGt a b = prod.swap (ivl_lt_bounds b a)"
+| "ivl_refine CGe a b = prod.swap (ivl_le_bounds b a)"
+| "ivl_refine CEq a b = (a \<sqinter> b, a \<sqinter> b)"
+| "ivl_refine CNe a b = (a, b)"
+
+lemma ivl_refine_sound:
+  "cop_eval c m n \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b
+     \<Longrightarrow> m \<in> gamma_ivl (fst (ivl_refine c a b)) \<and> n \<in> gamma_ivl (snd (ivl_refine c a b))"
+  by (cases c)
+     (auto dest: ivl_le_bounds_sound ivl_lt_bounds_sound intro: meet_ivl_gamma)
+
 instantiation ivl :: kind_int_domain
 begin
 
@@ -168,6 +231,10 @@ definition arith_ik_ivl :: "ikind \<Rightarrow> aop \<Rightarrow> ivl \<Rightarr
 
 definition cmp_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where "cmp_ik_ivl = ivl_cop"
 
+definition meet_ik_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "meet_ik_ivl a b = a \<sqinter> b"
+
+definition refine_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where "refine_ik_ivl = ivl_refine"
+
 instance proof
   fix n m :: int and k :: ikind and a b :: ivl and op :: aop and c :: cop and r :: bool
   show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: ivl)"
@@ -180,6 +247,13 @@ instance proof
     by (simp add: arith_ik_ivl_def norm_ivl_ik_sound ivl_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
     by (simp add: cmp_ik_ivl_def ivl_cop_sound)
+  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> m \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> m \<in> numeric_domain_class.gamma (meet_ik a b)"
+    by (simp add: meet_ik_ivl_def meet_ivl_gamma)
+  show "cop_eval c m n \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> m \<in> numeric_domain_class.gamma (fst (refine_ik c a b))
+        \<and> n \<in> numeric_domain_class.gamma (snd (refine_ik c a b))"
+    by (simp add: refine_ik_ivl_def ivl_refine_sound)
 qed
 
 end
