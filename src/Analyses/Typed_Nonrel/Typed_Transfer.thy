@@ -1,5 +1,5 @@
 theory Typed_Transfer
-  imports Typed_Nonrel "Voblint_Framework.MCP_Spec"
+  imports Typed_Nonrel "Voblint_Framework.MCP_Spec" "Voblint_Framework.Bool_Refine"
 begin
 
 section \<open>The typed non-relational transfer\<close>
@@ -24,6 +24,14 @@ fun neg_cop :: "cop \<Rightarrow> cop" where
 
 lemma cop_eval_neg_cop [simp]: "cop_eval (neg_cop c) m n \<longleftrightarrow> \<not> cop_eval c m n"
   by (cases c) auto
+
+text \<open>The Boolean structure of a typed condition, for \<^locale>\<open>bool_refine\<close>.\<close>
+
+fun tview :: "texp \<Rightarrow> texp bool_view" where
+  "tview (TNot a) = BV_Not a"
+| "tview (TAnd a b) = BV_And a b"
+| "tview (TOr a b) = BV_Or a b"
+| "tview _ = BV_Atom"
 
 text \<open>An actual fits a formal when every typed store gives it a value in the formal's
   range: it is a variable of the formal's kind, or an operation at that kind.\<close>
@@ -74,14 +82,33 @@ fun refine_var :: "texp \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs 
          | _ \<Rightarrow> \<sigma>)"
 | "refine_var e a \<sigma> = \<sigma>"
 
-fun trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
-  "trefine (TCmp c l r) pol \<sigma> =
-     (let (al, ar) = refine_ik (if pol then c else neg_cop c) (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)
-      in refine_var l al (refine_var r ar \<sigma>))"
-| "trefine (TNot e) pol \<sigma> = trefine e (\<not> pol) \<sigma>"
-| "trefine (TAnd a b) True \<sigma> = trefine b True (trefine a True \<sigma>)"
-| "trefine (TOr a b) False \<sigma> = trefine b False (trefine a False \<sigma>)"
-| "trefine e pol \<sigma> = \<sigma>"
+text \<open>
+  The Boolean structure of a guard is the generic one of \<^locale>\<open>bool_refine\<close>: a
+  comparison is the atom, narrowed by \<^const>\<open>refine_ik\<close>; an operand of a disjunction
+  that must hold, or of a conjunction that must fail, is kept only while its forward value
+  admits the required truth value, and the kept alternatives are joined. When none is
+  kept the state is returned unchanged, so a refinement never touches a variable the
+  guard does not read; the branch transfer below sends a guard its forward value rules
+  out to bottom.
+\<close>
+
+definition tatom :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
+  "tatom e pol \<sigma> =
+     (case e of
+        TCmp c l r \<Rightarrow>
+          (let (al, ar) = refine_ik (if pol then c else neg_cop c)
+                            (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)
+           in refine_var l al (refine_var r ar \<sigma>))
+      | _ \<Rightarrow> \<sigma>)"
+
+definition tfeas :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> bool" where
+  "tfeas e pol \<sigma> = (truth_ik (taeval_ask \<kappa> ch e \<sigma>) \<noteq> Some (\<not> pol))"
+
+lemma tbool_locale: "bool_refine tview size"
+  by unfold_locales (auto elim: tview.elims)
+
+definition trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
+  "trefine = bool_refine.brefine tview tatom tfeas sup id"
 
 definition tbranch :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tbranch b pol \<sigma> =
@@ -246,24 +273,49 @@ qed simp_all
 lemma trefine_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "truthy (teval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (trefine b pol \<sigma>)"
-  using assms
-proof (induction b pol \<sigma> rule: trefine.induct)
-  case (1 c l r pol \<sigma>)
-  let ?c = "if pol then c else neg_cop c"
-  have holds: "cop_eval ?c (teval l t) (teval r t)"
-    using 1(3) by (auto split: if_splits)
-  obtain al ar where ref: "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>) = (al, ar)"
-    by (cases "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)")
-  have "teval l t \<in> numeric_domain_class.gamma al" "teval r t \<in> numeric_domain_class.gamma ar"
-    using refine_ik_sound[OF holds taeval_ask_sound[OF 1(1,2)] taeval_ask_sound[OF 1(1,2)]] ref by simp_all
-  then show ?case using ref 1(1,2) by (simp add: refine_var_sound)
-next
-  case (2 e pol \<sigma>) then show ?case by (auto split: if_splits)
-next
-  case (3 a b \<sigma>) then show ?case by (auto split: if_splits)
-next
-  case (4 a b \<sigma>) then show ?case by (auto split: if_splits)
-qed simp_all
+proof -
+  let ?\<gamma> = "\<lambda>\<sigma>. gamma_tabs \<kappa> \<sigma> \<inter> Collect (geval_query.channel_holds teval ch)"
+  have atom: "t \<in> ?\<gamma> (tatom e pol \<sigma>)"
+    if "t \<in> ?\<gamma> \<sigma>" and "(teval e t \<noteq> 0) = pol" for e pol \<sigma> t
+  proof (cases e)
+    case (TCmp c l r)
+    let ?c = "if pol then c else neg_cop c"
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds teval ch t" using that(1) by auto
+    have holds: "cop_eval ?c (teval l t) (teval r t)"
+      using that(2) TCmp by (auto split: if_splits)
+    obtain al ar where ref: "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>) = (al, ar)"
+      by (cases "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)")
+    have "teval l t \<in> numeric_domain_class.gamma al" "teval r t \<in> numeric_domain_class.gamma ar"
+      using refine_ik_sound[OF holds taeval_ask_sound[OF g h] taeval_ask_sound[OF g h]] ref by simp_all
+    then show ?thesis using ref g h TCmp by (simp add: tatom_def refine_var_sound)
+  qed (use that in \<open>simp_all add: tatom_def\<close>)
+  have feas: "tfeas e pol \<sigma>" if "t \<in> ?\<gamma> \<sigma>" and "(teval e t \<noteq> 0) = pol" for e pol \<sigma> t
+  proof -
+    have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds teval ch t" using that(1) by auto
+    have "teval e t \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch e \<sigma>)"
+      by (rule taeval_ask_sound[OF g h])
+    then show ?thesis
+      using that(2) truth_ik_sound[of "taeval_ask \<kappa> ch e \<sigma>" "\<not> pol" "teval e t"]
+      by (auto simp: tfeas_def truthy_def)
+  qed
+  have join1: "t \<in> ?\<gamma> (x \<squnion> y)" if "t \<in> ?\<gamma> x" for x y :: "'a tabs" and t
+    using that gamma_tabs_mono[OF sup_ge1[of x y]] by auto
+  have join2: "t \<in> ?\<gamma> (x \<squnion> y)" if "t \<in> ?\<gamma> y" for x y :: "'a tabs" and t
+    using that gamma_tabs_mono[OF sup_ge2[of y x]] by auto
+  have "t \<in> ?\<gamma> (bool_refine.brefine tview tatom tfeas sup id b pol \<sigma>)"
+    apply (rule bool_refine.brefine_sound[OF tbool_locale, where ev = teval and \<gamma> = ?\<gamma>])
+    subgoal by (rule atom)
+    subgoal for e a t by (cases e rule: tview.cases) simp_all
+    subgoal for e a c t by (cases e rule: tview.cases) simp_all
+    subgoal for e a c t by (cases e rule: tview.cases) simp_all
+    subgoal by (rule feas)
+    subgoal by (rule join1)
+    subgoal by (rule join2)
+    subgoal using assms(1,2) by simp
+    subgoal using assms(3) by (simp add: truthy_def)
+    done
+  then show ?thesis by (simp add: trefine_def)
+qed
 
 lemma tbranch_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "truthy (teval b t) = pol"
@@ -581,7 +633,11 @@ lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind
   by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_kind Let_def split: aop.splits)
 
 lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (trefine \<kappa> ch b pol \<sigma>)"
-  by (induction b pol \<sigma> rule: trefine.induct) (simp_all add: refine_var_kind split: prod.splits)
+  unfolding trefine_def
+  apply (rule bool_refine.brefine_inv[OF tbool_locale, where P = "\<lambda>_. True" and Q = "kind_consistent \<kappa>"])
+  apply (simp_all add: kind_consistent_sup)
+  subgoal for e pol \<sigma>' by (cases e) (simp_all add: tatom_def refine_var_kind split: prod.split)
+  done
 
 lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> ch b pol \<sigma>)"
   by (simp add: tbranch_def trefine_kind split: option.splits)
@@ -619,5 +675,15 @@ lemma tcombine_kind:
      (simp_all add: tcombine_assign_def kind_consistent_def combine_env_def)
 
 end
+
+text \<open>The guard refinement runs as the generic recursion at the typed instance.\<close>
+
+global_interpretation tbool: bool_refine tview size "tatom \<kappa> ch" "tfeas \<kappa> ch" sup id
+  for \<kappa> ch
+  defines trefine_exec = tbool.brefine
+  by (rule tbool_locale)
+
+lemma trefine_code [code]: "trefine \<kappa> ch = trefine_exec \<kappa> ch"
+  by (simp add: trefine_def fun_eq_iff trefine_exec_def)
 
 end

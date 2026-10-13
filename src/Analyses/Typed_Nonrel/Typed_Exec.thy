@@ -82,7 +82,14 @@ lemma refine_var_frame: "v \<notin> tvars e \<Longrightarrow> refine_var \<kappa
   by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_frame Let_def split: aop.splits)
 
 lemma trefine_frame: "v \<notin> tvars b \<Longrightarrow> trefine \<kappa> ch b pol \<sigma> v = \<sigma> v"
-  by (induction b arbitrary: pol \<sigma>; case_tac pol) (auto simp: refine_var_frame split: prod.splits)
+  unfolding trefine_def
+  apply (rule bool_refine.brefine_inv[OF tbool_locale, where P = "\<lambda>e. v \<notin> tvars e" and Q = "\<lambda>x. x v = \<sigma> v"])
+  subgoal for e a by (cases e rule: tview.cases) simp_all
+  subgoal for e a c by (cases e rule: tview.cases) simp_all
+  subgoal for e a c by (cases e rule: tview.cases) simp_all
+  subgoal for e pol \<sigma>' by (cases e) (simp_all add: tatom_def refine_var_frame split: prod.split)
+  subgoal by (simp add: sup_fun_def)
+  by simp_all
 
 subsection \<open>The operations on the carrier\<close>
 

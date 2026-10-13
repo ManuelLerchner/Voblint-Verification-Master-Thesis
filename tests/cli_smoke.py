@@ -22,6 +22,7 @@ from run import REPO_ROOT, VOBLINT, bold, green, red
 MISSING_FILE = "tests/regression/00-sanity/does-not-exist.vimp"
 SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp"
 COOP_FILE = "tests/typed/01-cooperation.vimp"
+GUARDS_FILE = "tests/typed/02-bool-guards.vimp"
 
 CASES = [
     (
@@ -48,6 +49,18 @@ CASES = [
         ["--typed", "interval", "--context", "entry-state", COOP_FILE],
         0,
         "01-cooperation.vimp:10:5: refuted",
+    ),
+    (
+        "--typed narrows a disjunction that must hold by each feasible operand",
+        ["--typed", "interval", GUARDS_FILE],
+        0,
+        "02-bool-guards.vimp:5:5: proved",
+    ),
+    (
+        "--typed narrows a conjunction that must fail by each feasible operand",
+        ["--typed", "interval", GUARDS_FILE],
+        0,
+        "02-bool-guards.vimp:9:5: proved",
     ),
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),

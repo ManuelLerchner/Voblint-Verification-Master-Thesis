@@ -6544,6 +6544,9 @@ type phase = Widening | Narrowing;;
 type 'a trace_key = Trace_Buffer | Trace_Global of string |
   Trace_Seed of cfg_node * 'a;;
 
+type 'a bool_view = BV_Not of 'a | BV_And of 'a * 'a | BV_Or of 'a * 'a |
+  BV_Atom;;
+
 type ('a, 'b, 'c) gcfg_ext =
   Gcfg_ext of
     (cfg_node * (('a, 'b) gedge_action * cfg_node)) set *
@@ -9028,6 +9031,22 @@ let rec treturn_st _A
             (default_st_to_fun equal_var_id
               (bot_kd _A.ik_domain_kind_int_domain) tglobal st)));;
 
+let rec sup_fun _B f g x = sup _B.sup_semilattice_sup (f x) (g x);;
+
+let rec tview = function TNot a -> BV_Not a
+                | TAnd (a, b) -> BV_And (a, b)
+                | TOr (a, b) -> BV_Or (a, b)
+                | TN (v, va) -> BV_Atom
+                | TVar (v, va) -> BV_Atom
+                | TArith (v, va, vb, vc) -> BV_Atom
+                | TCast (v, va) -> BV_Atom
+                | TCmp (v, va, vb) -> BV_Atom;;
+
+let rec tfeas _A
+  kappa ch e pol sigma =
+    not (equal_option equal_bool (truth_ik _A (taeval_ask _A kappa ch e sigma))
+          (Some (not pol)));;
+
 let rec narrow_var _A
   kappa v a sigma =
     (if equal_var_ida v ReturnVar then sigma
@@ -9067,25 +9086,52 @@ let rec neg_cop = function CLt -> CGe
                   | CEq -> CNe
                   | CNe -> CEq;;
 
-let rec trefine _A
-  kappa ch x2 pol sigma = match kappa, ch, x2, pol, sigma with
-    kappa, ch, TCmp (c, l, r), pol, sigma ->
-      (let (al, ar) =
-         refine_ik _A (if pol then c else neg_cop c)
-           (taeval_ask _A kappa ch l sigma) (taeval_ask _A kappa ch r sigma)
-         in
-        refine_var _A kappa ch l al (refine_var _A kappa ch r ar sigma))
-    | kappa, ch, TNot e, pol, sigma -> trefine _A kappa ch e (not pol) sigma
-    | kappa, ch, TAnd (a, b), true, sigma ->
-        trefine _A kappa ch b true (trefine _A kappa ch a true sigma)
-    | kappa, ch, TOr (a, b), false, sigma ->
-        trefine _A kappa ch b false (trefine _A kappa ch a false sigma)
-    | kappa, ch, TN (v, va), pol, sigma -> sigma
-    | kappa, ch, TVar (v, va), pol, sigma -> sigma
-    | kappa, ch, TArith (v, va, vb, vc), pol, sigma -> sigma
-    | kappa, ch, TCast (v, va), pol, sigma -> sigma
-    | kappa, ch, TAnd (v, va), false, sigma -> sigma
-    | kappa, ch, TOr (v, va), true, sigma -> sigma;;
+let rec tatom _A
+  kappa ch e pol sigma =
+    (match e with TN (_, _) -> sigma | TVar (_, _) -> sigma
+      | TArith (_, _, _, _) -> sigma | TCast (_, _) -> sigma
+      | TCmp (c, l, r) ->
+        (let (al, ar) =
+           refine_ik _A (if pol then c else neg_cop c)
+             (taeval_ask _A kappa ch l sigma) (taeval_ask _A kappa ch r sigma)
+           in
+          refine_var _A kappa ch l al (refine_var _A kappa ch r ar sigma))
+      | TNot _ -> sigma | TAnd (_, _) -> sigma | TOr (_, _) -> sigma);;
+
+let rec trefine_exec _A
+  kappa ch e pol sigma =
+    (match tview e with BV_Not a -> trefine_exec _A kappa ch a (not pol) sigma
+      | BV_And (a, b) ->
+        (if pol
+          then trefine_exec _A kappa ch b true
+                 (trefine_exec _A kappa ch a true sigma)
+          else (match
+                 (tfeas _A kappa ch a false sigma,
+                   tfeas _A kappa ch b false sigma)
+                 with (true, true) ->
+                   sup_fun (semilattice_sup_kd _A.ik_domain_kind_int_domain)
+                     (trefine_exec _A kappa ch a false sigma)
+                     (trefine_exec _A kappa ch b false sigma)
+                 | (true, false) -> trefine_exec _A kappa ch a false sigma
+                 | (false, true) -> trefine_exec _A kappa ch b false sigma
+                 | (false, false) -> id sigma))
+      | BV_Or (a, b) ->
+        (if pol
+          then (match
+                 (tfeas _A kappa ch a true sigma,
+                   tfeas _A kappa ch b true sigma)
+                 with (true, true) ->
+                   sup_fun (semilattice_sup_kd _A.ik_domain_kind_int_domain)
+                     (trefine_exec _A kappa ch a true sigma)
+                     (trefine_exec _A kappa ch b true sigma)
+                 | (true, false) -> trefine_exec _A kappa ch a true sigma
+                 | (false, true) -> trefine_exec _A kappa ch b true sigma
+                 | (false, false) -> id sigma)
+          else trefine_exec _A kappa ch b false
+                 (trefine_exec _A kappa ch a false sigma))
+      | BV_Atom -> tatom _A kappa ch e pol sigma);;
+
+let rec trefine _A kappa ch = trefine_exec _A kappa ch;;
 
 let rec write_back _A
   vs sigma st =

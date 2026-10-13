@@ -1,0 +1,15 @@
+// Run with --typed interval: a guard that holds through either operand narrows by
+// each operand that can still hold and joins the results. x is in [-5, 5].
+fun f(i32 x) {
+  if (x > 3 || x > 4) {
+    __voblint_check(x >= 4); // || must hold: [4, 5] joined with [5, 5]
+  }
+  if (x <= 3 && x <= 4) {
+  } else {
+    __voblint_check(x >= 4); // && must fail: the same two alternatives
+  }
+}
+fun main() {
+  f(0 - 5);
+  f(5);
+}
