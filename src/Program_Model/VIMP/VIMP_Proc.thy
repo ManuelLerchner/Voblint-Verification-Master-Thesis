@@ -236,10 +236,22 @@ lemma pcompletes_special_nondet_int:
   "pcompletes \<G> \<Pi> (Call () (Some x) special_pname_nondet_int []) s (s(x := v))"
   by (simp add: special_table_def)
 
+context vimp_sem
+begin
+
+lemmas star_gpstep_induct =
+  star.induct[of "gpstep \<Pi>", split_format(complete), case_names refl step]
+
+lemma combine_env_rv_irrelevant [simp]:
+  "\<not> glob rv \<Longrightarrow> combine_env glob fr (t(rv := v)) = combine_env glob fr t"
+  by (rule ext) simp
+
 lemma psteps_Seq2:
-  "\<G>, \<Pi> \<turnstile> (c1, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c1', s', frs')
-   \<Longrightarrow> \<G>, \<Pi> \<turnstile> (Seq c1 c2, s, frs) \<rightarrow>\<^sub>p\<^sup>* (Seq c1' c2, s', frs')"
-  by (induction rule: star_pstep_induct) (auto intro: star.step)
+  "star (gpstep \<Pi>) (c1, s, frs) (c1', s', frs')
+   \<Longrightarrow> star (gpstep \<Pi>) (Seq c1 c2, s, frs) (Seq c1' c2, s', frs')"
+  by (induction rule: star.induct[of "gpstep \<Pi>", split_format(complete)]) (auto intro: star.step)
+
+end
 
 lemma pcompletes_Seq:
   assumes "pcompletes \<G> \<Pi> c1 s s2" and "pcompletes \<G> \<Pi> c2 s2 t"
@@ -259,23 +271,29 @@ subsection \<open>Frame-stack extension\<close>
 text \<open>A step never inspects the frames below the one it works on, so any run stays valid
   with more callers underneath.  This is what lets a proof about a procedure in isolation be
   reused at an arbitrary call depth.\<close>
+context vimp_sem
+begin
+
 lemma pstep_frame_extend:
-  "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p (c', s', frs') \<Longrightarrow>
-   \<G>, \<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p (c', s', frs' @ extra)"
+  "gpstep \<Pi> (c, s, frs) (c', s', frs') \<Longrightarrow>
+   gpstep \<Pi> (c, s, frs @ extra) (c', s', frs' @ extra)"
   by (induction "(c, s, frs)" "(c', s', frs')"
         arbitrary: c s frs c' s' frs' rule: gpstep.induct)
      auto
 
 lemma psteps_frame_extend:
-  "\<G>, \<Pi> \<turnstile> (c, s, frs) \<rightarrow>\<^sub>p\<^sup>* (c', s', frs') \<Longrightarrow>
-   \<G>, \<Pi> \<turnstile> (c, s, frs @ extra) \<rightarrow>\<^sub>p\<^sup>* (c', s', frs' @ extra)"
-  by (induction rule: star_pstep_induct) (auto intro: pstep_frame_extend star.step)
+  "star (gpstep \<Pi>) (c, s, frs) (c', s', frs') \<Longrightarrow>
+   star (gpstep \<Pi>) (c, s, frs @ extra) (c', s', frs' @ extra)"
+  by (induction rule: star.induct[of "gpstep \<Pi>", split_format(complete)])
+     (auto intro: pstep_frame_extend star.step)
 
 lemma psteps_frame_mono:
-  "\<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t, []) \<Longrightarrow>
-   \<G>, \<Pi> \<turnstile> (c, s, extra) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t, extra)"
+  "star (gpstep \<Pi>) (c, s, []) (SKIP i, t, []) \<Longrightarrow>
+   star (gpstep \<Pi>) (c, s, extra) (SKIP i, t, extra)"
   using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
   by simp
+
+end
 
 subsection \<open>Call completion\<close>
 
@@ -286,31 +304,31 @@ lemma combine_env_ret_var_irrelevant [simp]:
   "\<not> \<G> ret_var \<Longrightarrow> combine_env \<G> fr (t(ret_var := v)) = combine_env \<G> fr t"
   by (rule ext) simp
 
+context vimp_sem
+begin
+
 lemma psteps_Seq_Restore_body:
-  assumes "\<G>, \<Pi> \<turnstile> (c, s0, [Frame fr dst]) \<rightarrow>\<^sub>p\<^sup>* (SKIP i, t', [Frame fr dst])"
-  shows "\<G>, \<Pi> \<turnstile> (Seq c (Restore j), s0, [Frame fr dst])
-           \<rightarrow>\<^sub>p\<^sup>* (SKIP j, combine_assign dst (t' ret_var) (combine_env \<G> fr t'), [])"
+  assumes "star (gpstep \<Pi>) (c, s0, [Frame fr dst]) (SKIP i, t', [Frame fr dst])"
+  shows "star (gpstep \<Pi>) (Seq c (Restore j), s0, [Frame fr dst]) (SKIP j, combine_assign dst (conv dst (t' rv)) (combine_env glob fr t'), [])"
   using psteps_Seq2[OF assms] by (meson Seq1 RestoreStep star.refl star.step star_trans)
 
 lemma pstep_Call:
   assumes "\<Pi> p = Some decl"
       and "length actuals = length (formals decl)"
       and "distinct (formals decl)"
-  shows "\<G>, \<Pi> \<turnstile> (Call i dst p actuals, s, frs)
-           \<rightarrow>\<^sub>p (Seq (body decl) (Restore i),
-            bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s),
+  shows "gpstep \<Pi> (Call i dst p actuals, s, frs) (Seq (body decl) (Restore i),
+            bind_formals (formals decl) (map (\<lambda>e. ev e s) actuals) (enter_state glob s),
             Frame s dst # frs)"
   using assms by (rule Call) (rule refl)+
 
 lemma pstep_Call_parameterless [intro]:
   assumes "\<Pi> p = Some (\<lparr>formals = [], body = c\<rparr>)"
   shows
-    "\<G>, \<Pi> \<turnstile> (Call i dst p [], s, frs) \<rightarrow>\<^sub>p (Seq c (Restore i), enter_state \<G> s, Frame s dst # frs)"
+    "gpstep \<Pi> (Call i dst p [], s, frs) (Seq c (Restore i), enter_state glob s, Frame s dst # frs)"
 proof -
-  have "\<G>, \<Pi> \<turnstile> (Call i dst p [], s, frs)
-          \<rightarrow>\<^sub>p (Seq (body (\<lparr>formals = [], body = c\<rparr>)) (Restore i),
+  have "gpstep \<Pi> (Call i dst p [], s, frs) (Seq (body (\<lparr>formals = [], body = c\<rparr>)) (Restore i),
            bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
-             (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) []) (enter_state \<G> s),
+             (map (\<lambda>e. ev e s) []) (enter_state glob s),
            Frame s dst # frs)"
     using assms by (rule pstep_Call) simp_all
   then show ?thesis by simp
@@ -318,6 +336,8 @@ qed
 
 text \<open>A value reaches the destination only through an explicit \<open>Return\<close>;
   otherwise the destination receives \<open>ret_var\<close>'s \<open>enter_state\<close> value \<open>0\<close>.\<close>
+end
+
 lemma pcompletes_Call:
   assumes p: "\<Pi> p = Some decl"
       and arity: "length actuals = length (formals decl)"

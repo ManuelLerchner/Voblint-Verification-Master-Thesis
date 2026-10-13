@@ -321,8 +321,11 @@ qed
 
 text \<open>In a whole compiled program \<^term>\<open>FunctionEntry r\<close> has a unique out-target: \<open>main\<close> and the
   callees are node-disjoint (\<open>prog_main_name \<notin> set ps\<close>), and each contributes a single entry edge.\<close>
+context trace_sem
+begin
+
 lemma compile_prog_entry_out_unique:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and e1: "(FunctionEntry r, a1, v1) \<in> intra (compile_prog \<Pi> ps)"
     and e2: "(FunctionEntry r, a2, v2) \<in> intra (compile_prog \<Pi> ps)"
   shows "v1 = v2"
@@ -352,6 +355,8 @@ proof -
   qed
 qed
 
+end
+
 subsection \<open>Whole-program edge shapes\<close>
 
 text \<open>Two shape facts a consumer of a compiled graph may use without redoing the
@@ -373,8 +378,11 @@ proof -
     by blast
 qed
 
+context trace_sem
+begin
+
 lemma compile_prog_entry_declared:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and e: "(FunctionEntry p, a, v) \<in> intra (compile_prog \<Pi> ps)"
   shows "\<exists>d. \<Pi> p = Some d"
 proof -
@@ -398,14 +406,19 @@ proof -
   qed
 qed
 
+end
+
 subsection \<open>Edges stay in the activation fragment\<close>
 
 text \<open>The fragment a procedure's entry wiring identifies owns every edge of the program that
   sources in its nodes.  The callee pass and \<open>main\<close> occupy disjoint counter ranges, and inside
   the pass \<open>compile_procs_member_frag\<close> settles ownership; the entry edge pins the start counter
   through \<open>compile_prog_entry_out_unique\<close>.\<close>
+context trace_sem
+begin
+
 lemma compile_prog_entry_frag:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)"
@@ -462,7 +475,7 @@ text \<open>Given a genuine procedure fragment (declared body, entry wiring) and
   intra edge leaving that node, and every call leaving it, lands its same-activation successor
   back in the fragment.\<close>
 lemma frag_edge_intra:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)"
@@ -472,7 +485,7 @@ lemma frag_edge_intra:
   using compile_prog_entry_frag[OF wf decl cb ent] compile_proc_intra_pfn[OF cb] uin e by blast
 
 lemma frag_edge_calls:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and decl: "\<Pi> r = Some d"
     and cb: "compile_proc \<Pi> r d m = (m', Ep, Kp)"
     and ent: "(FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps)"
@@ -481,12 +494,17 @@ lemma frag_edge_calls:
   shows "af \<in> pfn r m m'"
   using compile_prog_entry_frag[OF wf decl cb ent] compile_proc_calls_pfn[OF cb] uin e by blast
 
+end
+
 subsection \<open>Procedure locality of a valid activation\<close>
 
 text \<open>Every declared procedure of a compiled program owns a fragment, identified by the start
   counter its entry wiring edge points at.\<close>
+context trace_sem
+begin
+
 lemma compile_prog_proc_frag:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and decl: "\<Pi> q = Some d"
   obtains m m' Ep Kp where
     "compile_proc \<Pi> q d m = (m', Ep, Kp)"
@@ -521,7 +539,9 @@ text \<open>\<open>frag_ok u\<close>: the activation \<open>u\<close> either lie
   (declared body, entry wiring, all path nodes in the fragment) or is a single-node activation
   stuck at an undeclared \<^term>\<open>FunctionEntry\<close> --- which can never advance and never reaches a
   \<^term>\<open>FunctionResult\<close>.\<close>
-definition frag_ok :: "'a ptable \<Rightarrow> pname list \<Rightarrow> activation_trace \<Rightarrow> bool" where
+end
+
+definition frag_ok :: "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> 'v gactivation_trace \<Rightarrow> bool" where
   "frag_ok \<Pi> ps u \<longleftrightarrow>
      (\<exists>r d m m' Ep Kp. \<Pi> r = Some d
         \<and> compile_proc \<Pi> r d m = (m', Ep, Kp)
@@ -546,15 +566,18 @@ lemma frag_okE [elim]:
   | (stub) p s where "path_of u = [(FunctionEntry p, s)]" "\<Pi> p = None"
   using assms unfolding frag_ok_def by meson
 
+context trace_sem
+begin
+
 lemma sink_in_path_nodes:
-  "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<Longrightarrow> sink_node t \<in> fst ` set (path_of t)"
+  "t \<in> gvalid_activation_trace (g) (S) \<Longrightarrow> sink_node t \<in> fst ` set (path_of t)"
   using valid_activation_trace_path_nonempty by (auto simp: sink_node_def)
 
 text \<open>Extending a fragment-local activation by one node keeps it fragment-local when the step
   to that node stays inside every genuine fragment holding its sink and no step leaves a stub.
   An intra step and the resumption after a call are the two such extensions.\<close>
 lemma frag_ok_snoc:
-  assumes t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>" and ok: "frag_ok \<Pi> ps t"
+  assumes t: "t \<in> gvalid_activation_trace (compile_prog \<Pi> ps) (S)" and ok: "frag_ok \<Pi> ps t"
     and pu: "path_of u = path_of t @ [(v, s)]"
     and stay: "\<And>r d m m' Ep Kp. \<Pi> r = Some d \<Longrightarrow> compile_proc \<Pi> r d m = (m', Ep, Kp) \<Longrightarrow>
       (FunctionEntry r, EA_Body r, Statement m) \<in> intra (compile_prog \<Pi> ps) \<Longrightarrow>
@@ -579,8 +602,8 @@ text \<open>Every activation in the caller chain of a valid activation trace is 
   carried over the whole \<^const>\<open>callers\<close> chain so that the return case, which resumes the caller,
   can read the caller's own fragment (\<open>caller \<in> callers callee\<close>).\<close>
 lemma valid_activation_trace_frag_callers:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and t: "t \<in> gvalid_activation_trace (compile_prog \<Pi> ps) (S)"
   shows "\<forall>u \<in> callers t. frag_ok \<Pi> ps u"
 proof -
   let ?g = "compile_prog \<Pi> ps"
@@ -597,18 +620,18 @@ proof -
       by (rule frag_okI_frag[OF main_decl cb ent])
          (simp_all add: pfn_def)
   next
-    fix t :: activation_trace and a v s'
-    assume ht: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps u"
+    fix t :: "'v gactivation_trace" and a v s'
+    assume ht: "t \<in> gvalid_activation_trace (?g) (S)" and ch: "\<forall>u \<in> callers t. frag_ok \<Pi> ps u"
       and e: "(sink_node t, a, v) \<in> intra ?g"
     have "frag_ok \<Pi> ps t" using ch callers_refl by blast
     then show "frag_ok \<Pi> ps (extend t (v, s'))"
       by (rule frag_ok_snoc[OF ht _ _ frag_edge_intra[OF wf _ _ _ _ e]])
          (use e in \<open>auto dest: compile_prog_entry_declared[OF wf]\<close>)
   next
-    fix caller :: activation_trace and dst pars args p cont
+    fix caller :: "'v gactivation_trace" and dst pars args p cont
     assume e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     show "frag_ok \<Pi> ps (Call caller
-            [(FunctionEntry p, call_enter \<G> (CallEdge dst pars args) (sink_store caller))])"
+            [(FunctionEntry p, gcall_enter (CallEdge dst pars args) (sink_store caller))])"
     proof (cases "\<Pi> p")
       case None
       then show ?thesis unfolding frag_ok_def by fastforce
@@ -622,28 +645,28 @@ proof -
         by (rule frag_okI_frag[OF Some cb ent]) (simp_all add: pfn_def)
     qed
   next
-    fix callee caller :: activation_trace and p dst pars args cont
-    assume cvcallee: "callee \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
+    fix callee caller :: "'v gactivation_trace" and p dst pars args cont
+    assume cvcallee: "callee \<in> gvalid_activation_trace (?g) (S)"
       and ch: "\<forall>u \<in> callers callee. frag_ok \<Pi> ps u"
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
-    have cv: "caller \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace_caller_valid[OF cvcallee cof] .
+    have cv: "caller \<in> gvalid_activation_trace (?g) (S)" using valid_activation_trace_caller_valid[OF cvcallee cof] .
     have "frag_ok \<Pi> ps caller" using ch cin by blast
     then show "frag_ok \<Pi> ps (Resume caller callee (path_of caller
-            @ [(cont, combine_collect \<G> dst (sink_store caller) (sink_store callee))]))"
+            @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))]))"
       by (rule frag_ok_snoc[OF cv _ _ frag_edge_calls[OF wf _ _ _ _ e]])
          (use e in \<open>auto dest: compile_prog_calls_source_stmt\<close>)
   next
-    show "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" by (rule t)
+    show "t \<in> gvalid_activation_trace (?g) (S)" by (rule t)
   qed
 qed
 
 text \<open>An activation entered at \<^term>\<open>FunctionEntry p\<close> reaches \<^term>\<open>FunctionResult q\<close> only for
   \<open>p = q\<close>.\<close>
 lemma valid_activation_trace_entry_result_eq:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and t: "t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and t: "t \<in> gvalid_activation_trace (compile_prog \<Pi> ps) (S)"
     and en: "fst (hd (path_of t)) = FunctionEntry p"
     and sk: "sink_node t = FunctionResult q"
   shows "p = q"
@@ -661,5 +684,7 @@ proof -
     with sk show ?thesis by simp
   qed
 qed
+
+end
 
 end

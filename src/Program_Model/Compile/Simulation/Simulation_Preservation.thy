@@ -754,11 +754,16 @@ end
 section \<open>The static certificate for a whole compiled program\<close>
 
 text \<open>The static source contract establishes the runtime return guard for the root activation.\<close>
+context simrel_sem
+begin
+
 lemma wf_compile_input_return_safe:
-  assumes "wf_compile_input \<G> \<Pi> ps"
+  assumes "gwf_compile_input vars rv glob \<Pi> ps"
   shows "return_safe (main_body \<Pi>)"
   using wf_compile_inputD(8)[OF assms] wf_compile_inputD(4)[OF assms]
   by (rule return_safe_if_no_return)
+
+end
 
 text \<open>
   \<^const>\<open>procs_embedded\<close> is the static certificate \<^const>\<open>csim\<close> reads: every procedure declared
@@ -769,8 +774,11 @@ text \<open>
   activation.  Discharging it from actual \<^const>\<open>compile_prog\<close> output, rather than assuming it
   forever, is what closes the static side of the simulation.
 \<close>
+context simrel_sem
+begin
+
 theorem procs_embedded_compile_prog:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
   shows "procs_embedded \<Pi> (compile_prog \<Pi> ps)"
   unfolding procs_embedded_def
 proof (intro allI impI)
@@ -820,6 +828,8 @@ proof (intro allI impI)
           \<and> source_com (body decl) \<and> special_table p = None"
     using cb Ebsub Ksub ent ext srccom wf_compile_inputD(6)[OF wf pd] by blast
 qed
+
+end
 
 section \<open>The certificate is inhabited\<close>
 

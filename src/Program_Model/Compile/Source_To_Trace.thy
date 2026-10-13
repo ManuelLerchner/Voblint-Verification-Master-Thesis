@@ -18,11 +18,11 @@ text \<open>
 
 subsection \<open>The representation invariant\<close>
 
-text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in lockstep with the runtime frame list: each
+text \<open>\<open>stack_repr\<close> walks \<^const>\<open>caller_of\<close> in lockstep with the runtime 'v gframe list: each
   \<^type>\<open>cframe\<close> \<open>(cont, dst, s)\<close> pins the caller activation \<open>caller\<close> --- its frozen store
   \<open>sink_store caller = s\<close> --- and records the concrete \<^const>\<open>calls\<close> edge that spawned the child,
   whose callee \<^term>\<open>FunctionEntry p\<close> equals the child's (path-invariant) entry node.\<close>
-inductive stack_repr :: "cfg \<Rightarrow> cframe list \<Rightarrow> activation_trace \<Rightarrow> bool" for g where
+inductive stack_repr :: "('v, 'e) gcfg \<Rightarrow> 'v gcframe list \<Rightarrow> 'v gactivation_trace \<Rightarrow> bool" for g where
   empty [intro]: "caller_of t = None \<Longrightarrow> stack_repr g [] t"
 | frame [intro]: "caller_of t = Some caller \<Longrightarrow> sink_store caller = s
           \<Longrightarrow> fst (hd (path_of t)) = FunctionEntry p
@@ -38,13 +38,20 @@ inductive_cases stack_repr_ConsE [elim]: "stack_repr g (cf # stk) t"
 
 text \<open>\<open>activation_trace_repr\<close> pins a valid activation trace to a located configuration: the trace's sink is the current
   node/store, and its caller chain is the runtime stack.\<close>
-definition activation_trace_repr ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> activation_trace \<Rightarrow> bool" where
-  "activation_trace_repr \<G> g S cf t = (case cf of (v, s, stk) \<Rightarrow>
-     t \<in> \<T>\<^bsub>\<G>,g,S\<^esub> \<and> sink_node t = v \<and> sink_store t = s \<and> stack_repr g stk t)"
+locale bridge_sem = simrel_sem ev glob rv conv + collect_sem ev rv conv glob
+  for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool" and rv :: 'v
+    and conv :: "'v option \<Rightarrow> int \<Rightarrow> int"
+begin
 
-definition located_activation_trace :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> bool" where
-  "located_activation_trace \<G> g S cf = (\<exists>t. activation_trace_repr \<G> g S cf t)"
+definition gactivation_trace_repr ::
+  "('v, 'e) gcfg \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> 'v gcconf \<Rightarrow> 'v gactivation_trace \<Rightarrow> bool" where
+  "gactivation_trace_repr g S cf t = (case cf of (v, s, stk) \<Rightarrow>
+     t \<in> gvalid_activation_trace g S \<and> sink_node t = v \<and> sink_store t = s \<and> stack_repr g stk t)"
+
+definition glocated_activation_trace :: "('v, 'e) gcfg \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> 'v gcconf \<Rightarrow> bool" where
+  "glocated_activation_trace g S cf = (\<exists>t. gactivation_trace_repr g S cf t)"
+
+end
 
 text \<open>\<open>stack_repr\<close> reads only the top \<^const>\<open>caller_of\<close> and the path-invariant entry node,
   so it transfers across activations sharing both (an \<^const>\<open>extend\<close> appends --- entry
@@ -62,33 +69,36 @@ text \<open>The load-bearing case.  A \<^const>\<open>cstep\<close> return pops 
   edge, whose callee \<^term>\<open>FunctionEntry q\<close> matches the returning \<^term>\<open>FunctionResult q\<close> by
   \<open>valid_activation_trace_entry_result_eq\<close> --- so the trace composes by \<open>gvalid_activation_trace.ret\<close>, and the combined
   store equals the \<^const>\<open>cstep\<close> store.\<close>
+context bridge_sem
+begin
+
 lemma activation_trace_repr_Return:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and rep: "activation_trace_repr \<G> (compile_prog \<Pi> ps) S
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and rep: "gactivation_trace_repr (compile_prog \<Pi> ps) S
                   (FunctionResult q, tst, (cont, dst, caller) # stk) t0"
-  shows "activation_trace_repr \<G> (compile_prog \<Pi> ps) S
-           (cont, combine_collect \<G> dst caller tst, stk)
+  shows "gactivation_trace_repr (compile_prog \<Pi> ps) S
+           (cont, gcombine_collect dst caller tst, stk)
            (Resume (the (caller_of t0)) t0
-              (path_of (the (caller_of t0)) @ [(cont, combine_collect \<G> dst caller tst)]))"
+              (path_of (the (caller_of t0)) @ [(cont, gcombine_collect dst caller tst)]))"
 proof -
   let ?g = "compile_prog \<Pi> ps"
-  from rep have t0v: "t0 \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn0: "sink_node t0 = FunctionResult q"
+  from rep have t0v: "t0 \<in> gvalid_activation_trace (?g) (S)" and sn0: "sink_node t0 = FunctionResult q"
     and ss0: "sink_store t0 = tst"
     and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
-    by (auto simp: activation_trace_repr_def)
+    by (auto simp: gactivation_trace_repr_def)
   from stk0 obtain c p pars args where cof: "caller_of t0 = Some c"
     and ssc: "sink_store c = caller" and entryp: "fst (hd (path_of t0)) = FunctionEntry p"
     and edge: "(sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
-  have cvalid: "c \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using valid_activation_trace_caller_valid[OF t0v cof] .
+  have cvalid: "c \<in> gvalid_activation_trace (?g) (S)" using valid_activation_trace_caller_valid[OF t0v cof] .
   have pq: "p = q" using valid_activation_trace_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
-  let ?r = "combine_collect \<G> dst caller tst"
+  let ?r = "gcombine_collect dst caller tst"
   let ?t' = "Resume c t0 (path_of c @ [(cont, ?r)])"
   have edge_q: "(sink_node c, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls ?g"
     using edge pq by simp
-  have valid': "?t' \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
+  have valid': "?t' \<in> gvalid_activation_trace (?g) (S)"
     using gvalid_activation_trace.ret[OF t0v cof sn0 edge_q] ssc ss0 by simp
   have sn': "sink_node ?t' = cont" by (simp add: sink_node_def)
   have ss': "sink_store ?t' = ?r" by (simp add: sink_store_def)
@@ -97,45 +107,50 @@ proof -
   have stk': "stack_repr ?g stk ?t'"
     using stack_repr_cong[OF stkc, of ?t'] entry' by simp
   show ?thesis
-    unfolding cthe using valid' sn' ss' stk' by (simp add: activation_trace_repr_def)
+    unfolding cthe using valid' sn' ss' stk' by (simp add: gactivation_trace_repr_def)
 qed
+
+end
 
 subsection \<open>The invariant is preserved by located CFG steps\<close>
 
 text \<open>Each \<^const>\<open>cstep\<close> rule maps to one \<^const>\<open>valid_activation_trace\<close> constructor: intra \<open>\<mapsto>\<close>
   \<^const>\<open>extend\<close>, call \<open>\<mapsto>\<close> \<^const>\<open>Call\<close>, return \<open>\<mapsto>\<close> \<^const>\<open>Resume\<close> (\<open>activation_trace_repr_Return\<close>).\<close>
+context bridge_sem
+begin
+
 lemma cstep_preserves_activation_trace_repr:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and step: "\<G>, compile_prog \<Pi> ps \<turnstile> cf \<rightarrow>\<^sub>c cf'"
-    and rep: "activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf t"
-  shows "\<exists>t'. activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf' t'"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and step: "gcstep (compile_prog \<Pi> ps) cf cf'"
+    and rep: "gactivation_trace_repr (compile_prog \<Pi> ps) S cf t"
+  shows "\<exists>t'. gactivation_trace_repr (compile_prog \<Pi> ps) S cf' t'"
   using step rep
 proof (cases rule: gcstep.cases)
   case (Intra u a v s' s stk')
   let ?g = "compile_prog \<Pi> ps"
-  from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = u"
+  from rep have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = u"
     and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
-    using Intra by (auto simp: activation_trace_repr_def)
+    using Intra by (auto simp: gactivation_trace_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
-  have e2: "s' \<in> edge_step a (sink_store t)" using Intra ss by simp
-  have "extend t (v, s') \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" using gvalid_activation_trace.intra[OF tv e1 e2] .
+  have e2: "s' \<in> gedge_step a (sink_store t)" using Intra ss by simp
+  have "extend t (v, s') \<in> gvalid_activation_trace (?g) (S)" using gvalid_activation_trace.intra[OF tv e1 e2] .
   moreover have "stack_repr ?g stk' (extend t (v, s'))"
     using stack_repr_cong[OF str] valid_activation_trace_path_nonempty[OF tv] by simp
-  ultimately have "activation_trace_repr \<G> ?g S (v, s', stk') (extend t (v, s'))"
-    by (simp add: activation_trace_repr_def)
+  ultimately have "gactivation_trace_repr ?g S (v, s', stk') (extend t (v, s'))"
+    by (simp add: gactivation_trace_repr_def)
   then show ?thesis using Intra by auto
 next
   case (Call u dst pars actuals q cont s stk')
   let ?g = "compile_prog \<Pi> ps"
-  from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = u"
+  from rep have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = u"
     and ss: "sink_store t = s"
     and str: "stack_repr ?g stk' t"
-    using Call by (auto simp: activation_trace_repr_def)
+    using Call by (auto simp: gactivation_trace_repr_def)
   have edge: "(sink_node t, CallEdge dst pars actuals, FunctionEntry q, cont) \<in> calls ?g"
     using Call sn by simp
-  let ?child = "Call t [(FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s)]"
-  have child_valid: "?child \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>"
+  let ?child = "Call t [(FunctionEntry q, gcall_enter (CallEdge dst pars actuals) s)]"
+  have child_valid: "?child \<in> gvalid_activation_trace (?g) (S)"
     using gvalid_activation_trace.call[OF tv edge] ss by simp
   have "stack_repr ?g ((cont, dst, s) # stk') ?child"
   proof (rule stack_repr.frame)
@@ -146,58 +161,60 @@ next
       using edge .
     show "stack_repr ?g stk' t" using str .
   qed
-  with child_valid have "activation_trace_repr \<G> ?g S
-      (FunctionEntry q, call_enter \<G> (CallEdge dst pars actuals) s,
+  with child_valid have "gactivation_trace_repr ?g S
+      (FunctionEntry q, gcall_enter (CallEdge dst pars actuals) s,
        (cont, dst, s) # stk') ?child"
-    by (simp add: activation_trace_repr_def sink_node_def sink_store_def)
+    by (simp add: gactivation_trace_repr_def sink_node_def sink_store_def)
   then show ?thesis using Call by auto
 next
   case (Return q tst cont dst caller stk')
   from rep Return(1)
-  have rep': "activation_trace_repr \<G> (compile_prog \<Pi> ps) S
+  have rep': "gactivation_trace_repr (compile_prog \<Pi> ps) S
                 (FunctionResult q, tst, (cont, dst, caller) # stk') t" by simp
   from activation_trace_repr_Return[OF wf rep'] show ?thesis using Return(2) by auto
 qed
 
 lemma located_activation_trace_entry:
   assumes "s \<in> S"
-  shows "located_activation_trace \<G> g S (cfg_entry g, s, [])"
+  shows "glocated_activation_trace g S (cfg_entry g, s, [])"
 proof -
-  have "activation_trace_repr \<G> g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
+  have "gactivation_trace_repr g S (cfg_entry g, s, []) (Root [(cfg_entry g, s)])"
     using assms
-    by (auto simp: activation_trace_repr_def sink_node_def sink_store_def
+    by (auto simp: gactivation_trace_repr_def sink_node_def sink_store_def
       gvalid_activation_trace.root)
-  then show ?thesis by (auto simp: located_activation_trace_def)
+  then show ?thesis by (auto simp: glocated_activation_trace_def)
 qed
 
 lemma cstep_preserves_located_activation_trace:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and "located_activation_trace \<G> (compile_prog \<Pi> ps) S cf"
-    and "\<G>, compile_prog \<Pi> ps \<turnstile> cf \<rightarrow>\<^sub>c cf'"
-  shows "located_activation_trace \<G> (compile_prog \<Pi> ps) S cf'"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and "glocated_activation_trace (compile_prog \<Pi> ps) S cf"
+    and "gcstep (compile_prog \<Pi> ps) cf cf'"
+  shows "glocated_activation_trace (compile_prog \<Pi> ps) S cf'"
 proof -
-  from assms(2) obtain t where "activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf t"
-    by (auto simp: located_activation_trace_def)
-  then obtain t' where "activation_trace_repr \<G> (compile_prog \<Pi> ps) S cf' t'"
+  from assms(2) obtain t where "gactivation_trace_repr (compile_prog \<Pi> ps) S cf t"
+    by (auto simp: glocated_activation_trace_def)
+  then obtain t' where "gactivation_trace_repr (compile_prog \<Pi> ps) S cf' t'"
     using cstep_preserves_activation_trace_repr[OF wf assms(3)] by blast
-  then show ?thesis by (auto simp: located_activation_trace_def)
+  then show ?thesis by (auto simp: glocated_activation_trace_def)
 qed
 
 lemma csteps_preserve_located_activation_trace:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
-    and "located_activation_trace \<G> (compile_prog \<Pi> ps) S cf"
-    and "\<G>, compile_prog \<Pi> ps \<turnstile> cf \<rightarrow>\<^sub>c\<^sup>* cf'"
-  shows "located_activation_trace \<G> (compile_prog \<Pi> ps) S cf'"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
+    and "glocated_activation_trace (compile_prog \<Pi> ps) S cf"
+    and "star (gcstep (compile_prog \<Pi> ps)) cf cf'"
+  shows "glocated_activation_trace (compile_prog \<Pi> ps) S cf'"
   using assms(3) assms(2)
 proof (induction rule: star.induct)
   case (refl a)
   then show ?case .
 next
   case (step a b c)
-  have "located_activation_trace \<G> (compile_prog \<Pi> ps) S b"
+  have "glocated_activation_trace (compile_prog \<Pi> ps) S b"
     by (rule cstep_preserves_located_activation_trace[OF wf step.prems step.hyps(1)])
   then show ?case by (rule step.IH)
 qed
+
+end
 
 subsection \<open>The initial main activation\<close>
 
@@ -206,8 +223,11 @@ text \<open>The program entry \<^term>\<open>FunctionEntry prog_main_name\<close
   body fragment is certified by \<open>procs_embedded_compile_prog\<close>.  One \<^term>\<open>EA_Body\<close> edge crosses
   from \<^term>\<open>FunctionEntry prog_main_name\<close> to the body entry \<open>en\<close>, where the \<open>Base\<close> activation
   simulates the source \<open>main_body \<Pi>\<close>.\<close>
+context bridge_sem
+begin
+
 lemma compile_prog_main_base:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
   obtains en where
     "(FunctionEntry prog_main_name, EA_Body prog_main_name, en) \<in> intra (compile_prog \<Pi> ps)"
     "\<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (main_body \<Pi>, s, []) \<approx> (en, s, [])"
@@ -228,6 +248,8 @@ proof -
   from entry base show ?thesis ..
 qed
 
+end
+
 subsection \<open>Top-level structural facts of the invariant\<close>
 
 text \<open>A trace has no caller exactly when its activation is at the top level (empty runtime stack).\<close>
@@ -238,22 +260,30 @@ lemma stack_repr_Nil_iff:
 text \<open>A callerless activation carries exactly the initial context, whatever the policy ---
   the \<open>Root\<close> case never consults \<open>adm\<close>, and the \<open>Resume\<close> case only forwards to the same
   callerless ancestor. No validity is needed: the two clauses involved name no edge.\<close>
+context bridge_sem
+begin
+
 lemma activation_context_rel_caller_of_None:
   "caller_of t = None
-   \<Longrightarrow> activation_context_rel \<G> adm c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
+   \<Longrightarrow> gactivation_context_rel adm c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
   by (induction t) auto
+
+end
 
 subsection \<open>The source bridge\<close>
 
 text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cstep\<close>
   simulation) and the located invariant: every source run produces a matching valid
   activation trace at the simulated node.\<close>
+context bridge_sem
+begin
+
 theorem source_run_has_activation_trace:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+    and run: "star (gpstep \<Pi>) (main_body \<Pi>, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t"
+                   \<and> gactivation_trace_repr (compile_prog \<Pi> ps) S (v, s, stk) t"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   have pc: "procs_embedded \<Pi> ?g" by (rule procs_embedded_compile_prog[OF wf])
@@ -262,23 +292,23 @@ proof -
     and base: "\<Pi>, ?g, prog_main_name \<turnstile> (main_body \<Pi>, s0, []) \<approx> (en, s0, [])"
     by (rule compile_prog_main_base[OF wf])
   have loc0:
-    "located_activation_trace \<G> (compile_prog \<Pi> ps) S (FunctionEntry prog_main_name, s0, [])"
+    "glocated_activation_trace (compile_prog \<Pi> ps) S (FunctionEntry prog_main_name, s0, [])"
     using located_activation_trace_entry[where g = "compile_prog \<Pi> ps", OF s0] by simp
-  have step0: "\<G>, ?g \<turnstile> (FunctionEntry prog_main_name, s0, []) \<rightarrow>\<^sub>c (en, s0, [])"
+  have step0: "gcstep ?g (FunctionEntry prog_main_name, s0, []) (en, s0, [])"
     by (rule cstep_body[OF entry])
-  have loc_en: "located_activation_trace \<G> ?g S (en, s0, [])"
+  have loc_en: "glocated_activation_trace ?g S (en, s0, [])"
     by (rule cstep_preserves_located_activation_trace[OF wf loc0 step0])
   from csim_star[OF base pc swf run] obtain cf'
-    where run_c: "\<G>, ?g \<turnstile> (en, s0, []) \<rightarrow>\<^sub>c\<^sup>* cf'"
+    where run_c: "star (gcstep ?g) (en, s0, []) cf'"
       and sim': "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> cf'"
     by blast
   obtain v s' stk where cf': "cf' = (v, s', stk)" by (cases cf')
-  have store: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
-  have loc_v: "located_activation_trace \<G> ?g S (v, s, stk)"
-    using csteps_preserve_located_activation_trace[OF wf loc_en run_c] cf' store by simp
-  from loc_v obtain t where "activation_trace_repr \<G> ?g S (v, s, stk) t"
-    by (auto simp: located_activation_trace_def)
-  then show ?thesis using sim' cf' store by blast
+  have seq: "s' = s" using csim_store_eq[OF sim'[unfolded cf']] by simp
+  have loc_v: "glocated_activation_trace ?g S (v, s, stk)"
+    using csteps_preserve_located_activation_trace[OF wf loc_en run_c] cf' seq by simp
+  from loc_v obtain t where "gactivation_trace_repr ?g S (v, s, stk) t"
+    by (auto simp: glocated_activation_trace_def)
+  then show ?thesis using sim' cf' seq by blast
 qed
 
 text \<open>The plain projected source bridge: a reachable source store lies in the activation-trace
@@ -287,25 +317,25 @@ text \<open>The plain projected source bridge: a reachable source store lies in 
   asks for one: \<open>has_ctx\<close> is what \<open>activation_coverage\<close>'s \<open>TOTAL\<close> buys downstream, and what a
   functional policy has outright (\<open>source_store_in_activation_collect_of_fun\<close>).\<close>
 theorem source_store_in_activation_collect:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
-    and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>\<G>,compile_prog \<Pi> ps,S\<^esub>
-                   \<Longrightarrow> \<exists>c. activation_context_rel \<G> adm c\<^sub>0 (compile_prog \<Pi> ps) t c"
+    and run: "star (gpstep \<Pi>) (main_body \<Pi>, s0, []) (residual, s, frs)"
+    and has_ctx: "\<And>t. t \<in> gvalid_activation_trace (compile_prog \<Pi> ps) (S)
+                   \<Longrightarrow> \<exists>c. gactivation_context_rel adm c\<^sub>0 (compile_prog \<Pi> ps) t c"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
-                   \<and> activation_context_rel \<G> adm c\<^sub>0 (compile_prog \<Pi> ps) t c
-                   \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
+                   \<and> gactivation_trace_repr (compile_prog \<Pi> ps) S (v, s, stk) t
+                   \<and> gactivation_context_rel adm c\<^sub>0 (compile_prog \<Pi> ps) t c
+                   \<and> s \<in> gactivation_collect adm c\<^sub>0 (compile_prog \<Pi> ps) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
     where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
+      and rep: "gactivation_trace_repr ?g S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
-    by (auto simp: activation_trace_repr_def)
-  from has_ctx[OF tv] obtain c where tc: "activation_context_rel \<G> adm c\<^sub>0 ?g t c" by blast
-  have "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,?g,S\<^esub> v c"
+    by (auto simp: gactivation_trace_repr_def)
+  from has_ctx[OF tv] obtain c where tc: "gactivation_context_rel adm c\<^sub>0 ?g t c" by blast
+  have "s \<in> gactivation_collect adm c\<^sub>0 ?g S v c"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim rep tc by blast
 qed
@@ -313,25 +343,25 @@ qed
 text \<open>A functional policy carries \<^const>\<open>activation_context_of\<close>'s context on every valid activation trace, so it needs no
   context witness.\<close>
 corollary source_store_in_activation_collect_of_fun:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+    and run: "star (gpstep \<Pi>) (main_body \<Pi>, s0, []) (residual, s, frs)"
   shows "\<exists>v stk t c. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> activation_trace_repr \<G> (compile_prog \<Pi> ps) S (v, s, stk) t
+                   \<and> gactivation_trace_repr (compile_prog \<Pi> ps) S (v, s, stk) t
                    \<and> activation_context_of f c\<^sub>0 t = c
-                   \<and> s \<in> \<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c"
+                   \<and> s \<in> gactivation_collect (context_policy_of_fun f) c\<^sub>0 (compile_prog \<Pi> ps) S v c"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
     where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
-  from rep have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
+      and rep: "gactivation_trace_repr ?g S (v, s, stk) t" by blast
+  from rep have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = v"
     and ss: "sink_store t = s"
-    by (auto simp: activation_trace_repr_def)
+    by (auto simp: gactivation_trace_repr_def)
   have tc:
-    "activation_context_rel \<G> (context_policy_of_fun f) c\<^sub>0 ?g t (activation_context_of f c\<^sub>0 t)"
+    "gactivation_context_rel (context_policy_of_fun f) c\<^sub>0 ?g t (activation_context_of f c\<^sub>0 t)"
     by (simp add: activation_context_rel_of_fun_iff[OF tv])
-  have "s \<in> \<A>\<^bsub>\<G>,context_policy_of_fun f,c\<^sub>0,?g,S\<^esub> v
+  have "s \<in> gactivation_collect (context_policy_of_fun f) c\<^sub>0 ?g S v
               (activation_context_of f c\<^sub>0 t)"
     using activation_collect_I[OF tv sn tc] ss by simp
   then show ?thesis using sim rep by blast
@@ -341,27 +371,29 @@ text \<open>The witness-free top-level result: a store reached with an empty sou
   the activation collecting at the fixed seed context --- no \<^typ>\<open>activation_trace\<close> witness and no context
   existential. This is the shape a user reads for main-level program points.\<close>
 theorem source_toplevel_in_activation_collect:
-  assumes wf: "wf_compile_input \<G> \<Pi> ps"
+  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
     and s0: "s0 \<in> S"
-    and run: "\<G>, \<Pi> \<turnstile> (main_body \<Pi>, s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, [])"
+    and run: "star (gpstep \<Pi>) (main_body \<Pi>, s0, []) (residual, s, [])"
   shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, [])
-             \<and> s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,compile_prog \<Pi> ps,S\<^esub> v c\<^sub>0"
+             \<and> s \<in> gactivation_collect adm c\<^sub>0 (compile_prog \<Pi> ps) S v c\<^sub>0"
 proof -
   let ?g = "compile_prog \<Pi> ps"
   from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
     where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, stk)"
-      and rep: "activation_trace_repr \<G> ?g S (v, s, stk) t" by blast
+      and rep: "gactivation_trace_repr ?g S (v, s, stk) t" by blast
   have stk0: "stk = []" using sim by blast
-  from rep stk0 have tv: "t \<in> \<T>\<^bsub>\<G>,?g,S\<^esub>" and sn: "sink_node t = v"
+  from rep stk0 have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = v"
     and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
-    by (auto simp: activation_trace_repr_def)
+    by (auto simp: gactivation_trace_repr_def)
   have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "activation_context_rel \<G> adm c\<^sub>0 ?g t c\<^sub>0"
+  have covered: "gactivation_context_rel adm c\<^sub>0 ?g t c\<^sub>0"
     by (simp add: activation_context_rel_caller_of_None[OF cof])
-  have "s \<in> \<A>\<^bsub>\<G>,adm,c\<^sub>0,?g,S\<^esub> v c\<^sub>0"
+  have "s \<in> gactivation_collect adm c\<^sub>0 ?g S v c\<^sub>0"
     using activation_collect_I[OF tv sn covered] ss by simp
   then show ?thesis using sim stk0 by blast
 qed
+
+end
 
 section \<open>The bridge is inhabited\<close>
 
@@ -369,6 +401,25 @@ text \<open>\<open>source_run_has_activation_trace\<close> and the collecting co
   input, so the session ends by exhibiting one and running the bridge on it.  The zero-step
   run of the empty \<open>main\<close> is enough: it yields an actual node of an actual compiled graph and
   an actual \<^const>\<open>valid_activation_trace\<close> witness, so none of the above is vacuously true.\<close>
+
+
+
+
+text \<open>The untyped bridge is the instance at source names and untyped expressions.\<close>
+
+definition activation_trace_repr ::
+  "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> activation_trace \<Rightarrow> bool" where
+  "activation_trace_repr \<G> = bridge_sem.gactivation_trace_repr aval \<G> ret_var (\<lambda>_ n. n)"
+
+definition located_activation_trace :: "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> cconf \<Rightarrow> bool" where
+  "located_activation_trace \<G> = bridge_sem.glocated_activation_trace aval \<G> ret_var (\<lambda>_ n. n)"
+
+global_interpretation untyped?: bridge_sem aval \<G> ret_var "\<lambda>_ n. n"
+    rewrites "bridge_sem.gactivation_trace_repr aval \<G> ret_var (\<lambda>_ n. n) = activation_trace_repr \<G>"
+      and "bridge_sem.glocated_activation_trace aval \<G> ret_var (\<lambda>_ n. n) = located_activation_trace \<G>"
+  for \<G> :: "vname \<Rightarrow> bool"
+  by (simp_all add: activation_trace_repr_def located_activation_trace_def)
+
 
 theorem source_run_has_activation_trace_witness:
   "\<exists>v stk t. witness_pi, witness_cfg, prog_main_name \<turnstile> (SKIP (), s0, []) \<approx> (v, s0, stk)
