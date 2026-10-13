@@ -3,7 +3,8 @@
 Status: stages 0 to 4 landed on `feat/typed-ir` (typed Interval end to end, with
 backward refinement and Goblint's unsigned wrap); stage 5 in progress: one generic
 typed pipeline (`Voblint_Typed_Nonrel`) with end-to-end theorems for every
-`kind_int_domain`, instantiated at Interval and Congruence; the Int product is next.
+`kind_int_domain`, instantiated at Interval, Congruence and their reduced product
+(`int_tuple`); Order is next.
 
 Goal: Voblint becomes a verified, Goblint-style machine-integer analyzer. Typed
 expressions and static variable identities reach a typed CFG with no casts on
@@ -295,7 +296,7 @@ Globals start at zero concretely and abstractly.
 | 4 | `int_domain_ik`, `'a kd`, Interval with `norm`, `cast_to`, `widen`, `narrow`, kind-aware arithmetic, guard refinement through casts; typed Interval end to end | executable typed Interval with its own soundness theorem |
 | 5 | Typed Congruence, then the Int product (Interval and Congruence first, with Goblint's `no_ov` protocol), then Order; Sign and Parity last | every configuration sound; precision changes classified |
 | 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem. An experimental CLI path for the typed Interval and Congruence comes early, beside the untyped CLI, for differential testing | the CLI's typed analysis is the one the theorem covers |
-| 7 | Cleanup, proposed separately once stage 6 is complete: remove the mathematical source semantics and the typed-to-untyped lowering; keep reusable domains and proof infrastructure; migrate examples, flagging every one whose properties change under wraparound instead of rewriting its expected results | one source language, one analyzer |
+| 7 | Cleanup, proposed separately once stage 6 is complete: remove the mathematical-integer analyzer, its source semantics and the typed-to-untyped lowering; generalize the generic framework in place at the typed instance, so the parallel typed spine disappears and the `typed`/`Typed_` prefixes go with it (`typed_cfg` becomes the CFG, `Typed_Nonrel` the non-relational analysis); keep reusable domains and proof infrastructure; migrate examples, flagging every one whose properties change under wraparound instead of rewriting its expected results | one source language, one analyzer, no `typed` prefix |
 
 ### Stage 4 breakdown
 

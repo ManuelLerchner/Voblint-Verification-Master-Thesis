@@ -19,6 +19,7 @@ src/Analyses/Congruence
 src/Analyses/Typed_Congruence
 src/Analyses/Relational
 src/Analyses/Int
+src/Analyses/Typed_Int
 src/Executable_Surface/CLI
 src/Examples/CFG
 src/Examples/Congruence
