@@ -598,9 +598,9 @@ et al. @tilscher26, which Voblint includes as a submodule with a few changes
   the callee (by #isaconst("wf_cfg")), and the node $k$ where the caller
   resumes. Nodes (#isatype("cfg_node")) are $ctor("Statement") thin n$,
   $ctor("FunctionEntry") thin p$ or $ctor("FunctionResult") thin p$.
-  #isaconst("cfg_entry") is the root node. #isaconst("checks") pairs the node
-  of each check with its condition. For a compiled graph it is computed from the #isaconst("EA_Check") edges, so it cannot drift from them, and the report
-  classifies the same edges (#isaconst("classify_checks")).
+  #isaconst("cfg_entry") is the root node. A check is a local edge labeled
+  #isaconst("EA_Check") with its condition, and the report classifies exactly
+  these edges (#isaconst("classify_checks")).
 ]
 
 The call information $ctor("CallEdge") thin italic("dst") thin

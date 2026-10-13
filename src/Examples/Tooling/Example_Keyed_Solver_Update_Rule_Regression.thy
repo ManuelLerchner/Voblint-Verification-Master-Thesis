@@ -32,7 +32,7 @@ definition keyed_step :: "edge_action \<Rightarrow> ivl \<Rightarrow> ivl \<Righ
      (case a of EA_Assign _ _ \<Rightarrow> (g \<squnion> Ivl (Fin 1) (Fin 1), d) | _ \<Rightarrow> (g, d))"
 
 definition keyed_dummy_cfg :: cfg where
-  "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
+  "keyed_dummy_cfg = \<lparr> intra = {}, calls = {}, cfg_entry = Statement 0 \<rparr>"
 
 text \<open>Two predecessors of \<open>Statement 1\<close>, both from \<open>Statement 0\<close>, with different
   \<open>edge_action\<close>s so their \<^const>\<open>dg_edge_program_at\<close> contributions differ.\<close>
@@ -109,7 +109,7 @@ definition merge_cfg :: cfg where
   "merge_cfg = \<lparr>
      intra = {(Statement 0, EA_Nop, Statement 2),
               (Statement 1, EA_Assign (STR ''x'') (exp.N 0), Statement 2)},
-     calls = {}, cfg_entry = Statement 0, checks = {} \<rparr>"
+     calls = {}, cfg_entry = Statement 0 \<rparr>"
 
 definition merge_eqs :: "(pp \<times> unit, unit, (ivl, ivl) dg_state) eqsT" where
   "merge_eqs =

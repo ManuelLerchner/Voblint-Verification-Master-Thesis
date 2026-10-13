@@ -70,7 +70,9 @@ lemma node_collect_intra_step:
     and st: "s' \<in> gedge_step a s"
   shows "s' \<in> (gnode_collect g S) v"
 proof -
-  from s obtain t where t: "t \<in> (gvalid_activation_trace g S)" and n: "sink_node t = u" and w: "sink_store t = s"
+  from s
+  obtain t where t: "t \<in> (gvalid_activation_trace g S)" and n: "sink_node t = u" and w:
+    "sink_store t = s"
     by (rule node_collect_E)
   have "extend t (v, s') \<in> (gvalid_activation_trace g S)"
     by (rule gvalid_activation_trace.intra[OF t]) (use e st n w in simp_all)
@@ -179,7 +181,8 @@ text \<open>Bridge (2): the converse needs every valid activation trace to carry
   \<^const>\<open>activation_context_of\<close> is total; a relational one earns it from conditional totality, which is
   \<open>Activation_Trace_Abstract\<close>'s business.  No finiteness assumption either way.\<close>
 theorem node_collect_eq_Union_activation_of_has_context:
-  assumes has_ctx: "\<And>t. t \<in> (gvalid_activation_trace g S) \<Longrightarrow> \<exists>c. gactivation_context_rel adm c\<^sub>0 g t c"
+  assumes has_ctx:
+    "\<And>t. t \<in> (gvalid_activation_trace g S) \<Longrightarrow> \<exists>c. gactivation_context_rel adm c\<^sub>0 g t c"
   shows "(gnode_collect g S) v = (\<Union>c. gactivation_collect adm c\<^sub>0 g S v c)"
 proof
   show "(gnode_collect g S) v \<subseteq> (\<Union>c. gactivation_collect adm c\<^sub>0 g S v c)"
@@ -219,8 +222,6 @@ global_interpretation untyped?: collect_sem aval ret_var "\<lambda>_ n. n" \<G>
   by (simp add: node_collect_def)
 
 
-
-
 section \<open>The collecting semantics is inhabited\<close>
 
 text \<open>
@@ -235,8 +236,7 @@ definition activation_trace_witness_cfg :: cfg where
   "activation_trace_witness_cfg =
      \<lparr> intra = {(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1)},
        calls = {},
-       cfg_entry = Statement 0,
-       checks = {} \<rparr>"
+       cfg_entry = Statement 0 \<rparr>"
 
 lemma activation_trace_witness_entry [simp]: "cfg_entry activation_trace_witness_cfg = Statement 0"
   by (simp add: activation_trace_witness_cfg_def)

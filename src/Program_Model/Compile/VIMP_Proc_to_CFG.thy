@@ -200,12 +200,6 @@ text \<open>The whole program: every declared procedure, plus \<open>main_body \
   no global exit: whole-program completion is \<open>FunctionResult prog_main_name\<close>, and the entry is
   \<open>FunctionEntry prog_main_name\<close>.\<close>
 
-text \<open>\<open>checks\<close> is not collected by a separate counter-threading pass: it is read
-  directly off the compiled edges, exactly the \<^const>\<open>EA_Check\<close> edges
-  \<^const>\<open>compile\<close>'s own \<open>Check l c\<close> clause emits. There is only one representation
-  of "where a check sits and what it says" --- the compiled \<^const>\<open>intra\<close> set
-  itself --- so this field cannot drift from it by construction, not merely by
-  a separately proved agreement lemma.\<close>
 definition compile_prog ::
   "('a, 'v, 'e) gptable \<Rightarrow> pname list \<Rightarrow> ('v, 'e) gcfg"
 where
@@ -214,9 +208,7 @@ where
           (n2, Emain, Kmain) =
             compile_proc \<Pi> prog_main_name \<lparr>formals = [], body = main_body \<Pi>\<rparr> n1
       in \<lparr> intra = Eprocs \<union> Emain, calls = Kprocs \<union> Kmain,
-           cfg_entry = FunctionEntry prog_main_name,
-           checks = (\<lambda>(u, a, v). (u, ea_check_cond a))
-             ` Set.filter (\<lambda>(u, a, v). is_EA_Check a) (Eprocs \<union> Emain) \<rparr>)"
+           cfg_entry = FunctionEntry prog_main_name \<rparr>)"
 
 text \<open>Decomposition of a whole compiled program into the callee pass and the \<open>main\<close>
   fragment.\<close>
