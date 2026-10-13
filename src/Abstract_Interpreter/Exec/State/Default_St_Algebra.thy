@@ -22,7 +22,7 @@ text \<open>
 subsection \<open>The pointwise combinator\<close>
 
 fun map2_default_dict ::
-  "('a => 'a => 'a) => 'a default_dict => 'a default_dict => 'a default_dict"
+  "('a => 'a => 'a) => ('k, 'a) gdefault_dict => ('k, 'a) gdefault_dict => ('k, 'a) gdefault_dict"
 where
   "map2_default_dict f (d1, ps1) (d2, ps2) =
      (f d1 d2,
@@ -30,8 +30,8 @@ where
         (remdups (map fst ps1 @ map fst ps2)))"
 
 fun map2_default_st_rep ::
-  "('a => 'a => 'a) => ('a::bot) default_st_rep => 'a default_st_rep =>
-   'a default_st_rep"
+  "('a => 'a => 'a) => ('k, 'a::bot) gdefault_st_rep => ('k, 'a) gdefault_st_rep =>
+   ('k, 'a) gdefault_st_rep"
 where
   "map2_default_st_rep f (l1, g1) (l2, g2) =
      (map2_default_dict f l1 l2, map2_default_dict f g1 g2)"
@@ -76,8 +76,8 @@ text \<open>
 \<close>
 
 definition merge_default_st_rep ::
-  "('a::bounded_semilattice_sup_bot) default_st_rep =>
-   'a default_st_rep => 'a default_st_rep"
+  "('k, 'a::bounded_semilattice_sup_bot) gdefault_st_rep =>
+   ('k, 'a) gdefault_st_rep => ('k, 'a) gdefault_st_rep"
 where
   "merge_default_st_rep s t = map2_default_st_rep (\<squnion>) s t"
 
@@ -94,12 +94,12 @@ lemma eq_default_st_rep_merge:
   using assms unfolding merge_default_st_rep_def
   by (rule eq_default_st_rep_map2)
 
-instantiation default_st ::
-  (bounded_semilattice_sup_bot) sup
+instantiation gdefault_st ::
+  (infinite_key, bounded_semilattice_sup_bot) sup
 begin
-lift_definition sup_default_st ::
-  "('a::bounded_semilattice_sup_bot) default_st =>
-   'a default_st => 'a default_st"
+lift_definition sup_gdefault_st ::
+  "('a::infinite_key, 'b::bounded_semilattice_sup_bot) gdefault_st =>
+   ('a, 'b) gdefault_st => ('a, 'b) gdefault_st"
   is merge_default_st_rep
   by (rule eq_default_st_rep_merge)
 instance ..
@@ -109,10 +109,10 @@ lemma default_st_get_sup [simp]:
   "(s \<squnion> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<squnion> t\<langle>loc\<rangle>"
   by transfer (rule default_st_rep_get_merge)
 
-instance default_st ::
-  (bounded_semilattice_sup_bot) semilattice_sup
+instance gdefault_st ::
+  (infinite_key, bounded_semilattice_sup_bot) semilattice_sup
 proof intro_classes
-  fix s t u :: "('a::bounded_semilattice_sup_bot) default_st"
+  fix s t u :: "('a::infinite_key, 'b::bounded_semilattice_sup_bot) gdefault_st"
   show "s \<le> s \<squnion> t"
     by (simp add: le_default_st_iff)
   show "t \<le> s \<squnion> t"
@@ -121,8 +121,8 @@ proof intro_classes
     by (simp add: le_default_st_iff)
 qed
 
-instance default_st ::
-  (bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
+instance gdefault_st ::
+  (infinite_key, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
 subsection \<open>Widening and narrowing\<close>
 
@@ -132,8 +132,8 @@ text \<open>
 \<close>
 
 definition widen_default_st_rep ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st_rep =>
-   'a default_st_rep => 'a default_st_rep"
+  "('k, 'a::{bounded_semilattice_sup_bot, warrowing}) gdefault_st_rep =>
+   ('k, 'a) gdefault_st_rep => ('k, 'a) gdefault_st_rep"
 where
   "widen_default_st_rep s t = map2_default_st_rep (\<nabla>) s t"
 
@@ -163,8 +163,8 @@ text \<open>
 \<close>
 
 lift_definition widen_on_default_st ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st =>
-   'a default_st => 'a default_st"
+  "('k::infinite_key, 'a::{bounded_semilattice_sup_bot, warrowing}) gdefault_st =>
+   ('k, 'a) gdefault_st => ('k, 'a) gdefault_st"
   is widen_default_st_rep
   by (rule eq_default_st_rep_widen)
 
@@ -173,30 +173,30 @@ lemma default_st_get_widen_on [simp]:
      s\<langle>loc\<rangle> \<nabla> t\<langle>loc\<rangle>"
   by transfer (rule default_st_rep_get_widen)
 
-instantiation default_st :: ("{bounded_semilattice_sup_bot, warrowing}") widening
+instantiation gdefault_st :: (infinite_key, "{bounded_semilattice_sup_bot, warrowing}") widening
 begin
-definition widen_default_st ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st =>
-   'a default_st => 'a default_st"
+definition widen_gdefault_st ::
+  "('a::infinite_key, 'b::{bounded_semilattice_sup_bot, warrowing}) gdefault_st =>
+   ('a, 'b) gdefault_st => ('a, 'b) gdefault_st"
 where
-  "widen_default_st s t = widen_on_default_st s t"
+  "widen_gdefault_st s t = widen_on_default_st s t"
 instance
 proof
-  fix a b :: "('a::{bounded_semilattice_sup_bot, warrowing}) default_st"
+  fix a b :: "('a::infinite_key, 'b::{bounded_semilattice_sup_bot, warrowing}) gdefault_st"
   show "a \<le> (a \<nabla> b)"
-    by (simp add: le_default_st_iff widen_default_st_def widen_ge1)
+    by (simp add: le_default_st_iff widen_gdefault_st_def widen_ge1)
   show "b \<le> (a \<nabla> b)"
-    by (simp add: le_default_st_iff widen_default_st_def widen_ge2)
+    by (simp add: le_default_st_iff widen_gdefault_st_def widen_ge2)
 qed
 end
 
 lemma default_st_get_widen [simp]:
   "(s \<nabla> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<nabla> t\<langle>loc\<rangle>"
-  by (simp add: widen_default_st_def)
+  by (simp add: widen_gdefault_st_def)
 
 definition narrow_default_st_rep ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st_rep =>
-   'a default_st_rep => 'a default_st_rep"
+  "('k, 'a::{bounded_semilattice_sup_bot, warrowing}) gdefault_st_rep =>
+   ('k, 'a) gdefault_st_rep => ('k, 'a) gdefault_st_rep"
 where
   "narrow_default_st_rep s t = map2_default_st_rep (\<Delta>) s t"
 
@@ -214,8 +214,8 @@ lemma eq_default_st_rep_narrow:
   by (rule eq_default_st_rep_map2)
 
 lift_definition narrow_on_default_st ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st =>
-   'a default_st => 'a default_st"
+  "('k::infinite_key, 'a::{bounded_semilattice_sup_bot, warrowing}) gdefault_st =>
+   ('k, 'a) gdefault_st => ('k, 'a) gdefault_st"
   is narrow_default_st_rep
   by (rule eq_default_st_rep_narrow)
 
@@ -224,24 +224,24 @@ lemma default_st_get_narrow_on [simp]:
      s\<langle>loc\<rangle> \<Delta> t\<langle>loc\<rangle>"
   by transfer (rule default_st_rep_get_narrow)
 
-instantiation default_st :: ("{bounded_semilattice_sup_bot, warrowing}") narrowing
+instantiation gdefault_st :: (infinite_key, "{bounded_semilattice_sup_bot, warrowing}") narrowing
 begin
-definition narrow_default_st ::
-  "('a::{bounded_semilattice_sup_bot, warrowing}) default_st =>
-   'a default_st => 'a default_st"
+definition narrow_gdefault_st ::
+  "('a::infinite_key, 'b::{bounded_semilattice_sup_bot, warrowing}) gdefault_st =>
+   ('a, 'b) gdefault_st => ('a, 'b) gdefault_st"
 where
-  "narrow_default_st s t = narrow_on_default_st s t"
+  "narrow_gdefault_st s t = narrow_on_default_st s t"
 instance
   by standard
-     (auto simp add: le_default_st_iff narrow_default_st_def
+     (auto simp add: le_default_st_iff narrow_gdefault_st_def
        intro: narrow_ge narrow_le)
 end
 
 lemma default_st_get_narrow [simp]:
   "(s \<Delta> t)\<langle>loc\<rangle> = s\<langle>loc\<rangle> \<Delta> t\<langle>loc\<rangle>"
-  by (simp add: narrow_default_st_def)
+  by (simp add: narrow_gdefault_st_def)
 
-instance default_st :: ("{bounded_semilattice_sup_bot, warrowing}") warrowing ..
+instance gdefault_st :: (infinite_key, "{bounded_semilattice_sup_bot, warrowing}") warrowing ..
 
 unbundle no default_st_carrier_syntax
 

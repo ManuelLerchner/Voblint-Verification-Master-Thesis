@@ -30,7 +30,7 @@ text \<open>
 subsection \<open>The structural environment combine\<close>
 
 lemma combine_env_mono:
-  fixes sc1 sc2 se1 se2 :: "'a::order abs_state"
+  fixes sc1 sc2 se1 se2 :: "('k, 'a::order) gabs_state"
   assumes "sc1 \<le> sc2" and "se1 \<le> se2"
   shows "combine_env \<G> sc1 se1 \<le> combine_env \<G> sc2 se2"
   using assms by (auto simp: combine_env_def le_fun_def)
@@ -45,7 +45,7 @@ text \<open>
   environment stage instead.
 \<close>
 lemma combine_env_sound [intro]:
-  fixes dc de :: "'a::numeric_domain abs_state"
+  fixes dc de :: "('k, 'a::numeric_domain) gabs_state"
   assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
   shows "combine_env \<G> s t \<in> \<gamma> (combine_env \<G> dc de)"
   using assms by (auto simp: gamma_state_def le_fun_def)
@@ -57,7 +57,7 @@ text \<open>The two facts a call boundary keeps re-deriving: writing one variabl
   arbitrary domain and no transfer function, so every analysis picks them up rather than
   proving its own copy.\<close>
 lemma gamma_state_upd [intro]:
-  fixes d :: "'a::numeric_domain abs_state"
+  fixes d :: "('k, 'a::numeric_domain) gabs_state"
   assumes s: "s \<in> \<gamma> d" and v: "v \<in> \<gamma> a"
   shows "s(x := v) \<in> \<gamma> (d(x := a))"
   using s v unfolding gamma_state_def by auto
@@ -67,7 +67,7 @@ text \<open>
   same formals yield a sound entry state.
 \<close>
 lemma bind_formals_sound [intro]:
-  fixes d :: "'a::numeric_domain abs_state"
+  fixes d :: "('k, 'a::numeric_domain) gabs_state"
   assumes s: "s \<in> \<gamma> d"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a) vs avs"
   shows "bind_formals xs vs s \<in> \<gamma> (bind_formals xs avs d)"
@@ -79,7 +79,7 @@ lemma bind_formals_sound [intro]:
   done
 
 lemma bind_formals_mono:
-  fixes d1 d2 :: "'a::order abs_state"
+  fixes d1 d2 :: "('k, 'a::order) gabs_state"
   assumes base: "d1 \<le> d2"
     and vals: "list_all2 (\<le>) avs1 avs2"
   shows "bind_formals xs avs1 d1 \<le> bind_formals xs avs2 d2"
@@ -138,8 +138,8 @@ lemma enter_binding_sound_list_all2 [intro]:
   fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
     and vals: "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-                 (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
-  shows "enter_binding \<G> 0 aval xs es s
+                 (map (\<lambda>e. ev e s) es) (map (\<lambda>e. aval_abs e d) es)"
+  shows "enter_binding \<G> 0 ev xs es s
            \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
   unfolding enter_binding_def enter_state_def[symmetric]
   by (rule bind_formals_sound[OF enter_frame_sound[OF sv reset_full] vals])
@@ -147,17 +147,17 @@ lemma enter_binding_sound_list_all2 [intro]:
 lemma enter_binding_sound [intro]:
   fixes reset_val :: "'a::numeric_domain"
   assumes sv: "s \<in> \<gamma> d" and reset_full: "\<gamma> reset_val = UNIV"
-    and eval: "\<And>e. e \<in> set es \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> \<gamma> (aval_abs e d)"
-  shows "enter_binding \<G> 0 aval xs es s
+    and eval: "\<And>e. e \<in> set es \<Longrightarrow> ev e s \<in> \<gamma> (aval_abs e d)"
+  shows "enter_binding \<G> 0 ev xs es s
            \<in> \<gamma> (enter_binding \<G> reset_val aval_abs xs es d)"
 proof (rule enter_binding_sound_list_all2[OF sv reset_full])
   show "list_all2 (\<lambda>v a. v \<in> \<gamma> a)
-          (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (map (\<lambda>e. aval_abs e d) es)"
+          (map (\<lambda>e. ev e s) es) (map (\<lambda>e. aval_abs e d) es)"
     by (rule list_all2_map_mapI) (rule eval)
 qed
 
 lemma enter_binding_mono:
-  fixes reset_val :: "'a::order" and d1 d2 :: "'a abs_state"
+  fixes reset_val :: "'a::order" and d1 d2 :: "('k, 'a) gabs_state"
   assumes state_le: "d1 \<le> d2"
     and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
   shows "enter_binding \<G> reset_val aval_abs xs es d1
@@ -191,7 +191,7 @@ text \<open>The return-value write is a single-slot update, hence monotone in bo
   monotonicity from this one fact.\<close>
 
 lemma combine_assign_mono:
-  fixes s1 s2 :: "'a::order abs_state"
+  fixes s1 s2 :: "('k, 'a::order) gabs_state"
   assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
   shows "combine_assign dst v1 s1 \<le> combine_assign dst v2 s2"
   using assms by (cases dst) (auto simp: le_fun_def)

@@ -33,49 +33,54 @@ text \<open>
   to the values actually read.
 \<close>
 
-instantiation default_st :: ("{order_bot, order_top}") ownership_split
+instantiation gdefault_st :: (global_name, "{order_bot, order_top}") ownership_split
 begin
 
-definition split_cmb_default_st :: "'a default_st \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st" where
-  "split_cmb_default_st = combine_default_st"
+definition split_cmb_gdefault_st :: "('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
+  "split_cmb_gdefault_st = combine_default_st"
 
-definition split_rl_default_st :: "'a default_st \<Rightarrow> 'a default_st" where
-  "split_rl_default_st = restrict_local_default_st"
+definition split_rl_gdefault_st :: "('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
+  "split_rl_gdefault_st = restrict_local_default_st"
 
-definition split_rg_default_st :: "'a default_st \<Rightarrow> 'a default_st" where
-  "split_rg_default_st = restrict_global_default_st"
+definition split_rg_gdefault_st :: "('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
+  "split_rg_gdefault_st = restrict_global_default_st"
 
-definition split_global_at_default_st :: "vname \<Rightarrow> 'a default_st \<Rightarrow> 'a default_st" where
-  "split_global_at_default_st x d =
-     (bot\<langle>(Global_Location x) := (d\<langle>(Global_Location x)\<rangle>)\<rangle>)"
+definition split_global_at_gdefault_st :: "vname \<Rightarrow> ('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
+  "split_global_at_gdefault_st x d =
+     (bot\<langle>(Global_Location (global_name x)) := (d\<langle>(Global_Location (global_name x))\<rangle>)\<rangle>)"
 
-definition split_free_default_st :: "vname list \<Rightarrow> 'a default_st" where
-  "split_free_default_st R = \<llangle>(bot, []), (top, map (\<lambda>x. (x, bot)) R)\<rrangle>"
+definition split_free_gdefault_st :: "vname list \<Rightarrow> ('a, 'b) gdefault_st" where
+  "split_free_gdefault_st R = \<llangle>(bot, []), (top, map (\<lambda>x. (global_name x, bot)) R)\<rrangle>"
 
-lemma split_free_default_st_get:
-  "(split_free R :: 'a default_st)\<langle>loc\<rangle> =
-     (case loc of Global_Location x \<Rightarrow> if x \<in> set R then bot else top | _ \<Rightarrow> bot)"
-  by (cases loc) (simp_all add: split_free_default_st_def map_of_map_restrict
-      restrict_map_def)
+lemma map_of_map_const_key:
+  "map_of (map (\<lambda>x. (f x, b)) R) k = (if k \<in> f ` set R then Some b else None)"
+  by (induction R) auto
+
+lemma split_free_gdefault_st_get:
+  "(split_free R :: ('a, 'b) gdefault_st)\<langle>loc\<rangle> =
+     (case loc of Global_Location x \<Rightarrow> if x \<in> global_name ` set R then bot else top | _ \<Rightarrow> bot)"
+  by (cases loc) (auto simp: split_free_gdefault_st_def map_of_map_const_key)
 
 instance
 proof
-  fix d d' g g' :: "'a default_st"
+  fix d d' g g' :: "('a, 'b) gdefault_st"
   assume "d \<le> d'" "g \<le> g'"
   then show "split_cmb d g \<le> split_cmb d' g'"
-    by (auto simp: split_cmb_default_st_def le_default_st_iff split: location.split)
+    by (auto simp: split_cmb_gdefault_st_def le_default_st_iff split: glocation.split)
 next
-  fix n :: vname and R and d :: "'a default_st"
+  fix n :: vname and R and d :: "('a, 'b) gdefault_st"
   assume "n \<notin> set R"
+  then have "global_name n \<notin> global_name ` set R"
+    using inj_global_name by (auto dest: injD)
   then show "split_global_at n d \<le> split_free R"
-    by (auto simp: le_default_st_iff split_global_at_default_st_def split_free_default_st_get
-        split: location.split)
+    by (auto simp: le_default_st_iff split_global_at_gdefault_st_def split_free_gdefault_st_get
+        split: glocation.split)
 next
   fix n :: vname
-  show "split_global_at n (bot :: 'a default_st) = bot"
-    by (rule default_st_eqI) (simp add: split_global_at_default_st_def)
-qed (auto simp: split_cmb_default_st_def split_rl_default_st_def split_rg_default_st_def
-    split_global_at_default_st_def le_default_st_iff)
+  show "split_global_at n (bot :: ('a, 'b) gdefault_st) = bot"
+    by (rule default_st_eqI) (simp add: split_global_at_gdefault_st_def)
+qed (auto simp: split_cmb_gdefault_st_def split_rl_gdefault_st_def split_rg_gdefault_st_def
+    split_global_at_gdefault_st_def le_default_st_iff)
 
 end
 
@@ -236,7 +241,7 @@ text \<open>
 lemma split_global_at_default_st_get [simp]:
   "((split_global_at x d)\<langle>loc\<rangle>) =
      (if loc = Global_Location x then (d\<langle>loc\<rangle>) else bot)"
-  by (auto simp: split_global_at_default_st_def)
+  by (auto simp: split_global_at_gdefault_st_def)
 
 lemma view_of_default_st_get:
   "(view_of split_global_at xs E acc :: 'a::{bounded_semilattice_sup_bot, order_top} default_st)\<langle>loc\<rangle>
@@ -244,7 +249,7 @@ lemma view_of_default_st_get:
                        | Local_Location y \<Rightarrow> bot)"
   unfolding view_of_def
   by (induction xs arbitrary: acc)
-     (auto simp: split_global_at_default_st_def ac_simps split: location.split)
+     (auto simp: split_global_at_gdefault_st_def ac_simps split: glocation.split)
 
 text \<open>The value a lifted state carries, \<open>bot\<close> when unreachable.\<close>
 
@@ -327,7 +332,7 @@ lemma keyed_field_gamma:
     \<longleftrightarrow> (\<forall>y. s y \<in> \<gamma> (if y \<in> set xs then (lift_val (lift_get f (E y)))\<langle>Global_Location y\<rangle>
                          else st\<langle>Local_Location y\<rangle>))"
   by (simp add: keyed_field_read[OF hom fa] gamma_lift_def default_st_gamma_def gamma_state_def
-      default_st_to_fun_def location_of_def G split_cmb_default_st_def view_of_default_st_get)
+      default_st_to_fun_def location_of_def G split_cmb_gdefault_st_def view_of_default_st_get)
 
 lemma default_st_gamma_iff:
   "s \<in> default_st_gamma \<G> st \<longleftrightarrow> (\<forall>y. s y \<in> \<gamma> (st\<langle>location_of \<G> y\<rangle>))"
@@ -373,7 +378,7 @@ proof -
     proof (cases "y \<in> set xs")
       case False
       then show ?thesis using s'R[rule_format, of y]
-        by (simp add: G location_of_def split_rl_default_st_def)
+        by (simp add: G location_of_def split_rl_gdefault_st_def)
     next
       case xs: True
       show ?thesis
