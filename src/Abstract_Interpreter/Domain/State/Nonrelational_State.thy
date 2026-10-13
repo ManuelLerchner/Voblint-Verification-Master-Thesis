@@ -19,7 +19,8 @@ text \<open>
   testing \<open>gamma_state\<close> against the empty set at run time.
 \<close>
 
-type_synonym 'a abs_state = "vname => 'a"
+type_synonym ('k, 'a) gabs_state = "'k => 'a"
+type_synonym 'a abs_state = "(vname, 'a) gabs_state"
 
 (* HOL ships fun :: (type, bounded_lattice) bounded_lattice but not this
    weaker pointwise instance; abs_state needs it for TD_side part_post_solution. *)
@@ -30,7 +31,7 @@ text \<open>Pointwise join on abstract states is idempotent because the value-do
   standard idempotent-join laws without a separate state-level assumption.\<close>
 subsection \<open>State concretization\<close>
 
-definition gamma_state :: "('a::numeric_domain) abs_state \<Rightarrow> store set" where
+definition gamma_state :: "('k, 'a::numeric_domain) gabs_state \<Rightarrow> ('k \<Rightarrow> int) set" where
   "gamma_state d = {s. \<forall>x. s x \<in> \<gamma> (d x)}"
 
 adhoc_overloading gamma_S == gamma_state
@@ -49,23 +50,23 @@ text \<open>Every value-level concretization law, lifted to states.  All of them
   are read one variable at a time, and no law here needs a relation between variables.\<close>
 lemma gamma_state_mono:
   "sigma1 \<le> sigma2 \<Longrightarrow> \<gamma> sigma1 \<subseteq> \<gamma> sigma2"
-  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
+  for sigma1 sigma2 :: "('k, 'a::numeric_domain) gabs_state"
   unfolding gamma_state_def le_fun_def
   using gamma_mono by blast
 
 lemma gamma_state_bot [simp]:
-  "\<gamma> (bot :: 'a::numeric_domain abs_state) = {}"
+  "\<gamma> (bot :: ('k, 'a::numeric_domain) gabs_state) = {}"
   unfolding gamma_state_def bot_fun_def using gamma_bot by auto
 
 lemma gamma_state_sup_ub1 [intro]:
   "\<gamma> sigma1 \<subseteq> \<gamma> (sigma1 \<squnion> sigma2)"
-  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
+  for sigma1 sigma2 :: "('k, 'a::numeric_domain) gabs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub1 by blast
 
 lemma gamma_state_sup_ub2 [intro]:
   "\<gamma> sigma2 \<subseteq> \<gamma> (sigma1 \<squnion> sigma2)"
-  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
+  for sigma1 sigma2 :: "('k, 'a::numeric_domain) gabs_state"
   unfolding gamma_state_def sup_fun_def
   using gamma_sup_ub2 by blast
 
@@ -81,12 +82,12 @@ text \<open>
 
 lemma gamma_state_supI1 [intro]:
   "s \<in> \<gamma> sigma1 \<Longrightarrow> s \<in> \<gamma> (sigma1 \<squnion> sigma2)"
-  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
+  for sigma1 sigma2 :: "('k, 'a::numeric_domain) gabs_state"
   using gamma_state_sup_ub1 by blast
 
 lemma gamma_state_supI2 [intro]:
   "s \<in> \<gamma> sigma2 \<Longrightarrow> s \<in> \<gamma> (sigma1 \<squnion> sigma2)"
-  for sigma1 sigma2 :: "'a::numeric_domain abs_state"
+  for sigma1 sigma2 :: "('k, 'a::numeric_domain) gabs_state"
   using gamma_state_sup_ub2 by blast
 
 text \<open>
@@ -97,7 +98,7 @@ text \<open>
 \<close>
 lemma gamma_stateD:
   "s \<in> \<gamma> d \<Longrightarrow> s x \<in> \<gamma> (d x)"
-  for d :: "'a::numeric_domain abs_state"
+  for d :: "('k, 'a::numeric_domain) gabs_state"
   unfolding gamma_state_def by simp
 
 subsection \<open>Witness-bottom abstract states\<close>
@@ -123,7 +124,7 @@ text \<open>
   \<open>is_empty_state\<close> on every such state.
 \<close>
 
-definition is_empty_state :: "('a::executable_domain) abs_state \<Rightarrow> bool" where
+definition is_empty_state :: "('k, 'a::executable_domain) gabs_state \<Rightarrow> bool" where
   "is_empty_state d = (\<exists>x. is_empty (d x))"
 
 lemma is_empty_stateI [intro]:
@@ -187,17 +188,17 @@ lemma is_empty_state_iff_gamma_state_empty:
   using is_empty_state_gamma_state_empty gamma_state_empty_is_empty_state by blast
 
 lemma exact_emptiness_is_empty_state:
-  "exact_emptiness is_empty_state (gamma_state :: 'a::numeric_domain abs_state \<Rightarrow> store set)"
+  "exact_emptiness is_empty_state (gamma_state :: ('k, 'a::numeric_domain) gabs_state \<Rightarrow> ('k \<Rightarrow> int) set)"
   by (rule exact_emptinessI) (rule is_empty_state_iff_gamma_state_empty)
 
 lemma is_empty_state_bot [simp]:
-  "is_empty_state (bot :: 'a::numeric_domain abs_state)"
+  "is_empty_state (bot :: ('k, 'a::numeric_domain) gabs_state)"
   unfolding is_empty_state_def bot_fun_def
   using is_empty_correct gamma_bot by blast
 
 lemma is_empty_state_antimono:
   "d1 \<le> d2 \<Longrightarrow> is_empty_state d2 \<Longrightarrow> is_empty_state d1"
-  for d1 d2 :: "'a::numeric_domain abs_state"
+  for d1 d2 :: "('k, 'a::numeric_domain) gabs_state"
   unfolding is_empty_state_def le_fun_def using is_empty_antimono by blast
 
 end

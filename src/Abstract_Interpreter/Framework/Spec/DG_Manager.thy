@@ -55,11 +55,15 @@ text \<open>
 
 subsection \<open>The manager record\<close>
 
-record ('x,'k,'v,'dl,'dg) man =
+record ('e,'x,'k,'v,'dl,'dg) gman =
   man_local :: 'dl
   man_global :: "'v \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dg) strategy_program"
   man_sideg :: "'v \<Rightarrow> 'dg \<Rightarrow> ('x,'k,('dl,'dg) dg_state,unit) strategy_program"
-  man_ask :: "query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
+  man_ask :: "'e gquery \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
+
+text \<open>A manager of the untyped language, whose queries are about untyped expressions.\<close>
+
+type_synonym ('x,'k,'v,'dl,'dg) man = "(exp,'x,'k,'v,'dl,'dg) gman"
 
 subsection \<open>Packed-carrier primitives\<close>
 
@@ -178,7 +182,7 @@ text \<open>
   meet of its components' answers.
 \<close>
 
-definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('x,'k,'v,'dl,'dg) man" where
+definition mk_dg_man :: "'dl::bot \<Rightarrow> ('v \<Rightarrow> 'k) \<Rightarrow> ('e,'x,'k,'v,'dl,'dg) gman" where
   "mk_dg_man d unknown_of = \<lparr>
      man_local = d,
      man_global = (\<lambda>v. dg_read_global (unknown_of v)),
@@ -213,16 +217,18 @@ lemma mk_dg_man_local_update [simp]:
   "mk_dg_man d unknown_of\<lparr>man_ask := A, man_local := e\<rparr> = mk_dg_man e unknown_of\<lparr>man_ask := A\<rparr>"
   by (simp_all add: mk_dg_man_def)
 
-type_synonym ('x,'k,'v,'dl,'dg) man_transfer =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+type_synonym ('e,'x,'k,'v,'dl,'dg) gman_transfer =
+  "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_transfer = "(exp,'x,'k,'v,'dl,'dg) gman_transfer"
 
 text \<open>
   A query handler takes the same manager and answers the query in the answer
   lattice, Goblint's \<open>Spec.query man q\<close>.
 \<close>
 
-type_synonym ('x,'k,'v,'dl,'dg) man_query =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> query \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
+type_synonym ('e,'x,'k,'v,'dl,'dg) gman_query =
+  "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> 'e gquery \<Rightarrow> ('x,'k,('dl,'dg) dg_state,answer) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_query = "(exp,'x,'k,'v,'dl,'dg) gman_query"
 
 text \<open>
   A combine-shaped transfer takes the same manager plus the callee-exit
@@ -230,8 +236,10 @@ text \<open>
   \<open>combine_env\<close>/\<open>combine_assign\<close> take the same \<open>man\<close> plus a \<open>D.t\<close>.
 \<close>
 
+type_synonym ('e,'x,'k,'v,'dl,'dg) gman_combine_transfer =
+  "('e,'x,'k,'v,'dl,'dg) gman \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
 type_synonym ('x,'k,'v,'dl,'dg) man_combine_transfer =
-  "('x,'k,'v,'dl,'dg) man \<Rightarrow> 'dl \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl) strategy_program"
+  "(exp,'x,'k,'v,'dl,'dg) gman_combine_transfer"
 
 text \<open>
   A call answers a list of alternatives, and each alternative is a pair: the
@@ -249,9 +257,10 @@ text \<open>
 
 type_synonym 'dl enter_result = "'dl \<times> 'dl"
 
-type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer =
-  "('x,'k,'v,'dl,'dg) man
+type_synonym ('e,'x,'k,'v,'dl,'dg) gman_enter_transfer =
+  "('e,'x,'k,'v,'dl,'dg) gman
    \<Rightarrow> ('x,'k,('dl,'dg) dg_state,'dl enter_result list) strategy_program"
+type_synonym ('x,'k,'v,'dl,'dg) man_enter_transfer = "(exp,'x,'k,'v,'dl,'dg) gman_enter_transfer"
 
 text \<open>
   A second transfer stage runs from the point the first reached by updating
