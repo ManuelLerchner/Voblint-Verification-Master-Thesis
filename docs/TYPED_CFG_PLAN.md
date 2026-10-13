@@ -178,6 +178,38 @@ Order of work: a vertical slice first (generic `CFG_Def` edge types and
 `edge_step`, untyped abbreviations, full build green, commit), then `pstep` and
 frames, then the compiler and simulation, then collecting semantics.
 
+### 2.1a Typed instance (stage 2)
+
+`src/Program_Model/Typed_CFG/Typed_CFG.thy` instantiates the generic core at
+`ev = teval`, `glob = tglobal`, `rv = ReturnVar`, `conv κ = tconv κ`:
+
+- `ReturnVar` is the one return slot (G: `return_varinfo`). It is activation-local:
+  `enter_state tglobal` resets it at a call, as every non-`GlobalId` identity.
+  `ReturnId p` stays as the key for `p`'s return kind in the kind environment.
+- `tglobal v ⟷ v` is a `GlobalId` (I).
+- `tconv κ (Some v) n = ik_norm (κ v) n`: the generic rules convert at every write
+  to a variable (assignment, library result, call result at restore), as C does on
+  assignment (G: CIL inserts the casts; Goblint's `set` then normalizes to the
+  lval's kind). Elaborated right-hand sides already have the destination kind, so
+  the conversion at an assignment is the identity on them.
+- A return writes `ReturnVar` without conversion; elaboration has converted the
+  returned expression to `κ (ReturnId p)` (G: CIL's cast on `return e`).
+- `typed_ptable p ds` is the elaborated procedure table, with formals resolved
+  to `ScopedId`s; `typed_cfg p ds = compile_prog (typed_ptable p ds) (prog_procs p)`.
+  Reads are `TVar (κ v) v`; the only casts on edges are those elaboration inserts
+  for C's conversions (promotion, usual arithmetic conversions, assignment).
+  Pinned by `Typed_CFG_Regression.typed_cfg_edges`.
+
+Proved: `typed_wf_compile_input` (the typed table is a well-formed compiler
+input whenever the source program is), `typed_source_run_has_activation_trace`
+and `typed_source_reaches_node_collect` (every typed run is simulated on the typed
+graph, and its store lies in the typed collecting semantics at the simulating
+node).
+
+The reference `tstep` (per-procedure `ReturnId` slots, simulated by the lowered
+`pstep`) is unchanged. Its relation to `tpstep` is not yet proved; stage 6
+decides which of the two the headline theorem quantifies over.
+
 ### 2.2 Kind-tagged values (stage 4)
 
 `'a kd = KBot | KD ikind 'a | KTop` with:
@@ -230,7 +262,7 @@ Globals start at zero concretely and abstractly.
 | --- | --- | --- |
 | 0 | Goblint reference (this document) | done |
 | 1 | Generic CFG, compiler, `pstep`/`cstep`, simulation, collecting semantics; untyped instance | all existing theorems and outputs unchanged |
-| 2 | Typed instance: compile `elab_com` output directly; generalize location elaboration; typed simulation, traces, collecting | typed source runs simulated by the typed CFG; no read casts |
+| 2 | Typed instance: compile `elab_com` output directly; generalize location elaboration; typed simulation, traces, collecting | typed source runs simulated by the typed CFG; no read casts (landed, see 2.1a) |
 | 3 | Concrete `styped` preservation (assign, entry, binding, return, restore, call destinations, library and nondeterministic results); abstract kind consistency | invariants proved |
 | 4 | `int_domain_ik`, `'a kd`, Interval with `norm`, `cast_to`, `widen`, `narrow`, kind-aware arithmetic, guard refinement through casts; typed Interval end to end | executable typed Interval with its own soundness theorem |
 | 5 | Congruence, Sign, Parity, Int product, Order | every configuration sound; precision changes classified |

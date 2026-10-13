@@ -21,11 +21,13 @@ datatype tframe =
 
 type_synonym 'a ttable = "pname \<Rightarrow> (var_id list \<times> 'a tcom) option"
 
-text \<open>The globals are the identities without a scope. A call keeps them and resets
-  every other identity, as \<^const>\<open>enter_state\<close> keeps the declared globals.\<close>
+text \<open>The globals are the \<^const>\<open>GlobalId\<close> identities. A call keeps them and resets
+  every other identity, the shared return slot included, as \<^const>\<open>enter_state\<close>
+  keeps the declared globals.\<close>
 
-definition tglobal :: "var_id \<Rightarrow> bool" where
-  "tglobal v \<longleftrightarrow> var_scope v = None"
+fun tglobal :: "var_id \<Rightarrow> bool" where
+  "tglobal (GlobalId _) = True"
+| "tglobal _ = False"
 
 text \<open>The procedure whose activation is running: the callee of the innermost frame, or
   \<open>main\<close> when no call is pending.\<close>
@@ -317,13 +319,13 @@ proof (intro conjI allI impI)
       using ys by auto
     with True assms(1) x show ?thesis
       by (auto simp: bind_formals_other resolve_var_def srel_def enter_frame_def
-               enter_state_def tglobal_def dest: spec [of _ x])
+               enter_state_def tglobal.simps dest: spec [of _ x])
   next
     case False
     have "bind_formals (map (ScopedId p) ys) ns (enter_frame tglobal 0 t) (ScopedId p x)
             = ik_norm (\<kappa> (ScopedId p x)) (bind_formals ys ns (enter_state \<G> s) x)"
       using assms(4) False
-      by (intro bind_formals_ScopedId) (auto simp: enter_frame_def enter_state_def tglobal_def)
+      by (intro bind_formals_ScopedId) (auto simp: enter_frame_def enter_state_def tglobal.simps)
     with False show ?thesis by (simp add: resolve_var_def)
   qed
 next
@@ -331,7 +333,7 @@ next
     using assms(3) by (auto simp: list_all_iff gvalid_formal_def)
   with assms(2) show "bind_formals (map (ScopedId p) ys) ns (enter_frame tglobal 0 t) (ReturnId p)
                         = bind_formals ys ns (enter_state \<G> s) ret_var"
-    by (simp add: bind_formals_other enter_frame_def enter_state_def tglobal_def)
+    by (simp add: bind_formals_other enter_frame_def enter_state_def tglobal.simps)
 qed
 
 text \<open>Leaving a callee: globals come from the callee, locals from the caller's frame,
@@ -352,15 +354,15 @@ proof -
     proof (cases "\<G> x")
       case True
       with callee x show ?thesis
-        by (auto simp: srel_def resolve_var_def tglobal_def dest: spec [of _ x])
+        by (auto simp: srel_def resolve_var_def tglobal.simps dest: spec [of _ x])
     next
       case False
       with caller x show ?thesis
-        by (auto simp: srel_def resolve_var_def tglobal_def dest: spec [of _ x])
+        by (auto simp: srel_def resolve_var_def tglobal.simps dest: spec [of _ x])
     qed
   next
     show "combine_env tglobal tf t (ReturnId q) = combine_env \<G> f s ret_var"
-      using caller nr by (simp add: srel_def tglobal_def)
+      using caller nr by (simp add: srel_def tglobal.simps)
   qed
   have ret: "t (ReturnId p) = s ret_var"
     using callee by (simp add: srel_def)

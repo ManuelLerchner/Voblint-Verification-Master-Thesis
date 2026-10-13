@@ -16,11 +16,20 @@ datatype var_id =
     GlobalId vname
   | ScopedId pname vname
   | ReturnId pname
+  | ReturnVar
+
+derive linorder var_id
+
+text \<open>\<open>ReturnVar\<close> is the one slot a return writes and a call result is read from,
+  Goblint's \<^verbatim>\<open>return_varinfo\<close>: activation-local, belonging to no single procedure.
+  \<open>ReturnId p\<close> names the kind procedure \<open>p\<close> returns, which elaboration converts a
+  returned value to.\<close>
 
 fun var_scope :: "var_id \<Rightarrow> pname option" where
   "var_scope (GlobalId _) = None"
 | "var_scope (ScopedId q _) = Some q"
 | "var_scope (ReturnId q) = Some q"
+| "var_scope ReturnVar = None"
 
 text \<open>The source name of an identity, which a report shows and erasure restores.
   The return slot keeps the reserved name the untyped semantics stores results in.\<close>
@@ -29,6 +38,7 @@ fun var_name :: "var_id \<Rightarrow> vname" where
   "var_name (GlobalId x) = x"
 | "var_name (ScopedId _ x) = x"
 | "var_name (ReturnId _) = ret_var"
+| "var_name ReturnVar = ret_var"
 
 subsection \<open>Resolution\<close>
 
@@ -50,6 +60,9 @@ lemma var_scope_resolve_var [simp]:
   by (simp add: resolve_var_def)
 
 lemma resolve_var_not_ReturnId [simp]: "resolve_var \<G> q x \<noteq> ReturnId r"
+  by (simp add: resolve_var_def)
+
+lemma resolve_var_not_ReturnVar [simp]: "resolve_var \<G> q x \<noteq> ReturnVar"
   by (simp add: resolve_var_def)
 
 text \<open>Resolution is unique: within one procedure distinct names get distinct

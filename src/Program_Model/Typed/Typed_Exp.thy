@@ -140,6 +140,10 @@ datatype texp =
   | TAnd texp texp
   | TOr texp texp
 
+derive linorder aop
+derive linorder cop
+derive linorder texp
+
 fun teval :: "texp \<Rightarrow> tstore \<Rightarrow> int" where
   "teval (TN ik n) t = ik_norm ik n"
 | "teval (TVar ik v) t = t v"

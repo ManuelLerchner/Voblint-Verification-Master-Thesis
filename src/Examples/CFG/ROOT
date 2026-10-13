@@ -8,9 +8,11 @@ session Voblint_Examples_CFG in "." = "Voblint_Compile" +
      elaboration"
   sessions
     "Voblint_Typed"
+    "Voblint_Typed_CFG"
   theories
     Example_Compile_Call_Free
     VIMP_Regression
     Compile_Regression
     Elaborated_Compilation_Regression
     Typed_Regression
+    Typed_CFG_Regression
