@@ -20,6 +20,8 @@ lemma step_verdicts:
   "verdicts (run_typed Typed_Congruence Globals_Join [] step_prog) = [Check_Unknown]"
   "verdicts (run_typed Typed_Int Globals_Join [] step_prog) = [Check_Proved]"
   "verdicts (run_typed Typed_Order Globals_Join [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed Typed_Sign Globals_Join [] step_prog) = [Check_Unknown]"
+  "verdicts (run_typed Typed_Parity Globals_Join [] step_prog) = [Check_Unknown]"
   by eval+
 
 end

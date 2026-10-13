@@ -43,7 +43,7 @@ let usage =
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order [--globals RULE] FILE.vimp\n\n\
+   voblint --typed interval|congruence|int|order|sign|parity [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -589,6 +589,8 @@ let () =
            | "congruence" -> Some C.Typed_Congruence
            | "int" -> Some C.Typed_Int
            | "order" -> Some C.Typed_Order
+           | "sign" -> Some C.Typed_Sign
+           | "parity" -> Some C.Typed_Parity
            | _ ->
                prerr_endline ("unknown --typed value: " ^ v);
                exit 1);

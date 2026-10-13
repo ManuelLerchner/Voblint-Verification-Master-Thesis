@@ -5,6 +5,8 @@ session Voblint_Typed_CLI in "." = "Voblint_Typed_Int" +
     program and its kind declarations, with the soundness of its verdicts"
   sessions
     Voblint_Typed_Order
+    Voblint_Typed_Sign
+    Voblint_Typed_Parity
   theories
     Typed_Run
     Typed_Run_Regression

@@ -127,7 +127,7 @@ module Generated : sig
   type typed_answer = Typed_Malformed | Typed_No_Answer |
     Typed_Analysed of (cfg_node * (texp * check_result)) list
   type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int |
-    Typed_Order
+    Typed_Order | Typed_Sign | Typed_Parity
   type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
     Context_Call_String of cfg_node list
   type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a
@@ -3089,10 +3089,6 @@ let warrowing_sign =
   ({narrowing_warrowing = narrowing_sign; widening_warrowing = widening_sign} :
     sign warrowing);;
 
-let semilattice_sup_sign =
-  ({sup_semilattice_sup = sup_sign; order_semilattice_sup = order_sign} :
-    sign semilattice_sup);;
-
 let rec string_of_sign = function SBot -> "<bottom>"
                          | SNeg -> "-"
                          | SNonPos -> "<le>" ^ "0"
@@ -3107,6 +3103,74 @@ let rec is_bottom_sign s = equal_signa s SBot;;
 
 let rec is_empty_sign a = is_bottom_sign a;;
 
+let gamma_sign _ = failwith "Sign_Lattice.gamma_sign";;
+
+let rec gamma_signa a = gamma_sign a;;
+
+let rec inf_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                   | SNeg, SBot -> SBot
+                   | SNonPos, SBot -> SBot
+                   | SZero, SBot -> SBot
+                   | SNonNeg, SBot -> SBot
+                   | SPos, SBot -> SBot
+                   | STop, SBot -> SBot
+                   | STop, SNeg -> SNeg
+                   | STop, SNonPos -> SNonPos
+                   | STop, SZero -> SZero
+                   | STop, SNonNeg -> SNonNeg
+                   | STop, SPos -> SPos
+                   | STop, STop -> STop
+                   | SNeg, STop -> SNeg
+                   | SNonPos, STop -> SNonPos
+                   | SZero, STop -> SZero
+                   | SNonNeg, STop -> SNonNeg
+                   | SPos, STop -> SPos
+                   | SNeg, SNeg -> SNeg
+                   | SNeg, SNonPos -> SNeg
+                   | SNonPos, SNeg -> SNeg
+                   | SNonPos, SNonPos -> SNonPos
+                   | SNonPos, SZero -> SZero
+                   | SZero, SNonPos -> SZero
+                   | SNonPos, SNonNeg -> SZero
+                   | SNonNeg, SNonPos -> SZero
+                   | SZero, SZero -> SZero
+                   | SZero, SNonNeg -> SZero
+                   | SNonNeg, SZero -> SZero
+                   | SNonNeg, SNonNeg -> SNonNeg
+                   | SNonNeg, SPos -> SPos
+                   | SPos, SNonNeg -> SPos
+                   | SPos, SPos -> SPos
+                   | SNeg, SZero -> SBot
+                   | SNeg, SNonNeg -> SBot
+                   | SNeg, SPos -> SBot
+                   | SNonPos, SPos -> SBot
+                   | SZero, SNeg -> SBot
+                   | SZero, SPos -> SBot
+                   | SNonNeg, SNeg -> SBot
+                   | SPos, SNeg -> SBot
+                   | SPos, SNonPos -> SBot
+                   | SPos, SZero -> SBot;;
+
+let rec narrow_ik_sign k a b = inf_sign a b;;
+
+let rec widen_ik_sign k a b = sup_signa a b;;
+
+let rec ik_signed = function I8 -> true
+                    | U8 -> false
+                    | I16 -> true
+                    | U16 -> false
+                    | I32 -> true
+                    | U32 -> false
+                    | I64 -> true
+                    | U64 -> false;;
+
+let rec empty_ik_sign
+  k a = equal_signa a SBot || not (ik_signed k) && equal_signa a SNeg;;
+
+let semilattice_sup_sign =
+  ({sup_semilattice_sup = sup_sign; order_semilattice_sup = order_sign} :
+    sign semilattice_sup);;
+
 let bounded_semilattice_sup_bot_sign =
   ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_sign;
      order_bot_bounded_semilattice_sup_bot = order_bot_sign}
@@ -3119,6 +3183,305 @@ let executable_domain_sign =
      warrowing_executable_domain = warrowing_sign; is_empty = is_empty_sign;
      to_string = to_string_sign}
     : sign executable_domain);;
+
+let numeric_domain_sign =
+  ({executable_domain_numeric_domain = executable_domain_sign;
+     gamma = gamma_signa}
+    : sign numeric_domain);;
+
+let ik_domain_sign =
+  ({numeric_domain_ik_domain = numeric_domain_sign; widen_ik = widen_ik_sign;
+     narrow_ik = narrow_ik_sign; empty_ik = empty_ik_sign}
+    : sign ik_domain);;
+
+let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                     | SNeg, SBot -> SBot
+                     | SNonPos, SBot -> SBot
+                     | SZero, SBot -> SBot
+                     | SNonNeg, SBot -> SBot
+                     | SPos, SBot -> SBot
+                     | STop, SBot -> SBot
+                     | SZero, SNeg -> SZero
+                     | SZero, SNonPos -> SZero
+                     | SZero, SZero -> SZero
+                     | SZero, SNonNeg -> SZero
+                     | SZero, SPos -> SZero
+                     | SZero, STop -> SZero
+                     | SNeg, SZero -> SZero
+                     | SNonPos, SZero -> SZero
+                     | SNonNeg, SZero -> SZero
+                     | SPos, SZero -> SZero
+                     | STop, SZero -> SZero
+                     | SNeg, SNeg -> SPos
+                     | SPos, SPos -> SPos
+                     | SNeg, SPos -> SNeg
+                     | SPos, SNeg -> SNeg
+                     | SNeg, SNonPos -> SNonNeg
+                     | SNonPos, SNeg -> SNonNeg
+                     | SNeg, SNonNeg -> SNonPos
+                     | SNonNeg, SNeg -> SNonPos
+                     | SPos, SNonNeg -> SNonNeg
+                     | SNonNeg, SPos -> SNonNeg
+                     | SPos, SNonPos -> SNonPos
+                     | SNonPos, SPos -> SNonPos
+                     | SNonNeg, SNonNeg -> SNonNeg
+                     | SNonNeg, SNonPos -> SNonPos
+                     | SNonPos, SNonNeg -> SNonPos
+                     | SNonPos, SNonPos -> SNonNeg
+                     | SNeg, STop -> STop
+                     | SNonPos, STop -> STop
+                     | SNonNeg, STop -> STop
+                     | SPos, STop -> STop
+                     | STop, SNeg -> STop
+                     | STop, SNonPos -> STop
+                     | STop, SNonNeg -> STop
+                     | STop, SPos -> STop
+                     | STop, STop -> STop;;
+
+let rec minus_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                     | SNeg, SBot -> SBot
+                     | SNonPos, SBot -> SBot
+                     | SZero, SBot -> SBot
+                     | SNonNeg, SBot -> SBot
+                     | SPos, SBot -> SBot
+                     | STop, SBot -> SBot
+                     | SNeg, SPos -> SNeg
+                     | SNeg, SNonNeg -> SNeg
+                     | SPos, SNeg -> SPos
+                     | SPos, SNonPos -> SPos
+                     | SNeg, SZero -> SNeg
+                     | SPos, SZero -> SPos
+                     | SZero, SZero -> SZero
+                     | SZero, SNeg -> SPos
+                     | SZero, SPos -> SNeg
+                     | SZero, SNonNeg -> SNonPos
+                     | SZero, SNonPos -> SNonNeg
+                     | SNonNeg, SZero -> SNonNeg
+                     | SNonNeg, SNeg -> SPos
+                     | SNonNeg, SNonPos -> SNonNeg
+                     | SNonPos, SZero -> SNonPos
+                     | SNonPos, SPos -> SNeg
+                     | SNonPos, SNonNeg -> SNonPos
+                     | SNeg, SNeg -> STop
+                     | SNeg, SNonPos -> STop
+                     | SNeg, STop -> STop
+                     | SNonPos, SNeg -> STop
+                     | SNonPos, SNonPos -> STop
+                     | SNonPos, STop -> STop
+                     | SZero, STop -> STop
+                     | SNonNeg, SNonNeg -> STop
+                     | SNonNeg, SPos -> STop
+                     | SNonNeg, STop -> STop
+                     | SPos, SNonNeg -> STop
+                     | SPos, SPos -> STop
+                     | SPos, STop -> STop
+                     | STop, SNeg -> STop
+                     | STop, SNonPos -> STop
+                     | STop, SZero -> STop
+                     | STop, SNonNeg -> STop
+                     | STop, SPos -> STop
+                     | STop, STop -> STop;;
+
+let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
+                    | SNeg, SBot -> SBot
+                    | SNonPos, SBot -> SBot
+                    | SZero, SBot -> SBot
+                    | SNonNeg, SBot -> SBot
+                    | SPos, SBot -> SBot
+                    | STop, SBot -> SBot
+                    | SNeg, SNeg -> SNeg
+                    | SNeg, SNonPos -> SNeg
+                    | SNonPos, SNeg -> SNeg
+                    | SNonPos, SNonPos -> SNonPos
+                    | SPos, SPos -> SPos
+                    | SPos, SNonNeg -> SPos
+                    | SNonNeg, SPos -> SPos
+                    | SNonNeg, SNonNeg -> SNonNeg
+                    | SZero, SNeg -> SNeg
+                    | SZero, SNonPos -> SNonPos
+                    | SZero, SZero -> SZero
+                    | SZero, SNonNeg -> SNonNeg
+                    | SZero, SPos -> SPos
+                    | SZero, STop -> STop
+                    | SNeg, SZero -> SNeg
+                    | SNonPos, SZero -> SNonPos
+                    | SNonNeg, SZero -> SNonNeg
+                    | SPos, SZero -> SPos
+                    | STop, SZero -> STop
+                    | SNeg, SNonNeg -> STop
+                    | SNeg, SPos -> STop
+                    | SNeg, STop -> STop
+                    | SNonPos, SNonNeg -> STop
+                    | SNonPos, SPos -> STop
+                    | SNonPos, STop -> STop
+                    | SNonNeg, SNeg -> STop
+                    | SNonNeg, SNonPos -> STop
+                    | SNonNeg, STop -> STop
+                    | SPos, SNeg -> STop
+                    | SPos, SNonPos -> STop
+                    | SPos, STop -> STop
+                    | STop, SNeg -> STop
+                    | STop, SNonPos -> STop
+                    | STop, SNonNeg -> STop
+                    | STop, SPos -> STop
+                    | STop, STop -> STop;;
+
+let rec sign_mod
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else (if equal_signa b SZero then a else sup_signa a SZero));;
+
+let rec sign_div
+  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
+          else sup_signa (times_sign a b) SZero);;
+
+let rec sign_aop x0 a b = match x0, a, b with AAdd, a, b -> plus_sign a b
+                   | ASub, a, b -> minus_sign a b
+                   | AMul, a, b -> times_sign a b
+                   | ADiv, a, b -> sign_div a b
+                   | AMod, a, b -> sign_mod a b;;
+
+let rec raw_aop_ik_sign x = sign_aop x;;
+
+let rec refine_ik_sign
+  c a b = (if equal_cop c CEq then (inf_sign a b, inf_sign a b) else (a, b));;
+
+let rec sign_of_int
+  n = (if less_int n zero_inta then SNeg
+        else (if equal_inta n zero_inta then SZero else SPos));;
+
+let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
+
+let one_nat : nat = Nat (Z.of_int 1);;
+
+let rec suc n = plus_nat n one_nat;;
+
+let rec signed_take_bit _A
+  n a = (let l =
+           take_bit _A.semiring_bit_operations_ring_bit_operations (suc n) a in
+          (if bit _A.semiring_bit_operations_ring_bit_operations.semiring_bits_semiring_bit_operations
+                l n
+            then plus _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.semigroup_add_numeral.plus_semigroup_add
+                   l (push_bit _A.semiring_bit_operations_ring_bit_operations
+                       (suc n)
+                       (uminus
+                         _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.group_add_neg_numeral.uminus_group_add
+                         (one _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.one_numeral)))
+            else l));;
+
+let rec minus_nat
+  m n = Nat (max ord_integer Z.zero
+              (Z.sub (integer_of_nat m) (integer_of_nat n)));;
+
+let rec ik_bits = function I8 -> nat_of_integer (Z.of_int 8)
+                  | U8 -> nat_of_integer (Z.of_int 8)
+                  | I16 -> nat_of_integer (Z.of_int 16)
+                  | U16 -> nat_of_integer (Z.of_int 16)
+                  | I32 -> nat_of_integer (Z.of_int 32)
+                  | U32 -> nat_of_integer (Z.of_int 32)
+                  | I64 -> nat_of_integer (Z.of_int 64)
+                  | U64 -> nat_of_integer (Z.of_int 64);;
+
+let rec ik_norm
+  ik n =
+    (if ik_signed ik
+      then signed_take_bit ring_bit_operations_int
+             (minus_nat (ik_bits ik) one_nat) n
+      else take_bit_int (ik_bits ik) n);;
+
+let rec of_int_ik_sign k n = sign_of_int (ik_norm k n);;
+
+let rec sign_cast
+  ik a =
+    (if equal_signa a SBot then SBot
+      else (if equal_signa a SZero then SZero
+             else (if ik_signed ik then STop else SNonNeg)));;
+
+let rec arith_ik_sign k op a b = sign_cast k (sign_aop op a b);;
+
+let rec meet_ik_sign a b = inf_sign a b;;
+
+let rec fits_ik_sign k a = equal_signa a SBot || equal_signa a SZero;;
+
+let zero_nat : nat = Nat Z.zero;;
+
+let rec power _A
+  a n = (if equal_nata n zero_nat then one _A.one_power
+          else times _A.times_power a (power _A a (minus_nat n one_nat)));;
+
+let rec ik_half
+  ik = power power_int (Int_of_integer (Z.of_int 2))
+         (minus_nat (ik_bits ik) one_nat);;
+
+let rec ik_min
+  ik = (if ik_signed ik then uminus_inta (ik_half ik) else zero_inta);;
+
+let rec ik_mod ik = power power_int (Int_of_integer (Z.of_int 2)) (ik_bits ik);;
+
+let rec ik_max
+  ik = (if ik_signed ik then minus_inta (ik_half ik) one_inta
+         else minus_inta (ik_mod ik) one_inta);;
+
+let rec cast_ik_sign
+  sk k a =
+    (match sk with None -> sign_cast k a
+      | Some s ->
+        (if less_eq_int (ik_min k) (ik_min s) &&
+              less_eq_int (ik_max s) (ik_max k)
+          then a else sign_cast k a));;
+
+let rec top_ik_sign k = (if ik_signed k then STop else SNonNeg);;
+
+let rec sign_eqb
+  a b = (if equal_signa a SZero && equal_signa b SZero then Some true
+          else (if sign_le a SNeg && sign_le b SNonNeg ||
+                     (sign_le b SNeg && sign_le a SNonNeg ||
+                       (sign_le a SPos && sign_le b SNonPos ||
+                         sign_le b SPos && sign_le a SNonPos))
+                 then Some false else None));;
+
+let rec map_option f x1 = match f, x1 with f, None -> None
+                     | f, Some x2 -> Some (f x2);;
+
+let rec sign_lt
+  a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
+          else (if sign_le a SNonPos && sign_le b SPos then Some true
+                 else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
+                        else (if sign_le b SNeg && sign_le a SPos
+                               then Some false else None))));;
+
+let rec sign_cop x0 a b = match x0, a, b with CLt, a, b -> sign_lt a b
+                   | CGt, a, b -> sign_lt b a
+                   | CLe, a, b -> map_option not (sign_lt b a)
+                   | CGe, a, b -> map_option not (sign_lt a b)
+                   | CEq, a, b -> sign_eqb a b
+                   | CNe, a, b -> map_option not (sign_eqb a b);;
+
+let rec cmp_ik_sign x = sign_cop x;;
+
+type 'a kind_int_domain =
+  {ik_domain_kind_int_domain : 'a ik_domain; top_ik : ikind -> 'a;
+    of_int_ik : ikind -> int -> 'a; cast_ik : ikind option -> ikind -> 'a -> 'a;
+    arith_ik : ikind -> aop -> 'a -> 'a -> 'a;
+    cmp_ik : cop -> 'a -> 'a -> bool option; meet_ik : 'a -> 'a -> 'a;
+    refine_ik : cop -> 'a -> 'a -> 'a * 'a; raw_aop_ik : aop -> 'a -> 'a -> 'a;
+    fits_ik : ikind -> 'a -> bool};;
+let top_ik _A = _A.top_ik;;
+let of_int_ik _A = _A.of_int_ik;;
+let cast_ik _A = _A.cast_ik;;
+let arith_ik _A = _A.arith_ik;;
+let cmp_ik _A = _A.cmp_ik;;
+let meet_ik _A = _A.meet_ik;;
+let refine_ik _A = _A.refine_ik;;
+let raw_aop_ik _A = _A.raw_aop_ik;;
+let fits_ik _A = _A.fits_ik;;
+
+let kind_int_domain_sign =
+  ({ik_domain_kind_int_domain = ik_domain_sign; top_ik = top_ik_sign;
+     of_int_ik = of_int_ik_sign; cast_ik = cast_ik_sign;
+     arith_ik = arith_ik_sign; cmp_ik = cmp_ik_sign; meet_ik = meet_ik_sign;
+     refine_ik = refine_ik_sign; raw_aop_ik = raw_aop_ik_sign;
+     fits_ik = fits_ik_sign}
+    : sign kind_int_domain);;
 
 let rec list_all p x1 = match p, x1 with p, [] -> true
                    | p, x :: xs -> p x && list_all p xs;;
@@ -3630,8 +3993,6 @@ let rec char_of_integer
 
 let rec char_of_nat x = comp char_of_integer integer_of_nat x;;
 
-let rec plus_nat m n = Nat (Z.add (integer_of_nat m) (integer_of_nat n));;
-
 let rec integer_of_char (Chr x) = x;;
 
 let rec map f x1 = match f, x1 with f, [] -> []
@@ -3676,50 +4037,7 @@ let gamma_ivl _ = failwith "Interval_Lattice.gamma_ivl";;
 
 let rec gamma_ivla a = gamma_ivl a;;
 
-let rec ik_signed = function I8 -> true
-                    | U8 -> false
-                    | I16 -> true
-                    | U16 -> false
-                    | I32 -> true
-                    | U32 -> false
-                    | I64 -> true
-                    | U64 -> false;;
-
-let rec minus_nat
-  m n = Nat (max ord_integer Z.zero
-              (Z.sub (integer_of_nat m) (integer_of_nat n)));;
-
-let one_nat : nat = Nat (Z.of_int 1);;
-
-let zero_nat : nat = Nat Z.zero;;
-
-let rec power _A
-  a n = (if equal_nata n zero_nat then one _A.one_power
-          else times _A.times_power a (power _A a (minus_nat n one_nat)));;
-
-let rec ik_bits = function I8 -> nat_of_integer (Z.of_int 8)
-                  | U8 -> nat_of_integer (Z.of_int 8)
-                  | I16 -> nat_of_integer (Z.of_int 16)
-                  | U16 -> nat_of_integer (Z.of_int 16)
-                  | I32 -> nat_of_integer (Z.of_int 32)
-                  | U32 -> nat_of_integer (Z.of_int 32)
-                  | I64 -> nat_of_integer (Z.of_int 64)
-                  | U64 -> nat_of_integer (Z.of_int 64);;
-
-let rec ik_half
-  ik = power power_int (Int_of_integer (Z.of_int 2))
-         (minus_nat (ik_bits ik) one_nat);;
-
-let rec ik_min
-  ik = (if ik_signed ik then uminus_inta (ik_half ik) else zero_inta);;
-
 let rec ik_lo k = Fin (ik_min k);;
-
-let rec ik_mod ik = power power_int (Int_of_integer (Z.of_int 2)) (ik_bits ik);;
-
-let rec ik_max
-  ik = (if ik_signed ik then minus_inta (ik_half ik) one_inta
-         else minus_inta (ik_mod ik) one_inta);;
 
 let rec ik_hi k = Fin (ik_max k);;
 
@@ -3958,28 +4276,6 @@ let rec ivl_refine x0 a b = match x0, a, b with CLt, a, b -> ivl_lt_bounds a b
 
 let rec refine_ik_ivl x = ivl_refine x;;
 
-let rec suc n = plus_nat n one_nat;;
-
-let rec signed_take_bit _A
-  n a = (let l =
-           take_bit _A.semiring_bit_operations_ring_bit_operations (suc n) a in
-          (if bit _A.semiring_bit_operations_ring_bit_operations.semiring_bits_semiring_bit_operations
-                l n
-            then plus _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.semigroup_add_numeral.plus_semigroup_add
-                   l (push_bit _A.semiring_bit_operations_ring_bit_operations
-                       (suc n)
-                       (uminus
-                         _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.group_add_neg_numeral.uminus_group_add
-                         (one _A.ring_parity_ring_bit_operations.comm_ring_1_ring_parity.ring_1_comm_ring_1.neg_numeral_ring_1.numeral_neg_numeral.one_numeral)))
-            else l));;
-
-let rec ik_norm
-  ik n =
-    (if ik_signed ik
-      then signed_take_bit ring_bit_operations_int
-             (minus_nat (ik_bits ik) one_nat) n
-      else take_bit_int (ik_bits ik) n);;
-
 let rec of_int_ik_ivl k n = Ivl (Fin (ik_norm k n), Fin (ik_norm k n));;
 
 let rec ik_ivl k = Ivl (ik_lo k, ik_hi k);;
@@ -4008,9 +4304,6 @@ let rec fits_ik_ivl k a = less_eq_ivl a (ik_ivl k);;
 let rec cast_ik_ivl sk = norm_ivl_ik;;
 
 let rec top_ik_ivl x = ik_ivl x;;
-
-let rec map_option f x1 = match f, x1 with f, None -> None
-                     | f, Some x2 -> Some (f x2);;
 
 let rec interval_less_false
   (Ivl (l1, u1)) (Ivl (l2, u2)) =
@@ -4048,23 +4341,6 @@ let rec ivl_cop x0 a b = match x0, a, b with CLt, a, b -> ivl_lt a b
                   | CNe, a, b -> map_option not (ivl_eq a b);;
 
 let rec cmp_ik_ivl x = ivl_cop x;;
-
-type 'a kind_int_domain =
-  {ik_domain_kind_int_domain : 'a ik_domain; top_ik : ikind -> 'a;
-    of_int_ik : ikind -> int -> 'a; cast_ik : ikind option -> ikind -> 'a -> 'a;
-    arith_ik : ikind -> aop -> 'a -> 'a -> 'a;
-    cmp_ik : cop -> 'a -> 'a -> bool option; meet_ik : 'a -> 'a -> 'a;
-    refine_ik : cop -> 'a -> 'a -> 'a * 'a; raw_aop_ik : aop -> 'a -> 'a -> 'a;
-    fits_ik : ikind -> 'a -> bool};;
-let top_ik _A = _A.top_ik;;
-let of_int_ik _A = _A.of_int_ik;;
-let cast_ik _A = _A.cast_ik;;
-let arith_ik _A = _A.arith_ik;;
-let cmp_ik _A = _A.cmp_ik;;
-let meet_ik _A = _A.meet_ik;;
-let refine_ik _A = _A.refine_ik;;
-let raw_aop_ik _A = _A.raw_aop_ik;;
-let fits_ik _A = _A.fits_ik;;
 
 let kind_int_domain_ivl =
   ({ik_domain_kind_int_domain = ik_domain_ivl; top_ik = top_ik_ivl;
@@ -4174,10 +4450,6 @@ let warrowing_parity =
      widening_warrowing = widening_parity}
     : parity warrowing);;
 
-let semilattice_sup_parity =
-  ({sup_semilattice_sup = sup_parity; order_semilattice_sup = order_parity} :
-    parity semilattice_sup);;
-
 let rec string_of_parity = function PBot -> "<bottom>"
                            | PEven -> "2" ^ "<int>"
                            | POdd -> "1+2" ^ "<int>"
@@ -4192,6 +4464,35 @@ let rec is_bottom_parity p = equal_paritya p PBot;;
 
 let rec is_empty_parity a = is_bottom_parity a;;
 
+let gamma_parity _ = failwith "Parity_Lattice.gamma_parity";;
+
+let rec gamma_paritya a = gamma_parity a;;
+
+let rec inf_parity
+  x0 b = match x0, b with PTop, b -> b
+    | PBot, PTop -> PBot
+    | PEven, PTop -> PEven
+    | POdd, PTop -> POdd
+    | PBot, PBot -> (if equal_paritya PBot PBot then PBot else PBot)
+    | PBot, PEven -> (if equal_paritya PBot PEven then PBot else PBot)
+    | PBot, POdd -> (if equal_paritya PBot POdd then PBot else PBot)
+    | PEven, PBot -> (if equal_paritya PEven PBot then PEven else PBot)
+    | PEven, PEven -> (if equal_paritya PEven PEven then PEven else PBot)
+    | PEven, POdd -> (if equal_paritya PEven POdd then PEven else PBot)
+    | POdd, PBot -> (if equal_paritya POdd PBot then POdd else PBot)
+    | POdd, PEven -> (if equal_paritya POdd PEven then POdd else PBot)
+    | POdd, POdd -> (if equal_paritya POdd POdd then POdd else PBot);;
+
+let rec narrow_ik_parity k a b = inf_parity a b;;
+
+let rec widen_ik_parity k a b = sup_paritya a b;;
+
+let rec empty_ik_parity k a = equal_paritya a PBot;;
+
+let semilattice_sup_parity =
+  ({sup_semilattice_sup = sup_parity; order_semilattice_sup = order_parity} :
+    parity semilattice_sup);;
+
 let bounded_semilattice_sup_bot_parity =
   ({semilattice_sup_bounded_semilattice_sup_bot = semilattice_sup_parity;
      order_bot_bounded_semilattice_sup_bot = order_bot_parity}
@@ -4204,6 +4505,129 @@ let executable_domain_parity =
      warrowing_executable_domain = warrowing_parity; is_empty = is_empty_parity;
      to_string = to_string_parity}
     : parity executable_domain);;
+
+let numeric_domain_parity =
+  ({executable_domain_numeric_domain = executable_domain_parity;
+     gamma = gamma_paritya}
+    : parity numeric_domain);;
+
+let ik_domain_parity =
+  ({numeric_domain_ik_domain = numeric_domain_parity;
+     widen_ik = widen_ik_parity; narrow_ik = narrow_ik_parity;
+     empty_ik = empty_ik_parity}
+    : parity ik_domain);;
+
+let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
+                       | PEven, PBot -> PBot
+                       | POdd, PBot -> PBot
+                       | PTop, PBot -> PBot
+                       | PEven, PEven -> PEven
+                       | PEven, POdd -> PEven
+                       | PEven, PTop -> PEven
+                       | POdd, PEven -> PEven
+                       | PTop, PEven -> PEven
+                       | POdd, POdd -> POdd
+                       | POdd, PTop -> PTop
+                       | PTop, POdd -> PTop
+                       | PTop, PTop -> PTop;;
+
+let rec minus_parity x0 uu = match x0, uu with PBot, uu -> PBot
+                       | PEven, PBot -> PBot
+                       | POdd, PBot -> PBot
+                       | PTop, PBot -> PBot
+                       | PEven, PEven -> PEven
+                       | POdd, POdd -> PEven
+                       | PEven, POdd -> POdd
+                       | POdd, PEven -> POdd
+                       | PEven, PTop -> PTop
+                       | POdd, PTop -> PTop
+                       | PTop, PEven -> PTop
+                       | PTop, POdd -> PTop
+                       | PTop, PTop -> PTop;;
+
+let rec plus_parity x0 uu = match x0, uu with PBot, uu -> PBot
+                      | PEven, PBot -> PBot
+                      | POdd, PBot -> PBot
+                      | PTop, PBot -> PBot
+                      | PEven, PEven -> PEven
+                      | POdd, POdd -> PEven
+                      | PEven, POdd -> POdd
+                      | POdd, PEven -> POdd
+                      | PEven, PTop -> PTop
+                      | POdd, PTop -> PTop
+                      | PTop, PEven -> PTop
+                      | PTop, POdd -> PTop
+                      | PTop, PTop -> PTop;;
+
+let rec parity_mod
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
+          else (if equal_paritya b PEven then a else PTop));;
+
+let rec parity_div
+  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
+
+let rec parity_aop x0 a b = match x0, a, b with AAdd, a, b -> plus_parity a b
+                     | ASub, a, b -> minus_parity a b
+                     | AMul, a, b -> times_parity a b
+                     | ADiv, a, b -> parity_div a b
+                     | AMod, a, b -> parity_mod a b;;
+
+let rec raw_aop_ik_parity x = parity_aop x;;
+
+let rec refine_ik_parity
+  c a b =
+    (if equal_cop c CEq then (inf_parity a b, inf_parity a b) else (a, b));;
+
+let rec dvd (_A1, _A2)
+  a b = eq _A1
+          (modulo
+            _A2.semiring_modulo_trivial_semidom_modulo.semiring_modulo_semiring_modulo_trivial.modulo_semiring_modulo
+            b a)
+          (zero _A2.algebraic_semidom_semidom_modulo.semidom_divide_algebraic_semidom.semidom_semidom_divide.comm_semiring_1_cancel_semidom.comm_semiring_1_comm_semiring_1_cancel.semiring_1_comm_semiring_1.semiring_0_semiring_1.mult_zero_semiring_0.zero_mult_zero);;
+
+let rec parity_of_int
+  n = (if dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2)) n
+        then PEven else POdd);;
+
+let rec of_int_ik_parity k n = parity_of_int (ik_norm k n);;
+
+let rec arith_ik_parity k = parity_aop;;
+
+let rec meet_ik_parity a b = inf_parity a b;;
+
+let rec fits_ik_parity k a = equal_paritya a PBot;;
+
+let rec cast_ik_parity sk k a = a;;
+
+let rec top_ik_parity k = PTop;;
+
+let rec parity_eqb uu uv = match uu, uv with PEven, POdd -> Some false
+                     | POdd, PEven -> Some false
+                     | PBot, uv -> None
+                     | POdd, PBot -> None
+                     | POdd, POdd -> None
+                     | POdd, PTop -> None
+                     | PTop, uv -> None
+                     | uu, PBot -> None
+                     | PEven, PEven -> None
+                     | uu, PTop -> None;;
+
+let rec parity_cop x0 a b = match x0, a, b with CEq, a, b -> parity_eqb a b
+                     | CNe, a, b -> map_option not (parity_eqb a b)
+                     | CLt, a, b -> None
+                     | CLe, a, b -> None
+                     | CGt, a, b -> None
+                     | CGe, a, b -> None;;
+
+let rec cmp_ik_parity x = parity_cop x;;
+
+let kind_int_domain_parity =
+  ({ik_domain_kind_int_domain = ik_domain_parity; top_ik = top_ik_parity;
+     of_int_ik = of_int_ik_parity; cast_ik = cast_ik_parity;
+     arith_ik = arith_ik_parity; cmp_ik = cmp_ik_parity;
+     meet_ik = meet_ik_parity; refine_ik = refine_ik_parity;
+     raw_aop_ik = raw_aop_ik_parity; fits_ik = fits_ik_parity}
+    : parity kind_int_domain);;
 
 type 'a query_lift = QBot | QLifted of 'a | QTop;;
 
@@ -4265,13 +4689,6 @@ let bot_congruencea : congruence = bottom_congruence;;
 let bot_int_tuplea : int_tuple = IT (bot_ivla, bot_congruencea);;
 
 let bot_int_tuple = ({bot = bot_int_tuplea} : int_tuple bot);;
-
-let rec dvd (_A1, _A2)
-  a b = eq _A1
-          (modulo
-            _A2.semiring_modulo_trivial_semidom_modulo.semiring_modulo_semiring_modulo_trivial.modulo_semiring_modulo
-            b a)
-          (zero _A2.algebraic_semidom_semidom_modulo.semidom_divide_algebraic_semidom.semidom_semidom_divide.comm_semiring_1_cancel_semidom.comm_semiring_1_comm_semiring_1_cancel.semiring_1_comm_semiring_1.semiring_0_semiring_1.mult_zero_semiring_0.zero_mult_zero);;
 
 let rec congruence_le_rep
   x0 uu = match x0, uu with None, uu -> true
@@ -5416,65 +5833,6 @@ let rec equal_int_dom_exta _A
 let rec equal_int_dom_ext _A =
   ({equal = equal_int_dom_exta _A} : 'a int_dom_ext equal);;
 
-let rec inf_parity
-  x0 b = match x0, b with PTop, b -> b
-    | PBot, PTop -> PBot
-    | PEven, PTop -> PEven
-    | POdd, PTop -> POdd
-    | PBot, PBot -> (if equal_paritya PBot PBot then PBot else PBot)
-    | PBot, PEven -> (if equal_paritya PBot PEven then PBot else PBot)
-    | PBot, POdd -> (if equal_paritya PBot POdd then PBot else PBot)
-    | PEven, PBot -> (if equal_paritya PEven PBot then PEven else PBot)
-    | PEven, PEven -> (if equal_paritya PEven PEven then PEven else PBot)
-    | PEven, POdd -> (if equal_paritya PEven POdd then PEven else PBot)
-    | POdd, PBot -> (if equal_paritya POdd PBot then POdd else PBot)
-    | POdd, PEven -> (if equal_paritya POdd PEven then POdd else PBot)
-    | POdd, POdd -> (if equal_paritya POdd POdd then POdd else PBot);;
-
-let rec inf_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                   | SNeg, SBot -> SBot
-                   | SNonPos, SBot -> SBot
-                   | SZero, SBot -> SBot
-                   | SNonNeg, SBot -> SBot
-                   | SPos, SBot -> SBot
-                   | STop, SBot -> SBot
-                   | STop, SNeg -> SNeg
-                   | STop, SNonPos -> SNonPos
-                   | STop, SZero -> SZero
-                   | STop, SNonNeg -> SNonNeg
-                   | STop, SPos -> SPos
-                   | STop, STop -> STop
-                   | SNeg, STop -> SNeg
-                   | SNonPos, STop -> SNonPos
-                   | SZero, STop -> SZero
-                   | SNonNeg, STop -> SNonNeg
-                   | SPos, STop -> SPos
-                   | SNeg, SNeg -> SNeg
-                   | SNeg, SNonPos -> SNeg
-                   | SNonPos, SNeg -> SNeg
-                   | SNonPos, SNonPos -> SNonPos
-                   | SNonPos, SZero -> SZero
-                   | SZero, SNonPos -> SZero
-                   | SNonPos, SNonNeg -> SZero
-                   | SNonNeg, SNonPos -> SZero
-                   | SZero, SZero -> SZero
-                   | SZero, SNonNeg -> SZero
-                   | SNonNeg, SZero -> SZero
-                   | SNonNeg, SNonNeg -> SNonNeg
-                   | SNonNeg, SPos -> SPos
-                   | SPos, SNonNeg -> SPos
-                   | SPos, SPos -> SPos
-                   | SNeg, SZero -> SBot
-                   | SNeg, SNonNeg -> SBot
-                   | SNeg, SPos -> SBot
-                   | SNonPos, SPos -> SBot
-                   | SZero, SNeg -> SBot
-                   | SZero, SPos -> SBot
-                   | SNonNeg, SNeg -> SBot
-                   | SPos, SNeg -> SBot
-                   | SPos, SNonPos -> SBot
-                   | SPos, SZero -> SBot;;
-
 let rec int_congruence
   (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
     int_congruence;;
@@ -6090,8 +6448,8 @@ type ('a, 'b, 'c) route_event = Ev_Route of 'a * 'b * 'c;;
 type typed_answer = Typed_Malformed | Typed_No_Answer |
   Typed_Analysed of (cfg_node * (texp * check_result)) list;;
 
-type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int |
-  Typed_Order;;
+type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order
+  | Typed_Sign | Typed_Parity;;
 
 type 'a ganalysis_event = Check_Event of (nat * nat) * 'a;;
 
@@ -9768,7 +10126,11 @@ let rec run_typed
              | Typed_Int ->
                nonrel_run (equal_int_tuple, kind_int_domain_int_tuple) Type r ds
                  p
-             | Typed_Order -> order_run r ds p));;
+             | Typed_Order -> order_run r ds p
+             | Typed_Sign ->
+               nonrel_run (equal_sign, kind_int_domain_sign) Type r ds p
+             | Typed_Parity ->
+               nonrel_run (equal_parity, kind_int_domain_parity) Type r ds p));;
 
 let rec field_empty
   (Analysis_registration_ext
@@ -10063,14 +10425,6 @@ let rec bool_valued = function Not uu -> true
 let rec answer_of_ivl
   i = QLifted
         (int_ivl_update (fun _ -> i) (top_int_dom_exta bounded_lattice_unit));;
-
-let rec parity_of_int
-  n = (if dvd (equal_int, semidom_modulo_int) (Int_of_integer (Z.of_int 2)) n
-        then PEven else POdd);;
-
-let rec sign_of_int
-  n = (if less_int n zero_inta then SNeg
-        else (if equal_inta n zero_inta then SZero else SPos));;
 
 let rec int_dom_of_int
   n = int_congruence_update (fun _ -> congruence_of_int n)
@@ -10887,34 +11241,6 @@ let rec factor_parity = function PBot -> PBot
 let rec inv_times_parity
   r a b = (inf_parity a (factor_parity r), inf_parity b (factor_parity r));;
 
-let rec minus_parity x0 uu = match x0, uu with PBot, uu -> PBot
-                       | PEven, PBot -> PBot
-                       | POdd, PBot -> PBot
-                       | PTop, PBot -> PBot
-                       | PEven, PEven -> PEven
-                       | POdd, POdd -> PEven
-                       | PEven, POdd -> POdd
-                       | POdd, PEven -> POdd
-                       | PEven, PTop -> PTop
-                       | POdd, PTop -> PTop
-                       | PTop, PEven -> PTop
-                       | PTop, POdd -> PTop
-                       | PTop, PTop -> PTop;;
-
-let rec plus_parity x0 uu = match x0, uu with PBot, uu -> PBot
-                      | PEven, PBot -> PBot
-                      | POdd, PBot -> PBot
-                      | PTop, PBot -> PBot
-                      | PEven, PEven -> PEven
-                      | POdd, POdd -> PEven
-                      | PEven, POdd -> POdd
-                      | POdd, PEven -> POdd
-                      | PEven, PTop -> PTop
-                      | POdd, PTop -> PTop
-                      | PTop, PEven -> PTop
-                      | PTop, POdd -> PTop
-                      | PTop, PTop -> PTop;;
-
 let rec inv_minus_parity
   r a b = (inf_parity a (plus_parity r b), inf_parity b (minus_parity a r));;
 
@@ -10937,38 +11263,6 @@ let parity_refine_ops : (parity, unit) refine_ops_ext
 let rec parity_eq
   a b = (if parity_eq_true a b then Some true
           else (if parity_eq_false a b then Some false else None));;
-
-let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
-                       | PEven, PBot -> PBot
-                       | POdd, PBot -> PBot
-                       | PTop, PBot -> PBot
-                       | PEven, PEven -> PEven
-                       | PEven, POdd -> PEven
-                       | PEven, PTop -> PEven
-                       | POdd, PEven -> PEven
-                       | PTop, PEven -> PEven
-                       | POdd, POdd -> POdd
-                       | POdd, PTop -> PTop
-                       | PTop, POdd -> PTop
-                       | PTop, PTop -> PTop;;
-
-let rec parity_mod
-  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot
-          else (if equal_paritya b PEven then a else PTop));;
-
-let rec parity_eqb uu uv = match uu, uv with PEven, POdd -> Some false
-                     | POdd, PEven -> Some false
-                     | PBot, uv -> None
-                     | POdd, PBot -> None
-                     | POdd, POdd -> None
-                     | POdd, PTop -> None
-                     | PTop, uv -> None
-                     | uu, PBot -> None
-                     | PEven, PEven -> None
-                     | uu, PTop -> None;;
-
-let rec parity_div
-  a b = (if equal_paritya a PBot || equal_paritya b PBot then PBot else PTop);;
 
 let rec parity_lt uu uv = None;;
 
@@ -11232,167 +11526,6 @@ let sign_refine_ops : (sign, unit) refine_ops_ext
 let rec sign_eq
   a b = (if sign_eq_true a b then Some true
           else (if sign_eq_false a b then Some false else None));;
-
-let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                     | SNeg, SBot -> SBot
-                     | SNonPos, SBot -> SBot
-                     | SZero, SBot -> SBot
-                     | SNonNeg, SBot -> SBot
-                     | SPos, SBot -> SBot
-                     | STop, SBot -> SBot
-                     | SZero, SNeg -> SZero
-                     | SZero, SNonPos -> SZero
-                     | SZero, SZero -> SZero
-                     | SZero, SNonNeg -> SZero
-                     | SZero, SPos -> SZero
-                     | SZero, STop -> SZero
-                     | SNeg, SZero -> SZero
-                     | SNonPos, SZero -> SZero
-                     | SNonNeg, SZero -> SZero
-                     | SPos, SZero -> SZero
-                     | STop, SZero -> SZero
-                     | SNeg, SNeg -> SPos
-                     | SPos, SPos -> SPos
-                     | SNeg, SPos -> SNeg
-                     | SPos, SNeg -> SNeg
-                     | SNeg, SNonPos -> SNonNeg
-                     | SNonPos, SNeg -> SNonNeg
-                     | SNeg, SNonNeg -> SNonPos
-                     | SNonNeg, SNeg -> SNonPos
-                     | SPos, SNonNeg -> SNonNeg
-                     | SNonNeg, SPos -> SNonNeg
-                     | SPos, SNonPos -> SNonPos
-                     | SNonPos, SPos -> SNonPos
-                     | SNonNeg, SNonNeg -> SNonNeg
-                     | SNonNeg, SNonPos -> SNonPos
-                     | SNonPos, SNonNeg -> SNonPos
-                     | SNonPos, SNonPos -> SNonNeg
-                     | SNeg, STop -> STop
-                     | SNonPos, STop -> STop
-                     | SNonNeg, STop -> STop
-                     | SPos, STop -> STop
-                     | STop, SNeg -> STop
-                     | STop, SNonPos -> STop
-                     | STop, SNonNeg -> STop
-                     | STop, SPos -> STop
-                     | STop, STop -> STop;;
-
-let rec minus_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                     | SNeg, SBot -> SBot
-                     | SNonPos, SBot -> SBot
-                     | SZero, SBot -> SBot
-                     | SNonNeg, SBot -> SBot
-                     | SPos, SBot -> SBot
-                     | STop, SBot -> SBot
-                     | SNeg, SPos -> SNeg
-                     | SNeg, SNonNeg -> SNeg
-                     | SPos, SNeg -> SPos
-                     | SPos, SNonPos -> SPos
-                     | SNeg, SZero -> SNeg
-                     | SPos, SZero -> SPos
-                     | SZero, SZero -> SZero
-                     | SZero, SNeg -> SPos
-                     | SZero, SPos -> SNeg
-                     | SZero, SNonNeg -> SNonPos
-                     | SZero, SNonPos -> SNonNeg
-                     | SNonNeg, SZero -> SNonNeg
-                     | SNonNeg, SNeg -> SPos
-                     | SNonNeg, SNonPos -> SNonNeg
-                     | SNonPos, SZero -> SNonPos
-                     | SNonPos, SPos -> SNeg
-                     | SNonPos, SNonNeg -> SNonPos
-                     | SNeg, SNeg -> STop
-                     | SNeg, SNonPos -> STop
-                     | SNeg, STop -> STop
-                     | SNonPos, SNeg -> STop
-                     | SNonPos, SNonPos -> STop
-                     | SNonPos, STop -> STop
-                     | SZero, STop -> STop
-                     | SNonNeg, SNonNeg -> STop
-                     | SNonNeg, SPos -> STop
-                     | SNonNeg, STop -> STop
-                     | SPos, SNonNeg -> STop
-                     | SPos, SPos -> STop
-                     | SPos, STop -> STop
-                     | STop, SNeg -> STop
-                     | STop, SNonPos -> STop
-                     | STop, SZero -> STop
-                     | STop, SNonNeg -> STop
-                     | STop, SPos -> STop
-                     | STop, STop -> STop;;
-
-let rec plus_sign x0 uu = match x0, uu with SBot, uu -> SBot
-                    | SNeg, SBot -> SBot
-                    | SNonPos, SBot -> SBot
-                    | SZero, SBot -> SBot
-                    | SNonNeg, SBot -> SBot
-                    | SPos, SBot -> SBot
-                    | STop, SBot -> SBot
-                    | SNeg, SNeg -> SNeg
-                    | SNeg, SNonPos -> SNeg
-                    | SNonPos, SNeg -> SNeg
-                    | SNonPos, SNonPos -> SNonPos
-                    | SPos, SPos -> SPos
-                    | SPos, SNonNeg -> SPos
-                    | SNonNeg, SPos -> SPos
-                    | SNonNeg, SNonNeg -> SNonNeg
-                    | SZero, SNeg -> SNeg
-                    | SZero, SNonPos -> SNonPos
-                    | SZero, SZero -> SZero
-                    | SZero, SNonNeg -> SNonNeg
-                    | SZero, SPos -> SPos
-                    | SZero, STop -> STop
-                    | SNeg, SZero -> SNeg
-                    | SNonPos, SZero -> SNonPos
-                    | SNonNeg, SZero -> SNonNeg
-                    | SPos, SZero -> SPos
-                    | STop, SZero -> STop
-                    | SNeg, SNonNeg -> STop
-                    | SNeg, SPos -> STop
-                    | SNeg, STop -> STop
-                    | SNonPos, SNonNeg -> STop
-                    | SNonPos, SPos -> STop
-                    | SNonPos, STop -> STop
-                    | SNonNeg, SNeg -> STop
-                    | SNonNeg, SNonPos -> STop
-                    | SNonNeg, STop -> STop
-                    | SPos, SNeg -> STop
-                    | SPos, SNonPos -> STop
-                    | SPos, STop -> STop
-                    | STop, SNeg -> STop
-                    | STop, SNonPos -> STop
-                    | STop, SNonNeg -> STop
-                    | STop, SPos -> STop
-                    | STop, STop -> STop;;
-
-let rec sign_cast
-  ik a =
-    (if equal_signa a SBot then SBot
-      else (if equal_signa a SZero then SZero
-             else (if ik_signed ik then STop else SNonNeg)));;
-
-let rec sign_mod
-  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
-          else (if equal_signa b SZero then a else sup_signa a SZero));;
-
-let rec sign_eqb
-  a b = (if equal_signa a SZero && equal_signa b SZero then Some true
-          else (if sign_le a SNeg && sign_le b SNonNeg ||
-                     (sign_le b SNeg && sign_le a SNonNeg ||
-                       (sign_le a SPos && sign_le b SNonPos ||
-                         sign_le b SPos && sign_le a SNonPos))
-                 then Some false else None));;
-
-let rec sign_div
-  a b = (if equal_signa a SBot || equal_signa b SBot then SBot
-          else sup_signa (times_sign a b) SZero);;
-
-let rec sign_lt
-  a b = (if sign_le a SNeg && sign_le b SNonNeg then Some true
-          else (if sign_le a SNonPos && sign_le b SPos then Some true
-                 else (if sign_le b SNonPos && sign_le a SNonNeg then Some false
-                        else (if sign_le b SNeg && sign_le a SPos
-                               then Some false else None))));;
 
 let rec aval_sign
   x0 d = match x0, d with N n, d -> sign_of_int n

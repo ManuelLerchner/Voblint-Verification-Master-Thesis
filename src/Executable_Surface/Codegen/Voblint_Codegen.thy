@@ -194,7 +194,7 @@ export_code
   int_of_integer nat_of_integer integer_of_int integer_of_nat
 
   \<comment> \<open>Typed run, experimental: a typed analysis of a program under its kind declarations\<close>
-  run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order
+  run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
   Typed_Malformed Typed_No_Answer Typed_Analysed
 
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>

@@ -1,5 +1,6 @@
 theory Typed_Run
   imports "Voblint_Typed_Int.Int_Tuple_Kind" "Voblint_Typed_Order.Typed_Order_Analysis"
+    "Voblint_Typed_Sign.Sign_Kind" "Voblint_Typed_Parity.Parity_Kind"
 begin
 
 section \<open>Running a typed analysis\<close>
@@ -11,7 +12,8 @@ text \<open>
   analyzes the lowered program, so the two can be compared on the same input.
 \<close>
 
-datatype typed_domain = Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order
+datatype typed_domain =
+  Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order | Typed_Sign | Typed_Parity
 
 datatype typed_answer =
     Typed_Malformed
@@ -44,7 +46,9 @@ definition run_typed :: "typed_domain \<Rightarrow> globals_rule \<Rightarrow> k
         Typed_Interval \<Rightarrow> nonrel_run TYPE(ivl) r ds p
       | Typed_Congruence \<Rightarrow> nonrel_run TYPE(congruence) r ds p
       | Typed_Int \<Rightarrow> nonrel_run TYPE(int_tuple) r ds p
-      | Typed_Order \<Rightarrow> order_run r ds p)"
+      | Typed_Order \<Rightarrow> order_run r ds p
+      | Typed_Sign \<Rightarrow> nonrel_run TYPE(sign) r ds p
+      | Typed_Parity \<Rightarrow> nonrel_run TYPE(parity) r ds p)"
 
 subsection \<open>Soundness\<close>
 
@@ -109,6 +113,8 @@ proof -
     using run exec order_run_sound[OF wf _ mem] nonrel_run_sound[OF wf _ mem, where 'a = ivl]
       nonrel_run_sound[OF wf _ mem, where 'a = congruence]
       nonrel_run_sound[OF wf _ mem, where 'a = int_tuple]
+      nonrel_run_sound[OF wf _ mem, where 'a = sign]
+      nonrel_run_sound[OF wf _ mem, where 'a = parity]
     by (cases d) (simp_all add: run_typed_def)
   then show "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)"
