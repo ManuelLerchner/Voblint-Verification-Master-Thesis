@@ -210,6 +210,24 @@ The reference `tstep` (per-procedure `ReturnId` slots, simulated by the lowered
 `pstep`) is unchanged. Its relation to `tpstep` is not yet proved; stage 6
 decides which of the two the headline theorem quantifies over.
 
+### 2.1b Concrete kind invariant (stage 3)
+
+`Typed_Invariants.thy`. `tstyped κ t`: every identity except `ReturnVar` holds a
+value of its kind. `ReturnVar` is excluded because procedures of different
+return kinds share it (G: `return_varinfo` is typed per function; here one slot
+serves all, and the destination conversion re-establishes the kind at the caller).
+
+- `valid_activation_trace_tstyped`: on any graph whose call edges pass well-typed,
+  slot-free actuals of the formals' kinds (`calls_typed`), every valid activation
+  trace from typed initial stores ends in a typed store. The induction carries the
+  invariant for all suspended callers, since a return resumes one of them.
+- `calls_typed_typed_cfg`: the typed graph satisfies `calls_typed (kenv_of ds)`,
+  via `compile_prog_calls_from` (every call edge comes from a source `Call`).
+- `tnode_collect_tstyped`, `typed_run_tstyped`: the typed collecting semantics
+  and every typed run contain only typed stores.
+
+Abstract kind consistency is stated with the kind-tagged values in stage 4.
+
 ### 2.2 Kind-tagged values (stage 4)
 
 `'a kd = KBot | KD ikind 'a | KTop` with:
@@ -263,7 +281,7 @@ Globals start at zero concretely and abstractly.
 | 0 | Goblint reference (this document) | done |
 | 1 | Generic CFG, compiler, `pstep`/`cstep`, simulation, collecting semantics; untyped instance | all existing theorems and outputs unchanged |
 | 2 | Typed instance: compile `elab_com` output directly; generalize location elaboration; typed simulation, traces, collecting | typed source runs simulated by the typed CFG; no read casts (landed, see 2.1a) |
-| 3 | Concrete `styped` preservation (assign, entry, binding, return, restore, call destinations, library and nondeterministic results); abstract kind consistency | invariants proved |
+| 3 | Concrete `styped` preservation (assign, entry, binding, return, restore, call destinations, library and nondeterministic results); abstract kind consistency | concrete invariant landed (2.1b); abstract part moves to stage 4 |
 | 4 | `int_domain_ik`, `'a kd`, Interval with `norm`, `cast_to`, `widen`, `narrow`, kind-aware arithmetic, guard refinement through casts; typed Interval end to end | executable typed Interval with its own soundness theorem |
 | 5 | Congruence, Sign, Parity, Int product, Order | every configuration sound; precision changes classified |
 | 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem | the CLI's typed analysis is the one the theorem covers |

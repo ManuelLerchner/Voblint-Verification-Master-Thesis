@@ -9,3 +9,4 @@ session Voblint_Typed_CFG in "." = "Voblint_Compile" +
     "Voblint_Typed"
   theories
     Typed_CFG
+    Typed_Invariants
