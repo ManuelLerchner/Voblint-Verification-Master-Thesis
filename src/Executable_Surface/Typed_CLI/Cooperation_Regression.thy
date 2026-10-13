@@ -1,5 +1,5 @@
 theory Cooperation_Regression
-  imports "Voblint_Typed_Interval.Interval_Kind" "Voblint_Typed_Order.Nonrel_Order_Product"
+  imports "Voblint_Typed_Interval.Interval_Kind" "Voblint_Typed_Order.Nonrel_Order_Product" Typed_MCP
     "Voblint_VIMP.VIMP_Notation"
 begin
 
@@ -45,6 +45,14 @@ lemma coop_verdicts:
   "verdicts_of (typed_order.report Globals_Join [] tglobal coop_prog ())
      = [Check_Unknown, Check_Unknown, Check_Unknown, Check_Unknown]"
   by eval+
+
+text \<open>The same cooperation through the shared registry: the two analyses activated as one
+  list, as Goblint's \<^verbatim>\<open>ana.activated\<close>.\<close>
+
+lemma coop_registry_verdicts:
+  "verdicts_of (typed_mcp.verdict_report [] [Typed_Interval, Typed_Order] 0 Globals_Join tglobal coop_prog)
+     = [Decided Check_Proved, Dead, Decided Check_Proved, Decided Check_Unknown]"
+  by eval
 
 end
 

@@ -236,6 +236,10 @@ global_interpretation tmcp: mcp_registry teval ReturnVar "\<lambda>_. tconv (ken
     truth_texp "\<lambda>\<G> p a. tfield (kenv_of ds) a" tlive tmcp_rd "tval_gamma (kenv_of ds)" tval_empty
     "\<lambda>p. tfield_empty" "tanswer (kenv_of ds)"
   for ds
+  defines tpart_answer = tmcp.part_answer and tmcp_field = tmcp.mcp_field
+    and tmcp_norm = tmcp.mcp_norm and tmcp_comp = tmcp.mcp_comp and tmcp_emp = tmcp.mcp_emp
+    and tmcp_empty_v = tmcp.mcp_empty_v and tmcp_answer = tmcp.mcp_answer
+    and tmcp_ask = tmcp.mcp_ask and tmcp_classify = tmcp.mcp_classify
 proof (unfold_locales, goal_cases Truth FieldSound Frame Single Dead EmptyRd EmptyGamma Bot Answer)
   case (Truth c s) show ?case by (rule teval_truth_texp)
 next
