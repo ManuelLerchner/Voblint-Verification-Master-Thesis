@@ -154,6 +154,55 @@ scheduling and widening behaviour differ by construction: the proxy carries no
 equation, so contributions join there and widening applies one hop later at the
 local entry unknown.
 
+## Machine-integer Interval (source-checked, 2026-10-13)
+
+Checked against the local `analyzer` checkout at `0dc12d355`. Paths are relative to
+`src/cdomain/value/cdomains/` unless they name `src/analyses/`. The Voblint side is the
+typed Interval analysis on branch `feat/typed-ir` (`src/Analyses/Typed_Interval/`).
+
+**Overflow normalization.** `int/intervalDomain.ml` `norm` (lines 35–70) keeps an
+in-range interval. When it overflows, it wraps exactly when `should_wrap ik` holds, the
+interval spans at most `max_ik - min_ik`, and the wrapped ends stay ordered; otherwise
+it answers `top_of ik`. `should_wrap` (`intDomain0.ml` line 67) is true for unsigned
+kinds, and for signed kinds only under `sem.int.signed_overflow = assume_wraparound`.
+`cast_to` is `norm ~cast:true` (line 140); `cast` matters only in the `assume_none`
+branch, which clamps instead of answering top. `norm_ivl_ik` in `Interval_Kind.thy`
+reproduces the default policy `assume_top`: unsigned kinds wrap under the same two
+conditions, signed overflow answers the kind's range, and a cast and an arithmetic
+result are normalized alike. Voblint has no `assume_none`: its concrete semantics wraps
+every write, so a policy that assumes no signed overflow would be unsound for it.
+Goblint's `assume_wraparound` (signed wrapping) is not implemented; it would be sound,
+since the wrap argument `mod_interval_wrap` does not depend on signedness.
+
+**Widening and narrowing.** Without thresholds, `widen` (lines 142–157) moves a growing
+bound to the kind's range end, and `narrow` (lines 164–172) replaces only a bound that
+sits at the kind's range end, then normalizes. `widen_ivl_ik` moves a growing bound to
+the kind's end or past it to the new bound, whichever is further, so a value outside the
+kind's range is not lost; `narrow_ivl_ik` replaces the same bounds and does not
+normalize. Thresholds are not modelled.
+
+**Guard refinement.** `src/analyses/baseInvariant.ml` refines through a cast
+(lines 836–865) only when `VD.is_dynamically_safe_cast` holds, that is, when the operand's
+current value fits the target kind. `refine_var` uses the same run-time condition
+(`fits_ik`). Through arithmetic, `inv_bin_int` (lines 293–321) inverts `+` and `-` with
+the kind's own operations, which in wrapping arithmetic is exact even when the operation
+may overflow, and also refines `*` by an odd constant and `/`. `refine_var` inverts only
+`+` and `-`, and only when the mathematical result fits the kind, which it computes
+with `raw_aop_ik`. It refines strictly less than Goblint when an operation may overflow,
+and does not refine through `*`, `/` or `%`.
+
+**Reduced product.** `int/intDomTuple.ml` `refine` (lines 280–296) applies the
+components' refinement functions never, once, or to a fixpoint, and the tuple's
+arithmetic first asks the interval component whether an operation may overflow and
+passes the answer as `no_ov` to the others (`mapovc`, lines 300–305). The typed product is
+not yet migrated; see the typed-migration gap report.
+
+**Congruence.** `int/congruenceDomain.ml` wraps a constant on `normalize` and in
+`cast_to` (lines 27–45, 168–190); a non-constant class survives a cast only when the
+source kind's range lies inside the target's. Unsigned `+`, `-`, `*` on non-constant
+classes keep the largest power of two dividing the modulus (`handle_overflow`,
+lines 248–262); signed overflow answers top. The typed Congruence is not yet migrated.
+
 ## Boundary examples
 
 These are capability boundaries, not claims that every Goblint configuration
