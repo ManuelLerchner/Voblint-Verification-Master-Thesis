@@ -7,8 +7,8 @@ section \<open>Kind-aware integer domains\<close>
 text \<open>
   The operations a typed transfer needs from an integer domain, after Goblint's
   \<^verbatim>\<open>IntDomain.S\<close>: every operation that produces a value takes the kind it computes
-  at. \<open>top_ik k\<close> is Goblint's \<open>top_of ik\<close>, \<open>of_int_ik\<close> its \<open>of_int ik\<close>, \<open>cast_ik\<close> its
-  \<open>cast_to ik\<close>, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
+  at. \<open>top_ik k\<close> is Goblint's \<open>top_of ik\<close>, \<open>of_int_ik\<close> its \<open>of_int ik\<close>, \<open>cast_ik sk k\<close> its
+  \<open>cast_to ?from_ik:sk k\<close>, where \<open>sk\<close> is the operand's kind when it is known, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
   result is normalized to \<open>k\<close>. A comparison answers \<open>Some b\<close> only when every pair of
   operands agrees on \<open>b\<close>. \<open>refine_ik c a b\<close> narrows both operands of a comparison
   known to hold, as Goblint's \<^verbatim>\<open>invariant\<close> does for a guard. \<open>raw_aop_ik\<close> is
@@ -20,7 +20,7 @@ text \<open>
 class kind_int_domain = ik_domain +
   fixes top_ik :: "ikind \<Rightarrow> 'a::{bounded_semilattice_sup_bot, order_top}"
     and of_int_ik :: "ikind \<Rightarrow> int \<Rightarrow> 'a"
-    and cast_ik :: "ikind \<Rightarrow> 'a \<Rightarrow> 'a"
+    and cast_ik :: "ikind option \<Rightarrow> ikind \<Rightarrow> 'a \<Rightarrow> 'a"
     and arith_ik :: "ikind \<Rightarrow> aop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and cmp_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and meet_ik :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
@@ -29,7 +29,9 @@ class kind_int_domain = ik_domain +
     and fits_ik :: "ikind \<Rightarrow> 'a \<Rightarrow> bool"
   assumes top_ik_sound: "n \<in> ik_range k \<Longrightarrow> n \<in> \<gamma> (top_ik k)"
     and of_int_ik_sound: "ik_norm k n \<in> \<gamma> (of_int_ik k n)"
-    and cast_ik_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik k a)"
+    and cast_ik_sound:
+      "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> \<gamma> a
+         \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik sk k a)"
     and arith_ik_sound:
       "m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> \<gamma> (arith_ik k op a b)"
     and cmp_ik_sound:
@@ -159,11 +161,28 @@ lemma truth_ik_sound:
   using cmp_ik_sound[of CNe a "of_int_ik I32 0" b n 0] of_int_ik_I32_01(1)
   by (simp add: truthy_def)
 
+text \<open>A conversion knows its operand's kind when the operand produces values of that
+  kind: an operation always does, and a variable does when it is read at its declared
+  kind.\<close>
+
+definition src_kind :: "kenv \<Rightarrow> texp \<Rightarrow> ikind option" where
+  "src_kind \<kappa> e =
+     (case e of TVar ik v \<Rightarrow> if v \<noteq> ReturnVar \<and> ik = \<kappa> v then Some ik else None
+      | _ \<Rightarrow> Some (texp_kind e))"
+
+lemma src_kind_sound:
+  assumes "tstyped \<kappa> t" and "src_kind \<kappa> e = Some k"
+  shows "teval e t \<in> ik_range k"
+  using assms by (cases e) (auto simp: src_kind_def tstyped_def split: if_splits)
+
+lemma cast_ik_None_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik None k a)"
+  by (rule cast_ik_sound) simp_all
+
 fun taeval :: "kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "taeval \<kappa> (TN ik n) \<sigma> = of_int_ik ik n"
 | "taeval \<kappa> (TVar ik v) \<sigma> = read_var \<kappa> \<sigma> v"
 | "taeval \<kappa> (TArith ik op a b) \<sigma> = arith_ik ik op (taeval \<kappa> a \<sigma>) (taeval \<kappa> b \<sigma>)"
-| "taeval \<kappa> (TCast ik a) \<sigma> = cast_ik ik (taeval \<kappa> a \<sigma>)"
+| "taeval \<kappa> (TCast ik a) \<sigma> = cast_ik (src_kind \<kappa> a) ik (taeval \<kappa> a \<sigma>)"
 | "taeval \<kappa> (TCmp op a b) \<sigma> = bool_val (cmp_ik op (taeval \<kappa> a \<sigma>) (taeval \<kappa> b \<sigma>))"
 | "taeval \<kappa> (TNot a) \<sigma> = bool_val (map_option HOL.Not (truth_ik (taeval \<kappa> a \<sigma>)))"
 | "taeval \<kappa> (TAnd a b) \<sigma> =
@@ -185,7 +204,10 @@ next
 next
   case (TArith ik op a b) then show ?case by (simp add: arith_ik_sound)
 next
-  case (TCast ik a) then show ?case by (simp add: cast_ik_sound)
+  case (TCast ik a)
+  have "teval a t \<in> ik_range k" if "src_kind \<kappa> a = Some k" for k
+    using src_kind_sound[OF gamma_tabsD(1)[OF assms] that] .
+  with TCast show ?case by (simp add: cast_ik_sound)
 next
   case (TCmp op a b) then show ?case
     by (simp add: bool_val_sound cmp_ik_sound)

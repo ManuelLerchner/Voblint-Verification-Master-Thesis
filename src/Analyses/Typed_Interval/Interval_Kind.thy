@@ -307,7 +307,8 @@ definition top_ik_ivl :: "ikind \<Rightarrow> ivl" where "top_ik_ivl = ik_ivl"
 definition of_int_ik_ivl :: "ikind \<Rightarrow> int \<Rightarrow> ivl" where
   "of_int_ik_ivl k n = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
 
-definition cast_ik_ivl :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where "cast_ik_ivl = norm_ivl_ik"
+definition cast_ik_ivl :: "ikind option \<Rightarrow> ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "cast_ik_ivl sk = norm_ivl_ik"
 
 definition arith_ik_ivl :: "ikind \<Rightarrow> aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
   "arith_ik_ivl k op a b = norm_ivl_ik k (ivl_aop op a b)"
@@ -328,7 +329,8 @@ instance proof
     by (simp add: top_ik_ivl_def)
   show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: ivl)"
     by (simp add: of_int_ik_ivl_def less_eq_eint_def)
-  show "n \<in> numeric_domain_class.gamma a \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik k a)"
+  show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
+      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik sk k a)" for sk
     by (simp add: cast_ik_ivl_def norm_ivl_ik_sound)
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
     by (simp add: arith_ik_ivl_def norm_ivl_ik_sound ivl_aop_sound)

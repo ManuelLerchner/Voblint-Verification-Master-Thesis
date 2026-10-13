@@ -37,13 +37,13 @@ context
 begin
 
 definition tassign :: "var_id \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
-  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik (\<kappa> x) (taeval \<kappa> e \<sigma>)))"
+  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval \<kappa> e \<sigma>)))"
 
 definition special_val :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "special_val sc x \<sigma> =
      (case sc of Nondet_Int \<Rightarrow> top_ik (\<kappa> x)
-      | Min a b \<Rightarrow> cast_ik (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)
-      | Max a b \<Rightarrow> cast_ik (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>))"
+      | Min a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)
+      | Max a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>))"
 
 definition tspecial :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tspecial sc x \<sigma> = \<sigma>(x := KD (\<kappa> x) (special_val sc x \<sigma>))"
@@ -107,14 +107,14 @@ definition tenter_state ::
     "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs toplift" where
   "tenter_state ps es \<sigma> =
      (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
-      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
              (tenter_frame \<sigma>))
       else TTop)"
 
 definition tcombine_assign :: "var_id option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
   "tcombine_assign dst \<sigma> \<sigma>\<^sub>e =
      (case dst of None \<Rightarrow> \<sigma>
-      | Some x \<Rightarrow> \<sigma>(x := KD (\<kappa> x) (cast_ik (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))))"
+      | Some x \<Rightarrow> \<sigma>(x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))))"
 
 subsection \<open>Soundness of each operation\<close>
 
@@ -137,8 +137,8 @@ lemma tassign_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "t(x := ik_norm (\<kappa> x) (teval e t)) \<in> gamma_tabs \<kappa> (tassign x e \<sigma>)"
 proof -
-  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik (\<kappa> x) (taeval \<kappa> e \<sigma>))"
-    by (rule cast_ik_sound[OF taeval_sound[OF assms]])
+  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik None (\<kappa> x) (taeval \<kappa> e \<sigma>))"
+    by (rule cast_ik_None_sound[OF taeval_sound[OF assms]])
   then show ?thesis unfolding tassign_def by (simp add: gamma_tabs_upd[OF assms])
 qed
 
@@ -155,7 +155,7 @@ next
     by blast+
   then have "v \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
     using assms(2) Min by (auto simp: min_def)
-  with Min show ?thesis by (simp add: special_val_def cast_ik_sound)
+  with Min show ?thesis by (simp add: special_val_def cast_ik_None_sound)
 next
   case (Max a b)
   have "teval a t \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
@@ -164,7 +164,7 @@ next
     by blast+
   then have "v \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
     using assms(2) Max by (auto simp: max_def)
-  with Max show ?thesis by (simp add: special_val_def cast_ik_sound)
+  with Max show ?thesis by (simp add: special_val_def cast_ik_None_sound)
 qed
 
 lemma tspecial_sound:
@@ -331,7 +331,7 @@ lemma bind_formals_fit:
   shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)
     \<and> (\<forall>y. bind_formals ps (map (\<lambda>e. teval e t) es) s y
           \<in> numeric_domain_class.gamma
-              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
                  \<sigma>' y))"
   using assms(1,3,4)
 proof (induction ps arbitrary: es s \<sigma>')
@@ -347,13 +347,13 @@ next
       and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
     have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF t] .
     have rng: "teval e t \<in> ik_range (\<kappa> p)" by (rule arg_fits_range[OF fit ty])
-    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>)))"
-      using cast_ik_sound[OF taeval_sound[OF t], of "\<kappa> p" e] rng by simp
+    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>)))"
+      using cast_ik_None_sound[OF taeval_sound[OF t], of "\<kappa> p" e] rng by simp
     have "p \<noteq> ReturnVar" using fit by (simp add: arg_fits_def)
     then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng
       by (rule_tac tstyped_upd) auto
     have gu: "\<And>y. (s(p := teval e t)) y \<in> numeric_domain_class.gamma
-        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>)))) y)"
+        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>)))) y)"
       using val Cons.prems(3) by simp
     note IH = Cons.IH[OF rest tyu gu]
     show ?thesis unfolding \<open>es = e # es'\<close> using IH by simp
@@ -373,7 +373,7 @@ proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
   note fit = bind_formals_fit[OF True assms tstyped_enter_state[OF ty] frame]
   have "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
       \<in> gamma_tabs \<kappa> (bind_formals ps
-           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
            (tenter_frame \<sigma>))"
     using fit by (intro gamma_tabsI) blast+
   with True show ?thesis by (simp add: tenter_state_def)
@@ -401,11 +401,11 @@ proof -
   next
     case (Some x)
     have rv: "ik_norm (\<kappa> x) (t ReturnVar)
-        \<in> numeric_domain_class.gamma (cast_ik (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))"
-      by (rule cast_ik_sound[OF kd_val_sound[OF vs(2)]])
+        \<in> numeric_domain_class.gamma (cast_ik None (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))"
+      by (rule cast_ik_None_sound[OF kd_val_sound[OF vs(2)]])
     have "(combine_env tglobal s t)(x := ik_norm (\<kappa> x) (t ReturnVar))
         \<in> gamma_tabs \<kappa> ((combine_env tglobal \<sigma> \<sigma>\<^sub>e)
-             (x := KD (\<kappa> x) (cast_ik (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))))"
+             (x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (kd_val (\<sigma>\<^sub>e ReturnVar)))))"
       using rv cty cvs by (intro gamma_tabsI tstyped_upd) auto
     with Some show ?thesis by (simp add: tcombine_assign_def)
   qed
