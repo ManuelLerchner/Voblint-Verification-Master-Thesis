@@ -452,10 +452,6 @@ let run_typed_and_exit path stmt_positions domain rule context =
   | C.Typed_Malformed ->
       prerr_endline "voblint: the program is not admissible";
       exit 3
-  | C.Typed_Unsupported ->
-      prerr_endline
-        "voblint: --typed runs several analyses at call-string contexts only";
-      exit 1
   | C.Typed_No_Answer ->
       prerr_endline "voblint: the solver returned no answer";
       exit 4

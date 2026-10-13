@@ -195,7 +195,7 @@ export_code
 
   \<comment> \<open>Typed run, experimental: a typed analysis of a program under its kind declarations\<close>
   run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
-  Typed_Malformed Typed_Unsupported Typed_No_Answer Typed_Analysed
+  Typed_Malformed Typed_No_Answer Typed_Analysed
   Typed_Call_String Typed_Entry_State
 
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>
