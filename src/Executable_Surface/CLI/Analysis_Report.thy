@@ -27,7 +27,7 @@ definition report_classify :: "vimp_report \<Rightarrow> exp \<Rightarrow> mcp_v
 
 text \<open>The states a report holds at a point, one per context it was solved at.\<close>
 
-definition report_states_at :: "vimp_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted set" where
+definition report_states_at :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted set" where
   "report_states_at res v = state_value ` {st \<in> set (report_states res). state_point st = v}"
 
 lemma finite_report_states_at [simp]: "finite (report_states_at res v)"
@@ -373,18 +373,18 @@ lemma row_in_rows:
 
 lemma report_states_at_report_of:
   assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
-  shows "report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v
+  shows "report_states_at (report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr) v
            = lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
 proof -
   define r where "r = run_table sr"
   define ctxs where "ctxs = ordered_by_key ctx_key (snd ` covered_keys r)"
-  define nodes where "nodes = cfg_node_list (prog_cfg p)
-    @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list (prog_cfg p)))"
+  define nodes where "nodes = cfg_node_list g
+    @ sorted_list_of_set (fst ` covered_keys r - set (cfg_node_list g))"
   have ctxs: "set ctxs = snd ` covered_keys r"
     unfolding ctxs_def r_def
     by (rule ordered_by_key_set) (use fin inj in \<open>auto intro: inj_on_subset\<close>)
   have nodes: "w \<in> set nodes" if "(w, ctx) \<in> covered_keys r" for w ctx
-  proof (cases "w \<in> set (cfg_node_list (prog_cfg p))")
+  proof (cases "w \<in> set (cfg_node_list g)")
     case False
     with that fin show ?thesis unfolding nodes_def r_def by (force intro: rev_image_eqI)
   qed (simp add: nodes_def)
@@ -399,7 +399,7 @@ proof -
   show ?thesis
   proof (intro equalityI subsetI)
     fix d
-    assume "d \<in> report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v"
+    assume "d \<in> report_states_at (report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr) v"
     then show "d \<in> lookup_table (run_table sr) v ` table_contexts (run_table sr) v"
       unfolding report_states_at_def report_of_def Let_def by (auto simp: table_contexts_iff)
   next
@@ -411,7 +411,7 @@ proof -
     from cov ctxs have "ctx \<in> set ctxs" by force
     then obtain i where i: "(i, ctx) \<in> set (enumerate 0 ctxs)" using indexed by blast
     have w: "v \<in> set nodes" using nodes[OF cov] .
-    show "d \<in> report_states_at (vimp_report_of config ctx_key ctx_tag classify sr p) v"
+    show "d \<in> report_states_at (report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr) v"
       unfolding report_states_at_def report_of_def Let_def r_def[symmetric] ctxs_def[symmetric]
         nodes_def[symmetric]
       apply (simp only: analysis_report.select_convs)

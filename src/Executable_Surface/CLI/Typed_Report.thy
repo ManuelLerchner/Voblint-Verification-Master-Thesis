@@ -91,4 +91,54 @@ proof -
     using typed_mcp_verdict_sound[OF wf solved(1) _ s] by auto
 qed
 
+subsection \<open>Soundness of the reported states\<close>
+
+text \<open>
+  Every typed store that reaches a node is described by one of the states the report
+  lists there. The typed node theorem places it in the state the solve publishes at some
+  context; that state is not bottom, so the solved table covers the node at that context,
+  and the report lists every covered entry (\<open>report_states_at_report_of\<close>).
+\<close>
+
+theorem typed_report_state_sound:
+  assumes wf: "wf_program_compile_input p"
+    and run: "typed_report_run as r k ds p = Some res"
+    and s: "s \<in> reaching ds p v"
+  obtains d where "Lifted d \<in> report_states_at res v"
+    and "s \<in> tmcp.act_gamma ds (tactivation as) d"
+proof -
+  from run obtain sol where
+    sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+            (typed_mcp.root_query ds p) = Some sol"
+    and res: "res = typed_cs_report as r k ds p sol"
+    by (auto simp: typed_report_run_def dg_pipeline.root_query_def)
+  note solved = typed_mcp.solve_c_run[OF sol]
+  let ?r = "typed_mcp.result ds as k r tglobal p"
+  from typed_mcp_node_sound[OF wf solved(1)] s obtain ctx where
+    sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at ds as k r tglobal p ctx v)"
+    by blast
+  obtain d where look: "lookup_table ?r v ctx = Lifted d"
+    and sd: "s \<in> tmcp.act_gamma ds (tactivation as) d"
+  proof (cases "lookup_table ?r v ctx")
+    case Bot
+    with sc show ?thesis by (simp add: typed_mcp.state_at_unfold tmcp.act_gamma_bot)
+  next
+    case (Lifted d)
+    with sc that show ?thesis by (simp add: typed_mcp.state_at_unfold)
+  qed
+  have fin: "finite (covered_keys ?r)"
+    using typed_mcp.vars_finite_of_terminates[OF solved(1)]
+    by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
+  have run_table: "run_table (typed_mcp.solved_run_of ds as k tglobal p sol) = ?r"
+    using solved(2) by simp
+  have rows: "report_states_at res v = lookup_table ?r v ` table_contexts ?r v"
+    unfolding res typed_cs_report_def run_table[symmetric]
+    by (rule report_states_at_report_of[OF _ inj_call_string_key]) (simp add: run_table fin)
+  have "lookup_table ?r v ctx \<in> lookup_table ?r v ` table_contexts ?r v"
+    by (rule imageI[OF lookup_table_LiftedD[OF look]])
+  then have "Lifted d \<in> report_states_at res v"
+    by (simp only: rows look)
+  then show ?thesis using sd by (rule that)
+qed
+
 end
