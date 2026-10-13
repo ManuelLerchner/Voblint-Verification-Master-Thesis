@@ -123,9 +123,9 @@ text \<open>
   every language an analysis runs on.
 \<close>
 
-datatype report_context =
+datatype 'm report_context =
     Report_Unit
-  | Report_Entry mcp_ctx
+  | Report_Entry 'm
   | Report_Call_String "pp list"
 
 record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
@@ -140,7 +140,7 @@ record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
   report_diagnostics :: "'e arithmetic_diagnostic list"
 
 type_synonym vimp_report =
-  "(analysis_config, report_context, vname, exp, vname, mcp_val) analysis_report"
+  "(analysis_config, mcp_ctx report_context, vname, exp, vname, mcp_val) analysis_report"
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -329,7 +329,7 @@ text \<open>A VIMP program hands over its own variables, graph, declared globals
   are flow-insensitive, division obligations and procedures.\<close>
 
 abbreviation vimp_report_of ::
-    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> report_context)
+    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> mcp_ctx report_context)
        \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, vname, mcp_val) solved_run \<Rightarrow> imp_prog
        \<Rightarrow> vimp_report" where
   "vimp_report_of config ctx_key ctx_tag classify sr p \<equiv>

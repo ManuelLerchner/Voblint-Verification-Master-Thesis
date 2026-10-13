@@ -151,7 +151,7 @@ module Generated : sig
     Ev_Update of 'a * bool * bool * 'c * 'c | Ev_Iterate_Changed of 'a |
     Ev_Side of 'a * 'b * 'c | Ev_Update_Global of 'a * 'b * bool * 'c * 'c |
     Ev_Destabilize of ('a, 'b) sum | Ev_Stable_Remove of 'a
-  type report_context
+  type 'a report_context
   type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat
   type unknown_node = Local_Node of cfg_node * nat | Global_Node of string
   type 'a analysis_answer = Invalid_Activation | Malformed_Program | No_Answer |
@@ -199,7 +199,22 @@ module Generated : sig
   val run_voblint :
     analysis_config ->
       unit imp_prog_ext ->
-        (analysis_config, report_context, string, exp, string,
+        (analysis_config,
+          ((sign list),
+            ((ivl list),
+              ((parity list),
+                ((unit int_dom_ext list),
+                  ((unit int_dom_ext list),
+                    ((unit int_dom_ext list),
+                      ((congruence list), (unit list)) analysis_product)
+                      analysis_product)
+                    analysis_product)
+                  analysis_product)
+                analysis_product)
+              analysis_product)
+            analysis_product
+            report_context,
+          string, exp, string,
           ((string -> sign) lifted,
             ((string -> ivl) lifted,
               ((string -> parity) lifted,
@@ -234,7 +249,22 @@ module Generated : sig
     ('a, 'b, 'c) result_state_ext -> ('a * check_result lifted) list
   val render_report :
     (abstract_value -> 'a) ->
-      (analysis_config, report_context, string, exp, string,
+      (analysis_config,
+        ((sign list),
+          ((ivl list),
+            ((parity list),
+              ((unit int_dom_ext list),
+                ((unit int_dom_ext list),
+                  ((unit int_dom_ext list),
+                    ((congruence list), (unit list)) analysis_product)
+                    analysis_product)
+                  analysis_product)
+                analysis_product)
+              analysis_product)
+            analysis_product)
+          analysis_product
+          report_context,
+        string, exp, string,
         ((string -> sign) lifted,
           ((string -> ivl) lifted,
             ((string -> parity) lifted,
@@ -6645,22 +6675,8 @@ type ('a, 'b, 'c) solver_event = Ev_Start of 'a | Ev_Stop |
 
 type special_desc = SD_Nondet_Int | SD_Min | SD_Max;;
 
-type report_context = Report_Unit |
-  Report_Entry of
-    ((sign list),
-      ((ivl list),
-        ((parity list),
-          ((unit int_dom_ext list),
-            ((unit int_dom_ext list),
-              ((unit int_dom_ext list),
-                ((congruence list), (unit list)) analysis_product)
-                analysis_product)
-              analysis_product)
-            analysis_product)
-          analysis_product)
-        analysis_product)
-      analysis_product
-  | Report_Call_String of cfg_node list;;
+type 'a report_context = Report_Unit | Report_Entry of 'a |
+  Report_Call_String of cfg_node list;;
 
 type context_mode = Ctx_None | Ctx_EntryState | Ctx_CallString of nat;;
 
@@ -19612,34 +19628,6 @@ let rec arithmetic_condition
 
 let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
 
-let rec arithmetic_expression_sites
-  g = (let edges =
-         cfg_intra_list (equal_literal, linorder_literal)
-           (equal_exp, linorder_exp) g
-         in
-        map_filter
-          (fun x ->
-            (if (match x with (_, (EA_Nop, _)) -> true
-                  | (_, (EA_Assign (_, _), _)) -> true
-                  | (_, (EA_Special (_, _), _)) -> true
-                  | (_, (EA_Assume _, _)) -> true
-                  | (u, (EA_AssumeNot e, _)) ->
-                    not (list_ex
-                          (fun (ua, (a, _)) ->
-                            equal_cfg_nodea u ua &&
-                              equal_gedge_actiona equal_literal equal_exp a
-                                (EA_Assume e))
-                          edges)
-                  | (_, (EA_Body _, _)) -> true
-                  | (_, (EA_Ret (_, _), _)) -> true
-                  | (_, (EA_Check (_, _), _)) -> true)
-              then Some (let (u, (a, _)) = x in (u, edge_expressions a))
-              else None))
-          edges) @
-        map (fun (u, (ca, (_, _))) -> (u, ce_args ca))
-          (cfg_calls_list (equal_literal, linorder_literal)
-            (equal_exp, linorder_exp) g);;
-
 let rec arithmetic_obligations
   = function N n -> []
     | V x -> []
@@ -19663,9 +19651,37 @@ let rec arithmetic_obligations
     | NotEq (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | Cast (uu, a) -> arithmetic_obligations a;;
 
+let rec arithmetic_expression_sites (_A1, _A2) (_B1, _B2)
+  g = (let edges = cfg_intra_list (_A1, _A2) (_B1, _B2) g in
+        map_filter
+          (fun x ->
+            (if (match x with (_, (EA_Nop, _)) -> true
+                  | (_, (EA_Assign (_, _), _)) -> true
+                  | (_, (EA_Special (_, _), _)) -> true
+                  | (_, (EA_Assume _, _)) -> true
+                  | (u, (EA_AssumeNot e, _)) ->
+                    not (list_ex
+                          (fun (ua, (a, _)) ->
+                            equal_cfg_nodea u ua &&
+                              equal_gedge_actiona _A1 _B1 a (EA_Assume e))
+                          edges)
+                  | (_, (EA_Body _, _)) -> true
+                  | (_, (EA_Ret (_, _), _)) -> true
+                  | (_, (EA_Check (_, _), _)) -> true)
+              then Some (let (u, (a, _)) = x in (u, edge_expressions a))
+              else None))
+          edges) @
+        map (fun (u, (ca, (_, _))) -> (u, ce_args ca))
+          (cfg_calls_list (_A1, _A2) (_B1, _B2) g);;
+
+let rec obligation_sites (_A1, _A2) (_B1, _B2)
+  obls g =
+    map (fun (v, es) -> (v, maps obls es))
+      (arithmetic_expression_sites (_B1, _B2) (_A1, _A2) g);;
+
 let rec arithmetic_sites
-  g = map (fun (v, es) -> (v, maps arithmetic_obligations es))
-        (arithmetic_expression_sites g);;
+  x = obligation_sites (equal_exp, linorder_exp)
+        (equal_literal, linorder_literal) arithmetic_obligations x;;
 
 let rec route_unit
   u ctx d ca =

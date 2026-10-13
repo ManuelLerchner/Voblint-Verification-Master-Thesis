@@ -244,7 +244,7 @@ text \<open>
 \<close>
 
 fun render_context ::
-    "(abstract_value \<Rightarrow> 'v) \<Rightarrow> analysis_domain list \<Rightarrow> report_context \<Rightarrow> 'v analysis_context"
+    "(abstract_value \<Rightarrow> 'v) \<Rightarrow> analysis_domain list \<Rightarrow> mcp_ctx report_context \<Rightarrow> 'v analysis_context"
 where
   "render_context show as Report_Unit = Context_Unit"
 | "render_context show as (Report_Entry ctx) = Context_Entry (map show (mcp_ctx_values as ctx))"

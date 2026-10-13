@@ -98,15 +98,16 @@ section \<open>Sites and their solved classifications\<close>
 
 text \<open>
   \<open>arithmetic_expression_sites\<close> collects the expressions each CFG edge and call
-  evaluates; \<open>arithmetic_sites\<close> turns them into the divisor obligations the
-  solved table then classifies.
+  evaluates; \<open>obligation_sites\<close> turns them into the divisor obligations the solved
+  table then classifies, given how an expression of the language yields them.
 \<close>
 
 
 text \<open>Only suppress a negative guard edge when the same point has a matching
   positive guard edge. All other expression-bearing edges remain in the report.\<close>
 
-definition arithmetic_expression_sites :: "cfg \<Rightarrow> (pp \<times> exp list) list" where
+definition arithmetic_expression_sites ::
+    "('v::linorder, 'e::linorder) gcfg \<Rightarrow> (pp \<times> 'e list) list" where
   "arithmetic_expression_sites g =
      (let edges = cfg_intra_list g
       in map (\<lambda>(u, a, v). (u, edge_expressions a))
@@ -115,10 +116,14 @@ definition arithmetic_expression_sites :: "cfg \<Rightarrow> (pp \<times> exp li
              | _ \<Rightarrow> True) edges)) @
        map (\<lambda>(u, ca, ce, k). (u, ce_args ca)) (cfg_calls_list g)"
 
+definition obligation_sites ::
+    "('e \<Rightarrow> 'e arithmetic_obligation list) \<Rightarrow> ('v::linorder, 'e::linorder) gcfg
+       \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list" where
+  "obligation_sites obls g =
+     map (\<lambda>(v, es). (v, concat (map obls es))) (arithmetic_expression_sites g)"
+
 definition arithmetic_sites :: "cfg \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
-  "arithmetic_sites g =
-     map (\<lambda>(v, es). (v, concat (map arithmetic_obligations es)))
-       (arithmetic_expression_sites g)"
+  "arithmetic_sites = obligation_sites arithmetic_obligations"
 
 text \<open>A diagnostic names an obligation of a site list, read through the condition that
   makes it safe. The site list and the condition depend on the expression language;
@@ -200,7 +205,7 @@ proof -
       "arithmetic_divisor obligation = divisor"
     using arithmetic_obligations_divisors[of e] by force
   have site: "(v, concat (map arithmetic_obligations es)) \<in> set (arithmetic_sites g)"
-    using assms(1) by (auto simp: arithmetic_sites_def)
+    using assms(1) by (force simp: arithmetic_sites_def obligation_sites_def)
   have "obligation \<in> set (concat (map arithmetic_obligations es))"
     using ob assms(2) by auto
   from that[OF site this ob(2)] show thesis .

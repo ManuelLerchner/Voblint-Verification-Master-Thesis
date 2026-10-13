@@ -13,6 +13,7 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     "Voblint_Analysis_Congruence"
     "Voblint_Analysis_Relational"
     "Voblint_Typed"
+    "Voblint_Typed_CLI"
     "HOL-Library"
   directories
     "generated"
@@ -30,4 +31,5 @@ session Voblint_CLI in "." = "Voblint_Analysis_Int" +
     Analysis_Report
     Analysis_Certified
     Typed_Certified
+    Typed_Report
     Trace_Run
