@@ -10,4 +10,5 @@ session Voblint_Typed_Nonrel in "." = "Voblint_Nonrelational" +
     Typed_Nonrel
     Typed_Transfer
     Typed_Exec
+    Spec_Product
     Typed_Nonrel_Analysis
