@@ -1,5 +1,6 @@
 theory Interval_Kind
-  imports "Voblint_Analysis_Interval.Interval_Warrowing" "Voblint_Domain.Kind_Lifted"
+  imports "Voblint_Analysis_Interval.Interval_Warrowing" "Voblint_Analysis_Interval.Interval_Arithmetic"
+    "Voblint_Analysis_Interval.Interval_Numeric_Queries" Typed_Nonrel
 begin
 
 section \<open>Intervals at a kind\<close>
@@ -82,5 +83,105 @@ lemma widen_ivl_ik_in_range:
   assumes "l1 < l0" and "ik_lo k \<le> l1" and "u0 < u1" and "u1 \<le> ik_hi k"
   shows "widen_ivl_ik k (Ivl l0 u0) (Ivl l1 u1) = Ivl (ik_lo k) (ik_hi k)"
   using assms by (auto simp: min_def max_def)
+
+
+section \<open>Intervals as a kind-aware integer domain\<close>
+
+text \<open>
+  An operation at kind \<open>k\<close> computes the mathematical interval and keeps it when it lies
+  in \<open>k\<close>'s range; otherwise the normalized result may lie anywhere in the range, and the
+  answer is \<open>top_of k\<close>. This is Goblint's interval behaviour under the \<open>top\<close> overflow
+  policy, without its wrap of representable overflows.
+\<close>
+
+definition ik_ivl :: "ikind \<Rightarrow> ivl" where "ik_ivl k = Ivl (ik_lo k) (ik_hi k)"
+
+lemma gamma_ik_ivl [simp]: "gamma_ivl (ik_ivl k) = ik_range k"
+  by (auto simp: ik_ivl_def ik_lo_def ik_hi_def less_eq_eint_def)
+
+definition norm_ivl_ik :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "norm_ivl_ik k a = (if a \<le> ik_ivl k then a else ik_ivl k)"
+
+lemma norm_ivl_ik_sound:
+  assumes "n \<in> gamma_ivl a"
+  shows "ik_norm k n \<in> gamma_ivl (norm_ivl_ik k a)"
+proof (cases "a \<le> ik_ivl k")
+  case True
+  then have "n \<in> ik_range k" using gamma_ivl_mono[OF True] assms by auto
+  with True assms show ?thesis by (simp add: norm_ivl_ik_def)
+qed (simp add: norm_ivl_ik_def)
+
+fun ivl_aop :: "aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_aop AAdd a b = a + b"
+| "ivl_aop ASub a b = a - b"
+| "ivl_aop AMul a b = a * b"
+| "ivl_aop ADiv a b = ivl_div a b"
+| "ivl_aop AMod a b = ivl_mod a b"
+
+lemma ivl_aop_sound:
+  "m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> aop_eval op m n \<in> gamma_ivl (ivl_aop op a b)"
+  by (cases op) (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound
+      ivl_mod_sound)
+
+definition ivl_lt :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "ivl_lt a b =
+     (if interval_less_true a b then Some True
+      else if interval_less_false a b then Some False else None)"
+
+definition ivl_eq :: "ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "ivl_eq a b =
+     (if interval_eq_true a b then Some True
+      else if interval_eq_false a b then Some False else None)"
+
+lemma ivl_lt_sound: "ivl_lt a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> (m < n) = r"
+  by (auto simp: ivl_lt_def split: if_splits
+      dest: interval_less_true_sound interval_less_false_sound)
+
+lemma ivl_eq_sound: "ivl_eq a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> (m = n) = r"
+  by (auto simp: ivl_eq_def split: if_splits
+      dest: interval_eq_true_sound interval_eq_false_sound)
+
+fun ivl_cop :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
+  "ivl_cop CLt a b = ivl_lt a b"
+| "ivl_cop CGt a b = ivl_lt b a"
+| "ivl_cop CLe a b = map_option HOL.Not (ivl_lt b a)"
+| "ivl_cop CGe a b = map_option HOL.Not (ivl_lt a b)"
+| "ivl_cop CEq a b = ivl_eq a b"
+| "ivl_cop CNe a b = map_option HOL.Not (ivl_eq a b)"
+
+lemma ivl_cop_sound:
+  "ivl_cop c a b = Some r \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> cop_eval c m n = r"
+  by (cases c) (auto dest: ivl_lt_sound ivl_eq_sound)
+
+instantiation ivl :: kind_int_domain
+begin
+
+definition top_ik_ivl :: "ikind \<Rightarrow> ivl" where "top_ik_ivl = ik_ivl"
+
+definition of_int_ik_ivl :: "ikind \<Rightarrow> int \<Rightarrow> ivl" where
+  "of_int_ik_ivl k n = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
+
+definition cast_ik_ivl :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where "cast_ik_ivl = norm_ivl_ik"
+
+definition arith_ik_ivl :: "ikind \<Rightarrow> aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "arith_ik_ivl k op a b = norm_ivl_ik k (ivl_aop op a b)"
+
+definition cmp_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where "cmp_ik_ivl = ivl_cop"
+
+instance proof
+  fix n m :: int and k :: ikind and a b :: ivl and op :: aop and c :: cop and r :: bool
+  show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: ivl)"
+    by (simp add: top_ik_ivl_def)
+  show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: ivl)"
+    by (simp add: of_int_ik_ivl_def less_eq_eint_def)
+  show "n \<in> numeric_domain_class.gamma a \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik k a)"
+    by (simp add: cast_ik_ivl_def norm_ivl_ik_sound)
+  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
+    by (simp add: arith_ik_ivl_def norm_ivl_ik_sound ivl_aop_sound)
+  show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
+    by (simp add: cmp_ik_ivl_def ivl_cop_sound)
+qed
+
+end
 
 end
