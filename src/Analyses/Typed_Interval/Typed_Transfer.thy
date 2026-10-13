@@ -25,16 +25,6 @@ fun neg_cop :: "cop \<Rightarrow> cop" where
 lemma cop_eval_neg_cop [simp]: "cop_eval (neg_cop c) m n \<longleftrightarrow> \<not> cop_eval c m n"
   by (cases c) auto
 
-text \<open>A conversion to \<open>ik\<close> keeps every value of kind \<open>k\<close> when the range of \<open>ik\<close>
-  contains that of \<open>k\<close>.\<close>
-
-definition preserves_kind :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
-  "preserves_kind k ik \<longleftrightarrow> ik_min ik \<le> ik_min k \<and> ik_max k \<le> ik_max ik"
-
-lemma preserves_kind_norm:
-  "preserves_kind k ik \<Longrightarrow> n \<in> ik_range k \<Longrightarrow> ik_norm ik n = n"
-  by (auto simp: preserves_kind_def intro!: ik_norm_id)
-
 text \<open>An actual fits a formal when every typed store gives it a value in the formal's
   range: it is a variable of the formal's kind, or an operation at that kind.\<close>
 
@@ -60,8 +50,10 @@ definition tspecial :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a
 
 text \<open>
   A guard narrows the variables it compares, as Goblint's \<^verbatim>\<open>baseInvariant\<close>
-  does: a variable read directly, or through a conversion to a kind whose range contains
-  the variable's own, so that the conversion keeps every value. A negation flips the
+  does. A comparison refines each operand by the value it must have and passes that
+  value down: a conversion whose operand already fits the target kind keeps every value,
+  and a sum or difference that cannot overflow is inverted on mathematical integers.
+  Any other node, or a possible overflow, stops the refinement. A negation flips the
   polarity, a conjunction that holds and a disjunction that fails narrow by both sides.
 \<close>
 
@@ -71,8 +63,15 @@ definition narrow_var :: "var_id \<Rightarrow> 'a::kind_int_domain \<Rightarrow>
 
 fun refine_var :: "texp \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
   "refine_var (TVar ik v) a \<sigma> = narrow_var v a \<sigma>"
-| "refine_var (TCast ik (TVar ik' v)) a \<sigma> =
-     (if preserves_kind (\<kappa> v) ik then narrow_var v a \<sigma> else \<sigma>)"
+| "refine_var (TCast ik e) a \<sigma> =
+     (if fits_ik ik (taeval \<kappa> e \<sigma>) then refine_var e a \<sigma> else \<sigma>)"
+| "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma> =
+     (let a\<^sub>1 = taeval \<kappa> e\<^sub>1 \<sigma>; a\<^sub>2 = taeval \<kappa> e\<^sub>2 \<sigma>
+      in if \<not> fits_ik ik (raw_aop_ik op a\<^sub>1 a\<^sub>2) then \<sigma>
+         else case op of
+           AAdd \<Rightarrow> refine_var e\<^sub>2 (raw_aop_ik ASub a a\<^sub>1) (refine_var e\<^sub>1 (raw_aop_ik ASub a a\<^sub>2) \<sigma>)
+         | ASub \<Rightarrow> refine_var e\<^sub>2 (raw_aop_ik ASub a\<^sub>1 a) (refine_var e\<^sub>1 (raw_aop_ik AAdd a a\<^sub>2) \<sigma>)
+         | _ \<Rightarrow> \<sigma>)"
 | "refine_var e a \<sigma> = \<sigma>"
 
 fun trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
@@ -191,35 +190,58 @@ qed (use assms in \<open>simp add: narrow_var_def\<close>)
 lemma refine_var_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "teval e t \<in> numeric_domain_class.gamma a"
   shows "t \<in> gamma_tabs \<kappa> (refine_var e a \<sigma>)"
-proof (cases "\<exists>ik v. e = TVar ik v")
-  case True
-  then obtain ik v where "e = TVar ik v" by blast
-  with assms show ?thesis by (simp add: narrow_var_sound)
+  using assms
+proof (induction e arbitrary: a \<sigma>)
+  case (TVar ik v) then show ?case by (simp add: narrow_var_sound)
 next
-  case False
-  show ?thesis
-  proof (cases "\<exists>ik ik' v. e = TCast ik (TVar ik' v)")
+  case (TCast ik e)
+  show ?case
+  proof (cases "fits_ik ik (taeval \<kappa> e \<sigma>)")
     case True
-    then obtain ik ik' v where e: "e = TCast ik (TVar ik' v)" by blast
+    have "teval e t \<in> ik_range ik"
+      by (rule fits_ik_sound[OF True taeval_sound[OF TCast.prems(1)]])
+    then have "teval e t \<in> numeric_domain_class.gamma a"
+      using TCast.prems(2) by (simp del: ik_range_iff)
+    with True TCast.IH[OF TCast.prems(1)] show ?thesis by simp
+  qed (use TCast.prems in simp)
+next
+  case (TArith ik op e\<^sub>1 e\<^sub>2)
+  define a\<^sub>1 where "a\<^sub>1 = taeval \<kappa> e\<^sub>1 \<sigma>"
+  define a\<^sub>2 where "a\<^sub>2 = taeval \<kappa> e\<^sub>2 \<sigma>"
+  have m: "teval e\<^sub>1 t \<in> numeric_domain_class.gamma a\<^sub>1"
+    and n: "teval e\<^sub>2 t \<in> numeric_domain_class.gamma a\<^sub>2"
+    using taeval_sound[OF TArith.prems(1)] by (simp_all add: a\<^sub>1_def a\<^sub>2_def)
+  show ?case
+  proof (cases "fits_ik ik (raw_aop_ik op a\<^sub>1 a\<^sub>2)")
+    case fits: True
+    have "aop_eval op (teval e\<^sub>1 t) (teval e\<^sub>2 t) \<in> ik_range ik"
+      by (rule fits_ik_sound[OF fits raw_aop_ik_sound[OF m n]])
+    then have r: "aop_eval op (teval e\<^sub>1 t) (teval e\<^sub>2 t) \<in> numeric_domain_class.gamma a"
+      using TArith.prems(2) by (simp del: ik_range_iff)
     show ?thesis
-    proof (cases "preserves_kind (\<kappa> v) ik \<and> v \<noteq> ReturnVar")
-      case pk: True
-      have rng: "t v \<in> ik_range (\<kappa> v)"
-        using gamma_tabsD(1)[OF assms(1)] pk by (simp add: tstyped_def)
-      have "teval e t = t v"
-        using e pk preserves_kind_norm[of "\<kappa> v" ik "t v"] rng by (simp del: ik_range_iff)
-      with assms pk e show ?thesis by (simp add: narrow_var_sound)
+    proof (cases op)
+      case AAdd
+      have m': "teval e\<^sub>1 t \<in> numeric_domain_class.gamma (raw_aop_ik ASub a a\<^sub>2)"
+        using raw_aop_ik_sound[OF r n, of ASub] AAdd by simp
+      have n': "teval e\<^sub>2 t \<in> numeric_domain_class.gamma (raw_aop_ik ASub a a\<^sub>1)"
+        using raw_aop_ik_sound[OF r m, of ASub] AAdd by simp
+      have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
+          = refine_var e\<^sub>2 (raw_aop_ik ASub a a\<^sub>1) (refine_var e\<^sub>1 (raw_aop_ik ASub a a\<^sub>2) \<sigma>)"
+        using fits AAdd by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1) m'] n'] show ?thesis by simp
     next
-      case False
-      with assms e show ?thesis by (auto simp: narrow_var_def)
-    qed
-  next
-    case False
-    with \<open>\<not> (\<exists>ik v. e = TVar ik v)\<close> have "refine_var e a \<sigma> = \<sigma>"
-      by (cases "(e, a, \<sigma>)" rule: refine_var.cases) auto
-    with assms show ?thesis by simp
-  qed
-qed
+      case ASub
+      have m': "teval e\<^sub>1 t \<in> numeric_domain_class.gamma (raw_aop_ik AAdd a a\<^sub>2)"
+        using raw_aop_ik_sound[OF r n, of AAdd] ASub by simp
+      have n': "teval e\<^sub>2 t \<in> numeric_domain_class.gamma (raw_aop_ik ASub a\<^sub>1 a)"
+        using raw_aop_ik_sound[OF m r, of ASub] ASub by simp
+      have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
+          = refine_var e\<^sub>2 (raw_aop_ik ASub a\<^sub>1 a) (refine_var e\<^sub>1 (raw_aop_ik AAdd a a\<^sub>2) \<sigma>)"
+        using fits ASub by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1) m'] n'] show ?thesis by simp
+    qed (use fits TArith.prems in \<open>simp_all add: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
+  qed (use TArith.prems in \<open>simp add: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
+qed simp_all
 
 lemma trefine_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "truthy (teval b t) = pol"
@@ -546,7 +568,7 @@ lemma narrow_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind
   by (simp add: narrow_var_def kind_consistent_upd)
 
 lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (refine_var \<kappa> e a \<sigma>)"
-  by (induction e a \<sigma> rule: refine_var.induct) (simp_all add: narrow_var_kind)
+  by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_kind Let_def split: aop.splits)
 
 lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (trefine \<kappa> b pol \<sigma>)"
   by (induction b pol \<sigma> rule: trefine.induct) (simp_all add: refine_var_kind split: prod.splits)

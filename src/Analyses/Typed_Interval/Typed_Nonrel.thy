@@ -11,7 +11,10 @@ text \<open>
   \<open>cast_to ik\<close>, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
   result is normalized to \<open>k\<close>. A comparison answers \<open>Some b\<close> only when every pair of
   operands agrees on \<open>b\<close>. \<open>refine_ik c a b\<close> narrows both operands of a comparison
-  known to hold, as Goblint's \<^verbatim>\<open>invariant\<close> does for a guard.
+  known to hold, as Goblint's \<^verbatim>\<open>invariant\<close> does for a guard. \<open>raw_aop_ik\<close> is
+  the operation on mathematical integers, which a backward step inverts, and
+  \<open>fits_ik k a\<close> says that every value of \<open>a\<close> lies in \<open>k\<close>'s range, so that
+  normalizing to \<open>k\<close> changes none of them.
 \<close>
 
 class kind_int_domain = ik_domain +
@@ -22,6 +25,8 @@ class kind_int_domain = ik_domain +
     and cmp_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and meet_ik :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and refine_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
+    and raw_aop_ik :: "aop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
+    and fits_ik :: "ikind \<Rightarrow> 'a \<Rightarrow> bool"
   assumes top_ik_sound: "n \<in> ik_range k \<Longrightarrow> n \<in> \<gamma> (top_ik k)"
     and of_int_ik_sound: "ik_norm k n \<in> \<gamma> (of_int_ik k n)"
     and cast_ik_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik k a)"
@@ -33,6 +38,8 @@ class kind_int_domain = ik_domain +
     and refine_ik_sound:
       "cop_eval c m n \<Longrightarrow> m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b
          \<Longrightarrow> m \<in> \<gamma> (fst (refine_ik c a b)) \<and> n \<in> \<gamma> (snd (refine_ik c a b))"
+    and raw_aop_ik_sound: "m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> aop_eval op m n \<in> \<gamma> (raw_aop_ik op a b)"
+    and fits_ik_sound: "fits_ik k a \<Longrightarrow> n \<in> \<gamma> a \<Longrightarrow> n \<in> ik_range k"
 
 section \<open>Typed abstract states\<close>
 

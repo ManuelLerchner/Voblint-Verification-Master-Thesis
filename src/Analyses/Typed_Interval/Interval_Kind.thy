@@ -318,6 +318,10 @@ definition meet_ik_ivl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "meet_
 
 definition refine_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where "refine_ik_ivl = ivl_refine"
 
+definition raw_aop_ik_ivl :: "aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where "raw_aop_ik_ivl = ivl_aop"
+
+definition fits_ik_ivl :: "ikind \<Rightarrow> ivl \<Rightarrow> bool" where "fits_ik_ivl k a \<longleftrightarrow> a \<le> ik_ivl k"
+
 instance proof
   fix n m :: int and k :: ikind and a b :: ivl and op :: aop and c :: cop and r :: bool
   show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: ivl)"
@@ -337,6 +341,11 @@ instance proof
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (fst (refine_ik c a b))
         \<and> n \<in> numeric_domain_class.gamma (snd (refine_ik c a b))"
     by (simp add: refine_ik_ivl_def ivl_refine_sound)
+  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> aop_eval op m n \<in> numeric_domain_class.gamma (raw_aop_ik op a b)"
+    by (simp add: raw_aop_ik_ivl_def ivl_aop_sound)
+  show "fits_ik k a \<Longrightarrow> n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> ik_range k"
+    using gamma_ivl_mono[of a "ik_ivl k"] by (auto simp: fits_ik_ivl_def simp del: ik_range_iff)
 qed
 
 end

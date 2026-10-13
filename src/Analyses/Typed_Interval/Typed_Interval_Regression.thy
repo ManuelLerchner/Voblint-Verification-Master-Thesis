@@ -84,4 +84,52 @@ lemma swrap_values:
   "tt_at (swrap_at (Statement 2)) (main_var (STR ''x'')) = KD I8 (Ivl (Fin (-128)) (Fin 127))"
   by eval
 
+
+subsection \<open>Backward refinement through arithmetic and conversions\<close>
+
+text \<open>Two calls give \<open>f\<close>'s formal \<open>x\<close> the range \<open>[0,99]\<close>. Then \<open>x + 1\<close> cannot
+  overflow, so \<open>x + 1 < 10\<close> bounds \<open>x\<close> by \<open>8\<close>; without the inversion \<open>y\<close> would be
+  \<open>[0,99]\<close> when \<open>f\<close> returns.\<close>
+
+abbreviation f_var :: "vname \<Rightarrow> var_id" where
+  "f_var x \<equiv> ScopedId (STR ''f'') x"
+
+definition arith_prog :: imp_prog where
+  "arith_prog = program {
+     fun f(x) { y = 0; if (x + 1 < 10) { y = x; } }
+     fun main() { f(0); f(99); } }"
+
+lemma arith_refined:
+  "tt_at (typed_interval.state_at [] Globals_Join tglobal arith_prog ()
+            (FunctionResult (STR ''f''))) (f_var (STR ''y''))
+     = KD I32 (Ivl (Fin 0) (Fin 8))"
+  by eval
+
+text \<open>Comparing a signed \<open>x\<close> with an unsigned \<open>y\<close> converts \<open>x\<close> to unsigned. When
+  \<open>x\<close> is known non-negative the conversion keeps its value, so \<open>x < y\<close> bounds \<open>x\<close>; when
+  \<open>x\<close> may be negative the conversion is not injective on its values and refines
+  nothing.\<close>
+
+definition mixed_kinds :: kind_decls where
+  "mixed_kinds = [(f_var (STR ''y''), U32)]"
+
+definition mixed_prog :: imp_prog where
+  "mixed_prog = program {
+     fun f(x) { y = 5; z = 0; if (x < y) { z = x; } }
+     fun main() { f(0); f(9); } }"
+
+definition mixed_neg_prog :: imp_prog where
+  "mixed_neg_prog = program {
+     fun f(x) { y = 5; z = 0; if (x < y) { z = x; } }
+     fun main() { f(0 - 10); f(9); } }"
+
+lemma mixed_refined:
+  "tt_at (typed_interval.state_at mixed_kinds Globals_Join tglobal mixed_prog ()
+            (FunctionResult (STR ''f''))) (f_var (STR ''z''))
+     = KD I32 (Ivl (Fin 0) (Fin 4))"
+  "tt_at (typed_interval.state_at mixed_kinds Globals_Join tglobal mixed_neg_prog ()
+            (FunctionResult (STR ''f''))) (f_var (STR ''z''))
+     = KD I32 (Ivl (Fin (-10)) (Fin 9))"
+  by eval+
+
 end

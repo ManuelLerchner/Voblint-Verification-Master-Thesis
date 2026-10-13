@@ -79,7 +79,7 @@ lemma narrow_var_frame: "v \<noteq> w \<Longrightarrow> narrow_var \<kappa> w a 
   by (simp add: narrow_var_def)
 
 lemma refine_var_frame: "v \<notin> tvars e \<Longrightarrow> refine_var \<kappa> e a \<sigma> v = \<sigma> v"
-  by (induction e a \<sigma> rule: refine_var.induct) (auto simp: narrow_var_frame)
+  by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_frame Let_def split: aop.splits)
 
 lemma trefine_frame: "v \<notin> tvars b \<Longrightarrow> trefine \<kappa> b pol \<sigma> v = \<sigma> v"
   by (induction b arbitrary: pol \<sigma>; case_tac pol) (auto simp: refine_var_frame split: prod.splits)
