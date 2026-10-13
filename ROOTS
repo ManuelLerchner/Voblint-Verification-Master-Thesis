@@ -11,10 +11,12 @@ src/Analyses/Shared/Routing
 src/Analyses/Shared/Result
 src/Analyses/Shared/Nonrelational
 src/Analyses/Sign
+src/Analyses/Typed_Sign
 src/Analyses/Interval
 src/Analyses/Typed_Nonrel
 src/Analyses/Typed_Interval
 src/Analyses/Parity
+src/Analyses/Typed_Parity
 src/Analyses/Congruence
 src/Analyses/Typed_Congruence
 src/Analyses/Relational

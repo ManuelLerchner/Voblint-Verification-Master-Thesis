@@ -1,0 +1,8 @@
+chapter Voblint
+
+session Voblint_Typed_Sign in "." = "Voblint_Analysis_Sign" +
+  description "The Sign domain at machine kinds, run by the typed pipeline"
+  sessions
+    Voblint_Typed_Nonrel
+  theories
+    Sign_Kind
