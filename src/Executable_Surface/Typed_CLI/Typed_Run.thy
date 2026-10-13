@@ -66,11 +66,11 @@ proof -
       (cfg_exit (typed_cfg p ds), ()) \<noteq> None"
     and rs: "rs = typed_nonrel.report TYPE('a) ds r tglobal p ()"
     using run by (simp_all add: nonrel_run_def split: if_splits)
-  have term: "typed_nonrel.terminates TYPE('a) ds r tglobal p"
+  have stops: "typed_nonrel.terminates TYPE('a) ds r tglobal p"
     unfolding typed_nonrel.terminates_code
     using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
   show ?thesis
-    using typed_nonrel_report_proved_sound[OF wf term] typed_nonrel_report_refuted_sound[OF wf term]
+    using typed_nonrel_report_proved_sound[OF wf stops] typed_nonrel_report_refuted_sound[OF wf stops]
       mem rs by blast
 qed
 
@@ -85,11 +85,11 @@ proof -
       (cfg_exit (typed_cfg p ds), ()) \<noteq> None"
     and rs: "rs = typed_order.report r ds tglobal p ()"
     using run by (simp_all add: order_run_def split: if_splits)
-  have term: "typed_order.terminates r ds tglobal p"
+  have stops: "typed_order.terminates r ds tglobal p"
     unfolding typed_order.terminates_code
     using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
   show ?thesis
-    using typed_order_report_proved_sound[OF wf term] typed_order_report_refuted_sound[OF wf term]
+    using typed_order_report_proved_sound[OF wf stops] typed_order_report_refuted_sound[OF wf stops]
       mem rs by blast
 qed
 
@@ -106,9 +106,10 @@ proof -
   note wf = wf_program_compile_input_exec_sound[OF exec]
   have both: "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
        \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
-    using run exec
-    by (cases d)
-       (auto simp: run_typed_def intro: nonrel_run_sound[OF wf _ mem] order_run_sound[OF wf _ mem])
+    using run exec order_run_sound[OF wf _ mem] nonrel_run_sound[OF wf _ mem, where 'a = ivl]
+      nonrel_run_sound[OF wf _ mem, where 'a = congruence]
+      nonrel_run_sound[OF wf _ mem, where 'a = int_tuple]
+    by (cases d) (simp_all add: run_typed_def)
   then show "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)"
     by blast+
