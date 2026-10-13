@@ -157,7 +157,7 @@ export_code
   \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
      diagnostics, the analysis graph\<close>
   Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
-  render_report
+  vimp_render_report typed_render_report string_of_typed_value var_label
   res_cfg res_contexts res_states res_joined res_routes res_checks res_globals res_diagnostics
   res_graph graph_nodes graph_edges Local_Node Global_Node
   Intra_Dep Enter_Dep Combine_Dep Continue_Dep Global_Read Global_Write

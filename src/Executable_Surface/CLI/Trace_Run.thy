@@ -69,9 +69,9 @@ datatype 'c trace_key = Trace_Buffer | Trace_Global vname | Trace_Seed cfg_node 
 datatype ('c, 'g, 'd, 'l) trace_printers = Trace_Printers
   "'c \<Rightarrow> abstract_value analysis_context"
   "'g \<Rightarrow> 'c trace_key"
-  "'d \<Rightarrow> abstract_value analysis_view lifted"
-  "vname option \<Rightarrow> 'd \<Rightarrow> abstract_value analysis_view lifted"
-  "'l \<Rightarrow> abstract_value analysis_view lifted"
+  "'d \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
+  "vname option \<Rightarrow> 'd \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
+  "'l \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
 
 fun key_of_global_unknown :: "(vname, 'c) global_unknown \<Rightarrow> 'c trace_key" where
   "key_of_global_unknown Analysis_Buffer = Trace_Buffer"

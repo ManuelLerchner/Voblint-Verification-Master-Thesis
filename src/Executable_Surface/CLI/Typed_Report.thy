@@ -310,4 +310,98 @@ proof -
   then show ?thesis using that by blast
 qed
 
+subsection \<open>Rendering a typed report\<close>
+
+text \<open>
+  A typed report is rendered by \<^const>\<open>render_report\<close> with a renderer of its own: each
+  active analysis shows a kind-tagged value per variable, the order analysis its facts,
+  and an entry-state context the formal values of its active fields. Typed analyses keep
+  every variable in a point's own state, so no edge reads or writes a global unknown.
+\<close>
+
+instantiation toplift :: (join_val) join_val
+begin
+fun vjoin_toplift :: "'a toplift \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift" where
+  "vjoin_toplift (TL a) (TL b) = TL (vjoin a b)"
+| "vjoin_toplift _ _ = TTop"
+instance ..
+end
+
+instantiation order_rel :: (type) join_val
+begin
+definition vjoin_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightarrow> 'v order_rel" where
+  "vjoin_order_rel = sup"
+instance ..
+end
+
+datatype typed_value =
+    Typed_Interval_Value "ivl kd"
+  | Typed_Congruence_Value "congruence kd"
+  | Typed_Int_Value "int_tuple kd"
+  | Typed_Sign_Value "sign kd"
+  | Typed_Parity_Value "parity kd"
+  | Typed_Order_Value "(vname \<times> vname) list option"
+
+fun string_of_typed_value :: "typed_value \<Rightarrow> String.literal" where
+  "string_of_typed_value (Typed_Interval_Value v) = to_string v"
+| "string_of_typed_value (Typed_Congruence_Value v) = to_string v"
+| "string_of_typed_value (Typed_Int_Value v) = to_string v"
+| "string_of_typed_value (Typed_Sign_Value v) = to_string v"
+| "string_of_typed_value (Typed_Parity_Value v) = to_string v"
+| "string_of_typed_value (Typed_Order_Value v) = order_view_string v"
+
+text \<open>A variable is shown by its name, qualified by its procedure when it is local.\<close>
+
+fun var_label :: "var_id \<Rightarrow> vname" where
+  "var_label (GlobalId x) = x"
+| "var_label (ScopedId f x) = f + STR ''::'' + x"
+| "var_label (ReturnId f) = f + STR ''::return''"
+| "var_label ReturnVar = STR ''return''"
+
+definition tfield_view ::
+    "('a kd \<Rightarrow> typed_value) \<Rightarrow> var_id list \<Rightarrow> 'a tabs toplift lifted \<Rightarrow> typed_value field_state" where
+  "tfield_view mk vars d =
+     Field_Store (map (\<lambda>x. (var_label x, mk (case d of Bot \<Rightarrow> KBot | Lifted TTop \<Rightarrow> KTop
+                                                  | Lifted (TL \<sigma>) \<Rightarrow> \<sigma> x))) vars)"
+
+definition order_field_view :: "var_id order_rel lifted \<Rightarrow> typed_value field_state" where
+  "order_field_view d =
+     Field_Whole (Typed_Order_Value (case d of
+        Lifted (OFacts ps) \<Rightarrow> Some (map (\<lambda>(a, b). (var_label a, var_label b)) (sorted_list_of_set ps))
+      | _ \<Rightarrow> None))"
+
+definition typed_render ::
+    "typed_domain list \<Rightarrow> var_id list \<Rightarrow> tmcp_val \<Rightarrow> (typed_domain, typed_value) analysis_view" where
+  "typed_render as vars v = map (\<lambda>a. (a, case a of
+       Typed_Interval \<Rightarrow> tfield_view Typed_Interval_Value vars (tslot1 v)
+     | Typed_Congruence \<Rightarrow> tfield_view Typed_Congruence_Value vars (tslot2 v)
+     | Typed_Int \<Rightarrow> tfield_view Typed_Int_Value vars (tslot3 v)
+     | Typed_Sign \<Rightarrow> tfield_view Typed_Sign_Value vars (tslot4 v)
+     | Typed_Parity \<Rightarrow> tfield_view Typed_Parity_Value vars (tslot5 v)
+     | Typed_Order \<Rightarrow> order_field_view (tslot6 v))) as"
+
+fun typed_ctx_values :: "typed_domain list \<Rightarrow> tmcp_ctx \<Rightarrow> typed_value list" where
+  "typed_ctx_values as (Product i (Product c (Product t (Product s (Product q u))))) =
+     concat (map (\<lambda>a. case a of
+         Typed_Interval \<Rightarrow> map Typed_Interval_Value i
+       | Typed_Congruence \<Rightarrow> map Typed_Congruence_Value c
+       | Typed_Int \<Rightarrow> map Typed_Int_Value t
+       | Typed_Sign \<Rightarrow> map Typed_Sign_Value s
+       | Typed_Parity \<Rightarrow> map Typed_Parity_Value q
+       | Typed_Order \<Rightarrow> []) as)"
+
+definition typed_renderer ::
+    "(typed_domain list \<times> globals_rule \<times> typed_context, tmcp_ctx, tmcp_val, var_id, texp, unit,
+      typed_domain, typed_value) report_renderer" where
+  "typed_renderer =
+     \<lparr> rr_view = (\<lambda>(as, _, _). typed_render (tactivation as)),
+       rr_context = (\<lambda>(as, _, _). typed_ctx_values (tactivation as)),
+       rr_footprints = \<lparr> fp_edge_reads = (\<lambda>_ _. []), fp_edge_writes = (\<lambda>_ _. []),
+                         fp_call_reads = (\<lambda>_ _. []), fp_call_writes = (\<lambda>_ _. []) \<rparr> \<rparr>"
+
+
+definition typed_render_report ::
+    "(typed_value \<Rightarrow> 'v) \<Rightarrow> typed_report \<Rightarrow> (var_id, texp, unit, typed_domain, 'v) run_result" where
+  "typed_render_report = render_report typed_renderer"
+
 end

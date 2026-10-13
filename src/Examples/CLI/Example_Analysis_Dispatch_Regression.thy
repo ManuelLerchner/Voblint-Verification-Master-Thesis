@@ -131,7 +131,7 @@ fun field_value :: "vname \<Rightarrow> 'v field_state \<Rightarrow> 'v option" 
   "field_value x (Field_Store bs) = map_of bs x"
 | "field_value x (Field_Whole _) = None"
 
-definition interval_value :: "vname \<Rightarrow> 'v analysis_view \<Rightarrow> 'v option" where
+definition interval_value :: "vname \<Rightarrow> (analysis_domain, 'v) analysis_view \<Rightarrow> 'v option" where
   "interval_value x view = Option.bind (map_of view Interval_Analysis) (field_value x)"
 
 definition step_view :: "imp_prog \<Rightarrow> vname \<Rightarrow> pp \<Rightarrow> (abstract_value option lifted
@@ -142,7 +142,7 @@ definition step_view :: "imp_prog \<Rightarrow> vname \<Rightarrow> pp \<Rightar
         Analysed res \<Rightarrow>
           map (\<lambda>st. (map_lift (interval_value x) (state_value st),
                      map (\<lambda>(w, s). (w, map_lift (interval_value x) s)) (state_steps st)))
-            (filter (\<lambda>st. state_point st = v) (res_states (render_report id res)))
+            (filter (\<lambda>st. state_point st = v) (res_states (vimp_render_report id res)))
       | _ \<Rightarrow> [])"
 
 abbreviation step_demo_i :: "pp \<Rightarrow> (abstract_value option lifted

@@ -1,6 +1,6 @@
 (* Regression driver for the generated Voblint_Generated OCaml module.
    Constructs a VIMP program purely through the exported AST constructors
-   (never touching Isabelle), runs it through the exported `run_voblint`
+   (never touching Isabelle), runs it through the exported `run_voblint_legacy`
    entry point for every domain, and checks the result against the values
    src/Examples/CLI/Example_Analysis_Dispatch_Regression.thy's
    dispatch_demo_* lemmas prove and
@@ -222,8 +222,8 @@ let rec show_exp_compact = function
 let report domain prog =
   match
     map_analysis_answer
-      (render_report string_of_abstract_value)
-      (run_voblint
+      (vimp_render_report string_of_abstract_value)
+      (run_voblint_legacy
          (Analysis_Config
             ( [ domain ],
               Globals_Warrow,

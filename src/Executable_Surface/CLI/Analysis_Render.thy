@@ -16,30 +16,49 @@ text \<open>
   report, as the rendering below is, and no soundness theorem reads it.
 \<close>
 
-datatype unknown_node = Local_Node pp nat | Global_Node vname
+datatype 'n unknown_node = Local_Node pp nat | Global_Node 'n
 
-datatype analysis_edge =
-    Intra_Dep edge_action
-  | Enter_Dep call_action
-  | Combine_Dep call_action
-  | Continue_Dep call_action
+datatype ('vr, 'e) analysis_edge =
+    Intra_Dep "('vr, 'e) gedge_action"
+  | Enter_Dep "('vr, 'e) gcall_action"
+  | Combine_Dep "('vr, 'e) gcall_action"
+  | Continue_Dep "('vr, 'e) gcall_action"
   | Global_Read
   | Global_Write
 
-record analysis_graph =
-  graph_nodes :: "unknown_node list"
-  graph_edges :: "(unknown_node \<times> analysis_edge \<times> unknown_node) list"
+record ('vr, 'e, 'n) analysis_graph =
+  graph_nodes :: "'n unknown_node list"
+  graph_edges :: "('n unknown_node \<times> ('vr, 'e) analysis_edge \<times> 'n unknown_node) list"
+
+text \<open>
+  Which global names an edge or a call reads and writes depends on the language, so the
+  graph takes these footprints as an argument.
+\<close>
+
+record ('vr, 'e, 'n) footprints =
+  fp_edge_reads :: "('n \<Rightarrow> bool) \<Rightarrow> ('vr, 'e) gedge_action \<Rightarrow> 'n list"
+  fp_edge_writes :: "('n \<Rightarrow> bool) \<Rightarrow> ('vr, 'e) gedge_action \<Rightarrow> 'n list"
+  fp_call_reads :: "('n \<Rightarrow> bool) \<Rightarrow> 'e list \<Rightarrow> 'n list"
+  fp_call_writes :: "('n \<Rightarrow> bool) \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'n list"
+
+definition vimp_footprints :: "(vname, exp, vname) footprints" where
+  "vimp_footprints =
+     \<lparr> fp_edge_reads = edge_global_reads, fp_edge_writes = edge_global_writes,
+       fp_call_reads = call_global_reads,
+       fp_call_writes = (\<lambda>G ca. case ca of CallEdge dst pars args \<Rightarrow>
+         global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)) \<rparr>"
 
 text \<open>The program globals the report keeps at unknowns of their own.\<close>
 
-definition report_global_names :: "vimp_report \<Rightarrow> vname list" where
+definition report_global_names :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> 'n list" where
   "report_global_names res =
      concat (map (\<lambda>g. case global_unknown g of Global_Named x \<Rightarrow> [x] | _ \<Rightarrow> []) (report_globals res))"
 
-definition report_rows_of :: "vimp_report \<Rightarrow> (pp \<times> nat) list" where
+definition report_rows_of :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> (pp \<times> nat) list" where
   "report_rows_of res = map (\<lambda>st. (state_point st, state_context st)) (report_states res)"
 
-definition report_route_targets :: "vimp_report \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> nat list" where
+definition report_route_targets ::
+    "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> nat list" where
   "report_route_targets res u c =
      concat (map route_targets
        (filter (\<lambda>r. route_point r = u \<and> route_context r = c) (report_routes res)))"
@@ -50,14 +69,15 @@ definition callee_of :: "pp \<Rightarrow> pname" where
 text \<open>What a step within one context adds: the step, and the globals it reads and writes.\<close>
 
 definition intra_deps ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> pp \<times> edge_action \<times> pp
-     \<Rightarrow> (unknown_node \<times> analysis_edge \<times> unknown_node) list" where
-  "intra_deps G rows u c e =
+    "('vr, 'e, 'n) footprints \<Rightarrow> ('n \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat
+     \<Rightarrow> pp \<times> ('vr, 'e) gedge_action \<times> pp
+     \<Rightarrow> ('n unknown_node \<times> ('vr, 'e) analysis_edge \<times> 'n unknown_node) list" where
+  "intra_deps fp G rows u c e =
      (case e of (u', a, v) \<Rightarrow>
         if u' = u \<and> (v, c) \<in> set rows
         then (Local_Node u c, Intra_Dep a, Local_Node v c)
-             # map (\<lambda>x. (Global_Node x, Global_Read, Local_Node v c)) (edge_global_reads G a)
-             @ map (\<lambda>x. (Local_Node v c, Global_Write, Global_Node x)) (edge_global_writes G a)
+             # map (\<lambda>x. (Global_Node x, Global_Read, Local_Node v c)) (fp_edge_reads fp G a)
+             @ map (\<lambda>x. (Local_Node v c, Global_Write, Global_Node x)) (fp_edge_writes fp G a)
         else [])"
 
 text \<open>
@@ -68,9 +88,10 @@ text \<open>
 \<close>
 
 definition call_deps ::
-    "vimp_report \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat
-     \<Rightarrow> pp \<times> call_action \<times> pp \<times> pp \<Rightarrow> (unknown_node \<times> analysis_edge \<times> unknown_node) list" where
-  "call_deps res G rows u c e =
+    "('vr, 'e, 'n) footprints \<Rightarrow> ('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> ('n \<Rightarrow> bool)
+     \<Rightarrow> (pp \<times> nat) list \<Rightarrow> pp \<Rightarrow> nat \<Rightarrow> pp \<times> ('vr, 'e) gcall_action \<times> pp \<times> pp
+     \<Rightarrow> ('n unknown_node \<times> ('vr, 'e) analysis_edge \<times> 'n unknown_node) list" where
+  "call_deps fp res G rows u c e =
      (case e of (u', ca, entry, after) \<Rightarrow>
         if u' \<noteq> u then []
         else
@@ -83,24 +104,25 @@ definition call_deps ::
                 targets)
               @ (if (after, c) \<in> set rows
                  then (Local_Node u c, Continue_Dep ca, Local_Node after c)
-                      # (case ca of CallEdge dst pars args \<Rightarrow>
-                           map (\<lambda>x. (Global_Node x, Global_Read, Local_Node after c))
-                             (call_global_reads G args)
-                           @ map (\<lambda>x. (Local_Node after c, Global_Write, Global_Node x))
-                               (global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)))
+                      # map (\<lambda>x. (Global_Node x, Global_Read, Local_Node after c))
+                          (fp_call_reads fp G (ce_args ca))
+                      @ map (\<lambda>x. (Local_Node after c, Global_Write, Global_Node x))
+                          (fp_call_writes fp G ca)
                  else [])))"
 
-definition analysis_graph_of :: "vimp_report \<Rightarrow> analysis_graph" where
-  "analysis_graph_of res =
+definition analysis_graph_of ::
+    "('vr::linorder, 'e::linorder, 'n) footprints \<Rightarrow> ('k, 'x, 'vr, 'e, 'n, 's) analysis_report
+       \<Rightarrow> ('vr, 'e, 'n) analysis_graph" where
+  "analysis_graph_of fp res =
      (let g = report_cfg res;
           rows = report_rows_of res;
           names = report_global_names res;
           G = (\<lambda>x. x \<in> set names)
       in \<lparr> graph_nodes = map (\<lambda>(v, c). Local_Node v c) rows @ map Global_Node names,
            graph_edges =
-             concat (map (\<lambda>e. concat (map (\<lambda>(u, c). intra_deps G rows u c e) rows))
+             concat (map (\<lambda>e. concat (map (\<lambda>(u, c). intra_deps fp G rows u c e) rows))
                (cfg_intra_list g))
-             @ concat (map (\<lambda>e. concat (map (\<lambda>(u, c). call_deps res G rows u c e) rows))
+             @ concat (map (\<lambda>e. concat (map (\<lambda>(u, c). call_deps fp res G rows u c e) rows))
                  (cfg_calls_list g))
              @ concat (map (\<lambda>(u, c).
                  if u = cfg_entry g
@@ -130,7 +152,7 @@ datatype 'v analysis_context =
   | Context_Entry "'v list"
   | Context_Call_String "pp list"
 
-type_synonym 'v analysis_view = "(analysis_domain \<times> 'v field_state) list"
+type_synonym ('d, 'v) analysis_view = "('d \<times> 'v field_state) list"
 
 text \<open>
   The states a report holds at a point, joined over its contexts: what a reader who
@@ -199,7 +221,8 @@ end
 instance relc :: join_val_sup
   by standard (simp add: vjoin_relc_def)
 
-definition report_point_join :: "vimp_report \<Rightarrow> pp \<Rightarrow> mcp_val lifted" where
+definition report_point_join ::
+    "('k, 'x, 'vr, 'e, 'n, 's::join_val) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted" where
   "report_point_join res v =
      fold vjoin (map state_value (filter (\<lambda>st. state_point st = v) (report_states res))) Bot"
 
@@ -209,53 +232,72 @@ text \<open>
   joined position by position.
 \<close>
 
-definition report_steps_join :: "vimp_report \<Rightarrow> pp \<Rightarrow> (pp \<times> mcp_val lifted) list" where
+definition report_steps_join ::
+    "('k, 'x, 'vr, 'e, 'n, 's::join_val) analysis_report \<Rightarrow> pp \<Rightarrow> (pp \<times> 's lifted) list" where
   "report_steps_join res v =
      (case map state_steps (filter (\<lambda>st. state_point st = v) (report_states res)) of
         [] \<Rightarrow> []
       | s # ss \<Rightarrow> fold (map2 (\<lambda>(w, a) (_, b). (w, vjoin a b))) ss s)"
 
 lemma report_point_join_sup:
-  "report_point_join res v =
+  fixes res :: "('k, 'x, 'vr, 'e, 'n, 's::join_val_sup) analysis_report"
+  shows "report_point_join res v =
      fold (\<squnion>) (map state_value (filter (\<lambda>st. state_point st = v) (report_states res))) Bot"
   unfolding report_point_join_def by (simp add: vjoin_sup[abs_def])
 
-record 'v run_result =
-  res_cfg :: cfg
+record ('vr, 'e, 'n, 'd, 'v) run_result =
+  res_cfg :: "('vr, 'e) gcfg"
   res_contexts :: "'v analysis_context list"
-  res_states :: "(exp, 'v analysis_view) result_state list"
-  res_joined :: "(pp \<times> 'v analysis_view lifted \<times> (pp \<times> 'v analysis_view lifted) list) list"
+  res_states :: "('e, ('d, 'v) analysis_view) result_state list"
+  res_joined :: "(pp \<times> ('d, 'v) analysis_view lifted \<times> (pp \<times> ('d, 'v) analysis_view lifted) list) list"
   res_routes :: "call_route list"
-  res_checks :: "exp result_check list"
-  res_globals :: "(vname, 'v analysis_view) result_global list"
-  res_diagnostics :: "exp arithmetic_diagnostic list"
-  res_graph :: analysis_graph
+  res_checks :: "'e result_check list"
+  res_globals :: "('n, ('d, 'v) analysis_view) result_global list"
+  res_diagnostics :: "'e arithmetic_diagnostic list"
+  res_graph :: "('vr, 'e, 'n) analysis_graph"
 
-definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> 'v analysis_view \<Rightarrow> 'w analysis_view" where
+definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> ('d, 'v) analysis_view \<Rightarrow> ('d, 'w) analysis_view" where
   "map_analysis_view f = map (\<lambda>(a, s). (a, map_field_state f s))"
 
 definition mcp_render ::
-    "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> abstract_value analysis_view" where
+    "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> (analysis_domain, abstract_value) analysis_view" where
   "mcp_render as vars v = map (\<lambda>a. (a, value_display (registration_of a) v vars)) as"
 
 text \<open>
+  What a language shows of its report: each active analysis's part of a state, the
+  values an entry-state context is keyed by, and the global footprints of its edges.
   The printer \<open>show\<close> is a parameter: \<^const>\<open>string_of_abstract_value\<close> for text,
   composed in the adapter with whatever post-processing its output needs.
 \<close>
 
-fun render_context ::
-    "(abstract_value \<Rightarrow> 'v) \<Rightarrow> analysis_domain list \<Rightarrow> mcp_ctx report_context \<Rightarrow> 'v analysis_context"
-where
-  "render_context show as Report_Unit = Context_Unit"
-| "render_context show as (Report_Entry ctx) = Context_Entry (map show (mcp_ctx_values as ctx))"
-| "render_context show as (Report_Call_String us) = Context_Call_String us"
+record ('k, 'm, 's, 'vr, 'e, 'n, 'd, 'a) report_renderer =
+  rr_view :: "'k \<Rightarrow> 'vr list \<Rightarrow> 's \<Rightarrow> ('d, 'a) analysis_view"
+  rr_context :: "'k \<Rightarrow> 'm \<Rightarrow> 'a list"
+  rr_footprints :: "('vr, 'e, 'n) footprints"
 
-definition render_report :: "(abstract_value \<Rightarrow> 'v) \<Rightarrow> vimp_report \<Rightarrow> 'v run_result" where
-  "render_report show res =
-     (let as = activation (config_analyses (report_config res));
-          state = map_analysis_view show \<circ> mcp_render as (report_vars res)
+definition vimp_renderer ::
+    "(analysis_config, mcp_ctx, mcp_val, vname, exp, vname, analysis_domain, abstract_value)
+       report_renderer" where
+  "vimp_renderer =
+     \<lparr> rr_view = (\<lambda>config. mcp_render (activation (config_analyses config))),
+       rr_context = (\<lambda>config. mcp_ctx_values (activation (config_analyses config))),
+       rr_footprints = vimp_footprints \<rparr>"
+
+fun render_context :: "('a \<Rightarrow> 'v) \<Rightarrow> ('m \<Rightarrow> 'a list) \<Rightarrow> 'm report_context \<Rightarrow> 'v analysis_context"
+where
+  "render_context show vals Report_Unit = Context_Unit"
+| "render_context show vals (Report_Entry ctx) = Context_Entry (map show (vals ctx))"
+| "render_context show vals (Report_Call_String us) = Context_Call_String us"
+
+definition render_report ::
+    "('k, 'm, 's::join_val, 'vr::linorder, 'e::linorder, 'n, 'd, 'a) report_renderer
+       \<Rightarrow> ('a \<Rightarrow> 'v) \<Rightarrow> ('k, 'm report_context, 'vr, 'e, 'n, 's) analysis_report
+       \<Rightarrow> ('vr, 'e, 'n, 'd, 'v) run_result" where
+  "render_report rr show res =
+     (let config = report_config res;
+          state = map_analysis_view show \<circ> rr_view rr config (report_vars res)
       in \<lparr> res_cfg = report_cfg res,
-           res_contexts = map (render_context show as) (report_contexts res),
+           res_contexts = map (render_context show (rr_context rr config)) (report_contexts res),
            res_states = map (map_result_state state) (report_states res),
            res_joined = map (\<lambda>v. (v, map_lift state (report_point_join res v),
                                   map (\<lambda>(w, s). (w, map_lift state s)) (report_steps_join res v)))
@@ -264,13 +306,19 @@ definition render_report :: "(abstract_value \<Rightarrow> 'v) \<Rightarrow> vim
            res_checks = report_checks res,
            res_globals = map (map_result_global state) (report_globals res),
            res_diagnostics = report_diagnostics res,
-           res_graph = analysis_graph_of res \<rparr>)"
+           res_graph = analysis_graph_of (rr_footprints rr) res \<rparr>)"
+
+text \<open>Each language's rendering, with its value type fixed, as generated code calls it.\<close>
+
+definition vimp_render_report ::
+    "(abstract_value \<Rightarrow> 'v) \<Rightarrow> vimp_report \<Rightarrow> (vname, exp, vname, analysis_domain, 'v) run_result" where
+  "vimp_render_report = render_report vimp_renderer"
 
 lemma render_report_columns [simp]:
-  "res_cfg (render_report show res) = report_cfg res"
-  "res_checks (render_report show res) = report_checks res"
-  "res_diagnostics (render_report show res) = report_diagnostics res"
-  "res_routes (render_report show res) = report_routes res"
+  "res_cfg (render_report rr show res) = report_cfg res"
+  "res_checks (render_report rr show res) = report_checks res"
+  "res_diagnostics (render_report rr show res) = report_diagnostics res"
+  "res_routes (render_report rr show res) = report_routes res"
   by (simp_all add: render_report_def Let_def)
 
 section \<open>What the analysis graph contains\<close>
@@ -281,12 +329,12 @@ text \<open>
 \<close>
 
 lemma local_node_in_analysis_graph:
-  "Local_Node v c \<in> set (graph_nodes (analysis_graph_of res))
+  "Local_Node v c \<in> set (graph_nodes (analysis_graph_of fp res))
      \<longleftrightarrow> (\<exists>st \<in> set (report_states res). state_point st = v \<and> state_context st = c)"
   by (auto simp: analysis_graph_of_def report_rows_of_def Let_def)
 
 lemma global_node_in_analysis_graph:
-  "Global_Node x \<in> set (graph_nodes (analysis_graph_of res))
+  "Global_Node x \<in> set (graph_nodes (analysis_graph_of fp res))
      \<longleftrightarrow> (\<exists>gl \<in> set (report_globals res). global_unknown gl = Global_Named x)"
 proof -
   have "x \<in> set (report_global_names res)
@@ -299,8 +347,8 @@ text \<open>A step of a reported context contributes all its dependencies to the
 
 lemma intra_deps_in_analysis_graph:
   assumes "(u, c) \<in> set (report_rows_of res)" and "e \<in> set (cfg_intra_list (report_cfg res))"
-  shows "set (intra_deps (\<lambda>y. y \<in> set (report_global_names res)) (report_rows_of res) u c e)
-           \<subseteq> set (graph_edges (analysis_graph_of res))"
+  shows "set (intra_deps fp (\<lambda>y. y \<in> set (report_global_names res)) (report_rows_of res) u c e)
+           \<subseteq> set (graph_edges (analysis_graph_of fp res))"
   using assms unfolding analysis_graph_of_def Let_def
   by (auto intro!: bexI[where x = "(u, c)"] bexI[where x = e])
 
@@ -313,19 +361,19 @@ lemma global_deps_in_analysis_graph:
   fixes res defines "G \<equiv> (\<lambda>y. y \<in> set (report_global_names res))"
   assumes e: "(u, a, v) \<in> set (cfg_intra_list (report_cfg res))"
     and u: "(u, c) \<in> set (report_rows_of res)" and v: "(v, c) \<in> set (report_rows_of res)"
-  shows "x \<in> set (edge_global_reads G a)
-           \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of res))"
-    and "x \<in> set (edge_global_writes G a)
-           \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of res))"
+  shows "x \<in> set (fp_edge_reads fp G a)
+           \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of fp res))"
+    and "x \<in> set (fp_edge_writes fp G a)
+           \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of fp res))"
 proof -
-  have deps: "set (intra_deps G (report_rows_of res) u c (u, a, v))
-                \<subseteq> set (graph_edges (analysis_graph_of res))"
+  have deps: "set (intra_deps fp G (report_rows_of res) u c (u, a, v))
+                \<subseteq> set (graph_edges (analysis_graph_of fp res))"
     unfolding G_def by (rule intra_deps_in_analysis_graph[OF u e])
-  show "x \<in> set (edge_global_reads G a)
-          \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of res))"
+  show "x \<in> set (fp_edge_reads fp G a)
+          \<Longrightarrow> (Global_Node x, Global_Read, Local_Node v c) \<in> set (graph_edges (analysis_graph_of fp res))"
     using deps v by (auto simp: intra_deps_def)
-  show "x \<in> set (edge_global_writes G a)
-          \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of res))"
+  show "x \<in> set (fp_edge_writes fp G a)
+          \<Longrightarrow> (Local_Node v c, Global_Write, Global_Node x) \<in> set (graph_edges (analysis_graph_of fp res))"
     using deps v by (auto simp: intra_deps_def)
 qed
 

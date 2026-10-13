@@ -87,7 +87,9 @@ lemma mcp_gamma_v_mono: "v \<le> v' \<Longrightarrow> mcp_gamma_v as v \<subsete
 lemma fold_sup_ge: "x \<in> set xs \<or> x \<le> acc \<Longrightarrow> x \<le> fold (\<squnion>) xs (acc :: 'a::semilattice_sup)"
   by (induction xs arbitrary: acc) (auto intro: le_supI1 le_supI2)
 
-lemma report_states_at_le_point_join: "d \<in> report_states_at res v \<Longrightarrow> d \<le> report_point_join res v"
+lemma report_states_at_le_point_join:
+  fixes res :: "('k, 'x, 'vr, 'e, 'n, 's::join_val_sup) analysis_report"
+  shows "d \<in> report_states_at res v \<Longrightarrow> d \<le> report_point_join res v"
   unfolding report_states_at_def report_point_join_sup by (auto intro!: fold_sup_ge)
 
 text \<open>Every store the report describes at a point, the joined state describes.\<close>

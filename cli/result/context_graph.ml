@@ -193,7 +193,7 @@ let findings_of state =
 (* Everything known at a node: its state, then its findings. *)
 let lines n = List.concat_map A.section_lines n.sections @ n.findings
 
-let build prog (result : (string, unit) C.run_result_ext) : t =
+let build prog (result : (string, C.exp, string, C.analysis_domain, string, unit) C.run_result_ext) : t =
   let g = C.res_cfg result in
   let owner_of = A.owners g in
   let names_of = scope prog g owner_of in
