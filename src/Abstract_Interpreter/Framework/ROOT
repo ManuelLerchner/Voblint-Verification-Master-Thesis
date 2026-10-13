@@ -63,6 +63,7 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Check_Report
     Contextual_Check_Report
     Check_Answer
+    MCP_Registry
     DG_Analysis_Adapter
     (* Composition of a solved routed system with a context policy, once:
        the (domain, context-policy) product is instantiated, not duplicated. *)

@@ -95,26 +95,54 @@ text \<open>
   itself is \<^const>\<open>Bot\<close>, never from the answer to its query.
 \<close>
 
-definition answer_check :: "('v \<Rightarrow> query \<Rightarrow> answer) \<Rightarrow> exp \<Rightarrow> 'v \<Rightarrow> check_result" where
-  "answer_check q c v =
-     (case classify_answer (q v (check_query_of c)) of Decided r \<Rightarrow> r | _ \<Rightarrow> Check_Unknown)"
+text \<open>
+  The question is the check's truth value, which a language spells with its own
+  expressions: \<open>tx c\<close> evaluates to \<open>1\<close> where \<open>c\<close> holds and to \<open>0\<close> elsewhere. For the
+  untyped language it is \<^const>\<open>check_truth_exp\<close>.
+\<close>
+
+definition answer_check ::
+    "('e \<Rightarrow> 'e) \<Rightarrow> ('v \<Rightarrow> 'e gquery \<Rightarrow> answer) \<Rightarrow> 'e \<Rightarrow> 'v \<Rightarrow> check_result" where
+  "answer_check tx q c v =
+     (case classify_answer (q v (EvalInt (tx c))) of Decided r \<Rightarrow> r | _ \<Rightarrow> Check_Unknown)"
+
+lemma answer_check_gsound:
+  assumes truth: "ev (tx c) s = (if truthy (ev c s) then 1 else 0)"
+    and holds: "geval_holds ev (EvalInt (tx c)) (q v (EvalInt (tx c))) s"
+  shows answer_check_gproved: "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
+    and answer_check_grefuted: "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
+proof -
+  let ?a = "q v (EvalInt (tx c))"
+  have val: "(if truthy (ev c s) then 1 else 0) \<in> gamma_answer ?a"
+    using holds truth by simp
+  show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
+    using val
+    by (cases ?a rule: classify_answer.cases)
+       (auto simp: answer_check_def split: if_splits option.splits
+         dest!: gamma_int_dom_constant_subset)
+  show "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
+    using val
+    by (cases ?a rule: classify_answer.cases)
+       (auto simp: answer_check_def split: if_splits option.splits
+         dest!: gamma_int_dom_constant_subset)
+qed
 
 lemma answer_check_proved:
-  assumes "answer_check q c v = Check_Proved"
+  assumes "answer_check check_truth_exp q c v = Check_Proved"
     and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
   shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using assms classify_answer_proved
-  by (auto simp: answer_check_def split: lifted.splits)
+  using answer_check_gproved[where ev = aval and tx = check_truth_exp, OF aval_check_truth_exp] assms
+  by simp
 
 lemma answer_check_refuted:
-  assumes "answer_check q c v = Check_Refuted"
+  assumes "answer_check check_truth_exp q c v = Check_Refuted"
     and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
   shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using assms classify_answer_refuted
-  by (auto simp: answer_check_def split: lifted.splits)
+  using answer_check_grefuted[where ev = aval and tx = check_truth_exp, OF aval_check_truth_exp] assms
+  by simp
 
 lemma (in sound_check_query) answer_check_eval_answer:
-  "answer_check eval_answer = classify_check"
+  "answer_check check_truth_exp eval_answer = classify_check"
   by (simp add: fun_eq_iff answer_check_def classify_eval_answer del: eval_answer.simps)
 
 end

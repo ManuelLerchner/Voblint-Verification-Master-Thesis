@@ -18026,6 +18026,9 @@ let rec entry_ctx_key
       [Key_List (map abstract_value_key (mcp_ctx_values asa ctx));
         mcp_ctx_key ctx];;
 
+let rec check_truth_exp
+  c = (if bool_valued c then c else NotEq (c, N zero_inta));;
+
 let rec classify_answer
   = function QBot -> Bot
     | QLifted v ->
@@ -18040,15 +18043,12 @@ let rec classify_answer
           else (if equal_option equal_int (answer_const QTop) (Some zero_inta)
                  then Lifted Check_Refuted else Lifted Check_Unknown));;
 
-let rec check_truth_exp
-  c = (if bool_valued c then c else NotEq (c, N zero_inta));;
-
 let rec answer_check
-  q c v =
-    (match classify_answer (q v (EvalInt (check_truth_exp c)))
-      with Bot -> Check_Unknown | Lifted r -> r);;
+  tx q c v =
+    (match classify_answer (q v (EvalInt (tx c))) with Bot -> Check_Unknown
+      | Lifted r -> r);;
 
-let rec mcp_classify asa = answer_check (mcp_answer asa);;
+let rec mcp_classify asa = answer_check check_truth_exp (mcp_answer asa);;
 
 let mcp_root_ctx :
   ((sign list),

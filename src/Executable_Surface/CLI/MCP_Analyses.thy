@@ -1,5 +1,5 @@
 theory MCP_Analyses
-  imports MCP_Carrier
+  imports MCP_Carrier "Voblint_Framework.MCP_Registry"
 begin
 
 section \<open>The registered analyses, run as one\<close>
@@ -25,119 +25,12 @@ lemma part_gamma_rd: "part_gamma \<G> a x = gamma_lift (val_gamma a) (map_lift (
   by (cases a rule: analysis_domain_cases; cases x)
     (simp_all add: mcp_rd_def gamma_lift_default_st_gamma_to_fun)
 
-subsection \<open>Each analysis answers what it knows\<close>
-
-text \<open>
-  While the system is solved, a field answers a query as its published value
-  does: from its own publication map, through the answer its analysis registers for
-  checks. An analysis written without a query handler thereby becomes a
-  provider on the combined state, as every Goblint analysis answers
-  \<open>EvalInt\<close> from its own domain. The answer is sound for the stores the
-  field describes, so the handler replaces the component's own
-  (\<^const>\<open>with_qry\<close>) without touching a transfer.
-\<close>
-
-definition part_answer :: "(vname \<Rightarrow> bool) \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted \<Rightarrow> channel"
-where
-  "part_answer \<G> a x q =
-     (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> value_answer (registration_of a) (mcp_rd \<G> r) q)"
-
-lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> eval_holds q (part_answer \<G> a x q) s"
-  by (cases x) (auto simp: part_answer_def part_gamma_rd intro: value_answer_sound)
-
-definition mcp_field ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> analysis_domain \<Rightarrow> mcp_st lifted local_spec" where
-  "mcp_field \<G> p a = with_qry (\<lambda>ch. part_answer \<G> a) (field_spec (registration_of a) \<G> p)"
-
-lemma mcp_field_sound:
-  "sound_local_spec (declared_global p) (part_gamma (declared_global p) a)
-     (mcp_field (declared_global p) p a)"
-  unfolding mcp_field_def
-  by (rule with_qry_sound[OF field_spec_sound]) (rule part_answer_sound)
-
-lemma mcp_field_frame: "a \<noteq> b \<Longrightarrow> mcp_frame (mcp_field \<G> p a) (part_gamma \<G> b)"
-  unfolding mcp_field_def by (rule with_qry_frame[OF field_spec_frame])
-
-subsection \<open>The active analyses, run as one\<close>
-
-text \<open>
-  The combined state is unreachable as soon as one active analysis says its
-  field is, as Goblint's \<open>MCP\<close> raises \<open>Deadcode\<close> when one component does. The
-  normalization changes no concretization: a field that describes nothing
-  empties the intersection already.
-\<close>
-
-
-definition mcp_norm :: "analysis_domain list \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_norm as x =
-     (case x of
-        Bot \<Rightarrow> Bot
-      | Lifted r \<Rightarrow> if list_all (\<lambda>a. field_live (registration_of a) r) as then x else Bot)"
-
 lemma part_gamma_Bot [simp]: "part_gamma \<G> a Bot = {}"
   by (cases a rule: analysis_domain_cases) simp_all
 
 lemma part_gamma_dead:
   "\<not> field_live (registration_of a) r \<Longrightarrow> part_gamma \<G> a (Lifted r) = {}"
   by (cases a rule: analysis_domain_cases) simp_all
-
-lemma mcp_gamma_norm:
-  "mcp_gamma (map (part_gamma \<G>) as) (mcp_norm as x) = mcp_gamma (map (part_gamma \<G>) as) x"
-  by (cases x) (auto simp: mcp_norm_def mcp_gamma_def list_all_iff dest: part_gamma_dead)
-
-definition mcp_comp ::
-  "analysis_domain list \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted local_spec" where
-  "mcp_comp as \<G> p = map_local_spec (mcp_norm as) (mcp_combine (map (mcp_field \<G> p) as))"
-
-theorem mcp_comp_sound:
-  assumes "distinct as" and "as \<noteq> []"
-  shows "sound_local_spec (declared_global p)
-           (mcp_gamma (map (part_gamma (declared_global p)) as))
-           (mcp_comp as (declared_global p) p)"
-proof -
-  let ?gcs = "map (\<lambda>a. (part_gamma (declared_global p) a,
-                         mcp_field (declared_global p) p a)) as"
-  have "sound_local_spec (declared_global p) (mcp_gamma (map fst ?gcs))
-          (mcp_combine (map snd ?gcs))"
-    by (rule mcp_combine_sound)
-       (auto simp: mcp_field_sound assms
-         intro!: mcp_independent_map mcp_field_frame)
-  then show ?thesis
-    unfolding mcp_comp_def
-    by (intro map_local_spec_sound) (simp_all add: comp_def mcp_gamma_norm)
-qed
-
-lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp_comp as \<G> p)"
-  unfolding mcp_comp_def mcp_field_def
-  by (intro single_entry_map_local_spec single_entry_mcp_combine)
-     (auto simp: single_entry_field_spec single_entry_with_qry)
-
-subsection \<open>What the combined state publishes\<close>
-
-text \<open>
-  A solved combined state is published field by field, each through its
-  analysis's own publication map. Its concretization is the intersection over the
-  active fields, and a check is decided from the meet of the active analyses'
-  answers.
-\<close>
-
-lemma mcp_gamma_rd:
-  "as \<noteq> [] \<Longrightarrow> mcp_gamma (map (part_gamma \<G>) as) x
-                  = gamma_lift (mcp_gamma_v as) (map_lift (mcp_rd \<G>) x)"
-  by (cases x) (auto simp: mcp_gamma_def mcp_gamma_v_def part_gamma_rd)
-
-lemma mcp_gamma_v_bot: "as \<noteq> [] \<Longrightarrow> mcp_gamma_v as \<bottom> = {}"
-proof -
-  have "val_gamma a \<bottom> = {}" for a by (cases a rule: analysis_domain_cases) simp_all
-  then show "as \<noteq> [] \<Longrightarrow> ?thesis" by (auto simp: mcp_gamma_v_def)
-qed
-
-definition mcp_emp :: "analysis_domain list \<Rightarrow> imp_prog \<Rightarrow> mcp_st \<Rightarrow> bool" where
-  "mcp_emp as p r =
-     list_ex (\<lambda>a. field_empty (registration_of a) (declared_global_vars p) r) as"
-
-definition mcp_empty_v :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> bool" where
-  "mcp_empty_v as v = list_ex (\<lambda>a. val_empty a v) as"
 
 lemma field_empty_rd:
   "field_empty (registration_of a) (declared_global_vars p) r
@@ -147,18 +40,93 @@ lemma field_empty_rd:
         default_st_is_bot_for_iff[where \<G> = "declared_global p", OF declared_global_iff]
         split: lifted.split)
 
-lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"
-  by (simp add: mcp_emp_def mcp_empty_v_def field_empty_rd)
-
 lemma val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
   by (cases a rule: analysis_domain_cases)
     (auto split: lifted.splits dest: is_empty_state_gamma_state_empty)
 
+subsection \<open>The registry of the untyped analyses\<close>
+
+text \<open>
+  The registered analyses form a \<^locale>\<open>mcp_registry\<close> over the untyped language:
+  every field answers queries as its published value does, the active fields run as
+  one component, and a check is decided from the meet of their answers. The
+  constants keep the names this theory always gave them.
+\<close>
+
+global_interpretation umcp: mcp_registry aval ret_var "\<lambda>_ _ n. n" declared_global check_truth_exp
+    "\<lambda>\<G> p a. field_spec (registration_of a) \<G> p" "\<lambda>a. field_live (registration_of a)"
+    mcp_rd val_gamma val_empty "\<lambda>p a. field_empty (registration_of a) (declared_global_vars p)"
+    "\<lambda>a. value_answer (registration_of a)"
+  defines part_answer = umcp.part_answer and mcp_field = umcp.mcp_field
+    and mcp_norm = umcp.mcp_norm and mcp_comp = umcp.mcp_comp and mcp_emp = umcp.mcp_emp
+    and mcp_empty_v = umcp.mcp_empty_v and mcp_answer = umcp.mcp_answer
+    and mcp_classify = umcp.mcp_classify
+proof (unfold_locales, goal_cases Truth FieldSound Frame Single Dead EmptyRd EmptyGamma Bot Answer)
+  case (Truth c s) show ?case by (rule aval_check_truth_exp)
+next
+  case (FieldSound p a) show ?case
+    using field_spec_sound[of p a] by (simp add: sound_local_spec_inst part_gamma_rd[abs_def])
+next
+  case (Frame a b \<G> p) then show ?case
+    using field_spec_frame[of a b \<G> p] by (simp add: part_gamma_rd[abs_def])
+next
+  case (Single \<G> p a) show ?case by (rule single_entry_field_spec)
+next
+  case (Dead a r \<G>) then show ?case
+    using part_gamma_dead[of a r \<G>] by (simp add: part_gamma_rd)
+next
+  case (EmptyRd p a r) show ?case by (rule field_empty_rd)
+next
+  case (EmptyGamma a v) then show ?case by (rule val_empty_gamma)
+next
+  case (Bot a) show ?case by (cases a rule: analysis_domain_cases) simp_all
+next
+  case (Answer s a v q) then show ?case using value_answer_sound by simp
+qed
+
+lemma umcp_act_gamma [simp]: "umcp.act_gamma = mcp_gamma_v"
+  by (simp add: fun_eq_iff umcp.act_gamma_def mcp_gamma_v_def)
+
+text \<open>The registry's facts, stated over the carrier's own field concretization.\<close>
+
+theorem mcp_comp_sound:
+  assumes "distinct as" and "as \<noteq> []"
+  shows "sound_local_spec (declared_global p)
+           (mcp_gamma (map (part_gamma (declared_global p)) as))
+           (mcp_comp as (declared_global p) p)"
+  using umcp.mcp_comp_sound[OF assms, of p]
+  by (simp add: sound_local_spec_inst part_gamma_rd[abs_def])
+
+lemmas single_entry_mcp_comp = umcp.single_entry_mcp_comp
+
+lemma mcp_gamma_rd:
+  "as \<noteq> [] \<Longrightarrow> mcp_gamma (map (part_gamma \<G>) as) x
+                  = gamma_lift (mcp_gamma_v as) (map_lift (mcp_rd \<G>) x)"
+  using umcp.mcp_gamma_rd[of as \<G> x] by (simp add: part_gamma_rd[abs_def])
+
+lemma mcp_gamma_v_bot: "as \<noteq> [] \<Longrightarrow> mcp_gamma_v as \<bottom> = {}"
+  using umcp.act_gamma_bot by simp
+
+lemma mcp_emp_rd: "mcp_emp as p r = mcp_empty_v as (mcp_rd (declared_global p) r)"
+  by (rule umcp.mcp_emp_rd)
+
 lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = {}"
-  by (auto simp: mcp_empty_v_def mcp_gamma_v_def list_ex_iff dest: val_empty_gamma)
+  using umcp.mcp_empty_v_gamma by simp
 
 lemma sound_emptiness_mcp: "sound_emptiness (mcp_empty_v as) (mcp_gamma_v as)"
-  by (rule sound_emptinessI) (rule mcp_empty_v_gamma)
+  using umcp.sound_emptiness_mcp by simp
+
+lemma mcp_answer_sound: "s \<in> mcp_gamma_v as v \<Longrightarrow> eval_holds q (mcp_answer as v q) s"
+  using umcp.mcp_answer_sound[of s as v q] by simp
+
+lemma mcp_classify_proved:
+  "mcp_classify as e v = Check_Proved \<Longrightarrow> s \<in> mcp_gamma_v as v \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+  using umcp.mcp_classify_proved[of s as v e] by simp
+
+lemma mcp_classify_refuted:
+  "mcp_classify as e v = Check_Refuted \<Longrightarrow> s \<in> mcp_gamma_v as v
+   \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
+  using umcp.mcp_classify_refuted[of s as v e] by simp
 
 text \<open>
   The combined test is not exact. Interval says \<open>x = 2\<close> and Parity says \<open>x\<close> is odd:
@@ -178,7 +146,7 @@ proof -
   moreover have "(\<lambda>_. 1) \<in> \<gamma> ((\<top> :: parity abs_state)(STR ''x'' := POdd))"
     by (auto simp: gamma_state_def gamma_parity_top)
   ultimately show ?thesis
-    by (auto simp: mcp_empty_v_def mcp_contradiction_def is_empty_state_iff_gamma_state_empty)
+    by (auto simp: umcp.mcp_empty_v_def mcp_contradiction_def is_empty_state_iff_gamma_state_empty)
 qed
 
 lemma mcp_contradiction_no_store:
@@ -200,28 +168,6 @@ lemma mcp_empty_v_not_exact:
     mcp_contradiction_no_store
   by blast
 
-definition mcp_answer :: "analysis_domain list \<Rightarrow> mcp_val \<Rightarrow> query \<Rightarrow> answer" where
-  "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as \<top>"
-
-lemma mcp_answer_fold_sound:
-  "\<forall>a \<in> set as. s \<in> val_gamma a v \<Longrightarrow> eval_holds q r s
-   \<Longrightarrow> eval_holds q (fold (\<lambda>a r. r \<sqinter> value_answer (registration_of a) v q) as r) s"
-  by (induction as arbitrary: r) (auto intro: eval_query.inf_sound value_answer_sound)
-
-lemma mcp_answer_sound: "s \<in> mcp_gamma_v as v \<Longrightarrow> eval_holds q (mcp_answer as v q) s"
-  unfolding mcp_answer_def mcp_gamma_v_def by (rule mcp_answer_fold_sound) auto
-
-definition mcp_classify :: "analysis_domain list \<Rightarrow> exp \<Rightarrow> mcp_val \<Rightarrow> check_result" where
-  "mcp_classify as = answer_check (mcp_answer as)"
-
-lemma mcp_classify_proved:
-  "mcp_classify as e v = Check_Proved \<Longrightarrow> s \<in> mcp_gamma_v as v \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  unfolding mcp_classify_def by (erule answer_check_proved) (rule mcp_answer_sound)
-
-lemma mcp_classify_refuted:
-  "mcp_classify as e v = Check_Refuted \<Longrightarrow> s \<in> mcp_gamma_v as v
-   \<Longrightarrow> \<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-  unfolding mcp_classify_def by (erule answer_check_refuted) (rule mcp_answer_sound)
 
 text \<open>
   A caller activates a distinct, nonempty list of analyses. The registrations
