@@ -1,15 +1,24 @@
 # Goblint-aligned typed analyzer: plan and reference
 
-Status: roadmap adopted; stage 0 (this reference) done, stages 1 and 2 next.
-Nothing below stage 0 is implemented yet beyond the typed front end of
-`docs/TYPED_IR.md`.
+Status: stages 0 to 4 landed on `feat/typed-ir` (typed Interval end to end, with
+backward refinement and Goblint's unsigned wrap); stage 5 in progress (typed
+Congruence).
 
 Goal: Voblint becomes a verified, Goblint-style machine-integer analyzer. Typed
 expressions and static variable identities reach a typed CFG with no casts on
 reads; abstract values keep their kinds; numeric operations take the kind as
 Goblint's do; widening is bounded by the kind; one executable pipeline carries an
-end-to-end theorem. The mathematical-integer analyzer stays a supported instance
-with its proofs.
+end-to-end theorem.
+
+Final architecture: one typed machine-integer source language and one certified
+analyzer, closely following Goblint. Integers have the kinds
+`i8/u8/i16/u16/i32/u32/i64/u64`; a declaration without a kind is `i32`. There is
+no mathematical source type and no `IMath` pseudo-kind. Mathematical integers stay
+as internal machinery wherever they help implement or verify the machine-integer
+analysis: Isabelle `int`, interval bounds, congruence moduli and the existing
+kind-free domain operations. The untyped mathematical-integer analyzer and its
+proofs stay until the typed analyzer is executable, certified and tested; their
+removal is a separate cleanup (stage 7).
 
 Normative reference: `goblint/analyzer` at `0dc12d355`, checked out at
 `../analyzer`. Every Goblint reference below was read in that checkout. Secondary
@@ -253,12 +262,12 @@ widening and narrowing preserve it, so `KTop` never occurs at a declared variabl
 
 ### 2.3 Mathematical integers
 
-`ikind` keeps its eight finite machine kinds. The mathematical analyzer keeps the
-existing kind-free domain interface. The typed operations are built on top of it
-the way Goblint's `IntervalFunctor` builds `add ik` from `IArith.add` and
-`norm ik`, so the two analyzers share one arithmetic and differ only in the
-normalization. There is no `IMath` kind (V for the mathematical mode; it has no
-Goblint counterpart).
+`ikind` keeps its eight finite machine kinds, and the source language gains no
+mathematical kind. The kind-free domain interface stays as internal machinery: the
+typed operations are built on top of it the way Goblint's `IntervalFunctor` builds
+`add ik` from `IArith.add` and `norm ik`, so the legacy and typed analyzers share
+one arithmetic and differ only in the normalization. When the legacy analyzer is
+removed, these operations remain as the typed analyzer's implementation layer.
 
 ### 2.4 Initialization
 
@@ -283,8 +292,9 @@ Globals start at zero concretely and abstractly.
 | 2 | Typed instance: compile `elab_com` output directly; generalize location elaboration; typed simulation, traces, collecting | typed source runs simulated by the typed CFG; no read casts (landed, see 2.1a) |
 | 3 | Concrete `styped` preservation (assign, entry, binding, return, restore, call destinations, library and nondeterministic results); abstract kind consistency | concrete invariant landed (2.1b); abstract part moves to stage 4 |
 | 4 | `int_domain_ik`, `'a kd`, Interval with `norm`, `cast_to`, `widen`, `narrow`, kind-aware arithmetic, guard refinement through casts; typed Interval end to end | executable typed Interval with its own soundness theorem |
-| 5 | Congruence, Sign, Parity, Int product, Order | every configuration sound; precision changes classified |
-| 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem | the CLI's typed analysis is the one the theorem covers |
+| 5 | Typed Congruence, then the Int product (Interval and Congruence first, with Goblint's `no_ov` protocol), then Order; Sign and Parity last | every configuration sound; precision changes classified |
+| 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem. An experimental CLI path for the typed Interval and Congruence comes early, beside the untyped CLI, for differential testing | the CLI's typed analysis is the one the theorem covers |
+| 7 | Cleanup, proposed separately once stage 6 is complete: remove the mathematical source semantics and the typed-to-untyped lowering; keep reusable domains and proof infrastructure; migrate examples, flagging every one whose properties change under wraparound instead of rewriting its expected results | one source language, one analyzer |
 
 ### Stage 4 breakdown
 
@@ -319,7 +329,7 @@ the framework becomes generic as stage 1 made the program model generic:
   call results converted to the destination kind. Abstract kind consistency.
 - 4e. Typed Interval end to end: soundness against `tnode_collect` and typed runs.
 
-Long term the untyped analyzer is removed. The pattern above keeps that removal
+Stage 7 removes the untyped analyzer. The pattern above keeps that removal
 mechanical: deleting the untyped locales, their sublocales and the `aval`
 interpretations leaves the generic development intact.
 
