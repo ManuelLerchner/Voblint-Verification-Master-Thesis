@@ -1,5 +1,5 @@
 theory Typed_Interval_Regression
-  imports Typed_Interval_Analysis "Voblint_VIMP.VIMP_Notation"
+  imports Interval_Kind "Voblint_Typed_Nonrel.Typed_Nonrel_Analysis" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Regression: the typed Interval analysis, executed\<close>
@@ -7,11 +7,19 @@ section \<open>Regression: the typed Interval analysis, executed\<close>
 text \<open>
   Each case runs the certified solver on a typed program inside Isabelle and pins the
   published value of one variable. Termination is decided by evaluation, so the
-  end-to-end theorems of \<open>Typed_Interval_Analysis\<close> apply to these runs.
+  end-to-end theorems of \<open>Typed_Nonrel_Analysis\<close> apply to these runs.
 \<close>
 
 definition tt_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" where
   "tt_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
+
+abbreviation ivl_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> unit \<Rightarrow>
+    (cfg_node \<times> unit, (unit, unit) global_unknown,
+     (ivl tst toplift lifted, ivl tst toplift lifted) dg_state) strategy_tree" where
+  "ivl_equations ds p \<equiv> typed_nonrel.equations ds tglobal p"
+
+abbreviation ivl_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> ivl tabs toplift" where
+  "ivl_state_at ds p \<equiv> typed_nonrel.state_at ds Globals_Join tglobal p ()"
 
 abbreviation main_var :: "vname \<Rightarrow> var_id" where
   "main_var x \<equiv> ScopedId (STR ''main'') x"
@@ -24,16 +32,16 @@ definition loop_prog :: imp_prog where
   "loop_prog = program { fun main() { x = 0; while (x < 20) { x = x + 1; } } }"
 
 lemma loop_terminates_c:
-  "TD_side_rule_Interp_solve_c Globals_Join (typed_interval.equations [] tglobal loop_prog)
+  "TD_side_rule_Interp_solve_c Globals_Join (ivl_equations [] loop_prog)
      (cfg_exit (typed_cfg loop_prog []), ()) \<noteq> None"
   by eval
 
-lemma loop_terminates: "typed_interval.terminates [] Globals_Join tglobal loop_prog"
-  unfolding typed_interval.terminates_code
+lemma loop_terminates: "typed_nonrel.terminates TYPE(ivl) [] Globals_Join tglobal loop_prog"
+  unfolding typed_nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF loop_terminates_c] by simp
 
 abbreviation loop_at :: "pp \<Rightarrow> ivl tabs toplift" where
-  "loop_at \<equiv> typed_interval.state_at [] Globals_Join tglobal loop_prog ()"
+  "loop_at \<equiv> ivl_state_at [] loop_prog"
 
 lemma loop_values:
   "tt_at (loop_at (Statement 1)) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 0) (Fin 20))"
@@ -53,12 +61,12 @@ definition wrap_kinds :: kind_decls where
   "wrap_kinds = [(main_var (STR ''x''), U8)]"
 
 lemma wrap_terminates_c:
-  "TD_side_rule_Interp_solve_c Globals_Join (typed_interval.equations wrap_kinds tglobal wrap_prog)
+  "TD_side_rule_Interp_solve_c Globals_Join (ivl_equations wrap_kinds wrap_prog)
      (cfg_exit (typed_cfg wrap_prog wrap_kinds), ()) \<noteq> None"
   by eval
 
 abbreviation wrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
-  "wrap_at \<equiv> typed_interval.state_at wrap_kinds Globals_Join tglobal wrap_prog ()"
+  "wrap_at \<equiv> ivl_state_at wrap_kinds wrap_prog"
 
 lemma wrap_values:
   "tt_at (wrap_at (Statement 1)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 250) (Fin 250))"
@@ -78,7 +86,7 @@ definition swrap_kinds :: kind_decls where
   "swrap_kinds = [(main_var (STR ''x''), I8)]"
 
 abbreviation swrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
-  "swrap_at \<equiv> typed_interval.state_at swrap_kinds Globals_Join tglobal swrap_prog ()"
+  "swrap_at \<equiv> ivl_state_at swrap_kinds swrap_prog"
 
 lemma swrap_values:
   "tt_at (swrap_at (Statement 2)) (main_var (STR ''x'')) = KD I8 (Ivl (Fin (-128)) (Fin 127))"
@@ -100,7 +108,7 @@ definition arith_prog :: imp_prog where
      fun main() { f(0); f(99); } }"
 
 lemma arith_refined:
-  "tt_at (typed_interval.state_at [] Globals_Join tglobal arith_prog ()
+  "tt_at (ivl_state_at [] arith_prog
             (FunctionResult (STR ''f''))) (f_var (STR ''y''))
      = KD I32 (Ivl (Fin 0) (Fin 8))"
   by eval
@@ -124,10 +132,10 @@ definition mixed_neg_prog :: imp_prog where
      fun main() { f(0 - 10); f(9); } }"
 
 lemma mixed_refined:
-  "tt_at (typed_interval.state_at mixed_kinds Globals_Join tglobal mixed_prog ()
+  "tt_at (ivl_state_at mixed_kinds mixed_prog
             (FunctionResult (STR ''f''))) (f_var (STR ''z''))
      = KD I32 (Ivl (Fin 0) (Fin 4))"
-  "tt_at (typed_interval.state_at mixed_kinds Globals_Join tglobal mixed_neg_prog ()
+  "tt_at (ivl_state_at mixed_kinds mixed_neg_prog
             (FunctionResult (STR ''f''))) (f_var (STR ''z''))
      = KD I32 (Ivl (Fin (-10)) (Fin 9))"
   by eval+

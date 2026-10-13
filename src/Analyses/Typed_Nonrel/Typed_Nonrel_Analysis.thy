@@ -1,20 +1,20 @@
-theory Typed_Interval_Analysis
+theory Typed_Nonrel_Analysis
   imports
     Typed_Exec
-    Interval_Kind
     "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Solver.Globals_Rule"
 begin
 
 unbundle default_st_syntax
 
-section \<open>The typed Interval analysis\<close>
+section \<open>The typed non-relational analysis\<close>
 
 text \<open>
-  The executable typed component at the Interval domain, run by the shared D/G pipeline
-  over the typed CFG. The kind declarations \<open>ds\<close> are a parameter of the instance:
-  they fix the kind environment the concretization, the transfer and the initial state
-  read, and the program varies under them.
+  The executable typed component at any kind-aware integer domain, run by the shared
+  D/G pipeline over the typed CFG. The kind declarations \<open>ds\<close> are a parameter of the
+  instance: they fix the kind environment the concretization, the transfer and the
+  initial state read, and the program varies under them. The domain is a type
+  parameter, so every constant of the instance takes the domain's \<open>TYPE\<close> first.
 \<close>
 
 subsection \<open>Verdicts\<close>
@@ -97,14 +97,14 @@ lemma typed_exec_spec_sound_rd:
      (typed_exec_spec \<kappa> :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)"
   using typed_exec_spec_sound[of \<kappa>, where 'a = 'a] by (simp add: gamma_exec_def[abs_def])
 
-global_interpretation typed_interval: gdg_analysis
+global_interpretation typed_nonrel: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, ivl tst toplift lifted) glocal_spec"
+    "\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
     "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ _ _ _ _. ()" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
-       TYPE((ivl tst toplift lifted, ivl tst toplift lifted) dg_state) r"
+       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
     "TL \<bottom>" "tclassify (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
@@ -146,7 +146,7 @@ qed
 subsection \<open>End-to-end soundness\<close>
 
 text \<open>
-  A terminating solve of the typed Interval analysis bounds every store a typed run of
+  A terminating solve of the typed analysis bounds every store a typed run of
   the program reaches. The run starts in a store whose globals are zero at their kinds;
   the analysis has one context, so the bound is the state published at the run's node.
   Termination is a premise about this program, as for the untyped analyses.
@@ -156,50 +156,50 @@ context
   fixes ds :: kind_decls and r :: globals_rule
 begin
 
-lemma typed_interval_node_sound:
+lemma typed_nonrel_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_interval.terminates ds r tglobal p"
+    and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) ds r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> gamma_tt (kenv_of ds) (typed_interval.state_at ds r tglobal p () v)"
-  using typed_interval.gfun_route_result_node_sound
+           \<subseteq> gamma_tt (kenv_of ds) (typed_nonrel.state_at ds r tglobal p () v :: 'a tabs toplift)"
+  using typed_nonrel.gfun_route_result_node_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "\<lambda>_ _ _. ()" v]
   by (simp add: tnode_collect_def UNIV_unit)
 
-theorem typed_interval_source_sound:
+theorem typed_nonrel_source_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_interval.terminates ds r tglobal p"
+    and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) ds r tglobal p"
     and s0: "s0 \<in> tinit_stores (kenv_of ds)"
     and run: "star (tpstep (kenv_of ds) (typed_ptable p ds))
                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
   shows "\<exists>v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name
                     \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> gamma_tt (kenv_of ds) (typed_interval.state_at ds r tglobal p () v)"
-  using typed_source_reaches_node_collect[OF wf s0 run] typed_interval_node_sound[OF wf solves]
+                 \<and> s \<in> gamma_tt (kenv_of ds) (typed_nonrel.state_at ds r tglobal p () v :: 'a tabs toplift)"
+  using typed_source_reaches_node_collect[OF wf s0 run] typed_nonrel_node_sound[OF wf solves]
   by blast
 
 text \<open>A proved check holds at every typed store reaching its node; a refuted one fails at
   every such store. Neither verdict says the node is reached.\<close>
 
-theorem typed_interval_report_proved_sound:
+theorem typed_nonrel_report_proved_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_interval.terminates ds r tglobal p"
-    and mem: "(v, c, Check_Proved) \<in> set (typed_interval.report ds r tglobal p ())"
+    and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) ds r tglobal p"
+    and mem: "(v, c, Check_Proved) \<in> set (typed_nonrel.report TYPE('a) ds r tglobal p ())"
   shows "\<forall>s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v.
            truthy (teval c s)"
-  using typed_interval.gfun_route_report_proved_sound
+  using typed_nonrel.gfun_route_report_proved_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves mem, of "\<lambda>_ _ _. ()"]
-    typed_interval.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
+    typed_nonrel.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
   by (simp add: tnode_collect_def)
 
-theorem typed_interval_report_refuted_sound:
+theorem typed_nonrel_report_refuted_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_interval.terminates ds r tglobal p"
-    and mem: "(v, c, Check_Refuted) \<in> set (typed_interval.report ds r tglobal p ())"
+    and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) ds r tglobal p"
+    and mem: "(v, c, Check_Refuted) \<in> set (typed_nonrel.report TYPE('a) ds r tglobal p ())"
   shows "\<forall>s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v.
            \<not> truthy (teval c s)"
-  using typed_interval.gfun_route_report_refuted_sound
+  using typed_nonrel.gfun_route_report_refuted_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves mem, of "\<lambda>_ _ _. ()"]
-    typed_interval.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
+    typed_nonrel.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
   by (simp add: tnode_collect_def)
 
 end

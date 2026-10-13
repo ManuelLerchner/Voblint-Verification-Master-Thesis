@@ -1,7 +1,7 @@
 theory Interval_Kind
   imports
     "Voblint_Analysis_Interval.Interval_Arithmetic"
-    "Voblint_Analysis_Interval.Interval_Numeric_Queries" Typed_Nonrel
+    "Voblint_Analysis_Interval.Interval_Numeric_Queries" "Voblint_Typed_Nonrel.Typed_Nonrel"
 begin
 
 section \<open>Intervals at a kind\<close>
