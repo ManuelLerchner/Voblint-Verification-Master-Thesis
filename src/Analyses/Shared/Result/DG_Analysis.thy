@@ -123,12 +123,14 @@ text \<open>
   call leads when it contributes at all.
 \<close>
 
-record ('c, 'n, 'v) solved_run =
+record ('vr, 'e, 'c, 'n, 'v) gsolved_run =
   run_table :: "('c, 'v) solved_table"
   run_shared :: "'n \<Rightarrow> 'v lifted"
   run_seed :: "pname \<Rightarrow> 'c \<Rightarrow> 'v lifted"
-  run_step :: "pp \<Rightarrow> 'c \<Rightarrow> edge_action \<Rightarrow> 'v lifted"
-  run_succ :: "cfg_node \<Rightarrow> 'c \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option"
+  run_step :: "pp \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gedge_action \<Rightarrow> 'v lifted"
+  run_succ :: "cfg_node \<Rightarrow> 'c \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c option"
+
+type_synonym ('c, 'n, 'v) solved_run = "(vname, exp, 'c, 'n, 'v) gsolved_run"
 
 text \<open>
   \<open>dg_pipeline\<close> only fixes parameters: the component \<open>comp\<close>, the carrier
@@ -153,32 +155,34 @@ text \<open>
 \<close>
 
 locale dg_pipeline =
-  fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
-    and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
-    and rd :: "(vname \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
+  fixes comp :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr::linorder, 'e::linorder, 's::semilattice_sup lifted) glocal_spec"
+    and emp :: "'p \<Rightarrow> 's \<Rightarrow> bool"
+    and rd :: "('vr \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v"
     and init_st :: 's
     and buffer_key :: 'k
     and global_of :: "'n \<Rightarrow> 'k"
     and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
-    and route :: "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 's lifted \<Rightarrow> call_action \<Rightarrow> 'c"
+    and route :: "('vr \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> 's lifted \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'c"
     and root_ctx :: 'c
     and solve :: "(pp \<times> 'c, 'k, ('s lifted, 's lifted) dg_state) eqsT
                   \<Rightarrow> pp \<times> 'c
                   \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)"
     and solve_dom :: "(pp \<times> 'c, 'k, ('s lifted, 's lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c \<Rightarrow> bool"
     and bot_state :: 'v
-    and classify :: "exp \<Rightarrow> 'v \<Rightarrow> check_result"
-    and place_spec :: "imp_prog \<Rightarrow> 's lifted local_spec
-                        \<Rightarrow> (pp \<times> 'c, 'k, 'n, 's lifted, 's lifted) dg_spec"
-    and place_cmb :: "imp_prog \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
-    and place_rl :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
-    and place_rg :: "(vname \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
-    and place_inits :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('n \<times> 's lifted) list"
-    and place_enter :: "imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
+    and classify :: "'e \<Rightarrow> 'v \<Rightarrow> check_result"
+    and place_spec :: "'p \<Rightarrow> ('vr, 'e, 's lifted) glocal_spec
+                        \<Rightarrow> ('vr, 'e, pp \<times> 'c, 'k, 'n, 's lifted, 's lifted) gdg_spec"
+    and place_cmb :: "'p \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
+    and place_rl :: "('vr \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and place_rg :: "('vr \<Rightarrow> bool) \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and place_inits :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('n \<times> 's lifted) list"
+    and place_enter :: "'p \<Rightarrow> ('vr, 'e) gcall_info \<Rightarrow> 's lifted \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
+    and pcfg :: "'p \<Rightarrow> ('vr, 'e) gcfg"
+    and pentry :: "'p \<Rightarrow> cfg_node"
 begin
 
-definition analysis_spec :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (pp \<times> 'c, 'k, 'n, 's lifted, 's lifted) dg_spec" where
+definition analysis_spec :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
+    \<Rightarrow> ('vr, 'e, pp \<times> 'c, 'k, 'n, 's lifted, 's lifted) gdg_spec" where
   "analysis_spec \<G> p = place_spec p (comp \<G> p)"
 
 text \<open>
@@ -187,7 +191,7 @@ text \<open>
   state paired with this one.
 \<close>
 
-definition comp_entry :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted
+definition comp_entry :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e) gcall_info \<Rightarrow> 's lifted
     \<Rightarrow> 's lifted" where
   "comp_entry \<G> p ci w = snd (hd (ls_enter (comp \<G> p) (ls_channel (comp \<G> p) w) ci (w, w)))"
 
@@ -197,14 +201,14 @@ text \<open>
   half of the answer keeps its local part.
 \<close>
 
-definition entry_alt :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted
+definition entry_alt :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e) gcall_info \<Rightarrow> 's lifted
     \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted \<times> 's lifted" where
   "entry_alt \<G> p ci d g =
      (let w = place_enter p ci d g in (place_rl \<G> w, place_rl \<G> (comp_entry \<G> p ci w)))"
 
 text \<open>The state a call enters its callee with.\<close>
 
-definition entry_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> 's lifted
+definition entry_of :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e) gcall_info \<Rightarrow> 's lifted
     \<Rightarrow> ('n \<Rightarrow> 's lifted) \<Rightarrow> 's lifted"
   where "entry_of \<G> p ci d g = snd (entry_alt \<G> p ci d g)"
 
@@ -215,8 +219,8 @@ text \<open>
   is reached as one of its dependencies.
 \<close>
 
-definition root_query :: "imp_prog \<Rightarrow> pp \<times> 'c" where
-  "root_query p = (cfg_exit (prog_cfg p), root_ctx)"
+definition root_query :: "'p \<Rightarrow> pp \<times> 'c" where
+  "root_query p = (cfg_exit (pcfg p), root_ctx)"
 
 text \<open>
   \<open>root_query\<close>'s own type mentions no domain, so a code equation for it carries a
@@ -232,22 +236,11 @@ text \<open>
   part at the node's own key passes no such values.
 \<close>
 
-definition init_publications :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition init_publications :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> pp \<times> 'c \<Rightarrow> ('k \<times> ('s lifted, 's lifted) dg_state) list" where
   "init_publications \<G> p x =
-     (if x = (cfg_entry (prog_cfg p), root_ctx)
+     (if x = (pentry p, root_ctx)
       then map (\<lambda>(n, d). (global_of n, DG Bot d)) (place_inits \<G> p) else [])"
-
-text \<open>
-  The generated code evaluates this test at every equation evaluation, so the code
-  equation names the entry node directly instead of compiling the program each time.
-\<close>
-
-lemma init_publications_code:
-  "init_publications \<G> p x =
-     (if x = (FunctionEntry prog_main_name, root_ctx)
-      then map (\<lambda>(n, d). (global_of n, DG Bot d)) (place_inits \<G> p) else [])"
-  by (simp add: init_publications_def prog_cfg_def)
 
 text \<open>
   The initial global environment a run starts from: what the entry node buffers at
@@ -255,53 +248,53 @@ text \<open>
   publications.
 \<close>
 
-definition init_env :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'n \<Rightarrow> 's lifted" where
+definition init_env :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'n \<Rightarrow> 's lifted" where
   "init_env \<G> p n =
      (if global_of n = buffer_key then place_rg \<G> (Lifted init_st) else Bot)
        \<squnion> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = n) (place_inits \<G> p). d)"
 
-definition equations :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition equations :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> (pp \<times> 'c, 'k,
          ('s lifted, 's lifted) dg_state) eqsT" where
   "equations \<G> p =
      with_init (init_publications \<G> p)
        (compiled_routed_eqs_for buffer_key global_of seed (route \<G>)
-          (analysis_spec \<G> p) (prog_cfg p) (Lifted init_st) (place_rg \<G> (Lifted init_st)))"
+          (analysis_spec \<G> p) (pcfg p) (Lifted init_st) (place_rg \<G> (Lifted init_st)))"
 
-definition solution :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition solution :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> (pp \<times> 'c) set
          \<times> (pp \<times> 'c + 'k
               \<Rightarrow> ('s lifted, 's lifted) dg_state)" where
   "solution \<G> p = solve (equations \<G> p) (root_query p)"
 
-definition terminates :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> bool" where
+definition terminates :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> bool" where
   "terminates \<G> p = solve_dom (equations \<G> p) (root_query p)"
 
-lemma solution_code: "solution \<G> p = solve (equations \<G> p) (cfg_exit (prog_cfg p), root_ctx)"
+lemma solution_code: "solution \<G> p = solve (equations \<G> p) (cfg_exit (pcfg p), root_ctx)"
   by (simp add: solution_def root_query_def)
 
 lemma terminates_code:
-  "terminates \<G> p = solve_dom (equations \<G> p) (cfg_exit (prog_cfg p), root_ctx)"
+  "terminates \<G> p = solve_dom (equations \<G> p) (cfg_exit (pcfg p), root_ctx)"
   by (simp add: terminates_def root_query_def)
 
-definition sol_vars :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> 'c) set" where
+definition sol_vars :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> (pp \<times> 'c) set" where
   "sol_vars \<G> p = fst (solution \<G> p)"
 
-definition sol_env :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition sol_env :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state" where
   "sol_env \<G> p = snd (solution \<G> p)"
 
-definition reader :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition reader :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> pp \<times> 'c + 'k \<Rightarrow> 's lifted" where
   "reader \<G> p = solved_local_reader (sol_vars \<G> p) (sol_env \<G> p)"
 
-definition result :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition result :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> ('c, 'v) solved_table" where
   "result \<G> p = dg_result_for (rd \<G>) (emp p) (place_cmb p) global_of (solution \<G> p)"
 
 text \<open>The solved global environment every recombination reads.\<close>
 
-definition sol_global :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'n \<Rightarrow> 's lifted" where
+definition sol_global :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'n \<Rightarrow> 's lifted" where
   "sol_global \<G> p = genv global_of (sol_env \<G> p)"
 
 text \<open>
@@ -312,8 +305,8 @@ text \<open>
   publish it by spelling this out, exactly as it publishes \<^const>\<open>result\<close>.
 \<close>
 
-definition ctx_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> 'c
-    \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c" where
+definition ctx_succ :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> cfg_node \<Rightarrow> 'c
+    \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c" where
   "ctx_succ \<G> p u ctx ca q =
      route \<G> u ctx (entry_of \<G> p (call_info_of ca q) (dg_local (sol_env \<G> p (Inl (u, ctx))))
                       (sol_global \<G> p)) ca"
@@ -325,8 +318,8 @@ text \<open>
   otherwise the context \<^const>\<open>ctx_succ\<close> names.
 \<close>
 
-definition live_succ :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> 'c
-    \<Rightarrow> call_action \<Rightarrow> pname \<Rightarrow> 'c option" where
+definition live_succ :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> cfg_node \<Rightarrow> 'c
+    \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> 'c option" where
   "live_succ \<G> p u ctx ca q =
      (if entry_of \<G> p (call_info_of ca q) (dg_local (sol_env \<G> p (Inl (u, ctx))))
            (sol_global \<G> p) = Bot
@@ -353,9 +346,9 @@ text \<open>
   reads it without solving again; \<open>run\<close> below reads the specification's solve.
 \<close>
 
-definition solved_run_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
+definition solved_run_of :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
     \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> ('s lifted, 's lifted) dg_state)
-    \<Rightarrow> ('c, 'n, 'v) solved_run" where
+    \<Rightarrow> ('vr, 'e, 'c, 'n, 'v) gsolved_run" where
   "solved_run_of \<G> p sol =
      (let c = comp \<G> p;
           g = genv global_of (snd sol);
@@ -370,7 +363,7 @@ definition solved_run_of :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
              let d = entry_of \<G> p (call_info_of ca q) (dg_local (snd sol (Inl (u, ctx)))) g
              in if d = Bot then None else Some (route \<G> u ctx d ca)) \<rparr>)"
 
-definition run :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> ('c, 'n, 'v) solved_run" where
+definition run :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr, 'e, 'c, 'n, 'v) gsolved_run" where
   "run \<G> p = solved_run_of \<G> p (solution \<G> p)"
 
 lemma run_table_run [simp]: "run_table (run \<G> p) = result \<G> p"
@@ -388,13 +381,13 @@ text \<open>
   pipeline's own result table.
 \<close>
 
-definition check_projection :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (pp \<times> exp \<times> ('c \<times> contextual_verdict) set) list" where
-  "check_projection \<G> p = classify_checks_ctx (prog_cfg p) (result \<G> p) classify"
+definition check_projection :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
+    \<Rightarrow> (pp \<times> 'e \<times> ('c \<times> contextual_verdict) set) list" where
+  "check_projection \<G> p = classify_checks_ctx (pcfg p) (result \<G> p) classify"
 
-definition verdict_report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "verdict_report \<G> p = classify_checks_verdicts (prog_cfg p) (result \<G> p) classify"
+definition verdict_report :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
+    \<Rightarrow> (pp \<times> 'e \<times> contextual_verdict) list" where
+  "verdict_report \<G> p = classify_checks_verdicts (pcfg p) (result \<G> p) classify"
 
 text \<open>
   The same table read at one context: the state published there, and the check
@@ -403,15 +396,15 @@ text \<open>
   context-insensitive run reads it at \<open>()\<close>.
 \<close>
 
-definition state_at :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'v" where
+definition state_at :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'c \<Rightarrow> pp \<Rightarrow> 'v" where
   "state_at \<G> = analysis_surface.state_at (result \<G>) bot_state"
 
-definition report :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 'c \<Rightarrow> check_report_entry list" where
-  "report \<G> = analysis_surface.report (result \<G>) bot_state classify"
+definition report :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'c \<Rightarrow> (pp \<times> 'e \<times> check_result) list" where
+  "report \<G> = analysis_surface.report (result \<G>) bot_state classify pcfg"
 
-definition report_with_state :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-    \<Rightarrow> 'c \<Rightarrow> (pp \<times> exp \<times> check_result \<times> bool \<times> 'v) list" where
-  "report_with_state \<G> = analysis_surface.report_with_state (result \<G>) bot_state classify"
+definition report_with_state :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p
+    \<Rightarrow> 'c \<Rightarrow> (pp \<times> 'e \<times> check_result \<times> bool \<times> 'v) list" where
+  "report_with_state \<G> = analysis_surface.report_with_state (result \<G>) bot_state classify pcfg"
 
 lemma state_at_unfold:
   "state_at \<G> p ctx v
@@ -429,7 +422,7 @@ declare
   dg_pipeline.entry_alt_def [code]
   dg_pipeline.entry_of_def [code]
   dg_pipeline.sol_global_def [code]
-  dg_pipeline.init_publications_code [code]
+  dg_pipeline.init_publications_def [code]
   dg_pipeline.equations_def [code]
   dg_pipeline.solution_code [code]
   dg_pipeline.terminates_code [code]
@@ -464,6 +457,7 @@ text \<open>
 locale dg_analysis =
   dg_pipeline comp emp rd init_st buffer_key global_of seed route root_ctx solve solve_dom
     bot_state classify place_spec place_cmb place_rl place_rg place_inits place_enter
+    prog_cfg "\<lambda>_. FunctionEntry prog_main_name"
   + certified_solver solve solve_dom solve_c
   for comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
     and emp :: "imp_prog \<Rightarrow> 's \<Rightarrow> bool"
@@ -716,7 +710,7 @@ proof -
   have "DG Bot d \<le> sol_env pgs p (Inr (global_of n))"
     by (rule post_bounded_with_init_at[OF post_bounded_of_part_post_solution[OF pp,
           unfolded equations_def] entry_cov])
-       (use mem in \<open>auto simp: init_publications_def\<close>)
+       (use mem in \<open>auto simp: init_publications_def prog_cfg_def\<close>)
   then show ?thesis by (simp add: sol_global_def less_eq_dg_state_def)
 qed
 

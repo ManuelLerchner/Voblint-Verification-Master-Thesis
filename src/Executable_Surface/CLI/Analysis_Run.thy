@@ -404,7 +404,8 @@ definition mcp_equations ::
        \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
   "mcp_equations as pg buffer global seed route root =
      dg_pipeline.equations (mcp_comp as) (mcp_init as) buffer global seed route root
-       (mcp_place_spec pg) (mcp_place_rg pg) (mcp_place_inits pg as)"
+       (mcp_place_spec pg) (mcp_place_rg pg) (mcp_place_inits pg as) prog_cfg
+       (\<lambda>_. FunctionEntry prog_main_name)"
 
 definition mcp_solve_c ::
     "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c

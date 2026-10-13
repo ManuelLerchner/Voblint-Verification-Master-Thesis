@@ -353,9 +353,10 @@ lemma certificate_demo_solve_c:
         (mcp_init (activation certificate_analyses))
         Analysis_Buffer (Analysis_Global :: vname \<Rightarrow> (vname, cfg_node list) global_unknown)
         Activation_Seed (\<lambda>_. cs_route 1) []
-        (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d. Bot) (\<lambda>\<G> p. [])
+        (\<lambda>\<G> c. dg_spec_of c) (\<lambda>\<G> d. Bot) (\<lambda>\<G> p. []) prog_cfg
+        (\<lambda>_. FunctionEntry prog_main_name)
         (declared_global certificate_demo_prog) certificate_demo_prog)
-     (dg_pipeline.root_query [] certificate_demo_prog) \<noteq> None"
+     (dg_pipeline.root_query [] prog_cfg certificate_demo_prog) \<noteq> None"
   unfolding dg_pipeline.root_query_def by eval
 
 lemma certificate_demo_terminates:

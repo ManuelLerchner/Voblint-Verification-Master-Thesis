@@ -34,10 +34,10 @@ definition compiled_routed_eqs_for ::
     "'K
       \<Rightarrow> ('N \<Rightarrow> 'K)
       \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'K)
-      \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'D \<Rightarrow> call_action \<Rightarrow> 'C)
-      \<Rightarrow> (pp \<times> 'C, 'K, 'N,
-           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) dg_spec
-      \<Rightarrow> cfg
+      \<Rightarrow> (pp \<Rightarrow> 'C \<Rightarrow> 'D \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'C)
+      \<Rightarrow> ('vr::linorder, 'e::linorder, pp \<times> 'C, 'K, 'N,
+           'D::bounded_semilattice_sup_bot, 'G::bounded_semilattice_sup_bot) gdg_spec
+      \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg
       \<Rightarrow> 'D
       \<Rightarrow> 'G
       \<Rightarrow> (pp \<times> 'C, 'K, ('D, 'G) dg_state) eqsT"
@@ -76,22 +76,20 @@ lemma group_lookup_group_by_key:
   by (induction xs) (auto simp: group_by_key_def group_lookup_def split: option.splits)
 
 definition intra_predecessor_index ::
-    "cfg \<Rightarrow> (cfg_node, (cfg_node \<times> edge_action) list) rbt" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) list) rbt" where
   "intra_predecessor_index g =
      group_by_key (\<lambda>(u, a, w). w) (\<lambda>(u, a, w). Some (u, a)) (cfg_intra_list g)"
 
+lemma map_filter_intra_target:
+  "List.map_filter
+     (\<lambda>x. if (\<lambda>(u, a, w). w) x = v then (\<lambda>(u, a, w). Some (u, a)) x else None) es
+   = map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) es)"
+  by (induction es) auto
+
 lemma group_lookup_intra_predecessor_index:
   "group_lookup (intra_predecessor_index g) v = intra_predecessor_list g v"
-proof -
-  have "List.map_filter
-          (\<lambda>x. if (\<lambda>(u, a, w). w) x = v then (\<lambda>(u, a, w). Some (u, a)) x else None) es
-          = map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) es)"
-    for es :: "(cfg_node \<times> edge_action \<times> cfg_node) list"
-    by (induction es) auto
-  then show ?thesis
-    unfolding intra_predecessor_index_def intra_predecessor_list_def group_lookup_group_by_key
-    by simp
-qed
+  unfolding intra_predecessor_index_def intra_predecessor_list_def group_lookup_group_by_key
+  by (simp add: map_filter_intra_target)
 
 lemma map_group_lookup_intra_predecessor_index:
   "map (\<lambda>(u, a). (Inl (u, ctx), a)) (group_lookup (intra_predecessor_index g) v)
@@ -99,25 +97,24 @@ lemma map_group_lookup_intra_predecessor_index:
   by (simp add: intra_predecessor_addr_list_def group_lookup_intra_predecessor_index)
 
 definition call_target_index ::
-    "cfg \<Rightarrow> (cfg_node, (cfg_node \<times> call_action \<times> pname) list) rbt" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node, (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) list) rbt" where
   "call_target_index g =
      group_by_key (\<lambda>(c, ca, ce, k). k) (\<lambda>(c, ca, ce, k). call_target_at k (c, ca, ce, k))
        (cfg_calls_list g)"
 
+lemma call_target_at_key:
+  "(if (\<lambda>(c, ca, ce, k). k) e = v
+     then (\<lambda>(c, ca, ce, k). call_target_at k (c, ca, ce, k)) e else None)
+   = call_target_at v e"
+proof -
+  obtain c ca ce k where e: "e = (c, ca, ce, k)" by (cases e) auto
+  show ?thesis by (cases ce) (auto simp: e)
+qed
+
 lemma group_lookup_call_target_index:
   "group_lookup (call_target_index g) v = call_target_list g v"
-proof -
-  have "(if (\<lambda>(c, ca, ce, k). k) e = v
-         then (\<lambda>(c, ca, ce, k). call_target_at k (c, ca, ce, k)) e else None)
-          = call_target_at v e" for e :: "cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node"
-  proof -
-    obtain c ca ce k where e: "e = (c, ca, ce, k)" by (cases e) auto
-    show ?thesis by (cases ce) (auto simp: e)
-  qed
-  then show ?thesis
-    unfolding call_target_index_def call_target_list_def group_lookup_group_by_key
-    by simp
-qed
+  unfolding call_target_index_def call_target_list_def group_lookup_group_by_key
+  by (simp add: call_target_at_key)
 
 text \<open>
   The indexes are let-bound outside the equation system, so a solver holding
