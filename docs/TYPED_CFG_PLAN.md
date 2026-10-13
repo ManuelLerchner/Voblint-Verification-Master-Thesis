@@ -286,6 +286,32 @@ Globals start at zero concretely and abstractly.
 | 5 | Congruence, Sign, Parity, Int product, Order | every configuration sound; precision changes classified |
 | 6 | `run_voblint` on the typed CFG; typed ∃/∀ headline theorem | the CLI's typed analysis is the one the theorem covers |
 
+### Stage 4 breakdown
+
+The typed analysis runs through the same D/G framework as the mathematical one.
+That framework is fixed to `vname`/`exp`/`imp_prog` today (`dg_spec` fields,
+`analysis_contract`, `sound_nonrelational_transfer`, `routed_context`,
+`dg_analysis_exec`, `dg_pipeline`). An encoding of the typed graph into the
+untyped one would lose the conversion of call results at the destination, so
+the framework becomes generic as stage 1 made the program model generic:
+
+- 4a. Domain layer (no framework dependency): `ik_domain`, `'a kd`
+  (`Kind_Lifted`), Interval at a kind (`Interval_Kind`: Goblint `widen ik`,
+  `narrow ik`, emptiness in a kind's range). Landed.
+- 4b. Framework spine generic in the variable and expression type: `dg_spec`,
+  `analysis_event`, `analysis_contract` over `cfg_transfer_sem`, `Transfer_Algebra`,
+  `DG_Local_State_Spec`, `CFG_Enumeration`, generator, `Activation_Backbone`,
+  `DG_Ctx_Activation`, `Routed_Context`, `Routed_Analysis_Sound`, checks.
+  Untyped names stay as the instance; every existing theorem keeps its statement.
+- 4c. Exec, Routing and Result generic: `default_st` keyed by any linorder type,
+  `dg_domain_exec`, `compiled_routed_eqs_for`, `dg_pipeline`/`dg_analysis` over
+  a program-shaped parameter instead of `imp_prog`.
+- 4d. Typed nonrelational transfer over `var_id ⇒ 'a kd`: assignment converts
+  to `κ x` (Goblint `cast_to`), kind-aware arithmetic (`norm ik`), guards refined
+  backward through dynamically safe casts, entry seeds locals with `top_of (κ x)`,
+  call results converted to the destination kind. Abstract kind consistency.
+- 4e. Typed Interval end to end: soundness against `tnode_collect` and typed runs.
+
 Review boundary: after stage 2. The typed-to-lowered simulation (`tstep_sim`,
 `run_voblint_typed_sound`) and the mathematical analyzer stay until a separate
 review decides otherwise.
