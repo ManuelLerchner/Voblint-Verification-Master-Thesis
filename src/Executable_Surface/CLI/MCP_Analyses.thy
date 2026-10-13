@@ -56,11 +56,11 @@ text \<open>
 global_interpretation umcp: mcp_registry aval ret_var "\<lambda>_ _ n. n" declared_global check_truth_exp
     "\<lambda>\<G> p a. field_spec (registration_of a) \<G> p" "\<lambda>a. field_live (registration_of a)"
     mcp_rd val_gamma val_empty "\<lambda>p a. field_empty (registration_of a) (declared_global_vars p)"
-    "\<lambda>a. value_answer (registration_of a)"
+    "\<lambda>a v ch. value_answer (registration_of a) v"
   defines part_answer = umcp.part_answer and mcp_field = umcp.mcp_field
     and mcp_norm = umcp.mcp_norm and mcp_comp = umcp.mcp_comp and mcp_emp = umcp.mcp_emp
     and mcp_empty_v = umcp.mcp_empty_v and mcp_answer = umcp.mcp_answer
-    and mcp_classify = umcp.mcp_classify
+    and mcp_ask = umcp.mcp_ask and mcp_classify = umcp.mcp_classify
 proof (unfold_locales, goal_cases Truth FieldSound Frame Single Dead EmptyRd EmptyGamma Bot Answer)
   case (Truth c s) show ?case by (rule aval_check_truth_exp)
 next
@@ -115,9 +115,6 @@ lemma mcp_empty_v_gamma: "mcp_empty_v as v \<Longrightarrow> mcp_gamma_v as v = 
 
 lemma sound_emptiness_mcp: "sound_emptiness (mcp_empty_v as) (mcp_gamma_v as)"
   using umcp.sound_emptiness_mcp by simp
-
-lemma mcp_answer_sound: "s \<in> mcp_gamma_v as v \<Longrightarrow> eval_holds q (mcp_answer as v q) s"
-  using umcp.mcp_answer_sound[of s as v q] by simp
 
 lemma mcp_classify_proved:
   "mcp_classify as e v = Check_Proved \<Longrightarrow> s \<in> mcp_gamma_v as v \<Longrightarrow> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"

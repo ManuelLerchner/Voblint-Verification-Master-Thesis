@@ -11158,11 +11158,11 @@ let rec run_typed
              | (Typed_Parity :: Typed_Sign :: _, _) -> Typed_Unsupported
              | (Typed_Parity :: Typed_Parity :: _, _) -> Typed_Unsupported));;
 
-let rec field_empty
+let rec value_answer
   (Analysis_registration_ext
     (field_spec, field_live, field_empty, value_answer, value_display,
       context_values, more))
-    = field_empty;;
+    = value_answer;;
 
 let rec default_st_rep_is_bot _A
   g ((dl, ls), (dg, gs)) =
@@ -14644,6 +14644,22 @@ let rec registration_of
             (fun v _ -> Field_Whole (OrderValue (order_pairs (slot8 v)))),
             (fun _ -> []), ());;
 
+let rec mcp_answer
+  asa ch v q =
+    fold (fun a r ->
+           inf_query_lift (inf_int_dom_ext bounded_lattice_unit) r
+             (value_answer (registration_of a) v q))
+      asa (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
+
+let rec mcp_ask
+  asa v = ask_rec equal_exp (mcp_answer asa) query_depth bot_set v;;
+
+let rec field_empty
+  (Analysis_registration_ext
+    (field_spec, field_live, field_empty, value_answer, value_display,
+      context_values, more))
+    = field_empty;;
+
 let rec mcp_emp
   asa p r =
     list_ex
@@ -14758,21 +14774,14 @@ let rec field_spec
       context_values, more))
     = field_spec;;
 
-let rec value_answer
-  (Analysis_registration_ext
-    (field_spec, field_live, field_empty, value_answer, value_display,
-      context_values, more))
-    = value_answer;;
-
 let rec part_answer
-  g a x q =
+  g a ch x q =
     (match x
       with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
       | Lifted r -> value_answer (registration_of a) (mcp_rd g r) q);;
 
 let rec mcp_field
-  g p a =
-    with_qry (fun _ -> part_answer g a) (field_spec (registration_of a) g p);;
+  g p a = with_qry (part_answer g a) (field_spec (registration_of a) g p);;
 
 let rec field_live
   (Analysis_registration_ext
@@ -16085,13 +16094,6 @@ let rec edge_reads
 let rec activation
   asa = (if null asa then [Int_Analysis Refine_Fixpoint]
           else remdups equal_analysis_domain asa);;
-
-let rec mcp_answer
-  asa v q =
-    fold (fun a r ->
-           inf_query_lift (inf_int_dom_ext bounded_lattice_unit) r
-             (value_answer (registration_of a) v q))
-      asa (top_query_lifta (order_int_dom_ext bounded_lattice_unit));;
 
 let rec int_of_char x = comp (fun a -> Int_of_integer a) integer_of_char x;;
 
@@ -18048,7 +18050,7 @@ let rec answer_check
     (match classify_answer (q v (EvalInt (tx c))) with Bot -> Check_Unknown
       | Lifted r -> r);;
 
-let rec mcp_classify asa = answer_check check_truth_exp (mcp_answer asa);;
+let rec mcp_classify asa = answer_check check_truth_exp (mcp_ask asa);;
 
 let mcp_root_ctx :
   ((sign list),

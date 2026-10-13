@@ -26,7 +26,7 @@ locale mcp_registry =
     and val_gamma :: "'a \<Rightarrow> 'v \<Rightarrow> ('vr \<Rightarrow> int) set"
     and val_empty :: "'a \<Rightarrow> 'v \<Rightarrow> bool"
     and field_empty :: "'p \<Rightarrow> 'a \<Rightarrow> 's \<Rightarrow> bool"
-    and answer :: "'a \<Rightarrow> 'v \<Rightarrow> 'e gquery \<Rightarrow> answer"
+    and answer :: "'a \<Rightarrow> 'v \<Rightarrow> 'e gchannel \<Rightarrow> 'e gquery \<Rightarrow> answer"
   assumes truth: "ev (tx c) s = (if truthy (ev c s) then 1 else 0)"
     and field_sound: "mcp_sem.gsound_local_spec ev rv (pconv p) (pglob p)
          (\<lambda>x. gamma_lift (val_gamma a) (map_lift (rd (pglob p)) x)) (field (pglob p) p a)"
@@ -37,7 +37,8 @@ locale mcp_registry =
     and field_empty_rd: "field_empty p a r = val_empty a (rd (pglob p) r)"
     and val_empty_gamma: "val_empty a v \<Longrightarrow> val_gamma a v = {}"
     and val_gamma_bot: "val_gamma a \<bottom> = {}"
-    and answer_sound: "s \<in> val_gamma a v \<Longrightarrow> geval_holds ev q (answer a v q) s"
+    and answer_sound: "s \<in> val_gamma a v \<Longrightarrow> geval_query.channel_holds ev ch s
+         \<Longrightarrow> geval_holds ev q (answer a v ch q) s"
 begin
 
 abbreviation part_gamma :: "('vr \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 's lifted \<Rightarrow> ('vr \<Rightarrow> int) set" where
@@ -52,16 +53,21 @@ text \<open>
   A field answers a query as its published value does, so an analysis written
   without a query handler becomes a provider on the combined state
   (\<^const>\<open>with_qry\<close>), as every Goblint analysis answers \<open>EvalInt\<close> from its domain.
+  An answer may itself ask the channel, as Goblint's \<^verbatim>\<open>base\<close> asks about the operands
+  of the expression it is asked about.
 \<close>
 
-definition part_answer :: "('vr \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 's lifted \<Rightarrow> 'e gquery \<Rightarrow> answer" where
-  "part_answer \<G> a x q = (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> answer a (rd \<G> r) q)"
+definition part_answer ::
+    "('vr \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> 'e gchannel \<Rightarrow> 's lifted \<Rightarrow> 'e gquery \<Rightarrow> answer" where
+  "part_answer \<G> a ch x q = (case x of Bot \<Rightarrow> \<top> | Lifted r \<Rightarrow> answer a (rd \<G> r) ch q)"
 
-lemma part_answer_sound: "s \<in> part_gamma \<G> a x \<Longrightarrow> geval_holds ev q (part_answer \<G> a x q) s"
+lemma part_answer_sound:
+  "s \<in> part_gamma \<G> a x \<Longrightarrow> geval_query.channel_holds ev ch s
+     \<Longrightarrow> geval_holds ev q (part_answer \<G> a ch x q) s"
   by (cases x) (auto simp: part_answer_def intro: answer_sound)
 
 definition mcp_field :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'a \<Rightarrow> ('vr, 'e, 's lifted) glocal_spec" where
-  "mcp_field \<G> p a = with_qry (\<lambda>ch. part_answer \<G> a) (field \<G> p a)"
+  "mcp_field \<G> p a = with_qry (part_answer \<G> a) (field \<G> p a)"
 
 lemma mcp_field_sound:
   "mcp_sem.gsound_local_spec ev rv (pconv p) (pglob p) (part_gamma (pglob p) a)
@@ -141,29 +147,46 @@ subsection \<open>Deciding a check from every active analysis\<close>
 
 text \<open>
   The combined answer meets the active analyses' answers, as \<open>MCP.query'\<close> does,
-  and a check is decided from it as Goblint's \<open>assert\<close> reads \<open>eval_bool\<close>.
+  and a check is decided from it as Goblint's \<open>assert\<close> reads \<open>eval_bool\<close>. The
+  question goes through the channel the combined answer closes over itself
+  (\<^const>\<open>ask_rec\<close>), so an answer that asks about a subexpression reaches every
+  active analysis, and a query cycle answers \<open>\<top>\<close>.
 \<close>
 
-definition mcp_answer :: "'a list \<Rightarrow> 'v \<Rightarrow> 'e gquery \<Rightarrow> answer" where
-  "mcp_answer as v q = fold (\<lambda>a r. r \<sqinter> answer a v q) as \<top>"
+definition mcp_answer :: "'a list \<Rightarrow> 'e gchannel \<Rightarrow> 'v \<Rightarrow> 'e gquery \<Rightarrow> answer" where
+  "mcp_answer as ch v q = fold (\<lambda>a r. r \<sqinter> answer a v ch q) as \<top>"
 
 lemma mcp_answer_fold_sound:
-  "\<forall>a \<in> set as. s \<in> val_gamma a v \<Longrightarrow> geval_holds ev q r s
-   \<Longrightarrow> geval_holds ev q (fold (\<lambda>a r. r \<sqinter> answer a v q) as r) s"
+  "\<forall>a \<in> set as. s \<in> val_gamma a v \<Longrightarrow> geval_query.channel_holds ev ch s
+   \<Longrightarrow> geval_holds ev q r s \<Longrightarrow> geval_holds ev q (fold (\<lambda>a r. r \<sqinter> answer a v ch q) as r) s"
   by (induction as arbitrary: r) (auto intro: geval_query.inf_sound answer_sound)
 
-lemma mcp_answer_sound: "s \<in> act_gamma as v \<Longrightarrow> geval_holds ev q (mcp_answer as v q) s"
+lemma mcp_answer_sound:
+  "s \<in> act_gamma as v \<Longrightarrow> geval_query.channel_holds ev ch s
+     \<Longrightarrow> geval_holds ev q (mcp_answer as ch v q) s"
   unfolding mcp_answer_def act_gamma_def by (rule mcp_answer_fold_sound) auto
 
+definition mcp_ask :: "'a list \<Rightarrow> 'v \<Rightarrow> 'e gchannel" where
+  "mcp_ask as v = ask_rec (mcp_answer as) query_depth {} v"
+
+lemma mcp_ask_sound:
+  assumes s: "s \<in> act_gamma as v"
+  shows "geval_query.channel_holds ev (mcp_ask as v) s"
+proof -
+  interpret S: mcp_sem ev rv "\<lambda>_ n. n" "\<lambda>_. True" .
+  show ?thesis
+    unfolding mcp_ask_def by (rule S.ask_rec_sound) (rule mcp_answer_sound[OF s])
+qed
+
 definition mcp_classify :: "'a list \<Rightarrow> 'e \<Rightarrow> 'v \<Rightarrow> check_result" where
-  "mcp_classify as = answer_check tx (mcp_answer as)"
+  "mcp_classify as = answer_check tx (mcp_ask as)"
 
 lemma mcp_classify_sound:
   assumes s: "s \<in> act_gamma as v"
   shows mcp_classify_proved: "mcp_classify as c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
     and mcp_classify_refuted: "mcp_classify as c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
-  using answer_check_gsound[where ev = ev and tx = tx and q = "mcp_answer as" and c = c and v = v,
-      OF truth mcp_answer_sound[OF s]]
+  using answer_check_gsound[where ev = ev and tx = tx and q = "mcp_ask as" and c = c and v = v,
+      OF truth geval_query.channel_holdsD[OF mcp_ask_sound[OF s]]]
   by (simp_all add: mcp_classify_def)
 
 end
