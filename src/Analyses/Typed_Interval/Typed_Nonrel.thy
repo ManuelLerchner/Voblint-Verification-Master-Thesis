@@ -1,5 +1,5 @@
 theory Typed_Nonrel
-  imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted"
+  imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted" "Voblint_Domain.Top_Lift"
 begin
 
 section \<open>Kind-aware integer domains\<close>
@@ -33,21 +33,21 @@ text \<open>
   A typed abstract state maps every variable identity to a kind-tagged value. It
   describes the typed stores whose values lie in the state's values: \<^const>\<open>tstyped\<close>
   is part of the description, so a value the state does not constrain still stays in
-  its variable's range. The top state is the one exception and describes every store,
-  untyped or not; a transfer answers it for an action no typed program contains.
+  its variable's range. \<^const>\<open>TTop\<close> above the typed states describes every store,
+  typed or not; a transfer answers it for an action no typed program contains.
 \<close>
 
 type_synonym 'a tabs = "var_id \<Rightarrow> 'a kd"
 
 definition gamma_tabs :: "kenv \<Rightarrow> 'a::ik_domain tabs \<Rightarrow> tstore set" where
-  "gamma_tabs \<kappa> \<sigma> =
-     (if \<sigma> = \<top> then UNIV else {t. tstyped \<kappa> t \<and> (\<forall>v. t v \<in> \<gamma> (\<sigma> v))})"
+  "gamma_tabs \<kappa> \<sigma> = {t. tstyped \<kappa> t \<and> (\<forall>v. t v \<in> \<gamma> (\<sigma> v))}"
 
-lemma gamma_tabs_top [simp]: "gamma_tabs \<kappa> \<top> = UNIV"
-  by (simp add: gamma_tabs_def)
+fun gamma_tt :: "kenv \<Rightarrow> 'a::ik_domain tabs toplift \<Rightarrow> tstore set" where
+  "gamma_tt \<kappa> TTop = UNIV"
+| "gamma_tt \<kappa> (TL \<sigma>) = gamma_tabs \<kappa> \<sigma>"
 
 lemma gamma_tabsD:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "\<sigma> \<noteq> \<top>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "tstyped \<kappa> t" and "t v \<in> \<gamma> (\<sigma> v)"
   using assms by (simp_all add: gamma_tabs_def)
 
@@ -58,21 +58,17 @@ lemma gamma_tabsI:
 lemma gamma_tabs_mono:
   assumes "\<sigma>\<^sub>1 \<le> \<sigma>\<^sub>2"
   shows "gamma_tabs \<kappa> \<sigma>\<^sub>1 \<subseteq> gamma_tabs \<kappa> \<sigma>\<^sub>2"
-proof (cases "\<sigma>\<^sub>2 = \<top>")
-  case False
-  then have "\<sigma>\<^sub>1 \<noteq> \<top>" using assms top.extremum_uniqueI by blast
+proof -
   have "x v \<in> \<gamma> (\<sigma>\<^sub>2 v)" if "x v \<in> \<gamma> (\<sigma>\<^sub>1 v)" for x v
     using that gamma_mono[OF le_funD[OF assms, of v]] by blast
-  with False \<open>\<sigma>\<^sub>1 \<noteq> \<top>\<close> show ?thesis
-    by (auto simp: gamma_tabs_def simp del: gamma_kd.simps)
-qed simp
+  then show ?thesis by (auto simp: gamma_tabs_def simp del: gamma_kd.simps)
+qed
+
+lemma gamma_tt_mono: "d\<^sub>1 \<le> d\<^sub>2 \<Longrightarrow> gamma_tt \<kappa> d\<^sub>1 \<subseteq> gamma_tt \<kappa> d\<^sub>2"
+  by (cases d\<^sub>1; cases d\<^sub>2) (simp_all add: gamma_tabs_mono)
 
 lemma gamma_tabs_bot [simp]: "gamma_tabs \<kappa> \<bottom> = {}"
-proof -
-  have "(\<bottom> :: 'a::ik_domain tabs) \<noteq> \<top>"
-    by (simp add: fun_eq_iff bot_kd_def top_kd_def)
-  then show ?thesis by (simp add: gamma_tabs_def bot_fun_def bot_kd_def)
-qed
+  by (simp add: gamma_tabs_def bot_fun_def bot_kd_def)
 
 section \<open>Reading and evaluating\<close>
 
@@ -95,7 +91,7 @@ lemma kd_val_sound: "n \<in> \<gamma> d \<Longrightarrow> n \<in> \<gamma> (kd_v
   by (cases d) simp_all
 
 lemma read_var_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "\<sigma> \<noteq> \<top>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "t v \<in> \<gamma> (read_var \<kappa> \<sigma> v)"
 proof -
   have ty: "tstyped \<kappa> t" and tv: "t v \<in> \<gamma> (\<sigma> v)"
@@ -166,7 +162,7 @@ fun taeval :: "kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<
                | (Some False, Some False) \<Rightarrow> Some False | _ \<Rightarrow> None)"
 
 theorem taeval_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "\<sigma> \<noteq> \<top>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "teval e t \<in> \<gamma> (taeval \<kappa> e \<sigma>)"
 proof (induction e)
   case (TN ik n) show ?case by (simp add: of_int_ik_sound)
