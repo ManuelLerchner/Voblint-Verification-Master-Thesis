@@ -196,6 +196,22 @@ may overflow, and also refines `*` by an odd constant and `/`. `refine_var` inve
 with `raw_aop_ik`. It refines strictly less than Goblint when an operation may overflow,
 and does not refine through `*`, `/` or `%`.
 
+**Boolean guards.** The typed refinement (`trefine`, `Typed_Transfer.thy`) instantiates
+the generic `bool_refine` locale (`Bool_Refine.thy`). A conjunction that must hold
+narrows by its left operand, then its right, as `inv_exp` narrows `e1` and then `e2`
+(`baseInvariant.ml`, lines 744–745 at `0dc12d355`). A disjunction that must hold narrows
+by each operand whose forward value admits truth and joins the results, as the `LOr`
+case does (lines 724–731). Where neither operand admits it the result is bottom, which
+is Goblint's fall-through `Deadcode`. A conjunction that must fail is handled the same
+way; Goblint's `LAnd` case gives up there (line 452), so this refines more. The
+feasibility of an operand is decided by its forward value, where Goblint catches the
+`Deadcode` its refinement raises. The branch then keeps the refinement at the variables
+the guard reads, and a variable refined to bottom makes the successor `Bot`
+(`transfer_lift tst_empty`), as `refine_lv` calls `contra` on a bottom value (lines 94
+and 108) and `contra` raises `Deadcode`. The
+untyped `bfilter` narrows a conjunction by its right operand first; this differs from
+Goblint only when the operands narrow the same variable non-commutatively.
+
 **Reduced product.** `int/intDomTuple.ml` `refine` (lines 280–296) applies the
 components' refinement functions never, once, or to a fixpoint, and the tuple's
 arithmetic first asks the interval component whether an operation may overflow and
