@@ -9031,6 +9031,8 @@ let rec treturn_st _A
             (default_st_to_fun equal_var_id
               (bot_kd _A.ik_domain_kind_int_domain) tglobal st)));;
 
+let rec bot_fun _B x = bot _B;;
+
 let rec sup_fun _B f g x = sup _B.sup_semilattice_sup (f x) (g x);;
 
 let rec tview = function TNot a -> BV_Not a
@@ -9114,7 +9116,8 @@ let rec trefine_exec _A
                      (trefine_exec _A kappa ch b false sigma)
                  | (true, false) -> trefine_exec _A kappa ch a false sigma
                  | (false, true) -> trefine_exec _A kappa ch b false sigma
-                 | (false, false) -> id sigma))
+                 | (false, false) ->
+                   bot_fun (bot_kd _A.ik_domain_kind_int_domain)))
       | BV_Or (a, b) ->
         (if pol
           then (match
@@ -9126,7 +9129,8 @@ let rec trefine_exec _A
                      (trefine_exec _A kappa ch b true sigma)
                  | (true, false) -> trefine_exec _A kappa ch a true sigma
                  | (false, true) -> trefine_exec _A kappa ch b true sigma
-                 | (false, false) -> id sigma)
+                 | (false, false) ->
+                   bot_fun (bot_kd _A.ik_domain_kind_int_domain))
           else trefine_exec _A kappa ch b false
                  (trefine_exec _A kappa ch a false sigma))
       | BV_Atom -> tatom _A kappa ch e pol sigma);;

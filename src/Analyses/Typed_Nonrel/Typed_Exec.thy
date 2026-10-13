@@ -67,29 +67,9 @@ lemma trd_write_back:
   "trd (write_back vs \<sigma> st) = (\<lambda>v. if v \<in> set vs then \<sigma> v else trd st v)"
   by (induction vs arbitrary: st) (auto simp: write_back_def fun_eq_iff)
 
-lemma trd_write_back_frame:
-  "(\<And>v. v \<notin> set vs \<Longrightarrow> \<sigma> v = trd st v) \<Longrightarrow> trd (write_back vs \<sigma> st) = \<sigma>"
-  by (auto simp: trd_write_back fun_eq_iff)
-
 context
   fixes \<kappa> :: kenv and ch :: "texp gchannel"
 begin
-
-lemma narrow_var_frame: "v \<noteq> w \<Longrightarrow> narrow_var \<kappa> w a \<sigma> v = \<sigma> v"
-  by (simp add: narrow_var_def)
-
-lemma refine_var_frame: "v \<notin> tvars e \<Longrightarrow> refine_var \<kappa> ch e a \<sigma> v = \<sigma> v"
-  by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_frame Let_def split: aop.splits)
-
-lemma trefine_frame: "v \<notin> tvars b \<Longrightarrow> trefine \<kappa> ch b pol \<sigma> v = \<sigma> v"
-  unfolding trefine_def
-  apply (rule bool_refine.brefine_inv[OF tbool_locale, where P = "\<lambda>e. v \<notin> tvars e" and Q = "\<lambda>x. x v = \<sigma> v"])
-  subgoal for e a by (cases e rule: tview.cases) simp_all
-  subgoal for e a c by (cases e rule: tview.cases) simp_all
-  subgoal for e a c by (cases e rule: tview.cases) simp_all
-  subgoal for e pol \<sigma>' by (cases e) (simp_all add: tatom_def refine_var_frame split: prod.split)
-  subgoal by (simp add: sup_fun_def)
-  by simp_all
 
 subsection \<open>The operations on the carrier\<close>
 
@@ -133,12 +113,7 @@ lemma trd_tspecial_st [simp]: "trd (tspecial_st sc x st) = tspecial \<kappa> ch 
   by (simp add: tspecial_st_def tspecial_def)
 
 lemma trd_tbranch_st [simp]: "trd (tbranch_st b pol st) = tbranch \<kappa> ch b pol (trd st)"
-proof -
-  have "trd (write_back (tvar_list b) (trefine \<kappa> ch b pol (trd st)) st) = trefine \<kappa> ch b pol (trd st)"
-    by (rule trd_write_back_frame) (simp add: trefine_frame)
-  then show ?thesis
-    by (simp add: tbranch_st_def tbranch_def Let_def split: option.splits)
-qed
+  by (simp add: tbranch_st_def tbranch_def trd_write_back Let_def split: option.splits)
 
 lemma trd_treturn_st [simp]: "trd (treturn_st r st) = treturn \<kappa> ch r (trd st)"
   by (simp add: treturn_st_def treturn_def split: option.splits)

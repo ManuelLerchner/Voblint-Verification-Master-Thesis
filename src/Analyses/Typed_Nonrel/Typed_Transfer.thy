@@ -87,9 +87,10 @@ text \<open>
   comparison is the atom, narrowed by \<^const>\<open>refine_ik\<close>; an operand of a disjunction
   that must hold, or of a conjunction that must fail, is kept only while its forward value
   admits the required truth value, and the kept alternatives are joined. When none is
-  kept the state is returned unchanged, so a refinement never touches a variable the
-  guard does not read; the branch transfer below sends a guard its forward value rules
-  out to bottom.
+  kept no store satisfies the guard, and the result is bottom, as Goblint's
+  \<^verbatim>\<open>Deadcode\<close>. A branch keeps the refinement only at the variables its guard reads,
+  where the executable state stores it; a variable refined to bottom marks the branch
+  unreachable.
 \<close>
 
 definition tatom :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
@@ -108,13 +109,14 @@ lemma tbool_locale: "bool_refine tview size"
   by unfold_locales (auto elim: tview.elims)
 
 definition trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
-  "trefine = bool_refine.brefine tview tatom tfeas sup id"
+  "trefine = bool_refine.brefine tview tatom tfeas sup (\<lambda>_. \<bottom>)"
 
 definition tbranch :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tbranch b pol \<sigma> =
-     (case truth_ik (taeval_ask \<kappa> ch b \<sigma>) of
-        Some r \<Rightarrow> if r = pol then trefine b pol \<sigma> else \<bottom>
-      | None \<Rightarrow> trefine b pol \<sigma>)"
+     (let refined = (\<lambda>v. if v \<in> tvars b then trefine b pol \<sigma> v else \<sigma> v)
+      in case truth_ik (taeval_ask \<kappa> ch b \<sigma>) of
+           Some r \<Rightarrow> if r = pol then refined else \<bottom>
+         | None \<Rightarrow> refined)"
 
 text \<open>The returned value is tagged with a kind whose range it lies in: a variable's
   declared kind, or the kind an operation normalized it to.\<close>
@@ -302,7 +304,7 @@ proof -
     using that gamma_tabs_mono[OF sup_ge1[of x y]] by auto
   have join2: "t \<in> ?\<gamma> (x \<squnion> y)" if "t \<in> ?\<gamma> y" for x y :: "'a tabs" and t
     using that gamma_tabs_mono[OF sup_ge2[of y x]] by auto
-  have "t \<in> ?\<gamma> (bool_refine.brefine tview tatom tfeas sup id b pol \<sigma>)"
+  have "t \<in> ?\<gamma> (bool_refine.brefine tview tatom tfeas sup (\<lambda>_. \<bottom>) b pol \<sigma>)"
     apply (rule bool_refine.brefine_sound[OF tbool_locale, where ev = teval and \<gamma> = ?\<gamma>])
     subgoal by (rule atom)
     subgoal for e a t by (cases e rule: tview.cases) simp_all
@@ -317,15 +319,26 @@ proof -
   then show ?thesis by (simp add: trefine_def)
 qed
 
+lemma gamma_tabs_restrict:
+  "t \<in> gamma_tabs \<kappa> \<sigma>' \<Longrightarrow> t \<in> gamma_tabs \<kappa> \<sigma>
+    \<Longrightarrow> t \<in> gamma_tabs \<kappa> (\<lambda>v. if v \<in> S then \<sigma>' v else \<sigma> v)"
+  by (simp add: gamma_tabs_def)
+
 lemma tbranch_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "truthy (teval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (tbranch b pol \<sigma>)"
-proof (cases "truth_ik (taeval_ask \<kappa> ch b \<sigma>)")
-  case (Some r)
-  then have "truthy (teval b t) = r"
-    by (rule truth_ik_sound[OF _ taeval_ask_sound[OF assms(1,2)]])
-  with Some assms trefine_sound[OF assms] show ?thesis by (simp add: tbranch_def)
-qed (use assms trefine_sound[OF assms] in \<open>simp add: tbranch_def\<close>)
+proof -
+  have refined: "t \<in> gamma_tabs \<kappa> (\<lambda>v. if v \<in> tvars b then trefine b pol \<sigma> v else \<sigma> v)"
+    by (rule gamma_tabs_restrict[OF trefine_sound[OF assms] assms(1)])
+  show ?thesis
+  proof (cases "truth_ik (taeval_ask \<kappa> ch b \<sigma>)")
+    case (Some r)
+    then have "truthy (teval b t) = r"
+      by (rule truth_ik_sound[OF _ taeval_ask_sound[OF assms(1,2)]])
+    with assms(3) have "r = pol" by simp
+    with Some refined show ?thesis by (simp add: tbranch_def Let_def)
+  qed (use refined in \<open>simp add: tbranch_def Let_def\<close>)
+qed
 
 lemma teval_in_range_kind:
   assumes "\<not> (\<exists>ik v. e = TVar ik v)"
@@ -640,7 +653,12 @@ lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_co
   done
 
 lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> ch b pol \<sigma>)"
-  by (simp add: tbranch_def trefine_kind split: option.splits)
+proof -
+  assume k: "kind_consistent \<kappa> \<sigma>"
+  have "kind_consistent \<kappa> (\<lambda>v. if v \<in> tvars b then trefine \<kappa> ch b pol \<sigma> v else \<sigma> v)"
+    using k trefine_kind[OF k, of ch b pol] by (simp add: kind_consistent_def)
+  then show ?thesis by (simp add: tbranch_def Let_def split: option.splits)
+qed
 
 lemma treturn_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (treturn \<kappa> ch r \<sigma>)"
   by (simp add: treturn_def kind_consistent_upd split: option.splits)
@@ -678,7 +696,7 @@ end
 
 text \<open>The guard refinement runs as the generic recursion at the typed instance.\<close>
 
-global_interpretation tbool: bool_refine tview size "tatom \<kappa> ch" "tfeas \<kappa> ch" sup id
+global_interpretation tbool: bool_refine tview size "tatom \<kappa> ch" "tfeas \<kappa> ch" sup "\<lambda>_. \<bottom>"
   for \<kappa> ch
   defines trefine_exec = tbool.brefine
   by (rule tbool_locale)
