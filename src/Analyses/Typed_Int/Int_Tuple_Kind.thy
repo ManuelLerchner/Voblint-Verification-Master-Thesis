@@ -325,6 +325,12 @@ definition raw_aop_ik_int_tuple :: "aop \<Rightarrow> int_tuple \<Rightarrow> in
 definition fits_ik_int_tuple :: "ikind \<Rightarrow> int_tuple \<Rightarrow> bool" where
   "fits_ik_int_tuple k a \<longleftrightarrow> fits_ik k (it_ivl a) \<or> fits_ik k (it_cong a)"
 
+definition answer_ik_int_tuple :: "int_tuple \<Rightarrow> answer" where
+  "answer_ik_int_tuple a = answer_ik (it_ivl a) \<sqinter> answer_ik (it_cong a)"
+
+definition of_answer_ik_int_tuple :: "ikind option \<Rightarrow> answer \<Rightarrow> int_tuple" where
+  "of_answer_ik_int_tuple sk q = IT (of_answer_ik sk q) (of_answer_ik sk q)"
+
 instance proof
   fix n m :: int and k :: ikind and a b :: int_tuple and op :: aop and c :: cop and r :: bool
   show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: int_tuple)"
@@ -389,6 +395,13 @@ instance proof
   show "fits_ik k a \<Longrightarrow> n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> ik_range k"
     using fits_ik_sound[of k "it_ivl a" n] fits_ik_sound[of k "it_cong a" n]
     by (cases a) (auto simp: fits_ik_int_tuple_def simp del: ik_range_iff)
+  show "n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> gamma_answer (answer_ik a)"
+    using answer_ik_sound[of n "it_ivl a"] answer_ik_sound[of n "it_cong a"]
+    by (cases a) (simp add: answer_ik_int_tuple_def gamma_query_lift_inf[OF gamma_inf_int_dom])
+  show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: int_tuple)" for sk q
+    using of_answer_ik_sound[of sk n q, where 'a = ivl] of_answer_ik_sound[of sk n q, where 'a = congruence]
+    by (simp add: of_answer_ik_int_tuple_def)
 qed
 
 end

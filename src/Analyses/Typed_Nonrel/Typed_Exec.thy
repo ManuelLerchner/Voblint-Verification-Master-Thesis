@@ -72,16 +72,16 @@ lemma trd_write_back_frame:
   by (auto simp: trd_write_back fun_eq_iff)
 
 context
-  fixes \<kappa> :: kenv
+  fixes \<kappa> :: kenv and ch :: "texp gchannel"
 begin
 
 lemma narrow_var_frame: "v \<noteq> w \<Longrightarrow> narrow_var \<kappa> w a \<sigma> v = \<sigma> v"
   by (simp add: narrow_var_def)
 
-lemma refine_var_frame: "v \<notin> tvars e \<Longrightarrow> refine_var \<kappa> e a \<sigma> v = \<sigma> v"
+lemma refine_var_frame: "v \<notin> tvars e \<Longrightarrow> refine_var \<kappa> ch e a \<sigma> v = \<sigma> v"
   by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_frame Let_def split: aop.splits)
 
-lemma trefine_frame: "v \<notin> tvars b \<Longrightarrow> trefine \<kappa> b pol \<sigma> v = \<sigma> v"
+lemma trefine_frame: "v \<notin> tvars b \<Longrightarrow> trefine \<kappa> ch b pol \<sigma> v = \<sigma> v"
   by (induction b arbitrary: pol \<sigma>; case_tac pol) (auto simp: refine_var_frame split: prod.splits)
 
 subsection \<open>The operations on the carrier\<close>
@@ -89,26 +89,26 @@ subsection \<open>The operations on the carrier\<close>
 text \<open>Each writes the entries its counterpart changes and reads the represented function.\<close>
 
 definition tassign_st :: "var_id \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
-  "tassign_st x e st = st\<langle>tloc x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval \<kappa> e (trd st)))\<rangle>"
+  "tassign_st x e st = st\<langle>tloc x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e (trd st)))\<rangle>"
 
 definition tspecial_st :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
-  "tspecial_st sc x st = st\<langle>tloc x := KD (\<kappa> x) (special_val \<kappa> sc x (trd st))\<rangle>"
+  "tspecial_st sc x st = st\<langle>tloc x := KD (\<kappa> x) (special_val \<kappa> ch sc x (trd st))\<rangle>"
 
 definition tbranch_st :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
   "tbranch_st b pol st =
-     (let refined = write_back (tvar_list b) (trefine \<kappa> b pol (trd st)) st
-      in case truth_ik (taeval \<kappa> b (trd st)) of
+     (let refined = write_back (tvar_list b) (trefine \<kappa> ch b pol (trd st)) st
+      in case truth_ik (taeval_ask \<kappa> ch b (trd st)) of
            Some r \<Rightarrow> if r = pol then refined else \<bottom>
          | None \<Rightarrow> refined)"
 
 definition treturn_st :: "texp option \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
-  "treturn_st r st = (case r of None \<Rightarrow> st | Some e \<Rightarrow> st\<langle>tloc ReturnVar := ret_kd \<kappa> e (trd st)\<rangle>)"
+  "treturn_st r st = (case r of None \<Rightarrow> st | Some e \<Rightarrow> st\<langle>tloc ReturnVar := ret_kd \<kappa> ch e (trd st)\<rangle>)"
 
 definition tenter_st :: "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst toplift" where
   "tenter_st ps es st =
      (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
       then TL (bind_formals_default_st tglobal ps
-                 (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e (trd st)))) ps es)
+                 (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e (trd st)))) ps es)
                  (enter_frame_D_default_st KTop st))
       else TTop)"
 
@@ -119,25 +119,25 @@ definition tcombine_assign_st :: "var_id option \<Rightarrow> 'a::kind_int_domai
 
 text \<open>Each agrees with its counterpart on the represented function.\<close>
 
-lemma trd_tassign_st [simp]: "trd (tassign_st x e st) = tassign \<kappa> x e (trd st)"
+lemma trd_tassign_st [simp]: "trd (tassign_st x e st) = tassign \<kappa> ch x e (trd st)"
   by (simp add: tassign_st_def tassign_def)
 
-lemma trd_tspecial_st [simp]: "trd (tspecial_st sc x st) = tspecial \<kappa> sc x (trd st)"
+lemma trd_tspecial_st [simp]: "trd (tspecial_st sc x st) = tspecial \<kappa> ch sc x (trd st)"
   by (simp add: tspecial_st_def tspecial_def)
 
-lemma trd_tbranch_st [simp]: "trd (tbranch_st b pol st) = tbranch \<kappa> b pol (trd st)"
+lemma trd_tbranch_st [simp]: "trd (tbranch_st b pol st) = tbranch \<kappa> ch b pol (trd st)"
 proof -
-  have "trd (write_back (tvar_list b) (trefine \<kappa> b pol (trd st)) st) = trefine \<kappa> b pol (trd st)"
+  have "trd (write_back (tvar_list b) (trefine \<kappa> ch b pol (trd st)) st) = trefine \<kappa> ch b pol (trd st)"
     by (rule trd_write_back_frame) (simp add: trefine_frame)
   then show ?thesis
     by (simp add: tbranch_st_def tbranch_def Let_def split: option.splits)
 qed
 
-lemma trd_treturn_st [simp]: "trd (treturn_st r st) = treturn \<kappa> r (trd st)"
+lemma trd_treturn_st [simp]: "trd (treturn_st r st) = treturn \<kappa> ch r (trd st)"
   by (simp add: treturn_st_def treturn_def split: option.splits)
 
 lemma map_trd_tenter_st [simp]:
-  "map_toplift trd (tenter_st ps es st) = tenter_state \<kappa> ps es (trd st)"
+  "map_toplift trd (tenter_st ps es st) = tenter_state \<kappa> ch ps es (trd st)"
   by (simp add: tenter_st_def tenter_state_def tenter_frame_def)
 
 lemma trd_tcombine_assign_st [simp]:
@@ -147,23 +147,23 @@ lemma trd_tcombine_assign_st [simp]:
 text \<open>The same under \<^const>\<open>TTop\<close>.\<close>
 
 lemma map_trd_tl_tassign_st [simp]:
-  "map_toplift trd (tl_map (tassign_st x e) d) = tl_map (tassign \<kappa> x e) (map_toplift trd d)"
+  "map_toplift trd (tl_map (tassign_st x e) d) = tl_map (tassign \<kappa> ch x e) (map_toplift trd d)"
   by (cases d) simp_all
 
 lemma map_trd_tl_tspecial_st [simp]:
-  "map_toplift trd (tl_map (tspecial_st sc x) d) = tl_map (tspecial \<kappa> sc x) (map_toplift trd d)"
+  "map_toplift trd (tl_map (tspecial_st sc x) d) = tl_map (tspecial \<kappa> ch sc x) (map_toplift trd d)"
   by (cases d) simp_all
 
 lemma map_trd_tl_tbranch_st [simp]:
-  "map_toplift trd (tl_map (tbranch_st b pol) d) = tl_map (tbranch \<kappa> b pol) (map_toplift trd d)"
+  "map_toplift trd (tl_map (tbranch_st b pol) d) = tl_map (tbranch \<kappa> ch b pol) (map_toplift trd d)"
   by (cases d) simp_all
 
 lemma map_trd_tl_treturn_st [simp]:
-  "map_toplift trd (tl_map (treturn_st r) d) = tl_map (treturn \<kappa> r) (map_toplift trd d)"
+  "map_toplift trd (tl_map (treturn_st r) d) = tl_map (treturn \<kappa> ch r) (map_toplift trd d)"
   by (cases d) simp_all
 
 lemma map_trd_tl_tenter_st [simp]:
-  "map_toplift trd (tl_bind (tenter_st ps es) d) = tl_bind (tenter_state \<kappa> ps es) (map_toplift trd d)"
+  "map_toplift trd (tl_bind (tenter_st ps es) d) = tl_bind (tenter_state \<kappa> ch ps es) (map_toplift trd d)"
   by (cases d) simp_all
 
 lemma map_trd_tl_tcombine_assign_st [simp]:
@@ -281,16 +281,16 @@ text \<open>The component of \<open>Typed_Transfer\<close> on the carrier, over 
 definition typed_exec_spec ::
     "kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec" where
   "typed_exec_spec \<kappa> =
-     \<lparr> ls_query = query_unknown,
+     \<lparr> ls_query = (\<lambda>ch d q. case d of Bot \<Rightarrow> \<top> | Lifted x \<Rightarrow> tquery \<kappa> ch (map_toplift trd x) q),
        ls_skip = (\<lambda>ch d. d),
-       ls_assign = (\<lambda>ch x e. transfer_lift tst_empty (tl_map (tassign_st \<kappa> x e))),
-       ls_special = (\<lambda>ch sc x. transfer_lift tst_empty (tl_map (tspecial_st \<kappa> sc x))),
-       ls_branch = (\<lambda>ch b pol. transfer_lift tst_empty (tl_map (tbranch_st \<kappa> b pol))),
+       ls_assign = (\<lambda>ch x e. transfer_lift tst_empty (tl_map (tassign_st \<kappa> ch x e))),
+       ls_special = (\<lambda>ch sc x. transfer_lift tst_empty (tl_map (tspecial_st \<kappa> ch sc x))),
+       ls_branch = (\<lambda>ch b pol. transfer_lift tst_empty (tl_map (tbranch_st \<kappa> ch b pol))),
        ls_body = (\<lambda>ch p d. d),
-       ls_return = (\<lambda>ch r p. transfer_lift tst_empty (tl_map (treturn_st \<kappa> r))),
+       ls_return = (\<lambda>ch r p. transfer_lift tst_empty (tl_map (treturn_st \<kappa> ch r))),
        ls_event = (\<lambda>ch evt d. d),
        ls_enter = (\<lambda>ch ci p.
-         [(fst p, transfer_lift tst_empty (tl_bind (tenter_st \<kappa> (ci_formals ci) (ci_args ci))) (fst p))]),
+         [(fst p, transfer_lift tst_empty (tl_bind (tenter_st \<kappa> ch (ci_formals ci) (ci_args ci))) (fst p))]),
        ls_combine_env = (\<lambda>ch ch' ci x y. do { a \<leftarrow> x; b \<leftarrow> y; Lifted (tl_map2 combine_default_st a b) }),
        ls_combine_assign = (\<lambda>ch ci. transfer_lift2 tst_empty (tl_map2 (tcombine_assign_st \<kappa> (ci_dst ci)))) \<rparr>"
 
@@ -343,7 +343,17 @@ proof -
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_exec \<kappa> x \<subseteq> gamma_exec \<kappa> y"
       by (rule gamma_exec_mono)
     show "T.gsound_query (gamma_exec \<kappa>) (ls_query (typed_exec_spec \<kappa>))"
-      by (simp add: typed_exec_spec_def T.sound_query_unknown)
+      unfolding T.gsound_query_def
+      apply (intro allI impI)
+      subgoal premises prems for ch s d q
+      proof (cases d)
+        case (Lifted x)
+        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        from T.sound_local_spec_queryD[OF S, unfolded T.gsound_query_def, rule_format,
+            OF this prems(2)]
+        show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
+      qed (simp add: typed_exec_spec_def)
+      done
     show "T.gsound_skip (gamma_exec \<kappa>) (ls_skip (typed_exec_spec \<kappa>))"
       by (simp add: typed_exec_spec_def T.gsound_skip_def)
     show "T.gsound_body (gamma_exec \<kappa>) (ls_body (typed_exec_spec \<kappa>))"

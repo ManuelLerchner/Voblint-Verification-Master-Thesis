@@ -33,17 +33,17 @@ definition arg_fits :: "kenv \<Rightarrow> var_id \<Rightarrow> texp \<Rightarro
      (case e of TVar ik v \<Rightarrow> v \<noteq> ReturnVar \<and> \<kappa> v = \<kappa> p | _ \<Rightarrow> texp_kind e = \<kappa> p)"
 
 context
-  fixes \<kappa> :: kenv
+  fixes \<kappa> :: kenv and ch :: "texp gchannel"
 begin
 
 definition tassign :: "var_id \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
-  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval \<kappa> e \<sigma>)))"
+  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>)))"
 
 definition special_val :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "special_val sc x \<sigma> =
      (case sc of Nondet_Int \<Rightarrow> top_ik (\<kappa> x)
-      | Min a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)
-      | Max a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>))"
+      | Min a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)
+      | Max a b \<Rightarrow> cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>))"
 
 definition tspecial :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tspecial sc x \<sigma> = \<sigma>(x := KD (\<kappa> x) (special_val sc x \<sigma>))"
@@ -64,9 +64,9 @@ definition narrow_var :: "var_id \<Rightarrow> 'a::kind_int_domain \<Rightarrow>
 fun refine_var :: "texp \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
   "refine_var (TVar ik v) a \<sigma> = narrow_var v a \<sigma>"
 | "refine_var (TCast ik e) a \<sigma> =
-     (if fits_ik ik (taeval \<kappa> e \<sigma>) then refine_var e a \<sigma> else \<sigma>)"
+     (if fits_ik ik (taeval_ask \<kappa> ch e \<sigma>) then refine_var e a \<sigma> else \<sigma>)"
 | "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma> =
-     (let a\<^sub>1 = taeval \<kappa> e\<^sub>1 \<sigma>; a\<^sub>2 = taeval \<kappa> e\<^sub>2 \<sigma>
+     (let a\<^sub>1 = taeval_ask \<kappa> ch e\<^sub>1 \<sigma>; a\<^sub>2 = taeval_ask \<kappa> ch e\<^sub>2 \<sigma>
       in if \<not> fits_ik ik (raw_aop_ik op a\<^sub>1 a\<^sub>2) then \<sigma>
          else case op of
            AAdd \<Rightarrow> refine_var e\<^sub>2 (raw_aop_ik ASub a a\<^sub>1) (refine_var e\<^sub>1 (raw_aop_ik ASub a a\<^sub>2) \<sigma>)
@@ -76,7 +76,7 @@ fun refine_var :: "texp \<Rightarrow> 'a::kind_int_domain \<Rightarrow> 'a tabs 
 
 fun trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "trefine (TCmp c l r) pol \<sigma> =
-     (let (al, ar) = refine_ik (if pol then c else neg_cop c) (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>)
+     (let (al, ar) = refine_ik (if pol then c else neg_cop c) (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)
       in refine_var l al (refine_var r ar \<sigma>))"
 | "trefine (TNot e) pol \<sigma> = trefine e (\<not> pol) \<sigma>"
 | "trefine (TAnd a b) True \<sigma> = trefine b True (trefine a True \<sigma>)"
@@ -85,7 +85,7 @@ fun trefine :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \
 
 definition tbranch :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tbranch b pol \<sigma> =
-     (case truth_ik (taeval \<kappa> b \<sigma>) of
+     (case truth_ik (taeval_ask \<kappa> ch b \<sigma>) of
         Some r \<Rightarrow> if r = pol then trefine b pol \<sigma> else \<bottom>
       | None \<Rightarrow> trefine b pol \<sigma>)"
 
@@ -95,7 +95,7 @@ text \<open>The returned value is tagged with a kind whose range it lies in: a v
 definition ret_kd :: "texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a kd" where
   "ret_kd e \<sigma> =
      (case e of TVar ik v \<Rightarrow> if v = ReturnVar then KTop else KD (\<kappa> v) (read_var \<kappa> \<sigma> v)
-      | _ \<Rightarrow> KD (texp_kind e) (taeval \<kappa> e \<sigma>))"
+      | _ \<Rightarrow> KD (texp_kind e) (taeval_ask \<kappa> ch e \<sigma>))"
 
 definition treturn :: "texp option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "treturn r \<sigma> = (case r of None \<Rightarrow> \<sigma> | Some e \<Rightarrow> \<sigma>(ReturnVar := ret_kd e \<sigma>))"
@@ -107,7 +107,7 @@ definition tenter_state ::
     "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs toplift" where
   "tenter_state ps es \<sigma> =
      (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
-      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
              (tenter_frame \<sigma>))
       else TTop)"
 
@@ -134,41 +134,41 @@ lemma gamma_tabs_upd:
   by (intro gamma_tabsI tstyped_upd) auto
 
 lemma tassign_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "t(x := ik_norm (\<kappa> x) (teval e t)) \<in> gamma_tabs \<kappa> (tassign x e \<sigma>)"
 proof -
-  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik None (\<kappa> x) (taeval \<kappa> e \<sigma>))"
-    by (rule cast_ik_None_sound[OF taeval_sound[OF assms]])
-  then show ?thesis unfolding tassign_def by (simp add: gamma_tabs_upd[OF assms])
+  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>))"
+    by (rule cast_ik_None_sound[OF taeval_ask_sound[OF assms]])
+  then show ?thesis unfolding tassign_def by (simp add: gamma_tabs_upd[OF assms(1)])
 qed
 
 lemma special_val_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "special_result teval sc t v"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "special_result teval sc t v"
   shows "ik_norm (\<kappa> x) v \<in> numeric_domain_class.gamma (special_val sc x \<sigma>)"
 proof (cases sc)
   case Nondet_Int then show ?thesis by (simp add: special_val_def top_ik_sound)
 next
   case (Min a b)
-  have "teval a t \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    "teval b t \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    using taeval_sound[OF assms(1)] gamma_mono[OF sup.cobounded1] gamma_mono[OF sup.cobounded2]
+  have "teval a t \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    "teval b t \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    using taeval_ask_sound[OF assms(1,2)] gamma_mono[OF sup.cobounded1] gamma_mono[OF sup.cobounded2]
     by blast+
-  then have "v \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    using assms(2) Min by (auto simp: min_def)
+  then have "v \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    using assms(3) Min by (auto simp: min_def)
   with Min show ?thesis by (simp add: special_val_def cast_ik_None_sound)
 next
   case (Max a b)
-  have "teval a t \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    "teval b t \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    using taeval_sound[OF assms(1)] gamma_mono[OF sup.cobounded1] gamma_mono[OF sup.cobounded2]
+  have "teval a t \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    "teval b t \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    using taeval_ask_sound[OF assms(1,2)] gamma_mono[OF sup.cobounded1] gamma_mono[OF sup.cobounded2]
     by blast+
-  then have "v \<in> numeric_domain_class.gamma (taeval \<kappa> a \<sigma> \<squnion> taeval \<kappa> b \<sigma>)"
-    using assms(2) Max by (auto simp: max_def)
+  then have "v \<in> numeric_domain_class.gamma (taeval_ask \<kappa> ch a \<sigma> \<squnion> taeval_ask \<kappa> ch b \<sigma>)"
+    using assms(3) Max by (auto simp: max_def)
   with Max show ?thesis by (simp add: special_val_def cast_ik_None_sound)
 qed
 
 lemma tspecial_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "special_result teval sc t v"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "special_result teval sc t v"
   shows "t(x := ik_norm (\<kappa> x) v) \<in> gamma_tabs \<kappa> (tspecial sc x \<sigma>)"
   unfolding tspecial_def
   using gamma_tabs_upd[OF assms(1)] special_val_sound[OF assms] by simp
@@ -188,7 +188,7 @@ proof (cases "v = ReturnVar")
 qed (use assms in \<open>simp add: narrow_var_def\<close>)
 
 lemma refine_var_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "teval e t \<in> numeric_domain_class.gamma a"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "teval e t \<in> numeric_domain_class.gamma a"
   shows "t \<in> gamma_tabs \<kappa> (refine_var e a \<sigma>)"
   using assms
 proof (induction e arbitrary: a \<sigma>)
@@ -196,28 +196,28 @@ proof (induction e arbitrary: a \<sigma>)
 next
   case (TCast ik e)
   show ?case
-  proof (cases "fits_ik ik (taeval \<kappa> e \<sigma>)")
+  proof (cases "fits_ik ik (taeval_ask \<kappa> ch e \<sigma>)")
     case True
     have "teval e t \<in> ik_range ik"
-      by (rule fits_ik_sound[OF True taeval_sound[OF TCast.prems(1)]])
+      by (rule fits_ik_sound[OF True taeval_ask_sound[OF TCast.prems(1,2)]])
     then have "teval e t \<in> numeric_domain_class.gamma a"
-      using TCast.prems(2) by (simp del: ik_range_iff)
-    with True TCast.IH[OF TCast.prems(1)] show ?thesis by simp
+      using TCast.prems(3) by (simp del: ik_range_iff)
+    with True TCast.IH[OF TCast.prems(1,2)] show ?thesis by simp
   qed (use TCast.prems in simp)
 next
   case (TArith ik op e\<^sub>1 e\<^sub>2)
-  define a\<^sub>1 where "a\<^sub>1 = taeval \<kappa> e\<^sub>1 \<sigma>"
-  define a\<^sub>2 where "a\<^sub>2 = taeval \<kappa> e\<^sub>2 \<sigma>"
+  define a\<^sub>1 where "a\<^sub>1 = taeval_ask \<kappa> ch e\<^sub>1 \<sigma>"
+  define a\<^sub>2 where "a\<^sub>2 = taeval_ask \<kappa> ch e\<^sub>2 \<sigma>"
   have m: "teval e\<^sub>1 t \<in> numeric_domain_class.gamma a\<^sub>1"
     and n: "teval e\<^sub>2 t \<in> numeric_domain_class.gamma a\<^sub>2"
-    using taeval_sound[OF TArith.prems(1)] by (simp_all add: a\<^sub>1_def a\<^sub>2_def)
+    using taeval_ask_sound[OF TArith.prems(1,2)] by (simp_all add: a\<^sub>1_def a\<^sub>2_def)
   show ?case
   proof (cases "fits_ik ik (raw_aop_ik op a\<^sub>1 a\<^sub>2)")
     case fits: True
     have "aop_eval op (teval e\<^sub>1 t) (teval e\<^sub>2 t) \<in> ik_range ik"
       by (rule fits_ik_sound[OF fits raw_aop_ik_sound[OF m n]])
     then have r: "aop_eval op (teval e\<^sub>1 t) (teval e\<^sub>2 t) \<in> numeric_domain_class.gamma a"
-      using TArith.prems(2) by (simp del: ik_range_iff)
+      using TArith.prems(3) by (simp del: ik_range_iff)
     show ?thesis
     proof (cases op)
       case AAdd
@@ -228,7 +228,7 @@ next
       have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
           = refine_var e\<^sub>2 (raw_aop_ik ASub a a\<^sub>1) (refine_var e\<^sub>1 (raw_aop_ik ASub a a\<^sub>2) \<sigma>)"
         using fits AAdd by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
-      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1) m'] n'] show ?thesis by simp
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis by simp
     next
       case ASub
       have m': "teval e\<^sub>1 t \<in> numeric_domain_class.gamma (raw_aop_ik AAdd a a\<^sub>2)"
@@ -238,25 +238,25 @@ next
       have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
           = refine_var e\<^sub>2 (raw_aop_ik ASub a\<^sub>1 a) (refine_var e\<^sub>1 (raw_aop_ik AAdd a a\<^sub>2) \<sigma>)"
         using fits ASub by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
-      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1) m'] n'] show ?thesis by simp
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis by simp
     qed (use fits TArith.prems in \<open>simp_all add: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
   qed (use TArith.prems in \<open>simp add: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
 qed simp_all
 
 lemma trefine_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "truthy (teval b t) = pol"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "truthy (teval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (trefine b pol \<sigma>)"
   using assms
 proof (induction b pol \<sigma> rule: trefine.induct)
   case (1 c l r pol \<sigma>)
   let ?c = "if pol then c else neg_cop c"
   have holds: "cop_eval ?c (teval l t) (teval r t)"
-    using 1(2) by (auto split: if_splits)
-  obtain al ar where ref: "refine_ik ?c (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>) = (al, ar)"
-    by (cases "refine_ik ?c (taeval \<kappa> l \<sigma>) (taeval \<kappa> r \<sigma>)")
+    using 1(3) by (auto split: if_splits)
+  obtain al ar where ref: "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>) = (al, ar)"
+    by (cases "refine_ik ?c (taeval_ask \<kappa> ch l \<sigma>) (taeval_ask \<kappa> ch r \<sigma>)")
   have "teval l t \<in> numeric_domain_class.gamma al" "teval r t \<in> numeric_domain_class.gamma ar"
-    using refine_ik_sound[OF holds taeval_sound[OF 1(1)] taeval_sound[OF 1(1)]] ref by simp_all
-  then show ?case using ref 1(1) by (simp add: refine_var_sound)
+    using refine_ik_sound[OF holds taeval_ask_sound[OF 1(1,2)] taeval_ask_sound[OF 1(1,2)]] ref by simp_all
+  then show ?case using ref 1(1,2) by (simp add: refine_var_sound)
 next
   case (2 e pol \<sigma>) then show ?case by (auto split: if_splits)
 next
@@ -266,12 +266,12 @@ next
 qed simp_all
 
 lemma tbranch_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "truthy (teval b t) = pol"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t" and "truthy (teval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (tbranch b pol \<sigma>)"
-proof (cases "truth_ik (taeval \<kappa> b \<sigma>)")
+proof (cases "truth_ik (taeval_ask \<kappa> ch b \<sigma>)")
   case (Some r)
   then have "truthy (teval b t) = r"
-    by (rule truth_ik_sound[OF _ taeval_sound[OF assms(1)]])
+    by (rule truth_ik_sound[OF _ taeval_ask_sound[OF assms(1,2)]])
   with Some assms trefine_sound[OF assms] show ?thesis by (simp add: tbranch_def)
 qed (use assms trefine_sound[OF assms] in \<open>simp add: tbranch_def\<close>)
 
@@ -281,7 +281,7 @@ lemma teval_in_range_kind:
   using assms by (cases e) auto
 
 lemma ret_kd_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "teval e t \<in> numeric_domain_class.gamma (ret_kd e \<sigma>)"
 proof (cases "\<exists>ik v. e = TVar ik v")
   case True
@@ -290,25 +290,25 @@ proof (cases "\<exists>ik v. e = TVar ik v")
   proof (cases "v = ReturnVar")
     case False
     have "t v \<in> ik_range (\<kappa> v)"
-      using gamma_tabsD(1)[OF assms] False by (simp add: tstyped_def)
-    with False e read_var_sound[OF assms] show ?thesis by (simp add: ret_kd_def)
+      using gamma_tabsD(1)[OF assms(1)] False by (simp add: tstyped_def)
+    with False e read_var_sound[OF assms(1)] show ?thesis by (simp add: ret_kd_def)
   qed (simp add: ret_kd_def e)
 next
   case False
-  then have "ret_kd e \<sigma> = KD (texp_kind e) (taeval \<kappa> e \<sigma>)"
+  then have "ret_kd e \<sigma> = KD (texp_kind e) (taeval_ask \<kappa> ch e \<sigma>)"
     by (cases e) (auto simp: ret_kd_def)
-  with taeval_sound[OF assms] teval_in_range_kind[OF False] show ?thesis by simp
+  with taeval_ask_sound[OF assms] teval_in_range_kind[OF False] show ?thesis by simp
 qed
 
 lemma treturn_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "t(ReturnVar := (case r of None \<Rightarrow> t ReturnVar | Some e \<Rightarrow> teval e t))
            \<in> gamma_tabs \<kappa> (treturn r \<sigma>)"
 proof (cases r)
   case None with assms show ?thesis by (simp add: treturn_def)
 next
   case (Some e)
-  with gamma_tabs_upd[OF assms ret_kd_sound[OF assms]] show ?thesis by (simp add: treturn_def)
+  with gamma_tabs_upd[OF assms(1) ret_kd_sound[OF assms]] show ?thesis by (simp add: treturn_def)
 qed
 
 lemma arg_fits_range:
@@ -326,14 +326,14 @@ qed
 
 lemma bind_formals_fit:
   assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)"
-    and t: "t \<in> gamma_tabs \<kappa> \<sigma>"
+    and t: "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
     and "tstyped \<kappa> s" and "\<And>y. s y \<in> numeric_domain_class.gamma (\<sigma>' y)"
   shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)
     \<and> (\<forall>y. bind_formals ps (map (\<lambda>e. teval e t) es) s y
           \<in> numeric_domain_class.gamma
-              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
                  \<sigma>' y))"
-  using assms(1,3,4)
+  using assms(1,4,5)
 proof (induction ps arbitrary: es s \<sigma>')
   case Nil then show ?case by simp
 next
@@ -347,13 +347,13 @@ next
       and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
     have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF t] .
     have rng: "teval e t \<in> ik_range (\<kappa> p)" by (rule arg_fits_range[OF fit ty])
-    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>)))"
-      using cast_ik_None_sound[OF taeval_sound[OF t], of "\<kappa> p" e] rng by simp
+    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))"
+      using cast_ik_None_sound[OF taeval_ask_sound[OF t ch], of "\<kappa> p" e] rng by simp
     have "p \<noteq> ReturnVar" using fit by (simp add: arg_fits_def)
     then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng
       by (rule_tac tstyped_upd) auto
     have gu: "\<And>y. (s(p := teval e t)) y \<in> numeric_domain_class.gamma
-        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>)))) y)"
+        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))) y)"
       using val Cons.prems(3) by simp
     note IH = Cons.IH[OF rest tyu gu]
     show ?thesis unfolding \<open>es = e # es'\<close> using IH by simp
@@ -361,19 +361,19 @@ next
 qed
 
 lemma tenter_state_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
            \<in> gamma_tt \<kappa> (tenter_state ps es \<sigma>)"
 proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
   case True
-  have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF assms] .
+  have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF assms(1)] .
   have frame: "\<And>y. enter_state tglobal t y \<in> numeric_domain_class.gamma (tenter_frame \<sigma> y)"
-    using gamma_tabsD(2)[OF assms]
+    using gamma_tabsD(2)[OF assms(1)]
     by (simp add: enter_state_def tenter_frame_def enter_frame_def combine_env_def)
   note fit = bind_formals_fit[OF True assms tstyped_enter_state[OF ty] frame]
   have "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
       \<in> gamma_tabs \<kappa> (bind_formals ps
-           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval \<kappa> e \<sigma>))) ps es)
+           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
            (tenter_frame \<sigma>))"
     using fit by (intro gamma_tabsI) blast+
   with True show ?thesis by (simp add: tenter_state_def)
@@ -430,22 +430,28 @@ fun tl_map2 :: "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a toplift 
   "tl_map2 f (TL a) (TL b) = TL (f a b)"
 | "tl_map2 f _ _ = TTop"
 
-text \<open>The component asks its partners nothing and answers nothing; the entry has one
+text \<open>The component answers \<open>EvalInt\<close> by evaluating without asking the expression
+  itself back, as Goblint's \<^verbatim>\<open>base\<close> answers it with \<^verbatim>\<open>eval_rv_no_ask_evalint\<close>.
+  Every transfer evaluates through the channel it receives. The entry has one
   alternative, the caller's state paired with the entered one.\<close>
+
+fun tquery :: "kenv \<Rightarrow> texp gchannel \<Rightarrow> 'a::kind_int_domain tabs toplift \<Rightarrow> texp gchannel" where
+  "tquery \<kappa> ch TTop q = \<top>"
+| "tquery \<kappa> ch (TL \<sigma>) (EvalInt e) = answer_ik (taeval \<kappa> ch e \<sigma>)"
 
 definition typed_spec ::
     "kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tabs toplift) glocal_spec" where
   "typed_spec \<kappa> =
-     \<lparr> ls_query = query_unknown,
+     \<lparr> ls_query = tquery \<kappa>,
        ls_skip = (\<lambda>ch d. d),
-       ls_assign = (\<lambda>ch x e. tl_map (tassign \<kappa> x e)),
-       ls_special = (\<lambda>ch sc x. tl_map (tspecial \<kappa> sc x)),
-       ls_branch = (\<lambda>ch b pol. tl_map (tbranch \<kappa> b pol)),
+       ls_assign = (\<lambda>ch x e. tl_map (tassign \<kappa> ch x e)),
+       ls_special = (\<lambda>ch sc x. tl_map (tspecial \<kappa> ch sc x)),
+       ls_branch = (\<lambda>ch b pol. tl_map (tbranch \<kappa> ch b pol)),
        ls_body = (\<lambda>ch p d. d),
-       ls_return = (\<lambda>ch r p. tl_map (treturn \<kappa> r)),
+       ls_return = (\<lambda>ch r p. tl_map (treturn \<kappa> ch r)),
        ls_event = (\<lambda>ch evt d. d),
        ls_enter = (\<lambda>ch ci p.
-         [(fst p, tl_bind (tenter_state \<kappa> (ci_formals ci) (ci_args ci)) (fst p))]),
+         [(fst p, tl_bind (tenter_state \<kappa> ch (ci_formals ci) (ci_args ci)) (fst p))]),
        ls_combine_env = (\<lambda>ch ch' ci. tl_map2 (combine_env tglobal)),
        ls_combine_assign = (\<lambda>ch ci. tl_map2 (tcombine_assign \<kappa> (ci_dst ci))) \<rparr>"
 
@@ -464,7 +470,11 @@ proof -
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_tt \<kappa> x \<subseteq> gamma_tt \<kappa> y"
       by (rule gamma_tt_mono)
     show "T.gsound_query (gamma_tt \<kappa>) (ls_query (typed_spec \<kappa>))"
-      by (simp add: typed_spec_def T.sound_query_unknown)
+      unfolding T.gsound_query_def
+      apply (intro allI impI)
+      subgoal for ch s x q
+        by (cases x; cases q) (simp_all add: typed_spec_def answer_ik_sound taeval_sound)
+      done
     show "T.gsound_skip (gamma_tt \<kappa>) (ls_skip (typed_spec \<kappa>))"
       by (simp add: typed_spec_def T.gsound_skip_def)
     show "T.gsound_assign (gamma_tt \<kappa>) (ls_assign (typed_spec \<kappa>))"
@@ -558,29 +568,29 @@ context
   fixes \<kappa> :: kenv
 begin
 
-lemma tassign_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tassign \<kappa> x e \<sigma>)"
+lemma tassign_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tassign \<kappa> ch x e \<sigma>)"
   by (simp add: tassign_def kind_consistent_upd)
 
-lemma tspecial_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tspecial \<kappa> sc x \<sigma>)"
+lemma tspecial_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tspecial \<kappa> ch sc x \<sigma>)"
   by (simp add: tspecial_def kind_consistent_upd)
 
 lemma narrow_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (narrow_var \<kappa> v a \<sigma>)"
   by (simp add: narrow_var_def kind_consistent_upd)
 
-lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (refine_var \<kappa> e a \<sigma>)"
+lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (refine_var \<kappa> ch e a \<sigma>)"
   by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_kind Let_def split: aop.splits)
 
-lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (trefine \<kappa> b pol \<sigma>)"
+lemma trefine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (trefine \<kappa> ch b pol \<sigma>)"
   by (induction b pol \<sigma> rule: trefine.induct) (simp_all add: refine_var_kind split: prod.splits)
 
-lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> b pol \<sigma>)"
+lemma tbranch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tbranch \<kappa> ch b pol \<sigma>)"
   by (simp add: tbranch_def trefine_kind split: option.splits)
 
-lemma treturn_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (treturn \<kappa> r \<sigma>)"
+lemma treturn_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (treturn \<kappa> ch r \<sigma>)"
   by (simp add: treturn_def kind_consistent_upd split: option.splits)
 
 lemma tenter_state_kind:
-  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent_tt \<kappa> (tenter_state \<kappa> ps es \<sigma>)"
+  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent_tt \<kappa> (tenter_state \<kappa> ch ps es \<sigma>)"
 proof -
   assume kc: "kind_consistent \<kappa> \<sigma>"
   have frame: "kind_consistent \<kappa> (tenter_frame \<sigma>)"

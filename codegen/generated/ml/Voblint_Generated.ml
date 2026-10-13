@@ -92,6 +92,10 @@ module Generated : sig
   type cfg_node = Statement of nat | FunctionEntry of string |
     FunctionResult of string
   type sign
+  type congruence
+  type parity
+  type ivl
+  type 'a int_dom_ext
   type relc
   type ('a, 'b) gcall_action = CallEdge of 'a option * 'a list * 'b list
   type 'a gspecial_call = Nondet_Int | Min of 'a * 'a | Max of 'a * 'a
@@ -99,16 +103,12 @@ module Generated : sig
     EA_Special of 'b gspecial_call * 'a | EA_Assume of 'b | EA_AssumeNot of 'b |
     EA_Body of string | EA_Ret of 'b option * string |
     EA_Check of (nat * nat) * 'b
-  type ivl
-  type parity
-  type congruence
   type int_tuple
   type 'a lifted = Bot | Lifted of 'a
   type check_result = Check_Proved | Check_Refuted | Check_Unknown
   type refine_mode = Refine_Never | Refine_Once | Refine_Fixpoint
   type analysis_domain = Sign_Analysis | Interval_Analysis | Parity_Analysis |
     Int_Analysis of refine_mode | Congruence_Analysis | Order_Analysis
-  type 'a int_dom_ext
   type ('a, 'b) analysis_product
   type ('a, 'b, 'c) gcom = SKIP of 'a | Assign of 'a * 'b * 'c |
     Check of 'a * (nat * nat) * 'c |
@@ -3195,6 +3195,27 @@ let ik_domain_sign =
      narrow_ik = narrow_ik_sign; empty_ik = empty_ik_sign}
     : sign ik_domain);;
 
+type 'a query_lift = QBot | QLifted of 'a | QTop;;
+
+type congruence = Abs_congruence of (int * int) option;;
+
+type parity = PBot | PEven | POdd | PTop;;
+
+type eint = MinInf | Fin of int | PlusInf;;
+
+type ivl = Ivl of eint * eint;;
+
+type 'a int_dom_ext = Int_dom_ext of sign * ivl * parity * congruence * 'a;;
+
+let rec int_sign
+  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    int_sign;;
+
+let rec of_answer_ik_sign
+  sk q =
+    (match q with QBot -> bot_signa | QLifted a -> int_sign a
+      | QTop -> top_signa);;
+
 let rec times_sign x0 uu = match x0, uu with SBot, uu -> SBot
                      | SNeg, SBot -> SBot
                      | SNonPos, SBot -> SBot
@@ -3391,6 +3412,39 @@ let rec ik_norm
 
 let rec of_int_ik_sign k n = sign_of_int (ik_norm k n);;
 
+let rec normalize_congruence_rep
+  = function None -> None
+    | Some (c, m) ->
+        (if equal_inta m zero_inta then Some (c, zero_inta)
+          else (let p = abs_int m in
+                let r = modulo_inta c p in
+                 Some (r, p)));;
+
+let rec mk_congruence
+  xb xc = Abs_congruence (normalize_congruence_rep (Some (xb, xc)));;
+
+let top_congruencea : congruence = mk_congruence zero_inta one_inta;;
+
+let top_paritya : parity = PTop;;
+
+let ivl_top : ivl = Ivl (MinInf, PlusInf);;
+
+let top_ivla : ivl = ivl_top;;
+
+let rec top_int_dom_exta _A
+  = Int_dom_ext
+      (top_signa, top_ivla, top_paritya, top_congruencea,
+        top _A.bounded_lattice_top_bounded_lattice.bounded_semilattice_inf_top_bounded_lattice_top.order_top_bounded_semilattice_inf_top.top_order_top);;
+
+let rec int_sign_update
+  int_signa (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more))
+    = Int_dom_ext
+        (int_signa int_sign, int_ivl, int_parity, int_congruence, more);;
+
+let rec answer_ik_sign
+  a = QLifted
+        (int_sign_update (fun _ -> a) (top_int_dom_exta bounded_lattice_unit));;
+
 let rec sign_cast
   ik a =
     (if equal_signa a SBot then SBot
@@ -3430,6 +3484,27 @@ let rec cast_ik_sign
               less_eq_int (ik_max s) (ik_max k)
           then a else sign_cast k a));;
 
+type 'a kind_int_domain =
+  {ik_domain_kind_int_domain : 'a ik_domain; top_ik : ikind -> 'a;
+    of_int_ik : ikind -> int -> 'a; cast_ik : ikind option -> ikind -> 'a -> 'a;
+    arith_ik : ikind -> aop -> 'a -> 'a -> 'a;
+    cmp_ik : cop -> 'a -> 'a -> bool option; meet_ik : 'a -> 'a -> 'a;
+    refine_ik : cop -> 'a -> 'a -> 'a * 'a; raw_aop_ik : aop -> 'a -> 'a -> 'a;
+    fits_ik : ikind -> 'a -> bool;
+    answer_ik : 'a -> unit int_dom_ext query_lift;
+    of_answer_ik : ikind option -> unit int_dom_ext query_lift -> 'a};;
+let top_ik _A = _A.top_ik;;
+let of_int_ik _A = _A.of_int_ik;;
+let cast_ik _A = _A.cast_ik;;
+let arith_ik _A = _A.arith_ik;;
+let cmp_ik _A = _A.cmp_ik;;
+let meet_ik _A = _A.meet_ik;;
+let refine_ik _A = _A.refine_ik;;
+let raw_aop_ik _A = _A.raw_aop_ik;;
+let fits_ik _A = _A.fits_ik;;
+let answer_ik _A = _A.answer_ik;;
+let of_answer_ik _A = _A.of_answer_ik;;
+
 let rec top_ik_sign k = (if ik_signed k then STop else SNonNeg);;
 
 let rec sign_eqb
@@ -3459,29 +3534,13 @@ let rec sign_cop x0 a b = match x0, a, b with CLt, a, b -> sign_lt a b
 
 let rec cmp_ik_sign x = sign_cop x;;
 
-type 'a kind_int_domain =
-  {ik_domain_kind_int_domain : 'a ik_domain; top_ik : ikind -> 'a;
-    of_int_ik : ikind -> int -> 'a; cast_ik : ikind option -> ikind -> 'a -> 'a;
-    arith_ik : ikind -> aop -> 'a -> 'a -> 'a;
-    cmp_ik : cop -> 'a -> 'a -> bool option; meet_ik : 'a -> 'a -> 'a;
-    refine_ik : cop -> 'a -> 'a -> 'a * 'a; raw_aop_ik : aop -> 'a -> 'a -> 'a;
-    fits_ik : ikind -> 'a -> bool};;
-let top_ik _A = _A.top_ik;;
-let of_int_ik _A = _A.of_int_ik;;
-let cast_ik _A = _A.cast_ik;;
-let arith_ik _A = _A.arith_ik;;
-let cmp_ik _A = _A.cmp_ik;;
-let meet_ik _A = _A.meet_ik;;
-let refine_ik _A = _A.refine_ik;;
-let raw_aop_ik _A = _A.raw_aop_ik;;
-let fits_ik _A = _A.fits_ik;;
-
 let kind_int_domain_sign =
   ({ik_domain_kind_int_domain = ik_domain_sign; top_ik = top_ik_sign;
      of_int_ik = of_int_ik_sign; cast_ik = cast_ik_sign;
      arith_ik = arith_ik_sign; cmp_ik = cmp_ik_sign; meet_ik = meet_ik_sign;
      refine_ik = refine_ik_sign; raw_aop_ik = raw_aop_ik_sign;
-     fits_ik = fits_ik_sign}
+     fits_ik = fits_ik_sign; answer_ik = answer_ik_sign;
+     of_answer_ik = of_answer_ik_sign}
     : sign kind_int_domain);;
 
 let rec list_all p x1 = match p, x1 with p, [] -> true
@@ -3888,8 +3947,6 @@ let rec linorder_gedge_action (_A1, _A2) (_B1, _B2) =
   ({order_linorder = (order_gedge_action (_A1, _A2) (_B1, _B2))} :
     ('a, 'b) gedge_action linorder);;
 
-type eint = MinInf | Fin of int | PlusInf;;
-
 let rec equal_eint x0 x1 = match x0, x1 with Fin x2, PlusInf -> false
                      | PlusInf, Fin x2 -> false
                      | MinInf, PlusInf -> false
@@ -3899,8 +3956,6 @@ let rec equal_eint x0 x1 = match x0, x1 with Fin x2, PlusInf -> false
                      | Fin x2, Fin y2 -> equal_inta x2 y2
                      | PlusInf, PlusInf -> true
                      | MinInf, MinInf -> true;;
-
-type ivl = Ivl of eint * eint;;
 
 let rec equal_ivla
   (Ivl (x1, x2)) (Ivl (y1, y2)) = equal_eint x1 y1 && equal_eint x2 y2;;
@@ -3937,10 +3992,6 @@ let rec less_eq_ivl
 let rec less_ivl a b = less_eq_ivl a b && not (less_eq_ivl b a);;
 
 let ord_ivl = ({less_eq = less_eq_ivl; less = less_ivl} : ivl ord);;
-
-let ivl_top : ivl = Ivl (MinInf, PlusInf);;
-
-let top_ivla : ivl = ivl_top;;
 
 let top_ivl = ({top = top_ivla} : ivl top);;
 
@@ -4098,6 +4149,18 @@ let ik_domain_ivl =
   ({numeric_domain_ik_domain = numeric_domain_ivl; widen_ik = widen_ik_ivl;
      narrow_ik = narrow_ik_ivl; empty_ik = empty_ik_ivl}
     : ivl ik_domain);;
+
+let rec int_ivl
+  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    int_ivl;;
+
+let rec ik_ivl k = Ivl (ik_lo k, ik_hi k);;
+
+let rec of_answer_ik_ivl
+  sk q =
+    (let r = (match sk with None -> top_ivla | Some a -> ik_ivl a) in
+      (match q with QBot -> bot_ivla | QLifted d -> inf_ivl (int_ivl d) r
+        | QTop -> r));;
 
 let rec ivl_times_core
   uu uv = match uu, uv with
@@ -4279,7 +4342,15 @@ let rec refine_ik_ivl x = ivl_refine x;;
 
 let rec of_int_ik_ivl k n = Ivl (Fin (ik_norm k n), Fin (ik_norm k n));;
 
-let rec ik_ivl k = Ivl (ik_lo k, ik_hi k);;
+let rec int_ivl_update
+  int_ivla (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    Int_dom_ext (int_sign, int_ivla int_ivl, int_parity, int_congruence, more);;
+
+let rec answer_of_ivl
+  i = QLifted
+        (int_ivl_update (fun _ -> i) (top_int_dom_exta bounded_lattice_unit));;
+
+let rec answer_ik_ivl x = answer_of_ivl x;;
 
 let rec wrap_ivl_ik
   k x y =
@@ -4347,7 +4418,8 @@ let kind_int_domain_ivl =
   ({ik_domain_kind_int_domain = ik_domain_ivl; top_ik = top_ik_ivl;
      of_int_ik = of_int_ik_ivl; cast_ik = cast_ik_ivl; arith_ik = arith_ik_ivl;
      cmp_ik = cmp_ik_ivl; meet_ik = meet_ik_ivl; refine_ik = refine_ik_ivl;
-     raw_aop_ik = raw_aop_ik_ivl; fits_ik = fits_ik_ivl}
+     raw_aop_ik = raw_aop_ik_ivl; fits_ik = fits_ik_ivl;
+     answer_ik = answer_ik_ivl; of_answer_ik = of_answer_ik_ivl}
     : ivl kind_int_domain);;
 
 type 'a gquery = EvalInt of 'a;;
@@ -4355,8 +4427,6 @@ type 'a gquery = EvalInt of 'a;;
 let rec equal_gquerya _A (EvalInt x) (EvalInt ya) = eq _A x ya;;
 
 let rec equal_gquery _A = ({equal = equal_gquerya _A} : 'a gquery equal);;
-
-type parity = PBot | PEven | POdd | PTop;;
 
 let rec equal_paritya x0 x1 = match x0, x1 with POdd, PTop -> false
                         | PTop, POdd -> false
@@ -4418,8 +4488,6 @@ let rec less_eq_parity a b = parity_le a b;;
 let rec less_parity a b = parity_le a b && not (parity_le b a);;
 
 let ord_parity = ({less_eq = less_eq_parity; less = less_parity} : parity ord);;
-
-let top_paritya : parity = PTop;;
 
 let top_parity = ({top = top_paritya} : parity top);;
 
@@ -4518,6 +4586,15 @@ let ik_domain_parity =
      empty_ik = empty_ik_parity}
     : parity ik_domain);;
 
+let rec int_parity
+  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    int_parity;;
+
+let rec of_answer_ik_parity
+  sk q =
+    (match q with QBot -> bot_paritya | QLifted a -> int_parity a
+      | QTop -> top_paritya);;
+
 let rec times_parity x0 uu = match x0, uu with PBot, uu -> PBot
                        | PEven, PBot -> PBot
                        | POdd, PBot -> PBot
@@ -4592,6 +4669,17 @@ let rec parity_of_int
 
 let rec of_int_ik_parity k n = parity_of_int (ik_norm k n);;
 
+let rec int_parity_update
+  int_paritya
+    (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    Int_dom_ext
+      (int_sign, int_ivl, int_paritya int_parity, int_congruence, more);;
+
+let rec answer_ik_parity
+  a = QLifted
+        (int_parity_update (fun _ -> a)
+          (top_int_dom_exta bounded_lattice_unit));;
+
 let rec arith_ik_parity k = parity_aop;;
 
 let rec meet_ik_parity a b = inf_parity a b;;
@@ -4627,16 +4715,13 @@ let kind_int_domain_parity =
      of_int_ik = of_int_ik_parity; cast_ik = cast_ik_parity;
      arith_ik = arith_ik_parity; cmp_ik = cmp_ik_parity;
      meet_ik = meet_ik_parity; refine_ik = refine_ik_parity;
-     raw_aop_ik = raw_aop_ik_parity; fits_ik = fits_ik_parity}
+     raw_aop_ik = raw_aop_ik_parity; fits_ik = fits_ik_parity;
+     answer_ik = answer_ik_parity; of_answer_ik = of_answer_ik_parity}
     : parity kind_int_domain);;
-
-type 'a query_lift = QBot | QLifted of 'a | QTop;;
 
 let rec top_query_lifta _A = QTop;;
 
 let rec top_query_lift _A = ({top = top_query_lifta _A} : 'a query_lift top);;
-
-type congruence = Abs_congruence of (int * int) option;;
 
 let rec rep_congruence (Abs_congruence x) = x;;
 
@@ -4650,14 +4735,6 @@ let rec equal_int_tuplea
   (IT (x1, x2)) (IT (y1, y2)) = equal_ivla x1 y1 && equal_congruencea x2 y2;;
 
 let equal_int_tuple = ({equal = equal_int_tuplea} : int_tuple equal);;
-
-let rec normalize_congruence_rep
-  = function None -> None
-    | Some (c, m) ->
-        (if equal_inta m zero_inta then Some (c, zero_inta)
-          else (let p = abs_int m in
-                let r = modulo_inta c p in
-                 Some (r, p)));;
 
 let rec join_congruence_rep
   x0 y = match x0, y with None, y -> y
@@ -4712,11 +4789,6 @@ let rec less_int_tuple
 
 let ord_int_tuple =
   ({less_eq = less_eq_int_tuple; less = less_int_tuple} : int_tuple ord);;
-
-let rec mk_congruence
-  xb xc = Abs_congruence (normalize_congruence_rep (Some (xb, xc)));;
-
-let top_congruencea : congruence = mk_congruence zero_inta one_inta;;
 
 let top_int_tuplea : int_tuple = IT (top_ivla, top_congruencea);;
 
@@ -4931,6 +5003,18 @@ let ik_domain_int_tuple =
      empty_ik = empty_ik_int_tuple}
     : int_tuple ik_domain);;
 
+let rec int_congruence
+  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    int_congruence;;
+
+let rec of_answer_ik_congruence
+  sk q =
+    (match q with QBot -> bot_congruencea | QLifted a -> int_congruence a
+      | QTop -> top_congruencea);;
+
+let rec of_answer_ik_int_tuple
+  sk q = IT (of_answer_ik_ivl sk q, of_answer_ik_congruence sk q);;
+
 let rec times_congruence_rep
   x0 uu = match x0, uu with None, uu -> None
     | Some v, None -> None
@@ -5093,6 +5177,43 @@ let rec of_int_ik_congruence k n = congruence_of_int (ik_norm k n);;
 let rec of_int_ik_int_tuple
   k n = IT (of_int_ik_ivl k n, of_int_ik_congruence k n);;
 
+let rec int_congruence_update
+  int_congruencea
+    (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
+    Int_dom_ext
+      (int_sign, int_ivl, int_parity, int_congruencea int_congruence, more);;
+
+let rec answer_ik_congruence
+  a = QLifted
+        (int_congruence_update (fun _ -> a)
+          (top_int_dom_exta bounded_lattice_unit));;
+
+let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
+                            | QLifted v, QBot -> QBot
+                            | QTop, QBot -> QBot
+                            | QTop, QLifted v -> QLifted v
+                            | QTop, QTop -> QTop
+                            | QLifted v, QTop -> QLifted v
+                            | QLifted a, QLifted b -> QLifted (inf _A a b);;
+
+let rec more
+  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) = more;;
+
+let rec inf_int_dom_exta _A
+  a b = Int_dom_ext
+          (inf_sign (int_sign a) (int_sign b), inf_ivl (int_ivl a) (int_ivl b),
+            inf_parity (int_parity a) (int_parity b),
+            inf_congruence (int_congruence a) (int_congruence b),
+            inf _A.bounded_lattice_bot_bounded_lattice.lattice_bounded_lattice_bot.semilattice_inf_lattice.inf_semilattice_inf
+              (more a) (more b));;
+
+let rec inf_int_dom_ext _A =
+  ({inf = inf_int_dom_exta _A} : 'a int_dom_ext inf);;
+
+let rec answer_ik_int_tuple
+  a = inf_query_lift (inf_int_dom_ext bounded_lattice_unit)
+        (answer_ik_ivl (it_ivl a)) (answer_ik_congruence (it_cong a));;
+
 let rec norm_cong_ik
   k a = (match rep_congruence a with None -> bot_congruencea
           | Some (c, m) ->
@@ -5183,7 +5304,8 @@ let kind_int_domain_int_tuple =
      of_int_ik = of_int_ik_int_tuple; cast_ik = cast_ik_int_tuple;
      arith_ik = arith_ik_int_tuple; cmp_ik = cmp_ik_int_tuple;
      meet_ik = meet_ik_int_tuple; refine_ik = refine_ik_int_tuple;
-     raw_aop_ik = raw_aop_ik_int_tuple; fits_ik = fits_ik_int_tuple}
+     raw_aop_ik = raw_aop_ik_int_tuple; fits_ik = fits_ik_int_tuple;
+     answer_ik = answer_ik_int_tuple; of_answer_ik = of_answer_ik_int_tuple}
     : int_tuple kind_int_domain);;
 
 type 'a lifted = Bot | Lifted of 'a;;
@@ -5745,7 +5867,8 @@ let kind_int_domain_congruence =
      cast_ik = cast_ik_congruence; arith_ik = arith_ik_congruence;
      cmp_ik = cmp_ik_congruence; meet_ik = meet_ik_congruence;
      refine_ik = refine_ik_congruence; raw_aop_ik = raw_aop_ik_congruence;
-     fits_ik = fits_ik_congruence}
+     fits_ik = fits_ik_congruence; answer_ik = answer_ik_congruence;
+     of_answer_ik = of_answer_ik_congruence}
     : congruence kind_int_domain);;
 
 type 'a order_rel = OBot | OFacts of ('a * 'a) set;;
@@ -5820,8 +5943,6 @@ let rec bounded_semilattice_sup_bot_order_rel _A =
      order_bot_bounded_semilattice_sup_bot = (order_bot_order_rel _A)}
     : 'a order_rel bounded_semilattice_sup_bot);;
 
-type 'a int_dom_ext = Int_dom_ext of sign * ivl * parity * congruence * 'a;;
-
 let rec equal_int_dom_exta _A
   (Int_dom_ext (int_signa, int_ivla, int_paritya, int_congruencea, morea))
     (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
@@ -5833,36 +5954,6 @@ let rec equal_int_dom_exta _A
 
 let rec equal_int_dom_ext _A =
   ({equal = equal_int_dom_exta _A} : 'a int_dom_ext equal);;
-
-let rec int_congruence
-  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    int_congruence;;
-
-let rec int_parity
-  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    int_parity;;
-
-let rec int_sign
-  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    int_sign;;
-
-let rec int_ivl
-  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    int_ivl;;
-
-let rec more
-  (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) = more;;
-
-let rec inf_int_dom_exta _A
-  a b = Int_dom_ext
-          (inf_sign (int_sign a) (int_sign b), inf_ivl (int_ivl a) (int_ivl b),
-            inf_parity (int_parity a) (int_parity b),
-            inf_congruence (int_congruence a) (int_congruence b),
-            inf _A.bounded_lattice_bot_bounded_lattice.lattice_bounded_lattice_bot.semilattice_inf_lattice.inf_semilattice_inf
-              (more a) (more b));;
-
-let rec inf_int_dom_ext _A =
-  ({inf = inf_int_dom_exta _A} : 'a int_dom_ext inf);;
 
 let rec sup_int_dom_exta _A
   a b = Int_dom_ext
@@ -5900,11 +5991,6 @@ let rec ord_int_dom_ext _A =
   ({less_eq = less_eq_int_dom_ext _A; less = less_int_dom_ext _A} :
     'a int_dom_ext ord);;
 
-let rec top_int_dom_exta _A
-  = Int_dom_ext
-      (top_signa, top_ivla, top_paritya, top_congruencea,
-        top _A.bounded_lattice_top_bounded_lattice.bounded_semilattice_inf_top_bounded_lattice_top.order_top_bounded_semilattice_inf_top.top_order_top);;
-
 let rec top_int_dom_ext _A =
   ({top = top_int_dom_exta _A} : 'a int_dom_ext top);;
 
@@ -5913,27 +5999,6 @@ let rec preorder_int_dom_ext _A =
 
 let rec order_int_dom_ext _A =
   ({preorder_order = (preorder_int_dom_ext _A)} : 'a int_dom_ext order);;
-
-let rec int_congruence_update
-  int_congruencea
-    (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    Int_dom_ext
-      (int_sign, int_ivl, int_parity, int_congruencea int_congruence, more);;
-
-let rec int_parity_update
-  int_paritya
-    (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    Int_dom_ext
-      (int_sign, int_ivl, int_paritya int_parity, int_congruence, more);;
-
-let rec int_sign_update
-  int_signa (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more))
-    = Int_dom_ext
-        (int_signa int_sign, int_ivl, int_parity, int_congruence, more);;
-
-let rec int_ivl_update
-  int_ivla (Int_dom_ext (int_sign, int_ivl, int_parity, int_congruence, more)) =
-    Int_dom_ext (int_sign, int_ivla int_ivl, int_parity, int_congruence, more);;
 
 let rec truncate
   r = Int_dom_ext (int_sign r, int_ivl r, int_parity r, int_congruence r, ());;
@@ -7328,14 +7393,6 @@ let rec lens_of
         put x (ls_combine_env c ch cha ci (get x) (get de)))
       (fun ch ci x de -> put x (ls_combine_assign c ch ci (get x) (get de)));;
 
-let rec inf_query_lift _A x0 uu = match x0, uu with QBot, uu -> QBot
-                            | QLifted v, QBot -> QBot
-                            | QTop, QBot -> QBot
-                            | QTop, QLifted v -> QLifted v
-                            | QTop, QTop -> QTop
-                            | QLifted v, QTop -> QLifted v
-                            | QLifted a, QLifted b -> QLifted (inf _A a b);;
-
 let rec mcp_qry
   cs ch x q =
     fold (fun c r ->
@@ -8205,8 +8262,6 @@ let rec kd_val _A
     | KTop ->
         top _A.ik_domain_kind_int_domain.numeric_domain_ik_domain.executable_domain_numeric_domain.order_top_executable_domain.top_order_top;;
 
-let rec truth_ik _A a = cmp_ik _A CNe a (of_int_ik _A I32 zero_inta);;
-
 let rec src_kind
   kappa e =
     (match e with TN (_, _) -> Some (texp_kind e)
@@ -8217,6 +8272,8 @@ let rec src_kind
       | TCast (_, _) -> Some (texp_kind e)
       | TCmp (_, _, _) -> Some (texp_kind e) | TNot _ -> Some (texp_kind e)
       | TAnd (_, _) -> Some (texp_kind e) | TOr (_, _) -> Some (texp_kind e));;
+
+let rec truth_ik _A a = cmp_ik _A CNe a (of_int_ik _A I32 zero_inta);;
 
 let rec read_var _A
   kappa sigma v =
@@ -8236,37 +8293,78 @@ let rec bool_val _A
         | Some false -> of_int_ik _A I32 zero_inta);;
 
 let rec taeval _A
-  kappa x1 sigma = match kappa, x1, sigma with
-    kappa, TN (ik, n), sigma -> of_int_ik _A ik n
-    | kappa, TVar (ik, v), sigma -> read_var _A kappa sigma v
-    | kappa, TArith (ik, op, a, b), sigma ->
-        arith_ik _A ik op (taeval _A kappa a sigma) (taeval _A kappa b sigma)
-    | kappa, TCast (ik, a), sigma ->
-        cast_ik _A (src_kind kappa a) ik (taeval _A kappa a sigma)
-    | kappa, TCmp (op, a, b), sigma ->
+  kappa ch x2 sigma = match kappa, ch, x2, sigma with
+    kappa, ch, TN (ik, n), sigma -> of_int_ik _A ik n
+    | kappa, ch, TVar (ik, v), sigma -> read_var _A kappa sigma v
+    | kappa, ch, TArith (ik, op, a, b), sigma ->
+        arith_ik _A ik op (taeval_ask _A kappa ch a sigma)
+          (taeval_ask _A kappa ch b sigma)
+    | kappa, ch, TCast (ik, a), sigma ->
+        cast_ik _A (src_kind kappa a) ik (taeval_ask _A kappa ch a sigma)
+    | kappa, ch, TCmp (op, a, b), sigma ->
         bool_val _A
-          (cmp_ik _A op (taeval _A kappa a sigma) (taeval _A kappa b sigma))
-    | kappa, TNot a, sigma ->
-        bool_val _A (map_option not (truth_ik _A (taeval _A kappa a sigma)))
-    | kappa, TAnd (a, b), sigma ->
+          (cmp_ik _A op (taeval_ask _A kappa ch a sigma)
+            (taeval_ask _A kappa ch b sigma))
+    | kappa, ch, TNot a, sigma ->
+        bool_val _A
+          (map_option not (truth_ik _A (taeval_ask _A kappa ch a sigma)))
+    | kappa, ch, TAnd (a, b), sigma ->
         bool_val _A
           (match
-            (truth_ik _A (taeval _A kappa a sigma),
-              truth_ik _A (taeval _A kappa b sigma))
+            (truth_ik _A (taeval_ask _A kappa ch a sigma),
+              truth_ik _A (taeval_ask _A kappa ch b sigma))
             with (None, None) -> None | (None, Some true) -> None
             | (None, Some false) -> Some false | (Some true, None) -> None
             | (Some true, Some true) -> Some true
             | (Some true, Some false) -> Some false
             | (Some false, _) -> Some false)
-    | kappa, TOr (a, b), sigma ->
+    | kappa, ch, TOr (a, b), sigma ->
         bool_val _A
           (match
-            (truth_ik _A (taeval _A kappa a sigma),
-              truth_ik _A (taeval _A kappa b sigma))
+            (truth_ik _A (taeval_ask _A kappa ch a sigma),
+              truth_ik _A (taeval_ask _A kappa ch b sigma))
             with (None, None) -> None | (None, Some true) -> Some true
             | (None, Some false) -> None | (Some true, _) -> Some true
             | (Some false, None) -> None | (Some false, Some true) -> Some true
-            | (Some false, Some false) -> Some false);;
+            | (Some false, Some false) -> Some false)
+and taeval_ask _A
+  kappa ch e sigma =
+    (match e with TN (a, b) -> of_int_ik _A a b
+      | TVar (_, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TArith (_, _, _, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TCast (_, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TCmp (_, _, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TNot _ ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TAnd (_, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma)
+      | TOr (_, _) ->
+        (match ch (EvalInt e)
+          with QBot -> of_answer_ik _A (src_kind kappa e) QBot
+          | QLifted a -> of_answer_ik _A (src_kind kappa e) (QLifted a)
+          | QTop -> taeval _A kappa ch e sigma));;
 
 let top_order_rel : 'a order_rel = OFacts bot_set;;
 
@@ -9343,16 +9441,70 @@ let rec ord_branch
     | TOr (v, va), uv, d -> d
     | TCmp (v, va, vb), uv, OBot -> OBot;;
 
+let rec int_dom_of_int
+  n = int_congruence_update (fun _ -> congruence_of_int n)
+        (int_parity_update (fun _ -> parity_of_int n)
+          (int_ivl_update (fun _ -> Ivl (Fin n, Fin n))
+            (int_sign_update (fun _ -> sign_of_int n)
+              (top_int_dom_exta bounded_lattice_unit))));;
+
+let rec answer_of_int n = QLifted (int_dom_of_int n);;
+
+let rec ord_query
+  ch d q = match ch, d, q with
+    ch, Lifted d, EvalInt (TCmp (c, TVar (ka, x), TVar (k, y))) ->
+      (match ord_decide c d x y
+        with None -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+        | Some b -> answer_of_int (if b then one_inta else zero_inta))
+    | ch, Bot, q -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TN (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TVar (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TArith (va, vb, vc, vd)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCast (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TN (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TArith (vd, ve, vf, vg), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TCast (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TCmp (vd, ve, vf), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TNot vd, vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TAnd (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, TOr (vd, ve), vc)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TN (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TArith (vd, ve, vf, vg))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TCast (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TCmp (vd, ve, vf))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TNot vd)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TAnd (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TCmp (va, vb, TOr (vd, ve))) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TNot va) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TAnd (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | ch, d, EvalInt (TOr (va, vb)) ->
+        top_query_lifta (order_int_dom_ext bounded_lattice_unit);;
+
 let rec combine_env_identity cha ch ci x de = x;;
-
-let rec top_fun _B x = top _B;;
-
-let rec query_unknown
-  ch x = top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
 let ord_spec : (var_id, texp, var_id order_rel lifted, unit) glocal_spec_ext
   = Glocal_spec_ext
-      (query_unknown, (fun _ d -> d),
+      (ord_query, (fun _ d -> d),
         (fun _ x _ -> map_lift (ord_forget equal_var_id x)),
         (fun _ _ x -> map_lift (ord_forget equal_var_id x)),
         (fun _ b pol -> map_lift (ord_branch b pol)), (fun _ _ d -> d),
@@ -9650,8 +9802,14 @@ let rec tclassify _A
   kappa c d =
     (match d with TTop -> Check_Unknown
       | TL sigma ->
-        (match truth_ik _A (taeval _A kappa c sigma) with None -> Check_Unknown
-          | Some true -> Check_Proved | Some false -> Check_Refuted));;
+        (match
+          truth_ik _A
+            (taeval _A kappa
+              (fun _ ->
+                top_query_lifta (order_int_dom_ext bounded_lattice_unit))
+              c sigma)
+          with None -> Check_Unknown | Some true -> Check_Proved
+          | Some false -> Check_Refuted));;
 
 let rec tinit_st _A
   ds = TL (Abs_default_st
@@ -9698,49 +9856,57 @@ let rec tl_bind f x1 = match f, x1 with f, TTop -> TTop
                   | f, TL a -> f a;;
 
 let rec special_val _A
-  kappa sc x sigma =
+  kappa ch sc x sigma =
     (match sc with Nondet_Int -> top_ik _A (kappa x)
       | Min (a, b) ->
         cast_ik _A None (kappa x)
           (sup _A.ik_domain_kind_int_domain.numeric_domain_ik_domain.executable_domain_numeric_domain.bounded_semilattice_sup_bot_executable_domain.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-            (taeval _A kappa a sigma) (taeval _A kappa b sigma))
+            (taeval_ask _A kappa ch a sigma) (taeval_ask _A kappa ch b sigma))
       | Max (a, b) ->
         cast_ik _A None (kappa x)
           (sup _A.ik_domain_kind_int_domain.numeric_domain_ik_domain.executable_domain_numeric_domain.bounded_semilattice_sup_bot_executable_domain.semilattice_sup_bounded_semilattice_sup_bot.sup_semilattice_sup
-            (taeval _A kappa a sigma) (taeval _A kappa b sigma)));;
+            (taeval_ask _A kappa ch a sigma)
+            (taeval_ask _A kappa ch b sigma)));;
 
 let rec tspecial_st _A
-  kappa sc x st =
+  kappa ch sc x st =
     default_st_set equal_var_id (bot_kd _A.ik_domain_kind_int_domain) st
       (location_of tglobal x)
       (KD (kappa x,
-            special_val _A kappa sc x
+            special_val _A kappa ch sc x
               (default_st_to_fun equal_var_id
                 (bot_kd _A.ik_domain_kind_int_domain) tglobal st)));;
+
+let rec tquery _A
+  kappa ch x2 q = match kappa, ch, x2, q with
+    kappa, ch, TTop, q ->
+      top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+    | kappa, ch, TL sigma, EvalInt e ->
+        answer_ik _A (taeval _A kappa ch e sigma);;
 
 let rec tl_map f x1 = match f, x1 with f, TTop -> TTop
                  | f, TL a -> TL (f a);;
 
 let rec ret_kd _A
-  kappa e sigma =
-    (match e with TN (_, _) -> KD (texp_kind e, taeval _A kappa e sigma)
+  kappa ch e sigma =
+    (match e with TN (_, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
       | TVar (_, v) ->
         (if equal_var_ida v ReturnVar then KTop
           else KD (kappa v, read_var _A kappa sigma v))
-      | TArith (_, _, _, _) -> KD (texp_kind e, taeval _A kappa e sigma)
-      | TCast (_, _) -> KD (texp_kind e, taeval _A kappa e sigma)
-      | TCmp (_, _, _) -> KD (texp_kind e, taeval _A kappa e sigma)
-      | TNot _ -> KD (texp_kind e, taeval _A kappa e sigma)
-      | TAnd (_, _) -> KD (texp_kind e, taeval _A kappa e sigma)
-      | TOr (_, _) -> KD (texp_kind e, taeval _A kappa e sigma));;
+      | TArith (_, _, _, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
+      | TCast (_, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
+      | TCmp (_, _, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
+      | TNot _ -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
+      | TAnd (_, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma)
+      | TOr (_, _) -> KD (texp_kind e, taeval_ask _A kappa ch e sigma));;
 
 let rec treturn_st _A
-  kappa r st =
+  kappa ch r st =
     (match r with None -> st
       | Some e ->
         default_st_set equal_var_id (bot_kd _A.ik_domain_kind_int_domain) st
           (location_of tglobal ReturnVar)
-          (ret_kd _A kappa e
+          (ret_kd _A kappa ch e
             (default_st_to_fun equal_var_id
               (bot_kd _A.ik_domain_kind_int_domain) tglobal st)));;
 
@@ -9751,30 +9917,30 @@ let rec narrow_var _A
              (KD (kappa v, meet_ik _A a (read_var _A kappa sigma v))));;
 
 let rec refine_var _A
-  kappa x1 a sigma = match kappa, x1, a, sigma with
-    kappa, TVar (ik, v), a, sigma -> narrow_var _A kappa v a sigma
-    | kappa, TCast (ik, e), a, sigma ->
-        (if fits_ik _A ik (taeval _A kappa e sigma)
-          then refine_var _A kappa e a sigma else sigma)
-    | kappa, TArith (ik, op, e_1, e_2), a, sigma ->
-        (let a_1 = taeval _A kappa e_1 sigma in
-         let a_2 = taeval _A kappa e_2 sigma in
+  kappa ch x2 a sigma = match kappa, ch, x2, a, sigma with
+    kappa, ch, TVar (ik, v), a, sigma -> narrow_var _A kappa v a sigma
+    | kappa, ch, TCast (ik, e), a, sigma ->
+        (if fits_ik _A ik (taeval_ask _A kappa ch e sigma)
+          then refine_var _A kappa ch e a sigma else sigma)
+    | kappa, ch, TArith (ik, op, e_1, e_2), a, sigma ->
+        (let a_1 = taeval_ask _A kappa ch e_1 sigma in
+         let a_2 = taeval_ask _A kappa ch e_2 sigma in
           (if not (fits_ik _A ik (raw_aop_ik _A op a_1 a_2)) then sigma
             else (match op
                    with AAdd ->
-                     refine_var _A kappa e_2 (raw_aop_ik _A ASub a a_1)
-                       (refine_var _A kappa e_1 (raw_aop_ik _A ASub a a_2)
+                     refine_var _A kappa ch e_2 (raw_aop_ik _A ASub a a_1)
+                       (refine_var _A kappa ch e_1 (raw_aop_ik _A ASub a a_2)
                          sigma)
                    | ASub ->
-                     refine_var _A kappa e_2 (raw_aop_ik _A ASub a_1 a)
-                       (refine_var _A kappa e_1 (raw_aop_ik _A AAdd a a_2)
+                     refine_var _A kappa ch e_2 (raw_aop_ik _A ASub a_1 a)
+                       (refine_var _A kappa ch e_1 (raw_aop_ik _A AAdd a a_2)
                          sigma)
                    | AMul -> sigma | ADiv -> sigma | AMod -> sigma)))
-    | kappa, TN (v, va), a, sigma -> sigma
-    | kappa, TCmp (v, va, vb), a, sigma -> sigma
-    | kappa, TNot v, a, sigma -> sigma
-    | kappa, TAnd (v, va), a, sigma -> sigma
-    | kappa, TOr (v, va), a, sigma -> sigma;;
+    | kappa, ch, TN (v, va), a, sigma -> sigma
+    | kappa, ch, TCmp (v, va, vb), a, sigma -> sigma
+    | kappa, ch, TNot v, a, sigma -> sigma
+    | kappa, ch, TAnd (v, va), a, sigma -> sigma
+    | kappa, ch, TOr (v, va), a, sigma -> sigma;;
 
 let rec neg_cop = function CLt -> CGe
                   | CLe -> CGt
@@ -9784,24 +9950,24 @@ let rec neg_cop = function CLt -> CGe
                   | CNe -> CEq;;
 
 let rec trefine _A
-  kappa x1 pol sigma = match kappa, x1, pol, sigma with
-    kappa, TCmp (c, l, r), pol, sigma ->
+  kappa ch x2 pol sigma = match kappa, ch, x2, pol, sigma with
+    kappa, ch, TCmp (c, l, r), pol, sigma ->
       (let (al, ar) =
-         refine_ik _A (if pol then c else neg_cop c) (taeval _A kappa l sigma)
-           (taeval _A kappa r sigma)
+         refine_ik _A (if pol then c else neg_cop c)
+           (taeval_ask _A kappa ch l sigma) (taeval_ask _A kappa ch r sigma)
          in
-        refine_var _A kappa l al (refine_var _A kappa r ar sigma))
-    | kappa, TNot e, pol, sigma -> trefine _A kappa e (not pol) sigma
-    | kappa, TAnd (a, b), true, sigma ->
-        trefine _A kappa b true (trefine _A kappa a true sigma)
-    | kappa, TOr (a, b), false, sigma ->
-        trefine _A kappa b false (trefine _A kappa a false sigma)
-    | kappa, TN (v, va), pol, sigma -> sigma
-    | kappa, TVar (v, va), pol, sigma -> sigma
-    | kappa, TArith (v, va, vb, vc), pol, sigma -> sigma
-    | kappa, TCast (v, va), pol, sigma -> sigma
-    | kappa, TAnd (v, va), false, sigma -> sigma
-    | kappa, TOr (v, va), true, sigma -> sigma;;
+        refine_var _A kappa ch l al (refine_var _A kappa ch r ar sigma))
+    | kappa, ch, TNot e, pol, sigma -> trefine _A kappa ch e (not pol) sigma
+    | kappa, ch, TAnd (a, b), true, sigma ->
+        trefine _A kappa ch b true (trefine _A kappa ch a true sigma)
+    | kappa, ch, TOr (a, b), false, sigma ->
+        trefine _A kappa ch b false (trefine _A kappa ch a false sigma)
+    | kappa, ch, TN (v, va), pol, sigma -> sigma
+    | kappa, ch, TVar (v, va), pol, sigma -> sigma
+    | kappa, ch, TArith (v, va, vb, vc), pol, sigma -> sigma
+    | kappa, ch, TCast (v, va), pol, sigma -> sigma
+    | kappa, ch, TAnd (v, va), false, sigma -> sigma
+    | kappa, ch, TOr (v, va), true, sigma -> sigma;;
 
 let rec write_back _A
   vs sigma st =
@@ -9820,17 +9986,17 @@ let rec tvar_list = function TN (uu, uv) -> []
                     | TOr (a, b) -> tvar_list a @ tvar_list b;;
 
 let rec tbranch_st _A
-  kappa b pol st =
+  kappa ch b pol st =
     (let refined =
        write_back _A (tvar_list b)
-         (trefine _A kappa b pol
+         (trefine _A kappa ch b pol
            (default_st_to_fun equal_var_id (bot_kd _A.ik_domain_kind_int_domain)
              tglobal st))
          st
        in
       (match
         truth_ik _A
-          (taeval _A kappa b
+          (taeval_ask _A kappa ch b
             (default_st_to_fun equal_var_id
               (bot_kd _A.ik_domain_kind_int_domain) tglobal st))
         with None -> refined
@@ -9839,12 +10005,12 @@ let rec tbranch_st _A
             else bot_gdefault_sta (bot_kd _A.ik_domain_kind_int_domain))));;
 
 let rec tassign_st _A
-  kappa x e st =
+  kappa ch x e st =
     default_st_set equal_var_id (bot_kd _A.ik_domain_kind_int_domain) st
       (location_of tglobal x)
       (KD (kappa x,
             cast_ik _A None (kappa x)
-              (taeval _A kappa e
+              (taeval_ask _A kappa ch e
                 (default_st_to_fun equal_var_id
                   (bot_kd _A.ik_domain_kind_int_domain) tglobal st))));;
 
@@ -9903,14 +10069,14 @@ let rec arg_fits
         | TOr (_, _) -> equal_ikind (texp_kind e) (kappa p));;
 
 let rec tenter_st _A
-  kappa ps es st =
+  kappa ch ps es st =
     (if list_all (fun (a, b) -> arg_fits kappa a b) (zip ps es)
       then TL (bind_formals_default_st equal_var_id
                 (bot_kd _A.ik_domain_kind_int_domain) tglobal ps
                 (map (fun (x, y) ->
                        KD (kappa x,
                             cast_ik _A None (kappa x)
-                              (taeval _A kappa y
+                              (taeval_ask _A kappa ch y
                                 (default_st_to_fun equal_var_id
                                   (bot_kd _A.ik_domain_kind_int_domain) tglobal
                                   st))))
@@ -9922,21 +10088,31 @@ let rec tenter_st _A
 let rec typed_exec_spec _A
   kappa =
     Glocal_spec_ext
-      (query_unknown, (fun _ d -> d),
-        (fun _ x e ->
-          transfer_lift (tst_empty _A) (tl_map (tassign_st _A kappa x e))),
-        (fun _ sc x ->
-          transfer_lift (tst_empty _A) (tl_map (tspecial_st _A kappa sc x))),
-        (fun _ b pol ->
-          transfer_lift (tst_empty _A) (tl_map (tbranch_st _A kappa b pol))),
+      ((fun ch d q ->
+         (match d
+           with Bot -> top_query_lifta (order_int_dom_ext bounded_lattice_unit)
+           | Lifted x ->
+             tquery _A kappa ch
+               (map_toplift
+                 (default_st_to_fun equal_var_id
+                   (bot_kd _A.ik_domain_kind_int_domain) tglobal)
+                 x)
+               q)),
+        (fun _ d -> d),
+        (fun ch x e ->
+          transfer_lift (tst_empty _A) (tl_map (tassign_st _A kappa ch x e))),
+        (fun ch sc x ->
+          transfer_lift (tst_empty _A) (tl_map (tspecial_st _A kappa ch sc x))),
+        (fun ch b pol ->
+          transfer_lift (tst_empty _A) (tl_map (tbranch_st _A kappa ch b pol))),
         (fun _ _ d -> d),
-        (fun _ r _ ->
-          transfer_lift (tst_empty _A) (tl_map (treturn_st _A kappa r))),
+        (fun ch r _ ->
+          transfer_lift (tst_empty _A) (tl_map (treturn_st _A kappa ch r))),
         (fun _ _ d -> d),
-        (fun _ ci p ->
+        (fun ch ci p ->
           [(fst p,
              transfer_lift (tst_empty _A)
-               (tl_bind (tenter_st _A kappa (ci_formals ci) (ci_args ci)))
+               (tl_bind (tenter_st _A kappa ch (ci_formals ci) (ci_args ci)))
                (fst p))]),
         (fun _ _ _ x y ->
           bind_lift x
@@ -10469,19 +10645,6 @@ let rec bool_valued = function Not uu -> true
                       | Div (v, va) -> false
                       | Mod (v, va) -> false
                       | Cast (v, va) -> false;;
-
-let rec answer_of_ivl
-  i = QLifted
-        (int_ivl_update (fun _ -> i) (top_int_dom_exta bounded_lattice_unit));;
-
-let rec int_dom_of_int
-  n = int_congruence_update (fun _ -> congruence_of_int n)
-        (int_parity_update (fun _ -> parity_of_int n)
-          (int_ivl_update (fun _ -> Ivl (Fin n, Fin n))
-            (int_sign_update (fun _ -> sign_of_int n)
-              (top_int_dom_exta bounded_lattice_unit))));;
-
-let rec answer_of_int n = QLifted (int_dom_of_int n);;
 
 let rec bool_answer
   r = (match r with None -> answer_of_ivl (Ivl (Fin zero_inta, Fin one_inta))
@@ -11222,6 +11385,8 @@ let rec combine_env_st_lifted _A
             Lifted
               (combine_default_st
                 _A.order_bot_bounded_semilattice_sup_bot.bot_order_bot x y)));;
+
+let rec top_fun _B x = top _B;;
 
 let rec exec_local_spec _A
   g empty_pred tf_st enter_st =
@@ -12678,6 +12843,9 @@ let rec branch_identity ch b pol x = x;;
 let rec event_identity ch ev x = x;;
 
 let rec skip_identity ch x = x;;
+
+let rec query_unknown
+  ch x = top_fun (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
 let rec body_identity ch p x = x;;
 

@@ -1,6 +1,11 @@
 theory Typed_Nonrel
   imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted" "Voblint_Domain.Top_Lift"
+    "Voblint_Framework.Analysis_Query"
 begin
+
+text \<open>Values here are per variable, so \<open>\<gamma>\<close> is the class concretization alone.\<close>
+
+no_notation gamma_S ("\<gamma>")
 
 section \<open>Kind-aware integer domains\<close>
 
@@ -15,6 +20,11 @@ text \<open>
   the operation on mathematical integers, which a backward step inverts, and
   \<open>fits_ik k a\<close> says that every value of \<open>a\<close> lies in \<open>k\<close>'s range, so that
   normalizing to \<open>k\<close> changes none of them.
+
+  \<open>answer_ik\<close> and \<open>of_answer_ik\<close> translate between a value and an answer to Goblint's
+  \<open>EvalInt\<close> query, as Goblint's \<^verbatim>\<open>IntDomTuple\<close> is both the base value and the
+  query result. \<open>of_answer_ik sk\<close> may use the kind \<open>sk\<close> of the queried expression,
+  when it is known, to bound an answer that claims nothing.
 \<close>
 
 class kind_int_domain = ik_domain +
@@ -27,6 +37,8 @@ class kind_int_domain = ik_domain +
     and refine_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
     and raw_aop_ik :: "aop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and fits_ik :: "ikind \<Rightarrow> 'a \<Rightarrow> bool"
+    and answer_ik :: "'a \<Rightarrow> answer"
+    and of_answer_ik :: "ikind option \<Rightarrow> answer \<Rightarrow> 'a"
   assumes top_ik_sound: "n \<in> ik_range k \<Longrightarrow> n \<in> \<gamma> (top_ik k)"
     and of_int_ik_sound: "ik_norm k n \<in> \<gamma> (of_int_ik k n)"
     and cast_ik_sound:
@@ -42,6 +54,16 @@ class kind_int_domain = ik_domain +
          \<Longrightarrow> m \<in> \<gamma> (fst (refine_ik c a b)) \<and> n \<in> \<gamma> (snd (refine_ik c a b))"
     and raw_aop_ik_sound: "m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> aop_eval op m n \<in> \<gamma> (raw_aop_ik op a b)"
     and fits_ik_sound: "fits_ik k a \<Longrightarrow> n \<in> \<gamma> a \<Longrightarrow> n \<in> ik_range k"
+    and answer_ik_sound: "n \<in> \<gamma> a \<Longrightarrow> n \<in> gamma_answer (answer_ik a)"
+    and of_answer_ik_sound:
+      "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
+         \<Longrightarrow> n \<in> \<gamma> (of_answer_ik sk q)"
+
+text \<open>A single-component domain answers with its component of \<^typ>\<open>int_dom\<close> and
+  leaves the others at top, so its answer claims exactly what its value does.\<close>
+
+abbreviation answer_with :: "(int_dom \<Rightarrow> int_dom) \<Rightarrow> answer" where
+  "answer_with f \<equiv> QLifted (f \<top>)"
 
 section \<open>Typed abstract states\<close>
 
@@ -178,59 +200,104 @@ lemma src_kind_sound:
 lemma cast_ik_None_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik None k a)"
   by (rule cast_ik_sound) simp_all
 
-fun taeval :: "kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
-  "taeval \<kappa> (TN ik n) \<sigma> = of_int_ik ik n"
-| "taeval \<kappa> (TVar ik v) \<sigma> = read_var \<kappa> \<sigma> v"
-| "taeval \<kappa> (TArith ik op a b) \<sigma> = arith_ik ik op (taeval \<kappa> a \<sigma>) (taeval \<kappa> b \<sigma>)"
-| "taeval \<kappa> (TCast ik a) \<sigma> = cast_ik (src_kind \<kappa> a) ik (taeval \<kappa> a \<sigma>)"
-| "taeval \<kappa> (TCmp op a b) \<sigma> = bool_val (cmp_ik op (taeval \<kappa> a \<sigma>) (taeval \<kappa> b \<sigma>))"
-| "taeval \<kappa> (TNot a) \<sigma> = bool_val (map_option HOL.Not (truth_ik (taeval \<kappa> a \<sigma>)))"
-| "taeval \<kappa> (TAnd a b) \<sigma> =
-     bool_val (case (truth_ik (taeval \<kappa> a \<sigma>), truth_ik (taeval \<kappa> b \<sigma>)) of
+text \<open>
+  Evaluation consults the other analyses, as Goblint's \<^verbatim>\<open>base\<close> does
+  (\<^verbatim>\<open>eval_rv_ask_evalint\<close> in \<^verbatim>\<open>src/analyses/base.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>): every
+  operand that is not a constant is asked about through the channel \<open>ch\<close>, and its
+  answer replaces the value. Since this analysis answers the query too, the answer
+  already includes its own evaluation, and nothing is evaluated twice. \<open>taeval\<close> asks
+  about the operands but not about the expression itself, which is how the analysis
+  answers a query without asking it back; \<open>taeval_ask\<close> also asks about the
+  expression. An answer that claims nothing, such as the one a query cycle gets,
+  falls back to the analysis's own evaluation, where Goblint takes the kind's top.
+  Under the channel that answers every query with \<open>\<top>\<close>, both are the plain
+  evaluation.
+\<close>
+
+fun taeval :: "kenv \<Rightarrow> (texp gquery \<Rightarrow> answer) \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a"
+  and taeval_ask :: "kenv \<Rightarrow> (texp gquery \<Rightarrow> answer) \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
+  "taeval \<kappa> ch (TN ik n) \<sigma> = of_int_ik ik n"
+| "taeval \<kappa> ch (TVar ik v) \<sigma> = read_var \<kappa> \<sigma> v"
+| "taeval \<kappa> ch (TArith ik op a b) \<sigma> = arith_ik ik op (taeval_ask \<kappa> ch a \<sigma>) (taeval_ask \<kappa> ch b \<sigma>)"
+| "taeval \<kappa> ch (TCast ik a) \<sigma> = cast_ik (src_kind \<kappa> a) ik (taeval_ask \<kappa> ch a \<sigma>)"
+| "taeval \<kappa> ch (TCmp op a b) \<sigma> =
+     bool_val (cmp_ik op (taeval_ask \<kappa> ch a \<sigma>) (taeval_ask \<kappa> ch b \<sigma>))"
+| "taeval \<kappa> ch (TNot a) \<sigma> = bool_val (map_option HOL.Not (truth_ik (taeval_ask \<kappa> ch a \<sigma>)))"
+| "taeval \<kappa> ch (TAnd a b) \<sigma> =
+     bool_val (case (truth_ik (taeval_ask \<kappa> ch a \<sigma>), truth_ik (taeval_ask \<kappa> ch b \<sigma>)) of
                  (Some False, _) \<Rightarrow> Some False | (_, Some False) \<Rightarrow> Some False
                | (Some True, Some True) \<Rightarrow> Some True | _ \<Rightarrow> None)"
-| "taeval \<kappa> (TOr a b) \<sigma> =
-     bool_val (case (truth_ik (taeval \<kappa> a \<sigma>), truth_ik (taeval \<kappa> b \<sigma>)) of
+| "taeval \<kappa> ch (TOr a b) \<sigma> =
+     bool_val (case (truth_ik (taeval_ask \<kappa> ch a \<sigma>), truth_ik (taeval_ask \<kappa> ch b \<sigma>)) of
                  (Some True, _) \<Rightarrow> Some True | (_, Some True) \<Rightarrow> Some True
                | (Some False, Some False) \<Rightarrow> Some False | _ \<Rightarrow> None)"
+| "taeval_ask \<kappa> ch e \<sigma> =
+     (case e of TN ik n \<Rightarrow> of_int_ik ik n
+      | _ \<Rightarrow> (case ch (EvalInt e) of QTop \<Rightarrow> taeval \<kappa> ch e \<sigma> | q \<Rightarrow> of_answer_ik (src_kind \<kappa> e) q))"
+
+lemma taeval_ask_of_sound:
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds teval ch t"
+    and "teval e t \<in> \<gamma> (taeval \<kappa> ch e \<sigma>)"
+  shows "teval e t \<in> \<gamma> (taeval_ask \<kappa> ch e \<sigma>)"
+proof -
+  have ans: "teval e t \<in> gamma_answer (ch (EvalInt e))"
+    using geval_query.channel_holdsD[OF assms(2), of "EvalInt e"] by simp
+  have rng: "\<And>k. src_kind \<kappa> e = Some k \<Longrightarrow> teval e t \<in> ik_range k"
+    using src_kind_sound[OF gamma_tabsD(1)[OF assms(1)]] .
+  show ?thesis
+    using assms(3) of_answer_ik_sound[OF rng ans]
+    by (cases e; cases "ch (EvalInt e)") auto
+qed
 
 theorem taeval_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
-  shows "teval e t \<in> \<gamma> (taeval \<kappa> e \<sigma>)"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds teval ch t"
+  shows "teval e t \<in> \<gamma> (taeval \<kappa> ch e \<sigma>)"
 proof (induction e)
   case (TN ik n) show ?case by (simp add: of_int_ik_sound)
 next
-  case (TVar ik v) show ?case by (simp add: read_var_sound[OF assms])
+  case (TVar ik v) show ?case by (simp add: read_var_sound[OF assms(1)])
 next
-  case (TArith ik op a b) then show ?case by (simp add: arith_ik_sound)
+  case (TArith ik op a b) then show ?case
+    using taeval_ask_of_sound[OF assms] by (simp add: arith_ik_sound)
 next
   case (TCast ik a)
   have "teval a t \<in> ik_range k" if "src_kind \<kappa> a = Some k" for k
-    using src_kind_sound[OF gamma_tabsD(1)[OF assms] that] .
-  with TCast show ?case by (simp add: cast_ik_sound)
+    using src_kind_sound[OF gamma_tabsD(1)[OF assms(1)] that] .
+  with TCast taeval_ask_of_sound[OF assms] show ?case by (simp add: cast_ik_sound)
 next
   case (TCmp op a b) then show ?case
-    by (simp add: bool_val_sound cmp_ik_sound)
+    using taeval_ask_of_sound[OF assms] by (simp add: bool_val_sound cmp_ik_sound)
 next
   case (TNot a)
+  have a: "teval a t \<in> \<gamma> (taeval_ask \<kappa> ch a \<sigma>)"
+    by (rule taeval_ask_of_sound[OF assms TNot])
   have "(if \<not> truthy (teval a t) then 1 else 0)
-      \<in> \<gamma> (bool_val (map_option HOL.Not (truth_ik (taeval \<kappa> a \<sigma>))) :: 'a)"
-    by (rule bool_val_sound) (use TNot truth_ik_sound in auto)
+      \<in> \<gamma> (bool_val (map_option HOL.Not (truth_ik (taeval_ask \<kappa> ch a \<sigma>))) :: 'a)"
+    by (rule bool_val_sound) (use a truth_ik_sound in auto)
   moreover have "teval (TNot a) t = (if \<not> truthy (teval a t) then 1 else 0)"
     by simp
   ultimately show ?case by (simp only: taeval.simps)
 next
   case (TAnd a b)
+  have a: "teval a t \<in> \<gamma> (taeval_ask \<kappa> ch a \<sigma>)" and b: "teval b t \<in> \<gamma> (taeval_ask \<kappa> ch b \<sigma>)"
+    using taeval_ask_of_sound[OF assms] TAnd by blast+
   show ?case
     unfolding teval.simps taeval.simps
     by (rule bool_val_sound)
-       (use TAnd truth_ik_sound in \<open>auto split: option.splits bool.splits\<close>)
+       (use a b truth_ik_sound in \<open>auto split: option.splits bool.splits\<close>)
 next
   case (TOr a b)
+  have a: "teval a t \<in> \<gamma> (taeval_ask \<kappa> ch a \<sigma>)" and b: "teval b t \<in> \<gamma> (taeval_ask \<kappa> ch b \<sigma>)"
+    using taeval_ask_of_sound[OF assms] TOr by blast+
   show ?case
     unfolding teval.simps taeval.simps
     by (rule bool_val_sound)
-       (use TOr truth_ik_sound in \<open>auto split: option.splits bool.splits\<close>)
+       (use a b truth_ik_sound in \<open>auto split: option.splits bool.splits\<close>)
 qed
+
+corollary taeval_ask_sound:
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds teval ch t"
+  shows "teval e t \<in> \<gamma> (taeval_ask \<kappa> ch e \<sigma>)"
+  by (rule taeval_ask_of_sound[OF assms taeval_sound[OF assms]])
 
 end

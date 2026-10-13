@@ -22,7 +22,7 @@ subsection \<open>Verdicts\<close>
 definition tclassify :: "kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs toplift \<Rightarrow> check_result" where
   "tclassify \<kappa> c d =
      (case d of TTop \<Rightarrow> Check_Unknown
-      | TL \<sigma> \<Rightarrow> (case truth_ik (taeval \<kappa> c \<sigma>) of
+      | TL \<sigma> \<Rightarrow> (case truth_ik (taeval \<kappa> (\<lambda>_. \<top>) c \<sigma>) of
                   Some True \<Rightarrow> Check_Proved
                 | Some False \<Rightarrow> Check_Refuted
                 | None \<Rightarrow> Check_Unknown))"
@@ -33,10 +33,10 @@ lemma tclassify_sound:
     and tclassify_refuted: "tclassify \<kappa> c d = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
   have truth: "truthy (teval c s) = b"
-    if "d = TL \<sigma>" "truth_ik (taeval \<kappa> c \<sigma>) = Some b" for \<sigma> b
+    if "d = TL \<sigma>" "truth_ik (taeval \<kappa> (\<lambda>_. \<top>) c \<sigma>) = Some b" for \<sigma> b
   proof -
     from s that(1) have "s \<in> gamma_tabs \<kappa> \<sigma>" by simp
-    then show ?thesis by (rule truth_ik_sound[OF that(2) taeval_sound])
+    then show ?thesis by (rule truth_ik_sound[OF that(2) taeval_sound]) simp
   qed
   show "tclassify \<kappa> c d = Check_Proved \<Longrightarrow> truthy (teval c s)"
     using truth by (auto simp: tclassify_def split: toplift.splits option.splits bool.splits)

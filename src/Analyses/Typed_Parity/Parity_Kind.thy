@@ -97,6 +97,12 @@ definition raw_aop_ik_parity :: "aop \<Rightarrow> parity \<Rightarrow> parity \
 definition fits_ik_parity :: "ikind \<Rightarrow> parity \<Rightarrow> bool" where
   "fits_ik_parity k a \<longleftrightarrow> a = PBot"
 
+definition answer_ik_parity :: "parity \<Rightarrow> answer" where
+  "answer_ik_parity a = answer_with (int_parity_update (\<lambda>_. a))"
+
+definition of_answer_ik_parity :: "ikind option \<Rightarrow> answer \<Rightarrow> parity" where
+  "of_answer_ik_parity sk q = (case q of QBot \<Rightarrow> \<bottom> | QTop \<Rightarrow> \<top> | QLifted d \<Rightarrow> int_parity d)"
+
 instance proof
   fix n m :: int and k :: ikind and a b :: parity and op :: aop and c :: cop and r :: bool
   show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: parity)"
@@ -124,6 +130,12 @@ instance proof
     by (simp add: raw_aop_ik_parity_def parity_aop_sound)
   show "fits_ik k a \<Longrightarrow> n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> ik_range k"
     by (simp add: fits_ik_parity_def)
+  show "n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> gamma_answer (answer_ik a)"
+    by (simp add: answer_ik_parity_def gamma_int_dom_def top_int_dom_ext_def gamma_sign_top
+        gamma_parity_top top_ivl_def gamma_ivl_top)
+  show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: parity)" for sk q
+    by (cases q) (simp_all add: of_answer_ik_parity_def gamma_int_dom_def gamma_sign_top gamma_parity_top)
 qed
 
 end

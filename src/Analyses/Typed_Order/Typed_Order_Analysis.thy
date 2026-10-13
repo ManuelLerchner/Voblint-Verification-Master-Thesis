@@ -161,6 +161,26 @@ lemma ord_classify_sound:
   by (induction c d rule: ord_classify.induct;
       fastforce split: option.splits bool.splits if_splits)+
 
+subsection \<open>The query\<close>
+
+text \<open>
+  The component answers \<open>EvalInt\<close> for a comparison between two variables from its own
+  facts, as Goblint's \<^verbatim>\<open>varEq\<close> and \<^verbatim>\<open>expRelation\<close> do
+  (\<^verbatim>\<open>varEq.ml\<close> line 595, \<^verbatim>\<open>expRelation.ml\<close> lines 53 to 70 at \<^verbatim>\<open>0dc12d355\<close>):
+  a decided comparison is the exact truth value, anything else is \<open>\<top>\<close>. It asks
+  nobody, as those analyses do not.
+\<close>
+
+fun ord_query :: "texp gchannel \<Rightarrow> var_id order_rel lifted \<Rightarrow> texp gchannel" where
+  "ord_query ch (Lifted d) (EvalInt (TCmp c (TVar k x) (TVar k' y))) =
+     (case ord_decide c d x y of Some b \<Rightarrow> answer_of_int (if b then 1 else 0) | None \<Rightarrow> \<top>)"
+| "ord_query ch d q = \<top>"
+
+lemma ord_query_sound:
+  "s \<in> gamma_ord d \<Longrightarrow> geval_holds teval q (ord_query ch (Lifted d) q) s"
+  using ord_decide_sound
+  by (cases "(ch, Lifted d, q)" rule: ord_query.cases) (auto split: option.splits)
+
 subsection \<open>The component\<close>
 
 text \<open>
@@ -172,7 +192,7 @@ text \<open>
 
 definition ord_spec :: "(var_id, texp, var_id order_rel lifted) glocal_spec" where
   "ord_spec =
-     \<lparr> ls_query = query_unknown,
+     \<lparr> ls_query = ord_query,
        ls_skip = (\<lambda>ch d. d),
        ls_assign = (\<lambda>ch x e. map_lift (ord_forget x)),
        ls_special = (\<lambda>ch sc x. map_lift (ord_forget x)),
@@ -206,7 +226,7 @@ proof -
   proof (rule T.sound_local_specI)
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_ord_lift x \<subseteq> gamma_ord_lift y" by (rule gamma_ord_lift_mono)
     show "T.gsound_query gamma_ord_lift (ls_query ord_spec)"
-      by (simp add: ord_spec_def T.sound_query_unknown)
+      by (auto simp: ord_spec_def T.gsound_query_def ord_query_sound dest!: L)
     show "T.gsound_skip gamma_ord_lift (ls_skip ord_spec)"
       by (simp add: ord_spec_def T.gsound_skip_def)
     show "T.gsound_body gamma_ord_lift (ls_body ord_spec)"

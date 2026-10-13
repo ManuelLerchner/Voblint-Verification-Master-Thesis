@@ -12,8 +12,15 @@ text \<open>
   componentwise pair carrier \<^typ>\<open>('a, 'b) analysis_product\<close>. Each component keeps its
   own reachability flag, so a component's intermediate return state, which has no
   meaning of its own, is never collapsed by the other. The product describes the stores
-  both components admit. Components do not query each other: the product answers every
-  query with top, and each component receives the incoming channel.
+  both components admit.
+
+  The product answers a query with the meet of its components' answers, as
+  \<^verbatim>\<open>MCP.query'\<close> does; a component that knows nothing answers \<open>\<top>\<close>, the neutral
+  element. Each operation passes its channel on to both components unchanged. When the
+  product is closed into a specification (\<^const>\<open>dg_spec_of\<close>), that channel is
+  \<^const>\<open>ask_rec\<close> over the product's own handler, so each component's transfer asks
+  both components, as a Goblint transfer does through \<^verbatim>\<open>man.ask\<close>, and query cycles
+  answer \<open>\<top>\<close>.
 \<close>
 
 type_synonym ('a, 'b) pstate = "('a lifted, 'b lifted) analysis_product lifted"
@@ -49,7 +56,9 @@ definition spec_product ::
     "('vr, 'e, 'a lifted) glocal_spec \<Rightarrow> ('vr, 'e, 'b lifted) glocal_spec
        \<Rightarrow> ('vr, 'e, ('a, 'b) pstate) glocal_spec" where
   "spec_product c1 c2 =
-     \<lparr> ls_query = query_unknown,
+     \<lparr> ls_query = (\<lambda>ch d q. case d of
+           Lifted (Product a b) \<Rightarrow> ls_query c1 ch a q \<sqinter> ls_query c2 ch b q
+         | Bot \<Rightarrow> \<top>),
        ls_skip = (\<lambda>ch. pmap (ls_skip c1 ch) (ls_skip c2 ch)),
        ls_assign = (\<lambda>ch x e. pmap (ls_assign c1 ch x e) (ls_assign c2 ch x e)),
        ls_special = (\<lambda>ch sc x. pmap (ls_special c1 ch sc x) (ls_special c2 ch sc x)),
@@ -92,7 +101,8 @@ proof (rule sound_local_specI)
       using m1 m2 by (fastforce simp: pgamma_def split: lifted.splits analysis_product.splits)
   qed
   show "gsound_query (pgamma gm1 gm2) (ls_query (spec_product c1 c2))"
-    by (simp add: spec_product_def sound_query_unknown)
+    using sound_local_spec_queryD[OF s1] sound_local_spec_queryD[OF s2]
+    by (fastforce simp: gsound_query_def spec_product_def geval_query.inf_sound dest!: L)
   show "gsound_skip (pgamma gm1 gm2) (ls_skip (spec_product c1 c2))"
     using sound_local_spec_skipD[OF s1] sound_local_spec_skipD[OF s2]
     by (fastforce simp: gsound_skip_def spec_product_def dest!: L)

@@ -323,6 +323,13 @@ definition raw_aop_ik_ivl :: "aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarr
 
 definition fits_ik_ivl :: "ikind \<Rightarrow> ivl \<Rightarrow> bool" where "fits_ik_ivl k a \<longleftrightarrow> a \<le> ik_ivl k"
 
+definition answer_ik_ivl :: "ivl \<Rightarrow> answer" where "answer_ik_ivl = answer_of_ivl"
+
+definition of_answer_ik_ivl :: "ikind option \<Rightarrow> answer \<Rightarrow> ivl" where
+  "of_answer_ik_ivl sk q =
+     (let r = (case sk of Some k \<Rightarrow> ik_ivl k | None \<Rightarrow> \<top>)
+      in case q of QBot \<Rightarrow> \<bottom> | QTop \<Rightarrow> r | QLifted d \<Rightarrow> int_ivl d \<sqinter> r)"
+
 instance proof
   fix n m :: int and k :: ikind and a b :: ivl and op :: aop and c :: cop and r :: bool
   show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: ivl)"
@@ -348,6 +355,13 @@ instance proof
     by (simp add: raw_aop_ik_ivl_def ivl_aop_sound)
   show "fits_ik k a \<Longrightarrow> n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> ik_range k"
     using gamma_ivl_mono[of a "ik_ivl k"] by (auto simp: fits_ik_ivl_def simp del: ik_range_iff)
+  show "n \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> gamma_answer (answer_ik a)"
+    by (simp add: answer_ik_ivl_def)
+  show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: ivl)" for sk q
+    by (cases sk; cases q)
+       (auto simp: of_answer_ik_ivl_def gamma_int_dom_def meet_ivl_gamma top_ivl_def gamma_ivl_top
+         simp del: ik_range_iff)
 qed
 
 end
@@ -356,6 +370,6 @@ text \<open>\<^class>\<open>kind_int_domain\<close> extends \<^class>\<open>nume
   typed analysis carries the concretization in its class dictionary. It is never
   called, and its equation is not executable at \<^typ>\<open>int\<close>.\<close>
 
-declare [[code abort: gamma_ivl]]
+declare [[code abort: gamma_ivl]] 
 
 end
