@@ -10,3 +10,4 @@ session Voblint_Typed_CFG in "." = "Voblint_Compile" +
   theories
     Typed_CFG
     Typed_Invariants
+    Typed_Return_Slot
