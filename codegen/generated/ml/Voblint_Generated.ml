@@ -3508,8 +3508,37 @@ let rec sign_aop x0 a b = match x0, a, b with AAdd, a, b -> plus_sign a b
 
 let rec raw_aop_ik_sign x = sign_aop x;;
 
+let rec sign_excl a b = match a, b with SNonNeg, SZero -> SPos
+                    | SNonPos, SZero -> SNeg
+                    | SZero, SZero -> SBot
+                    | SBot, b -> SBot
+                    | SNeg, b -> SNeg
+                    | SNonPos, SBot -> SNonPos
+                    | SNonPos, SNeg -> SNonPos
+                    | SNonPos, SNonPos -> SNonPos
+                    | SNonPos, SNonNeg -> SNonPos
+                    | SNonPos, SPos -> SNonPos
+                    | SNonPos, STop -> SNonPos
+                    | SZero, SBot -> SZero
+                    | SZero, SNeg -> SZero
+                    | SZero, SNonPos -> SZero
+                    | SZero, SNonNeg -> SZero
+                    | SZero, SPos -> SZero
+                    | SZero, STop -> SZero
+                    | SPos, b -> SPos
+                    | STop, b -> STop
+                    | a, SBot -> a
+                    | a, SNeg -> a
+                    | a, SNonPos -> a
+                    | a, SNonNeg -> a
+                    | a, SPos -> a
+                    | a, STop -> a;;
+
 let rec refine_ik_sign
-  c a b = (if equal_cop c CEq then (inf_sign a b, inf_sign a b) else (a, b));;
+  c a b =
+    (if equal_cop c CEq then (inf_sign a b, inf_sign a b)
+      else (if equal_cop c CNe then (sign_excl a b, sign_excl b a)
+             else (a, b)));;
 
 let rec sign_of_int
   n = (if less_int n zero_inta then SNeg
@@ -4476,12 +4505,26 @@ let rec ivl_le_bounds
 
 let rec swap p = (snd p, fst p);;
 
+let rec ivl_excl
+  a x1 = match a, x1 with
+    Ivl (l, u), Ivl (Fin x, Fin y) ->
+      (if equal_inta x y
+        then Ivl ((if equal_eint l (Fin x) then Fin (plus_inta x one_inta)
+                    else l),
+                   (if equal_eint u (Fin x) then Fin (minus_inta x one_inta)
+                     else u))
+        else Ivl (l, u))
+    | a, Ivl (MinInf, va) -> a
+    | a, Ivl (PlusInf, va) -> a
+    | a, Ivl (v, MinInf) -> a
+    | a, Ivl (v, PlusInf) -> a;;
+
 let rec ivl_refine x0 a b = match x0, a, b with CLt, a, b -> ivl_lt_bounds a b
                      | CLe, a, b -> ivl_le_bounds a b
                      | CGt, a, b -> swap (ivl_lt_bounds b a)
                      | CGe, a, b -> swap (ivl_le_bounds b a)
                      | CEq, a, b -> (inf_ivl a b, inf_ivl a b)
-                     | CNe, a, b -> (a, b);;
+                     | CNe, a, b -> (ivl_excl a b, ivl_excl b a);;
 
 let rec refine_ik_ivl x = ivl_refine x;;
 

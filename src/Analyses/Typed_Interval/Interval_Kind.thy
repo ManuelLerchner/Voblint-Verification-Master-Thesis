@@ -256,19 +256,36 @@ proof -
     by (auto simp: ivl_lt_bounds_def less_eq_eint_def intro!: meet_ivl_gamma)
 qed
 
+text \<open>
+  A disequality with a known constant \<open>x\<close> moves a bound of the other side that equals
+  \<open>x\<close> past it, as \<^verbatim>\<open>inv_bin_int\<close> excludes the interval bounds for \<^verbatim>\<open>Ne\<close>
+  (\<^verbatim>\<open>baseInvariant.ml\<close>, lines 395--416 at \<^verbatim>\<open>0dc12d355\<close>); a singleton equal to
+  \<open>x\<close> becomes empty.
+\<close>
+
+fun ivl_excl :: "ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "ivl_excl (Ivl l u) (Ivl (Fin x) (Fin y)) =
+     (if x = y then Ivl (if l = Fin x then Fin (x + 1) else l) (if u = Fin x then Fin (x - 1) else u)
+      else Ivl l u)"
+| "ivl_excl a b = a"
+
+lemma ivl_excl_sound:
+  "m \<noteq> n \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> m \<in> gamma_ivl (ivl_excl a b)"
+  by (induction a b rule: ivl_excl.induct) (auto simp: less_eq_eint_def)
+
 fun ivl_refine :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl \<times> ivl" where
   "ivl_refine CLt a b = ivl_lt_bounds a b"
 | "ivl_refine CLe a b = ivl_le_bounds a b"
 | "ivl_refine CGt a b = prod.swap (ivl_lt_bounds b a)"
 | "ivl_refine CGe a b = prod.swap (ivl_le_bounds b a)"
 | "ivl_refine CEq a b = (a \<sqinter> b, a \<sqinter> b)"
-| "ivl_refine CNe a b = (a, b)"
+| "ivl_refine CNe a b = (ivl_excl a b, ivl_excl b a)"
 
 lemma ivl_refine_sound:
   "cop_eval c m n \<Longrightarrow> m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b
      \<Longrightarrow> m \<in> gamma_ivl (fst (ivl_refine c a b)) \<and> n \<in> gamma_ivl (snd (ivl_refine c a b))"
   by (cases c)
-     (auto dest: ivl_le_bounds_sound ivl_lt_bounds_sound intro: meet_ivl_gamma)
+     (auto dest: ivl_le_bounds_sound ivl_lt_bounds_sound intro: meet_ivl_gamma ivl_excl_sound)
 
 instantiation ivl :: kind_int_domain
 begin

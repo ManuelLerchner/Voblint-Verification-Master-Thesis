@@ -91,8 +91,23 @@ definition cmp_ik_sign :: "cop \<Rightarrow> sign \<Rightarrow> sign \<Rightarro
 definition meet_ik_sign :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
   "meet_ik_sign a b = a \<sqinter> b"
 
+text \<open>A disequality with zero excludes zero from the other side, the sign counterpart
+  of the bound exclusion of \<^verbatim>\<open>inv_bin_int\<close> for \<^verbatim>\<open>Ne\<close>.\<close>
+
+fun sign_excl :: "sign \<Rightarrow> sign \<Rightarrow> sign" where
+  "sign_excl SNonNeg SZero = SPos"
+| "sign_excl SNonPos SZero = SNeg"
+| "sign_excl SZero SZero = SBot"
+| "sign_excl a b = a"
+
+lemma sign_excl_sound:
+  "m \<noteq> n \<Longrightarrow> m \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> m \<in> gamma_sign (sign_excl a b)"
+  by (induction a b rule: sign_excl.induct) auto
+
 definition refine_ik_sign :: "cop \<Rightarrow> sign \<Rightarrow> sign \<Rightarrow> sign \<times> sign" where
-  "refine_ik_sign c a b = (if c = CEq then (a \<sqinter> b, a \<sqinter> b) else (a, b))"
+  "refine_ik_sign c a b =
+     (if c = CEq then (a \<sqinter> b, a \<sqinter> b)
+      else if c = CNe then (sign_excl a b, sign_excl b a) else (a, b))"
 
 definition raw_aop_ik_sign :: "aop \<Rightarrow> sign \<Rightarrow> sign \<Rightarrow> sign" where
   "raw_aop_ik_sign = sign_aop"
@@ -127,7 +142,7 @@ instance proof
   show "cop_eval c m n \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
       \<Longrightarrow> m \<in> numeric_domain_class.gamma (fst (refine_ik c a b))
         \<and> n \<in> numeric_domain_class.gamma (snd (refine_ik c a b))"
-    by (cases c) (simp_all add: refine_ik_sign_def)
+    by (cases c) (auto simp: refine_ik_sign_def intro: sign_excl_sound)
   show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
       \<Longrightarrow> aop_eval op m n \<in> numeric_domain_class.gamma (raw_aop_ik op a b)"
     by (simp add: raw_aop_ik_sign_def sign_aop_sound)
