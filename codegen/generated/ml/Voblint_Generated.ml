@@ -9292,7 +9292,7 @@ let rec tassign_st _A
     default_st_set equal_var_id (bot_kd _A.ik_domain_kind_int_domain) st
       (location_of tglobal x)
       (KD (kappa x,
-            cast_ik _A None (kappa x)
+            cast_ik _A (src_kind kappa e) (kappa x)
               (taeval_ask _A kappa ch e
                 (default_st_to_fun equal_var_id
                   (bot_kd _A.ik_domain_kind_int_domain) tglobal st))));;
@@ -9358,7 +9358,7 @@ let rec tenter_st _A
                 (bot_kd _A.ik_domain_kind_int_domain) tglobal ps
                 (map (fun (x, y) ->
                        KD (kappa x,
-                            cast_ik _A None (kappa x)
+                            cast_ik _A (src_kind kappa y) (kappa x)
                               (taeval_ask _A kappa ch y
                                 (default_st_to_fun equal_var_id
                                   (bot_kd _A.ik_domain_kind_int_domain) tglobal

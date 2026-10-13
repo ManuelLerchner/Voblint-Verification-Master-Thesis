@@ -76,7 +76,7 @@ subsection \<open>The operations on the carrier\<close>
 text \<open>Each writes the entries its counterpart changes and reads the represented function.\<close>
 
 definition tassign_st :: "var_id \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
-  "tassign_st x e st = st\<langle>tloc x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e (trd st)))\<rangle>"
+  "tassign_st x e st = st\<langle>tloc x := KD (\<kappa> x) (cast_ik (src_kind \<kappa> e) (\<kappa> x) (taeval_ask \<kappa> ch e (trd st)))\<rangle>"
 
 definition tspecial_st :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
   "tspecial_st sc x st = st\<langle>tloc x := KD (\<kappa> x) (special_val \<kappa> ch sc x (trd st))\<rangle>"
@@ -95,7 +95,7 @@ definition tenter_st :: "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::k
   "tenter_st ps es st =
      (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
       then TL (bind_formals_default_st tglobal ps
-                 (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e (trd st)))) ps es)
+                 (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e (trd st)))) ps es)
                  (enter_frame_D_default_st KTop st))
       else TTop)"
 

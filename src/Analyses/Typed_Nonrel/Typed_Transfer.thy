@@ -45,7 +45,7 @@ context
 begin
 
 definition tassign :: "var_id \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
-  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>)))"
+  "tassign x e \<sigma> = \<sigma>(x := KD (\<kappa> x) (cast_ik (src_kind \<kappa> e) (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>)))"
 
 definition special_val :: "texp gspecial_call \<Rightarrow> var_id \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "special_val sc x \<sigma> =
@@ -136,7 +136,7 @@ definition tenter_state ::
     "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs toplift" where
   "tenter_state ps es \<sigma> =
      (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
-      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
+      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
              (tenter_frame \<sigma>))
       else TTop)"
 
@@ -166,8 +166,8 @@ lemma tassign_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "t(x := ik_norm (\<kappa> x) (teval e t)) \<in> gamma_tabs \<kappa> (tassign x e \<sigma>)"
 proof -
-  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik None (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>))"
-    by (rule cast_ik_None_sound[OF taeval_ask_sound[OF assms]])
+  have "ik_norm (\<kappa> x) (teval e t) \<in> numeric_domain_class.gamma (cast_ik (src_kind \<kappa> e) (\<kappa> x) (taeval_ask \<kappa> ch e \<sigma>))"
+    by (rule cast_ik_src_sound[OF gamma_tabsD(1)[OF assms(1)] taeval_ask_sound[OF assms]])
   then show ?thesis unfolding tassign_def by (simp add: gamma_tabs_upd[OF assms(1)])
 qed
 
@@ -396,7 +396,7 @@ lemma bind_formals_fit:
   shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)
     \<and> (\<forall>y. bind_formals ps (map (\<lambda>e. teval e t) es) s y
           \<in> numeric_domain_class.gamma
-              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
+              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
                  \<sigma>' y))"
   using assms(1,4,5)
 proof (induction ps arbitrary: es s \<sigma>')
@@ -412,13 +412,16 @@ next
       and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
     have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF t] .
     have rng: "teval e t \<in> ik_range (\<kappa> p)" by (rule arg_fits_range[OF fit ty])
-    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))"
-      using cast_ik_None_sound[OF taeval_ask_sound[OF t ch], of "\<kappa> p" e] rng by simp
+    have cast: "teval e t \<in> numeric_domain_class.gamma (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))"
+      using cast_ik_src_sound[OF ty taeval_ask_sound[OF t ch, of e], of "\<kappa> p"]
+      by (simp only: ik_norm_id[OF rng])
+    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))"
+      using cast rng by simp
     have "p \<noteq> ReturnVar" using fit by (simp add: arg_fits_def)
     then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng
       by (rule_tac tstyped_upd) auto
     have gu: "\<And>y. (s(p := teval e t)) y \<in> numeric_domain_class.gamma
-        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))) y)"
+        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>)))) y)"
       using val Cons.prems(3) by simp
     note IH = Cons.IH[OF rest tyu gu]
     show ?thesis unfolding \<open>es = e # es'\<close> using IH by simp
@@ -438,7 +441,7 @@ proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
   note fit = bind_formals_fit[OF True assms tstyped_enter_state[OF ty] frame]
   have "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
       \<in> gamma_tabs \<kappa> (bind_formals ps
-           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik None (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
+           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (src_kind \<kappa> e) (\<kappa> p) (taeval_ask \<kappa> ch e \<sigma>))) ps es)
            (tenter_frame \<sigma>))"
     using fit by (intro gamma_tabsI) blast+
   with True show ?thesis by (simp add: tenter_state_def)

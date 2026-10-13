@@ -222,6 +222,14 @@ lemma src_kind_sound:
 lemma cast_ik_None_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik None k a)"
   by (rule cast_ik_sound) simp_all
 
+text \<open>A conversion may name the kind of the expression it converts, as Goblint's
+  \<^verbatim>\<open>cast_to ?from_ik\<close> does: a typed store gives that expression a value in its kind's range.\<close>
+
+lemma cast_ik_src_sound:
+  assumes "tstyped \<kappa> t" and "teval e t \<in> \<gamma> a"
+  shows "ik_norm k (teval e t) \<in> \<gamma> (cast_ik (src_kind \<kappa> e) k a)"
+  using assms(2) src_kind_sound[OF assms(1)] by (intro cast_ik_sound) auto
+
 text \<open>
   Evaluation consults the other analyses, as Goblint's \<^verbatim>\<open>base\<close> does
   (\<^verbatim>\<open>eval_rv_ask_evalint\<close> in \<^verbatim>\<open>src/analyses/base.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>): every
