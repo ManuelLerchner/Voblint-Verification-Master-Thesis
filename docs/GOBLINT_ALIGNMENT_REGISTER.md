@@ -227,9 +227,32 @@ interval (`refine_with_interval`) and then interval by congruence, which is Gobl
 `once` mode rather than its default `never`; the mode is not configurable yet.
 Goblint's `Interval.refine_with_congruence` keeps an end that sits at the kind's limit;
 `refine_ivl_with_congruence` rounds every finite end. Widening, narrowing and join are
-componentwise without refinement, so the narrowing laws hold. A comparison takes the
+componentwise without refinement, so the narrowing laws hold; Goblint's `narrow` does
+refine (`map2` without `~norefine`, lines 425–426), while its `join` and `widen` do not
+(lines 416–423). A comparison takes the
 interval's answer and falls back to the congruence's. `Typed_Int_Regression.thy` pins
 the gain: the step-3 loop that Congruence alone loses to top ends at exactly `99`.
+
+**Integer interface.** The class `kind_int_domain`
+(`src/Analyses/Typed_Nonrel/Typed_Nonrel.thy`) corresponds to the part of `IntDomain.S`
+(`intDomain_intf.ml`) that VIMP's expressions use: `top_ik` is `top_of`, `of_int_ik` is
+`of_int`, `cast_ik` is `cast_to ?from_ik` without a `castkind`, `arith_ik` is the
+arithmetic at a kind, and `cmp_ik` answers comparisons as `lt`…`ne` do. Comparison and
+`meet_ik` take no kind, and `bool_val` builds truth values at `I32` only. `answer_ik`
+replaces `to_int`, `minimal`/`maximal` and the exclusion lists by one `answer` record.
+`empty_ik` tests emptiness against the kind's range. Absent: `bot_of`, `is_top_of`,
+`of_interval`, `of_congruence`, `starting`/`ending`, `neg`, the bit operations and
+shifts (VIMP has neither), `invariant` (Goblint's witness output, not guard narrowing),
+and `project`. Guard narrowing is `refine_ik`, which corresponds to `inv_bin_int`
+in `baseInvariant.ml`, not to `invariant`. Its `!=` case is weaker: Goblint excludes a
+known singleton through the exclusion-list components (`baseInvariant.ml`, lines
+395–416), while the typed Interval leaves both operands unchanged (`ivl_refine CNe`).
+The interface returns no overflow information: Goblint's `SOverflow` operations return
+`overflow_info`, and `check_ov` (`intDomTuple.ml`, lines 70–78) emits a signed-overflow
+warning when every overflow-tracking component reports one. The typed semantics wraps
+signed kinds, a signed overflow sends the typed Interval to the kind's range as
+`assume_top` does, and no warning is produced. `raw_aop_ik` and `fits_ik` stand in for
+`no_ov` inside `int_tuple`. Source-checked 2026-10-13 at `0dc12d355`.
 
 **Congruence.** `int/congruenceDomain.ml` wraps a constant on `normalize` and in
 `cast_to` (lines 27–45, 168–190); a non-constant class survives a cast only when the
