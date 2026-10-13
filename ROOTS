@@ -16,6 +16,7 @@ src/Analyses/Typed_Nonrel
 src/Analyses/Typed_Interval
 src/Analyses/Parity
 src/Analyses/Congruence
+src/Analyses/Typed_Congruence
 src/Analyses/Relational
 src/Analyses/Int
 src/Executable_Surface/CLI

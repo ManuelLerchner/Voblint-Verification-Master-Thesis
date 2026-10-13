@@ -1,8 +1,9 @@
 # Goblint-aligned typed analyzer: plan and reference
 
 Status: stages 0 to 4 landed on `feat/typed-ir` (typed Interval end to end, with
-backward refinement and Goblint's unsigned wrap); stage 5 in progress (typed
-Congruence).
+backward refinement and Goblint's unsigned wrap); stage 5 in progress: one generic
+typed pipeline (`Voblint_Typed_Nonrel`) with end-to-end theorems for every
+`kind_int_domain`, instantiated at Interval and Congruence; the Int product is next.
 
 Goal: Voblint becomes a verified, Goblint-style machine-integer analyzer. Typed
 expressions and static variable identities reach a typed CFG with no casts on
