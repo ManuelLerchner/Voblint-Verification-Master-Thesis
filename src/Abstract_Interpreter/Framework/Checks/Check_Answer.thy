@@ -20,9 +20,10 @@ definition bool_answer :: "bool option \<Rightarrow> answer" where
       | None \<Rightarrow> answer_of_ivl (Ivl (Fin 0) (Fin 1)))"
 
 lemma classify_answer_of_int:
-  "classify_answer (answer_of_int n) =
-     Decided (if n = 1 then Check_Proved else if n = 0 then Check_Refuted else Check_Unknown)"
-  using answer_const_of_int[of n] unfolding answer_of_int_def by simp
+  "classify_answer (answer_of_int 1) = Decided Check_Proved"
+  "classify_answer (answer_of_int 0) = Decided Check_Refuted"
+  using answer_const_of_int[of 1] answer_const_of_int[of 0]
+  by (simp_all add: answer_of_int_def int_dom_of_int_def del: answer_const.simps)
 
 lemma answer_const_bool_range: "answer_const (answer_of_ivl (Ivl (Fin 0) (Fin 1))) = None"
 proof -
@@ -40,7 +41,9 @@ lemma classify_bool_answer:
 proof (cases r)
   case None
   then show ?thesis
-    using answer_const_bool_range by (simp add: bool_answer_def answer_of_ivl_def)
+    using answer_const_bool_range
+    by (simp add: bool_answer_def answer_of_ivl_def top_int_dom_ext_def top_sign_def
+        top_parity_def less_eint_def less_eq_eint_def)
 qed (auto simp: bool_answer_def classify_answer_of_int)
 
 context sound_check_query
@@ -116,15 +119,27 @@ proof -
   have val: "(if truthy (ev c s) then 1 else 0) \<in> gamma_answer ?a"
     using holds truth by simp
   show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
-    using val
-    by (cases ?a rule: classify_answer.cases)
-       (auto simp: answer_check_def split: if_splits option.splits
-         dest!: gamma_int_dom_constant_subset)
+  proof -
+    assume "answer_check tx q c v = Check_Proved"
+    then have "answer_const ?a = Some 1 \<or> answer_nonzero ?a"
+      by (cases ?a rule: classify_answer.cases)
+         (auto simp: answer_check_def split: if_splits
+           simp del: answer_const.simps answer_nonzero.simps)
+    then show "truthy (ev c s)"
+    proof
+      assume "answer_const ?a = Some 1"
+      with val show ?thesis
+        by (cases ?a) (auto split: if_splits dest!: gamma_int_dom_constant_subset)
+    next
+      assume "answer_nonzero ?a"
+      from answer_nonzero_gamma[OF this val] show ?thesis by (simp split: if_splits)
+    qed
+  qed
   show "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
     using val
     by (cases ?a rule: classify_answer.cases)
        (auto simp: answer_check_def split: if_splits option.splits
-         dest!: gamma_int_dom_constant_subset)
+         simp del: answer_nonzero.simps dest!: gamma_int_dom_constant_subset)
 qed
 
 lemma answer_check_proved:

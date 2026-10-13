@@ -8655,6 +8655,17 @@ let rec verdict_report (_A1, _A2) (_C1, _C2) (_D1, _D2) _F _H
         place_rg place_inits pcfg pentry g p)
       classify;;
 
+let rec answer_nonzero
+  = function
+    QLifted d ->
+      equal_signa (int_sign d) SNeg ||
+        (equal_signa (int_sign d) SPos ||
+          (equal_paritya (int_parity d) POdd ||
+            (let Ivl (l, u) = int_ivl d in
+              less_eint (Fin zero_inta) l || less_eint u (Fin zero_inta))))
+    | QBot -> false
+    | QTop -> false;;
+
 let rec answer_const = function QLifted d -> int_dom_constant d
                        | QBot -> None
                        | QTop -> None;;
@@ -8662,13 +8673,15 @@ let rec answer_const = function QLifted d -> int_dom_constant d
 let rec classify_answer
   = function QBot -> Bot
     | QLifted v ->
-        (if equal_option equal_int (answer_const (QLifted v)) (Some one_inta)
+        (if equal_option equal_int (answer_const (QLifted v)) (Some one_inta) ||
+              answer_nonzero (QLifted v)
           then Lifted Check_Proved
           else (if equal_option equal_int (answer_const (QLifted v))
                      (Some zero_inta)
                  then Lifted Check_Refuted else Lifted Check_Unknown))
     | QTop ->
-        (if equal_option equal_int (answer_const QTop) (Some one_inta)
+        (if equal_option equal_int (answer_const QTop) (Some one_inta) ||
+              answer_nonzero QTop
           then Lifted Check_Proved
           else (if equal_option equal_int (answer_const QTop) (Some zero_inta)
                  then Lifted Check_Refuted else Lifted Check_Unknown));;

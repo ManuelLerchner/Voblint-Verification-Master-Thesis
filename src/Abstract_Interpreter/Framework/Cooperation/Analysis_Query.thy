@@ -136,6 +136,29 @@ lemma eval_holds_constD:
   using assms gamma_int_dom_constant_subset
   by (cases a rule: answer_const.cases) auto
 
+text \<open>An answer excludes zero when one of its components does.\<close>
+
+fun answer_nonzero :: "answer \<Rightarrow> bool" where
+  "answer_nonzero (QLifted d) =
+     (int_sign d = SNeg \<or> int_sign d = SPos \<or> int_parity d = POdd
+      \<or> (case int_ivl d of Ivl l u \<Rightarrow> Fin 0 < l \<or> u < Fin 0))"
+| "answer_nonzero _ = False"
+
+lemma answer_nonzero_gamma:
+  assumes "answer_nonzero a" and "n \<in> gamma_answer a"
+  shows "n \<noteq> 0"
+proof (cases a)
+  case (QLifted d)
+  obtain l u where i: "int_ivl d = Ivl l u" by (cases "int_ivl d")
+  have "n \<in> gamma_sign (int_sign d)" "n \<in> gamma_parity (int_parity d)"
+    and lu: "l \<le> Fin n" "Fin n \<le> u"
+    using assms(2) QLifted i by (simp_all add: gamma_int_dom_def)
+  moreover have "Fin 0 < l \<Longrightarrow> n \<noteq> 0" "u < Fin 0 \<Longrightarrow> n \<noteq> 0"
+    using lu by (auto dest: order.strict_trans2 order.strict_trans1)
+  ultimately show ?thesis
+    using assms(1) QLifted i by auto
+qed (use assms in simp_all)
+
 lemma answer_const_of_int [simp]: "answer_const (answer_of_int n) = Some n"
   by (simp add: answer_of_int_def int_dom_of_int_def int_dom_constant_def
       top_int_dom_ext_def)

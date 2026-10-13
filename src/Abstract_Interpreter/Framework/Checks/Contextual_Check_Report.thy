@@ -119,7 +119,7 @@ abbreviation check_query_of :: "exp \<Rightarrow> query" where
 fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
   "classify_answer QBot = Dead"
 | "classify_answer a =
-     (if answer_const a = Some 1 then Decided Check_Proved
+     (if answer_const a = Some 1 \<or> answer_nonzero a then Decided Check_Proved
       else if answer_const a = Some 0 then Decided Check_Refuted
       else Decided Check_Unknown)"
 
@@ -128,11 +128,21 @@ lemma classify_answer_proved:
     and "eval_holds (check_query_of c) a s"
   shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
 proof -
-  have "answer_const a = Some 1"
+  have "answer_const a = Some 1 \<or> answer_nonzero a"
     using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps)
-  from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp add: aval_check_truth_exp split: if_splits)
+      (auto split: option.splits if_splits simp del: answer_const.simps answer_nonzero.simps)
+  then show ?thesis
+  proof
+    assume "answer_const a = Some 1"
+    from eval_holds_constD[OF assms(2) this] show ?thesis
+      by (simp add: aval_check_truth_exp split: if_splits)
+  next
+    assume "answer_nonzero a"
+    moreover have "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s \<in> gamma_answer a"
+      using assms(2) by simp
+    ultimately have "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s \<noteq> 0" by (rule answer_nonzero_gamma)
+    then show ?thesis by (simp add: aval_check_truth_exp split: if_splits)
+  qed
 qed
 
 lemma classify_answer_refuted:
@@ -142,7 +152,7 @@ lemma classify_answer_refuted:
 proof -
   have "answer_const a = Some 0"
     using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps)
+      (auto split: option.splits if_splits simp del: answer_const.simps answer_nonzero.simps)
   from eval_holds_constD[OF assms(2) this] show ?thesis
     by (simp add: aval_check_truth_exp split: if_splits)
 qed
