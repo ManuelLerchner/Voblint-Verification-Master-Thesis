@@ -424,13 +424,11 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
    check is printed with its source line, so a run can be compared with the untyped
    analysis of the same file. *)
 let run_typed_and_exit path stmt_positions domain rule context =
-  let depth =
+  let context =
     match context with
-    | C.Ctx_None -> C.nat_of_integer Z.zero
-    | C.Ctx_CallString k -> k
-    | C.Ctx_EntryState ->
-        prerr_endline "voblint: --typed supports --context none and call-string only";
-        exit 1
+    | C.Ctx_None -> C.Typed_Call_String (C.nat_of_integer Z.zero)
+    | C.Ctx_CallString k -> C.Typed_Call_String k
+    | C.Ctx_EntryState -> C.Typed_Entry_State
   in
   let p, decls =
     match !Vimp_typing.source_program with
@@ -450,12 +448,13 @@ let run_typed_and_exit path stmt_positions domain rule context =
         | None -> Printf.sprintf "%s:statement %d" path i)
     | _ -> path
   in
-  match C.run_typed domain rule depth decls p with
+  match C.run_typed domain rule context decls p with
   | C.Typed_Malformed ->
       prerr_endline "voblint: the program is not admissible";
       exit 3
   | C.Typed_Unsupported ->
-      prerr_endline "voblint: --typed runs one analysis, or one with order";
+      prerr_endline
+        "voblint: --typed runs one analysis, or one with order at call strings";
       exit 1
   | C.Typed_No_Answer ->
       prerr_endline "voblint: the solver returned no answer";

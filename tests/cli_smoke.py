@@ -42,6 +42,13 @@ CASES = [
         1,
         "--typed runs one analysis, or one with order",
     ),
+    (
+        # Entry state separates f(100, 0) from f(0, 100): y is exactly 0 there.
+        "--typed interval at entry-state contexts separates the calls",
+        ["--typed", "interval", "--context", "entry-state", COOP_FILE],
+        0,
+        "01-cooperation.vimp:10:5: refuted",
+    ),
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),
     (

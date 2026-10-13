@@ -126,6 +126,7 @@ module Generated : sig
     Typed_Analysed of (cfg_node * (texp * check_result)) list
   type typed_domain = Typed_Interval | Typed_Congruence | Typed_Int |
     Typed_Order | Typed_Sign | Typed_Parity
+  type typed_context = Typed_Call_String of nat | Typed_Entry_State
   type 'a analysis_context = Context_Unit | Context_Entry of 'a list |
     Context_Call_String of cfg_node list
   type 'a field_state = Field_Store of (string * 'a) list | Field_Whole of 'a
@@ -186,7 +187,8 @@ module Generated : sig
   val run_typed :
     typed_domain list ->
       globals_rule ->
-        nat -> (var_id * ikind) list -> unit imp_prog_ext -> typed_answer
+        typed_context ->
+          (var_id * ikind) list -> unit imp_prog_ext -> typed_answer
   val arithmetic_divisor : arithmetic_obligation -> exp
   val prog_cfg : unit imp_prog_ext -> (string, exp, unit) gcfg_ext
   val typed_prog :
@@ -6522,6 +6524,8 @@ type ('a, 'b, 'c, 'd) state_ext =
     'a set * (('a, 'b) sum, ('a list)) fmap * 'a set * (('a, 'b) sum -> 'c) *
       'd;;
 
+type typed_context = Typed_Call_String of nat | Typed_Entry_State;;
+
 type ('a, 'b, 'c) strategy_tree = Answer of 'c |
   QueryL of 'a * ('c -> ('a, 'b, 'c) strategy_tree) |
   QueryG of 'b * ('c -> ('a, 'b, 'c) strategy_tree) |
@@ -8642,6 +8646,17 @@ let rec tclassify _A
           with None -> Check_Unknown | Some true -> Check_Proved
           | Some false -> Check_Refuted));;
 
+let rec typed_es _A
+  g d ca =
+    (let CallEdge (_, pars, _) = ca in
+      (match d
+        with Bot -> map (fun _ -> bot_kda _A.ik_domain_kind_int_domain) pars
+        | Lifted TTop -> map (fun _ -> KTop) pars
+        | Lifted (TL st) ->
+          map (default_st_to_fun equal_var_id
+                (bot_kd _A.ik_domain_kind_int_domain) g st)
+            pars));;
+
 let rec tinit_st _A
   ds = TL (Abs_default_st
             ((KTop, []),
@@ -9598,6 +9613,213 @@ let rec dg_spec_of _B _C
                             (fun _ -> local_transfer (closed_step _B c EA_Nop))
                             local_dg_spec_template))))))))));;
 
+let rec nonrel_es_run (_A1, _A2)
+  t r ds p =
+    (if is_none
+          (tD_side_rule_Interp_solve_c
+            (equal_prod equal_cfg_node (equal_list (equal_kd _A1)))
+            (equal_global_unknown equal_unit (equal_list (equal_kd _A1)))
+            ((equal_dg_state
+               (equal_lifted
+                 (equal_toplift
+                   (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                     ((equal_kd _A1),
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
+               (equal_lifted
+                 (equal_toplift
+                   (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                     ((equal_kd _A1),
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))),
+              (bounded_semilattice_sup_bot_dg_state
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_toplift
+                    (bounded_semilattice_sup_bot_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd
+                        _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
+                (bounded_semilattice_sup_bot_lifted
+                  (bounded_semilattice_sup_bot_toplift
+                    (bounded_semilattice_sup_bot_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd
+                        _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)),
+              (warrowing_dg_state
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_toplift
+                     (bounded_semilattice_sup_bot_gdefault_st
+                       (infinite_key_var_id, equal_var_id)
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_toplift
+                       (bounded_semilattice_sup_bot_gdefault_st
+                         (infinite_key_var_id, equal_var_id)
+                         (bounded_semilattice_sup_bot_kd
+                           _A2.ik_domain_kind_int_domain))),
+                      (warrowing_toplift
+                        (warrowing_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          ((bounded_semilattice_sup_bot_kd
+                             _A2.ik_domain_kind_int_domain),
+                            (warrowing_kd _A2.ik_domain_kind_int_domain)))))))
+                ((bounded_semilattice_sup_bot_lifted
+                   (bounded_semilattice_sup_bot_toplift
+                     (bounded_semilattice_sup_bot_gdefault_st
+                       (infinite_key_var_id, equal_var_id)
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
+                  (warrowing_lifted
+                    ((bounded_semilattice_sup_bot_toplift
+                       (bounded_semilattice_sup_bot_gdefault_st
+                         (infinite_key_var_id, equal_var_id)
+                         (bounded_semilattice_sup_bot_kd
+                           _A2.ik_domain_kind_int_domain))),
+                      (warrowing_toplift
+                        (warrowing_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          ((bounded_semilattice_sup_bot_kd
+                             _A2.ik_domain_kind_int_domain),
+                            (warrowing_kd _A2.ik_domain_kind_int_domain)))))))))
+            r (equations (equal_var_id, linorder_var_id)
+                (equal_texp, linorder_texp)
+                ((equal_toplift
+                   (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                     ((equal_kd _A1),
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))),
+                  (semilattice_sup_toplift
+                    (semilattice_sup_gdefault_st
+                      (infinite_key_var_id, equal_var_id)
+                      (bounded_semilattice_sup_bot_kd
+                        _A2.ik_domain_kind_int_domain))))
+                (equal_global_unknown equal_unit (equal_list (equal_kd _A1)))
+                (equal_list (equal_kd _A1))
+                (fun _ _ -> typed_exec_spec _A2 (kenv_of ds)) (tinit_st _A2 ds)
+                (Analysis_Global ()) (fun a -> Analysis_Global a)
+                (fun a b -> Activation_Seed (a, b))
+                (fun g _ _ -> typed_es _A2 g) []
+                (fun _ ->
+                  dg_spec_of equal_texp
+                    (bot_lifted
+                      (semilattice_sup_toplift
+                        (semilattice_sup_gdefault_st
+                          (infinite_key_var_id, equal_var_id)
+                          (bounded_semilattice_sup_bot_kd
+                            _A2.ik_domain_kind_int_domain)))))
+                (fun _ _ -> Bot) (fun _ _ -> []) (fun pa -> typed_cfg pa ds)
+                (fun _ -> FunctionEntry prog_main_name) tglobal p)
+            (cfg_exit (typed_cfg p ds), []))
+      then Typed_No_Answer
+      else Typed_Analysed
+             (map (fun (u, (c, v)) -> (u, (c, verdict_result v)))
+               (verdict_report (equal_var_id, linorder_var_id)
+                 (equal_texp, linorder_texp)
+                 ((equal_toplift
+                    (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                      ((equal_kd _A1),
+                        (bounded_semilattice_sup_bot_kd
+                          _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))),
+                   (semilattice_sup_toplift
+                     (semilattice_sup_gdefault_st
+                       (infinite_key_var_id, equal_var_id)
+                       (bounded_semilattice_sup_bot_kd
+                         _A2.ik_domain_kind_int_domain))))
+                 (equal_global_unknown equal_unit (equal_list (equal_kd _A1)))
+                 (equal_list (equal_kd _A1))
+                 (fun _ _ -> typed_exec_spec _A2 (kenv_of ds))
+                 (fun _ -> tst_empty _A2)
+                 (fun g ->
+                   map_toplift
+                     (default_st_to_fun equal_var_id
+                       (bot_kd _A2.ik_domain_kind_int_domain) g))
+                 (tinit_st _A2 ds) (Analysis_Global ())
+                 (fun a -> Analysis_Global a)
+                 (fun a b -> Activation_Seed (a, b))
+                 (fun g _ _ -> typed_es _A2 g) []
+                 (tD_side_rule_Interp_solve
+                   (equal_prod equal_cfg_node (equal_list (equal_kd _A1)))
+                   (equal_global_unknown equal_unit (equal_list (equal_kd _A1)))
+                   ((equal_dg_state
+                      (equal_lifted
+                        (equal_toplift
+                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                            ((equal_kd _A1),
+                              (bounded_semilattice_sup_bot_kd
+                                _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))
+                      (equal_lifted
+                        (equal_toplift
+                          (equal_gdefault_st (infinite_key_var_id, equal_var_id)
+                            ((equal_kd _A1),
+                              (bounded_semilattice_sup_bot_kd
+                                _A2.ik_domain_kind_int_domain).order_bot_bounded_semilattice_sup_bot))))),
+                     (bounded_semilattice_sup_bot_dg_state
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)
+                       (bounded_semilattice_sup_bot_lifted
+                         (bounded_semilattice_sup_bot_toplift
+                           (bounded_semilattice_sup_bot_gdefault_st
+                             (infinite_key_var_id, equal_var_id)
+                             (bounded_semilattice_sup_bot_kd
+                               _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot)),
+                     (warrowing_dg_state
+                       ((bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_toplift
+                            (bounded_semilattice_sup_bot_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd
+                                _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
+                         (warrowing_lifted
+                           ((bounded_semilattice_sup_bot_toplift
+                              (bounded_semilattice_sup_bot_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  _A2.ik_domain_kind_int_domain))),
+                             (warrowing_toplift
+                               (warrowing_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 ((bounded_semilattice_sup_bot_kd
+                                    _A2.ik_domain_kind_int_domain),
+                                   (warrowing_kd
+                                     _A2.ik_domain_kind_int_domain)))))))
+                       ((bounded_semilattice_sup_bot_lifted
+                          (bounded_semilattice_sup_bot_toplift
+                            (bounded_semilattice_sup_bot_gdefault_st
+                              (infinite_key_var_id, equal_var_id)
+                              (bounded_semilattice_sup_bot_kd
+                                _A2.ik_domain_kind_int_domain))).semilattice_sup_bounded_semilattice_sup_bot),
+                         (warrowing_lifted
+                           ((bounded_semilattice_sup_bot_toplift
+                              (bounded_semilattice_sup_bot_gdefault_st
+                                (infinite_key_var_id, equal_var_id)
+                                (bounded_semilattice_sup_bot_kd
+                                  _A2.ik_domain_kind_int_domain))),
+                             (warrowing_toplift
+                               (warrowing_gdefault_st
+                                 (infinite_key_var_id, equal_var_id)
+                                 ((bounded_semilattice_sup_bot_kd
+                                    _A2.ik_domain_kind_int_domain),
+                                   (warrowing_kd
+                                     _A2.ik_domain_kind_int_domain)))))))))
+                   r)
+                 (tclassify _A2 (kenv_of ds))
+                 (fun _ ->
+                   dg_spec_of equal_texp
+                     (bot_lifted
+                       (semilattice_sup_toplift
+                         (semilattice_sup_gdefault_st
+                           (infinite_key_var_id, equal_var_id)
+                           (bounded_semilattice_sup_bot_kd
+                             _A2.ik_domain_kind_int_domain)))))
+                 (fun _ d _ -> d) (fun _ _ -> Bot) (fun _ _ -> [])
+                 (fun pa -> typed_cfg pa ds)
+                 (fun _ -> FunctionEntry prog_main_name) tglobal p)));;
+
 let rec nonrel_run (_A1, _A2)
   t r k ds p =
     (if is_none
@@ -9804,6 +10026,11 @@ let rec nonrel_run (_A1, _A2)
                  (fun _ d _ -> d) (fun _ _ -> Bot) (fun _ _ -> [])
                  (fun pa -> typed_cfg pa ds)
                  (fun _ -> FunctionEntry prog_main_name) tglobal p)));;
+
+let rec nonrel_ctx_run (_A1, _A2)
+  t r cx ds p =
+    (match cx with Typed_Call_String k -> nonrel_run (_A1, _A2) t r k ds p
+      | Typed_Entry_State -> nonrel_es_run (_A1, _A2) t r ds p);;
 
 let top_order_rel : 'a order_rel = OFacts bot_set;;
 
@@ -10092,19 +10319,21 @@ let rec order_run
                (fun _ -> FunctionEntry prog_main_name) tglobal p ()));;
 
 let rec run_one
-  d r k ds p =
+  d r cx ds p =
     (match d
       with Typed_Interval ->
-        nonrel_run (equal_ivl, kind_int_domain_ivl) Type r k ds p
+        nonrel_ctx_run (equal_ivl, kind_int_domain_ivl) Type r cx ds p
       | Typed_Congruence ->
-        nonrel_run (equal_congruence, kind_int_domain_congruence) Type r k ds p
+        nonrel_ctx_run (equal_congruence, kind_int_domain_congruence) Type r cx
+          ds p
       | Typed_Int ->
-        nonrel_run (equal_int_tuple, kind_int_domain_int_tuple) Type r k ds p
+        nonrel_ctx_run (equal_int_tuple, kind_int_domain_int_tuple) Type r cx ds
+          p
       | Typed_Order -> order_run r ds p
       | Typed_Sign ->
-        nonrel_run (equal_sign, kind_int_domain_sign) Type r k ds p
+        nonrel_ctx_run (equal_sign, kind_int_domain_sign) Type r cx ds p
       | Typed_Parity ->
-        nonrel_run (equal_parity, kind_int_domain_parity) Type r k ds p);;
+        nonrel_ctx_run (equal_parity, kind_int_domain_parity) Type r cx ds p);;
 
 let rec mcp_rd
   g r = Product
@@ -10836,68 +11065,98 @@ let rec run_with_order
         nonrel_order_run (equal_parity, kind_int_domain_parity) Type r k ds p);;
 
 let rec run_typed
-  asa r k ds p =
+  asa r cx ds p =
     (if not (wf_program_compile_input_exec p) then Typed_Malformed
-      else (match asa with [] -> Typed_Unsupported
-             | [Typed_Interval] -> run_one Typed_Interval r k ds p
-             | Typed_Interval :: Typed_Interval :: _ -> Typed_Unsupported
-             | Typed_Interval :: Typed_Congruence :: _ -> Typed_Unsupported
-             | Typed_Interval :: Typed_Int :: _ -> Typed_Unsupported
-             | [Typed_Interval; Typed_Order] ->
+      else (match (asa, cx) with ([], _) -> Typed_Unsupported
+             | ([Typed_Interval], _) -> run_one Typed_Interval r cx ds p
+             | (Typed_Interval :: Typed_Interval :: _, _) -> Typed_Unsupported
+             | (Typed_Interval :: Typed_Congruence :: _, _) -> Typed_Unsupported
+             | (Typed_Interval :: Typed_Int :: _, _) -> Typed_Unsupported
+             | ([Typed_Interval; Typed_Order], Typed_Call_String k) ->
                run_with_order Typed_Interval r k ds p
-             | Typed_Interval :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | Typed_Interval :: Typed_Sign :: _ -> Typed_Unsupported
-             | Typed_Interval :: Typed_Parity :: _ -> Typed_Unsupported
-             | [Typed_Congruence] -> run_one Typed_Congruence r k ds p
-             | Typed_Congruence :: Typed_Interval :: _ -> Typed_Unsupported
-             | Typed_Congruence :: Typed_Congruence :: _ -> Typed_Unsupported
-             | Typed_Congruence :: Typed_Int :: _ -> Typed_Unsupported
-             | [Typed_Congruence; Typed_Order] ->
+             | ([Typed_Interval; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Interval :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
+             | (Typed_Interval :: Typed_Sign :: _, _) -> Typed_Unsupported
+             | (Typed_Interval :: Typed_Parity :: _, _) -> Typed_Unsupported
+             | ([Typed_Congruence], _) -> run_one Typed_Congruence r cx ds p
+             | (Typed_Congruence :: Typed_Interval :: _, _) -> Typed_Unsupported
+             | (Typed_Congruence :: Typed_Congruence :: _, _) ->
+               Typed_Unsupported
+             | (Typed_Congruence :: Typed_Int :: _, _) -> Typed_Unsupported
+             | ([Typed_Congruence; Typed_Order], Typed_Call_String k) ->
                run_with_order Typed_Congruence r k ds p
-             | Typed_Congruence :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | Typed_Congruence :: Typed_Sign :: _ -> Typed_Unsupported
-             | Typed_Congruence :: Typed_Parity :: _ -> Typed_Unsupported
-             | [Typed_Int] -> run_one Typed_Int r k ds p
-             | Typed_Int :: Typed_Interval :: _ -> Typed_Unsupported
-             | Typed_Int :: Typed_Congruence :: _ -> Typed_Unsupported
-             | Typed_Int :: Typed_Int :: _ -> Typed_Unsupported
-             | [Typed_Int; Typed_Order] -> run_with_order Typed_Int r k ds p
-             | Typed_Int :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | Typed_Int :: Typed_Sign :: _ -> Typed_Unsupported
-             | Typed_Int :: Typed_Parity :: _ -> Typed_Unsupported
-             | [Typed_Order] -> run_one Typed_Order r k ds p
-             | [Typed_Order; Typed_Interval] ->
+             | ([Typed_Congruence; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Congruence :: Typed_Order :: _ :: _, _) ->
+               Typed_Unsupported
+             | (Typed_Congruence :: Typed_Sign :: _, _) -> Typed_Unsupported
+             | (Typed_Congruence :: Typed_Parity :: _, _) -> Typed_Unsupported
+             | ([Typed_Int], _) -> run_one Typed_Int r cx ds p
+             | (Typed_Int :: Typed_Interval :: _, _) -> Typed_Unsupported
+             | (Typed_Int :: Typed_Congruence :: _, _) -> Typed_Unsupported
+             | (Typed_Int :: Typed_Int :: _, _) -> Typed_Unsupported
+             | ([Typed_Int; Typed_Order], Typed_Call_String k) ->
+               run_with_order Typed_Int r k ds p
+             | ([Typed_Int; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Int :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
+             | (Typed_Int :: Typed_Sign :: _, _) -> Typed_Unsupported
+             | (Typed_Int :: Typed_Parity :: _, _) -> Typed_Unsupported
+             | ([Typed_Order], _) -> run_one Typed_Order r cx ds p
+             | ([Typed_Order; Typed_Interval], Typed_Call_String k) ->
                run_with_order Typed_Interval r k ds p
-             | Typed_Order :: Typed_Interval :: _ :: _ -> Typed_Unsupported
-             | [Typed_Order; Typed_Congruence] ->
+             | ([Typed_Order; Typed_Interval], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Interval :: _ :: _, _) -> Typed_Unsupported
+             | ([Typed_Order; Typed_Congruence], Typed_Call_String k) ->
                run_with_order Typed_Congruence r k ds p
-             | Typed_Order :: Typed_Congruence :: _ :: _ -> Typed_Unsupported
-             | [Typed_Order; Typed_Int] -> run_with_order Typed_Int r k ds p
-             | Typed_Order :: Typed_Int :: _ :: _ -> Typed_Unsupported
-             | [Typed_Order; Typed_Order] -> run_with_order Typed_Order r k ds p
-             | Typed_Order :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | [Typed_Order; Typed_Sign] -> run_with_order Typed_Sign r k ds p
-             | Typed_Order :: Typed_Sign :: _ :: _ -> Typed_Unsupported
-             | [Typed_Order; Typed_Parity] ->
+             | ([Typed_Order; Typed_Congruence], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Congruence :: _ :: _, _) ->
+               Typed_Unsupported
+             | ([Typed_Order; Typed_Int], Typed_Call_String k) ->
+               run_with_order Typed_Int r k ds p
+             | ([Typed_Order; Typed_Int], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Int :: _ :: _, _) -> Typed_Unsupported
+             | ([Typed_Order; Typed_Order], Typed_Call_String k) ->
+               run_with_order Typed_Order r k ds p
+             | ([Typed_Order; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
+             | ([Typed_Order; Typed_Sign], Typed_Call_String k) ->
+               run_with_order Typed_Sign r k ds p
+             | ([Typed_Order; Typed_Sign], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Sign :: _ :: _, _) -> Typed_Unsupported
+             | ([Typed_Order; Typed_Parity], Typed_Call_String k) ->
                run_with_order Typed_Parity r k ds p
-             | Typed_Order :: Typed_Parity :: _ :: _ -> Typed_Unsupported
-             | [Typed_Sign] -> run_one Typed_Sign r k ds p
-             | Typed_Sign :: Typed_Interval :: _ -> Typed_Unsupported
-             | Typed_Sign :: Typed_Congruence :: _ -> Typed_Unsupported
-             | Typed_Sign :: Typed_Int :: _ -> Typed_Unsupported
-             | [Typed_Sign; Typed_Order] -> run_with_order Typed_Sign r k ds p
-             | Typed_Sign :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | Typed_Sign :: Typed_Sign :: _ -> Typed_Unsupported
-             | Typed_Sign :: Typed_Parity :: _ -> Typed_Unsupported
-             | [Typed_Parity] -> run_one Typed_Parity r k ds p
-             | Typed_Parity :: Typed_Interval :: _ -> Typed_Unsupported
-             | Typed_Parity :: Typed_Congruence :: _ -> Typed_Unsupported
-             | Typed_Parity :: Typed_Int :: _ -> Typed_Unsupported
-             | [Typed_Parity; Typed_Order] ->
+             | ([Typed_Order; Typed_Parity], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Order :: Typed_Parity :: _ :: _, _) -> Typed_Unsupported
+             | ([Typed_Sign], _) -> run_one Typed_Sign r cx ds p
+             | (Typed_Sign :: Typed_Interval :: _, _) -> Typed_Unsupported
+             | (Typed_Sign :: Typed_Congruence :: _, _) -> Typed_Unsupported
+             | (Typed_Sign :: Typed_Int :: _, _) -> Typed_Unsupported
+             | ([Typed_Sign; Typed_Order], Typed_Call_String k) ->
+               run_with_order Typed_Sign r k ds p
+             | ([Typed_Sign; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Sign :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
+             | (Typed_Sign :: Typed_Sign :: _, _) -> Typed_Unsupported
+             | (Typed_Sign :: Typed_Parity :: _, _) -> Typed_Unsupported
+             | ([Typed_Parity], _) -> run_one Typed_Parity r cx ds p
+             | (Typed_Parity :: Typed_Interval :: _, _) -> Typed_Unsupported
+             | (Typed_Parity :: Typed_Congruence :: _, _) -> Typed_Unsupported
+             | (Typed_Parity :: Typed_Int :: _, _) -> Typed_Unsupported
+             | ([Typed_Parity; Typed_Order], Typed_Call_String k) ->
                run_with_order Typed_Parity r k ds p
-             | Typed_Parity :: Typed_Order :: _ :: _ -> Typed_Unsupported
-             | Typed_Parity :: Typed_Sign :: _ -> Typed_Unsupported
-             | Typed_Parity :: Typed_Parity :: _ -> Typed_Unsupported));;
+             | ([Typed_Parity; Typed_Order], Typed_Entry_State) ->
+               Typed_Unsupported
+             | (Typed_Parity :: Typed_Order :: _ :: _, _) -> Typed_Unsupported
+             | (Typed_Parity :: Typed_Sign :: _, _) -> Typed_Unsupported
+             | (Typed_Parity :: Typed_Parity :: _, _) -> Typed_Unsupported));;
 
 let rec field_empty
   (Analysis_registration_ext

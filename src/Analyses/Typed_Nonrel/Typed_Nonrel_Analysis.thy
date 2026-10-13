@@ -273,6 +273,130 @@ theorem typed_nonrel_report_refuted_sound:
 
 end
 
+subsection \<open>Entry-state contexts\<close>
+
+text \<open>
+  A call's context is the abstract values of the callee's formals in the state the call
+  enters, as for the untyped analyses' entry-state policy. Goblint's default context is the
+  whole entry state (\<^verbatim>\<open>DefaultSpec.context\<close>); the formals are the part of it a call
+  determines, since the callee's other locals start unconstrained.
+\<close>
+
+definition typed_es ::
+    "(var_id \<Rightarrow> bool) \<Rightarrow> 'a::kind_int_domain tst toplift lifted \<Rightarrow> (var_id, texp) gcall_action
+       \<Rightarrow> 'a kd list" where
+  "typed_es \<G> d ca =
+     (case ca of CallEdge dst pars args \<Rightarrow>
+        (case d of Lifted (TL st) \<Rightarrow> map (default_st_to_fun \<G> st) pars
+         | Lifted TTop \<Rightarrow> map (\<lambda>_. KTop) pars
+         | Bot \<Rightarrow> map (\<lambda>_. \<bottom>) pars))"
+
+global_interpretation typed_nonrel_es: gdg_analysis
+    teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
+    "\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
+    "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
+    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>\<G> u ctx d ca. typed_es \<G> d ca" "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, 'a kd list) global_unknown)
+       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
+    "TL \<bottom>" "tclassify (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
+    "TD_side_rule_Interp_solve_c r"
+    "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
+    "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
+  for ds r
+proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
+    EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
+    FinCalls CallsUnique)
+  case (CompSound p) show ?case by (rule typed_exec_spec_sound_rd)
+next
+  case (EnterSingle p ci d) show ?case
+    by (simp add: typed_exec_spec_def dg_pipeline.comp_entry_def)
+next
+  case (EmptyRd p s) show ?case by (rule tst_empty_iff)
+next
+  case EmptyV show ?case by (rule sound_emptinessI) (rule tt_empty_sound)
+next
+  case (SeedNe v ctx) show ?case by simp
+next
+  case (ClProved c d s) then show ?case by (intro tclassify_proved)
+next
+  case (ClRefuted c d s) then show ?case by (intro tclassify_refuted)
+next
+  case BotState show ?case by simp
+next
+  case (InitSound p) show ?case by (rule tinit_sound)
+next
+  case (SeedNeGlobal v ctx n) show ?case by simp
+next
+  case (PEntry p) show ?case by (simp add: typed_cfg_def)
+next
+  case (FinIntra p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
+next
+  case (FinCalls p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
+next
+  case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
+qed
+
+context
+  fixes ds :: kind_decls and r :: globals_rule
+begin
+
+lemma typed_nonrel_es_node_sound:
+  assumes wf: "wf_program_compile_input p"
+    and solves: "typed_nonrel_es.terminates TYPE('a::kind_int_domain) ds r tglobal p"
+  shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
+           \<subseteq> (\<Union>ctx. gamma_tt (kenv_of ds)
+                 (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift))"
+proof
+  fix s assume "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+  then obtain ctx :: "'a kd list" where "s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds)) tglobal
+      (typed_nonrel_es.admitted_contexts ds r tglobal p) [] (typed_cfg p ds) (tinit_stores (kenv_of ds)) v ctx"
+    using typed_nonrel_es.gentry_state_node_collect_eq_Union_of_terminates
+        [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
+    by (auto simp: tnode_collect_def)
+  then have "s \<in> gamma_lift (gamma_tt (kenv_of ds))
+      (lookup_table (typed_nonrel_es.result ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx)"
+    using typed_nonrel_es.gentry_state_lookup_sound_of_terminates
+        [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v ctx]
+    by blast
+  then have "s \<in> gamma_tt (kenv_of ds) (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift)"
+    by (auto simp: typed_nonrel_es.state_at_unfold split: lifted.splits)
+  then show "s \<in> (\<Union>ctx. gamma_tt (kenv_of ds) (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift))"
+    by blast
+qed
+
+theorem typed_nonrel_es_verdict_sound:
+  assumes wf: "wf_program_compile_input p"
+    and solves: "typed_nonrel_es.terminates TYPE('a::kind_int_domain) ds r tglobal p"
+    and mem: "(v, c, Decided res) \<in> set (typed_nonrel_es.verdict_report TYPE('a) ds r tglobal p)"
+    and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+  shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+proof -
+  obtain ctx where sc:
+    "s \<in> gamma_tt (kenv_of ds) (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift)"
+    using typed_nonrel_es_node_sound[OF wf solves] s by blast
+  have decided: "tclassify (kenv_of ds) c (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift) = res"
+    if known: "res \<noteq> Check_Unknown"
+  proof (cases "lookup_table (typed_nonrel_es.result ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+    case Bot
+    then show ?thesis using sc by (simp add: typed_nonrel_es.state_at_unfold)
+  next
+    case (Lifted st)
+    have fin: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
+    show ?thesis
+      using classify_checks_ctx_decided_sound[OF fin
+          mem[unfolded typed_nonrel_es.verdict_report_def] Lifted known] Lifted
+      by (simp add: typed_nonrel_es.state_at_unfold)
+  qed
+  show "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
+    using decided tclassify_proved[OF sc] by auto
+  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
+    using decided tclassify_refuted[OF sc] by auto
+qed
+
+end
+
 unbundle no default_st_syntax
 
 end

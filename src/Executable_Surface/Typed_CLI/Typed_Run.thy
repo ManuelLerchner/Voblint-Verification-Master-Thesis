@@ -66,16 +66,37 @@ definition nonrel_order_run ::
       else Typed_Analysed (map (\<lambda>(u, c, v). (u, c, verdict_result v))
              (nonrel_order.verdict_report TYPE('a) ds k r tglobal p)))"
 
+text \<open>A non-relational analysis also runs at entry-state contexts: a call's context is
+  the abstract values of the callee's formals.\<close>
+
+datatype typed_context = Typed_Call_String nat | Typed_Entry_State
+
+definition nonrel_es_run ::
+    "'a::kind_int_domain itself \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "nonrel_es_run T r ds p =
+     (if TD_side_rule_Interp_solve_c r
+           (typed_nonrel_es.equations ds tglobal p :: ('a kd list, 'a tst toplift) typed_eqs)
+           (cfg_exit (typed_cfg p ds), []) = None
+      then Typed_No_Answer
+      else Typed_Analysed (map (\<lambda>(u, c, v). (u, c, verdict_result v))
+             (typed_nonrel_es.verdict_report TYPE('a) ds r tglobal p)))"
+
+definition nonrel_ctx_run ::
+    "'a::kind_int_domain itself \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog
+       \<Rightarrow> typed_answer" where
+  "nonrel_ctx_run T r cx ds p =
+     (case cx of Typed_Call_String k \<Rightarrow> nonrel_run T r k ds p | Typed_Entry_State \<Rightarrow> nonrel_es_run T r ds p)"
+
 definition run_one ::
-    "typed_domain \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
-  "run_one d r k ds p =
+    "typed_domain \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "run_one d r cx ds p =
      (case d of
-        Typed_Interval \<Rightarrow> nonrel_run TYPE(ivl) r k ds p
-      | Typed_Congruence \<Rightarrow> nonrel_run TYPE(congruence) r k ds p
-      | Typed_Int \<Rightarrow> nonrel_run TYPE(int_tuple) r k ds p
+        Typed_Interval \<Rightarrow> nonrel_ctx_run TYPE(ivl) r cx ds p
+      | Typed_Congruence \<Rightarrow> nonrel_ctx_run TYPE(congruence) r cx ds p
+      | Typed_Int \<Rightarrow> nonrel_ctx_run TYPE(int_tuple) r cx ds p
       | Typed_Order \<Rightarrow> order_run r ds p
-      | Typed_Sign \<Rightarrow> nonrel_run TYPE(sign) r k ds p
-      | Typed_Parity \<Rightarrow> nonrel_run TYPE(parity) r k ds p)"
+      | Typed_Sign \<Rightarrow> nonrel_ctx_run TYPE(sign) r cx ds p
+      | Typed_Parity \<Rightarrow> nonrel_ctx_run TYPE(parity) r cx ds p)"
 
 definition run_with_order ::
     "typed_domain \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
@@ -89,13 +110,13 @@ definition run_with_order ::
       | Typed_Parity \<Rightarrow> nonrel_order_run TYPE(parity) r k ds p)"
 
 definition run_typed ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
-  "run_typed as r k ds p =
+    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "run_typed as r cx ds p =
      (if \<not> wf_program_compile_input_exec p then Typed_Malformed
-      else case as of
-        [d] \<Rightarrow> run_one d r k ds p
-      | [d, Typed_Order] \<Rightarrow> run_with_order d r k ds p
-      | [Typed_Order, d] \<Rightarrow> run_with_order d r k ds p
+      else case (as, cx) of
+        ([d], _) \<Rightarrow> run_one d r cx ds p
+      | ([d, Typed_Order], Typed_Call_String k) \<Rightarrow> run_with_order d r k ds p
+      | ([Typed_Order, d], Typed_Call_String k) \<Rightarrow> run_with_order d r k ds p
       | _ \<Rightarrow> Typed_Unsupported)"
 
 subsection \<open>Soundness\<close>
@@ -188,12 +209,47 @@ abbreviation run_sound :: "typed_answer \<Rightarrow> kind_decls \<Rightarrow> i
      (res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
      \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
 
+lemma nonrel_es_run_sound:
+  assumes wf: "wf_program_compile_input p"
+  shows "run_sound (nonrel_es_run (TYPE('a::kind_int_domain)) r ds p) ds p"
+proof (intro allI impI)
+  fix rs v c res
+  assume run: "nonrel_es_run TYPE('a) r ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
+  have solved: "TD_side_rule_Interp_solve_c r
+      (typed_nonrel_es.equations ds tglobal p :: ('a kd list, 'a tst toplift) typed_eqs)
+      (cfg_exit (typed_cfg p ds), []) \<noteq> None"
+    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v))
+                 (typed_nonrel_es.verdict_report TYPE('a) ds r tglobal p)"
+    using run by (simp_all add: nonrel_es_run_def split: if_splits)
+  have stops: "typed_nonrel_es.terminates TYPE('a) ds r tglobal p"
+    unfolding typed_nonrel_es.terminates_code
+    using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
+  obtain w where w: "(v, c, w) \<in> set (typed_nonrel_es.verdict_report TYPE('a) ds r tglobal p)"
+    and res: "res = verdict_result w"
+    using mem rs by auto
+  show "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
+       \<and> (res = Check_Refuted \<longrightarrow> (\<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)))"
+  proof (cases w)
+    case (Lifted r')
+    then show ?thesis
+      using typed_nonrel_es_verdict_sound[OF wf stops, of v c r'] w res
+      by (auto simp: verdict_result_def)
+  qed (simp add: res verdict_result_def)
+qed
+
+lemma nonrel_ctx_run_sound:
+  assumes wf: "wf_program_compile_input p"
+  shows "run_sound (nonrel_ctx_run (TYPE('a::kind_int_domain)) r cx ds p) ds p"
+  using nonrel_run_sound[OF wf, where 'a = 'a] nonrel_es_run_sound[OF wf, where 'a = 'a]
+  by (cases cx) (simp_all add: nonrel_ctx_run_def)
+
 lemma run_one_sound:
   assumes wf: "wf_program_compile_input p"
-  shows "run_sound (run_one d r k ds p) ds p"
-  using order_run_sound[OF wf] nonrel_run_sound[OF wf, where 'a = ivl]
-    nonrel_run_sound[OF wf, where 'a = congruence] nonrel_run_sound[OF wf, where 'a = int_tuple]
-    nonrel_run_sound[OF wf, where 'a = sign] nonrel_run_sound[OF wf, where 'a = parity]
+  shows "run_sound (run_one d r cx ds p) ds p"
+  using order_run_sound[OF wf] nonrel_ctx_run_sound[OF wf, where 'a = ivl]
+    nonrel_ctx_run_sound[OF wf, where 'a = congruence]
+    nonrel_ctx_run_sound[OF wf, where 'a = int_tuple]
+    nonrel_ctx_run_sound[OF wf, where 'a = sign] nonrel_ctx_run_sound[OF wf, where 'a = parity]
   by (cases d) (simp_all add: run_one_def)
 
 lemma run_with_order_sound:
@@ -206,7 +262,7 @@ lemma run_with_order_sound:
   by (cases d) (simp_all add: run_with_order_def)
 
 theorem run_typed_sound:
-  assumes run: "run_typed as r k ds p = Typed_Analysed rs"
+  assumes run: "run_typed as r cx ds p = Typed_Analysed rs"
     and mem: "(v, c, res) \<in> set rs"
   shows run_typed_proved_sound:
       "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
@@ -216,9 +272,9 @@ proof -
   have exec: "wf_program_compile_input_exec p"
     using run by (simp add: run_typed_def split: if_splits)
   note wf = wf_program_compile_input_exec_sound[OF exec]
-  have "run_sound (run_typed as r k ds p) ds p"
+  have "run_sound (run_typed as r cx ds p) ds p"
     using run_one_sound[OF wf] run_with_order_sound[OF wf] exec
-    by (simp add: run_typed_def split: list.splits typed_domain.splits)
+    by (simp add: run_typed_def split: list.splits typed_domain.splits typed_context.splits)
   then show "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<forall>s \<in> reaching ds p v. \<not> truthy (teval c s)"
     using run mem by blast+
