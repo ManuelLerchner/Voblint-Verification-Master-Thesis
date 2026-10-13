@@ -99,22 +99,22 @@ lemma typed_exec_spec_sound_rd:
      (typed_exec_spec \<kappa> :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)"
   using typed_exec_spec_sound[of \<kappa>, where 'a = 'a] by (simp add: gamma_exec_def[abs_def])
 
-abbreviation typed_cs :: "nat \<Rightarrow> cfg_node \<Rightarrow> cfg_node list \<Rightarrow> 'x \<Rightarrow> cfg_node list" where
-  "typed_cs k u ctx x \<equiv> take k (u # ctx)"
+text \<open>What the component owes the pipeline does not depend on the context policy, so it
+  is proved once, for any route and root context.\<close>
 
-global_interpretation typed_nonrel: gdg_analysis
-    teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
-    "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
-    "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
-       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
-    "TL \<bottom>" "tclassify (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
-    "TD_side_rule_Interp_solve_c r"
-    "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
-    "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
-  for ds r k
+lemma typed_nonrel_routed:
+  "gdg_analysis
+    teval ReturnVar (\<lambda>_. tconv (kenv_of ds)) (\<lambda>_. tglobal) (\<lambda>_. tinit_stores (kenv_of ds))
+    (\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)
+    (\<lambda>_. tst_empty) (\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)) (tinit_st ds)
+    (Analysis_Global ()) Analysis_Global Activation_Seed
+    (TD_side_rule_Interp_solve r)
+    (TD_side_rule_Interp.solve_dom TYPE((unit, 'c) global_unknown)
+       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r)
+    (TL \<bottom>) (tclassify (kenv_of ds)) (gamma_tt (kenv_of ds)) tt_empty
+    (TD_side_rule_Interp_solve_c r)
+    (\<lambda>_ c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>_ d. d) (\<lambda>_ d. Bot) (\<lambda>_ p. []) (\<lambda>p ci d e. d)
+    (\<lambda>p. typed_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
 proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
     EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
     FinCalls CallsUnique)
@@ -147,6 +147,24 @@ next
 next
   case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
 qed
+
+abbreviation typed_cs :: "nat \<Rightarrow> cfg_node \<Rightarrow> cfg_node list \<Rightarrow> 'x \<Rightarrow> cfg_node list" where
+  "typed_cs k u ctx x \<equiv> take k (u # ctx)"
+
+global_interpretation typed_nonrel: gdg_analysis
+    teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
+    "\<lambda>_ _. typed_exec_spec (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
+    "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
+    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
+    "TD_side_rule_Interp_solve r"
+    "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
+       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
+    "TL \<bottom>" "tclassify (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
+    "TD_side_rule_Interp_solve_c r"
+    "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
+    "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
+  for ds r k
+  by (rule typed_nonrel_routed)
 
 subsection \<open>End-to-end soundness\<close>
 
@@ -217,9 +235,11 @@ proof -
   obtain ctx where sc:
     "s \<in> gamma_tt (kenv_of ds) (typed_nonrel.state_at ds k r tglobal p ctx v :: 'a tabs toplift)"
     using typed_nonrel_node_sound[OF wf solves] s by blast
-  have decided: "tclassify (kenv_of ds) c (typed_nonrel.state_at ds k r tglobal p ctx v :: 'a tabs toplift) = res"
+  have decided:
+    "tclassify (kenv_of ds) c (typed_nonrel.state_at ds k r tglobal p ctx v :: 'a tabs toplift) = res"
     if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (typed_nonrel.result ds k r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+  proof (cases
+    "lookup_table (typed_nonrel.result ds k r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_nonrel.state_at_unfold)
   next
@@ -304,38 +324,7 @@ global_interpretation typed_nonrel_es: gdg_analysis
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for ds r
-proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSound EnterSingle
-    EmptyRd EmptyV SeedNe ClProved ClRefuted BotState InitSound SeedNeGlobal PEntry FinIntra
-    FinCalls CallsUnique)
-  case (CompSound p) show ?case by (rule typed_exec_spec_sound_rd)
-next
-  case (EnterSingle p ci d) show ?case
-    by (simp add: typed_exec_spec_def dg_pipeline.comp_entry_def)
-next
-  case (EmptyRd p s) show ?case by (rule tst_empty_iff)
-next
-  case EmptyV show ?case by (rule sound_emptinessI) (rule tt_empty_sound)
-next
-  case (SeedNe v ctx) show ?case by simp
-next
-  case (ClProved c d s) then show ?case by (intro tclassify_proved)
-next
-  case (ClRefuted c d s) then show ?case by (intro tclassify_refuted)
-next
-  case BotState show ?case by simp
-next
-  case (InitSound p) show ?case by (rule tinit_sound)
-next
-  case (SeedNeGlobal v ctx n) show ?case by simp
-next
-  case (PEntry p) show ?case by (simp add: typed_cfg_def)
-next
-  case (FinIntra p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
-next
-  case (FinCalls p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
-next
-  case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
-qed
+  by (rule typed_nonrel_routed)
 
 context
   fixes ds :: kind_decls and r :: globals_rule
@@ -376,9 +365,11 @@ proof -
   obtain ctx where sc:
     "s \<in> gamma_tt (kenv_of ds) (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift)"
     using typed_nonrel_es_node_sound[OF wf solves] s by blast
-  have decided: "tclassify (kenv_of ds) c (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift) = res"
+  have decided:
+    "tclassify (kenv_of ds) c (typed_nonrel_es.state_at ds r tglobal p ctx v :: 'a tabs toplift) = res"
     if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (typed_nonrel_es.result ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+  proof (cases
+    "lookup_table (typed_nonrel_es.result ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_nonrel_es.state_at_unfold)
   next
