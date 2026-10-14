@@ -134,6 +134,9 @@ module Generated : sig
     Restore of 'a | Unwind of 'a
   type ('a, 'b, 'c, 'd) gproc_decl_ext =
     Gproc_decl_ext of 'b list * ('a, 'b, 'c) gcom * 'd
+  type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
+    Conversion_Overflow
+  type 'a arithmetic_obligation
   type 'a trace_key = Trace_Buffer | Trace_Global of string |
     Trace_Seed of cfg_node * 'a
   type ('a, 'b, 'c) gcfg_ext
@@ -187,10 +190,7 @@ module Generated : sig
   type 'a voblint_conf_ext =
     Voblint_conf_ext of
       typed_domain list * typed_context * globals_rule * unit sem_conf_ext * 'a
-  type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-    Conversion_Overflow
   type ('a, 'b, 'c, 'd) analysis_graph_ext
-  type 'a arithmetic_obligation
   type 'a arithmetic_diagnostic
   type ('a, 'b, 'c) result_global_ext
   type ('a, 'b, 'c) result_state_ext
@@ -6877,6 +6877,30 @@ let rec equal_gproc_decl_ext _A _B _C _D =
   ({equal = equal_gproc_decl_exta _A _B _C _D} :
     ('a, 'b, 'c, 'd) gproc_decl_ext equal);;
 
+type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
+  Conversion_Overflow;;
+
+let rec equal_arithmetic_hazard
+  x0 x1 = match x0, x1 with Signed_Overflow, Conversion_Overflow -> false
+    | Conversion_Overflow, Signed_Overflow -> false
+    | Division_By_Zero, Conversion_Overflow -> false
+    | Conversion_Overflow, Division_By_Zero -> false
+    | Division_By_Zero, Signed_Overflow -> false
+    | Signed_Overflow, Division_By_Zero -> false
+    | Conversion_Overflow, Conversion_Overflow -> true
+    | Signed_Overflow, Signed_Overflow -> true
+    | Division_By_Zero, Division_By_Zero -> true;;
+
+type 'a arithmetic_obligation =
+  Arithmetic_Obligation of arithmetic_hazard * 'a * 'a;;
+
+let rec equal_arithmetic_obligationa _A
+  (Arithmetic_Obligation (x1, x2, x3)) (Arithmetic_Obligation (y1, y2, y3)) =
+    equal_arithmetic_hazard x1 y1 && (eq _A x2 y2 && eq _A x3 y3);;
+
+let rec equal_arithmetic_obligation _A =
+  ({equal = equal_arithmetic_obligationa _A} : 'a arithmetic_obligation equal);;
+
 type color = R | B;;
 
 type ('a, 'b) rbta = Empty |
@@ -7114,9 +7138,6 @@ type 'a voblint_conf_ext =
   Voblint_conf_ext of
     typed_domain list * typed_context * globals_rule * unit sem_conf_ext * 'a;;
 
-type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
-  Conversion_Overflow;;
-
 type ('a, 'b, 'c, 'd) footprints_ext =
   Footprints_ext of
     (('c -> bool) -> ('a, 'b) gedge_action -> 'c list) *
@@ -7128,9 +7149,6 @@ type ('a, 'b, 'c, 'd) analysis_graph_ext =
   Analysis_graph_ext of
     'c unknown_node list *
       ('c unknown_node * (('a, 'b) analysis_edge * 'c unknown_node)) list * 'd;;
-
-type 'a arithmetic_obligation =
-  Arithmetic_Obligation of arithmetic_hazard * 'a * 'a;;
 
 type 'a arithmetic_diagnostic =
   Arithmetic_Diagnostic of
@@ -21133,6 +21151,68 @@ let rec conf_sem
   (Voblint_conf_ext (conf_analyses, conf_context, conf_globals, conf_sem, more))
     = conf_sem;;
 
+let rec arithmetic_operation (Arithmetic_Obligation (x1, x2, x3)) = x2;;
+
+let rec arithmetic_hazard (Arithmetic_Obligation (x1, x2, x3)) = x1;;
+
+let rec arithmetic_operand (Arithmetic_Obligation (x1, x2, x3)) = x3;;
+
+let rec tarith_condition
+  ob = TCmp (CNe, arithmetic_operand ob,
+              TN (texp_kind (arithmetic_operand ob), zero_inta));;
+
+let rec answer_ivl = function QLifted d -> int_ivl d
+                     | QBot -> bot_ivla
+                     | QTop -> top_ivla;;
+
+let rec operand_ivl
+  ch x1 = match ch, x1 with
+    ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
+    | ch, TCmp (c, a, b) ->
+        inf_ivl (answer_ivl (ch (EvalInt (TCmp (c, a, b)))))
+          (Ivl (Fin zero_inta, Fin one_inta))
+    | ch, TNot a ->
+        inf_ivl (answer_ivl (ch (EvalInt (TNot a))))
+          (Ivl (Fin zero_inta, Fin one_inta))
+    | ch, TAnd (a, b) ->
+        inf_ivl (answer_ivl (ch (EvalInt (TAnd (a, b)))))
+          (Ivl (Fin zero_inta, Fin one_inta))
+    | ch, TOr (a, b) ->
+        inf_ivl (answer_ivl (ch (EvalInt (TOr (a, b)))))
+          (Ivl (Fin zero_inta, Fin one_inta))
+    | ch, TVar (v, va) -> answer_ivl (ch (EvalInt (TVar (v, va))))
+    | ch, TArith (v, va, vb, vc) ->
+        answer_ivl (ch (EvalInt (TArith (v, va, vb, vc))))
+    | ch, TCast (v, va) -> answer_ivl (ch (EvalInt (TCast (v, va))));;
+
+let rec tunwrapped_ivl
+  ch x1 = match ch, x1 with ch, TN (k, n) -> Ivl (Fin n, Fin n)
+    | ch, TArith (k, op, a, b) ->
+        ivl_aop op (operand_ivl ch a) (operand_ivl ch b)
+    | ch, TCast (k, a) -> operand_ivl ch a
+    | ch, TVar (v, va) -> operand_ivl ch (TVar (v, va))
+    | ch, TCmp (v, va, vb) -> operand_ivl ch (TCmp (v, va, vb))
+    | ch, TNot v -> operand_ivl ch (TNot v)
+    | ch, TAnd (v, va) -> operand_ivl ch (TAnd (v, va))
+    | ch, TOr (v, va) -> operand_ivl ch (TOr (v, va));;
+
+let rec fits_verdict
+  k i = (if is_bottom_ivl i then Check_Unknown
+          else (if less_eq_ivl i (ik_ivl k) then Check_Proved
+                 else (if is_bottom_ivl (inf_ivl i (ik_ivl k))
+                        then Check_Refuted else Check_Unknown)));;
+
+let rec tobligation_classify
+  sem ds asa ob v =
+    (match arithmetic_hazard ob
+      with Division_By_Zero -> tmcp_classify sem ds asa (tarith_condition ob) v
+      | Signed_Overflow ->
+        fits_verdict (texp_kind (arithmetic_operation ob))
+          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob))
+      | Conversion_Overflow ->
+        fits_verdict (texp_kind (arithmetic_operation ob))
+          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob)));;
+
 let rec edge_expressions = function EA_Assign (x, e) -> [e]
                            | EA_Assume e -> [e]
                            | EA_AssumeNot e -> [e]
@@ -21173,63 +21253,13 @@ let rec obligation_sites (_A1, _A2) (_B1, _B2)
     map (fun (v, es) -> (v, maps obls es))
       (arithmetic_expression_sites (_B1, _B2) (_A1, _A2) g);;
 
-let rec arithmetic_operation (Arithmetic_Obligation (x1, x2, x3)) = x2;;
-
-let rec arithmetic_hazard (Arithmetic_Obligation (x1, x2, x3)) = x1;;
-
-let rec arithmetic_operand (Arithmetic_Obligation (x1, x2, x3)) = x3;;
-
-let rec tarith_condition
-  ob = TCmp (CNe, arithmetic_operand ob,
-              TN (texp_kind (arithmetic_operand ob), zero_inta));;
-
-let rec answer_ivl = function QLifted d -> int_ivl d
-                     | QBot -> bot_ivla
-                     | QTop -> top_ivla;;
-
-let rec operand_ivl
-  ch x1 = match ch, x1 with
-    ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
-    | ch, TVar (v, va) -> answer_ivl (ch (EvalInt (TVar (v, va))))
-    | ch, TArith (v, va, vb, vc) ->
-        answer_ivl (ch (EvalInt (TArith (v, va, vb, vc))))
-    | ch, TCast (v, va) -> answer_ivl (ch (EvalInt (TCast (v, va))))
-    | ch, TCmp (v, va, vb) -> answer_ivl (ch (EvalInt (TCmp (v, va, vb))))
-    | ch, TNot v -> answer_ivl (ch (EvalInt (TNot v)))
-    | ch, TAnd (v, va) -> answer_ivl (ch (EvalInt (TAnd (v, va))))
-    | ch, TOr (v, va) -> answer_ivl (ch (EvalInt (TOr (v, va))));;
-
-let rec tunwrapped_ivl
-  ch x1 = match ch, x1 with
-    ch, TArith (k, op, a, b) -> ivl_aop op (operand_ivl ch a) (operand_ivl ch b)
-    | ch, TCast (k, a) -> operand_ivl ch a
-    | ch, TN (v, va) -> operand_ivl ch (TN (v, va))
-    | ch, TVar (v, va) -> operand_ivl ch (TVar (v, va))
-    | ch, TCmp (v, va, vb) -> operand_ivl ch (TCmp (v, va, vb))
-    | ch, TNot v -> operand_ivl ch (TNot v)
-    | ch, TAnd (v, va) -> operand_ivl ch (TAnd (v, va))
-    | ch, TOr (v, va) -> operand_ivl ch (TOr (v, va));;
-
-let rec fits_verdict
-  k i = (if is_bottom_ivl i then Check_Unknown
-          else (if less_eq_ivl i (ik_ivl k) then Check_Proved
-                 else (if is_bottom_ivl (inf_ivl i (ik_ivl k))
-                        then Check_Refuted else Check_Unknown)));;
-
-let rec tobligation_classify
-  sem ds asa ob v =
-    (match arithmetic_hazard ob
-      with Division_By_Zero -> tmcp_classify sem ds asa (tarith_condition ob) v
-      | Signed_Overflow ->
-        fits_verdict (texp_kind (arithmetic_operation ob))
-          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob))
-      | Conversion_Overflow ->
-        fits_verdict (texp_kind (arithmetic_operation ob))
-          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob)));;
-
 let rec tarith_obligations
-  = function TN (uu, uv) -> []
-    | TVar (uw, ux) -> []
+  = function
+    TN (k, n) ->
+      (if less_eq_int (ik_min k) n && less_eq_int n (ik_max k) then []
+        else [Arithmetic_Obligation
+                (Conversion_Overflow, TN (k, n), TN (k, n))])
+    | TVar (uu, uv) -> []
     | TArith (k, op, a, b) ->
         tarith_obligations a @
           tarith_obligations b @
@@ -21242,11 +21272,50 @@ let rec tarith_obligations
                         (Signed_Overflow, TArith (k, op, a, b),
                           TArith (k, op, a, b))]
                 else [])
-    | TCast (uy, a) -> tarith_obligations a
-    | TCmp (uz, a, b) -> tarith_obligations a @ tarith_obligations b
+    | TCast (k, a) ->
+        tarith_obligations a @
+          (if ik_widens (texp_kind a) k then []
+            else [Arithmetic_Obligation (Conversion_Overflow, TCast (k, a), a)])
+    | TCmp (uw, a, b) -> tarith_obligations a @ tarith_obligations b
     | TNot a -> tarith_obligations a
     | TAnd (a, b) -> tarith_obligations a @ tarith_obligations b
     | TOr (a, b) -> tarith_obligations a @ tarith_obligations b;;
+
+let rec treturn_sites
+  ds p =
+    (let g = typed_cfg p ds in
+      remdups
+        (equal_prod equal_cfg_node
+          (equal_list (equal_arithmetic_obligation equal_texp)))
+        (maps (fun (_, (ca, (ce, _))) ->
+                (match ce_dst ca with None -> []
+                  | Some x ->
+                    maps (fun a ->
+                           (match a with (_, (EA_Nop, _)) -> []
+                             | (_, (EA_Assign (_, _), _)) -> []
+                             | (_, (EA_Special (_, _), _)) -> []
+                             | (_, (EA_Assume _, _)) -> []
+                             | (_, (EA_AssumeNot _, _)) -> []
+                             | (_, (EA_Body _, _)) -> []
+                             | (_, (EA_Ret (None, _), _)) -> []
+                             | (v, (EA_Ret (Some e, q), _)) ->
+                               (if ((q : string) = (callee_of_entry ce)) &&
+                                     not (ik_widens (texp_kind e)
+   (kenv_of ds x))
+                                 then [(v,
+ [Arithmetic_Obligation (Conversion_Overflow, TCast (kenv_of ds x, e), e)])]
+                                 else [])
+                             | (_, (EA_Check (_, _), _)) -> []))
+                      (cfg_intra_list (equal_var_id, linorder_var_id)
+                        (equal_texp, linorder_texp) g)))
+          (cfg_calls_list (equal_var_id, linorder_var_id)
+            (equal_texp, linorder_texp) g)));;
+
+let rec tobligation_sites
+  ds p =
+    obligation_sites (equal_texp, linorder_texp) (equal_var_id, linorder_var_id)
+      tarith_obligations (typed_cfg p ds) @
+      treturn_sites ds p;;
 
 let rec int_tuple_key
   a = Key_List [ivl_key (it_ivl a); congruence_key (it_cong a)];;
@@ -21307,9 +21376,7 @@ let rec typed_es_report
               (equal_analysis_product (equal_list (equal_kd equal_parity))
                 (equal_list equal_unit))))))
       (Voblint_conf_ext (asa, Typed_Entry_State, r, sem, ()))
-      (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-      (obligation_sites (equal_texp, linorder_texp)
-        (equal_var_id, linorder_var_id) tarith_obligations (typed_cfg p ds))
+      (typed_vars (typed_cfg p ds)) (typed_cfg p ds) [] (tobligation_sites ds p)
       (tobligation_classify sem ds (tactivation asa))
       (prog_main_name :: prog_procs p) tmcp_ctx_key (fun a -> Report_Entry a)
       (tmcp_classify sem ds (tactivation asa))
@@ -21419,9 +21486,7 @@ let rec typed_cs_report
     report_of (equal_var_id, linorder_var_id) (equal_texp, linorder_texp)
       (equal_list equal_cfg_node)
       (Voblint_conf_ext (asa, Typed_Call_String k, r, sem, ()))
-      (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-      (obligation_sites (equal_texp, linorder_texp)
-        (equal_var_id, linorder_var_id) tarith_obligations (typed_cfg p ds))
+      (typed_vars (typed_cfg p ds)) (typed_cfg p ds) [] (tobligation_sites ds p)
       (tobligation_classify sem ds (tactivation asa))
       (prog_main_name :: prog_procs p)
       (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))

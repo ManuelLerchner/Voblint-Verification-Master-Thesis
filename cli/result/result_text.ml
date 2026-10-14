@@ -49,7 +49,7 @@ let obligation_message verdict obligation =
     | C.Signed_Overflow, C.TArith (_, op, _, _) ->
         "signed integer overflow in " ^ operator_name op
     | C.Signed_Overflow, _ -> "signed integer overflow"
-    | C.Conversion_Overflow, C.TCast (k, _) ->
+    | C.Conversion_Overflow, (C.TCast (k, _) | C.TN (k, _)) ->
         (if C.ik_signed k then "signed" else "unsigned")
         ^ " integer overflow in conversion"
     | C.Conversion_Overflow, _ -> "integer overflow in conversion"

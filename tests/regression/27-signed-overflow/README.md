@@ -27,4 +27,15 @@ overflow obligation; C also leaves `INT_MIN % -1` undefined, which Voblint does
 not report. Unsigned arithmetic wraps by definition and raises none; Goblint
 warns about it as unsigned overflow.
 
+Conversions raise the obligation that the converted value fits the target kind,
+whenever the source kind does not widen into it: explicit casts, assigned values
+and literals, arguments, returned values, and a call's result converted to the
+caller's destination, which is decided at the callee's `return`. As in Goblint,
+conversions to signed and unsigned kinds are both reported, although C defines
+a conversion to an unsigned kind as wraparound and leaves one to a signed kind
+implementation-defined. Voblint does not distinguish an explicit cast from an
+implicit conversion, and does not check the conversion of a library call's
+result (`min`, `max`). `precision/06` and `known-imprecision/05` run one
+program under each policy.
+
 Run with `pixi run python3 tests/run.py 27-signed-overflow`.

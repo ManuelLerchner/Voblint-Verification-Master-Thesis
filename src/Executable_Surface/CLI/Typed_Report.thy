@@ -22,13 +22,29 @@ text \<open>
   the kind's minimum divided by \<open>-1\<close>. An unsigned operation wraps by definition and
   raises no obligation. A remainder raises none either: its mathematical result always
   fits, although C also leaves \<open>INT_MIN % -1\<close> undefined because the quotient does not.
+
+  A conversion must convert a value its target kind represents. Elaboration makes
+  every conversion a \<open>TCast\<close> node: an explicit cast, and the implicit conversions of an
+  assigned value, an argument and a returned value to the kind of the place they are
+  written to. A conversion whose source kind widens into its target cannot change a
+  value of the source kind and raises no obligation. Goblint checks conversions to
+  signed and unsigned kinds alike (\<open>IntegerOverflowInExplicitCast\<close>,
+  \<open>\<dots>InImplicitCast\<close>); so does Voblint, although C defines a conversion to an unsigned
+  kind as wraparound and leaves one to a signed kind implementation-defined, not
+  undefined. Voblint does not tell an explicit cast from an implicit conversion, since
+  elaboration does not record it.
+
   Every obligation of an expression is raised, however deeply it is nested and
   whatever the value of an enclosing logical operator, since the typed language
   evaluates both operands of one.
 \<close>
 
+text \<open>A literal elaborated at a kind is converted to it as well: \<open>x = 300\<close> for an 8-bit
+  \<open>x\<close> elaborates to the literal at \<open>x\<close>'s kind, whose value wraps.\<close>
+
 fun tarith_obligations :: "texp \<Rightarrow> texp arithmetic_obligation list" where
-  "tarith_obligations (TN _ _) = []"
+  "tarith_obligations (TN k n) =
+     (if n \<in> ik_range k then [] else [Arithmetic_Obligation Conversion_Overflow (TN k n) (TN k n)])"
 | "tarith_obligations (TVar _ _) = []"
 | "tarith_obligations (TArith k op a b) =
      tarith_obligations a @ tarith_obligations b
@@ -36,7 +52,10 @@ fun tarith_obligations :: "texp \<Rightarrow> texp arithmetic_obligation list" w
         then [Arithmetic_Obligation Division_By_Zero (TArith k op a b) b] else [])
      @ (if ik_signed k \<and> op \<noteq> AMod
         then [Arithmetic_Obligation Signed_Overflow (TArith k op a b) (TArith k op a b)] else [])"
-| "tarith_obligations (TCast _ a) = tarith_obligations a"
+| "tarith_obligations (TCast k a) =
+     tarith_obligations a
+     @ (if ik_widens (texp_kind a) k then []
+        else [Arithmetic_Obligation Conversion_Overflow (TCast k a) a])"
 | "tarith_obligations (TCmp _ a b) = tarith_obligations a @ tarith_obligations b"
 | "tarith_obligations (TNot a) = tarith_obligations a"
 | "tarith_obligations (TAnd a b) = tarith_obligations a @ tarith_obligations b"
@@ -58,7 +77,8 @@ text \<open>
 \<close>
 
 fun tunwrapped :: "texp \<Rightarrow> tstore \<Rightarrow> int" where
-  "tunwrapped (TArith k op a b) t = aop_eval op (teval a t) (teval b t)"
+  "tunwrapped (TN k n) t = n"
+| "tunwrapped (TArith k op a b) t = aop_eval op (teval a t) (teval b t)"
 | "tunwrapped (TCast k a) t = teval a t"
 | "tunwrapped e t = teval e t"
 
@@ -85,16 +105,22 @@ fun answer_ivl :: "answer \<Rightarrow> ivl" where
 lemma answer_ivl_sound: "n \<in> gamma_answer a \<Longrightarrow> n \<in> gamma_ivl (answer_ivl a)"
   by (cases a) (auto simp: gamma_int_dom_def top_ivl_def ivl_top_def)
 
-text \<open>A literal operand is its own exact interval, whatever the active analyses
-  answer for it: a domain without magnitudes, such as Parity, would otherwise leave
-  even \<open>10 / 3\<close> a possible overflow.\<close>
+text \<open>A literal operand is its own exact interval, and a truth value lies in
+  \<open>[0, 1]\<close>, whatever the active analyses answer for them: a domain without
+  magnitudes, such as Parity, would otherwise leave even \<open>10 / 3\<close> a possible
+  overflow.\<close>
 
 fun operand_ivl :: "texp gchannel \<Rightarrow> texp \<Rightarrow> ivl" where
   "operand_ivl ch (TN k n) = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
+| "operand_ivl ch (TCmp c a b) = answer_ivl (ch (EvalInt (TCmp c a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TNot a) = answer_ivl (ch (EvalInt (TNot a))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TAnd a b) = answer_ivl (ch (EvalInt (TAnd a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
+| "operand_ivl ch (TOr a b) = answer_ivl (ch (EvalInt (TOr a b))) \<sqinter> Ivl (Fin 0) (Fin 1)"
 | "operand_ivl ch e = answer_ivl (ch (EvalInt e))"
 
 fun tunwrapped_ivl :: "texp gchannel \<Rightarrow> texp \<Rightarrow> ivl" where
-  "tunwrapped_ivl ch (TArith k op a b) = ivl_aop op (operand_ivl ch a) (operand_ivl ch b)"
+  "tunwrapped_ivl ch (TN k n) = Ivl (Fin n) (Fin n)"
+| "tunwrapped_ivl ch (TArith k op a b) = ivl_aop op (operand_ivl ch a) (operand_ivl ch b)"
 | "tunwrapped_ivl ch (TCast k a) = operand_ivl ch a"
 | "tunwrapped_ivl ch e = operand_ivl ch e"
 
@@ -102,12 +128,19 @@ lemma tunwrapped_ivl_sound:
   assumes "geval_query.channel_holds teval ch t"
   shows "tunwrapped e t \<in> gamma_ivl (tunwrapped_ivl ch e)"
 proof -
+  have answer: "teval a t \<in> gamma_ivl (answer_ivl (ch (EvalInt a)))" for a
+    using geval_query.channel_holdsD[OF assms, of "EvalInt a"] by (auto intro: answer_ivl_sound)
+  have truth: "teval a t \<in> gamma_ivl (Ivl (Fin 0) (Fin 1))"
+    if "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
+    for a
+    using that by (auto simp: less_eq_eint_def)
   have ans: "teval a t \<in> gamma_ivl (operand_ivl ch a)" for a
-  proof (cases a)
-    case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)
-  qed (use geval_query.channel_holdsD[OF assms, of "EvalInt a"] in \<open>auto intro: answer_ivl_sound\<close>)
+    using answer[of a] truth[of a]
+    by (cases a) (auto simp: less_eq_eint_def gamma_inf_ivl)
   show ?thesis
-    by (cases e) (simp_all only: tunwrapped.simps tunwrapped_ivl.simps ans ivl_aop_sound)
+  proof (cases e)
+    case (TN k n) then show ?thesis by (simp add: less_eq_eint_def)
+  qed (simp_all only: tunwrapped.simps tunwrapped_ivl.simps ans ivl_aop_sound)
 qed
 
 definition fits_verdict :: "ikind \<Rightarrow> ivl \<Rightarrow> check_result" where
@@ -156,6 +189,36 @@ proof -
     by (auto simp: tobligation_classify_def tobligation_holds_def split: arithmetic_hazard.splits)
 qed
 
+subsection \<open>Where the obligations are decided\<close>
+
+text \<open>
+  An expression's obligations are decided at the source of the edge or call that
+  evaluates it. One conversion has no expression of its own: a call's result, which
+  the caller writes to its destination at the destination's kind. Its obligation is
+  decided where the callee returns, on the returned expression, once for each kind a
+  caller converts it to. A returned value whose kind widens into the destination's
+  raises none. A library call's result, such as \<open>min\<close>'s, is converted without an
+  obligation.
+\<close>
+
+definition treturn_sites ::
+    "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp arithmetic_obligation list) list" where
+  "treturn_sites ds p =
+     (let g = typed_cfg p ds
+      in remdups (concat (map (\<lambda>(u, ca, ce, k). case ce_dst ca of
+           None \<Rightarrow> []
+         | Some x \<Rightarrow> concat (map (\<lambda>(v, a, w). case a of
+               EA_Ret (Some e) q \<Rightarrow>
+                 if q = callee_of_entry ce \<and> \<not> ik_widens (texp_kind e) (kenv_of ds x)
+                 then [(v, [Arithmetic_Obligation Conversion_Overflow (TCast (kenv_of ds x) e) e])]
+                 else []
+             | _ \<Rightarrow> []) (cfg_intra_list g)))
+         (cfg_calls_list g))))"
+
+definition tobligation_sites :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp arithmetic_obligation list) list" where
+  "tobligation_sites ds p =
+     obligation_sites tarith_obligations (typed_cfg p ds) @ treturn_sites ds p"
+
 text \<open>The variables a report lists: every variable an edge or a call of the typed graph
   mentions.\<close>
 
@@ -195,8 +258,7 @@ definition typed_cs_report ::
   "typed_cs_report sem as r k ds p sol =
      report_of \<lparr>conf_analyses = as, conf_context = Typed_Call_String k, conf_globals = r, conf_sem = sem\<rparr>
        (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-       (obligation_sites tarith_obligations (typed_cfg p ds))
-       (tobligation_classify sem ds (tactivation as))
+       (tobligation_sites ds p) (tobligation_classify sem ds (tactivation as))
        (prog_main_name # prog_procs p) (\<lambda>ctx. Key_List (map Key_Node ctx))
        (if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String)
        (tmcp_classify sem ds (tactivation as)) (typed_mcp.solved_run_of sem ds as k tglobal p sol)"
@@ -291,8 +353,7 @@ definition typed_es_report ::
   "typed_es_report sem as r ds p sol =
      report_of \<lparr>conf_analyses = as, conf_context = Typed_Entry_State, conf_globals = r, conf_sem = sem\<rparr>
        (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-       (obligation_sites tarith_obligations (typed_cfg p ds))
-       (tobligation_classify sem ds (tactivation as))
+       (tobligation_sites ds p) (tobligation_classify sem ds (tactivation as))
        (prog_main_name # prog_procs p) tmcp_ctx_key Report_Entry
        (tmcp_classify sem ds (tactivation as)) (typed_mcp_es.solved_run_of sem ds as tglobal p sol)"
 
@@ -526,14 +587,14 @@ theorem typed_report_diagnostics_sound:
     and run: "typed_report_run sem as r cx ds p = Some res"
     and s: "s \<in> reaching ds p v"
   shows typed_report_obligation_safe:
-      "(v, obs) \<in> set (obligation_sites tarith_obligations (typed_cfg p ds)) \<Longrightarrow> ob \<in> set obs
+      "(v, obs) \<in> set (tobligation_sites ds p) \<Longrightarrow> ob \<in> set obs
          \<Longrightarrow> \<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v
          \<Longrightarrow> tobligation_holds ob s"
     and typed_report_obligation_refuted:
       "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
          \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> tobligation_holds (diagnostic_obligation d) s"
 proof -
-  let ?sites = "obligation_sites tarith_obligations (typed_cfg p ds)"
+  let ?sites = "tobligation_sites ds p"
   let ?cl = "tobligation_classify sem ds (tactivation as)"
   let ?P = "(\<forall>obs ob. (v, obs) \<in> set ?sites \<longrightarrow> ob \<in> set obs
               \<longrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)
@@ -615,20 +676,19 @@ proof -
 qed
 
 text \<open>Every obligation of an expression an edge or a call evaluates is one the report
-  decides at the edge's or the call's source.\<close>
+  decides at the edge's or the call's source, and every conversion of a call's result
+  is one it decides where the callee returns.\<close>
 
 lemma tobligation_site:
   assumes "(v, es) \<in> set (arithmetic_expression_sites (typed_cfg p ds))"
     and "e \<in> set es" and "ob \<in> set (tarith_obligations e)"
-  shows "\<exists>obs. (v, obs) \<in> set (obligation_sites tarith_obligations (typed_cfg p ds))
-           \<and> ob \<in> set obs"
-  using assms unfolding obligation_sites_def by force
+  shows "\<exists>obs. (v, obs) \<in> set (tobligation_sites ds p) \<and> ob \<in> set obs"
+  using assms unfolding tobligation_sites_def obligation_sites_def by force
 
 lemma tobligation_site_intra:
   assumes "(v, a, w) \<in> intra (typed_cfg p ds)"
     and "e \<in> set (edge_expressions a)" and "ob \<in> set (tarith_obligations e)"
-  shows "\<exists>obs. (v, obs) \<in> set (obligation_sites tarith_obligations (typed_cfg p ds))
-           \<and> ob \<in> set obs"
+  shows "\<exists>obs. (v, obs) \<in> set (tobligation_sites ds p) \<and> ob \<in> set obs"
   using assms
   by (intro tobligation_site[OF arithmetic_expression_sites_intra])
      (simp_all add: typed_cfg_def compile_prog_finite)
@@ -636,19 +696,40 @@ lemma tobligation_site_intra:
 lemma tobligation_site_call:
   assumes "(v, ca, ce, k) \<in> calls (typed_cfg p ds)"
     and "e \<in> set (ce_args ca)" and "ob \<in> set (tarith_obligations e)"
-  shows "\<exists>obs. (v, obs) \<in> set (obligation_sites tarith_obligations (typed_cfg p ds))
-           \<and> ob \<in> set obs"
+  shows "\<exists>obs. (v, obs) \<in> set (tobligation_sites ds p) \<and> ob \<in> set obs"
   using assms
   by (intro tobligation_site[OF arithmetic_expression_sites_call])
      (simp_all add: typed_cfg_def compile_prog_finite)
 
-text \<open>A signed overflow obligation holds exactly when the operation's mathematical
-  result lies in its kind.\<close>
+lemma tobligation_site_return:
+  assumes call: "(u, ca, ce, k) \<in> calls (typed_cfg p ds)" and dst: "ce_dst ca = Some x"
+    and ret: "(v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (typed_cfg p ds)"
+    and narrows: "\<not> ik_widens (texp_kind e) (kenv_of ds x)"
+  shows "(v, [Arithmetic_Obligation Conversion_Overflow (TCast (kenv_of ds x) e) e])
+           \<in> set (tobligation_sites ds p)"
+proof -
+  have fin: "finite (intra (typed_cfg p ds))" "finite (calls (typed_cfg p ds))"
+    by (simp_all add: typed_cfg_def compile_prog_finite)
+  have "(u, ca, ce, k) \<in> set (cfg_calls_list (typed_cfg p ds))"
+    and "(v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> set (cfg_intra_list (typed_cfg p ds))"
+    using call ret fin by simp_all
+  then show ?thesis
+    unfolding tobligation_sites_def treturn_sites_def Let_def
+    using dst narrows by (force simp: image_iff)
+qed
+
+text \<open>What an obligation of each hazard says about a store.\<close>
 
 lemma tobligation_holds_overflow [simp]:
   "tobligation_holds (Arithmetic_Obligation Signed_Overflow (TArith k op a b) x) t
      \<longleftrightarrow> aop_eval op (teval a t) (teval b t) \<in> ik_range k"
   by (simp add: tobligation_holds_def)
+
+lemma tobligation_holds_conversion [simp]:
+  "tobligation_holds (Arithmetic_Obligation Conversion_Overflow (TCast k a) x) t
+     \<longleftrightarrow> teval a t \<in> ik_range k"
+  "tobligation_holds (Arithmetic_Obligation Conversion_Overflow (TN k n) x) t \<longleftrightarrow> n \<in> ik_range k"
+  by (simp_all add: tobligation_holds_def)
 
 lemma tobligation_holds_division [simp]:
   "tobligation_holds (Arithmetic_Obligation Division_By_Zero e b) t \<longleftrightarrow> teval b t \<noteq> 0"
@@ -676,6 +757,16 @@ lemma tarith_obligations_division:
   "TArith k op a b \<in> tsubexps e \<Longrightarrow> op = ADiv \<or> op = AMod
      \<Longrightarrow> Arithmetic_Obligation Division_By_Zero (TArith k op a b) b \<in> set (tarith_obligations e)"
   by (induction e) auto
+
+lemma tarith_obligations_conversion:
+  "TCast k a \<in> tsubexps e \<Longrightarrow> \<not> ik_widens (texp_kind a) k
+     \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TCast k a) a \<in> set (tarith_obligations e)"
+  by (induction e) auto
+
+lemma tarith_obligations_literal:
+  "TN k n \<in> tsubexps e \<Longrightarrow> n \<notin> ik_range k
+     \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TN k n) (TN k n) \<in> set (tarith_obligations e)"
+  by (induction e) (auto simp del: ik_range_iff)
 subsection \<open>Rendering a typed report\<close>
 
 text \<open>

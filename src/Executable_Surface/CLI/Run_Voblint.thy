@@ -91,8 +91,10 @@ subsection \<open>What the arithmetic diagnostics guarantee\<close>
 
 text \<open>
   A point the report's diagnostics do not name is safe: at every store that reaches it,
-  every obligation of every expression an edge or a call there evaluates holds. No
-  divisor is zero, and no signed operation computes a result outside its kind. A
+  every obligation of every expression an edge or a call there evaluates holds, and
+  every value returned there fits the kind each caller converts it to. No divisor is
+  zero, no signed operation computes a result outside its kind, and no conversion
+  narrower than its source kind converts a value outside its target. A
   diagnostic says nothing on its own unless it is refuted: then its obligation fails at
   every store that reaches its point, which is a definite violation only if the point is
   reached. Both hold under either overflow policy, which changes only how precisely the
@@ -109,6 +111,11 @@ theorem run_voblint_arithmetic_safe:
     and run_voblint_arithmetic_safe_call:
       "(v, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> e \<in> set (ce_args ca)
          \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> tobligation_holds ob s"
+    and run_voblint_arithmetic_safe_return:
+      "(u, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> ce_dst ca = Some x
+         \<Longrightarrow> (v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (typed_cfg p ds)
+         \<Longrightarrow> \<not> ik_widens (texp_kind e) (kenv_of ds x)
+         \<Longrightarrow> teval e s \<in> ik_range (kenv_of ds x)"
 proof -
   from run have wf: "wf_program_compile_input p"
     and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
@@ -123,6 +130,11 @@ proof -
     if "(v, ca, ce, k) \<in> calls (typed_cfg p ds)" "e \<in> set (ce_args ca)"
       "ob \<in> set (tarith_obligations e)"
     using tobligation_site_call[OF that] safe by blast
+  show "teval e s \<in> ik_range (kenv_of ds x)"
+    if "(u, ca, ce, k) \<in> calls (typed_cfg p ds)" "ce_dst ca = Some x"
+      "(v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (typed_cfg p ds)"
+      "\<not> ik_widens (texp_kind e) (kenv_of ds x)"
+    using safe[OF tobligation_site_return[OF that]] by simp
 qed
 
 theorem run_voblint_arithmetic_refuted:
@@ -157,5 +169,23 @@ corollary run_voblint_no_signed_overflow:
   using evaluated tarith_obligations_overflow[OF sub signed op]
     run_voblint_arithmetic_safe[OF run absent s]
   by (metis tobligation_holds_overflow)
+
+text \<open>
+  For conversions: at a point no diagnostic names, every conversion nested in an
+  expression evaluated there whose source kind does not widen into its target converts
+  a value the target represents, so no conversion changes the value it converts.
+\<close>
+
+corollary run_voblint_no_conversion_overflow:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and s: "s \<in> reaching ds p v"
+    and evaluated: "((v, a, w) \<in> intra (typed_cfg p ds) \<and> e \<in> set (edge_expressions a))
+                    \<or> ((v, ca, ce, k) \<in> calls (typed_cfg p ds) \<and> e \<in> set (ce_args ca))"
+    and sub: "TCast ik x \<in> tsubexps e" and narrows: "\<not> ik_widens (texp_kind x) ik"
+  shows "teval x s \<in> ik_range ik"
+  using evaluated tarith_obligations_conversion[OF sub narrows]
+    run_voblint_arithmetic_safe[OF run absent s]
+  by (metis tobligation_holds_conversion(1))
 
 end
