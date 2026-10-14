@@ -9,18 +9,20 @@ text \<open>
   type: a finite set of pairs \<open>(x, y)\<close>, each meaning that \<open>x\<close>'s value is at most
   \<open>y\<close>'s. Stored values are already normalized to their kinds, so the facts compare the
   values a typed run holds; a guard adds a fact only when it compares two variable
-  reads, whose values the comparison sees unconverted.
+  reads, whose values the comparison sees unconverted. The flag records that every
+  variable other than the return slot holds a value of its kind (@{const tstyped}): a
+  copy between two variables of one kind then passes the conversion unchanged.
 \<close>
 
-datatype 'v order_rel = OBot | OFacts "('v \<times> 'v) set"
+datatype 'v order_rel = OBot | OFacts bool "('v \<times> 'v) set"
 
 instantiation order_rel :: (type) "{bounded_semilattice_sup_bot, order_top}"
 begin
 
 fun less_eq_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightarrow> bool" where
   "less_eq_order_rel OBot _ = True"
-| "less_eq_order_rel (OFacts _) OBot = False"
-| "less_eq_order_rel (OFacts a) (OFacts b) = (b \<subseteq> a)"
+| "less_eq_order_rel (OFacts _ _) OBot = False"
+| "less_eq_order_rel (OFacts t a) (OFacts u b) = (b \<subseteq> a \<and> (u \<longrightarrow> t))"
 
 definition less_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightarrow> bool" where
   "less_order_rel a b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> a"
@@ -28,11 +30,11 @@ definition less_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightarr
 fun sup_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightarrow> 'v order_rel" where
   "sup_order_rel OBot b = b"
 | "sup_order_rel a OBot = a"
-| "sup_order_rel (OFacts a) (OFacts b) = OFacts (a \<inter> b)"
+| "sup_order_rel (OFacts t a) (OFacts u b) = OFacts (t \<and> u) (a \<inter> b)"
 
 definition bot_order_rel :: "'v order_rel" where "bot_order_rel = OBot"
 
-definition top_order_rel :: "'v order_rel" where "top_order_rel = OFacts {}"
+definition top_order_rel :: "'v order_rel" where "top_order_rel = OFacts False {}"
 
 instance proof
   fix x y z :: "'v order_rel"
@@ -66,21 +68,26 @@ qed
 
 end
 
-fun gamma_ord :: "'v order_rel \<Rightarrow> ('v \<Rightarrow> int) set" where
-  "gamma_ord OBot = {}"
-| "gamma_ord (OFacts ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
+fun gamma_ord :: "kenv \<Rightarrow> var_id order_rel \<Rightarrow> tstore set" where
+  "gamma_ord \<kappa> OBot = {}"
+| "gamma_ord \<kappa> (OFacts t ps) = {s. (t \<longrightarrow> tstyped \<kappa> s) \<and> (\<forall>(x, y) \<in> ps. s x \<le> s y)}"
 
-lemma gamma_ord_mono: "a \<le> b \<Longrightarrow> gamma_ord a \<subseteq> gamma_ord b"
+lemma gamma_ord_mono: "a \<le> b \<Longrightarrow> gamma_ord \<kappa> a \<subseteq> gamma_ord \<kappa> b"
   by (cases a; cases b) auto
 
-lemma gamma_ord_top [simp]: "gamma_ord top = UNIV"
+lemma gamma_ord_top [simp]: "gamma_ord \<kappa> top = UNIV"
   by (simp add: top_order_rel_def)
 
 fun ord_forget :: "'v \<Rightarrow> 'v order_rel \<Rightarrow> 'v order_rel" where
   "ord_forget x OBot = OBot"
-| "ord_forget x (OFacts ps) = OFacts {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
+| "ord_forget x (OFacts t ps) = OFacts t {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
 
-lemma ord_forget_sound: "s \<in> gamma_ord d \<Longrightarrow> s(x := v) \<in> gamma_ord (ord_forget x d)"
+text \<open>Every write converts to its destination's kind except the return slot's, which no
+  kind constrains, so a forgotten destination keeps the stores typed.\<close>
+
+lemma ord_forget_sound:
+  "s \<in> gamma_ord \<kappa> d \<Longrightarrow> v = ik_norm (\<kappa> x) n \<or> x = ReturnVar
+     \<Longrightarrow> s(x := v) \<in> gamma_ord \<kappa> (ord_forget x d)"
   by (cases d) auto
 
 subsection \<open>Guards\<close>
@@ -107,14 +114,14 @@ lemma cmp_facts_sound:
   by (cases c; cases pol) auto
 
 fun ord_branch :: "texp \<Rightarrow> bool \<Rightarrow> var_id order_rel \<Rightarrow> var_id order_rel" where
-  "ord_branch (TCmp c (TVar k x) (TVar k' y)) pol (OFacts ps) = OFacts (ps \<union> cmp_facts c pol x y)"
+  "ord_branch (TCmp c (TVar k x) (TVar k' y)) pol (OFacts t ps) = OFacts t (ps \<union> cmp_facts c pol x y)"
 | "ord_branch (TNot b) pol d = ord_branch b (\<not> pol) d"
 | "ord_branch _ _ d = d"
 
 lemma ord_branch_sound:
-  "s \<in> gamma_ord d \<Longrightarrow> truthy (teval b s) = pol \<Longrightarrow> s \<in> gamma_ord (ord_branch b pol d)"
+  "s \<in> gamma_ord \<kappa> d \<Longrightarrow> truthy (teval b s) = pol \<Longrightarrow> s \<in> gamma_ord \<kappa> (ord_branch b pol d)"
 proof (induction b pol d rule: ord_branch.induct)
-  case (1 c k x k' y pol ps)
+  case (1 c k x k' y pol t ps)
   then show ?case using cmp_facts_sound[of c s x y pol] by (auto split: if_splits)
 next
   case (2 b pol d)
@@ -127,9 +134,9 @@ text \<open>A pair \<open>(x, y)\<close> decides \<open>x \<le> y\<close> as tru
   pair it also decides equality.\<close>
 
 definition ord_le :: "var_id order_rel \<Rightarrow> var_id \<Rightarrow> var_id \<Rightarrow> bool" where
-  "ord_le d x y = (case d of OBot \<Rightarrow> False | OFacts ps \<Rightarrow> x = y \<or> (x, y) \<in> ps)"
+  "ord_le d x y = (case d of OBot \<Rightarrow> False | OFacts _ ps \<Rightarrow> x = y \<or> (x, y) \<in> ps)"
 
-lemma ord_le_sound: "ord_le d x y \<Longrightarrow> s \<in> gamma_ord d \<Longrightarrow> s x \<le> s y"
+lemma ord_le_sound: "ord_le d x y \<Longrightarrow> s \<in> gamma_ord \<kappa> d \<Longrightarrow> s x \<le> s y"
   by (cases d) (auto simp: ord_le_def)
 
 fun ord_decide :: "cop \<Rightarrow> var_id order_rel \<Rightarrow> var_id \<Rightarrow> var_id \<Rightarrow> bool option" where
@@ -141,8 +148,8 @@ fun ord_decide :: "cop \<Rightarrow> var_id order_rel \<Rightarrow> var_id \<Rig
 | "ord_decide CNe d x y = (if ord_le d x y \<and> ord_le d y x then Some False else None)"
 
 lemma ord_decide_sound:
-  "ord_decide c d x y = Some r \<Longrightarrow> s \<in> gamma_ord d \<Longrightarrow> cop_eval c (s x) (s y) = r"
-  using ord_le_sound[of d x y s] ord_le_sound[of d y x s]
+  "ord_decide c d x y = Some r \<Longrightarrow> s \<in> gamma_ord \<kappa> d \<Longrightarrow> cop_eval c (s x) (s y) = r"
+  using ord_le_sound[of d x y s \<kappa>] ord_le_sound[of d y x s \<kappa>]
   by (cases c) (auto split: if_splits)
 
 fun ord_classify :: "texp \<Rightarrow> var_id order_rel \<Rightarrow> check_result" where
@@ -154,7 +161,7 @@ fun ord_classify :: "texp \<Rightarrow> var_id order_rel \<Rightarrow> check_res
 | "ord_classify _ d = Check_Unknown"
 
 lemma ord_classify_sound:
-  assumes "s \<in> gamma_ord d"
+  assumes "s \<in> gamma_ord \<kappa> d"
   shows ord_classify_proved: "ord_classify c d = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and ord_classify_refuted: "ord_classify c d = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
   using assms ord_decide_sound
@@ -177,77 +184,202 @@ fun ord_query :: "texp gchannel \<Rightarrow> var_id order_rel lifted \<Rightarr
 | "ord_query ch d q = \<top>"
 
 lemma ord_query_sound:
-  "s \<in> gamma_ord d \<Longrightarrow> geval_holds teval q (ord_query ch (Lifted d) q) s"
+  "s \<in> gamma_ord \<kappa> d \<Longrightarrow> geval_holds teval q (ord_query ch (Lifted d) q) s"
   using ord_decide_sound
   by (cases "(ch, Lifted d, q)" rule: ord_query.cases) (auto split: option.splits)
+
+subsection \<open>Assignments\<close>
+
+text \<open>
+  At \<open>x = e\<close> the component asks about the state before the assignment, where
+  \<open>(\<kappa> x) e\<close> evaluates to the new value of \<open>x\<close> and every other variable keeps
+  its value, as the untyped order analysis does. The exact answer \<open>1\<close> to
+  \<open>(\<kappa> x) e \<le> y\<close> makes \<open>(x, y)\<close> true afterwards, and \<open>y \<le> (\<kappa> x) e\<close> makes
+  \<open>(y, x)\<close> true. The candidate partners are the variables in \<open>ys\<close>. A copy from a
+  variable of the same kind records both orders when the stores are typed and gives
+  the destination the source's facts, as
+  Goblint's \<^verbatim>\<open>varEq\<close> records an equality for an assignment between variables of
+  one type (\<^verbatim>\<open>varEq.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>).
+\<close>
+
+definition ord_copy ::
+    "kenv \<Rightarrow> var_id \<Rightarrow> texp \<Rightarrow> (var_id \<times> var_id) set \<Rightarrow> (var_id \<times> var_id) set" where
+  "ord_copy \<kappa> x e ps = (case e of
+     TVar k y \<Rightarrow> if y \<noteq> x \<and> y \<noteq> ReturnVar \<and> \<kappa> y = \<kappa> x
+       then {(x, y), (y, x)} \<union> (\<lambda>(a, b). (x, b)) ` Set.filter (\<lambda>(a, b). a = y) ps
+            \<union> (\<lambda>(a, b). (a, x)) ` Set.filter (\<lambda>(a, b). b = y) ps
+       else {}
+   | _ \<Rightarrow> {})"
+
+definition ord_learn ::
+    "kenv \<Rightarrow> var_id list \<Rightarrow> texp gchannel \<Rightarrow> var_id \<Rightarrow> texp \<Rightarrow> var_id order_rel \<Rightarrow> var_id order_rel" where
+  "ord_learn \<kappa> ys ch x e d =
+     (case d of
+        OBot \<Rightarrow> OBot
+      | OFacts t ps \<Rightarrow> OFacts t (ps
+          \<union> (if t then ord_copy \<kappa> x e ps else {})
+          \<union> set (map (\<lambda>y. (x, y)) (filter (\<lambda>y. y \<noteq> x
+                \<and> answer_const (ch (EvalInt (TCmp CLe (TCast (\<kappa> x) e) (TVar (\<kappa> y) y)))) = Some 1) ys))
+          \<union> set (map (\<lambda>y. (y, x)) (filter (\<lambda>y. y \<noteq> x
+                \<and> answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1) ys))))"
+
+lemma geval_holds_constD:
+  "geval_holds ev (EvalInt e) a s \<Longrightarrow> answer_const a = Some n \<Longrightarrow> ev e s = n"
+  using gamma_int_dom_constant_subset by (cases a rule: answer_const.cases) auto
+
+lemma ord_learn_sound:
+  assumes post: "s(x := ik_norm (\<kappa> x) (teval e s)) \<in> gamma_ord \<kappa> d"
+    and ch: "geval_query.channel_holds teval ch s"
+  shows "s(x := ik_norm (\<kappa> x) (teval e s)) \<in> gamma_ord \<kappa> (ord_learn \<kappa> ys ch x e d)"
+proof (cases d)
+  case OBot with post show ?thesis by simp
+next
+  case (OFacts t ps)
+  define s' where "s' = s(x := ik_norm (\<kappa> x) (teval e s))"
+  have up: "s' x \<le> s' y"
+    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TCast (\<kappa> x) e) (TVar (\<kappa> y) y)))) = Some 1" for y
+    using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
+    by (simp add: s'_def split: if_splits)
+  have down: "s' y \<le> s' x"
+    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1" for y
+    using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
+    by (simp add: s'_def split: if_splits)
+  have mem: "s' \<in> gamma_ord \<kappa> (OFacts t ps)" using post OFacts by (simp add: s'_def)
+  have copy: "s' a \<le> s' b" if t: "t" and ab: "(a, b) \<in> ord_copy \<kappa> x e ps" for a b
+  proof -
+    from ab obtain k y where e: "e = TVar k y" and y: "y \<noteq> x" "y \<noteq> ReturnVar" "\<kappa> y = \<kappa> x"
+      and ab': "(a, b) = (x, y) \<or> (a, b) = (y, x) \<or> (a = x \<and> (y, b) \<in> ps) \<or> (b = x \<and> (a, y) \<in> ps)"
+      by (auto simp: ord_copy_def split: texp.splits if_splits)
+    from post OFacts t have "tstyped \<kappa> s'" by (simp add: s'_def)
+    then have "s' y \<in> ik_range (\<kappa> x)" using y unfolding tstyped_def by metis
+    then have "s' x = s' y" using y by (simp add: s'_def e del: ik_range_iff)
+    then show ?thesis using ab' mem by auto
+  qed
+  show ?thesis
+    using mem up down copy unfolding s'_def[symmetric] by (auto simp: ord_learn_def OFacts)
+qed
+
+subsection \<open>Calls\<close>
+
+text \<open>The callee starts from no facts and the caller learns none back. The callee's
+  stores are typed when the caller's are and every actual fits its formal
+  (@{const arg_fits}), as for the non-relational analyses' entry; the caller's after
+  the call when both sides' are, as the result converts to its destination's kind.\<close>
+
+definition ord_typed :: "var_id order_rel lifted \<Rightarrow> bool" where
+  "ord_typed d = (case d of Lifted (OFacts t _) \<Rightarrow> t | _ \<Rightarrow> False)"
+
+definition ord_enter :: "kenv \<Rightarrow> var_id list \<Rightarrow> texp list \<Rightarrow> var_id order_rel lifted \<Rightarrow> var_id order_rel" where
+  "ord_enter \<kappa> ps es d = OFacts (ord_typed d \<and> list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)) {}"
+
+lemma tstyped_bind_fits:
+  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)" and "tstyped \<kappa> t" and "tstyped \<kappa> s"
+  shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)"
+proof (rule tstyped_bind_formals[OF assms(3)])
+  fix x n assume "(x, n) \<in> set (zip ps (map (\<lambda>e. teval e t) es))"
+  then obtain e where "(x, e) \<in> set (zip ps es)" and n: "n = teval e t"
+    by (auto simp: zip_map2)
+  with assms(1) have "arg_fits \<kappa> x e" by (auto simp: list_all_iff)
+  then show "n \<in> ik_range (\<kappa> x)" using n arg_fits_range[OF _ assms(2)] by simp
+qed
 
 subsection \<open>The component\<close>
 
 text \<open>
-  Assignments and library calls forget their destination; a return forgets the
-  return slot. At a call the callee starts from no facts and the caller learns
-  nothing back, as in the untyped order analysis: a callee may change globals, so
-  no fact survives the call.
+  Assignments forget their destination and learn, library calls forget it, and a
+  return forgets the return slot. The caller learns nothing back from a call, as in
+  the untyped order analysis: a callee may change globals, so no fact survives it.
 \<close>
 
-definition ord_spec :: "(var_id, texp, var_id order_rel lifted) glocal_spec" where
-  "ord_spec =
+definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, texp, var_id order_rel lifted) glocal_spec" where
+  "ord_spec \<kappa> ys =
      \<lparr> ls_query = ord_query,
        ls_skip = (\<lambda>ch d. d),
-       ls_assign = (\<lambda>ch x e. map_lift (ord_forget x)),
+       ls_assign = (\<lambda>ch x e. map_lift (ord_learn \<kappa> ys ch x e \<circ> ord_forget x)),
        ls_special = (\<lambda>ch sc x. map_lift (ord_forget x)),
        ls_branch = (\<lambda>ch b pol. map_lift (ord_branch b pol)),
        ls_body = (\<lambda>ch p d. d),
        ls_return = (\<lambda>ch r p d. case r of None \<Rightarrow> d | Some a \<Rightarrow> map_lift (ord_forget ReturnVar) d),
        ls_event = (\<lambda>ch evt d. d),
-       ls_enter = (\<lambda>ch ci p. [(fst p, Lifted top)]),
+       ls_enter = (\<lambda>ch ci p. [(fst p, Lifted (ord_enter \<kappa> (ci_formals ci) (ci_args ci) (fst p)))]),
        ls_combine_env = combine_env_identity,
-       ls_combine_assign = (\<lambda>ch ci d de. Lifted top) \<rparr>"
+       ls_combine_assign = (\<lambda>ch ci d de. Lifted (OFacts (ord_typed d \<and> ord_typed de) {})) \<rparr>"
 
-abbreviation gamma_ord_lift :: "var_id order_rel lifted \<Rightarrow> tstore set" where
-  "gamma_ord_lift d \<equiv> gamma_lift gamma_ord (map_lift (\<lambda>d. d) d)"
+abbreviation gamma_ord_lift :: "kenv \<Rightarrow> var_id order_rel lifted \<Rightarrow> tstore set" where
+  "gamma_ord_lift \<kappa> d \<equiv> gamma_lift (gamma_ord \<kappa>) (map_lift (\<lambda>d. d) d)"
 
 lemma gamma_ord_lift_simps [simp]:
-  "gamma_ord_lift Bot = {}"
-  "gamma_ord_lift (Lifted x) = gamma_ord x"
-  "gamma_ord_lift (map_lift f (Lifted x)) = gamma_ord (f x)"
+  "gamma_ord_lift \<kappa> Bot = {}"
+  "gamma_ord_lift \<kappa> (Lifted x) = gamma_ord \<kappa> x"
+  "gamma_ord_lift \<kappa> (map_lift f (Lifted x)) = gamma_ord \<kappa> (f x)"
   by (simp_all add: map_lift_def)
 
-lemma gamma_ord_lift_mono: "x \<le> y \<Longrightarrow> gamma_ord_lift x \<subseteq> gamma_ord_lift y"
+lemma gamma_ord_lift_mono: "x \<le> y \<Longrightarrow> gamma_ord_lift \<kappa> x \<subseteq> gamma_ord_lift \<kappa> y"
   by (cases x; cases y) (auto dest: gamma_ord_mono)
 
+lemma ord_enter_sound:
+  assumes "s \<in> gamma_ord_lift \<kappa> d"
+  shows "bind_formals ps (map (\<lambda>e. teval e s) es) (enter_state tglobal s)
+           \<in> gamma_ord \<kappa> (ord_enter \<kappa> ps es d)"
+proof -
+  have "tstyped \<kappa> s" if "ord_typed d"
+    using assms that by (auto simp: ord_typed_def split: lifted.splits order_rel.splits)
+  then show ?thesis
+    using tstyped_bind_fits[OF _ _ tstyped_enter_state, of \<kappa> ps es s s]
+    by (auto simp: ord_enter_def)
+qed
+
+lemma ord_typed_tstyped: "s \<in> gamma_ord_lift \<kappa> d \<Longrightarrow> ord_typed d \<Longrightarrow> tstyped \<kappa> s"
+  by (auto simp: ord_typed_def split: lifted.splits order_rel.splits)
+
+lemma tstyped_gcombine:
+  "tstyped \<kappa> s \<Longrightarrow> tstyped \<kappa> t
+     \<Longrightarrow> tstyped \<kappa> (combine_assign dst (tconv \<kappa> dst (t ReturnVar)) (combine_env tglobal s t))"
+  by (cases dst) (auto simp: tstyped_combine_env)
+
 theorem ord_spec_sound:
-  "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal gamma_ord_lift ord_spec"
+  "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal (gamma_ord_lift \<kappa>) (ord_spec \<kappa> ys)"
 proof -
   interpret T: mcp_sem teval ReturnVar "tconv \<kappa>" tglobal .
-  have L: "\<exists>x. d = Lifted x \<and> s \<in> gamma_ord x" if "s \<in> gamma_ord_lift d" for s d
+  have L: "\<exists>x. d = Lifted x \<and> s \<in> gamma_ord \<kappa> x" if "s \<in> gamma_ord_lift \<kappa> d" for s d
     using that by (cases d) simp_all
   show ?thesis
   proof (rule T.sound_local_specI)
-    show "\<And>x y. x \<le> y \<Longrightarrow> gamma_ord_lift x \<subseteq> gamma_ord_lift y" by (rule gamma_ord_lift_mono)
-    show "T.gsound_query gamma_ord_lift (ls_query ord_spec)"
+    show "\<And>x y. x \<le> y \<Longrightarrow> gamma_ord_lift \<kappa> x \<subseteq> gamma_ord_lift \<kappa> y" by (rule gamma_ord_lift_mono)
+    show "T.gsound_query (gamma_ord_lift \<kappa>) (ls_query (ord_spec \<kappa> ys))"
       by (auto simp: ord_spec_def T.gsound_query_def ord_query_sound dest!: L)
-    show "T.gsound_skip gamma_ord_lift (ls_skip ord_spec)"
+    show "T.gsound_skip (gamma_ord_lift \<kappa>) (ls_skip (ord_spec \<kappa> ys))"
       by (simp add: ord_spec_def T.gsound_skip_def)
-    show "T.gsound_body gamma_ord_lift (ls_body ord_spec)"
+    show "T.gsound_body (gamma_ord_lift \<kappa>) (ls_body (ord_spec \<kappa> ys))"
       by (simp add: ord_spec_def T.gsound_body_def)
-    show "T.gsound_event gamma_ord_lift (ls_event ord_spec)"
+    show "T.gsound_event (gamma_ord_lift \<kappa>) (ls_event (ord_spec \<kappa> ys))"
       by (simp add: ord_spec_def T.gsound_event_def)
-    show "T.gsound_assign gamma_ord_lift (ls_assign ord_spec)"
-      by (auto simp: ord_spec_def T.gsound_assign_def dest!: L intro: ord_forget_sound)
-    show "T.gsound_special gamma_ord_lift (ls_special ord_spec)"
+    show "T.gsound_assign (gamma_ord_lift \<kappa>) (ls_assign (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def T.gsound_assign_def dest!: L
+          intro!: ord_learn_sound ord_forget_sound)
+    show "T.gsound_special (gamma_ord_lift \<kappa>) (ls_special (ord_spec \<kappa> ys))"
       by (auto simp: ord_spec_def T.gsound_special_def dest!: L intro: ord_forget_sound)
-    show "T.gsound_branch gamma_ord_lift (ls_branch ord_spec)"
+    show "T.gsound_branch (gamma_ord_lift \<kappa>) (ls_branch (ord_spec \<kappa> ys))"
       using ord_branch_sound by (fastforce simp: ord_spec_def T.gsound_branch_def dest!: L)
-    show "T.gsound_return gamma_ord_lift (ls_return ord_spec)"
+    show "T.gsound_return (gamma_ord_lift \<kappa>) (ls_return (ord_spec \<kappa> ys))"
       by (auto simp: ord_spec_def T.gsound_return_def dest!: L intro: ord_forget_sound
           split: option.splits)
-    show "T.gsound_enter gamma_ord_lift (ls_enter ord_spec)"
-      by (simp add: ord_spec_def T.gsound_enter_def)
-    show "T.gsound_combine gamma_ord_lift (ls_combine_env ord_spec) (ls_combine_assign ord_spec)"
-      by (simp add: ord_spec_def T.sound_combine_env_identity)
+    show "T.gsound_enter (gamma_ord_lift \<kappa>) (ls_enter (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def T.gsound_enter_def cfg_transfer_sem.call_enter_CallEdge
+          intro: ord_enter_sound)
+    show "T.gsound_combine (gamma_ord_lift \<kappa>) (ls_combine_env (ord_spec \<kappa> ys))
+        (ls_combine_assign (ord_spec \<kappa> ys))"
+      by (auto simp: ord_spec_def T.gsound_combine_def combine_env_identity_def
+          cfg_transfer_sem.gcombine_collect_def intro!: tstyped_gcombine dest: ord_typed_tstyped)
   qed
 qed
+
+text \<open>The candidate partners: every variable some procedure of the program declares, as
+  for the untyped order analysis (@{const program_vars}).\<close>
+
+definition ord_vars :: "imp_prog \<Rightarrow> var_id list" where
+  "ord_vars p = remdups (concat (map (\<lambda>q. map (resolve_var (declared_global p) q)
+     (filter (\<lambda>x. x \<noteq> ret_var) (scope_vnames_list p q))) (prog_main_name # prog_procs p)))"
 
 subsection \<open>The pipeline instance\<close>
 
@@ -257,12 +389,12 @@ text \<open>The same unit-context instance as the non-relational typed analyses,
 
 global_interpretation typed_order: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "\<lambda>_ _. ord_spec" "\<lambda>_ d. d = OBot" "\<lambda>_ d. d" "top :: var_id order_rel"
+    "\<lambda>_ p. ord_spec (kenv_of ds) (ord_vars p)" "\<lambda>_ d. d = OBot" "\<lambda>_ d. d" "OFacts True {}"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ _ _ _ _. ()" "()"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, unit) global_unknown)
        TYPE((var_id order_rel lifted, var_id order_rel lifted) dg_state) r"
-    OBot ord_classify gamma_ord "\<lambda>d. d = OBot"
+    OBot ord_classify "gamma_ord (kenv_of ds)" "\<lambda>d. d = OBot"
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
@@ -287,7 +419,7 @@ next
 next
   case BotState show ?case by simp
 next
-  case (InitSound p) show ?case by simp
+  case (InitSound p) show ?case by (auto dest: tinit_stores_tstyped)
 next
   case (SeedNeGlobal v ctx n) show ?case by simp
 next
@@ -308,9 +440,9 @@ begin
 
 lemma typed_order_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_order.terminates r ds tglobal p"
+    and solves: "typed_order.terminates ds r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> gamma_ord (typed_order.state_at r ds tglobal p () v)"
+           \<subseteq> gamma_ord (kenv_of ds) (typed_order.state_at ds r tglobal p () v)"
   using typed_order.gfun_route_result_node_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "\<lambda>_ _ _. ()" v]
   by (simp add: tnode_collect_def UNIV_unit)
@@ -320,8 +452,8 @@ text \<open>A proved order check holds at every typed store reaching its node; a
 
 theorem typed_order_report_proved_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_order.terminates r ds tglobal p"
-    and mem: "(v, c, Check_Proved) \<in> set (typed_order.report r ds tglobal p ())"
+    and solves: "typed_order.terminates ds r tglobal p"
+    and mem: "(v, c, Check_Proved) \<in> set (typed_order.report ds r tglobal p ())"
   shows "\<forall>s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v.
            truthy (teval c s)"
   using typed_order.gfun_route_report_proved_sound
@@ -331,8 +463,8 @@ theorem typed_order_report_proved_sound:
 
 theorem typed_order_report_refuted_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_order.terminates r ds tglobal p"
-    and mem: "(v, c, Check_Refuted) \<in> set (typed_order.report r ds tglobal p ())"
+    and solves: "typed_order.terminates ds r tglobal p"
+    and mem: "(v, c, Check_Refuted) \<in> set (typed_order.report ds r tglobal p ())"
   shows "\<forall>s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v.
            \<not> truthy (teval c s)"
   using typed_order.gfun_route_report_refuted_sound

@@ -8,7 +8,8 @@ figure it names needs the same update as its expected result.
 
 Each case's header names its figure. Categories follow `tests/run.py`:
 `precision/` for results the figure presents as exact, `known-imprecision/` for
-the UNKNOWN answers a figure explains, and the group root for the solves a
+the UNKNOWN answers a figure explains, `soundness/` for checks whose concrete
+outcome is undetermined, and the group root for the solves a
 figure reports as "no answer", pinned with `--timeout 5`. The `EXPECT-GRAPH`
 blocks pin the per-node values the figures draw; the node and context counts in
 "The price of precision" are the node and distinct-context counts of those
@@ -24,8 +25,8 @@ blocks.
 | A real bug, replayed (Voblint side) | goblint/analyzer #1161 regression test `37-congruence/14` | `precision/04-goblint_1161_congruence_mod` |
 | The flagship theorems (explorer program) | `theorems` example | `precision/05-theorems_program` |
 | Many runs in, one region per node out | `multiples-of-three` | `known-imprecision/06-multiples_of_three_interval`, `precision/06-multiples_of_three_int` |
-| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`17`, `precision/49`–`51`, `known-imprecision/07`–`09`, `known-imprecision/20`, `01`–`02-recursion_grows_*_diverges` |
-| A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`30`, `03-recursion_grows_entry_state_diverges` |
+| Which Globals setting should you pick? | two call sites, call inside a loop, growing and shrinking recursion | `precision/07`–`12`, `precision/15`–`17`, `precision/49`–`50`, `precision/52`–`53`, `soundness/13`–`14`, `soundness/51`, `known-imprecision/07`–`08`, `01`–`02-recursion_grows_*_diverges` |
+| A call that never stops calling | `recursion-bounded`, `recursion-grows` | `precision/18`–`27`, `soundness/28`–`30`, `03-recursion_grows_entry_state_diverges` |
 | The price of precision | fan-out, `down(5)` | `precision/31`–`42`, `known-imprecision/10-down_call_string_4` |
 | Context sensitivity: how many copies of a procedure; Reading a result | playground demo | `precision/43`–`44-demo_*`, `known-imprecision/11`–`12-demo_*` |
 | One copy of each procedure (compiled graph) | `sum(2)` via `dec` | `precision/46-sum_dec_cfgmap` |

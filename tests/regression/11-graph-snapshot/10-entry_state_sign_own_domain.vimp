@@ -14,7 +14,9 @@
 // Sign gives square one context, not two: the entry-state context is the
 // tuple of formals' abstract values, and 3 and 4 are both Positive, so the
 // two call sites route to the same activation. 15-expanded_int_own_domain
-// is the same program under Int, where they do not.
+// is the same program under Int, where they do not. Both checks are
+// UNKNOWN although a = 9 and b = 16: typed Sign has no magnitude, so it
+// cannot exclude i32 wraparound of n * n, and the product is Top.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -32,31 +34,31 @@
 //     square_entry_square_ctx0
 //
 // nodes:
-//   main_pp5_ctx0: pp5 [proved]
+//   main_pp5_ctx0: pp5 [unknown]
 //       sign:
-//         a=+
-//         b=+
+//         a=⊤
+//         b=⊤
 //       check 0 < b
 //   main_pp6_ctx0: pp6
 //       sign:
-//         a=+
-//         b=+
+//         a=⊤
+//         b=⊤
 //   main_exit_main_ctx0: exit_main
 //       sign:
-//         a=+
-//         b=+
+//         a=⊤
+//         b=⊤
 //   main_pp2_ctx0: pp2
 //       sign:
 //         a=⊤
 //         b=⊤
 //   main_pp3_ctx0: pp3
 //       sign:
-//         a=+
+//         a=⊤
 //         b=⊤
-//   main_pp4_ctx0: pp4 [proved]
+//   main_pp4_ctx0: pp4 [unknown]
 //       sign:
-//         a=+
-//         b=+
+//         a=⊤
+//         b=⊤
 //       check 0 < a
 //   main_entry_main_ctx0: entry_main
 //       sign:
@@ -96,6 +98,6 @@ fun square(n) {
 fun main() {
   a = square(3);
   b = square(4);
-  __voblint_check(0 < a); // PROVED
-  __voblint_check(0 < b); // PROVED
+  __voblint_check(0 < a); // UNKNOWN
+  __voblint_check(0 < b); // UNKNOWN
 }

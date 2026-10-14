@@ -38,7 +38,7 @@
 (library
  (name voblint_frontend)
  (wrapped false)
- (modules vimp_frontend vimp_printer)
+ (modules vimp_frontend vimp_printer typed_printer)
  (libraries voblint_grammar voblint_positions str zarith))
 
 (library

@@ -1,0 +1,19 @@
+// PARAM: --analysis int
+// Under the default assume_top the Int product still keeps a congruence
+// across a signed * and + when its interval proves that the result fits:
+// Goblint's no_ov, passed from the interval to the congruence. The guard
+// bounds n to [0,10], so x = 4 * n + 1 lies in [1,41] and the congruence keeps
+// 1 (mod 4). That excludes 3, which the interval [1,41] alone cannot.
+// Without the bound, x may overflow, the congruence goes to top under
+// assume_top, and x != 3 is not decided.
+fun main() {
+  n = __voblint_nondet_int();
+  if (0 <= n && n <= 10) {
+    x = 4 * n + 1;
+    __voblint_check(x != 3); // PROVED
+    __voblint_check(x % 4 == 1); // PROVED
+  }
+  m = __voblint_nondet_int();
+  y = 4 * m + 1;
+  __voblint_check(y != 3); // UNKNOWN
+}

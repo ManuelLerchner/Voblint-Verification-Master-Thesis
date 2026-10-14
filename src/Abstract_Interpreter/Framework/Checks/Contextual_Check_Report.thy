@@ -119,43 +119,28 @@ abbreviation check_query_of :: "exp \<Rightarrow> query" where
 fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
   "classify_answer QBot = Dead"
 | "classify_answer a =
-     (if answer_const a = Some 1 \<or> answer_nonzero a then Decided Check_Proved
-      else if answer_const a = Some 0 then Decided Check_Refuted
+     (if answer_excludes 0 a then Decided Check_Proved
+      else if answer_excludes 1 a then Decided Check_Refuted
       else Decided Check_Unknown)"
+
+lemma classify_answer_cases:
+  "classify_answer a = Decided Check_Proved \<Longrightarrow> 0 \<notin> gamma_answer a"
+  "classify_answer a = Decided Check_Refuted \<Longrightarrow> 1 \<notin> gamma_answer a"
+  by (cases a; simp only: classify_answer.simps answer_excludes_iff split: if_splits; simp)+
 
 lemma classify_answer_proved:
   assumes "classify_answer a = Decided Check_Proved"
     and "eval_holds (check_query_of c) a s"
   shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof -
-  have "answer_const a = Some 1 \<or> answer_nonzero a"
-    using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps answer_nonzero.simps)
-  then show ?thesis
-  proof
-    assume "answer_const a = Some 1"
-    from eval_holds_constD[OF assms(2) this] show ?thesis
-      by (simp add: aval_check_truth_exp split: if_splits)
-  next
-    assume "answer_nonzero a"
-    moreover have "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s \<in> gamma_answer a"
-      using assms(2) by simp
-    ultimately have "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s \<noteq> 0" by (rule answer_nonzero_gamma)
-    then show ?thesis by (simp add: aval_check_truth_exp split: if_splits)
-  qed
-qed
+  using classify_answer_cases(1)[OF assms(1)] assms(2)
+  by (auto simp: aval_check_truth_exp split: if_splits)
 
 lemma classify_answer_refuted:
   assumes "classify_answer a = Decided Check_Refuted"
     and "eval_holds (check_query_of c) a s"
   shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-proof -
-  have "answer_const a = Some 0"
-    using assms(1) by (cases a rule: classify_answer.cases)
-      (auto split: option.splits if_splits simp del: answer_const.simps answer_nonzero.simps)
-  from eval_holds_constD[OF assms(2) this] show ?thesis
-    by (simp add: aval_check_truth_exp split: if_splits)
-qed
+  using classify_answer_cases(2)[OF assms(1)] assms(2)
+  by (auto simp: aval_check_truth_exp split: if_splits)
 
 lemma classify_answer_dead:
   assumes "classify_answer a = Dead"

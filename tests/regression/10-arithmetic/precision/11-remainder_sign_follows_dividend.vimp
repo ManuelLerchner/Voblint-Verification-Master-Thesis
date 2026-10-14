@@ -1,25 +1,26 @@
-// PARAM: --analysis int
-// C's remainder carries the sign of its dividend, so x % 6 is 5 where x is
-// positive and -1 where x is negative. For an unconstrained x = 6n + 5 both
-// happen, and Interval answers [-1,5]. That bound reads like a bug and is the
-// correct one: n = -1 gives x = -1, and -1 % 6 is -1, not 5.
+// PARAM: --analysis int --signed-overflow assume_wraparound
+// C's remainder carries the sign of its dividend. Over i32, 6 * n + 5
+// wraps: 6 * n reaches every even value, so x ranges over every odd i32
+// and x % 6 over the odd values in [-5,5]. The Int product finds exactly
+// that: Interval bounds a to [-5,5] and Congruence keeps it odd, which
+// proves a <= 5 and a != 0. The sign guard splits a into [-5,-1] and [1,5],
+// and neither arm holds a single value, so a >= -1, a == -1 and a == 5 are
+// undetermined and UNKNOWN is exact.
 //
-// Congruence keeps the class 5 (mod 6), which leaves exactly -1 and 5 inside
-// those bounds, so a guard on the sign splits the two and each arm holds a
-// singleton. Neither component decides an arm alone: Interval on its own stops
-// at [-5,5] because it never learns the class, and Congruence never learns the
-// sign, so the guard tells it nothing. Under interval, congruence, parity or
-// sign every check here is UNKNOWN.
+// Run under --signed-overflow assume_wraparound: the case tests classes that
+// survive wraparound modulo 2^32 on signed i32. Under Goblint's default
+// assume_top a signed operation that may overflow gives both components top
+// (27-signed-overflow/known-imprecision/03).
 fun main() {
   n = __voblint_nondet_int();
   x = 6 * n + 5;
   a = x % 6;
-  __voblint_check(a >= -1); // PROVED
+  __voblint_check(a >= -1); // UNKNOWN
   __voblint_check(a <= 5); // PROVED
   __voblint_check(a != 0); // PROVED
   if (a < 0) {
-    __voblint_check(a == -1); // PROVED
+    __voblint_check(a == -1); // UNKNOWN
   } else {
-    __voblint_check(a == 5); // PROVED
+    __voblint_check(a == 5); // UNKNOWN
   }
 }

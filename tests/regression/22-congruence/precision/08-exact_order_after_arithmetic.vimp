@@ -1,7 +1,12 @@
-// PARAM: --analysis congruence
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
 // Arithmetic produces the exact singleton 4. Congruence decides both its
 // equality and ordering queries; singleton ordering no longer falls back
 // to UNKNOWN.
+//
+// Run under --signed-overflow assume_wraparound: the case is about deciding
+// an order on a singleton, and its classes come from signed arithmetic, which
+// standalone Congruence answers with top under Goblint's default assume_top
+// (27-signed-overflow/known-imprecision/02).
 fun main() {
   x = 2 + 2;
   __voblint_check(x == 4); // PROVED

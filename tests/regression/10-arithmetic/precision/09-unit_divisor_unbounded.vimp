@@ -1,5 +1,7 @@
 // PARAM: --analysis interval
 // Division by a unit must preserve the finite endpoint of an unbounded range.
+// In the n <= -7 arm, n / -1 wraps to -2147483648 when n = -2147483648, so
+// positive >= 7 is undetermined and UNKNOWN is exact.
 fun main() {
   n = __voblint_nondet_int();
   if (n >= 7) {
@@ -11,6 +13,6 @@ fun main() {
     negative = n / 1;
     positive = n / -1;
     __voblint_check(negative <= -7); // PROVED
-    __voblint_check(positive >= 7); // PROVED
+    __voblint_check(positive >= 7); // UNKNOWN
   }
 }

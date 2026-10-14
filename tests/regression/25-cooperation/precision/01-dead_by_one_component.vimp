@@ -1,4 +1,4 @@
-// PARAM: --analysis interval,congruence
+// PARAM: --analysis interval,congruence --signed-overflow assume_wraparound
 // Concretely the loop leaves x == 10: it starts at 4 and steps by 2 while
 // x < 10. So 10 <= x holds and the branch on x == 11 is never taken.
 //
@@ -11,6 +11,11 @@
 // Run together, each check is decided by the met answer, so Interval's proves
 // the first; and the combined state is unreachable as soon as one active
 // analysis's part is, so Congruence's dead branch is dead for both.
+//
+// Run under --signed-overflow assume_wraparound: the case is about two
+// separate analyses cooperating. Congruence runs without the Int product's
+// no_ov here, so under Goblint's default assume_top its x + 2 may overflow
+// and gives top (27-signed-overflow/known-imprecision/02).
 fun main() {
   x = 4;
   while (x < 10) {

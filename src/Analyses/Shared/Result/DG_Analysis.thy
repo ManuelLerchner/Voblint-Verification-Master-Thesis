@@ -1484,6 +1484,20 @@ qed (simp_all add: sound_local_spec_inst analysis_contract_iff fun_eq_iff edge_c
        admits_call_context_def activation_context_rel_def call_context_total_on_def
        activation_collect_def node_collect_def)
 
+text \<open>Conversely, the generic contracts at the untyped language are the untyped ones.\<close>
+
+lemma dg_analysis_of_gdg_analysis:
+  fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
+  assumes "gdg_analysis aval ret_var (\<lambda>_ _ n. n) declared_global
+      (\<lambda>p. cinit_stores (declared_global p)) comp emp rd init_st buffer_key global_of seed
+      solve solve_dom bot_state classify \<gamma>\<^sub>V empty\<^sub>V solve_c place_spec place_cmb place_rl
+      place_rg place_inits place_enter prog_cfg (\<lambda>_. FunctionEntry prog_main_name)"
+  shows "dg_analysis comp emp rd init_st buffer_key global_of seed solve solve_dom bot_state
+      classify \<gamma>\<^sub>V empty\<^sub>V solve_c place_spec place_cmb place_rl place_rg place_inits place_enter"
+  using assms
+  unfolding gdg_analysis_def gdg_analysis_axioms_def dg_analysis_def dg_analysis_axioms_def
+  by (simp add: sound_local_spec_inst analysis_contract_iff call_enter_def)
+
 subsection \<open>Every variable in the local half\<close>
 
 text \<open>
@@ -1675,9 +1689,221 @@ text \<open>
 
   Beyond the component's own soundness, the carrier owes monotone operations,
   that a name outside a read set is cut below \<open>free\<close> of that set, and two facts
-  about concretization: the frame law \<open>mix\<close> of @{thm [source] keyed_split_contract},
+  about concretization: the frame law \<open>mix\<close> of @{thm [source] gkeyed_split_contract},
   and that a state is described by its local half recombined with its own cuts.
 \<close>
+
+theorem gdg_analysis_keyedI:
+  fixes comp ::
+    "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> ('vr::linorder, 'e::linorder, 's::semilattice_sup lifted) glocal_spec"
+    and seed :: "pp \<Rightarrow> 'c \<Rightarrow> 'k"
+    and global_of :: "'vr \<Rightarrow> 'k"
+    and cmb :: "'s lifted \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and rg :: "'vr \<Rightarrow> 's lifted \<Rightarrow> 's lifted"
+    and pglobs :: "'p \<Rightarrow> 'vr list"
+  assumes solver: "certified_solver solve solve_dom solve_c"
+    and comp_sound:
+      "\<And>p. mcp_sem.gsound_local_spec ev rv (pconv p) (pglob p)
+               (\<lambda>d. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) d))
+               (comp (pglob p) p)"
+    and enter_single:
+      "\<And>p ci d. ls_enter (comp (pglob p) p) (ls_channel (comp (pglob p) p) d)
+                    ci (d, d)
+                  = [(d, dg_pipeline.comp_entry comp (pglob p) p ci d)]"
+    and cmb_mono: "\<And>d d' g g'. d \<le> d' \<Longrightarrow> g \<le> g' \<Longrightarrow> cmb d g \<le> cmb d' g'"
+    and cmb_rl: "\<And>x g. cmb (rl x) g = cmb x g"
+    and rl_cmb: "\<And>d g. rl (cmb d g) = rl d"
+    and cmb_bot: "\<And>g. cmb Bot g = Bot"
+    and rg_mono: "\<And>x v v'. v \<le> v' \<Longrightarrow> rg x v \<le> rg x v'"
+    and rg_free: "\<And>x R v. x \<notin> set R \<Longrightarrow> rg x v \<le> free R"
+    and mix: "\<And>p l0 e r s s' W.
+        s \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) (cmb l0 (full_view rg (pglobs p) e)))
+        \<Longrightarrow> s' \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) r)
+        \<Longrightarrow> (\<forall>x. pglob p x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x)
+        \<Longrightarrow> s' \<in> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+               (cmb (rl r) (full_view rg (pglobs p) (\<lambda>x. if x \<in> set W then rg x r else e x))))"
+    and init_view: "\<And>p. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) (Lifted init_st))
+        \<subseteq> gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p))
+             (cmb (Lifted init_st) (full_view rg (pglobs p) (\<lambda>x. rg x (Lifted init_st)))))"
+    and empty_rd: "\<And>p s. emp p s \<longleftrightarrow> empty\<^sub>V (rd (pglob p) s)"
+    and empty\<^sub>V_sound: "sound_emptiness empty\<^sub>V \<gamma>\<^sub>V"
+    and seed_ne: "\<And>v ctx. seed v ctx \<noteq> buffer_key"
+    and seed_ne_global: "\<And>v ctx n. seed v ctx \<noteq> global_of n"
+    and classify_proved:
+      "\<And>c d s. classify c d = Check_Proved \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> truthy (ev c s)"
+    and classify_refuted:
+      "\<And>c d s. classify c d = Check_Refuted \<Longrightarrow> s \<in> \<gamma>\<^sub>V d \<Longrightarrow> \<not> truthy (ev c s)"
+    and bot_state_empty: "\<gamma>\<^sub>V bot_state = {}"
+    and init_sound: "\<And>p. pinit p \<subseteq> \<gamma>\<^sub>V (rd (pglob p) init_st)"
+    and pentry: "\<And>p. pentry p = cfg_entry (pcfg p)"
+    and fin_intra: "\<And>p. finite (intra (pcfg p))"
+    and fin_calls: "\<And>p. finite (calls (pcfg p))"
+    and calls_unique: "\<And>p. calls_source_unique (pcfg p)"
+  shows "gdg_analysis ev rv pconv pglob pinit comp emp rd init_st buffer_key global_of seed
+           solve solve_dom bot_state classify \<gamma>\<^sub>V empty\<^sub>V solve_c
+           (\<lambda>p c. gkeyed_split_spec evars rv (pglob p) cmb rl rg free c)
+           (\<lambda>p d e. cmb d (full_view rg (pglobs p) e)) (\<lambda>\<G>. rl) (\<lambda>\<G> d. Bot)
+           (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (pglobs p))
+           (\<lambda>p ci d e. cmb d (view_of rg (gcall_global_reads evars (pglob p) (ci_args ci)) e
+              (free (gcall_global_reads evars (pglob p) (ci_args ci)))))
+           pcfg pentry"
+proof -
+  let ?gm = "\<lambda>p d. gamma_lift \<gamma>\<^sub>V (map_lift (rd (pglob p)) d)"
+  have gm_mono: "\<And>p x y. x \<le> y \<Longrightarrow> ?gm p x \<subseteq> ?gm p y"
+    using comp_sound unfolding mcp_sem.gsound_local_spec_def by metis
+  show ?thesis
+  proof (rule gdg_analysis.intro[OF solver gdg_analysis_axioms.intro], goal_cases CompSound
+      EnterSingle Contract Runs Deps EntrySound CmbBot Init EmptyRd EmptyV SeedNe SeedNeGlobal
+      ClProved ClRefuted BotState InitSound PEntry FinIntra FinCalls CallsUnique)
+    case (CompSound p) show ?case by (rule comp_sound)
+  next
+    case (EnterSingle p ci d) show ?case by (rule enter_single)
+  next
+    case (Contract p) show ?case
+      unfolding dg_pipeline.analysis_spec_def
+      using comp_sound[where p = p] cmb_mono rg_mono rg_free mix[where p = p]
+      by (rule gkeyed_split_contract)
+  next
+    case (Runs p ci d \<sigma>) show ?case
+      using enter_runs_keyed_enter_transfer[of cmb rl rg free
+          "gcall_global_reads evars (pglob p) (ci_args ci)"
+          "global_names_in (pglob p) (ci_formals ci)"
+          "\<lambda>d. ls_enter (comp (pglob p) p) (ls_channel (comp (pglob p) p) d)
+             ci (d, d)" d global_of \<sigma>]
+      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
+  next
+    case (Deps p ci d \<sigma>) show ?case
+      using enter_deps_keyed_enter_transfer[of cmb rl rg free
+          "gcall_global_reads evars (pglob p) (ci_args ci)"
+          "global_names_in (pglob p) (ci_formals ci)"
+          "\<lambda>d. ls_enter (comp (pglob p) p) (ls_channel (comp (pglob p) p) d)
+             ci (d, d)" d global_of \<sigma>]
+      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
+  next
+    case (EntrySound p ci d \<sigma> pub s)
+    let ?\<G> = "pglob p" and ?xs = "pglobs p"
+    let ?c = "comp ?\<G> p"
+    let ?e = "genv global_of \<sigma>"
+    let ?R = "gcall_global_reads evars ?\<G> (ci_args ci)"
+    let ?v = "view_of rg ?R ?e (free ?R)"
+    let ?w = "cmb d ?v"
+    let ?E = "dg_pipeline.comp_entry comp ?\<G> p ci ?w"
+    let ?W = "global_names_in ?\<G> (ci_formals ci)"
+    let ?ce = "cfg_transfer_sem.gcall_enter ev ?\<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"
+    have alt: "dg_pipeline.entry_alt comp (\<lambda>\<G>. rl)
+        (\<lambda>p ci d e. cmb d (view_of rg (gcall_global_reads evars (pglob p) (ci_args ci)) e
+           (free (gcall_global_reads evars (pglob p) (ci_args ci)))))
+        ?\<G> p ci d ?e = (rl ?w, rl ?E)"
+      by (simp add: dg_pipeline.entry_alt_def Let_def)
+    have R0: "enter_runs (enter\<^sup>\<sharp> (dg_pipeline.analysis_spec comp
+          (\<lambda>p. gkeyed_split_spec evars rv (pglob p) cmb rl rg free) ?\<G> p) ci)
+        (mk_dg_man d global_of) \<sigma> [(rl ?w, rl ?E)] (pub_sides global_of rg ?W (?E \<squnion> bot))"
+      using enter_runs_keyed_enter_transfer[of cmb rl rg free ?R ?W
+          "\<lambda>d. ls_enter ?c (ls_channel ?c d) ci (d, d)" d global_of \<sigma>]
+      by (simp add: dg_pipeline.analysis_spec_def enter_single)
+    have pub: "pub = pub_sides global_of rg ?W (?E \<squnion> bot)"
+      using enter_runsD_sides[OF EntrySound(1)[unfolded alt], of "\<lambda>_. Answer bot"]
+        enter_runsD_sides[OF R0, of "\<lambda>_. Answer bot"]
+      by (simp add: bot_fun_def[symmetric])
+    have E_Bot: "?E \<squnion> Bot = ?E" by (cases ?E) simp_all
+    have le: "rg x ?E \<le> ?e x" if "x \<in> set ?W" for x
+    proof -
+      have "DG bot (rg x ?E) \<le> pub (Inr (global_of x))"
+        using pub_sides_ge[OF that, of rg "?E \<squnion> bot" global_of] by (simp add: pub E_Bot)
+      then have "rg x ?E \<le> genv global_of pub x" by (simp add: less_eq_dg_state_def)
+      also have "\<dots> \<le> ?e x" using EntrySound(2) by (simp add: le_fun_def)
+      finally show ?thesis .
+    qed
+    have view_ge: "full_view rg ?xs ?e \<le> ?v"
+      unfolding full_view_def
+    proof (rule view_of_le)
+      fix x assume "x \<in> set ?xs"
+      show "rg x (?e x) \<le> ?v"
+      proof (cases "x \<in> set ?R")
+        case True then show ?thesis by (rule view_of_ge_mem)
+      next
+        case False
+        then show ?thesis using rg_free view_of_ge_acc by (blast intro: order_trans)
+      qed
+    qed simp
+    have s0: "s \<in> ?gm p (cmb d (full_view rg ?xs ?e))" using EntrySound(3) by simp
+    have sw: "s \<in> ?gm p ?w"
+      using s0 gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
+    have sE: "?ce s \<in> ?gm p ?E"
+    proof -
+      obtain q where "q \<in> set (ls_enter ?c (ls_channel ?c ?w) ci (?w, ?w))" "?ce s \<in> ?gm p (snd q)"
+        using comp_sound[where p = p] sw mcp_sem.ls_channel_sound[OF comp_sound[where p = p] sw]
+        unfolding mcp_sem.gsound_local_spec_def by (metis fst_conv)
+      then show ?thesis by (simp add: enter_single)
+    qed
+    have fr: "\<forall>x. ?\<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> ?ce s x = s x"
+      by (auto intro: cfg_transfer_sem.call_enter_frame)
+    have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x)))"
+      by (rule mix[OF s0 sE fr])
+    moreover have "cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x))
+        \<le> cmb (rl ?E) (full_view rg ?xs ?e)"
+    proof (intro cmb_mono order_refl full_view_mono[OF rg_mono])
+      fix x
+      show "(if x \<in> set ?W then rg x ?E else ?e x) \<le> ?e x"
+        using le[of x] by (cases "x \<in> set ?W") simp_all
+    qed
+    ultimately have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs ?e))"
+      using gm_mono by blast
+    moreover have "s \<in> ?gm p (cmb (rl ?w) (full_view rg ?xs ?e))"
+      using s0 by (simp add: rl_cmb cmb_rl)
+    ultimately show ?case by (simp add: alt)
+  next
+    case (CmbBot p g) show ?case by (simp add: cmb_bot)
+  next
+    case (Init p)
+    let ?xs = "pglobs p"
+    let ?ie = "dg_pipeline.init_env init_st buffer_key global_of (\<lambda>\<G> d. Bot)
+      (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (pglobs p)) (pglob p) p"
+    have ie: "rg x (Lifted init_st) \<le> ?ie x" if x: "x \<in> set ?xs" for x
+    proof -
+      have "rg x (Lifted init_st)
+          \<le> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = x) (map (\<lambda>y. (y, rg y (Lifted init_st))) ys). d)"
+        if "x \<in> set ys" for ys
+        using that by (induction ys) (auto intro: le_supI1 le_supI2)
+      then show ?thesis using x by (simp add: dg_pipeline.init_env_def le_supI2)
+    qed
+    have "full_view rg ?xs (\<lambda>x. rg x (Lifted init_st)) \<le> full_view rg ?xs ?ie"
+      unfolding full_view_def
+    proof (rule view_of_le)
+      fix x assume x: "x \<in> set ?xs"
+      show "rg x (rg x (Lifted init_st)) \<le> view_of rg ?xs ?ie bot"
+        using rg_mono[OF ie[OF x], of x] view_of_ge_mem[OF x, of rg ?ie bot] by (rule order_trans)
+    qed simp
+    then show ?case
+      using init_view[where p = p] gm_mono[OF cmb_mono[OF order_refl], where p = p] by blast
+  next
+    case (EmptyRd p s) show ?case by (rule empty_rd)
+  next
+    case EmptyV show ?case by (rule empty\<^sub>V_sound)
+  next
+    case (SeedNe v ctx) show ?case by (rule seed_ne)
+  next
+    case (SeedNeGlobal v ctx n) show ?case by (rule seed_ne_global)
+  next
+    case (ClProved c d s) then show ?case by (rule classify_proved)
+  next
+    case (ClRefuted c d s) then show ?case by (rule classify_refuted)
+  next
+    case BotState show ?case by (rule bot_state_empty)
+  next
+    case (InitSound p) show ?case by (rule init_sound)
+  next
+    case (PEntry p) show ?case by (rule pentry)
+  next
+    case (FinIntra p) show ?case by (rule fin_intra)
+  next
+    case (FinCalls p) show ?case by (rule fin_calls)
+  next
+    case (CallsUnique p) show ?case by (rule calls_unique)
+  qed
+qed
+
+text \<open>The same placement over source names and untyped expressions.\<close>
 
 theorem dg_analysis_keyedI:
   fixes comp :: "(vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> 's::semilattice_sup lifted local_spec"
@@ -1731,153 +1957,9 @@ theorem dg_analysis_keyedI:
            (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (declared_global_vars p))
            (\<lambda>p ci d e. cmb d (view_of rg (call_global_reads (declared_global p) (ci_args ci)) e
               (free (call_global_reads (declared_global p) (ci_args ci)))))"
-proof -
-  let ?gm = "\<lambda>p d. gamma_lift \<gamma>\<^sub>V (map_lift (rd (declared_global p)) d)"
-  have gm_mono: "\<And>p x y. x \<le> y \<Longrightarrow> ?gm p x \<subseteq> ?gm p y"
-    using comp_sound unfolding sound_local_spec_def by metis
-  show ?thesis
-  proof (rule dg_analysis.intro[OF solver dg_analysis_axioms.intro], goal_cases CompSound
-      EnterSingle Contract Runs Deps EntrySound CmbBot Init EmptyRd EmptyV SeedNe SeedNeGlobal
-      ClProved ClRefuted BotState InitSound)
-    case (CompSound p) show ?case by (rule comp_sound)
-  next
-    case (EnterSingle p ci d) show ?case by (rule enter_single)
-  next
-    case (Contract p) show ?case
-      unfolding dg_pipeline.analysis_spec_def
-      using comp_sound[where p = p] cmb_mono rg_mono rg_free mix[where p = p]
-      by (rule keyed_split_contract)
-  next
-    case (Runs p ci d \<sigma>) show ?case
-      using enter_runs_keyed_enter_transfer[of cmb rl rg free
-          "call_global_reads (declared_global p) (ci_args ci)"
-          "global_names_in (declared_global p) (ci_formals ci)"
-          "\<lambda>d. ls_enter (comp (declared_global p) p) (ls_channel (comp (declared_global p) p) d)
-             ci (d, d)" d global_of \<sigma>]
-      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
-  next
-    case (Deps p ci d \<sigma>) show ?case
-      using enter_deps_keyed_enter_transfer[of cmb rl rg free
-          "call_global_reads (declared_global p) (ci_args ci)"
-          "global_names_in (declared_global p) (ci_formals ci)"
-          "\<lambda>d. ls_enter (comp (declared_global p) p) (ls_channel (comp (declared_global p) p) d)
-             ci (d, d)" d global_of \<sigma>]
-      by (auto simp: dg_pipeline.analysis_spec_def dg_pipeline.entry_alt_def enter_single Let_def)
-  next
-    case (EntrySound p ci d \<sigma> pub s)
-    let ?\<G> = "declared_global p" and ?xs = "declared_global_vars p"
-    let ?c = "comp ?\<G> p"
-    let ?e = "genv global_of \<sigma>"
-    let ?R = "call_global_reads ?\<G> (ci_args ci)"
-    let ?v = "view_of rg ?R ?e (free ?R)"
-    let ?w = "cmb d ?v"
-    let ?E = "dg_pipeline.comp_entry comp ?\<G> p ci ?w"
-    let ?W = "global_names_in ?\<G> (ci_formals ci)"
-    let ?ce = "call_enter ?\<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"
-    have alt: "dg_pipeline.entry_alt comp (\<lambda>\<G>. rl)
-        (\<lambda>p ci d e. cmb d (view_of rg (call_global_reads (declared_global p) (ci_args ci)) e
-           (free (call_global_reads (declared_global p) (ci_args ci)))))
-        ?\<G> p ci d ?e = (rl ?w, rl ?E)"
-      by (simp add: dg_pipeline.entry_alt_def Let_def)
-    have R0: "enter_runs (enter\<^sup>\<sharp> (dg_pipeline.analysis_spec comp
-          (\<lambda>p. keyed_split_spec (declared_global p) cmb rl rg free) ?\<G> p) ci)
-        (mk_dg_man d global_of) \<sigma> [(rl ?w, rl ?E)] (pub_sides global_of rg ?W (?E \<squnion> bot))"
-      using enter_runs_keyed_enter_transfer[of cmb rl rg free ?R ?W
-          "\<lambda>d. ls_enter ?c (ls_channel ?c d) ci (d, d)" d global_of \<sigma>]
-      by (simp add: dg_pipeline.analysis_spec_def enter_single)
-    have pub: "pub = pub_sides global_of rg ?W (?E \<squnion> bot)"
-      using enter_runsD_sides[OF EntrySound(1)[unfolded alt], of "\<lambda>_. Answer bot"]
-        enter_runsD_sides[OF R0, of "\<lambda>_. Answer bot"]
-      by (simp add: bot_fun_def[symmetric])
-    have E_Bot: "?E \<squnion> Bot = ?E" by (cases ?E) simp_all
-    have le: "rg x ?E \<le> ?e x" if "x \<in> set ?W" for x
-    proof -
-      have "DG bot (rg x ?E) \<le> pub (Inr (global_of x))"
-        using pub_sides_ge[OF that, of rg "?E \<squnion> bot" global_of] by (simp add: pub E_Bot)
-      then have "rg x ?E \<le> genv global_of pub x" by (simp add: less_eq_dg_state_def)
-      also have "\<dots> \<le> ?e x" using EntrySound(2) by (simp add: le_fun_def)
-      finally show ?thesis .
-    qed
-    have view_ge: "full_view rg ?xs ?e \<le> ?v"
-      unfolding full_view_def
-    proof (rule view_of_le)
-      fix x assume "x \<in> set ?xs"
-      show "rg x (?e x) \<le> ?v"
-      proof (cases "x \<in> set ?R")
-        case True then show ?thesis by (rule view_of_ge_mem)
-      next
-        case False
-        then show ?thesis using rg_free view_of_ge_acc by (blast intro: order_trans)
-      qed
-    qed simp
-    have s0: "s \<in> ?gm p (cmb d (full_view rg ?xs ?e))" using EntrySound(3) by simp
-    have sw: "s \<in> ?gm p ?w"
-      using s0 gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
-    have sE: "?ce s \<in> ?gm p ?E"
-    proof -
-      obtain q where "q \<in> set (ls_enter ?c (ls_channel ?c ?w) ci (?w, ?w))" "?ce s \<in> ?gm p (snd q)"
-        using comp_sound[where p = p] sw ls_channel_sound[OF comp_sound[where p = p] sw]
-        unfolding sound_local_spec_def by (metis fst_conv)
-      then show ?thesis by (simp add: enter_single)
-    qed
-    have fr: "\<forall>x. ?\<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> ?ce s x = s x"
-      by (auto intro: call_enter_frame)
-    have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x)))"
-      by (rule mix[OF s0 sE fr])
-    moreover have "cmb (rl ?E) (full_view rg ?xs (\<lambda>x. if x \<in> set ?W then rg x ?E else ?e x))
-        \<le> cmb (rl ?E) (full_view rg ?xs ?e)"
-    proof (intro cmb_mono order_refl full_view_mono[OF rg_mono])
-      fix x
-      show "(if x \<in> set ?W then rg x ?E else ?e x) \<le> ?e x"
-        using le[of x] by (cases "x \<in> set ?W") simp_all
-    qed
-    ultimately have "?ce s \<in> ?gm p (cmb (rl ?E) (full_view rg ?xs ?e))"
-      using gm_mono by blast
-    moreover have "s \<in> ?gm p (cmb (rl ?w) (full_view rg ?xs ?e))"
-      using s0 by (simp add: rl_cmb cmb_rl)
-    ultimately show ?case by (simp add: alt)
-  next
-    case (CmbBot p g) show ?case by (simp add: cmb_bot)
-  next
-    case (Init p)
-    let ?xs = "declared_global_vars p"
-    let ?ie = "dg_pipeline.init_env init_st buffer_key global_of (\<lambda>\<G> d. Bot)
-      (\<lambda>\<G> p. map (\<lambda>x. (x, rg x (Lifted init_st))) (declared_global_vars p)) (declared_global p) p"
-    have ie: "rg x (Lifted init_st) \<le> ?ie x" if x: "x \<in> set ?xs" for x
-    proof -
-      have "rg x (Lifted init_st)
-          \<le> (\<Squnion>(m, d)\<leftarrow>filter (\<lambda>(m, d). m = x) (map (\<lambda>y. (y, rg y (Lifted init_st))) ys). d)"
-        if "x \<in> set ys" for ys
-        using that by (induction ys) (auto intro: le_supI1 le_supI2)
-      then show ?thesis using x by (simp add: dg_pipeline.init_env_def le_supI2)
-    qed
-    have "full_view rg ?xs (\<lambda>x. rg x (Lifted init_st)) \<le> full_view rg ?xs ?ie"
-      unfolding full_view_def
-    proof (rule view_of_le)
-      fix x assume x: "x \<in> set ?xs"
-      show "rg x (rg x (Lifted init_st)) \<le> view_of rg ?xs ?ie bot"
-        using rg_mono[OF ie[OF x], of x] view_of_ge_mem[OF x, of rg ?ie bot] by (rule order_trans)
-    qed simp
-    then show ?case
-      using init_view[where p = p] gm_mono[OF cmb_mono[OF order_refl], where p = p] by blast
-  next
-    case (EmptyRd p s) show ?case by (rule empty_rd)
-  next
-    case EmptyV show ?case by (rule empty\<^sub>V_sound)
-  next
-    case (SeedNe v ctx) show ?case by (rule seed_ne)
-  next
-    case (SeedNeGlobal v ctx n) show ?case by (rule seed_ne_global)
-  next
-    case (ClProved c d s) then show ?case by (rule classify_proved)
-  next
-    case (ClRefuted c d s) then show ?case by (rule classify_refuted)
-  next
-    case BotState show ?case by (rule bot_state_empty)
-  next
-    case (InitSound p) show ?case by (rule init_sound)
-  qed
-qed
+  by (rule dg_analysis_of_gdg_analysis, rule gdg_analysis_keyedI)
+     (fact | simp add: comp_sound[unfolded sound_local_spec_inst] prog_cfg_def compile_prog_finite
+        prog_cfg_calls_source_unique[unfolded prog_cfg_def])+
 
 subsection \<open>An executable analysis as the pipeline's component\<close>
 

@@ -1,5 +1,8 @@
-// PARAM: --analysis interval --context none --globals bounded-narrowing
-// Backs the bounded-narrowing cell of the site's Globals guide table: f(x + 1) grows x without bound, and the check is PROVED.
+// PARAM: --analysis interval --context none --globals warrow-per-origin
+// Backs the warrow-per-origin cell of the site's Globals guide table: f(x + 1)
+// grows x by one per call; after 2^31 calls x + 1 wraps to -2147483648, so the
+// check is reached with x >= 0 and with x < 0 and UNKNOWN is the only sound
+// answer.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: f / unit
@@ -19,20 +22,20 @@
 //       unreachable
 //   main_exit_main_ctx0: exit_main [unreachable]
 //       unreachable
-//   f_pp0_ctx0: pp0 [proved]
+//   f_pp0_ctx0: pp0 [unknown]
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //       check x >= 0
 //   f_pp1_ctx0: pp1
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //   f_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //   main_pp3_ctx0: pp3
 //       interval:
 //   f_entry_f_ctx0: entry_f
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //   main_pp4_ctx0: pp4 [unreachable]
 //       unreachable
 //   main_entry_main_ctx0: entry_main
@@ -53,7 +56,7 @@
 // EXPECT-GRAPH-END
 
 fun f(x) {
-  __voblint_check(x >= 0); // PROVED
+  __voblint_check(x >= 0); // UNKNOWN
   f(x + 1);
 }
 

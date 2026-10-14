@@ -16,10 +16,10 @@ definition tt_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" w
 abbreviation ivl_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
     (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
      (ivl tst toplift lifted, ivl tst toplift lifted) dg_state) strategy_tree" where
-  "ivl_equations ds p \<equiv> typed_nonrel.equations ds 0 tglobal p"
+  "ivl_equations ds p \<equiv> typed_nonrel.equations default_sem_conf ds 0 tglobal p"
 
 abbreviation ivl_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> ivl tabs toplift" where
-  "ivl_state_at ds p \<equiv> typed_nonrel.state_at ds 0 Globals_Join tglobal p []"
+  "ivl_state_at ds p \<equiv> typed_nonrel.state_at default_sem_conf ds 0 Globals_Join tglobal p []"
 
 abbreviation main_var :: "vname \<Rightarrow> var_id" where
   "main_var x \<equiv> ScopedId (STR ''main'') x"
@@ -36,7 +36,7 @@ lemma loop_terminates_c:
      (cfg_exit (typed_cfg loop_prog []), []) \<noteq> None"
   by eval
 
-lemma loop_terminates: "typed_nonrel.terminates TYPE(ivl) [] 0 Globals_Join tglobal loop_prog"
+lemma loop_terminates: "typed_nonrel.terminates TYPE(ivl) default_sem_conf [] 0 Globals_Join tglobal loop_prog"
   unfolding typed_nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF loop_terminates_c] by simp
 

@@ -70,6 +70,7 @@ let header_positions () : (string * (int * int * int * int)) list =
 
 let program (file : string) (src : string) :
     unit Voblint.imp_prog_ext
+    * (Voblint.var_id * Voblint.ikind) list
     * (int * (int * int * int * int)) list
     * (string * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in
@@ -79,7 +80,7 @@ let program (file : string) (src : string) :
     let supplier = I.lexer_lexbuf_to_supplier Vimp_lexer.token lexbuf in
     let checkpoint = Vimp_parser.Incremental.program lexbuf.lex_curr_p in
     let prog = I.loop supplier checkpoint in
-    (prog, stmt_positions prog, header_positions ())
+    (prog, !Vimp_typing.last_kind_decls, stmt_positions prog, header_positions ())
   with
   | Vimp_lexer.Lex_error { line; col; msg } ->
       raise (Parse_error { file; line; col; msg })

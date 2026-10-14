@@ -86,6 +86,24 @@ const narrowBoundGroup = query("#narrow-bound-group");
 const intRefinementSelect = query("#int-refinement-select");
 const intRefinementGroup = query("#int-refinement-group");
 
+/*
+ * The options the domains read, one control each, keyed by their Goblint path
+ * (data-option). They reach the analyzer as the CLI's --set PATH VALUE pairs, so a
+ * further option is a further control here and a further row of option_specs.
+ */
+const optionControls = [...document.querySelectorAll("[data-option]")];
+
+function optionDefault(control) {
+  return [...control.options].find((option) => option.defaultSelected)?.value ?? control.value;
+}
+
+function readSettings() {
+  return optionControls
+    .filter((control) => control.value !== optionDefault(control))
+    .map((control) => `${control.dataset.option}=${control.value}`)
+    .join(";");
+}
+
 const globalsHelp = query("#globals-help");
 
 const runButton = query("#run-analysis");
@@ -418,18 +436,22 @@ function setTraceSummary(text) {
  * the constructor, then each result field with a list's length in place of the list.
  * The answer sits under the arguments, the arrow under the function name.
  */
+/* The configuration record as Isabelle prints it, every field in the order run_voblint declares. */
+function confTerm(conf) {
+  if (!conf) {
+    return "conf";
+  }
+  const sem = conf.conf_sem ?? {};
+  const semFields = Object.entries(sem).map(([key, value]) => `${key} = ${constructorTerm(value)}`);
+  return `⦇conf_analyses = [${(conf.conf_analyses ?? []).map(constructorTerm).join(", ")}], conf_context = ${constructorTerm(conf.conf_context)}, conf_globals = ${constructorTerm(conf.conf_globals)}, conf_sem = ⦇${semFields.join(", ")}⦈⦈`;
+}
+
 function renderRawCall(raw) {
   const input = raw?.input;
   const output = raw?.output;
   const args = input
-    ? [
-        callPart(
-          `[${(input.as ?? []).map(constructorTerm).join(", ")}] ${constructorTerm(input.rule)} ${constructorTerm(input.ctx)} ${input.pg ? `${constructorTerm(input.pg)} ` : ""}`,
-          "arg",
-        ),
-        callPart("p", "program"),
-      ]
-    : [callPart("as rule ctx pg p", "arg")];
+    ? [callPart(confTerm(input.conf), "arg"), callPart("ds p", "program")]
+    : [callPart("conf ds p", "arg")];
   /* Before any run the title asks for one. */
   let result = [callPart("?", "arg"), callPart("  run the analysis to see the answer", "observed")];
 
@@ -4226,6 +4248,7 @@ function readConfiguration() {
     narrowBound,
     intRefinement,
     placement,
+    settings: readSettings(),
   };
 }
 
@@ -4252,6 +4275,12 @@ function configurationLabel(configuration) {
 
   if (usesInt()) {
     parts.push(`Int ${selectedLabel(intRefinementSelect).toLowerCase()}`);
+  }
+
+  for (const control of optionControls) {
+    if (control.value !== optionDefault(control)) {
+      parts.push(`${control.dataset.option}=${control.value}`);
+    }
   }
 
   return parts.join(" · ");
@@ -4464,6 +4493,7 @@ function runAnalysisInWorker(configuration, source, { onChunk = null, onInput = 
         contextDepth: configuration.contextDepth,
         intRefinement: configuration.intRefinement,
         placement: configuration.placement,
+        settings: configuration.settings ?? "",
         trace: configuration.trace ?? "off",
         source,
       });
@@ -5140,6 +5170,9 @@ function openProgram({ source, fileName, settings = {} }) {
   selectIfOffered(placementSelect, settings.placement ?? "flow-sensitive");
   setGraphView(GRAPH_VIEWS.includes(settings.graph) ? settings.graph : graphView);
   selectIfOffered(intRefinementSelect, settings.refinement);
+  for (const control of optionControls) {
+    selectIfOffered(control, settings[control.dataset.option] ?? optionDefault(control));
+  }
 
   /* A linked trace, in any form older links name, opens the panel that shows it. */
   if (settings.trace != null && settings.trace !== "off") {
@@ -5208,6 +5241,7 @@ const LINK_SETTINGS = [
   "refinement",
   "placement",
   "trace",
+  ...optionControls.map((control) => control.dataset.option),
 ];
 
 const shareButton = query("#share-link");
@@ -5306,6 +5340,9 @@ async function shareLink() {
     ...(placementSelect.value === "flow-insensitive"
       ? [linkParam("placement", "flow-insensitive")]
       : []),
+    ...optionControls
+      .filter((control) => control.value !== optionDefault(control))
+      .map((control) => linkParam(control.dataset.option, control.value)),
     ...(rawResult.open ? [linkParam("trace", "verbose")] : []),
     ...(graphView !== "cfg" ? [linkParam("graph", graphView)] : []),
   ];

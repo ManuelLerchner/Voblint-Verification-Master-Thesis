@@ -29,21 +29,49 @@ definition tarith_condition :: "texp arithmetic_obligation \<Rightarrow> texp" w
   "tarith_condition ob =
      TCmp CNe (arithmetic_divisor ob) (TN (texp_kind (arithmetic_divisor ob)) 0)"
 
+text \<open>The variables a report lists: every variable an edge or a call of the typed graph
+  mentions.\<close>
+
+fun tspecial_vars :: "texp gspecial_call \<Rightarrow> var_id list" where
+  "tspecial_vars Nondet_Int = []"
+| "tspecial_vars (Min a b) = tvar_list a @ tvar_list b"
+| "tspecial_vars (Max a b) = tvar_list a @ tvar_list b"
+
+fun tedge_vars :: "(var_id, texp) gedge_action \<Rightarrow> var_id list" where
+  "tedge_vars (EA_Assign x e) = x # tvar_list e"
+| "tedge_vars (EA_Special sc x) = x # tspecial_vars sc"
+| "tedge_vars (EA_Assume b) = tvar_list b"
+| "tedge_vars (EA_AssumeNot b) = tvar_list b"
+| "tedge_vars (EA_Ret e _) = (case e of Some e \<Rightarrow> tvar_list e | None \<Rightarrow> [])"
+| "tedge_vars (EA_Check _ e) = tvar_list e"
+| "tedge_vars _ = []"
+
+fun tcall_vars :: "(var_id, texp) gcall_action \<Rightarrow> var_id list" where
+  "tcall_vars (CallEdge dst ps args) =
+     (case dst of Some x \<Rightarrow> [x] | None \<Rightarrow> []) @ ps @ concat (map tvar_list args)"
+
+definition typed_vars :: "(var_id, texp) gcfg \<Rightarrow> var_id list" where
+  "typed_vars g =
+     sorted_list_of_set (set (concat (map (\<lambda>(u, a, w). tedge_vars a) (cfg_intra_list g))
+                            @ concat (map (\<lambda>(u, ca, e, w). tcall_vars ca) (cfg_calls_list g))))"
+
 type_synonym typed_report =
-  "(typed_domain list \<times> globals_rule \<times> typed_context, tmcp_ctx report_context,
+  "(voblint_conf, tmcp_ctx report_context,
     var_id, texp, unit, tmcp_val) analysis_report"
 
 definition typed_cs_report ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> cfg_node list) set
           \<times> (pp \<times> cfg_node list + (unit, cfg_node list) global_unknown
               \<Rightarrow> (tmcp_st lifted, tmcp_st lifted) dg_state)
        \<Rightarrow> typed_report" where
-  "typed_cs_report as r k ds p sol =
-     report_of (as, r, Typed_Call_String k) (map fst ds) (typed_cfg p ds) []
+  "typed_cs_report sem as r k ds p sol =
+     report_of \<lparr>conf_analyses = as, conf_context = Typed_Call_String k, conf_globals = r, conf_sem = sem\<rparr>
+       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
        (obligation_sites tarith_obligations (typed_cfg p ds)) tarith_condition
-       (prog_main_name # prog_procs p) (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
-       (tmcp_classify ds (tactivation as)) (typed_mcp.solved_run_of ds as k tglobal p sol)"
+       (prog_main_name # prog_procs p) (\<lambda>ctx. Key_List (map Key_Node ctx))
+       (if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String)
+       (tmcp_classify sem ds (tactivation as)) (typed_mcp.solved_run_of sem ds as k tglobal p sol)"
 
 subsection \<open>At entry-state contexts\<close>
 
@@ -81,56 +109,63 @@ lemma map_kd_key_inject:
   shows "map (kd_key f) xs = map (kd_key f) ys \<Longrightarrow> xs = ys"
   using kd_key_inject[OF assms] by (auto dest: list.inj_map_strong[rotated])
 
-definition int_tuple_key :: "int_tuple \<Rightarrow> order_key" where
+definition int_tuple_key :: "'m int_tuple \<Rightarrow> order_key" where
   "int_tuple_key a = Key_List [ivl_key (it_ivl a), congruence_key (it_cong a)]"
 
 lemma int_tuple_key_inject [simp]: "int_tuple_key a = int_tuple_key b \<longleftrightarrow> a = b"
   unfolding int_tuple_key_def by (cases a; cases b) simp
 
 fun tmcp_ctx_key :: "tmcp_ctx \<Rightarrow> order_key" where
-  "tmcp_ctx_key (Product i (Product c (Product t (Product s (Product q u))))) =
+  "tmcp_ctx_key (Product i (Product c (Product (Product tn (Product to tf)) (Product s (Product q u))))) =
      Key_List [Key_List (map (kd_key ivl_key) i), Key_List (map (kd_key congruence_key) c),
-               Key_List (map (kd_key int_tuple_key) t), Key_List (map (kd_key sign_key) s),
+               Key_List (map (kd_key int_tuple_key) tn), Key_List (map (kd_key int_tuple_key) to),
+               Key_List (map (kd_key int_tuple_key) tf), Key_List (map (kd_key sign_key) s),
                Key_List (map (kd_key parity_key) q), Key_List (map (\<lambda>_. Key_List []) u)]"
 
 lemma inj_tmcp_ctx_key: "inj tmcp_ctx_key"
 proof (rule injI)
   fix a b :: tmcp_ctx
   assume eq: "tmcp_ctx_key a = tmcp_ctx_key b"
-  obtain i c t s q u where a: "a = Product i (Product c (Product t (Product s (Product q u))))"
+  obtain i c tn to tf s q u
+    where a: "a = Product i (Product c (Product (Product tn (Product to tf)) (Product s (Product q u))))"
     by (metis analysis_product.exhaust)
-  obtain i' c' t' s' q' u'
-    where b: "b = Product i' (Product c' (Product t' (Product s' (Product q' u'))))"
+  obtain i' c' tn' to' tf' s' q' u'
+    where b: "b = Product i' (Product c' (Product (Product tn' (Product to' tf')) (Product s' (Product q' u'))))"
     by (metis analysis_product.exhaust)
   from eq have keys:
     "map (kd_key ivl_key) i = map (kd_key ivl_key) i'"
     "map (kd_key congruence_key) c = map (kd_key congruence_key) c'"
-    "map (kd_key int_tuple_key) t = map (kd_key int_tuple_key) t'"
+    "map (kd_key int_tuple_key) tn = map (kd_key int_tuple_key) tn'"
+    "map (kd_key int_tuple_key) to = map (kd_key int_tuple_key) to'"
+    "map (kd_key int_tuple_key) tf = map (kd_key int_tuple_key) tf'"
     "map (kd_key sign_key) s = map (kd_key sign_key) s'"
     "map (kd_key parity_key) q = map (kd_key parity_key) q'"
     "map (\<lambda>_. Key_List []) u = map (\<lambda>_. Key_List []) u'"
     by (simp_all add: a b)
-  have "length u = length u'" using keys(6) by (metis length_map)
+  have "length u = length u'" using keys(8) by (metis length_map)
   then have "u = u'" by (simp add: list_eq_iff_nth_eq)
   moreover have "i = i'" by (rule map_kd_key_inject[OF _ keys(1)]) simp
   moreover have "c = c'" by (rule map_kd_key_inject[OF _ keys(2)]) simp
-  moreover have "t = t'" by (rule map_kd_key_inject[OF _ keys(3)]) simp
-  moreover have "s = s'" by (rule map_kd_key_inject[OF _ keys(4)]) simp
-  moreover have "q = q'" by (rule map_kd_key_inject[OF _ keys(5)]) simp
+  moreover have "tn = tn'" by (rule map_kd_key_inject[OF _ keys(3)]) simp
+  moreover have "to = to'" by (rule map_kd_key_inject[OF _ keys(4)]) simp
+  moreover have "tf = tf'" by (rule map_kd_key_inject[OF _ keys(5)]) simp
+  moreover have "s = s'" by (rule map_kd_key_inject[OF _ keys(6)]) simp
+  moreover have "q = q'" by (rule map_kd_key_inject[OF _ keys(7)]) simp
   ultimately show "a = b" by (simp add: a b)
 qed
 
 definition typed_es_report ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> tmcp_ctx) set
           \<times> (pp \<times> tmcp_ctx + (unit, tmcp_ctx) global_unknown
               \<Rightarrow> (tmcp_st lifted, tmcp_st lifted) dg_state)
        \<Rightarrow> typed_report" where
-  "typed_es_report as r ds p sol =
-     report_of (as, r, Typed_Entry_State) (map fst ds) (typed_cfg p ds) []
+  "typed_es_report sem as r ds p sol =
+     report_of \<lparr>conf_analyses = as, conf_context = Typed_Entry_State, conf_globals = r, conf_sem = sem\<rparr>
+       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
        (obligation_sites tarith_obligations (typed_cfg p ds)) tarith_condition
        (prog_main_name # prog_procs p) tmcp_ctx_key Report_Entry
-       (tmcp_classify ds (tactivation as)) (typed_mcp_es.solved_run_of ds as tglobal p sol)"
+       (tmcp_classify sem ds (tactivation as)) (typed_mcp_es.solved_run_of sem ds as tglobal p sol)"
 
 subsection \<open>The run\<close>
 
@@ -138,17 +173,17 @@ text \<open>A typed run solves the equations of the chosen context policy and re
   answer; the logical \<open>None\<close> branch of the executable solve has no report.\<close>
 
 definition typed_report_run ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog
        \<Rightarrow> typed_report option" where
-  "typed_report_run as r cx ds p =
+  "typed_report_run sem as r cx ds p =
      (case cx of
         Typed_Call_String k \<Rightarrow>
-          map_option (typed_cs_report as r k ds p)
-            (TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+          map_option (typed_cs_report sem as r k ds p)
+            (TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
                (cfg_exit (typed_cfg p ds), []))
       | Typed_Entry_State \<Rightarrow>
-          map_option (typed_es_report as r ds p)
-            (TD_side_rule_Interp_solve_c r (typed_mcp_es.equations ds as tglobal p)
+          map_option (typed_es_report sem as r ds p)
+            (TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
                (cfg_exit (typed_cfg p ds), tmcp_root_ctx)))"
 
 subsection \<open>What the builder keeps\<close>
@@ -196,7 +231,7 @@ text \<open>
 
 theorem typed_report_check_sound:
   assumes wf: "wf_program_compile_input p"
-    and run: "typed_report_run as r cx ds p = Some res"
+    and run: "typed_report_run sem as r cx ds p = Some res"
     and chk: "chk \<in> set (report_checks res)"
     and s: "s \<in> reaching ds p (check_point chk)"
   shows "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
@@ -207,13 +242,13 @@ proof -
   proof (cases cx)
     case (Typed_Call_String k)
     from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
               (typed_mcp.root_query ds p) = Some sol"
-      and res: "res = typed_cs_report as r k ds p sol"
+      and res: "res = typed_cs_report sem as r k ds p sol"
       by (auto simp: typed_report_run_def Typed_Call_String dg_pipeline.root_query_def)
     note solved = typed_mcp.solve_c_run[OF sol]
     have "(check_point chk, check_exp chk, check_verdict chk)
-            \<in> set (typed_mcp.verdict_report ds as k r tglobal p)"
+            \<in> set (typed_mcp.verdict_report sem ds as k r tglobal p)"
       using report_of_check_mem[OF chk[unfolded res typed_cs_report_def]] solved(2)
       by (simp add: typed_mcp.verdict_report_def)
     then show ?thesis
@@ -221,13 +256,13 @@ proof -
   next
     case Typed_Entry_State
     from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations ds as tglobal p)
+      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
               (typed_mcp_es.root_query ds p) = Some sol"
-      and res: "res = typed_es_report as r ds p sol"
+      and res: "res = typed_es_report sem as r ds p sol"
       by (auto simp: typed_report_run_def Typed_Entry_State dg_pipeline.root_query_def)
     note solved = typed_mcp_es.solve_c_run[OF sol]
     have "(check_point chk, check_exp chk, check_verdict chk)
-            \<in> set (typed_mcp_es.verdict_report ds as r tglobal p)"
+            \<in> set (typed_mcp_es.verdict_report sem ds as r tglobal p)"
       using report_of_check_mem[OF chk[unfolded res typed_es_report_def]] solved(2)
       by (simp add: typed_mcp_es.verdict_report_def)
     then show ?thesis
@@ -240,7 +275,7 @@ qed
 
 theorem typed_report_state_sound:
   assumes wf: "wf_program_compile_input p"
-    and run: "typed_report_run as r cx ds p = Some res"
+    and run: "typed_report_run sem as r cx ds p = Some res"
     and s: "s \<in> reaching ds p v"
   obtains d where "Lifted d \<in> report_states_at res v"
     and "s \<in> tmcp.act_gamma ds (tactivation as) d"
@@ -249,14 +284,14 @@ proof -
   proof (cases cx)
     case (Typed_Call_String k)
     from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
               (typed_mcp.root_query ds p) = Some sol"
-      and res: "res = typed_cs_report as r k ds p sol"
+      and res: "res = typed_cs_report sem as r k ds p sol"
       by (auto simp: typed_report_run_def Typed_Call_String dg_pipeline.root_query_def)
     note solved = typed_mcp.solve_c_run[OF sol]
-    let ?r = "typed_mcp.result ds as k r tglobal p"
+    let ?r = "typed_mcp.result sem ds as k r tglobal p"
     from typed_mcp_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at ds as k r tglobal p ctx v)"
+      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v)"
       by blast
     obtain d where look: "lookup_table ?r v ctx = Lifted d"
       and sd: "s \<in> tmcp.act_gamma ds (tactivation as) d"
@@ -270,7 +305,7 @@ proof -
     have fin: "finite (covered_keys ?r)"
       using typed_mcp.vars_finite_of_terminates[OF solved(1)]
       by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have tbl: "run_table (typed_mcp.solved_run_of ds as k tglobal p sol) = ?r"
+    have tbl: "run_table (typed_mcp.solved_run_of sem ds as k tglobal p sol) = ?r"
       using solved(2) by simp
     have "Lifted d \<in> report_states_at res v"
       unfolding res typed_cs_report_def
@@ -279,14 +314,14 @@ proof -
   next
     case Typed_Entry_State
     from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations ds as tglobal p)
+      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
               (typed_mcp_es.root_query ds p) = Some sol"
-      and res: "res = typed_es_report as r ds p sol"
+      and res: "res = typed_es_report sem as r ds p sol"
       by (auto simp: typed_report_run_def Typed_Entry_State dg_pipeline.root_query_def)
     note solved = typed_mcp_es.solve_c_run[OF sol]
-    let ?r = "typed_mcp_es.result ds as r tglobal p"
+    let ?r = "typed_mcp_es.result sem ds as r tglobal p"
     from typed_mcp_es_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at ds as r tglobal p ctx v)"
+      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v)"
       by blast
     obtain d where look: "lookup_table ?r v ctx = Lifted d"
       and sd: "s \<in> tmcp.act_gamma ds (tactivation as) d"
@@ -300,7 +335,7 @@ proof -
     have fin: "finite (covered_keys ?r)"
       using typed_mcp_es.vars_finite_of_terminates[OF solved(1)]
       by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have tbl: "run_table (typed_mcp_es.solved_run_of ds as tglobal p sol) = ?r"
+    have tbl: "run_table (typed_mcp_es.solved_run_of sem ds as tglobal p sol) = ?r"
       using solved(2) by simp
     have "Lifted d \<in> report_states_at res v"
       unfolding res typed_es_report_def
@@ -334,10 +369,15 @@ definition vjoin_order_rel :: "'v order_rel \<Rightarrow> 'v order_rel \<Rightar
 instance ..
 end
 
+text \<open>An Int value prints the same at every refinement mode, so the report drops the mode.\<close>
+
+definition it_untag :: "'m int_tuple \<Rightarrow> unit int_tuple" where
+  "it_untag a = IT (it_ivl a) (it_cong a)"
+
 datatype typed_value =
     Typed_Interval_Value "ivl kd"
   | Typed_Congruence_Value "congruence kd"
-  | Typed_Int_Value "int_tuple kd"
+  | Typed_Int_Value "unit int_tuple kd"
   | Typed_Sign_Value "sign kd"
   | Typed_Parity_Value "parity kd"
   | Typed_Order_Value "(vname \<times> vname) list option"
@@ -364,10 +404,17 @@ definition tfield_view ::
      Field_Store (map (\<lambda>x. (var_label x, mk (case d of Bot \<Rightarrow> KBot | Lifted TTop \<Rightarrow> KTop
                                                   | Lifted (TL \<sigma>) \<Rightarrow> \<sigma> x))) vars)"
 
+text \<open>An order fact relates variables of one procedure's state, so it names each by its
+  own name.\<close>
+
+fun var_name :: "var_id \<Rightarrow> vname" where
+  "var_name (ScopedId f x) = x"
+| "var_name x = var_label x"
+
 definition order_field_view :: "var_id order_rel lifted \<Rightarrow> typed_value field_state" where
   "order_field_view d =
      Field_Whole (Typed_Order_Value (case d of
-        Lifted (OFacts ps) \<Rightarrow> Some (map (\<lambda>(a, b). (var_label a, var_label b)) (sorted_list_of_set ps))
+        Lifted (OFacts _ ps) \<Rightarrow> Some (map (\<lambda>(a, b). (var_name a, var_name b)) (sorted_list_of_set ps))
       | _ \<Rightarrow> None))"
 
 definition typed_render ::
@@ -375,27 +422,31 @@ definition typed_render ::
   "typed_render as vars v = map (\<lambda>a. (a, case a of
        Typed_Interval \<Rightarrow> tfield_view Typed_Interval_Value vars (tslot1 v)
      | Typed_Congruence \<Rightarrow> tfield_view Typed_Congruence_Value vars (tslot2 v)
-     | Typed_Int \<Rightarrow> tfield_view Typed_Int_Value vars (tslot3 v)
+     | Typed_Int Refine_Never \<Rightarrow> tfield_view (Typed_Int_Value \<circ> map_kd it_untag) vars (tslot3n v)
+     | Typed_Int Refine_Once \<Rightarrow> tfield_view (Typed_Int_Value \<circ> map_kd it_untag) vars (tslot3o v)
+     | Typed_Int Refine_Fixpoint \<Rightarrow> tfield_view (Typed_Int_Value \<circ> map_kd it_untag) vars (tslot3f v)
      | Typed_Sign \<Rightarrow> tfield_view Typed_Sign_Value vars (tslot4 v)
      | Typed_Parity \<Rightarrow> tfield_view Typed_Parity_Value vars (tslot5 v)
      | Typed_Order \<Rightarrow> order_field_view (tslot6 v))) as"
 
 fun typed_ctx_values :: "typed_domain list \<Rightarrow> tmcp_ctx \<Rightarrow> typed_value list" where
-  "typed_ctx_values as (Product i (Product c (Product t (Product s (Product q u))))) =
+  "typed_ctx_values as (Product i (Product c (Product (Product tn (Product to tf)) (Product s (Product q u))))) =
      concat (map (\<lambda>a. case a of
          Typed_Interval \<Rightarrow> map Typed_Interval_Value i
        | Typed_Congruence \<Rightarrow> map Typed_Congruence_Value c
-       | Typed_Int \<Rightarrow> map Typed_Int_Value t
+       | Typed_Int Refine_Never \<Rightarrow> map (Typed_Int_Value \<circ> map_kd it_untag) tn
+       | Typed_Int Refine_Once \<Rightarrow> map (Typed_Int_Value \<circ> map_kd it_untag) to
+       | Typed_Int Refine_Fixpoint \<Rightarrow> map (Typed_Int_Value \<circ> map_kd it_untag) tf
        | Typed_Sign \<Rightarrow> map Typed_Sign_Value s
        | Typed_Parity \<Rightarrow> map Typed_Parity_Value q
        | Typed_Order \<Rightarrow> []) as)"
 
 definition typed_renderer ::
-    "(typed_domain list \<times> globals_rule \<times> typed_context, tmcp_ctx, tmcp_val, var_id, texp, unit,
+    "(voblint_conf, tmcp_ctx, tmcp_val, var_id, texp, unit,
       typed_domain, typed_value) report_renderer" where
   "typed_renderer =
-     \<lparr> rr_view = (\<lambda>(as, _, _). typed_render (tactivation as)),
-       rr_context = (\<lambda>(as, _, _). typed_ctx_values (tactivation as)),
+     \<lparr> rr_view = (\<lambda>conf. typed_render (tactivation (conf_analyses conf))),
+       rr_context = (\<lambda>conf. typed_ctx_values (tactivation (conf_analyses conf))),
        rr_footprints = \<lparr> fp_edge_reads = (\<lambda>_ _. []), fp_edge_writes = (\<lambda>_ _. []),
                          fp_call_reads = (\<lambda>_ _. []), fp_call_writes = (\<lambda>_ _. []) \<rparr> \<rparr>"
 

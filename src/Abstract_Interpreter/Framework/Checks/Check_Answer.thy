@@ -19,20 +19,17 @@ definition bool_answer :: "bool option \<Rightarrow> answer" where
         Some b \<Rightarrow> answer_of_int (if b then 1 else 0)
       | None \<Rightarrow> answer_of_ivl (Ivl (Fin 0) (Fin 1)))"
 
+lemma classify_answer_gamma:
+  "a \<noteq> QBot \<Longrightarrow> classify_answer a =
+     Decided (if 0 \<notin> gamma_answer a then Check_Proved
+              else if 1 \<notin> gamma_answer a then Check_Refuted else Check_Unknown)"
+  using answer_excludes_iff[of 0 a] answer_excludes_iff[of 1 a]
+  by (cases a) (auto simp del: answer_excludes.simps)
+
 lemma classify_answer_of_int:
   "classify_answer (answer_of_int 1) = Decided Check_Proved"
   "classify_answer (answer_of_int 0) = Decided Check_Refuted"
-  using answer_const_of_int[of 1] answer_const_of_int[of 0]
-  by (simp_all add: answer_of_int_def int_dom_of_int_def del: answer_const.simps)
-
-lemma answer_const_bool_range: "answer_const (answer_of_ivl (Ivl (Fin 0) (Fin 1))) = None"
-proof -
-  have "congruence_constant (\<top> :: congruence) = None"
-    by (cases "congruence_constant (\<top> :: congruence)")
-       (auto dest!: gamma_congruence_constant simp: set_eq_iff, presburger)
-  then show ?thesis
-    by (simp add: answer_of_ivl_def int_dom_constant_def top_int_dom_ext_def top_sign_def)
-qed
+  by (simp_all add: answer_of_int_def is_bottom_int_dom_correct)
 
 lemma classify_bool_answer:
   "classify_answer (bool_answer r) =
@@ -40,10 +37,10 @@ lemma classify_bool_answer:
                       | None \<Rightarrow> Check_Unknown)"
 proof (cases r)
   case None
-  then show ?thesis
-    using answer_const_bool_range
-    by (simp add: bool_answer_def answer_of_ivl_def top_int_dom_ext_def top_sign_def
-        top_parity_def less_eint_def less_eq_eint_def)
+  have "answer_of_ivl (Ivl (Fin 0) (Fin 1)) \<noteq> QBot"
+    by (simp add: answer_of_ivl_def)
+  with None show ?thesis
+    by (simp add: bool_answer_def classify_answer_gamma)
 qed (auto simp: bool_answer_def classify_answer_of_int)
 
 context sound_check_query
@@ -118,28 +115,10 @@ proof -
   let ?a = "q v (EvalInt (tx c))"
   have val: "(if truthy (ev c s) then 1 else 0) \<in> gamma_answer ?a"
     using holds truth by simp
-  show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
-  proof -
-    assume "answer_check tx q c v = Check_Proved"
-    then have "answer_const ?a = Some 1 \<or> answer_nonzero ?a"
-      by (cases ?a rule: classify_answer.cases)
-         (auto simp: answer_check_def split: if_splits
-           simp del: answer_const.simps answer_nonzero.simps)
-    then show "truthy (ev c s)"
-    proof
-      assume "answer_const ?a = Some 1"
-      with val show ?thesis
-        by (cases ?a) (auto split: if_splits dest!: gamma_int_dom_constant_subset)
-    next
-      assume "answer_nonzero ?a"
-      from answer_nonzero_gamma[OF this val] show ?thesis by (simp split: if_splits)
-    qed
-  qed
-  show "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
-    using val
-    by (cases ?a rule: classify_answer.cases)
-       (auto simp: answer_check_def split: if_splits option.splits
-         simp del: answer_nonzero.simps dest!: gamma_int_dom_constant_subset)
+  then have "?a \<noteq> QBot" by auto
+  then show "answer_check tx q c v = Check_Proved \<Longrightarrow> truthy (ev c s)"
+    and "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
+    using val by (auto simp: answer_check_def classify_answer_gamma split: if_splits)
 qed
 
 lemma answer_check_proved:

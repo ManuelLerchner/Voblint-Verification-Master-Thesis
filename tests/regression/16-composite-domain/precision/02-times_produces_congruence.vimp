@@ -1,4 +1,4 @@
-// PARAM: --analysis int
+// PARAM: --analysis int --signed-overflow assume_wraparound
 // y := x * 2 gives y an even/mod-2-congruent-to-0 fact from Times' own
 // abstract transfer, for any x (x itself is left unconstrained). Two
 // nested guards then bound y to the interval [1,2] via real control flow
@@ -11,6 +11,11 @@
 // driven by real multiplication instead of an equality guard, so the
 // congruence fact comes from arithmetic (Int_Arithmetic.thy's Times case)
 // rather than from a solved linear equation.
+//
+// Run under --signed-overflow assume_wraparound: the case tests classes that
+// survive wraparound modulo 2^32 on signed i32. Under Goblint's default
+// assume_top a signed operation that may overflow gives both components top
+// (27-signed-overflow/known-imprecision/03).
 fun main() {
   y = x * 2;
   if (0 < y) {

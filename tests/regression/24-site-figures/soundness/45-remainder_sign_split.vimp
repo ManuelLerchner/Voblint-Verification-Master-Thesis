@@ -1,0 +1,17 @@
+// PARAM: --analysis int
+// Backs the site figure "A bound that looks wrong". Over i32, 6 * n + 5
+// wraps to every odd value, so x % 6 ranges over the odd values in [-5,5].
+// The guard splits a into [-5,-1] and [1,5], and every check is
+// undetermined, so UNKNOWN is the only sound answer.
+
+fun main() {
+  n = __voblint_nondet_int();
+  x = 6 * n + 5;
+  a = x % 6;
+  __voblint_check(a >= 0);       // UNKNOWN
+  if (a < 0) {
+    __voblint_check(a == -1);    // UNKNOWN
+  } else {
+    __voblint_check(a == 5);     // UNKNOWN
+  }
+}

@@ -1,10 +1,17 @@
-// PARAM: --analysis int --int-refinement fixpoint
+// PARAM: --analysis int --int-refinement fixpoint --signed-overflow assume_wraparound
 // Source: Example_Int_Domain (arithmetic_fixpoint_result,
 // arithmetic_evaluator_refines_each_operation) and Example_Int_Backward
 // (int_exact_division_recovers_parity, int_division_remainder_progressive),
 // the Refine_Fixpoint columns. Same program and verdicts as
-// 18-refinement_once_arithmetic.vimp. The theory separates the two modes
-// only in the sum's sign (NonPositive vs Zero), which no check here sees.
+// 18-refinement_once_arithmetic.vimp, which explains why the two
+// exact-division equalities are undetermined over i32. The theory separates
+// the two modes only in the sum's sign (NonPositive vs Zero), which no
+// check here sees.
+//
+// Run under --signed-overflow assume_wraparound: the case tests classes that
+// survive wraparound modulo 2^32 on signed i32. Under Goblint's default
+// assume_top a signed operation that may overflow gives both components top
+// (27-signed-overflow/known-imprecision/03).
 fun main() {
   x = -1;
   m = __voblint_nondet_int();
@@ -19,8 +26,8 @@ fun main() {
   n = __voblint_nondet_int();
   even = (6 * n) / 3;
   odd = (12 * n + 3) / -3;
-  __voblint_check(even == 1); // REFUTED
-  __voblint_check(odd == 0); // REFUTED
+  __voblint_check(even == 1); // UNKNOWN
+  __voblint_check(odd == 0); // UNKNOWN
   if (0 <= n && n <= 20) {
     r = ((12 * n + 3) / 3) % 4;
     __voblint_check(r == 1); // PROVED

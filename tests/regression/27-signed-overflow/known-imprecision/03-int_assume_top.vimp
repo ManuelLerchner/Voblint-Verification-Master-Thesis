@@ -1,0 +1,17 @@
+// PARAM: --analysis int
+// Concretely b, d and f are INT_MIN, INT_MAX and 0. Under the default
+// assume_top the interval of each result leaves i32, so no_ov fails and both
+// components give the kind's top. ../precision/03 proves all three under
+// assume_wraparound; ../precision/04 shows the Int product keeping a class
+// when the interval proves that the result fits.
+fun main() {
+  a = 2147483647;
+  b = a + 1;
+  __voblint_check(b == -2147483648); // UNKNOWN
+  c = -2147483648;
+  d = c - 1;
+  __voblint_check(d == 2147483647); // UNKNOWN
+  e = 65536;
+  f = e * e;
+  __voblint_check(f == 0); // UNKNOWN
+}

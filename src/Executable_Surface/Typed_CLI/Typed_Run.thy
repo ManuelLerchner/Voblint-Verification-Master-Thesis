@@ -11,8 +11,16 @@ text \<open>
   \<open>run_typed\<close> in \<open>Typed_MCP\<close>.
 \<close>
 
+text \<open>Each refinement mode of Int is an analysis of its own, as in the untyped carrier.\<close>
+
 datatype typed_domain =
-  Typed_Interval | Typed_Congruence | Typed_Int | Typed_Order | Typed_Sign | Typed_Parity
+  Typed_Interval | Typed_Congruence | Typed_Int refine_mode | Typed_Order | Typed_Sign | Typed_Parity
+
+lemma typed_domain_cases [case_names Interval Congruence Int_Never Int_Once Int_Fixpoint Order Sign Parity]:
+  obtains "a = Typed_Interval" | "a = Typed_Congruence" | "a = Typed_Int Refine_Never"
+    | "a = Typed_Int Refine_Once" | "a = Typed_Int Refine_Fixpoint" | "a = Typed_Order"
+    | "a = Typed_Sign" | "a = Typed_Parity"
+  by (metis refine_mode.exhaust typed_domain.exhaust)
 
 datatype typed_answer =
     Typed_Malformed
@@ -34,6 +42,20 @@ definition verdict_result :: "contextual_verdict \<Rightarrow> check_result" whe
   "verdict_result v = (case v of Lifted r \<Rightarrow> r | Bot \<Rightarrow> Check_Unknown)"
 
 datatype typed_context = Typed_Call_String nat | Typed_Entry_State
+
+text \<open>
+  The options of a run as one value, in the role of Goblint's configuration tree: the
+  activated analyses (\<^verbatim>\<open>ana.activated\<close>), the context policy, the update rule of the
+  globals, and the options the domains read (\<^verbatim>\<open>sem\<close>). Goblint reads an option from its
+  global tree where it is used; here the value is passed down, and a further option is a
+  further field.
+\<close>
+
+record voblint_conf =
+  conf_analyses :: "typed_domain list"
+  conf_context :: typed_context
+  conf_globals :: globals_rule
+  conf_sem :: sem_conf
 
 subsection \<open>Soundness\<close>
 

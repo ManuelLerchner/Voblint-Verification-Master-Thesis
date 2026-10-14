@@ -1,19 +1,46 @@
 theory Int_Tuple_Kind
   imports
     "Voblint_Typed_Interval.Interval_Kind" "Voblint_Typed_Congruence.Congruence_Kind"
-    "Voblint_Analysis_Int.Int_Refinement"
+    "Voblint_Analysis_Int.Int_Refinement_Control"
 begin
 
 section \<open>The reduced product of Interval and Congruence\<close>
 
 text \<open>
   Goblint's \<^verbatim>\<open>IntDomTuple\<close> (\<^verbatim>\<open>int/intDomTuple.ml\<close>) restricted to its Interval and
-  Congruence components. A value denotes the integers both components admit.
+  Congruence components. A value denotes the integers both components admit. Its type
+  parameter selects how the components refine each other, as Goblint's
+  \<^verbatim>\<open>ana.int.refinement\<close> does; the untyped Int analysis takes the same modes.
 \<close>
 
-datatype int_tuple = IT (it_ivl: ivl) (it_cong: congruence)
+class int_refinement =
+  fixes int_mode :: "'a itself \<Rightarrow> refine_mode"
 
-definition gamma_it :: "int_tuple \<Rightarrow> int set" where
+datatype int_never = Int_Never
+datatype int_once = Int_Once
+datatype int_fixpoint = Int_Fixpoint
+
+instantiation int_never :: int_refinement
+begin
+definition "int_mode (_ :: int_never itself) = Refine_Never"
+instance ..
+end
+
+instantiation int_once :: int_refinement
+begin
+definition "int_mode (_ :: int_once itself) = Refine_Once"
+instance ..
+end
+
+instantiation int_fixpoint :: int_refinement
+begin
+definition "int_mode (_ :: int_fixpoint itself) = Refine_Fixpoint"
+instance ..
+end
+
+datatype 'm int_tuple = IT (it_ivl: ivl) (it_cong: congruence)
+
+definition gamma_it :: "'a int_tuple \<Rightarrow> int set" where
   "gamma_it a = gamma_ivl (it_ivl a) \<inter> gamma_congruence (it_cong a)"
 
 lemma gamma_it_IT [simp]: "gamma_it (IT i c) = gamma_ivl i \<inter> gamma_congruence c"
@@ -21,24 +48,24 @@ lemma gamma_it_IT [simp]: "gamma_it (IT i c) = gamma_ivl i \<inter> gamma_congru
 
 subsection \<open>Lattice\<close>
 
-instantiation int_tuple :: "{order_top, bounded_semilattice_sup_bot}"
+instantiation int_tuple :: (type) "{order_top, bounded_semilattice_sup_bot}"
 begin
 
-definition less_eq_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> bool" where
+definition less_eq_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> bool" where
   "a \<le> b \<longleftrightarrow> it_ivl a \<le> it_ivl b \<and> it_cong a \<le> it_cong b"
 
-definition less_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> bool" where
-  "a < b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> (a :: int_tuple)"
+definition less_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> bool" where
+  "a < b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> (a :: 'a int_tuple)"
 
-definition sup_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition sup_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "a \<squnion> b = IT (it_ivl a \<squnion> it_ivl b) (it_cong a \<squnion> it_cong b)"
 
-definition bot_int_tuple :: int_tuple where "bot = IT bot bot"
+definition bot_int_tuple :: "'a int_tuple" where "bot = IT bot bot"
 
-definition top_int_tuple :: int_tuple where "top = IT top top"
+definition top_int_tuple :: "'a int_tuple" where "top = IT top top"
 
 instance proof
-  fix a b c :: int_tuple
+  fix a b c :: "'a int_tuple"
   show "a < b \<longleftrightarrow> a \<le> b \<and> \<not> b \<le> a" by (rule less_int_tuple_def)
   show "a \<le> a" by (simp add: less_eq_int_tuple_def)
   show "a \<le> b \<Longrightarrow> b \<le> c \<Longrightarrow> a \<le> c"
@@ -187,7 +214,7 @@ proof (cases "\<exists>x y r m. i = Ivl (Fin x) (Fin y) \<and> Rep_congruence c 
   qed
 qed (use n in \<open>auto simp: cong_refine_with_ivl_def split: ivl.splits eint.splits option.splits\<close>)
 
-definition it_refine :: "int_tuple \<Rightarrow> int_tuple" where
+definition it_refine :: "'m int_tuple \<Rightarrow> 'm int_tuple" where
   "it_refine a =
      (let c = cong_refine_with_ivl (it_ivl a) (it_cong a)
       in IT (refine_ivl_with_congruence c (it_ivl a)) c)"
@@ -196,36 +223,66 @@ lemma it_refine_sound: "n \<in> gamma_it a \<Longrightarrow> n \<in> gamma_it (i
   using cong_refine_with_ivl_sound refine_ivl_with_congruence_cover
   by (cases a) (fastforce simp: it_refine_def Let_def)
 
+text \<open>\<open>Refine_Never\<close> leaves the components apart, \<open>Refine_Once\<close> exchanges once, and
+  \<open>Refine_Fixpoint\<close> exchanges until nothing changes. Like the untyped
+  \<^const>\<open>refine_fix\<close>, the fixpoint keeps its input when the loop does not stop.\<close>
+
+definition it_refine_mode :: "refine_mode \<Rightarrow> 'm int_tuple \<Rightarrow> 'm int_tuple" where
+  "it_refine_mode md a =
+     (case md of
+        Refine_Never \<Rightarrow> a
+      | Refine_Once \<Rightarrow> it_refine a
+      | Refine_Fixpoint \<Rightarrow>
+          (case while_option (\<lambda>x. it_refine x \<noteq> x) it_refine a of Some r \<Rightarrow> r | None \<Rightarrow> a))"
+
+lemma it_refine_mode_sound: "n \<in> gamma_it a \<Longrightarrow> n \<in> gamma_it (it_refine_mode md a)"
+proof (cases md)
+  case Refine_Fixpoint
+  assume n: "n \<in> gamma_it a"
+  have "n \<in> gamma_it r" if "while_option (\<lambda>x. it_refine x \<noteq> x) it_refine a = Some r" for r
+    using while_option_rule[where P = "\<lambda>x. n \<in> gamma_it x", OF _ that] n it_refine_sound by blast
+  with n Refine_Fixpoint show ?thesis by (auto simp: it_refine_mode_def split: option.splits)
+qed (simp_all add: it_refine_mode_def it_refine_sound)
+
 subsection \<open>Domain instances\<close>
 
-instantiation int_tuple :: numeric_domain
+instantiation int_tuple :: (type) numeric_domain
 begin
 
-definition widen_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition widen_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "widen_int_tuple a b = IT (it_ivl a \<nabla> it_ivl b) (it_cong a \<nabla> it_cong b)"
 
-definition narrow_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition narrow_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "narrow_int_tuple a b = IT (it_ivl a \<Delta> it_ivl b) (it_cong a \<Delta> it_cong b)"
 
-definition is_empty_int_tuple :: "int_tuple \<Rightarrow> bool" where
+definition is_empty_int_tuple :: "'a int_tuple \<Rightarrow> bool" where
   "is_empty_int_tuple a = it_empty (it_ivl a) (it_cong a)"
 
-definition to_string_int_tuple :: "int_tuple \<Rightarrow> String.literal" where
-  "to_string_int_tuple a =
-     STR ''intervals:'' + to_string (it_ivl a) + STR ''; congruences:'' + to_string (it_cong a)"
+text \<open>A value prints as the untyped Int product does: bottom, a single integer when a
+  component pins one, and otherwise each component.\<close>
 
-definition gamma_int_tuple :: "int_tuple \<Rightarrow> int set" where
+definition to_string_int_tuple :: "'a int_tuple \<Rightarrow> String.literal" where
+  "to_string_int_tuple a =
+     (if it_empty (it_ivl a) (it_cong a) then sym_bottom
+      else case ivl_constant (it_ivl a) of
+        Some n \<Rightarrow> string_of_int n
+      | None \<Rightarrow> (case congruence_constant (it_cong a) of
+          Some n \<Rightarrow> string_of_int n
+        | None \<Rightarrow> STR ''intervals:'' + to_string (it_ivl a) + STR ''; congruences:''
+                    + to_string (it_cong a)))"
+
+definition gamma_int_tuple :: "'a int_tuple \<Rightarrow> int set" where
   "gamma_int_tuple = gamma_it"
 
 instance proof
-  fix a b :: int_tuple
+  fix a b :: "'a int_tuple"
   show "a \<le> a \<nabla> b" "b \<le> a \<nabla> b"
     by (simp_all add: widen_int_tuple_def less_eq_int_tuple_def widen_ge1 widen_ge2)
   show "b \<le> a \<Longrightarrow> b \<le> a \<Delta> b" "b \<le> a \<Longrightarrow> a \<Delta> b \<le> a"
     by (simp_all add: narrow_int_tuple_def less_eq_int_tuple_def narrow_ge narrow_le)
-  show "numeric_domain_class.gamma (bot :: int_tuple) = {}"
+  show "numeric_domain_class.gamma (bot :: 'a int_tuple) = {}"
     by (simp add: gamma_int_tuple_def bot_int_tuple_def bot_congruence_def)
-  show "numeric_domain_class.gamma (top :: int_tuple) = UNIV"
+  show "numeric_domain_class.gamma (top :: 'a int_tuple) = UNIV"
     using gamma_top[where 'a = ivl]
     by (simp add: gamma_int_tuple_def top_int_tuple_def)
   show "a \<le> b \<Longrightarrow> numeric_domain_class.gamma a \<subseteq> numeric_domain_class.gamma b"
@@ -244,25 +301,25 @@ lemma gamma_int_tuple_IT [simp]:
 
 lemma it_refine_IT_sound:
   "n \<in> gamma_ivl i \<Longrightarrow> n \<in> gamma_congruence c
-     \<Longrightarrow> n \<in> numeric_domain_class.gamma (it_refine (IT i c))"
-  using it_refine_sound[of n "IT i c"] by (simp add: gamma_int_tuple_def)
+     \<Longrightarrow> n \<in> numeric_domain_class.gamma (it_refine_mode md (IT i c))"
+  using it_refine_mode_sound[of n "IT i c"] by (simp add: gamma_int_tuple_def)
 
-instantiation int_tuple :: ik_domain
+instantiation int_tuple :: (type) ik_domain
 begin
 
-definition widen_ik_int_tuple :: "ikind \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition widen_ik_int_tuple :: "ikind \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "widen_ik_int_tuple k a b =
      IT (widen_ik k (it_ivl a) (it_ivl b)) (widen_ik k (it_cong a) (it_cong b))"
 
-definition narrow_ik_int_tuple :: "ikind \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition narrow_ik_int_tuple :: "ikind \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "narrow_ik_int_tuple k a b =
      IT (narrow_ik k (it_ivl a) (it_ivl b)) (narrow_ik k (it_cong a) (it_cong b))"
 
-definition empty_ik_int_tuple :: "ikind \<Rightarrow> int_tuple \<Rightarrow> bool" where
+definition empty_ik_int_tuple :: "ikind \<Rightarrow> 'a int_tuple \<Rightarrow> bool" where
   "empty_ik_int_tuple k a = it_empty (it_ivl a \<sqinter> ik_ivl k) (it_cong a)"
 
 instance proof
-  fix k :: ikind and a b :: int_tuple
+  fix k :: ikind and a b :: "'a int_tuple"
   show "a \<le> widen_ik k a b" "b \<le> widen_ik k a b"
     by (simp_all add: widen_ik_int_tuple_def less_eq_int_tuple_def widen_ik_ge1 widen_ik_ge2)
   show "b \<le> a \<Longrightarrow> b \<le> narrow_ik k a b" "b \<le> a \<Longrightarrow> narrow_ik k a b \<le> a"
@@ -278,96 +335,104 @@ text \<open>
   its mathematical result fits the kind, no value overflows (\<^verbatim>\<open>no_ov\<close>), so the
   congruence keeps its exact class. A conversion keeps the class on the same condition.
   Comparisons take the first component that decides, as \<^verbatim>\<open>map2bool\<close> takes the
-  components' common answer. Every result is refined once.
+  components' common answer. Every result is refined as the mode says.
 \<close>
 
-instantiation int_tuple :: kind_int_domain
+instantiation int_tuple :: (int_refinement) kind_int_domain
 begin
 
-definition top_ik_int_tuple :: "ikind \<Rightarrow> int_tuple" where
+definition top_ik_int_tuple :: "ikind \<Rightarrow> 'a int_tuple" where
   "top_ik_int_tuple k = IT (top_ik k) (top_ik k)"
 
-definition of_int_ik_int_tuple :: "ikind \<Rightarrow> int \<Rightarrow> int_tuple" where
+definition of_int_ik_int_tuple :: "ikind \<Rightarrow> int \<Rightarrow> 'a int_tuple" where
   "of_int_ik_int_tuple k n = IT (of_int_ik k n) (of_int_ik k n)"
 
-definition cast_ik_int_tuple :: "ikind option \<Rightarrow> ikind \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
-  "cast_ik_int_tuple sk k a =
-     it_refine (IT (cast_ik sk k (it_ivl a))
-                   (if fits_ik k (it_ivl a) then it_cong a else cast_ik sk k (it_cong a)))"
+definition cast_ik_int_tuple ::
+    "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
+  "cast_ik_int_tuple ovp sk k a =
+     it_refine_mode (int_mode TYPE('a)) (IT (cast_ik ovp sk k (it_ivl a))
+                   (if fits_ik k (it_ivl a) then it_cong a else cast_ik ovp sk k (it_cong a)))"
 
-definition arith_ik_int_tuple :: "ikind \<Rightarrow> aop \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
-  "arith_ik_int_tuple k op a b =
+text \<open>The interval decides Goblint's \<^verbatim>\<open>no_ov\<close>: when the mathematical result fits, the
+  congruence keeps its unnormalized class.\<close>
+
+definition arith_ik_int_tuple ::
+    "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
+  "arith_ik_int_tuple ovp k op fits a b =
      (let r = raw_aop_ik op (it_ivl a) (it_ivl b)
-      in it_refine (IT (cast_ik None k r)
+      in it_refine_mode (int_mode TYPE('a)) (IT (cast_ik ovp None k r)
                        (if fits_ik k r then raw_aop_ik op (it_cong a) (it_cong b)
-                        else arith_ik k op (it_cong a) (it_cong b))))"
+                        else arith_ik ovp k op fits (it_cong a) (it_cong b))))"
 
-definition cmp_ik_int_tuple :: "cop \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> bool option" where
+definition cmp_ik_int_tuple :: "cop \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> bool option" where
   "cmp_ik_int_tuple c a b =
      (case cmp_ik c (it_ivl a) (it_ivl b) of
         Some r \<Rightarrow> Some r
       | None \<Rightarrow> cmp_ik c (it_cong a) (it_cong b))"
 
-definition meet_ik_int_tuple :: "int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition meet_ik_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "meet_ik_int_tuple a b =
-     it_refine (IT (meet_ik (it_ivl a) (it_ivl b)) (meet_ik (it_cong a) (it_cong b)))"
+     it_refine_mode (int_mode TYPE('a)) (IT (meet_ik (it_ivl a) (it_ivl b)) (meet_ik (it_cong a) (it_cong b)))"
 
-definition refine_ik_int_tuple :: "cop \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<times> int_tuple" where
+definition refine_ik_int_tuple :: "cop \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<times> 'a int_tuple" where
   "refine_ik_int_tuple c a b =
      (let (i1, i2) = refine_ik c (it_ivl a) (it_ivl b);
           (c1, c2) = refine_ik c (it_cong a) (it_cong b)
-      in (it_refine (IT i1 c1), it_refine (IT i2 c2)))"
+      in (it_refine_mode (int_mode TYPE('a)) (IT i1 c1), it_refine_mode (int_mode TYPE('a)) (IT i2 c2)))"
 
-definition raw_aop_ik_int_tuple :: "aop \<Rightarrow> int_tuple \<Rightarrow> int_tuple \<Rightarrow> int_tuple" where
+definition raw_aop_ik_int_tuple :: "aop \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple" where
   "raw_aop_ik_int_tuple op a b =
      IT (raw_aop_ik op (it_ivl a) (it_ivl b)) (raw_aop_ik op (it_cong a) (it_cong b))"
 
-definition fits_ik_int_tuple :: "ikind \<Rightarrow> int_tuple \<Rightarrow> bool" where
+definition fits_ik_int_tuple :: "ikind \<Rightarrow> 'a int_tuple \<Rightarrow> bool" where
   "fits_ik_int_tuple k a \<longleftrightarrow> fits_ik k (it_ivl a) \<or> fits_ik k (it_cong a)"
 
-definition answer_ik_int_tuple :: "int_tuple \<Rightarrow> answer" where
+definition answer_ik_int_tuple :: "'a int_tuple \<Rightarrow> answer" where
   "answer_ik_int_tuple a = answer_ik (it_ivl a) \<sqinter> answer_ik (it_cong a)"
 
-definition of_answer_ik_int_tuple :: "ikind option \<Rightarrow> answer \<Rightarrow> int_tuple" where
+definition of_answer_ik_int_tuple :: "ikind option \<Rightarrow> answer \<Rightarrow> 'a int_tuple" where
   "of_answer_ik_int_tuple sk q = IT (of_answer_ik sk q) (of_answer_ik sk q)"
 
 instance proof
-  fix n m :: int and k :: ikind and a b :: int_tuple and op :: aop and c :: cop and r :: bool
-  show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: int_tuple)"
+  fix n m :: int and k :: ikind and a b :: "'a int_tuple" and op :: aop and c :: cop and r :: bool
+  show "n \<in> ik_range k \<Longrightarrow> n \<in> numeric_domain_class.gamma (top_ik k :: 'a int_tuple)"
     using top_ik_sound[of n k, where 'a = ivl] top_ik_sound[of n k, where 'a = congruence]
     by (simp add: top_ik_int_tuple_def)
-  show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: int_tuple)"
+  show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: 'a int_tuple)"
     using of_int_ik_sound[of k n, where 'a = ivl] of_int_ik_sound[of k n, where 'a = congruence]
     by (simp add: of_int_ik_int_tuple_def)
   show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
-      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik sk k a)" for sk
+      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik ovp sk k a)" for ovp sk
   proof -
     assume src: "\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k'" and n: "n \<in> numeric_domain_class.gamma a"
     obtain i cg where a: "a = IT i cg" by (cases a)
     have ni: "n \<in> gamma_ivl i" and nc: "n \<in> gamma_congruence cg" using n by (simp_all add: a)
-    have "ik_norm k n \<in> gamma_ivl (cast_ik sk k i)"
-      using cast_ik_sound[where a = i and k = k, OF src] ni by simp
+    have "ik_norm k n \<in> gamma_ivl (cast_ik ovp sk k i)"
+      using cast_ik_sound[where a = i and k = k and ovp = ovp, OF src] ni by simp
     moreover have "ik_norm k n \<in> gamma_congruence
-        (if fits_ik k i then cg else cast_ik sk k cg)"
-      using fits_ik_sound[of k i n] cast_ik_sound[where a = cg and k = k, OF src] ni nc
+        (if fits_ik k i then cg else cast_ik ovp sk k cg)"
+      using fits_ik_sound[of k i n] cast_ik_sound[where a = cg and k = k and ovp = ovp, OF src] ni nc
       by (auto simp del: ik_range_iff)
     ultimately show ?thesis
       unfolding cast_ik_int_tuple_def a int_tuple.sel by (rule it_refine_IT_sound)
   qed
-  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
-      \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
+  show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik ovp k op fits a b)" for ovp fits
   proof -
-    assume ma: "m \<in> numeric_domain_class.gamma a" and nb: "n \<in> numeric_domain_class.gamma b"
+    assume fit: "fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k"
+      and ma: "m \<in> numeric_domain_class.gamma a" and nb: "n \<in> numeric_domain_class.gamma b"
     obtain i1 c1 i2 c2 where a: "a = IT i1 c1" and b: "b = IT i2 c2" by (cases a; cases b)
     let ?r = "raw_aop_ik op i1 i2"
     have rv: "aop_eval op m n \<in> gamma_ivl ?r"
       using raw_aop_ik_sound[of m i1 n i2] ma nb by (simp add: a b)
-    have "ik_norm k (aop_eval op m n) \<in> gamma_ivl (cast_ik None k ?r)"
-      using cast_ik_None_sound[where a = ?r and k = k] rv by simp
+    have "ik_norm k (aop_eval op m n) \<in> gamma_ivl (cast_ik ovp None k ?r)"
+      using cast_ik_None_sound[where a = ?r and k = k and ovp = ovp] rv by simp
     moreover have "ik_norm k (aop_eval op m n) \<in> gamma_congruence
-        (if fits_ik k ?r then raw_aop_ik op c1 c2 else arith_ik k op c1 c2)"
+        (if fits_ik k ?r then raw_aop_ik op c1 c2 else arith_ik ovp k op fits c1 c2)"
       using fits_ik_sound[of k ?r] rv raw_aop_ik_sound[of m c1 n c2]
-        arith_ik_sound[of m c1 n c2 k op] ma nb
+        arith_ik_sound[where k = k and op = op and operands_fit = fits and ovp = ovp and a = c1 and b = c2,
+          OF fit] ma nb
       by (auto simp: a b simp del: ik_range_iff)
     ultimately show ?thesis
       unfolding arith_ik_int_tuple_def a b int_tuple.sel Let_def by (rule it_refine_IT_sound)
@@ -399,7 +464,7 @@ instance proof
     using answer_ik_sound[of n "it_ivl a"] answer_ik_sound[of n "it_cong a"]
     by (cases a) (simp add: answer_ik_int_tuple_def gamma_query_lift_inf[OF gamma_inf_int_dom])
   show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
-      \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: int_tuple)" for sk q
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: 'a int_tuple)" for sk q
     using of_answer_ik_sound[of sk n q, where 'a = ivl] of_answer_ik_sound[of sk n q, where 'a = congruence]
     by (simp add: of_answer_ik_int_tuple_def)
 qed
@@ -407,3 +472,4 @@ qed
 end
 
 end
+

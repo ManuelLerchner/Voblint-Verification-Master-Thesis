@@ -13,6 +13,7 @@ and the analyzer then runs on that lowered program. Signed overflow wraps (the
 `-fwrapv` reading), so these verdicts are about wrapping arithmetic, not about
 C programs whose signed arithmetic overflows.
 
-A program that writes no kind keeps mathematical integers; `08` checks that.
+A program that writes no kind gives every variable the default kind i32;
+`08` checks that.
 
 Run with `pixi run python3 tests/run.py 26-machine-kinds`.

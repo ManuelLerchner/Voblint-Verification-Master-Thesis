@@ -18,15 +18,15 @@
 // nodes:
 //   p_pp1_ctx0: pp1
 //       interval:
-//         x=[1,+∞]
+//         x=[1,2147483647]
 //   p_exit_p_ctx0: exit_p
 //       interval:
-//         x=[1,+∞]
+//         x=[1,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
 //   p_pp0_ctx0: pp0 [unknown]
 //       interval:
-//         x=[1,+∞]
+//         x=[1,2147483647]
 //       check x <= 2
 //   main_pp2_ctx0: pp2
 //       interval:
@@ -34,7 +34,7 @@
 //       interval:
 //   p_entry_p_ctx0: entry_p
 //       interval:
-//         x=[1,+∞]
+//         x=[1,2147483647]
 //   main_pp4_ctx0: pp4
 //       interval:
 //   main_entry_main_ctx0: entry_main

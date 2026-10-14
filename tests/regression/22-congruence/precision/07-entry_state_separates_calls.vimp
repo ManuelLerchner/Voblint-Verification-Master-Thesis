@@ -1,4 +1,4 @@
-// PARAM: --analysis congruence --context entry-state
+// PARAM: --analysis congruence --context entry-state --signed-overflow assume_wraparound
 // The context-sensitive counterpart 05-congruence_across_call.vimp names.
 // triple has two call sites carrying different singleton classes. Joined at
 // one context, p is the congruence join of 4 and 5 -- gcd(|4-5|) = 1, so
@@ -10,6 +10,11 @@
 // each with its own singleton, so combine reads back 12 and 15 exactly.
 // The entry-state route is the whole content of this case: the same
 // program, the same domain, decided only because the contexts stay apart.
+//
+// Run under --signed-overflow assume_wraparound: the case is about entry-
+// state contexts, and its classes come from signed arithmetic, which
+// standalone Congruence answers with top under Goblint's default assume_top
+// (27-signed-overflow/known-imprecision/02).
 fun triple(p) { return p * 3; }
 fun main() {
   a = triple(4);

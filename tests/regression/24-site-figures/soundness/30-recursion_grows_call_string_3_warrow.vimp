@@ -1,7 +1,8 @@
 // PARAM: --analysis interval --context call-string --context-depth 3 --globals warrow
 // Backs the "Endless" program of the figure "A call that never stops calling"
-// (call string 3, warrow): the first depths keep exact contexts and the deepest
-// one is widened to [k,+inf], so x >= 0 is PROVED.
+// (call string 3, warrow): f(x + 1) grows x by one per call; after 2^31 calls
+// x + 1 wraps to -2147483648, so the check is reached with x >= 0 and with
+// x < 0 and UNKNOWN is the only sound answer.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -45,18 +46,18 @@
 //       interval:
 //   f_exit_f_ctx0: exit_f [unreachable]
 //       unreachable
-//   f_pp0_ctx0: pp0 [proved]
+//   f_pp0_ctx0: pp0 [unknown]
 //       interval:
-//         x=[3,+∞]
+//         x=[-2147483648,2147483647]
 //       check x >= 0
 //   f_pp1_ctx0: pp1
 //       interval:
-//         x=[3,+∞]
+//         x=[-2147483648,2147483647]
 //   f_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //   f_entry_f_ctx0: entry_f
 //       interval:
-//         x=[3,+∞]
+//         x=[-2147483648,2147483647]
 //   f_exit_f_ctx1: exit_f [unreachable]
 //       unreachable
 //   f_pp0_ctx1: pp0 [proved]
@@ -133,7 +134,7 @@
 // EXPECT-GRAPH-END
 
 fun f(x) {
-  __voblint_check(x >= 0); // PROVED
+  __voblint_check(x >= 0); // UNKNOWN
   f(x + 1);
 }
 

@@ -68,11 +68,11 @@ definition top_ik_parity :: "ikind \<Rightarrow> parity" where "top_ik_parity k 
 definition of_int_ik_parity :: "ikind \<Rightarrow> int \<Rightarrow> parity" where
   "of_int_ik_parity k n = parity_of_int (ik_norm k n)"
 
-definition cast_ik_parity :: "ikind option \<Rightarrow> ikind \<Rightarrow> parity \<Rightarrow> parity" where
-  "cast_ik_parity sk k a = a"
+definition cast_ik_parity :: "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> parity \<Rightarrow> parity" where
+  "cast_ik_parity ovp sk k a = a"
 
-definition arith_ik_parity :: "ikind \<Rightarrow> aop \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> parity" where
-  "arith_ik_parity k = parity_aop"
+definition arith_ik_parity :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> parity" where
+  "arith_ik_parity ovp k op fits = parity_aop op"
 
 definition cmp_ik_parity :: "cop \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> bool option" where
   "cmp_ik_parity = cop_of parity_lt parity_eqb"
@@ -102,10 +102,11 @@ instance proof
   show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: parity)"
     by (simp add: of_int_ik_parity_def parity_of_int_gamma)
   show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
-      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik sk k a)" for sk
+      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik ovp sk k a)" for ovp sk
     by (simp add: cast_ik_parity_def parity_cast_sound)
-  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
-      \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
+  show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a
+      \<Longrightarrow> n \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik ovp k op fits a b)" for ovp fits
     by (simp add: arith_ik_parity_def parity_cast_sound parity_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
@@ -145,7 +146,7 @@ definition parity_prog :: imp_prog where
      fun main() { f(); } }"
 
 lemma parity_value:
-  "(case typed_nonrel.state_at [(ScopedId (STR ''f'') (STR ''x''), U8)] 0 Globals_Join tglobal parity_prog []
+  "(case typed_nonrel.state_at default_sem_conf [(ScopedId (STR ''f'') (STR ''x''), U8)] 0 Globals_Join tglobal parity_prog []
           (Statement 1) of
       TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> (ScopedId (STR ''f'') (STR ''x'')))
      = KD U8 PEven"

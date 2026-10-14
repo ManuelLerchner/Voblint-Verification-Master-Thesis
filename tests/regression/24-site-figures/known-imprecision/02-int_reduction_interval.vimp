@@ -1,6 +1,10 @@
-// PARAM: --analysis interval
+// PARAM: --analysis interval --signed-overflow assume_wraparound
 // Backs the "Each domain alone" column of the site figure "Four domains, one value:
 // reduction". Every run has x in {1,5,9}, but an interval cannot express 1 (mod 4): the guards leave [-2,10], so the check is not decided.
+//
+// Run under --signed-overflow assume_wraparound, as the figure's Int column
+// (../precision/02-int_reduction_int.vimp): every column of the figure
+// describes the same wrapping semantics of 4 * n + 1.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / unit
@@ -16,29 +20,29 @@
 // nodes:
 //   main_pp1_ctx0: pp1
 //       interval:
-//         n=⊤
+//         n=[-2147483648,2147483647]
 //         x=⊤
 //   main_pp2_ctx0: pp2
 //       interval:
-//         n=⊤
-//         x=⊤
+//         n=[-2147483648,2147483647]
+//         x=[-2147483648,2147483647]
 //   main_pp3_ctx0: pp3
 //       interval:
-//         n=⊤
-//         x=[-2,+∞]
+//         n=[-2147483648,2147483647]
+//         x=[-2,2147483647]
 //   main_pp4_ctx0: pp4 [unknown]
 //       interval:
-//         n=⊤
+//         n=[-2147483648,2147483647]
 //         x=[-2,10]
 //       check x >= 1 && x <= 9
 //   main_pp7_ctx0: pp7
 //       interval:
-//         n=⊤
-//         x=⊤
+//         n=[-2147483648,2147483647]
+//         x=[-2147483648,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         n=⊤
-//         x=⊤
+//         n=[-2147483648,2147483647]
+//         x=[-2147483648,2147483647]
 //   main_pp0_ctx0: pp0
 //       interval:
 //         n=⊤

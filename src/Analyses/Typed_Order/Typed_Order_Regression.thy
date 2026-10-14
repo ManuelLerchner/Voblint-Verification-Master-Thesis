@@ -8,7 +8,7 @@ abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
 
 abbreviation ord_result :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> var_id order_rel" where
-  "ord_result ds p \<equiv> typed_order.state_at Globals_Join ds tglobal p () (FunctionResult (STR ''f''))"
+  "ord_result ds p \<equiv> typed_order.state_at ds Globals_Join tglobal p () (FunctionResult (STR ''f''))"
 
 text \<open>The loop exits when \<open>x < y\<close> fails, so \<open>y \<le> x\<close> holds at the exit. The body
   assigns \<open>x\<close>, which forgets every fact about it, so no fact survives into the loop.\<close>
@@ -23,11 +23,11 @@ lemma loop_terminates_c:
      (cfg_exit (typed_cfg loop_prog []), ()) \<noteq> None"
   by eval
 
-lemma loop_terminates: "typed_order.terminates Globals_Join [] tglobal loop_prog"
+lemma loop_terminates: "typed_order.terminates [] Globals_Join tglobal loop_prog"
   unfolding typed_order.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF loop_terminates_c] by simp
 
-lemma loop_facts: "ord_result [] loop_prog = OFacts {(f_var (STR ''y''), f_var (STR ''x''))}"
+lemma loop_facts: "ord_result [] loop_prog = OFacts True {(f_var (STR ''y''), f_var (STR ''x''))}"
   by eval
 
 text \<open>The facts are about stored values, which already lie in their kinds: a \<^const>\<open>U8\<close>
@@ -40,7 +40,7 @@ definition mixed_prog :: imp_prog where
      fun main() { f(0, 5); } }"
 
 lemma mixed_facts:
-  "ord_result [(f_var (STR ''x''), U8)] mixed_prog = OFacts {}"
+  "ord_result [(f_var (STR ''x''), U8)] mixed_prog = OFacts True {}"
   by eval
 
 end

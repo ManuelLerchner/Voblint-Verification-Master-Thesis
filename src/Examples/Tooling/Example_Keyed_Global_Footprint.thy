@@ -23,13 +23,13 @@ abbreviation write_h :: edge_action where
 
 lemma read_g_footprint:
   "edge_global_reads gh read_g = [STR ''g'']" "edge_global_writes gh read_g = []"
-  by (simp_all add: gh_def edge_global_reads_def edge_global_writes_def edge_reads_def
-      global_names_in_def)
+  by (simp_all add: gh_def gedge_global_reads_def gedge_global_writes_def gedge_reads_def
+      cfg_transfer_sem.gedge_writes.simps global_names_in_def)
 
 lemma write_h_footprint:
   "edge_global_reads gh write_h = []" "edge_global_writes gh write_h = [STR ''h'']"
-  by (simp_all add: gh_def edge_global_reads_def edge_global_writes_def edge_reads_def
-      global_names_in_def)
+  by (simp_all add: gh_def gedge_global_reads_def gedge_global_writes_def gedge_reads_def
+      cfg_transfer_sem.gedge_writes.simps global_names_in_def)
 
 text \<open>The keyed program for \<open>x := g + 1\<close> depends on \<open>g\<close>'s unknown and nothing else global.\<close>
 

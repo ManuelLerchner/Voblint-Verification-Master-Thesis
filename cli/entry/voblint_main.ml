@@ -36,7 +36,7 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--dot] [--timeout SECONDS]\n\
+   N] [--int-refinement never|once|fixpoint] [--set PATH VALUE] [--dot] [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
@@ -171,8 +171,9 @@ let usage =
   \  --format text|jsonl        Trace as text (default) or JSON Lines.\n\
   \  --output FILE              Write the trace to FILE instead of stderr.\n\
   \                             Each of --compact, --verbose, --trace-sys,\n\
-  \                             --format and --output implies --trace.\n\
-  \  --help                     Show this message.\n\n\
+  \                             --format and --output implies --trace.\n"
+  ^ Analysis_request.options_usage ()
+  ^ "  --help                     Show this message.\n\n\
    Trust boundary: results are sound for the program this file's unverified\n\
   \  parser actually built, not a guarantee that the parser read your source\n\
   \  correctly. The analyzer core (parsing excluded) is generated from a\n\
@@ -418,49 +419,6 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
           in
           wait_loop 0.0005)
 
-
-(* The experimental typed run: the activated typed analyses on the program before
-   lowering, under its kind declarations, through the certified entry point run_typed. Each
-   check is printed with its source line, so a run can be compared with the untyped
-   analysis of the same file. *)
-let run_typed_and_exit path stmt_positions domain rule context =
-  let context =
-    match context with
-    | C.Ctx_None -> C.Typed_Call_String (C.nat_of_integer Z.zero)
-    | C.Ctx_CallString k -> C.Typed_Call_String k
-    | C.Ctx_EntryState -> C.Typed_Entry_State
-  in
-  let p, decls =
-    match !Vimp_typing.source_program with
-    | Some pd -> pd
-    | None -> failwith "voblint: no program was parsed"
-  in
-  let verdict = function
-    | C.Check_Proved -> "proved"
-    | C.Check_Refuted -> "refuted"
-    | C.Check_Unknown -> "unknown"
-  in
-  let location = function
-    | C.Statement k -> (
-        let i = Z.to_int (C.integer_of_nat k) in
-        match List.assoc_opt i stmt_positions with
-        | Some (line, col, _, _) -> Printf.sprintf "%s:%d:%d" path line col
-        | None -> Printf.sprintf "%s:statement %d" path i)
-    | _ -> path
-  in
-  match C.run_typed domain rule context decls p with
-  | C.Typed_Malformed ->
-      prerr_endline "voblint: the program is not admissible";
-      exit 3
-  | C.Typed_No_Answer ->
-      prerr_endline "voblint: the solver returned no answer";
-      exit 4
-  | C.Typed_Analysed rows ->
-      List.iter
-        (fun (pt, (_, r)) -> Printf.printf "%s: %s\n" (location pt) (verdict r))
-        rows;
-      exit 0
-
 let () =
   (* Every domain named by --analysis, in order, exactly as given: run_voblint
      alone decides whether the list is a valid activation. *)
@@ -490,8 +448,9 @@ let () =
   let trace_output = ref None in
   let globals_name = ref None in
   let program_globals_name = ref "flow-sensitive" in
+  (* The PATH VALUE pairs of --set and of each option's own flag, in order. *)
+  let settings = ref [] in
   let file = ref None in
-  let typed_domain = ref None in
   let rec parse_args = function
     | [] -> ()
     | "--help" :: _ ->
@@ -517,6 +476,16 @@ let () =
         parse_args rest
     | "--program-globals" :: v :: rest ->
         program_globals_name := v;
+        parse_args rest
+    | "--set" :: path :: v :: rest ->
+        settings := (path, v) :: !settings;
+        parse_args rest
+    | [ "--set" ] | [ "--set"; _ ] ->
+        prerr_endline "voblint: --set expects PATH VALUE";
+        exit 1
+    | f :: v :: rest when Option.is_some (Analysis_request.option_of_flag f) ->
+        let spec = Option.get (Analysis_request.option_of_flag f) in
+        settings := (spec.Analysis_request.path, v) :: !settings;
         parse_args rest
     | "--narrow-bound" :: v :: rest ->
         (try narrow_bound := Some (int_of_string v)
@@ -588,20 +557,6 @@ let () =
         trace := true;
         trace_output := Some v;
         parse_args rest
-    | "--typed" :: v :: rest ->
-        let domain = function
-          | "interval" -> C.Typed_Interval
-          | "congruence" -> C.Typed_Congruence
-          | "int" -> C.Typed_Int
-          | "order" -> C.Typed_Order
-          | "sign" -> C.Typed_Sign
-          | "parity" -> C.Typed_Parity
-          | n ->
-              prerr_endline ("unknown --typed value: " ^ n);
-              exit 1
-        in
-        typed_domain := Some (List.map domain (String.split_on_char ',' v));
-        parse_args rest
     | "--timeout" :: v :: rest ->
         (try timeout := float_of_string v
          with _ ->
@@ -638,15 +593,24 @@ let () =
       context = !context_name;
       depth = !context_depth;
       program_globals = !program_globals_name;
+      settings = List.rev !settings;
     }
   in
   let fail message =
     prerr_endline message;
     exit 1
   in
-  let { Analysis_request.domains = analyses; rule; mode = context; placement } =
+  let { Analysis_request.domains = analyses; rule; mode = context; sem } =
     match Analysis_request.resolve request with
     | Ok resolved -> resolved
+    | Error (Analysis_request.Unknown_option path) ->
+        fail ("unknown --set option: " ^ path)
+    | Error (Analysis_request.Invalid_option_value (spec, v)) ->
+        fail
+          (Printf.sprintf "unknown %s value: %s (expected %s)"
+             (Option.value spec.flag ~default:("--set " ^ spec.path))
+             v
+             (String.concat ", " spec.values))
     | Error (Analysis_request.Unknown_refinement v) ->
         fail ("unknown --int-refinement value: " ^ v)
     | Error (Analysis_request.Unknown_context_name v) ->
@@ -657,6 +621,10 @@ let () =
         fail ("unknown --analysis value: " ^ v)
     | Error (Analysis_request.Unknown_program_globals v) ->
         fail ("unknown --program-globals value: " ^ v)
+    | Error Analysis_request.Unsupported_program_globals ->
+        fail
+          "voblint: --program-globals flow-insensitive is not supported: every \
+           global is kept in a point's own state"
     | Error Analysis_request.Refinement_without_int ->
         fail "voblint: --int-refinement is only valid with --analysis int"
     | Error Analysis_request.Negative_narrow_bound ->
@@ -695,17 +663,13 @@ let () =
       prerr_endline ("voblint: cannot read " ^ path ^ ": " ^ msg);
       exit 1
   in
-  let prog, stmt_positions, header_positions =
+  let prog, decls, stmt_positions, header_positions =
     try Vimp_frontend.program path src
     with Vimp_frontend.Parse_error { file; line; col; msg } ->
       Printf.eprintf "%s:%d:%d: parse error: %s\n" file line col msg;
       exit 2
   in
   if !parse_only then exit 0;
-  (match !typed_domain with
-  | None -> ()
-  | Some d ->
-      run_typed_and_exit path stmt_positions d !globals context);
   if !ast then begin
     print_endline (Render_json.program_json prog);
     exit 0
@@ -719,23 +683,21 @@ let () =
         prerr_endline usage;
         exit 1
   in
+  let run_conf () =
+    Analysis_request.conf ~domains ~rule:!globals ~context ~sem
+  in
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
      combination to silently resolve. *)
   if !json then begin
-    let answer =
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
-        ~program_globals:placement prog
-    in
-    let raw =
-      Render_json.run_voblint_json ~domains ~globals:!globals ~ctx:context
-        ~program_globals:placement prog answer
-    in
+    let conf = run_conf () in
+    let answer = Analysis_request.analyse ~conf ~decls prog in
+    let raw = Render_json.run_voblint_json ~conf ~decls prog answer in
     (match answer with
     | C.Analysed result ->
         print_endline
           (Render_json.result_json
-             ~shared:(placement = C.Program_Globals_Flow_Insensitive)
+             ~shared:false
              0. prog ~stmt_positions ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
@@ -767,10 +729,7 @@ let () =
         Fun.protect ~finally:(fun () -> close_out oc) (fun () -> write oc)
   in
   let solve () =
-    match
-      Analysis_request.analyse ~analyses:domains ~globals:!globals ~context
-        ~program_globals:placement prog
-    with
+    match Analysis_request.analyse ~conf:(run_conf ()) ~decls prog with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
     | C.No_Answer -> failwith "voblint: the solver returned no answer"
@@ -812,7 +771,7 @@ let () =
                           Render_xml.line;
                           column;
                           verdict = A.verdict_name v;
-                          cond = Vimp_printer.string_of_exp (C.check_exp check);
+                          cond = Typed_printer.string_of_texp (C.check_exp check);
                           message = None;
                         })
                 (Render_text.located_checks (C.res_checks result))

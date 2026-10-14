@@ -1,6 +1,13 @@
 // PARAM: --analysis interval
 // Normalize and clamp an unknown input before dividing it into buckets.
-// Interval retains quotient/remainder bounds through the call and the joins.
+// Interval keeps the upper bounds of quotient and remainder through the
+// call and the joins. The lower bounds are lost for two reasons.
+// q >= 0 and bin >= 0 are undetermined: -n wraps to -2147483648 when
+// n = -2147483648, so q and bin can be -536870912.
+// r >= 0 always holds, since -2147483648 % 4 == 0. Mechanism: after the
+// clamp n is -2147483648 or in [0,23], and the interval hull
+// [-2147483648,23] loses that the outlier is divisible by 4, so r is
+// [-3,3].
 fun bucket(n) {
   if (n < 0) {
     n = -n;
@@ -10,9 +17,9 @@ fun bucket(n) {
   }
   q = n / 4;
   r = n % 4;
-  __voblint_check(q >= 0); // PROVED
+  __voblint_check(q >= 0); // UNKNOWN
   __voblint_check(q <= 5); // PROVED
-  __voblint_check(r >= 0); // PROVED
+  __voblint_check(r >= 0); // UNKNOWN
   __voblint_check(r < 4); // PROVED
   return q;
 }
@@ -20,7 +27,7 @@ fun bucket(n) {
 fun main() {
   input = __voblint_nondet_int();
   bin = bucket(input);
-  __voblint_check(bin >= 0); // PROVED
+  __voblint_check(bin >= 0); // UNKNOWN
   __voblint_check(bin <= 5); // PROVED
   __voblint_check(bin != 6); // PROVED
   if (bin == 0) {

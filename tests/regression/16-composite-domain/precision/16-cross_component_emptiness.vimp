@@ -1,4 +1,4 @@
-// PARAM: --analysis int --int-refinement never
+// PARAM: --analysis int --int-refinement never --signed-overflow assume_wraparound
 // Source: Example_Int_Domain (interval_parity_contradiction,
 // interval_congruence_contradiction).
 //
@@ -8,6 +8,11 @@
 // off, so the branch is dead. Measured on this source: --analysis interval
 // and --analysis congruence answer REFUTED (branch live), --analysis parity
 // UNKNOWN.
+//
+// Run under --signed-overflow assume_wraparound: the case tests classes that
+// survive wraparound modulo 2^32 on signed i32. Under Goblint's default
+// assume_top a signed operation that may overflow gives both components top
+// (27-signed-overflow/known-imprecision/03).
 fun main() {
   n = __voblint_nondet_int();
   x = 2 * n + 1;

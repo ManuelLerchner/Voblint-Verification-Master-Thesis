@@ -1,0 +1,15 @@
+// PARAM: --analysis int --signed-overflow assume_wraparound
+// The overflowing operations of 01-interval_wraparound.vimp under the Int
+// product: both components wrap, so every check is proved. The assume_top
+// twin is ../known-imprecision/03-int_assume_top.vimp.
+fun main() {
+  a = 2147483647;
+  b = a + 1;
+  __voblint_check(b == -2147483648); // PROVED
+  c = -2147483648;
+  d = c - 1;
+  __voblint_check(d == 2147483647); // PROVED
+  e = 65536;
+  f = e * e;
+  __voblint_check(f == 0); // PROVED
+}

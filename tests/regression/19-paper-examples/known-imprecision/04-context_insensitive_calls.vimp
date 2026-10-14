@@ -35,38 +35,38 @@
 //       unreachable
 //   f_exit_f_ctx0: exit_f
 //       interval:
-//         p=[3,+∞]
+//         p=[3,2147483647]
 //   main_pp5_ctx0: pp5 [unknown]
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //       check y == 20
 //   main_pp6_ctx0: pp6
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //   f_pp0_ctx0: pp0
 //       interval:
-//         p=[3,+∞]
+//         p=[3,2147483647]
 //   main_pp2_ctx0: pp2
 //       interval:
 //         x=⊤
 //         y=⊤
 //   main_pp3_ctx0: pp3
 //       interval:
-//         x=[6,+∞]
+//         x=[-2147483648,2147483647]
 //         y=⊤
 //   f_entry_f_ctx0: entry_f
 //       interval:
-//         p=[3,+∞]
+//         p=[3,2147483647]
 //   main_pp4_ctx0: pp4 [unknown]
 //       interval:
-//         x=[6,+∞]
-//         y=[6,+∞]
+//         x=[-2147483648,2147483647]
+//         y=[-2147483648,2147483647]
 //       check x == 6
 //   main_entry_main_ctx0: entry_main
 //       interval:

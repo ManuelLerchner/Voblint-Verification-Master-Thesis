@@ -1,6 +1,11 @@
-// PARAM: --analysis int
+// PARAM: --analysis int --signed-overflow assume_wraparound
 // Backs the site figure "Four domains, one value: reduction": refine_congruence moves
 // the interval's bounds onto 1 (mod 4), so [0,10] becomes [1,9] and both checks are PROVED.
+//
+// Run under --signed-overflow assume_wraparound: 4 * n + 1 is 1 (mod 4) for every
+// n only modulo 2^32, and under Goblint's default assume_top the unbounded
+// 4 * n may overflow, which gives both components top
+// (27-signed-overflow/known-imprecision/03).
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / unit
@@ -16,29 +21,29 @@
 // nodes:
 //   main_pp1_ctx0: pp1
 //       int:
-//         n=⊤
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
 //         x=⊤
 //   main_pp2_ctx0: pp2
 //       int:
-//         n=⊤
-//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
+//         x=intervals:[-2147483647,2147483645]; congruences:1+4ℤ
 //   main_pp3_ctx0: pp3
 //       int:
-//         n=⊤
-//         x=signs:+; intervals:[1,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
+//         x=intervals:[1,2147483645]; congruences:1+4ℤ
 //   main_pp4_ctx0: pp4 [proved]
 //       int:
-//         n=⊤
-//         x=signs:+; intervals:[1,9]; parities:1+2ℤ; congruences:1+4ℤ
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
+//         x=intervals:[1,9]; congruences:1+4ℤ
 //       check x >= 1 && x <= 9
 //   main_pp7_ctx0: pp7
 //       int:
-//         n=⊤
-//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
+//         x=intervals:[-2147483647,2147483645]; congruences:1+4ℤ
 //   main_exit_main_ctx0: exit_main
 //       int:
-//         n=⊤
-//         x=signs:⊤; intervals:[-∞,+∞]; parities:1+2ℤ; congruences:1+4ℤ
+//         n=intervals:[-2147483648,2147483647]; congruences:⊤
+//         x=intervals:[-2147483647,2147483645]; congruences:1+4ℤ
 //   main_pp0_ctx0: pp0
 //       int:
 //         n=⊤

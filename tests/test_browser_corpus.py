@@ -45,6 +45,11 @@ FIXTURES = sorted(
 )
 
 
+# A PARAM setting from the analyzer's option table, by its Goblint path: the
+# page's settings argument, the browser form of --set PATH VALUE.
+OPTION_PATHS = {"signed_overflow": "sem.int.signed_overflow"}
+
+
 def web_call(path):
     """The playground's call for a fixture: its PARAM settings, the CLI's
     defaults for the rest."""
@@ -62,6 +67,7 @@ def web_call(path):
         s.get("context_depth", 0),
         s.get("int_refinement", "fixpoint"),
         placement,
+        ";".join(f"{path_}={s[key]}" for key, path_ in OPTION_PATHS.items() if key in s),
         path.read_text(),
         "compact",
     ]

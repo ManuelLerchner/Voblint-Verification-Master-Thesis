@@ -32,11 +32,85 @@ lemma cop_of_sound:
 section \<open>Kind-aware integer domains\<close>
 
 text \<open>
+  The concrete semantics wraps every result, signed or not. How an abstract domain treats
+  a possible signed overflow is a separate choice, Goblint's
+  \<^verbatim>\<open>sem.int.signed_overflow\<close>: \<open>Assume_Top\<close>, its default, answers the kind's top,
+  and \<open>Assume_Wraparound\<close> wraps as the concrete semantics does. Both are sound here. An
+  unsigned kind always wraps (\<^verbatim>\<open>should_wrap\<close> in \<^verbatim>\<open>intDomain0.ml\<close>).
+\<close>
+
+datatype signed_overflow_policy = Assume_Top | Assume_Wraparound
+
+definition should_wrap :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> bool" where
+  "should_wrap ovp k \<longleftrightarrow> \<not> ik_signed k \<or> ovp = Assume_Wraparound"
+
+text \<open>
+  The options of Goblint's \<^verbatim>\<open>sem.int\<close> group that the domains read. Goblint reads
+  them from its global configuration at every use; here one value is a parameter of
+  the evaluator and the transfers, and every soundness theorem holds for each value.
+  A further option is a further field.
+\<close>
+
+record sem_conf =
+  sem_int_signed_overflow :: signed_overflow_policy
+
+definition default_sem_conf :: sem_conf where
+  "default_sem_conf = \<lparr> sem_int_signed_overflow = Assume_Top \<rparr>"
+
+text \<open>A remainder of in-range operands, and a quotient unless the divisor is \<open>-1\<close>, stays
+  in the kind's range: no policy applies to them.\<close>
+
+lemma c_mod_between: "min 0 a \<le> c_mod a b \<and> c_mod a b \<le> max 0 a"
+proof (cases "b = 0")
+  case False
+  have "c_mod a b = sgn a * (\<bar>a\<bar> mod \<bar>b\<bar>)"
+    using False by (simp add: c_mod_def c_div_def algebra_simps abs_mult_sgn
+        minus_div_mult_eq_mod[symmetric] sgn_mult_abs; metis abs_sgn)
+  moreover have "0 \<le> \<bar>a\<bar> mod \<bar>b\<bar>" "\<bar>a\<bar> mod \<bar>b\<bar> \<le> \<bar>a\<bar>"
+    using False by (simp_all add: zmod_le_nonneg_dividend)
+  ultimately show ?thesis by (cases "0 \<le> a") (auto simp: sgn_if)
+qed (simp add: c_mod_def)
+
+lemma c_mod_in_range: "m \<in> ik_range k \<Longrightarrow> c_mod m n \<in> ik_range k"
+  using c_mod_between[of m n] ik_min_le_zero[of k] zero_le_ik_max[of k]
+  by (cases "0 \<le> m") (auto simp: min_def max_def simp del: ik_min_le_zero zero_le_ik_max)
+
+lemma c_div_in_range:
+  assumes m: "m \<in> ik_range k" and n: "n \<in> ik_range k" and n1: "n \<noteq> -1"
+  shows "c_div m n \<in> ik_range k"
+proof (cases "n = 0")
+  case False
+  define q where "q = \<bar>m\<bar> div \<bar>n\<bar>"
+  have q0: "0 \<le> q" using False by (simp add: q_def pos_imp_zdiv_nonneg_iff)
+  have "q * \<bar>n\<bar> = \<bar>m\<bar> - \<bar>m\<bar> mod \<bar>n\<bar>" by (simp add: q_def minus_mod_eq_div_mult)
+  moreover have "0 \<le> \<bar>m\<bar> mod \<bar>n\<bar>" using False by simp
+  ultimately have qn: "q * \<bar>n\<bar> \<le> \<bar>m\<bar>" by linarith
+  have cd: "c_div m n = sgn m * sgn n * q" using False by (simp add: c_div_def q_def)
+  have lo: "ik_min k = (if ik_signed k then - ik_max k - 1 else 0)"
+    by (simp add: ik_min_def ik_max_def)
+  have one: "1 \<le> ik_max k" by (cases k) (simp_all add: ik_max_def ik_half_def ik_mod_def)
+  have mk: "ik_min k \<le> m" "m \<le> ik_max k" "ik_min k \<le> n" "n \<le> ik_max k" using m n by simp_all
+  show ?thesis
+  proof (cases "n = 1")
+    case True
+    then show ?thesis using m by simp
+  next
+    case n2: False
+    with False n1 have "2 \<le> \<bar>n\<bar>" by linarith
+    then have "2 * q \<le> \<bar>m\<bar>" using qn mult_left_mono[of 2 "\<bar>n\<bar>" q] q0 by (simp add: mult.commute)
+    then show ?thesis using cd lo one mk q0 by (auto simp: sgn_if split: if_splits)
+  qed
+qed simp
+
+text \<open>
   The operations a typed transfer needs from an integer domain, after Goblint's
   \<^verbatim>\<open>IntDomain.S\<close>: every operation that produces a value takes the kind it computes
-  at. \<open>top_ik k\<close> is Goblint's \<open>top_of ik\<close>, \<open>of_int_ik\<close> its \<open>of_int ik\<close>, \<open>cast_ik sk k\<close> its
-  \<open>cast_to ?from_ik:sk k\<close>, where \<open>sk\<close> is the operand's kind when it is known, and \<open>arith_ik k op\<close> the binary operation at kind \<open>k\<close>, whose concrete
-  result is normalized to \<open>k\<close>. A comparison answers \<open>Some b\<close> only when every pair of
+  at. \<open>top_ik k\<close> is Goblint's \<open>top_of ik\<close>, \<open>of_int_ik\<close> its \<open>of_int ik\<close>, \<open>cast_ik ovp sk k\<close> its
+  \<open>cast_to ?from_ik:sk k\<close>, where \<open>sk\<close> is the operand's kind when it is known, and
+  \<open>arith_ik ovp k op operands_fit\<close> the binary operation at kind \<open>k\<close>, whose concrete result
+  is normalized to \<open>k\<close>; \<open>operands_fit\<close> says that both operands lie in \<open>k\<close>'s range, as
+  they do when each operand has kind \<open>k\<close>. It does not say that the result does. A
+  comparison answers \<open>Some b\<close> only when every pair of
   operands agrees on \<open>b\<close>. \<open>refine_ik c a b\<close> narrows both operands of a comparison
   known to hold, as \<^verbatim>\<open>inv_bin_int\<close> in Goblint's \<^verbatim>\<open>baseInvariant.ml\<close> does for a guard. \<open>raw_aop_ik\<close> is
   the operation on mathematical integers, which a backward step inverts, and
@@ -52,8 +126,8 @@ text \<open>
 class kind_int_domain = ik_domain +
   fixes top_ik :: "ikind \<Rightarrow> 'a::{bounded_semilattice_sup_bot, order_top}"
     and of_int_ik :: "ikind \<Rightarrow> int \<Rightarrow> 'a"
-    and cast_ik :: "ikind option \<Rightarrow> ikind \<Rightarrow> 'a \<Rightarrow> 'a"
-    and arith_ik :: "ikind \<Rightarrow> aop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
+    and cast_ik :: "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> 'a \<Rightarrow> 'a"
+    and arith_ik :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and cmp_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> bool option"
     and meet_ik :: "'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and refine_ik :: "cop \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a \<times> 'a"
@@ -65,9 +139,10 @@ class kind_int_domain = ik_domain +
     and of_int_ik_sound: "ik_norm k n \<in> \<gamma> (of_int_ik k n)"
     and cast_ik_sound:
       "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> \<gamma> a
-         \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik sk k a)"
+         \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik ovp sk k a)"
     and arith_ik_sound:
-      "m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> \<gamma> (arith_ik k op a b)"
+      "(operands_fit \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b
+         \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> \<gamma> (arith_ik ovp k op operands_fit a b)"
     and cmp_ik_sound:
       "cmp_ik c a b = Some r \<Longrightarrow> m \<in> \<gamma> a \<Longrightarrow> n \<in> \<gamma> b \<Longrightarrow> cop_eval c m n = r"
     and meet_ik_sound: "m \<in> \<gamma> a \<Longrightarrow> m \<in> \<gamma> b \<Longrightarrow> m \<in> \<gamma> (meet_ik a b)"
@@ -150,6 +225,14 @@ definition read_var :: "kenv \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow
 lemma kd_val_sound: "n \<in> \<gamma> d \<Longrightarrow> n \<in> \<gamma> (kd_val d)"
   by (cases d) simp_all
 
+text \<open>A tagged value lies in its tag's range, so a conversion from it knows its source.\<close>
+
+definition kd_kind :: "'a kd \<Rightarrow> ikind option" where
+  "kd_kind d = (case d of KD k a \<Rightarrow> Some k | _ \<Rightarrow> None)"
+
+lemma kd_kind_range: "n \<in> \<gamma> d \<Longrightarrow> kd_kind d = Some k \<Longrightarrow> n \<in> ik_range k"
+  by (cases d) (auto simp: kd_kind_def)
+
 lemma read_var_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
   shows "t v \<in> \<gamma> (read_var \<kappa> \<sigma> v)"
@@ -219,7 +302,7 @@ lemma src_kind_sound:
   shows "teval e t \<in> ik_range k"
   using assms by (cases e) (auto simp: src_kind_def tstyped_def split: if_splits)
 
-lemma cast_ik_None_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik None k a)"
+lemma cast_ik_None_sound: "n \<in> \<gamma> a \<Longrightarrow> ik_norm k n \<in> \<gamma> (cast_ik ovp None k a)"
   by (rule cast_ik_sound) simp_all
 
 text \<open>A conversion may name the kind of the expression it converts, as Goblint's
@@ -227,15 +310,18 @@ text \<open>A conversion may name the kind of the expression it converts, as Gob
 
 lemma cast_ik_src_sound:
   assumes "tstyped \<kappa> t" and "teval e t \<in> \<gamma> a"
-  shows "ik_norm k (teval e t) \<in> \<gamma> (cast_ik (src_kind \<kappa> e) k a)"
+  shows "ik_norm k (teval e t) \<in> \<gamma> (cast_ik ovp (src_kind \<kappa> e) k a)"
   using assms(2) src_kind_sound[OF assms(1)] by (intro cast_ik_sound) auto
 
 text \<open>
   Evaluation consults the other analyses, as Goblint's \<^verbatim>\<open>base\<close> does
   (\<^verbatim>\<open>eval_rv_ask_evalint\<close> in \<^verbatim>\<open>src/analyses/base.ml\<close> at \<^verbatim>\<open>0dc12d355\<close>): every
   operand that is not a constant is asked about through the channel \<open>ch\<close>, and its
-  answer replaces the value. Since this analysis answers the query too, the answer
-  already includes its own evaluation, and nothing is evaluated twice. \<open>taeval\<close> asks
+  answer is met with the analysis's own evaluation. Goblint takes the answer alone:
+  there the evaluated state is the one the channel answers about, since CIL splits a
+  conjunction into one guard per conjunct. A VIMP guard refines a whole conjunction in
+  one state, so the second conjunct is evaluated in a state the first has already
+  narrowed, finer than the channel's. \<open>taeval\<close> asks
   about the operands but not about the expression itself, which is how the analysis
   answers a query without asking it back; \<open>taeval_ask\<close> also asks about the
   expression. An answer that claims nothing, such as the one a query cycle gets,
@@ -244,12 +330,19 @@ text \<open>
   evaluation.
 \<close>
 
+context
+  fixes sem :: sem_conf
+begin
+
 fun taeval :: "kenv \<Rightarrow> (texp gquery \<Rightarrow> answer) \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a"
   and taeval_ask :: "kenv \<Rightarrow> (texp gquery \<Rightarrow> answer) \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a" where
   "taeval \<kappa> ch (TN ik n) \<sigma> = of_int_ik ik n"
 | "taeval \<kappa> ch (TVar ik v) \<sigma> = read_var \<kappa> \<sigma> v"
-| "taeval \<kappa> ch (TArith ik op a b) \<sigma> = arith_ik ik op (taeval_ask \<kappa> ch a \<sigma>) (taeval_ask \<kappa> ch b \<sigma>)"
-| "taeval \<kappa> ch (TCast ik a) \<sigma> = cast_ik (src_kind \<kappa> a) ik (taeval_ask \<kappa> ch a \<sigma>)"
+| "taeval \<kappa> ch (TArith ik op a b) \<sigma> =
+     arith_ik (sem_int_signed_overflow sem) ik op (src_kind \<kappa> a = Some ik \<and> src_kind \<kappa> b = Some ik)
+       (taeval_ask \<kappa> ch a \<sigma>) (taeval_ask \<kappa> ch b \<sigma>)"
+| "taeval \<kappa> ch (TCast ik a) \<sigma> =
+     cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> a) ik (taeval_ask \<kappa> ch a \<sigma>)"
 | "taeval \<kappa> ch (TCmp op a b) \<sigma> =
      bool_val (cmp_ik op (taeval_ask \<kappa> ch a \<sigma>) (taeval_ask \<kappa> ch b \<sigma>))"
 | "taeval \<kappa> ch (TNot a) \<sigma> = bool_val (map_option HOL.Not (truth_ik (taeval_ask \<kappa> ch a \<sigma>)))"
@@ -263,7 +356,8 @@ fun taeval :: "kenv \<Rightarrow> (texp gquery \<Rightarrow> answer) \<Rightarro
                | (Some False, Some False) \<Rightarrow> Some False | _ \<Rightarrow> None)"
 | "taeval_ask \<kappa> ch e \<sigma> =
      (case e of TN ik n \<Rightarrow> of_int_ik ik n
-      | _ \<Rightarrow> (case ch (EvalInt e) of QTop \<Rightarrow> taeval \<kappa> ch e \<sigma> | q \<Rightarrow> of_answer_ik (src_kind \<kappa> e) q))"
+      | _ \<Rightarrow> (case ch (EvalInt e) of QTop \<Rightarrow> taeval \<kappa> ch e \<sigma>
+              | q \<Rightarrow> meet_ik (taeval \<kappa> ch e \<sigma>) (of_answer_ik (src_kind \<kappa> e) q)))"
 
 lemma taeval_ask_of_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds teval ch t"
@@ -275,7 +369,7 @@ proof -
   have rng: "\<And>k. src_kind \<kappa> e = Some k \<Longrightarrow> teval e t \<in> ik_range k"
     using src_kind_sound[OF gamma_tabsD(1)[OF assms(1)]] .
   show ?thesis
-    using assms(3) of_answer_ik_sound[OF rng ans]
+    using assms(3) of_answer_ik_sound[OF rng ans] meet_ik_sound
     by (cases e; cases "ch (EvalInt e)") auto
 qed
 
@@ -287,7 +381,10 @@ proof (induction e)
 next
   case (TVar ik v) show ?case by (simp add: read_var_sound[OF assms(1)])
 next
-  case (TArith ik op a b) then show ?case
+  case (TArith ik op a b)
+  have "src_kind \<kappa> e = Some ik \<Longrightarrow> teval e t \<in> ik_range ik" for e
+    using src_kind_sound[OF gamma_tabsD(1)[OF assms(1)]] .
+  with TArith show ?case
     using taeval_ask_of_sound[OF assms] by (simp add: arith_ik_sound)
 next
   case (TCast ik a)
@@ -329,5 +426,7 @@ corollary taeval_ask_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and "geval_query.channel_holds teval ch t"
   shows "teval e t \<in> \<gamma> (taeval_ask \<kappa> ch e \<sigma>)"
   by (rule taeval_ask_of_sound[OF assms taeval_sound[OF assms]])
+
+end
 
 end

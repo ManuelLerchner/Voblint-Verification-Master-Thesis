@@ -206,6 +206,23 @@
               </div>
 
               <div class="control-group">
+                <label for="signed-overflow-select">Signed overflow</label>
+                <select
+                  id="signed-overflow-select"
+                  data-option="sem.int.signed_overflow"
+                  aria-describedby="signed-overflow-help"
+                >
+                  <option value="assume_top" selected>Top (Goblint default)</option>
+                  <option value="assume_wraparound">Wraparound</option>
+                </select>
+                <span id="signed-overflow-help" class="visually-hidden">
+                  How the integer domains treat a possible signed overflow: the kind's top,
+                  Goblint's default sem.int.signed_overflow, or wraparound, as the concrete
+                  semantics computes it. Unsigned kinds wrap under both.
+                </span>
+              </div>
+
+              <div class="control-group">
                 <label for="context-select">Context sensitivity</label>
                 <select id="context-select">
                   <option value="none">None</option>

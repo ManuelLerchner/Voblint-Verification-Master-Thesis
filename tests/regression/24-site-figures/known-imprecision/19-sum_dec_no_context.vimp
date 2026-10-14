@@ -32,62 +32,62 @@
 //       unreachable
 //   dec_exit_dec_ctx0: exit_dec
 //       interval:
-//         x=[-∞,2]
+//         x=[-2147483648,2147483647]
 //   sum_pp3_ctx0: pp3
 //       interval:
-//         n=[-∞,0]
+//         n=[-2147483648,0]
 //         m=⊤
 //         r=⊤
 //   sum_pp8_ctx0: pp8 [unreachable]
 //       unreachable
 //   sum_exit_sum_ctx0: exit_sum
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2147483647]
 //         m=⊤
 //         r=⊤
 //   main_pp11_ctx0: pp11
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //   main_exit_main_ctx0: exit_main
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //   dec_pp0_ctx0: pp0
 //       interval:
-//         x=[-∞,2]
+//         x=[-2147483648,2147483647]
 //   sum_pp2_ctx0: pp2
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2147483647]
 //         m=⊤
 //         r=⊤
 //   sum_pp5_ctx0: pp5
 //       interval:
-//         n=[1,2]
+//         n=[1,2147483647]
 //         m=⊤
 //         r=⊤
 //   dec_entry_dec_ctx0: entry_dec
 //       interval:
-//         x=[-∞,2]
+//         x=[-2147483648,2147483647]
 //   sum_pp6_ctx0: pp6
 //       interval:
-//         n=[1,2]
-//         m=[-∞,1]
+//         n=[1,2147483647]
+//         m=[-2147483648,2147483647]
 //         r=⊤
 //   sum_pp7_ctx0: pp7
 //       interval:
-//         n=[1,2]
-//         m=[-∞,1]
-//         r=[0,+∞]
+//         n=[1,2147483647]
+//         m=[-2147483648,2147483647]
+//         r=[-2147483648,2147483647]
 //   main_pp9_ctx0: pp9
 //       interval:
 //         x=⊤
 //   sum_entry_sum_ctx0: entry_sum
 //       interval:
-//         n=[-∞,2]
+//         n=[-2147483648,2147483647]
 //         m=⊤
 //         r=⊤
 //   main_pp10_ctx0: pp10 [unknown]
 //       interval:
-//         x=[0,+∞]
+//         x=[-2147483648,2147483647]
 //       check x == 3
 //   main_entry_main_ctx0: entry_main
 //       interval:

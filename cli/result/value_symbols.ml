@@ -47,5 +47,5 @@ let decode s =
    value printed and its ASCII symbol tokens decoded. *)
 let render_answer answer =
   C.map_analysis_answer
-    (C.vimp_render_report (fun v -> decode (C.string_of_abstract_value v)))
+    (C.typed_render_report (fun v -> decode (C.string_of_typed_value v)))
     answer

@@ -1,7 +1,12 @@
-// PARAM: --analysis congruence
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
 // Remainder retains the dividend's residue modulo six. The result can be
 // either 1 or -5, but never 4; backward intersection removes that branch.
 // A linear equality on the remainder also recovers its exact negative value.
+//
+// Run under --signed-overflow assume_wraparound: the case tests congruence
+// arithmetic modulo 2^32 on signed i32. Under Goblint's default assume_top a
+// signed +, - or * that may overflow gives top instead (27-signed-
+// overflow/known-imprecision/02).
 fun main() {
   n = __voblint_nondet_int();
   dividend = n * 6 + 1;

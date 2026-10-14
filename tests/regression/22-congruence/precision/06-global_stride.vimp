@@ -1,4 +1,4 @@
-// PARAM: --analysis congruence
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
 // A declared global carried across a call boundary. cinit_congruence_st
 // (Congruence_Exec.thy) starts a global at the single integer 0 and every
 // local at top, so the ownership split is visible in the initial state
@@ -7,6 +7,11 @@
 //
 // bump's write is read back at the caller through the combine edge, so
 // g == 5 is decided on a singleton rather than on a joined class.
+//
+// Run under --signed-overflow assume_wraparound: the case is about a global
+// carried across a call, and its classes come from signed arithmetic, which
+// standalone Congruence answers with top under Goblint's default assume_top
+// (27-signed-overflow/known-imprecision/02).
 global g;
 fun bump() { g = g + 4; }
 fun main() {

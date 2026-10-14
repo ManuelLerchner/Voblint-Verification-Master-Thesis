@@ -37,11 +37,11 @@ definition verdicts_of :: "('v \<times> 'c \<times> 'r) list \<Rightarrow> 'r li
   "verdicts_of rs = map (\<lambda>(_, _, r). r) rs"
 
 lemma coop_verdicts:
-  "verdicts_of (typed_mcp.verdict_report [] [Typed_Interval, Typed_Order] 0 Globals_Join tglobal coop_prog)
+  "verdicts_of (typed_mcp.verdict_report default_sem_conf [] [Typed_Interval, Typed_Order] 0 Globals_Join tglobal coop_prog)
      = [Decided Check_Proved, Dead, Decided Check_Proved, Decided Check_Unknown]"
-  "verdicts_of (typed_nonrel.verdict_report TYPE(ivl) [] 0 Globals_Join tglobal coop_prog)
+  "verdicts_of (typed_nonrel.verdict_report TYPE(ivl) default_sem_conf [] 0 Globals_Join tglobal coop_prog)
      = [Decided Check_Unknown, Decided Check_Refuted, Decided Check_Unknown, Decided Check_Unknown]"
-  "verdicts_of (typed_order.report Globals_Join [] tglobal coop_prog ())
+  "verdicts_of (typed_order.report [] Globals_Join tglobal coop_prog ())
      = [Check_Unknown, Check_Unknown, Check_Unknown, Check_Unknown]"
   by eval+
 

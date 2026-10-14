@@ -1,6 +1,10 @@
-// PARAM: --analysis parity
+// PARAM: --analysis parity --signed-overflow assume_wraparound
 // Backs the "Each domain alone" column of the site figure "Four domains, one value:
 // reduction". Every run has x in {1,5,9}, but a parity cannot bound x: x = 4*n+1 is odd and nothing more, so the check is not decided.
+//
+// Run under --signed-overflow assume_wraparound, as the figure's Int column
+// (../precision/02-int_reduction_int.vimp): every column of the figure
+// describes the same wrapping semantics of 4 * n + 1.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / unit

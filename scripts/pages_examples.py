@@ -41,10 +41,10 @@ SHOWCASE = [
         "checks neither proves alone; every kind of inline annotation appears once.",
     ),
     (
-        "20-nested-loops/precision/02-nested2_narrowing_recovers_j.vimp",
+        "20-nested-loops/precision/01-hh12_nested_counted.vimp",
         "Widening, then narrowing",
-        "Nested loops: the inner head widens j to [0,+inf] and narrows it back, "
-        "so the outer counter is proved non-negative.",
+        "Nested counted loops: each head widens its counter to [0,+inf] and narrows "
+        "it back against the loop bound, so both counters are proved exact on exit.",
     ),
     (
         "07-sign-precision/precision/06-tutorial_negative_join.vimp",
@@ -93,6 +93,9 @@ PLAYGROUND_KEYS = {
     "int_refinement": "refinement",
     "narrow_bound": "narrow",
     "program_globals": "placement",
+    # An option of the analyzer's option table goes by its Goblint path, which
+    # is also the playground control's data-option and the link parameter.
+    "signed_overflow": "sem.int.signed_overflow",
 }
 
 

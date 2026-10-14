@@ -75,17 +75,22 @@ type t = {
   global_deps : global_dep list;
 }
 
-let ret_var = "#ret"
+let ret_var = C.var_label C.ReturnVar
 let main_name = "main"
 
-(* The names a procedure's node state shows, in display order. *)
+(* A local's label is qualified by its procedure; a node shows it by its own name. *)
+let qualify owner x = owner ^ "::" ^ x
+
+let display = A.display
+
+(* The labels a procedure's node state shows, in display order. *)
 let scope prog g owner_of =
   let globals = C.declared_global_vars prog in
   let formals_of owner =
     if owner = main_name then []
     else
       match C.prog_table prog owner with
-      | Some (C.Gproc_decl_ext (formals, _, ())) -> formals
+      | Some (C.Gproc_decl_ext (formals, _, ())) -> List.map (qualify owner) formals
       | None -> []
   in
   let assigned owner =
@@ -94,12 +99,13 @@ let scope prog g owner_of =
         if owner_of u <> owner then []
         else
           match a with
-          | C.EA_Assign (x, _) | C.EA_Special (_, x) -> [ x ]
+          | C.EA_Assign (x, _) | C.EA_Special (_, x) -> [ C.var_label x ]
           | _ -> [])
       (A.intra_edges g)
     @ List.concat_map
         (fun (u, C.CallEdge (dst, _, _), _, _) ->
-          if owner_of u <> owner then [] else Option.to_list dst)
+          if owner_of u <> owner then []
+          else List.map C.var_label (Option.to_list dst))
         (A.call_edges g)
   in
   fun owner ->
@@ -144,10 +150,11 @@ let sections_of state =
   | C.Bot -> []
   | C.Lifted view -> A.sections_of view
 
-(* The bindings a store section holds for [names], in [names] order. *)
+(* The bindings a store section holds for [names], in [names] order, each under the
+   name its node shows. *)
 let pick names bindings =
   List.filter_map
-    (fun x -> Option.map (fun v -> (x, v)) (List.assoc_opt x bindings))
+    (fun x -> Option.map (fun v -> (display x, v)) (List.assoc_opt x bindings))
     names
 
 (* A node's sections: a store restricted to the owner's scope, a whole value as is. *)
@@ -179,7 +186,7 @@ let findings_of state =
   dead
   @ List.map
       (fun (cnd, verdict) ->
-        let text = "check " ^ Vimp_printer.string_of_exp cnd in
+        let text = "check " ^ Typed_printer.string_of_texp cnd in
         match verdict with C.Bot -> text ^ " [dead]" | C.Lifted _ -> text)
       (C.state_checks state)
   @ List.filter_map
@@ -193,7 +200,7 @@ let findings_of state =
 (* Everything known at a node: its state, then its findings. *)
 let lines n = List.concat_map A.section_lines n.sections @ n.findings
 
-let build prog (result : (string, C.exp, string, C.analysis_domain, string, unit) C.run_result_ext) : t =
+let build prog (result : (C.var_id, C.texp, unit, C.typed_domain, string, unit) C.run_result_ext) : t =
   let g = C.res_cfg result in
   let owner_of = A.owners g in
   let names_of = scope prog g owner_of in
@@ -356,7 +363,7 @@ let build prog (result : (string, C.exp, string, C.analysis_domain, string, unit
                      text =
                        Option.fold ~none:""
                          ~some:(fun x ->
-                           x ^ " := " ^ A.call_text (callee_at result_node) ca)
+                           A.var_text x ^ " := " ^ A.call_text (callee_at result_node) ca)
                          dst;
                      writes = None;
                    };
@@ -371,14 +378,14 @@ let build prog (result : (string, C.exp, string, C.analysis_domain, string, unit
                      dst = local after c;
                      kind = Call_to_return;
                      text = callee_of_call u ca after;
-                     writes = dst;
+                     writes = Option.map C.var_label dst;
                    };
                  ],
                  [] )
-           | C.Global_Node x, C.Global_Read, C.Local_Node (v, c) ->
-               ([], global_dep x (local v c) Read)
-           | C.Local_Node (v, c), C.Global_Write, C.Global_Node x ->
-               ([], global_dep x (local v c) Write)
+           | C.Global_Node (), C.Global_Read, C.Local_Node (v, c) ->
+               ([], global_dep A.global_name (local v c) Read)
+           | C.Local_Node (v, c), C.Global_Write, C.Global_Node () ->
+               ([], global_dep A.global_name (local v c) Write)
            | _ -> ([], []))
          (C.graph_edges (C.res_graph result)))
   in

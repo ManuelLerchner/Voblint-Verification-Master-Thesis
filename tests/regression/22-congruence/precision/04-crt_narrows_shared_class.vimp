@@ -1,16 +1,11 @@
 // PARAM: --analysis congruence
-// The Chinese remainder construction, observable at the CLI. x is
-// 1 (mod 4) and y is 3 (mod 6); the guard x == y intersects them, and
-// intersect_congruence's Bezout branch computes the one shared residue
-// (9) with the least common multiple (12) as its period, so both sides
-// become 9 (mod 12).
-//
-// The inner guard is what makes that narrowing observable rather than
-// merely internal. 13 is 1 (mod 4), so it is compatible with everything x
-// knew on its own -- the inner branch would be live without the meet. It
-// is not 9 (mod 12), so after the meet the branch is proved dead. The
-// NOWARN therefore depends on the CRT step specifically, not on either
-// operand's own class.
+// The guard x == y intersects two classes. x = 4 * n + 1 is 1 (mod 4);
+// 4 divides 2^32, so the class survives i32 wraparound. y = 6 * m + 3 does
+// not keep 3 (mod 6): 6 * m wraps to any even value, so y is only odd.
+// The meet of 1 (mod 4) and 1 (mod 2) is 1 (mod 4), and 13 lies in it.
+// The inner branch is concretely reachable (n = 3, and 6 * m == 10 has an
+// i32 solution because 3 is invertible mod 2^32), so check(false) is
+// REFUTED.
 fun main() {
   n = __voblint_nondet_int();
   m = __voblint_nondet_int();
@@ -18,7 +13,7 @@ fun main() {
   y = 6 * m + 3;
   if (x == y) {
     if (x == 13) {
-      __voblint_check(false); // NOWARN (unreachable)
+      __voblint_check(false); // REFUTED
     } else {
       __voblint_check(true); // PROVED
     }

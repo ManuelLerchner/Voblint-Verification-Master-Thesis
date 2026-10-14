@@ -1,0 +1,21 @@
+// PARAM: --analysis int
+// Adapted from Goblint tests/regression/56-witness/26-mine-tutorial-ex4.6.c
+// (Mine's tutorial, example 4.6): a counter runs from 40 down to 0 and
+// exits on x != 0. Goblint proves the in-loop bounds only by unassuming a
+// YAML witness. The same program under --analysis interval is
+// 12-widening/known-imprecision/04-mine_ex46_decreasing_counter.vimp.
+//
+// The composite proves only x == 0. Mechanism: Int is the product of
+// Interval and Congruence (Int_Tuple_Kind.thy), and neither component
+// keeps x > 0 at the head, so the interval widens x to [-2147483648,40]. x - 1 may underflow on that interval and
+// yields the full i32 range, so the head becomes top and both in-loop
+// bounds are UNKNOWN. x == 0 holds because the exit edge asserts equality.
+fun main() {
+  x = 40;
+  while (x != 0) {
+    __voblint_check(x <= 40); // UNKNOWN
+    x = x - 1;
+    __voblint_check(x >= 0); // UNKNOWN
+  }
+  __voblint_check(x == 0); // PROVED
+}

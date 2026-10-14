@@ -112,6 +112,10 @@ lemma combine_collect_frame:
 
 end
 
+text \<open>The write set runs in generated code at every language, not only the untyped one.\<close>
+
+lemmas [code] = cfg_transfer_sem.gedge_writes.simps
+
 definition edge_collect :: "edge_action \<Rightarrow> store set \<Rightarrow> store set" where
   "edge_collect = cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n)"
 
@@ -134,17 +138,20 @@ global_interpretation untyped?: cfg_transfer_sem aval ret_var "\<lambda>_ n. n" 
 
 subsection \<open>What an edge reads\<close>
 
-text \<open>An edge reads the variables of its expressions.\<close>
+text \<open>An edge reads the variables of its expressions, as \<open>evars\<close> names them.\<close>
 
-definition edge_reads :: "edge_action \<Rightarrow> vname list" where
-  "edge_reads a = sorted_list_of_set (\<Union> (exp_vnames ` set (edge_expressions a)))"
+definition gedge_reads :: "('e \<Rightarrow> 'v::linorder set) \<Rightarrow> ('v, 'e) gedge_action \<Rightarrow> 'v list" where
+  "gedge_reads evars a = sorted_list_of_set (\<Union> (evars ` set (edge_expressions a)))"
+
+abbreviation edge_reads :: "edge_action \<Rightarrow> vname list" where
+  "edge_reads \<equiv> gedge_reads exp_vnames"
 
 subsection \<open>Finite global footprints\<close>
 
 text \<open>The declared globals among those names, as duplicate-free lists a
   transfer folds over to read or publish them.\<close>
 
-definition global_names_in :: "(vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> vname list" where
+definition global_names_in :: "('v \<Rightarrow> bool) \<Rightarrow> 'v list \<Rightarrow> 'v list" where
   "global_names_in G xs = remdups (filter G xs)"
 
 lemma set_global_names_in [simp]:
@@ -157,25 +164,38 @@ lemma distinct_global_names_in [simp]: "distinct (global_names_in G xs)"
 definition globals_in_exp :: "(vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> vname list" where
   "globals_in_exp G e = global_names_in G (sorted_list_of_set (exp_vnames e))"
 
-definition edge_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
-  "edge_global_reads G a = global_names_in G (edge_reads a)"
+definition gedge_global_reads ::
+    "('e \<Rightarrow> 'v::linorder set) \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> ('v, 'e) gedge_action \<Rightarrow> 'v list" where
+  "gedge_global_reads evars G a = global_names_in G (gedge_reads evars a)"
 
-definition edge_global_writes :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
-  "edge_global_writes G a = global_names_in G (edge_writes a)"
+text \<open>The writes are those of the concrete step, so they follow the return slot \<open>rv\<close>.\<close>
 
-definition call_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> exp list \<Rightarrow> vname list" where
-  "call_global_reads G es = global_names_in G (sorted_list_of_set (\<Union> (exp_vnames ` set es)))"
+definition gedge_global_writes :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> ('v, 'e) gedge_action \<Rightarrow> 'v list" where
+  "gedge_global_writes rv G a = global_names_in G (cfg_transfer_sem.gedge_writes rv a)"
+
+definition gcall_global_reads ::
+    "('e \<Rightarrow> 'v::linorder set) \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> 'e list \<Rightarrow> 'v list" where
+  "gcall_global_reads evars G es = global_names_in G (sorted_list_of_set (\<Union> (evars ` set es)))"
+
+abbreviation edge_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
+  "edge_global_reads \<equiv> gedge_global_reads exp_vnames"
+
+abbreviation edge_global_writes :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
+  "edge_global_writes \<equiv> gedge_global_writes ret_var"
+
+abbreviation call_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> exp list \<Rightarrow> vname list" where
+  "call_global_reads \<equiv> gcall_global_reads exp_vnames"
 
 lemma set_edge_global_writes [simp]:
-  "set (edge_global_writes G a) = {x \<in> set (edge_writes a). G x}"
-  by (simp add: edge_global_writes_def)
+  "set (gedge_global_writes rv G a) = {x \<in> set (cfg_transfer_sem.gedge_writes rv a). G x}"
+  by (simp add: gedge_global_writes_def)
 
 lemma distinct_global_footprints [simp]:
   "distinct (globals_in_exp G e)"
-  "distinct (edge_global_reads G a)"
-  "distinct (edge_global_writes G a)"
-  "distinct (call_global_reads G es)"
-  by (simp_all add: globals_in_exp_def edge_global_reads_def edge_global_writes_def
-    call_global_reads_def)
+  "distinct (gedge_global_reads evars G a)"
+  "distinct (gedge_global_writes rv G a)"
+  "distinct (gcall_global_reads evars G es)"
+  by (simp_all add: globals_in_exp_def gedge_global_reads_def gedge_global_writes_def
+    gcall_global_reads_def)
 
 end

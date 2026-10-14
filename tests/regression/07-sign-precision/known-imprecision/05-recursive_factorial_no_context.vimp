@@ -7,7 +7,9 @@
 // so that Top joins into the entry state (measured: n = Top at the check).
 // The theory's prose blames the join of the two call sites' 3 and 4; both
 // are Positive, so the recursive subtraction is the actual cause.
-// Every return value is Positive regardless, so the other three checks hold.
+// Every return value is positive concretely (at most 4! = 24), but n * r
+// is Top: typed Sign has no magnitude, so it cannot exclude i32 wraparound
+// of a product of two positives. That Top flows into r, a and b.
 // Interval sibling with entry-state contexts:
 // 03-procedures/precision/06-recursive_factorial_dead_branch_no_bottom_leak.vimp.
 fun factorial(n) {
@@ -16,13 +18,13 @@ fun factorial(n) {
     return 1;
   } else {
     r = factorial(n - 1);
-    __voblint_check(0 < r); // PROVED
+    __voblint_check(0 < r); // UNKNOWN
     return n * r;
   }
 }
 fun main() {
   a = factorial(3);
   b = factorial(4);
-  __voblint_check(0 < a); // PROVED
-  __voblint_check(0 < b); // PROVED
+  __voblint_check(0 < a); // UNKNOWN
+  __voblint_check(0 < b); // UNKNOWN
 }

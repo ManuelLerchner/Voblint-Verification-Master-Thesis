@@ -136,12 +136,13 @@ proof -
 qed
 
 text \<open>
-  An unsigned kind wraps a finite interval that spans less than its modulus and whose
-  wrapped ends stay ordered; any other overflow gives the kind's whole range. This is
-  Goblint's \<^verbatim>\<open>norm\<close> in \<^verbatim>\<open>intervalDomain.ml\<close> under its default policy
-  \<^verbatim>\<open>sem.int.signed_overflow = assume_top\<close>, where a signed kind does not wrap.
-  Goblint treats a cast and an arithmetic result alike there; they differ only under
-  \<^verbatim>\<open>assume_none\<close>, which assumes that no signed overflow occurs.
+  A kind that wraps under the overflow policy wraps a finite interval that spans less
+  than its modulus and whose wrapped ends stay ordered; any other overflow gives the
+  kind's whole range. This is Goblint's \<^verbatim>\<open>norm\<close> in \<^verbatim>\<open>intervalDomain.ml\<close>: under the
+  default \<^verbatim>\<open>sem.int.signed_overflow = assume_top\<close> only an unsigned kind wraps, under
+  \<^verbatim>\<open>assume_wraparound\<close> every kind does. A cast and an arithmetic result are treated
+  alike; they differ only under \<^verbatim>\<open>assume_none\<close>, which assumes that no signed overflow
+  occurs.
 \<close>
 
 definition wrap_ivl_ik :: "ikind \<Rightarrow> int \<Rightarrow> int \<Rightarrow> ivl" where
@@ -149,30 +150,33 @@ definition wrap_ivl_ik :: "ikind \<Rightarrow> int \<Rightarrow> int \<Rightarro
      (if y - x < ik_mod k \<and> ik_norm k x \<le> ik_norm k y
       then Ivl (Fin (ik_norm k x)) (Fin (ik_norm k y)) else ik_ivl k)"
 
-definition norm_ivl_ik :: "ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "norm_ivl_ik k a =
+definition norm_ivl_ik :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "norm_ivl_ik ovp k a =
      (if a \<le> ik_ivl k then a
       else case a of
-        Ivl (Fin x) (Fin y) \<Rightarrow> if ik_signed k then ik_ivl k else wrap_ivl_ik k x y
+        Ivl (Fin x) (Fin y) \<Rightarrow> if should_wrap ovp k then wrap_ivl_ik k x y else ik_ivl k
       | _ \<Rightarrow> ik_ivl k)"
 
-lemma ik_norm_unsigned: "\<not> ik_signed k \<Longrightarrow> ik_norm k n = n mod ik_mod k"
-  by (simp add: ik_norm_def ik_mod_def take_bit_eq_mod)
+lemma ik_max_min_mod: "ik_max k - ik_min k + 1 = ik_mod k"
+  by (cases k) (simp_all add: ik_max_def ik_min_def ik_half_def ik_mod_def)
 
 lemma wrap_ivl_ik_sound:
-  assumes "\<not> ik_signed k" and "x \<le> n" and "n \<le> y"
+  assumes "x \<le> n" and "n \<le> y"
   shows "ik_norm k n \<in> gamma_ivl (wrap_ivl_ik k x y)"
 proof (cases "y - x < ik_mod k \<and> ik_norm k x \<le> ik_norm k y")
   case True
-  have "0 < ik_mod k" by (simp add: ik_mod_def)
-  with True assms have "ik_norm k x \<le> ik_norm k n \<and> ik_norm k n \<le> ik_norm k y"
-    by (simp add: ik_norm_unsigned mod_interval_wrap)
-  with True show ?thesis by (simp add: wrap_ivl_ik_def less_eq_eint_def)
+  then have w: "y - x \<le> ik_max k - ik_min k" using ik_max_min_mod[of k] by linarith
+  have "ik_norm k n = ik_norm k x + (n - x)"
+    using True assms(1,2) ik_norm_interval_shift w by blast
+  moreover have "ik_norm k y = ik_norm k x + (y - x)"
+    using True assms(1,2) ik_norm_interval_shift order_trans w by blast
+  ultimately show ?thesis
+    using True assms by (simp add: wrap_ivl_ik_def less_eq_eint_def)
 qed (auto simp: wrap_ivl_ik_def)
 
 lemma norm_ivl_ik_sound:
   assumes "n \<in> gamma_ivl a"
-  shows "ik_norm k n \<in> gamma_ivl (norm_ivl_ik k a)"
+  shows "ik_norm k n \<in> gamma_ivl (norm_ivl_ik ovp k a)"
 proof (cases "a \<le> ik_ivl k")
   case True
   then have "n \<in> ik_range k" using gamma_ivl_mono[OF True] assms by auto
@@ -181,14 +185,14 @@ next
   case False
   obtain l u where a: "a = Ivl l u" by (cases a)
   show ?thesis
-  proof (cases "\<exists>x y. l = Fin x \<and> u = Fin y \<and> \<not> ik_signed k")
+  proof (cases "\<exists>x y. l = Fin x \<and> u = Fin y")
     case True
-    then obtain x y where l: "l = Fin x" and u: "u = Fin y" and k: "\<not> ik_signed k" by blast
+    then obtain x y where l: "l = Fin x" and u: "u = Fin y" by blast
     have "x \<le> n" "n \<le> y" using assms by (simp_all add: a l u less_eq_eint_def)
-    with False k show ?thesis by (simp add: norm_ivl_ik_def a l u wrap_ivl_ik_sound)
+    with False show ?thesis by (simp add: norm_ivl_ik_def a l u wrap_ivl_ik_sound)
   next
     case nw: False
-    then have "norm_ivl_ik k a = ik_ivl k"
+    then have "norm_ivl_ik ovp k a = ik_ivl k"
       using False by (cases l; cases u) (auto simp: norm_ivl_ik_def a)
     then show ?thesis by simp
   qed
@@ -295,11 +299,11 @@ definition top_ik_ivl :: "ikind \<Rightarrow> ivl" where "top_ik_ivl = ik_ivl"
 definition of_int_ik_ivl :: "ikind \<Rightarrow> int \<Rightarrow> ivl" where
   "of_int_ik_ivl k n = Ivl (Fin (ik_norm k n)) (Fin (ik_norm k n))"
 
-definition cast_ik_ivl :: "ikind option \<Rightarrow> ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "cast_ik_ivl sk = norm_ivl_ik"
+definition cast_ik_ivl :: "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "cast_ik_ivl ovp sk = norm_ivl_ik ovp"
 
-definition arith_ik_ivl :: "ikind \<Rightarrow> aop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
-  "arith_ik_ivl k op a b = norm_ivl_ik k (ivl_aop op a b)"
+definition arith_ik_ivl :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> ivl" where
+  "arith_ik_ivl ovp k op fits a b = norm_ivl_ik ovp k (ivl_aop op a b)"
 
 definition cmp_ik_ivl :: "cop \<Rightarrow> ivl \<Rightarrow> ivl \<Rightarrow> bool option" where
   "cmp_ik_ivl = cop_of interval_less interval_eq"
@@ -326,9 +330,10 @@ instance proof
   show "ik_norm k n \<in> numeric_domain_class.gamma (of_int_ik k n :: ivl)"
     by (simp add: of_int_ik_ivl_def less_eq_eint_def)
   show "(\<And>k'. sk = Some k' \<Longrightarrow> n \<in> ik_range k') \<Longrightarrow> n \<in> numeric_domain_class.gamma a
-      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik sk k a)" for sk
+      \<Longrightarrow> ik_norm k n \<in> numeric_domain_class.gamma (cast_ik ovp sk k a)" for ovp sk
     by (simp add: cast_ik_ivl_def norm_ivl_ik_sound)
-  show "m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik k op a b)"
+  show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b
+      \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik ovp k op fits a b)" for ovp fits
     by (simp add: arith_ik_ivl_def norm_ivl_ik_sound ivl_aop_sound)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"
     unfolding cmp_ik_ivl_def

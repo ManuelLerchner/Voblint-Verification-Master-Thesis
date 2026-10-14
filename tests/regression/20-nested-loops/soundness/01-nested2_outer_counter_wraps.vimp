@@ -1,0 +1,22 @@
+// PARAM: --analysis interval
+// Adapted from Goblint tests/regression/34-localwn_restart/03-nested2.c
+// (Amato-Scozzari, SAS 2013): an endless outer loop whose body runs a
+// counted inner loop and then steps i := i + 11 - j. Goblint expects
+// i >= 0 under td3 and slr3 with sem.int.signed_overflow assume_none.
+//
+// Under i32 wraparound the check is undetermined: the inner loop always
+// leaves j = 10, so i grows by one per outer iteration, passes 2147483647
+// and wraps to -2147483648. The run reaches the check in stores with
+// i >= 0 and, after 2^31 iterations, in stores with i < 0, so UNKNOWN is
+// the only sound answer.
+fun main() {
+  i = 0;
+  while (true) {
+    j = 0;
+    while (j < 10) {
+      j = j + 1;
+    }
+    i = i + 11 - j;
+    __voblint_check(i >= 0); // UNKNOWN
+  }
+}

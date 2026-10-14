@@ -1,0 +1,16 @@
+// PARAM: --analysis congruence --signed-overflow assume_wraparound
+// x is 0 (mod 2) whatever n is, also after i32 wraparound, so x == 3 is
+// false at every execution and x != 3 holds. cong_eq (Congruence_Kind.thy)
+// answers an equality when both sides are singletons and otherwise checks
+// whether the two classes share a value; 0 (mod 2) and the singleton 3 do
+// not, so the check is PROVED without a singleton on the left.
+//
+// Run under --signed-overflow assume_wraparound: the case tests congruence
+// arithmetic modulo 2^32 on signed i32. Under Goblint's default assume_top a
+// signed +, - or * that may overflow gives top instead (27-signed-
+// overflow/known-imprecision/02).
+fun main() {
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  __voblint_check(x != 3); // PROVED
+}

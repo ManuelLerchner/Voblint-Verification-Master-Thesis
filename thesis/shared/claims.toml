@@ -417,6 +417,8 @@ argv = [
   "none",
   "--int-refinement",
   "never",
+  "--signed-overflow",
+  "assume_wraparound",
   "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
 ]
 why = "Reduced product, Section 11.3: without reduction x is [-2,10] and 1+4Z at the check, and x >= 1 && x <= 9 is UNKNOWN."
@@ -427,6 +429,8 @@ argv = [
   "int",
   "--context",
   "none",
+  "--signed-overflow",
+  "assume_wraparound",
   "tests/regression/24-site-figures/precision/02-int_reduction_int.vimp",
 ]
 why = "Reduced product, Section 11.3: reduction trims the interval to [1,9] and makes the sign positive, so x >= 1 && x <= 9 is PROVED."

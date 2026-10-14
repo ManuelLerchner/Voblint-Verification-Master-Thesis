@@ -5,8 +5,9 @@
 // (via f(3) and via f(-10)), so it gets two separate clusters whose enter and
 // combine edges route to their own context rather than joining, and the two
 // clusters carry genuinely different states (Positive vs Negative). The
-// checks are Sign's own business, not the graph's: doubling preserves sign,
-// so both are PROVED.
+// checks are Sign's own business, not the graph's: x = 6 and y = -20, but
+// typed Sign has no magnitude, so it cannot exclude i32 wraparound of
+// p + p, and both are UNKNOWN.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -41,31 +42,31 @@
 //     f_entry_f_ctx1
 //
 // nodes:
-//   main_pp8_ctx0: pp8 [proved]
+//   main_pp8_ctx0: pp8 [unknown]
 //       sign:
-//         x=+
-//         y=-
+//         x=⊤
+//         y=⊤
 //       check y < 0
 //   main_pp9_ctx0: pp9
 //       sign:
-//         x=+
-//         y=-
+//         x=⊤
+//         y=⊤
 //   main_exit_main_ctx0: exit_main
 //       sign:
-//         x=+
-//         y=-
+//         x=⊤
+//         y=⊤
 //   main_pp5_ctx0: pp5
 //       sign:
 //         x=⊤
 //         y=⊤
 //   main_pp6_ctx0: pp6
 //       sign:
-//         x=+
+//         x=⊤
 //         y=⊤
-//   main_pp7_ctx0: pp7 [proved]
+//   main_pp7_ctx0: pp7 [unknown]
 //       sign:
-//         x=+
-//         y=-
+//         x=⊤
+//         y=⊤
 //       check 0 < x
 //   main_entry_main_ctx0: entry_main
 //       sign:
@@ -98,7 +99,7 @@
 //   f_exit_f_ctx0: exit_f
 //       sign:
 //         p=+
-//         t=+
+//         t=⊤
 //   f_pp2_ctx0: pp2
 //       sign:
 //         p=+
@@ -106,7 +107,7 @@
 //   f_pp3_ctx0: pp3
 //       sign:
 //         p=+
-//         t=+
+//         t=⊤
 //   f_entry_f_ctx0: entry_f
 //       sign:
 //         p=+
@@ -116,7 +117,7 @@
 //   f_exit_f_ctx1: exit_f
 //       sign:
 //         p=-
-//         t=-
+//         t=⊤
 //   f_pp2_ctx1: pp2
 //       sign:
 //         p=-
@@ -124,7 +125,7 @@
 //   f_pp3_ctx1: pp3
 //       sign:
 //         p=-
-//         t=-
+//         t=⊤
 //   f_entry_f_ctx1: entry_f
 //       sign:
 //         p=-
@@ -166,6 +167,6 @@ fun f(p) { t = g(p); return t; }
 fun main() {
   x = f(3);
   y = f(-10);
-  __voblint_check(0 < x); // PROVED
-  __voblint_check(y < 0); // PROVED
+  __voblint_check(0 < x); // UNKNOWN
+  __voblint_check(y < 0); // UNKNOWN
 }

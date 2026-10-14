@@ -51,6 +51,7 @@ SETTING_FLAGS = {
     "--int-refinement": "int_refinement",
     "--narrow-bound": "narrow_bound",
     "--program-globals": "program_globals",
+    "--signed-overflow": "signed_overflow",
 }
 
 # The bound voblint's bounded-narrowing rule takes when --narrow-bound is absent.

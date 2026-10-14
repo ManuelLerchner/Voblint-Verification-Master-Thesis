@@ -1,0 +1,15 @@
+// PARAM: --analysis int
+// Over i32 the products wrap, so neither quotient has a fixed parity.
+// 6 * n wraps to any even value, so (6 * n) / 3 can be odd (4 / 3 == 1).
+// 12 * n + 3 wraps to any value that is 3 (mod 4), so its quotient by -3
+// can be even, including 0 (-1 / -3 == 0). Every check is undetermined,
+// so UNKNOWN is the only sound answer.
+fun main() {
+  n = __voblint_nondet_int();
+  even = (6 * n) / 3;
+  odd = (12 * n + 3) / -3;
+  __voblint_check(even % 2 == 0); // UNKNOWN
+  __voblint_check(odd % 2 != 0); // UNKNOWN
+  __voblint_check(even == 1); // UNKNOWN
+  __voblint_check(odd == 0); // UNKNOWN
+}

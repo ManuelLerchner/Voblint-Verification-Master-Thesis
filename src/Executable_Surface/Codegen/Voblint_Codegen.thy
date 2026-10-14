@@ -149,6 +149,19 @@ definition cfg_call_edges ::
 definition cfg_points :: "cfg \<Rightarrow> cfg_node list" where
   "cfg_points = cfg_node_list"
 
+text \<open>The same readers for a typed program's graph, until the VIMP graph is retired.\<close>
+
+definition tcfg_intra_edges ::
+    "(var_id, texp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, texp) gedge_action \<times> cfg_node) list" where
+  "tcfg_intra_edges = cfg_intra_list"
+
+definition tcfg_call_edges ::
+    "(var_id, texp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, texp) gcall_action \<times> cfg_node \<times> cfg_node) list" where
+  "tcfg_call_edges = cfg_calls_list"
+
+definition tcfg_points :: "(var_id, texp) gcfg \<Rightarrow> cfg_node list" where
+  "tcfg_points = cfg_node_list"
+
 export_code
 
   \<comment> \<open>Run: the typed analyzer, and the analyzer over mathematical integers it replaces\<close>
@@ -158,6 +171,7 @@ export_code
      diagnostics, the analysis graph\<close>
   Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
   vimp_render_report typed_render_report string_of_typed_value var_label
+  TN TVar TArith TCast TCmp TNot TAnd TOr AAdd ASub AMul ADiv AMod CLt CLe CGt CGe CEq CNe
   res_cfg res_contexts res_states res_joined res_routes res_checks res_globals res_diagnostics
   res_graph graph_nodes graph_edges Local_Node Global_Node
   Intra_Dep Enter_Dep Combine_Dep Continue_Dep Global_Read Global_Write
@@ -171,7 +185,7 @@ export_code
   arithmetic_operation arithmetic_divisor
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
-  cfg_entry cfg_points
+  cfg_entry cfg_points tcfg_intra_edges tcfg_call_edges tcfg_points
 
   \<comment> \<open>Ask: configuration of domains, global update rule, context, program globals\<close>
   Analysis_Config
@@ -196,6 +210,10 @@ export_code
   run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
   Typed_Malformed Typed_No_Answer Typed_Analysed
   Typed_Call_String Typed_Entry_State
+
+  \<comment> \<open>Configuration of a typed run: the options as one value, after Goblint's tree\<close>
+  voblint_conf_ext conf_analyses conf_context conf_globals conf_sem
+  sem_conf_ext sem_int_signed_overflow default_sem_conf Assume_Top Assume_Wraparound
 
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>
   declared_global_vars

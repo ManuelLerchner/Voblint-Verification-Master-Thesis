@@ -25,35 +25,22 @@ definition tmcp_init :: "kind_decls \<Rightarrow> typed_domain list \<Rightarrow
   "tmcp_init ds as =
      Product (if Typed_Interval \<in> set as then Lifted (tinit_st ds) else Bot)
      (Product (if Typed_Congruence \<in> set as then Lifted (tinit_st ds) else Bot)
-     (Product (if Typed_Int \<in> set as then Lifted (tinit_st ds) else Bot)
+     (Product (Product (if Typed_Int Refine_Never \<in> set as then Lifted (tinit_st ds) else Bot)
+        (Product (if Typed_Int Refine_Once \<in> set as then Lifted (tinit_st ds) else Bot)
+                 (if Typed_Int Refine_Fixpoint \<in> set as then Lifted (tinit_st ds) else Bot)))
      (Product (if Typed_Sign \<in> set as then Lifted (tinit_st ds) else Bot)
      (Product (if Typed_Parity \<in> set as then Lifted (tinit_st ds) else Bot)
-              (if Typed_Order \<in> set as then Lifted top else Bot)))))"
+              (if Typed_Order \<in> set as then Lifted (OFacts True {}) else Bot)))))"
 
 lemma tmcp_init_sound:
   "tinit_stores (kenv_of ds) \<subseteq> tmcp.act_gamma ds as (tmcp_rd tglobal (tmcp_init ds as))"
 proof
   fix t assume t: "t \<in> tinit_stores (kenv_of ds)"
-  have "t \<in> tval_gamma (kenv_of ds) a (tmcp_rd tglobal (tmcp_init ds as))" if "a \<in> set as" for a
-  proof (cases a)
-    case Typed_Interval with that have m: "Typed_Interval \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Interval m tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t])
-  next
-    case Typed_Congruence with that have m: "Typed_Congruence \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Congruence m tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t])
-  next
-    case Typed_Int with that have m: "Typed_Int \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Int m tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t])
-  next
-    case Typed_Sign with that have m: "Typed_Sign \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Sign m tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t])
-  next
-    case Typed_Parity with that have m: "Typed_Parity \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Parity m tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t])
-  next
-    case Typed_Order with that have m: "Typed_Order \<in> set as" by simp
-    show ?thesis by (simp add: Typed_Order m tmcp_init_def tmcp_rd_def)
-  qed
+  have "t \<in> tval_gamma (kenv_of ds) a (tmcp_rd tglobal (tmcp_init ds as))" if m: "a \<in> set as" for a
+  proof (cases a rule: typed_domain_cases)
+    case Order with m show ?thesis
+      by (simp add: tmcp_init_def tmcp_rd_def tinit_stores_tstyped[OF t])
+  qed (use m in \<open>simp_all add: tmcp_init_def tmcp_rd_def subsetD[OF tinit_sound t]\<close>)
   then show "t \<in> tmcp.act_gamma ds as (tmcp_rd tglobal (tmcp_init ds as))"
     by (simp add: tmcp.act_gamma_def)
 qed
@@ -65,13 +52,13 @@ text \<open>What the combination owes the pipeline does not depend on the contex
 lemma typed_mcp_routed:
   "gdg_analysis
     teval ReturnVar (\<lambda>_. tconv (kenv_of ds)) (\<lambda>_. tglobal) (\<lambda>_. tinit_stores (kenv_of ds))
-    (tmcp_comp ds (tactivation as)) (tmcp_emp (tactivation as)) tmcp_rd
+    (tmcp_comp sem ds (tactivation as)) (tmcp_emp (tactivation as)) tmcp_rd
     (tmcp_init ds (tactivation as))
     (Analysis_Global ()) Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE((unit, 'c) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r)
-    \<bottom> (tmcp_classify ds (tactivation as)) (tmcp.act_gamma ds (tactivation as))
+    \<bottom> (tmcp_classify sem ds (tactivation as)) (tmcp.act_gamma ds (tactivation as))
     (tmcp_empty_v (tactivation as))
     (TD_side_rule_Interp_solve_c r)
     (\<lambda>_ c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>_ d. d) (\<lambda>_ d. Bot) (\<lambda>_ p. []) (\<lambda>p ci d e. d)
@@ -84,13 +71,15 @@ proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSo
       = (\<lambda>d. gamma_lift (tmcp.act_gamma ds (tactivation as)) (map_lift (tmcp_rd tglobal) d))"
     by (rule ext) (rule tmcp.mcp_gamma_rd[OF tactivation_ne])
   show ?case
-    using tmcp.mcp_comp_sound[OF distinct_tactivation tactivation_ne, of ds as p] unfolding eq by simp
+    using tmcp.mcp_comp_sound[OF distinct_tactivation tactivation_ne, where sem = sem and ds = ds and p = p,
+        of as]
+    unfolding eq by simp
 next
   case (EnterSingle p ci d)
   show ?case
     using single_entryD[OF tmcp.single_entry_mcp_comp[OF tactivation_ne],
-        of ds as tglobal p
-          "ls_channel (tmcp_comp ds (tactivation as) tglobal p) d" ci "(d, d)"]
+        of sem ds as tglobal p
+          "ls_channel (tmcp_comp sem ds (tactivation as) tglobal p) d" ci "(d, d)"]
     by (simp add: dg_pipeline.comp_entry_def)
 next
   case (EmptyRd p s) show ?case by (rule tmcp.mcp_emp_rd)
@@ -122,18 +111,18 @@ subsection \<open>At call-string contexts\<close>
 
 global_interpretation typed_mcp: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "tmcp_comp ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
+    "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
     "tmcp_init ds (tactivation as)"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
-    \<bottom> "tmcp_classify ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
+    \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
     "tmcp_empty_v (tactivation as)"
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
-  for ds as r k
+  for sem ds as r k
   by (rule typed_mcp_routed)
 
 subsection \<open>At entry-state contexts\<close>
@@ -145,9 +134,11 @@ text \<open>
 \<close>
 
 type_synonym tmcp_ctx =
-  "(ivl kd list, (congruence kd list, (int_tuple kd list, (sign kd list, (parity kd list,
-    unit list) analysis_product) analysis_product) analysis_product) analysis_product)
-   analysis_product"
+  "(ivl kd list, (congruence kd list,
+    ((int_never int_tuple kd list, (int_once int_tuple kd list, int_fixpoint int_tuple kd list)
+      analysis_product) analysis_product,
+    (sign kd list, (parity kd list, unit list) analysis_product) analysis_product)
+    analysis_product) analysis_product) analysis_product"
 
 definition tmcp_route ::
     "typed_domain list \<Rightarrow> (var_id \<Rightarrow> bool) \<Rightarrow> cfg_node \<Rightarrow> tmcp_ctx \<Rightarrow> tmcp_st lifted
@@ -155,58 +146,61 @@ definition tmcp_route ::
   "tmcp_route as \<G> u ctx d ca =
      Product (if Typed_Interval \<in> set as then typed_es \<G> (lift_get tslot1 d) ca else [])
      (Product (if Typed_Congruence \<in> set as then typed_es \<G> (lift_get tslot2 d) ca else [])
-     (Product (if Typed_Int \<in> set as then typed_es \<G> (lift_get tslot3 d) ca else [])
+     (Product (Product (if Typed_Int Refine_Never \<in> set as then typed_es \<G> (lift_get tslot3n d) ca else [])
+        (Product (if Typed_Int Refine_Once \<in> set as then typed_es \<G> (lift_get tslot3o d) ca else [])
+                 (if Typed_Int Refine_Fixpoint \<in> set as then typed_es \<G> (lift_get tslot3f d) ca else [])))
      (Product (if Typed_Sign \<in> set as then typed_es \<G> (lift_get tslot4 d) ca else [])
      (Product (if Typed_Parity \<in> set as then typed_es \<G> (lift_get tslot5 d) ca else []) []))))"
 
 definition tmcp_root_ctx :: tmcp_ctx where
-  "tmcp_root_ctx = Product [] (Product [] (Product [] (Product [] (Product [] []))))"
+  "tmcp_root_ctx = Product [] (Product [] (Product (Product [] (Product [] []))
+     (Product [] (Product [] []))))"
 
 global_interpretation typed_mcp_es: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "tmcp_comp ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
+    "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
     "tmcp_init ds (tactivation as)"
     "Analysis_Global ()" Analysis_Global Activation_Seed "tmcp_route (tactivation as)" tmcp_root_ctx
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, tmcp_ctx) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
-    \<bottom> "tmcp_classify ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
+    \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
     "tmcp_empty_v (tactivation as)"
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
-  for ds as r
+  for sem ds as r
   by (rule typed_mcp_routed)
 
 subsection \<open>End-to-end soundness\<close>
 
 context
-  fixes ds :: kind_decls and as :: "typed_domain list" and r :: globals_rule and k :: nat
+  fixes sem :: sem_conf and ds :: kind_decls and as :: "typed_domain list" and r :: globals_rule and k :: nat
 begin
 
 lemma typed_mcp_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp.terminates ds as k r tglobal p"
+    and solves: "typed_mcp.terminates sem ds as k r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at ds as k r tglobal p ctx v))"
+           \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v))"
   using typed_mcp.gfun_route_result_node_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
   by (simp add: tnode_collect_def)
 
 theorem typed_mcp_verdict_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp.terminates ds as k r tglobal p"
-    and mem: "(v, c, Decided res) \<in> set (typed_mcp.verdict_report ds as k r tglobal p)"
+    and solves: "typed_mcp.terminates sem ds as k r tglobal p"
+    and mem: "(v, c, Decided res) \<in> set (typed_mcp.verdict_report sem ds as k r tglobal p)"
     and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
   shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
-  obtain ctx where sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at ds as k r tglobal p ctx v)"
+  obtain ctx where sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v)"
     using typed_mcp_node_sound[OF wf solves] s by blast
   have decided:
-    "tmcp_classify ds (tactivation as) c (typed_mcp.state_at ds as k r tglobal p ctx v) = res"
+    "tmcp_classify sem ds (tactivation as) c (typed_mcp.state_at sem ds as k r tglobal p ctx v) = res"
     if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (typed_mcp.result ds as k r tglobal p) v ctx")
+  proof (cases "lookup_table (typed_mcp.result sem ds as k r tglobal p) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_mcp.state_at_unfold tmcp.act_gamma_bot)
   next
@@ -225,42 +219,42 @@ qed
 
 lemma typed_mcp_es_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp_es.terminates ds as r tglobal p"
+    and solves: "typed_mcp_es.terminates sem ds as r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at ds as r tglobal p ctx v))"
+           \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v))"
 proof
   fix s assume "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
   then obtain ctx :: tmcp_ctx where "s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds))
-      tglobal (typed_mcp_es.admitted_contexts ds as r tglobal p) tmcp_root_ctx (typed_cfg p ds)
+      tglobal (typed_mcp_es.admitted_contexts sem ds as r tglobal p) tmcp_root_ctx (typed_cfg p ds)
       (tinit_stores (kenv_of ds)) v ctx"
     using typed_mcp_es.gentry_state_node_collect_eq_Union_of_terminates
         [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
     by (auto simp: tnode_collect_def)
   then have "s \<in> gamma_lift (tmcp.act_gamma ds (tactivation as))
-      (lookup_table (typed_mcp_es.result ds as r tglobal p) v ctx)"
+      (lookup_table (typed_mcp_es.result sem ds as r tglobal p) v ctx)"
     using typed_mcp_es.gentry_state_lookup_sound_of_terminates
         [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v ctx]
     by blast
-  then have "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at ds as r tglobal p ctx v)"
+  then have "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v)"
     by (auto simp: typed_mcp_es.state_at_unfold split: lifted.splits)
-  then show "s \<in> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at ds as r tglobal p ctx v))"
+  then show "s \<in> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v))"
     by blast
 qed
 
 theorem typed_mcp_es_verdict_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp_es.terminates ds as r tglobal p"
-    and mem: "(v, c, Decided res) \<in> set (typed_mcp_es.verdict_report ds as r tglobal p)"
+    and solves: "typed_mcp_es.terminates sem ds as r tglobal p"
+    and mem: "(v, c, Decided res) \<in> set (typed_mcp_es.verdict_report sem ds as r tglobal p)"
     and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
   shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
-  obtain ctx where sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at ds as r tglobal p ctx v)"
+  obtain ctx where sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v)"
     using typed_mcp_es_node_sound[OF wf solves] s by blast
   have decided:
-    "tmcp_classify ds (tactivation as) c (typed_mcp_es.state_at ds as r tglobal p ctx v) = res"
+    "tmcp_classify sem ds (tactivation as) c (typed_mcp_es.state_at sem ds as r tglobal p ctx v) = res"
     if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (typed_mcp_es.result ds as r tglobal p) v ctx")
+  proof (cases "lookup_table (typed_mcp_es.result sem ds as r tglobal p) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_mcp_es.state_at_unfold tmcp.act_gamma_bot)
   next
@@ -291,45 +285,45 @@ text \<open>
 \<close>
 
 definition mcp_run ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
-  "mcp_run as r k ds p =
-     (if TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "mcp_run sem as r k ds p =
+     (if TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
            (cfg_exit (typed_cfg p ds), []) = None
       then Typed_No_Answer
       else Typed_Analysed (map (\<lambda>(u, c, v). (u, c, verdict_result v))
-             (typed_mcp.verdict_report ds as k r tglobal p)))"
+             (typed_mcp.verdict_report sem ds as k r tglobal p)))"
 
 definition mcp_es_run ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
-  "mcp_es_run as r ds p =
-     (if TD_side_rule_Interp_solve_c r (typed_mcp_es.equations ds as tglobal p)
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "mcp_es_run sem as r ds p =
+     (if TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
            (cfg_exit (typed_cfg p ds), tmcp_root_ctx) = None
       then Typed_No_Answer
       else Typed_Analysed (map (\<lambda>(u, c, v). (u, c, verdict_result v))
-             (typed_mcp_es.verdict_report ds as r tglobal p)))"
+             (typed_mcp_es.verdict_report sem ds as r tglobal p)))"
 
 definition run_typed ::
-    "typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
-  "run_typed as r cx ds p =
+    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_answer" where
+  "run_typed sem as r cx ds p =
      (if \<not> wf_program_compile_input_exec p then Typed_Malformed
       else case cx of
-        Typed_Call_String k \<Rightarrow> mcp_run as r k ds p
-      | Typed_Entry_State \<Rightarrow> mcp_es_run as r ds p)"
+        Typed_Call_String k \<Rightarrow> mcp_run sem as r k ds p
+      | Typed_Entry_State \<Rightarrow> mcp_es_run sem as r ds p)"
 
 lemma mcp_run_sound:
   assumes wf: "wf_program_compile_input p"
-  shows "run_sound (mcp_run as r k ds p) ds p"
+  shows "run_sound (mcp_run sem as r k ds p) ds p"
 proof (intro allI impI)
   fix rs v c res
-  assume run: "mcp_run as r k ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
-  have solved: "TD_side_rule_Interp_solve_c r (typed_mcp.equations ds as k tglobal p)
+  assume run: "mcp_run sem as r k ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
+  have solved: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
       (cfg_exit (typed_cfg p ds), []) \<noteq> None"
-    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v)) (typed_mcp.verdict_report ds as k r tglobal p)"
+    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v)) (typed_mcp.verdict_report sem ds as k r tglobal p)"
     using run by (simp_all add: mcp_run_def split: if_splits)
-  have stops: "typed_mcp.terminates ds as k r tglobal p"
+  have stops: "typed_mcp.terminates sem ds as k r tglobal p"
     unfolding typed_mcp.terminates_code
     using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
-  obtain w where w: "(v, c, w) \<in> set (typed_mcp.verdict_report ds as k r tglobal p)"
+  obtain w where w: "(v, c, w) \<in> set (typed_mcp.verdict_report sem ds as k r tglobal p)"
     and res: "res = verdict_result w"
     using mem rs by auto
   show "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
@@ -344,18 +338,18 @@ qed
 
 lemma mcp_es_run_sound:
   assumes wf: "wf_program_compile_input p"
-  shows "run_sound (mcp_es_run as r ds p) ds p"
+  shows "run_sound (mcp_es_run sem as r ds p) ds p"
 proof (intro allI impI)
   fix rs v c res
-  assume run: "mcp_es_run as r ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
-  have solved: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations ds as tglobal p)
+  assume run: "mcp_es_run sem as r ds p = Typed_Analysed rs" and mem: "(v, c, res) \<in> set rs"
+  have solved: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
       (cfg_exit (typed_cfg p ds), tmcp_root_ctx) \<noteq> None"
-    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v)) (typed_mcp_es.verdict_report ds as r tglobal p)"
+    and rs: "rs = map (\<lambda>(u, c, v). (u, c, verdict_result v)) (typed_mcp_es.verdict_report sem ds as r tglobal p)"
     using run by (simp_all add: mcp_es_run_def split: if_splits)
-  have stops: "typed_mcp_es.terminates ds as r tglobal p"
+  have stops: "typed_mcp_es.terminates sem ds as r tglobal p"
     unfolding typed_mcp_es.terminates_code
     using TD_side_rule_Interp.solve_dom_of_solve_c[OF solved] by simp
-  obtain w where w: "(v, c, w) \<in> set (typed_mcp_es.verdict_report ds as r tglobal p)"
+  obtain w where w: "(v, c, w) \<in> set (typed_mcp_es.verdict_report sem ds as r tglobal p)"
     and res: "res = verdict_result w"
     using mem rs by auto
   show "(res = Check_Proved \<longrightarrow> (\<forall>s \<in> reaching ds p v. truthy (teval c s)))
@@ -369,7 +363,7 @@ proof (intro allI impI)
 qed
 
 theorem run_typed_sound:
-  assumes run: "run_typed as r cx ds p = Typed_Analysed rs"
+  assumes run: "run_typed sem as r cx ds p = Typed_Analysed rs"
     and mem: "(v, c, res) \<in> set rs"
   shows run_typed_proved_sound:
       "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
@@ -379,7 +373,7 @@ proof -
   have exec: "wf_program_compile_input_exec p"
     using run by (simp add: run_typed_def split: if_splits)
   note wf = wf_program_compile_input_exec_sound[OF exec]
-  have "run_sound (run_typed as r cx ds p) ds p"
+  have "run_sound (run_typed sem as r cx ds p) ds p"
     using mcp_es_run_sound[OF wf] mcp_run_sound[OF wf] exec
     by (simp add: run_typed_def split: typed_context.splits)
   then show "res = Check_Proved \<Longrightarrow> \<forall>s \<in> reaching ds p v. truthy (teval c s)"
