@@ -23,8 +23,15 @@ MISSING_FILE = "tests/regression/00-sanity/does-not-exist.vimp"
 SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp"
 COOP_FILE = "tests/typed/01-cooperation.vimp"
 GUARDS_FILE = "tests/typed/02-bool-guards.vimp"
+DEPTH_FILE = "tests/typed/03-query-depth.vimp"
 
 CASES = [
+    (
+        "query recursion past its depth bound answers No_Answer, not a crash",
+        ["--analysis", "interval,order", DEPTH_FILE],
+        3,
+        "nested analysis queries exceeded their depth bound",
+    ),
     (
         "--typed interval,order proves a check that needs both analyses",
         ["--typed", "interval,order", COOP_FILE],

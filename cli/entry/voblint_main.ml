@@ -307,6 +307,9 @@ type outcome =
      the contained run rather than from a gate this file keeps. *)
   | Malformed
   | Invalid_activation
+  (* The analyzer gave no certified report: the solver did not finish, or a
+     chain of nested queries exceeded its depth bound. *)
+  | No_answer
 
 (* Raised where an answer other than a successful run arrives, so every
    rendering below can be written against the output it needs. *)
@@ -341,7 +344,8 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                   output_string oc "R\n";
                   output_string oc s
               | Malformed -> output_string oc "M\n"
-              | Invalid_activation -> output_string oc "I\n");
+              | Invalid_activation -> output_string oc "I\n"
+              | No_answer -> output_string oc "N\n");
               close_out oc;
               0
             with e ->
@@ -390,6 +394,7 @@ let run_contained ~timeout (f : unit -> outcome) : (outcome, string) result =
                     | "R" -> Ok (Ok_report body)
                     | "M" -> Ok Malformed
                     | "I" -> Ok Invalid_activation
+                    | "N" -> Ok No_answer
                     | _ -> Error body)
                 | None -> Error "analysis subprocess produced no output")
             | _, Unix.WEXITED code ->
@@ -732,7 +737,7 @@ let () =
     match Analysis_request.analyse ~conf:(run_conf ()) ~decls prog with
     | C.Invalid_Activation -> raise (Answered Invalid_activation)
     | C.Malformed_Program -> raise (Answered Malformed)
-    | C.No_Answer -> failwith "voblint: the solver returned no answer"
+    | C.No_Answer -> raise (Answered No_answer)
     | C.Analysed result ->
         if !trace then emit_trace result;
         if !html || !dot || !graph_snapshot then
@@ -879,6 +884,11 @@ let () =
   | Ok Invalid_activation ->
       prerr_endline "voblint: --analysis names a domain more than once";
       exit 1
+  | Ok No_answer ->
+      prerr_endline
+        "voblint: no answer: the solver did not finish, or nested analysis \
+         queries exceeded their depth bound";
+      exit 3
   | Error msg ->
       Printf.eprintf "voblint: %s\n" msg;
       exit 3

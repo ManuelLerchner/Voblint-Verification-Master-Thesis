@@ -239,10 +239,22 @@ let resolve (r : request) : (resolved, request_error) result =
 let conf ~domains ~rule ~context ~sem =
   C.Voblint_conf_ext (domains, context, rule, sem, ())
 
+(* The message of the one abort in the generated analyzer: a chain of nested
+   queries deeper than query_depth (MCP_Spec.ask_rec). Logically such a query
+   answers top; the executable stops instead, so its run has no certified
+   report. A query cycle is not this abort: it answers top and the run goes on. *)
+let query_depth_exhausted = "query recursion exceeded query_depth"
+
 (* The analysis and its rendering, in sequence: the report run_voblint returns is
-   semantic, and the adapters read its rendering. *)
+   semantic, and the adapters read its rendering. A run cut short by query depth
+   answers No_Answer, as one the solver did not finish does; no other failure is
+   caught. *)
 let analyse ~conf ~decls program =
-  Value_symbols.render_answer (C.run_voblint conf decls program)
+  let answer =
+    try C.run_voblint conf decls program
+    with Failure msg when msg = query_depth_exhausted -> C.No_Answer
+  in
+  Value_symbols.render_answer answer
 
 (* The options' help, generated from [option_specs], in the layout of the
    other flags: name at column 2, text wrapped at column 29. *)

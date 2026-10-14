@@ -312,7 +312,9 @@ let run analysis_js globals_js context_js context_depth refinement_js
               Render_json.error_json ~raw
                 "Select at least one analysis, each at most once"
           | C.No_Answer ->
-              Render_json.error_json ~raw "The solver returned no answer"
+              Render_json.error_json ~raw
+                "No answer: the solver did not finish, or nested analysis queries \
+                 exceeded their depth bound"
           | C.Malformed_Program ->
               let message =
                 match Wf_explain.explain program with
