@@ -5,12 +5,12 @@ Voblint trace
   program:  tests/solver-trace/one-call.vimp
 
          (entry_main, root) reads Seed(main, root) = ⊥
-ROUTE    call at (pp2 "a = bump(5);" L9, root): entry interval: a=⊤, #ret=⊤, n=[5,5] -> context [[5,5]]
-FLUSH    Seed(bump, [[5,5]]) += interval: a=⊤, #ret=⊤, n=[5,5]  (changed)
+ROUTE    call at (pp2 "a = bump(5);" L9, root): entry interval: bump::n=[5,5], main::a=⊤, return=⊤ -> context [[5,5]]
+FLUSH    Seed(bump, [[5,5]]) += interval: bump::n=[5,5], main::a=⊤, return=⊤  (changed)
 QUERY    (pp3 "__voblint_check(a == 6);" L10, root) asks (exit_bump, [[5,5]])
-         (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: a=⊤, #ret=⊤, n=[5,5]
-         (exit_bump, [[5,5]]) returns interval: a=⊤, #ret=[6,6], n=[5,5]
-RETURN   (pp3 "__voblint_check(a == 6);" L10, root) = interval: a=[6,6], #ret=⊤, n=⊤
+         (entry_bump, [[5,5]]) reads Seed(bump, [[5,5]]) = interval: bump::n=[5,5], main::a=⊤, return=⊤
+         (exit_bump, [[5,5]]) returns interval: bump::n=[5,5], main::a=⊤, return=[6,6]
+RETURN   (pp3 "__voblint_check(a == 6);" L10, root) = interval: bump::n=⊤, main::a=[6,6], return=⊤
 
 CHECK    a == 6 at pp3: PROVED
 

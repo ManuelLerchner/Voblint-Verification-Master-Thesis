@@ -64,9 +64,11 @@ let read_back raw =
 (* ---------------------------------------------------------------- naming *)
 
 let node_name = A.point_name
-let value_text v = Value_symbols.decode (C.string_of_abstract_value v)
+(* The printers hand every value over as its rendering and every analysis by its
+   name, whatever analyzer the run used. *)
+let value_text v = Value_symbols.decode v
 
-let context_label (ctx : C.abstract_value C.analysis_context) =
+let context_label (ctx : string C.analysis_context) =
   match ctx with
   | C.Context_Unit -> "unit"
   | C.Context_Entry [] | C.Context_Call_String [] -> "root"
@@ -76,15 +78,6 @@ let context_label (ctx : C.abstract_value C.analysis_context) =
       "[" ^ String.concat " " (List.map A.point_name ps) ^ "]"
 
 type ('d, 'v) view = ('d * 'v C.field_state) list C.lifted
-
-(* The traced solve is the VIMP one, whose views name the VIMP analyses. *)
-let traced_label = function
-  | C.Sign_Analysis -> "sign"
-  | C.Interval_Analysis -> "interval"
-  | C.Int_Analysis _ -> "int"
-  | C.Parity_Analysis -> "parity"
-  | C.Congruence_Analysis -> "congruence"
-  | C.Order_Analysis -> "order"
 
 (* A state as one line, with [label] for each analysis and [value_text] for each
    value: the trace's own values, or the strings of the returned result. *)
@@ -105,7 +98,7 @@ let view_text_with label value_text (v : ('d, 'v) view) =
              | C.Field_Whole v -> value_text v)
            sections)
 
-let view_text v = view_text_with traced_label value_text v
+let view_text v = view_text_with Fun.id value_text v
 
 let proc_of = function
   | C.FunctionEntry p | C.FunctionResult p -> p
@@ -116,7 +109,7 @@ type global = Buffer | Program_global of string | Seed of C.cfg_node * Obj.t
 (* Everything that reads a run's unknowns and values, from its printers. *)
 type names = {
   point : C.cfg_node -> string;
-  context : Obj.t -> C.abstract_value C.analysis_context;
+  context : Obj.t -> string C.analysis_context;
   global : Obj.t -> global;
   local_value : Obj.t -> string;
   global_value : Obj.t -> Obj.t -> string;

@@ -1,6 +1,7 @@
 theory Trace_Run
   imports
     Analysis_Render
+    Typed_Report
     "Voblint_Solver.Solver_Trace"
 begin
 
@@ -40,8 +41,8 @@ lemma cs_route_traced [code]:
 text \<open>The formals route is generated per analysis registry, so it is wrapped, not restated.\<close>
 
 lemma trace_route:
-  fixes route :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
-    and route_rhs :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> call_action \<Rightarrow> 'c"
+  fixes route :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> ('v, 'e) gcall_action \<Rightarrow> 'c"
+    and route_rhs :: "pp \<Rightarrow> 'c \<Rightarrow> 'l \<Rightarrow> ('v, 'e) gcall_action \<Rightarrow> 'c"
   assumes "\<And>u ctx d ca. route u ctx d ca = route_rhs u ctx d ca"
   shows "route u ctx d ca =
     (let c = route_rhs u ctx d ca; _ = trace_event STR ''route'' (\<lambda>_. Ev_Route (u, ctx) d c) in c)"
@@ -66,25 +67,60 @@ text \<open>
 
 datatype 'c trace_key = Trace_Buffer | Trace_Global vname | Trace_Seed cfg_node 'c
 
+text \<open>
+  The printers hand the trace each analysis by its name and each value as its
+  rendering, so one trace reader serves every run, whatever the analyses' values.
+\<close>
+
+type_synonym trace_view = "(String.literal, String.literal) analysis_view"
+
 datatype ('c, 'g, 'd, 'l) trace_printers = Trace_Printers
-  "'c \<Rightarrow> abstract_value analysis_context"
+  "'c \<Rightarrow> String.literal analysis_context"
   "'g \<Rightarrow> 'c trace_key"
-  "'d \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
-  "vname option \<Rightarrow> 'd \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
-  "'l \<Rightarrow> (analysis_domain, abstract_value) analysis_view lifted"
+  "'d \<Rightarrow> trace_view lifted"
+  "vname option \<Rightarrow> 'd \<Rightarrow> trace_view lifted"
+  "'l \<Rightarrow> trace_view lifted"
+
+definition trace_view_of :: "('a \<Rightarrow> String.literal) \<Rightarrow> ('v \<Rightarrow> String.literal)
+    \<Rightarrow> ('a, 'v) analysis_view \<Rightarrow> trace_view" where
+  "trace_view_of name text = map (\<lambda>(a, f). (name a, map_field_state text f))"
+
+fun analysis_name :: "analysis_domain \<Rightarrow> String.literal" where
+  "analysis_name Sign_Analysis = STR ''sign''"
+| "analysis_name Interval_Analysis = STR ''interval''"
+| "analysis_name (Int_Analysis _) = STR ''int''"
+| "analysis_name Parity_Analysis = STR ''parity''"
+| "analysis_name Congruence_Analysis = STR ''congruence''"
+| "analysis_name Order_Analysis = STR ''order''"
+
+fun typed_domain_name :: "typed_domain \<Rightarrow> String.literal" where
+  "typed_domain_name Typed_Sign = STR ''sign''"
+| "typed_domain_name Typed_Interval = STR ''interval''"
+| "typed_domain_name (Typed_Int _) = STR ''int''"
+| "typed_domain_name Typed_Parity = STR ''parity''"
+| "typed_domain_name Typed_Congruence = STR ''congruence''"
+| "typed_domain_name Typed_Order = STR ''order''"
 
 fun key_of_global_unknown :: "(vname, 'c) global_unknown \<Rightarrow> 'c trace_key" where
   "key_of_global_unknown Analysis_Buffer = Trace_Buffer"
 | "key_of_global_unknown (Analysis_Global x) = Trace_Global x"
 | "key_of_global_unknown (Activation_Seed n c) = Trace_Seed n c"
 
+text \<open>A typed run keeps every variable in a point's own state; its one global unknown
+  besides the seeds is the node-owned buffer.\<close>
+
+fun typed_key_of_global_unknown :: "(unit, 'c) global_unknown \<Rightarrow> 'c trace_key" where
+  "typed_key_of_global_unknown (Activation_Seed n c) = Trace_Seed n c"
+| "typed_key_of_global_unknown _ = Trace_Buffer"
+
 definition mcp_trace_printers ::
     "program_globals \<Rightarrow> analysis_domain list \<Rightarrow> imp_prog
-       \<Rightarrow> ('c \<Rightarrow> abstract_value analysis_context)
+       \<Rightarrow> ('c \<Rightarrow> String.literal analysis_context)
        \<Rightarrow> ('c, (vname, 'c) global_unknown, (mcp_st lifted, mcp_st lifted) dg_state, mcp_st lifted)
             trace_printers" where
   "mcp_trace_printers pg as p ctx_view =
-     (let raw = (\<lambda>vs d. map_lift (mcp_render (activation as) vs)
+     (let raw = (\<lambda>vs d. map_lift (trace_view_of analysis_name string_of_abstract_value
+                                    \<circ> mcp_render (activation as) vs)
                          (map_lift (mcp_rd (declared_global p)) d));
           view = (\<lambda>d. raw (program_vars p) (canonicalize_lift (mcp_emp (activation as) p) d));
           local = (case pg of
@@ -96,6 +132,22 @@ definition mcp_trace_printers ::
                      | Some x \<Rightarrow> [x])
       in Trace_Printers ctx_view key_of_global_unknown (\<lambda>d. local (dg_local d))
            (\<lambda>n d. raw (globals n) (dg_global d)) local)"
+
+text \<open>A typed run's values are read as its report renders them, each variable by its
+  label. The trace also shows the return slot, which carries a callee's result to its
+  caller.\<close>
+
+definition typed_trace_printers ::
+    "typed_domain list \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> ('c \<Rightarrow> String.literal analysis_context)
+       \<Rightarrow> ('c, (unit, 'c) global_unknown, (tmcp_st lifted, tmcp_st lifted) dg_state, tmcp_st lifted)
+            trace_printers" where
+  "typed_trace_printers as ds p ctx_view =
+     (let view = (\<lambda>d. map_lift (trace_view_of typed_domain_name string_of_typed_value
+                                  \<circ> typed_render (tactivation as)
+                                      (typed_vars (typed_cfg p ds) @ [ReturnVar]))
+                        (map_lift (tmcp_rd tglobal) d))
+      in Trace_Printers ctx_view typed_key_of_global_unknown (\<lambda>d. view (dg_local d))
+           (\<lambda>n d. view (dg_global d)) view)"
 
 lemma trace_run:
   "f = rhs \<Longrightarrow> f = (let _ = trace_event STR ''run'' e in rhs)"
@@ -123,10 +175,45 @@ lemmas analysis_report_of_traced [code] =
   trace_run[OF analysis_report_of.simps(1)[of as r pg p],
     of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>_ :: unit. Context_Unit)"]
   trace_run[OF analysis_report_of.simps(2)[of as r pg p],
-    of "\<lambda>_. mcp_trace_printers pg as p (\<lambda>ctx. Context_Entry (mcp_ctx_values (activation as) ctx))"]
+    of "\<lambda>_. mcp_trace_printers pg as p
+              (\<lambda>ctx. Context_Entry (map string_of_abstract_value (mcp_ctx_values (activation as) ctx)))"]
   trace_run[OF analysis_report_of.simps(3)[of as r k pg p],
     of "\<lambda>_. mcp_trace_printers pg as p Context_Call_String"]
   for as r k pg p
+
+text \<open>
+  A typed run is traced the same way: its printers are announced before the solve,
+  and the solve reports its steps. A call-string context of length zero is shown as no
+  context, as the report shows it.
+\<close>
+
+declare typed_report_run_def [code del]
+
+lemma typed_report_run_traced [code]:
+  "typed_report_run sem as r cx ds p =
+     (case cx of
+        Typed_Call_String k \<Rightarrow>
+          (let _ = trace_event STR ''run''
+                     (\<lambda>_. typed_trace_printers as ds p
+                            (if k = 0 then (\<lambda>_ :: cfg_node list. Context_Unit)
+                             else Context_Call_String))
+           in map_option (typed_cs_report sem as r k ds p)
+                (solve_c_traced r (typed_mcp.equations sem ds as k tglobal p)
+                   (cfg_exit (typed_cfg p ds), [])))
+      | Typed_Entry_State \<Rightarrow>
+          (let _ = trace_event STR ''run''
+                     (\<lambda>_. typed_trace_printers as ds p
+                            (\<lambda>ctx. Context_Entry (map string_of_typed_value
+                                     (typed_ctx_values (tactivation as) ctx))))
+           in map_option (typed_es_report sem as r ds p)
+                (solve_c_traced r (typed_mcp_es.equations sem ds as tglobal p)
+                   (cfg_exit (typed_cfg p ds), tmcp_root_ctx))))"
+  by (simp add: typed_report_run_def solve_c_traced_eq trace_event_def split: typed_context.split)
+
+declare tmcp_route_def [code del]
+
+lemmas tmcp_route_traced [code] =
+  trace_route[where route = "tmcp_route as G", OF tmcp_route_def] for as G
 
 subsection \<open>The hook\<close>
 
