@@ -43,8 +43,7 @@ let usage =
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order|sign|parity[,...] [--context \
-   none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
+   \n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -704,7 +703,9 @@ let () =
     (match answer with
     | C.Analysed result ->
         print_endline
-          (Render_json.result_json ~shared:false 0. prog ~stmt_positions
+          (Render_json.result_json
+             ~shared:(placement = C.Program_Globals_Flow_Insensitive)
+             0. prog ~stmt_positions
              ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
