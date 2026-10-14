@@ -110,10 +110,15 @@ qed
 subsection \<open>Verdicts\<close>
 
 text \<open>
-  \<open>report_checks_at\<close> selects the checks a report records at one program point.
+  The reading of a report is the same for every language it is built for: the
+  vocabulary below takes any report, whatever its expressions and states, and
+  only the evaluator that says what a condition means at a store is the
+  language's. \<open>report_checks_at\<close> selects the checks a report records at one
+  program point.
 \<close>
 
-definition report_checks_at :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp result_check set" where
+definition report_checks_at ::
+    "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 'e result_check set" where
   "report_checks_at res v = {c \<in> set (report_checks res). check_point c = v}"
 
 lemma mem_report_checks_at [simp]:
@@ -121,49 +126,57 @@ lemma mem_report_checks_at [simp]:
   by (simp add: report_checks_at_def)
 
 text \<open>
-  What a decided verdict says about a store: \<open>Check_Proved\<close> that the condition
-  holds, \<open>Check_Refuted\<close> that it fails, \<open>Check_Unknown\<close> nothing.
+  What a decided verdict says about a store, under an evaluator \<open>ev\<close>:
+  \<open>Check_Proved\<close> that the condition holds, \<open>Check_Refuted\<close> that it fails,
+  \<open>Check_Unknown\<close> nothing.
 \<close>
 
-fun verdict_holds :: "check_result \<Rightarrow> exp \<Rightarrow> store \<Rightarrow> bool" where
-  "verdict_holds Check_Proved e s = truthy (\<lbrakk>e\<rbrakk>\<^sub>e s)"
-| "verdict_holds Check_Refuted e s = (\<not> truthy (\<lbrakk>e\<rbrakk>\<^sub>e s))"
-| "verdict_holds Check_Unknown e s = True"
+fun verdict_holds :: "('e \<Rightarrow> 't \<Rightarrow> int) \<Rightarrow> check_result \<Rightarrow> 'e \<Rightarrow> 't \<Rightarrow> bool" where
+  "verdict_holds ev Check_Proved e s = truthy (ev e s)"
+| "verdict_holds ev Check_Refuted e s = (\<not> truthy (ev e s))"
+| "verdict_holds ev Check_Unknown e s = True"
 
 text \<open>
   The stores a check's verdict admits. A \<open>Dead\<close> check claims nothing about stores;
   its claim, that the point is unreached, is \<open>DEAD\<close> below.
 \<close>
 
-definition check_stores :: "exp result_check \<Rightarrow> store set" where
-  "check_stores c = (case check_verdict c of
-                       Decided r \<Rightarrow> {s. verdict_holds r (check_exp c) s}
-                     | Dead \<Rightarrow> UNIV)"
+definition check_stores :: "('e \<Rightarrow> 't \<Rightarrow> int) \<Rightarrow> 'e result_check \<Rightarrow> 't set" where
+  "check_stores ev c = (case check_verdict c of
+                          Decided r \<Rightarrow> {s. verdict_holds ev r (check_exp c) s}
+                        | Dead \<Rightarrow> UNIV)"
 
 definition verdict_stores :: "vimp_report \<Rightarrow> pp \<Rightarrow> store set" ("\<V>\<^bsub>_\<^esub>") where
-  "\<V>\<^bsub>res\<^esub> v = (\<Inter>c \<in> report_checks_at res v. check_stores c)"
+  "\<V>\<^bsub>res\<^esub> v = (\<Inter>c \<in> report_checks_at res v. check_stores aval c)"
 
 lemma verdict_stores_eq:
   "\<V>\<^bsub>res\<^esub> v =
      {s. \<forall>c \<in> report_checks_at res v. \<forall>r.
-           check_verdict c = Decided r \<longrightarrow> verdict_holds r (check_exp c) s}"
+           check_verdict c = Decided r \<longrightarrow> verdict_holds aval r (check_exp c) s}"
   unfolding verdict_stores_def check_stores_def by (auto split: lifted.splits)
 
-definition HAS_VERDICT :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> check_result \<Rightarrow> bool" where
+text \<open>
+  The verdict a report gives a condition at a point. \<open>PROVED res v c\<close> says the
+  report proves check \<open>c\<close> at \<open>v\<close>: since a point may carry several checks, the
+  condition names the one meant.
+\<close>
+
+definition HAS_VERDICT ::
+    "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 'e \<Rightarrow> check_result \<Rightarrow> bool" where
   "HAS_VERDICT res v e r \<longleftrightarrow>
      (\<exists>c \<in> report_checks_at res v. check_exp c = e \<and> check_verdict c = Decided r)"
 
-abbreviation PROVED :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation PROVED :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 'e \<Rightarrow> bool" where
   "PROVED res v e \<equiv> HAS_VERDICT res v e Check_Proved"
 
-abbreviation REFUTED :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation REFUTED :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 'e \<Rightarrow> bool" where
   "REFUTED res v e \<equiv> HAS_VERDICT res v e Check_Refuted"
 
-abbreviation UNKNOWN :: "vimp_report \<Rightarrow> pp \<Rightarrow> exp \<Rightarrow> bool" where
+abbreviation UNKNOWN :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 'e \<Rightarrow> bool" where
   "UNKNOWN res v e \<equiv> HAS_VERDICT res v e Check_Unknown"
 
 lemma verdict_storesD:
-  "s \<in> \<V>\<^bsub>res\<^esub> v \<Longrightarrow> HAS_VERDICT res v e r \<Longrightarrow> verdict_holds r e s"
+  "s \<in> \<V>\<^bsub>res\<^esub> v \<Longrightarrow> HAS_VERDICT res v e r \<Longrightarrow> verdict_holds aval r e s"
   unfolding verdict_stores_eq HAS_VERDICT_def by blast
 
 text \<open>
@@ -174,8 +187,18 @@ text \<open>
   for a product of analyses, so the converse of \<open>analysis_report_dead\<close> does not hold.
 \<close>
 
-definition DEAD :: "vimp_report \<Rightarrow> pp \<Rightarrow> bool" where
+definition DEAD :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
   "DEAD res v \<longleftrightarrow> (\<forall>d \<in> report_states_at res v. d = Bot)"
+
+text \<open>
+  \<open>SAFE\<close> says the report names no arithmetic diagnostic at a point. What that
+  guarantees depends on which obligations the report was built to decide: a
+  language's soundness theorem states it for the obligations of its own
+  expressions, and says nothing about a hazard the report does not check.
+\<close>
+
+definition SAFE :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
+  "SAFE res v \<longleftrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)"
 
 subsection \<open>A consistent report\<close>
 
@@ -219,7 +242,7 @@ text \<open>
 \<close>
 
 lemma (in sound_classifier) classify_verdict_holds:
-  "t \<in> gm d \<Longrightarrow> verdict_holds (classify cnd d) cnd t"
+  "t \<in> gm d \<Longrightarrow> verdict_holds aval (classify cnd d) cnd t"
   by (cases "classify cnd d") (auto dest: proved refuted)
 
 theorem analysis_report_verdicts_sound:
@@ -235,10 +258,10 @@ proof
   proof (intro CollectI ballI allI impI)
     fix c r
     assume c: "c \<in> report_checks_at res v" and verdict: "check_verdict c = Decided r"
-    have holds: "verdict_holds (report_classify res (check_exp c) d) (check_exp c) s"
+    have holds: "verdict_holds aval (report_classify res (check_exp c) d) (check_exp c) s"
       using s unfolding report_classify_def report_gamma_def
       by (rule sound_classifier.classify_verdict_holds [OF mcp_sound_classifier])
-    show "verdict_holds r (check_exp c) s"
+    show "verdict_holds aval r (check_exp c) s"
     proof (cases "r = Check_Unknown")
       case False
       with consistent_report_decided[OF assms c verdict False row] holds show ?thesis by simp

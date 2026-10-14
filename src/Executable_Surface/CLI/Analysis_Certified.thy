@@ -295,7 +295,7 @@ proof -
     have "\<R>\<^bsub>res\<^esub> v = {}" using \<open>check_point c = v\<close> analysis_report_dead by blast
     with sem show False by blast
   qed
-  moreover have holds: "verdict_holds r e s" if "check_verdict c = Decided r" for r
+  moreover have holds: "verdict_holds aval r e s" if "check_verdict c = Decided r" for r
   proof (rule verdict_storesD [OF verdicts])
     show "HAS_VERDICT res v e r"
       unfolding HAS_VERDICT_def

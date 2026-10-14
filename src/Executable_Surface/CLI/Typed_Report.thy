@@ -88,6 +88,9 @@ definition tobligation_holds :: "texp arithmetic_obligation \<Rightarrow> tstore
         Division_By_Zero \<Rightarrow> teval (arithmetic_operand ob) t \<noteq> 0
       | _ \<Rightarrow> tunwrapped (arithmetic_operation ob) t \<in> ik_range (texp_kind (arithmetic_operation ob)))"
 
+abbreviation tsatisfies :: "tstore \<Rightarrow> texp arithmetic_obligation \<Rightarrow> bool" (infix "\<Turnstile>" 50) where
+  "s \<Turnstile> ob \<equiv> tobligation_holds ob s"
+
 text \<open>
   An overflow obligation is decided as Goblint decides it, from the interval of the
   unwrapped result: the operands' values are asked through \<open>EvalInt\<close>, so every active
@@ -218,6 +221,16 @@ definition treturn_sites ::
 definition tobligation_sites :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> texp arithmetic_obligation list) list" where
   "tobligation_sites ds p =
      obligation_sites tarith_obligations (typed_cfg p ds) @ treturn_sites ds p"
+
+text \<open>The obligations a typed report decides at a point, and what it means for a store
+  to meet one: \<open>s \<Turnstile> ob\<close>.\<close>
+
+definition tobligations_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> pp \<Rightarrow> texp arithmetic_obligation set" where
+  "tobligations_at ds p v = (\<Union>(u, obs) \<in> set (tobligation_sites ds p). if u = v then set obs else {})"
+
+lemma mem_tobligations_at:
+  "ob \<in> tobligations_at ds p v \<longleftrightarrow> (\<exists>obs. (v, obs) \<in> set (tobligation_sites ds p) \<and> ob \<in> set obs)"
+  by (force simp: tobligations_at_def split: if_splits)
 
 text \<open>The variables a report lists: every variable an edge or a call of the typed graph
   mentions.\<close>

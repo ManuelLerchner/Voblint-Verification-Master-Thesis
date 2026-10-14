@@ -188,4 +188,68 @@ corollary run_voblint_no_conversion_overflow:
     run_voblint_arithmetic_safe[OF run absent s]
   by (metis tobligation_holds_conversion(1))
 
+subsection \<open>The report's vocabulary\<close>
+
+text \<open>
+  The guarantees above, read through the predicates every report shares:
+  \<^const>\<open>PROVED\<close>, \<^const>\<open>REFUTED\<close>, \<^const>\<open>DEAD\<close> and \<^const>\<open>SAFE\<close>, and
+  \<open>s \<Turnstile> ob\<close> for a store meeting an obligation. \<open>reaching ds p v\<close> are the stores that
+  reach \<open>v\<close>. A proved check holds at each of them and a refuted one fails; a dead
+  point has none; at a safe point every obligation the report decides there holds.
+  None of them says that \<open>v\<close> is reached.
+
+  \<open>SAFE\<close> is only as strong as the obligations it covers: those of every expression
+  an edge or a call at \<open>v\<close> evaluates and of every value returned there that a
+  caller converts to a narrower kind (\<open>run_voblint_obligations_cover\<close>). It says
+  nothing about a hazard Voblint does not check, such as the conversion of a
+  library call's result.
+\<close>
+
+theorem run_voblint_report_sound:
+  assumes run: "run_voblint conf ds p = Analysed res" and s: "s \<in> reaching ds p v"
+  shows run_voblint_PROVED: "PROVED res v c \<Longrightarrow> truthy (teval c s)"
+    and run_voblint_REFUTED: "REFUTED res v c \<Longrightarrow> \<not> truthy (teval c s)"
+    and run_voblint_DEAD: "DEAD res v \<Longrightarrow> False"
+    and run_voblint_SAFE: "SAFE res v \<Longrightarrow> ob \<in> tobligations_at ds p v \<Longrightarrow> s \<Turnstile> ob"
+proof -
+  show "PROVED res v c \<Longrightarrow> truthy (teval c s)"
+    using run_voblint_proved[OF run] s by (auto simp: HAS_VERDICT_def)
+  show "REFUTED res v c \<Longrightarrow> \<not> truthy (teval c s)"
+    using run_voblint_refuted[OF run] s by (auto simp: HAS_VERDICT_def)
+  show "DEAD res v \<Longrightarrow> False"
+    using run_voblint_states[OF run s] by (auto simp: DEAD_def)
+  show "SAFE res v \<Longrightarrow> ob \<in> tobligations_at ds p v \<Longrightarrow> s \<Turnstile> ob"
+  proof -
+    assume safe: "SAFE res v" and ob: "ob \<in> tobligations_at ds p v"
+    from run have wf: "wf_program_compile_input p"
+      and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
+                  (conf_context conf) ds p = Some res"
+      by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+    from ob obtain obs where "(v, obs) \<in> set (tobligation_sites ds p)" and "ob \<in> set obs"
+      by (auto simp: mem_tobligations_at)
+    from typed_report_obligation_safe[OF wf rep s this] safe show "s \<Turnstile> ob"
+      by (simp add: SAFE_def)
+  qed
+qed
+
+corollary run_voblint_dead_unreached:
+  "run_voblint conf ds p = Analysed res \<Longrightarrow> DEAD res v \<Longrightarrow> reaching ds p v = {}"
+  using run_voblint_DEAD by blast
+
+text \<open>Every obligation of an expression evaluated at \<open>v\<close>, and every narrowing
+  conversion of a value returned at \<open>v\<close>, is one the report decides there.\<close>
+
+lemma run_voblint_obligations_cover:
+  shows "(v, a, w) \<in> intra (typed_cfg p ds) \<Longrightarrow> e \<in> set (edge_expressions a)
+           \<Longrightarrow> set (tarith_obligations e) \<subseteq> tobligations_at ds p v"
+    and "(v, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> e \<in> set (ce_args ca)
+           \<Longrightarrow> set (tarith_obligations e) \<subseteq> tobligations_at ds p v"
+    and "(u, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> ce_dst ca = Some x
+           \<Longrightarrow> (v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (typed_cfg p ds)
+           \<Longrightarrow> \<not> ik_widens (texp_kind e) (kenv_of ds x)
+           \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TCast (kenv_of ds x) e) e
+                 \<in> tobligations_at ds p v"
+  by (auto simp: mem_tobligations_at dest: tobligation_site_intra tobligation_site_call
+      intro: tobligation_site_return)
+
 end
