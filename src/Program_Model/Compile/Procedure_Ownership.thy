@@ -227,7 +227,7 @@ qed
 
 lemma compile_procs_entry_mem:
   "compile_procs \<Pi> ps n = (n', E, K) \<Longrightarrow> (FunctionEntry r, a, v) \<in> E \<Longrightarrow> r \<in> set ps"
-  using compile_procs_intra_origin compile_proc_entry_mem by blast
+  using compile_procs_intra_origin compile_proc_entry_mem by metis
 
 text \<open>Under \<open>distinct ps\<close> a member's fragment owns every edge of the pass that sources in the
   member's nodes: the other members are compiled over disjoint counter ranges, and their
@@ -463,7 +463,7 @@ proof -
       by blast
     have ent0: "(FunctionEntry r, EA_Body r, Statement m0) \<in> intra ?g"
       using EI Ersub compile_proc_entry_edge[OF cpr] by auto
-    have mm: "m = m0" using compile_prog_entry_out_unique[OF wf ent ent0] by simp
+    have mm: "m = m0" using compile_prog_entry_out_unique[OF wf ent ent0] by auto
     have mout: "m' = m0'" "Ep = Er" "Kp = Kr" using cb cpr mm by simp_all
     have neq: "prog_main_name \<noteq> r" using False by simp
     show ?thesis unfolding mm mout
