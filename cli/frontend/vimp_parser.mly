@@ -85,6 +85,8 @@ let close_definition header_start header_end ((name, _, _, _, _) as decl) =
 %type <Vimp_typing.global_line list> global_line_star
 %type <Vimp_typing.formal> tformal
 %type <Vimp_typing.formal list> tformals
+%type <string * (unit, string, Voblint.exp) Voblint.gcom> init_decl
+%type <(string * (unit, string, Voblint.exp) Voblint.gcom) list> init_decls
 %type <(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list> local_decl
 %type <(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list> local_decl_star
 %type <Vimp_typing.definition> function_decl
@@ -247,15 +249,26 @@ tformals:
 
 (* A local declaration starts its variable at an arbitrary value of its kind,
    written out as a library call so the semantics, not the parser, says what
-   that value may be. *)
+   that value may be. An initializer, as in C's `i8 x = 2;`, is an assignment
+   instead, converted to the variable's kind as any assignment is. Each
+   declarator is one statement at its own position. *)
+init_decl:
+  | x = IDENT
+      { (x,
+         record_stmt_pos $startpos $endpos
+           (Voblint.Call ((), Some x, "__voblint_nondet_int", []))) }
+  | x = IDENT ASSIGN e = exp
+      { (x, record_stmt_pos $startpos $endpos (Voblint.Assign ((), x, e))) }
+
+init_decls:
+  | d = init_decl
+      { [d] }
+  | ds = init_decls COMMA d = init_decl
+      { ds @ [d] }
+
 local_decl:
-  | k = kind xs = ids SEMI
-      { List.map
-          (fun x ->
-            (x, k,
-             record_stmt_pos $startpos $endpos
-               (Voblint.Call ((), Some x, "__voblint_nondet_int", []))))
-          xs }
+  | k = kind ds = init_decls SEMI
+      { List.map (fun (x, c) -> (x, k, c)) ds }
 
 local_decl_star:
   | (* empty *)

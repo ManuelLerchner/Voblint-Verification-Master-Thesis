@@ -13,7 +13,8 @@
    theorems cover the typed semantics. Declared locals are not zero: the parser
    starts the body with `x = __voblint_nondet_int();` for each one, so a local
    holds an arbitrary value of its kind until the program writes it, as an
-   uninitialized C automatic does. Globals start at zero, as C's static
+   uninitialized C automatic does. A local with an initializer, `u8 x = 2;`,
+   starts with the assignment `x = 2;` instead. Globals start at zero, as C's static
    storage does. *)
 
 type global_line = string list * Voblint.ikind option

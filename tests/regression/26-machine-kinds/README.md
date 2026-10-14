@@ -5,7 +5,9 @@ Programs that declare machine kinds in C style: on a `global` line
 (`fun u16 f(...)`), or as a local declared before a body's first statement
 (`u8 x;`). A program that writes any kind must write one on every global and
 formal, and must declare every local. A declared local starts at an arbitrary
-value of its kind; a global starts at zero.
+value of its kind unless it has an initializer (`i8 x = 2;`), which assigns the
+value converted to the local's kind, as any assignment does; a global starts at
+zero. `11` checks initializers.
 
 The frontend elaborates a typed program with the verified `typed_prog`: every
 operation computes at its C kind, every conversion becomes an explicit `Cast`,
