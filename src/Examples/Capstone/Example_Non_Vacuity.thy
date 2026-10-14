@@ -1,22 +1,22 @@
 theory Example_Non_Vacuity
-  imports Example_End_To_End_Certificate
+  imports "Voblint_CLI.Run_Voblint" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>The headline theorems are not vacuous\<close>
 
 text \<open>
   A theorem whose premises no configuration meets is true and says nothing. This
-  theory shows, for each endpoint of \<^theory>\<open>Voblint_CLI.Analysis_Certified\<close>, that its
+  theory shows, for the endpoints of \<^theory>\<open>Voblint_CLI.Run_Voblint\<close>, that their
   premises hold together on one concrete program, and that the conclusion is then
   informative: the verdict it constrains is \<^const>\<open>Check_Proved\<close> or \<^const>\<open>Dead\<close>, not
   \<^const>\<open>Check_Unknown\<close>. It then shows five conditions to be load-bearing: the
-  definite verdicts in \<^const>\<open>verdict_stores\<close>, the transfer obligation of the
-  congruence remainder, the context correlation of RETURN and the TOTAL obligation in
+  definite verdicts a report states, the transfer obligation of the congruence
+  remainder, the context correlation of RETURN and the TOTAL obligation in
   \<^const>\<open>activation_coverage\<close>, and the pairing in \<^const>\<open>entry_pairs_cover\<close>. Dropping
-  or weakening each admits an answer that misses a concrete exe    by (elim IfSE) (blast intro: gpstep.IfTrue gpstep.IfFalse)+cution.
+  or weakening each admits an answer that misses a concrete execution.
 
   Non-vacuity is a property of the premises. It says nothing about whether
-  \<^const>\<open>pstep\<close> models the intended language.
+  \<^const>\<open>tpstep\<close> models the intended language.
 \<close>
 
 subsection \<open>The two-call program\<close>
@@ -38,12 +38,13 @@ definition nv_prog :: imp_prog where
      }
    }"
 
-abbreviation nv_config :: analysis_config where
-  "nv_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Warrow Ctx_EntryState
-     Program_Globals_Flow_Sensitive"
+definition nv_conf :: voblint_conf where
+  "nv_conf = \<lparr>conf_analyses = [Typed_Interval], conf_context = Typed_Entry_State,
+     conf_globals = Globals_Warrow, conf_program_globals = Program_Globals_Flow_Sensitive,
+     conf_sem = default_sem_conf\<rparr>"
 
 lemma nv_report:
-  "(case run_voblint_legacy nv_config nv_prog of
+  "(case run_voblint nv_conf [] nv_prog of
       Analysed res \<Rightarrow>
         map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
           = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
@@ -52,135 +53,141 @@ lemma nv_report:
 
 lemma nv_analysed:
   obtains res where
-    "run_voblint_legacy nv_config nv_prog = Analysed res"
+    "run_voblint nv_conf [] nv_prog = Analysed res"
     "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
        = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
-  using nv_report
-  by (cases "run_voblint_legacy nv_config nv_prog") auto
+  using nv_report by (cases "run_voblint nv_conf [] nv_prog") auto
 
 subsection \<open>The premises, discharged\<close>
 
 text \<open>
   Each premise of the source-level endpoints, proved for \<open>nv_prog\<close>: the zero store is
-  initial, there are no globals, and the source run reaches the first check
-  (\<open>nv_to_check\<close>).
+  initial, and the typed run reaches the first check (\<open>nv_to_check\<close>).
 \<close>
 
-lemma nv_init: "(\<lambda>_. 0) \<in> cinit_stores (declared_global nv_prog)"
-  by (simp add: cinit_stores_def)
+abbreviation nv_var :: "vname \<Rightarrow> var_id" where
+  "nv_var x \<equiv> ScopedId (STR ''main'') x"
 
-lemma nv_no_globals: "declared_global nv_prog = (\<lambda>_. False)"
-  by (simp add: nv_prog_def fun_eq_iff)
+lemma nv_init: "(\<lambda>_. 0) \<in> tinit_stores (kenv_of [])"
+  by (simp add: tinit_stores_def styped_def kenv_of_def)
 
-lemma nv_table:
-  "prog_table nv_prog (STR ''bump'')
-     = Some \<lparr>formals = [STR ''n''],
-              body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
-  by (simp add: nv_prog_def prog_main_name_def)
+lemma nv_bump:
+  "typed_ptable nv_prog [] (STR ''bump'')
+     = Some \<lparr>formals = [ScopedId (STR ''bump'') (STR ''n'')],
+             body = Return () (Some (TArith I32 AAdd (TVar I32 (ScopedId (STR ''bump'') (STR ''n'')))
+                                       (TN I32 1)))\<rparr>"
+  by eval
 
 lemma nv_main:
-  "main_body (prog_table nv_prog)
-     = VIMP_Proc.gcom.Seq
-         (VIMP_Proc.gcom.Seq
-            (VIMP_Proc.gcom.Seq
-               (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-               (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-            (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))))
-         (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))"
-  by (simp add: nv_prog_def main_body_def prog_main_name_def)
+  "main_body (typed_ptable nv_prog [])
+     = Seq (Seq (Seq (gcom.Call () (Some (nv_var (STR ''a''))) (STR ''bump'') [TN I32 5])
+                     (gcom.Call () (Some (nv_var (STR ''b''))) (STR ''bump'') [TN I32 4]))
+                (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))))
+           (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5)))"
+  by eval
+
+text \<open>One call of \<open>bump\<close>: enter, return \<open>n + 1\<close>, and resume the caller.\<close>
 
 lemma nv_call:
-  "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.gcom.Call () (Some x) (STR ''bump'') [N k]) s (s(x := k + 1))"
-  using pcompletes_Call_return
-          [where \<Pi> = "prog_table nv_prog" and p = "STR ''bump''"
-             and decl = "\<lparr>formals = [STR ''n''],
-                          body = VIMP_Proc.gcom.Return () (Some (Plus (V (STR ''n'')) (N 1)))\<rparr>"
-             and e = "Plus (V (STR ''n'')) (N 1)" and actuals = "[N k]" and dst = "Some x"
-             and \<G> = "declared_global nv_prog" and s = s,
-           OF nv_table]
-  by (simp add: nv_no_globals enter_state_def combine_env_def)
-
-abbreviation nv_final :: store where
-  "nv_final \<equiv> (\<lambda>_. 0)(STR ''a'' := 6, STR ''b'' := 5)"
-
-lemma nv_calls:
-  "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-        (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-     (\<lambda>_. 0) nv_final"
+  assumes k: "k \<in> ik_range I32" and k1: "k + 1 \<in> ik_range I32"
+  shows "star (tpstep (kenv_of []) (typed_ptable nv_prog []))
+     (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, [])
+     (SKIP (), t(nv_var x := k + 1), [])"
 proof -
-  have c1: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5]) (\<lambda>_. 0)
-              ((\<lambda>_. 0)(STR ''a'' := 6))"
-    using nv_call [where x = "STR ''a''" and k = 5 and s = "\<lambda>_. 0"] by simp
-  have c2: "pcompletes (declared_global nv_prog) (prog_table nv_prog)
-              (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4])
-              ((\<lambda>_. 0)(STR ''a'' := 6)) nv_final"
-    using nv_call [where x = "STR ''b''" and k = 4 and s = "(\<lambda>_. 0)(STR ''a'' := 6)"]
+  let ?\<kappa> = "kenv_of []" and ?\<Pi> = "typed_ptable nv_prog []"
+  let ?n = "ScopedId (STR ''bump'') (STR ''n'')"
+  let ?E = "TArith I32 AAdd (TVar I32 ?n) (TN I32 1)"
+  let ?c = "bind_formals [?n] (map2 (\<lambda>y. tconv ?\<kappa> (Some y)) [?n] [teval (TN I32 k) t])
+              (enter_state tglobal t)"
+  let ?c' = "?c(ReturnVar := teval ?E ?c)"
+  have s1: "tpstep ?\<kappa> ?\<Pi> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, [])
+              (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])"
+    using typed.pstep_Call[where \<Pi> = ?\<Pi> and p = "STR ''bump''", OF nv_bump,
+        of "[TN I32 k]" ?\<kappa> "()" "Some (nv_var x)" t "[]"]
     by simp
-  show ?thesis by (rule pcompletes_Seq [OF c1 c2])
+  have s2: "tpstep ?\<kappa> ?\<Pi> (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])
+              (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])"
+    by (rule typed.Seq2) (rule typed.ReturnSome)
+  have s3: "tpstep ?\<kappa> ?\<Pi> (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])
+              (SKIP (), combine_assign (Some (nv_var x)) (tconv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar))
+                          (combine_env tglobal t ?c'), [])"
+    by (rule typed.UnwindAct)
+  have eq: "combine_assign (Some (nv_var x)) (tconv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar))
+              (combine_env tglobal t ?c') = t(nv_var x := k + 1)"
+    using k k1
+    by (auto simp: fun_eq_iff combine_env_def enter_state_def kenv_of_def simp del: ik_range_iff)
+  show ?thesis
+    using s1 s2 s3 by (simp only: eq[symmetric]) (meson star.step star.refl)
 qed
 
-text \<open>The source run, stopped with the first check about to execute.\<close>
+abbreviation nv_final :: tstore where
+  "nv_final \<equiv> (\<lambda>_. 0)(nv_var (STR ''a'') := 6, nv_var (STR ''b'') := 5)"
+
+abbreviation nv_checks :: "(unit, var_id, texp) gcom" where
+  "nv_checks \<equiv> Seq (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)))
+                  (Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5)))"
+
+text \<open>The typed run, stopped with the first check about to execute.\<close>
 
 lemma nv_to_check:
-  "declared_global nv_prog, prog_table nv_prog \<turnstile>
-     (main_body (prog_table nv_prog), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-     (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-        (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))), nv_final, [])"
+  "star (tpstep (kenv_of []) (typed_ptable nv_prog []))
+     (main_body (typed_ptable nv_prog []), \<lambda>_. 0, []) (nv_checks, nv_final, [])"
 proof -
-  have "declared_global nv_prog, prog_table nv_prog \<turnstile>
-          (VIMP_Proc.gcom.Seq
-             (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Call () (Some (STR ''a'')) (STR ''bump'') [N 5])
-                (VIMP_Proc.gcom.Call () (Some (STR ''b'')) (STR ''bump'') [N 4]))
-             (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6))), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>*
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)), nv_final, [])"
-    using psteps_Seq2 [OF nv_calls] by (meson Seq1 star.step star.refl star_trans)
-  then show ?thesis unfolding nv_main by (rule psteps_Seq2)
+  let ?\<kappa> = "kenv_of []" and ?\<Pi> = "typed_ptable nv_prog []"
+  let ?C1 = "gcom.Call () (Some (nv_var (STR ''a''))) (STR ''bump'') [TN I32 5]"
+  let ?C2 = "gcom.Call () (Some (nv_var (STR ''b''))) (STR ''bump'') [TN I32 4]"
+  let ?K1 = "Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
+  let ?K2 = "Check () (0, 0) (TCmp CEq (TVar I32 (nv_var (STR ''b''))) (TN I32 5))"
+  let ?t1 = "(\<lambda>_. 0)(nv_var (STR ''a'') := 6) :: tstore"
+  have r: "(4::int) \<in> ik_range I32" "(5::int) \<in> ik_range I32" "(6::int) \<in> ik_range I32"
+    by eval+
+  have c1: "star (tpstep ?\<kappa> ?\<Pi>) (?C1, \<lambda>_. 0, []) (SKIP (), ?t1, [])"
+    using nv_call[where k = 5 and x = "STR ''a''" and t = "\<lambda>_. 0", OF r(2)] r(3) by simp
+  have c2: "star (tpstep ?\<kappa> ?\<Pi>) (?C2, ?t1, []) (SKIP (), nv_final, [])"
+    using nv_call[where k = 4 and x = "STR ''b''" and t = ?t1, OF r(1)] r(2) by simp
+  have calls: "star (tpstep ?\<kappa> ?\<Pi>) (Seq ?C1 ?C2, \<lambda>_. 0, []) (SKIP (), nv_final, [])"
+    using typed.psteps_Seq2[OF c1, of ?C2] c2 by (meson typed.Seq1 star.step star_trans)
+  have "star (tpstep ?\<kappa> ?\<Pi>) (Seq (Seq ?C1 ?C2) ?K1, \<lambda>_. 0, []) (?K1, nv_final, [])"
+    using typed.psteps_Seq2[OF calls, of ?K1] by (meson typed.Seq1 star.step star.refl star_trans)
+  then show ?thesis unfolding nv_main by (rule typed.psteps_Seq2)
 qed
 
 subsection \<open>The endpoints, instantiated\<close>
 
 text \<open>
-  With the premises discharged, \<open>run_voblint_legacy_source_sound\<close> and its siblings apply to
-  \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are
-  \<open>Check_Proved\<close> and \<open>Dead\<close>.
+  With the premises discharged, \<open>run_voblint_source_sound\<close> and its siblings apply to
+  \<open>nv_prog\<close> and to \<open>nv_dead_prog\<close>, and the verdicts they constrain are \<open>Check_Proved\<close>
+  and \<open>Dead\<close>.
 \<close>
 
 theorem nv_source_certified:
-  "\<exists>res v.
-     run_voblint_legacy nv_config nv_prog
-       = Analysed res
+  "\<exists>res v stk.
+     run_voblint nv_conf [] nv_prog = Analysed res
    \<and> map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
-       = [(Statement 4, Decided Check_Proved),
-          (Statement 5, Decided Check_Proved)]
-   \<and> nv_prog, (\<lambda>_. 0) \<turnstile>
-       (VIMP_Proc.gcom.Seq
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<rhd> v
-   \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                   cinit_stores (declared_global nv_prog)\<^esub> v
-   \<and> nv_final \<in> \<R>\<^bsub>res\<^esub> v
-   \<and> nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+       = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]
+   \<and> typed_ptable nv_prog [], typed_cfg nv_prog [], prog_main_name
+       \<turnstile> (nv_checks, nv_final, []) \<approx> (v, nv_final, stk)
+   \<and> nv_final \<in> reaching [] nv_prog v
+   \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+          \<and> nv_final \<in> tmcp.act_gamma [] (tactivation (conf_analyses nv_conf)) d)
+   \<and> \<not> DEAD res v"
 proof -
-  obtain res where ans: "run_voblint_legacy nv_config nv_prog
-                           = Analysed res"
+  obtain res where ans: "run_voblint nv_conf [] nv_prog = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  from run_voblint_legacy_source_sound [OF nv_init nv_to_check ans]
-  obtain v where "nv_prog, (\<lambda>_. 0) \<turnstile>
-       (VIMP_Proc.gcom.Seq
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-          (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5))),
-        nv_final, []) \<rhd> v"
-    and "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                     cinit_stores (declared_global nv_prog)\<^esub> v"
-    and "nv_final \<in> \<R>\<^bsub>res\<^esub> v" and "nv_final \<in> \<V>\<^bsub>res\<^esub> v"
+  from run_voblint_source_sound [OF ans nv_init nv_to_check]
+  obtain v stk where
+    sim: "typed_ptable nv_prog [], typed_cfg nv_prog [], prog_main_name
+            \<turnstile> (nv_checks, nv_final, []) \<approx> (v, nv_final, stk)"
+    and reach: "nv_final \<in> reaching [] nv_prog v"
+    and st: "\<exists>d. Lifted d \<in> report_states_at res v
+               \<and> nv_final \<in> tmcp.act_gamma [] (tactivation (conf_analyses nv_conf)) d"
+    and live: "\<not> DEAD res v"
     by blast
-  with ans checks show ?thesis by - (intro exI conjI; assumption)
+  show ?thesis
+    by (rule exI[of _ res], rule exI[of _ v], rule exI[of _ stk])
+       (simp only: ans checks sim reach st live simp_thms)
 qed
 
 text \<open>
@@ -189,30 +196,26 @@ text \<open>
 \<close>
 
 theorem nv_check_proved_sound:
-  "\<exists>res. run_voblint_legacy nv_config nv_prog = Analysed res
-     \<and> (\<exists>chk \<in> set (report_checks res). check_exp chk = Eq (V (STR ''a'')) (N 6)
-          \<and> nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                          cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)
+  "\<exists>res. run_voblint nv_conf [] nv_prog = Analysed res
+     \<and> (\<exists>chk \<in> set (report_checks res).
+          check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)
+          \<and> nv_final \<in> reaching [] nv_prog (check_point chk)
           \<and> check_verdict chk = Decided Check_Proved
-          \<and> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final))"
+          \<and> truthy (teval (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)) nv_final))"
 proof -
-  obtain res where ans: "run_voblint_legacy nv_config nv_prog
-                           = Analysed res"
+  obtain res where ans: "run_voblint nv_conf [] nv_prog = Analysed res"
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  have nc: "next_check (VIMP_Proc.gcom.Seq (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''a'')) (N 6)))
-              (VIMP_Proc.gcom.Check () (0, 0) (Eq (V (STR ''b'')) (N 5)))) = Some ((0, 0), Eq (V (STR ''a'')) (N 6))"
+  have nc: "next_check nv_checks = Some ((0, 0), TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
     by simp
-  from run_voblint_legacy_check_sound [OF nv_init nv_to_check nc ans]
-  obtain chk
-    where listed: "chk \<in> set (report_checks res)"
-      and re: "check_exp chk = Eq (V (STR ''a'')) (N 6)"
-      and mem: "nv_final \<in> \<C>\<^bsub>declared_global nv_prog,prog_cfg nv_prog,
-                              cinit_stores (declared_global nv_prog)\<^esub> (check_point chk)"
-      and pr: "check_verdict chk = Decided Check_Proved
-                 \<longrightarrow> truthy (\<lbrakk>Eq (V (STR ''a'')) (N 6)\<rbrakk>\<^sub>e nv_final)"
-    by auto
+  from run_voblint_check_sound [OF ans nv_init nv_to_check nc]
+  obtain chk where listed: "chk \<in> set (report_checks res)"
+    and re: "check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)"
+    and mem: "nv_final \<in> reaching [] nv_prog (check_point chk)"
+    and pr: "check_verdict chk = Decided Check_Proved
+               \<longrightarrow> truthy (teval (TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6)) nv_final)"
+    by blast
   have "(check_point chk, check_verdict chk)
           \<in> set [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     unfolding checks [symmetric] using listed by auto
@@ -229,42 +232,40 @@ definition nv_dead_prog :: imp_prog where
      }
    }"
 
-abbreviation nv_dead_config :: analysis_config where
-  "nv_dead_config \<equiv> Analysis_Config [Interval_Analysis] Globals_Join Ctx_None
-     Program_Globals_Flow_Sensitive"
+definition nv_dead_conf :: voblint_conf where
+  "nv_dead_conf = \<lparr>conf_analyses = [Typed_Interval], conf_context = Typed_Call_String 0,
+     conf_globals = Globals_Join, conf_program_globals = Program_Globals_Flow_Sensitive,
+     conf_sem = default_sem_conf\<rparr>"
 
 lemma nv_dead_report:
-  "(case run_voblint_legacy nv_dead_config nv_dead_prog of
+  "(case run_voblint nv_dead_conf [] nv_dead_prog of
       Analysed res \<Rightarrow>
-        map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-          = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-             (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]
+        map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+          = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]
     | _ \<Rightarrow> False)"
   by eval
 
 lemma nv_dead_analysed:
   obtains res where
-    "run_voblint_legacy nv_dead_config nv_dead_prog = Analysed res"
-    "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-       = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-          (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
-  using nv_dead_report
-  by (cases "run_voblint_legacy nv_dead_config nv_dead_prog") auto
+    "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+    "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+       = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]"
+  using nv_dead_report by (cases "run_voblint nv_dead_conf [] nv_dead_prog") auto
 
-theorem nv_dead_unreached:
-  "\<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-     cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 3) = {}"
+theorem nv_dead_unreached: "reaching [] nv_dead_prog (Statement 3) = {}"
 proof -
-  obtain res where ans: "run_voblint_legacy nv_dead_config nv_dead_prog
-                           = Analysed res"
-    and checks: "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-                   = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-                      (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
+  obtain res where ans: "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+    and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
+                   = [(Statement 1, Decided Check_Refuted), (Statement 3, Dead)]"
     by (rule nv_dead_analysed)
-  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 3"
-      "check_verdict chk = Dead"
-    by (cases "report_checks res" rule: remdups_adj.cases) auto
-  with run_voblint_legacy_dead_check_unreached [OF ans] show ?thesis by metis
+  obtain chk where mem: "chk \<in> set (report_checks res)" and pt: "check_point chk = Statement 3"
+    and dead: "check_verdict chk = Dead"
+    using checks by (cases "report_checks res" rule: remdups_adj.cases) auto
+  from ans have wf: "wf_program_compile_input nv_dead_prog"
+    and rep: "typed_report_run nv_dead_conf [] nv_dead_prog = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  show ?thesis
+    using typed_report_check_live[OF wf rep _ mem pt] dead by blast
 qed
 
 section \<open>Load-bearing conditions\<close>
@@ -277,19 +278,21 @@ text \<open>
 subsection \<open>Soundness alone is cheap\<close>
 
 text \<open>
-  \<^const>\<open>verdict_stores\<close> constrains only definite verdicts, so a report that answers
-  \<^const>\<open>Check_Unknown\<close> at every check admits every store at every node. The
-  endpoint is informative because the verdicts \<^const>\<open>run_voblint_legacy\<close> actually returns
-  above are \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
+  The guarantees constrain only definite verdicts, so a report that answers
+  \<^const>\<open>Check_Unknown\<close> at every check meets them at every store. The endpoint is
+  informative because the verdicts \<^const>\<open>run_voblint\<close> actually returns above are
+  \<^const>\<open>Check_Proved\<close> and \<^const>\<open>Dead\<close>.
 \<close>
 
-definition answer_all :: "contextual_verdict \<Rightarrow> vimp_report \<Rightarrow> vimp_report" where
+definition answer_all :: "contextual_verdict \<Rightarrow> typed_report \<Rightarrow> typed_report" where
   "answer_all vd res =
      res\<lparr>report_checks := map (\<lambda>chk. chk\<lparr>check_verdict := vd\<rparr>) (report_checks res)\<rparr>"
 
 lemma unknown_everywhere_sound:
-  "s \<in> \<V>\<^bsub>answer_all (Decided Check_Unknown) res\<^esub> v"
-  by (auto simp: verdict_stores_eq answer_all_def)
+  "\<forall>chk \<in> set (report_checks (answer_all (Decided Check_Unknown) res)).
+     (check_verdict chk = Decided Check_Proved \<longrightarrow> P chk)
+     \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> Q chk)"
+  by (auto simp: answer_all_def)
 
 text \<open>
   An answer of \<^const>\<open>Check_Proved\<close> everywhere is not sound: the store after
@@ -297,53 +300,62 @@ text \<open>
 \<close>
 
 lemma nv_dead_reaches_first_check:
-  "(\<lambda>_. 0)(STR ''x'' := 1)
-     \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-         cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 1)"
+  "(\<lambda>_. 0)(nv_var (STR ''x'') := 1) \<in> reaching [] nv_dead_prog (Statement 1)"
 proof -
-  have intra: "intra (prog_cfg nv_dead_prog) =
-     {(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0),
-      (Statement 5, EA_Ret None (STR ''main''), FunctionResult (STR ''main'')),
-      (Statement 1, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 0)), Statement 2),
-      (Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1),
-      (Statement 3, EA_Check (0, 0) (Eq (V (STR ''x'')) (N 5)), Statement 5),
-      (Statement 2, EA_Assume (Less (V (STR ''x'')) (N 0)), Statement 3),
-      (Statement 2, EA_AssumeNot (Less (V (STR ''x'')) (N 0)), Statement 4),
-      (Statement 4, EA_Assign (STR ''x'') (N 2), Statement 5)}"
-    unfolding prog_cfg_def by eval
-  have entry: "cfg_entry (prog_cfg nv_dead_prog) = FunctionEntry (STR ''main'')"
-    by (simp only: prog_cfg_def cfg_entry_compile_prog prog_main_name_def)
-  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-              cinit_stores (declared_global nv_dead_prog)\<^esub> (FunctionEntry (STR ''main''))"
-    using node_collect_init [of "\<lambda>_. 0" "cinit_stores (declared_global nv_dead_prog)"
-                               "declared_global nv_dead_prog" "prog_cfg nv_dead_prog"]
-    by (simp add: entry cinit_stores_def)
-  have s0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>declared_global nv_dead_prog,prog_cfg nv_dead_prog,
-              cinit_stores (declared_global nv_dead_prog)\<^esub> (Statement 0)"
-    by (rule node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
-       (auto simp: intra)
+  have intra: "(FunctionEntry (STR ''main''), EA_Body (STR ''main''), Statement 0)
+                 \<in> intra (typed_cfg nv_dead_prog [])"
+    "(Statement 0, EA_Assign (nv_var (STR ''x'')) (TN I32 1), Statement 1)
+                 \<in> intra (typed_cfg nv_dead_prog [])"
+    by eval+
+  have entry: "cfg_entry (typed_cfg nv_dead_prog []) = FunctionEntry (STR ''main'')"
+    by eval
+  have e0: "(\<lambda>_. 0) \<in> reaching [] nv_dead_prog (FunctionEntry (STR ''main''))"
+    using typed.node_collect_init [OF nv_init, of "kenv_of []" "typed_cfg nv_dead_prog []"]
+    by (simp add: entry)
+  have s0: "(\<lambda>_. 0) \<in> reaching [] nv_dead_prog (Statement 0)"
+    by (rule typed.node_collect_intra_step [OF e0 intra(1)]) simp
   show ?thesis
-    by (rule node_collect_intra_step [OF s0, where a = "EA_Assign (STR ''x'') (N 1)"])
-       (auto simp: intra)
+    by (rule typed.node_collect_intra_step [OF s0 intra(2)]) (simp add: kenv_of_def)
 qed
 
 theorem proved_everywhere_unsound:
-  assumes "run_voblint_legacy nv_dead_config nv_dead_prog = Analysed res"
-  shows "(\<lambda>_. 0)(STR ''x'' := 1)
-           \<notin> \<V>\<^bsub>answer_all (Decided Check_Proved) res\<^esub> (Statement 1)"
+  assumes "run_voblint nv_dead_conf [] nv_dead_prog = Analysed res"
+  shows "\<exists>chk \<in> set (report_checks (answer_all (Decided Check_Proved) res)).
+           check_verdict chk = Decided Check_Proved
+           \<and> (\<lambda>_. 0)(nv_var (STR ''x'') := 1) \<in> reaching [] nv_dead_prog (check_point chk)
+           \<and> \<not> truthy (teval (check_exp chk) ((\<lambda>_. 0)(nv_var (STR ''x'') := 1)))"
 proof -
-  from nv_dead_report assms
-  have "map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk)) (report_checks res)
-          = [(Statement 1, Eq (V (STR ''x'')) (N 0), Decided Check_Refuted),
-             (Statement 3, Eq (V (STR ''x'')) (N 5), Dead)]"
-    by simp
-  then obtain chk where "chk \<in> set (report_checks res)" "check_point chk = Statement 1"
-      "check_exp chk = Eq (V (STR ''x'')) (N 0)"
+  have exps: "map (\<lambda>chk. (check_point chk, check_exp chk)) (report_checks res)
+      = [(Statement 1, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)),
+         (Statement 3, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 5))]"
+  proof -
+    have "(case run_voblint nv_dead_conf [] nv_dead_prog of
+             Analysed res \<Rightarrow> map (\<lambda>chk. (check_point chk, check_exp chk)) (report_checks res)
+                = [(Statement 1, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)),
+                   (Statement 3, TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 5))]
+           | _ \<Rightarrow> False)"
+      by eval
+    then show ?thesis using assms by simp
+  qed
+  then obtain chk where mem: "chk \<in> set (report_checks res)" and pt: "check_point chk = Statement 1"
+      and ex: "check_exp chk = TCmp CEq (TVar I32 (nv_var (STR ''x''))) (TN I32 0)"
     by (cases "report_checks res" rule: remdups_adj.cases) auto
-  then show ?thesis
-    by (auto simp: verdict_stores_eq answer_all_def
-        intro!: bexI[of _ "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>"])
+  have mem': "chk\<lparr>check_verdict := Decided Check_Proved\<rparr>
+                \<in> set (report_checks (answer_all (Decided Check_Proved) res))"
+    using mem by (simp add: answer_all_def)
+  show ?thesis
+    using nv_dead_reaches_first_check pt ex
+    by (intro bexI[OF _ mem']) simp
 qed
+
+subsection \<open>The untyped framework counterexamples\<close>
+
+text \<open>
+  The remaining conditions belong to the generic framework, which the untyped
+  instance below exercises on source names: its collecting semantics and
+  \<^const>\<open>activation_coverage\<close> are the ones the typed analyzer instantiates.
+\<close>
+
 
 subsection \<open>The pre-fix Goblint congruence remainder\<close>
 
