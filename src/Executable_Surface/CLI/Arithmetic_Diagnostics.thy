@@ -2,15 +2,29 @@ theory Arithmetic_Diagnostics
   imports "Voblint_Framework.Contextual_Check_Report"
 begin
 
-section \<open>Division and remainder occurrences\<close>
+section \<open>Arithmetic obligations\<close>
 
 text \<open>Diagnostics inspect all expression operands, matching VIMP's total,
   pure expression model. They neither change execution nor assume short-circuit
   evaluation for logical operators. Lists retain repeated syntactically equal occurrences.\<close>
 
+text \<open>
+  An obligation names an operation, the hazard it may run into and the operand the
+  hazard concerns. A division or remainder must not divide by zero; its operand is the
+  divisor. A signed arithmetic operation must compute a result its kind represents,
+  as C requires (ISO/IEC 9899 6.5p5); its operand is the operation itself. A conversion
+  must convert a value the target kind represents, the categories Goblint separates as
+  arithmetic and cast overflow (\<^verbatim>\<open>Checks.Category\<close> at \<open>0dc12d355\<close>); its operand is
+  the converted expression. Which hazards a language raises, and when one is safe, is
+  the language's; the report treats them alike.
+\<close>
+
+datatype arithmetic_hazard = Division_By_Zero | Signed_Overflow | Conversion_Overflow
+
 datatype 'e arithmetic_obligation = Arithmetic_Obligation
+  (arithmetic_hazard: arithmetic_hazard)
   (arithmetic_operation: 'e)
-  (arithmetic_divisor: 'e)
+  (arithmetic_operand: 'e)
 
 fun arithmetic_obligations :: "exp \<Rightarrow> exp arithmetic_obligation list" where
   "arithmetic_obligations (N n) = []"
@@ -22,10 +36,10 @@ fun arithmetic_obligations :: "exp \<Rightarrow> exp arithmetic_obligation list"
      arithmetic_obligations a @ arithmetic_obligations b"
 | "arithmetic_obligations (Div a b) =
      arithmetic_obligations a @ arithmetic_obligations b @
-       [Arithmetic_Obligation (Div a b) b]"
+       [Arithmetic_Obligation Division_By_Zero (Div a b) b]"
 | "arithmetic_obligations (Mod a b) =
      arithmetic_obligations a @ arithmetic_obligations b @
-       [Arithmetic_Obligation (Mod a b) b]"
+       [Arithmetic_Obligation Division_By_Zero (Mod a b) b]"
 | "arithmetic_obligations (Plus a b) =
      arithmetic_obligations a @ arithmetic_obligations b"
 | "arithmetic_obligations (Minus a b) =
@@ -83,23 +97,42 @@ fun expression_divisors :: "exp \<Rightarrow> exp set" where
 | "expression_divisors (Cast _ a) = expression_divisors a"
 
 lemma arithmetic_obligations_divisors:
-  "arithmetic_divisor ` set (arithmetic_obligations e) = expression_divisors e"
+  "arithmetic_operand ` set (arithmetic_obligations e) = expression_divisors e"
+  by (induction e) auto
+
+lemma arithmetic_obligations_hazard:
+  "ob \<in> set (arithmetic_obligations e) \<Longrightarrow> arithmetic_hazard ob = Division_By_Zero"
   by (induction e) auto
 
 definition arithmetic_condition :: "exp arithmetic_obligation \<Rightarrow> exp" where
-  "arithmetic_condition obligation = NotEq (arithmetic_divisor obligation) (N 0)"
+  "arithmetic_condition obligation = NotEq (arithmetic_operand obligation) (N 0)"
 
 lemma arithmetic_condition_safe:
   "truthy (\<lbrakk>arithmetic_condition obligation\<rbrakk>\<^sub>e s) \<longleftrightarrow>
-    \<lbrakk>arithmetic_divisor obligation\<rbrakk>\<^sub>e s \<noteq> 0"
+    \<lbrakk>arithmetic_operand obligation\<rbrakk>\<^sub>e s \<noteq> 0"
   by (auto simp: arithmetic_condition_def split: if_splits)
+
+text \<open>An obligation whose safety one condition of the language states is classified
+  as that condition is.\<close>
+
+definition by_condition ::
+    "('o \<Rightarrow> 'e) \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'o \<Rightarrow> 'a \<Rightarrow> check_result" where
+  "by_condition cond classify ob = classify (cond ob)"
+
+lemma classify_point_by_condition [simp]:
+  "classify_point (by_condition cond classify) ob x = classify_point classify (cond ob) x"
+  by (cases x) (simp_all add: by_condition_def)
+
+lemma point_verdict_by_condition [simp]:
+  "point_verdict r (by_condition cond classify) v ob = point_verdict r classify v (cond ob)"
+  by (simp add: point_verdict_def)
 
 section \<open>Sites and their solved classifications\<close>
 
 text \<open>
   \<open>arithmetic_expression_sites\<close> collects the expressions each CFG edge and call
-  evaluates; \<open>obligation_sites\<close> turns them into the divisor obligations the solved
-  table then classifies, given how an expression of the language yields them.
+  evaluates; \<open>obligation_sites\<close> turns them into the obligations the solved table then
+  classifies, given how an expression of the language yields them.
 \<close>
 
 
@@ -125,9 +158,9 @@ definition obligation_sites ::
 definition arithmetic_sites :: "cfg \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
   "arithmetic_sites = obligation_sites arithmetic_obligations"
 
-text \<open>A diagnostic names an obligation of a site list, read through the condition that
-  makes it safe. The site list and the condition depend on the expression language;
-  the classification does not.\<close>
+text \<open>A diagnostic names an obligation of a site list, read through a classifier of
+  obligations. The site list and the classifier depend on the expression language and
+  the analysis; the classification does not.\<close>
 
 datatype 'e arithmetic_diagnostic = Arithmetic_Diagnostic
   (diagnostic_point: pp)
@@ -145,14 +178,13 @@ fun arithmetic_diagnostic_of ::
 | "arithmetic_diagnostic_of v i obligation _ = []"
 
 definition arithmetic_diagnostics ::
-    "(pp \<times> 'e arithmetic_obligation list) list \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
-       \<Rightarrow> ('ctx, 'a) solved_table \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result)
+    "(pp \<times> 'e arithmetic_obligation list) list \<Rightarrow> ('ctx, 'a) solved_table
+       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'a \<Rightarrow> check_result)
        \<Rightarrow> 'e arithmetic_diagnostic list" where
-  "arithmetic_diagnostics sites cond r classify =
+  "arithmetic_diagnostics sites r classify =
      concat (map (\<lambda>(v, obligations).
        concat (map (\<lambda>(i, obligation).
-         arithmetic_diagnostic_of v i obligation
-           (point_verdict r classify v (cond obligation)))
+         arithmetic_diagnostic_of v i obligation (point_verdict r classify v obligation))
          (zip [0..<length obligations] obligations))) sites)"
 
 lemma arithmetic_expression_sites_intra:
@@ -198,11 +230,11 @@ lemma arithmetic_sites_divisor:
   assumes "(v, es) \<in> set (arithmetic_expression_sites g)"
     and "e \<in> set es" and "divisor \<in> expression_divisors e"
   obtains obligations obligation where "(v, obligations) \<in> set (arithmetic_sites g)"
-    and "obligation \<in> set obligations" and "arithmetic_divisor obligation = divisor"
+    and "obligation \<in> set obligations" and "arithmetic_operand obligation = divisor"
 proof -
   from assms(3) obtain obligation where
     ob: "obligation \<in> set (arithmetic_obligations e)"
-      "arithmetic_divisor obligation = divisor"
+      "arithmetic_operand obligation = divisor"
     using arithmetic_obligations_divisors[of e] by force
   have site: "(v, concat (map arithmetic_obligations es)) \<in> set (arithmetic_sites g)"
     using assms(1) by (force simp: arithmetic_sites_def obligation_sites_def)
@@ -214,9 +246,9 @@ qed
 lemma arithmetic_diagnostics_absent:
   assumes site: "(v, obligations) \<in> set sites"
     and ob: "obligation \<in> set obligations"
-    and absent: "\<forall>d \<in> set (arithmetic_diagnostics sites cond r classify). diagnostic_point d \<noteq> v"
-  shows "point_verdict r classify v (cond obligation) = Bot \<or>
-    point_verdict r classify v (cond obligation) = Lifted Check_Proved"
+    and absent: "\<forall>d \<in> set (arithmetic_diagnostics sites r classify). diagnostic_point d \<noteq> v"
+  shows "point_verdict r classify v obligation = Bot \<or>
+    point_verdict r classify v obligation = Lifted Check_Proved"
 proof -
   have "obligation \<in> set (map snd (zip [0..<length obligations] obligations))"
     using ob by simp
@@ -228,9 +260,9 @@ proof -
   define i where "i = fst pair"
   have indexed: "(i, obligation) \<in> set (zip [0..<length obligations] obligations)"
     using indexed unfolding i_def .
-  let ?verdict = "point_verdict r classify v (cond obligation)"
+  let ?verdict = "point_verdict r classify v obligation"
   have included: "set (arithmetic_diagnostic_of v i obligation ?verdict)
-      \<subseteq> set (arithmetic_diagnostics sites cond r classify)"
+      \<subseteq> set (arithmetic_diagnostics sites r classify)"
     using site indexed
     unfolding arithmetic_diagnostics_def
     by (force simp only: set_concat set_map image_iff case_prod_beta)
@@ -252,7 +284,7 @@ proof -
     using included point absent
     by (meson empty_subsetI set_empty2 subset_antisym subset_iff)
   show ?thesis
-  proof (cases "point_verdict r classify v (cond obligation)")
+  proof (cases ?verdict)
     case Bot
     then show ?thesis by simp
   next
@@ -261,7 +293,7 @@ proof -
   qed
 qed
 
-text \<open>An error names a point whose divisor condition the solved table refutes.\<close>
+text \<open>An error names a point whose obligation the solved table refutes.\<close>
 
 lemma arithmetic_diagnostic_of_refuted:
   assumes "d \<in> set (arithmetic_diagnostic_of v i obligation verdict)"
@@ -271,11 +303,25 @@ lemma arithmetic_diagnostic_of_refuted:
   using assms by (cases "(v, i, obligation, verdict)" rule: arithmetic_diagnostic_of.cases) auto
 
 lemma arithmetic_diagnostics_refuted:
-  assumes "d \<in> set (arithmetic_diagnostics sites cond r classify)"
+  assumes "d \<in> set (arithmetic_diagnostics sites r classify)"
     and "diagnostic_verdict d = Check_Refuted"
-  shows "point_verdict r classify (diagnostic_point d)
-      (cond (diagnostic_obligation d)) = Lifted Check_Refuted"
+  shows "point_verdict r classify (diagnostic_point d) (diagnostic_obligation d)
+      = Lifted Check_Refuted"
   using assms unfolding arithmetic_diagnostics_def
   by (auto dest!: arithmetic_diagnostic_of_refuted)
+
+text \<open>A diagnostic names an obligation of its own point.\<close>
+
+lemma arithmetic_diagnostic_of_mem:
+  "d \<in> set (arithmetic_diagnostic_of v i ob verdict) \<Longrightarrow>
+     diagnostic_point d = v \<and> diagnostic_obligation d = ob"
+  by (cases "(v, i, ob, verdict)" rule: arithmetic_diagnostic_of.cases) auto
+
+lemma arithmetic_diagnostics_site:
+  assumes "d \<in> set (arithmetic_diagnostics sites r classify)"
+  shows "\<exists>obligations. (diagnostic_point d, obligations) \<in> set sites
+    \<and> diagnostic_obligation d \<in> set obligations"
+  using assms unfolding arithmetic_diagnostics_def
+  by (fastforce dest: arithmetic_diagnostic_of_mem set_zip_rightD)
 
 end

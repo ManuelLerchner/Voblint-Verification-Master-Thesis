@@ -169,7 +169,7 @@ text \<open>
 
 lemma arithmetic_safe:
   assumes absent: "\<forall>d \<in> set (arithmetic_diagnostics (arithmetic_sites (prog_cfg p))
-      arithmetic_condition r classify).
+      r (by_condition arithmetic_condition classify)).
       diagnostic_point d \<noteq> v"
     and mem: "s \<in> \<C>\<^bsub>declared_global p,prog_cfg p,cinit_stores (declared_global p)\<^esub> v"
   shows "arithmetic_safe_at (prog_cfg p) v s"
@@ -186,11 +186,11 @@ proof -
     obtain obligations obligation where
       obs: "(v, obligations) \<in> set (arithmetic_sites (prog_cfg p))"
       and ob: "obligation \<in> set obligations"
-      and divisor: "arithmetic_divisor obligation = divisor"
+      and divisor: "arithmetic_operand obligation = divisor"
       by (rule arithmetic_sites_divisor[OF site expr div])
     have verdict: "point_verdict r classify v (arithmetic_condition obligation)
                      = Lifted Check_Proved"
-      using arithmetic_diagnostics_absent[OF obs ob absent]
+      using arithmetic_diagnostics_absent[OF obs ob absent, simplified]
         point_verdict_not_dead[OF finite_contexts look, of classify]
       by blast
     have classified: "classify (arithmetic_condition obligation) st = Check_Proved"

@@ -99,6 +99,7 @@ module Generated : sig
     FunctionResult of string
   type 'a toplift
   type sign
+  val ik_signed : ikind -> bool
   type congruence
   type parity
   type ivl
@@ -186,6 +187,8 @@ module Generated : sig
   type 'a voblint_conf_ext =
     Voblint_conf_ext of
       typed_domain list * typed_context * globals_rule * unit sem_conf_ext * 'a
+  type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
+    Conversion_Overflow
   type ('a, 'b, 'c, 'd) analysis_graph_ext
   type 'a arithmetic_obligation
   type 'a arithmetic_diagnostic
@@ -216,7 +219,9 @@ module Generated : sig
   val conf_globals : 'a voblint_conf_ext -> globals_rule
   val conf_context : 'a voblint_conf_ext -> typed_context
   val conf_sem : 'a voblint_conf_ext -> unit sem_conf_ext
-  val arithmetic_divisor : 'a arithmetic_obligation -> 'a
+  val arithmetic_operation : 'a arithmetic_obligation -> 'a
+  val arithmetic_hazard : 'a arithmetic_obligation -> arithmetic_hazard
+  val arithmetic_operand : 'a arithmetic_obligation -> 'a
   val run_voblint :
     unit voblint_conf_ext ->
       (var_id * ikind) list ->
@@ -431,7 +436,6 @@ module Generated : sig
     ('a -> 'b) -> 'a analysis_answer -> 'b analysis_answer
   val diagnostic_point : 'a arithmetic_diagnostic -> cfg_node
   val diagnostic_verdict : 'a arithmetic_diagnostic -> check_result
-  val arithmetic_operation : 'a arithmetic_obligation -> 'a
   val diagnostic_obligation :
     'a arithmetic_diagnostic -> 'a arithmetic_obligation
   val diagnostic_occurrence : 'a arithmetic_diagnostic -> nat
@@ -7110,6 +7114,9 @@ type 'a voblint_conf_ext =
   Voblint_conf_ext of
     typed_domain list * typed_context * globals_rule * unit sem_conf_ext * 'a;;
 
+type arithmetic_hazard = Division_By_Zero | Signed_Overflow |
+  Conversion_Overflow;;
+
 type ('a, 'b, 'c, 'd) footprints_ext =
   Footprints_ext of
     (('c -> bool) -> ('a, 'b) gedge_action -> 'c list) *
@@ -7122,7 +7129,8 @@ type ('a, 'b, 'c, 'd) analysis_graph_ext =
     'c unknown_node list *
       ('c unknown_node * (('a, 'b) analysis_edge * 'c unknown_node)) list * 'd;;
 
-type 'a arithmetic_obligation = Arithmetic_Obligation of 'a * 'a;;
+type 'a arithmetic_obligation =
+  Arithmetic_Obligation of arithmetic_hazard * 'a * 'a;;
 
 type 'a arithmetic_diagnostic =
   Arithmetic_Diagnostic of
@@ -19849,11 +19857,11 @@ let rec point_verdict _A
         (table_contexts r v));;
 
 let rec arithmetic_diagnostics _B
-  sites cond r classify =
+  sites r classify =
     maps (fun (v, obligations) ->
            maps (fun (i, obligation) ->
                   arithmetic_diagnostic_of v i obligation
-                    (point_verdict _B r classify v (cond obligation)))
+                    (point_verdict _B r classify v obligation))
              (zip (upt zero_nat (size_list obligations)) obligations))
       sites;;
 
@@ -19916,24 +19924,24 @@ let rec run_step
     = run_step;;
 
 let rec report_row _C
-  sr classify cond conds obls edges i ctx v =
+  sr classify classify_ob conds obls edges i ctx v =
     (let state = lookup_table _C (run_table sr) v ctx in
       Result_state_ext
         (v, i, state,
           map (fun c -> (c, classify_point classify c state))
             (group_lookup linorder_cfg_node conds v),
           map (fun obligation ->
-                (obligation, classify_point classify (cond obligation) state))
+                (obligation, classify_point classify_ob obligation state))
             (concat (group_lookup linorder_cfg_node obls v)),
           map (fun (a, w) -> (w, run_step sr v ctx a))
             (group_lookup linorder_cfg_node edges v),
           ()));;
 
-let rec report_of (_B1, _B2) (_C1, _C2) _E
-  config vars g globals sites cond procs ctx_key ctx_tag classify sr =
+let rec report_of (_B1, _B2) (_C1, _C2) _F
+  config vars g globals sites classify_ob procs ctx_key ctx_tag classify sr =
     (let r = run_table sr in
      let ctxs =
-       ordered_by_key _E (equal_order_key, linorder_order_key) ctx_key
+       ordered_by_key _F (equal_order_key, linorder_order_key) ctx_key
          (image snd (covered_keys r))
        in
      let indexed = enumerate zero_nat ctxs in
@@ -19956,15 +19964,16 @@ let rec report_of (_B1, _B2) (_C1, _C2) _E
        in
      let obligations =
        group_by_key linorder_cfg_node fst (comp (fun a -> Some a) snd) sites in
-     let state_at = report_row _E sr classify cond checks obligations steps in
+     let state_at =
+       report_row _F sr classify classify_ob checks obligations steps in
      let route_at =
        (fun u ca ce i ctx ->
          Call_route_ext
            (u, i, callee_of_entry ce,
-             (match lookup_table _E r u ctx with Bot -> []
+             (match lookup_table _F r u ctx with Bot -> []
                | Lifted _ ->
                  remdups equal_nat
-                   (maps (context_indices _E indexed)
+                   (maps (context_indices _F indexed)
                      (live_targets (run_succ sr) u ctx ca
                        (callee_of_entry ce)))),
              ()))
@@ -19974,7 +19983,7 @@ let rec report_of (_B1, _B2) (_C1, _C2) _E
          (match
            filtera
              (fun (_, ctx) ->
-               member (equal_prod equal_cfg_node _E) (FunctionEntry f, ctx)
+               member (equal_prod equal_cfg_node _F) (FunctionEntry f, ctx)
                  (covered_keys r))
              indexed
            with [] -> [Result_global_ext (Global_Seed (f, None), Bot, ())]
@@ -19989,7 +19998,7 @@ let rec report_of (_B1, _B2) (_C1, _C2) _E
           maps (fun (i, ctx) ->
                  map_filter
                    (fun x ->
-                     (if member (equal_prod equal_cfg_node _E) (x, ctx)
+                     (if member (equal_prod equal_cfg_node _F) (x, ctx)
                            (covered_keys r)
                        then Some (state_at i ctx x) else None))
                    nodes)
@@ -19998,17 +20007,17 @@ let rec report_of (_B1, _B2) (_C1, _C2) _E
                  map_filter
                    (fun x ->
                      (if (let (_, ctx) = x in
-                           member (equal_prod equal_cfg_node _E) (u, ctx)
+                           member (equal_prod equal_cfg_node _F) (u, ctx)
                              (covered_keys r))
                        then Some (let (a, b) = x in route_at u ca ce a b)
                        else None))
                    indexed)
             (cfg_calls_list (_B1, _B2) (_C1, _C2) g),
-          result_checks_of (_B1, _B2) (_C1, _C2) _E g r classify,
+          result_checks_of (_B1, _B2) (_C1, _C2) _F g r classify,
           map (fun x -> Result_global_ext (Global_Named x, run_shared sr x, ()))
             globals @
             maps seeds_of procs,
-          arithmetic_diagnostics _E sites cond r classify, ()));;
+          arithmetic_diagnostics _F sites r classify_ob, ()));;
 
 let rec explode s = map char_of_integer (Str_Literal.asciis_of_literal s);;
 
@@ -21164,6 +21173,60 @@ let rec obligation_sites (_A1, _A2) (_B1, _B2)
     map (fun (v, es) -> (v, maps obls es))
       (arithmetic_expression_sites (_B1, _B2) (_A1, _A2) g);;
 
+let rec arithmetic_operation (Arithmetic_Obligation (x1, x2, x3)) = x2;;
+
+let rec arithmetic_hazard (Arithmetic_Obligation (x1, x2, x3)) = x1;;
+
+let rec arithmetic_operand (Arithmetic_Obligation (x1, x2, x3)) = x3;;
+
+let rec tarith_condition
+  ob = TCmp (CNe, arithmetic_operand ob,
+              TN (texp_kind (arithmetic_operand ob), zero_inta));;
+
+let rec answer_ivl = function QLifted d -> int_ivl d
+                     | QBot -> bot_ivla
+                     | QTop -> top_ivla;;
+
+let rec operand_ivl
+  ch x1 = match ch, x1 with
+    ch, TN (k, n) -> Ivl (Fin (ik_norm k n), Fin (ik_norm k n))
+    | ch, TVar (v, va) -> answer_ivl (ch (EvalInt (TVar (v, va))))
+    | ch, TArith (v, va, vb, vc) ->
+        answer_ivl (ch (EvalInt (TArith (v, va, vb, vc))))
+    | ch, TCast (v, va) -> answer_ivl (ch (EvalInt (TCast (v, va))))
+    | ch, TCmp (v, va, vb) -> answer_ivl (ch (EvalInt (TCmp (v, va, vb))))
+    | ch, TNot v -> answer_ivl (ch (EvalInt (TNot v)))
+    | ch, TAnd (v, va) -> answer_ivl (ch (EvalInt (TAnd (v, va))))
+    | ch, TOr (v, va) -> answer_ivl (ch (EvalInt (TOr (v, va))));;
+
+let rec tunwrapped_ivl
+  ch x1 = match ch, x1 with
+    ch, TArith (k, op, a, b) -> ivl_aop op (operand_ivl ch a) (operand_ivl ch b)
+    | ch, TCast (k, a) -> operand_ivl ch a
+    | ch, TN (v, va) -> operand_ivl ch (TN (v, va))
+    | ch, TVar (v, va) -> operand_ivl ch (TVar (v, va))
+    | ch, TCmp (v, va, vb) -> operand_ivl ch (TCmp (v, va, vb))
+    | ch, TNot v -> operand_ivl ch (TNot v)
+    | ch, TAnd (v, va) -> operand_ivl ch (TAnd (v, va))
+    | ch, TOr (v, va) -> operand_ivl ch (TOr (v, va));;
+
+let rec fits_verdict
+  k i = (if is_bottom_ivl i then Check_Unknown
+          else (if less_eq_ivl i (ik_ivl k) then Check_Proved
+                 else (if is_bottom_ivl (inf_ivl i (ik_ivl k))
+                        then Check_Refuted else Check_Unknown)));;
+
+let rec tobligation_classify
+  sem ds asa ob v =
+    (match arithmetic_hazard ob
+      with Division_By_Zero -> tmcp_classify sem ds asa (tarith_condition ob) v
+      | Signed_Overflow ->
+        fits_verdict (texp_kind (arithmetic_operation ob))
+          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob))
+      | Conversion_Overflow ->
+        fits_verdict (texp_kind (arithmetic_operation ob))
+          (tunwrapped_ivl (tmcp_ask sem ds asa v) (arithmetic_operation ob)));;
+
 let rec tarith_obligations
   = function TN (uu, uv) -> []
     | TVar (uw, ux) -> []
@@ -21171,18 +21234,19 @@ let rec tarith_obligations
         tarith_obligations a @
           tarith_obligations b @
             (if equal_aopa op ADiv || equal_aopa op AMod
-              then [Arithmetic_Obligation (TArith (k, op, a, b), b)] else [])
+              then [Arithmetic_Obligation
+                      (Division_By_Zero, TArith (k, op, a, b), b)]
+              else []) @
+              (if ik_signed k && not (equal_aopa op AMod)
+                then [Arithmetic_Obligation
+                        (Signed_Overflow, TArith (k, op, a, b),
+                          TArith (k, op, a, b))]
+                else [])
     | TCast (uy, a) -> tarith_obligations a
     | TCmp (uz, a, b) -> tarith_obligations a @ tarith_obligations b
     | TNot a -> tarith_obligations a
     | TAnd (a, b) -> tarith_obligations a @ tarith_obligations b
     | TOr (a, b) -> tarith_obligations a @ tarith_obligations b;;
-
-let rec arithmetic_divisor (Arithmetic_Obligation (x1, x2)) = x2;;
-
-let rec tarith_condition
-  ob = TCmp (CNe, arithmetic_divisor ob,
-              TN (texp_kind (arithmetic_divisor ob), zero_inta));;
 
 let rec int_tuple_key
   a = Key_List [ivl_key (it_ivl a); congruence_key (it_cong a)];;
@@ -21246,8 +21310,9 @@ let rec typed_es_report
       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
       (obligation_sites (equal_texp, linorder_texp)
         (equal_var_id, linorder_var_id) tarith_obligations (typed_cfg p ds))
-      tarith_condition (prog_main_name :: prog_procs p) tmcp_ctx_key
-      (fun a -> Report_Entry a) (tmcp_classify sem ds (tactivation asa))
+      (tobligation_classify sem ds (tactivation asa))
+      (prog_main_name :: prog_procs p) tmcp_ctx_key (fun a -> Report_Entry a)
+      (tmcp_classify sem ds (tactivation asa))
       (solved_run_of linorder_var_id (equal_texp, linorder_texp)
         ((equal_analysis_product
            (equal_lifted
@@ -21357,7 +21422,8 @@ let rec typed_cs_report
       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
       (obligation_sites (equal_texp, linorder_texp)
         (equal_var_id, linorder_var_id) tarith_obligations (typed_cfg p ds))
-      tarith_condition (prog_main_name :: prog_procs p)
+      (tobligation_classify sem ds (tactivation asa))
+      (prog_main_name :: prog_procs p)
       (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))
       (if equal_nata k zero_nat then (fun _ -> Report_Unit)
         else (fun a -> Report_Call_String a))
@@ -26151,7 +26217,7 @@ let rec cfg_call_edges
         x;;
 
 let rec arithmetic_condition
-  obligation = NotEq (arithmetic_divisor obligation, N zero_inta);;
+  obligation = NotEq (arithmetic_operand obligation, N zero_inta);;
 
 let rec config_globals (Analysis_Config (x1, x2, x3, x4)) = x4;;
 
@@ -26163,10 +26229,12 @@ let rec arithmetic_obligations
     | Or (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | Div (a, b) ->
         arithmetic_obligations a @
-          arithmetic_obligations b @ [Arithmetic_Obligation (Div (a, b), b)]
+          arithmetic_obligations b @
+            [Arithmetic_Obligation (Division_By_Zero, Div (a, b), b)]
     | Mod (a, b) ->
         arithmetic_obligations a @
-          arithmetic_obligations b @ [Arithmetic_Obligation (Mod (a, b), b)]
+          arithmetic_obligations b @
+            [Arithmetic_Obligation (Division_By_Zero, Mod (a, b), b)]
     | Plus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | Minus (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
     | Times (a, b) -> arithmetic_obligations a @ arithmetic_obligations b
@@ -26181,6 +26249,8 @@ let rec arithmetic_obligations
 let rec arithmetic_sites
   x = obligation_sites (equal_exp, linorder_exp)
         (equal_literal, linorder_literal) arithmetic_obligations x;;
+
+let rec by_condition cond classify ob = classify (cond ob);;
 
 let rec analysis_report_of
   x0 p = match x0, p with
@@ -26198,7 +26268,9 @@ let rec analysis_report_of
               (match config_globals (Analysis_Config (asa, r, Ctx_None, pg))
                 with Program_Globals_Flow_Sensitive -> []
                 | Program_Globals_Flow_Insensitive -> declared_global_vars p)
-              (arithmetic_sites (prog_cfg p)) arithmetic_condition
+              (arithmetic_sites (prog_cfg p))
+              (by_condition arithmetic_condition
+                (mcp_classify (activation asa)))
               (prog_main_name :: prog_procs p) (fun _ -> Key_List [])
               (fun _ -> Report_Unit) (mcp_classify (activation asa))
               (mcp_run_of (activation asa) pg (fun a -> Analysis_Global a)
@@ -26241,7 +26313,9 @@ let rec analysis_report_of
                   config_globals (Analysis_Config (asa, r, Ctx_EntryState, pg))
                   with Program_Globals_Flow_Sensitive -> []
                   | Program_Globals_Flow_Insensitive -> declared_global_vars p)
-                (arithmetic_sites (prog_cfg p)) arithmetic_condition
+                (arithmetic_sites (prog_cfg p))
+                (by_condition arithmetic_condition
+                  (mcp_classify (activation asa)))
                 (prog_main_name :: prog_procs p)
                 (entry_ctx_key (activation asa)) (fun a -> Report_Entry a)
                 (mcp_classify (activation asa))
@@ -26323,7 +26397,9 @@ let rec analysis_report_of
                     (Analysis_Config (asa, r, Ctx_CallString k, pg))
                   with Program_Globals_Flow_Sensitive -> []
                   | Program_Globals_Flow_Insensitive -> declared_global_vars p)
-                (arithmetic_sites (prog_cfg p)) arithmetic_condition
+                (arithmetic_sites (prog_cfg p))
+                (by_condition arithmetic_condition
+                  (mcp_classify (activation asa)))
                 (prog_main_name :: prog_procs p)
                 (fun ctx -> Key_List (map (fun a -> Key_Node a) ctx))
                 (fun a -> Report_Call_String a) (mcp_classify (activation asa))
@@ -26595,8 +26671,6 @@ let rec map_analysis_answer
 let rec diagnostic_point (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x1;;
 
 let rec diagnostic_verdict (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x4;;
-
-let rec arithmetic_operation (Arithmetic_Obligation (x1, x2)) = x1;;
 
 let rec diagnostic_obligation (Arithmetic_Diagnostic (x1, x2, x3, x4)) = x3;;
 

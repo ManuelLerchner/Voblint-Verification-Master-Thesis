@@ -70,10 +70,12 @@ file-level directive `// EXPECT-ARITHMETIC`, then annotate source lines:
   // ARITH: ERROR division-by-zero
   // ARITH: WARN remainder-by-zero
   // ARITH: ERROR division-by-zero; ERROR division-by-zero
+  // ARITH: WARN signed-overflow
   // ARITH: NONE
 
-ERROR requires a definite zero divisor; WARN requires a possible zero
-divisor. Semicolons retain distinct occurrences on the same source line.
+ERROR requires a violation at every reaching store: a definite zero divisor,
+or a signed operation whose mathematical result misses its kind. WARN
+requires a possible one. Semicolons retain distinct occurrences on the same source line.
 NONE documents silence. The directive enables an exact whole-file comparison
 of source lines, severity, operation, and multiplicity: unannotated warnings
 fail too. Fixtures without the directive retain their existing verdict-only
@@ -252,11 +254,24 @@ REPORT_LINE_RE = re.compile(
     r"^(\d+):\d+\s+\S+\s+.*?\s(PROVED|REFUTED|UNKNOWN|DEAD)(?:\s|$)"
 )
 ARITHMETIC_REPORT_RE = re.compile(
-    r"^(.+):(\d+):(\d+): (warning|error): "
-    r"(possible (division|remainder) by zero|"
-    r"(division|remainder) by zero whenever this operation is evaluated): "
+    r"^(.+):(\d+):(\d+): (warning|error): (possible )?"
+    r"(division by zero|remainder by zero|signed integer overflow in \S+"
+    r"|(?:signed |unsigned )?integer overflow in conversion)"
+    r"( whenever this operation is evaluated)?: "
     r".+ \[([^\]]+)\]$"
 )
+ARITHMETIC_MESSAGE_RE = re.compile(r"by zero|integer overflow")
+
+
+def arithmetic_hazard(message: str) -> str:
+    """The fixture vocabulary's name for a diagnostic's message."""
+    if message == "division by zero":
+        return "division-by-zero"
+    if message == "remainder by zero":
+        return "remainder-by-zero"
+    if "conversion" in message:
+        return "conversion-overflow"
+    return "signed-overflow"
 
 
 # Set from main()'s --update-graphs/--create-graphs before the (possibly
@@ -292,7 +307,7 @@ def actual_verdicts(stdout: str) -> dict[int, str]:
 def actual_arithmetic(output: str, path: Path, analysis: str) -> Counter:
     actual = Counter()
     for line in diagnostic_lines(output):
-        if "division by zero" not in line and "remainder by zero" not in line:
+        if not ARITHMETIC_MESSAGE_RE.search(line):
             continue
         match = ARITHMETIC_REPORT_RE.fullmatch(line)
         if match is None:
@@ -301,10 +316,13 @@ def actual_arithmetic(output: str, path: Path, analysis: str) -> Counter:
             raise ValueError(f"invalid arithmetic diagnostic location: {line!r}")
         if match[8] != analysis:
             raise ValueError(f"unexpected arithmetic diagnostic analysis: {match[8]!r}")
-        expected_severity = "warning" if match[6] else "error"
+        # A possible violation is a warning; one at every reaching store an error.
+        if bool(match[5]) == bool(match[7]):
+            raise ValueError(f"inconsistent arithmetic diagnostic wording: {line!r}")
+        expected_severity = "warning" if match[5] else "error"
         if match[4] != expected_severity:
             raise ValueError(f"inconsistent arithmetic diagnostic severity: {line!r}")
-        actual[int(match[2]), match[4], match[6] or match[7]] += 1
+        actual[int(match[2]), match[4], arithmetic_hazard(match[6])] += 1
     return actual
 
 
@@ -326,7 +344,7 @@ def check_arithmetic(
     ]:
         for (line_no, severity, operation), count in sorted(difference.items()):
             problems.append(
-                f"line {line_no}: {label} {count} {severity} {operation}-by-zero diagnostic(s)"
+                f"line {line_no}: {label} {count} {severity} {operation} diagnostic(s)"
             )
     return not problems, problems
 

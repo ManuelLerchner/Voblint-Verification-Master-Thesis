@@ -193,7 +193,7 @@ let findings_of state =
       (fun (obligation, verdict) ->
         match verdict with
         | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
-            Some (A.division_message v (C.arithmetic_operation obligation))
+            Some (A.obligation_message v obligation)
         | _ -> None)
       (C.state_diagnostics state)
 

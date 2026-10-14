@@ -7,6 +7,8 @@
 // [1,1] and [4,4], and a == 2 is UNKNOWN. hits == 8 is UNKNOWN for the same reason:
 // record(i) and record(3) share record's one context, and the global hits is
 // measured at ⊤ at the check.
+// hits at ⊤ and the joined v and a leave hits + amount, v * 2 and a - 2 possible
+// signed overflows.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: record / unit
@@ -100,6 +102,7 @@
 //         b=[-2147483648,2147483647]
 //         i=[5,5]
 //         share=⊤
+//       possible signed integer overflow in -: a - 2
 //       possible division by zero: 10 / (a - 2)
 //   main_pp22_ctx0: pp22
 //       interval:
@@ -119,12 +122,14 @@
 //         b=⊤
 //         i=⊤
 //         share=⊤
-//   record_pp0_ctx0: pp0
+//   record_pp0_ctx0: pp0 [unknown]
 //       interval:
 //         amount=[-2147483648,2147483647]
-//   scale_pp2_ctx0: pp2
+//       possible signed integer overflow in +: hits + amount
+//   scale_pp2_ctx0: pp2 [unknown]
 //       interval:
 //         v=[1,2147483647]
+//       possible signed integer overflow in *: v * 2
 //   wrap_pp4_ctx0: pp4
 //       interval:
 //         w=[1,2147483647]
@@ -240,11 +245,11 @@
 global hits;
 
 fun record(amount) {
-  hits = hits + amount;
+  hits = hits + amount; // ARITH: WARN signed-overflow
 }
 
 fun scale(v) {
-  return v * 2;
+  return v * 2; // ARITH: WARN signed-overflow
 }
 
 fun wrap(w) {
@@ -271,5 +276,5 @@ fun main() {
   a = wrap(1);
   b = wrap(4);
   __voblint_check(a == 2); // UNKNOWN
-  share = 10 / (a - 2); // ARITH: WARN division-by-zero
+  share = 10 / (a - 2); // ARITH: WARN division-by-zero; WARN signed-overflow
 }

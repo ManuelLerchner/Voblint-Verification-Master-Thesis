@@ -46,10 +46,11 @@
 //       interval:
 //         n=[2,2]
 //         r=⊤
-//   f_pp3_ctx0: pp3
+//   f_pp3_ctx0: pp3 [unknown]
 //       interval:
 //         n=[2,2]
 //         r=[-2147483648,2147483647]
+//       possible signed integer overflow in *: n * r
 //   main_pp5_ctx0: pp5
 //       interval:
 //         a=⊤

@@ -243,41 +243,42 @@ text \<open>
 
 definition report_row ::
     "('vr, 'e, 'c, 'n, 's) gsolved_run \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result)
-       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
+       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
        \<Rightarrow> (pp, 'e list) rbt \<Rightarrow> (pp, 'e arithmetic_obligation list list) rbt
        \<Rightarrow> (pp, (('vr, 'e) gedge_action \<times> pp) list) rbt \<Rightarrow> nat \<Rightarrow> 'c \<Rightarrow> pp
        \<Rightarrow> ('e, 's) result_state" where
-  "report_row sr classify cond conds obls edges i ctx v =
+  "report_row sr classify classify_ob conds obls edges i ctx v =
      (let state = lookup_table (run_table sr) v ctx
       in \<lparr> state_point = v, state_context = i,
            state_value = state,
            state_checks =
              map (\<lambda>c. (c, classify_point classify c state)) (group_lookup conds v),
            state_diagnostics =
-             map (\<lambda>obligation. (obligation, classify_point classify (cond obligation) state))
+             map (\<lambda>obligation. (obligation, classify_point classify_ob obligation state))
                (concat (group_lookup obls v)),
            state_steps = map (\<lambda>(a, w). (w, run_step sr v ctx a)) (group_lookup edges v) \<rparr>)"
 
 lemma report_row_simps [simp]:
-  "state_point (report_row sr classify cond conds obls edges i ctx v) = v"
-  "state_context (report_row sr classify cond conds obls edges i ctx v) = i"
-  "state_value (report_row sr classify cond conds obls edges i ctx v)
+  "state_point (report_row sr classify classify_ob conds obls edges i ctx v) = v"
+  "state_context (report_row sr classify classify_ob conds obls edges i ctx v) = i"
+  "state_value (report_row sr classify classify_ob conds obls edges i ctx v)
      = lookup_table (run_table sr) v ctx"
   by (simp_all add: report_row_def Let_def)
 
 text \<open>
   The builder reads the program only through what it is handed: its variables, its
   graph, the global names kept at their own unknowns, the arithmetic obligation sites
-  with the condition that makes one safe, and its procedures.
+  with the classifier that decides one, and its procedures.
 \<close>
 
 definition report_of ::
     "'k \<Rightarrow> 'vr list \<Rightarrow> ('vr::linorder, 'e::linorder) gcfg \<Rightarrow> 'n list
-       \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 'e)
+       \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list
+       \<Rightarrow> ('e arithmetic_obligation \<Rightarrow> 's \<Rightarrow> check_result)
        \<Rightarrow> pname list \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> 'x)
        \<Rightarrow> ('e \<Rightarrow> 's \<Rightarrow> check_result) \<Rightarrow> ('vr, 'e, 'c, 'n, 's) gsolved_run
        \<Rightarrow> ('k, 'x, 'vr, 'e, 'n, 's) analysis_report" where
-  "report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr =
+  "report_of config vars g globals sites classify_ob procs ctx_key ctx_tag classify sr =
      (let r = run_table sr;
           ctxs = ordered_by_key ctx_key (snd ` covered_keys r);
           indexed = enumerate 0 ctxs;
@@ -288,7 +289,7 @@ definition report_of ::
           checks = group_by_key (\<lambda>(u, a, w). u)
             (\<lambda>(u, a, w). if is_EA_Check a then Some (ea_check_cond a) else None) intra;
           obligations = group_by_key fst (Some \<circ> snd) sites;
-          state_at = report_row sr classify cond checks obligations steps;
+          state_at = report_row sr classify classify_ob checks obligations steps;
           route_at = (\<lambda>u ca ce i ctx.
             \<lparr> route_point = u, route_context = i, route_callee = callee_of_entry ce,
               route_targets =
@@ -323,7 +324,7 @@ definition report_of ::
              map (\<lambda>x. \<lparr> global_unknown = Global_Named x, global_state = run_shared sr x \<rparr>)
                globals
              @ concat (map seeds_of procs),
-           report_diagnostics = arithmetic_diagnostics sites cond r classify \<rparr>)"
+           report_diagnostics = arithmetic_diagnostics sites r classify_ob \<rparr>)"
 
 text \<open>A VIMP program hands over its own variables, graph, declared globals when they
   are flow-insensitive, division obligations and procedures.\<close>
@@ -337,7 +338,8 @@ abbreviation vimp_report_of ::
        (case config_globals config of
           Program_Globals_Flow_Sensitive \<Rightarrow> []
         | Program_Globals_Flow_Insensitive \<Rightarrow> declared_global_vars p)
-       (arithmetic_sites (prog_cfg p)) arithmetic_condition (prog_main_name # prog_procs p)
+       (arithmetic_sites (prog_cfg p)) (by_condition arithmetic_condition classify)
+       (prog_main_name # prog_procs p)
        ctx_key ctx_tag classify sr"
 
 subsection \<open>One configuration, one report\<close>

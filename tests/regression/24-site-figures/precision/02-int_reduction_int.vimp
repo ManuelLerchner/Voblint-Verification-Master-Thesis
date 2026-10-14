@@ -19,10 +19,11 @@
 //     main_entry_main_ctx0
 //
 // nodes:
-//   main_pp1_ctx0: pp1
+//   main_pp1_ctx0: pp1 [unknown]
 //       int:
 //         n=intervals:[-2147483648,2147483647]; congruences:⊤
 //         x=⊤
+//       possible signed integer overflow in *: 4 * n
 //   main_pp2_ctx0: pp2
 //       int:
 //         n=intervals:[-2147483648,2147483647]; congruences:⊤

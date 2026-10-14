@@ -53,10 +53,11 @@
 //       interval:
 //         n=[2,3]
 //         tmp=⊤
-//   fact_pp3_ctx0: pp3
+//   fact_pp3_ctx0: pp3 [unknown]
 //       interval:
 //         n=[2,3]
 //         tmp=[-2147483648,2147483647]
+//       possible signed integer overflow in *: n * tmp
 //   main_pp5_ctx0: pp5
 //       interval:
 //         r=⊤

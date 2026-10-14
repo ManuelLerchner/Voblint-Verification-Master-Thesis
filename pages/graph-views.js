@@ -64,7 +64,7 @@ function byPoint(items) {
 
 /*
  * The compiled CFG of the run, as res_cfg holds it: every program point once, boxed by
- * its procedure. A point's colour is the report's verdict for its checks and divisions,
+ * its procedure. A point's colour is the report's verdict for its checks and arithmetic findings,
  * never one context's. With several contexts, each context's state is a row of its own.
  */
 export function cfgView(result) {

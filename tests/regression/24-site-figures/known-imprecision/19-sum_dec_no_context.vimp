@@ -51,9 +51,10 @@
 //   main_exit_main_ctx0: exit_main
 //       interval:
 //         x=[-2147483648,2147483647]
-//   dec_pp0_ctx0: pp0
+//   dec_pp0_ctx0: pp0 [unknown]
 //       interval:
 //         x=[-2147483648,2147483647]
+//       possible signed integer overflow in -: x - 1
 //   sum_pp2_ctx0: pp2
 //       interval:
 //         n=[-2147483648,2147483647]
@@ -72,11 +73,12 @@
 //         n=[1,2147483647]
 //         m=[-2147483648,2147483647]
 //         r=⊤
-//   sum_pp7_ctx0: pp7
+//   sum_pp7_ctx0: pp7 [unknown]
 //       interval:
 //         n=[1,2147483647]
 //         m=[-2147483648,2147483647]
 //         r=[-2147483648,2147483647]
+//       possible signed integer overflow in +: r + n
 //   main_pp9_ctx0: pp9
 //       interval:
 //         x=⊤

@@ -27,20 +27,39 @@ let contextual_verdict_name = function
   | C.Bot -> "DEAD"
   | C.Lifted v -> verdict_name v
 
-(* A division or remainder whose divisor the verdict says is, or may be, zero. *)
-let division_message verdict operation =
-  let kind =
-    match operation with C.TArith (_, C.AMod, _, _) -> "remainder" | _ -> "division"
-  in
+(* What a diagnostic reports, worded after Goblint's messages: a division or
+   remainder whose divisor is, or may be, zero; a signed operation whose
+   mathematical result lies, or may lie, outside its kind; a conversion whose value
+   the target kind does, or may, not represent. A REFUTED verdict holds for every
+   execution that evaluates the operation; an UNKNOWN one is only possible. *)
+let operator_name = function
+  | C.AAdd -> "+"
+  | C.ASub -> "-"
+  | C.AMul -> "*"
+  | C.ADiv -> "/"
+  | C.AMod -> "%"
+
+let obligation_message verdict obligation =
+  let operation = C.arithmetic_operation obligation in
   let text = Typed_printer.string_of_texp operation in
+  let what =
+    match (C.arithmetic_hazard obligation, operation) with
+    | C.Division_By_Zero, C.TArith (_, C.AMod, _, _) -> "remainder by zero"
+    | C.Division_By_Zero, _ -> "division by zero"
+    | C.Signed_Overflow, C.TArith (_, op, _, _) ->
+        "signed integer overflow in " ^ operator_name op
+    | C.Signed_Overflow, _ -> "signed integer overflow"
+    | C.Conversion_Overflow, C.TCast (k, _) ->
+        (if C.ik_signed k then "signed" else "unsigned")
+        ^ " integer overflow in conversion"
+    | C.Conversion_Overflow, _ -> "integer overflow in conversion"
+  in
   match verdict with
-  | C.Check_Refuted ->
-      kind ^ " by zero whenever this operation is evaluated: " ^ text
-  | _ -> "possible " ^ kind ^ " by zero: " ^ text
+  | C.Check_Refuted -> what ^ " whenever this operation is evaluated: " ^ text
+  | _ -> "possible " ^ what ^ ": " ^ text
 
 let diagnostic_message d =
-  division_message (C.diagnostic_verdict d)
-    (C.arithmetic_operation (C.diagnostic_obligation d))
+  obligation_message (C.diagnostic_verdict d) (C.diagnostic_obligation d)
 
 (* The name an analysis goes by on the command line and in every report. *)
 let analysis_label = Analysis_request.name_of_analysis

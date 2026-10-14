@@ -6,7 +6,8 @@
 // [1,+inf] and the returned r, and so a and b, lose both bounds. a == 2 is
 // concretely true but UNKNOWN, and 10 / (a - 2) -- concretely 10 / 0 -- is
 // only a possible division by zero. record keeps one context per call site
-// in main, so hits stays exact and hits == 8 is still proved.
+// in main, so hits stays exact and hits == 8 is still proved. The widened v
+// and a leave v * 2 and a - 2 possible signed overflows.
 global hits;
 
 fun record(amount) {
@@ -14,7 +15,7 @@ fun record(amount) {
 }
 
 fun scale(v) {
-  return v * 2;
+  return v * 2; // ARITH: WARN signed-overflow
 }
 
 fun wrap(w) {
@@ -41,5 +42,5 @@ fun main() {
   a = wrap(1);
   b = wrap(4);
   __voblint_check(a == 2); // UNKNOWN
-  share = 10 / (a - 2); // ARITH: WARN division-by-zero
+  share = 10 / (a - 2); // ARITH: WARN division-by-zero; WARN signed-overflow
 }

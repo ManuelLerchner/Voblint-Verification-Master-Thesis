@@ -18,10 +18,12 @@
 //     main_entry_main_ctx0
 //
 // nodes:
-//   main_pp1_ctx0: pp1
+//   main_pp1_ctx0: pp1 [unknown]
 //       congruence:
 //         n=⊤
 //         x=⊤
+//       possible signed integer overflow in *: 4 * n
+//       possible signed integer overflow in +: 4 * n + 1
 //   main_pp2_ctx0: pp2
 //       congruence:
 //         n=⊤

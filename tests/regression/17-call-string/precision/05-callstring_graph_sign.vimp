@@ -77,9 +77,10 @@
 //   g_exit_g_ctx0: exit_g
 //       sign:
 //         p=+
-//   g_pp0_ctx0: pp0
+//   g_pp0_ctx0: pp0 [unknown]
 //       sign:
 //         p=+
+//       possible signed integer overflow in +: p + p
 //   g_entry_g_ctx0: entry_g
 //       sign:
 //         p=+
@@ -88,9 +89,10 @@
 //   g_exit_g_ctx1: exit_g
 //       sign:
 //         p=-
-//   g_pp0_ctx1: pp0
+//   g_pp0_ctx1: pp0 [unknown]
 //       sign:
 //         p=-
+//       possible signed integer overflow in +: p + p
 //   g_entry_g_ctx1: entry_g
 //       sign:
 //         p=-

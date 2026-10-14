@@ -1134,26 +1134,37 @@ function resultAnnotations(result) {
   ];
 }
 
-class AnnotationBadge extends WidgetType {
-  constructor(labels, detail) {
+/*
+ * A line's annotations, one badge per kind and label in its own colour, so an
+ * error beside a warning on one line reads as two findings. Each badge's tooltip
+ * lists only its own details.
+ */
+class AnnotationBadges extends WidgetType {
+  constructor(items) {
     super();
 
-    this.labels = labels;
-    this.detail = detail;
+    this.items = items;
+    this.key = JSON.stringify(items);
   }
 
   eq(other) {
-    return other.labels === this.labels && other.detail === this.detail;
+    return other.key === this.key;
   }
 
   toDOM() {
-    const badge = document.createElement("span");
+    const badges = document.createElement("span");
 
-    badge.className = "cm-verdict-badge";
-    badge.textContent = this.labels;
-    badge.title = this.detail;
+    badges.className = "cm-verdict-badges";
+    for (const item of this.items) {
+      const badge = document.createElement("span");
 
-    return badge;
+      badge.className = `cm-verdict-badge cm-verdict-${item.kind}`;
+      badge.textContent = item.label;
+      badge.title = item.detail;
+      badges.append(badge);
+    }
+
+    return badges;
   }
 
   ignoreEvent() {
@@ -1217,13 +1228,18 @@ function resultDecorations(doc, view, showHints) {
         ANNOTATION_SEVERITY.indexOf(current) > ANNOTATION_SEVERITY.indexOf(worst) ? current : worst,
       );
 
-    const labels = [...new Set(group.map((a) => `${ANNOTATION_ICON[a.kind]} ${a.label}`))].join(
-      "  ",
-    );
-    const detail = group
-      .map((a) => a.detail)
-      .filter(Boolean)
-      .join("\n");
+    const items = [];
+
+    for (const annotation of group) {
+      const label = `${ANNOTATION_ICON[annotation.kind]} ${annotation.label}`;
+      const item = items.find((i) => i.label === label && i.kind === annotation.kind);
+
+      if (item) {
+        item.detail = [item.detail, annotation.detail].filter(Boolean).join("\n");
+      } else {
+        items.push({ kind: annotation.kind, label, detail: annotation.detail ?? "" });
+      }
+    }
 
     ranges.push(Decoration.line({ class: `cm-verdict-line cm-verdict-${kind}` }).range(line.from));
 
@@ -1237,9 +1253,7 @@ function resultDecorations(doc, view, showHints) {
         ranges.push(Decoration.mark({ class: "cm-error-token" }).range(from, to));
       }
     }
-    ranges.push(
-      Decoration.widget({ widget: new AnnotationBadge(labels, detail), side: 2 }).range(line.to),
-    );
+    ranges.push(Decoration.widget({ widget: new AnnotationBadges(items), side: 2 }).range(line.to));
   }
 
   for (const lineNumber of view.deadLines) {
@@ -2324,8 +2338,8 @@ function taxiTurn(index) {
 }
 
 /*
- * A zero divisor is marked by an icon beside the point, definite before possible, and
- * its message left to the tooltip: an expression-length line would widen the node
+ * An arithmetic finding (a zero divisor or a signed overflow) is marked by an icon
+ * beside the point, definite before possible, and its message left to the tooltip: an expression-length line would widen the node
  * and, through it, the whole column of the layout.
  */
 

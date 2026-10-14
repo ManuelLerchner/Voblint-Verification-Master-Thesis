@@ -87,4 +87,75 @@ lemma run_voblint_config:
      (auto simp: run_voblint_def typed_report_run_def typed_cs_report_def typed_es_report_def
       report_of_def Let_def split: if_splits option.splits typed_context.splits)
 
+subsection \<open>What the arithmetic diagnostics guarantee\<close>
+
+text \<open>
+  A point the report's diagnostics do not name is safe: at every store that reaches it,
+  every obligation of every expression an edge or a call there evaluates holds. No
+  divisor is zero, and no signed operation computes a result outside its kind. A
+  diagnostic says nothing on its own unless it is refuted: then its obligation fails at
+  every store that reaches its point, which is a definite violation only if the point is
+  reached. Both hold under either overflow policy, which changes only how precisely the
+  analyses bound a wrapped value.
+\<close>
+
+theorem run_voblint_arithmetic_safe:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and s: "s \<in> reaching ds p v"
+  shows run_voblint_arithmetic_safe_intra:
+      "(v, a, w) \<in> intra (typed_cfg p ds) \<Longrightarrow> e \<in> set (edge_expressions a)
+         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> tobligation_holds ob s"
+    and run_voblint_arithmetic_safe_call:
+      "(v, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> e \<in> set (ce_args ca)
+         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> tobligation_holds ob s"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
+                (conf_context conf) ds p = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  note safe = typed_report_obligation_safe[OF wf rep s _ _ absent]
+  show "tobligation_holds ob s"
+    if "(v, a, w) \<in> intra (typed_cfg p ds)" "e \<in> set (edge_expressions a)"
+      "ob \<in> set (tarith_obligations e)"
+    using tobligation_site_intra[OF that] safe by blast
+  show "tobligation_holds ob s"
+    if "(v, ca, ce, k) \<in> calls (typed_cfg p ds)" "e \<in> set (ce_args ca)"
+      "ob \<in> set (tarith_obligations e)"
+    using tobligation_site_call[OF that] safe by blast
+qed
+
+theorem run_voblint_arithmetic_refuted:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and d: "d \<in> set (report_diagnostics res)" and r: "diagnostic_verdict d = Check_Refuted"
+    and s: "s \<in> reaching ds p (diagnostic_point d)"
+  shows "\<not> tobligation_holds (diagnostic_obligation d) s"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
+                (conf_context conf) ds p = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  show ?thesis by (rule typed_report_obligation_refuted[OF wf rep s d r refl])
+qed
+
+text \<open>
+  For signed overflow in particular: at a point no diagnostic names, every signed
+  addition, subtraction, multiplication and division nested in an expression evaluated
+  there computes, from the operand values of any reaching store, a mathematical result
+  its kind represents. So no execution that reaches the point overflows there, whichever
+  value wraparound would have produced.
+\<close>
+
+corollary run_voblint_no_signed_overflow:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and s: "s \<in> reaching ds p v"
+    and evaluated: "((v, a, w) \<in> intra (typed_cfg p ds) \<and> e \<in> set (edge_expressions a))
+                    \<or> ((v, ca, ce, k) \<in> calls (typed_cfg p ds) \<and> e \<in> set (ce_args ca))"
+    and sub: "TArith ik op x y \<in> tsubexps e" and signed: "ik_signed ik" and op: "op \<noteq> AMod"
+  shows "aop_eval op (teval x s) (teval y s) \<in> ik_range ik"
+  using evaluated tarith_obligations_overflow[OF sub signed op]
+    run_voblint_arithmetic_safe[OF run absent s]
+  by (metis tobligation_holds_overflow)
+
 end

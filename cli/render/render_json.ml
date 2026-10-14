@@ -108,8 +108,9 @@ let kind_name = function
   | G.Proc_exit -> "proc_exit"
   | G.Point -> "point"
 
-(* A zero divisor at a node, and the finding line that names it, so a drawing can
-   mark the node compactly and still find the full message among its findings. *)
+(* An arithmetic finding at a node -- a zero divisor or a signed overflow, definite
+   or possible -- and the finding line that names it, so a drawing can mark the
+   node compactly and still find the full message among its findings. *)
 let division_json (verdict, message) =
   Printf.sprintf "{\"verdict\":%s,\"message\":%s}"
     (json_string
@@ -295,7 +296,7 @@ let nodes_json result (graph : G.t) context_key =
         (C.state_point st, A.int_of_nat (C.state_context st))
         st)
     (C.res_states result);
-  (* The same divisions, verdicts and messages Context_graph lists as findings. *)
+  (* The same arithmetic findings, verdicts and messages Context_graph lists. *)
   let divisions (n : G.node) =
     match Hashtbl.find_opt states (n.point, n.context) with
     | None -> []
@@ -305,7 +306,7 @@ let nodes_json result (graph : G.t) context_key =
             match verdict with
             | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
                 Some
-                  (v, A.division_message v (C.arithmetic_operation obligation))
+                  (v, A.obligation_message v obligation)
             | _ -> None)
           (C.state_diagnostics st)
   in
@@ -678,11 +679,17 @@ let check_result_json = function
   | C.Check_Refuted -> tagged "Check_Refuted" []
   | C.Check_Unknown -> tagged "Check_Unknown" []
 
+let hazard_json = function
+  | C.Division_By_Zero -> tagged "Division_By_Zero" []
+  | C.Signed_Overflow -> tagged "Signed_Overflow" []
+  | C.Conversion_Overflow -> tagged "Conversion_Overflow" []
+
 let obligation_json o =
   json_object
     [
+      ("arithmetic_hazard", hazard_json (C.arithmetic_hazard o));
       ("arithmetic_operation", texp_json (C.arithmetic_operation o));
-      ("arithmetic_divisor", texp_json (C.arithmetic_divisor o));
+      ("arithmetic_operand", texp_json (C.arithmetic_operand o));
     ]
 
 let cfg_json g =

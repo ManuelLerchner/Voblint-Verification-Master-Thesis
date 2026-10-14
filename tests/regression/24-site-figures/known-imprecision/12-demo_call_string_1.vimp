@@ -5,6 +5,7 @@
 // scale through its single call site s3.
 // Concretely a = 2, but this setting gives scale one copy for both calls, v joins
 // [1,1] and [4,4], and a == 2 is UNKNOWN.
+// The widened v and a leave v * 2 and a - 2 possible signed overflows.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / root context
@@ -92,6 +93,7 @@
 //         b=[-2147483648,2147483647]
 //         i=[5,5]
 //         share=⊤
+//       possible signed integer overflow in -: a - 2
 //       possible division by zero: 10 / (a - 2)
 //   main_pp22_ctx0: pp22
 //       interval:
@@ -162,9 +164,10 @@
 //   scale_exit_scale_ctx0: exit_scale
 //       interval:
 //         v=[1,2147483647]
-//   scale_pp2_ctx0: pp2
+//   scale_pp2_ctx0: pp2 [unknown]
 //       interval:
 //         v=[1,2147483647]
+//       possible signed integer overflow in *: v * 2
 //   scale_entry_scale_ctx0: entry_scale
 //       interval:
 //         v=[1,2147483647]
@@ -286,7 +289,7 @@ fun record(amount) {
 }
 
 fun scale(v) {
-  return v * 2;
+  return v * 2; // ARITH: WARN signed-overflow
 }
 
 fun wrap(w) {
@@ -313,5 +316,5 @@ fun main() {
   a = wrap(1);
   b = wrap(4);
   __voblint_check(a == 2); // UNKNOWN
-  share = 10 / (a - 2); // ARITH: WARN division-by-zero
+  share = 10 / (a - 2); // ARITH: WARN division-by-zero; WARN signed-overflow
 }

@@ -49,9 +49,10 @@
 //       interval:
 //         x=[-2147483648,2147483647]
 //         y=[-2147483648,2147483647]
-//   f_pp0_ctx0: pp0
+//   f_pp0_ctx0: pp0 [unknown]
 //       interval:
 //         p=[3,2147483647]
+//       possible signed integer overflow in +: p + p
 //   main_pp2_ctx0: pp2
 //       interval:
 //         x=⊤

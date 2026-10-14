@@ -17,7 +17,16 @@ from pathlib import Path
 
 PARAM_RE = re.compile(r"^// PARAM: (.*)$")
 ARITHMETIC_HEADER = "// EXPECT-ARITHMETIC"
-ARITHMETIC_ENTRY_RE = re.compile(r"(WARN|ERROR) (division|remainder)-by-zero")
+# One entry per diagnostic: its severity and the hazard it reports.
+ARITHMETIC_HAZARDS = (
+    "division-by-zero",
+    "remainder-by-zero",
+    "signed-overflow",
+    "conversion-overflow",
+)
+ARITHMETIC_ENTRY_RE = re.compile(
+    r"(WARN|ERROR) (" + "|".join(ARITHMETIC_HAZARDS) + r")"
+)
 GRAPH_BEGIN = "// EXPECT-GRAPH-BEGIN"
 GRAPH_END = "// EXPECT-GRAPH-END"
 

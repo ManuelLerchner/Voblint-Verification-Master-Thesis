@@ -182,7 +182,8 @@ export_code
   check_point check_label check_exp check_verdict
   global_unknown global_state Global_Named Global_Seed
   diagnostic_point diagnostic_occurrence diagnostic_obligation diagnostic_verdict
-  arithmetic_operation arithmetic_divisor
+  arithmetic_hazard arithmetic_operation arithmetic_operand
+  Division_By_Zero Signed_Overflow Conversion_Overflow ik_signed
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
   cfg_entry cfg_points tcfg_intra_edges tcfg_call_edges tcfg_points

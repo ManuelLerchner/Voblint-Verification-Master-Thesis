@@ -715,7 +715,7 @@ main {
   --verdict-tint: rgb(255 138 115 / 0.2);
 }
 
-.code-editor .cm-verdict-error .cm-verdict-badge {
+.code-editor .cm-verdict-badge.cm-verdict-error {
   color: #1c1c1c;
   background: #ff8a73;
 }
@@ -728,8 +728,16 @@ main {
   border-radius: 2px;
 }
 
-.code-editor .cm-verdict-badge {
+.code-editor .cm-verdict-badges {
   margin-left: 1.5em;
+  white-space: pre;
+}
+
+.code-editor .cm-verdict-badge + .cm-verdict-badge {
+  margin-left: 0.5em;
+}
+
+.code-editor .cm-verdict-badge {
   padding: 0 0.5em;
   border-radius: 4px;
   color: var(--verdict-color);
@@ -741,7 +749,7 @@ main {
 }
 
 /* Dim the code, not the badge: a line's opacity would fade its DEAD label too. */
-.code-editor .cm-dead-line > :not(.cm-verdict-badge) {
+.code-editor .cm-dead-line > :not(.cm-verdict-badges) {
   opacity: 0.42;
 }
 

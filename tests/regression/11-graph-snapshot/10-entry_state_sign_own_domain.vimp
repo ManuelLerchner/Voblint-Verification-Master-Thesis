@@ -69,9 +69,10 @@
 //   square_exit_square_ctx0: exit_square
 //       sign:
 //         n=+
-//   square_pp0_ctx0: pp0
+//   square_pp0_ctx0: pp0 [unknown]
 //       sign:
 //         n=+
+//       possible signed integer overflow in *: n * n
 //   square_entry_square_ctx0: entry_square
 //       sign:
 //         n=+

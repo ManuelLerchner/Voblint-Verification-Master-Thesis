@@ -25,9 +25,10 @@
 //       interval:
 //         x=[-2147483648,2147483647]
 //       check x >= 0
-//   f_pp1_ctx0: pp1
+//   f_pp1_ctx0: pp1 [unknown]
 //       interval:
 //         x=[-2147483648,2147483647]
+//       possible signed integer overflow in +: x + 1
 //   f_pp2_ctx0: pp2 [unreachable]
 //       unreachable
 //   main_pp3_ctx0: pp3

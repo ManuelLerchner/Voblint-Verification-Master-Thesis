@@ -341,8 +341,8 @@
             <span><span class="lg-badge dead">∅ DEAD</span>no context reaches it</span>
           </div>
           <div class="legend-row" aria-label="Arithmetic">
-            <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero</span>
-            <span><span class="lg-badge error">✗ ERROR</span>a divisor is zero in every live context</span>
+            <span><span class="lg-badge warning">⚠ WARNING</span>a divisor may be zero, or a signed operation may overflow</span>
+            <span><span class="lg-badge error">✗ ERROR</span>the divisor is zero, or the signed result overflows, at every reaching store</span>
           </div>
           <div class="legend-row" aria-label="Value hints">
             <span><span class="lg-badge hint">x: [2,2]</span>what a statement assigns; <code>→</code> callee parameters, <code>↩</code> a return; <code>⇢</code> a write to a flow-insensitive global, <code>final</code> that global's final value</span>

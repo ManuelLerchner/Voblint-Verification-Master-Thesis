@@ -428,8 +428,8 @@ lemma report_of_simps [simp]:
   "report_checks (vimp_report_of config ctx_key ctx_tag classify sr p)
      = result_checks_of (prog_cfg p) (run_table sr) classify"
   "report_diagnostics (vimp_report_of config ctx_key ctx_tag classify sr p)
-     = arithmetic_diagnostics (arithmetic_sites (prog_cfg p)) arithmetic_condition
-         (run_table sr) classify"
+     = arithmetic_diagnostics (arithmetic_sites (prog_cfg p)) (run_table sr)
+         (by_condition arithmetic_condition classify)"
   by (simp_all add: report_of_def Let_def)
 
 text \<open>
@@ -486,7 +486,7 @@ proof -
   proof -
     let ?e = "arithmetic_condition (diagnostic_obligation d)"
     have pv: "point_verdict (run_table sr) classify (diagnostic_point d) ?e = Decided Check_Refuted"
-      using arithmetic_diagnostics_refuted d r by simp
+      using arithmetic_diagnostics_refuted[OF d[unfolded report_of_simps] r] by simp
     from s obtain st where row: "Lifted st \<in> report_states_at ?res (diagnostic_point d)"
       and sg: "s \<in> report_gamma ?res st"
       by (rule report_semE)
@@ -783,7 +783,8 @@ proof -
   have contexts: "length (report_contexts ?res) = length ctxs"
     by (simp add: report_of_def Let_def ctxs_def r_def)
   have states: "report_states ?res
-    = concat (map (\<lambda>(i, ctx). map (report_row sr classify arithmetic_condition checks obls steps i ctx)
+    = concat (map (\<lambda>(i, ctx). map (report_row sr classify (by_condition arithmetic_condition classify)
+                                     checks obls steps i ctx)
                                  (filter (\<lambda>v. (v, ctx) \<in> covered_keys r) nodes))
                 (enumerate 0 ctxs))"
     by (simp add: report_of_def Let_def ctxs_def r_def nodes_def g_def checks_def obls_def
@@ -812,7 +813,8 @@ proof -
     if "st \<in> set (report_states ?res)" for st
   proof -
     from that obtain i ctx v
-      where st: "st = report_row sr classify arithmetic_condition checks obls steps i ctx v"
+      where st: "st = report_row sr classify (by_condition arithmetic_condition classify)
+                         checks obls steps i ctx v"
       by (auto simp: states)
     have "map check_exp (filter (\<lambda>c. check_point c = v) (report_checks ?res))
             = group_lookup checks v" (is "map check_exp ?cs = _")
