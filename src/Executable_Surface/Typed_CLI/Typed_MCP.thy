@@ -181,7 +181,7 @@ begin
 lemma typed_mcp_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_mcp.terminates sem ds as k r tglobal p"
-  shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
+  shows "(reaching ds p v)
            \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v))"
   using typed_mcp.gfun_route_result_node_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
@@ -191,7 +191,7 @@ theorem typed_mcp_verdict_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_mcp.terminates sem ds as k r tglobal p"
     and mem: "(v, c, Decided res) \<in> set (typed_mcp.verdict_report sem ds as k r tglobal p)"
-    and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+    and s: "s \<in> (reaching ds p v)"
   shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
@@ -220,10 +220,10 @@ qed
 lemma typed_mcp_es_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_mcp_es.terminates sem ds as r tglobal p"
-  shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
+  shows "(reaching ds p v)
            \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v))"
 proof
-  fix s assume "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+  fix s assume "s \<in> (reaching ds p v)"
   then obtain ctx :: tmcp_ctx where "s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds))
       tglobal (typed_mcp_es.admitted_contexts sem ds as r tglobal p) tmcp_root_ctx (typed_cfg p ds)
       (tinit_stores (kenv_of ds)) v ctx"
@@ -245,7 +245,7 @@ theorem typed_mcp_es_verdict_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_mcp_es.terminates sem ds as r tglobal p"
     and mem: "(v, c, Decided res) \<in> set (typed_mcp_es.verdict_report sem ds as r tglobal p)"
-    and s: "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
+    and s: "s \<in> (reaching ds p v)"
   shows "res = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -

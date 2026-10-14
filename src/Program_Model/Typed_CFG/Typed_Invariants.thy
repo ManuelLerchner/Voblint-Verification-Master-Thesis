@@ -233,7 +233,7 @@ lemma call_formals_typed_ptable:
   by (cases "prog_table p q") (auto simp: typed_ptable_def prog_formals_def Code.abort_def)
 
 theorem calls_typed_typed_cfg:
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+  assumes wf: "wf_program_compile_input p"
   shows "calls_typed (kenv_of ds) (typed_cfg p ds)"
   unfolding calls_typed_def
 proof (intro allI impI)
@@ -264,7 +264,7 @@ text \<open>Hence a typed run keeps its store typed: every identity other than t
   holds a value of its kind at every point of the run.\<close>
 
 theorem typed_run_tstyped:
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+  assumes wf: "wf_program_compile_input p"
     and s0: "tstyped (kenv_of ds) s0"
     and run: "star (tpstep (kenv_of ds) (typed_ptable p ds))
                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"

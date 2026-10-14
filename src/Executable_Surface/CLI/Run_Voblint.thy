@@ -103,14 +103,14 @@ text \<open>
 
 theorem run_voblint_arithmetic_safe:
   assumes run: "run_voblint conf ds p = Analysed res"
-    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and absent: "SAFE res v"
     and s: "s \<in> reaching ds p v"
   shows run_voblint_arithmetic_safe_intra:
       "(v, a, w) \<in> intra (typed_cfg p ds) \<Longrightarrow> e \<in> set (edge_expressions a)
-         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> tobligation_holds ob s"
+         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> s \<Turnstile> ob"
     and run_voblint_arithmetic_safe_call:
       "(v, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> e \<in> set (ce_args ca)
-         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> tobligation_holds ob s"
+         \<Longrightarrow> ob \<in> set (tarith_obligations e) \<Longrightarrow> s \<Turnstile> ob"
     and run_voblint_arithmetic_safe_return:
       "(u, ca, ce, k) \<in> calls (typed_cfg p ds) \<Longrightarrow> ce_dst ca = Some x
          \<Longrightarrow> (v, EA_Ret (Some e) (callee_of_entry ce), w) \<in> intra (typed_cfg p ds)
@@ -122,11 +122,11 @@ proof -
                 (conf_context conf) ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   note safe = typed_report_obligation_safe[OF wf rep s _ _ absent]
-  show "tobligation_holds ob s"
+  show "s \<Turnstile> ob"
     if "(v, a, w) \<in> intra (typed_cfg p ds)" "e \<in> set (edge_expressions a)"
       "ob \<in> set (tarith_obligations e)"
     using tobligation_site_intra[OF that] safe by blast
-  show "tobligation_holds ob s"
+  show "s \<Turnstile> ob"
     if "(v, ca, ce, k) \<in> calls (typed_cfg p ds)" "e \<in> set (ce_args ca)"
       "ob \<in> set (tarith_obligations e)"
     using tobligation_site_call[OF that] safe by blast
@@ -141,7 +141,7 @@ theorem run_voblint_arithmetic_refuted:
   assumes run: "run_voblint conf ds p = Analysed res"
     and d: "d \<in> set (report_diagnostics res)" and r: "diagnostic_verdict d = Check_Refuted"
     and s: "s \<in> reaching ds p (diagnostic_point d)"
-  shows "\<not> tobligation_holds (diagnostic_obligation d) s"
+  shows "\<not> s \<Turnstile> diagnostic_obligation d"
 proof -
   from run have wf: "wf_program_compile_input p"
     and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
@@ -160,7 +160,7 @@ text \<open>
 
 corollary run_voblint_no_signed_overflow:
   assumes run: "run_voblint conf ds p = Analysed res"
-    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and absent: "SAFE res v"
     and s: "s \<in> reaching ds p v"
     and evaluated: "((v, a, w) \<in> intra (typed_cfg p ds) \<and> e \<in> set (edge_expressions a))
                     \<or> ((v, ca, ce, k) \<in> calls (typed_cfg p ds) \<and> e \<in> set (ce_args ca))"
@@ -178,7 +178,7 @@ text \<open>
 
 corollary run_voblint_no_conversion_overflow:
   assumes run: "run_voblint conf ds p = Analysed res"
-    and absent: "\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
+    and absent: "SAFE res v"
     and s: "s \<in> reaching ds p v"
     and evaluated: "((v, a, w) \<in> intra (typed_cfg p ds) \<and> e \<in> set (edge_expressions a))
                     \<or> ((v, ca, ce, k) \<in> calls (typed_cfg p ds) \<and> e \<in> set (ce_args ca))"
@@ -227,8 +227,7 @@ proof -
       by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
     from ob obtain obs where "(v, obs) \<in> set (tobligation_sites ds p)" and "ob \<in> set obs"
       by (auto simp: mem_tobligations_at)
-    from typed_report_obligation_safe[OF wf rep s this] safe show "s \<Turnstile> ob"
-      by (simp add: SAFE_def)
+    from typed_report_obligation_safe[OF wf rep s this] safe show "s \<Turnstile> ob" .
   qed
 qed
 

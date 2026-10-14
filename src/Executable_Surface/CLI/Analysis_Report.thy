@@ -197,8 +197,8 @@ text \<open>
   expressions, and says nothing about a hazard the report does not check.
 \<close>
 
-definition SAFE :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
-  "SAFE res v \<longleftrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)"
+abbreviation SAFE :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> bool" where
+  "SAFE res v \<equiv> \<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v"
 
 subsection \<open>A consistent report\<close>
 

@@ -37,7 +37,7 @@ instance var_id :: infinite_key
 type_synonym 'a tst = "(var_id, 'a kd) gdefault_st"
 
 abbreviation trd :: "'a::kind_int_domain tst \<Rightarrow> 'a tabs" where
-  "trd \<equiv> default_st_to_fun tglobal"
+  "trd \<equiv> \<rho>\<^bsub>tglobal\<^esub>"
 
 abbreviation tloc :: "var_id \<Rightarrow> var_id glocation" where
   "tloc \<equiv> location_of tglobal"

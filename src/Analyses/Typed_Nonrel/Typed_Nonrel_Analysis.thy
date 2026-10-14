@@ -307,7 +307,7 @@ definition typed_es ::
        \<Rightarrow> 'a kd list" where
   "typed_es \<G> d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
-        (case d of Lifted (TL st) \<Rightarrow> map (default_st_to_fun \<G> st) pars
+        (case d of Lifted (TL st) \<Rightarrow> map (\<rho>\<^bsub>\<G>\<^esub> st) pars
          | Lifted TTop \<Rightarrow> map (\<lambda>_. KTop) pars
          | Bot \<Rightarrow> map (\<lambda>_. \<bottom>) pars))"
 

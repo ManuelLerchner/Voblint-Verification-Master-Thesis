@@ -201,7 +201,7 @@ text \<open>Every run of the typed program is simulated on the typed graph, and 
   instance; nothing about kinds enters the simulation proof.\<close>
 
 theorem typed_source_run_has_activation_trace:
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+  assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
     and run: "star (tpstep \<kappa> (typed_ptable p ds))
                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
@@ -215,7 +215,7 @@ text \<open>Hence every store a typed run reaches lies in the typed collecting s
   node simulating it. This is the inclusion a sound typed analysis result bounds.\<close>
 
 theorem typed_source_reaches_node_collect:
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+  assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
     and run: "star (tpstep \<kappa> (typed_ptable p ds))
                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"

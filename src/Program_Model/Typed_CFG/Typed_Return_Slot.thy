@@ -296,7 +296,7 @@ text \<open>A run of an elaborated program under the shared slot is a run under 
   slots from the same start, whose stores agree with it everywhere but at the slots.\<close>
 
 theorem typed_run_tsteps:
-  assumes wf: "wf_compile_input (declared_global p) (prog_table p) (prog_procs p)"
+  assumes wf: "wf_program_compile_input p"
     and s0: "tstyped (kenv_of ds) s0"
     and run: "star (tpstep (kenv_of ds) (typed_ptable p ds))
                 (main_body (typed_ptable p ds), s0, []) (c, s, fs)"

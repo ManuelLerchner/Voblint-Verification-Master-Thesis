@@ -176,18 +176,18 @@ definition tobligation_classify ::
 
 lemma tobligation_classify_sound:
   assumes t: "t \<in> tmcp.act_gamma ds as v"
-  shows "tobligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> tobligation_holds ob t"
-    and "tobligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> tobligation_holds ob t"
+  shows "tobligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
+    and "tobligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
 proof -
   have ch: "geval_query.channel_holds teval (tmcp_ask sem ds as v) t"
     by (rule tmcp.mcp_ask_sound[OF t])
   note fits = fits_verdict_sound[OF tunwrapped_ivl_sound[OF ch]]
   have ne: "truthy (teval (tarith_condition ob) t) \<longleftrightarrow> teval (arithmetic_operand ob) t \<noteq> 0"
     by (simp add: tarith_condition_def)
-  show "tobligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> tobligation_holds ob t"
+  show "tobligation_classify sem ds as ob v = Check_Proved \<Longrightarrow> t \<Turnstile> ob"
     using fits(1) tmcp.mcp_classify_proved[OF t] ne
     by (auto simp: tobligation_classify_def tobligation_holds_def split: arithmetic_hazard.splits)
-  show "tobligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> tobligation_holds ob t"
+  show "tobligation_classify sem ds as ob v = Check_Refuted \<Longrightarrow> \<not> t \<Turnstile> ob"
     using fits(2) tmcp.mcp_classify_refuted[OF t] ne
     by (auto simp: tobligation_classify_def tobligation_holds_def split: arithmetic_hazard.splits)
 qed
@@ -564,14 +564,14 @@ lemma table_diagnostics_sound:
       "(v, obs) \<in> set sites \<Longrightarrow> ob \<in> set obs
          \<Longrightarrow> \<forall>d \<in> set (arithmetic_diagnostics sites rt (tobligation_classify sem ds as)).
                diagnostic_point d \<noteq> v
-         \<Longrightarrow> tobligation_holds ob s"
+         \<Longrightarrow> s \<Turnstile> ob"
     and table_diagnostics_refuted:
       "d \<in> set (arithmetic_diagnostics sites rt (tobligation_classify sem ds as))
          \<Longrightarrow> diagnostic_verdict d = Check_Refuted \<Longrightarrow> diagnostic_point d = v
-         \<Longrightarrow> \<not> tobligation_holds (diagnostic_obligation d) s"
+         \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
 proof -
   let ?cl = "tobligation_classify sem ds as"
-  show "tobligation_holds ob s"
+  show "s \<Turnstile> ob"
     if site: "(v, obs) \<in> set sites" and ob: "ob \<in> set obs"
       and absent: "\<forall>d \<in> set (arithmetic_diagnostics sites rt ?cl). diagnostic_point d \<noteq> v"
   proof -
@@ -583,7 +583,7 @@ proof -
       by (rule point_verdict_decided[OF _ _ look]) simp
     then show ?thesis by (rule tobligation_classify_sound(1)[OF s])
   qed
-  show "\<not> tobligation_holds (diagnostic_obligation d) s"
+  show "\<not> s \<Turnstile> diagnostic_obligation d"
     if d: "d \<in> set (arithmetic_diagnostics sites rt ?cl)"
       and r: "diagnostic_verdict d = Check_Refuted" and v: "diagnostic_point d = v"
   proof -
@@ -600,20 +600,16 @@ theorem typed_report_diagnostics_sound:
     and run: "typed_report_run sem as r cx ds p = Some res"
     and s: "s \<in> reaching ds p v"
   shows typed_report_obligation_safe:
-      "(v, obs) \<in> set (tobligation_sites ds p) \<Longrightarrow> ob \<in> set obs
-         \<Longrightarrow> \<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v
-         \<Longrightarrow> tobligation_holds ob s"
+      "(v, obs) \<in> set (tobligation_sites ds p) \<Longrightarrow> ob \<in> set obs \<Longrightarrow> SAFE res v \<Longrightarrow> s \<Turnstile> ob"
     and typed_report_obligation_refuted:
       "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
-         \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> tobligation_holds (diagnostic_obligation d) s"
+         \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
 proof -
   let ?sites = "tobligation_sites ds p"
   let ?cl = "tobligation_classify sem ds (tactivation as)"
-  let ?P = "(\<forall>obs ob. (v, obs) \<in> set ?sites \<longrightarrow> ob \<in> set obs
-              \<longrightarrow> (\<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v)
-              \<longrightarrow> tobligation_holds ob s)
+  let ?P = "(\<forall>obs ob. (v, obs) \<in> set ?sites \<longrightarrow> ob \<in> set obs \<longrightarrow> SAFE res v \<longrightarrow> s \<Turnstile> ob)
           \<and> (\<forall>d. d \<in> set (report_diagnostics res) \<longrightarrow> diagnostic_verdict d = Check_Refuted
-              \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> tobligation_holds (diagnostic_obligation d) s)"
+              \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d)"
   have from_table: ?P
     if diags: "report_diagnostics res = arithmetic_diagnostics ?sites rt ?cl"
       and fin: "finite (covered_keys rt)" and look: "lookup_table rt v ctx = Lifted st"
@@ -681,10 +677,9 @@ proof -
       using solved(2) by (simp add: res typed_es_report_def report_of_def Let_def)
     from from_table[OF this fin look st] show ?P .
   qed
-  then show "(v, obs) \<in> set ?sites \<Longrightarrow> ob \<in> set obs
-      \<Longrightarrow> \<forall>d \<in> set (report_diagnostics res). diagnostic_point d \<noteq> v \<Longrightarrow> tobligation_holds ob s"
+  then show "(v, obs) \<in> set ?sites \<Longrightarrow> ob \<in> set obs \<Longrightarrow> SAFE res v \<Longrightarrow> s \<Turnstile> ob"
     and "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
-      \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> tobligation_holds (diagnostic_obligation d) s"
+      \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
     by blast+
 qed
 
@@ -734,18 +729,18 @@ qed
 text \<open>What an obligation of each hazard says about a store.\<close>
 
 lemma tobligation_holds_overflow [simp]:
-  "tobligation_holds (Arithmetic_Obligation Signed_Overflow (TArith k op a b) x) t
+  "t \<Turnstile> Arithmetic_Obligation Signed_Overflow (TArith k op a b) x
      \<longleftrightarrow> aop_eval op (teval a t) (teval b t) \<in> ik_range k"
   by (simp add: tobligation_holds_def)
 
 lemma tobligation_holds_conversion [simp]:
-  "tobligation_holds (Arithmetic_Obligation Conversion_Overflow (TCast k a) x) t
+  "t \<Turnstile> Arithmetic_Obligation Conversion_Overflow (TCast k a) x
      \<longleftrightarrow> teval a t \<in> ik_range k"
-  "tobligation_holds (Arithmetic_Obligation Conversion_Overflow (TN k n) x) t \<longleftrightarrow> n \<in> ik_range k"
+  "t \<Turnstile> Arithmetic_Obligation Conversion_Overflow (TN k n) x \<longleftrightarrow> n \<in> ik_range k"
   by (simp_all add: tobligation_holds_def)
 
 lemma tobligation_holds_division [simp]:
-  "tobligation_holds (Arithmetic_Obligation Division_By_Zero e b) t \<longleftrightarrow> teval b t \<noteq> 0"
+  "t \<Turnstile> Arithmetic_Obligation Division_By_Zero e b \<longleftrightarrow> teval b t \<noteq> 0"
   by (simp add: tobligation_holds_def)
 
 text \<open>An expression raises an obligation for each of its nodes that can fail, at any

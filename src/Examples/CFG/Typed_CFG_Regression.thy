@@ -39,7 +39,7 @@ text \<open>The program is a well-formed compiler input, so its typed runs are s
 lemma ret_prog_typed_wf:
   "gwf_compile_input tvars ReturnVar tglobal (typed_ptable ret_prog ret_kinds) (prog_procs ret_prog)"
 proof (rule typed_wf_compile_input)
-  show "wf_compile_input (declared_global ret_prog) (prog_table ret_prog) (prog_procs ret_prog)"
+  show "wf_program_compile_input ret_prog"
     unfolding gwf_compile_input_def
     by (auto simp: wf_compile_input_simps ret_prog_def split: if_splits)
 qed
