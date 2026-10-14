@@ -52,8 +52,8 @@ def matching_stderr(case):
 def test_annotations_preserve_duplicate_occurrences(case):
     assert runner.expected_arithmetic(case) == Counter(
         {
-            (4, "error", "division"): 2,
-            (5, "warning", "remainder"): 1,
+            (4, "error", "division-by-zero"): 2,
+            (5, "warning", "remainder-by-zero"): 1,
         }
     )
     assert runner.check_arithmetic(

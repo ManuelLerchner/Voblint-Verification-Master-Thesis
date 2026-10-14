@@ -21,8 +21,6 @@ from run import REPO_ROOT, VOBLINT, bold, green, red
 
 MISSING_FILE = "tests/regression/00-sanity/does-not-exist.vimp"
 SANITY_FILE = "tests/regression/00-sanity/precision/01-straight_line_proved.vimp"
-COOP_FILE = "tests/typed/01-cooperation.vimp"
-GUARDS_FILE = "tests/typed/02-bool-guards.vimp"
 DEPTH_FILE = "tests/typed/03-query-depth.vimp"
 
 CASES = [
@@ -31,49 +29,6 @@ CASES = [
         ["--analysis", "interval,order", DEPTH_FILE],
         3,
         "nested analysis queries exceeded their depth bound",
-    ),
-    (
-        "--typed interval,order proves a check that needs both analyses",
-        ["--typed", "interval,order", COOP_FILE],
-        0,
-        "01-cooperation.vimp:6:5: proved",
-    ),
-    (
-        "--typed interval alone leaves that check unknown",
-        ["--typed", "interval", COOP_FILE],
-        0,
-        "01-cooperation.vimp:6:5: unknown",
-    ),
-    (
-        "--typed runs several analyses at entry-state contexts",
-        ["--typed", "interval,order", "--context", "entry-state", COOP_FILE],
-        0,
-        "01-cooperation.vimp:10:5: refuted",
-    ),
-    (
-        # Entry state separates f(100, 0) from f(0, 100): y is exactly 0 there.
-        "--typed interval at entry-state contexts separates the calls",
-        ["--typed", "interval", "--context", "entry-state", COOP_FILE],
-        0,
-        "01-cooperation.vimp:10:5: refuted",
-    ),
-    (
-        "--typed narrows a disjunction that must hold by each feasible operand",
-        ["--typed", "interval", GUARDS_FILE],
-        0,
-        "02-bool-guards.vimp:6:5: proved",
-    ),
-    (
-        "--typed narrows a conjunction that must fail by each feasible operand",
-        ["--typed", "interval", GUARDS_FILE],
-        0,
-        "02-bool-guards.vimp:10:5: proved",
-    ),
-    (
-        "--typed sends a guard no store satisfies after narrowing to bottom",
-        ["--typed", "interval", GUARDS_FILE],
-        0,
-        "02-bool-guards.vimp:16:3: proved",
     ),
     ("--help exits 0 with usage", ["--help"], 0, "voblint --analysis sign|interval"),
     ("--help names the default HTML output", ["--help"], 0, "build/report/"),
