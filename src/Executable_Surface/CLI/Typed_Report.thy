@@ -834,13 +834,6 @@ text \<open>
   every variable in a point's own state, so no edge reads or writes a global unknown.
 \<close>
 
-instantiation toplift :: (join_val) join_val
-begin
-fun vjoin_toplift :: "'a toplift \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift" where
-  "vjoin_toplift (TL a) (TL b) = TL (vjoin a b)"
-| "vjoin_toplift _ _ = TTop"
-instance ..
-end
 
 instantiation order_rel :: (type) join_val
 begin
@@ -879,10 +872,9 @@ fun var_label :: "var_id \<Rightarrow> vname" where
 | "var_label ReturnVar = STR ''return''"
 
 definition tfield_view ::
-    "('a kd \<Rightarrow> typed_value) \<Rightarrow> var_id list \<Rightarrow> 'a tabs toplift lifted \<Rightarrow> typed_value field_state" where
+    "('a kd \<Rightarrow> typed_value) \<Rightarrow> var_id list \<Rightarrow> 'a tabs lifted \<Rightarrow> typed_value field_state" where
   "tfield_view mk vars d =
-     Field_Store (map (\<lambda>x. (var_label x, mk (case d of Bot \<Rightarrow> KBot | Lifted TTop \<Rightarrow> KTop
-                                                  | Lifted (TL \<sigma>) \<Rightarrow> \<sigma> x))) vars)"
+     Field_Store (map (\<lambda>x. (var_label x, mk (case d of Bot \<Rightarrow> KBot | Lifted \<sigma> \<Rightarrow> \<sigma> x))) vars)"
 
 text \<open>An order fact relates variables of one procedure's state, so it names each by its
   own name.\<close>

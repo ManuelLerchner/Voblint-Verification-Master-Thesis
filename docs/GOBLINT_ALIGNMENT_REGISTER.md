@@ -207,7 +207,7 @@ way; Goblint's `LAnd` case gives up there (line 452), so this refines more. The
 feasibility of an operand is decided by its forward value, where Goblint catches the
 `Deadcode` its refinement raises. The branch then keeps the refinement at the variables
 the guard reads, and a variable refined to bottom makes the successor `Bot`
-(`transfer_lift tst_empty`), as `refine_lv` calls `contra` on a bottom value (lines 94
+(`transfer_lift tst_is_bot`), as `refine_lv` calls `contra` on a bottom value (lines 94
 and 108) and `contra` raises `Deadcode`. The
 untyped `bfilter` narrows a conjunction by its right operand first; this differs from
 Goblint only when the operands narrow the same variable non-commutatively.

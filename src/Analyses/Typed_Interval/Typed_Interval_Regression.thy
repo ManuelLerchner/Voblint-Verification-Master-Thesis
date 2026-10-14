@@ -10,15 +10,13 @@ text \<open>
   end-to-end theorems of \<open>Typed_Nonrel_Analysis\<close> apply to these runs.
 \<close>
 
-definition tt_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" where
-  "tt_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
 
 abbreviation ivl_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
     (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
-     (ivl tst toplift lifted, ivl tst toplift lifted) dg_state) strategy_tree" where
+     (ivl tst lifted, ivl tst lifted) dg_state) strategy_tree" where
   "ivl_equations ds p \<equiv> typed_nonrel.equations default_sem_conf ds 0 tglobal p"
 
-abbreviation ivl_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> ivl tabs toplift" where
+abbreviation ivl_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> ivl tabs" where
   "ivl_state_at ds p \<equiv> typed_nonrel.state_at default_sem_conf ds 0 Globals_Join tglobal p []"
 
 abbreviation main_var :: "vname \<Rightarrow> var_id" where
@@ -40,13 +38,13 @@ lemma loop_terminates: "typed_nonrel.terminates TYPE(ivl) default_sem_conf [] 0 
   unfolding typed_nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF loop_terminates_c] by simp
 
-abbreviation loop_at :: "pp \<Rightarrow> ivl tabs toplift" where
+abbreviation loop_at :: "pp \<Rightarrow> ivl tabs" where
   "loop_at \<equiv> ivl_state_at [] loop_prog"
 
 lemma loop_values:
-  "tt_at (loop_at (Statement 1)) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 0) (Fin 20))"
-  "tt_at (loop_at (Statement 2)) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 0) (Fin 19))"
-  "tt_at (loop_at (Statement 3)) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 20) (Fin 20))"
+  "loop_at (Statement 1) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 0) (Fin 20))"
+  "loop_at (Statement 2) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 0) (Fin 19))"
+  "loop_at (Statement 3) (main_var (STR ''x'')) = KD I32 (Ivl (Fin 20) (Fin 20))"
   by eval+
 
 subsection \<open>An unsigned char that wraps\<close>
@@ -65,12 +63,12 @@ lemma wrap_terminates_c:
      (cfg_exit (typed_cfg wrap_prog wrap_kinds), []) \<noteq> None"
   by eval
 
-abbreviation wrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
+abbreviation wrap_at :: "pp \<Rightarrow> ivl tabs" where
   "wrap_at \<equiv> ivl_state_at wrap_kinds wrap_prog"
 
 lemma wrap_values:
-  "tt_at (wrap_at (Statement 1)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 250) (Fin 250))"
-  "tt_at (wrap_at (Statement 2)) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 4) (Fin 4))"
+  "wrap_at (Statement 1) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 250) (Fin 250))"
+  "wrap_at (Statement 2) (main_var (STR ''x'')) = KD U8 (Ivl (Fin 4) (Fin 4))"
   by eval+
 
 
@@ -85,11 +83,11 @@ definition swrap_prog :: imp_prog where
 definition swrap_kinds :: kind_decls where
   "swrap_kinds = [(main_var (STR ''x''), I8)]"
 
-abbreviation swrap_at :: "pp \<Rightarrow> ivl tabs toplift" where
+abbreviation swrap_at :: "pp \<Rightarrow> ivl tabs" where
   "swrap_at \<equiv> ivl_state_at swrap_kinds swrap_prog"
 
 lemma swrap_values:
-  "tt_at (swrap_at (Statement 2)) (main_var (STR ''x'')) = KD I8 (Ivl (Fin (-128)) (Fin 127))"
+  "swrap_at (Statement 2) (main_var (STR ''x'')) = KD I8 (Ivl (Fin (-128)) (Fin 127))"
   by eval
 
 
@@ -108,8 +106,8 @@ definition arith_prog :: imp_prog where
      fun main() { f(0); f(99); } }"
 
 lemma arith_refined:
-  "tt_at (ivl_state_at [] arith_prog
-            (FunctionResult (STR ''f''))) (f_var (STR ''y''))
+  "ivl_state_at [] arith_prog
+            (FunctionResult (STR ''f'')) (f_var (STR ''y''))
      = KD I32 (Ivl (Fin 0) (Fin 8))"
   by eval
 
@@ -132,11 +130,11 @@ definition mixed_neg_prog :: imp_prog where
      fun main() { f(0 - 10); f(9); } }"
 
 lemma mixed_refined:
-  "tt_at (ivl_state_at mixed_kinds mixed_prog
-            (FunctionResult (STR ''f''))) (f_var (STR ''z''))
+  "ivl_state_at mixed_kinds mixed_prog
+            (FunctionResult (STR ''f'')) (f_var (STR ''z''))
      = KD I32 (Ivl (Fin 0) (Fin 4))"
-  "tt_at (ivl_state_at mixed_kinds mixed_neg_prog
-            (FunctionResult (STR ''f''))) (f_var (STR ''z''))
+  "ivl_state_at mixed_kinds mixed_neg_prog
+            (FunctionResult (STR ''f'')) (f_var (STR ''z''))
      = KD I32 (Ivl (Fin (-10)) (Fin 9))"
   by eval+
 

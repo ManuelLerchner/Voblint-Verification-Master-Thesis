@@ -4,22 +4,18 @@ begin
 
 section \<open>Regression: the typed Congruence analysis, executed\<close>
 
-definition ct_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" where
-  "ct_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
-
-abbreviation cong_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> congruence tabs toplift" where
+abbreviation cong_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> congruence tabs" where
   "cong_state_at ds p \<equiv> typed_nonrel.state_at default_sem_conf ds 0 Globals_Join tglobal p []"
 
 abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
 
 abbreviation f_result :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> vname \<Rightarrow> congruence kd" where
-  "f_result ds p x \<equiv> ct_at (cong_state_at ds p (FunctionResult (STR ''f''))) (f_var x)"
-
+  "f_result ds p x \<equiv> cong_state_at ds p (FunctionResult (STR ''f'')) (f_var x)"
 
 abbreviation cong_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
     (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
-     (congruence tst toplift lifted, congruence tst toplift lifted) dg_state) strategy_tree" where
+     (congruence tst lifted, congruence tst lifted) dg_state) strategy_tree" where
   "cong_equations ds p \<equiv> typed_nonrel.equations default_sem_conf ds 0 tglobal p"
 
 subsection \<open>Constants\<close>

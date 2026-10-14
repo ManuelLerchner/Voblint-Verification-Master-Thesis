@@ -262,26 +262,15 @@ qed
 subsection \<open>Calls\<close>
 
 text \<open>The callee starts from no facts and the caller learns none back. The callee's
-  stores are typed when the caller's are and every actual fits its formal
-  (@{const arg_fits}), as for the non-relational analyses' entry; the caller's after
-  the call when both sides' are, as the result converts to its destination's kind.\<close>
+  stores are typed when the caller's are, since a call converts each actual to its
+  formal's kind; the caller's after the call when both sides' are, as the result
+  converts to its destination's kind.\<close>
 
 definition ord_typed :: "var_id order_rel lifted \<Rightarrow> bool" where
   "ord_typed d = (case d of Lifted (OFacts t _) \<Rightarrow> t | _ \<Rightarrow> False)"
 
-definition ord_enter :: "kenv \<Rightarrow> var_id list \<Rightarrow> texp list \<Rightarrow> var_id order_rel lifted \<Rightarrow> var_id order_rel" where
-  "ord_enter \<kappa> ps es d = OFacts (ord_typed d \<and> list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)) {}"
-
-lemma tstyped_bind_fits:
-  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)" and "tstyped \<kappa> t" and "tstyped \<kappa> s"
-  shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)"
-proof (rule tstyped_bind_formals[OF assms(3)])
-  fix x n assume "(x, n) \<in> set (zip ps (map (\<lambda>e. teval e t) es))"
-  then obtain e where "(x, e) \<in> set (zip ps es)" and n: "n = teval e t"
-    by (auto simp: zip_map2)
-  with assms(1) have "arg_fits \<kappa> x e" by (auto simp: list_all_iff)
-  then show "n \<in> ik_range (\<kappa> x)" using n arg_fits_range[OF _ assms(2)] by simp
-qed
+definition ord_enter :: "var_id list \<Rightarrow> texp list \<Rightarrow> var_id order_rel lifted \<Rightarrow> var_id order_rel" where
+  "ord_enter ps es d = OFacts (ord_typed d) {}"
 
 subsection \<open>The component\<close>
 
@@ -301,7 +290,7 @@ definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, te
        ls_body = (\<lambda>ch p d. d),
        ls_return = (\<lambda>ch r p d. case r of None \<Rightarrow> d | Some a \<Rightarrow> map_lift (ord_forget ReturnVar) d),
        ls_event = (\<lambda>ch evt d. d),
-       ls_enter = (\<lambda>ch ci p. [(fst p, Lifted (ord_enter \<kappa> (ci_formals ci) (ci_args ci) (fst p)))]),
+       ls_enter = (\<lambda>ch ci p. [(fst p, Lifted (ord_enter (ci_formals ci) (ci_args ci) (fst p)))]),
        ls_combine_env = combine_env_identity,
        ls_combine_assign = (\<lambda>ch ci d de. Lifted (OFacts (ord_typed d \<and> ord_typed de) {})) \<rparr>"
 
@@ -321,14 +310,13 @@ lemma ord_enter_sound:
   assumes "s \<in> gamma_ord_lift \<kappa> d"
   shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e s) es))
            (enter_state tglobal s)
-           \<in> gamma_ord \<kappa> (ord_enter \<kappa> ps es d)"
+           \<in> gamma_ord \<kappa> (ord_enter ps es d)"
 proof -
-  have "tstyped \<kappa> s" if "ord_typed d"
-    using assms that by (auto simp: ord_typed_def split: lifted.splits order_rel.splits)
+  have "tstyped \<kappa> (typed.gcall_enter \<kappa> (CallEdge dst ps es) s)" if "ord_typed d" for dst
+    using assms that by (intro tstyped_call_enter)
+      (auto simp: ord_typed_def split: lifted.splits order_rel.splits)
   then show ?thesis
-    using tstyped_bind_fits[OF _ _ tstyped_enter_state, of \<kappa> ps es s s]
-      bind_formals_fit_norm[of \<kappa> ps es s]
-    by (auto simp: ord_enter_def)
+    by (auto simp: ord_enter_def typed.call_enter_CallEdge)
 qed
 
 lemma ord_typed_tstyped: "s \<in> gamma_ord_lift \<kappa> d \<Longrightarrow> ord_typed d \<Longrightarrow> tstyped \<kappa> s"

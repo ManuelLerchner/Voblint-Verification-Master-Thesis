@@ -12,10 +12,6 @@ text \<open>
   return writes the returned value into the return slot; a call resets the callee's
   locals to their kinds' whole ranges and binds the formals; and the return combine
   takes the callee's globals and writes the converted return value.
-
-  A call whose actuals do not fit its formals' kinds enters at \<^const>\<open>TTop\<close>: the typed
-  CFG has no such call, and its entered store need not be typed. Every operation keeps
-  \<^const>\<open>TTop\<close>.
 \<close>
 
 fun neg_cop :: "cop \<Rightarrow> cop" where
@@ -33,50 +29,10 @@ fun tview :: "texp \<Rightarrow> texp bool_view" where
 | "tview (TOr a b) = BV_Or a b"
 | "tview _ = BV_Atom"
 
-text \<open>An actual fits a formal when every typed store gives it a value in the formal's
-  range: it is a variable of the formal's kind, or an operation at that kind.\<close>
-
-definition arg_fits :: "kenv \<Rightarrow> var_id \<Rightarrow> texp \<Rightarrow> bool" where
-  "arg_fits \<kappa> p e \<longleftrightarrow> p \<noteq> ReturnVar \<and>
-     (case e of TVar ik v \<Rightarrow> v \<noteq> ReturnVar \<and> \<kappa> v = \<kappa> p | _ \<Rightarrow> texp_kind e = \<kappa> p)"
-
 lemma teval_in_range_kind:
   assumes "\<not> (\<exists>ik v. e = TVar ik v)"
   shows "teval e t \<in> ik_range (texp_kind e)"
   using assms by (cases e) auto
-
-lemma arg_fits_range:
-  assumes "arg_fits \<kappa> p e" and "tstyped \<kappa> t"
-  shows "teval e t \<in> ik_range (\<kappa> p)"
-proof (cases "\<exists>ik v. e = TVar ik v")
-  case True
-  then obtain ik v where "e = TVar ik v" by blast
-  with assms show ?thesis by (auto simp: arg_fits_def tstyped_def)
-next
-  case False
-  then have "texp_kind e = \<kappa> p" using assms(1) by (cases e) (auto simp: arg_fits_def)
-  with teval_in_range_kind[OF False] show ?thesis by simp
-qed
-
-text \<open>Converting an actual that fits its formal changes nothing.\<close>
-
-lemma bind_formals_fit_norm:
-  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)" and "tstyped \<kappa> t"
-  shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e t) es)) s
-           = bind_formals ps (map (\<lambda>e. teval e t) es) s"
-  using assms(1)
-proof (induction ps arbitrary: es s)
-  case (Cons p ps)
-  show ?case
-  proof (cases es)
-    case (Cons e es')
-    with Cons.prems have fit: "arg_fits \<kappa> p e"
-      and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
-    have "ik_norm (\<kappa> p) (teval e t) = teval e t"
-      by (rule ik_norm_id[OF arg_fits_range[OF fit assms(2)]])
-    with Cons.IH[OF rest] \<open>es = e # es'\<close> show ?thesis by simp
-  qed simp
-qed simp
 
 text \<open>Normalizing an intermediate result changes no later sum or difference at the same
   kind, so an operation that wrapped is inverted exactly by the wrapping inverse.\<close>
@@ -251,12 +207,10 @@ definition tenter_frame :: "'a::kind_int_domain tabs \<Rightarrow> 'a tabs" wher
   "tenter_frame \<sigma> = enter_frame tglobal KTop \<sigma>"
 
 definition tenter_state ::
-    "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs toplift" where
+    "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs" where
   "tenter_state ps es \<sigma> =
-     (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
-      then TL (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es)
-             (tenter_frame \<sigma>))
-      else TTop)"
+     bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es)
+       (tenter_frame \<sigma>)"
 
 definition tcombine_assign :: "var_id option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
   "tcombine_assign dst \<sigma> \<sigma>\<^sub>e =
@@ -560,16 +514,16 @@ next
   with gamma_tabs_upd[OF assms(1) ret_kd_sound[OF assms]] show ?thesis by (simp add: treturn_def)
 qed
 
-lemma bind_formals_fit:
-  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)"
-    and t: "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
-    and "tstyped \<kappa> s" and "\<And>y. s y \<in> numeric_domain_class.gamma (\<sigma>' y)"
-  shows "tstyped \<kappa> (bind_formals ps (map (\<lambda>e. teval e t) es) s)
-    \<and> (\<forall>y. bind_formals ps (map (\<lambda>e. teval e t) es) s y
-          \<in> numeric_domain_class.gamma
-              (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es)
-                 \<sigma>' y))"
-  using assms(1,4,5)
+text \<open>Binding a formal is an assignment in the callee's frame of a value the caller
+  evaluates: each converts to the formal's kind.\<close>
+
+lemma bind_formals_sound:
+  assumes t: "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
+    and s: "s \<in> gamma_tabs \<kappa> \<sigma>'"
+  shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e t) es)) s
+           \<in> gamma_tabs \<kappa> (bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem)
+               (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es) \<sigma>')"
+  using s
 proof (induction ps arbitrary: es s \<sigma>')
   case Nil then show ?case by simp
 next
@@ -579,23 +533,13 @@ next
     case Nil with Cons.prems show ?thesis by simp
   next
     case (Cons e es')
-    with Cons.prems(1) have fit: "arg_fits \<kappa> p e"
-      and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
-    have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF t] .
-    have rng: "teval e t \<in> ik_range (\<kappa> p)" by (rule arg_fits_range[OF fit ty])
-    have cast: "teval e t \<in> numeric_domain_class.gamma (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))"
-      using cast_ik_src_sound[OF ty taeval_ask_sound[OF t ch, of e], of "\<kappa> p"]
-      by (simp only: ik_norm_id[OF rng])
-    have val: "teval e t \<in> numeric_domain_class.gamma (KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>)))"
-      using cast rng by simp
-    have "p \<noteq> ReturnVar" using fit by (simp add: arg_fits_def)
-    then have tyu: "tstyped \<kappa> (s(p := teval e t))" using Cons.prems(2) rng
-      by (rule_tac tstyped_upd) auto
-    have gu: "\<And>y. (s(p := teval e t)) y \<in> numeric_domain_class.gamma
-        ((\<sigma>'(p := KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>)))) y)"
-      using val Cons.prems(3) by simp
-    note IH = Cons.IH[OF rest tyu gu]
-    show ?thesis unfolding \<open>es = e # es'\<close> using IH by simp
+    have "ik_norm (\<kappa> p) (teval e t) \<in> numeric_domain_class.gamma
+        (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))"
+      by (rule cast_ik_src_sound[OF gamma_tabsD(1)[OF t] taeval_ask_sound[OF t ch]])
+    then have "s(p := ik_norm (\<kappa> p) (teval e t)) \<in> gamma_tabs \<kappa> (\<sigma>'(p := KD (\<kappa> p)
+        (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))))"
+      by (simp add: gamma_tabs_upd[OF Cons.prems])
+    from Cons.IH[OF this, of es'] show ?thesis by (simp add: \<open>es = e # es'\<close>)
   qed
 qed
 
@@ -603,22 +547,13 @@ lemma tenter_state_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
   shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e t) es))
            (enter_state tglobal t)
-           \<in> gamma_tt \<kappa> (tenter_state ps es \<sigma>)"
-proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
-  case True
-  have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF assms(1)] .
-  note norm = bind_formals_fit_norm[OF True ty]
-  have frame: "\<And>y. enter_state tglobal t y \<in> numeric_domain_class.gamma (tenter_frame \<sigma> y)"
-    using gamma_tabsD(2)[OF assms(1)]
-    by (simp add: enter_state_def tenter_frame_def enter_frame_def combine_env_def)
-  note fit = bind_formals_fit[OF True assms tstyped_enter_state[OF ty] frame]
-  have "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
-      \<in> gamma_tabs \<kappa> (bind_formals ps
-           (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es)
-           (tenter_frame \<sigma>))"
-    using fit by (intro gamma_tabsI) blast+
-  with True show ?thesis by (simp add: tenter_state_def norm)
-qed (simp add: tenter_state_def)
+           \<in> gamma_tabs \<kappa> (tenter_state ps es \<sigma>)"
+proof -
+  have "enter_state tglobal t \<in> gamma_tabs \<kappa> (tenter_frame \<sigma>)"
+    using gamma_tabsD[OF assms(1)] tstyped_enter_state
+    by (intro gamma_tabsI) (auto simp: enter_state_def tenter_frame_def enter_frame_def combine_env_def)
+  then show ?thesis unfolding tenter_state_def by (rule bind_formals_sound[OF assms])
+qed
 
 lemma tcombine_sound:
   assumes "s \<in> gamma_tabs \<kappa> \<sigma>" and "t \<in> gamma_tabs \<kappa> \<sigma>\<^sub>e"
@@ -657,95 +592,66 @@ end
 
 subsection \<open>The typed component\<close>
 
-text \<open>The transfers above, lifted to keep \<^const>\<open>TTop\<close>.\<close>
-
-fun tl_map :: "('a \<Rightarrow> 'a) \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift" where
-  "tl_map f TTop = TTop"
-| "tl_map f (TL a) = TL (f a)"
-
-fun tl_bind :: "('a \<Rightarrow> 'a toplift) \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift" where
-  "tl_bind f TTop = TTop"
-| "tl_bind f (TL a) = f a"
-
-fun tl_map2 :: "('a \<Rightarrow> 'a \<Rightarrow> 'a) \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift \<Rightarrow> 'a toplift" where
-  "tl_map2 f (TL a) (TL b) = TL (f a b)"
-| "tl_map2 f _ _ = TTop"
-
 text \<open>The component answers \<open>EvalInt\<close> by evaluating without asking the expression
   itself back, as Goblint's \<^verbatim>\<open>base\<close> answers it with \<^verbatim>\<open>eval_rv_no_ask_evalint\<close>.
   Every transfer evaluates through the channel it receives. The entry has one
   alternative, the caller's state paired with the entered one.\<close>
 
-fun tquery :: "sem_conf \<Rightarrow> kenv \<Rightarrow> texp gchannel \<Rightarrow> 'a::kind_int_domain tabs toplift \<Rightarrow> texp gchannel" where
-  "tquery sem \<kappa> ch TTop q = \<top>"
-| "tquery sem \<kappa> ch (TL \<sigma>) (EvalInt e) = answer_ik (taeval sem \<kappa> ch e \<sigma>)"
+fun tquery :: "sem_conf \<Rightarrow> kenv \<Rightarrow> texp gchannel \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> texp gchannel" where
+  "tquery sem \<kappa> ch \<sigma> (EvalInt e) = answer_ik (taeval sem \<kappa> ch e \<sigma>)"
 
 definition typed_spec ::
-    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tabs toplift) glocal_spec" where
+    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tabs) glocal_spec" where
   "typed_spec sem \<kappa> =
      \<lparr> ls_query = tquery sem \<kappa>,
        ls_skip = (\<lambda>ch d. d),
-       ls_assign = (\<lambda>ch x e. tl_map (tassign sem \<kappa> ch x e)),
-       ls_special = (\<lambda>ch sc x. tl_map (tspecial sem \<kappa> ch sc x)),
-       ls_branch = (\<lambda>ch b pol. tl_map (tbranch sem \<kappa> ch b pol)),
+       ls_assign = (\<lambda>ch x e. tassign sem \<kappa> ch x e),
+       ls_special = (\<lambda>ch sc x. tspecial sem \<kappa> ch sc x),
+       ls_branch = (\<lambda>ch b pol. tbranch sem \<kappa> ch b pol),
        ls_body = (\<lambda>ch p d. d),
-       ls_return = (\<lambda>ch r p. tl_map (treturn sem \<kappa> ch r)),
+       ls_return = (\<lambda>ch r p. treturn sem \<kappa> ch r),
        ls_event = (\<lambda>ch evt d. d),
        ls_enter = (\<lambda>ch ci p.
-         [(fst p, tl_bind (tenter_state sem \<kappa> ch (ci_formals ci) (ci_args ci)) (fst p))]),
-       ls_combine_env = (\<lambda>ch ch' ci. tl_map2 (combine_env tglobal)),
-       ls_combine_assign = (\<lambda>ch ci. tl_map2 (tcombine_assign sem \<kappa> (ci_dst ci))) \<rparr>"
-
-lemma gamma_tt_map:
-  "(\<And>\<sigma>. t \<in> gamma_tabs \<kappa> \<sigma> \<Longrightarrow> t' \<in> gamma_tabs \<kappa> (f \<sigma>))
-     \<Longrightarrow> t \<in> gamma_tt \<kappa> d \<Longrightarrow> t' \<in> gamma_tt \<kappa> (tl_map f d)"
-  by (cases d) simp_all
+         [(fst p, tenter_state sem \<kappa> ch (ci_formals ci) (ci_args ci) (fst p))]),
+       ls_combine_env = (\<lambda>ch ch' ci. combine_env tglobal),
+       ls_combine_assign = (\<lambda>ch ci. tcombine_assign sem \<kappa> (ci_dst ci)) \<rparr>"
 
 theorem typed_spec_sound:
-  "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal (gamma_tt \<kappa>)
-     (typed_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tabs toplift) glocal_spec)"
+  "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal (gamma_tabs \<kappa>)
+     (typed_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tabs) glocal_spec)"
 proof -
   interpret T: mcp_sem teval ReturnVar "tconv \<kappa>" tglobal .
   show ?thesis
   proof (rule T.sound_local_specI)
-    show "\<And>x y. x \<le> y \<Longrightarrow> gamma_tt \<kappa> x \<subseteq> gamma_tt \<kappa> y"
-      by (rule gamma_tt_mono)
-    show "T.gsound_query (gamma_tt \<kappa>) (ls_query (typed_spec sem \<kappa>))"
+    show "\<And>x y. x \<le> y \<Longrightarrow> gamma_tabs \<kappa> x \<subseteq> gamma_tabs \<kappa> y"
+      by (rule gamma_tabs_mono)
+    show "T.gsound_query (gamma_tabs \<kappa>) (ls_query (typed_spec sem \<kappa>))"
       unfolding T.gsound_query_def
       apply (intro allI impI)
       subgoal for ch s x q
-        by (cases x; cases q) (simp_all add: typed_spec_def answer_ik_sound taeval_sound)
+        by (cases q) (simp_all add: typed_spec_def answer_ik_sound taeval_sound)
       done
-    show "T.gsound_skip (gamma_tt \<kappa>) (ls_skip (typed_spec sem \<kappa>))"
+    show "T.gsound_skip (gamma_tabs \<kappa>) (ls_skip (typed_spec sem \<kappa>))"
       by (simp add: typed_spec_def T.gsound_skip_def)
-    show "T.gsound_assign (gamma_tt \<kappa>) (ls_assign (typed_spec sem \<kappa>))"
-      by (auto simp: typed_spec_def T.gsound_assign_def intro!: gamma_tt_map tassign_sound)
-    show "T.gsound_special (gamma_tt \<kappa>) (ls_special (typed_spec sem \<kappa>))"
-      by (auto simp: typed_spec_def T.gsound_special_def intro!: gamma_tt_map tspecial_sound)
-    show "T.gsound_branch (gamma_tt \<kappa>) (ls_branch (typed_spec sem \<kappa>))"
-      by (auto simp: typed_spec_def T.gsound_branch_def intro!: gamma_tt_map tbranch_sound)
-    show "T.gsound_body (gamma_tt \<kappa>) (ls_body (typed_spec sem \<kappa>))"
+    show "T.gsound_assign (gamma_tabs \<kappa>) (ls_assign (typed_spec sem \<kappa>))"
+      by (auto simp: typed_spec_def T.gsound_assign_def intro!: tassign_sound)
+    show "T.gsound_special (gamma_tabs \<kappa>) (ls_special (typed_spec sem \<kappa>))"
+      by (auto simp: typed_spec_def T.gsound_special_def intro!: tspecial_sound)
+    show "T.gsound_branch (gamma_tabs \<kappa>) (ls_branch (typed_spec sem \<kappa>))"
+      by (auto simp: typed_spec_def T.gsound_branch_def intro!: tbranch_sound)
+    show "T.gsound_body (gamma_tabs \<kappa>) (ls_body (typed_spec sem \<kappa>))"
       by (simp add: typed_spec_def T.gsound_body_def)
-    show "T.gsound_return (gamma_tt \<kappa>) (ls_return (typed_spec sem \<kappa>))"
-      by (auto simp: typed_spec_def T.gsound_return_def intro!: gamma_tt_map treturn_sound)
-    show "T.gsound_event (gamma_tt \<kappa>) (ls_event (typed_spec sem \<kappa>))"
+    show "T.gsound_return (gamma_tabs \<kappa>) (ls_return (typed_spec sem \<kappa>))"
+      by (auto simp: typed_spec_def T.gsound_return_def intro!: treturn_sound)
+    show "T.gsound_event (gamma_tabs \<kappa>) (ls_event (typed_spec sem \<kappa>))"
       by (simp add: typed_spec_def T.gsound_event_def)
-    show "T.gsound_enter (gamma_tt \<kappa>) (ls_enter (typed_spec sem \<kappa>))"
+    show "T.gsound_enter (gamma_tabs \<kappa>) (ls_enter (typed_spec sem \<kappa>))"
       unfolding T.gsound_enter_def
-      apply (intro allI impI)
-      subgoal for ch s ci p
-        by (cases "fst p")
-           (auto simp: typed_spec_def cfg_transfer_sem.call_enter_CallEdge intro:
-             tenter_state_sound)
-      done
-    show "T.gsound_combine (gamma_tt \<kappa>) (ls_combine_env (typed_spec sem \<kappa>))
+      by (auto simp: typed_spec_def cfg_transfer_sem.call_enter_CallEdge intro: tenter_state_sound)
+    show "T.gsound_combine (gamma_tabs \<kappa>) (ls_combine_env (typed_spec sem \<kappa>))
         (ls_combine_assign (typed_spec sem \<kappa>))"
       unfolding T.gsound_combine_def
-      apply (intro allI impI)
-      subgoal for ch ch' s t ci x de
-        by (cases x; cases de)
-           (auto simp: typed_spec_def cfg_transfer_sem.gcombine_collect_def intro: tcombine_sound)
-      done
+      by (auto simp: typed_spec_def cfg_transfer_sem.gcombine_collect_def intro: tcombine_sound)
   qed
 qed
 
@@ -769,10 +675,6 @@ lemma kd_at_simps [simp]:
 
 definition kind_consistent :: "kenv \<Rightarrow> 'a tabs \<Rightarrow> bool" where
   "kind_consistent \<kappa> \<sigma> \<longleftrightarrow> (\<forall>v. v \<noteq> ReturnVar \<longrightarrow> kd_at (\<kappa> v) (\<sigma> v))"
-
-fun kind_consistent_tt :: "kenv \<Rightarrow> 'a tabs toplift \<Rightarrow> bool" where
-  "kind_consistent_tt \<kappa> TTop \<longleftrightarrow> True"
-| "kind_consistent_tt \<kappa> (TL \<sigma>) \<longleftrightarrow> kind_consistent \<kappa> \<sigma>"
 
 lemma kind_consistent_upd:
   "kind_consistent \<kappa> \<sigma> \<Longrightarrow> (x \<noteq> ReturnVar \<Longrightarrow> kd_at (\<kappa> x) d)
@@ -842,7 +744,7 @@ lemma treturn_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_co
   by (simp add: treturn_def kind_consistent_upd split: option.splits)
 
 lemma tenter_state_kind:
-  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent_tt \<kappa> (tenter_state sem \<kappa> ch ps es \<sigma>)"
+  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (tenter_state sem \<kappa> ch ps es \<sigma>)"
 proof -
   assume kc: "kind_consistent \<kappa> \<sigma>"
   have frame: "kind_consistent \<kappa> (tenter_frame \<sigma>)"

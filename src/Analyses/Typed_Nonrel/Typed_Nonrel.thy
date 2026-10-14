@@ -1,6 +1,5 @@
 theory Typed_Nonrel
   imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted"
-    "Voblint_Domain.Top_Lift"
     "Voblint_Framework.Analysis_Query"
 begin
 
@@ -168,18 +167,13 @@ text \<open>
   A typed abstract state maps every variable identity to a kind-tagged value. It
   describes the typed stores whose values lie in the state's values: \<^const>\<open>tstyped\<close>
   is part of the description, so a value the state does not constrain still stays in
-  its variable's range. \<^const>\<open>TTop\<close> above the typed states describes every store,
-  typed or not; a transfer answers it for an action no typed program contains.
+  its variable's range.
 \<close>
 
 type_synonym 'a tabs = "var_id \<Rightarrow> 'a kd"
 
 definition gamma_tabs :: "kenv \<Rightarrow> 'a::ik_domain tabs \<Rightarrow> tstore set" where
   "gamma_tabs \<kappa> \<sigma> = {t. tstyped \<kappa> t \<and> (\<forall>v. t v \<in> \<gamma> (\<sigma> v))}"
-
-fun gamma_tt :: "kenv \<Rightarrow> 'a::ik_domain tabs toplift \<Rightarrow> tstore set" where
-  "gamma_tt \<kappa> TTop = UNIV"
-| "gamma_tt \<kappa> (TL \<sigma>) = gamma_tabs \<kappa> \<sigma>"
 
 lemma gamma_tabsD:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>"
@@ -198,9 +192,6 @@ proof -
     using that gamma_mono[OF le_funD[OF assms, of v]] by blast
   then show ?thesis by (auto simp: gamma_tabs_def simp del: gamma_kd.simps)
 qed
-
-lemma gamma_tt_mono: "d\<^sub>1 \<le> d\<^sub>2 \<Longrightarrow> gamma_tt \<kappa> d\<^sub>1 \<subseteq> gamma_tt \<kappa> d\<^sub>2"
-  by (cases d\<^sub>1; cases d\<^sub>2) (simp_all add: gamma_tabs_mono)
 
 lemma gamma_tabs_bot [simp]: "gamma_tabs \<kappa> \<bottom> = {}"
   by (simp add: gamma_tabs_def bot_fun_def bot_kd_def)

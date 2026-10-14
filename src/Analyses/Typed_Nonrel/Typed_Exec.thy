@@ -91,13 +91,11 @@ definition tbranch_st :: "texp \<Rightarrow> bool \<Rightarrow> 'a::kind_int_dom
 definition treturn_st :: "texp option \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
   "treturn_st r st = (case r of None \<Rightarrow> st | Some e \<Rightarrow> st\<langle>tloc ReturnVar := ret_kd sem \<kappa> ch e (trd st)\<rangle>)"
 
-definition tenter_st :: "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst toplift" where
+definition tenter_st :: "var_id list \<Rightarrow> texp list \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst" where
   "tenter_st ps es st =
-     (if list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)
-      then TL (bind_formals_default_st tglobal ps
-                 (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e (trd st)))) ps es)
-                 (enter_frame_D_default_st KTop st))
-      else TTop)"
+     bind_formals_default_st tglobal ps
+       (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e (trd st)))) ps es)
+       (enter_frame_D_default_st KTop st)"
 
 definition tcombine_assign_st :: "var_id option \<Rightarrow> 'a::kind_int_domain tst \<Rightarrow> 'a tst \<Rightarrow> 'a tst" where
   "tcombine_assign_st dst st ste =
@@ -119,40 +117,13 @@ lemma trd_tbranch_st [simp]: "trd (tbranch_st b pol st) = tbranch sem \<kappa> c
 lemma trd_treturn_st [simp]: "trd (treturn_st r st) = treturn sem \<kappa> ch r (trd st)"
   by (simp add: treturn_st_def treturn_def split: option.splits)
 
-lemma map_trd_tenter_st [simp]:
-  "map_toplift trd (tenter_st ps es st) = tenter_state sem \<kappa> ch ps es (trd st)"
+lemma trd_tenter_st [simp]:
+  "trd (tenter_st ps es st) = tenter_state sem \<kappa> ch ps es (trd st)"
   by (simp add: tenter_st_def tenter_state_def tenter_frame_def)
 
 lemma trd_tcombine_assign_st [simp]:
   "trd (tcombine_assign_st dst st ste) = tcombine_assign sem \<kappa> dst (trd st) (trd ste)"
   by (simp add: tcombine_assign_st_def tcombine_assign_def split: option.splits)
-
-text \<open>The same under \<^const>\<open>TTop\<close>.\<close>
-
-lemma map_trd_tl_tassign_st [simp]:
-  "map_toplift trd (tl_map (tassign_st x e) d) = tl_map (tassign sem \<kappa> ch x e) (map_toplift trd d)"
-  by (cases d) simp_all
-
-lemma map_trd_tl_tspecial_st [simp]:
-  "map_toplift trd (tl_map (tspecial_st sc x) d) = tl_map (tspecial sem \<kappa> ch sc x) (map_toplift trd d)"
-  by (cases d) simp_all
-
-lemma map_trd_tl_tbranch_st [simp]:
-  "map_toplift trd (tl_map (tbranch_st b pol) d) = tl_map (tbranch sem \<kappa> ch b pol) (map_toplift trd d)"
-  by (cases d) simp_all
-
-lemma map_trd_tl_treturn_st [simp]:
-  "map_toplift trd (tl_map (treturn_st r) d) = tl_map (treturn sem \<kappa> ch r) (map_toplift trd d)"
-  by (cases d) simp_all
-
-lemma map_trd_tl_tenter_st [simp]:
-  "map_toplift trd (tl_bind (tenter_st ps es) d) = tl_bind (tenter_state sem \<kappa> ch ps es) (map_toplift trd d)"
-  by (cases d) simp_all
-
-lemma map_trd_tl_tcombine_assign_st [simp]:
-  "map_toplift trd (tl_map2 (tcombine_assign_st dst) d e)
-     = tl_map2 (tcombine_assign sem \<kappa> dst) (map_toplift trd d) (map_toplift trd e)"
-  by (cases d; cases e) simp_all
 
 end
 
@@ -237,24 +208,15 @@ lift_definition tst_is_bot :: "'a::kind_int_domain tst \<Rightarrow> bool" is ts
 lemma tst_is_bot_iff: "tst_is_bot st \<longleftrightarrow> (\<exists>v. is_empty (trd st v))"
   by (simp add: tst_is_bot.rep_eq tst_rep_is_bot_iff default_st_to_fun_rep)
 
-lemma map_trd_tl_combine [simp]:
-  "map_toplift trd (tl_map2 combine_default_st d e)
-     = tl_map2 (combine_env tglobal) (map_toplift trd d) (map_toplift trd (e :: 'a::kind_int_domain tst toplift))"
-  by (cases d; cases e) simp_all
+lemma trd_combine [simp]:
+  "trd (combine_default_st d e) = combine_env tglobal (trd d) (trd (e :: 'a::kind_int_domain tst))"
+  by simp
 
-fun tt_empty :: "'a::kind_int_domain tabs toplift \<Rightarrow> bool" where
-  "tt_empty TTop \<longleftrightarrow> False"
-| "tt_empty (TL \<sigma>) \<longleftrightarrow> (\<exists>v. is_empty (\<sigma> v))"
+definition tt_empty :: "'a::kind_int_domain tabs \<Rightarrow> bool" where
+  "tt_empty \<sigma> \<longleftrightarrow> (\<exists>v. is_empty (\<sigma> v))"
 
-fun tst_empty :: "'a::kind_int_domain tst toplift \<Rightarrow> bool" where
-  "tst_empty TTop \<longleftrightarrow> False"
-| "tst_empty (TL st) \<longleftrightarrow> tst_is_bot st"
-
-lemma tst_empty_iff: "tst_empty d \<longleftrightarrow> tt_empty (map_toplift trd d)"
-  by (cases d) (simp_all add: tst_is_bot_iff)
-
-lemma tt_empty_sound: "tt_empty d \<Longrightarrow> gamma_tt \<kappa> d = {}"
-  by (cases d) (auto simp: gamma_tabs_def is_empty_correct simp del: gamma_kd_def)
+lemma tt_empty_sound: "tt_empty \<sigma> \<Longrightarrow> gamma_tabs \<kappa> \<sigma> = {}"
+  by (auto simp: tt_empty_def gamma_tabs_def is_empty_correct simp del: gamma_kd_def)
 
 subsection \<open>The executable component\<close>
 
@@ -262,65 +224,59 @@ text \<open>The component of \<open>Typed_Transfer\<close> on the carrier, over 
   a step whose result denotes nothing answers \<^const>\<open>Bot\<close>.\<close>
 
 definition typed_exec_spec ::
-    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec" where
+    "sem_conf \<Rightarrow> kenv \<Rightarrow> (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec" where
   "typed_exec_spec sem \<kappa> =
-     \<lparr> ls_query = (\<lambda>ch d q. case d of Bot \<Rightarrow> \<top> | Lifted x \<Rightarrow> tquery sem \<kappa> ch (map_toplift trd x) q),
+     \<lparr> ls_query = (\<lambda>ch d q. case d of Bot \<Rightarrow> \<top> | Lifted x \<Rightarrow> tquery sem \<kappa> ch (trd x) q),
        ls_skip = (\<lambda>ch d. d),
-       ls_assign = (\<lambda>ch x e. transfer_lift tst_empty (tl_map (tassign_st sem \<kappa> ch x e))),
-       ls_special = (\<lambda>ch sc x. transfer_lift tst_empty (tl_map (tspecial_st sem \<kappa> ch sc x))),
-       ls_branch = (\<lambda>ch b pol. transfer_lift tst_empty (tl_map (tbranch_st sem \<kappa> ch b pol))),
+       ls_assign = (\<lambda>ch x e. transfer_lift tst_is_bot (tassign_st sem \<kappa> ch x e)),
+       ls_special = (\<lambda>ch sc x. transfer_lift tst_is_bot (tspecial_st sem \<kappa> ch sc x)),
+       ls_branch = (\<lambda>ch b pol. transfer_lift tst_is_bot (tbranch_st sem \<kappa> ch b pol)),
        ls_body = (\<lambda>ch p d. d),
-       ls_return = (\<lambda>ch r p. transfer_lift tst_empty (tl_map (treturn_st sem \<kappa> ch r))),
+       ls_return = (\<lambda>ch r p. transfer_lift tst_is_bot (treturn_st sem \<kappa> ch r)),
        ls_event = (\<lambda>ch evt d. d),
        ls_enter = (\<lambda>ch ci p.
-         [(fst p, transfer_lift tst_empty (tl_bind (tenter_st sem \<kappa> ch (ci_formals ci) (ci_args ci))) (fst p))]),
-       ls_combine_env = (\<lambda>ch ch' ci x y. do { a \<leftarrow> x; b \<leftarrow> y; Lifted (tl_map2 combine_default_st a b) }),
-       ls_combine_assign = (\<lambda>ch ci. transfer_lift2 tst_empty (tl_map2 (tcombine_assign_st sem \<kappa> (ci_dst ci)))) \<rparr>"
+         [(fst p, transfer_lift tst_is_bot (tenter_st sem \<kappa> ch (ci_formals ci) (ci_args ci)) (fst p))]),
+       ls_combine_env = (\<lambda>ch ch' ci x y. do { a \<leftarrow> x; b \<leftarrow> y; Lifted (combine_default_st a b) }),
+       ls_combine_assign = (\<lambda>ch ci. transfer_lift2 tst_is_bot (tcombine_assign_st sem \<kappa> (ci_dst ci))) \<rparr>"
 
-definition gamma_exec :: "kenv \<Rightarrow> 'a::kind_int_domain tst toplift lifted \<Rightarrow> tstore set" where
-  "gamma_exec \<kappa> d = gamma_lift (gamma_tt \<kappa>) (map_lift (map_toplift trd) d)"
+definition gamma_exec :: "kenv \<Rightarrow> 'a::kind_int_domain tst lifted \<Rightarrow> tstore set" where
+  "gamma_exec \<kappa> d = gamma_lift (gamma_tabs \<kappa>) (map_lift trd d)"
 
 lemma gamma_exec_Bot [simp]: "gamma_exec \<kappa> Bot = {}"
   by (simp add: gamma_exec_def)
 
-lemma gamma_exec_Lifted [simp]: "gamma_exec \<kappa> (Lifted x) = gamma_tt \<kappa> (map_toplift trd x)"
+lemma gamma_exec_Lifted [simp]: "gamma_exec \<kappa> (Lifted x) = gamma_tabs \<kappa> (trd x)"
   by (simp add: gamma_exec_def)
 
+lemma tst_is_bot_sound: "tst_is_bot st \<Longrightarrow> gamma_tabs \<kappa> (trd st) = {}"
+  by (rule tt_empty_sound) (simp add: tt_empty_def tst_is_bot_iff)
+
 lemma gamma_exec_normalize_lift [simp]:
-  "s \<in> gamma_exec \<kappa> (normalize_lift tst_empty y) \<longleftrightarrow> s \<in> gamma_tt \<kappa> (map_toplift trd y)"
-  using tt_empty_sound[of "map_toplift trd y" \<kappa>]
-  by (auto simp: normalize_lift_def tst_empty_iff)
+  "s \<in> gamma_exec \<kappa> (normalize_lift tst_is_bot y) \<longleftrightarrow> s \<in> gamma_tabs \<kappa> (trd y)"
+  using tst_is_bot_sound[of y \<kappa>] by (auto simp: normalize_lift_def)
 
 lemma gamma_exec_transfer_lift [simp]:
-  "s \<in> gamma_exec \<kappa> (transfer_lift tst_empty f (Lifted x))
-     \<longleftrightarrow> s \<in> gamma_tt \<kappa> (map_toplift trd (f x))"
-  using tt_empty_sound[of "map_toplift trd (f x)" \<kappa>]
-  by (auto simp: transfer_lift_def normalize_lift_def tst_empty_iff)
+  "s \<in> gamma_exec \<kappa> (transfer_lift tst_is_bot f (Lifted x)) \<longleftrightarrow> s \<in> gamma_tabs \<kappa> (trd (f x))"
+  using tst_is_bot_sound[of "f x" \<kappa>] by (auto simp: transfer_lift_def normalize_lift_def)
 
 lemma gamma_exec_transfer_lift2 [simp]:
-  "s \<in> gamma_exec \<kappa> (transfer_lift2 tst_empty f (Lifted x) (Lifted y))
-     \<longleftrightarrow> s \<in> gamma_tt \<kappa> (map_toplift trd (f x y))"
-  using tt_empty_sound[of "map_toplift trd (f x y)" \<kappa>]
-  by (auto simp: transfer_lift2_def normalize_lift_def tst_empty_iff)
+  "s \<in> gamma_exec \<kappa> (transfer_lift2 tst_is_bot f (Lifted x) (Lifted y))
+     \<longleftrightarrow> s \<in> gamma_tabs \<kappa> (trd (f x y))"
+  using tst_is_bot_sound[of "f x y" \<kappa>] by (auto simp: transfer_lift2_def normalize_lift_def)
 
 lemma gamma_exec_mono: "x \<le> y \<Longrightarrow> gamma_exec \<kappa> x \<subseteq> gamma_exec \<kappa> y"
 proof (cases x; cases y)
   fix a b assume "x \<le> y" "x = Lifted a" "y = Lifted b"
-  then have "a \<le> b" by simp
-  then have "map_toplift trd a \<le> map_toplift trd b"
-    by (cases a; cases b) (simp_all add: default_st_to_fun_mono)
-  with \<open>x = Lifted a\<close> \<open>y = Lifted b\<close> show ?thesis by (simp add: gamma_tt_mono)
+  then have "trd a \<le> trd b" by (simp add: default_st_to_fun_mono)
+  with \<open>x = Lifted a\<close> \<open>y = Lifted b\<close> show ?thesis by (simp add: gamma_tabs_mono)
 qed simp_all
 
 theorem typed_exec_spec_sound:
   "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal (gamma_exec \<kappa>)
-     (typed_exec_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)"
+     (typed_exec_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec)"
 proof -
   interpret T: mcp_sem teval ReturnVar "tconv \<kappa>" tglobal .
   note S = typed_spec_sound[of \<kappa>]
-  have lifted: "\<exists>x. d = Lifted x \<and> s \<in> gamma_tt \<kappa> (map_toplift trd x)"
-    if "s \<in> gamma_exec \<kappa> d" for s and d :: "'a tst toplift lifted"
-    using that by (cases d) simp_all
   show ?thesis
   proof (rule T.sound_local_specI)
     show "\<And>x y. x \<le> y \<Longrightarrow> gamma_exec \<kappa> x \<subseteq> gamma_exec \<kappa> y"
@@ -331,7 +287,7 @@ proof -
       subgoal premises prems for ch s d q
       proof (cases d)
         case (Lifted x)
-        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        with prems(1) have "s \<in> gamma_tabs \<kappa> (trd x)" by simp
         from T.sound_local_spec_queryD[OF S, unfolded T.gsound_query_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
@@ -349,7 +305,7 @@ proof -
       subgoal premises prems for ch d s y e
       proof (cases d)
         case (Lifted x)
-        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        with prems(1) have "s \<in> gamma_tabs \<kappa> (trd x)" by simp
         from T.sound_local_spec_assignD[OF S, unfolded T.gsound_assign_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
@@ -361,7 +317,7 @@ proof -
       subgoal premises prems for ch d s sc y t
       proof (cases d)
         case (Lifted x)
-        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        with prems(1) have "s \<in> gamma_tabs \<kappa> (trd x)" by simp
         from T.sound_local_spec_specialD[OF S, unfolded T.gsound_special_def, rule_format,
             OF this prems(2) prems(3)]
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
@@ -373,7 +329,7 @@ proof -
       subgoal premises prems for ch d s b pol
       proof (cases d)
         case (Lifted x)
-        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        with prems(1) have "s \<in> gamma_tabs \<kappa> (trd x)" by simp
         from T.sound_local_spec_branchD[OF S, unfolded T.gsound_branch_def, rule_format,
             OF this prems(2) prems(3)]
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
@@ -385,7 +341,7 @@ proof -
       subgoal premises prems for ch d s r p
       proof (cases d)
         case (Lifted x)
-        with prems(1) have "s \<in> gamma_tt \<kappa> (map_toplift trd x)" by simp
+        with prems(1) have "s \<in> gamma_tabs \<kappa> (trd x)" by simp
         from T.sound_local_spec_returnD[OF S, unfolded T.gsound_return_def, rule_format,
             OF this prems(2)]
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def Lifted)
@@ -397,10 +353,10 @@ proof -
       subgoal premises prems for ch s ci p
       proof -
         from prems(1) obtain x where p: "fst p = Lifted x"
-          and sx: "s \<in> gamma_tt \<kappa> (map_toplift trd x)"
+          and sx: "s \<in> gamma_tabs \<kappa> (trd x)"
           by (cases "fst p") simp_all
         from T.sound_local_spec_enterD[OF S, unfolded T.gsound_enter_def, rule_format,
-            where p = "(map_toplift trd x, map_toplift trd x)" and ci = ci, OF _ prems(2)] sx
+            where p = "(trd x, trd x)" and ci = ci, OF _ prems(2)] sx
         show ?thesis by (simp add: typed_exec_spec_def typed_spec_def p)
       qed
       done
@@ -411,10 +367,10 @@ proof -
       subgoal premises prems for ch ch' s t ci x de
       proof -
         from prems(1) obtain a where x: "x = Lifted a"
-          and sa: "s \<in> gamma_tt \<kappa> (map_toplift trd a)"
+          and sa: "s \<in> gamma_tabs \<kappa> (trd a)"
           by (cases x) simp_all
         from prems(3) obtain b where de: "de = Lifted b"
-          and tb: "t \<in> gamma_tt \<kappa> (map_toplift trd b)"
+          and tb: "t \<in> gamma_tabs \<kappa> (trd b)"
           by (cases de) simp_all
         from T.sound_local_spec_combineD[OF S, unfolded T.gsound_combine_def, rule_format,
             where ci = ci, OF sa prems(2) tb prems(4)]

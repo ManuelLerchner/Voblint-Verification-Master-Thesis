@@ -4,22 +4,19 @@ begin
 
 section \<open>Regression: the typed Interval-Congruence product, executed\<close>
 
-definition it_at :: "'a tabs toplift \<Rightarrow> var_id \<Rightarrow> 'a kd" where
-  "it_at d v = (case d of TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> v)"
-
-abbreviation it_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> int_fixpoint int_tuple tabs toplift" where
+abbreviation it_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> int_fixpoint int_tuple tabs" where
   "it_state_at ds p \<equiv> typed_nonrel.state_at default_sem_conf ds 0 Globals_Join tglobal p []"
 
 abbreviation it_equations :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<times> cfg_node list \<Rightarrow>
     (cfg_node \<times> cfg_node list, (unit, cfg_node list) global_unknown,
-     (int_fixpoint int_tuple tst toplift lifted, int_fixpoint int_tuple tst toplift lifted) dg_state) strategy_tree" where
+     (int_fixpoint int_tuple tst lifted, int_fixpoint int_tuple tst lifted) dg_state) strategy_tree" where
   "it_equations ds p \<equiv> typed_nonrel.equations default_sem_conf ds 0 tglobal p"
 
 abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
 
 abbreviation f_result :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> vname \<Rightarrow> int_fixpoint int_tuple kd" where
-  "f_result ds p x \<equiv> it_at (it_state_at ds p (FunctionResult (STR ''f''))) (f_var x)"
+  "f_result ds p x \<equiv> it_state_at ds p (FunctionResult (STR ''f'')) (f_var x)"
 
 subsection \<open>No overflow keeps the class\<close>
 

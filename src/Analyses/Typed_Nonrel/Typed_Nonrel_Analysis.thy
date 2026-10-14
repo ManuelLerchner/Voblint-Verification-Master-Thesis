@@ -19,54 +19,50 @@ text \<open>
 
 subsection \<open>Verdicts\<close>
 
-definition tclassify :: "sem_conf \<Rightarrow> kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs toplift \<Rightarrow> check_result" where
+definition tclassify :: "sem_conf \<Rightarrow> kenv \<Rightarrow> texp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> check_result" where
   "tclassify sem \<kappa> c d =
-     (case d of TTop \<Rightarrow> Check_Unknown
-      | TL \<sigma> \<Rightarrow> (case truth_ik (taeval sem \<kappa> (\<lambda>_. \<top>) c \<sigma>) of
-                  Some True \<Rightarrow> Check_Proved
-                | Some False \<Rightarrow> Check_Refuted
-                | None \<Rightarrow> Check_Unknown))"
+     (case truth_ik (taeval sem \<kappa> (\<lambda>_. \<top>) c d) of
+        Some True \<Rightarrow> Check_Proved
+      | Some False \<Rightarrow> Check_Refuted
+      | None \<Rightarrow> Check_Unknown)"
 
 lemma tclassify_sound:
-  assumes s: "s \<in> gamma_tt \<kappa> d"
+  assumes s: "s \<in> gamma_tabs \<kappa> d"
   shows tclassify_proved: "tclassify sem \<kappa> c d = Check_Proved \<Longrightarrow> truthy (teval c s)"
     and tclassify_refuted: "tclassify sem \<kappa> c d = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
   have truth: "truthy (teval c s) = b"
-    if "d = TL \<sigma>" "truth_ik (taeval sem \<kappa> (\<lambda>_. \<top>) c \<sigma>) = Some b" for \<sigma> b
-  proof -
-    from s that(1) have "s \<in> gamma_tabs \<kappa> \<sigma>" by simp
-    then show ?thesis by (rule truth_ik_sound[OF that(2) taeval_sound]) simp
-  qed
+    if "truth_ik (taeval sem \<kappa> (\<lambda>_. \<top>) c d) = Some b" for b
+    using s by (rule truth_ik_sound[OF that taeval_sound]) simp
   show "tclassify sem \<kappa> c d = Check_Proved \<Longrightarrow> truthy (teval c s)"
-    using truth by (auto simp: tclassify_def split: toplift.splits option.splits bool.splits)
+    using truth by (auto simp: tclassify_def split: option.splits bool.splits)
   show "tclassify sem \<kappa> c d = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
-    using truth by (auto simp: tclassify_def split: toplift.splits option.splits bool.splits)
+    using truth by (auto simp: tclassify_def split: option.splits bool.splits)
 qed
 
 subsection \<open>The initial state\<close>
 
 text \<open>Every global starts at zero at its declared kind; every local is unconstrained.\<close>
 
-definition tinit_st :: "kind_decls \<Rightarrow> 'a::kind_int_domain tst toplift" where
+definition tinit_st :: "kind_decls \<Rightarrow> 'a::kind_int_domain tst" where
   "tinit_st ds =
-     TL \<llangle>(KTop, []), (KD I32 (of_int_ik I32 0), map (\<lambda>(v, k). (v, KD k (of_int_ik k 0))) ds)\<rrangle>"
+     \<llangle>(KTop, []), (KD I32 (of_int_ik I32 0), map (\<lambda>(v, k). (v, KD k (of_int_ik k 0))) ds)\<rrangle>"
 
-lemma map_trd_tinit_st:
-  "map_toplift trd (tinit_st ds :: 'a::kind_int_domain tst toplift)
-     = TL (\<lambda>v. if tglobal v then KD (kenv_of ds v) (of_int_ik (kenv_of ds v) 0) else KTop)"
+lemma trd_tinit_st:
+  "trd (tinit_st ds :: 'a::kind_int_domain tst)
+     = (\<lambda>v. if tglobal v then KD (kenv_of ds v) (of_int_ik (kenv_of ds v) 0) else KTop)"
   by (auto simp: tinit_st_def default_st_to_fun_def location_of_def kenv_of_def map_of_map
       fun_eq_iff split: option.splits)
 
 lemma tinit_sound:
   "tinit_stores (kenv_of ds)
-     \<subseteq> gamma_tt (kenv_of ds) (map_toplift trd (tinit_st ds :: 'a::kind_int_domain tst toplift))"
+     \<subseteq> gamma_tabs (kenv_of ds) (trd (tinit_st ds :: 'a::kind_int_domain tst))"
 proof
   fix t assume t: "t \<in> tinit_stores (kenv_of ds)"
   have rng: "t v \<in> ik_range (kenv_of ds v)" for v
     using t by (simp add: tinit_stores_def stypedD del: ik_range_iff)
-  show "t \<in> gamma_tt (kenv_of ds) (map_toplift trd (tinit_st ds))"
-    unfolding map_trd_tinit_st gamma_tt.simps
+  show "t \<in> gamma_tabs (kenv_of ds) (trd (tinit_st ds))"
+    unfolding trd_tinit_st
   proof (rule gamma_tabsI[OF tinit_stores_tstyped[OF t]], goal_cases)
     case (1 v)
     show ?case
@@ -95,8 +91,8 @@ lemma typed_cfg_calls_source_unique: "calls_source_unique (typed_cfg p ds)"
 
 lemma typed_exec_spec_sound_rd:
   "mcp_sem.gsound_local_spec teval ReturnVar (tconv \<kappa>) tglobal
-     (\<lambda>d. gamma_lift (gamma_tt \<kappa>) (map_lift (map_toplift trd) d))
-     (typed_exec_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)"
+     (\<lambda>d. gamma_lift (gamma_tabs \<kappa>) (map_lift trd d))
+     (typed_exec_spec sem \<kappa> :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec)"
   using typed_exec_spec_sound[of \<kappa> sem, where 'a = 'a] by (simp add: gamma_exec_def[abs_def])
 
 text \<open>What the component owes the pipeline does not depend on the context policy, so it
@@ -105,13 +101,13 @@ text \<open>What the component owes the pipeline does not depend on the context 
 lemma typed_nonrel_routed:
   "gdg_analysis
     teval ReturnVar (\<lambda>_. tconv (kenv_of ds)) (\<lambda>_. tglobal) (\<lambda>_. tinit_stores (kenv_of ds))
-    (\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec)
-    (\<lambda>_. tst_empty) (\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)) (tinit_st ds)
+    (\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec)
+    (\<lambda>_. tst_is_bot) (\<lambda>\<G>. default_st_to_fun \<G>) (tinit_st ds)
     (Analysis_Global ()) Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE((unit, 'c) global_unknown)
-       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r)
-    (TL \<bottom>) (tclassify sem (kenv_of ds)) (gamma_tt (kenv_of ds)) tt_empty
+       TYPE(('a tst lifted, 'a tst lifted) dg_state) r)
+    \<bottom> (tclassify sem (kenv_of ds)) (gamma_tabs (kenv_of ds)) tt_empty
     (TD_side_rule_Interp_solve_c r)
     (\<lambda>_ c. dg_spec_of c) (\<lambda>p d e. d) (\<lambda>_ d. d) (\<lambda>_ d. Bot) (\<lambda>_ p. []) (\<lambda>p ci d e. d)
     (\<lambda>p. typed_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
@@ -123,7 +119,7 @@ next
   case (EnterSingle p ci d) show ?case
     by (simp add: typed_exec_spec_def dg_pipeline.comp_entry_def)
 next
-  case (EmptyRd p s) show ?case by (rule tst_empty_iff)
+  case (EmptyRd p s) show ?case by (simp add: tst_is_bot_iff tt_empty_def)
 next
   case EmptyV show ?case by (rule sound_emptinessI) (rule tt_empty_sound)
 next
@@ -153,13 +149,13 @@ abbreviation typed_cs :: "nat \<Rightarrow> cfg_node \<Rightarrow> cfg_node list
 
 global_interpretation typed_nonrel: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
-    "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
+    "\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec"
+    "\<lambda>_. tst_is_bot" "\<lambda>\<G>. default_st_to_fun \<G>" "tinit_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
-       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
-    "TL \<bottom>" "tclassify sem (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
+       TYPE(('a tst lifted, 'a tst lifted) dg_state) r"
+    \<bottom> "tclassify sem (kenv_of ds)" "gamma_tabs (kenv_of ds)" tt_empty
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
@@ -185,8 +181,8 @@ lemma typed_nonrel_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) sem ds k r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. gamma_tt (kenv_of ds)
-                 (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs toplift))"
+           \<subseteq> (\<Union>ctx. gamma_tabs (kenv_of ds)
+                 (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs))"
   using typed_nonrel.gfun_route_result_node_sound
       [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
   by (simp add: tnode_collect_def)
@@ -199,7 +195,7 @@ theorem typed_nonrel_source_sound:
                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
   shows "\<exists>v stk ctx. typed_ptable p ds, typed_cfg p ds, prog_main_name
                     \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> gamma_tt (kenv_of ds) (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs toplift)"
+                 \<and> s \<in> gamma_tabs (kenv_of ds) (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs)"
   using typed_source_reaches_node_collect[OF wf s0 run] typed_nonrel_node_sound[OF wf solves]
   by blast
 
@@ -233,13 +229,13 @@ theorem typed_nonrel_verdict_sound:
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
   obtain ctx where sc:
-    "s \<in> gamma_tt (kenv_of ds) (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs toplift)"
+    "s \<in> gamma_tabs (kenv_of ds) (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs)"
     using typed_nonrel_node_sound[OF wf solves] s by blast
   have decided:
-    "tclassify sem (kenv_of ds) c (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs toplift) = res"
+    "tclassify sem (kenv_of ds) c (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs) = res"
     if known: "res \<noteq> Check_Unknown"
   proof (cases
-    "lookup_table (typed_nonrel.result sem ds k r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+    "lookup_table (typed_nonrel.result sem ds k r tglobal p :: (_, 'a tabs) solved_table) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_nonrel.state_at_unfold)
   next
@@ -303,23 +299,22 @@ text \<open>
 \<close>
 
 definition typed_es ::
-    "(var_id \<Rightarrow> bool) \<Rightarrow> 'a::kind_int_domain tst toplift lifted \<Rightarrow> (var_id, texp) gcall_action
+    "(var_id \<Rightarrow> bool) \<Rightarrow> 'a::kind_int_domain tst lifted \<Rightarrow> (var_id, texp) gcall_action
        \<Rightarrow> 'a kd list" where
   "typed_es \<G> d ca =
      (case ca of CallEdge dst pars args \<Rightarrow>
-        (case d of Lifted (TL st) \<Rightarrow> map (\<rho>\<^bsub>\<G>\<^esub> st) pars
-         | Lifted TTop \<Rightarrow> map (\<lambda>_. KTop) pars
+        (case d of Lifted st \<Rightarrow> map (\<rho>\<^bsub>\<G>\<^esub> st) pars
          | Bot \<Rightarrow> map (\<lambda>_. \<bottom>) pars))"
 
 global_interpretation typed_nonrel_es: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst toplift lifted) glocal_spec"
-    "\<lambda>_. tst_empty" "\<lambda>\<G>. map_toplift (default_st_to_fun \<G>)" "tinit_st ds"
+    "\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec"
+    "\<lambda>_. tst_is_bot" "\<lambda>\<G>. default_st_to_fun \<G>" "tinit_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>\<G> u ctx d ca. typed_es \<G> d ca" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, 'a kd list) global_unknown)
-       TYPE(('a tst toplift lifted, 'a tst toplift lifted) dg_state) r"
-    "TL \<bottom>" "tclassify sem (kenv_of ds)" "gamma_tt (kenv_of ds)" tt_empty
+       TYPE(('a tst lifted, 'a tst lifted) dg_state) r"
+    \<bottom> "tclassify sem (kenv_of ds)" "gamma_tabs (kenv_of ds)" tt_empty
     "TD_side_rule_Interp_solve_c r"
     "\<lambda>_ c. dg_spec_of c" "\<lambda>p d e. d" "\<lambda>_ d. d" "\<lambda>_ d. Bot" "\<lambda>_ p. []" "\<lambda>p ci d e. d"
     "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
@@ -334,8 +329,8 @@ lemma typed_nonrel_es_node_sound:
   assumes wf: "wf_program_compile_input p"
     and solves: "typed_nonrel_es.terminates TYPE('a::kind_int_domain) sem ds r tglobal p"
   shows "tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. gamma_tt (kenv_of ds)
-                 (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs toplift))"
+           \<subseteq> (\<Union>ctx. gamma_tabs (kenv_of ds)
+                 (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs))"
 proof
   fix s assume "s \<in> tnode_collect (kenv_of ds) (typed_cfg p ds) (tinit_stores (kenv_of ds)) v"
   then obtain ctx :: "'a kd list" where "s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds)) tglobal
@@ -343,14 +338,14 @@ proof
     using typed_nonrel_es.gentry_state_node_collect_eq_Union_of_terminates
         [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
     by (auto simp: tnode_collect_def)
-  then have "s \<in> gamma_lift (gamma_tt (kenv_of ds))
-      (lookup_table (typed_nonrel_es.result sem ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx)"
+  then have "s \<in> gamma_lift (gamma_tabs (kenv_of ds))
+      (lookup_table (typed_nonrel_es.result sem ds r tglobal p :: (_, 'a tabs) solved_table) v ctx)"
     using typed_nonrel_es.gentry_state_lookup_sound_of_terminates
         [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v ctx]
     by blast
-  then have "s \<in> gamma_tt (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs toplift)"
+  then have "s \<in> gamma_tabs (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs)"
     by (auto simp: typed_nonrel_es.state_at_unfold split: lifted.splits)
-  then show "s \<in> (\<Union>ctx. gamma_tt (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs toplift))"
+  then show "s \<in> (\<Union>ctx. gamma_tabs (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs))"
     by blast
 qed
 
@@ -363,13 +358,13 @@ theorem typed_nonrel_es_verdict_sound:
     and "res = Check_Refuted \<Longrightarrow> \<not> truthy (teval c s)"
 proof -
   obtain ctx where sc:
-    "s \<in> gamma_tt (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs toplift)"
+    "s \<in> gamma_tabs (kenv_of ds) (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs)"
     using typed_nonrel_es_node_sound[OF wf solves] s by blast
   have decided:
-    "tclassify sem (kenv_of ds) c (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs toplift) = res"
+    "tclassify sem (kenv_of ds) c (typed_nonrel_es.state_at sem ds r tglobal p ctx v :: 'a tabs) = res"
     if known: "res \<noteq> Check_Unknown"
   proof (cases
-    "lookup_table (typed_nonrel_es.result sem ds r tglobal p :: (_, 'a tabs toplift) solved_table) v ctx")
+    "lookup_table (typed_nonrel_es.result sem ds r tglobal p :: (_, 'a tabs) solved_table) v ctx")
     case Bot
     then show ?thesis using sc by (simp add: typed_nonrel_es.state_at_unfold)
   next
@@ -391,3 +386,4 @@ end
 unbundle no default_st_syntax
 
 end
+

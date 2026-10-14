@@ -17,17 +17,17 @@ subsection \<open>Fields\<close>
 text \<open>Int has one field per refinement mode, each holding the product at that mode.\<close>
 
 type_synonym tmcp_st =
-  "(ivl tst toplift lifted, (congruence tst toplift lifted,
-    ((int_never int_tuple tst toplift lifted, (int_once int_tuple tst toplift lifted,
-      int_fixpoint int_tuple tst toplift lifted) analysis_product) analysis_product,
-    (sign tst toplift lifted, (parity tst toplift lifted, var_id order_rel lifted)
+  "(ivl tst lifted, (congruence tst lifted,
+    ((int_never int_tuple tst lifted, (int_once int_tuple tst lifted,
+      int_fixpoint int_tuple tst lifted) analysis_product) analysis_product,
+    (sign tst lifted, (parity tst lifted, var_id order_rel lifted)
     analysis_product) analysis_product) analysis_product) analysis_product) analysis_product"
 
 type_synonym tmcp_val =
-  "(ivl tabs toplift lifted, (congruence tabs toplift lifted,
-    ((int_never int_tuple tabs toplift lifted, (int_once int_tuple tabs toplift lifted,
-      int_fixpoint int_tuple tabs toplift lifted) analysis_product) analysis_product,
-    (sign tabs toplift lifted, (parity tabs toplift lifted, var_id order_rel lifted)
+  "(ivl tabs lifted, (congruence tabs lifted,
+    ((int_never int_tuple tabs lifted, (int_once int_tuple tabs lifted,
+      int_fixpoint int_tuple tabs lifted) analysis_product) analysis_product,
+    (sign tabs lifted, (parity tabs lifted, var_id order_rel lifted)
     analysis_product) analysis_product) analysis_product) analysis_product) analysis_product"
 
 definition tslot1 where "tslot1 r = pleft r"
@@ -67,13 +67,13 @@ lemmas tslot_defs [simp] = tslot1_def tslot2_def tslot3_def tslot4_def tslot5_de
 
 definition tmcp_rd :: "(var_id \<Rightarrow> bool) \<Rightarrow> tmcp_st \<Rightarrow> tmcp_val" where
   "tmcp_rd \<G> r =
-     Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot1 r))
-     (Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot2 r))
-     (Product (Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot3n r))
-        (Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot3o r))
-                 (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot3f r))))
-     (Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot4 r))
-     (Product (map_lift (map_toplift (default_st_to_fun \<G>)) (tslot5 r)) (tslot6 r)))))"
+     Product (map_lift (default_st_to_fun \<G>) (tslot1 r))
+     (Product (map_lift (default_st_to_fun \<G>) (tslot2 r))
+     (Product (Product (map_lift (default_st_to_fun \<G>) (tslot3n r))
+        (Product (map_lift (default_st_to_fun \<G>) (tslot3o r))
+                 (map_lift (default_st_to_fun \<G>) (tslot3f r))))
+     (Product (map_lift (default_st_to_fun \<G>) (tslot4 r))
+     (Product (map_lift (default_st_to_fun \<G>) (tslot5 r)) (tslot6 r)))))"
 
 subsection \<open>Each analysis on its own field\<close>
 
@@ -89,13 +89,13 @@ definition tfield :: "sem_conf \<Rightarrow> kenv \<Rightarrow> imp_prog \<Right
     | Typed_Order \<Rightarrow> lens_of (lift_get tslot6) (lift_put set_tslot6) (ord_spec \<kappa> (ord_vars p)))"
 
 fun tval_gamma :: "kenv \<Rightarrow> typed_domain \<Rightarrow> tmcp_val \<Rightarrow> tstore set" where
-  "tval_gamma \<kappa> Typed_Interval v = gamma_lift (gamma_tt \<kappa>) (tslot1 v)"
-| "tval_gamma \<kappa> Typed_Congruence v = gamma_lift (gamma_tt \<kappa>) (tslot2 v)"
-| "tval_gamma \<kappa> (Typed_Int Refine_Never) v = gamma_lift (gamma_tt \<kappa>) (tslot3n v)"
-| "tval_gamma \<kappa> (Typed_Int Refine_Once) v = gamma_lift (gamma_tt \<kappa>) (tslot3o v)"
-| "tval_gamma \<kappa> (Typed_Int Refine_Fixpoint) v = gamma_lift (gamma_tt \<kappa>) (tslot3f v)"
-| "tval_gamma \<kappa> Typed_Sign v = gamma_lift (gamma_tt \<kappa>) (tslot4 v)"
-| "tval_gamma \<kappa> Typed_Parity v = gamma_lift (gamma_tt \<kappa>) (tslot5 v)"
+  "tval_gamma \<kappa> Typed_Interval v = gamma_lift (gamma_tabs \<kappa>) (tslot1 v)"
+| "tval_gamma \<kappa> Typed_Congruence v = gamma_lift (gamma_tabs \<kappa>) (tslot2 v)"
+| "tval_gamma \<kappa> (Typed_Int Refine_Never) v = gamma_lift (gamma_tabs \<kappa>) (tslot3n v)"
+| "tval_gamma \<kappa> (Typed_Int Refine_Once) v = gamma_lift (gamma_tabs \<kappa>) (tslot3o v)"
+| "tval_gamma \<kappa> (Typed_Int Refine_Fixpoint) v = gamma_lift (gamma_tabs \<kappa>) (tslot3f v)"
+| "tval_gamma \<kappa> Typed_Sign v = gamma_lift (gamma_tabs \<kappa>) (tslot4 v)"
+| "tval_gamma \<kappa> Typed_Parity v = gamma_lift (gamma_tabs \<kappa>) (tslot5 v)"
 | "tval_gamma \<kappa> Typed_Order v = gamma_ord_lift \<kappa> (tslot6 v)"
 
 fun tlive :: "typed_domain \<Rightarrow> tmcp_st \<Rightarrow> bool" where
@@ -108,7 +108,7 @@ fun tlive :: "typed_domain \<Rightarrow> tmcp_st \<Rightarrow> bool" where
 | "tlive Typed_Parity r = (tslot5 r \<noteq> Bot)"
 | "tlive Typed_Order r = (tslot6 r \<noteq> Bot)"
 
-definition tt_lift_empty :: "'a::kind_int_domain tabs toplift lifted \<Rightarrow> bool" where
+definition tt_lift_empty :: "'a::kind_int_domain tabs lifted \<Rightarrow> bool" where
   "tt_lift_empty x = (case x of Bot \<Rightarrow> True | Lifted d \<Rightarrow> tt_empty d)"
 
 fun tval_empty :: "typed_domain \<Rightarrow> tmcp_val \<Rightarrow> bool" where
@@ -121,8 +121,8 @@ fun tval_empty :: "typed_domain \<Rightarrow> tmcp_val \<Rightarrow> bool" where
 | "tval_empty Typed_Parity v = tt_lift_empty (tslot5 v)"
 | "tval_empty Typed_Order v = (tslot6 v = Bot)"
 
-definition tst_lift_empty :: "'a::kind_int_domain tst toplift lifted \<Rightarrow> bool" where
-  "tst_lift_empty x = (case x of Bot \<Rightarrow> True | Lifted d \<Rightarrow> tst_empty d)"
+definition tst_lift_empty :: "'a::kind_int_domain tst lifted \<Rightarrow> bool" where
+  "tst_lift_empty x = (case x of Bot \<Rightarrow> True | Lifted d \<Rightarrow> tst_is_bot d)"
 
 fun tfield_empty :: "typed_domain \<Rightarrow> tmcp_st \<Rightarrow> bool" where
   "tfield_empty Typed_Interval r = tst_lift_empty (tslot1 r)"
@@ -134,7 +134,7 @@ fun tfield_empty :: "typed_domain \<Rightarrow> tmcp_st \<Rightarrow> bool" wher
 | "tfield_empty Typed_Parity r = tst_lift_empty (tslot5 r)"
 | "tfield_empty Typed_Order r = (tslot6 r = Bot)"
 
-definition tt_answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs toplift lifted \<Rightarrow> texp gchannel \<Rightarrow> texp gchannel" where
+definition tt_answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs lifted \<Rightarrow> texp gchannel \<Rightarrow> texp gchannel" where
   "tt_answer sem \<kappa> x ch q = (case x of Bot \<Rightarrow> \<top> | Lifted d \<Rightarrow> tquery sem \<kappa> ch d q)"
 
 fun tanswer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> typed_domain \<Rightarrow> tmcp_val \<Rightarrow> texp gchannel \<Rightarrow> texp gchannel" where
@@ -164,12 +164,12 @@ lemma teval_truth_texp: "teval (truth_texp c) s = (if truthy (teval c s) then 1 
 subsection \<open>The registry\<close>
 
 lemma tt_answer_sound:
-  assumes "s \<in> gamma_lift (gamma_tt \<kappa>) x" and "geval_query.channel_holds teval ch s"
-  shows "geval_holds teval q (tt_answer sem \<kappa> (x :: 'a::kind_int_domain tabs toplift lifted) ch q) s"
+  assumes "s \<in> gamma_lift (gamma_tabs \<kappa>) x" and "geval_query.channel_holds teval ch s"
+  shows "geval_holds teval q (tt_answer sem \<kappa> (x :: 'a::kind_int_domain tabs lifted) ch q) s"
 proof (cases x)
   case (Lifted d)
   interpret T: mcp_sem teval ReturnVar "tconv \<kappa>" tglobal .
-  from assms Lifted have "s \<in> gamma_tt \<kappa> d" by simp
+  from assms Lifted have "s \<in> gamma_tabs \<kappa> d" by simp
   from T.sound_local_spec_queryD[OF typed_spec_sound[of \<kappa>, where 'a = 'a],
       unfolded T.gsound_query_def, rule_format, OF this assms(2)]
   show ?thesis by (simp add: tt_answer_def Lifted typed_spec_def)
@@ -278,7 +278,7 @@ next
 next
   case (EmptyRd p a r) show ?case
     by (cases a rule: typed_domain_cases)
-       (simp_all add: tmcp_rd_def tst_lift_empty_def tt_lift_empty_def tst_empty_iff split: lifted.splits)
+       (simp_all add: tmcp_rd_def tst_lift_empty_def tt_lift_empty_def tst_is_bot_iff tt_empty_def split: lifted.splits)
 next
   case (EmptyGamma a v) then show ?case
     by (cases a rule: typed_domain_cases) (auto simp: tt_lift_empty_def dest: tt_empty_sound split: lifted.splits)

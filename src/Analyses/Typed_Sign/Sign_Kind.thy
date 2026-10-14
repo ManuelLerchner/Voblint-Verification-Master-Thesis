@@ -240,9 +240,8 @@ definition sign_prog :: imp_prog where
   "sign_prog = program { fun f() { x = 0; x = x - 5; } fun main() { f(); } }"
 
 lemma sign_value:
-  "(case typed_nonrel.state_at default_sem_conf [(ScopedId (STR ''f'') (STR ''x''), U8)] 0 Globals_Join tglobal sign_prog []
-          (FunctionResult (STR ''f'')) of
-      TTop \<Rightarrow> KTop | TL \<sigma> \<Rightarrow> \<sigma> (ScopedId (STR ''f'') (STR ''x'')))
+  "typed_nonrel.state_at default_sem_conf [(ScopedId (STR ''f'') (STR ''x''), U8)] 0 Globals_Join tglobal sign_prog []
+     (FunctionResult (STR ''f'')) (ScopedId (STR ''f'') (STR ''x''))
      = KD U8 SNonNeg"
   by eval
 
