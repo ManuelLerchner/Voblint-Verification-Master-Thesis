@@ -34,15 +34,21 @@ fun u16 f(u8 n) { u8 x; x = n + 1; return x; }
 fun main() { i64 r; r = f(300); g = r; }
 ```
 
-Kinds go on `global` lines, formals, return kinds (`fun u16 f`) and locals,
-which are declared before a body's first statement, as CIL's `fundec.slocals`
-lists them. A procedure without a return kind returns no value. A program that
+Kinds go on `global` lines, formals, return kinds (`fun u16 f`) and locals. A
+local declaration may appear wherever a statement may, and braces, including
+those of a branch or loop body, open a C block scope. The parser collects every
+declaration of a body into the procedure's locals, as CIL's `fundec.slocals`
+does, and renames a declaration whose name is already taken in its procedure
+(by a global, a formal or an earlier declaration) to `x#2`, `x#3`, ..., resolving
+each use to the declaration in scope (`cli/frontend/vimp_scope.ml`). A procedure
+without a return kind returns no value. A program that
 writes any kind must write one on every global and formal and declare every
 local; `cli/frontend/vimp_typing.ml` checks this and builds the `kind_decls`.
 Globals start at zero, as C's static storage does. A declared local starts at an
-arbitrary value of its kind: the parser begins the body with
-`x = __voblint_nondet_int();` for each declared local, so the typed semantics
-converts that value to the local's kind. `(k) e` converts explicitly in any
+arbitrary value of its kind: the parser lowers `u8 x;` to
+`x = __voblint_nondet_int();` where the declaration is written, so the typed
+semantics converts that value to the local's kind, and a declaration in a loop
+body draws a fresh value on every iteration. `(k) e` converts explicitly in any
 program. A literal of a typed program must fit `i64`, the widest kind an
 unsuffixed C decimal literal can take; the frontend rejects a larger one, which
 the typed semantics would wrap. The printer (`vimp_printer.ml`) prints VIMP, so a

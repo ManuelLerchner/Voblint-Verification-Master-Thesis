@@ -1,0 +1,42 @@
+// PARAM: --analysis interval
+// Braces open a C block scope. A declaration in an inner block may shadow an
+// outer local, a formal or a global; the frontend renames it to `x#2`, a name no
+// source can write, so each declaration is its own local identity and the outer
+// variable is untouched once the block closes. Branch and loop bodies are blocks.
+global i32 g;
+
+fun i32 f(i32 a) {
+  {
+    i8 a = 3;
+    __voblint_check(a == 3); // PROVED
+  }
+  return a;
+}
+
+fun main() {
+  i32 x = 1000;
+  i32 y = x;
+  {
+    i8 x = 7;
+    y = y + x;
+    __voblint_check(x == 7); // PROVED
+    {
+      u8 x = 255;
+      __voblint_check(x == 255); // PROVED
+    }
+    __voblint_check(x == 7); // PROVED
+  }
+  __voblint_check(x == 1000); // PROVED
+  __voblint_check(y == 1007); // PROVED
+  g = 4;
+  if (y > 0) {
+    i8 g = 1;
+    __voblint_check(g == 1); // PROVED
+  } else {
+    u8 g = 2;
+  }
+  __voblint_check(g == 4); // PROVED
+  i32 r;
+  r = f(5);
+  __voblint_check(r == 5); // PROVED
+}

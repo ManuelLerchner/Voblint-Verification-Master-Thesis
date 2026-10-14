@@ -20,6 +20,15 @@ let source_label p =
 let close_definition header_start header_end ((name, _, _, _, _) as decl) =
   Vimp_positions.close name header_start header_end;
   decl
+
+(* The current procedure's declared locals with their kinds, in source order. *)
+let local_kinds : (string * Voblint.ikind) list ref = ref []
+
+let declare_locals k ds =
+  local_kinds := !local_kinds @ List.map (fun (id, _) -> (id, k)) ds;
+  match List.map snd ds with
+  | c :: cs -> List.fold_left (fun acc c -> Voblint.Seq (acc, c)) c cs
+  | [] -> assert false
 %}
 
 %token <string> IDENT
@@ -87,8 +96,10 @@ let close_definition header_start header_end ((name, _, _, _, _) as decl) =
 %type <Vimp_typing.formal list> tformals
 %type <string * (unit, string, Voblint.exp) Voblint.gcom> init_decl
 %type <(string * (unit, string, Voblint.exp) Voblint.gcom) list> init_decls
-%type <(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list> local_decl
-%type <(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list> local_decl_star
+%type <string * string> decl_name
+%type <unit> block_open
+%type <unit> block_close
+%type <string * Vimp_typing.formal list * Voblint.ikind option * Lexing.position * Lexing.position> fun_head
 %type <Vimp_typing.definition> function_decl
 %type <Vimp_typing.definition list> function_decl_star
 
@@ -98,7 +109,7 @@ let close_definition header_start header_end ((name, _, _, _, _) as decl) =
 (* exp: *)
 exp:
   | v0 = IDENT
-      { Voblint.V v0 }
+      { let v0 = Vimp_scope.resolve v0 in Voblint.V v0 }
   | v0 = INT
       { Voblint.N (Voblint.Int_of_integer v0) }
   | v0 = MINUS v1 = exp %prec UMINUS
@@ -167,7 +178,7 @@ stmt:
   | v0 = SKIP v1 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.SKIP ()) }
   | v0 = IDENT v1 = ASSIGN v2 = exp v3 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
+      { let v0 = Vimp_scope.resolve v0 in record_stmt_pos $startpos $endpos (Voblint.Assign ((), v0, v2)) }
   | v0 = RETURN v1 = exp v2 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Return ((), (Some v1))) }
   | v0 = RETURN v1 = SEMI
@@ -176,19 +187,23 @@ stmt:
       { record_stmt_pos $startpos $endpos (Voblint.Check ((), (source_label $startpos), v2)) }
   | v0 = if_stmt
       { v0 }
-  | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
+  | v0 = WHILE v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.While ((), v2, v5)) }
   | v0 = IDENT v1 = LPAREN v2 = actuals v3 = RPAREN v4 = SEMI
       { record_stmt_pos $startpos $endpos (Voblint.Call ((), None, v0, v2)) }
   | v0 = IDENT v1 = ASSIGN v2 = IDENT v3 = LPAREN v4 = actuals v5 = RPAREN v6 = SEMI
-      { record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
+      { let v0 = Vimp_scope.resolve v0 in record_stmt_pos $startpos $endpos (Voblint.Call ((), (Some v0), v2, v4)) }
+  | k = kind ds = init_decls SEMI
+      { declare_locals k ds }
+  | block_open b = stmts_opt block_close
+      { b }
 (* if_stmt: *)
 if_stmt:
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = LBRACE v9 = stmts_opt v10 = RBRACE
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close v7 = ELSE v8 = block_open v9 = stmts_opt v10 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v9)) }
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, (record_stmt_pos $endpos $endpos (Voblint.SKIP ())))) }
-  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = LBRACE v5 = stmts_opt v6 = RBRACE v7 = ELSE v8 = if_stmt
+  | v0 = IF v1 = LPAREN v2 = exp v3 = RPAREN v4 = block_open v5 = stmts_opt v6 = block_close v7 = ELSE v8 = if_stmt
       { record_stmt_pos $startpos $endpos (Voblint.If ((), v2, v5, v8)) }
 (* stmts: *)
 stmts:
@@ -229,9 +244,9 @@ global_line_star:
 
 global_line:
   | GLOBAL xs = ids SEMI
-      { (xs, None) }
+      { Vimp_scope.add_globals xs; (xs, None) }
   | GLOBAL k = kind xs = ids SEMI
-      { (xs, Some k) }
+      { Vimp_scope.add_globals xs; (xs, Some k) }
 
 tformal:
   | x = IDENT
@@ -251,14 +266,26 @@ tformals:
    written out as a library call so the semantics, not the parser, says what
    that value may be. An initializer, as in C's `i8 x = 2;`, is an assignment
    instead, converted to the variable's kind as any assignment is. Each
-   declarator is one statement at its own position. *)
-init_decl:
+   declarator is one statement at its own position, executed where it is
+   written, so a declaration in a loop body starts its variable afresh on
+   every iteration. The declarator's name is in scope from the declarator on,
+   as in C, so its initializer would read the variable it declares; that read
+   is rejected rather than given a value C leaves indeterminate. *)
+decl_name:
   | x = IDENT
-      { (x,
+      { (x, Vimp_scope.declare x) }
+
+init_decl:
+  | d = decl_name
+      { let _, id = d in
+        (id,
          record_stmt_pos $startpos $endpos
-           (Voblint.Call ((), Some x, "__voblint_nondet_int", []))) }
-  | x = IDENT ASSIGN e = exp
-      { (x, record_stmt_pos $startpos $endpos (Voblint.Assign ((), x, e))) }
+           (Voblint.Call ((), Some id, "__voblint_nondet_int", []))) }
+  | d = decl_name ASSIGN e = exp
+      { let x, id = d in
+        if List.mem id (Vimp_typing.exp_vars [] e) then
+          failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
+        (id, record_stmt_pos $startpos $endpos (Voblint.Assign ((), id, e))) }
 
 init_decls:
   | d = init_decl
@@ -266,24 +293,27 @@ init_decls:
   | ds = init_decls COMMA d = init_decl
       { ds @ [d] }
 
-local_decl:
-  | k = kind ds = init_decls SEMI
-      { List.map (fun (x, c) -> (x, k, c)) ds }
+block_open:
+  | LBRACE
+      { Vimp_scope.push () }
 
-local_decl_star:
-  | (* empty *)
-      { [] }
-  | l = local_decl ls = local_decl_star
-      { l @ ls }
+block_close:
+  | RBRACE
+      { Vimp_scope.pop () }
 
-(* Locals are declared before the first statement, as CIL's fundec.slocals
-   lists them, so every local is in scope throughout its procedure. *)
+(* Every declaration in a body is one of the procedure's locals, as CIL's
+   fundec.slocals collects them, under the name Vimp_scope gave it. *)
+fun_head:
+  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN LBRACE
+      { Vimp_scope.enter_proc (List.map fst fs);
+        local_kinds := [];
+        (name, fs, rk, $startpos, $endpos(rp)) }
+
 function_decl:
-  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN
-    LBRACE ls = local_decl_star b = stmts_opt RBRACE
-      { let body = List.fold_right (fun (_, _, c) acc -> Voblint.Seq (c, acc)) ls b in
-        close_definition $startpos $endpos(rp)
-          (name, fs, rk, List.map (fun (x, k, _) -> (x, k)) ls, body) }
+  | h = fun_head b = stmts_opt RBRACE
+      { let name, fs, rk, p, q = h in
+        Vimp_scope.close_proc ();
+        close_definition p q (name, fs, rk, !local_kinds, b) }
 
 function_decl_star:
   | (* empty *)

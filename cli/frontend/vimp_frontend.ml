@@ -75,12 +75,16 @@ let program (file : string) (src : string) :
     * (string * (int * int * int * int)) list =
   let lexbuf = Lexing.from_string src in
   Vimp_positions.reset ();
+  Vimp_scope.reset ();
   try
     let module I = Vimp_parser.MenhirInterpreter in
     let supplier = I.lexer_lexbuf_to_supplier Vimp_lexer.token lexbuf in
     let checkpoint = Vimp_parser.Incremental.program lexbuf.lex_curr_p in
     let prog = I.loop supplier checkpoint in
-    (prog, !Vimp_typing.last_kind_decls, stmt_positions prog, header_positions ())
+    ( prog,
+      !Vimp_typing.last_kind_decls,
+      stmt_positions prog,
+      header_positions () )
   with
   | Vimp_lexer.Lex_error { line; col; msg } ->
       raise (Parse_error { file; line; col; msg })

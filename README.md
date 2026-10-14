@@ -232,7 +232,7 @@ pin the findings and describe the expectation syntax.
 
 VIMP integers are mathematical unless a program declares machine kinds. Kinds
 are written C-style: on a `global` line, on a formal, as a procedure's return
-kind, and on locals declared before a body's first statement. A program that
+kind, and on locals, declared anywhere in a body with C's block scoping. A program that
 writes any kind must declare every variable; a declared local starts at an
 arbitrary value of its kind, and `(k) e` converts explicitly:
 

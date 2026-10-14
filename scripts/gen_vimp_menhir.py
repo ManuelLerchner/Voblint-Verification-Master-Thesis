@@ -172,8 +172,10 @@ NONTERMINAL_TYPES = {
     "tformals": "Vimp_typing.formal list",
     "init_decl": "string * (unit, string, Voblint.exp) Voblint.gcom",
     "init_decls": "(string * (unit, string, Voblint.exp) Voblint.gcom) list",
-    "local_decl": "(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list",
-    "local_decl_star": "(string * Voblint.ikind * (unit, string, Voblint.exp) Voblint.gcom) list",
+    "decl_name": "string * string",
+    "block_open": "unit",
+    "block_close": "unit",
+    "fun_head": "string * Vimp_typing.formal list * Voblint.ikind option * Lexing.position * Lexing.position",
     "function_decl": "Vimp_typing.definition",
     "function_decl_star": "Vimp_typing.definition list",
 }
@@ -228,8 +230,20 @@ def owns_stmt_index(prod: dict) -> bool:
     } or ctor in {"Call"}
 
 
+# The rhs positions where an IDENT names a variable rather than a procedure.
+# The CLI resolves each to the declaration in scope (cli/frontend/vimp_scope.ml);
+# the Isabelle notation reads no declarations and keeps the name.
+VARIABLE_USES = {"exp_var": 0, "stmt_assign": 0, "stmt_callret": 0}
+
+# A statement's braces open and close a C block scope.
+BLOCK_BRACES = {"LBRACE": "block_open", "RBRACE": "block_close"}
+
+
 def render_alt(prod: dict) -> str:
-    pattern = rhs_pattern(prod["rhs"])
+    rhs = prod["rhs"]
+    if prod["result"] in ("stmt", "if_stmt"):
+        rhs = [BLOCK_BRACES.get(sym, sym) for sym in rhs]
+    pattern = rhs_pattern(rhs)
     # A prefix form whose rightmost terminal carries no level of its own (unary
     # minus, a cast's closing parenthesis) states its level explicitly.
     is_uminus = prod.get("special") == "unary_minus" or prod.get("name") == "exp_cast"
@@ -247,6 +261,9 @@ def render_alt(prod: dict) -> str:
     # walking the parsed AST the same way rather than assuming token order.
     if owns_stmt_index(prod):
         action = f"record_stmt_pos $startpos $endpos ({action})"
+    use = VARIABLE_USES.get(prod.get("name"))
+    if use is not None:
+        action = f"let v{use} = Vimp_scope.resolve v{use} in {action}"
     return f"  | {pattern}{prec}\n      {{ {action} }}"
 
 
@@ -293,6 +310,18 @@ def gen_list_rule(prod: dict) -> str:
     return f"{name}:\n" + "\n".join(alts)
 
 
+# Statements only the CLI reads: a local declaration, which may appear wherever a
+# statement may, and a bare block. The Isabelle notation reads neither.
+CLI_ALTS = {
+    "stmt": [
+        """  | k = kind ds = init_decls SEMI
+      { declare_locals k ds }""",
+        """  | block_open b = stmts_opt block_close
+      { b }""",
+    ],
+}
+
+
 def gen_program_rule() -> str:
     # Declarations are the one part of the surface syntax the Isabelle
     # notation does not share: kinds reach a theory as `typed_prog p ds`, not
@@ -313,9 +342,9 @@ global_line_star:
 
 global_line:
   | GLOBAL xs = ids SEMI
-      { (xs, None) }
+      { Vimp_scope.add_globals xs; (xs, None) }
   | GLOBAL k = kind xs = ids SEMI
-      { (xs, Some k) }
+      { Vimp_scope.add_globals xs; (xs, Some k) }
 
 tformal:
   | x = IDENT
@@ -335,14 +364,26 @@ tformals:
    written out as a library call so the semantics, not the parser, says what
    that value may be. An initializer, as in C's `i8 x = 2;`, is an assignment
    instead, converted to the variable's kind as any assignment is. Each
-   declarator is one statement at its own position. *)
-init_decl:
+   declarator is one statement at its own position, executed where it is
+   written, so a declaration in a loop body starts its variable afresh on
+   every iteration. The declarator's name is in scope from the declarator on,
+   as in C, so its initializer would read the variable it declares; that read
+   is rejected rather than given a value C leaves indeterminate. *)
+decl_name:
   | x = IDENT
-      { (x,
+      { (x, Vimp_scope.declare x) }
+
+init_decl:
+  | d = decl_name
+      { let _, id = d in
+        (id,
          record_stmt_pos $startpos $endpos
-           (Voblint.Call ((), Some x, "__voblint_nondet_int", []))) }
-  | x = IDENT ASSIGN e = exp
-      { (x, record_stmt_pos $startpos $endpos (Voblint.Assign ((), x, e))) }
+           (Voblint.Call ((), Some id, "__voblint_nondet_int", []))) }
+  | d = decl_name ASSIGN e = exp
+      { let x, id = d in
+        if List.mem id (Vimp_typing.exp_vars [] e) then
+          failwith (Printf.sprintf "the initializer of '%s' reads '%s' itself" x x);
+        (id, record_stmt_pos $startpos $endpos (Voblint.Assign ((), id, e))) }
 
 init_decls:
   | d = init_decl
@@ -350,24 +391,27 @@ init_decls:
   | ds = init_decls COMMA d = init_decl
       { ds @ [d] }
 
-local_decl:
-  | k = kind ds = init_decls SEMI
-      { List.map (fun (x, c) -> (x, k, c)) ds }
+block_open:
+  | LBRACE
+      { Vimp_scope.push () }
 
-local_decl_star:
-  | (* empty *)
-      { [] }
-  | l = local_decl ls = local_decl_star
-      { l @ ls }
+block_close:
+  | RBRACE
+      { Vimp_scope.pop () }
 
-(* Locals are declared before the first statement, as CIL's fundec.slocals
-   lists them, so every local is in scope throughout its procedure. *)
+(* Every declaration in a body is one of the procedure's locals, as CIL's
+   fundec.slocals collects them, under the name Vimp_scope gave it. *)
+fun_head:
+  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN LBRACE
+      { Vimp_scope.enter_proc (List.map fst fs);
+        local_kinds := [];
+        (name, fs, rk, $startpos, $endpos(rp)) }
+
 function_decl:
-  | FUN rk = option(kind) name = IDENT LPAREN fs = tformals rp = RPAREN
-    LBRACE ls = local_decl_star b = stmts_opt RBRACE
-      { let body = List.fold_right (fun (_, _, c) acc -> Voblint.Seq (c, acc)) ls b in
-        close_definition $startpos $endpos(rp)
-          (name, fs, rk, List.map (fun (x, k, _) -> (x, k)) ls, body) }
+  | h = fun_head b = stmts_opt RBRACE
+      { let name, fs, rk, p, q = h in
+        Vimp_scope.close_proc ();
+        close_definition p q (name, fs, rk, !local_kinds, b) }
 
 function_decl_star:
   | (* empty *)
@@ -393,7 +437,7 @@ def gen_parser(g: dict) -> str:
 
     rule_blocks = []
     for result, prods in regular_by_result.items():
-        alts = "\n".join(render_alt(p) for p in prods)
+        alts = "\n".join([render_alt(p) for p in prods] + CLI_ALTS.get(result, []))
         rule_blocks.append(f"{result}:\n{alts}")
 
     for p in list_prods:
@@ -424,6 +468,15 @@ let source_label p =
 let close_definition header_start header_end ((name, _, _, _, _) as decl) =
   Vimp_positions.close name header_start header_end;
   decl
+
+(* The current procedure's declared locals with their kinds, in source order. *)
+let local_kinds : (string * Voblint.ikind) list ref = ref []
+
+let declare_locals k ds =
+  local_kinds := !local_kinds @ List.map (fun (id, _) -> (id, k)) ds;
+  match List.map snd ds with
+  | c :: cs -> List.fold_left (fun acc c -> Voblint.Seq (acc, c)) c cs
+  | [] -> assert false
 %}}
 
 {token_decls(g)}

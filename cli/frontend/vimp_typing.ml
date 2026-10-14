@@ -11,17 +11,18 @@
    Its declarations become the verified elaboration's kind_decls, and the
    program goes to the analyzer as `typed_prog p decls`, whose soundness
    theorems cover the typed semantics. Declared locals are not zero: the parser
-   starts the body with `x = __voblint_nondet_int();` for each one, so a local
-   holds an arbitrary value of its kind until the program writes it, as an
+   lowers `u8 x;` to `x = __voblint_nondet_int();` where it is written, so a
+   local holds an arbitrary value of its kind until the program writes it, as an
    uninitialized C automatic does. A local with an initializer, `u8 x = 2;`,
-   starts with the assignment `x = 2;` instead. Globals start at zero, as C's static
-   storage does. *)
+   lowers to the assignment `x = 2;` instead. Globals start at zero, as C's static
+   storage does. Block scoping is resolved by the parser (Vimp_scope), so every
+   declared local reaches this module under a name unique in its procedure. *)
 
 type global_line = string list * Voblint.ikind option
 type formal = string * Voblint.ikind option
 
-(* (name, formals, return kind, declared locals, body with the locals'
-   initializations prepended) *)
+(* (name, formals, return kind, declared locals, body with each declaration
+   lowered in place) *)
 type definition =
   string
   * formal list
@@ -199,5 +200,6 @@ let program (globals : global_line list) (defs : definition list) :
       main_body
       (List.concat_map fst globals)
   in
-  last_kind_decls := (if is_typed globals defs then kind_decls globals defs else []);
+  last_kind_decls :=
+    if is_typed globals defs then kind_decls globals defs else [];
   p

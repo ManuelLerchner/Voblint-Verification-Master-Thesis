@@ -17,6 +17,12 @@
   (copy %{deps} %{targets})))
 
 (rule
+ (targets vimp_scope.ml)
+ (deps ../../cli/frontend/vimp_scope.ml)
+ (action
+  (copy %{deps} %{targets})))
+
+(rule
  (targets vimp_typing.ml)
  (deps ../../cli/frontend/vimp_typing.ml)
  (action
@@ -58,7 +64,7 @@
 (library
  (name ast_driver_positions)
  (wrapped false)
- (modules vimp_positions))
+ (modules vimp_positions vimp_scope))
 
 (library
  (name ast_driver_grammar)
