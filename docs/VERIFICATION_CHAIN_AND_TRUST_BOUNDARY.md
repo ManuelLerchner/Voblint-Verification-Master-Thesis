@@ -174,6 +174,15 @@ at its own label. Two steps stay trusted: the parser writes the line and column 
 each check's `__voblint_check` keyword into its label, and the renderer prints the
 label it reads. No list of parser positions is zipped with the rows any more.
 
+A local declared without an initializer reaches the proved chain as the library
+call `x = __voblint_nondet_int()` at the declaration's position. `tpstep_declare`
+(`Typed_CFG.thy`) proves that this call may leave any value of `x`'s kind in `x`
+and changes nothing else, and `tpstep_declare_forgets` that its outcomes do not
+depend on what `x` held before: the `0` a call entry writes, or an earlier
+iteration's or activation's value. That the parser places every use of a local
+after its declaration is trusted; its scope check rejects a use before the
+declaration, and no theorem covers it.
+
 Arithmetic diagnostics are still placed by position lookup outside the proof.
 `run_voblint_arithmetic_safe` is stated at a CFG node; the CLI finds a
 diagnostic's line through the statement positions the parser records in
@@ -193,7 +202,7 @@ Not proved:
   time rather than proved);
 - anything about the rendered graph, snapshot or globals strings;
 - the lexer and parser, including that each check's label is its own source
-  position;
+  position and that every use of a local follows its declaration;
 - the source position printed for an arithmetic diagnostic;
 - Isabelle's code generator, the OCaml compiler and its runtime.
 

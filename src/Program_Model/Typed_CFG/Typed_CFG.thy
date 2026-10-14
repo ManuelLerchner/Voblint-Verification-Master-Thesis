@@ -42,6 +42,42 @@ global_interpretation typed: bridge_sem teval tglobal ReturnVar "tconv \<kappa>"
   for \<kappa> :: kenv
   by (simp_all add: tpstep_def tcstep_def tnode_collect_def)
 
+subsection \<open>A declaration without an initializer\<close>
+
+text \<open>
+  The frontend writes a local's declaration without an initializer as the library call
+  \<open>x = __voblint_nondet_int()\<close> at the declaration's position, so it runs on every
+  activation and every loop iteration that reaches it. That call may leave any value of
+  \<open>x\<close>'s kind in \<open>x\<close> and changes nothing else. Its outcomes do not depend on what \<open>x\<close> held
+  before: the \<open>0\<close> a call entry wrote, or the value of an earlier iteration or activation.
+  That the frontend places every use of a local after its declaration is trusted.
+\<close>
+
+lemma tpstep_declare:
+  assumes "\<Pi> special_pname_nondet_int = None"
+  shows "tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')
+           \<longleftrightarrow> c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
+proof
+  assume "tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')"
+  then show "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
+    using assms by (auto elim!: typed.CallSE simp: special_table_def)
+next
+  assume "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
+  then obtain n where n: "n \<in> ik_range (\<kappa> x)" and eq: "c' = SKIP i" "frs' = frs" "s' = s(x := n)"
+    by blast
+  have "tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs)
+          (SKIP i, s(x := tconv \<kappa> (Some x) n), frs)"
+    by (rule typed.Special[where desc = SD_Nondet_Int and sc = "Nondet_Int :: texp gspecial_call"])
+       (simp_all add: special_table_def)
+  with n eq show "tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')"
+    by (simp del: ik_range_iff)
+qed
+
+corollary tpstep_declare_forgets:
+  assumes "\<Pi> special_pname_nondet_int = None"
+  shows "tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s(x := m), frs) cfg
+           \<longleftrightarrow> tpstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) cfg"
+  by (cases cfg) (simp add: tpstep_declare[where \<Pi> = \<Pi>, OF assms])
 section \<open>The typed program and its graph\<close>
 
 text \<open>A procedure's typed formals are the identities its formals resolve to, and its typed
