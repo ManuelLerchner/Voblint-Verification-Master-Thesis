@@ -1,24 +1,20 @@
 theory Analysis_Run
   imports
     Arithmetic_Diagnostics
-    MCP_Analyses
+    Dispatch_Carrier
     MCP_Split
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
 begin
 
-section \<open>Running one configuration once\<close>
+section \<open>The report of one run\<close>
 
 text \<open>
-  The public analysis operation. A caller hands over the three choices that
-  decide what gets solved and a program, and receives the solve as a report:
-  every covered point-and-context state, the contexts each call enters, the check
-  column and the arithmetic diagnostics. One solve stands behind all of them. The
-  report holds semantic states, never their rendering; text, graphs and report
-  pages are built from it by a projection outside the theorems.
-
-  Nothing outside this theory decides which analyser runs: the one function below
-  that reads the context policy names the registration that policy solves with.
+  A solve is handed back as a report: every covered point-and-context state, the
+  contexts each call enters, the check column and the arithmetic diagnostics. One
+  solve stands behind all of them. The report holds semantic states, never their
+  rendering; text, graphs and report pages are built from it by a projection outside
+  the theorems.
 \<close>
 
 subsection \<open>The rows of a report\<close>
@@ -88,22 +84,6 @@ definition map_result_global :: "('s \<Rightarrow> 't) \<Rightarrow> ('n, 's) re
      \<lparr> global_unknown = global_unknown g,
        global_state = map_lift f (global_state g) \<rparr>"
 
-subsection \<open>The configuration\<close>
-
-text \<open>
-  A caller's three choices travel together as one value: the analyses that run, the
-  rule for side-effected globals, and the context policy. A configuration is valid
-  when it activates at least one analysis and none twice.
-\<close>
-
-datatype analysis_config = Analysis_Config
-  (config_analyses: "analysis_domain list")
-  (config_rule: globals_rule)
-  (config_context: context_mode)
-  (config_globals: program_globals)
-
-definition valid_config :: "analysis_config \<Rightarrow> bool" where
-  "valid_config config \<longleftrightarrow> config_analyses config \<noteq> [] \<and> distinct (config_analyses config)"
 
 subsection \<open>The report\<close>
 
@@ -132,8 +112,6 @@ record ('k, 'x, 'vr, 'e, 'n, 's) analysis_report =
   report_globals :: "('n, 's) result_global list"
   report_diagnostics :: "'e arithmetic_diagnostic list"
 
-type_synonym vimp_report =
-  "(analysis_config, mcp_ctx report_context, vname, exp, vname, mcp_val) analysis_report"
 
 subsection \<open>One builder for every context policy\<close>
 
@@ -319,155 +297,7 @@ definition report_of ::
              @ concat (map seeds_of procs),
            report_diagnostics = arithmetic_diagnostics sites r classify_ob \<rparr>)"
 
-text \<open>A VIMP program hands over its own variables, graph, declared globals when they
-  are flow-insensitive, division obligations and procedures.\<close>
-
-abbreviation vimp_report_of ::
-    "analysis_config \<Rightarrow> ('c \<Rightarrow> order_key) \<Rightarrow> ('c \<Rightarrow> mcp_ctx report_context)
-       \<Rightarrow> (exp \<Rightarrow> mcp_val \<Rightarrow> check_result) \<Rightarrow> ('c, vname, mcp_val) solved_run \<Rightarrow> imp_prog
-       \<Rightarrow> vimp_report" where
-  "vimp_report_of config ctx_key ctx_tag classify sr p \<equiv>
-     report_of config (program_vars p) (prog_cfg p)
-       (case config_globals config of
-          Program_Globals_Flow_Sensitive \<Rightarrow> []
-        | Program_Globals_Flow_Insensitive \<Rightarrow> declared_global_vars p)
-       (arithmetic_sites (prog_cfg p)) (by_condition arithmetic_condition classify)
-       (prog_main_name # prog_procs p)
-       ctx_key ctx_tag classify sr"
-
-subsection \<open>One configuration, one report\<close>
-
-text \<open>
-  An entry-state context reads as the formal values the active analyses key it by,
-  in activation order, and is listed in the order of those values. Those values
-  alone do not tell every context apart --- they skip the fields of inactive
-  analyses --- so the whole context breaks ties, which makes the key injective and
-  leaves the order of contexts that the values already tell apart unchanged.
-\<close>
-
-definition mcp_ctx_values :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> abstract_value list" where
-  "mcp_ctx_values as ctx = concat (map (\<lambda>a. context_values (registration_of a) ctx) as)"
-
-definition entry_ctx_key :: "analysis_domain list \<Rightarrow> mcp_ctx \<Rightarrow> order_key" where
-  "entry_ctx_key as ctx =
-     Key_List [Key_List (map abstract_value_key (mcp_ctx_values as ctx)), mcp_ctx_key ctx]"
-
-lemma entry_ctx_key_inject: "entry_ctx_key as a = entry_ctx_key as b \<Longrightarrow> a = b"
-  by (simp add: entry_ctx_key_def mcp_ctx_key_inject)
-
-text \<open>
-  The one place the context policy is read. Each policy names the registration the
-  active analyses run as under the chosen global update rule, solves its equations
-  with the executable solver from the program exit at the root context, and reads
-  the report off the answer. The logical \<open>None\<close> branch of \<open>solve_c\<close> yields no report.
-  Where the solve diverges, the generated code does not return at all, so that
-  branch is not an operational timeout result.
-\<close>
-text \<open>
-  The executable boundary, specialised once. The registrations are generic in their
-  carrier; these three constants fix it at the combined state and leave only the
-  context and global-key types open. Generated code then builds the carrier's
-  equality and lattice dictionaries inside each constant rather than inline in every
-  branch below.
-\<close>
-
-text \<open>
-  The placement: the component as it is, every program global in each point's own
-  state. Program globals at unknowns of their own are a placement of the typed
-  analyses (\<^verbatim>\<open>MCP_Split\<close>), so this analyzer reads the configuration's placement as
-  flow-sensitive.
-\<close>
-
-definition mcp_place_spec :: "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted local_spec
-    \<Rightarrow> (pp \<times> 'c, 'k, vname, mcp_st lifted, mcp_st lifted) dg_spec" where
-  "mcp_place_spec pg = (\<lambda>\<G> c. dg_spec_of c)"
-
-definition mcp_place_cmb ::
-    "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
-       \<Rightarrow> mcp_st lifted" where
-  "mcp_place_cmb pg = (\<lambda>\<G> d e. d)"
-
-definition mcp_place_rl :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_place_rl pg = (\<lambda>\<G> d. d)"
-
-definition mcp_place_rg :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_place_rg pg = (\<lambda>\<G> d. Bot)"
-
-definition mcp_place_inits :: "program_globals \<Rightarrow> analysis_domain list
-    \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (vname \<times> mcp_st lifted) list" where
-  "mcp_place_inits pg as = (\<lambda>\<G> p. [])"
-
-definition mcp_place_enter ::
-    "program_globals \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
-       \<Rightarrow> mcp_st lifted" where
-  "mcp_place_enter pg = (\<lambda>p ci d e. d)"
-
-lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
-  mcp_place_inits_def mcp_place_enter_def
-
-definition mcp_equations ::
-    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> 'k \<Rightarrow> (vname \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c
-       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
-  "mcp_equations as pg buffer gk seed route root =
-     dg_pipeline.equations (mcp_comp as) (mcp_init as) buffer gk seed route root
-       (mcp_place_spec pg) (mcp_place_rg pg) (mcp_place_inits pg as) prog_cfg
-       (\<lambda>_. FunctionEntry prog_main_name)"
-
-definition mcp_solve_c ::
-    "globals_rule \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT \<Rightarrow> pp \<times> 'c
-       \<Rightarrow> ((pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)) option"
-  where
-  "mcp_solve_c = TD_side_rule_Interp_solve_c"
-
-definition mcp_run_of ::
-    "analysis_domain list \<Rightarrow> program_globals \<Rightarrow> (vname \<Rightarrow> 'k) \<Rightarrow> (pp \<Rightarrow> 'c \<Rightarrow> 'k)
-       \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c)
-       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
-       \<Rightarrow> ('c, vname, mcp_val) solved_run" where
-  "mcp_run_of as pg gk seed route =
-     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd gk seed route
-       (mcp_place_cmb pg) (mcp_place_rl pg) (mcp_place_enter pg)"
-
-lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def
-
-
-fun analysis_report_of :: "analysis_config \<Rightarrow> imp_prog \<Rightarrow> vimp_report option" where
-  "analysis_report_of (Analysis_Config as r Ctx_None pg) p =
-     map_option
-       (\<lambda>sol. vimp_report_of (Analysis_Config as r Ctx_None pg) (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
-          (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed (\<lambda>_. route_unit)
-             (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (\<lambda>_. route_unit) () (declared_global p) p)
-          (cfg_exit (prog_cfg p), ()))"
-| "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p =
-     map_option
-       (\<lambda>sol. vimp_report_of (Analysis_Config as r Ctx_EntryState pg)
-          (entry_ctx_key (activation as)) Report_Entry (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
-             (mcp_formals_route (activation as)) (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (mcp_formals_route (activation as)) mcp_root_ctx (declared_global p) p)
-          (cfg_exit (prog_cfg p), mcp_root_ctx))"
-| "analysis_report_of (Analysis_Config as r (Ctx_CallString k) pg) p =
-     map_option
-       (\<lambda>sol. vimp_report_of (Analysis_Config as r (Ctx_CallString k) pg)
-          (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
-          (mcp_classify (activation as))
-          (mcp_run_of (activation as) pg Analysis_Global Activation_Seed
-             (\<lambda>_. cs_route k) (declared_global p) p sol) p)
-       (mcp_solve_c r
-          (mcp_equations (activation as) pg Analysis_Buffer Analysis_Global Activation_Seed
-             (\<lambda>_. cs_route k) [] (declared_global p) p)
-          (cfg_exit (prog_cfg p), []))"
-
-subsection \<open>The public operation\<close>
+subsection \<open>The answer\<close>
 
 text \<open>
   Four answers: an invalid configuration asks for no run, a malformed program was
@@ -480,15 +310,5 @@ datatype 'r analysis_answer =
   | Malformed_Program
   | No_Answer
   | Analysed 'r
-
-definition run_voblint_legacy ::
-  "analysis_config \<Rightarrow> imp_prog \<Rightarrow> vimp_report analysis_answer"
-where
-  "run_voblint_legacy config p =
-     (if \<not> valid_config config then Invalid_Activation
-      else if \<not> wf_program_compile_input_exec p then Malformed_Program
-      else case analysis_report_of config p of
-             None \<Rightarrow> No_Answer
-           | Some res \<Rightarrow> Analysed res)"
 
 end

@@ -279,9 +279,8 @@ definition typed_report_of ::
 subsection \<open>At entry-state contexts\<close>
 
 text \<open>
-  An entry-state context is listed in the order of an injective key, as a VIMP entry
-  state is (\<^const>\<open>entry_ctx_key\<close>): each field's formal values, a kind-tagged value
-  keyed by its tag, its kind and its value.
+  An entry-state context is listed in the order of an injective key: each field's
+  formal values, a kind-tagged value keyed by its tag, its kind and its value.
 \<close>
 
 fun ikind_key :: "ikind \<Rightarrow> order_key" where

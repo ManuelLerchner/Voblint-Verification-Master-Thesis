@@ -7,11 +7,10 @@ section \<open>The public analysis operation\<close>
 text \<open>
   \<open>run_voblint\<close> analyzes a program under its kind declarations with the options of a
   \<^typ>\<open>voblint_conf\<close>: the activated typed analyses, a context policy, a global update
-  rule and the options the domains read, as Goblint's configuration tree selects them
-  (\<^verbatim>\<open>ana.activated\<close>, \<^verbatim>\<open>sem.int.signed_overflow\<close>). It answers the report
-  \<^const>\<open>report_of\<close> builds from the solve. An activation is valid when it names at
-  least one analysis and none twice. The analyzer over mathematical integers stays
-  available as \<^const>\<open>run_voblint_legacy\<close>.
+  rule, where program globals live, and the options the domains read, as Goblint's
+  configuration tree selects them (\<^verbatim>\<open>ana.activated\<close>, \<^verbatim>\<open>sem.int.signed_overflow\<close>). It
+  answers the report \<^const>\<open>report_of\<close> builds from the solve. An activation is valid
+  when it names at least one analysis and none twice.
 \<close>
 
 definition valid_activation :: "typed_domain list \<Rightarrow> bool" where

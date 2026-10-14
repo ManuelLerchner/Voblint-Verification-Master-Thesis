@@ -83,8 +83,7 @@ lemma demo_interval: "run_checks [Typed_Interval] demo_prog
 text \<open>
   Two calls grow a global. Without contexts the two calls share \<open>inc\<close>'s entry, so
   \<open>total + n\<close> at \<open>i32\<close> may overflow under the default \<open>assume_top\<close> and both domains
-  lose the bound: neither check is decided. Over the mathematical integers of
-  \<^const>\<open>run_voblint_legacy\<close> the first check was proved.
+  lose the bound: neither check is decided.
 \<close>
 
 lemma proc_demo_sign: "run_checks [Typed_Sign] proc_demo_prog

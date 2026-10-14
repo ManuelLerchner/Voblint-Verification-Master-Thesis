@@ -51,6 +51,9 @@ RETIRED_TASKS = {
     # "docs" named the format of neither output.
     "isabelle-docs-build",
     "docs-overview",
+    "assembly-check",
+    "assembly-generate",
+    "analysis-registry-check",
     "gen-assembly",
     "gen-grammar-isabelle",
     "gen-grammar-menhir",

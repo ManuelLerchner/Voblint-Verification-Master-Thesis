@@ -26,106 +26,6 @@ datatype 'e arithmetic_obligation = Arithmetic_Obligation
   (arithmetic_operation: 'e)
   (arithmetic_operand: 'e)
 
-fun arithmetic_obligations :: "exp \<Rightarrow> exp arithmetic_obligation list" where
-  "arithmetic_obligations (N n) = []"
-| "arithmetic_obligations (V x) = []"
-| "arithmetic_obligations (Not a) = arithmetic_obligations a"
-| "arithmetic_obligations (And a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Or a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Div a b) =
-     arithmetic_obligations a @ arithmetic_obligations b @
-       [Arithmetic_Obligation Division_By_Zero (Div a b) b]"
-| "arithmetic_obligations (Mod a b) =
-     arithmetic_obligations a @ arithmetic_obligations b @
-       [Arithmetic_Obligation Division_By_Zero (Mod a b) b]"
-| "arithmetic_obligations (Plus a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Minus a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Times a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Less a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (LessEq a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Greater a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (GreaterEq a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Eq a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (NotEq a b) =
-     arithmetic_obligations a @ arithmetic_obligations b"
-| "arithmetic_obligations (Cast _ a) = arithmetic_obligations a"
-
-text \<open>The set specification ignores occurrence numbering and names every denominator
-  appearing anywhere in an expression. The extraction theorem connects it to the
-  occurrence-preserving list consumed by the report.\<close>
-
-fun expression_divisors :: "exp \<Rightarrow> exp set" where
-  "expression_divisors (N n) = {}"
-| "expression_divisors (V x) = {}"
-| "expression_divisors (Not a) = expression_divisors a"
-| "expression_divisors (And a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Or a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Div a b) =
-     insert b (expression_divisors a \<union> expression_divisors b)"
-| "expression_divisors (Mod a b) =
-     insert b (expression_divisors a \<union> expression_divisors b)"
-| "expression_divisors (Plus a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Minus a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Times a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Less a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (LessEq a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Greater a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (GreaterEq a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Eq a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (NotEq a b) =
-     expression_divisors a \<union> expression_divisors b"
-| "expression_divisors (Cast _ a) = expression_divisors a"
-
-lemma arithmetic_obligations_divisors:
-  "arithmetic_operand ` set (arithmetic_obligations e) = expression_divisors e"
-  by (induction e) auto
-
-lemma arithmetic_obligations_hazard:
-  "ob \<in> set (arithmetic_obligations e) \<Longrightarrow> arithmetic_hazard ob = Division_By_Zero"
-  by (induction e) auto
-
-definition arithmetic_condition :: "exp arithmetic_obligation \<Rightarrow> exp" where
-  "arithmetic_condition obligation = NotEq (arithmetic_operand obligation) (N 0)"
-
-lemma arithmetic_condition_safe:
-  "truthy (\<lbrakk>arithmetic_condition obligation\<rbrakk>\<^sub>e s) \<longleftrightarrow>
-    \<lbrakk>arithmetic_operand obligation\<rbrakk>\<^sub>e s \<noteq> 0"
-  by (auto simp: arithmetic_condition_def split: if_splits)
-
-text \<open>An obligation whose safety one condition of the language states is classified
-  as that condition is.\<close>
-
-definition by_condition ::
-    "('o \<Rightarrow> 'e) \<Rightarrow> ('e \<Rightarrow> 'a \<Rightarrow> check_result) \<Rightarrow> 'o \<Rightarrow> 'a \<Rightarrow> check_result" where
-  "by_condition cond classify ob = classify (cond ob)"
-
-lemma classify_point_by_condition [simp]:
-  "classify_point (by_condition cond classify) ob x = classify_point classify (cond ob) x"
-  by (cases x) (simp_all add: by_condition_def)
-
-lemma point_verdict_by_condition [simp]:
-  "point_verdict r (by_condition cond classify) v ob = point_verdict r classify v (cond ob)"
-  by (simp add: point_verdict_def)
 
 section \<open>Sites and their solved classifications\<close>
 
@@ -155,8 +55,6 @@ definition obligation_sites ::
   "obligation_sites obls g =
      map (\<lambda>(v, es). (v, concat (map obls es))) (arithmetic_expression_sites g)"
 
-definition arithmetic_sites :: "cfg \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
-  "arithmetic_sites = obligation_sites arithmetic_obligations"
 
 text \<open>A diagnostic names an obligation of a site list, read through a classifier of
   obligations. The site list and the classifier depend on the expression language and
@@ -226,22 +124,6 @@ lemma arithmetic_expression_sites_call:
   using assms unfolding arithmetic_expression_sites_def
   by (force simp: image_iff)
 
-lemma arithmetic_sites_divisor:
-  assumes "(v, es) \<in> set (arithmetic_expression_sites g)"
-    and "e \<in> set es" and "divisor \<in> expression_divisors e"
-  obtains obligations obligation where "(v, obligations) \<in> set (arithmetic_sites g)"
-    and "obligation \<in> set obligations" and "arithmetic_operand obligation = divisor"
-proof -
-  from assms(3) obtain obligation where
-    ob: "obligation \<in> set (arithmetic_obligations e)"
-      "arithmetic_operand obligation = divisor"
-    using arithmetic_obligations_divisors[of e] by force
-  have site: "(v, concat (map arithmetic_obligations es)) \<in> set (arithmetic_sites g)"
-    using assms(1) by (force simp: arithmetic_sites_def obligation_sites_def)
-  have "obligation \<in> set (concat (map arithmetic_obligations es))"
-    using ob assms(2) by auto
-  from that[OF site this ob(2)] show thesis .
-qed
 
 lemma arithmetic_diagnostics_absent:
   assumes site: "(v, obligations) \<in> set sites"

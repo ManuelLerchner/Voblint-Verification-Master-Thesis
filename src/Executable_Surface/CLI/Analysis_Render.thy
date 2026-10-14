@@ -11,8 +11,8 @@ text \<open>
   have between those unknowns: a step within a context, a call entering the contexts
   the report routes it to, the callee's result resuming the caller, the call's
   continuation, and the reads and writes of each global, by the same footprints the
-  keyed lifter reads and publishes (\<^const>\<open>edge_global_reads\<close>,
-  \<^const>\<open>edge_global_writes\<close>, \<^const>\<open>call_global_reads\<close>). It is a projection of the
+  keyed lifter reads and publishes (\<^const>\<open>gedge_global_reads\<close>,
+  \<^const>\<open>gedge_global_writes\<close>, \<^const>\<open>gcall_global_reads\<close>). It is a projection of the
   report, as the rendering below is, and no soundness theorem reads it.
 \<close>
 
@@ -40,14 +40,6 @@ record ('vr, 'e, 'n) footprints =
   fp_edge_writes :: "('n \<Rightarrow> bool) \<Rightarrow> ('vr, 'e) gedge_action \<Rightarrow> 'n list"
   fp_call_reads :: "('n \<Rightarrow> bool) \<Rightarrow> 'e list \<Rightarrow> 'n list"
   fp_call_writes :: "('n \<Rightarrow> bool) \<Rightarrow> ('vr, 'e) gcall_action \<Rightarrow> 'n list"
-
-definition vimp_footprints :: "(vname, exp, vname) footprints" where
-  "vimp_footprints =
-     \<lparr> fp_edge_reads = edge_global_reads, fp_edge_writes = edge_global_writes,
-       fp_call_reads = call_global_reads,
-       fp_call_writes = (\<lambda>G ca. case ca of CallEdge dst pars args \<Rightarrow>
-         global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)) \<rparr>"
-
 text \<open>The program globals the report keeps at unknowns of their own.\<close>
 
 definition report_global_names :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> 'n list" where
@@ -157,8 +149,7 @@ type_synonym ('d, 'v) analysis_view = "('d \<times> 'v field_state) list"
 text \<open>
   The states a report holds at a point, joined over its contexts: what a reader who
   ignores contexts can say about the point. It may be coarser than the states it
-  joins, but every store any of them describes, it describes too
-  (\<open>report_sem_point_join\<close>).
+  joins, but every store any of them describes, it describes too.
 \<close>
 
 text \<open>
@@ -212,14 +203,6 @@ end
 instance analysis_product :: (join_val_sup, join_val_sup) join_val_sup
   by standard (simp add: vjoin_analysis_product_def sup_analysis_product_def vjoin_sup)
 
-instantiation relc :: join_val
-begin
-definition vjoin_relc :: "relc \<Rightarrow> relc \<Rightarrow> relc" where "vjoin_relc = sup"
-instance ..
-end
-
-instance relc :: join_val_sup
-  by standard (simp add: vjoin_relc_def)
 
 definition report_point_join ::
     "('k, 'x, 'vr, 'e, 'n, 's::join_val) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted" where
@@ -259,29 +242,17 @@ record ('vr, 'e, 'n, 'd, 'v) run_result =
 definition map_analysis_view :: "('v \<Rightarrow> 'w) \<Rightarrow> ('d, 'v) analysis_view \<Rightarrow> ('d, 'w) analysis_view" where
   "map_analysis_view f = map (\<lambda>(a, s). (a, map_field_state f s))"
 
-definition mcp_render ::
-    "analysis_domain list \<Rightarrow> vname list \<Rightarrow> mcp_val \<Rightarrow> (analysis_domain, abstract_value) analysis_view" where
-  "mcp_render as vars v = map (\<lambda>a. (a, value_display (registration_of a) v vars)) as"
-
 text \<open>
   What a language shows of its report: each active analysis's part of a state, the
   values an entry-state context is keyed by, and the global footprints of its edges.
-  The printer \<open>show\<close> is a parameter: \<^const>\<open>string_of_abstract_value\<close> for text,
-  composed in the adapter with whatever post-processing its output needs.
+  The printer \<open>show\<close> is a parameter, composed in the adapter with whatever
+  post-processing its output needs.
 \<close>
 
 record ('k, 'm, 's, 'vr, 'e, 'n, 'd, 'a) report_renderer =
   rr_view :: "'k \<Rightarrow> 'vr list \<Rightarrow> 's \<Rightarrow> ('d, 'a) analysis_view"
   rr_context :: "'k \<Rightarrow> 'm \<Rightarrow> 'a list"
   rr_footprints :: "('vr, 'e, 'n) footprints"
-
-definition vimp_renderer ::
-    "(analysis_config, mcp_ctx, mcp_val, vname, exp, vname, analysis_domain, abstract_value)
-       report_renderer" where
-  "vimp_renderer =
-     \<lparr> rr_view = (\<lambda>config. mcp_render (activation (config_analyses config))),
-       rr_context = (\<lambda>config. mcp_ctx_values (activation (config_analyses config))),
-       rr_footprints = vimp_footprints \<rparr>"
 
 fun render_context :: "('a \<Rightarrow> 'v) \<Rightarrow> ('m \<Rightarrow> 'a list) \<Rightarrow> 'm report_context \<Rightarrow> 'v analysis_context"
 where
@@ -308,11 +279,6 @@ definition render_report ::
            res_diagnostics = report_diagnostics res,
            res_graph = analysis_graph_of (rr_footprints rr) res \<rparr>)"
 
-text \<open>Each language's rendering, with its value type fixed, as generated code calls it.\<close>
-
-definition vimp_render_report ::
-    "(abstract_value \<Rightarrow> 'v) \<Rightarrow> vimp_report \<Rightarrow> (vname, exp, vname, analysis_domain, 'v) run_result" where
-  "vimp_render_report = render_report vimp_renderer"
 
 lemma render_report_columns [simp]:
   "res_cfg (render_report rr show res) = report_cfg res"

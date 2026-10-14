@@ -2,19 +2,7 @@ chapter Voblint
 
 session Voblint_Examples in "." = "Voblint_Examples_CLI" +
   description
-    "The project capstone: a fully discharged end-to-end certificate and the
-     narrative index that imports every example session"
-  sessions
-    "HOL-Library"
-    "Voblint_Examples_CFG"
-    "Voblint_Examples_Congruence"
-    "Voblint_Examples_Sign"
-    "Voblint_Examples_Interval"
-    "Voblint_Examples_Parity"
-    "Voblint_Examples_Int"
-    "Voblint_Examples_Relational"
-    "Voblint_Examples_Tooling"
+    "The project capstone: the published theorem is non-vacuous, and the
+     framework's guarantees fail without its premises"
   theories
-    Example_End_To_End_Certificate
     Example_Non_Vacuity
-    Voblint

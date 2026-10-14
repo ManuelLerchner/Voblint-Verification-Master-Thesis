@@ -548,14 +548,6 @@ relational Order analysis writes its `local_spec` by hand
 transfer functions from certified value operations follows Nipkow's Isabelle
 abstract interpreter (see [Foundations](#foundations)).
 
-The registrations and the combined analyzer state are generated from
-[`manifests/analyses.yaml`](manifests/analyses.yaml) by
-`pixi run assembly-generate`. A new numeric domain needs its lattice with
-widening and narrowing, its concretization, the certified operation record, a
-lemma that the initial state covers the initial stores, and a manifest entry.
-The CLI's analysis names are still added by hand. No step needs source-level
-reasoning.
-
 ## Building
 
 Requirements: **Isabelle2025-2**, an **[AFP](https://www.isa-afp.org/)** checkout,
