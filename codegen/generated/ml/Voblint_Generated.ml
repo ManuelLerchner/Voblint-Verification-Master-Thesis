@@ -205,6 +205,8 @@ module Generated : sig
     unit imp_prog_ext ->
       string -> (unit, string, exp, unit) gproc_decl_ext option
   val prog_procs : unit imp_prog_ext -> string list
+  val typed_cfg :
+    unit imp_prog_ext -> (var_id * ikind) list -> (var_id, texp, unit) gcfg_ext
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val run_typed :
     unit sem_conf_ext ->

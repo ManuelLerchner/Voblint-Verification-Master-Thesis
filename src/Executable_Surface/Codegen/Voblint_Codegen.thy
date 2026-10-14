@@ -186,7 +186,7 @@ export_code
   Division_By_Zero Signed_Overflow Conversion_Overflow ik_signed
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
-  cfg_entry cfg_points tcfg_intra_edges tcfg_call_edges tcfg_points
+  cfg_entry cfg_points typed_cfg tcfg_intra_edges tcfg_call_edges tcfg_points
 
   \<comment> \<open>Ask: configuration of domains, global update rule, context, program globals\<close>
   Analysis_Config
