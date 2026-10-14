@@ -595,7 +595,7 @@ proof -
   qed
 qed
 
-theorem typed_report_diagnostics_sound:
+theorem typed_report_point_sound:
   assumes wf: "wf_program_compile_input p"
     and run: "typed_report_run sem as r cx ds p = Some res"
     and s: "s \<in> reaching ds p v"
@@ -604,22 +604,40 @@ theorem typed_report_diagnostics_sound:
     and typed_report_obligation_refuted:
       "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
          \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
+    and typed_report_check_live:
+      "chk \<in> set (report_checks res) \<Longrightarrow> check_point chk = v \<Longrightarrow> check_verdict chk \<noteq> Dead"
 proof -
   let ?sites = "tobligation_sites ds p"
   let ?cl = "tobligation_classify sem ds (tactivation as)"
   let ?P = "(\<forall>obs ob. (v, obs) \<in> set ?sites \<longrightarrow> ob \<in> set obs \<longrightarrow> SAFE res v \<longrightarrow> s \<Turnstile> ob)
           \<and> (\<forall>d. d \<in> set (report_diagnostics res) \<longrightarrow> diagnostic_verdict d = Check_Refuted
-              \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d)"
+              \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d)
+          \<and> (\<forall>chk. chk \<in> set (report_checks res) \<longrightarrow> check_point chk = v
+              \<longrightarrow> check_verdict chk \<noteq> Dead)"
   have from_table: ?P
     if diags: "report_diagnostics res = arithmetic_diagnostics ?sites rt ?cl"
+      and checks: "report_checks res
+                     = result_checks_of (typed_cfg p ds) rt (tmcp_classify sem ds (tactivation as))"
       and fin: "finite (covered_keys rt)" and look: "lookup_table rt v ctx = Lifted st"
       and st: "s \<in> tmcp.act_gamma ds (tactivation as) st"
     for rt :: "('c, tmcp_val) solved_table" and ctx st
   proof -
-    have "finite (table_contexts rt v)"
+    have fin_v: "finite (table_contexts rt v)"
       using fin unfolding table_contexts_def by simp
-    note sound = table_diagnostics_sound[OF this look st, where sem = sem]
-    show ?P unfolding diags using sound by blast
+    note sound = table_diagnostics_sound[OF fin_v look st, where sem = sem]
+    have live: "check_verdict chk \<noteq> Dead"
+      if "chk \<in> set (report_checks res)" and "check_point chk = v" for chk
+    proof -
+      from that obtain a w where "(v, a, w) \<in> set (cfg_intra_list (typed_cfg p ds))"
+        and "chk = \<lparr>check_point = v, check_label = ea_check_label a, check_exp = ea_check_cond a,
+                    check_verdict = point_verdict rt (tmcp_classify sem ds (tactivation as)) v
+                                      (ea_check_cond a)\<rparr>"
+        by (auto simp: checks result_checks_of_def)
+      then show ?thesis
+        using point_verdict_not_dead[OF fin_v look, of "tmcp_classify sem ds (tactivation as)"]
+        by simp
+    qed
+    show ?P unfolding diags using sound live by blast
   qed
   have ?P
   proof (cases cx)
@@ -647,7 +665,9 @@ proof -
       using typed_mcp.vars_finite_of_terminates[OF solved(1)]
       by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
     have "report_diagnostics res = arithmetic_diagnostics ?sites ?r ?cl"
-      using solved(2) by (simp add: res typed_cs_report_def report_of_def Let_def)
+      and "report_checks res
+             = result_checks_of (typed_cfg p ds) ?r (tmcp_classify sem ds (tactivation as))"
+      using solved(2) by (simp_all add: res typed_cs_report_def report_of_def Let_def)
     from from_table[OF this fin look st] show ?P .
   next
     case Typed_Entry_State
@@ -674,13 +694,43 @@ proof -
       using typed_mcp_es.vars_finite_of_terminates[OF solved(1)]
       by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
     have "report_diagnostics res = arithmetic_diagnostics ?sites ?r ?cl"
-      using solved(2) by (simp add: res typed_es_report_def report_of_def Let_def)
+      and "report_checks res
+             = result_checks_of (typed_cfg p ds) ?r (tmcp_classify sem ds (tactivation as))"
+      using solved(2) by (simp_all add: res typed_es_report_def report_of_def Let_def)
     from from_table[OF this fin look st] show ?P .
   qed
   then show "(v, obs) \<in> set ?sites \<Longrightarrow> ob \<in> set obs \<Longrightarrow> SAFE res v \<Longrightarrow> s \<Turnstile> ob"
     and "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
       \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
+    and "chk \<in> set (report_checks res) \<Longrightarrow> check_point chk = v \<Longrightarrow> check_verdict chk \<noteq> Dead"
     by blast+
+qed
+
+text \<open>A report lists a check row for every check edge of the typed graph, at the edge's
+  source and with its label and condition.\<close>
+
+lemma typed_report_check_row:
+  assumes run: "typed_report_run sem as r cx ds p = Some res"
+    and edge: "(v, EA_Check l e, w) \<in> intra (typed_cfg p ds)"
+  shows "\<exists>chk \<in> set (report_checks res). check_point chk = v \<and> check_label chk = l
+           \<and> check_exp chk = e"
+proof -
+  have fin: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
+  have checks: "report_checks res = result_checks_of (typed_cfg p ds) rt cl \<Longrightarrow> ?thesis"
+    for rt :: "('c, tmcp_val) solved_table" and cl
+    using edge fin by (force simp: result_checks_of_def)
+  show ?thesis
+  proof (cases cx)
+    case (Typed_Call_String k)
+    with run obtain sol where "res = typed_cs_report sem as r k ds p sol"
+      by (auto simp: typed_report_run_def)
+    then show ?thesis by (intro checks) (simp add: typed_cs_report_def report_of_def Let_def)
+  next
+    case Typed_Entry_State
+    with run obtain sol where "res = typed_es_report sem as r ds p sol"
+      by (auto simp: typed_report_run_def)
+    then show ?thesis by (intro checks) (simp add: typed_es_report_def report_of_def Let_def)
+  qed
 qed
 
 text \<open>Every obligation of an expression an edge or a call evaluates is one the report

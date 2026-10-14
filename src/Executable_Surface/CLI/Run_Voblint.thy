@@ -87,6 +87,26 @@ lemma run_voblint_config:
      (auto simp: run_voblint_def typed_report_run_def typed_cs_report_def typed_es_report_def
       report_of_def Let_def split: if_splits option.splits typed_context.splits)
 
+lemma run_voblint_cfg:
+  assumes "run_voblint conf ds p = Analysed res"
+  shows "report_cfg res = typed_cfg p ds"
+  using assms
+  by (cases conf)
+     (auto simp: run_voblint_def typed_report_run_def typed_cs_report_def typed_es_report_def
+      report_of_def Let_def split: if_splits option.splits typed_context.splits)
+
+text \<open>
+  The report contract in one statement: an analysed answer was given for a valid
+  activation and a well-formed program, and is a report of exactly that
+  configuration and the program's typed graph. The theorems that follow read it.
+\<close>
+
+theorem run_voblint_report_contract:
+  assumes "run_voblint conf ds p = Analysed res"
+  shows "valid_activation (conf_analyses conf)" and "wf_program_compile_input_exec p"
+    and "report_config res = conf" and "report_cfg res = typed_cfg p ds"
+  using assms run_voblint_config run_voblint_cfg by (auto elim: run_voblint_AnalysedE)
+
 subsection \<open>What the arithmetic diagnostics guarantee\<close>
 
 text \<open>
@@ -234,6 +254,257 @@ qed
 corollary run_voblint_dead_unreached:
   "run_voblint conf ds p = Analysed res \<Longrightarrow> DEAD res v \<Longrightarrow> reaching ds p v = {}"
   using run_voblint_DEAD by blast
+
+subsection \<open>What an answer guarantees about a run of the program\<close>
+
+text \<open>
+  The same guarantees, read at a run of the typed program itself rather than at a
+  node of its graph. Run the program from a store whose globals are zero at their
+  kinds and stop anywhere: the configuration reached is simulated at a node \<open>v\<close> of
+  the typed graph, the store reaches \<open>v\<close>, the report holds a state at \<open>v\<close> describing
+  it, \<open>v\<close> is not dead, every check the report decides at \<open>v\<close> has its verdict at the
+  store, and if \<open>v\<close> is safe every obligation decided there holds of the store.
+\<close>
+
+theorem run_voblint_source_sound:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 \<in> tinit_stores (kenv_of ds)"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name
+                    \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> s \<in> reaching ds p v
+           \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+                  \<and> s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+           \<and> \<not> DEAD res v
+           \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (teval c s))
+           \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))
+           \<and> (SAFE res v \<longrightarrow> (\<forall>ob \<in> tobligations_at ds p v. s \<Turnstile> ob))"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  from typed_source_reaches_node_collect[OF wf s0 exec] obtain v stk
+    where sim: "typed_ptable p ds, typed_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and s: "s \<in> reaching ds p v"
+    by blast
+  show ?thesis
+    using sim s run_voblint_states[OF run s] run_voblint_report_sound[OF run s] by blast
+qed
+
+text \<open>
+  Read at a check: a run about to execute \<open>Check l e\<close> finds a check labelled \<open>l\<close> for
+  \<open>e\<close> in the report, listed at a node this very store reaches. Its verdict is not
+  \<open>Dead\<close>, and a decided verdict holds of the store.
+\<close>
+
+theorem run_voblint_check_sound:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 \<in> tinit_stores (kenv_of ds)"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+    and chk: "next_check residual = Some (l, e)"
+  shows "\<exists>c \<in> set (report_checks res). check_label c = l \<and> check_exp c = e
+           \<and> s \<in> reaching ds p (check_point c)
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (teval e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s))"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
+                (conf_context conf) ds p = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  from typed_source_reaches_node_collect[OF wf s0 exec] obtain v stk
+    where sim: "typed_ptable p ds, typed_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and s: "s \<in> reaching ds p v"
+    by blast
+  from csim_next_check_edge[OF sim chk] obtain w where "(v, EA_Check l e, w) \<in> intra (typed_cfg p ds)"
+    by blast
+  from typed_report_check_row[OF rep this] obtain c where c: "c \<in> set (report_checks res)"
+    and pt: "check_point c = v" and lbl: "check_label c = l" and ex: "check_exp c = e"
+    by blast
+  have "check_verdict c \<noteq> Dead" by (rule typed_report_check_live[OF wf rep s c pt])
+  with c pt lbl ex s run_voblint_proved[OF run c] run_voblint_refuted[OF run c] show ?thesis
+    by force
+qed
+
+text \<open>
+  Read by label, as a consumer finds a source check's row: when the report's labels
+  are distinct, which a consumer can decide on the report, the row labelled \<open>l\<close> is the
+  one for the check about to run, and its verdict holds of the store. That the parser
+  wrote each check's own source position into its label stays outside the theorem.
+\<close>
+
+corollary run_voblint_labelled_check_sound:
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 \<in> tinit_stores (kenv_of ds)"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+    and chk: "next_check residual = Some (l, e)"
+    and distinct: "distinct (map check_label (report_checks res))"
+  shows "\<exists>c \<in> set (report_checks res). check_label c = l"
+    and "\<forall>c \<in> set (report_checks res). check_label c = l \<longrightarrow>
+           check_exp c = e
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (teval e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s))"
+proof -
+  from run_voblint_check_sound[OF run s0 exec chk]
+  obtain c0 where c0: "c0 \<in> set (report_checks res)" "check_label c0 = l" "check_exp c0 = e"
+    and v0: "check_verdict c0 \<noteq> Dead"
+      "check_verdict c0 = Decided Check_Proved \<longrightarrow> truthy (teval e s)"
+      "check_verdict c0 = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s)"
+    by blast
+  from c0 show "\<exists>c \<in> set (report_checks res). check_label c = l" by blast
+  have inj: "inj_on check_label (set (report_checks res))"
+    using distinct by (simp add: distinct_map)
+  show "\<forall>c \<in> set (report_checks res). check_label c = l \<longrightarrow>
+           check_exp c = e
+           \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (teval e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s))"
+  proof (intro ballI impI)
+    fix c assume "c \<in> set (report_checks res)" and "check_label c = l"
+    with c0 inj have "c = c0" by (auto dest: inj_onD)
+    with c0 v0 show "check_exp c = e \<and> check_verdict c \<noteq> Dead
+           \<and> (check_verdict c = Decided Check_Proved \<longrightarrow> truthy (teval e s))
+           \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s))" by simp
+  qed
+qed
+
+text \<open>
+  The whole chain for any context policy, given what the policy owes: every valid
+  activation trace of the typed graph carries some context, and the stores filed
+  under the policy's contexts at a node are exactly the stores that reach it. A run
+  of the typed program is then simulated at a node, by a valid activation trace with
+  a context, whose store lies in that context's bucket; the buckets make up the
+  stores reaching the node, the report holds a state there describing the store, and
+  the report's checks hold of it.
+\<close>
+
+theorem run_voblint_spine:
+  fixes p :: imp_prog and ds :: kind_decls and adm c\<^sub>0
+  defines "g \<equiv> typed_cfg p ds" and "S \<equiv> tinit_stores (kenv_of ds)"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 \<in> S"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+    and has_ctx: "\<And>t. t \<in> typed.gvalid_activation_trace (kenv_of ds) g S
+                   \<Longrightarrow> \<exists>c. typed.gactivation_context_rel adm c\<^sub>0 g t c"
+    and buckets: "\<And>v. (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c')
+                   = reaching ds p v"
+  shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> typed.gactivation_context_rel adm c\<^sub>0 g t c
+           \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c
+           \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c') = reaching ds p v
+           \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+                  \<and> s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+           \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (teval c s))
+           \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  have cfg: "g = compile_prog (typed_ptable p ds) (prog_procs p)"
+    unfolding g_def by (rule typed_cfg_def)
+  from typed.source_store_in_activation_collect
+         [OF typed_wf_compile_input[OF wf] s0 exec has_ctx[unfolded cfg]]
+  obtain v stk t c
+    where sim: "typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and rep: "typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t"
+      and rel: "typed.gactivation_context_rel adm c\<^sub>0 g t c"
+      and mem: "s \<in> typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c"
+    unfolding cfg by blast
+  have s: "s \<in> reaching ds p v" using mem buckets[of v] by blast
+  show ?thesis
+    using sim rep rel mem buckets[of v] run_voblint_states[OF run s] run_voblint_report_sound[OF run s]
+    by blast
+qed
+
+text \<open>
+  Each context policy owes the spine's two facts. A call string is a function of the
+  trace, so every trace carries one and the buckets cover the stores outright. An
+  entry-state context is read off the solve, and the answer was given only because
+  the solve terminated, which is what makes the admitted contexts cover every trace.
+\<close>
+
+theorem run_voblint_call_string_chain:
+  fixes p :: imp_prog and ds :: kind_decls and k :: nat
+  defines "g \<equiv> typed_cfg p ds" and "S \<equiv> tinit_stores (kenv_of ds)"
+    and "adm \<equiv> context_policy_of_fun (typed_cs k)"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and cx: "conf_context conf = Typed_Call_String k"
+    and s0: "s0 \<in> S"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> typed.gactivation_context_rel adm [] g t c
+           \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm [] g S v c
+           \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v
+           \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+                  \<and> s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+           \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (teval c s))
+           \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))"
+proof -
+  have has_ctx: "\<exists>c. typed.gactivation_context_rel adm [] g t c"
+    if "t \<in> typed.gvalid_activation_trace (kenv_of ds) g S" for t
+    unfolding adm_def by (rule exI, subst typed.activation_context_rel_of_fun_iff[OF that]) (rule refl)
+  have buckets: "(\<Union>c'. typed.gactivation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v"
+    for v
+    unfolding adm_def g_def S_def tnode_collect_def
+    by (rule typed_mcp.fun_route_node_collect_eq_Union[where ctx_fun = "typed_cs k", symmetric])
+  show ?thesis
+    unfolding g_def S_def
+    by (rule run_voblint_spine[OF run s0[unfolded S_def] exec has_ctx[unfolded g_def S_def]
+          buckets[unfolded g_def S_def]])
+qed
+
+theorem run_voblint_entry_state_chain:
+  fixes p :: imp_prog and ds :: kind_decls and conf :: voblint_conf
+  defines "g \<equiv> typed_cfg p ds" and "S \<equiv> tinit_stores (kenv_of ds)"
+    and "adm \<equiv> typed_mcp_es.entry_context_rel (conf_sem conf) ds (conf_analyses conf)
+                 (conf_globals conf) p"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and cx: "conf_context conf = Typed_Entry_State"
+    and s0: "s0 \<in> S"
+    and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
+                 (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+           \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
+           \<and> typed.gactivation_context_rel adm tmcp_root_ctx g t c
+           \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c
+           \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c')
+               = reaching ds p v
+           \<and> (\<exists>d. Lifted d \<in> report_states_at res v
+                  \<and> s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+           \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (teval c s))
+           \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))"
+proof -
+  from run have wf: "wf_program_compile_input p"
+    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
+                (conf_context conf) ds p = Some res"
+    by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
+  from rep cx obtain sol where
+    "TD_side_rule_Interp_solve_c (conf_globals conf)
+       (typed_mcp_es.equations (conf_sem conf) ds (conf_analyses conf) tglobal p)
+       (typed_mcp_es.root_query ds p) = Some sol"
+    by (auto simp: typed_report_run_def dg_pipeline.root_query_def)
+  note solves = typed_mcp_es.solve_c_run(1)[OF this]
+  have has_ctx: "\<exists>c. typed.gactivation_context_rel adm tmcp_root_ctx g t c"
+    if "t \<in> typed.gvalid_activation_trace (kenv_of ds) g S" for t
+    using typed_mcp_es.gentry_state_has_context_of_terminates
+            [OF typed_cfg_def typed_wf_compile_input[OF wf] solves] that
+    unfolding adm_def g_def S_def by blast
+  have buckets: "(\<Union>c'. typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c')
+                   = reaching ds p v" for v
+    using typed_mcp_es.gentry_state_node_collect_eq_Union_of_terminates
+            [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
+    unfolding adm_def g_def S_def tnode_collect_def by simp
+  show ?thesis
+    unfolding g_def S_def
+    by (rule run_voblint_spine[OF run s0[unfolded S_def] exec has_ctx[unfolded g_def S_def]
+          buckets[unfolded g_def S_def]])
+qed
 
 text \<open>Every obligation of an expression evaluated at \<open>v\<close>, and every narrowing
   conversion of a value returned at \<open>v\<close>, is one the report decides there.\<close>

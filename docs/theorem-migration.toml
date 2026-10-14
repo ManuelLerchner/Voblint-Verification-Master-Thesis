@@ -1,0 +1,100 @@
+# Legacy (mathematical-integer) theorems and their typed counterparts.
+#
+# One entry per legacy theorem the thesis, the site or the docs cite. `typed` is
+# the theorem on the canonical analyzer (run_voblint), or "" when none exists
+# yet. `meaning` records what changed beyond the name; a citation may move to
+# the typed name only after its prose has been checked against that note.
+#
+# Semantic changes common to every typed entry:
+#   - stores are typed stores (tstore) over var_id, values are machine integers
+#     of each identity's kind, and expressions are elaborated typed expressions
+#     (texp, teval) rather than source expressions (exp, aval);
+#   - the run is of the elaborated program typed_ptable p ds under tpstep,
+#     starting from tinit_stores (globals zero at their kinds);
+#   - "reaching ds p v" replaces the collecting semantics 𝒞⇘𝒢,g,S⇙ v, over the
+#     typed graph typed_cfg p ds.
+
+[[theorem]]
+legacy = "run_voblint_legacy_sound"
+typed = "run_voblint_sound"
+meaning = "States and verdicts as before; the report is a typed_report."
+
+[[theorem]]
+legacy = "run_voblint_legacy_report_contract"
+typed = "run_voblint_report_contract"
+meaning = "valid_activation replaces valid_config; report_cfg is typed_cfg p ds. No well_formed_report clause yet."
+
+[[theorem]]
+legacy = "run_voblint_legacy_proved"
+typed = "run_voblint_PROVED"
+meaning = "Same shape over reaching stores; truthy (teval c s)."
+
+[[theorem]]
+legacy = "run_voblint_legacy_refuted"
+typed = "run_voblint_REFUTED"
+meaning = "Same shape over reaching stores."
+
+[[theorem]]
+legacy = "run_voblint_legacy_dead_unreached"
+typed = "run_voblint_dead_unreached"
+meaning = "Same statement."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_safe"
+typed = "run_voblint_SAFE"
+meaning = "Covers division by zero, signed overflow (+ - * /) and conversions to a narrower kind, not only division; stated through tobligations_at and s ⊨ ob. Obligations under && and || are not yet guarded by short-circuit evaluation."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_refuted"
+typed = "run_voblint_arithmetic_refuted"
+meaning = "A refuted obligation fails at every reaching store (¬ s ⊨ ob); legacy concluded a zero divisor."
+
+[[theorem]]
+legacy = "run_voblint_legacy_arithmetic_intra_safe"
+typed = "run_voblint_arithmetic_safe_intra"
+meaning = "Per evaluated expression of an edge; also _call and _return variants."
+
+[[theorem]]
+legacy = "run_voblint_legacy_source_sound"
+typed = "run_voblint_source_sound"
+meaning = "Existential in the simulating node (legacy also quantified every observed node via at_node); conclusions in the PROVED/REFUTED/DEAD/SAFE vocabulary."
+
+[[theorem]]
+legacy = "run_voblint_legacy_source_sound_joined"
+typed = ""
+meaning = "No typed counterpart for the context-joined state yet."
+
+[[theorem]]
+legacy = "run_voblint_legacy_check_sound"
+typed = "run_voblint_check_sound"
+meaning = "Same shape; the store reaches the check's point."
+
+[[theorem]]
+legacy = "run_voblint_legacy_labelled_check_sound"
+typed = "run_voblint_labelled_check_sound"
+meaning = "Same shape: distinct labels on the report make the labelled row the check's own."
+
+[[theorem]]
+legacy = "run_voblint_legacy_spine"
+typed = "run_voblint_spine"
+meaning = "Typed activation traces and collecting semantics (typed.*); ends in report states and PROVED/REFUTED rather than ℛ ⊆ 𝒱."
+
+[[theorem]]
+legacy = "run_voblint_legacy_call_string_chain"
+typed = "run_voblint_call_string_chain"
+meaning = "Context function typed_cs k; root context []."
+
+[[theorem]]
+legacy = "run_voblint_legacy_unit_chain"
+typed = "run_voblint_call_string_chain"
+meaning = "The typed analyzer has no separate unit policy: no context is a call string of length zero."
+
+[[theorem]]
+legacy = "run_voblint_legacy_entry_state_chain"
+typed = "run_voblint_entry_state_chain"
+meaning = "Admitted contexts typed_mcp_es.entry_context_rel; flow-insensitive globals are not supported on the typed path."
+
+[[theorem]]
+legacy = "nv_source_certified"
+typed = ""
+meaning = "Legacy capstone cited by the thesis abstract; candidate replacement run_voblint_source_sound, pending review of the abstract's claim."
