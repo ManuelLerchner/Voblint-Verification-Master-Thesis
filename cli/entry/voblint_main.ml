@@ -5,19 +5,18 @@
           manifests/vimp-grammar.yaml by scripts/gen_vimp_menhir.py -- ocamllex +
           Menhir, NOT verified) via Vimp_frontend (hand-written glue)
        -> imp_prog
-       -> Voblint.run_voblint_legacy
-            (Analysis_Config (domains, globals, context, program_globals))
+       -> Voblint.run_voblint conf kind_decls prog
           (Isabelle-generated). One call checks the activation and the program and
-          runs the analyses the activation list, global update rule and context
-          name. Every well-formed combination is answered. What comes back is a
-          semantic analysis_report: states as abstract values per point and
-          context, the routes calls take, the check column and diagnostics.
-       -> Voblint.render_report (Isabelle-generated, outside the
+          runs the analyses, global update rule and context the configuration
+          names. What comes back is a semantic typed report: states as abstract
+          values per point and context, the routes calls take, the check column
+          and diagnostics.
+       -> Voblint.typed_render_report (Isabelle-generated, outside the
           theorems) with the CLI's value printer (Value_symbols): the displayed
           run_result. Every rendering below (text report, graph, snapshot, HTML)
           is built from that one result, so none can draw from a different solve
           than another.
-       -> the theorems in Analysis_Certified.thy hold for every Analysed answer
+       -> the theorems in Run_Voblint.thy hold for every Analysed answer
           with no termination premise: where the solve does not return, no
           answer exists and nothing is claimed. A PROVED verdict does not
           assert that its point is reachable.

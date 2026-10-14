@@ -60,9 +60,9 @@ text \<open>
   signature unchanged: the root list still decides what the facade can expose, and the
   facade is the one place a later, narrower surface would be stated.
 
-  Analysis entry goes through \<^const>\<open>run_voblint_legacy\<close> alone, which checks the
-  activation list and well-formedness and runs the requested analyses, update rule and
-  context policy. Every combination is answered, so the CLI never decides legality.
+  Analysis entry goes through \<^const>\<open>run_voblint\<close> alone, which checks the activation
+  list and well-formedness and runs the requested analyses, update rule and context
+  policy.
 
   The last group of roots is there for signature visibility rather than for dispatch.
   A constant the serializer does not consider public is emitted but left out of the
@@ -103,17 +103,17 @@ text \<open>
   The list below is grouped by what each name is \<^emph>\<open>for\<close>, because the groups answer
   different questions and only one of them is an operation.
 
-  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint_legacy\<close>, alone. Everything a caller can ask the analyser
+  \<^item> \<^bold>\<open>Run.\<close> \<^const>\<open>run_voblint\<close>, alone. Everything a caller can ask the analyser
     to do goes through it.
 
   \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
-    projection \<^const>\<open>render_report\<close> that turns an analysed report into displayable
-    data, and the readers of that data: contexts, states, routes, checks, globals and
-    diagnostics. The records reach OCaml abstract, readable only through their
-    selectors, so a field added later cannot break a consumer that matched on field
-    order. A caller maps \<^const>\<open>render_report\<close> over the answer with
+    projection \<^const>\<open>typed_render_report\<close> that turns an analysed report into
+    displayable data, and the readers of that data: contexts, states, routes, checks,
+    globals and diagnostics. The records reach OCaml abstract, readable only through
+    their selectors, so a field added later cannot break a consumer that matched on field
+    order. A caller maps \<^const>\<open>typed_render_report\<close> over the answer with
     \<^const>\<open>map_analysis_answer\<close>, passing the value printer it wants: the CLI composes
-    \<^const>\<open>string_of_abstract_value\<close> with its decoding of ASCII symbol tokens.
+    \<^const>\<open>string_of_typed_value\<close> with its decoding of ASCII symbol tokens.
 
   \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which rule merges
     side-effected globals, which context policy. A caller constructs these, so their
@@ -135,21 +135,9 @@ text \<open>
 
 text \<open>
   The CFG enumerations are generic in the variable and expression types and need their
-  orders, which generated code would take as dictionary arguments. The CLI reads graphs of
-  source programs only, so it gets the enumerations at that instance.
+  orders, which generated code would take as dictionary arguments. The CLI reads typed
+  graphs only, so it gets the enumerations at that instance.
 \<close>
-
-definition cfg_intra_edges :: "cfg \<Rightarrow> (cfg_node \<times> edge_action \<times> cfg_node) list" where
-  "cfg_intra_edges = cfg_intra_list"
-
-definition cfg_call_edges ::
-    "cfg \<Rightarrow> (cfg_node \<times> call_action \<times> cfg_node \<times> cfg_node) list" where
-  "cfg_call_edges = cfg_calls_list"
-
-definition cfg_points :: "cfg \<Rightarrow> cfg_node list" where
-  "cfg_points = cfg_node_list"
-
-text \<open>The same readers for a typed program's graph, until the VIMP graph is retired.\<close>
 
 definition tcfg_intra_edges ::
     "(var_id, texp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, texp) gedge_action \<times> cfg_node) list" where
@@ -164,13 +152,13 @@ definition tcfg_points :: "(var_id, texp) gcfg \<Rightarrow> cfg_node list" wher
 
 export_code
 
-  \<comment> \<open>Run: the typed analyzer, and the analyzer over mathematical integers it replaces\<close>
-  run_voblint run_voblint_legacy
+  \<comment> \<open>Run: the typed analyzer\<close>
+  run_voblint
 
   \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
      diagnostics, the analysis graph\<close>
   Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
-  vimp_render_report typed_render_report string_of_typed_value var_label
+  typed_render_report string_of_typed_value var_label
   TN TVar TArith TCast TCmp TNot TAnd TOr AAdd ASub AMul ADiv AMod CLt CLe CGt CGe CEq CNe
   res_cfg res_contexts res_states res_joined res_routes res_checks res_globals res_diagnostics
   res_graph graph_nodes graph_edges Local_Node Global_Node
@@ -186,15 +174,16 @@ export_code
   Division_By_Zero Signed_Overflow Conversion_Overflow ik_signed
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
-  cfg_entry cfg_points typed_cfg tcfg_intra_edges tcfg_call_edges tcfg_points
+  cfg_entry typed_cfg tcfg_intra_edges tcfg_call_edges tcfg_points
 
-  \<comment> \<open>Ask: configuration of domains, global update rule, context, program globals\<close>
-  Analysis_Config
-  Program_Globals_Flow_Sensitive Program_Globals_Flow_Insensitive
-  Sign_Analysis Interval_Analysis Int_Analysis Refine_Fixpoint Refine_Once Refine_Never
-  Parity_Analysis Congruence_Analysis Order_Analysis
+  \<comment> \<open>Ask: the request's options, after Goblint's configuration tree\<close>
+  voblint_conf_ext conf_analyses conf_context conf_globals conf_sem
+  Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
+  Typed_Call_String Typed_Entry_State
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin Globals_Bounded_Narrowing
-  Ctx_None Ctx_EntryState Ctx_CallString
+  Program_Globals_Flow_Sensitive Program_Globals_Flow_Insensitive
+  Refine_Fixpoint Refine_Once Refine_Never
+  sem_conf_ext sem_int_signed_overflow default_sem_conf Assume_Top Assume_Wraparound
 
   \<comment> \<open>Program: what the frontend builds an input out of\<close>
   mk_program gproc_decl_ext
@@ -207,19 +196,9 @@ export_code
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat
 
-  \<comment> \<open>Typed run, experimental: a typed analysis of a program under its kind declarations\<close>
-  run_typed Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
-  Typed_Malformed Typed_No_Answer Typed_Analysed
-  Typed_Call_String Typed_Entry_State
-
-  \<comment> \<open>Configuration of a typed run: the options as one value, after Goblint's tree\<close>
-  voblint_conf_ext conf_analyses conf_context conf_globals conf_sem
-  sem_conf_ext sem_int_signed_overflow default_sem_conf Assume_Top Assume_Wraparound
-
   \<comment> \<open>Inspect: for the OCaml program printer and the CFG regressions, not the CLI\<close>
   declared_global_vars
-  prog_table prog_main prog_procs
-  prog_cfg cfg_intra_edges cfg_call_edges prog_stmt_post_order
+  prog_table prog_main prog_procs prog_stmt_post_order
   EA_Nop EA_Assign EA_Special EA_Assume EA_AssumeNot EA_Body EA_Ret EA_Check
   CallEdge Nondet_Int
 
@@ -229,7 +208,7 @@ export_code
   Ev_Wpoint_Remove Ev_Wpoint_Clear Ev_Update Ev_Iterate_Changed Ev_Side Ev_Update_Global
     Ev_Destabilize
   Ev_Stable_Remove
-  Ev_Route Trace_Printers Trace_Buffer Trace_Global Trace_Seed string_of_abstract_value Inl Inr
+  Ev_Route Trace_Printers Trace_Buffer Trace_Global Trace_Seed Inl Inr
 
   in OCaml module_name Generated file_prefix "Voblint_Generated"
 
