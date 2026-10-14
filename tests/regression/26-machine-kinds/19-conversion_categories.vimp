@@ -1,0 +1,13 @@
+// PARAM: --analysis interval
+// EXPECT-ARITHMETIC
+// Three hazards C classifies differently: converting 128 to i8 is
+// implementation-defined, converting -1 to u32 is defined (modulo 2^32), and
+// overflowing i32 addition is undefined. The report words the first two
+// "signed/unsigned integer overflow in conversion" and the third "signed integer
+// overflow in +"; this fixture vocabulary does not split the conversions.
+fun main() {
+  i8 a = 128; // ARITH: ERROR conversion-overflow
+  u32 b = -1; // ARITH: ERROR conversion-overflow
+  i32 c = 2147483647 + 1; // ARITH: ERROR signed-overflow
+  __voblint_check(b == 4294967295); // PROVED
+}
