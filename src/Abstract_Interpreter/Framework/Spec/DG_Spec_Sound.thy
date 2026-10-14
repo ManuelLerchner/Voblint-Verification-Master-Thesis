@@ -377,7 +377,7 @@ lemma analysis_contract_iff:
 sublocale analysis_contract \<subseteq> ganalysis_contract aval ret_var "\<lambda>_ n. n" \<G> S \<gamma>\<^sub>D\<^sub>G
   rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
     and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
     and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
 proof -
   show "ganalysis_contract aval ret_var (\<lambda>_ n. n) \<G> S \<gamma>\<^sub>D\<^sub>G"

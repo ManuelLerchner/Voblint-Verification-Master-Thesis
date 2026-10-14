@@ -7,7 +7,9 @@ Programs that declare machine kinds in C style: on a `global` line
 formal, and must declare every local. A declared local starts at an arbitrary
 value of its kind unless it has an initializer (`i8 x = 2;`), which assigns the
 value converted to the local's kind, as any assignment does; a global starts at
-zero. `11` checks initializers.
+zero. `11` checks initializers. A call converts each argument to its formal's
+kind; `04` and `12` check that, `12` also through a global and a recursive
+call.
 
 The frontend elaborates a typed program with the verified `typed_prog`: every
 operation computes at its C kind, every conversion becomes an explicit `Cast`,

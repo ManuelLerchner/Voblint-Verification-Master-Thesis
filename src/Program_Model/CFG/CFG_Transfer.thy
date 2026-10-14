@@ -64,19 +64,21 @@ subsection \<open>Call-entry transfer\<close>
 
 text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in the caller store,
   the callee locals are reset (\<^const>\<open>enter_state\<close>, globals preserved), and the resulting
-  values are bound to the callee formals.  All payload comes from the \<open>CallEdge\<close>, so the
-  transfer needs no procedure table.  This is exactly the entered store produced by the
-  source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
+  values are bound to the callee formals, each converted to its formal.  All payload
+  comes from the \<open>CallEdge\<close>, so the transfer needs no procedure table.  This is exactly
+  the entered store produced by the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
 
 definition gcall_enter :: "('v, 'e) gcall_action \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int)" where
   "gcall_enter ca s =
      (case ca of CallEdge dst pars actuals \<Rightarrow>
-        enter_binding glob 0 ev pars actuals s)"
+        bind_formals pars (map2 (\<lambda>x. conv (Some x)) pars (map (\<lambda>e. ev e s) actuals))
+          (enter_state glob s))"
 
 lemma call_enter_CallEdge:
   "gcall_enter (CallEdge dst pars actuals) s
-     = bind_formals pars (map (\<lambda>e. ev e s) actuals) (enter_state glob s)"
-  by (simp add: gcall_enter_def enter_binding_def enter_state_def)
+     = bind_formals pars (map2 (\<lambda>x. conv (Some x)) pars (map (\<lambda>e. ev e s) actuals))
+         (enter_state glob s)"
+  by (simp add: gcall_enter_def)
 
 text \<open>A parameterless call is exactly \<^const>\<open>enter_state\<close>: no actuals to evaluate and no
   formals to bind.\<close>
@@ -123,7 +125,7 @@ definition combine_collect :: "(vname \<Rightarrow> bool) \<Rightarrow> vname op
   "combine_collect \<G> = cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G>"
 
 definition call_enter :: "(vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> store \<Rightarrow> store" where
-  "call_enter \<G> = cfg_transfer_sem.gcall_enter aval \<G>"
+  "call_enter \<G> = cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G>"
 
 definition edge_writes :: "edge_action \<Rightarrow> vname list" where
   "edge_writes = cfg_transfer_sem.gedge_writes ret_var"
@@ -131,7 +133,7 @@ definition edge_writes :: "edge_action \<Rightarrow> vname list" where
 global_interpretation untyped?: cfg_transfer_sem aval ret_var "\<lambda>_ n. n" \<G>
   rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
     and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
     and "cfg_transfer_sem.gedge_writes ret_var = edge_writes"
   for \<G> :: "vname \<Rightarrow> bool"
   by (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_writes_def)

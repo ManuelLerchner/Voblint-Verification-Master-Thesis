@@ -263,7 +263,7 @@ sublocale dg_context_activation \<subseteq>
     extra bot0 d\<^sub>0 g\<^sub>0 sigma vars x0 sg \<gamma>\<^sub>M
   rewrites "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
     and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
     and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
   by unfold_locales (simp_all add: edge_collect_def combine_collect_def call_enter_def edge_step_def)
 

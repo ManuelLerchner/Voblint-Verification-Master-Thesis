@@ -8,7 +8,7 @@ text \<open>
   Every identity other than the return slot holds a value of its kind in every store a
   valid activation trace of the typed graph reaches. Writes to a variable convert to its
   kind (\<^const>\<open>tconv\<close>), and a call entry resets locals to \<open>0\<close> and binds each formal to
-  an actual that elaboration has already converted to the formal's kind. The return slot
+  its actual converted to the formal's kind. The return slot
   is shared by procedures returning different kinds, so it is excluded: it holds a value
   of the returning procedure's kind, which the destination conversion re-establishes at
   the caller.
@@ -68,25 +68,22 @@ lemma args_ok_zip:
   "args_ok \<kappa> xs es \<Longrightarrow> (x, e) \<in> set (zip xs es) \<Longrightarrow> texp_kind e = \<kappa> x"
   by (induction \<kappa> xs es rule: args_ok.induct) auto
 
+lemma zip_map2_self: "zip xs (map2 f xs ys) = map (\<lambda>(x, y). (x, f x y)) (zip xs ys)"
+proof (induction xs arbitrary: ys)
+  case (Cons x xs) then show ?case by (cases ys) simp_all
+qed simp
+
 lemma tstyped_call_enter:
-  assumes typed: "calls_typed \<kappa> g" and edge: "(u, CallEdge dst pars es, v, w) \<in> calls g"
-    and t: "tstyped \<kappa> t"
-  shows "tstyped \<kappa> (typed.gcall_enter (CallEdge dst pars es) t)"
+  assumes t: "tstyped \<kappa> t"
+  shows "tstyped \<kappa> (typed.gcall_enter \<kappa> (CallEdge dst pars es) t)"
 proof -
-  from typed edge have es: "list_all (\<lambda>e. wt_texp \<kappa> e \<and> ReturnVar \<notin> tvars e) es"
-    and ok: "args_ok \<kappa> pars es"
-    unfolding calls_typed_def by blast+
-  have "n \<in> ik_range (\<kappa> x)" if "(x, n) \<in> set (zip pars (map (\<lambda>e. teval e t) es))" for x n
-  proof -
-    from that obtain e where xe: "(x, e) \<in> set (zip pars es)" and n: "n = teval e t"
-      by (auto simp: zip_map2)
-    then have "e \<in> set es" by (auto dest: set_zip_rightD)
-    with es have "wt_texp \<kappa> e" "ReturnVar \<notin> tvars e" by (auto simp: list_all_iff)
-    then have "teval e t \<in> ik_range (texp_kind e)" by (intro teval_tstyped_in_range [OF t])
-    then show ?thesis using args_ok_zip [OF ok xe] n by simp
-  qed
+  have "n \<in> ik_range (\<kappa> x)"
+    if "(x, n) \<in> set (zip pars (map2 (\<lambda>x. tconv \<kappa> (Some x)) pars (map (\<lambda>e. teval e t) es)))"
+    for x n
+    using that by (auto simp: zip_map2_self)
   then show ?thesis
-    by (simp add: typed.call_enter_CallEdge tstyped_bind_formals tstyped_enter_state t)
+    unfolding typed.call_enter_CallEdge
+    by (rule tstyped_bind_formals[OF tstyped_enter_state[OF t]])
 qed
 
 text \<open>The suspended activations below a trace. A return resumes one of them, so the
@@ -117,7 +114,7 @@ next
     by (cases a) (auto simp: tstyped_def split: option.splits if_splits simp del: ik_range_iff)
 next
   case (call caller dst pars args p cont)
-  then show ?case by (simp add: tstyped_call_enter [OF typed])
+  then show ?case by (simp add: tstyped_call_enter)
 next
   case (ret callee caller p dst pars args cont)
   from ret.IH caller_of_callers [OF ret.hyps(2)]

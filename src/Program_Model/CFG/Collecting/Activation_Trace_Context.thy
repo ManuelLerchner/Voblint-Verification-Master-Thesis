@@ -473,15 +473,15 @@ text \<open>The untyped context semantics is the instance at source names and un
 definition admits_call_context ::
   "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> 'c context_policy
      \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> store \<Rightarrow> store \<Rightarrow> 'c \<Rightarrow> bool" where
-  "admits_call_context \<G> = ctx_sem.gadmits_call_context aval \<G>"
+  "admits_call_context \<G> = ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G>"
 
 definition activation_context_rel ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c \<Rightarrow> cfg \<Rightarrow> activation_trace \<Rightarrow> 'c \<Rightarrow> bool" where
-  "activation_context_rel \<G> = ctx_sem.gactivation_context_rel aval \<G>"
+  "activation_context_rel \<G> = ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G>"
 
 definition call_context_total_on ::
   "(cfg_node \<Rightarrow> 'c \<Rightarrow> store set) \<Rightarrow> 'c context_policy \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> bool" where
-  "call_context_total_on cover adm \<G> g = ctx_sem.gcall_context_total_on aval \<G> cover adm g"
+  "call_context_total_on cover adm \<G> g = ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover adm g"
 
 definition activation_collect ::
   "(vname \<Rightarrow> bool) \<Rightarrow> 'c context_policy \<Rightarrow> 'c \<Rightarrow> cfg
@@ -490,9 +490,9 @@ definition activation_collect ::
   "activation_collect \<G> = ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G>"
 
 global_interpretation untyped?: ctx_sem aval ret_var "\<lambda>_ n. n" \<G>
-    rewrites "ctx_sem.gadmits_call_context aval \<G> = admits_call_context \<G>"
-      and "ctx_sem.gactivation_context_rel aval \<G> = activation_context_rel \<G>"
-      and "ctx_sem.gcall_context_total_on aval \<G> cover adm g = call_context_total_on cover adm \<G> g"
+    rewrites "ctx_sem.gadmits_call_context aval (\<lambda>_ n. n) \<G> = admits_call_context \<G>"
+      and "ctx_sem.gactivation_context_rel aval (\<lambda>_ n. n) \<G> = activation_context_rel \<G>"
+      and "ctx_sem.gcall_context_total_on aval (\<lambda>_ n. n) \<G> cover adm g = call_context_total_on cover adm \<G> g"
       and "ctx_sem.gactivation_collect aval ret_var (\<lambda>_ n. n) \<G> = activation_collect \<G>"
   for \<G> :: "vname \<Rightarrow> bool"
   by (simp_all add: admits_call_context_def activation_context_rel_def call_context_total_on_def

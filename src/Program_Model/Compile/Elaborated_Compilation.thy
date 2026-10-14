@@ -646,14 +646,16 @@ next
   proof (elim CallSE)
     fix decl0
     assume c': "(c0', s', frs') = (Seq (body decl0) (Restore ()),
-                  bind_formals (formals decl0) (map (\<lambda>e. ev e s) args) (enter_state glob s),
+                  bind_formals (formals decl0)
+                    (map2 (\<lambda>x. conv (Some x)) (formals decl0) (map (\<lambda>e. ev e s) args)) (enter_state glob s),
                   Frame s dst # frs)"
       and d0: "erase_pt \<Pi> p = Some decl0"
       and len: "length args = length (formals decl0)" and dist: "distinct (formals decl0)"
     from d0 obtain decl where d: "\<Pi> p = Some decl" "decl0 = erase_decl decl"
       by (auto simp: erase_pt_apply)
     have "gpstep \<Pi> (gcom.Call i dst p args, s, frs) (Seq (body decl) (Restore i),
-               bind_formals (formals decl0) (map (\<lambda>e. ev e s) args) (enter_state glob s),
+               bind_formals (formals decl0)
+                 (map2 (\<lambda>x. conv (Some x)) (formals decl0) (map (\<lambda>e. ev e s) args)) (enter_state glob s),
                Frame s dst # frs)"
       by (rule gpstep.Call[where decl = decl]) (use len dist d in simp_all)
     then show ?thesis

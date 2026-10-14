@@ -74,7 +74,8 @@ where
              \<Longrightarrow> distinct xs
              \<Longrightarrow> \<kappa>, T \<turnstile> (Call i dst p es, t, tfs)
                  \<rightarrow>\<^sub>t (Seq b (Restore i),
-                    bind_formals xs (map (\<lambda>e. teval e t) es) (enter_frame tglobal 0 t),
+                    bind_formals xs (map2 (\<lambda>x e. ik_norm (\<kappa> x) (teval e t)) xs es)
+                      (enter_frame tglobal 0 t),
                     TFrame t dst p # tfs)"
 | TSpecial: "special_table p = Some desc
              \<Longrightarrow> tspecial desc es t n
@@ -596,6 +597,16 @@ next
     using wt esc TCall.prems(3) cur by (auto simp: list_all_iff intro: teval_lower_scoped)
   have rng: "list_all2 (\<lambda>y n. ik_norm (\<kappa> (ScopedId p y)) n = n) ys (map (\<lambda>e. \<lbrakk>lower e\<rbrakk>\<^sub>e s) es)"
     using args_ok_range [OF wt(2), of s] TCall.hyps(2) xs by (simp add: list_all2_map1)
+  have nv: "map2 (\<lambda>x e. ik_norm (\<kappa> x) (teval e t)) (map (ScopedId p) ys) es
+              = map (\<lambda>e. \<lbrakk>lower e\<rbrakk>\<^sub>e s) es"
+  proof -
+    have "map2 (\<lambda>x e. ik_norm (\<kappa> x) (teval e t)) (map (ScopedId p) ys) es
+          = map2 (\<lambda>y n. ik_norm (\<kappa> (ScopedId p y)) n) ys (map (\<lambda>e. teval e t) es)"
+      by (simp add: zip_map1 zip_map2 comp_def case_prod_beta)
+    also have "\<dots> = map (\<lambda>e. \<lbrakk>lower e\<rbrakk>\<^sub>e s) es"
+      unfolding vals using rng by (induction rule: list_all2_induct) simp_all
+    finally show ?thesis .
+  qed
   have dys: "distinct ys" using TCall.hyps(3) xs by (simp add: distinct_map)
   have lc: "lower_com (Call i dst p es) = Call i (map_option var_name dst) p (map lower es)"
       "lower_com (Seq b (Restore i)) = Seq (lower_com b) (Restore i)"
@@ -616,7 +627,7 @@ next
   show ?case
     using step tokc srel_enter [OF TCall.prems(3) [unfolded cur] nr vf rng] L TCall.prems(2-4) dsc
       cur
-    by (intro exI exI exI [of _ "[p, q]"]) (auto simp: vals xs)
+    by (intro exI exI exI [of _ "[p, q]"]) (auto simp: vals xs nv)
 next
   case (TSpecial p desc es t n i v tfs)
   from tok_single [OF TSpecial.prems(1)] obtain q where L: "L = [q]"

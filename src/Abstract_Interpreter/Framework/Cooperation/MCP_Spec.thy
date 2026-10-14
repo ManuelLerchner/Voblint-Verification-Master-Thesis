@@ -1292,7 +1292,7 @@ definition sound_query :: "('s \<Rightarrow> store set) \<Rightarrow> (channel \
 definition sound_enter ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> store set)
      \<Rightarrow> (channel \<Rightarrow> call_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list) \<Rightarrow> bool"
-  where sound_enter_inst: "sound_enter \<G> = mcp_sem.gsound_enter aval \<G>"
+  where sound_enter_inst: "sound_enter \<G> = mcp_sem.gsound_enter aval (\<lambda>_ n. n) \<G>"
 
 definition sound_combine ::
     "(vname \<Rightarrow> bool) \<Rightarrow> ('s \<Rightarrow> store set)
@@ -1310,11 +1310,11 @@ global_interpretation untyped?: mcp_sem aval ret_var "\<lambda>_ n. n" \<G>
     and "mcp_sem.gsound_return aval ret_var = sound_return"
     and "mcp_sem.gsound_event aval = sound_event"
     and "mcp_sem.gsound_query aval = sound_query"
-    and "mcp_sem.gsound_enter aval \<G> = sound_enter \<G>"
+    and "mcp_sem.gsound_enter aval (\<lambda>_ n. n) \<G> = sound_enter \<G>"
     and "mcp_sem.gsound_combine aval ret_var (\<lambda>_ n. n) \<G> = sound_combine \<G>"
     and "cfg_transfer_sem.gedge_collect aval ret_var (\<lambda>_ n. n) = edge_collect"
     and "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> = combine_collect \<G>"
-    and "cfg_transfer_sem.gcall_enter aval \<G> = call_enter \<G>"
+    and "cfg_transfer_sem.gcall_enter aval (\<lambda>_ n. n) \<G> = call_enter \<G>"
     and "cfg_edge_sem.gedge_step aval ret_var (\<lambda>_ n. n) = edge_step"
     and "cfg_edge_sem.gspecial_step aval (\<lambda>_ n. n) = special_step"
     and "ganalysis_contract aval ret_var (\<lambda>_ n. n) \<G> = (\<lambda>S gm. analysis_contract S gm \<G>)"

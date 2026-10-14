@@ -385,11 +385,11 @@ definition valid_activation_trace ::
 
 definition call_enter_store ::
     "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> cfg_node \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "call_enter_store \<G> = trace_sem.gcall_enter_store aval \<G>"
+  "call_enter_store \<G> = trace_sem.gcall_enter_store aval (\<lambda>_ n. n) \<G>"
 
 global_interpretation untyped?: trace_sem aval ret_var "\<lambda>_ n. n" \<G>
     rewrites "trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> = valid_activation_trace \<G>"
-      and "trace_sem.gcall_enter_store aval \<G> = call_enter_store \<G>"
+      and "trace_sem.gcall_enter_store aval (\<lambda>_ n. n) \<G> = call_enter_store \<G>"
   for \<G> :: "vname \<Rightarrow> bool"
   by (simp_all add: valid_activation_trace_def call_enter_store_def)
 

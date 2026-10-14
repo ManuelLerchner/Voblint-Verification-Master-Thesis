@@ -169,12 +169,15 @@ next
     using Call.prems(1) by simp_all
   have vals: "map (\<lambda>e. teval e t) actuals = vals"
     using Call.hyps(4) sf(2) teval_rsr[OF Call.prems(2)] by (auto simp: list_all_iff)
-  let ?t' = "bind_formals (formals decl) (map (\<lambda>e. teval e t) actuals) (enter_frame tglobal 0 t)"
+  let ?ns = "map2 (\<lambda>x e. ik_norm (\<kappa> x) (teval e t)) (formals decl) actuals"
+  let ?t' = "bind_formals (formals decl) ?ns (enter_frame tglobal 0 t)"
   have step: "\<kappa>, T \<turnstile> (gcom.Call i dst p actuals, t, tfs)
       \<rightarrow>\<^sub>t (Seq (body decl) (Restore i), ?t', TFrame t dst p # tfs)"
     by (rule tstep.TCall) (use T Call.hyps(2,3) in simp_all)
+  have ns: "map2 (\<lambda>x. tconv \<kappa> (Some x)) (formals decl) vals = ?ns"
+    unfolding vals[symmetric] by (simp add: zip_map2 comp_def case_prod_beta)
   have "rsr p ?t' callee"
-    unfolding Call.hyps(5) vals by (rule rsr_bind_formals[OF rsr_enter[OF Call.prems(2)] fok])
+    unfolding Call.hyps(5) ns by (rule rsr_bind_formals[OF rsr_enter[OF Call.prems(2)] fok])
   with step sf Call.prems(2,3) bok show ?case
     by (intro exI[of _ ?t'] exI[of _ "TFrame t dst p # tfs"]) simp
 next

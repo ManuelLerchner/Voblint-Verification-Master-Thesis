@@ -88,6 +88,16 @@ next
   then show ?case by (cases vs) simp_all
 qed
 
+text \<open>A semantics without conversion binds each value unchanged.\<close>
+lemma bind_formals_map2_ident [simp]:
+  "bind_formals xs (map2 (\<lambda>_ v. v) xs vs) s = bind_formals xs vs s"
+proof (induction xs arbitrary: vs s)
+  case Nil then show ?case by simp
+next
+  case (Cons y ys)
+  then show ?case by (cases vs) simp_all
+qed
+
 text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
   value, keep the globals, then bind the formals to the actuals evaluated in the
   caller's own state. Which state and which evaluator is all that separates the
@@ -132,9 +142,11 @@ text \<open>
   \<open>rv\<close> is the return slot (Goblint's single \<^verbatim>\<open>return_varinfo\<close>), and \<open>conv\<close> converts a
   value written to a destination, as Goblint converts a stored value to its target's
   declared type. \<open>conv\<close> takes the destination as an option so that the instance without
-  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules of the untyped semantics. Arguments
-  and return values are not converted here: elaboration has already converted them, as
-  CIL does.
+  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules of the untyped semantics. A call
+  converts each actual to its formal, as an assignment converts to its destination, so
+  every entry store holds each formal at its own kind. Elaboration has already
+  converted an actual it produced, as CIL does, and there the conversion changes
+  nothing. A returned value is converted once, to the caller's destination.
 \<close>
 
 locale vimp_sem =
@@ -161,7 +173,8 @@ where
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
              \<Longrightarrow> vals = map (\<lambda>e. ev e s) actuals
-             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state glob s)
+             \<Longrightarrow> callee = bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) vals)
+                           (enter_state glob s)
              \<Longrightarrow> gpstep \<Pi> (Call i dst p actuals, s, frs)
                    (Seq (body decl) (Restore i), callee, Frame s dst # frs)"
 | Special: "special_table p = Some desc
@@ -317,7 +330,9 @@ lemma pstep_Call:
       and "length actuals = length (formals decl)"
       and "distinct (formals decl)"
   shows "gpstep \<Pi> (Call i dst p actuals, s, frs) (Seq (body decl) (Restore i),
-            bind_formals (formals decl) (map (\<lambda>e. ev e s) actuals) (enter_state glob s),
+            bind_formals (formals decl)
+              (map2 (\<lambda>x. conv (Some x)) (formals decl) (map (\<lambda>e. ev e s) actuals))
+              (enter_state glob s),
             Frame s dst # frs)"
   using assms by (rule Call) (rule refl)+
 
@@ -328,7 +343,8 @@ lemma pstep_Call_parameterless [intro]:
 proof -
   have "gpstep \<Pi> (Call i dst p [], s, frs) (Seq (body (\<lparr>formals = [], body = c\<rparr>)) (Restore i),
            bind_formals (formals (\<lparr>formals = [], body = c\<rparr>))
-             (map (\<lambda>e. ev e s) []) (enter_state glob s),
+             (map2 (\<lambda>x. conv (Some x)) (formals (\<lparr>formals = [], body = c\<rparr>)) (map (\<lambda>e. ev e s) []))
+             (enter_state glob s),
            Frame s dst # frs)"
     using assms by (rule pstep_Call) simp_all
   then show ?thesis by simp
@@ -346,8 +362,14 @@ lemma pcompletes_Call:
                    (bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)) t'"
   shows "pcompletes \<G> \<Pi> (Call () dst p actuals) s
            (combine_assign dst (t' ret_var) (combine_env \<G> s t'))"
-  by (rule star.step, rule pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals])
-     (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
+proof -
+  have "\<G>, \<Pi> \<turnstile> (Call () dst p actuals, s, []) \<rightarrow>\<^sub>p
+          (Seq (body decl) (Restore ()),
+           bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s), [Frame s dst])"
+    using pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals] by simp
+  then show ?thesis
+    by (rule star.step) (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
+qed
 
 section \<open>Source-program well-formedness\<close>
 

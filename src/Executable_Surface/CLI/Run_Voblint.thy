@@ -389,12 +389,12 @@ theorem run_voblint_spine:
     and exec: "star (tpstep (kenv_of ds) (typed_ptable p ds))
                  (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
     and has_ctx: "\<And>t. t \<in> typed.gvalid_activation_trace (kenv_of ds) g S
-                   \<Longrightarrow> \<exists>c. typed.gactivation_context_rel adm c\<^sub>0 g t c"
+                   \<Longrightarrow> \<exists>c. typed.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
     and buckets: "\<And>v. (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c')
                    = reaching ds p v"
   shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> typed.gactivation_context_rel adm c\<^sub>0 g t c
+           \<and> typed.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
            \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c
            \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
@@ -411,7 +411,7 @@ proof -
   obtain v stk t c
     where sim: "typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and rep: "typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t"
-      and rel: "typed.gactivation_context_rel adm c\<^sub>0 g t c"
+      and rel: "typed.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
       and mem: "s \<in> typed.gactivation_collect (kenv_of ds) adm c\<^sub>0 g S v c"
     unfolding cfg by blast
   have s: "s \<in> reaching ds p v" using mem buckets[of v] by blast
@@ -438,7 +438,7 @@ theorem run_voblint_call_string_chain:
                  (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
   shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> typed.gactivation_context_rel adm [] g t c
+           \<and> typed.gactivation_context_rel (kenv_of ds) adm [] g t c
            \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm [] g S v c
            \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
@@ -446,7 +446,7 @@ theorem run_voblint_call_string_chain:
            \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (teval c s))
            \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))"
 proof -
-  have has_ctx: "\<exists>c. typed.gactivation_context_rel adm [] g t c"
+  have has_ctx: "\<exists>c. typed.gactivation_context_rel (kenv_of ds) adm [] g t c"
     if "t \<in> typed.gvalid_activation_trace (kenv_of ds) g S" for t
     unfolding adm_def by (rule exI, subst typed.activation_context_rel_of_fun_iff[OF that]) (rule refl)
   have buckets: "(\<Union>c'. typed.gactivation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v"
@@ -471,7 +471,7 @@ theorem run_voblint_entry_state_chain:
                  (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
   shows "\<exists>v stk t c. typed_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> typed.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
-           \<and> typed.gactivation_context_rel adm tmcp_root_ctx g t c
+           \<and> typed.gactivation_context_rel (kenv_of ds) adm tmcp_root_ctx g t c
            \<and> s \<in> typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c
            \<and> (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c')
                = reaching ds p v
@@ -490,7 +490,7 @@ proof -
        (typed_mcp_es.root_query ds p) = Some sol"
     by (auto simp: typed_report_run_def dg_pipeline.root_query_def)
   note solves = typed_mcp_es.solve_c_run(1)[OF this]
-  have has_ctx: "\<exists>c. typed.gactivation_context_rel adm tmcp_root_ctx g t c"
+  have has_ctx: "\<exists>c. typed.gactivation_context_rel (kenv_of ds) adm tmcp_root_ctx g t c"
     if "t \<in> typed.gvalid_activation_trace (kenv_of ds) g S" for t
     using typed_mcp_es.gentry_state_has_context_of_terminates
             [OF typed_cfg_def typed_wf_compile_input[OF wf] solves] that

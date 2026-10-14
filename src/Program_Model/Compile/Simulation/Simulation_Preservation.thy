@@ -222,12 +222,12 @@ lemma csim_call_base:
       and decl: "\<Pi> q = Some decl"
   shows "\<exists>cfg'. star (gcstep g) (v, s, []) cfg'
               \<and> \<Pi>, g, p \<turnstile> (seq_after (Seq (body decl) (Restore i)) afters,
-                          bind_formals (formals decl) (map (\<lambda>e. ev e s) actuals)
+                          bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) (map (\<lambda>e. ev e s) actuals))
                             (enter_state glob s),
                           [Frame s dst]) \<approx> cfg'"
 proof -
   let ?callee =
-    "bind_formals (formals decl) (map (\<lambda>e. ev e s) actuals) (enter_state glob s)"
+    "bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) (map (\<lambda>e. ev e s) actuals)) (enter_state glob s)"
   have spNone: "special_table q = None" by (rule procs_embedded_special_table_none[OF pc decl])
   from cacc obtain n' en E K where comp: "compile \<Pi> p body_p kk n = (n', en, E, K)"
       and Ksub: "K \<subseteq> calls g" by blast
@@ -280,7 +280,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
   from pcall spNone obtain decl where
     qdecl: "\<Pi> q = Some decl"
       and heq: "h' = Seq (body decl) (Restore i)"
-      and seq: "s' = bind_formals (formals decl) (map (\<lambda>e. ev e ss) actuals)
+      and seq: "s' = bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) (map (\<lambda>e. ev e ss) actuals))
                         (enter_state glob ss)"
       and fzeq: "fz = [Frame ss dst]"
     by auto
@@ -290,7 +290,7 @@ proof (induction "(c, s, frs)" "(v, t, stk)" arbitrary: c s frs v t stk src' rul
   obtain cfg' where
     cstar: "star (gcstep g) (vv, ss, []) cfg'"
       and csimr: "\<Pi>, g, p \<turnstile> (seq_after (Seq (body decl) (Restore i)) afters,
-               bind_formals (formals decl) (map (\<lambda>e. ev e ss) actuals)
+               bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) (map (\<lambda>e. ev e ss) actuals))
                  (enter_state glob ss),
                [Frame ss dst]) \<approx> cfg'" by blast
   from csimr have "\<Pi>, g, p \<turnstile> src' \<approx> cfg'" by (simp add: src' heq seq fzeq)

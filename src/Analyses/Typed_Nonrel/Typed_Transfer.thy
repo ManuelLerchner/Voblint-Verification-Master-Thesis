@@ -58,6 +58,26 @@ next
   with teval_in_range_kind[OF False] show ?thesis by simp
 qed
 
+text \<open>Converting an actual that fits its formal changes nothing.\<close>
+
+lemma bind_formals_fit_norm:
+  assumes "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)" and "tstyped \<kappa> t"
+  shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e t) es)) s
+           = bind_formals ps (map (\<lambda>e. teval e t) es) s"
+  using assms(1)
+proof (induction ps arbitrary: es s)
+  case (Cons p ps)
+  show ?case
+  proof (cases es)
+    case (Cons e es')
+    with Cons.prems have fit: "arg_fits \<kappa> p e"
+      and rest: "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es')" by simp_all
+    have "ik_norm (\<kappa> p) (teval e t) = teval e t"
+      by (rule ik_norm_id[OF arg_fits_range[OF fit assms(2)]])
+    with Cons.IH[OF rest] \<open>es = e # es'\<close> show ?thesis by simp
+  qed simp
+qed simp
+
 text \<open>Normalizing an intermediate result changes no later sum or difference at the same
   kind, so an operation that wrapped is inverted exactly by the wrapping inverse.\<close>
 
@@ -581,11 +601,13 @@ qed
 
 lemma tenter_state_sound:
   assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds teval ch t"
-  shows "bind_formals ps (map (\<lambda>e. teval e t) es) (enter_state tglobal t)
+  shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e t) es))
+           (enter_state tglobal t)
            \<in> gamma_tt \<kappa> (tenter_state ps es \<sigma>)"
 proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
   case True
   have ty: "tstyped \<kappa> t" using gamma_tabsD(1)[OF assms(1)] .
+  note norm = bind_formals_fit_norm[OF True ty]
   have frame: "\<And>y. enter_state tglobal t y \<in> numeric_domain_class.gamma (tenter_frame \<sigma> y)"
     using gamma_tabsD(2)[OF assms(1)]
     by (simp add: enter_state_def tenter_frame_def enter_frame_def combine_env_def)
@@ -595,7 +617,7 @@ proof (cases "list_all (\<lambda>(p, e). arg_fits \<kappa> p e) (zip ps es)")
            (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (taeval_ask sem \<kappa> ch e \<sigma>))) ps es)
            (tenter_frame \<sigma>))"
     using fit by (intro gamma_tabsI) blast+
-  with True show ?thesis by (simp add: tenter_state_def)
+  with True show ?thesis by (simp add: tenter_state_def norm)
 qed (simp add: tenter_state_def)
 
 lemma tcombine_sound:

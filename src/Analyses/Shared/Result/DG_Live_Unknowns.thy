@@ -352,7 +352,7 @@ lemma grouted_analysis_from_live_unknowns:
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> glive_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s)
+              (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s)
         \<Longrightarrow> route (pglob p) u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
                  (dg_local (sol_env (pglob p) p (Inl (u, ctx)))))
@@ -361,7 +361,7 @@ lemma grouted_analysis_from_live_unknowns:
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (pglob p) p (Inl (u, ctx)))) (gsol p)
         \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
+                      (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
   shows "grouted_analysis ev rv (pconv p) (pglob p) (analysis_spec (pglob p) p) (\<lambda>d e. pgam p d e) (pcfg p) buffer_key global_of
      (route (pglob p)) Bot (Lifted init_st)
      (place_rg (pglob p) (Lifted init_st))
@@ -413,7 +413,7 @@ next
   have sin: "s \<in> pgam p ?caller (gsol p)"
     using EnterCover(3) by (simp add: sol_global_def)
   have cov: "entry_pairs_cover (\<lambda>d. pgam p d (gsol p)) s
-      (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s)
+      (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s)
       [entry_alt (pglob p) p ?ci ?caller (gsol p)]"
   proof (rule entry_cover[OF solves _ EnterCover(2) sin])
     show "(cont, ctx) \<in> sol_vars (pglob p) p"
@@ -443,7 +443,7 @@ next
   have ce': "entry_alt (pglob p) p ?ci ?caller ?g = (c, e)"
     using ce by (simp add: sol_global_def)
   have sc: "s \<in> pgam p c ?g"
-    and ec: "cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s \<in> pgam p e ?g"
+    and ec: "cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s \<in> pgam p e ?g"
     using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
   have re: "route (pglob p) u ctx e (CallEdge dst pars args) = ctx'"
     using req ce by (simp add: entry_of_def)
@@ -493,7 +493,7 @@ theorem gactivation_collect_sound_live_unknowns:
     and cover_R: "\<And>u ctx dst pars args q cont s ctx'. (u, ctx) \<in> glive_unknowns p
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> ctx' \<in> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-              (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s)
+              (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s)
         \<Longrightarrow> route (pglob p) u ctx
               (entered p (call_info_of (CallEdge dst pars args) q)
                  (dg_local (sol_env (pglob p) p (Inl (u, ctx)))))
@@ -502,7 +502,7 @@ theorem gactivation_collect_sound_live_unknowns:
         \<Longrightarrow> (u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)
         \<Longrightarrow> s \<in> pgam p (dg_local (sol_env (pglob p) p (Inl (u, ctx)))) (gsol p)
         \<Longrightarrow> adm u ctx (call_info_of (CallEdge dst pars args) q) s
-                      (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
+                      (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
   shows "ctx_sem.gactivation_collect ev rv (pconv p) (pglob p) (adm) (root_ctx) (pcfg p) (pinit p) v ctx
            \<subseteq> pgam p (reader (pglob p) p (Inl (v, ctx))) (gsol p)"
 proof -
@@ -548,7 +548,7 @@ proof (rule gactivation_collect_sound_live_unknowns[OF wf solves])
   assume "(u, ctx) \<in> glive_unknowns p"
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
     and Rc: "ctx' \<in> context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-               (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s)"
+               (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s)"
   show "route (pglob p) u ctx
           (entered p (call_info_of (CallEdge dst pars args) q)
              (dg_local (sol_env (pglob p) p (Inl (u, ctx)))))
@@ -556,11 +556,11 @@ proof (rule gactivation_collect_sound_live_unknowns[OF wf solves])
     using Rc
     by (simp add:
       route_const[of _ _ _ _
-        "cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s"])
+        "cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s"])
 next
   fix u ctx dst pars args q cont and s :: "'vr \<Rightarrow> int"
   show "context_policy_of_fun ctx_fun u ctx (call_info_of (CallEdge dst pars args) q) s
-                 (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
+                 (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
     by simp
 qed
 
@@ -664,7 +664,7 @@ proof (rule grouted_analysis_from_live_unknowns[OF wf solves])
     and "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls (pcfg p)"
     and Rc: "ctx' \<in> admitted_contexts (pglob p) p u ctx
                (call_info_of (CallEdge dst pars args) q) s
-               (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s)"
+               (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s)"
   let ?ci = "call_info_of (CallEdge dst pars args) q"
   let ?caller = "dg_local (sol_env (pglob p) p (Inl (u, ctx)))"
   let ?ent = "entered p ?ci ?caller"
@@ -686,7 +686,7 @@ next
       glive_unknowns_sub by blast
   show "admitted_contexts (pglob p) p u ctx
                  (call_info_of (CallEdge dst pars args) q) s
-                 (cfg_transfer_sem.gcall_enter ev (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
+                 (cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s) \<noteq> {}"
     unfolding admitted_contexts_alt
     by (rule routed_entry_context_rel_total)
        (use entry_cover[OF solves cont ce sin]
@@ -736,7 +736,7 @@ lemma gentry_state_has_context_of_terminates:
   assumes wf: "gwf_compile_input vars rv (pglob p) (ptab p) (pprocs p)" and solves:
     "terminates (pglob p) p"
     and t: "t \<in> trace_sem.gvalid_activation_trace ev rv (pconv p) (pglob p) (pcfg p) (pinit p)"
-  shows "\<exists>c. ctx_sem.gactivation_context_rel ev (pglob p) (admitted_contexts (pglob p) p)
+  shows "\<exists>c. ctx_sem.gactivation_context_rel ev (pconv p) (pglob p) (admitted_contexts (pglob p) p)
                root_ctx (pcfg p) t c"
 proof -
   interpret live: grouted_analysis ev rv "pconv p" "pglob p" "analysis_spec (pglob p) p"

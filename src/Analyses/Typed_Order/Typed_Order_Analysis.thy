@@ -319,13 +319,15 @@ lemma gamma_ord_lift_mono: "x \<le> y \<Longrightarrow> gamma_ord_lift \<kappa> 
 
 lemma ord_enter_sound:
   assumes "s \<in> gamma_ord_lift \<kappa> d"
-  shows "bind_formals ps (map (\<lambda>e. teval e s) es) (enter_state tglobal s)
+  shows "bind_formals ps (map2 (\<lambda>x. ik_norm (\<kappa> x)) ps (map (\<lambda>e. teval e s) es))
+           (enter_state tglobal s)
            \<in> gamma_ord \<kappa> (ord_enter \<kappa> ps es d)"
 proof -
   have "tstyped \<kappa> s" if "ord_typed d"
     using assms that by (auto simp: ord_typed_def split: lifted.splits order_rel.splits)
   then show ?thesis
     using tstyped_bind_fits[OF _ _ tstyped_enter_state, of \<kappa> ps es s s]
+      bind_formals_fit_norm[of \<kappa> ps es s]
     by (auto simp: ord_enter_def)
 qed
 

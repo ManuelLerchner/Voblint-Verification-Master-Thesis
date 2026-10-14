@@ -1,0 +1,39 @@
+// PARAM: --analysis interval --signed-overflow assume_wraparound --context call-string --context-depth 1
+// A call converts each argument to its formal's kind, as an assignment converts
+// to its destination: 200 becomes -56 at i8, -1 becomes 4294967295 at u32, and
+// a global passed to a narrower formal wraps the same way. A recursive call
+// converts at every level, so its formal stays within the formal's kind.
+//
+// Run under --signed-overflow assume_wraparound: the checks pin wrapped
+// values. Under the default assume_top a conversion outside its kind gives
+// Interval the kind's top (27-signed-overflow/known-imprecision/01).
+global i32 g;
+fun i32 narrow(i8 n) {
+  return n;
+}
+fun i64 widen(u32 n) {
+  return n;
+}
+fun i32 down(u8 n, i32 d) {
+  i32 r;
+  if (d <= 0) {
+    return n;
+  }
+  r = down(n + 255, d - 1);
+  return r;
+}
+fun main() {
+  i32 a;
+  i64 b;
+  i32 c;
+  a = narrow(200);
+  __voblint_check(a == -56); // PROVED
+  b = widen(-1);
+  __voblint_check(b == 4294967295); // PROVED
+  g = 300;
+  a = narrow(g);
+  __voblint_check(a == 44); // PROVED
+  c = down(1, 2);
+  __voblint_check(0 <= c); // PROVED
+  __voblint_check(c <= 255); // PROVED
+}
