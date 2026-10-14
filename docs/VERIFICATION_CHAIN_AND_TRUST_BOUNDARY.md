@@ -179,9 +179,12 @@ call `x = __voblint_nondet_int()` at the declaration's position. `tpstep_declare
 (`Typed_CFG.thy`) proves that this call may leave any value of `x`'s kind in `x`
 and changes nothing else, and `tpstep_declare_forgets` that its outcomes do not
 depend on what `x` held before: the `0` a call entry writes, or an earlier
-iteration's or activation's value. That the parser places every use of a local
-after its declaration is trusted; its scope check rejects a use before the
-declaration, and no theorem covers it.
+iteration's or activation's value. Block scoping is resolved in the parser
+(`cli/frontend/vimp_scope.ml`): a declaration that shadows a name gets a fresh
+identity `x#2`, `x#3`, ..., and every use names the innermost declaration in
+scope. That this resolution follows C's scoping, and that every use of a local
+follows its declaration, is trusted; the parser rejects a use before the
+declaration or outside its scope, and no theorem covers it.
 
 Arithmetic diagnostics are still placed by position lookup outside the proof.
 `run_voblint_arithmetic_safe` is stated at a CFG node; the CLI finds a
