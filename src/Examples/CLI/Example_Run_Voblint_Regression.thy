@@ -23,7 +23,8 @@ definition demo_prog :: imp_prog where
 
 definition demo_conf :: "typed_domain list \<Rightarrow> voblint_conf" where
   "demo_conf as = \<lparr>conf_analyses = as, conf_context = Typed_Call_String 0,
-     conf_globals = Globals_Warrow, conf_sem = default_sem_conf\<rparr>"
+     conf_globals = Globals_Warrow, conf_program_globals = Program_Globals_Flow_Sensitive,
+     conf_sem = default_sem_conf\<rparr>"
 
 definition run_checks :: "typed_domain list \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> contextual_verdict) list option"
   where

@@ -186,7 +186,6 @@ let show_kind = function
   | I64 -> "i64"
   | U64 -> "u64"
 
-
 (* A variable by its own name: the report qualifies a local by its procedure. *)
 let show_var x =
   let l = var_label x in
@@ -195,10 +194,19 @@ let show_var x =
   | None -> l
 
 let show_aop = function
-  | AAdd -> "+" | ASub -> "-" | AMul -> "*" | ADiv -> "/" | AMod -> "%"
+  | AAdd -> "+"
+  | ASub -> "-"
+  | AMul -> "*"
+  | ADiv -> "/"
+  | AMod -> "%"
 
 let show_cop = function
-  | CLt -> "<" | CLe -> "<=" | CGt -> ">" | CGe -> ">=" | CEq -> "==" | CNe -> "!="
+  | CLt -> "<"
+  | CLe -> "<="
+  | CGt -> ">"
+  | CGe -> ">="
+  | CEq -> "=="
+  | CNe -> "!="
 
 (* A typed expression in the same compact form, its kinds left out but for a
    conversion's. *)
@@ -227,6 +235,7 @@ let report domain prog =
             ( [ domain ],
               Typed_Call_String (mk_nat 0),
               Globals_Warrow,
+              Program_Globals_Flow_Sensitive,
               default_sem_conf,
               () ))
          [] prog)
@@ -254,9 +263,11 @@ let show_edge_action = function
   | EA_Assign (x, a) -> show_var x ^ " := " ^ show_texp_compact a
   | EA_Special (Nondet_Int, x) -> show_var x ^ " := __voblint_nondet_int()"
   | EA_Special (Min (a, b), x) ->
-      show_var x ^ " := min(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+      show_var x ^ " := min(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b
+      ^ ")"
   | EA_Special (Max (a, b), x) ->
-      show_var x ^ " := max(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b ^ ")"
+      show_var x ^ " := max(" ^ show_texp_compact a ^ ", " ^ show_texp_compact b
+      ^ ")"
   | EA_Body p -> "body(" ^ p ^ ")"
   | EA_Assume b -> "[" ^ show_texp_compact b ^ "]"
   | EA_AssumeNot b -> "![" ^ show_texp_compact b ^ "]"
@@ -268,7 +279,9 @@ let show_call_action = function
   | CallEdge (None, _, es) ->
       "call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
   | CallEdge (Some x, _, es) ->
-      show_var x ^ " := call(" ^ String.concat "" (List.map show_texp_compact es) ^ ")"
+      show_var x ^ " := call("
+      ^ String.concat "" (List.map show_texp_compact es)
+      ^ ")"
 
 let show_intra_list es =
   String.concat "; "
@@ -337,26 +350,26 @@ let () =
   let actual_proc_demo_intra =
     show_intra_list (tcfg_intra_edges proc_demo_cfg)
   in
-  let actual_proc_demo_calls = show_calls_list (tcfg_call_edges proc_demo_cfg) in
+  let actual_proc_demo_calls =
+    show_calls_list (tcfg_call_edges proc_demo_cfg)
+  in
   let actual_no_call_global_self_ref_interval =
     report Typed_Interval no_call_global_self_ref_prog
   in
   let actual_one_call_interval = report Typed_Interval one_call_prog in
   let ok_sign =
-    check_case ~line:__LINE__ "Sign demo report" actual_sign
-      expected_sign
+    check_case ~line:__LINE__ "Sign demo report" actual_sign expected_sign
   in
   let ok_interval =
     check_case ~line:__LINE__ "Interval demo report" actual_interval
       expected_interval
   in
   let ok_proc_demo_sign =
-    check_case ~line:__LINE__ "Sign proc_demo report"
-      actual_proc_demo_sign expected_proc_demo_sign
+    check_case ~line:__LINE__ "Sign proc_demo report" actual_proc_demo_sign
+      expected_proc_demo_sign
   in
   let ok_proc_demo_interval =
-    check_case ~line:__LINE__
-      "Interval proc_demo report"
+    check_case ~line:__LINE__ "Interval proc_demo report"
       actual_proc_demo_interval expected_proc_demo_interval
   in
   let ok_proc_demo_intra =

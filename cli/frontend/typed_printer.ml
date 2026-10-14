@@ -25,7 +25,10 @@ let cop_text = function
 (* A local prints by its own name, as the source wrote it; its label qualifies it by
    its procedure. *)
 let var_name x =
-  match x with C.ScopedId (_, n) -> n | C.ReturnId _ | C.ReturnVar -> "return" | C.GlobalId n -> n
+  match x with
+  | C.ScopedId (_, n) -> n
+  | C.ReturnId _ | C.ReturnVar -> "return"
+  | C.GlobalId n -> n
 
 let rec texp_at ctx = function
   | C.TN (_, n) -> paren ctx 8 (Vimp_printer.string_of_int_lit n)

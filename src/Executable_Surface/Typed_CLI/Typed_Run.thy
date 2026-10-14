@@ -44,17 +44,26 @@ definition verdict_result :: "contextual_verdict \<Rightarrow> check_result" whe
 datatype typed_context = Typed_Call_String nat | Typed_Entry_State
 
 text \<open>
+  Where a program's globals live: in every point's own state, flow-sensitively, or
+  each at its own global unknown, as a flow-insensitive value read only by the
+  edges that mention it.
+\<close>
+
+datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive
+
+text \<open>
   The options of a run as one value, in the role of Goblint's configuration tree: the
   activated analyses (\<^verbatim>\<open>ana.activated\<close>), the context policy, the update rule of the
-  globals, and the options the domains read (\<^verbatim>\<open>sem\<close>). Goblint reads an option from its
-  global tree where it is used; here the value is passed down, and a further option is a
-  further field.
+  globals, where the program's globals live, and the options the domains read
+  (\<^verbatim>\<open>sem\<close>). Goblint reads an option from its global tree where it is used; here the
+  value is passed down, and a further option is a further field.
 \<close>
 
 record voblint_conf =
   conf_analyses :: "typed_domain list"
   conf_context :: typed_context
   conf_globals :: globals_rule
+  conf_program_globals :: program_globals
   conf_sem :: sem_conf
 
 subsection \<open>Soundness\<close>

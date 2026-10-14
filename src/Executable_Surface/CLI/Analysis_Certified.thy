@@ -473,42 +473,20 @@ text \<open>
   the collecting semantics, because the solve terminated, which the answer carries.
 \<close>
 
-text \<open>
-  Each placement registers entry-state routing once, so the contexts an answered run
-  admits are read off the registration its placement selects.
-\<close>
-
 definition mcp_es_admitted where
-  "mcp_es_admitted pg as r p = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.admitted_contexts as r (declared_global p) p
-   | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.admitted_contexts as r (declared_global p) p)"
+  "mcp_es_admitted pg as r p = mcp_es_rule.admitted_contexts as r (declared_global p) p"
 
 lemma run_voblint_legacy_entry_state_terminates:
   assumes "run_voblint_legacy (Analysis_Config as r Ctx_EntryState pg) p = Analysed res"
-  shows "case pg of
-           Program_Globals_Flow_Sensitive \<Rightarrow> mcp_es_rule.terminates as r (declared_global p) p
-         | Program_Globals_Flow_Insensitive \<Rightarrow> mcp_split_es_rule.terminates as r (declared_global p) p"
+  shows "mcp_es_rule.terminates as r (declared_global p) p"
 proof -
   from assms have rep: "analysis_report_of (Analysis_Config as r Ctx_EntryState pg) p = Some res"
     by (rule run_voblint_legacy_AnalysedE)
-  show ?thesis
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with rep obtain sol where
-      "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
-         (mcp_es_rule.root_query p) = Some sol"
-      by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-    then show ?thesis
-      using Program_Globals_Flow_Sensitive by (simp add: mcp_es_rule.solve_c_run(1))
-  next
-    case Program_Globals_Flow_Insensitive
-    with rep obtain sol where
-      "TD_side_rule_Interp_solve_c r (mcp_split_es_rule.equations as (declared_global p) p)
-         (mcp_split_es_rule.root_query p) = Some sol"
-      by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-    then show ?thesis
-      using Program_Globals_Flow_Insensitive by (simp add: mcp_split_es_rule.solve_c_run(1))
-  qed
+  then obtain sol where
+    "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
+       (mcp_es_rule.root_query p) = Some sol"
+    by (auto simp: dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
+  then show ?thesis by (simp add: mcp_es_rule.solve_c_run(1))
 qed
 
 theorem run_voblint_legacy_entry_state_chain:
@@ -534,29 +512,11 @@ proof -
   note terminates = run_voblint_legacy_entry_state_terminates [OF ans]
   have has_ctx: "\<exists>c. activation_context_rel \<G> adm mcp_root_ctx g t c"
     if "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>" for t
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with terminates show ?thesis
-      using mcp_es_rule.entry_state_has_context_of_terminates [OF wf] that
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  next
-    case Program_Globals_Flow_Insensitive
-    with terminates show ?thesis
-      using mcp_split_es_rule.entry_state_has_context_of_terminates [OF wf] that
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  qed
+    using terminates mcp_es_rule.entry_state_has_context_of_terminates [OF wf] that
+    unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   have buckets: "(\<Union>c'. \<A>\<^bsub>\<G>,adm,mcp_root_ctx,g,S\<^esub> v c') = \<C>\<^bsub>\<G>,g,S\<^esub> v" for v
-  proof (cases pg)
-    case Program_Globals_Flow_Sensitive
-    with terminates show ?thesis
-      using mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  next
-    case Program_Globals_Flow_Insensitive
-    with terminates show ?thesis
-      using mcp_split_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
-      unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
-  qed
+    using terminates mcp_es_rule.entry_state_node_collect_eq_Union_of_terminates [OF wf]
+    unfolding G_def g_def S_def R_def mcp_es_admitted_def by simp
   show ?thesis
     unfolding G_def Pi_def g_def S_def
     by (rule run_voblint_legacy_spine [OF s0 [unfolded S_def G_def] run [unfolded G_def Pi_def] ans

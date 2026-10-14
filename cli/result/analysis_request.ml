@@ -124,8 +124,7 @@ let sem_of_settings settings =
     | Some spec -> setting settings spec
     | None -> invalid_arg ("Analysis_request.sem_of_settings: " ^ path)
   in
-  C.Sem_conf_ext
-    (signed_overflow_of_name (get "sem.int.signed_overflow"), ())
+  C.Sem_conf_ext (signed_overflow_of_name (get "sem.int.signed_overflow"), ())
 
 (* A request as either entry receives it: names, not constructors. The native
    CLI reads it off its flags, the browser off the page's selections.
@@ -147,7 +146,6 @@ type request_error =
   | Unknown_globals of string
   | Unknown_analysis of string
   | Unknown_program_globals of string
-  | Unsupported_program_globals
   | Refinement_without_int
   | Negative_narrow_bound
   | Narrow_bound_without_rule
@@ -159,6 +157,7 @@ type resolved = {
   domains : C.typed_domain list option;
   rule : C.globals_rule;
   mode : C.typed_context;
+  placement : C.program_globals;
   sem : unit C.sem_conf_ext;
 }
 
@@ -226,18 +225,16 @@ let resolve (r : request) : (resolved, request_error) result =
   let* mode =
     Result.map_error (fun e -> Context e) (context_of_name r.context r.depth)
   in
-  (* The typed analyses keep every global in a point's own state. *)
-  let* () =
+  let* placement =
     match program_globals_of_name r.program_globals with
-    | Some C.Program_Globals_Flow_Sensitive -> Ok ()
-    | Some C.Program_Globals_Flow_Insensitive -> Error Unsupported_program_globals
+    | Some placement -> Ok placement
     | None -> Error (Unknown_program_globals r.program_globals)
   in
-  Ok { domains; rule; mode; sem = sem_of_settings r.settings }
+  Ok { domains; rule; mode; placement; sem = sem_of_settings r.settings }
 
 (* The configuration run_voblint receives, one value for every option. *)
-let conf ~domains ~rule ~context ~sem =
-  C.Voblint_conf_ext (domains, context, rule, sem, ())
+let conf ~domains ~rule ~context ~placement ~sem =
+  C.Voblint_conf_ext (domains, context, rule, placement, sem, ())
 
 (* The message of the one abort in the generated analyzer: a chain of nested
    queries deeper than query_depth (MCP_Spec.ask_rec). Logically such a query
@@ -278,9 +275,13 @@ let options_usage () =
        (fun o ->
          let names =
            (match o.flag with
-           | Some f -> [ Printf.sprintf "  %s %s" f (String.concat "|" o.values) ]
-           | None -> [])
-           @ [ Printf.sprintf "  --set %s %s" o.path (String.concat "|" o.values) ]
+             | Some f ->
+                 [ Printf.sprintf "  %s %s" f (String.concat "|" o.values) ]
+             | None -> [])
+           @ [
+               Printf.sprintf "  --set %s %s" o.path
+                 (String.concat "|" o.values);
+             ]
          in
          String.concat "\n" names ^ "\n"
          ^ String.concat ""

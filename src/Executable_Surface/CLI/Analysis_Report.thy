@@ -546,123 +546,55 @@ proof (cases config)
   show ?thesis
   proof (cases ctx)
     case Ctx_None
+    from some obtain sol where
+      sol: "TD_side_rule_Interp_solve_c r (mcp_rule.equations as (declared_global p) p)
+              (mcp_rule.root_query p) = Some sol"
+      and res: "res = vimp_report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
+                  (mcp_classify (activation as))
+                  (mcp_rule.solved_run_of as (declared_global p) p sol) p"
+      by (auto simp: Analysis_Config Ctx_None dg_pipeline.root_query_def
+          mcp_wrappers mcp_place_defs)
+    note run = mcp_rule.solve_c_run[OF sol]
     show ?thesis
-    proof (cases pg)
-      case Program_Globals_Flow_Sensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_rule.equations as (declared_global p) p)
-                (mcp_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
-                    (mcp_classify (activation as))
-                    (mcp_rule.solved_run_of as (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_None Program_Globals_Flow_Sensitive
-          dg_pipeline.root_query_def
-            mcp_wrappers mcp_place_defs)
-      note run = mcp_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ _ _ refl])
-           (use mcp_rule_table[OF wf run(1)] mcp_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def inj_def\<close>)
-    next
-      case Program_Globals_Flow_Insensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_split_rule.equations as (declared_global p) p)
-                (mcp_split_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (\<lambda>_. Key_List []) (\<lambda>_. Report_Unit)
-                    (mcp_classify (activation as))
-                    (mcp_split_rule.solved_run_of as (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_None Program_Globals_Flow_Insensitive
-          dg_pipeline.root_query_def
-            mcp_wrappers mcp_place_defs)
-      note run = mcp_split_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ _ _ refl])
-           (use mcp_split_rule_table[OF wf run(1)]
-              mcp_split_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def inj_def\<close>)
-    qed
+      unfolding res run(2)
+      by (rule report_of_sound[OF _ _ _ _ refl])
+         (use mcp_rule_table[OF wf run(1)] mcp_rule.vars_finite_of_terminates[OF run(1)] in
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
+              dg_pipeline.sol_vars_def inj_def\<close>)
   next
     case Ctx_EntryState
+    from some obtain sol where
+      sol: "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
+              (mcp_es_rule.root_query p) = Some sol"
+      and res: "res = vimp_report_of config (entry_ctx_key (activation as)) Report_Entry
+                  (mcp_classify (activation as))
+                  (mcp_es_rule.solved_run_of as (declared_global p) p sol) p"
+      by (auto simp: Analysis_Config Ctx_EntryState dg_pipeline.root_query_def mcp_wrappers
+          mcp_place_defs)
+    note run = mcp_es_rule.solve_c_run[OF sol]
     show ?thesis
-    proof (cases pg)
-      case Program_Globals_Flow_Sensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_es_rule.equations as (declared_global p) p)
-                (mcp_es_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (entry_ctx_key (activation as)) Report_Entry
-                    (mcp_classify (activation as))
-                    (mcp_es_rule.solved_run_of as (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Sensitive
-            dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-      note run = mcp_es_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
-           (use mcp_es_rule_table[OF wf run(1)] mcp_es_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
-    next
-      case Program_Globals_Flow_Insensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_split_es_rule.equations as (declared_global p) p)
-                (mcp_split_es_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (entry_ctx_key (activation as)) Report_Entry
-                    (mcp_classify (activation as))
-                    (mcp_split_es_rule.solved_run_of as (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_EntryState Program_Globals_Flow_Insensitive
-            dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-      note run = mcp_split_es_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
-           (use mcp_split_es_rule_table[OF wf run(1)]
-              mcp_split_es_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
-    qed
+      unfolding res run(2)
+      by (rule report_of_sound[OF _ _ inj_entry_ctx_key _ refl])
+         (use mcp_es_rule_table[OF wf run(1)] mcp_es_rule.vars_finite_of_terminates[OF run(1)] in
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
+              dg_pipeline.sol_vars_def\<close>)
   next
     case (Ctx_CallString k)
+    from some obtain sol where
+      sol: "TD_side_rule_Interp_solve_c r (mcp_cs_rule.equations as k (declared_global p) p)
+              (mcp_cs_rule.root_query p) = Some sol"
+      and res: "res = vimp_report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
+                  (mcp_classify (activation as))
+                  (mcp_cs_rule.solved_run_of as k (declared_global p) p sol) p"
+      by (auto simp: Analysis_Config Ctx_CallString dg_pipeline.root_query_def mcp_wrappers
+          mcp_place_defs)
+    note run = mcp_cs_rule.solve_c_run[OF sol]
     show ?thesis
-    proof (cases pg)
-      case Program_Globals_Flow_Sensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_cs_rule.equations as k (declared_global p) p)
-                (mcp_cs_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
-                    (mcp_classify (activation as))
-                    (mcp_cs_rule.solved_run_of as k (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Sensitive
-            dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-      note run = mcp_cs_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
-           (use mcp_cs_rule_table[OF wf run(1)] mcp_cs_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
-    next
-      case Program_Globals_Flow_Insensitive
-      from some obtain sol where
-        sol: "TD_side_rule_Interp_solve_c r (mcp_split_cs_rule.equations as k (declared_global p) p)
-                (mcp_split_cs_rule.root_query p) = Some sol"
-        and res: "res = vimp_report_of config (\<lambda>ctx. Key_List (map Key_Node ctx)) Report_Call_String
-                    (mcp_classify (activation as))
-                    (mcp_split_cs_rule.solved_run_of as k (declared_global p) p sol) p"
-        by (auto simp: Analysis_Config Ctx_CallString Program_Globals_Flow_Insensitive
-            dg_pipeline.root_query_def mcp_wrappers mcp_place_defs)
-      note run = mcp_split_cs_rule.solve_c_run[OF sol]
-      show ?thesis
-        unfolding res run(2)
-        by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
-           (use mcp_split_cs_rule_table[OF wf run(1)]
-              mcp_split_cs_rule.vars_finite_of_terminates[OF run(1)] in
-             \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
-                dg_pipeline.sol_vars_def\<close>)
-    qed
+      unfolding res run(2)
+      by (rule report_of_sound[OF _ _ inj_call_string_key _ refl])
+         (use mcp_cs_rule_table[OF wf run(1)] mcp_cs_rule.vars_finite_of_terminates[OF run(1)] in
+           \<open>simp_all add: Analysis_Config finite_solved_table_def dg_pipeline.result_def
+              dg_pipeline.sol_vars_def\<close>)
   qed
 qed
 

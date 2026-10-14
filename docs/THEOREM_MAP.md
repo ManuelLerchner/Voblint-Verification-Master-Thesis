@@ -72,9 +72,8 @@ policy and a placement of program globals. An activation list that is empty or r
 `Invalid_Activation`; a program that fails the well-formedness check answers
 `Malformed_Program`. Every other combination is check-producing.
 `solved_table` hands the table of the combined state's rule-parametric
-registration for the chosen policy and placement (`mcp_rule`, `mcp_es_rule`,
-`mcp_cs_rule`, or their flow-insensitive counterparts `mcp_split_rule`,
-`mcp_split_es_rule`, `mcp_split_cs_rule`)
+registration for the chosen policy and placement (`typed_mcp`, `typed_mcp_es`, or
+their flow-insensitive counterparts `typed_mcp_split`, `typed_mcp_split_es`)
 to `run_result_of`, so `res_checks` is `result_checks_of (classify_checks_verdicts ...)`
 and the endpoint's check argument applies: every distinct nonempty list over the
 6 analyses x 5 rules x 3 context policies x 2 placements, the call string at every bound `k`,

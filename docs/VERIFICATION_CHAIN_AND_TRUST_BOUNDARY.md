@@ -38,9 +38,10 @@ interprets it once, parametric in its refinement mode.
 `state_dg_spec_contract` turns that into `analysis_contract` for
 the whole-state specification each shipped domain provides. Under
 flow-insensitive program globals the analyzer wraps the combined state's
-specification in the keyed lifter `keyed_split_spec`, one global unknown per
-declared global, whose contract is `keyed_split_contract`; `mcp_keyed_dg_analysis`
-discharges its carrier laws for the combined state.
+specification in the keyed lifter `gkeyed_split_spec`, one global unknown per
+declared global, whose contract is `gkeyed_split_contract`; `typed_mcp_keyed`
+(`MCP_Split.thy`) discharges its carrier laws for the combined typed state. A global
+the program does not declare stays in each point's own state.
 
 Guards go through `branch_lifted` (`Backward_Domain.thy`): a forward feasibility
 gate ahead of backward narrowing by `bfilter`, with a definite contradiction

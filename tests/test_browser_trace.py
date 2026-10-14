@@ -159,14 +159,7 @@ SHARED_JOIN = (
     ("placement", "exact"),
     [
         ("flow-sensitive", "PROVED"),
-        pytest.param(
-            "flow-insensitive",
-            "UNKNOWN",
-            marks=pytest.mark.skip(
-                reason="flow-insensitive program globals are not yet supported "
-                "by the typed analyzer"
-            ),
-        ),
+        ("flow-insensitive", "UNKNOWN"),
     ],
 )
 def test_the_placement_reaches_the_analyzer(placement, exact):

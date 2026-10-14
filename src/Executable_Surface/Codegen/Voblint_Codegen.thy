@@ -177,7 +177,7 @@ export_code
   cfg_entry typed_cfg tcfg_intra_edges tcfg_call_edges tcfg_points
 
   \<comment> \<open>Ask: the request's options, after Goblint's configuration tree\<close>
-  voblint_conf_ext conf_analyses conf_context conf_globals conf_sem
+  voblint_conf_ext conf_analyses conf_context conf_globals conf_program_globals conf_sem
   Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
   Typed_Call_String Typed_Entry_State
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin Globals_Bounded_Narrowing

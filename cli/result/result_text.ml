@@ -92,7 +92,8 @@ let section_lines ?names (label, section) =
   (match section with
   | Store bindings ->
       List.filter_map
-        (fun (x, v) -> if keep x then Some ("  " ^ display x ^ "=" ^ v) else None)
+        (fun (x, v) ->
+          if keep x then Some ("  " ^ display x ^ "=" ^ v) else None)
         bindings
   | Whole v -> [ "  " ^ v ])
 
@@ -103,10 +104,6 @@ let context_label = function
   | C.Context_Call_String points ->
       "call-string=" ^ String.concat " " (List.map point_name points)
 
-(* The typed analyses keep every global in a point's own state, so a global unknown
-   has no name of its own yet. *)
-let global_name = "global"
-
 (* One row per global unknown: its name, then each active analysis's part of the state
    it holds, or [None] where it holds none. A seed is named by its procedure and, when a
    run has several contexts, by the context it was entered at. *)
@@ -116,7 +113,7 @@ let global_sections result =
     (fun g ->
       let key =
         match C.global_unknown g with
-        | C.Global_Named () -> "global " ^ global_name
+        | C.Global_Named x -> "global " ^ C.var_label x
         | C.Global_Seed (f, None) -> "enter " ^ f
         | C.Global_Seed (f, Some i) -> (
             match contexts.(int_of_nat i) with
@@ -144,8 +141,10 @@ let var_text x = display (C.var_label x)
 
 let special_text dst = function
   | C.Nondet_Int -> dst ^ " := __voblint_nondet_int()"
-  | C.Min (a, b) -> Printf.sprintf "%s := min(%s, %s)" dst (exp_text a) (exp_text b)
-  | C.Max (a, b) -> Printf.sprintf "%s := max(%s, %s)" dst (exp_text a) (exp_text b)
+  | C.Min (a, b) ->
+      Printf.sprintf "%s := min(%s, %s)" dst (exp_text a) (exp_text b)
+  | C.Max (a, b) ->
+      Printf.sprintf "%s := max(%s, %s)" dst (exp_text a) (exp_text b)
 
 let action_text = function
   | C.EA_Nop -> "nop"

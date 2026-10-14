@@ -127,12 +127,8 @@ def test_one_call_trace(name, trace_args):
 
 SHARED_GLOBAL = "tests/solver-trace/shared-global.vimp"
 SHARED_ARGS = [*ARGS, "--program-globals", "flow-insensitive"]
-FLOW_INSENSITIVE_PENDING = pytest.mark.skip(
-    reason="flow-insensitive program globals are not yet supported by the typed analyzer"
-)
 
 
-@FLOW_INSENSITIVE_PENDING
 @pytest.mark.parametrize(
     "name, trace_args",
     [

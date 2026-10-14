@@ -35,14 +35,16 @@ let usage =
   "voblint --analysis sign|interval|int|parity|congruence|order [--context \
    none|entry-state|call-string] [--context-depth K] [--globals \
    join|per-origin|warrow|warrow-per-origin|bounded-narrowing] [--narrow-bound \
-   N] [--int-refinement never|once|fixpoint] [--set PATH VALUE] [--dot] [--timeout SECONDS]\n\
+   N] [--int-refinement never|once|fixpoint] [--set PATH VALUE] [--dot] \
+   [--timeout SECONDS]\n\
   \  [--trace] [--verbose|--compact] [--trace-sys SYS[,...]] [--format \
    text|jsonl]\n\
   \  [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
    voblint --ast FILE.vimp\n\
-   voblint --typed interval|congruence|int|order|sign|parity[,...] [--context none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
+   voblint --typed interval|congruence|int|order|sign|parity[,...] [--context \
+   none|call-string --context-depth K] [--globals RULE] FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -173,10 +175,10 @@ let usage =
   \                             --format and --output implies --trace.\n"
   ^ Analysis_request.options_usage ()
   ^ "  --help                     Show this message.\n\n\
-   Trust boundary: results are sound for the program this file's unverified\n\
-  \  parser actually built, not a guarantee that the parser read your source\n\
-  \  correctly. The analyzer core (parsing excluded) is generated from a\n\
-  \  machine-checked Isabelle/HOL proof."
+     Trust boundary: results are sound for the program this file's unverified\n\
+    \  parser actually built, not a guarantee that the parser read your source\n\
+    \  correctly. The analyzer core (parsing excluded) is generated from a\n\
+    \  machine-checked Isabelle/HOL proof."
 
 module C = Voblint
 module A = Result_text
@@ -604,7 +606,13 @@ let () =
     prerr_endline message;
     exit 1
   in
-  let { Analysis_request.domains = analyses; rule; mode = context; sem } =
+  let {
+    Analysis_request.domains = analyses;
+    rule;
+    mode = context;
+    placement;
+    sem;
+  } =
     match Analysis_request.resolve request with
     | Ok resolved -> resolved
     | Error (Analysis_request.Unknown_option path) ->
@@ -625,10 +633,6 @@ let () =
         fail ("unknown --analysis value: " ^ v)
     | Error (Analysis_request.Unknown_program_globals v) ->
         fail ("unknown --program-globals value: " ^ v)
-    | Error Analysis_request.Unsupported_program_globals ->
-        fail
-          "voblint: --program-globals flow-insensitive is not supported: every \
-           global is kept in a point's own state"
     | Error Analysis_request.Refinement_without_int ->
         fail "voblint: --int-refinement is only valid with --analysis int"
     | Error Analysis_request.Negative_narrow_bound ->
@@ -688,7 +692,7 @@ let () =
         exit 1
   in
   let run_conf () =
-    Analysis_request.conf ~domains ~rule:!globals ~context ~sem
+    Analysis_request.conf ~domains ~rule:!globals ~context ~placement ~sem
   in
   (* --html writes a directory; the other renderings write one document to
      stdout. Asking for both is a contradiction about where output goes, not a
@@ -700,9 +704,8 @@ let () =
     (match answer with
     | C.Analysed result ->
         print_endline
-          (Render_json.result_json
-             ~shared:false
-             0. prog ~stmt_positions ~header_positions ~raw result)
+          (Render_json.result_json ~shared:false 0. prog ~stmt_positions
+             ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
     exit 0
@@ -775,7 +778,8 @@ let () =
                           Render_xml.line;
                           column;
                           verdict = A.verdict_name v;
-                          cond = Typed_printer.string_of_texp (C.check_exp check);
+                          cond =
+                            Typed_printer.string_of_texp (C.check_exp check);
                           message = None;
                         })
                 (Render_text.located_checks (C.res_checks result))

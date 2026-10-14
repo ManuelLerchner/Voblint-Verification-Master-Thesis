@@ -72,23 +72,6 @@ class infinite_key =
 instance String.literal :: infinite_key
   by standard (rule infinite_literal)
 
-text \<open>A key type names program globals by their source name. Untyped keys are the names
-  themselves; a typed key tags the name as a global identity.\<close>
-
-class global_name = infinite_key +
-  fixes global_name :: "vname \<Rightarrow> 'a"
-  assumes inj_global_name: "inj global_name"
-
-instantiation String.literal :: global_name
-begin
-definition global_name_literal :: "vname \<Rightarrow> String.literal" where
-  "global_name_literal x = x"
-instance by standard (simp add: global_name_literal_def inj_def)
-end
-
-lemma global_name_vname [simp]: "(global_name :: vname \<Rightarrow> vname) x = x"
-  by (simp add: global_name_literal_def)
-
 type_synonym ('k, 'a) gdefault_dict = "'a \<times> ('k \<times> 'a) list"
 type_synonym 'a default_dict = "(vname, 'a) gdefault_dict"
 

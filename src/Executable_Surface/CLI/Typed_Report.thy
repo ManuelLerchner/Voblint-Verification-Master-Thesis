@@ -1,14 +1,14 @@
 theory Typed_Report
-  imports Analysis_Report "Voblint_Typed_CLI.Typed_MCP"
+  imports Analysis_Report MCP_Split
 begin
 
 section \<open>The report of a typed run\<close>
 
 text \<open>
   A typed run is reported by the builder a VIMP run uses (\<^const>\<open>report_of\<close>): the typed
-  graph, the declared variables, no global name kept at its own unknown, since the typed
-  analyses keep every variable in a point's own state, the arithmetic obligations of the
-  typed expressions, and the program's procedures.
+  graph, the declared variables, the globals the placement keeps at unknowns of their
+  own, the arithmetic obligations of the typed expressions, and the program's
+  procedures.
 \<close>
 
 subsection \<open>Arithmetic obligations of typed expressions\<close>
@@ -260,21 +260,21 @@ definition typed_vars :: "(var_id, texp) gcfg \<Rightarrow> var_id list" where
 
 type_synonym typed_report =
   "(voblint_conf, tmcp_ctx report_context,
-    var_id, texp, unit, tmcp_val) analysis_report"
+    var_id, texp, var_id, tmcp_val) analysis_report"
 
-definition typed_cs_report ::
-    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> cfg_node list) set
-          \<times> (pp \<times> cfg_node list + (unit, cfg_node list) global_unknown
-              \<Rightarrow> (tmcp_st lifted, tmcp_st lifted) dg_state)
+text \<open>One builder for every context policy and placement: the policy contributes how its
+  contexts are ordered and tagged, the placement which globals it keeps at their own
+  unknowns.\<close>
+
+definition typed_report_of ::
+    "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> var_id list \<Rightarrow> ('c \<Rightarrow> order_key)
+       \<Rightarrow> ('c \<Rightarrow> tmcp_ctx report_context) \<Rightarrow> (var_id, texp, 'c, var_id, tmcp_val) gsolved_run
        \<Rightarrow> typed_report" where
-  "typed_cs_report sem as r k ds p sol =
-     report_of \<lparr>conf_analyses = as, conf_context = Typed_Call_String k, conf_globals = r, conf_sem = sem\<rparr>
-       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-       (tobligation_sites ds p) (tobligation_classify sem ds (tactivation as))
-       (prog_main_name # prog_procs p) (\<lambda>ctx. Key_List (map Key_Node ctx))
-       (if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String)
-       (tmcp_classify sem ds (tactivation as)) (typed_mcp.solved_run_of sem ds as k tglobal p sol)"
+  "typed_report_of conf ds p gs ctx_key ctx_tag sr =
+     report_of conf (typed_vars (typed_cfg p ds)) (typed_cfg p ds) gs
+       (tobligation_sites ds p) (tobligation_classify (conf_sem conf) ds (tactivation (conf_analyses conf)))
+       (prog_main_name # prog_procs p) ctx_key ctx_tag
+       (tmcp_classify (conf_sem conf) ds (tactivation (conf_analyses conf))) sr"
 
 subsection \<open>At entry-state contexts\<close>
 
@@ -357,37 +357,53 @@ proof (rule injI)
   ultimately show "a = b" by (simp add: a b)
 qed
 
-definition typed_es_report ::
-    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> kind_decls \<Rightarrow> imp_prog
-       \<Rightarrow> (pp \<times> tmcp_ctx) set
-          \<times> (pp \<times> tmcp_ctx + (unit, tmcp_ctx) global_unknown
-              \<Rightarrow> (tmcp_st lifted, tmcp_st lifted) dg_state)
-       \<Rightarrow> typed_report" where
-  "typed_es_report sem as r ds p sol =
-     report_of \<lparr>conf_analyses = as, conf_context = Typed_Entry_State, conf_globals = r, conf_sem = sem\<rparr>
-       (typed_vars (typed_cfg p ds)) (typed_cfg p ds) []
-       (tobligation_sites ds p) (tobligation_classify sem ds (tactivation as))
-       (prog_main_name # prog_procs p) tmcp_ctx_key Report_Entry
-       (tmcp_classify sem ds (tactivation as)) (typed_mcp_es.solved_run_of sem ds as tglobal p sol)"
-
 subsection \<open>The run\<close>
 
-text \<open>A typed run solves the equations of the chosen context policy and reports the
-  answer; the logical \<open>None\<close> branch of the executable solve has no report.\<close>
+text \<open>
+  A typed run solves the equations of the chosen context policy and placement and
+  reports the answer; the logical \<open>None\<close> branch of the executable solve has no report.
+  Under flow-insensitive placement each declared global lives at its own unknown.
+\<close>
 
-definition typed_report_run ::
-    "sem_conf \<Rightarrow> typed_domain list \<Rightarrow> globals_rule \<Rightarrow> typed_context \<Rightarrow> kind_decls \<Rightarrow> imp_prog
-       \<Rightarrow> typed_report option" where
-  "typed_report_run sem as r cx ds p =
-     (case cx of
-        Typed_Call_String k \<Rightarrow>
-          map_option (typed_cs_report sem as r k ds p)
-            (TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
-               (cfg_exit (typed_cfg p ds), []))
-      | Typed_Entry_State \<Rightarrow>
-          map_option (typed_es_report sem as r ds p)
-            (TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
-               (cfg_exit (typed_cfg p ds), tmcp_root_ctx)))"
+definition typed_cs_run :: "voblint_conf \<Rightarrow> nat \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_report option" where
+  "typed_cs_run conf k ds p =
+     (let sem = conf_sem conf; as = conf_analyses conf; r = conf_globals conf;
+          key = (\<lambda>ctx. Key_List (map Key_Node ctx));
+          tag = (if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String);
+          root = (cfg_exit (typed_cfg p ds), [])
+      in case conf_program_globals conf of
+           Program_Globals_Flow_Sensitive \<Rightarrow>
+             map_option (\<lambda>sol. typed_report_of conf ds p [] key tag
+                                 (typed_mcp.solved_run_of sem ds as k tglobal p sol))
+               (TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p) root)
+         | Program_Globals_Flow_Insensitive \<Rightarrow>
+             (let gs = tdeclared_globals p
+              in map_option (\<lambda>sol. typed_report_of conf ds p gs key tag
+                                     (typed_mcp_split.solved_run_of sem ds as k gs tglobal p sol))
+                   (TD_side_rule_Interp_solve_c r (typed_mcp_split.equations sem ds as k gs tglobal p)
+                      root)))"
+
+definition typed_es_run :: "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_report option" where
+  "typed_es_run conf ds p =
+     (let sem = conf_sem conf; as = conf_analyses conf; r = conf_globals conf;
+          root = (cfg_exit (typed_cfg p ds), tmcp_root_ctx)
+      in case conf_program_globals conf of
+           Program_Globals_Flow_Sensitive \<Rightarrow>
+             map_option (\<lambda>sol. typed_report_of conf ds p [] tmcp_ctx_key Report_Entry
+                                 (typed_mcp_es.solved_run_of sem ds as tglobal p sol))
+               (TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p) root)
+         | Program_Globals_Flow_Insensitive \<Rightarrow>
+             (let gs = tdeclared_globals p
+              in map_option (\<lambda>sol. typed_report_of conf ds p gs tmcp_ctx_key Report_Entry
+                                     (typed_mcp_split_es.solved_run_of sem ds as gs tglobal p sol))
+                   (TD_side_rule_Interp_solve_c r (typed_mcp_split_es.equations sem ds as gs tglobal p)
+                      root)))"
+
+definition typed_report_run :: "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_report option" where
+  "typed_report_run conf ds p =
+     (case conf_context conf of
+        Typed_Call_String k \<Rightarrow> typed_cs_run conf k ds p
+      | Typed_Entry_State \<Rightarrow> typed_es_run conf ds p)"
 
 subsection \<open>What the builder keeps\<close>
 
@@ -425,128 +441,9 @@ subsection \<open>Soundness\<close>
 
 text \<open>
   A typed report is sound for every typed store that reaches a node from a store whose
-  globals are zero at their kinds. A proved check holds there and a refuted one fails,
-  and the store lies in one of the states the report lists at the node. The executable
-  solve's answer is the run the typed theorems are about (\<open>solve_c_run\<close>); the check
-  column is that run's verdict report, and the listed states are every entry of its
-  table.
+  globals are zero at their kinds.
 \<close>
 
-theorem typed_report_check_sound:
-  assumes wf: "wf_program_compile_input p"
-    and run: "typed_report_run sem as r cx ds p = Some res"
-    and chk: "chk \<in> set (report_checks res)"
-    and s: "s \<in> reaching ds p (check_point chk)"
-  shows "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
-    and "check_verdict chk = Decided Check_Refuted \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
-proof -
-  have "(check_verdict chk = Decided Check_Proved \<longrightarrow> truthy (teval (check_exp chk) s))
-      \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval (check_exp chk) s))"
-  proof (cases cx)
-    case (Typed_Call_String k)
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
-              (typed_mcp.root_query ds p) = Some sol"
-      and res: "res = typed_cs_report sem as r k ds p sol"
-      by (auto simp: typed_report_run_def Typed_Call_String dg_pipeline.root_query_def)
-    note solved = typed_mcp.solve_c_run[OF sol]
-    have "(check_point chk, check_exp chk, check_verdict chk)
-            \<in> set (typed_mcp.verdict_report sem ds as k r tglobal p)"
-      using report_of_check_mem[OF chk[unfolded res typed_cs_report_def]] solved(2)
-      by (simp add: typed_mcp.verdict_report_def)
-    then show ?thesis
-      using typed_mcp_verdict_sound[OF wf solved(1) _ s] by auto
-  next
-    case Typed_Entry_State
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
-              (typed_mcp_es.root_query ds p) = Some sol"
-      and res: "res = typed_es_report sem as r ds p sol"
-      by (auto simp: typed_report_run_def Typed_Entry_State dg_pipeline.root_query_def)
-    note solved = typed_mcp_es.solve_c_run[OF sol]
-    have "(check_point chk, check_exp chk, check_verdict chk)
-            \<in> set (typed_mcp_es.verdict_report sem ds as r tglobal p)"
-      using report_of_check_mem[OF chk[unfolded res typed_es_report_def]] solved(2)
-      by (simp add: typed_mcp_es.verdict_report_def)
-    then show ?thesis
-      using typed_mcp_es_verdict_sound[OF wf solved(1) _ s] by auto
-  qed
-  then show "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
-    and "check_verdict chk = Decided Check_Refuted \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
-    by blast+
-qed
-
-theorem typed_report_state_sound:
-  assumes wf: "wf_program_compile_input p"
-    and run: "typed_report_run sem as r cx ds p = Some res"
-    and s: "s \<in> reaching ds p v"
-  obtains d where "Lifted d \<in> report_states_at res v"
-    and "s \<in> tmcp.act_gamma ds (tactivation as) d"
-proof -
-  have "\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> tmcp.act_gamma ds (tactivation as) d"
-  proof (cases cx)
-    case (Typed_Call_String k)
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
-              (typed_mcp.root_query ds p) = Some sol"
-      and res: "res = typed_cs_report sem as r k ds p sol"
-      by (auto simp: typed_report_run_def Typed_Call_String dg_pipeline.root_query_def)
-    note solved = typed_mcp.solve_c_run[OF sol]
-    let ?r = "typed_mcp.result sem ds as k r tglobal p"
-    from typed_mcp_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v)"
-      by blast
-    obtain d where look: "lookup_table ?r v ctx = Lifted d"
-      and sd: "s \<in> tmcp.act_gamma ds (tactivation as) d"
-    proof (cases "lookup_table ?r v ctx")
-      case Bot
-      with sc show ?thesis by (simp add: typed_mcp.state_at_unfold tmcp.act_gamma_bot)
-    next
-      case (Lifted d)
-      with sc that show ?thesis by (simp add: typed_mcp.state_at_unfold)
-    qed
-    have fin: "finite (covered_keys ?r)"
-      using typed_mcp.vars_finite_of_terminates[OF solved(1)]
-      by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have tbl: "run_table (typed_mcp.solved_run_of sem ds as k tglobal p sol) = ?r"
-      using solved(2) by simp
-    have "Lifted d \<in> report_states_at res v"
-      unfolding res typed_cs_report_def
-      by (rule report_of_state_mem[OF _ inj_call_string_key look[folded tbl]]) (simp only: tbl fin)
-    with sd show ?thesis by blast
-  next
-    case Typed_Entry_State
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
-              (typed_mcp_es.root_query ds p) = Some sol"
-      and res: "res = typed_es_report sem as r ds p sol"
-      by (auto simp: typed_report_run_def Typed_Entry_State dg_pipeline.root_query_def)
-    note solved = typed_mcp_es.solve_c_run[OF sol]
-    let ?r = "typed_mcp_es.result sem ds as r tglobal p"
-    from typed_mcp_es_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v)"
-      by blast
-    obtain d where look: "lookup_table ?r v ctx = Lifted d"
-      and sd: "s \<in> tmcp.act_gamma ds (tactivation as) d"
-    proof (cases "lookup_table ?r v ctx")
-      case Bot
-      with sc show ?thesis by (simp add: typed_mcp_es.state_at_unfold tmcp.act_gamma_bot)
-    next
-      case (Lifted d)
-      with sc that show ?thesis by (simp add: typed_mcp_es.state_at_unfold)
-    qed
-    have fin: "finite (covered_keys ?r)"
-      using typed_mcp_es.vars_finite_of_terminates[OF solved(1)]
-      by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have tbl: "run_table (typed_mcp_es.solved_run_of sem ds as tglobal p sol) = ?r"
-      using solved(2) by simp
-    have "Lifted d \<in> report_states_at res v"
-      unfolding res typed_es_report_def
-      by (rule report_of_state_mem[OF _ inj_tmcp_ctx_key look[folded tbl]]) (simp only: tbl fin)
-    with sd show ?thesis by blast
-  qed
-  then show ?thesis using that by blast
-qed
 text \<open>
   The diagnostics of a typed report are sound for the same stores. A point no
   diagnostic names meets every obligation of the expressions evaluated there at every
@@ -595,9 +492,209 @@ proof -
   qed
 qed
 
+text \<open>
+  Everything a typed report guarantees, in one predicate: it lists a row for every check
+  edge, and at every store that reaches a node the store lies in a state the report
+  lists there, no check there is dead, a proved check holds and a refuted one fails, a
+  point no diagnostic names meets every obligation decided there, and a refuted
+  obligation fails.
+\<close>
+
+definition typed_report_sound :: "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> imp_prog \<Rightarrow> typed_report \<Rightarrow> bool" where
+  "typed_report_sound conf ds p res \<longleftrightarrow>
+     (\<forall>v l e w. (v, EA_Check l e, w) \<in> intra (typed_cfg p ds) \<longrightarrow>
+        (\<exists>chk \<in> set (report_checks res). check_point chk = v \<and> check_label chk = l \<and> check_exp chk = e))
+   \<and> (\<forall>v s. s \<in> reaching ds p v \<longrightarrow>
+        (\<exists>d. Lifted d \<in> report_states_at res v \<and> s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+      \<and> (\<forall>chk \<in> set (report_checks res). check_point chk = v \<longrightarrow>
+           check_verdict chk \<noteq> Dead
+         \<and> (check_verdict chk = Decided Check_Proved \<longrightarrow> truthy (teval (check_exp chk) s))
+         \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval (check_exp chk) s)))
+      \<and> (\<forall>obs ob. (v, obs) \<in> set (tobligation_sites ds p) \<longrightarrow> ob \<in> set obs \<longrightarrow> SAFE res v \<longrightarrow> s \<Turnstile> ob)
+      \<and> (\<forall>d \<in> set (report_diagnostics res). diagnostic_verdict d = Check_Refuted
+           \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d))"
+
+text \<open>
+  A report built from a solved table is sound when the table covers every reaching
+  store, whichever context policy and placement filed it. The table's states are listed
+  and its verdicts reported, so each guarantee is read off the state a reaching store
+  lies in.
+\<close>
+
+lemma typed_report_of_sound:
+  fixes sr :: "(var_id, texp, 'c, var_id, tmcp_val) gsolved_run"
+  assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
+    and node: "\<And>v. reaching ds p v \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation (conf_analyses conf))
+                 (case lookup_table (run_table sr) v ctx of Bot \<Rightarrow> \<bottom> | Lifted st \<Rightarrow> st))"
+  shows "typed_report_sound conf ds p (typed_report_of conf ds p gs ctx_key ctx_tag sr)"
+proof -
+  let ?res = "typed_report_of conf ds p gs ctx_key ctx_tag sr"
+  let ?rt = "run_table sr"
+  let ?as = "tactivation (conf_analyses conf)" and ?sem = "conf_sem conf"
+  let ?cl = "tmcp_classify ?sem ds ?as"
+  have checks: "report_checks ?res = result_checks_of (typed_cfg p ds) ?rt ?cl"
+    and diags: "report_diagnostics ?res
+                  = arithmetic_diagnostics (tobligation_sites ds p) ?rt (tobligation_classify ?sem ds ?as)"
+    by (simp_all add: typed_report_of_def report_of_def Let_def)
+  have fin_g: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
+  have rows: "\<exists>chk \<in> set (report_checks ?res). check_point chk = v \<and> check_label chk = l
+                \<and> check_exp chk = e"
+    if "(v, EA_Check l e, w) \<in> intra (typed_cfg p ds)" for v l e w
+    using that fin_g by (force simp: checks result_checks_of_def)
+  have at: "(\<exists>d. Lifted d \<in> report_states_at ?res v \<and> s \<in> tmcp.act_gamma ds ?as d)
+      \<and> (\<forall>chk \<in> set (report_checks ?res). check_point chk = v \<longrightarrow>
+           check_verdict chk \<noteq> Dead
+         \<and> (check_verdict chk = Decided Check_Proved \<longrightarrow> truthy (teval (check_exp chk) s))
+         \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval (check_exp chk) s)))
+      \<and> (\<forall>obs ob. (v, obs) \<in> set (tobligation_sites ds p) \<longrightarrow> ob \<in> set obs \<longrightarrow> SAFE ?res v \<longrightarrow> s \<Turnstile> ob)
+      \<and> (\<forall>d \<in> set (report_diagnostics ?res). diagnostic_verdict d = Check_Refuted
+           \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d)"
+    if s: "s \<in> reaching ds p v" for v s
+  proof -
+    obtain ctx st where look: "lookup_table ?rt v ctx = Lifted st"
+      and st: "s \<in> tmcp.act_gamma ds ?as st"
+      using node[of v] s by (auto simp: tmcp.act_gamma_bot split: lifted.splits)
+    have fin_v: "finite (table_contexts ?rt v)" using fin unfolding table_contexts_def by simp
+    have states: "Lifted st \<in> report_states_at ?res v"
+      unfolding typed_report_of_def by (rule report_of_state_mem[OF fin inj look])
+    have check: "check_verdict chk \<noteq> Dead
+        \<and> (check_verdict chk = Decided Check_Proved \<longrightarrow> truthy (teval (check_exp chk) s))
+        \<and> (check_verdict chk = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval (check_exp chk) s))"
+      if mem: "chk \<in> set (report_checks ?res)" and pt: "check_point chk = v" for chk
+    proof -
+      from mem obtain u and a :: "(var_id, texp) gedge_action" where chk0: "chk = \<lparr>check_point = u, check_label = ea_check_label a,
+          check_exp = ea_check_cond a, check_verdict = point_verdict ?rt ?cl u (ea_check_cond a)\<rparr>"
+        unfolding checks result_checks_of_def by auto
+      with pt have chk: "chk = \<lparr>check_point = v, check_label = ea_check_label a,
+          check_exp = ea_check_cond a, check_verdict = point_verdict ?rt ?cl v (ea_check_cond a)\<rparr>"
+        by simp
+      have decided: "?cl (ea_check_cond a) st = r"
+        if "point_verdict ?rt ?cl v (ea_check_cond a) = Decided r" and "r \<noteq> Check_Unknown" for r
+        by (rule point_verdict_decided[OF that look])
+      show ?thesis
+        using point_verdict_not_dead[OF fin_v look, of ?cl "ea_check_cond a"]
+          decided[of Check_Proved] decided[of Check_Refuted]
+          tmcp.mcp_classify_proved[OF st] tmcp.mcp_classify_refuted[OF st]
+        by (auto simp: chk)
+    qed
+    note diag = table_diagnostics_sound[OF fin_v look st, where sem = ?sem]
+    show ?thesis using states st check diag unfolding diags by blast
+  qed
+  show ?thesis unfolding typed_report_sound_def using rows at by blast
+qed
+
+text \<open>
+  Every answered run is sound. The executable solve's answer is the run the typed
+  theorems are about (\<open>solve_c_run\<close>), so its table covers every reaching store
+  (\<open>typed_mcp_node_sound\<close> and its siblings for the other policy and placement).
+\<close>
+
+lemma typed_report_run_sound:
+  assumes wf: "wf_program_compile_input p" and run: "typed_report_run conf ds p = Some res"
+  shows "typed_report_sound conf ds p res"
+proof -
+  let ?sem = "conf_sem conf" and ?as = "conf_analyses conf" and ?r = "conf_globals conf"
+  let ?gs = "tdeclared_globals p"
+  show ?thesis
+  proof (cases "conf_context conf")
+    case (Typed_Call_String k)
+    let ?key = "\<lambda>ctx. Key_List (map Key_Node ctx)"
+      and ?tag = "if k = 0 then (\<lambda>_. Report_Unit) else Report_Call_String"
+    show ?thesis
+    proof (cases "conf_program_globals conf")
+      case Program_Globals_Flow_Sensitive
+      from run obtain sol where
+        sol: "TD_side_rule_Interp_solve_c ?r (typed_mcp.equations ?sem ds ?as k tglobal p)
+                (typed_mcp.root_query ds p) = Some sol"
+        and res: "res = typed_report_of conf ds p [] ?key ?tag
+                    (typed_mcp.solved_run_of ?sem ds ?as k tglobal p sol)"
+        by (auto simp: typed_report_run_def typed_cs_run_def Typed_Call_String
+            Program_Globals_Flow_Sensitive Let_def dg_pipeline.root_query_def)
+      note solved = typed_mcp.solve_c_run[OF sol]
+      show ?thesis
+        unfolding res
+        by (rule typed_report_of_sound)
+           (use solved typed_mcp.vars_finite_of_terminates[OF solved(1)]
+              typed_mcp_node_sound[OF wf solved(1), unfolded typed_mcp.state_at_unfold] in
+             \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_call_string_key\<close>)
+    next
+      case Program_Globals_Flow_Insensitive
+      from run obtain sol where
+        sol: "TD_side_rule_Interp_solve_c ?r (typed_mcp_split.equations ?sem ds ?as k ?gs tglobal p)
+                (typed_mcp_split.root_query ds p) = Some sol"
+        and res: "res = typed_report_of conf ds p ?gs ?key ?tag
+                    (typed_mcp_split.solved_run_of ?sem ds ?as k ?gs tglobal p sol)"
+        by (auto simp: typed_report_run_def typed_cs_run_def Typed_Call_String
+            Program_Globals_Flow_Insensitive Let_def dg_pipeline.root_query_def)
+      note solved = typed_mcp_split.solve_c_run[OF sol]
+      show ?thesis
+        unfolding res
+        by (rule typed_report_of_sound)
+           (use solved typed_mcp_split.vars_finite_of_terminates[OF solved(1)]
+              typed_mcp_split_node_sound[OF wf solved(1), unfolded typed_mcp_split.state_at_unfold] in
+             \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_call_string_key\<close>)
+    qed
+  next
+    case Typed_Entry_State
+    show ?thesis
+    proof (cases "conf_program_globals conf")
+      case Program_Globals_Flow_Sensitive
+      from run obtain sol where
+        sol: "TD_side_rule_Interp_solve_c ?r (typed_mcp_es.equations ?sem ds ?as tglobal p)
+                (typed_mcp_es.root_query ds p) = Some sol"
+        and res: "res = typed_report_of conf ds p [] tmcp_ctx_key Report_Entry
+                    (typed_mcp_es.solved_run_of ?sem ds ?as tglobal p sol)"
+        by (auto simp: typed_report_run_def typed_es_run_def Typed_Entry_State
+            Program_Globals_Flow_Sensitive Let_def dg_pipeline.root_query_def)
+      note solved = typed_mcp_es.solve_c_run[OF sol]
+      show ?thesis
+        unfolding res
+        by (rule typed_report_of_sound)
+           (use solved typed_mcp_es.vars_finite_of_terminates[OF solved(1)]
+              typed_mcp_es_node_sound[OF wf solved(1), unfolded typed_mcp_es.state_at_unfold] in
+             \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_tmcp_ctx_key\<close>)
+    next
+      case Program_Globals_Flow_Insensitive
+      from run obtain sol where
+        sol: "TD_side_rule_Interp_solve_c ?r (typed_mcp_split_es.equations ?sem ds ?as ?gs tglobal p)
+                (typed_mcp_split_es.root_query ds p) = Some sol"
+        and res: "res = typed_report_of conf ds p ?gs tmcp_ctx_key Report_Entry
+                    (typed_mcp_split_es.solved_run_of ?sem ds ?as ?gs tglobal p sol)"
+        by (auto simp: typed_report_run_def typed_es_run_def Typed_Entry_State
+            Program_Globals_Flow_Insensitive Let_def dg_pipeline.root_query_def)
+      note solved = typed_mcp_split_es.solve_c_run[OF sol]
+      show ?thesis
+        unfolding res
+        by (rule typed_report_of_sound)
+           (use solved typed_mcp_split_es.vars_finite_of_terminates[OF solved(1)]
+              typed_mcp_split_es_node_sound[OF wf solved(1), unfolded typed_mcp_split_es.state_at_unfold] in
+             \<open>simp_all add: dg_pipeline.result_def dg_pipeline.sol_vars_def inj_tmcp_ctx_key\<close>)
+    qed
+  qed
+qed
+
+text \<open>The guarantees one at a time, as the public theorems read them.\<close>
+
+theorem typed_report_check_sound:
+  assumes wf: "wf_program_compile_input p"
+    and run: "typed_report_run conf ds p = Some res"
+    and chk: "chk \<in> set (report_checks res)"
+    and s: "s \<in> reaching ds p (check_point chk)"
+  shows "check_verdict chk = Decided Check_Proved \<Longrightarrow> truthy (teval (check_exp chk) s)"
+    and "check_verdict chk = Decided Check_Refuted \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
+  using typed_report_run_sound[OF wf run] chk s unfolding typed_report_sound_def by blast+
+
+theorem typed_report_state_sound:
+  assumes wf: "wf_program_compile_input p"
+    and run: "typed_report_run conf ds p = Some res"
+    and s: "s \<in> reaching ds p v"
+  obtains d where "Lifted d \<in> report_states_at res v"
+    and "s \<in> tmcp.act_gamma ds (tactivation (conf_analyses conf)) d"
+  using typed_report_run_sound[OF wf run] s that unfolding typed_report_sound_def by blast
+
 theorem typed_report_point_sound:
   assumes wf: "wf_program_compile_input p"
-    and run: "typed_report_run sem as r cx ds p = Some res"
+    and run: "typed_report_run conf ds p = Some res"
     and s: "s \<in> reaching ds p v"
   shows typed_report_obligation_safe:
       "(v, obs) \<in> set (tobligation_sites ds p) \<Longrightarrow> ob \<in> set obs \<Longrightarrow> SAFE res v \<Longrightarrow> s \<Turnstile> ob"
@@ -606,132 +703,18 @@ theorem typed_report_point_sound:
          \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
     and typed_report_check_live:
       "chk \<in> set (report_checks res) \<Longrightarrow> check_point chk = v \<Longrightarrow> check_verdict chk \<noteq> Dead"
-proof -
-  let ?sites = "tobligation_sites ds p"
-  let ?cl = "tobligation_classify sem ds (tactivation as)"
-  let ?P = "(\<forall>obs ob. (v, obs) \<in> set ?sites \<longrightarrow> ob \<in> set obs \<longrightarrow> SAFE res v \<longrightarrow> s \<Turnstile> ob)
-          \<and> (\<forall>d. d \<in> set (report_diagnostics res) \<longrightarrow> diagnostic_verdict d = Check_Refuted
-              \<longrightarrow> diagnostic_point d = v \<longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d)
-          \<and> (\<forall>chk. chk \<in> set (report_checks res) \<longrightarrow> check_point chk = v
-              \<longrightarrow> check_verdict chk \<noteq> Dead)"
-  have from_table: ?P
-    if diags: "report_diagnostics res = arithmetic_diagnostics ?sites rt ?cl"
-      and checks: "report_checks res
-                     = result_checks_of (typed_cfg p ds) rt (tmcp_classify sem ds (tactivation as))"
-      and fin: "finite (covered_keys rt)" and look: "lookup_table rt v ctx = Lifted st"
-      and st: "s \<in> tmcp.act_gamma ds (tactivation as) st"
-    for rt :: "('c, tmcp_val) solved_table" and ctx st
-  proof -
-    have fin_v: "finite (table_contexts rt v)"
-      using fin unfolding table_contexts_def by simp
-    note sound = table_diagnostics_sound[OF fin_v look st, where sem = sem]
-    have live: "check_verdict chk \<noteq> Dead"
-      if "chk \<in> set (report_checks res)" and "check_point chk = v" for chk
-    proof -
-      from that obtain a w where "(v, a, w) \<in> set (cfg_intra_list (typed_cfg p ds))"
-        and "chk = \<lparr>check_point = v, check_label = ea_check_label a, check_exp = ea_check_cond a,
-                    check_verdict = point_verdict rt (tmcp_classify sem ds (tactivation as)) v
-                                      (ea_check_cond a)\<rparr>"
-        by (auto simp: checks result_checks_of_def)
-      then show ?thesis
-        using point_verdict_not_dead[OF fin_v look, of "tmcp_classify sem ds (tactivation as)"]
-        by simp
-    qed
-    show ?P unfolding diags using sound live by blast
-  qed
-  have ?P
-  proof (cases cx)
-    case (Typed_Call_String k)
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp.equations sem ds as k tglobal p)
-              (typed_mcp.root_query ds p) = Some sol"
-      and res: "res = typed_cs_report sem as r k ds p sol"
-      by (auto simp: typed_report_run_def Typed_Call_String dg_pipeline.root_query_def)
-    note solved = typed_mcp.solve_c_run[OF sol]
-    let ?r = "typed_mcp.result sem ds as k r tglobal p"
-    from typed_mcp_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v)"
-      by blast
-    obtain st where look: "lookup_table ?r v ctx = Lifted st"
-      and st: "s \<in> tmcp.act_gamma ds (tactivation as) st"
-    proof (cases "lookup_table ?r v ctx")
-      case Bot
-      with sc show ?thesis by (simp add: typed_mcp.state_at_unfold tmcp.act_gamma_bot)
-    next
-      case (Lifted d)
-      with sc that show ?thesis by (simp add: typed_mcp.state_at_unfold)
-    qed
-    have fin: "finite (covered_keys ?r)"
-      using typed_mcp.vars_finite_of_terminates[OF solved(1)]
-      by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have "report_diagnostics res = arithmetic_diagnostics ?sites ?r ?cl"
-      and "report_checks res
-             = result_checks_of (typed_cfg p ds) ?r (tmcp_classify sem ds (tactivation as))"
-      using solved(2) by (simp_all add: res typed_cs_report_def report_of_def Let_def)
-    from from_table[OF this fin look st] show ?P .
-  next
-    case Typed_Entry_State
-    from run obtain sol where
-      sol: "TD_side_rule_Interp_solve_c r (typed_mcp_es.equations sem ds as tglobal p)
-              (typed_mcp_es.root_query ds p) = Some sol"
-      and res: "res = typed_es_report sem as r ds p sol"
-      by (auto simp: typed_report_run_def Typed_Entry_State dg_pipeline.root_query_def)
-    note solved = typed_mcp_es.solve_c_run[OF sol]
-    let ?r = "typed_mcp_es.result sem ds as r tglobal p"
-    from typed_mcp_es_node_sound[OF wf solved(1)] s obtain ctx where
-      sc: "s \<in> tmcp.act_gamma ds (tactivation as) (typed_mcp_es.state_at sem ds as r tglobal p ctx v)"
-      by blast
-    obtain st where look: "lookup_table ?r v ctx = Lifted st"
-      and st: "s \<in> tmcp.act_gamma ds (tactivation as) st"
-    proof (cases "lookup_table ?r v ctx")
-      case Bot
-      with sc show ?thesis by (simp add: typed_mcp_es.state_at_unfold tmcp.act_gamma_bot)
-    next
-      case (Lifted d)
-      with sc that show ?thesis by (simp add: typed_mcp_es.state_at_unfold)
-    qed
-    have fin: "finite (covered_keys ?r)"
-      using typed_mcp_es.vars_finite_of_terminates[OF solved(1)]
-      by (simp add: dg_pipeline.result_def dg_pipeline.sol_vars_def)
-    have "report_diagnostics res = arithmetic_diagnostics ?sites ?r ?cl"
-      and "report_checks res
-             = result_checks_of (typed_cfg p ds) ?r (tmcp_classify sem ds (tactivation as))"
-      using solved(2) by (simp_all add: res typed_es_report_def report_of_def Let_def)
-    from from_table[OF this fin look st] show ?P .
-  qed
-  then show "(v, obs) \<in> set ?sites \<Longrightarrow> ob \<in> set obs \<Longrightarrow> SAFE res v \<Longrightarrow> s \<Turnstile> ob"
-    and "d \<in> set (report_diagnostics res) \<Longrightarrow> diagnostic_verdict d = Check_Refuted
-      \<Longrightarrow> diagnostic_point d = v \<Longrightarrow> \<not> s \<Turnstile> diagnostic_obligation d"
-    and "chk \<in> set (report_checks res) \<Longrightarrow> check_point chk = v \<Longrightarrow> check_verdict chk \<noteq> Dead"
-    by blast+
-qed
+  using typed_report_run_sound[OF wf run] s unfolding typed_report_sound_def by blast+
 
 text \<open>A report lists a check row for every check edge of the typed graph, at the edge's
   source and with its label and condition.\<close>
 
 lemma typed_report_check_row:
-  assumes run: "typed_report_run sem as r cx ds p = Some res"
+  assumes wf: "wf_program_compile_input p"
+    and run: "typed_report_run conf ds p = Some res"
     and edge: "(v, EA_Check l e, w) \<in> intra (typed_cfg p ds)"
   shows "\<exists>chk \<in> set (report_checks res). check_point chk = v \<and> check_label chk = l
            \<and> check_exp chk = e"
-proof -
-  have fin: "finite (intra (typed_cfg p ds))" by (simp add: typed_cfg_def compile_prog_finite)
-  have checks: "report_checks res = result_checks_of (typed_cfg p ds) rt cl \<Longrightarrow> ?thesis"
-    for rt :: "('c, tmcp_val) solved_table" and cl
-    using edge fin by (force simp: result_checks_of_def)
-  show ?thesis
-  proof (cases cx)
-    case (Typed_Call_String k)
-    with run obtain sol where "res = typed_cs_report sem as r k ds p sol"
-      by (auto simp: typed_report_run_def)
-    then show ?thesis by (intro checks) (simp add: typed_cs_report_def report_of_def Let_def)
-  next
-    case Typed_Entry_State
-    with run obtain sol where "res = typed_es_report sem as r ds p sol"
-      by (auto simp: typed_report_run_def)
-    then show ?thesis by (intro checks) (simp add: typed_es_report_def report_of_def Let_def)
-  qed
-qed
+  using typed_report_run_sound[OF wf run] edge unfolding typed_report_sound_def by blast
 
 text \<open>Every obligation of an expression an edge or a call evaluates is one the report
   decides at the edge's or the call's source, and every conversion of a call's result
@@ -913,18 +896,26 @@ fun typed_ctx_values :: "typed_domain list \<Rightarrow> tmcp_ctx \<Rightarrow> 
        | Typed_Parity \<Rightarrow> map Typed_Parity_Value q
        | Typed_Order \<Rightarrow> []) as)"
 
+text \<open>The globals an edge or a call reads and writes, among those kept at their own
+  unknowns.\<close>
+
+definition typed_footprints :: "(var_id, texp, var_id) footprints" where
+  "typed_footprints =
+     \<lparr> fp_edge_reads = gedge_global_reads tvars, fp_edge_writes = gedge_global_writes ReturnVar,
+       fp_call_reads = gcall_global_reads tvars,
+       fp_call_writes = (\<lambda>G ca. case ca of CallEdge dst pars args \<Rightarrow>
+         global_names_in G (case_option [] (\<lambda>x. [x]) dst @ pars)) \<rparr>"
+
 definition typed_renderer ::
-    "(voblint_conf, tmcp_ctx, tmcp_val, var_id, texp, unit,
+    "(voblint_conf, tmcp_ctx, tmcp_val, var_id, texp, var_id,
       typed_domain, typed_value) report_renderer" where
   "typed_renderer =
      \<lparr> rr_view = (\<lambda>conf. typed_render (tactivation (conf_analyses conf))),
        rr_context = (\<lambda>conf. typed_ctx_values (tactivation (conf_analyses conf))),
-       rr_footprints = \<lparr> fp_edge_reads = (\<lambda>_ _. []), fp_edge_writes = (\<lambda>_ _. []),
-                         fp_call_reads = (\<lambda>_ _. []), fp_call_writes = (\<lambda>_ _. []) \<rparr> \<rparr>"
-
+       rr_footprints = typed_footprints \<rparr>"
 
 definition typed_render_report ::
-    "(typed_value \<Rightarrow> 'v) \<Rightarrow> typed_report \<Rightarrow> (var_id, texp, unit, typed_domain, 'v) run_result" where
+    "(typed_value \<Rightarrow> 'v) \<Rightarrow> typed_report \<Rightarrow> (var_id, texp, var_id, typed_domain, 'v) run_result" where
   "typed_render_report = render_report typed_renderer"
 
 end

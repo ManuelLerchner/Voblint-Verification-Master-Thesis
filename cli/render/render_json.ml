@@ -305,8 +305,7 @@ let nodes_json result (graph : G.t) context_key =
           (fun (obligation, verdict) ->
             match verdict with
             | C.Lifted ((C.Check_Refuted | C.Check_Unknown) as v) ->
-                Some
-                  (v, A.obligation_message v obligation)
+                Some (v, A.obligation_message v obligation)
             | _ -> None)
           (C.state_diagnostics st)
   in
@@ -624,7 +623,12 @@ let rec texp_json = function
   | C.TVar (k, x) -> tagged "TVar" [ json_string (kind_name k); var_json x ]
   | C.TArith (k, op, a, b) ->
       tagged "TArith"
-        [ json_string (kind_name k); json_string (aop_name op); texp_json a; texp_json b ]
+        [
+          json_string (kind_name k);
+          json_string (aop_name op);
+          texp_json a;
+          texp_json b;
+        ]
   | C.TCast (k, a) -> tagged "TCast" [ json_string (kind_name k); texp_json a ]
   | C.TCmp (op, a, b) ->
       tagged "TCmp" [ json_string (cop_name op); texp_json a; texp_json b ]
@@ -663,12 +667,17 @@ let edge_action_json = function
   | C.EA_Assume b -> tagged "EA_Assume" [ texp_json b ]
   | C.EA_AssumeNot b -> tagged "EA_AssumeNot" [ texp_json b ]
   | C.EA_Body f -> tagged "EA_Body" [ json_string f ]
-  | C.EA_Ret (e, f) -> tagged "EA_Ret" [ json_option texp_json e; json_string f ]
+  | C.EA_Ret (e, f) ->
+      tagged "EA_Ret" [ json_option texp_json e; json_string f ]
   | C.EA_Check (l, b) -> tagged "EA_Check" [ check_label_json l; texp_json b ]
 
 let call_action_json (C.CallEdge (dst, formals, args)) =
   tagged "CallEdge"
-    [ json_option var_json dst; json_list var_json formals; json_list texp_json args ]
+    [
+      json_option var_json dst;
+      json_list var_json formals;
+      json_list texp_json args;
+    ]
 
 let lifted_json f = function
   | C.Bot -> tagged "Bot" []
@@ -774,7 +783,7 @@ let result_check_json c =
     ]
 
 let result_global_unknown_json = function
-  | C.Global_Named () -> tagged "Global_Named" [ json_string A.global_name ]
+  | C.Global_Named x -> tagged "Global_Named" [ json_string (C.var_label x) ]
   | C.Global_Seed (f, i) ->
       tagged "Global_Seed" [ json_string f; json_option nat_json i ]
 
@@ -852,12 +861,21 @@ let signed_overflow_json = function
   | C.Assume_Top -> tagged "Assume_Top" []
   | C.Assume_Wraparound -> tagged "Assume_Wraparound" []
 
-let conf_json (C.Voblint_conf_ext (domains, ctx, globals, C.Sem_conf_ext (ovp, ()), ())) =
+let program_globals_json = function
+  | C.Program_Globals_Flow_Sensitive ->
+      tagged "Program_Globals_Flow_Sensitive" []
+  | C.Program_Globals_Flow_Insensitive ->
+      tagged "Program_Globals_Flow_Insensitive" []
+
+let conf_json
+    (C.Voblint_conf_ext
+       (domains, ctx, globals, placement, C.Sem_conf_ext (ovp, ()), ())) =
   json_object
     [
       ("conf_analyses", json_list domain_json domains);
       ("conf_context", context_json_of_policy ctx);
       ("conf_globals", globals_rule_json globals);
+      ("conf_program_globals", program_globals_json placement);
       ( "conf_sem",
         json_object [ ("sem_int_signed_overflow", signed_overflow_json ovp) ] );
     ]
@@ -907,8 +925,8 @@ let shared_json program result =
   let globals = C.declared_global_vars program in
   let unknown g =
     match C.global_unknown g with
-    | C.Global_Named () ->
-        let x = A.global_name in
+    | C.Global_Named x ->
+        let x = C.var_label x in
         let reachable, lines =
           global_lines (fun y -> y = x) (C.global_state g)
         in
@@ -947,7 +965,8 @@ let seeds_json program result (graph : G.t) =
       | Some (C.Gproc_decl_ext (formals, _, ())) -> formals
       | None -> []
     in
-    List.mem name (List.map (Context_graph.qualify f) formals) || List.mem name globals
+    List.mem name (List.map (Context_graph.qualify f) formals)
+    || List.mem name globals
   in
   let seed (g, (key, _)) =
     match C.global_unknown g with

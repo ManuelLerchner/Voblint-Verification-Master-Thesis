@@ -54,9 +54,9 @@ lemma typed_mcp_routed:
     teval ReturnVar (\<lambda>_. tconv (kenv_of ds)) (\<lambda>_. tglobal) (\<lambda>_. tinit_stores (kenv_of ds))
     (tmcp_comp sem ds (tactivation as)) (tmcp_emp (tactivation as)) tmcp_rd
     (tmcp_init ds (tactivation as))
-    (Analysis_Global ()) Analysis_Global Activation_Seed
+    Analysis_Buffer Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
-    (TD_side_rule_Interp.solve_dom TYPE((unit, 'c) global_unknown)
+    (TD_side_rule_Interp.solve_dom TYPE((var_id, 'c) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r)
     \<bottom> (tmcp_classify sem ds (tactivation as)) (tmcp.act_gamma ds (tactivation as))
     (tmcp_empty_v (tactivation as))
@@ -113,9 +113,9 @@ global_interpretation typed_mcp: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
     "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
     "tmcp_init ds (tactivation as)"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
+    Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
+    "TD_side_rule_Interp.solve_dom TYPE((var_id, cfg_node list) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
     \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
     "tmcp_empty_v (tactivation as)"
@@ -160,9 +160,9 @@ global_interpretation typed_mcp_es: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
     "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
     "tmcp_init ds (tactivation as)"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "tmcp_route (tactivation as)" tmcp_root_ctx
+    Analysis_Buffer Analysis_Global Activation_Seed "tmcp_route (tactivation as)" tmcp_root_ctx
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((unit, tmcp_ctx) global_unknown)
+    "TD_side_rule_Interp.solve_dom TYPE((var_id, tmcp_ctx) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
     \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
     "tmcp_empty_v (tactivation as)"

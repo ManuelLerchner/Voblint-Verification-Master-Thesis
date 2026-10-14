@@ -21,8 +21,7 @@ definition run_voblint :: "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> i
   "run_voblint conf ds p =
      (if \<not> valid_activation (conf_analyses conf) then Invalid_Activation
       else if \<not> wf_program_compile_input_exec p then Malformed_Program
-      else case typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                  (conf_context conf) ds p of
+      else case typed_report_run conf ds p of
              None \<Rightarrow> No_Answer
            | Some res \<Rightarrow> Analysed res)"
 
@@ -53,8 +52,7 @@ theorem run_voblint_sound:
          \<Longrightarrow> s \<in> reaching ds p (check_point chk) \<Longrightarrow> \<not> truthy (teval (check_exp chk) s)"
 proof -
   have exec: "wf_program_compile_input_exec p"
-    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                (conf_context conf) ds p = Some res"
+    and rep: "typed_report_run conf ds p = Some res"
     using run by (auto simp: run_voblint_def split: if_splits option.splits)
   note wf = wf_program_compile_input_exec_sound[OF exec]
   show "\<And>v s. s \<in> reaching ds p v
@@ -75,25 +73,26 @@ text \<open>An answer was given for a valid activation and a well-formed program
 lemma run_voblint_AnalysedE:
   assumes "run_voblint conf ds p = Analysed res"
   obtains "valid_activation (conf_analyses conf)" and "wf_program_compile_input_exec p"
-    and "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-           (conf_context conf) ds p = Some res"
+    and "typed_report_run conf ds p = Some res"
   using assms unfolding run_voblint_def by (auto split: if_splits option.splits)
+
+lemma typed_report_run_shape:
+  assumes "typed_report_run conf ds p = Some res"
+  shows "report_config res = conf" and "report_cfg res = typed_cfg p ds"
+  using assms
+  by (auto simp: typed_report_run_def typed_cs_run_def typed_es_run_def typed_report_of_def
+      report_of_def Let_def split: typed_context.splits program_globals.splits)
 
 lemma run_voblint_config:
   assumes "run_voblint conf ds p = Analysed res"
   shows "report_config res = conf"
-  using assms
-  by (cases conf)
-     (auto simp: run_voblint_def typed_report_run_def typed_cs_report_def typed_es_report_def
-      report_of_def Let_def split: if_splits option.splits typed_context.splits)
+  using assms by (auto elim!: run_voblint_AnalysedE dest: typed_report_run_shape)
 
 lemma run_voblint_cfg:
   assumes "run_voblint conf ds p = Analysed res"
   shows "report_cfg res = typed_cfg p ds"
-  using assms
-  by (cases conf)
-     (auto simp: run_voblint_def typed_report_run_def typed_cs_report_def typed_es_report_def
-      report_of_def Let_def split: if_splits option.splits typed_context.splits)
+  using assms by (auto elim!: run_voblint_AnalysedE dest: typed_report_run_shape)
+
 
 text \<open>
   The report contract in one statement: an analysed answer was given for a valid
@@ -138,8 +137,7 @@ theorem run_voblint_arithmetic_safe:
          \<Longrightarrow> teval e s \<in> ik_range (kenv_of ds x)"
 proof -
   from run have wf: "wf_program_compile_input p"
-    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                (conf_context conf) ds p = Some res"
+    and rep: "typed_report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   note safe = typed_report_obligation_safe[OF wf rep s _ _ absent]
   show "s \<Turnstile> ob"
@@ -164,8 +162,7 @@ theorem run_voblint_arithmetic_refuted:
   shows "\<not> s \<Turnstile> diagnostic_obligation d"
 proof -
   from run have wf: "wf_program_compile_input p"
-    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                (conf_context conf) ds p = Some res"
+    and rep: "typed_report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   show ?thesis by (rule typed_report_obligation_refuted[OF wf rep s d r refl])
 qed
@@ -242,8 +239,7 @@ proof -
   proof -
     assume safe: "SAFE res v" and ob: "ob \<in> tobligations_at ds p v"
     from run have wf: "wf_program_compile_input p"
-      and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                  (conf_context conf) ds p = Some res"
+      and rep: "typed_report_run conf ds p = Some res"
       by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
     from ob obtain obs where "(v, obs) \<in> set (tobligation_sites ds p)" and "ob \<in> set obs"
       by (auto simp: mem_tobligations_at)
@@ -310,8 +306,7 @@ theorem run_voblint_check_sound:
            \<and> (check_verdict c = Decided Check_Refuted \<longrightarrow> \<not> truthy (teval e s))"
 proof -
   from run have wf: "wf_program_compile_input p"
-    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                (conf_context conf) ds p = Some res"
+    and rep: "typed_report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
   from typed_source_reaches_node_collect[OF wf s0 exec] obtain v stk
     where sim: "typed_ptable p ds, typed_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
@@ -319,7 +314,7 @@ proof -
     by blast
   from csim_next_check_edge[OF sim chk] obtain w where "(v, EA_Check l e, w) \<in> intra (typed_cfg p ds)"
     by blast
-  from typed_report_check_row[OF rep this] obtain c where c: "c \<in> set (report_checks res)"
+  from typed_report_check_row[OF wf rep this] obtain c where c: "c \<in> set (report_checks res)"
     and pt: "check_point c = v" and lbl: "check_label c = l" and ex: "check_exp c = e"
     by blast
   have "check_verdict c \<noteq> Dead" by (rule typed_report_check_live[OF wf rep s c pt])
@@ -459,11 +454,19 @@ proof -
           buckets[unfolded g_def S_def]])
 qed
 
+text \<open>An entry-state run admits the contexts its placement's registration reads off the
+  solve.\<close>
+
 theorem run_voblint_entry_state_chain:
   fixes p :: imp_prog and ds :: kind_decls and conf :: voblint_conf
   defines "g \<equiv> typed_cfg p ds" and "S \<equiv> tinit_stores (kenv_of ds)"
-    and "adm \<equiv> typed_mcp_es.entry_context_rel (conf_sem conf) ds (conf_analyses conf)
-                 (conf_globals conf) p"
+    and "adm \<equiv> (case conf_program_globals conf of
+                 Program_Globals_Flow_Sensitive \<Rightarrow>
+                   typed_mcp_es.entry_context_rel (conf_sem conf) ds (conf_analyses conf)
+                     (conf_globals conf) p
+               | Program_Globals_Flow_Insensitive \<Rightarrow>
+                   typed_mcp_split_es.entry_context_rel (conf_sem conf) ds (conf_analyses conf)
+                     (conf_globals conf) (tdeclared_globals p) p)"
   assumes run: "run_voblint conf ds p = Analysed res"
     and cx: "conf_context conf = Typed_Entry_State"
     and s0: "s0 \<in> S"
@@ -481,29 +484,47 @@ theorem run_voblint_entry_state_chain:
            \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (teval c s))"
 proof -
   from run have wf: "wf_program_compile_input p"
-    and rep: "typed_report_run (conf_sem conf) (conf_analyses conf) (conf_globals conf)
-                (conf_context conf) ds p = Some res"
+    and rep: "typed_report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
-  from rep cx obtain sol where
-    "TD_side_rule_Interp_solve_c (conf_globals conf)
-       (typed_mcp_es.equations (conf_sem conf) ds (conf_analyses conf) tglobal p)
-       (typed_mcp_es.root_query ds p) = Some sol"
-    by (auto simp: typed_report_run_def dg_pipeline.root_query_def)
-  note solves = typed_mcp_es.solve_c_run(1)[OF this]
-  have has_ctx: "\<exists>c. typed.gactivation_context_rel (kenv_of ds) adm tmcp_root_ctx g t c"
-    if "t \<in> typed.gvalid_activation_trace (kenv_of ds) g S" for t
-    using typed_mcp_es.gentry_state_has_context_of_terminates
-            [OF typed_cfg_def typed_wf_compile_input[OF wf] solves] that
-    unfolding adm_def g_def S_def by blast
-  have buckets: "(\<Union>c'. typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c')
-                   = reaching ds p v" for v
-    using typed_mcp_es.gentry_state_node_collect_eq_Union_of_terminates
-            [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
-    unfolding adm_def g_def S_def tnode_collect_def by simp
+  have chain: "(\<forall>t. t \<in> typed.gvalid_activation_trace (kenv_of ds) g S
+                  \<longrightarrow> (\<exists>c. typed.gactivation_context_rel (kenv_of ds) adm tmcp_root_ctx g t c))
+    \<and> (\<forall>v. (\<Union>c'. typed.gactivation_collect (kenv_of ds) adm tmcp_root_ctx g S v c')
+             = reaching ds p v)"
+  proof (cases "conf_program_globals conf")
+    case Program_Globals_Flow_Sensitive
+    from rep cx Program_Globals_Flow_Sensitive obtain sol where
+      "TD_side_rule_Interp_solve_c (conf_globals conf)
+         (typed_mcp_es.equations (conf_sem conf) ds (conf_analyses conf) tglobal p)
+         (typed_mcp_es.root_query ds p) = Some sol"
+      by (auto simp: typed_report_run_def typed_es_run_def Let_def dg_pipeline.root_query_def)
+    note solves = typed_mcp_es.solve_c_run(1)[OF this]
+    show ?thesis
+      using typed_mcp_es.gentry_state_has_context_of_terminates
+          [OF typed_cfg_def typed_wf_compile_input[OF wf] solves]
+        typed_mcp_es.gentry_state_node_collect_eq_Union_of_terminates
+          [OF typed_cfg_def typed_wf_compile_input[OF wf] solves]
+      unfolding adm_def g_def S_def tnode_collect_def Program_Globals_Flow_Sensitive by simp
+  next
+    case Program_Globals_Flow_Insensitive
+    from rep cx Program_Globals_Flow_Insensitive obtain sol where
+      "TD_side_rule_Interp_solve_c (conf_globals conf)
+         (typed_mcp_split_es.equations (conf_sem conf) ds (conf_analyses conf) (tdeclared_globals p)
+            tglobal p)
+         (typed_mcp_split_es.root_query ds p) = Some sol"
+      by (auto simp: typed_report_run_def typed_es_run_def Let_def dg_pipeline.root_query_def)
+    note solves = typed_mcp_split_es.solve_c_run(1)[OF this]
+    show ?thesis
+      using typed_mcp_split_es.gentry_state_has_context_of_terminates
+          [OF typed_cfg_def typed_wf_compile_input[OF wf] solves]
+        typed_mcp_split_es.gentry_state_node_collect_eq_Union_of_terminates
+          [OF typed_cfg_def typed_wf_compile_input[OF wf] solves]
+      unfolding adm_def g_def S_def tnode_collect_def Program_Globals_Flow_Insensitive by simp
+  qed
   show ?thesis
     unfolding g_def S_def
-    by (rule run_voblint_spine[OF run s0[unfolded S_def] exec has_ctx[unfolded g_def S_def]
-          buckets[unfolded g_def S_def]])
+    by (rule run_voblint_spine[OF run s0[unfolded S_def] exec
+          conjunct1[OF chain, unfolded g_def S_def, rule_format]
+          conjunct2[OF chain, unfolded g_def S_def, rule_format]])
 qed
 
 text \<open>Every obligation of an expression evaluated at \<open>v\<close>, and every narrowing

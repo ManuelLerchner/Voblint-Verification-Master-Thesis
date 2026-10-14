@@ -1,6 +1,7 @@
 theory Analysis_Run
   imports
     Arithmetic_Diagnostics
+    MCP_Analyses
     MCP_Split
     "HOL-Library.Code_Target_Numeral"
     "HOL-Library.Code_Abstract_Char"
@@ -94,14 +95,6 @@ text \<open>
   rule for side-effected globals, and the context policy. A configuration is valid
   when it activates at least one analysis and none twice.
 \<close>
-
-text \<open>
-  Where a program's globals live: in every point's own state, flow-sensitively, or
-  each at its own global unknown, as a flow-insensitive value read only by the
-  edges that mention it.
-\<close>
-
-datatype program_globals = Program_Globals_Flow_Sensitive | Program_Globals_Flow_Insensitive
 
 datatype analysis_config = Analysis_Config
   (config_analyses: "analysis_domain list")
@@ -379,48 +372,35 @@ text \<open>
 \<close>
 
 text \<open>
-  The placement the configuration chooses: the component as it is, or wrapped by the
-  keyed lifter with each program global at its own unknown and a point's state
-  recombined against the solved global environment.
+  The placement: the component as it is, every program global in each point's own
+  state. Program globals at unknowns of their own are a placement of the typed
+  analyses (\<^verbatim>\<open>MCP_Split\<close>), so this analyzer reads the configuration's placement as
+  flow-sensitive.
 \<close>
 
 definition mcp_place_spec :: "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted local_spec
     \<Rightarrow> (pp \<times> 'c, 'k, vname, mcp_st lifted, mcp_st lifted) dg_spec" where
-  "mcp_place_spec pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> c. dg_spec_of c)
-   | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>p c. keyed_split_spec (declared_global p)
-       split_cmb split_rl split_global_at split_free c))"
+  "mcp_place_spec pg = (\<lambda>\<G> c. dg_spec_of c)"
 
 definition mcp_place_cmb ::
     "program_globals \<Rightarrow> imp_prog \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
        \<Rightarrow> mcp_st lifted" where
-  "mcp_place_cmb pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d e. d)
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>p d e. split_cmb d (full_view split_global_at (declared_global_vars p) e)))"
+  "mcp_place_cmb pg = (\<lambda>\<G> d e. d)"
 
 definition mcp_place_rl :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
-  "mcp_place_rl pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> d. d) | Program_Globals_Flow_Insensitive \<Rightarrow> (\<lambda>\<G>. split_rl))"
+  "mcp_place_rl pg = (\<lambda>\<G> d. d)"
 
 definition mcp_place_rg :: "program_globals \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> mcp_st lifted \<Rightarrow> mcp_st lifted" where
   "mcp_place_rg pg = (\<lambda>\<G> d. Bot)"
 
 definition mcp_place_inits :: "program_globals \<Rightarrow> analysis_domain list
     \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog \<Rightarrow> (vname \<times> mcp_st lifted) list" where
-  "mcp_place_inits pg as = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>\<G> p. [])
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init as)))) (declared_global_vars p)))"
+  "mcp_place_inits pg as = (\<lambda>\<G> p. [])"
 
 definition mcp_place_enter ::
     "program_globals \<Rightarrow> imp_prog \<Rightarrow> call_info \<Rightarrow> mcp_st lifted \<Rightarrow> (vname \<Rightarrow> mcp_st lifted)
        \<Rightarrow> mcp_st lifted" where
-  "mcp_place_enter pg = (case pg of
-     Program_Globals_Flow_Sensitive \<Rightarrow> (\<lambda>p ci d e. d)
-   | Program_Globals_Flow_Insensitive \<Rightarrow>
-       (\<lambda>p ci d e. split_cmb d (view_of split_global_at (call_global_reads (declared_global p)
-          (ci_args ci)) e (split_free (call_global_reads (declared_global p) (ci_args ci))))))"
+  "mcp_place_enter pg = (\<lambda>p ci d e. d)"
 
 lemmas mcp_place_defs = mcp_place_spec_def mcp_place_cmb_def mcp_place_rl_def mcp_place_rg_def
   mcp_place_inits_def mcp_place_enter_def
@@ -430,8 +410,8 @@ definition mcp_equations ::
        \<Rightarrow> ((vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'c \<Rightarrow> mcp_st lifted \<Rightarrow> call_action \<Rightarrow> 'c) \<Rightarrow> 'c
        \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> 'c, 'k, (mcp_st lifted, mcp_st lifted) dg_state) eqsT" where
-  "mcp_equations as pg buffer global seed route root =
-     dg_pipeline.equations (mcp_comp as) (mcp_init as) buffer global seed route root
+  "mcp_equations as pg buffer gk seed route root =
+     dg_pipeline.equations (mcp_comp as) (mcp_init as) buffer gk seed route root
        (mcp_place_spec pg) (mcp_place_rg pg) (mcp_place_inits pg as) prog_cfg
        (\<lambda>_. FunctionEntry prog_main_name)"
 
@@ -447,8 +427,8 @@ definition mcp_run_of ::
        \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> imp_prog
        \<Rightarrow> (pp \<times> 'c) set \<times> (pp \<times> 'c + 'k \<Rightarrow> (mcp_st lifted, mcp_st lifted) dg_state)
        \<Rightarrow> ('c, vname, mcp_val) solved_run" where
-  "mcp_run_of as pg global seed route =
-     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd global seed route
+  "mcp_run_of as pg gk seed route =
+     dg_pipeline.solved_run_of (mcp_comp as) (mcp_emp as) mcp_rd gk seed route
        (mcp_place_cmb pg) (mcp_place_rl pg) (mcp_place_enter pg)"
 
 lemmas mcp_wrappers = mcp_equations_def mcp_solve_c_def mcp_run_of_def

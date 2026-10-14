@@ -64,6 +64,7 @@ let read_back raw =
 (* ---------------------------------------------------------------- naming *)
 
 let node_name = A.point_name
+
 (* The printers hand every value over as its rendering and every analysis by its
    name, whatever analyzer the run used. *)
 let value_text v = Value_symbols.decode v
@@ -656,7 +657,8 @@ let result_records result =
         {|{"event":"result","unknown":{"kind":"local","node":%s,"context":%s},"value":%s}|}
         (json_string (node_name (C.state_point st)))
         (json_ctx contexts.(A.int_of_nat (C.state_context st)))
-        (json_string (view_text_with A.analysis_label Fun.id (C.state_value st))))
+        (json_string
+           (view_text_with A.analysis_label Fun.id (C.state_value st))))
     (C.res_states result)
 
 let checks result =

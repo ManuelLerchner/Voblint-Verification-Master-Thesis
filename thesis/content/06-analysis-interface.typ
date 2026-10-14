@@ -258,7 +258,7 @@ one unknown per program global, so a write that changes `g` destabilizes only th
 `g` and those that depend on them. #isathm("keyed_split_contract") shows that this
 placement meets the analysis contract whenever the wrapped analysis is sound and the domain satisfies monotonicity
 laws and a frame law for the globals a transfer does not assign, which the analyzer's combined
-state does (#isathm("mcp_keyed_dg_analysis")), so #isathm("run_voblint_source_sound")
+state does (#isathm("typed_mcp_keyed")), so #isathm("run_voblint_source_sound")
 covers it.
 
 The interface is modular, since an analysis proves facts about its own
