@@ -413,7 +413,7 @@ def test_a_seed_carries_the_state_pushed_into_that_callee(tmp_path):
         for g in ET.parse(out / "nodes" / "globals.xml").getroot().findall("glob")
     }
     assert "enter bump" in rows, rows.keys()
-    assert "<key>n</key><value>[7,7]</value>" in rows["enter bump"], (
+    assert "<key>bump::n</key><value>[7,7]</value>" in rows["enter bump"], (
         f"the seed does not carry the actual argument: {rows['enter bump']}"
     )
     assert "unreachable" in rows["enter never"], (
@@ -567,8 +567,8 @@ def test_context_sensitive_globals_show_one_seed_per_context(tmp_path):
         v
         for k in seeds
         for v in [
-            "[3,3]" if "<key>n</key><value>[3,3]</value>" in rows[k] else "",
-            "[4,4]" if "<key>n</key><value>[4,4]</value>" in rows[k] else "",
+            "[3,3]" if "<key>square::n</key><value>[3,3]</value>" in rows[k] else "",
+            "[4,4]" if "<key>square::n</key><value>[4,4]</value>" in rows[k] else "",
         ]
         if v
     )
@@ -629,7 +629,8 @@ def test_several_domains_run_as_one_analysis(tmp_path):
         assert names == ["int", "interval", "sign"], (doc.name, names)
 
     # Interval and Sign alone leave this check UNKNOWN; Int proves it, and the
-    # met answer keeps Int's verdict.
+    # met answer keeps Int's verdict. Arithmetic diagnostics share the status
+    # rows, so only the check's row is compared.
     reported = [
         " ".join(v.text for v in status.iter("value") if v.text)
         for status in (
@@ -638,6 +639,7 @@ def test_several_domains_run_as_one_analysis(tmp_path):
         )
         if status is not None
     ]
+    reported = [row for row in reported if row.startswith("check ")]
     assert reported == ["check y == 2 PROVED"], reported
 
 
