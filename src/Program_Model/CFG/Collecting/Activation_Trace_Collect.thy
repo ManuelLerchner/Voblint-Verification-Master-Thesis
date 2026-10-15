@@ -126,7 +126,7 @@ text \<open>
   activation being popped is this trace's own caller --- holds by construction,
   and running the callee to its \<^const>\<open>FunctionResult\<close> along an intra path
   preserves it.  What a caller supplies is the call edge and an intra path through
-  the callee; what it gets back is the continuation node with the combined ('v \<Rightarrow> int).
+  the callee; what it gets back is the continuation node with the combined store.
 \<close>
 
 lemma node_collect_call_return_step:

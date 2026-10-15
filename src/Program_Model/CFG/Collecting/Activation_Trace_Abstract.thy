@@ -79,7 +79,7 @@ abbreviation buckets :: "cfg_node \<Rightarrow> 'c \<Rightarrow> ('v \<Rightarro
 abbreviation admits :: "cfg_node \<Rightarrow> 'c \<Rightarrow> pname \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> 'c \<Rightarrow> bool"
   where "admits \<equiv> gadmits_call_context g adm"
 
-text \<open>\<open>trace_covered u\<close>: \<open>u\<close> carries some context, and its sink ('v \<Rightarrow> int) is admitted at its
+text \<open>\<open>trace_covered u\<close>: \<open>u\<close> carries some context, and its sink store is admitted at its
   own node under every context it carries.\<close>
 definition trace_covered :: "'v gactivation_trace \<Rightarrow> bool" where
   "trace_covered u \<longleftrightarrow>
@@ -104,7 +104,7 @@ lemma trace_coveredD:
 
 subsection \<open>Closure under the four constructor clauses\<close>
 
-text \<open>\<open>init_covered\<close>: the main activation's seed ('v \<Rightarrow> int) is admitted at \<open>c\<^sub>0\<close>, the
+text \<open>\<open>init_covered\<close>: the main activation's seed store is admitted at \<open>c\<^sub>0\<close>, the
   one context every \<^const>\<open>Root\<close> carries.\<close>
 lemma init_covered: "s \<in> S \<Longrightarrow> trace_covered (Root [(cfg_entry g, s)])"
   by (auto simp: trace_covered_def)
@@ -119,7 +119,7 @@ lemma intra_covered:
   by (auto simp: activation_context_rel_extend[OF pne] intro: INTRA[OF e _ st])
 
 text \<open>\<open>call_covered\<close>: \<open>TOTAL\<close> gives the new activation some context, from a context its
-  caller carries; \<open>CALL\<close> covers the entered ('v \<Rightarrow> int) at every context it carries, each of
+  caller carries; \<open>CALL\<close> covers the entered store at every context it carries, each of
   which names its own edge out of the call site.\<close>
 lemma call_covered:
   assumes e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls g"
