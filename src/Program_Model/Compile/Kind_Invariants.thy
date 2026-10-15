@@ -200,4 +200,75 @@ qed
 lemma init_stores_in_kinds: "t \<in> init_stores \<kappa> \<Longrightarrow> in_kinds \<kappa> t"
   by (auto simp: init_stores_def in_kinds_def all_in_kinds_def simp del: ik_range_iff)
 
+subsection \<open>Runs of the elaborated program stay within their kinds\<close>
+
+text \<open>Elaboration puts a conversion on every argument, so the call edges of the elaborated
+  graph pass well-typed arguments to formals of the right kinds.\<close>
+
+lemma com_calls_elab_com:
+  "com_calls (elab_com \<G> fm \<kappa> r c)
+     = (\<lambda>(dst, q, es). (map_option (resolve_var \<G> r) dst, q,
+                         elab_args (resolve_var \<G> r) \<kappa> (map (resolve_var \<G> q) (fm q)) es))
+       ` com_calls c"
+  by (induction c) (auto simp: image_Un)
+
+lemma call_formals_elab_ptable:
+  "call_formals (elab_ptable p ds) q = map (resolve_var (declared_global p) q) (prog_formals p q)"
+  by (cases "prog_table p q") (auto simp: elab_ptable_def prog_formals_def)
+
+theorem calls_in_kinds_elab_cfg:
+  assumes wf: "wf_program_compile_input p"
+  shows "calls_in_kinds (kenv_of ds) (elab_cfg p ds)"
+  unfolding calls_in_kinds_def
+proof (intro allI impI)
+  fix u dst pars es v w
+  assume e: "(u, CallEdge dst pars es, v, w) \<in> calls (elab_cfg p ds)"
+  from wf have src: "wf_source_program (declared_global p) (prog_table p)"
+    by (simp add: gwf_compile_input_def)
+  from compile_prog_calls_from [OF elab_ptable_main(1) [OF src] e [unfolded elab_cfg_def]]
+  obtain r d q where d: "elab_ptable p ds r = Some d" and c: "(dst, q, es) \<in> com_calls (body d)"
+    and pars: "pars = call_formals (elab_ptable p ds) q"
+    by blast
+  let ?\<rho> = "resolve_var (declared_global p) r"
+  let ?fs = "map (resolve_var (declared_global p) q) (prog_formals p q)"
+  from d c obtain es0 where es: "es = elab_args ?\<rho> (kenv_of ds) ?fs es0"
+    by (auto simp: elab_ptable_def com_calls_elab_com)
+  have "list_all (\<lambda>e. wt_exp (kenv_of ds) e \<and> ReturnVar \<notin> exp_vars e) es"
+    using elab_args_wt [of "kenv_of ds" ?\<rho> ?fs es0] exp_vars_elab_args
+      [of _ ?\<rho> "kenv_of ds" ?fs es0]
+      ReturnVar_notin_range_resolve_var [of "declared_global p" r]
+    unfolding es list_all_iff by blast
+  moreover have "args_ok (kenv_of ds) pars es"
+    using elab_args_wt [of "kenv_of ds" ?\<rho> ?fs es0]
+    by (simp add: es pars call_formals_elab_ptable del: call_formals_def)
+  ultimately show "list_all (\<lambda>e. wt_exp (kenv_of ds) e \<and> ReturnVar \<notin> exp_vars e) es
+                     \<and> args_ok (kenv_of ds) pars es" ..
+qed
+
+text \<open>Hence a run of the elaborated program that starts from a store within its kinds keeps
+  every identity other than the return slot at a value of its kind, through assignments,
+  declarations, calls, returns and recursion. The premise on the initial store is explicit;
+  the initial stores of the soundness theorems satisfy it (@{thm init_stores_in_kinds}).\<close>
+
+theorem run_in_kinds:
+  assumes wf: "wf_program_compile_input p"
+    and s0: "in_kinds (kenv_of ds) s0"
+    and run:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+  shows "in_kinds (kenv_of ds) s"
+proof -
+  from source_reaches_node_collect [OF wf _ run, of "{s0}"]
+  obtain v where "s \<in> \<C>\<^bsub>kenv_of ds,elab_cfg p ds,{s0}\<^esub> v" by blast
+  then show ?thesis
+    using node_collect_in_kinds [OF calls_in_kinds_elab_cfg [OF wf]] s0 by blast
+qed
+
+corollary run_from_init_in_kinds:
+  assumes "wf_program_compile_input p"
+    and "s0 \<in> init_stores (kenv_of ds)"
+    and
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+  shows "in_kinds (kenv_of ds) s"
+  using run_in_kinds [OF assms(1) init_stores_in_kinds [OF assms(2)] assms(3)] .
+
 end
