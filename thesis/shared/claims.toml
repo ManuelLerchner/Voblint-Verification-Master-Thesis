@@ -944,3 +944,7 @@ why = "At i32, x + 1 may wrap, so Interval gives y the whole range and leaves y 
 [claims.dom-kinds-congruence]
 argv = ["--analysis", "congruence", "thesis/shared/programs/domain-kinds.vimp"]
 why = "At u32, 4 * n keeps the class 4Z through wrapping (4 divides 2^32), so a != 1 is PROVED; 3 * n loses 3Z (gcd(3, 2^32) = 1), and b != 1 fails at n = 2863311531."
+
+[claims.kinds-promotion]
+argv = ["--analysis", "interval", "thesis/shared/programs/kinds-promotion.vimp"]
+why = "Section 3.2: x + y is promoted to i32, so x + y < 250 compares 300 and is REFUTED; z = x + y converts 300 to u8, so z holds 44 and z < 250 is PROVED."

@@ -170,7 +170,8 @@ preservation argument at every layer (@ch:conclusion discusses the heap).
 ) <fig:vimp-island>
 
 One of these omissions matters in later chapters. Without pointers, concrete
-memory is a store from variables to integers. The non-relational analyses
+memory is a store from variable identities to integers, each within its kind
+(@sec:elaboration). The non-relational analyses
 of @ch:domains lift it pointwise to one abstract value per variable.
 @sec:rel-state gives a carrier that is not pointwise.
 
@@ -187,9 +188,8 @@ condition holds when it is nonzero (#isaconst("truthy"), #c11("6.8.4.1p2"),
             | e #vop("!=") e | e #vop("==") e \
         | & #vop("!", unary: true) e | e #vop("&&") e | e #vop("||") e | (k) thin e
   $
-  Here $k$ is a machine kind (#isatype("ikind")), one of the eight C integer
-  types from 8 to 64 bits, signed or unsigned, and $(k) thin e$ converts
-  explicitly.
+  Here $k$ is a machine kind (#isatype("ikind"), @sec:elaboration), and
+  $(k) thin e$ converts explicitly.
 ]
 
 Each operator has its own constructor, because an abstract domain chooses its
@@ -210,30 +210,9 @@ convenient, whereas an analyzer needs syntax that it can inspect. VIMP is theref
 generation can also export.
 
 The parser produces these _surface_ expressions over variable names, and
-surface VIMP has no evaluation of its own. Before anything executes,
-_elaboration_ (#isaconst("elaborate")) translates a surface expression of one
-procedure into a _core_ expression (#isatype("exp")). It resolves every name to
-a static variable identity (#isatype("var_id")), so that a global, a local of
-one procedure and a procedure's return slot are distinct variables, gives every
-arithmetic node the kind C computes it at under integer promotion and the usual
-arithmetic conversions, and makes every implicit conversion an explicit
-conversion node. A core expression is evaluated in a _store_ $s$ of type
-#isatype("store"), a total function #isai("var_id \<Rightarrow> int") from
-variable identities to integers. Evaluation #isaconst("eval", thy: "Core_Exp") is a function
-defined by one equation per constructor. Every arithmetic node computes the
-mathematical result and wraps it into the range of its kind $k$ with
-#isaconst("ik_norm"), so for example
-$
-  #isaconst("eval", thy: "Core_Exp") (e_1 attach(#vop("/"), br: k) e_2, s) = #isaconst("ik_norm") thin k thin (#isaconst("c_div") (#isaconst("eval", thy: "Core_Exp") (e_1, s), #isaconst("eval", thy: "Core_Exp") (e_2, s))), \
-  #isaconst("eval", thy: "Core_Exp") (e_1 #vop("<") e_2, s) = cases(1 & "if" #isaconst("eval", thy: "Core_Exp") (e_1, s) < #isaconst("eval", thy: "Core_Exp") (e_2, s), 0 & "otherwise",)
-$
-and a variable read returns $s(x)$ unchanged, because every write already
-converts to the variable's kind. Every expression has a value, because VIMP
-fixes the results of division and remainder by zero (#isaconst("c_div"),
-#isaconst("c_mod"), @sec:vimp-vs-c). It also has no effects, so a transfer
-function may evaluate a guard again, as the backward filtering of @ch:domains
-does. Input enters only through the statement `x = __voblint_nondet_int();`
-and never inside an expression. This keeps #isaconst("eval", thy: "Core_Exp") a function.
+surface VIMP has no evaluation of its own. Elaboration translates them into
+core expressions, in which every operation carries the width it computes at,
+and gives those their meaning (@sec:elaboration).
 
 Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
@@ -251,11 +230,8 @@ Every constructor except sequencing also carries an _annotation_, whose type is
 a parameter of #isatype("gcom"), as are the types of variables and expressions.
 The commands of a parsed program carry the unit annotation and have type
 #isatype("src_com"), over names and surface expressions. Elaboration
-(#isaconst("elab_com")) turns them into core commands (#isatype("com")) over
-identities and core expressions. It inserts the conversions C performs where a
-value is written: to the variable's kind at an assignment, to the formal's kind
-at an argument, and to the procedure's return kind at a #keyw("return"). The
-grammar above omits annotations, which @fig:pstep writes as $i$.
+(@sec:elaboration) turns them into core commands (#isatype("com")) over
+identities and core expressions. The grammar above omits annotations, which @fig:pstep writes as $i$.
 
 In concrete syntax, an assignment is written `x = e;` and a check
 `__voblint_check(e);`. The parser lowers `true`, `false`, and unary minus to the
@@ -272,7 +248,8 @@ VIMP also has three built-in _library calls_, `__voblint_nondet_int`, `min`, and
 #isaconst("special_result") gives the values they may return: any integer for
 `__voblint_nondet_int`, and the minimum or maximum of the arguments for `min`
 and `max`. A library call finishes in one step and stores its value, converted
-to the destination's kind, without an activation or a frame (@sec:pstep). The
+to the destination's kind (@sec:elaboration), without an activation or a
+frame (@sec:pstep). The
 remaining constructors, #ctor("Restore") and #ctor("Unwind"), are not source
 syntax (#isaconst("source_com") excludes them). They appear only during
 execution, where @sec:pstep uses them for calls and returns.
@@ -283,14 +260,8 @@ global variables (#isaconst("declared_global_vars")). Its procedure table
 (#isatype("proc_table")) looks up a name in that list, and the classifier
 #isaconst("declared_global") tests membership in the globals. The entry
 procedure is the declaration named `main`, and #isaconst("main_body") is its
-body. @fig:vimp-ast shows the running example in this form. Alongside the
-program, the parser hands over its kind declarations (#isatype("kind_decls")),
-which give identities their kinds. An identity without a declaration is a C
-`int` (#isaconst("kenv_of")), so the running example computes at 32 bits.
-Elaborating every body gives the program's core procedure table
-(#isaconst("elab_ptable")). The formal development starts from the parsed
-program and its declarations, and the parser lies outside the theorem
-(@sec:trust-boundary).
+body. @fig:vimp-ast shows the running example in this form. The running
+example declares no kinds, so it computes at `i32` (@sec:elaboration).
 
 // The tree is read from the parser's own output (claim ast-contexts), the JSON
 // the playground hands to the analyzer, so it cannot drift from the frontend.
@@ -374,6 +345,226 @@ although the callee may still diverge. C11 makes using the value of a call that
 falls through undefined (#c11("6.9.1p12")). Without the condition, VIMP would
 silently store the $0$ that the reset on entry left in #isaconst("ret_var").
 
+== Machine integers and elaboration #thy-badge("Voblint_VIMP", "Core_Exp") <sec:elaboration>
+
+A VIMP program is written like C. It declares its variables with integer types
+and leaves most conversions implicit. Its value, however, depends on the width
+at which each operation is computed. In the program below, `x` and `y` are
+8-bit unsigned variables.
+
+#listing(lang: "c", claim: "kinds-promotion", ```
+fun main() {
+  u8 x = 200;
+  u8 y = 100;
+  u8 z = x + y;
+  __voblint_check(x + y < 250);
+  __voblint_check(z < 250);
+}
+```)
+
+Read over mathematical integers, both checks compare $300$ with $250$ and fail.
+Read at the variables' own width, both compare $44$, the sum $300$ wrapped to
+8 bits, and hold. C answers differently for the two checks. It first
+converts both 8-bit operands to `int` (the integer promotions) and adds at
+that width, so the first check compares $300 < 250$ and fails. The assignment
+to `z` then converts $300$ back to 8 bits, so `z` holds $44$ and the second
+check holds. The analyzer agrees: the first check is
+#verdict(check-row("kinds-promotion", cond: "(i32) x + (i32) y < 250").verdict)
+and the second
+#verdict(check-row("kinds-promotion", cond: "(i32) z < 250").verdict). It
+also reports the conversion to `u8` as an error, because it changes the value,
+although C defines it (@sec:vimp-vs-c). A program that declares no types makes every variable 32 bits wide, so `z` holds
+$300$ and the second check fails. A verdict is therefore only meaningful
+together with the width at which each operation computes. This section fixes
+that width for every operation, and states the result as a translation of the
+program into a form in which every width is explicit.
+
+*Machine kinds.* A variable has one of eight _machine kinds_
+(#isatype("ikind")): `i8`, `u8`, `i16`, `u16`, `i32`, `u32`, `i64` and `u64`,
+the signed and unsigned integers of 8, 16, 32 and 64 bits. A kind $k$ of width
+$w$ fixes a range #isaconst("ik_range") $k$, the interval from
+#isaconst("ik_min") $k$ to #isaconst("ik_max") $k$, which is
+$[-2^(w-1), 2^(w-1) - 1]$ for a signed kind and $[0, 2^w - 1]$ for an unsigned
+one. Values stay mathematical integers, and the kind only says which of them
+a variable may hold. Wraparound #isaconst("ik_norm") maps every integer into
+the range by two's complement,
+$
+  #isaconst("ik_norm") thin k thin n = ((n - #isaconst("ik_min") thin k) mod 2^w) + #isaconst("ik_min") thin k
+$
+(#isathm("ik_norm_mod")), so that $#isaconst("ik_norm") thin #ctor("U8") thin 300 = 44$.
+Wraparound applies to signed kinds too. C leaves signed overflow undefined
+(#c11("6.5p5")), and VIMP gives it this defined meaning instead
+(@sec:vimp-vs-c).
+
+A program declares kinds in C's style: `global u8 g;` for a global,
+`fun u16 f(u8 n)` for a formal and a return value, and `i32 x;` or
+`i32 x = 0;` for a local, which may appear anywhere in a body and whose scope
+ends with its enclosing block. VIMP has no keyword `int`. A program that
+declares no kind at all is _untyped_, and each of its variables is `i32`, the
+role of C's `int`. A program that declares one kind must declare every global,
+formal and local, and a return kind for every procedure that returns a value.
+
+*Identities and stores.* A kind belongs to a variable, but a name does not
+determine the variable. Two procedures may both have a formal `n`, one of kind
+`i8` and one of kind `u32`, so a table from names to kinds cannot hold both.
+The semantics therefore stores values under _identities_
+(#isatype("var_id")): #ctor("GlobalId", thy: "Var_Id") $x$ for a global and
+#ctor("ScopedId", thy: "Var_Id") $q$ $x$ for a formal or local $x$ of
+procedure $q$. Two further identities serve the call mechanism, and no program
+can name them. #ctor("ReturnId", thy: "Var_Id") $q$ carries the return kind of
+$q$, and the single slot #ctor("ReturnVar", thy: "Var_Id") carries a returned
+value back to the caller. Within one procedure, distinct names resolve to
+distinct identities, and two procedures share an identity only for a global
+(#isaconst("resolve_var"), #isathm("resolve_var_eq_iff")). The formal language
+has no block scopes. The parser removes them: it renames every declaration that
+shadows a name already in use in its procedure to a fresh name such as `x#2`,
+which no source program can write, and resolves every use to the innermost
+declaration in scope (#fixture("26-machine-kinds/15-block_scopes.vimp")).
+
+A store $s$ (#isatype("store")) is a total function from identities to
+integers. The parser hands the kinds over as a list of declarations
+(#isatype("kind_decls")), and #isaconst("kenv_of") turns it into a kind
+environment $kappa$ (#isatype("kenv")) that gives an undeclared identity the
+kind `i32`. For an untyped program the list is empty.
+
+*Elaboration.* What the parser builds is _surface_ VIMP, the expressions of
+@sec:vimp over names, with implicit conversions. What executes is _core_ VIMP
+(#isatype("exp")), in which every arithmetic node carries the kind it computes
+at, every variable read names an identity, and every conversion is an explicit
+node #ctor("TCast", thy: "Core_Exp"). _Elaboration_ (#isaconst("elaborate"))
+translates a surface expression of procedure $q$, at the kind $k$ its context
+expects, into core VIMP. It follows C's rules
+// TODO: new C11 locators, checked against the N1570 copy the #c11 helper links to; confirm before keeping.
+(#c11("6.3.1.1p2"), #c11("6.3.1.8p1")). An arithmetic operator computes at the
+common kind of its operands, which the integer promotions and the usual
+arithmetic conversions determine (#isaconst("usual_kind")). Promotion turns
+every kind narrower than 32 bits into `i32` (#isaconst("ik_promote")), so
+`x + y` above computes at `i32`. A comparison converts both operands to their
+common kind and yields $0$ or $1$ at `i32`. A logical operator tests each
+operand at its own kind. A conversion node is inserted wherever a value meets
+a context of another kind, and omitted where the kinds agree, because a
+conversion that changes no value would still cost precision in a domain
+without magnitudes such as Sign, which can only answer $top$ for it. With
+$x$ and $y$ standing for the identities of `main`, the assignment to `z` above
+becomes
+$
+  z := #ctor("TCast", thy: "Core_Exp") thin #ctor("U8") thin (#ctor("TArith", thy: "Core_Exp") thin #ctor("I32") thin #ctor("AAdd") thin (#ctor("TCast", thy: "Core_Exp") thin #ctor("I32") thin (#ctor("TVar", thy: "Core_Exp") thin #ctor("U8") thin x)) thin (#ctor("TCast", thy: "Core_Exp") thin #ctor("I32") thin (#ctor("TVar", thy: "Core_Exp") thin #ctor("U8") thin y))).
+$
+The analyzer prints the check conditions of the listing in this elaborated
+form, #raw(check-row("kinds-promotion", cond: "(i32) x + (i32) y < 250").cond)
+and #raw(check-row("kinds-promotion", cond: "(i32) z < 250").cond).
+
+A literal is placed directly at the kind of its context, so `u8 z = 300;`
+stores $44$. Its own kind matters only where it chooses the kind of the
+operation it is an operand of. An unsuffixed literal is an `i32` if it fits
+and an `i64` otherwise, which is C's rule for a decimal constant when `long`
+has 64 bits (#isaconst("ik_of_lit"),
+// TODO: new C11 locator, checked against N1570; confirm.
+#c11("6.4.4.1p5")). The parser folds a leading minus sign into the literal and
+the kind is chosen by magnitude, so `-2147483648` is an `i64`, as the C
+expression `-2147483648`, the negation of a `long` constant, is under that
+assumption. The analyzer
+rejects a program with a literal outside the range of `i64`
+(#isaconst("lits_fit"), #isaconst("wf_program_compile_input_exec")).
+
+Commands are elaborated by #isaconst("elab_com"), which inserts the
+conversions C performs where a value is written: to the variable's kind at an
+assignment, to the formal's kind at an argument (#isaconst("elab_args")), and
+to the procedure's return kind #isai("\<kappa> (ReturnId q)") at a
+#keyw("return"). A condition or a check is evaluated at the kind it
+synthesizes. The arguments of `min` and `max` have no formals and keep their
+own kinds, and the library compares them as integers. Elaborating every body
+gives the program's core procedure table
+$Pi = #isaconst("elab_ptable") thin p thin italic("ds")$. Its expressions are
+well-typed: the operands of an arithmetic node carry its kind, and every
+written value has the kind of its target (#isathm("wt_exp_elaborate"),
+#isathm("wt_com_elab_com")).
+
+*Evaluation.* Since every kind is written on its node, evaluation
+#isaconst("eval", thy: "Core_Exp") needs no kind environment. It is a function
+defined by one equation per constructor. An arithmetic node computes the
+mathematical result and wraps it into its kind, a conversion wraps, and a
+variable read returns the stored value unchanged:
+$
+  #isaconst("eval", thy: "Core_Exp") (#ctor("TArith", thy: "Core_Exp") thin k thin italic("op") thin e_1 thin e_2, s) & = #isaconst("ik_norm") thin k thin (italic("op")(#isaconst("eval", thy: "Core_Exp") (e_1, s), #isaconst("eval", thy: "Core_Exp") (e_2, s))), \
+  #isaconst("eval", thy: "Core_Exp") (#ctor("TCast", thy: "Core_Exp") thin k thin e, s) & = #isaconst("ik_norm") thin k thin (#isaconst("eval", thy: "Core_Exp") (e, s)), \
+  #isaconst("eval", thy: "Core_Exp") (#ctor("TVar", thy: "Core_Exp") thin k thin x, s) & = s(x).
+$
+Division and remainder are #isaconst("c_div") and #isaconst("c_mod"), which
+truncate toward zero and give $0$ and the dividend for a zero divisor
+(@sec:vimp-vs-c). Every expression therefore has a value and no effect, so a
+transfer function may evaluate a guard again, as the backward filtering of
+@ch:domains does. Input enters only through the statement
+`x = __voblint_nondet_int();`, never inside an expression.
+
+Elaboration is the definition of what a surface expression means, so it
+deserves a check against a second reading. #isaconst("src_eval") states the
+meaning directly on the surface expression, given a kind for every name, in
+the shape in which the C standard describes it: convert the operands to their
+common kind, compute there with wraparound, and convert the result to the kind
+the context expects. Elaboration agrees with it on every store whose values
+lie in their kinds (#isaconst("all_in_kinds")).
+
+#theorem(name: [Elaboration preserves meaning], isa: "eval_elaborate")[
+  Let $rho$ resolve the names of a procedure to identities and let $t$ hold
+  every identity within its kind under $kappa$. Then the elaborated expression
+  evaluates in $t$ to the value that #isaconst("src_eval") gives the surface
+  expression in the procedure's view $t compose rho$ of the store.
+]
+
+
+The premise is needed at variable reads. #isaconst("src_eval") wraps a
+variable's value into its kind, while #isaconst("eval", thy: "Core_Exp") reads
+it unchanged, and the two agree only when the stored value already lies in
+the range. The theorem relates two definitions in Isabelle. It does not show
+either of them to be C, which @sec:vimp-vs-c argues instead.
+
+*Initial values.* A run starts from a store in #isaconst("init_stores")
+$kappa$, in which every global is $0$, as C's static objects are, and every
+other identity holds some value of its kind. The parser rewrites a local
+declared without an initializer, `u8 x;`, into `x = __voblint_nondet_int();`
+at the declaration, and one with an initializer into an assignment. The call
+leaves an arbitrary value of the kind in `x` and changes nothing else
+(#isathm("pstep_declare")). Its outcomes do not depend on what `x` held before
+(#isathm("pstep_declare_forgets")), so a declaration in a loop body or in a
+procedure called twice starts its variable afresh each time it executes
+(#fixture("26-machine-kinds/21-fresh_local_each_call.vimp")).
+
+*The step relation.* @sec:pstep defines execution by a generic step relation
+#isaconst("gpstep"), parametric in four choices: the evaluator, the classifier
+of the globals, the return slot, and the conversion applied when the
+semantics writes a value. The semantics of VIMP, #isaconst("pstep") $kappa$,
+is its instance at #isaconst("eval", thy: "Core_Exp"), the
+#ctor("GlobalId", thy: "Var_Id") identities (#isaconst("is_global")),
+#ctor("ReturnVar", thy: "Var_Id") and #isaconst("kind_conv") $kappa$, which
+wraps a value written to $x$ into #isai("\<kappa> x"). It is the only
+instance, and the graph and trace semantics of later sections are
+instantiated at the same choices. The relation converts at assignments and
+argument bindings, where elaboration has already converted, and at the two
+writes elaboration cannot see: the result of a call stored in its destination,
+and the result of a library call. A returned value is written to
+#ctor("ReturnVar", thy: "Var_Id") without conversion, because elaboration
+already converted it to the procedure's return kind.
+
+These conversions keep every store typed. For a well-formed program
+(#isaconst("wf_program_compile_input")), every store that a run of
+#isaconst("pstep") reaches from a store in #isaconst("init_stores") holds
+every identity other than #ctor("ReturnVar", thy: "Var_Id") within its kind
+(#isaconst("in_kinds"), #isathm("run_from_init_in_kinds")). The return slot is
+excluded because procedures with different return kinds share it. The proof
+goes through the graph semantics of @sec:cstep and the traces of @ch:traces,
+where the invariant holds for every collected store
+(#isathm("node_collect_in_kinds")). Its key step is that every call edge of
+the compiled graph passes arguments of its formals' kinds
+(#isathm("calls_in_kinds_elab_cfg")). The kind-aware domains of @ch:domains
+rely on this invariant.
+
+The formal development starts from the parsed program and its kind
+declarations. The parser's scope resolution, its rewriting of declarations,
+and the kinds it declares are trusted (@sec:trust-boundary). Whether the
+resulting meaning is the one a C programmer intends is argued in
+@sec:vimp-vs-c.
+
 == Executing a source program #thy-badge("Voblint_VIMP", "VIMP_Proc") <sec:pstep>
 
 An _operational semantics_ defines the meaning of a program by how it
@@ -409,10 +600,7 @@ call. Each suspended activation keeps its data in a _frame_.
   the caller's store and the variable, if any, that receives the result. The
   step relation #isaconst("pstep") relates a configuration of a core program to
   its successor. It is the instance of the generic relation in @fig:pstep at the
-  evaluator #isaconst("eval", thy: "Core_Exp"), the globals #isaconst("is_global"), the return
-  slot #ctor("ReturnVar", thy: "Var_Id") and the conversion
-  #isaconst("kind_conv"), which wraps every value the relation writes into the
-  kind of its destination.
+  choices of @sec:elaboration.
 ]
 
 #figure(
@@ -426,12 +614,7 @@ call. Each suspended activation keeps its data in a _frame_.
 ) <fig:pstep>
 
 The generic relation takes a classifier of the global variables, separate from
-the store, because a call resets only the locals. In core VIMP the globals are
-the #ctor("GlobalId", thy: "Var_Id") identities, to which elaboration resolves
-the names in #isaconst("declared_global"). What #isaconst("pstep") still needs
-is the kind of every identity, a kind environment
-#isai("\<kappa> :: kenv"), which for a program is #isaconst("kenv_of") of its
-declarations. The relation is written
+the store, because a call resets only the locals. The relation is written
 #isai("\<kappa>, \<Pi> \<turnstile> c \<rightarrow>\<^sub>p c'") for
 configurations $c$, $c'$, and a procedure table #isai("\<Pi>"). Its
 closure is #isai("\<rightarrow>\<^sub>p\<^sup>*"), and @fig:pstep lists its
@@ -459,8 +642,7 @@ caller to return to, and a bare #ctor("Unwind") has no step
 $p$ with declarations $italic("ds")$ is a run of #isaconst("pstep") on its
 elaboration $Pi = #isaconst("elab_ptable") thin p thin italic("ds")$. It starts
 from the configuration $(#isaconst("main_body") thin Pi, s_0, [])$, with an
-initial store $s_0$ in #isaconst("init_stores"), where every global is $0$ and
-every other identity holds some value of its kind (@sec:vimp-vs-c).
+initial store $s_0$ in #isaconst("init_stores") (@sec:elaboration).
 
 Just as Nipkow and Klein show that well-typed programs do not get stuck
 @nipkow14[§9.1.2], we show that well-formed VIMP programs do not, since claims

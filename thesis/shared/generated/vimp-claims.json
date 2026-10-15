@@ -484,6 +484,16 @@
       "placement": "flow-sensitive"
     }
   },
+  "kinds-promotion": {
+    "fixture": "thesis/shared/programs/kinds-promotion.vimp",
+    "program": "fun main() {\n  u8 x = 200;\n  u8 y = 100;\n  u8 z = x + y;\n  __voblint_check(x + y < 250);\n  __voblint_check(z < 250);\n}",
+    "settings": {
+      "analysis": "interval",
+      "context": "none",
+      "globals": "warrow",
+      "placement": "flow-sensitive"
+    }
+  },
   "mixed-flow-sign": {
     "fixture": "thesis/shared/programs/mixed-flow.vimp",
     "program": "global Gx;\nfun set() { Gx = 1; }\nfun get() { return Gx; }\nfun main() { x = 1; set(); y = get(); }",

@@ -1,0 +1,7 @@
+fun main() {
+  u8 x = 200;
+  u8 y = 100;
+  u8 z = x + y;
+  __voblint_check(x + y < 250);
+  __voblint_check(z < 250);
+}
