@@ -1,15 +1,15 @@
 {
   /*
-   * The value of x at each node, from `cli/voblint --analysis interval --dot` on the
-   * "multiples-of-three" example. lo/hi are ±Infinity for an unbounded side. Runs only ever
-   * reach multiples of three, which no interval can express, so every band admits integers
-   * that no run has.
+   * The value of x at each node, from `cli/voblint --analysis interval --context none --dot` on
+   * the "multiples-of-three" example. Its guard keeps n in [-4, 4], so x = 3 * n never wraps
+   * and the nine runs below are every value x can take. Runs only ever reach multiples of
+   * three, which no interval can express, so every band admits integers that no run has.
    */
   const PT_NODES = {
-    pp2: { x: 380, y: 60, code: "if (x > 0)", lo: -Infinity, hi: Infinity, value: "⊤" },
-    pp3: { x: 190, y: 210, code: "if (x < 3)", lo: 1, hi: Infinity, value: "[1, +∞]" },
-    pp6: { x: 570, y: 210, code: "if (x > 5)", lo: -Infinity, hi: 0, value: "[−∞, 0]" },
-    pp4: {
+    pp5: { x: 380, y: 60, code: "if (x > 0)", lo: -12, hi: 12, value: "[−12, 12]" },
+    pp6: { x: 190, y: 210, code: "if (x < 3)", lo: 1, hi: 12, value: "[1, 12]" },
+    pp9: { x: 570, y: 210, code: "if (x > 5)", lo: -12, hi: 0, value: "[−12, 0]" },
+    pp7: {
       x: 190,
       y: 360,
       code: "check(x == 1)",
@@ -18,8 +18,8 @@
       value: "[1, 2]",
       verdict: "UNKNOWN",
     },
-    pp7: { x: 570, y: 360, code: "check(x == 6)", bot: true, value: "⊥", verdict: "DEAD" },
-    pp9: { x: 380, y: 510, code: "end of main", lo: -Infinity, hi: Infinity, value: "⊤" },
+    pp10: { x: 570, y: 360, code: "check(x == 6)", bot: true, value: "⊥", verdict: "DEAD" },
+    pp12: { x: 380, y: 510, code: "end of main", lo: -12, hi: 12, value: "[−12, 12]" },
   };
 
   const PT_LOW = -12;
@@ -33,11 +33,11 @@
   const ptRoute = (x) =>
     x > 0
       ? x < 3
-        ? ["pp2", "pp3", "pp4", "pp9"]
-        : ["pp2", "pp3", "pp9"]
+        ? ["pp5", "pp6", "pp7", "pp12"]
+        : ["pp5", "pp6", "pp12"]
       : x > 5
-        ? ["pp2", "pp6", "pp7", "pp9"]
-        : ["pp2", "pp6", "pp9"];
+        ? ["pp5", "pp9", "pp10", "pp12"]
+        : ["pp5", "pp9", "pp12"];
   const ptSlot = (node, v) => ({
     x: node.x - ((PT_HIGH - PT_LOW) * PT_DX) / 2 + (v - PT_LOW) * PT_DX,
     y: node.y + 30,
@@ -120,8 +120,8 @@
       group.append(svgEl("line", { class: "pt-axis", x1: left, x2: right, y1: y, y2: y }));
 
       if (!node.bot) {
-        const bandLeft = node.lo === -Infinity ? left - 4 : ptSlot(node, node.lo).x - 7;
-        const bandRight = node.hi === Infinity ? right + 4 : ptSlot(node, node.hi).x + 7;
+        const bandLeft = ptSlot(node, node.lo).x - 7;
+        const bandRight = ptSlot(node, node.hi).x + 7;
         group.append(
           svgEl("rect", {
             class: "pt-band",
@@ -132,23 +132,6 @@
             rx: 10,
           }),
         );
-
-        if (node.lo === -Infinity) {
-          group.append(
-            svgEl("path", {
-              class: "pt-band-tail",
-              d: `M${left - 4} ${y - 6} L${left - 13} ${y} L${left - 4} ${y + 6}`,
-            }),
-          );
-        }
-        if (node.hi === Infinity) {
-          group.append(
-            svgEl("path", {
-              class: "pt-band-tail",
-              d: `M${right + 4} ${y - 6} L${right + 13} ${y} L${right + 4} ${y + 6}`,
-            }),
-          );
-        }
       }
 
       group.append(
@@ -228,7 +211,7 @@
         const v = 3 * n;
         const route = ptRoute(v);
         const points = [
-          { x: ptSlot(PT_NODES.pp2, v).x, y: -10 },
+          { x: ptSlot(PT_NODES.pp5, v).x, y: -10 },
           ...route.map((name) => ptSlot(PT_NODES[name], v)),
         ];
         const hops = points

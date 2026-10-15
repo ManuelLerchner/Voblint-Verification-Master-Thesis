@@ -6,15 +6,15 @@
   const CHAIN = {
     none: {
       buckets: [{ label: "c = ()", members: [1, 2] }],
-      gamma: [{ label: "c = ()", low: -Infinity, high: 2 }],
+      gamma: [{ label: "c = ()", low: -(2 ** 31), high: 2 }],
       sets: {
         source: "{n = 2, n = 1}",
         collect: "{n = 2, n = 1}",
         activation: "() ↦ {n = 2, n = 1}",
-        gamma: "() ↦ n ∈ [−∞, 2]",
+        gamma: "() ↦ n ∈ [−2³¹, 2]",
       },
       link: "one context, so the single bucket is the whole set",
-      note: "With one context for all of `f`, the bucket and the collecting semantics coincide. The solver's value is `[−∞, 2]` because the entry of `f` was widened, so the abstraction admits every `n` below `1` although no run has one.",
+      note: "With one context for all of `f`, the bucket and the collecting semantics coincide. The solver's value is `[−2³¹, 2]` because the entry of `f` was widened down to the smallest `i32`, so the abstraction admits every `n` below `1` although no run has one.",
     },
     entry: {
       buckets: [
@@ -63,7 +63,7 @@
             ? data.gamma.map((g) => ({
                 label: g.label,
                 has: (n) => n >= g.low && n <= g.high,
-                open: g.low === -Infinity,
+                open: g.low < low,
               }))
             : [];
 
@@ -114,7 +114,7 @@
       minus.setAttribute("class", "chain-tick");
       minus.setAttribute("x", "40");
       minus.setAttribute("y", "62");
-      minus.textContent = "−∞";
+      minus.textContent = "−2³¹";
       svg.append(minus);
     };
 

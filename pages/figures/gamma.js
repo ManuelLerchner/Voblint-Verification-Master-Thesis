@@ -6,11 +6,11 @@
   const GAMMA_PRESETS = [
     { label: "[−2, 5]", kind: "interval", test: (x) => x >= -2 && x <= 5 },
     {
-      label: "[3, +∞]",
+      label: "[3, 2³¹−1]",
       kind: "interval",
       test: (x) => x >= 3,
       tail: "right",
-      note: "The set continues past 12 forever.",
+      note: "The set continues past 12 up to 2³¹−1, the largest `i32`.",
     },
     { label: "≥ 0", kind: "sign", test: (x) => x >= 0, tail: "right" },
     { label: "< 0", kind: "sign", test: (x) => x < 0, tail: "left" },

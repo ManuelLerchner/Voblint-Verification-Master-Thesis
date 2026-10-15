@@ -111,13 +111,6 @@
   transition: opacity 500ms ease;
 }
 
-.scene-particles .pt-band-tail {
-  fill: none;
-  stroke: var(--primary);
-  stroke-width: 2;
-  transition: opacity 500ms ease;
-}
-
 .scene-particles .pt-dot {
   fill: var(--accent);
   opacity: 0;
@@ -169,7 +162,6 @@
 
 /* Concrete: only the dots. Abstract: the regions, with the dots as faint outlines inside. */
 .scene-particles[data-mode="concrete"] .pt-band,
-.scene-particles[data-mode="concrete"] .pt-band-tail,
 .scene-particles[data-mode="concrete"] .pt-value {
   opacity: 0;
 }

@@ -1,57 +1,63 @@
 // PARAM: --analysis int --context none
-// Backs the same figure's Int remark. Over i32, 3 is invertible mod 2^32,
-// so x = 3 * n reaches every value, 1 and 2 included, and the congruence
-// component keeps no class. Only the interval bounds remain: x < 3 after
-// x > 0 leaves [1,2], so x == 1 is reachable and undetermined (UNKNOWN),
-// and x > 5 contradicts x <= 0, so the second check is DEAD.
+// Backs the same figure's Int remark. n stays in [-4, 4], so x = 3 * n
+// cannot wrap and the congruence component keeps x in 3Z. After x > 0 and
+// x < 3 the interval part leaves [1,2], which holds no multiple of three, so
+// the first check is DEAD; x > 5 contradicts x <= 0, so the second is DEAD too.
 // EXPECT-GRAPH-BEGIN
 // clusters:
 //   cluster_ctx_0: main / unit
 //     main_pp1_ctx0
 //     main_pp2_ctx0
-//     main_pp3_ctx0
 //     main_pp4_ctx0
+//     main_pp5_ctx0
 //     main_pp6_ctx0
 //     main_pp7_ctx0
 //     main_pp9_ctx0
+//     main_pp10_ctx0
+//     main_pp12_ctx0
 //     main_exit_main_ctx0
 //     main_pp0_ctx0
 //     main_entry_main_ctx0
 //
 // nodes:
-//   main_pp1_ctx0: pp1 [unknown]
+//   main_pp1_ctx0: pp1
 //       int:
 //         n=intervals:[-2147483648,2147483647]; congruences:⊤
 //         x=⊤
-//       possible signed integer overflow in *: 3 * n
 //   main_pp2_ctx0: pp2
 //       int:
 //         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[-2147483648,2147483647]; congruences:⊤
-//   main_pp3_ctx0: pp3
+//         x=⊤
+//   main_pp4_ctx0: pp4
 //       int:
-//         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[1,2147483647]; congruences:⊤
-//   main_pp4_ctx0: pp4 [unknown]
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=⊤
+//   main_pp5_ctx0: pp5
 //       int:
-//         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[1,2]; congruences:⊤
-//       check x == 1
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=intervals:[-12,12]; congruences:3ℤ
 //   main_pp6_ctx0: pp6
 //       int:
-//         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[-2147483648,0]; congruences:⊤
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=intervals:[3,12]; congruences:3ℤ
 //   main_pp7_ctx0: pp7 [unreachable]
 //       unreachable
-//       check x == 6 [dead]
+//       check x == 1 [dead]
 //   main_pp9_ctx0: pp9
 //       int:
-//         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[-2147483648,2147483647]; congruences:⊤
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=intervals:[-12,0]; congruences:3ℤ
+//   main_pp10_ctx0: pp10 [unreachable]
+//       unreachable
+//       check x == 6 [dead]
+//   main_pp12_ctx0: pp12
+//       int:
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=intervals:[-12,12]; congruences:3ℤ
 //   main_exit_main_ctx0: exit_main
 //       int:
-//         n=intervals:[-2147483648,2147483647]; congruences:⊤
-//         x=intervals:[-2147483648,2147483647]; congruences:⊤
+//         n=intervals:[-4,4]; congruences:⊤
+//         x=intervals:[-12,12]; congruences:3ℤ
 //   main_pp0_ctx0: pp0
 //       int:
 //         n=⊤
@@ -63,25 +69,31 @@
 //
 // edges:
 //   main_pp0_ctx0 -> main_pp1_ctx0: n := __voblint_nondet_int()
-//   main_pp1_ctx0 -> main_pp2_ctx0: x := 3 * n
-//   main_pp2_ctx0 -> main_pp3_ctx0: [x > 0]
-//   main_pp2_ctx0 -> main_pp6_ctx0: ![x > 0]
-//   main_pp3_ctx0 -> main_pp4_ctx0: [x < 3]
-//   main_pp3_ctx0 -> main_pp9_ctx0: ![x < 3]
-//   main_pp4_ctx0 -> main_pp9_ctx0: check(x == 1)
-//   main_pp6_ctx0 -> main_pp7_ctx0: [x > 5]
-//   main_pp6_ctx0 -> main_pp9_ctx0: ![x > 5]
-//   main_pp7_ctx0 -> main_pp9_ctx0: check(x == 6)
-//   main_pp9_ctx0 -> main_exit_main_ctx0: return
+//   main_pp1_ctx0 -> main_pp2_ctx0: [n < -4 || n > 4]
+//   main_pp1_ctx0 -> main_pp4_ctx0: ![n < -4 || n > 4]
+//   main_pp2_ctx0 -> main_pp4_ctx0: n := 0
+//   main_pp4_ctx0 -> main_pp5_ctx0: x := 3 * n
+//   main_pp5_ctx0 -> main_pp6_ctx0: [x > 0]
+//   main_pp5_ctx0 -> main_pp9_ctx0: ![x > 0]
+//   main_pp6_ctx0 -> main_pp7_ctx0: [x < 3]
+//   main_pp6_ctx0 -> main_pp12_ctx0: ![x < 3]
+//   main_pp7_ctx0 -> main_pp12_ctx0: check(x == 1)
+//   main_pp9_ctx0 -> main_pp10_ctx0: [x > 5]
+//   main_pp9_ctx0 -> main_pp12_ctx0: ![x > 5]
+//   main_pp10_ctx0 -> main_pp12_ctx0: check(x == 6)
+//   main_pp12_ctx0 -> main_exit_main_ctx0: return
 //   main_entry_main_ctx0 -> main_pp0_ctx0: body(main)
 // EXPECT-GRAPH-END
 
 fun main() {
   n = __voblint_nondet_int();
+  if (n < -4 || n > 4) {
+    n = 0;
+  }
   x = 3 * n;
   if (x > 0) {
     if (x < 3) {
-      __voblint_check(x == 1); // UNKNOWN
+      __voblint_check(x == 1); // NOWARN
     }
   } else {
     if (x > 5) {
