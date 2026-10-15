@@ -1,11 +1,11 @@
 theory VIMP_Proc_to_CFG
-  imports "Voblint_CFG.CFG_Def" "Voblint_VIMP.Typed_Semantics"
+  imports "Voblint_CFG.CFG_Def" "Voblint_VIMP.VIMP_Semantics"
 begin
 
-section \<open>Procedure-aware CFG compilation for \<open>com\<close> programs\<close>
+section \<open>Procedure-aware CFG compilation for \<open>src_com\<close> programs\<close>
 
 text \<open>
-  Compile a \<open>com\<close> program directly into the two-relation procedure-aware CFG.  Nodes are
+  Compile a \<open>src_com\<close> program directly into the two-relation procedure-aware CFG.  Nodes are
   \<open>Statement n\<close> (allocated from a counter), \<open>FunctionEntry p\<close>, and \<open>FunctionResult p\<close>.
   The compiler threads the enclosing procedure name \<open>p\<close>, so a source \<open>Return\<close> and the
   normal fall-through both reach \<open>FunctionResult p\<close> through an \<open>EA_Ret\<close> intra edge.
@@ -510,7 +510,7 @@ section \<open>The typed graph\<close>
 text \<open>The typed graph compiles the elaborated procedures directly; no expression on it is
   lowered back to source names.\<close>
 
-definition typed_cfg :: "imp_prog \<Rightarrow> kind_decls \<Rightarrow> (var_id, texp) gcfg" where
-  "typed_cfg p ds = compile_prog (typed_ptable p ds) (prog_procs p)"
+definition elab_cfg :: "imp_prog \<Rightarrow> kind_decls \<Rightarrow> (var_id, exp) gcfg" where
+  "elab_cfg p ds = compile_prog (elab_ptable p ds) (prog_procs p)"
 
 end

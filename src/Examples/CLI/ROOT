@@ -10,3 +10,5 @@ session Voblint_Examples_CLI in "." = "Voblint_CLI" +
     Example_Run_Voblint_Precision
     (* Program globals on the shared channel, through run_voblint *)
     Example_Sign_Mixed_Flow
+    (* The analyses cooperating through the combined carrier *)
+    Cooperation_Regression

@@ -466,4 +466,13 @@ lemma activation_collect_of_fun:
 
 end
 
+text \<open>The context-indexed collecting semantics of core VIMP, at the same parameters as
+  \<^const>\<open>valid_activation_trace\<close>.\<close>
+
+definition activation_collect ::
+  "kenv \<Rightarrow> (var_id, exp, 'c) gcontext_policy \<Rightarrow> 'c \<Rightarrow> (var_id, exp) gcfg
+     \<Rightarrow> store set \<Rightarrow> cfg_node \<Rightarrow> 'c \<Rightarrow> store set"
+    ("\<A>\<^bsub>_,_,_,_,_\<^esub>") where
+  "activation_collect \<kappa> = ctx_sem.gactivation_collect eval ReturnVar (kind_conv \<kappa>) is_global"
+
 end

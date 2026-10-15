@@ -82,20 +82,20 @@ let declare_locals k ds =
 %left STAR SLASH PERCENT
 %right NOT UMINUS
 
-%type <Voblint.exp> exp
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmt
-%type <(unit, string, Voblint.exp) Voblint.gcom> if_stmt
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmts
-%type <(unit, string, Voblint.exp) Voblint.gcom> stmts_opt
-%type <Voblint.exp list> actuals
+%type <Voblint.src_exp> exp
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmt
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> if_stmt
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmts
+%type <(unit, string, Voblint.src_exp) Voblint.gcom> stmts_opt
+%type <Voblint.src_exp list> actuals
 %type <string list> ids
 %type <Voblint.ikind> kind
 %type <Vimp_typing.global_line> global_line
 %type <Vimp_typing.global_line list> global_line_star
 %type <Vimp_typing.formal> tformal
 %type <Vimp_typing.formal list> tformals
-%type <string * (unit, string, Voblint.exp) Voblint.gcom> init_decl
-%type <(string * (unit, string, Voblint.exp) Voblint.gcom) list> init_decls
+%type <string * (unit, string, Voblint.src_exp) Voblint.gcom> init_decl
+%type <(string * (unit, string, Voblint.src_exp) Voblint.gcom) list> init_decls
 %type <string * string> decl_name
 %type <unit> block_open
 %type <unit> block_close

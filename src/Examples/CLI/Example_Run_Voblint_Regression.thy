@@ -21,12 +21,12 @@ definition demo_prog :: imp_prog where
        }
      }"
 
-definition demo_conf :: "typed_domain list \<Rightarrow> voblint_conf" where
-  "demo_conf as = \<lparr>conf_analyses = as, conf_context = Typed_Call_String 0,
+definition demo_conf :: "analysis list \<Rightarrow> voblint_conf" where
+  "demo_conf as = \<lparr>conf_analyses = as, conf_context = Call_String 0,
      conf_globals = Globals_Warrow, conf_program_globals = Program_Globals_Flow_Sensitive,
      conf_sem = default_sem_conf\<rparr>"
 
-definition run_checks :: "typed_domain list \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> contextual_verdict) list option"
+definition run_checks :: "analysis list \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> contextual_verdict) list option"
   where
   "run_checks as p =
      (case run_voblint (demo_conf as) [] p of
@@ -72,11 +72,11 @@ definition one_call_prog :: imp_prog where
 
 text \<open>Straight-line code: both domains settle both checks.\<close>
 
-lemma demo_sign: "run_checks [Typed_Sign] demo_prog
+lemma demo_sign: "run_checks [Sign] demo_prog
     = Some [(Statement 1, Decided Check_Proved), (Statement 3, Decided Check_Refuted)]"
   by eval
 
-lemma demo_interval: "run_checks [Typed_Interval] demo_prog
+lemma demo_interval: "run_checks [Interval] demo_prog
     = Some [(Statement 1, Decided Check_Proved), (Statement 3, Decided Check_Refuted)]"
   by eval
 
@@ -86,22 +86,22 @@ text \<open>
   lose the bound: neither check is decided.
 \<close>
 
-lemma proc_demo_sign: "run_checks [Typed_Sign] proc_demo_prog
+lemma proc_demo_sign: "run_checks [Sign] proc_demo_prog
     = Some [(Statement 5, Decided Check_Unknown), (Statement 6, Decided Check_Unknown)]"
   by eval
 
-lemma proc_demo_interval: "run_checks [Typed_Interval] proc_demo_prog
+lemma proc_demo_interval: "run_checks [Interval] proc_demo_prog
     = Some [(Statement 5, Decided Check_Unknown), (Statement 6, Decided Check_Unknown)]"
   by eval
 
 text \<open>A global written from its own value, with no call and through one call: the
   exact value survives, so the check is proved.\<close>
 
-lemma no_call_global_self_ref_interval: "run_checks [Typed_Interval] no_call_global_self_ref_prog
+lemma no_call_global_self_ref_interval: "run_checks [Interval] no_call_global_self_ref_prog
     = Some [(Statement 2, Decided Check_Proved)]"
   by eval
 
-lemma one_call_interval: "run_checks [Typed_Interval] one_call_prog
+lemma one_call_interval: "run_checks [Interval] one_call_prog
     = Some [(Statement 4, Decided Check_Proved)]"
   by eval
 

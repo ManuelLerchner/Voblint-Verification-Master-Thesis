@@ -1,5 +1,5 @@
 theory MCP_Split
-  imports "Voblint_Typed_CLI.Typed_MCP"
+  imports "Voblint_CLI.MCP"
 begin
 
 section \<open>The registered analyses with program globals on the shared channel\<close>
@@ -355,11 +355,11 @@ lemma keyed_field_gamma:
   fixes f :: "'a::{ownership_split, bounded_semilattice_sup_bot} \<Rightarrow> 'c::kind_int_domain tst lifted"
     and E :: "var_id \<Rightarrow> 'a lifted"
   assumes hom: "split_hom f" and fa: "f a = Lifted st"
-  shows "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal)
+  shows "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global)
              (lift_get f (split_cmb gs (Lifted a) (full_view split_global_at gs E))))
-    \<longleftrightarrow> tstyped \<kappa> s \<and> (\<forall>y. s y \<in> gamma_kd (if tglobal y \<and> y \<in> set gs
+    \<longleftrightarrow> in_kinds \<kappa> s \<and> (\<forall>y. s y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
                             then (lift_val (lift_get f (E y)))\<langle>Global_Location y\<rangle>
-                            else st\<langle>location_of tglobal y\<rangle>))"
+                            else st\<langle>location_of is_global y\<rangle>))"
   by (auto simp: keyed_field_read[OF hom fa] gamma_tabs_def default_st_to_fun_def location_of_def
       split_cmb_gdefault_st_get view_of_default_st_get image_iff)
 
@@ -372,11 +372,11 @@ text \<open>
 lemma keyed_field_mix:
   fixes f :: "'a::{ownership_split, bounded_semilattice_sup_bot} \<Rightarrow> 'c::kind_int_domain tst lifted"
   assumes hom: "split_hom f"
-    and s: "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal)
+    and s: "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global)
                (lift_get f (split_cmb gs l0 (full_view split_global_at gs e))))"
-    and s': "s' \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get f r))"
-    and fr: "\<forall>x. tglobal x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x"
-  shows "s' \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal)
+    and s': "s' \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f r))"
+    and fr: "\<forall>x. is_global x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x"
+  shows "s' \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global)
            (lift_get f (split_cmb gs (split_rl gs r)
               (full_view split_global_at gs (\<lambda>x. if x \<in> set W then split_global_at x r else e x)))))"
 proof -
@@ -389,21 +389,21 @@ proof -
   have rl: "split_rl gs r = Lifted (split_rl gs ri)" by (simp add: r split_rl_lifted_def)
   have frl: "f (split_rl gs ri) = Lifted (split_rl gs stR)"
     by (simp add: hom_rl fr_i split_rl_lifted_def)
-  have s'R: "tstyped \<kappa> s'" "\<And>y. s' y \<in> gamma_kd (stR\<langle>location_of tglobal y\<rangle>)"
+  have s'R: "in_kinds \<kappa> s'" "\<And>y. s' y \<in> gamma_kd (stR\<langle>location_of is_global y\<rangle>)"
     using s' by (simp_all add: r fr_i lift_get_def gamma_tabs_def default_st_to_fun_def)
-  have s0: "\<And>y. s y \<in> gamma_kd (if tglobal y \<and> y \<in> set gs
-               then (lift_val (lift_get f (e y)))\<langle>Global_Location y\<rangle> else st0\<langle>location_of tglobal y\<rangle>)"
+  have s0: "\<And>y. s y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
+               then (lift_val (lift_get f (e y)))\<langle>Global_Location y\<rangle> else st0\<langle>location_of is_global y\<rangle>)"
     using s by (simp add: l0 keyed_field_gamma[OF hom fa0])
   show ?thesis
     unfolding rl keyed_field_gamma[OF hom frl]
   proof (intro conjI allI)
-    show "tstyped \<kappa> s'" by (rule s'R(1))
+    show "in_kinds \<kappa> s'" by (rule s'R(1))
   next
     fix y
-    show "s' y \<in> gamma_kd (if tglobal y \<and> y \<in> set gs
+    show "s' y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
         then (lift_val (lift_get f (if y \<in> set W then split_global_at y r else e y)))\<langle>Global_Location y\<rangle>
-        else (split_rl gs stR)\<langle>location_of tglobal y\<rangle>)"
-    proof (cases "tglobal y \<and> y \<in> set gs")
+        else (split_rl gs stR)\<langle>location_of is_global y\<rangle>)"
+    proof (cases "is_global y \<and> y \<in> set gs")
       case False
       then show ?thesis using s'R(2)[of y]
         by (auto simp: location_of_def split_rl_gdefault_st_get image_iff)
@@ -428,15 +428,15 @@ text \<open>A state is described by itself recombined with its own cuts.\<close>
 lemma keyed_field_init:
   fixes f :: "'a::{ownership_split, bounded_semilattice_sup_bot} \<Rightarrow> 'c::kind_int_domain tst lifted"
   assumes hom: "split_hom f"
-  shows "gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get f (Lifted i)))
-    \<subseteq> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get f (split_cmb gs (Lifted i)
+  shows "gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (Lifted i)))
+    \<subseteq> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (split_cmb gs (Lifted i)
          (full_view split_global_at gs (\<lambda>x. split_global_at x (Lifted i))))))"
 proof
   interpret split_hom f by (rule hom)
   fix s
-  assume s: "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get f (Lifted i)))"
+  assume s: "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (Lifted i)))"
   then obtain st where fi: "f i = Lifted st" by (cases "f i") (simp_all add: lift_get_def)
-  show "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get f (split_cmb gs (Lifted i)
+  show "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (split_cmb gs (Lifted i)
       (full_view split_global_at gs (\<lambda>x. split_global_at x (Lifted i))))))"
     using s unfolding keyed_field_gamma[OF hom fi]
     by (auto simp: fi lift_get_def gamma_tabs_def default_st_to_fun_def location_of_def
@@ -464,23 +464,23 @@ lemma split_hom_comp: "split_hom f \<Longrightarrow> split_hom g \<Longrightarro
   unfolding split_hom_def by simp
 
 lemma split_hom_tslots:
-  "split_hom (tslot1 :: tmcp_st \<Rightarrow> _)" "split_hom (tslot2 :: tmcp_st \<Rightarrow> _)"
-  "split_hom (tslot3n :: tmcp_st \<Rightarrow> _)" "split_hom (tslot3o :: tmcp_st \<Rightarrow> _)"
-  "split_hom (tslot3f :: tmcp_st \<Rightarrow> _)" "split_hom (tslot4 :: tmcp_st \<Rightarrow> _)"
-  "split_hom (tslot5 :: tmcp_st \<Rightarrow> _)"
+  "split_hom (slot1 :: mcp_st \<Rightarrow> _)" "split_hom (slot2 :: mcp_st \<Rightarrow> _)"
+  "split_hom (slot3n :: mcp_st \<Rightarrow> _)" "split_hom (slot3o :: mcp_st \<Rightarrow> _)"
+  "split_hom (slot3f :: mcp_st \<Rightarrow> _)" "split_hom (slot4 :: mcp_st \<Rightarrow> _)"
+  "split_hom (slot5 :: mcp_st \<Rightarrow> _)"
 proof -
   note h = split_hom_comp split_hom_pleft split_hom_pright
-  have eqs: "(tslot1 :: tmcp_st \<Rightarrow> _) = pleft" "(tslot2 :: tmcp_st \<Rightarrow> _) = pleft \<circ> pright"
-    "(tslot3n :: tmcp_st \<Rightarrow> _) = pleft \<circ> pleft \<circ> pright \<circ> pright"
-    "(tslot3o :: tmcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pleft \<circ> pright \<circ> pright"
-    "(tslot3f :: tmcp_st \<Rightarrow> _) = pright \<circ> pright \<circ> pleft \<circ> pright \<circ> pright"
-    "(tslot4 :: tmcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pright \<circ> pright"
-    "(tslot5 :: tmcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright"
+  have eqs: "(slot1 :: mcp_st \<Rightarrow> _) = pleft" "(slot2 :: mcp_st \<Rightarrow> _) = pleft \<circ> pright"
+    "(slot3n :: mcp_st \<Rightarrow> _) = pleft \<circ> pleft \<circ> pright \<circ> pright"
+    "(slot3o :: mcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pleft \<circ> pright \<circ> pright"
+    "(slot3f :: mcp_st \<Rightarrow> _) = pright \<circ> pright \<circ> pleft \<circ> pright \<circ> pright"
+    "(slot4 :: mcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pright \<circ> pright"
+    "(slot5 :: mcp_st \<Rightarrow> _) = pleft \<circ> pright \<circ> pright \<circ> pright \<circ> pright"
     by (simp_all add: fun_eq_iff)
-  show "split_hom (tslot1 :: tmcp_st \<Rightarrow> _)" "split_hom (tslot2 :: tmcp_st \<Rightarrow> _)"
-    "split_hom (tslot3n :: tmcp_st \<Rightarrow> _)" "split_hom (tslot3o :: tmcp_st \<Rightarrow> _)"
-    "split_hom (tslot3f :: tmcp_st \<Rightarrow> _)" "split_hom (tslot4 :: tmcp_st \<Rightarrow> _)"
-    "split_hom (tslot5 :: tmcp_st \<Rightarrow> _)"
+  show "split_hom (slot1 :: mcp_st \<Rightarrow> _)" "split_hom (slot2 :: mcp_st \<Rightarrow> _)"
+    "split_hom (slot3n :: mcp_st \<Rightarrow> _)" "split_hom (slot3o :: mcp_st \<Rightarrow> _)"
+    "split_hom (slot3f :: mcp_st \<Rightarrow> _)" "split_hom (slot4 :: mcp_st \<Rightarrow> _)"
+    "split_hom (slot5 :: mcp_st \<Rightarrow> _)"
     unfolding eqs by (intro h)+
 qed
 
@@ -491,46 +491,46 @@ lemma split_order_lifted [simp]:
   by (cases d; simp add: split_cmb_lifted_def split_cmb_order_rel_def split_rl_lifted_def
       split_rl_order_rel_def)+
 
-lemma tslot6_keyed:
-  "lift_get tslot6 (split_cmb gs (split_rl gs r) g) = lift_get tslot6 (r :: tmcp_st lifted)"
+lemma slot6_keyed:
+  "lift_get slot6 (split_cmb gs (split_rl gs r) g) = lift_get slot6 (r :: mcp_st lifted)"
   by (cases r) (simp_all add: split_cmb_Lifted split_rl_lifted_def split_cmb_analysis_product_def
       split_rl_analysis_product_def lift_get_def split_rl_order_rel_def map_lift_def
       split: lifted.split)
 
-lemma tslot6_keyed_init: "lift_get tslot6 (split_cmb gs (Lifted i) g) = tslot6 (i :: tmcp_st)"
+lemma slot6_keyed_init: "lift_get slot6 (split_cmb gs (Lifted i) g) = slot6 (i :: mcp_st)"
   by (simp add: split_cmb_Lifted split_cmb_analysis_product_def lift_get_def)
 
 text \<open>Each analysis reads its own field of the combined state.\<close>
 
-lemma tval_gamma_slot:
-  "gamma_lift (tval_gamma \<kappa> Typed_Interval) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot1 x))"
-  "gamma_lift (tval_gamma \<kappa> Typed_Congruence) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot2 x))"
-  "gamma_lift (tval_gamma \<kappa> (Typed_Int Refine_Never)) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot3n x))"
-  "gamma_lift (tval_gamma \<kappa> (Typed_Int Refine_Once)) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot3o x))"
-  "gamma_lift (tval_gamma \<kappa> (Typed_Int Refine_Fixpoint)) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot3f x))"
-  "gamma_lift (tval_gamma \<kappa> Typed_Sign) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot4 x))"
-  "gamma_lift (tval_gamma \<kappa> Typed_Parity) (map_lift (tmcp_rd tglobal) x)
-     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun tglobal) (lift_get tslot5 x))"
-  "gamma_lift (tval_gamma \<kappa> Typed_Order) (map_lift (tmcp_rd tglobal) x)
-     = gamma_ord_lift \<kappa> (lift_get tslot6 x)"
-  by (cases x; simp add: tmcp_rd_def lift_get_def)+
+lemma val_gamma_slot:
+  "gamma_lift (val_gamma \<kappa> Interval) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot1 x))"
+  "gamma_lift (val_gamma \<kappa> Congruence) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot2 x))"
+  "gamma_lift (val_gamma \<kappa> (Ana_Int Refine_Never)) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot3n x))"
+  "gamma_lift (val_gamma \<kappa> (Ana_Int Refine_Once)) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot3o x))"
+  "gamma_lift (val_gamma \<kappa> (Ana_Int Refine_Fixpoint)) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot3f x))"
+  "gamma_lift (val_gamma \<kappa> Sign) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot4 x))"
+  "gamma_lift (val_gamma \<kappa> Parity) (map_lift (mcp_rd is_global) x)
+     = gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get slot5 x))"
+  "gamma_lift (val_gamma \<kappa> Order) (map_lift (mcp_rd is_global) x)
+     = gamma_ord_lift \<kappa> (lift_get slot6 x)"
+  by (cases x; simp add: mcp_rd_def lift_get_def)+
 
 lemma part_gamma_keyed_mix:
-  assumes s: "s \<in> gamma_lift (tval_gamma \<kappa> a) (map_lift (tmcp_rd tglobal)
+  assumes s: "s \<in> gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global)
                  (split_cmb gs l0 (full_view split_global_at gs e)))"
-    and s': "s' \<in> gamma_lift (tval_gamma \<kappa> a) (map_lift (tmcp_rd tglobal) r)"
-    and fr: "\<forall>x. tglobal x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x"
-  shows "s' \<in> gamma_lift (tval_gamma \<kappa> a) (map_lift (tmcp_rd tglobal) (split_cmb gs (split_rl gs r)
+    and s': "s' \<in> gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global) r)"
+    and fr: "\<forall>x. is_global x \<longrightarrow> x \<notin> set W \<longrightarrow> s' x = s x"
+  shows "s' \<in> gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global) (split_cmb gs (split_rl gs r)
            (full_view split_global_at gs (\<lambda>x. if x \<in> set W then split_global_at x r else e x))))"
   using s s'
-  by (cases a rule: typed_domain_cases)
-     (simp_all only: tval_gamma_slot tslot6_keyed,
+  by (cases a rule: analysis_cases)
+     (simp_all only: val_gamma_slot slot6_keyed,
       (rule keyed_field_mix[OF split_hom_tslots(1) _ _ fr]
         keyed_field_mix[OF split_hom_tslots(2) _ _ fr]
         keyed_field_mix[OF split_hom_tslots(3) _ _ fr]
@@ -540,11 +540,11 @@ lemma part_gamma_keyed_mix:
         keyed_field_mix[OF split_hom_tslots(7) _ _ fr]; assumption)+)
 
 lemma part_gamma_keyed_init:
-  "gamma_lift (tval_gamma \<kappa> a) (map_lift (tmcp_rd tglobal) (Lifted i))
-     \<subseteq> gamma_lift (tval_gamma \<kappa> a) (map_lift (tmcp_rd tglobal) (split_cmb gs (Lifted i)
+  "gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global) (Lifted i))
+     \<subseteq> gamma_lift (val_gamma \<kappa> a) (map_lift (mcp_rd is_global) (split_cmb gs (Lifted i)
          (full_view split_global_at gs (\<lambda>x. split_global_at x (Lifted i)))))"
-  by (cases a rule: typed_domain_cases)
-     (simp_all only: tval_gamma_slot tslot6_keyed_init,
+  by (cases a rule: analysis_cases)
+     (simp_all only: val_gamma_slot slot6_keyed_init,
       (rule keyed_field_init[OF split_hom_tslots(1)] keyed_field_init[OF split_hom_tslots(2)]
         keyed_field_init[OF split_hom_tslots(3)] keyed_field_init[OF split_hom_tslots(4)]
         keyed_field_init[OF split_hom_tslots(5)] keyed_field_init[OF split_hom_tslots(6)]
@@ -559,45 +559,45 @@ text \<open>
   above.
 \<close>
 
-definition tdeclared_globals :: "imp_prog \<Rightarrow> var_id list" where
-  "tdeclared_globals p = map GlobalId (declared_global_vars p)"
+definition declared_globals :: "imp_prog \<Rightarrow> var_id list" where
+  "declared_globals p = map GlobalId (declared_global_vars p)"
 
-lemma typed_mcp_keyed:
+lemma mcp_cs_keyed:
   "gdg_analysis
-    teval ReturnVar (\<lambda>_. tconv (kenv_of ds)) (\<lambda>_. tglobal) (\<lambda>_. tinit_stores (kenv_of ds))
-    (tmcp_comp sem ds (tactivation as)) (tmcp_emp (tactivation as)) tmcp_rd
-    (tmcp_init ds (tactivation as))
+    eval ReturnVar (\<lambda>_. kind_conv (kenv_of ds)) (\<lambda>_. is_global) (\<lambda>_. init_stores (kenv_of ds))
+    (mcp_comp sem ds (activation_of as)) (mcp_emp (activation_of as)) mcp_rd
+    (mcp_init ds (activation_of as))
     Analysis_Buffer Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE((var_id, 'c) global_unknown)
-       TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r)
-    \<bottom> (tmcp_classify sem ds (tactivation as)) (tmcp.act_gamma ds (tactivation as))
-    (tmcp_empty_v (tactivation as))
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r)
+    \<bottom> (mcp_classify sem ds (activation_of as)) (mcp.act_gamma ds (activation_of as))
+    (mcp_empty_v (activation_of as))
     (TD_side_rule_Interp_solve_c r)
-    (\<lambda>p c. gkeyed_split_spec tvars ReturnVar tglobal (split_cmb gs) (split_rl gs)
+    (\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c)
     (\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)) (\<lambda>\<G>. split_rl gs) (\<lambda>\<G> d. Bot)
-    (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (tmcp_init ds (tactivation as))))) gs)
-    (\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads tvars tglobal (ci_args ci))
-       e (split_free (gcall_global_reads tvars tglobal (ci_args ci)))))
-    (\<lambda>p. typed_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
+    (\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs)
+    (\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
+       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci)))))
+    (\<lambda>p. elab_cfg p ds) (\<lambda>_. FunctionEntry prog_main_name)"
 proof (rule gdg_analysis_keyedI[OF td_certified_solver], goal_cases CompSound EnterSingle CmbMono
     CmbRl RlCmb CmbBot RgMono RgFree Mix InitView EmptyRd EmptyV SeedNe SeedNeGlobal ClProved
     ClRefuted BotState InitSound PEntry FinIntra FinCalls CallsUnique)
   case (CompSound p)
-  have eq: "mcp_gamma (map (tmcp.part_gamma ds tglobal) (tactivation as))
-      = (\<lambda>d. gamma_lift (tmcp.act_gamma ds (tactivation as)) (map_lift (tmcp_rd tglobal) d))"
-    by (rule ext) (rule tmcp.mcp_gamma_rd[OF tactivation_ne])
+  have eq: "mcp_gamma (map (mcp.part_gamma ds is_global) (activation_of as))
+      = (\<lambda>d. gamma_lift (mcp.act_gamma ds (activation_of as)) (map_lift (mcp_rd is_global) d))"
+    by (rule ext) (rule mcp.mcp_gamma_rd[OF activation_of_ne])
   show ?case
-    using tmcp.mcp_comp_sound[OF distinct_tactivation tactivation_ne, where sem = sem and ds = ds
+    using mcp.mcp_comp_sound[OF distinct_activation_of activation_of_ne, where sem = sem and ds = ds
         and p = p, of as]
     unfolding eq by simp
 next
   case (EnterSingle p ci d)
   show ?case
-    using single_entryD[OF tmcp.single_entry_mcp_comp[OF tactivation_ne],
-        of sem ds as tglobal p
-          "ls_channel (tmcp_comp sem ds (tactivation as) tglobal p) d" ci "(d, d)"]
+    using single_entryD[OF mcp.single_entry_mcp_comp[OF activation_of_ne],
+        of sem ds as is_global p
+          "ls_channel (mcp_comp sem ds (activation_of as) is_global p) d" ci "(d, d)"]
     by (simp add: dg_pipeline.comp_entry_def)
 next
   case (CmbMono d d' g g') then show ?case by (rule split_cmb_mono)
@@ -613,115 +613,115 @@ next
   case (RgFree x R v) then show ?case by (rule split_free_ge)
 next
   case (Mix p l0 e r s s' W)
-  note eq = tmcp.mcp_gamma_rd[OF tactivation_ne, symmetric]
+  note eq = mcp.mcp_gamma_rd[OF activation_of_ne, symmetric]
   show ?case
     using Mix unfolding eq mcp_gamma_def by (auto intro: part_gamma_keyed_mix)
 next
   case (InitView p)
-  note eq = tmcp.mcp_gamma_rd[OF tactivation_ne, symmetric]
+  note eq = mcp.mcp_gamma_rd[OF activation_of_ne, symmetric]
   show ?case
     unfolding eq mcp_gamma_def using part_gamma_keyed_init by fastforce
 next
-  case (EmptyRd p s) show ?case by (rule tmcp.mcp_emp_rd)
+  case (EmptyRd p s) show ?case by (rule mcp.mcp_emp_rd)
 next
-  case EmptyV show ?case by (rule tmcp.sound_emptiness_mcp)
+  case EmptyV show ?case by (rule mcp.sound_emptiness_mcp)
 next
   case (SeedNe v ctx) show ?case by simp
 next
   case (SeedNeGlobal v ctx n) show ?case by simp
 next
-  case (ClProved c d s) then show ?case by (intro tmcp.mcp_classify_proved)
+  case (ClProved c d s) then show ?case by (intro mcp.mcp_classify_proved)
 next
-  case (ClRefuted c d s) then show ?case by (intro tmcp.mcp_classify_refuted)
+  case (ClRefuted c d s) then show ?case by (intro mcp.mcp_classify_refuted)
 next
-  case BotState show ?case by (rule tmcp.act_gamma_bot[OF tactivation_ne])
+  case BotState show ?case by (rule mcp.act_gamma_bot[OF activation_of_ne])
 next
-  case (InitSound p) show ?case by (rule tmcp_init_sound)
+  case (InitSound p) show ?case by (rule mcp_init_sound)
 next
-  case (PEntry p) show ?case by (simp add: typed_cfg_def)
+  case (PEntry p) show ?case by (simp add: elab_cfg_def)
 next
-  case (FinIntra p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
+  case (FinIntra p) show ?case by (simp add: elab_cfg_def compile_prog_finite)
 next
-  case (FinCalls p) show ?case by (simp add: typed_cfg_def compile_prog_finite)
+  case (FinCalls p) show ?case by (simp add: elab_cfg_def compile_prog_finite)
 next
-  case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
+  case (CallsUnique p) show ?case by (rule elab_cfg_calls_source_unique)
 qed
 
 text \<open>The two context policies again, with each owned global at its own unknown.\<close>
 
-global_interpretation typed_mcp_split: gdg_analysis
-    teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
-    "tmcp_init ds (tactivation as)"
+global_interpretation mcp_split: gdg_analysis
+    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+    "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
+    "mcp_init ds (activation_of as)"
     Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((var_id, cfg_node list) global_unknown)
-       TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
-    \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
-    "tmcp_empty_v (tactivation as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. gkeyed_split_spec tvars ReturnVar tglobal (split_cmb gs) (split_rl gs)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
+    \<bottom> "mcp_classify sem ds (activation_of as)" "mcp.act_gamma ds (activation_of as)"
+    "mcp_empty_v (activation_of as)" "TD_side_rule_Interp_solve_c r"
+    "\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c"
     "\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)" "\<lambda>\<G>. split_rl gs" "\<lambda>\<G> d. Bot"
-    "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (tmcp_init ds (tactivation as))))) gs"
-    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads tvars tglobal (ci_args ci))
-       e (split_free (gcall_global_reads tvars tglobal (ci_args ci))))"
-    "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
+    "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs"
+    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
+       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci))))"
+    "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for sem ds as r k gs
-  by (rule typed_mcp_keyed)
+  by (rule mcp_cs_keyed)
 
-global_interpretation typed_mcp_split_es: gdg_analysis
-    teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
-    "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
-    "tmcp_init ds (tactivation as)"
-    Analysis_Buffer Analysis_Global Activation_Seed "tmcp_route (tactivation as)" tmcp_root_ctx
+global_interpretation mcp_split_es: gdg_analysis
+    eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
+    "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
+    "mcp_init ds (activation_of as)"
+    Analysis_Buffer Analysis_Global Activation_Seed "mcp_route (activation_of as)" mcp_root_ctx
     "TD_side_rule_Interp_solve r"
-    "TD_side_rule_Interp.solve_dom TYPE((var_id, tmcp_ctx) global_unknown)
-       TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
-    \<bottom> "tmcp_classify sem ds (tactivation as)" "tmcp.act_gamma ds (tactivation as)"
-    "tmcp_empty_v (tactivation as)" "TD_side_rule_Interp_solve_c r"
-    "\<lambda>p c. gkeyed_split_spec tvars ReturnVar tglobal (split_cmb gs) (split_rl gs)
+    "TD_side_rule_Interp.solve_dom TYPE((var_id, mcp_ctx) global_unknown)
+       TYPE((mcp_st lifted, mcp_st lifted) dg_state) r"
+    \<bottom> "mcp_classify sem ds (activation_of as)" "mcp.act_gamma ds (activation_of as)"
+    "mcp_empty_v (activation_of as)" "TD_side_rule_Interp_solve_c r"
+    "\<lambda>p c. gkeyed_split_spec exp_vars ReturnVar is_global (split_cmb gs) (split_rl gs)
        split_global_at split_free c"
     "\<lambda>p d e. split_cmb gs d (full_view split_global_at gs e)" "\<lambda>\<G>. split_rl gs" "\<lambda>\<G> d. Bot"
-    "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (tmcp_init ds (tactivation as))))) gs"
-    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads tvars tglobal (ci_args ci))
-       e (split_free (gcall_global_reads tvars tglobal (ci_args ci))))"
-    "\<lambda>p. typed_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
+    "\<lambda>\<G> p. map (\<lambda>x. (x, split_global_at x (Lifted (mcp_init ds (activation_of as))))) gs"
+    "\<lambda>p ci d e. split_cmb gs d (view_of split_global_at (gcall_global_reads exp_vars is_global (ci_args ci))
+       e (split_free (gcall_global_reads exp_vars is_global (ci_args ci))))"
+    "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for sem ds as r gs
-  by (rule typed_mcp_keyed)
+  by (rule mcp_cs_keyed)
 
 text \<open>Every store that reaches a node lies in a state the solve files there, as for the
-  whole-state placement (\<open>typed_mcp_node_sound\<close>).\<close>
+  whole-state placement (\<open>mcp_cs_node_sound\<close>).\<close>
 
-lemma typed_mcp_split_node_sound:
+lemma mcp_split_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp_split.terminates sem ds as k r gs tglobal p"
-  shows "reaching ds p v \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as)
-           (typed_mcp_split.state_at sem ds as k r gs tglobal p ctx v))"
-  using typed_mcp_split.gfun_route_result_node_sound
-      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "cs_context k" v]
-  by (simp add: tnode_collect_def cs_route_def cs_context_def)
+    and solves: "mcp_split.terminates sem ds as k r gs is_global p"
+  shows "reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
+           (mcp_split.state_at sem ds as k r gs is_global p ctx v))"
+  using mcp_split.gfun_route_result_node_sound
+      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k" v]
+  by (simp add: node_collect_def cs_route_def cs_context_def)
 
-lemma typed_mcp_split_es_node_sound:
+lemma mcp_split_es_node_sound:
   assumes wf: "wf_program_compile_input p"
-    and solves: "typed_mcp_split_es.terminates sem ds as r gs tglobal p"
-  shows "reaching ds p v \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as)
-           (typed_mcp_split_es.state_at sem ds as r gs tglobal p ctx v))"
+    and solves: "mcp_split_es.terminates sem ds as r gs is_global p"
+  shows "reaching ds p v \<subseteq> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
+           (mcp_split_es.state_at sem ds as r gs is_global p ctx v))"
 proof
   fix s assume "s \<in> reaching ds p v"
-  then obtain ctx :: tmcp_ctx where "s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds))
-      tglobal (typed_mcp_split_es.admitted_contexts sem ds as r gs tglobal p) tmcp_root_ctx
-      (typed_cfg p ds) (tinit_stores (kenv_of ds)) v ctx"
-    using typed_mcp_split_es.gentry_state_node_collect_eq_Union_of_terminates
-        [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v]
-    by (auto simp: tnode_collect_def)
-  then have "s \<in> gamma_lift (tmcp.act_gamma ds (tactivation as))
-      (lookup_table (typed_mcp_split_es.result sem ds as r gs tglobal p) v ctx)"
-    using typed_mcp_split_es.gentry_state_lookup_sound_of_terminates
-        [OF typed_cfg_def typed_wf_compile_input[OF wf] solves, of v ctx]
+  then obtain ctx :: mcp_ctx where "s \<in> ctx_sem.gactivation_collect eval ReturnVar (kind_conv (kenv_of ds))
+      is_global (mcp_split_es.admitted_contexts sem ds as r gs is_global p) mcp_root_ctx
+      (elab_cfg p ds) (init_stores (kenv_of ds)) v ctx"
+    using mcp_split_es.gentry_state_node_collect_eq_Union_of_terminates
+        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
+    by (auto simp: node_collect_def)
+  then have "s \<in> gamma_lift (mcp.act_gamma ds (activation_of as))
+      (lookup_table (mcp_split_es.result sem ds as r gs is_global p) v ctx)"
+    using mcp_split_es.gentry_state_lookup_sound_of_terminates
+        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v ctx]
     by blast
-  then show "s \<in> (\<Union>ctx. tmcp.act_gamma ds (tactivation as)
-      (typed_mcp_split_es.state_at sem ds as r gs tglobal p ctx v))"
-    by (intro UN_I[of ctx]) (auto simp: typed_mcp_split_es.state_at_unfold split: lifted.splits)
+  then show "s \<in> (\<Union>ctx. mcp.act_gamma ds (activation_of as)
+      (mcp_split_es.state_at sem ds as r gs is_global p ctx v))"
+    by (intro UN_I[of ctx]) (auto simp: mcp_split_es.state_at_unfold split: lifted.splits)
 qed
 
 end

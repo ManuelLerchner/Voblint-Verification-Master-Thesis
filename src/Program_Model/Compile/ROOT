@@ -31,5 +31,5 @@ session Voblint_Compile in "." = "Voblint_CFG" +
     (* The bridge, and the only theory that needs both branches: a source run
        becomes a valid activation trace (csim -> valid_activation_trace). *)
     Source_To_Trace
-    (* Typed stores stay typed along valid activation traces of the typed graph. *)
-    Typed_Invariants
+    (* Stores stay within their kinds along valid activation traces of the elaborated graph. *)
+    Kind_Invariants

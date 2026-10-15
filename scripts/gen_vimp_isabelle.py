@@ -483,21 +483,21 @@ def gen_syntax_block(g: dict) -> str:
 TR_CONST = {
     "N": "VIMP_Syntax.N",
     "V": "VIMP_Syntax.V",
-    "Plus": "VIMP_Syntax.exp.Plus",
-    "Minus": "VIMP_Syntax.exp.Minus",
-    "Times": "VIMP_Syntax.exp.Times",
-    "Div": "VIMP_Syntax.exp.Div",
-    "Mod": "VIMP_Syntax.exp.Mod",
-    "Less": "VIMP_Syntax.exp.Less",
-    "LessEq": "VIMP_Syntax.exp.LessEq",
-    "Greater": "VIMP_Syntax.exp.Greater",
-    "GreaterEq": "VIMP_Syntax.exp.GreaterEq",
-    "NotEq": "VIMP_Syntax.exp.NotEq",
-    "Eq": "VIMP_Syntax.exp.Eq",
-    "Not": "VIMP_Syntax.exp.Not",
-    "And": "VIMP_Syntax.exp.And",
-    "Or": "VIMP_Syntax.exp.Or",
-    "Cast": "VIMP_Syntax.exp.Cast",
+    "Plus": "VIMP_Syntax.src_exp.Plus",
+    "Minus": "VIMP_Syntax.src_exp.Minus",
+    "Times": "VIMP_Syntax.src_exp.Times",
+    "Div": "VIMP_Syntax.src_exp.Div",
+    "Mod": "VIMP_Syntax.src_exp.Mod",
+    "Less": "VIMP_Syntax.src_exp.Less",
+    "LessEq": "VIMP_Syntax.src_exp.LessEq",
+    "Greater": "VIMP_Syntax.src_exp.Greater",
+    "GreaterEq": "VIMP_Syntax.src_exp.GreaterEq",
+    "NotEq": "VIMP_Syntax.src_exp.NotEq",
+    "Eq": "VIMP_Syntax.src_exp.Eq",
+    "Not": "VIMP_Syntax.src_exp.Not",
+    "And": "VIMP_Syntax.src_exp.And",
+    "Or": "VIMP_Syntax.src_exp.Or",
+    "Cast": "VIMP_Syntax.src_exp.Cast",
     "I8": "Machine_Kind.ikind.I8",
     "U8": "Machine_Kind.ikind.U8",
     "I16": "Machine_Kind.ikind.I16",
@@ -772,22 +772,22 @@ def indent(text: str, prefix: str = "  ") -> str:
 VAL_DECLS = """\
 val c_N      = "VIMP_Syntax.N"
 val c_V      = "VIMP_Syntax.V"
-val c_Plus   = "VIMP_Syntax.exp.Plus"
-val c_Minus  = "VIMP_Syntax.exp.Minus"
-val c_Times  = "VIMP_Syntax.exp.Times"
-val c_Div = "VIMP_Syntax.exp.Div"
-val c_Mod = "VIMP_Syntax.exp.Mod"
+val c_Plus   = "VIMP_Syntax.src_exp.Plus"
+val c_Minus  = "VIMP_Syntax.src_exp.Minus"
+val c_Times  = "VIMP_Syntax.src_exp.Times"
+val c_Div = "VIMP_Syntax.src_exp.Div"
+val c_Mod = "VIMP_Syntax.src_exp.Mod"
 
-val c_Less   = "VIMP_Syntax.exp.Less"
-val c_LessEq = "VIMP_Syntax.exp.LessEq"
-val c_Greater = "VIMP_Syntax.exp.Greater"
-val c_GreaterEq = "VIMP_Syntax.exp.GreaterEq"
-val c_NotEq = "VIMP_Syntax.exp.NotEq"
-val c_Eq     = "VIMP_Syntax.exp.Eq"
-val c_Not    = "VIMP_Syntax.exp.Not"
-val c_And    = "VIMP_Syntax.exp.And"
-val c_Or     = "VIMP_Syntax.exp.Or"
-val c_Cast   = "VIMP_Syntax.exp.Cast"
+val c_Less   = "VIMP_Syntax.src_exp.Less"
+val c_LessEq = "VIMP_Syntax.src_exp.LessEq"
+val c_Greater = "VIMP_Syntax.src_exp.Greater"
+val c_GreaterEq = "VIMP_Syntax.src_exp.GreaterEq"
+val c_NotEq = "VIMP_Syntax.src_exp.NotEq"
+val c_Eq     = "VIMP_Syntax.src_exp.Eq"
+val c_Not    = "VIMP_Syntax.src_exp.Not"
+val c_And    = "VIMP_Syntax.src_exp.And"
+val c_Or     = "VIMP_Syntax.src_exp.Or"
+val c_Cast   = "VIMP_Syntax.src_exp.Cast"
 
 val c_I8  = "Machine_Kind.ikind.I8"
 val c_U8  = "Machine_Kind.ikind.U8"

@@ -10,7 +10,7 @@ text \<open>
   analyses, the context policy or the signed-overflow option, pinned by evaluation.
 \<close>
 
-definition prec_conf :: "typed_domain list \<Rightarrow> typed_context \<Rightarrow> sem_conf \<Rightarrow> voblint_conf" where
+definition prec_conf :: "analysis list \<Rightarrow> context_policy \<Rightarrow> sem_conf \<Rightarrow> voblint_conf" where
   "prec_conf as cx sem = \<lparr>conf_analyses = as, conf_context = cx,
      conf_globals = Globals_Join, conf_program_globals = Program_Globals_Flow_Sensitive,
      conf_sem = sem\<rparr>"
@@ -32,17 +32,17 @@ definition step_prog :: imp_prog where
      fun main() { x = 0; while (x < 99) { x = x + 3; } __voblint_check(x == 99); } }"
 
 lemma step_verdicts:
-  "verdicts (prec_conf [Typed_Interval] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Interval] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Congruence] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Congruence] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Int Refine_Fixpoint] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Ana_Int Refine_Fixpoint] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Proved]"
-  "verdicts (prec_conf [Typed_Order] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Order] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Sign] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Sign] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Parity] (Typed_Call_String 0) default_sem_conf) step_prog
+  "verdicts (prec_conf [Parity] (Call_String 0) default_sem_conf) step_prog
      = Some [Decided Check_Unknown]"
   by eval+
 
@@ -59,11 +59,11 @@ definition calls_prog :: imp_prog where
      fun main() { a = inc(1); __voblint_check(a == 2); b = inc(10); __voblint_check(b == 11); } }"
 
 lemma call_string_verdicts:
-  "verdicts (prec_conf [Typed_Interval] (Typed_Call_String 0) default_sem_conf) calls_prog
+  "verdicts (prec_conf [Interval] (Call_String 0) default_sem_conf) calls_prog
      = Some [Decided Check_Unknown, Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Interval] (Typed_Call_String 1) default_sem_conf) calls_prog
+  "verdicts (prec_conf [Interval] (Call_String 1) default_sem_conf) calls_prog
      = Some [Decided Check_Proved, Decided Check_Proved]"
-  "verdicts (prec_conf [Typed_Interval] Typed_Entry_State default_sem_conf) calls_prog
+  "verdicts (prec_conf [Interval] Entry_State default_sem_conf) calls_prog
      = Some [Decided Check_Proved, Decided Check_Proved]"
   by eval+
 
@@ -84,13 +84,13 @@ definition wrap_sem :: sem_conf where
   "wrap_sem = \<lparr>sem_int_signed_overflow = Assume_Wraparound\<rparr>"
 
 lemma overflow_verdicts:
-  "verdicts (prec_conf [Typed_Interval] (Typed_Call_String 0) default_sem_conf) overflow_prog
+  "verdicts (prec_conf [Interval] (Call_String 0) default_sem_conf) overflow_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Interval] (Typed_Call_String 0) wrap_sem) overflow_prog
+  "verdicts (prec_conf [Interval] (Call_String 0) wrap_sem) overflow_prog
      = Some [Decided Check_Proved]"
-  "verdicts (prec_conf [Typed_Int Refine_Never] (Typed_Call_String 0) default_sem_conf) overflow_prog
+  "verdicts (prec_conf [Ana_Int Refine_Never] (Call_String 0) default_sem_conf) overflow_prog
      = Some [Decided Check_Unknown]"
-  "verdicts (prec_conf [Typed_Int Refine_Never] (Typed_Call_String 0) wrap_sem) overflow_prog
+  "verdicts (prec_conf [Ana_Int Refine_Never] (Call_String 0) wrap_sem) overflow_prog
      = Some [Decided Check_Proved]"
   by eval+
 

@@ -1,8 +1,0 @@
-chapter Voblint
-
-session Voblint_Typed_Parity in "." = "Voblint_Analysis_Parity" +
-  description "The Parity domain at machine kinds, run by the typed pipeline"
-  sessions
-    Voblint_Typed_Nonrel
-  theories
-    Parity_Kind

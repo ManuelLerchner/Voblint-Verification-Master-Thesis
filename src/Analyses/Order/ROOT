@@ -1,0 +1,9 @@
+chapter Voblint
+
+session Voblint_Analysis_Order in "." = "Voblint_Nonrelational" +
+  description "The order relational domain over variable identities, run by the
+    D/G pipeline over the elaborated CFG"
+  theories
+    Order_Analysis
+    Relational_Regression
+    Order_Regression

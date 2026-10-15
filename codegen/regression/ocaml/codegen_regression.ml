@@ -31,12 +31,12 @@ let unlabelled = (mk_nat 0, mk_nat 0)
    names need no conversion at all. *)
 
 let domain_label = function
-  | Typed_Sign -> "Sign"
-  | Typed_Interval -> "Interval"
-  | Typed_Int _ -> "Int"
-  | Typed_Parity -> "Parity"
-  | Typed_Congruence -> "Congruence"
-  | Typed_Order -> "Order"
+  | Sign -> "Sign"
+  | Interval -> "Interval"
+  | Ana_Int _ -> "Int"
+  | Parity -> "Parity"
+  | Congruence -> "Congruence"
+  | Order -> "Order"
 
 (* y := 1; check(0 < y); y := 0 - 1; check(0 < y)
    Same program as demo_prog in Example_Run_Voblint_Regression.thy. *)
@@ -229,11 +229,11 @@ let rec show_texp_compact = function
 let report domain prog =
   match
     map_analysis_answer
-      (typed_render_report string_of_typed_value)
+      (prog_render_report string_of_report_value)
       (run_voblint
          (Voblint_conf_ext
             ( [ domain ],
-              Typed_Call_String (mk_nat 0),
+              Call_String (mk_nat 0),
               Globals_Warrow,
               Program_Globals_Flow_Sensitive,
               default_sem_conf,
@@ -342,21 +342,21 @@ let check_case_str ~line label actual expected =
     false)
 
 let () =
-  let actual_sign = report Typed_Sign demo_prog in
-  let actual_interval = report Typed_Interval demo_prog in
-  let actual_proc_demo_sign = report Typed_Sign proc_demo_prog in
-  let actual_proc_demo_interval = report Typed_Interval proc_demo_prog in
-  let proc_demo_cfg = typed_cfg proc_demo_prog [] in
+  let actual_sign = report Sign demo_prog in
+  let actual_interval = report Interval demo_prog in
+  let actual_proc_demo_sign = report Sign proc_demo_prog in
+  let actual_proc_demo_interval = report Interval proc_demo_prog in
+  let proc_demo_cfg = elab_cfg proc_demo_prog [] in
   let actual_proc_demo_intra =
-    show_intra_list (tcfg_intra_edges proc_demo_cfg)
+    show_intra_list (cfg_intra_edges proc_demo_cfg)
   in
   let actual_proc_demo_calls =
-    show_calls_list (tcfg_call_edges proc_demo_cfg)
+    show_calls_list (cfg_call_edges proc_demo_cfg)
   in
   let actual_no_call_global_self_ref_interval =
-    report Typed_Interval no_call_global_self_ref_prog
+    report Interval no_call_global_self_ref_prog
   in
-  let actual_one_call_interval = report Typed_Interval one_call_prog in
+  let actual_one_call_interval = report Interval one_call_prog in
   let ok_sign =
     check_case ~line:__LINE__ "Sign demo report" actual_sign expected_sign
   in

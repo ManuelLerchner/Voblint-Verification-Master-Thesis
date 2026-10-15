@@ -397,12 +397,16 @@ end
 
 section \<open>The typed instance\<close>
 
-global_interpretation typed: bridge_sem teval tglobal ReturnVar "tconv \<kappa>"
-  rewrites "vimp_sem.gpstep teval tglobal ReturnVar (tconv \<kappa>) = tpstep \<kappa>"
-    and "cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal = tcstep \<kappa>"
-    and "collect_sem.gnode_collect teval ReturnVar (tconv \<kappa>) tglobal = tnode_collect \<kappa>"
+global_interpretation vimp: bridge_sem eval is_global ReturnVar "kind_conv \<kappa>"
+  rewrites "vimp_sem.gpstep eval is_global ReturnVar (kind_conv \<kappa>) = pstep \<kappa>"
+    and "cfg_exec_sem.gcstep eval ReturnVar (kind_conv \<kappa>) is_global = cstep \<kappa>"
+    and "collect_sem.gnode_collect eval ReturnVar (kind_conv \<kappa>) is_global = node_collect \<kappa>"
+    and "trace_sem.gvalid_activation_trace eval ReturnVar (kind_conv \<kappa>) is_global
+           = valid_activation_trace \<kappa>"
+    and "ctx_sem.gactivation_collect eval ReturnVar (kind_conv \<kappa>) is_global = activation_collect \<kappa>"
   for \<kappa> :: kenv
-  by (simp_all add: tpstep_def tcstep_def tnode_collect_def)
+  by (simp_all add: pstep_def cstep_def node_collect_def valid_activation_trace_def
+      activation_collect_def)
 
 section \<open>Typed runs reach the typed graph\<close>
 
@@ -410,35 +414,35 @@ text \<open>Every run of the typed program is simulated on the typed graph, and 
   the sink of a valid activation trace there. Both are the generic bridge at the typed
   instance; nothing about kinds enters the simulation proof.\<close>
 
-theorem typed_source_run_has_activation_trace:
+theorem source_run_has_activation_trace:
   assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
-    and run: "star (tpstep \<kappa> (typed_ptable p ds))
-                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk t. typed_ptable p ds, typed_cfg p ds, prog_main_name
+    and run: "star (pstep \<kappa> (elab_ptable p ds))
+                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t. elab_ptable p ds, elab_cfg p ds, prog_main_name
                       \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                   \<and> typed.gactivation_trace_repr \<kappa> (typed_cfg p ds) S (v, s, stk) t"
-  unfolding typed_cfg_def
-  by (rule typed.source_run_has_activation_trace [OF typed_wf_compile_input [OF wf] s0 run])
+                   \<and> vimp.gactivation_trace_repr \<kappa> (elab_cfg p ds) S (v, s, stk) t"
+  unfolding elab_cfg_def
+  by (rule vimp.source_run_has_activation_trace [OF elab_wf_compile_input [OF wf] s0 run])
 
 text \<open>Hence every store a typed run reaches lies in the typed collecting semantics at the
   node simulating it. This is the inclusion a sound typed analysis result bounds.\<close>
 
-theorem typed_source_reaches_node_collect:
+theorem source_reaches_node_collect:
   assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
-    and run: "star (tpstep \<kappa> (typed_ptable p ds))
-                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name
+    and run: "star (pstep \<kappa> (elab_ptable p ds))
+                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
                     \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> tnode_collect \<kappa> (typed_cfg p ds) S v"
+                 \<and> s \<in> node_collect \<kappa> (elab_cfg p ds) S v"
 proof -
-  from typed_source_run_has_activation_trace [OF wf s0 run] obtain v stk t
-    where sim: "typed_ptable p ds, typed_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
-      and rep: "typed.gactivation_trace_repr \<kappa> (typed_cfg p ds) S (v, s, stk) t"
+  from source_run_has_activation_trace [OF wf s0 run] obtain v stk t
+    where sim: "elab_ptable p ds, elab_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and rep: "vimp.gactivation_trace_repr \<kappa> (elab_cfg p ds) S (v, s, stk) t"
     by blast
-  from rep have "s \<in> tnode_collect \<kappa> (typed_cfg p ds) S v"
-    by (auto simp: typed.gactivation_trace_repr_def typed.gnode_collect_def)
+  from rep have "s \<in> node_collect \<kappa> (elab_cfg p ds) S v"
+    by (auto simp: vimp.gactivation_trace_repr_def vimp.gnode_collect_def)
   with sim show ?thesis by blast
 qed
 

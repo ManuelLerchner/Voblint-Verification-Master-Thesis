@@ -359,7 +359,7 @@ let cfg_view_json prog result (graph : G.t) =
   let owner_of = A.owners g in
   let names_of = Context_graph.scope prog g owner_of in
   let id p = "cfg_" ^ A.point_name p in
-  let points = C.tcfg_points g in
+  let points = C.cfg_points g in
   (* The program's own procedure first, then the others as the CFG lists them. *)
   let owners =
     List.fold_left
@@ -705,17 +705,17 @@ let cfg_json g =
   json_object
     [
       ("cfg_entry", cfg_node_json (C.cfg_entry g));
-      ("cfg_node_list", json_list cfg_node_json (C.tcfg_points g));
+      ("cfg_node_list", json_list cfg_node_json (C.cfg_points g));
       ( "cfg_intra_list",
         json_list
           (json_pair cfg_node_json (json_pair edge_action_json cfg_node_json))
-          (C.tcfg_intra_edges g) );
+          (C.cfg_intra_edges g) );
       ( "cfg_calls_list",
         json_list
           (json_pair cfg_node_json
              (json_pair call_action_json
                 (json_pair cfg_node_json cfg_node_json)))
-          (C.tcfg_call_edges g) );
+          (C.cfg_call_edges g) );
     ]
 
 let context_json = function
@@ -730,12 +730,12 @@ let refine_mode_json = function
   | C.Refine_Never -> tagged "Refine_Never" []
 
 let domain_json = function
-  | C.Typed_Sign -> tagged "Typed_Sign" []
-  | C.Typed_Interval -> tagged "Typed_Interval" []
-  | C.Typed_Int mode -> tagged "Typed_Int" [ refine_mode_json mode ]
-  | C.Typed_Parity -> tagged "Typed_Parity" []
-  | C.Typed_Congruence -> tagged "Typed_Congruence" []
-  | C.Typed_Order -> tagged "Typed_Order" []
+  | C.Sign -> tagged "Typed_Sign" []
+  | C.Interval -> tagged "Typed_Interval" []
+  | C.Ana_Int mode -> tagged "Typed_Int" [ refine_mode_json mode ]
+  | C.Parity -> tagged "Typed_Parity" []
+  | C.Congruence -> tagged "Typed_Congruence" []
+  | C.Order -> tagged "Typed_Order" []
 
 let field_state_json = function
   | C.Field_Store bs ->
@@ -831,8 +831,8 @@ let globals_rule_json = function
       tagged "Globals_Bounded_Narrowing" [ nat_json n ]
 
 let context_json_of_policy = function
-  | C.Typed_Call_String k -> tagged "Typed_Call_String" [ nat_json k ]
-  | C.Typed_Entry_State -> tagged "Typed_Entry_State" []
+  | C.Call_String k -> tagged "Typed_Call_String" [ nat_json k ]
+  | C.Entry_State -> tagged "Typed_Entry_State" []
 
 let decl_json (x, k) = json_pair var_json json_string (x, kind_name k)
 

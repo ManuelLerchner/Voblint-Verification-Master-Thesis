@@ -9,7 +9,7 @@ text \<open>Build-checked regression assertions on concrete VIMP snippets and va
 
 subsection \<open>Concrete syntax and precedence\<close>
 
-text \<open>Each snippet elaborates to a fixed \<open>com\<close> term or to its fully parenthesised form: dangling
+text \<open>Each snippet elaborates to a fixed \<open>src_com\<close> term or to its fully parenthesised form: dangling
   and chained \<open>else\<close>, statement boundaries, calls and returns, and C operator precedence.\<close>
 
 lemma notation_if_without_else:

@@ -28,7 +28,7 @@ type definition =
   * formal list
   * Voblint.ikind option
   * (string * Voblint.ikind) list
-  * (unit, string, Voblint.exp) Voblint.gcom
+  * (unit, string, Voblint.src_exp) Voblint.gcom
 
 let rec exp_vars acc = function
   | Voblint.N _ -> acc

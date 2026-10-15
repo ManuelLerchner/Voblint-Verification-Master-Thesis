@@ -40,8 +40,8 @@ datatype ('a, 'v, 'e) gcom =
   | is_Restore: Restore 'a
   | Unwind 'a
 
-type_synonym 'a acom = "('a, vname, exp) gcom"
-type_synonym com = "unit acom"
+type_synonym 'a acom = "('a, vname, src_exp) gcom"
+type_synonym src_com = "unit acom"
 
 text \<open>The expressions a command evaluates, as a list for the executable checks.\<close>
 
@@ -74,7 +74,7 @@ record ('a, 'v, 'e) gproc_decl =
   formals :: "'v list"
   body    :: "('a, 'v, 'e) gcom"
 
-type_synonym proc_decl = "(unit, vname, exp) gproc_decl"
+type_synonym proc_decl = "(unit, vname, src_exp) gproc_decl"
 
 text \<open>The reserved local \<open>ret_var\<close> carries a published result to the restore
   boundary. It is absent from source programs, so a value-less completion
@@ -83,7 +83,7 @@ definition ret_var :: vname where
   "ret_var = STR ''#ret''"
 
 type_synonym ('a, 'v, 'e) gptable = "pname \<Rightarrow> ('a, 'v, 'e) gproc_decl option"
-type_synonym 'a ptable = "('a, vname, exp) gptable"
+type_synonym 'a ptable = "('a, vname, src_exp) gptable"
 type_synonym proc_table = "unit ptable"
 
 datatype 'v gframe = Frame (frame_store: "'v \<Rightarrow> int") (frame_dest: "'v option")
@@ -119,7 +119,7 @@ text \<open>Whole procedure entry, for the same reason: reset every local to a c
   value, keep the globals, then bind the formals to the actuals evaluated in the
   caller's own state. Which state and which evaluator is all that separates the
   concrete entry from an abstract one -- the concrete semantics runs it at
-  \<^const>\<open>aval\<close> and the reset value \<open>0\<close>, an abstract domain at its own
+  \<^const>\<open>src_aval\<close> and the reset value \<open>0\<close>, an abstract domain at its own
   evaluator and its own \<open>top\<close> -- so it is one definition, not a concrete one
   with an \<open>_abs\<close> copy beside it.\<close>
 definition enter_binding ::
@@ -133,7 +133,7 @@ text \<open>The concrete instance, spelled out: this is the equation that lets a
   soundness statement about the shared constant be read as one about the entry
   store the source semantics actually builds.\<close>
 lemma enter_binding_concrete:
-  "enter_binding \<G> 0 aval xs es s
+  "enter_binding \<G> 0 src_aval xs es s
      = bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state \<G> s)"
   by (simp add: enter_binding_def enter_state_def)
 
@@ -367,7 +367,7 @@ text \<open>Well-formedness is stated once for any language: \<open>vars\<close>
 definition gsource_exp :: "('e \<Rightarrow> 'v set) \<Rightarrow> 'v \<Rightarrow> 'e \<Rightarrow> bool" where
   "gsource_exp vars rv a \<longleftrightarrow> rv \<notin> vars a"
 
-abbreviation source_exp :: "exp \<Rightarrow> bool" where
+abbreviation source_exp :: "src_exp \<Rightarrow> bool" where
   "source_exp \<equiv> gsource_exp exp_vnames ret_var"
 
 definition gvalid_formal :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> 'v \<Rightarrow> bool" where
@@ -472,7 +472,7 @@ definition gwf_proc_decl ::
      list_all (gvalid_formal rv \<G>) (formals decl) \<and>
      gwf_source_com vars rv \<Pi> (body decl)"
 
-abbreviation wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, exp) gproc_decl \<Rightarrow> bool" where
+abbreviation wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, src_exp) gproc_decl \<Rightarrow> bool" where
   "wf_proc_decl \<equiv> gwf_proc_decl exp_vnames ret_var"
 
 definition greserved_ret_var :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> bool" where

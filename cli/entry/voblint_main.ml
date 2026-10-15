@@ -11,7 +11,7 @@
           names. What comes back is a semantic typed report: states as abstract
           values per point and context, the routes calls take, the check column
           and diagnostics.
-       -> Voblint.typed_render_report (Isabelle-generated, outside the
+       -> Voblint.prog_render_report (Isabelle-generated, outside the
           theorems) with the CLI's value printer (Value_symbols): the displayed
           run_result. Every rendering below (text report, graph, snapshot, HTML)
           is built from that one result, so none can draw from a different solve

@@ -17,21 +17,21 @@ let default_refinement = C.Refine_Fixpoint
 (* Each refinement mode is an analysis of its own in the generated carrier; all
    of them are int to the user. *)
 let analysis_of_name ~refinement = function
-  | "sign" -> Some C.Typed_Sign
-  | "interval" -> Some C.Typed_Interval
-  | "int" -> Some (C.Typed_Int refinement)
-  | "parity" -> Some C.Typed_Parity
-  | "congruence" -> Some C.Typed_Congruence
-  | "order" -> Some C.Typed_Order
+  | "sign" -> Some C.Sign
+  | "interval" -> Some C.Interval
+  | "int" -> Some (C.Ana_Int refinement)
+  | "parity" -> Some C.Parity
+  | "congruence" -> Some C.Congruence
+  | "order" -> Some C.Order
   | _ -> None
 
 let name_of_analysis = function
-  | C.Typed_Sign -> "sign"
-  | C.Typed_Interval -> "interval"
-  | C.Typed_Int _ -> "int"
-  | C.Typed_Parity -> "parity"
-  | C.Typed_Congruence -> "congruence"
-  | C.Typed_Order -> "order"
+  | C.Sign -> "sign"
+  | C.Interval -> "interval"
+  | C.Ana_Int _ -> "int"
+  | C.Parity -> "parity"
+  | C.Congruence -> "congruence"
+  | C.Order -> "order"
 
 (* The default of Goblint's solvers.td3.narrow-globs.narrow-gas option. The
    vendored rule counts differently: 0 still allows the one narrowing step of
@@ -60,11 +60,11 @@ type context_error =
    call string of length zero. *)
 let context_of_name name depth =
   match (name, depth) with
-  | "none", None -> Ok (C.Typed_Call_String (C.nat_of_integer Z.zero))
-  | "entry-state", None -> Ok C.Typed_Entry_State
+  | "none", None -> Ok (C.Call_String (C.nat_of_integer Z.zero))
+  | "entry-state", None -> Ok C.Entry_State
   | "call-string", Some k when k < 0 -> Error Negative_depth
   | "call-string", Some k ->
-      Ok (C.Typed_Call_String (C.nat_of_integer (Z.of_int k)))
+      Ok (C.Call_String (C.nat_of_integer (Z.of_int k)))
   | "call-string", None -> Error Missing_depth
   | ("none" | "entry-state"), Some _ -> Error Unexpected_depth
   | _ -> Error Unknown_context
@@ -154,9 +154,9 @@ type request_error =
   | Invalid_option_value of option_spec * string
 
 type resolved = {
-  domains : C.typed_domain list option;
+  domains : C.analysis list option;
   rule : C.globals_rule;
-  mode : C.typed_context;
+  mode : C.context_policy;
   placement : C.program_globals;
   sem : unit C.sem_conf_ext;
 }

@@ -28,8 +28,8 @@ session Voblint_VIMP in "." = "HOL-Library" +
     VIMP_Proc
     VIMP_Program
     Var_Id
-    Typed_Exp
-    Typed_Com
-    Typed_Semantics
+    Core_Exp
+    Core_Com
+    VIMP_Semantics
     VIMP_Grammar_Generated
     VIMP_Notation

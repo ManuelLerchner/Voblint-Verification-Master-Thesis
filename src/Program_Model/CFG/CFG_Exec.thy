@@ -118,13 +118,19 @@ lemma frames_match_activation:
 
 section \<open>The typed instance\<close>
 
-definition tcstep :: "kenv \<Rightarrow> (var_id, texp) gcfg
-    \<Rightarrow> var_id gcconf \<Rightarrow> var_id gcconf \<Rightarrow> bool" where
-  "tcstep \<kappa> = cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal"
+definition cstep :: "kenv \<Rightarrow> (var_id, exp) gcfg
+    \<Rightarrow> var_id gcconf \<Rightarrow> var_id gcconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) where
+  "cstep \<kappa> = cfg_exec_sem.gcstep eval ReturnVar (kind_conv \<kappa>) is_global"
 
-global_interpretation typed: cfg_exec_sem teval ReturnVar "tconv \<kappa>" tglobal
-  rewrites "cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal = tcstep \<kappa>"
+abbreviation csteps :: "kenv \<Rightarrow> (var_id, exp) gcfg
+    \<Rightarrow> var_id gcconf \<Rightarrow> var_id gcconf \<Rightarrow> bool"
+    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c\<^sup>*/ _)" [51, 51, 51, 51] 50) where
+  "csteps \<kappa> g x y \<equiv> star (cstep \<kappa> g) x y"
+
+global_interpretation vimp: cfg_exec_sem eval ReturnVar "kind_conv \<kappa>" is_global
+  rewrites "cfg_exec_sem.gcstep eval ReturnVar (kind_conv \<kappa>) is_global = cstep \<kappa>"
   for \<kappa> :: kenv
-  by (simp add: tcstep_def)
+  by (simp add: cstep_def)
 
 end

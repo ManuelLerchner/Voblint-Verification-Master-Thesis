@@ -1,7 +1,10 @@
 chapter Voblint
 
-session Voblint_Analysis_Int in "." = "Voblint_Result" +
-  description "The int_dom analysis family: a reduced product of Sign, Interval, Parity and Congruence, with verified progressive and structural-fixpoint refinement"
+session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
+  description "The int_dom analysis family: a reduced product of Sign, Interval, Parity and
+    Congruence, with verified progressive and structural-fixpoint refinement, and the
+    reduced product of Interval and Congruence at machine kinds, after Goblint's
+    IntDomTuple"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -19,3 +22,5 @@ session Voblint_Analysis_Int in "." = "Voblint_Result" +
     Int_Warrowing
     Int_Refinement
     Int_Refinement_Control
+    Int_Tuple_Kind
+    Int_Regression

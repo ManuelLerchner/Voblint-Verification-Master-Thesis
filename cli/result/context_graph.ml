@@ -203,9 +203,9 @@ let lines n = List.concat_map A.section_lines n.sections @ n.findings
 let build prog
     (result :
       ( C.var_id,
-        C.texp,
+        C.exp,
         C.var_id,
-        C.typed_domain,
+        C.analysis,
         string,
         unit )
       C.run_result_ext) : t =

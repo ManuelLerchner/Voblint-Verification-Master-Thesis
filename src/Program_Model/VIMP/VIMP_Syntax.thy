@@ -14,34 +14,34 @@ text \<open>
 \<close>
 
 type_synonym vname = String.literal
-type_synonym store = "vname \<Rightarrow> int"
+type_synonym src_store = "vname \<Rightarrow> int"
 
-datatype exp =
+datatype src_exp =
     N (exp_lit: int)
   | V (exp_var: vname)
-  | Plus  (exp_lhs: exp) (exp_rhs: exp)
-  | Minus (exp_lhs: exp) (exp_rhs: exp)
-  | Times (exp_lhs: exp) (exp_rhs: exp)
-  | Div (exp_lhs: exp) (exp_rhs: exp)
-  | Mod (exp_lhs: exp) (exp_rhs: exp)
-  | Less (cmp_lhs: exp) (cmp_rhs: exp)
-  | LessEq (cmp_lhs: exp) (cmp_rhs: exp)
-  | Greater (cmp_lhs: exp) (cmp_rhs: exp)
-  | GreaterEq (cmp_lhs: exp) (cmp_rhs: exp)
-  | NotEq (cmp_lhs: exp) (cmp_rhs: exp)
-  | Eq (cmp_lhs: exp) (cmp_rhs: exp)
-  | Not (exp_arg: exp)
-  | And (exp_lhs: exp) (exp_rhs: exp)
-  | Or (exp_lhs: exp) (exp_rhs: exp)
-  | Cast (cast_kind: ikind) (cast_arg: exp)
+  | Plus  (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Minus (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Times (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Div (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Mod (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Less (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | LessEq (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | Greater (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | GreaterEq (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | NotEq (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | Eq (cmp_lhs: src_exp) (cmp_rhs: src_exp)
+  | Not (exp_arg: src_exp)
+  | And (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Or (exp_lhs: src_exp) (exp_rhs: src_exp)
+  | Cast (cast_kind: ikind) (cast_arg: src_exp)
 
-instance exp :: countable
+instance src_exp :: countable
   by countable_datatype
 
 text \<open>The executable linear order gives @{const sorted_list_of_set} a
   deterministic representation of CFG edge sets; @{class compare_order} on
   \<^typ>\<open>String.literal\<close> makes it a usable leaf for the derivation.\<close>
 derive (linorder) compare_order String.literal
-derive linorder exp
+derive linorder src_exp
 
 end

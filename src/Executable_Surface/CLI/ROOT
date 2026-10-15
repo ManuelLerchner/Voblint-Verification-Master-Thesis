@@ -1,19 +1,25 @@
 chapter Voblint
 
-session Voblint_CLI in "." = "Voblint_Typed_CLI" +
+session Voblint_CLI in "." = "Voblint_Analysis_Int" +
   description
-    "Production CLI-facing surface: run_voblint over the typed analyses, every
-     global update rule and every context policy, with its soundness theorems,
-     independent of the demonstration and regression theories in
-     Voblint_Examples"
+    "Production CLI-facing surface: the analyses run as one (the activation vocabulary,
+     the combined carrier and its soundness), run_voblint over them, every global update
+     rule and every context policy, with its soundness theorems, independent of the
+     demonstration and regression theories in Voblint_Examples"
   sessions
+    "Voblint_Analysis_Order"
+    "Voblint_Analysis_Sign"
+    "Voblint_Analysis_Parity"
     "HOL-Library"
   theories
+    Analysis_Config
+    MCP_Carrier
+    MCP
     Dispatch_Carrier
     MCP_Split
     Analysis_Run
     Analysis_Render
     Analysis_Report
-    Typed_Report
+    Run_Report
     Run_Voblint
     Trace_Run

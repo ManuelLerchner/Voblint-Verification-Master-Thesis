@@ -5,7 +5,7 @@ begin
 section \<open>Expression evaluation\<close>
 
 text \<open>
-  \<open>aval\<close> evaluates an expression in a store.  Every VIMP expression is integer-valued, so
+  \<open>src_aval\<close> evaluates an expression in a store.  Every VIMP expression is integer-valued, so
   there is no separate Boolean type. Conditions use C-style truthiness (non-zero),
   while comparisons and logical operators yield \<open>1\<close> or \<open>0\<close>.  Evaluation is total and has no
   effects, which is why a guard can be re-evaluated freely by the transfer functions.
@@ -101,7 +101,7 @@ lemma c_div_neg_dividend:
 definition truthy :: "int \<Rightarrow> bool" where
   [simp]: "truthy n \<longleftrightarrow> n \<noteq> 0"
 
-fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^sub>e") where
+fun src_aval :: "src_exp \<Rightarrow> src_store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^sub>e") where
     "\<lbrakk>N n\<rbrakk>\<^sub>e     s  = n"
   | "\<lbrakk>V x\<rbrakk>\<^sub>e     s  = s x"
   | "\<lbrakk>Plus  a b\<rbrakk>\<^sub>e s  = \<lbrakk>a\<rbrakk>\<^sub>e s + \<lbrakk>b\<rbrakk>\<^sub>e s"
@@ -122,7 +122,7 @@ fun aval :: "exp \<Rightarrow> store \<Rightarrow> int" ("\<lbrakk>_\<rbrakk>\<^
 
 text \<open>
   \<open>truthy\<close> of a compiled comparison or Boolean expression restated in plain
-  Boolean form, so a caller never has to re-derive it from \<open>aval.simps\<close> and
+  Boolean form, so a caller never has to re-derive it from \<open>src_aval.simps\<close> and
   \<open>truthy\<close>'s own \<open>\<noteq> 0\<close> encoding through an explicit \<open>if\<close>-split.
 \<close>
 
@@ -168,7 +168,7 @@ text \<open>The variables an expression mentions. A transfer that evaluates the
   expression needs no other variable, which is what lets a keyed analysis read
   only the globals an edge mentions.\<close>
 
-fun exp_vnames :: "exp \<Rightarrow> vname set" where
+fun exp_vnames :: "src_exp \<Rightarrow> vname set" where
   "exp_vnames (N _) = {}"
 | "exp_vnames (V x) = {x}"
 | "exp_vnames (Plus a b) = exp_vnames a \<union> exp_vnames b"
@@ -194,7 +194,7 @@ text \<open>Every literal of an expression fits \<^const>\<open>I64\<close>. C g
   decimal constant no type beyond it (ISO/IEC 9899 6.4.4.1p5), so a well-formed program
   writes no other.\<close>
 
-fun lits_fit :: "exp \<Rightarrow> bool" where
+fun lits_fit :: "src_exp \<Rightarrow> bool" where
   "lits_fit (N n) \<longleftrightarrow> ik_min I64 \<le> n \<and> n \<le> ik_max I64"
 | "lits_fit (V _) \<longleftrightarrow> True"
 | "lits_fit (Plus a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"

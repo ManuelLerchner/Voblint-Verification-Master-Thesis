@@ -1,5 +1,5 @@
 theory CFG_Transfer
-  imports CFG_Def "Voblint_VIMP.Typed_Semantics"
+  imports CFG_Def "Voblint_VIMP.VIMP_Semantics"
 begin
 
 section \<open>What each kind of edge does to the store\<close>
@@ -143,7 +143,7 @@ lemma set_global_names_in [simp]:
 lemma distinct_global_names_in [simp]: "distinct (global_names_in G xs)"
   by (simp add: global_names_in_def)
 
-definition globals_in_exp :: "(vname \<Rightarrow> bool) \<Rightarrow> exp \<Rightarrow> vname list" where
+definition globals_in_exp :: "(vname \<Rightarrow> bool) \<Rightarrow> src_exp \<Rightarrow> vname list" where
   "globals_in_exp G e = global_names_in G (sorted_list_of_set (exp_vnames e))"
 
 definition gedge_global_reads ::
@@ -165,7 +165,7 @@ abbreviation edge_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> edge
 abbreviation edge_global_writes :: "(vname \<Rightarrow> bool) \<Rightarrow> edge_action \<Rightarrow> vname list" where
   "edge_global_writes \<equiv> gedge_global_writes ret_var"
 
-abbreviation call_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> exp list \<Rightarrow> vname list" where
+abbreviation call_global_reads :: "(vname \<Rightarrow> bool) \<Rightarrow> src_exp list \<Rightarrow> vname list" where
   "call_global_reads \<equiv> gcall_global_reads exp_vnames"
 
 lemma set_edge_global_writes [simp]:
@@ -186,7 +186,7 @@ text \<open>Core VIMP instantiates the edge and transfer semantics with the type
   shared return slot, conversion to the destination's kind and the \<^const>\<open>GlobalId\<close>
   globals.\<close>
 
-global_interpretation typed: cfg_transfer_sem teval ReturnVar "tconv \<kappa>" tglobal
+global_interpretation vimp: cfg_transfer_sem eval ReturnVar "kind_conv \<kappa>" is_global
   for \<kappa> :: kenv .
 
 end

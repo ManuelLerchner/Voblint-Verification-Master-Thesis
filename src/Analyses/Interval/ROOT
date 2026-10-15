@@ -1,7 +1,8 @@
 chapter Voblint
 
-session Voblint_Analysis_Interval in "." = "Voblint_Result" +
-  description "The Interval domain: bounds, lattice, widening, executable bridge, end-to-end soundness"
+session Voblint_Analysis_Interval in "." = "Voblint_Nonrelational" +
+  description "The Interval domain: bounds, lattice, widening, executable bridge, end-to-end
+    soundness, and kind-indexed widening and narrowing with Goblint's normalization"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -14,3 +15,5 @@ session Voblint_Analysis_Interval in "." = "Voblint_Result" +
     Interval_Warrowing
     Interval_Arithmetic
     Interval_Numeric_Queries
+    Interval_Kind
+    Interval_Regression

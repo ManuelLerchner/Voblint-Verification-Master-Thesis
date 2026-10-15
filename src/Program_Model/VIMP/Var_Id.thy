@@ -81,23 +81,23 @@ text \<open>
 \<close>
 
 type_synonym kenv = "var_id \<Rightarrow> ikind"
-type_synonym tstore = "var_id \<Rightarrow> int"
+type_synonym store = "var_id \<Rightarrow> int"
 
 definition int_kenv :: kenv where
   "int_kenv = (\<lambda>_. I32)"
 
 text \<open>A store is typed when every identity holds a value of its kind.\<close>
 
-definition styped :: "kenv \<Rightarrow> tstore \<Rightarrow> bool" where
-  "styped \<kappa> t \<longleftrightarrow> (\<forall>v. t v \<in> ik_range (\<kappa> v))"
+definition all_in_kinds :: "kenv \<Rightarrow> store \<Rightarrow> bool" where
+  "all_in_kinds \<kappa> t \<longleftrightarrow> (\<forall>v. t v \<in> ik_range (\<kappa> v))"
 
-lemma stypedD: "styped \<kappa> t \<Longrightarrow> t v \<in> ik_range (\<kappa> v)"
-  by (simp add: styped_def)
+lemma all_in_kindsD: "all_in_kinds \<kappa> t \<Longrightarrow> t v \<in> ik_range (\<kappa> v)"
+  by (simp add: all_in_kinds_def)
 
-lemma styped_zero [simp, intro]: "styped \<kappa> (\<lambda>_. 0)"
-  by (simp add: styped_def del: ik_range_iff)
+lemma all_in_kinds_zero [simp, intro]: "all_in_kinds \<kappa> (\<lambda>_. 0)"
+  by (simp add: all_in_kinds_def del: ik_range_iff)
 
-lemma styped_update [simp, intro]: "styped \<kappa> t \<Longrightarrow> styped \<kappa> (t(v := ik_norm (\<kappa> v) n))"
-  by (simp add: styped_def del: ik_range_iff)
+lemma all_in_kinds_update [simp, intro]: "all_in_kinds \<kappa> t \<Longrightarrow> all_in_kinds \<kappa> (t(v := ik_norm (\<kappa> v) n))"
+  by (simp add: all_in_kinds_def del: ik_range_iff)
 
 end

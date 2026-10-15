@@ -144,6 +144,14 @@ inductive_cases valid_activation_trace_ResumeE [elim]:
 
 end
 
+text \<open>The valid activation traces of core VIMP: the generic ones at its evaluator, its
+  return slot, conversion to the destination's kind and its globals.\<close>
+
+definition valid_activation_trace ::
+    "kenv \<Rightarrow> (var_id, exp) gcfg \<Rightarrow> store set \<Rightarrow> var_id gactivation_trace set"
+    ("\<T>\<^bsub>_,_,_\<^esub>") where
+  "valid_activation_trace \<kappa> = trace_sem.gvalid_activation_trace eval ReturnVar (kind_conv \<kappa>) is_global"
+
 subsection \<open>Structural lemmas\<close>
 
 text \<open>How the three trace shapes answer the projections every later proof reads them

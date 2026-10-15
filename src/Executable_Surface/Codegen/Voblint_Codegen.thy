@@ -107,13 +107,13 @@ text \<open>
     to do goes through it.
 
   \<^item> \<^bold>\<open>Result.\<close> \<^type>\<open>analysis_answer\<close>'s cases, which a caller must tell apart, the
-    projection \<^const>\<open>typed_render_report\<close> that turns an analysed report into
+    projection \<^const>\<open>prog_render_report\<close> that turns an analysed report into
     displayable data, and the readers of that data: contexts, states, routes, checks,
     globals and diagnostics. The records reach OCaml abstract, readable only through
     their selectors, so a field added later cannot break a consumer that matched on field
-    order. A caller maps \<^const>\<open>typed_render_report\<close> over the answer with
+    order. A caller maps \<^const>\<open>prog_render_report\<close> over the answer with
     \<^const>\<open>map_analysis_answer\<close>, passing the value printer it wants: the CLI composes
-    \<^const>\<open>string_of_typed_value\<close> with its decoding of ASCII symbol tokens.
+    \<^const>\<open>string_of_report_value\<close> with its decoding of ASCII symbol tokens.
 
   \<^item> \<^bold>\<open>Ask.\<close> The values naming a request: which domain, which rule merges
     side-effected globals, which context policy. A caller constructs these, so their
@@ -139,16 +139,23 @@ text \<open>
   graphs only, so it gets the enumerations at that instance.
 \<close>
 
-definition tcfg_intra_edges ::
-    "(var_id, texp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, texp) gedge_action \<times> cfg_node) list" where
-  "tcfg_intra_edges = cfg_intra_list"
+definition cfg_intra_edges ::
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, exp) gedge_action \<times> cfg_node) list" where
+  "cfg_intra_edges = cfg_intra_list"
 
-definition tcfg_call_edges ::
-    "(var_id, texp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, texp) gcall_action \<times> cfg_node \<times> cfg_node) list" where
-  "tcfg_call_edges = cfg_calls_list"
+definition cfg_call_edges ::
+    "(var_id, exp) gcfg \<Rightarrow> (cfg_node \<times> (var_id, exp) gcall_action \<times> cfg_node \<times> cfg_node) list" where
+  "cfg_call_edges = cfg_calls_list"
 
-definition tcfg_points :: "(var_id, texp) gcfg \<Rightarrow> cfg_node list" where
-  "tcfg_points = cfg_node_list"
+definition cfg_points :: "(var_id, exp) gcfg \<Rightarrow> cfg_node list" where
+  "cfg_points = cfg_node_list"
+
+text \<open>The surface equality constructor keeps the OCaml name the parser and printer use,
+  ahead of the derived comparator's \<open>Eq\<close>, which the code generator otherwise ranks
+  first now that the surface type is \<^typ>\<open>src_exp\<close>.\<close>
+
+code_identifier
+  constant src_exp.Eq \<rightharpoonup> (OCaml) "Generated.Eq"
 
 export_code
 
@@ -158,7 +165,7 @@ export_code
   \<comment> \<open>Result: answers, the report's rendering, contexts, states, routes, checks, globals,
      diagnostics, the analysis graph\<close>
   Invalid_Activation Malformed_Program No_Answer Analysed map_analysis_answer
-  typed_render_report string_of_typed_value var_label
+  prog_render_report string_of_report_value var_label
   TN TVar TArith TCast TCmp TNot TAnd TOr AAdd ASub AMul ADiv AMod CLt CLe CGt CGe CEq CNe
   res_cfg res_contexts res_states res_joined res_routes res_checks res_globals res_diagnostics
   res_graph graph_nodes graph_edges Local_Node Global_Node
@@ -174,12 +181,12 @@ export_code
   Division_By_Zero Signed_Overflow Conversion_Overflow ik_signed
   Check_Proved Check_Refuted Check_Unknown
   Bot Lifted
-  cfg_entry typed_cfg tcfg_intra_edges tcfg_call_edges tcfg_points
+  cfg_entry elab_cfg cfg_intra_edges cfg_call_edges cfg_points
 
   \<comment> \<open>Ask: the request's options, after Goblint's configuration tree\<close>
   voblint_conf_ext conf_analyses conf_context conf_globals conf_program_globals conf_sem
-  Typed_Interval Typed_Congruence Typed_Int Typed_Order Typed_Sign Typed_Parity
-  Typed_Call_String Typed_Entry_State
+  Interval Congruence Ana_Int Order Sign Parity
+  Call_String Entry_State
   Globals_Join Globals_Per_Origin Globals_Warrow Globals_Warrow_Per_Origin Globals_Bounded_Narrowing
   Program_Globals_Flow_Sensitive Program_Globals_Flow_Insensitive
   Refine_Fixpoint Refine_Once Refine_Never
@@ -189,7 +196,7 @@ export_code
   mk_program gproc_decl_ext
   SKIP Assign Seq gcom.If While Return Check gcom.Call
   N V Plus Minus Times Div Mod
-  exp.Not And Or Less exp.Eq Cast
+  src_exp.Not And Or Less src_exp.Eq Cast
 
   \<comment> \<open>Typed programs: kind declarations per identity\<close>
   GlobalId ScopedId ReturnId I8 U8 I16 U16 I32 U32 I64 U64

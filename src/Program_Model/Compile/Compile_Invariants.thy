@@ -420,21 +420,21 @@ text \<open>The typed program is a well-formed compiler input whenever the sourc
   elaboration resolves every name to an identity distinct from the return slot, and keeps
   the control structure the contract inspects.\<close>
 
-theorem typed_wf_compile_input:
+theorem elab_wf_compile_input:
   assumes wf: "wf_compile_input (declared_global p) (prog_table p) ps"
-  shows "gwf_compile_input tvars ReturnVar tglobal (typed_ptable p ds) ps"
+  shows "gwf_compile_input exp_vars ReturnVar is_global (elab_ptable p ds) ps"
 proof -
   from wf have src: "wf_source_program (declared_global p) (prog_table p)"
     by (simp add: gwf_compile_input_def)
-  note main = typed_ptable_main [OF src, of ds]
-  have "gwf_source_com tvars ReturnVar (typed_ptable p ds) (main_body (typed_ptable p ds))"
+  note main = elab_ptable_main [OF src, of ds]
+  have "gwf_source_com exp_vars ReturnVar (elab_ptable p ds) (main_body (elab_ptable p ds))"
     using src by (simp add: main(2) gwf_source_com_elab_com gwf_source_program_def)
-  moreover have "no_return (main_body (typed_ptable p ds))"
+  moreover have "no_return (main_body (elab_ptable p ds))"
     using src by (simp add: main(2) gwf_source_program_def)
-  moreover have "gwf_proc_decl tvars ReturnVar tglobal (typed_ptable p ds) decl"
-    if "typed_ptable p ds q = Some decl" for q decl
-    using that gwf_proc_decl_typed [OF src] by (auto simp: typed_ptable_def)
-  moreover have "special_table q = None" if "typed_ptable p ds q \<noteq> None" for q
+  moreover have "gwf_proc_decl exp_vars ReturnVar is_global (elab_ptable p ds) decl"
+    if "elab_ptable p ds q = Some decl" for q decl
+    using that gwf_proc_decl_elab [OF src] by (auto simp: elab_ptable_def)
+  moreover have "special_table q = None" if "elab_ptable p ds q \<noteq> None" for q
     using that src by (simp add: gwf_source_program_def)
   ultimately show ?thesis
     using wf main(1)

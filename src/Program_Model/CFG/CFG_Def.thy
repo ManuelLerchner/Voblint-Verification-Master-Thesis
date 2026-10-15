@@ -79,8 +79,8 @@ datatype ('v, 'e) gedge_action =
 datatype ('v, 'e) gcall_action =
     CallEdge (ce_dst: "'v option") (ce_formals: "'v list") (ce_args: "'e list")
 
-type_synonym edge_action = "(vname, exp) gedge_action"
-type_synonym call_action = "(vname, exp) gcall_action"
+type_synonym edge_action = "(vname, src_exp) gedge_action"
+type_synonym call_action = "(vname, src_exp) gcall_action"
 
 instance gedge_action :: (countable, countable) countable
   by countable_datatype
@@ -108,7 +108,7 @@ record ('v, 'e) gcall_info =
   ci_formals :: "'v list"
   ci_args    :: "'e list"
 
-type_synonym call_info = "(vname, exp) gcall_info"
+type_synonym call_info = "(vname, src_exp) gcall_info"
 
 definition call_info_of :: "('v, 'e) gcall_action \<Rightarrow> pname \<Rightarrow> ('v, 'e) gcall_info" where
   "call_info_of ca p =
@@ -136,7 +136,7 @@ record ('v, 'e) gcfg =
   calls     :: "(cfg_node \<times> ('v, 'e) gcall_action \<times> cfg_node \<times> cfg_node) set"
   cfg_entry :: cfg_node
 
-type_synonym cfg = "(vname, exp) gcfg"
+type_synonym cfg = "(vname, src_exp) gcfg"
 
 subsection \<open>Intra edge execution\<close>
 
@@ -309,7 +309,7 @@ subsection \<open>Executable orders\<close>
 
 text \<open>Structural orders make @{const sorted_list_of_set} a deterministic executable
   enumeration of intra and call relations. They affect only solver representation, not
-  CFG semantics. \<open>exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
+  CFG semantics. \<open>src_exp\<close> already derives \<open>linorder\<close> in \<^theory>\<open>Voblint_VIMP.VIMP_Syntax\<close>.\<close>
 derive linorder gspecial_call
 derive linorder gedge_action
 derive linorder gcall_action

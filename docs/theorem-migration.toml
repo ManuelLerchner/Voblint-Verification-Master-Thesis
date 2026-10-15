@@ -141,3 +141,2139 @@ meaning = "Example_Sign_DG_Overlapping_Enter: one call entered under two alterna
 legacy = "sign_k2_strictly_more_precise_than_k1_at_g"
 typed = ""
 meaning = "Example_Sign_DG_CallString_K2; to be restated through run_voblint in Example_Run_Voblint_Precision (k=2 proves a check k=1 does not). Cited by the thesis blueprint."
+
+# --- M7 rename (canonical names) ---
+# One entry per renamed session, theory, type, constant, interpretation qualifier and
+# fact, generated from the rename table applied to src/. Core VIMP takes the plain
+# names, surface VIMP the src_ prefix; generic g-prefixed locale constants and
+# run_voblint* are unchanged.
+
+[[rename]]
+old = "Voblint_Typed_CLI"
+new = "Voblint_CLI"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Congruence"
+new = "Voblint_Analysis_Congruence"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Int"
+new = "Voblint_Analysis_Int"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Interval"
+new = "Voblint_Analysis_Interval"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Nonrel"
+new = "Voblint_Nonrelational"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Order"
+new = "Voblint_Analysis_Order"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Parity"
+new = "Voblint_Analysis_Parity"
+kind = "session"
+
+[[rename]]
+old = "Voblint_Typed_Sign"
+new = "Voblint_Analysis_Sign"
+kind = "session"
+
+[[rename]]
+old = "Typed_Carrier"
+new = "MCP_Carrier"
+kind = "theory"
+
+[[rename]]
+old = "Typed_CFG_Regression"
+new = "CFG_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Com"
+new = "Core_Com"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Congruence_Regression"
+new = "Congruence_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Exec"
+new = "Nonrelational_Exec"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Exp"
+new = "Core_Exp"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Int_Regression"
+new = "Int_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Interval_Regression"
+new = "Interval_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Invariants"
+new = "Kind_Invariants"
+kind = "theory"
+
+[[rename]]
+old = "Typed_MCP"
+new = "MCP"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Nonrel"
+new = "Nonrelational_Domain"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Nonrel_Analysis"
+new = "Nonrelational_Analysis"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Order_Analysis"
+new = "Order_Analysis"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Order_Regression"
+new = "Order_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Regression"
+new = "Elaboration_Regression"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Report"
+new = "Run_Report"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Run"
+new = "Analysis_Config"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Semantics"
+new = "VIMP_Semantics"
+kind = "theory"
+
+[[rename]]
+old = "Typed_Transfer"
+new = "Nonrelational_Transfer"
+kind = "theory"
+
+[[rename]]
+old = "Voblint_Typed_CLI.Cooperation_Regression"
+new = "Voblint_Examples_CLI.Cooperation_Regression"
+kind = "theory"
+
+[[rename]]
+old = "com"
+new = "src_com"
+kind = "type"
+
+[[rename]]
+old = "exp"
+new = "src_exp"
+kind = "type"
+
+[[rename]]
+old = "store"
+new = "src_store"
+kind = "type"
+
+[[rename]]
+old = "tcom"
+new = "com"
+kind = "type"
+
+[[rename]]
+old = "texp"
+new = "exp"
+kind = "type"
+
+[[rename]]
+old = "tmcp_ctx"
+new = "mcp_ctx"
+kind = "type"
+
+[[rename]]
+old = "tmcp_st"
+new = "mcp_st"
+kind = "type"
+
+[[rename]]
+old = "tmcp_val"
+new = "mcp_val"
+kind = "type"
+
+[[rename]]
+old = "tstore"
+new = "store"
+kind = "type"
+
+[[rename]]
+old = "typed_context"
+new = "context_policy"
+kind = "type"
+
+[[rename]]
+old = "typed_domain"
+new = "analysis"
+kind = "type"
+
+[[rename]]
+old = "typed_report"
+new = "report"
+kind = "type"
+
+[[rename]]
+old = "typed_value"
+new = "report_value"
+kind = "type"
+
+[[rename]]
+old = "aval"
+new = "src_aval"
+kind = "constant"
+
+[[rename]]
+old = "calls_typed"
+new = "calls_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "ord_typed"
+new = "ord_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot1"
+new = "set_slot1"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot2"
+new = "set_slot2"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3"
+new = "set_slot3"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3f"
+new = "set_slot3f"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3n"
+new = "set_slot3n"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot3o"
+new = "set_slot3o"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot4"
+new = "set_slot4"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot5"
+new = "set_slot5"
+kind = "constant"
+
+[[rename]]
+old = "set_tslot6"
+new = "set_slot6"
+kind = "constant"
+
+[[rename]]
+old = "string_of_typed_value"
+new = "string_of_report_value"
+kind = "constant"
+
+[[rename]]
+old = "styped"
+new = "all_in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "tactivation"
+new = "activation_of"
+kind = "constant"
+
+[[rename]]
+old = "taeval"
+new = "aeval"
+kind = "constant"
+
+[[rename]]
+old = "taeval_ask"
+new = "aeval_ask"
+kind = "constant"
+
+[[rename]]
+old = "tanswer"
+new = "answer"
+kind = "constant"
+
+[[rename]]
+old = "tarith_condition"
+new = "arith_condition"
+kind = "constant"
+
+[[rename]]
+old = "tarith_obligations"
+new = "arith_obligations"
+kind = "constant"
+
+[[rename]]
+old = "tassign"
+new = "nonrel_assign"
+kind = "constant"
+
+[[rename]]
+old = "tassign_st"
+new = "assign_st"
+kind = "constant"
+
+[[rename]]
+old = "tatom"
+new = "nonrel_atom"
+kind = "constant"
+
+[[rename]]
+old = "taval"
+new = "src_eval"
+kind = "constant"
+
+[[rename]]
+old = "tbranch"
+new = "nonrel_branch"
+kind = "constant"
+
+[[rename]]
+old = "tbranch_st"
+new = "branch_st"
+kind = "constant"
+
+[[rename]]
+old = "tcall_vars"
+new = "call_vars"
+kind = "constant"
+
+[[rename]]
+old = "tcast_to"
+new = "cast_to"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_call_edges"
+new = "cfg_call_edges"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_intra_edges"
+new = "cfg_intra_edges"
+kind = "constant"
+
+[[rename]]
+old = "tcfg_points"
+new = "cfg_points"
+kind = "constant"
+
+[[rename]]
+old = "tclassify"
+new = "nonrel_classify"
+kind = "constant"
+
+[[rename]]
+old = "tcom_erase"
+new = "com_erase"
+kind = "constant"
+
+[[rename]]
+old = "tcombine_assign"
+new = "combine_assign_conv"
+kind = "constant"
+
+[[rename]]
+old = "tcombine_assign"
+new = "nonrel_combine_assign"
+kind = "constant"
+
+[[rename]]
+old = "tcombine_assign_st"
+new = "combine_assign_st"
+kind = "constant"
+
+[[rename]]
+old = "tconv"
+new = "kind_conv"
+kind = "constant"
+
+[[rename]]
+old = "tcstep"
+new = "cstep"
+kind = "constant"
+
+[[rename]]
+old = "tdeclared_globals"
+new = "declared_globals"
+kind = "constant"
+
+[[rename]]
+old = "tedge_vars"
+new = "edge_vars"
+kind = "constant"
+
+[[rename]]
+old = "tenter_frame"
+new = "nonrel_enter_frame"
+kind = "constant"
+
+[[rename]]
+old = "tenter_st"
+new = "enter_st"
+kind = "constant"
+
+[[rename]]
+old = "tenter_state"
+new = "nonrel_enter_state"
+kind = "constant"
+
+[[rename]]
+old = "teval"
+new = "eval"
+kind = "constant"
+
+[[rename]]
+old = "texp_erase"
+new = "exp_erase"
+kind = "constant"
+
+[[rename]]
+old = "texp_kind"
+new = "exp_kind"
+kind = "constant"
+
+[[rename]]
+old = "tfeas"
+new = "nonrel_feas"
+kind = "constant"
+
+[[rename]]
+old = "tfield"
+new = "field"
+kind = "constant"
+
+[[rename]]
+old = "tfield_empty"
+new = "field_empty"
+kind = "constant"
+
+[[rename]]
+old = "tfield_view"
+new = "field_view"
+kind = "constant"
+
+[[rename]]
+old = "tglobal"
+new = "is_global"
+kind = "constant"
+
+[[rename]]
+old = "tinit_st"
+new = "nonrel_init_st"
+kind = "constant"
+
+[[rename]]
+old = "tinit_stores"
+new = "init_stores"
+kind = "constant"
+
+[[rename]]
+old = "tlive"
+new = "live"
+kind = "constant"
+
+[[rename]]
+old = "tloc"
+new = "nonrel_loc"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_answer"
+new = "mcp_answer"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_ask"
+new = "mcp_ask"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_classify"
+new = "mcp_classify"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_comp"
+new = "mcp_comp"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_ctx_key"
+new = "mcp_ctx_key"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_emp"
+new = "mcp_emp"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_empty_v"
+new = "mcp_empty_v"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_field"
+new = "mcp_field"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_init"
+new = "mcp_init"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_norm"
+new = "mcp_norm"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_rd"
+new = "mcp_rd"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_root_ctx"
+new = "mcp_root_ctx"
+kind = "constant"
+
+[[rename]]
+old = "tmcp_route"
+new = "mcp_route"
+kind = "constant"
+
+[[rename]]
+old = "tnarrow"
+new = "nonrel_narrow"
+kind = "constant"
+
+[[rename]]
+old = "tnode_collect"
+new = "node_collect"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_classify"
+new = "obligation_classify"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_holds"
+new = "obligation_holds"
+kind = "constant"
+
+[[rename]]
+old = "tobligation_sites"
+new = "prog_obligation_sites"
+kind = "constant"
+
+[[rename]]
+old = "tobligations_at"
+new = "obligations_at"
+kind = "constant"
+
+[[rename]]
+old = "tpart_answer"
+new = "part_answer"
+kind = "constant"
+
+[[rename]]
+old = "tpstep"
+new = "pstep"
+kind = "constant"
+
+[[rename]]
+old = "tquery"
+new = "nonrel_query"
+kind = "constant"
+
+[[rename]]
+old = "trd"
+new = "nonrel_rd"
+kind = "constant"
+
+[[rename]]
+old = "trefine"
+new = "nonrel_refine"
+kind = "constant"
+
+[[rename]]
+old = "trefine_exec"
+new = "nonrel_refine_exec"
+kind = "constant"
+
+[[rename]]
+old = "treturn"
+new = "nonrel_return"
+kind = "constant"
+
+[[rename]]
+old = "treturn_sites"
+new = "return_sites"
+kind = "constant"
+
+[[rename]]
+old = "treturn_st"
+new = "return_st"
+kind = "constant"
+
+[[rename]]
+old = "truth_texp"
+new = "truth_exp"
+kind = "constant"
+
+[[rename]]
+old = "tsatisfies"
+new = "satisfies"
+kind = "constant"
+
+[[rename]]
+old = "tslot1"
+new = "slot1"
+kind = "constant"
+
+[[rename]]
+old = "tslot2"
+new = "slot2"
+kind = "constant"
+
+[[rename]]
+old = "tslot3"
+new = "slot3"
+kind = "constant"
+
+[[rename]]
+old = "tslot3f"
+new = "slot3f"
+kind = "constant"
+
+[[rename]]
+old = "tslot3n"
+new = "slot3n"
+kind = "constant"
+
+[[rename]]
+old = "tslot3o"
+new = "slot3o"
+kind = "constant"
+
+[[rename]]
+old = "tslot4"
+new = "slot4"
+kind = "constant"
+
+[[rename]]
+old = "tslot5"
+new = "slot5"
+kind = "constant"
+
+[[rename]]
+old = "tslot6"
+new = "slot6"
+kind = "constant"
+
+[[rename]]
+old = "tspecial"
+new = "nonrel_special"
+kind = "constant"
+
+[[rename]]
+old = "tspecial"
+new = "special_desc_result"
+kind = "constant"
+
+[[rename]]
+old = "tspecial_st"
+new = "special_st"
+kind = "constant"
+
+[[rename]]
+old = "tspecial_vars"
+new = "special_vars"
+kind = "constant"
+
+[[rename]]
+old = "tst_is_bot"
+new = "st_is_bot"
+kind = "constant"
+
+[[rename]]
+old = "tst_lift_empty"
+new = "st_lift_empty"
+kind = "constant"
+
+[[rename]]
+old = "tst_rep_is_bot"
+new = "st_rep_is_bot"
+kind = "constant"
+
+[[rename]]
+old = "tstyped"
+new = "in_kinds"
+kind = "constant"
+
+[[rename]]
+old = "tsubexps"
+new = "subexps"
+kind = "constant"
+
+[[rename]]
+old = "tt_answer"
+new = "t_answer"
+kind = "constant"
+
+[[rename]]
+old = "tt_empty"
+new = "t_empty"
+kind = "constant"
+
+[[rename]]
+old = "tt_lift_empty"
+new = "t_lift_empty"
+kind = "constant"
+
+[[rename]]
+old = "tunwrapped"
+new = "unwrapped"
+kind = "constant"
+
+[[rename]]
+old = "tunwrapped_ivl"
+new = "unwrapped_ivl"
+kind = "constant"
+
+[[rename]]
+old = "tval_empty"
+new = "val_empty"
+kind = "constant"
+
+[[rename]]
+old = "tval_gamma"
+new = "val_gamma"
+kind = "constant"
+
+[[rename]]
+old = "tvar_list"
+new = "var_list"
+kind = "constant"
+
+[[rename]]
+old = "tvars"
+new = "exp_vars"
+kind = "constant"
+
+[[rename]]
+old = "tview"
+new = "nonrel_view"
+kind = "constant"
+
+[[rename]]
+old = "typed.gactivation_collect"
+new = "activation_collect"
+kind = "constant"
+
+[[rename]]
+old = "typed.gvalid_activation_trace"
+new = "valid_activation_trace"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Call_String"
+new = "Call_String"
+kind = "constant"
+
+[[rename]]
+old = "typed_cfg"
+new = "elab_cfg"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Congruence"
+new = "Congruence"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Congruence_Value"
+new = "Congruence_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_cs_run"
+new = "cs_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_ctx_values"
+new = "context_values"
+kind = "constant"
+
+[[rename]]
+old = "typed_domain_name"
+new = "analysis_name"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Entry_State"
+new = "Entry_State"
+kind = "constant"
+
+[[rename]]
+old = "typed_es"
+new = "nonrel_es_ctx"
+kind = "constant"
+
+[[rename]]
+old = "typed_es_run"
+new = "es_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_exec_spec"
+new = "nonrel_exec_spec"
+kind = "constant"
+
+[[rename]]
+old = "typed_footprints"
+new = "footprints"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Int"
+new = "Ana_Int"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Int_Value"
+new = "Int_Value"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Interval"
+new = "Interval"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Interval_Value"
+new = "Interval_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_key_of_global_unknown"
+new = "key_of_global_unknown"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Order"
+new = "Order"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Order_Value"
+new = "Order_Value"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Parity"
+new = "Parity"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Parity_Value"
+new = "Parity_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_ptable"
+new = "elab_ptable"
+kind = "constant"
+
+[[rename]]
+old = "typed_render"
+new = "render"
+kind = "constant"
+
+[[rename]]
+old = "typed_render_report"
+new = "prog_render_report"
+kind = "constant"
+
+[[rename]]
+old = "typed_renderer"
+new = "renderer"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_of"
+new = "prog_report_of"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_run"
+new = "report_run"
+kind = "constant"
+
+[[rename]]
+old = "typed_report_sound"
+new = "report_sound"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Sign"
+new = "Sign"
+kind = "constant"
+
+[[rename]]
+old = "Typed_Sign_Value"
+new = "Sign_Value"
+kind = "constant"
+
+[[rename]]
+old = "typed_spec"
+new = "nonrel_spec"
+kind = "constant"
+
+[[rename]]
+old = "typed_trace_printers"
+new = "trace_printers"
+kind = "constant"
+
+[[rename]]
+old = "typed_vars"
+new = "cfg_vars"
+kind = "constant"
+
+[[rename]]
+old = "wt_tcom"
+new = "wt_com"
+kind = "constant"
+
+[[rename]]
+old = "wt_texp"
+new = "wt_exp"
+kind = "constant"
+
+[[rename]]
+old = "tbool"
+new = "nonrel_bool"
+kind = "qualifier"
+
+[[rename]]
+old = "tmcp"
+new = "mcp"
+kind = "qualifier"
+
+[[rename]]
+old = "typed"
+new = "vimp"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp"
+new = "mcp_cs"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_es"
+new = "mcp_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_split"
+new = "mcp_split"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_mcp_split_es"
+new = "mcp_split_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_nonrel"
+new = "nonrel"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_nonrel_es"
+new = "nonrel_es"
+kind = "qualifier"
+
+[[rename]]
+old = "typed_order"
+new = "order_analysis"
+kind = "qualifier"
+
+[[rename]]
+old = "activation_context_of_typed_cs0"
+new = "activation_context_of_cs0"
+kind = "fact"
+
+[[rename]]
+old = "call_formals_typed_ptable"
+new = "call_formals_elab_ptable"
+kind = "fact"
+
+[[rename]]
+old = "calls_typed_def"
+new = "calls_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "calls_typed_typed_cfg"
+new = "calls_in_kinds_elab_cfg"
+kind = "fact"
+
+[[rename]]
+old = "distinct_tactivation"
+new = "distinct_activation_of"
+kind = "fact"
+
+[[rename]]
+old = "gwf_proc_decl_typed"
+new = "gwf_proc_decl_elab"
+kind = "fact"
+
+[[rename]]
+old = "inj_tmcp_ctx_key"
+new = "inj_mcp_ctx_key"
+kind = "fact"
+
+[[rename]]
+old = "map_texp_erase_elab_args"
+new = "map_exp_erase_elab_args"
+kind = "fact"
+
+[[rename]]
+old = "mem_tobligations_at"
+new = "mem_obligations_at"
+kind = "fact"
+
+[[rename]]
+old = "ord_typed_def"
+new = "ord_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "ord_typed_tstyped"
+new = "ord_in_kinds_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "ret_prog_typed_wf"
+new = "ret_prog_elab_wf"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot1_def"
+new = "set_slot1_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot2_def"
+new = "set_slot2_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3_def"
+new = "set_slot3_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3f_def"
+new = "set_slot3f_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3n_def"
+new = "set_slot3n_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot3o_def"
+new = "set_slot3o_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot4_def"
+new = "set_slot4_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot5_def"
+new = "set_slot5_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tslot6_def"
+new = "set_slot6_def"
+kind = "fact"
+
+[[rename]]
+old = "set_tvar_list"
+new = "set_var_list"
+kind = "fact"
+
+[[rename]]
+old = "single_entry_tfield"
+new = "single_entry_field"
+kind = "fact"
+
+[[rename]]
+old = "single_entry_typed_exec_spec"
+new = "single_entry_nonrel_exec_spec"
+kind = "fact"
+
+[[rename]]
+old = "styped_def"
+new = "all_in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "styped_update"
+new = "all_in_kinds_update"
+kind = "fact"
+
+[[rename]]
+old = "styped_zero"
+new = "all_in_kinds_zero"
+kind = "fact"
+
+[[rename]]
+old = "stypedD"
+new = "all_in_kindsD"
+kind = "fact"
+
+[[rename]]
+old = "tactivation_def"
+new = "activation_of_def"
+kind = "fact"
+
+[[rename]]
+old = "tactivation_ne"
+new = "activation_of_ne"
+kind = "fact"
+
+[[rename]]
+old = "taeval_ask_of_sound"
+new = "aeval_ask_of_sound"
+kind = "fact"
+
+[[rename]]
+old = "taeval_ask_sound"
+new = "aeval_ask_sound"
+kind = "fact"
+
+[[rename]]
+old = "taeval_sound"
+new = "aeval_sound"
+kind = "fact"
+
+[[rename]]
+old = "tarith_condition_def"
+new = "arith_condition_def"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_conversion"
+new = "arith_obligations_conversion"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_division"
+new = "arith_obligations_division"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_literal"
+new = "arith_obligations_literal"
+kind = "fact"
+
+[[rename]]
+old = "tarith_obligations_overflow"
+new = "arith_obligations_overflow"
+kind = "fact"
+
+[[rename]]
+old = "tassign_def"
+new = "nonrel_assign_def"
+kind = "fact"
+
+[[rename]]
+old = "tassign_kind"
+new = "nonrel_assign_kind"
+kind = "fact"
+
+[[rename]]
+old = "tassign_sound"
+new = "nonrel_assign_sound"
+kind = "fact"
+
+[[rename]]
+old = "tassign_st_def"
+new = "assign_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tatom_def"
+new = "nonrel_atom_def"
+kind = "fact"
+
+[[rename]]
+old = "tbool_locale"
+new = "nonrel_bool_locale"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_def"
+new = "nonrel_branch_def"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_kind"
+new = "nonrel_branch_kind"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_sound"
+new = "nonrel_branch_sound"
+kind = "fact"
+
+[[rename]]
+old = "tbranch_st_def"
+new = "branch_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tcast_to_def"
+new = "cast_to_def"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_def"
+new = "nonrel_classify_def"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_proved"
+new = "nonrel_classify_proved"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_refuted"
+new = "nonrel_classify_refuted"
+kind = "fact"
+
+[[rename]]
+old = "tclassify_sound"
+new = "nonrel_classify_sound"
+kind = "fact"
+
+[[rename]]
+old = "tcom_erase_elab_com"
+new = "com_erase_elab_com"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_assign_def"
+new = "nonrel_combine_assign_def"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_assign_st_def"
+new = "combine_assign_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_kind"
+new = "nonrel_combine_kind"
+kind = "fact"
+
+[[rename]]
+old = "tcombine_sound"
+new = "nonrel_combine_sound"
+kind = "fact"
+
+[[rename]]
+old = "tconv_def"
+new = "kind_conv_def"
+kind = "fact"
+
+[[rename]]
+old = "tconv_simps"
+new = "kind_conv_simps"
+kind = "fact"
+
+[[rename]]
+old = "tcstep_def"
+new = "cstep_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_frame_def"
+new = "nonrel_enter_frame_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_st_def"
+new = "enter_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_state_def"
+new = "nonrel_enter_state_def"
+kind = "fact"
+
+[[rename]]
+old = "tenter_state_kind"
+new = "nonrel_enter_state_kind"
+kind = "fact"
+
+[[rename]]
+old = "tenter_state_sound"
+new = "nonrel_enter_state_sound"
+kind = "fact"
+
+[[rename]]
+old = "teval_cong"
+new = "eval_cong"
+kind = "fact"
+
+[[rename]]
+old = "teval_elaborate"
+new = "eval_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "teval_elaborate_syn"
+new = "eval_elaborate_syn"
+kind = "fact"
+
+[[rename]]
+old = "teval_in_range"
+new = "eval_in_range"
+kind = "fact"
+
+[[rename]]
+old = "teval_in_range_kind"
+new = "eval_in_range_kind"
+kind = "fact"
+
+[[rename]]
+old = "teval_truth_texp"
+new = "eval_truth_exp"
+kind = "fact"
+
+[[rename]]
+old = "teval_tstyped_in_range"
+new = "eval_in_kinds_in_range"
+kind = "fact"
+
+[[rename]]
+old = "texp_erase_elaborate"
+new = "exp_erase_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "texp_kind_elaborate"
+new = "exp_kind_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "texp_kind_tcast_to"
+new = "exp_kind_cast_to"
+kind = "fact"
+
+[[rename]]
+old = "tfeas_def"
+new = "nonrel_feas_def"
+kind = "fact"
+
+[[rename]]
+old = "tfield_def"
+new = "field_def"
+kind = "fact"
+
+[[rename]]
+old = "tfield_frame"
+new = "field_frame"
+kind = "fact"
+
+[[rename]]
+old = "tfield_sound"
+new = "field_sound"
+kind = "fact"
+
+[[rename]]
+old = "tinit_sound"
+new = "nonrel_init_sound"
+kind = "fact"
+
+[[rename]]
+old = "tinit_st_def"
+new = "nonrel_init_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tinit_stores_def"
+new = "init_stores_def"
+kind = "fact"
+
+[[rename]]
+old = "tinit_stores_tstyped"
+new = "init_stores_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_bot_slots"
+new = "mcp_bot_slots"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_init_def"
+new = "mcp_init_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_init_sound"
+new = "mcp_init_sound"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_rd_def"
+new = "mcp_rd_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_route_def"
+new = "mcp_route_def"
+kind = "fact"
+
+[[rename]]
+old = "tmcp_route_traced"
+new = "mcp_route_traced"
+kind = "fact"
+
+[[rename]]
+old = "tnarrow_def"
+new = "nonrel_narrow_def"
+kind = "fact"
+
+[[rename]]
+old = "tnode_collect_def"
+new = "node_collect_def"
+kind = "fact"
+
+[[rename]]
+old = "tnode_collect_tstyped"
+new = "node_collect_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_classify_def"
+new = "obligation_classify_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_classify_sound"
+new = "obligation_classify_sound"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_conversion"
+new = "obligation_holds_conversion"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_def"
+new = "obligation_holds_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_division"
+new = "obligation_holds_division"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_holds_overflow"
+new = "obligation_holds_overflow"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site"
+new = "prog_obligation_site"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_call"
+new = "prog_obligation_site_call"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_intra"
+new = "prog_obligation_site_intra"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_site_return"
+new = "prog_obligation_site_return"
+kind = "fact"
+
+[[rename]]
+old = "tobligation_sites_def"
+new = "prog_obligation_sites_def"
+kind = "fact"
+
+[[rename]]
+old = "tobligations_at_def"
+new = "obligations_at_def"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_declare"
+new = "pstep_declare"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_declare_forgets"
+new = "pstep_declare_forgets"
+kind = "fact"
+
+[[rename]]
+old = "tpstep_def"
+new = "pstep_def"
+kind = "fact"
+
+[[rename]]
+old = "trd_combine"
+new = "nonrel_rd_combine"
+kind = "fact"
+
+[[rename]]
+old = "trd_tassign_st"
+new = "nonrel_rd_assign_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tbranch_st"
+new = "nonrel_rd_branch_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tcombine_assign_st"
+new = "nonrel_rd_combine_assign_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tenter_st"
+new = "nonrel_rd_enter_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tinit_st"
+new = "nonrel_rd_init_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_treturn_st"
+new = "nonrel_rd_return_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_tspecial_st"
+new = "nonrel_rd_special_st"
+kind = "fact"
+
+[[rename]]
+old = "trd_write_back"
+new = "nonrel_rd_write_back"
+kind = "fact"
+
+[[rename]]
+old = "trefine_code"
+new = "nonrel_refine_code"
+kind = "fact"
+
+[[rename]]
+old = "trefine_def"
+new = "nonrel_refine_def"
+kind = "fact"
+
+[[rename]]
+old = "trefine_exec_def"
+new = "nonrel_refine_exec_def"
+kind = "fact"
+
+[[rename]]
+old = "trefine_kind"
+new = "nonrel_refine_kind"
+kind = "fact"
+
+[[rename]]
+old = "trefine_sound"
+new = "nonrel_refine_sound"
+kind = "fact"
+
+[[rename]]
+old = "treturn_def"
+new = "nonrel_return_def"
+kind = "fact"
+
+[[rename]]
+old = "treturn_kind"
+new = "nonrel_return_kind"
+kind = "fact"
+
+[[rename]]
+old = "treturn_sites_def"
+new = "return_sites_def"
+kind = "fact"
+
+[[rename]]
+old = "treturn_sound"
+new = "nonrel_return_sound"
+kind = "fact"
+
+[[rename]]
+old = "treturn_st_def"
+new = "return_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot1_def"
+new = "slot1_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot2_def"
+new = "slot2_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3_def"
+new = "slot3_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3f_def"
+new = "slot3f_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3n_def"
+new = "slot3n_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot3o_def"
+new = "slot3o_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot4_def"
+new = "slot4_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot5_def"
+new = "slot5_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_def"
+new = "slot6_def"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_keyed"
+new = "slot6_keyed"
+kind = "fact"
+
+[[rename]]
+old = "tslot6_keyed_init"
+new = "slot6_keyed_init"
+kind = "fact"
+
+[[rename]]
+old = "tslot_defs"
+new = "slot_defs"
+kind = "fact"
+
+[[rename]]
+old = "tslot_mono"
+new = "slot_mono"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_def"
+new = "nonrel_special_def"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_kind"
+new = "nonrel_special_kind"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_sound"
+new = "nonrel_special_sound"
+kind = "fact"
+
+[[rename]]
+old = "tspecial_st_def"
+new = "special_st_def"
+kind = "fact"
+
+[[rename]]
+old = "tst_is_bot_iff"
+new = "st_is_bot_iff"
+kind = "fact"
+
+[[rename]]
+old = "tst_is_bot_sound"
+new = "st_is_bot_sound"
+kind = "fact"
+
+[[rename]]
+old = "tst_lift_empty_def"
+new = "st_lift_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tst_rep_is_bot_iff"
+new = "st_rep_is_bot_iff"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_bind_formals"
+new = "in_kinds_bind_formals"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_call_enter"
+new = "in_kinds_call_enter"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_combine_env"
+new = "in_kinds_combine_env"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_def"
+new = "in_kinds_def"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_enter_state"
+new = "in_kinds_enter_state"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_gcombine"
+new = "in_kinds_gcombine"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_styped"
+new = "in_kinds_all_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_upd"
+new = "in_kinds_upd"
+kind = "fact"
+
+[[rename]]
+old = "tstyped_update"
+new = "in_kinds_update"
+kind = "fact"
+
+[[rename]]
+old = "tt_answer_def"
+new = "t_answer_def"
+kind = "fact"
+
+[[rename]]
+old = "tt_answer_sound"
+new = "t_answer_sound"
+kind = "fact"
+
+[[rename]]
+old = "tt_empty_def"
+new = "t_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tt_empty_sound"
+new = "t_empty_sound"
+kind = "fact"
+
+[[rename]]
+old = "tt_lift_empty_def"
+new = "t_lift_empty_def"
+kind = "fact"
+
+[[rename]]
+old = "tunwrapped_ivl_sound"
+new = "unwrapped_ivl_sound"
+kind = "fact"
+
+[[rename]]
+old = "tval_gamma_slot"
+new = "val_gamma_slot"
+kind = "fact"
+
+[[rename]]
+old = "tvars_elab_args"
+new = "exp_vars_elab_args"
+kind = "fact"
+
+[[rename]]
+old = "tvars_elaborate"
+new = "exp_vars_elaborate"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_calls_source_unique"
+new = "elab_cfg_calls_source_unique"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_def"
+new = "elab_cfg_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_cfg_edges"
+new = "elab_cfg_edges"
+kind = "fact"
+
+[[rename]]
+old = "typed_cs0_node_collect"
+new = "cs0_node_collect"
+kind = "fact"
+
+[[rename]]
+old = "typed_cs_run_def"
+new = "cs_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_cs_run_traced"
+new = "cs_run_traced"
+kind = "fact"
+
+[[rename]]
+old = "typed_domain_cases"
+new = "analysis_cases"
+kind = "fact"
+
+[[rename]]
+old = "typed_es_run_def"
+new = "es_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_es_run_traced"
+new = "es_run_traced"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_def"
+new = "nonrel_exec_spec_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_sound"
+new = "nonrel_exec_spec_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_exec_spec_sound_rd"
+new = "nonrel_exec_spec_sound_rd"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_es_node_sound"
+new = "mcp_es_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_es_verdict_sound"
+new = "mcp_es_verdict_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_keyed"
+new = "mcp_cs_keyed"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_node_sound"
+new = "mcp_cs_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_routed"
+new = "mcp_cs_routed"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_split_es_node_sound"
+new = "mcp_split_es_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_split_node_sound"
+new = "mcp_split_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_mcp_verdict_sound"
+new = "mcp_cs_verdict_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_es_node_sound"
+new = "nonrel_es_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_es_verdict_sound"
+new = "nonrel_es_verdict_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_node_sound"
+new = "nonrel_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_report_ctx_sound"
+new = "nonrel_report_ctx_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_report_proved_sound"
+new = "nonrel_report_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_report_refuted_sound"
+new = "nonrel_report_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_routed"
+new = "nonrel_routed"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_source_sound"
+new = "nonrel_source_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_nonrel_verdict_sound"
+new = "nonrel_verdict_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_order_node_sound"
+new = "order_analysis_node_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_order_report_proved_sound"
+new = "order_analysis_report_proved_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_order_report_refuted_sound"
+new = "order_analysis_report_refuted_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_ptable_def"
+new = "elab_ptable_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_ptable_main"
+new = "elab_ptable_main"
+kind = "fact"
+
+[[rename]]
+old = "typed_ptable_None_iff"
+new = "elab_ptable_None_iff"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_live"
+new = "report_check_live"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_row"
+new = "report_check_row"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_check_sound"
+new = "report_check_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_obligation_refuted"
+new = "report_obligation_refuted"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_obligation_safe"
+new = "report_obligation_safe"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_of_def"
+new = "prog_report_of_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_of_sound"
+new = "prog_report_of_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_point_sound"
+new = "report_point_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_def"
+new = "report_run_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_shape"
+new = "report_run_shape"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_run_sound"
+new = "report_run_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_sound_def"
+new = "report_sound_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_report_state_sound"
+new = "report_state_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_run_tstyped"
+new = "run_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "typed_source_reaches_node_collect"
+new = "source_reaches_node_collect"
+kind = "fact"
+
+[[rename]]
+old = "typed_source_run_has_activation_trace"
+new = "source_run_has_activation_trace"
+kind = "fact"
+
+[[rename]]
+old = "typed_spec_def"
+new = "nonrel_spec_def"
+kind = "fact"
+
+[[rename]]
+old = "typed_spec_sound"
+new = "nonrel_spec_sound"
+kind = "fact"
+
+[[rename]]
+old = "typed_wf_compile_input"
+new = "elab_wf_compile_input"
+kind = "fact"
+
+[[rename]]
+old = "u32_store_typed"
+new = "u32_store_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "valid_activation_trace_callers_tstyped"
+new = "valid_activation_trace_callers_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "valid_activation_trace_tstyped"
+new = "valid_activation_trace_in_kinds"
+kind = "fact"
+
+[[rename]]
+old = "wt_tcom_elab_com"
+new = "wt_com_elab_com"
+kind = "fact"
+
+[[rename]]
+old = "wt_texp_elaborate"
+new = "wt_exp_elaborate"
+kind = "fact"

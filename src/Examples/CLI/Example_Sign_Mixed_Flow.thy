@@ -29,7 +29,7 @@ definition mf_program :: imp_prog where
    }"
 
 definition mf_conf :: voblint_conf where
-  "mf_conf = \<lparr>conf_analyses = [Typed_Sign], conf_context = Typed_Call_String 0,
+  "mf_conf = \<lparr>conf_analyses = [Sign], conf_context = Call_String 0,
      conf_globals = Globals_Join, conf_program_globals = Program_Globals_Flow_Insensitive,
      conf_sem = default_sem_conf\<rparr>"
 
@@ -46,11 +46,11 @@ text \<open>
 \<close>
 
 theorem mf_checks_hold:
-  assumes s0: "s0 \<in> tinit_stores (kenv_of [])"
-    and exec: "star (tpstep (kenv_of []) (typed_ptable mf_program []))
-                 (main_body (typed_ptable mf_program []), s0, []) (residual, s, frs)"
+  assumes s0: "s0 \<in> init_stores (kenv_of [])"
+    and exec: "star (pstep (kenv_of []) (elab_ptable mf_program []))
+                 (main_body (elab_ptable mf_program []), s0, []) (residual, s, frs)"
     and chk: "next_check residual = Some (l, e)"
-  shows "truthy (teval e s)"
+  shows "truthy (eval e s)"
 proof -
   obtain res where ans: "run_voblint mf_conf [] mf_program = Analysed res"
     and verdicts: "map check_verdict (report_checks res)
@@ -58,7 +58,7 @@ proof -
     using mf_report by (cases "run_voblint mf_conf [] mf_program") auto
   from run_voblint_check_sound [OF ans s0 exec chk]
   obtain c where listed: "c \<in> set (report_checks res)"
-    and proved: "check_verdict c = Decided Check_Proved \<longrightarrow> truthy (teval e s)"
+    and proved: "check_verdict c = Decided Check_Proved \<longrightarrow> truthy (eval e s)"
     by blast
   have "check_verdict c \<in> set (map check_verdict (report_checks res))"
     using listed by simp

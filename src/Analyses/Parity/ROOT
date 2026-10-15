@@ -1,7 +1,8 @@
 chapter Voblint
 
-session Voblint_Analysis_Parity in "." = "Voblint_Result" +
-  description "The Parity domain: lattice, transfers, executable bridge"
+session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
+  description "The Parity domain: lattice, transfers, executable bridge, and the domain at
+    machine kinds"
   sessions
     "Voblint_VIMP"
     "Voblint_CFG"
@@ -13,3 +14,4 @@ session Voblint_Analysis_Parity in "." = "Voblint_Result" +
   theories
     Parity_Warrowing
     Parity_Domain
+    Parity_Kind

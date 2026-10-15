@@ -681,9 +681,9 @@ let counts steps =
 
 (* The name the header gives a context mode, as voblint's --context spells it. *)
 let context_name = function
-  | C.Typed_Call_String k when A.int_of_nat k = 0 -> "none"
-  | C.Typed_Entry_State -> "entry-state"
-  | C.Typed_Call_String k -> "call-string:" ^ string_of_int (A.int_of_nat k)
+  | C.Call_String k when A.int_of_nat k = 0 -> "none"
+  | C.Entry_State -> "entry-state"
+  | C.Call_String k -> "call-string:" ^ string_of_int (A.int_of_nat k)
 
 let text_header ~out ~analyses ~context ~globals ~program =
   out "Voblint trace\n";
