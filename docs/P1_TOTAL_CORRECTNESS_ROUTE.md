@@ -8,12 +8,12 @@ phase revisits the scope decision (`docs/THESIS_SCOPE_MEMO.md`).
 
 ## What P1 is
 
-The end-to-end endpoints (`fun_route_source_sound`,
-`fun_route_result_node_sound` and the other routed `*_of_terminates` theorems
-in `DG_Live_Unknowns.thy`) carry one solver hypothesis:
+The routed endpoints of `gdg_analysis` (`gfun_route_result_node_sound` and the
+other `*_of_terminates` theorems in `DG_Live_Unknowns.thy`) carry one solver
+hypothesis:
 
 ```isabelle
-assumes solves: "terminates ugs p"
+assumes solves: "terminates (pglob p) p"
 ```
 
 `terminates` is `solve_dom` at the program's root query (vendored

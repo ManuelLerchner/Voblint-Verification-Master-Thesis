@@ -1,5 +1,10 @@
 # Analysis report and solver boundary refactor
 
+Status: landed and since superseded in its names. The public theorems now speak
+about the report `run_voblint` returns without a termination premise
+(`Run_Voblint.thy`); `run_voblint_covers`, `𝒞` and `ℛ⇘res⇙` below are the plan's
+vocabulary, and `manifests/analyses.yaml` no longer exists.
+
 Branch `refactor/analysis-report`, from `origin/main`. The thesis and the site follow on
 `writing` after the merge.
 

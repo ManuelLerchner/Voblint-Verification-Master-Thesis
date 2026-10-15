@@ -16,6 +16,7 @@ mentions a graph, an equation, or a solver run.
 | File | Role |
 | --- | --- |
 | `Abstract_Domain.thy` | Executable and sound abstract-value classes, concretization bounds, widening, and the TD warrowing carrier constraint |
+| `Kind_Lifted.thy` | `ik_domain`, a numeric domain with kind-indexed widening, narrowing and emptiness, and `'a kd`, a value tagged with its machine kind |
 | `Reachability_Lift.thy` | Generic `Bot`/`Lifted` reachability carrier, lattice and solver-update instances, concretization, mapping, and normalized transfer combinators |
 | `Three_Valued.thy` | The three-valued combinators `and_opt`/`or_opt` shared by expression evaluation and check classification |
 | `Query_Lift.thy` | `'a query_lift`, Goblint's `Lattice.Lift`: a fresh bottom `QBot` and top `QTop` around a domain, the lattice query answers live in, with its meet and concretization |

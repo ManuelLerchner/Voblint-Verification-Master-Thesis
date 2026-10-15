@@ -1,5 +1,15 @@
 # Machine integers
 
+Status: historical. This page describes the lowering design (`typed_prog`,
+`lower_com`, `tstep_sim`, `run_voblint_typed_sound`), which Stage 7 removed with
+the mathematical-integer semantics. Every program now has one meaning: surface
+VIMP is elaborated (`elaborate`, `elab_com`, `elab_ptable`) to core VIMP, which
+`pstep` executes (`VIMP_Semantics.thy`) and the analyzer reads through `elab_cfg`;
+an undeclared variable has kind `I32` (`kenv_of`). Signed overflow is an analysis
+option (`Assume_Top`, the default, or `Assume_Wraparound`), and diagnostics cover
+division by zero, signed overflow and conversions that may not fit.
+`docs/theorem-migration.toml` maps old names to current ones.
+
 VIMP programs compute over mathematical integers unless they declare machine
 kinds. A program that declares kinds is elaborated to a typed intermediate
 representation and lowered back to VIMP with explicit conversions, and the

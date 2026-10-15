@@ -1,5 +1,10 @@
 # Cooperating analyses: design record
 
+Status note (Stage 7): the registry is `mcp_registry` (`MCP_Registry.thy`),
+interpreted as `mcp` over the combined carrier (`MCP_Carrier.thy`, `Voblint_CLI`).
+`Rel_Order_Local.thy`, `order_spec` and `analysis_contract` below are pre-Stage-7
+names; the order analysis is `Order_Analysis.thy`.
+
 Status: **implemented**. Cooperating analyses run as components of Goblint's
 `MCP` shape and reach `run_voblint`. This record reverses the earlier decision
 against generic analysis composition with MCP-style queries (issue #70 closed

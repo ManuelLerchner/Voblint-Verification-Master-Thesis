@@ -1,5 +1,9 @@
 # Sharing the backward-filter recursion: a measurement
 
+Status: historical. `Exec_Backward` and the `afilter_st` recursion it measures
+were removed with the untyped analyzer; the machine-kind transfer refines guards
+through `nonrel_refine` (`Nonrelational_Transfer.thy`).
+
 `afilter` and `afilter_st` are the same five-clause recursion over `exp`,
 differing only in how they read and write one variable, and each pair is joined
 by a commutation proof that walks the expression a third time. Seven such

@@ -2,13 +2,15 @@
 
 > **Status:** partly stale. "Pipeline" (above the rendering branch), "Layer
 > responsibilities" and "Why no automatic sublocale" name retired pieces:
-> `check_true`/`check_false` are one `check_query`; the `derived_*` locales are
-> `numeric_query_judgments` (`Numeric_Queries.thy`), interpreted for
-> every `sound_refinement` in `Backward_Numeric_Queries.thy`; `sound_refinement`
-> lives in `Backward_Domain.thy`; `abstract_domain` and `mono_refinement`
-> no longer exist. The current inventory is the
-> `Checks/` row of `src/Abstract_Interpreter/Framework/README.md`. The
-> rendering sections describe the tree as it stands.
+> `check_true`/`check_false` and `check_query` are gone; the `derived_*` locales
+> are `numeric_query_judgments` (`Numeric_Queries.thy`), interpreted for every
+> `sound_inverse_ops` in `Backward_Numeric_Queries.thy`; `sound_refinement`,
+> `abstract_domain` and `mono_refinement` no longer exist. A non-relational
+> analysis decides a check with `nonrel_classify` (`Nonrelational_Analysis.thy`),
+> and the activated analyses decide it together with `mcp_classify`
+> (`MCP_Registry.thy`). The current inventory is the `Checks/` row of
+> `src/Abstract_Interpreter/Framework/README.md`. The rendering sections describe
+> the tree as it stands.
 
 Overview of how a compiled `__voblint_check(...)` condition becomes both a
 GraphViz-rendered proof status and a semantic soundness guarantee. This is

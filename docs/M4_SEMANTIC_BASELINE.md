@@ -1,5 +1,9 @@
 # M4 semantic baseline
 
+Status: historical. The flagship examples it pins (`Example_Interval_DG_Flagship`,
+`Example_Parity_DG_Flagship`, `Example_Inc_Proc`) were removed with the untyped
+analysis instances; `Voblint_Examples_CLI` holds the current witnesses.
+
 This baseline records observable behavior that the reduced M4 migration must
 preserve for the existing classic-split policy. It is intentionally expressed
 in theorem and executable-result form so later changes can distinguish an

@@ -8,6 +8,9 @@ tick the status column, record what the build taught, and move anything that
 turned out wrong into the "Decisions and corrections" section rather than
 deleting it.
 
+Stage 7 (`docs/TYPED_CFG_PLAN.md`) later removed the untyped analysis
+instances and renamed sessions and theories; the session names below predate it.
+
 Read `docs/SESSION_CLEANUP_PLAYBOOK.md` first. Its procedure (survey, act on
 the ranked verdict, gate) and its traps apply unchanged. This document is the
 ranked verdict for Core.

@@ -13,71 +13,56 @@
 
 ## What is verified?
 
-Voblint proves end-to-end soundness of its executable analyzer. Whenever `run_voblint`
-returns a report, every reachable source configuration can be observed at one or more CFG
-nodes. At every such node, the report covers the reached store, and every definite verdict
-holds concretely.
+Voblint proves end-to-end soundness of its executable analyzer. Whenever
+`run_voblint` returns a report, every configuration a run of the program reaches
+is simulated at a CFG node, its store is collected there, some state the report
+holds there describes it, and every definite verdict there holds for it.
 
 ```math
-\underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{source run}}
+\underbrace{(\mathit{main}, s_0, [\,]) \to_p^{*} (r, s, \mathit{fs})}_{\text{run of the program}}
 \;\Longrightarrow\;
-\underbrace{\exists v.\; (r, s, \mathit{fs}) \rhd v}_{\text{observed at a node}}
+\exists v.\;
+\underbrace{(r, s, \mathit{fs}) \approx v}_{\text{simulated at a node}}
 \;\wedge\;
-\forall v.\; (r, s, \mathit{fs}) \rhd v \Longrightarrow
 \underbrace{s \in \mathcal{C}(v)}_{\text{collecting semantics}}
 \;\wedge\;
-\underbrace{\mathcal{C}(v) \subseteq [\![\, \mathit{res} \,]\!]_{v}}_{\text{analysis soundness}}
+\underbrace{s \in \gamma_{\mathit{res}}(v)}_{\text{analysis soundness}}
 \;\wedge\;
-\underbrace{[\![\, \mathit{res} \,]\!]_{v} \subseteq \mathcal{V}_{\mathit{res}}(v)}_{\text{verdict soundness}}
+\underbrace{s \models \mathit{verdicts}_{\mathit{res}}(v)}_{\text{verdict soundness}}
 ```
 
-Every configuration a source run from an initial store $s_0$ reaches is
-observed at some CFG node, written $(r, s, \mathit{fs}) \rhd v$. In full the
-relation reads $p, s_0 \vdash (r, s, \mathit{fs}) \rhd v$: it also depends on the
-program $p$ and the initial store $s_0$ of the run. At every node
-$v$ where it is observed, the store $s$ is collected, is represented by the
-analyzer's report, and satisfies every definite verdict reported there.
+Here $`\gamma_{\mathit{res}}(v)`$ stands for the stores some state the report
+lists at $v$ describes, and $`s \models \mathit{verdicts}_{\mathit{res}}(v)`$ for
+"every `PROVED` check at $v$ is true in $s$, every `REFUTED` one false, $v$ is not
+`DEAD`, and if $v$ is `SAFE` every arithmetic obligation there holds". These are
+README shorthands; the [headline theorem](#the-headline-theorem) gives the
+Isabelle statement.
 
-The residual command $r$ is not enough to determine a node, because equal
-commands can occur at different places. In `if (b) { x = 1; } else { x = 1; }`,
-for example, both branches leave the command `x = 1` behind, but the compiler
-places the two assignments at different nodes. The relation $\rhd$ therefore
-uses an elaboration of the program, which annotates every statement with the
-nodes the compiler emits for it and compiles to the same graph. Every run of the
-program lifts to a run of its elaboration, and the annotated command at which
-that run stops names $v$. A configuration reachable along two paths can be
-observed at two nodes, and the theorem covers each of them. The elaboration is
-used only in the proof, and `run_voblint` analyzes the program as written. The
-[headline theorem](#the-headline-theorem) gives the exact statement.
-
-The context-indexed sets $\mathcal{A}(v, \kappa)$ cover the collecting
-semantics without loss, so their union
-$\mathcal{C}(v) = \bigcup_{\kappa} \mathcal{A}(v, \kappa)$ recovers it
-exactly. The two inclusions hold for every successful analyzer run, independently of
-any particular store, and the headline theorem uses them to conclude that the reached
-store is a member of all three sets. They are one-way guarantees. The report may describe
-stores that no run reaches, and the verdict semantics keeps only what the
-definite verdicts assert.
+The run is of the program's core form. The parser builds surface VIMP;
+elaboration (`elab_ptable`, an Isabelle definition) resolves names to variable
+identities, computes every operation at its machine kind and makes every
+conversion explicit; `pstep` executes the result. A surface program means the core
+semantics of its elaboration. That meaning is part of the adequacy argument, not a
+proved transformation.
 
 Each step is an Isabelle theorem:
-[`psteps_lift`](src/Program_Model/Compile/Elaborated_Compilation.thy),
-[`csim_point_compile_prog`](src/Program_Model/Compile/Elaborated_Compilation.thy),
-[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy),
-[`node_collect_eq_Union_activation_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy),
-[`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy) and
-[`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy).
+[`source_reaches_node_collect`](src/Analyses/Shared/Result/Source_Activation_Sound.thy)
+(a run is simulated at a node whose collected stores contain its store),
+[`report_state_sound`](src/Executable_Surface/CLI/Run_Report.thy) and
+[`report_check_sound`](src/Executable_Surface/CLI/Run_Report.thy) (the report
+covers every collected store and its verdicts hold there), read at `run_voblint`'s
+answer by [`run_voblint_sound`](src/Executable_Surface/CLI/Run_Voblint.thy).
+[`run_voblint_source_sound`](src/Executable_Surface/CLI/Run_Voblint.thy)
+states the whole chain for every run that returns a report.
 
-[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-states the whole chain for every run that returns a report, at every node the run is observed at.
-
-The report's states at $v$ can also be joined over their contexts. Every store
-the report describes at $v$ lies in the concretization of that join,
-$`[\![\, \mathit{res} \,]\!]_{v}
-\subseteq \gamma\big(\bigsqcup_{\kappa} \mathit{res}(v,\kappa)\big)`$
-([`report_sem_point_join`](src/Executable_Surface/CLI/Analysis_Report.thy)),
-so [`run_voblint_source_sound_joined`](src/Executable_Surface/CLI/Analysis_Certified.thy)
-gives the same guarantee for the one state per point that the playground's
-control-flow view shows. The join can lose precision but not reached stores.
+The context-indexed sets $\mathcal{A}(v, c)$ (`activation_collect`) split the
+collecting semantics by context without loss:
+$\mathcal{C}(v) = \bigcup_{c} \mathcal{A}(v, c)$ for each shipped context policy.
+[`run_voblint_spine`](src/Executable_Surface/CLI/Run_Voblint.thy) states the chain
+through them for any policy that owes this, and
+`run_voblint_call_string_chain` and `run_voblint_entry_state_chain` discharge it
+for call strings and entry states. The guarantees are one-way: the report may
+describe stores that no run reaches.
 
 ## What is Voblint?
 
@@ -198,10 +183,13 @@ animation below from the playground.
 
 ### Arithmetic diagnostics
 
-Every analysis also checks the divisors of `/` and `%` against the solved state
-before the statement. A divisor that may be zero is a `warning`; one that is
-zero in every live context is an `error`. Safe operations and unreachable points
-report nothing, and diagnostics never change the exit code.
+Every analysis also checks the arithmetic of each evaluated expression against the
+solved state before the statement: division and remainder by zero, signed `+`, `-`,
+`*` and `/` whose result may leave its kind, and conversions to a narrower kind that
+may not fit, including a returned value converted to the caller's destination. An
+obligation that may fail is a `warning`; one that fails in every reaching store is
+an `error`. Safe operations and unreachable points report nothing, and diagnostics
+never change the exit code.
 
 <table>
   <tr>
@@ -223,198 +211,168 @@ report nothing, and diagnostics never change the exit code.
 The traversal covers assignments, guards, call arguments, returns, `min`/`max`
 and checks, nested arithmetic included, and both operands of `&&` and `||`. It is
 a diagnostic policy over VIMP's total expressions: execution still uses
-`a / 0 = 0` and `a % 0 = a`. “Possible” means the abstraction cannot exclude
-zero, not that a zero-divisor execution exists; an `error` does not prove its
-point reachable. The [arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md)
-pin the findings and describe the expectation syntax.
+`a / 0 = 0` and `a % 0 = a`, and wraps every result into its kind. "Possible"
+means the abstraction cannot exclude the hazard, not that a violating execution
+exists; an `error` does not prove its point reachable. The
+[arithmetic fixtures](tests/regression/23-arithmetic-diagnostics/README.md) and
+[signed-overflow fixtures](tests/regression/27-signed-overflow/README.md) pin the
+findings.
 
 ### Machine integers
 
-VIMP integers are mathematical unless a program declares machine kinds. Kinds
-are written C-style: on a `global` line, on a formal, as a procedure's return
-kind, and on locals, declared anywhere in a body with C's block scoping. A program that
-writes any kind must declare every variable; a declared local starts at an
-arbitrary value of its kind, and `(k) e` converts explicitly:
+Every VIMP value is a machine integer of some kind (`i8` to `u64`). Kinds are written
+C-style: on a `global` line, on a formal, as a procedure's return kind, and on
+locals, declared anywhere in a body with C's block scoping. A variable that names no
+kind is an `i32`. A declared local without an initializer starts at an arbitrary
+value of its kind, and `(k) e` converts explicitly:
 
 ```c
 global u8 g;
 fun u8 f(u8 n) { return n + 1; }
 fun main() {
   g = f(300);
-  __voblint_check(g == 45); // PROVED: 300 wraps to 44 at u8, then 44 + 1
+  __voblint_check(g == 45); // PROVED: 300 converts to 44 at u8, then 44 + 1
 }
 ```
 
-The frontend hands such a program to the verified
-[`typed_prog`](src/Program_Model/Typed/Typed_Lower.thy). It resolves every name
-to a static identity, computes every operation at its C kind (integer promotion
-and the usual arithmetic conversions), inserts a conversion wherever a value is
-written to a place of another kind, and lowers the result back to VIMP with
-explicit `Cast` nodes. `run_voblint` then analyzes the lowered program, so the
-[headline theorem](#the-headline-theorem) covers it. `lower_elaborate` and
-`lower_com_meaning` state what the lowered expressions compute: the typed
-meaning `taval` of the source expressions, on every store. Signed overflow wraps
-(the `-fwrapv` reading), which C leaves undefined. Every domain converts its
-values soundly; Interval tracks exact wraparound for narrow intervals.
-[`docs/TYPED_IR.md`](docs/TYPED_IR.md) has the details and the
-[machine-kind fixtures](tests/regression/26-machine-kinds/README.md) the
+Elaboration ([`Core_Exp.thy`](src/Program_Model/VIMP/Core_Exp.thy),
+[`Core_Com.thy`](src/Program_Model/VIMP/Core_Com.thy)) resolves every name to a
+static identity, computes every operation at its C kind (integer promotion and the
+usual arithmetic conversions), and inserts a conversion wherever a value is written
+to a place of another kind. Every result wraps into its kind, signed overflow
+included (the `-fwrapv` reading, which C leaves undefined); the signed-overflow
+diagnostics report where a C program could overflow. How a domain treats a possible
+signed overflow is a run option, Goblint's `sem.int.signed_overflow`: `assume_top`
+(the default) or `assume_wraparound`; the theorems hold under both. A literal
+outside `i64` is rejected. The
+[machine-kind fixtures](tests/regression/26-machine-kinds/README.md) have the
 examples.
+
+Three steps before Isabelle are trusted: the parser's block-scope resolution (a
+declaration that shadows a name gets a fresh name), the rewriting of a declaration
+without initializer into `x = __voblint_nondet_int()`, and the source positions it
+records.
 
 ## What Voblint proves
 
-For every selection of analyses, globals rule and context policy, the report
-`run_voblint` returns is sound for every execution of the program: whenever an
-execution reaches a program point, some state the report holds there describes
-its store, and every `PROVED` or `REFUTED` verdict there is correct for it. The
-theorems are stated about the same `run_voblint` that is exported to OCaml and
-runs in the CLI and the playground.
+For every selection of analyses, globals rule, context policy, placement of
+program globals and overflow policy, the report `run_voblint` returns is sound for
+every execution of the program: whenever an execution reaches a program point, some
+state the report holds there describes its store, and every `PROVED` or `REFUTED`
+verdict there is correct for it. The theorems are stated about the same
+`run_voblint` that is exported to OCaml and runs in the CLI and the playground.
 
 "Every execution" is made precise by an activation-trace collecting semantics.
-A [`valid_activation_trace`](src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy) trace records one
-procedure activation's view of a run, and
-[`node_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy) gathers every
-store such traces hold at each CFG node, adapting thread-modular local traces
-(see [Foundations](#foundations)) from threads to procedure activations.
+A [`valid_activation_trace`](src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy)
+records one procedure activation's view of a run, and
+[`node_collect`](src/Program_Model/CFG/Collecting/Activation_Trace_Collect.thy) gathers
+every store such traces hold at each CFG node, adapting thread-modular local traces
+(see [Foundations](#foundations)) from threads to procedure activations. The public
+theorems read it as `reaching ds p v`, the stores that reach node `v` of the
+elaborated graph `elab_cfg p ds` from `init_stores` (globals zero, every value in its
+kind).
 
 ### The headline theorem
 
-[`run_voblint_source_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy) relates any finite source execution
-to the report, at every CFG node the execution is observed at:
+[`run_voblint_source_sound`](src/Executable_Surface/CLI/Run_Voblint.thy) relates any
+finite run of the program to the report:
 
 ```isabelle
 theorem run_voblint_source_sound:
-  fixes p :: imp_prog and s0 s :: store
-  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
-  assumes s0: "s0 ∈ cinit_stores 𝒢"
-      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
-      and ans: "run_voblint config p = Analysed res"
-  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
-       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
-                s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-              ∧ s ∈ ℛ⇘res⇙ v
-              ∧ s ∈ 𝒱⇘res⇙ v)"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 ∈ init_stores (kenv_of ds)"
+    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
+                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+  shows "∃v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
+                    ⊢ (residual, s, frs) ≈ (v, s, stk)
+           ∧ s ∈ reaching ds p v
+           ∧ (∃d. Lifted d ∈ report_states_at res v
+                  ∧ s ∈ mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
+           ∧ ¬ DEAD res v
+           ∧ (∀c. PROVED res v c ⟶ truthy (eval c s))
+           ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (eval c s))
+           ∧ (SAFE res v ⟶ (∀ob ∈ obligations_at ds p v. s ⊨ ob))"
 ```
 
 | Premise | Meaning |
 | --- | --- |
-| `s0` | Initial store. Declared globals start at `0`; locals are unconstrained. |
-| `run` | Any finite execution prefix from `main`; the program need not terminate. |
-| `ans` | `run_voblint` accepted the configuration and the program, and its solve finished. |
-
-`→⇩p⇧*` is `psteps`, `⊳` is `at_node`, and `𝒞`, `ℛ⇘res⇙ v` and `𝒱` are `node_collect`,
-`report_sem` and `verdict_stores`; the [notation table](#notation) lists each symbol.
+| `run` | `run_voblint` accepted the configuration and the program, and its solve finished. |
+| `s0` | Initial store: globals start at `0`, every identity holds a value of its kind. |
+| `exec` | Any finite execution prefix of the elaborated program from `main`; the program need not terminate. |
 
 | Conclusion | Guarantee |
 | --- | --- |
-| `∃v. … ⊳ v` | The reached configuration is observed at some CFG node. |
-| `s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v` | At every such `v`, a valid activation trace reaches `v` with store `s`. |
-| `s ∈ ℛ⇘res⇙ v` | Some state the report holds at `v`, under one of its contexts, describes `s`. |
-| `s ∈ 𝒱⇘res⇙ v` | Every `PROVED` or `REFUTED` verdict at `v` holds for `s`. |
+| `… ≈ (v, s, stk)` | The reached configuration is simulated at CFG node `v` by the compiler's simulation relation `csim`, with the same store. |
+| `s ∈ reaching ds p v` | A valid activation trace reaches `v` with store `s`. |
+| `∃d. …` | Some state the report holds at `v` describes `s`, through the concretization of the activated analyses. |
+| `¬ DEAD res v` | `v` is not reported dead. |
+| `PROVED`, `REFUTED` | Every definite verdict at `v` holds for `s`. |
+| `SAFE` | If `v` has no arithmetic diagnostic, every obligation decided there holds of `s`. |
 
-A residual command alone does not determine its node, since equal commands occur at
-different places. [`at_node`](src/Program_Model/Compile/Elaborated_Compilation.thy)
-therefore reads the node off the program's elaboration `elab_pt`, which annotates every
-statement with the nodes the compiler emits for it and compiles to the same graph
-(`compile_prog_elab_pt`). `p, s0 ⊢ (residual, s, frs) ⊳ v` holds when some run of the
-elaboration from `s0` reaches an annotated configuration that erases to the source one,
-names `v` (`point`, `csim_point_compile_prog`) and is related to `v` by the compiler's
-simulation with the same store. Erased, the simulation relates the source configuration
-to `v` too (`at_node_csim`). The relation is not functional: a configuration reachable
-along two paths can be observed at two nodes, and the second half of the theorem covers
-every one of them. The elaboration is used only in the proof, and `run_voblint` runs the
-program as written.
+`ds` are the kind declarations the parser hands over; `conf` names a nonempty list of
+distinct analyses among Interval, Congruence, Int (at a refinement mode), Order,
+Sign and Parity, run together, one of the globals rules, a context policy (call
+strings of any length, length `0` being context-insensitive, or entry states), the
+placement of program globals, and the signed-overflow policy.
 
-`config` names a nonempty list of distinct analyses among Sign, Interval, Parity,
-Congruence, Int and Order, run together, one of the globals rules, and one
-context policy: no contexts, entry states, or call strings of any length.
-
-The theorem concludes membership of the reached store in all three sets. The
-inclusions between the sets are separate theorems about a successful analyzer run:
-`𝒞 v ⊆ ℛ⇘res⇙ v`
-needs the run that built the report
-([`run_voblint_covers`](src/Executable_Surface/CLI/Analysis_Certified.thy)), and
-`ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v` holds for the report alone
-([`analysis_report_verdicts_sound`](src/Executable_Surface/CLI/Analysis_Report.thy)).
-
-<details>
-<summary>Why the raw residual needs the annotated run</summary>
-
-A source residual alone need not name a single CFG node. In
-`if (b) { x = 1; } else { x = 1; }`, the residual `x = 1` is the same command in both
-branches, but the two branches compile to different nodes. The elaboration gives each
-occurrence its own annotation, so that the annotated residual determines its node
-([`csim_point_compile_prog`](src/Program_Model/Compile/Elaborated_Compilation.thy)). Every
-run of the program as written lifts to an annotated run
-([`psteps_lift`](src/Program_Model/Compile/Elaborated_Compilation.thy)). `at_node`
-quantifies existentially over the annotated command and the stack, and `v = point c` is
-fixed by that command. Contexts remain
-existential, because entry-state routing may admit several contexts for one activation.
-
-</details>
+[`run_voblint_sound`](src/Executable_Surface/CLI/Run_Voblint.thy) states the same
+guarantees at a node, for every store in `reaching ds p v`, without a run.
 
 ### Checks, dead code and arithmetic
 
 Results in the same theory specialise the guarantee to what the report shows:
 
-- [`run_voblint_check_sound`](src/Executable_Surface/CLI/Analysis_Certified.thy): when an execution is about to run a check,
-  the report lists a row under that check's label at a node reached with the
-  current store, the row is not `DEAD`, and a definite verdict is correct.
-  `run_voblint_labelled_check_sound` adds that, when no two rows share a label,
-  every row carrying the label is that row.
-- [`run_voblint_dead_unreached`](src/Executable_Surface/CLI/Analysis_Certified.thy): no execution reaches a `DEAD`
-  point; `run_voblint_dead_check_unreached` states it for a `DEAD` check row.
-- [`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Analysis_Certified.thy): at a reachable point with no arithmetic
-  diagnostic, every divisor in the point's expressions is nonzero in every store
-  that reaches it.
-- [`run_voblint_arithmetic_refuted`](src/Executable_Surface/CLI/Analysis_Certified.thy): the divisor
-  of an `error` is zero in every store that reaches its point.
+- [`run_voblint_check_sound`](src/Executable_Surface/CLI/Run_Voblint.thy): when an
+  execution is about to run a check, the report lists a row under that check's label
+  at a node reached with the current store, the row is not `Dead`, and a definite
+  verdict is correct. `run_voblint_labelled_check_sound` adds that, when no two rows
+  share a label, every row carrying the label is that row.
+- [`run_voblint_dead_unreached`](src/Executable_Surface/CLI/Run_Voblint.thy): no
+  store reaches a `DEAD` point.
+- [`run_voblint_arithmetic_safe`](src/Executable_Surface/CLI/Run_Voblint.thy): at a
+  point with no arithmetic diagnostic, every obligation of every expression an edge
+  or call there evaluates holds in every store that reaches it, and every value
+  returned there fits the kind a caller converts it to.
+  `run_voblint_no_signed_overflow` and `run_voblint_no_conversion_overflow` read it
+  for signed operations and conversions.
+- [`run_voblint_arithmetic_refuted`](src/Executable_Surface/CLI/Run_Voblint.thy): the
+  obligation of an `error` fails in every store that reaches its point.
 
 <details>
 <summary>Exact statements</summary>
 
 ```isabelle
 theorem run_voblint_report_contract:
-  assumes "run_voblint config p = Analysed res"
-  shows "valid_config config" "wf_program_compile_input_exec p"
-    and "report_config res = config" "report_cfg res = prog_cfg p"
-    and "well_formed_report res" "sound_report p res"
+  assumes "run_voblint conf ds p = Analysed res"
+  shows "valid_activation (conf_analyses conf)" and "wf_program_compile_input_exec p"
+    and "report_config res = conf" and "report_cfg res = elab_cfg p ds"
 ```
 
 ```isabelle
 theorem run_voblint_check_sound:
-  fixes p :: imp_prog and s0 s :: store
-  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
-  assumes s0: "s0 ∈ cinit_stores 𝒢"
-      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
-      and chk: "next_check residual = Some (l, e)"
-      and ans: "run_voblint config p = Analysed res"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 ∈ init_stores (kenv_of ds)"
+    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
+                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and chk: "next_check residual = Some (l, e)"
   shows "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e
-           ∧ s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ (check_point c)
+           ∧ s ∈ reaching ds p (check_point c)
            ∧ check_verdict c ≠ Dead
-           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (⟦e⟧⇩e s))
-           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (⟦e⟧⇩e s))"
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (eval e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (eval e s))"
 ```
 
 ```isabelle
 corollary run_voblint_dead_unreached:
-  assumes "run_voblint config p = Analysed res" and "DEAD res v"
-  shows "𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ v = {}"
-```
-
-```isabelle
-theorem run_voblint_arithmetic_safe:
-  assumes "run_voblint config p = Analysed res"
-      and "s ∈ 𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ v"
-      and "∀d ∈ set (report_diagnostics res). diagnostic_point d ≠ v"
-  shows "arithmetic_safe_at (prog_cfg p) v s"
+  "run_voblint conf ds p = Analysed res ⟹ DEAD res v ⟹ reaching ds p v = {}"
 ```
 
 ```isabelle
 theorem run_voblint_arithmetic_refuted:
-  assumes "run_voblint config p = Analysed res"
-      and "d ∈ set (report_diagnostics res)" and "diagnostic_verdict d = Check_Refuted"
-      and "s ∈ 𝒞⇘declared_global p,prog_cfg p,cinit_stores (declared_global p)⇙ (diagnostic_point d)"
-  shows "⟦arithmetic_divisor (diagnostic_obligation d)⟧⇩e s = 0"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and d: "d ∈ set (report_diagnostics res)" and r: "diagnostic_verdict d = Check_Refuted"
+    and s: "s ∈ reaching ds p (diagnostic_point d)"
+  shows "¬ s ⊨ diagnostic_obligation d"
 ```
 
 </details>
@@ -432,17 +390,17 @@ not be `DEAD`.
 
 | Covered by the proof | Outside the proof |
 | --- | --- |
-| VIMP execution from an already-constructed AST | Solver termination for arbitrary programs |
-| Compilation to the procedure-aware CFG | Lexing and parsing |
+| Execution of the elaborated core program (`pstep` on `elab_ptable p ds`) | Solver termination for arbitrary programs |
+| Compilation to the procedure-aware CFG (`elab_cfg`) and its simulation | Lexing, parsing, block-scope resolution, and the rewriting of a declaration without initializer |
 | Equation generation and the computed post-solution | Isabelle code generation, the OCaml compiler and runtime |
-| The report's states, check rows under their labels, arithmetic safety at quiet points, zero divisors at errors | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
-| Elaboration and lowering of a typed program, and the typed semantics it simulates (`run_voblint_typed_sound`) | That the parsed declarations are the ones the source wrote |
+| The report's states, check rows under their labels, arithmetic safety at quiet points, failing obligations at errors | That a check's label is its source position; diagnostic positions; rendered graphs and state strings; the playground |
+| | That elaboration and `pstep` model C's meaning of the source (an adequacy argument, not a theorem) |
 | | Completeness and precision |
 
-[`Example_End_To_End_Certificate`](src/Examples/Capstone/Example_End_To_End_Certificate.thy)
-evaluates the headline theorem's answer for one `Int` program with call-string
-contexts, so the theorem is not vacuous. [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md)
-lists the lower-level statements.
+[`Example_Non_Vacuity`](src/Examples/Capstone/Example_Non_Vacuity.thy) evaluates a
+concrete answer and discharges the headline theorem's premises for it, so the theorem
+is not vacuous. [`docs/THEOREM_MAP.md`](docs/THEOREM_MAP.md) lists the lower-level
+statements.
 
 ## Notation
 
@@ -483,70 +441,50 @@ settings.
       <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=none#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">Open without contexts</a> &middot; <a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=interval&amp;globals=warrow&amp;context=entry-state#code=SyvNU0gqzS3QyNNUqOZSUChKLSktylPIU9BWMLTmquXiSgMqyE3MzNOAyCcq2ELUm2paA7lJMK4JmBsfX5aflJOZVxKfnJGanK0BVG2rYIZVKgkkBTKkFgA">open with entry-state contexts</a></sub>
     </td>
   </tr>
-  <tr>
-    <td align="center">
-      <a href="docs/images/playground-int-refinement.png">
-        <img src="docs/images/playground-int-refinement.png" width="760" alt="The Int domain proving y == 2 where sign, interval and parity each report UNKNOWN">
-      </a>
-      <br><b>The refining <code>int</code> domain against three of its components</b>
-      <br><sub><code>int: PROVED</code> beside <code>interval</code>, <code>sign</code> and <code>parity</code>, each UNKNOWN on the same program and the same check.</sub>
-      <br><sub><a href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/playground.html?analysis=int&amp;globals=warrow&amp;context=none#code=SyvNU8hNzMzT0FSo5lJQyExT0KhU0FYwVLC1VTCGiCkoVCjYKhhag5nx8WX5STmZeSXxyRmpydlAxUCFRpogyVqF1JziVCQtBmBRrloA">Open with <code>int</code></a> &middot; <a href="tests/regression/16-composite-domain/precision/01-refinement_beats_components.vimp"><code>01-refinement_beats_components.vimp</code></a></sub>
-    </td>
-  </tr>
 </table>
-
-The gain does not come from a better interval transfer. Sign and Interval invert
-`+` conservatively, so the guard `y + 1 == 3` tells them nothing about `y`.
-Parity inverts it and learns only that `y` is even. Congruence, the fourth
-component, inverts `+` precisely enough to prove the check on its own. Inside `int`,
-the reduction re-derives the Sign, Interval and Parity views from the operand
-Congruence tightened
-([`Int_Backward.thy`](src/Analyses/Int/Int_Backward.thy),
-[`Int_Refinement.thy`](src/Analyses/Int/Int_Refinement.thy)).
 
 ## The generic D/G framework
 
 Analyses are factored the way Goblint factors them: **D** holds the abstract facts
 attached to program points, **G** the information published and consumed across
 points. The framework's interface is
-[`dg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
+[`gdg_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy), the Isabelle
 counterpart of Goblint's
 [`Spec`](https://github.com/goblint/analyzer/blob/1ab59c9c4d9859e9135885d3c9a9aa1a8f3b677e/src/framework/analyses.ml#L168-L263)
 (transfer, entry, combine and communication). Equation generation with context
 routing, solver integration and the lifting to source-level soundness are proved
-once, for any `dg_spec` with an
-[`analysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
+once, for any `gdg_spec` with a
+[`ganalysis_contract`](src/Abstract_Interpreter/Framework/Spec/DG_Spec_Sound.thy)
 relating it to concrete stores; see
 [`src/Abstract_Interpreter/Framework/README.md`](src/Abstract_Interpreter/Framework/README.md).
-Specifications that read or publish globals of their own, such as the relational
-`rel_order_spec`, instantiate `dg_spec` directly.
 
 Every analysis selectable through `run_voblint` enters through a smaller
-interface, a [`local_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
+interface, a [`glocal_spec`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy):
 one transfer per edge kind plus entry and combine, over local state only, with
-the soundness condition `sound_local_spec`. `dg_spec_of` lifts it to a `dg_spec`,
-and `dg_spec_of_contract` supplies the contract. With flow-insensitive program
-globals, [`keyed_split_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Keyed_Split_Spec.thy)
+the soundness condition `gsound_local_spec`. `dg_spec_of` lifts it to a `gdg_spec`,
+and `dg_spec_of_contract` supplies the contract. The activated analyses run as one
+state, one field each, as in Goblint's MCP
+([`MCP_Registry`](src/Abstract_Interpreter/Framework/Cooperation/MCP_Registry.thy),
+[`MCP_Carrier`](src/Executable_Surface/CLI/MCP_Carrier.thy)), and answer each
+other's queries. With flow-insensitive program globals,
+[`gkeyed_split_spec`](src/Abstract_Interpreter/Framework/Spec/DG_Keyed_Split_Spec.thy)
 wraps that specification so each edge reads only the globals its expressions
 mention and publishes only the globals it may assign, each at its own unknown,
-and `keyed_split_contract` carries the contract over.
+and `gkeyed_split_contract` carries the contract over.
 
-A numeric domain supplies one record of value operations,
-[`nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Ops.thy):
-an abstract evaluator, the comparison queries `<` and `==`, backward refinement
-operators, `min`/`max` and top. It proves one certificate,
-[`sound_nonrelational_ops`](src/Analyses/Shared/Nonrelational/Nonrelational_Transfer.thy);
-Sign, Interval, Parity and Congruence also prove their operations monotone.
-Everything else is derived from that record: the guard filter and branch
-transfer, the check classifier, the assignment and entry transfers, and their
-executable versions. Abstract and executable versions come from the same
-operations and agree on live stores, so there is no second implementation to
-prove equal. One rule, `dg_analysis_execI`, discharges the registration's
-transfer and classifier obligations from the certificate. The
-relational Order analysis writes its `local_spec` by hand
-([`order_spec`](src/Analyses/Relational/Rel_Order_Local.thy)). Deriving
-transfer functions from certified value operations follows Nipkow's Isabelle
-abstract interpreter (see [Foundations](#foundations)).
+A numeric domain enters as an instance of the class
+[`kind_int_domain`](src/Analyses/Nonrelational/Nonrelational_Domain.thy): values at
+a machine kind with kind-aware arithmetic, conversion, comparison, backward
+refinement and top, each with its soundness assumption. The non-relational
+transfer [`nonrel_spec`](src/Analyses/Nonrelational/Nonrelational_Transfer.thy) is
+written once over any such domain and proved sound once (`nonrel_spec_sound`); its
+executable carrier is `nonrel_exec_spec`
+([`Nonrelational_Exec`](src/Analyses/Nonrelational/Nonrelational_Exec.thy)). Sign,
+Interval, Parity, Congruence and the Interval-Congruence product `int_tuple` are
+instances. The relational Order analysis writes its `glocal_spec` by hand
+([`ord_spec`](src/Analyses/Order/Order_Analysis.thy)). Deriving transfer functions
+from certified value operations follows Nipkow's Isabelle abstract interpreter (see
+[Foundations](#foundations)).
 
 ## Building
 

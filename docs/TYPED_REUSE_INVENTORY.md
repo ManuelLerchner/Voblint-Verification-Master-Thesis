@@ -1,5 +1,9 @@
 # Typed analyzer: reuse inventory against `main`
 
+Status: historical. Stage 7 deleted the untyped analyzer, so no duplicate in
+this inventory remains; the names below predate the M7 rename, which
+`docs/theorem-migration.toml` records.
+
 Compared on 2026-10-13: branch `feat/typed-ir` against the existing (untyped) analyzer. Each
 row names the existing definition, the typed one, whether the algorithms agree, and what
 to do. Target: one implementation of each generic algorithm, with thin machine-integer

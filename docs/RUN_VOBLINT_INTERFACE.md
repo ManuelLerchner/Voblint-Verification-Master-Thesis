@@ -1,5 +1,9 @@
 # `run_voblint`: one verified function, one semantic report, one projection
 
+Status: partly historical. The principle stands; the generator
+(`scripts/gen_analysis_assembly.py`, `manifests/analyses.yaml`) is gone, and the
+combined carrier is the hand-written `MCP_Carrier.thy` in `Voblint_CLI`.
+
 ## Principle
 
 Isabelle exports the semantic information the soundness contract needs, plus

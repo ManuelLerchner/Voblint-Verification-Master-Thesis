@@ -27,8 +27,6 @@ These documents describe the supported architecture and its verification.
   — what is proved, what is generated, and what is handwritten.
 - [Activation trace semantics](ACTIVATION_LOCAL_TRACE_CONVERGENCE.md) —
   why `valid_activation_trace` is the concrete foundation and how contexts project from it.
-- [Analysis registration generation](ANALYSIS_ASSEMBLY_GENERATION.md) — the
-  `manifests/analyses.yaml` registry and what it generates.
 - [HTML result viewer](HTML_REPORT.md) — `voblint --html` output and
   `pixi run html-report-serve`.
 
@@ -60,6 +58,8 @@ match the tree.
   Interval × order demo.
 - [Proof verification gates](PROOF_PHASES.md) — checks required for each proof
   layer and for the repository.
+- [Typed analyzer plan](TYPED_CFG_PLAN.md) and [machine integers](TYPED_IR.md) —
+  how the machine-integer language replaced the mathematical one, historical.
 - [Goblint-alignment tracks](GOBLINT_ALIGNMENT_TRACKS.md) — the remaining M2
   and M3 context-alignment tracks.
 - [`solve_dom` total-correctness route](P1_TOTAL_CORRECTNESS_ROUTE.md) and

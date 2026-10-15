@@ -1,6 +1,6 @@
 # Compile
 
-This session compiles a VIMP program into the control-flow graphs of
+This session compiles an elaborated VIMP program into the control-flow graphs of
 `Voblint_CFG` and proves that running the source and running the graph agree.
 The graph model and its semantics live in `Voblint_CFG`; nothing there depends
 on anything here.
@@ -26,12 +26,15 @@ argument, that is the continuation.
 
 ## One program, end to end
 
-```c
-void main() { x = 0; inc(); check(0 < x); }
-void inc()  { x = x + 1; }
+```text
+program {
+  global x;
+  fun inc() { x = x + 1; }
+  fun main() { x = 0; inc(); __voblint_check(0 < x); }
+}
 ```
 
-*Compiled* (`compile_prog`): `inc`'s body is one statement node bracketed by its
+*Compiled* (`compile_prog`; `elab_cfg p ds` is `compile_prog` of the elaborated procedures): `inc`'s body is one statement node bracketed by its
 entry and result; `main`'s three commands get three consecutive nodes, and the
 call becomes a `calls` edge rather than an `intra` one, recording where to
 resume.
@@ -61,15 +64,18 @@ over-approximate.
 
 | File | Question it answers |
 | --- | --- |
-| `VIMP_Proc_to_CFG.thy` | How is a command turned into nodes and edges, and is the result a well-formed graph? |
+| `VIMP_Proc_to_CFG.thy` | How is a command turned into nodes and edges, and is the result a well-formed graph? Defines `elab_cfg`. |
 | `Compile_Wellformed.thy` | What is true of the graph that comes out: unique call sources, finiteness, `wf_cfg`? |
 | `Compile_Invariants.thy` | Which programs may be compiled, and where did each statement index come from? |
 | `Simulation/Residual_Location.thy` | After some steps, which node is the program counter at? |
 | `Simulation/Residual_Edges.thy` | Is the edge the compiler emitted for that command really in the graph? |
 | `Simulation/Simulation_Relation.thy` | What does it mean for a source state and a graph state to agree? (`csim`) |
 | `Simulation/Simulation_Preservation.thy` | Does that agreement survive every step, and every run? (`csim_star`) |
+| `Simulation/Source_Progress.thy` | Is every reachable source configuration of an accepted program finished or able to step? |
 | `Procedure_Ownership.thy` | Can an activation wander into another procedure's nodes? (no) |
+| `Live_Nodes.thy` | Which statements of a procedure are live, and does every live node reach its procedure's result? |
 | `Source_To_Trace.thy` | Is a source run a valid activation trace? (yes — and this is what soundness consumes) |
+| `Kind_Invariants.thy` | Does every store a valid activation trace of the elaborated graph reaches keep each identity in its kind? (yes, except the shared return slot) |
 
 ## Shape of the session
 

@@ -4,6 +4,15 @@
 > Chapter 4. Do not add further sections. Amend only when drafting reveals a
 > concrete contradiction with the theories, and record the contradiction rather
 > than expanding the plan around it.
+>
+> **Amended 2026-10-15 (Stage 7).** VIMP now has one, machine-integer semantics:
+> surface VIMP is elaborated to core VIMP, which `pstep` executes, and the
+> mathematical-integer semantics, the lowering and the untyped analyzer are gone
+> (`docs/TYPED_CFG_PLAN.md`). §§2.2–2.4, 3, 3.1, 3.2, 15.2 and 15.3 and the
+> language rows of §8 are updated; C6, C7, C8 and C9 carry Stage 7 notes. Other
+> sections may still use pre-Stage-7 names (`Ctx_None`, `analysis_domain`,
+> `abs_state`, `Analysis_Certified`, ...); `docs/theorem-migration.toml` maps
+> them, and `Run_Voblint.thy` holds the public theorems.
 
 A structure proposal grounded in the current formalization, not in the
 knowledge base and not in the earlier outlines. Every claim below was checked
@@ -78,23 +87,24 @@ trace, and `activation_collect` is the collecting semantics indexed by it.
 
 **Soundness is one contract, stated once, over an arbitrary graph.** An
 analysis claims "at node `v`, in context `c`, only these stores occur".
-`activation_coverage` says what such a claim must satisfy to be believed: five local
+`gactivation_coverage` says what such a claim must satisfy to be believed: five local
 obligations — `INIT`, `INTRA`, `CALL`, `RETURN`, `TOTAL` — and
-`activation_collect_sound` proves that satisfying them bounds every valid
+`gactivation_collect_sound` proves that satisfying them bounds every valid
 trace. No domain, no solver, no equation system appears in that theorem. The
 whole rest of the development exists to construct a claim that discharges
 those five obligations, and to compute it.
 
 **Domain, context policy and solver discipline are orthogonal.** A domain
-supplies a `dg_spec` — the Isabelle counterpart of Goblint's `Spec`: one
+supplies a `gdg_spec` — the Isabelle counterpart of Goblint's `Spec`: one
 manager-native transfer per edge action, plus `enter`, `combine_env` and
 `combine_assign` — and proves one soundness contract about it. A context
 policy supplies a routing function and its relation. A solver discipline is an
-argument. The generic assembly (`dg_analysis`) is
-proved once, and every combination inherits it: five domains, five global
-update rules, three context policies, call strings at every bound. The
-registrations that instantiate this are generated from a manifest, not written
-by hand.
+argument. The generic assembly (`gdg_analysis`) is
+proved once, and every combination inherits it: any activation of the six
+analyses, five global update rules, call strings at every bound or entry-state
+contexts. The analyses run as one through `mcp_registry`, registered once per
+context policy (`mcp_cs`, `mcp_es`) and per placement of program globals
+(`mcp_split`, `mcp_split_es`).
 
 What the thesis must be equally clear about is the boundary. The result is
 partial correctness: solver termination is a per-program premise, discharged
@@ -137,7 +147,8 @@ consumed through a single certificate.
 | Parity | `src/Analyses/Parity` | 1 187 | 8 |
 | Congruence | `src/Analyses/Congruence` | 3 405 | 12 |
 | Int (reduced product) | `src/Analyses/Int` | 5 324 | 12 |
-| Relational witness | `src/Analyses/Relational` | 576 | 1 |
+| Kind-aware non-relational pipeline | `src/Analyses/Nonrelational` | 1 981 | 4 |
+| Order (relational) | `src/Analyses/Order` | 534 | 3 |
 | CLI + codegen | `src/Executable_Surface` | 2 250 | 8 |
 | Examples and regressions | `src/Examples` | 14 482 | 65 |
 | **Total `src/`** | | **62 098** | **223** |
@@ -157,7 +168,8 @@ other per-directory figures are not tracked there and may lag.
 
 ### 2.2 Session graph
 
-Twenty-eight sessions, one per directory carrying a `ROOT`.
+Twenty-one sessions, one per directory carrying a `ROOT` (amended for Stage 7,
+2026-10-15).
 
 ```text
 Voblint_VIMP ─┬─> Voblint_CFG ─┬─> Voblint_Compile ──────────┐
@@ -170,48 +182,57 @@ TD ──> Voblint_Solver ──────────────^           
                                                                               v
                                                                   Voblint_Nonrelational
                                                                               │
-             ┌────────────────┬───────────────┬──────────────┬────────────────┘
-             v                v               v              v
-      Analysis_Sign   Analysis_Interval  Analysis_Parity  Analysis_Congruence
-             └────────────────┴───────────────┴──────────────┴──> Analysis_Int
-                                                                        │
-Voblint_Exec ──> Voblint_Analysis_Relational                            v
-                                                                  Voblint_CLI ──> Voblint_Codegen
-                                                                        │
-                                                                        v
-                                                              Voblint_Examples_*
+          ┌───────────────┬─────────────────┬───────────────┬─────────────────┼────────────┐
+          v               v                 v               v                 v            v
+   Analysis_Sign  Analysis_Interval  Analysis_Parity  Analysis_Congruence  Analysis_Int  Analysis_Order
+                                                                              │
+                                                                              v
+                                                         Voblint_CLI ──> Voblint_Codegen
+                                                              │
+                                                              v
+                                              Voblint_Examples_CLI ──> Voblint_Examples
+
+Voblint_Compile ──> Voblint_Examples_CFG
 ```
 
-Two session boundaries are load-bearing arguments, not packaging:
+`Voblint_Analysis_Int` also imports the four single-domain sessions, and
+`Voblint_CLI` also imports Order, Sign and Parity.
+
+One session boundary is a load-bearing argument, not packaging:
 
 - `Voblint_CFG` never mentions the compiler. Every D/G soundness endpoint is
   therefore stated for an *arbitrary* CFG, and the session boundary is what
   keeps that true.
-- `Voblint_Analysis_Relational` is parented on `Voblint_Exec`, *below* the
-  `Routing → Result → Nonrelational` chain. The pointwise reuse locales are
-  unreachable from it. That makes `Rel_Order_Domain`'s claim — a
-  non-`abs_state` carrier discharges the framework contract unchanged —
-  structural rather than a matter of which imports happen to be written.
+
+The relational Order analysis no longer sits outside the pointwise chain: it is
+parented on `Voblint_Nonrelational`. Its claim that a non-pointwise carrier
+discharges the framework contract unchanged rests on `Order_Analysis.thy`
+interpreting `gdg_analysis` directly, not on the session structure.
 
 ### 2.3 What each layer owns
 
-**`Voblint_VIMP`.** `com` with calls, explicit returns, and the runtime-only
-`Restore`/`Unwind` commands; small-step `pstep` over `(command, store, frame
-stack)`; `wf_source_program` as the admissibility contract; the locals/globals
-classifier `gs :: vname => bool` with `enter_state` and `combine_env`;
-`special_call` as a closed enumeration standing in for Goblint's library-function
-table; and a `parse_translation`-based concrete syntax generated from
-`manifests/vimp-grammar.yaml`.
+**`Voblint_VIMP`.** The whole language. Machine kinds (`ikind`, `ik_norm`);
+surface VIMP (`src_exp`, `src_com`, `imp_prog`, what the parser builds); variable
+identities `var_id`; core VIMP (`exp`, `com`, `eval`); elaboration (`elaborate`,
+`elab_com`, `elab_ptable`) from surface to core; the generic small-step relation
+`vimp_sem.gpstep` over `(command, store, frame stack)` with calls, explicit
+returns and the runtime-only `Restore`/`Unwind` commands; its canonical instance
+`pstep` with the globals classifier `is_global` and conversion to the
+destination's kind (`kind_conv`); `init_stores`; `special_call` as a closed
+enumeration standing in for Goblint's library-function table; and a
+`parse_translation`-based concrete syntax generated from
+`manifests/vimp-grammar.yaml`; and `wf_source_program` (`gwf_source_program`)
+as the admissibility contract.
 
 **`Voblint_CFG`.** `cfg` as two disjoint relations — `intra` labelled by an
 `edge_action`, and a four-place `calls` relation carrying call action, callee
 entry and continuation. Nodes are `Statement n`, `FunctionEntry p`,
 `FunctionResult p`. `cstep` executes an arbitrary graph. `CFG_Transfer` gives
 the three concrete transfers: `edge_collect`, `call_enter`, `combine_collect`.
-`Collecting/` holds the semantic heart: `activation_trace`, `valid_activation_trace`, `node_collect`,
-`activation_context_rel`, `context_policy`, `activation_collect`, and the
-`activation_coverage` locale with `activation_collect_sound` and
-`node_collect_eq_Union_activation_collect`.
+`Collecting/` holds the semantic heart, generic in the language and
+instantiated at core VIMP: `valid_activation_trace`, `node_collect`,
+`gactivation_context_rel`, context policies, `activation_collect`, and the
+`gactivation_coverage` locale with `node_collect_eq_Union_activation_collect`.
 
 **`Voblint_Compile`.** `compile_prog` as a continuation-passing compiler;
 `wf_compile_input` and its executable form; graph well-formedness
@@ -222,11 +243,11 @@ nodes; and the one theory that needs both halves, `Source_To_Trace`, which
 turns a source run into a `valid_activation_trace` witness.
 
 **`Voblint_Domain`.** The `numeric_domain` type class (carrier, order,
-concretization, no `alpha`); the reachability lift `'a lifted` mirroring
-Goblint's `Lattice.LiftConf`; pointwise `'a abs_state = vname => 'a` with
-`gamma_state` and `is_empty_state`; the `sound_refinement` locale for guard
-narrowing (`afilter`, `bfilter`, `branch_lifted`); and the numeric-query
-interface (`less`, `eq`) the check layer consumes.
+concretization, no `alpha`); the kind-indexed class `ik_domain` and the lift
+`'a kd` (`Kind_Lifted`); the reachability lift `'a lifted` mirroring Goblint's
+`Lattice.LiftConf`; the value-level inverse operators (`sound_inverse_ops`);
+the numeric-query interface (`less`, `eq`) the check layer consumes; and the
+value lattices of the shipped domains.
 
 **`Voblint_Solver`.** The vendored solver's strategy-tree language
 (`Answer | QueryL | QueryG | Side`) with a typed continuation-passing frontend
@@ -237,75 +258,79 @@ rules.
 
 **`Voblint_Framework`.** The D/G analysis framework, domain-free and
 compiler-free. `dg_state` (opaque `D`/`G`), the manager (`man_local`,
-`man_global`, `man_sideg`), `dg_spec` with one field per Goblint `Spec` method,
-`analysis_contract` as the soundness contract, the keyed equation generator
+`man_global`, `man_sideg`), `gdg_spec` with one field per Goblint `Spec` method,
+`ganalysis_contract` as the soundness contract, the keyed equation generator
 `routed_node_rhs` (and its buffered production variant), `Activation_Backbone`
 (the `activation_coverage` obligations in global shape), `DG_Ctx_Activation` (EDGE and
 COMB discharged from a post-solution), `Routed_Context` (CALL and COMB
-discharged once for any context policy), the check layers, and the result table.
+discharged once for any context policy), the check layers, the result table, and
+`mcp_registry`, which runs several analyses as one.
 
 **`Voblint_Exec`.** The gap between what soundness talks about and what the
-solver computes on. `default_st` is a quotient type over
-(local default, global default, override list); the readback `ρ⇘𝒢⇙` (`default_st_to_fun gs`)
-reads it back as an `abs_state`; every executable operation carries a commute
-theorem against its abstract counterpart; `Default_St_Reachability` gives a finite
-dead-state test proved equivalent to the infinite one.
+solver computes on. `gdefault_st` is a quotient type over a local and a global
+default dictionary (a default plus an override list), keyed by any linorder
+type; `default_st_to_fun` reads it back as a function; `Default_St_Reachability`
+gives a finite dead-state test proved equivalent to the infinite one. The
+commute theorems of each analysis's executable operations live with the
+analysis (`Nonrelational_Exec.thy`).
 
 **`src/Analyses/Shared/`.** Three chained sessions. `Voblint_Routing` builds
-the compiled equation system and the two concrete context policies
-(`Call_String_Routed_Context`, `Entry_State_Routed_Context`) plus the
-finite-context-space arguments. `Voblint_Result` is the publication surface:
+the compiled equation system plus the finite-context-space arguments; the
+concrete context policies are registrations in `Voblint_CLI` (`MCP.thy`). `Voblint_Result` is the publication surface:
 `Analysis_Surface`, `DG_Analysis` (construction half
-`dg_pipeline`, correctness half `dg_analysis`),
+`dg_pipeline`, correctness half `gdg_analysis`),
 `DG_Live_Unknowns` (coverage derived from termination, and the endpoints for
-every route that is a function of the call site, the unit route among them),
+every route that is a function of the call site),
 `Source_Activation_Sound`.
-`Voblint_Nonrelational` is what a pointwise domain reuses — the shared
-expression-soundness induction, special-call dispatch, the bundle of primitive
-operations `nonrelational_ops`, the locales `sound_nonrelational_ops`/`mono_nonrelational_ops`
-that derive the filters, branch, check classifier and transfer from it, and the
-executable backward filter.
+`Voblint_Nonrelational` (`src/Analyses/Nonrelational/`) is what a pointwise
+domain reuses: the class `kind_int_domain`, abstract evaluation `aeval`, the
+transfer `nonrel_spec` with `nonrel_spec_sound`, its executable carrier
+`nonrel_exec_spec`, and the analysis `nonrel` run by the shared pipeline at any
+such domain.
 
-**`src/Analyses/<Domain>/`.** Each domain supplies a lattice, arithmetic,
-inverse operators, special calls, numeric queries, the bundle
-`<impl>_ops` with its capability certificates and one interpretation of
-`sound_nonrelational_ops` or `mono_nonrelational_ops`, an executable
-mirror with its commute lemmas, the initial-state fact, a check classifier, and
-a *generated* `<Domain>_Analyses.thy` registering it at all three context
-policies with the update rule left as a parameter.
+**`src/Analyses/<Domain>/`.** Each value domain supplies widening, arithmetic
+and inverse operators at the value level, and a `<Domain>_Kind` theory that
+instantiates `kind_int_domain` at machine kinds; Int is the reduced product
+`int_tuple` of Interval and Congruence, parametric in its refinement mode.
+`src/Analyses/Order/` holds the relational order analysis. No domain registers
+itself at a context policy; the registrations are in `Voblint_CLI`.
 
-**`src/Executable_Surface/`.** `Analysis_Config` (four closed datatypes),
-`Analysis_Run` (`run_voblint`), the soundness theories, and the single
-`export_code` declaration.
+**`src/Executable_Surface/`.** `Analysis_Config` (`analysis`, `context_policy`,
+`program_globals`, the record `voblint_conf`), the combined carrier and its
+registrations (`MCP_Carrier`, `MCP`, `MCP_Split`), the report (`Analysis_Run`,
+`Analysis_Report`, `Run_Report`), `Run_Voblint` (`run_voblint` and its soundness
+theorems), and the single `export_code` declaration (`Voblint_Codegen`).
 
 ### 2.4 The configuration space
 
-`run_voblint :: analysis_domain list => globals_rule => context_mode => program_globals => imp_prog =>
-String.literal analysis_answer`.
+`run_voblint :: voblint_conf => kind_decls => imp_prog => report analysis_answer`
+(amended for Stage 7, 2026-10-15; `Analysis_Config.thy`, `Run_Voblint.thy`).
+A `voblint_conf` has five fields:
 
-- the activation list, a distinct nonempty list over `analysis_domain` —
-  `Sign_Analysis`, `Interval_Analysis`, `Int_Analysis`, `Parity_Analysis`,
-  `Congruence_Analysis`. The listed analyses run together as fields of one
-  generated combined state (`MCP_Carrier`), registered once per context policy
-  (`mcp_rule`, `mcp_es_rule`, `mcp_cs_rule`). A check is classified by
-  `answer_check` over the met `EvalInt` answer of the active analyses.
-- `globals_rule` — always-join, per-origin, Apinis warrowing,
+- `conf_analyses`, the activation list, a distinct nonempty list over
+  `analysis`: `Interval`, `Congruence`, `Ana_Int` at a refinement mode, `Order`,
+  `Sign`, `Parity`. The listed analyses run together as fields of one combined
+  state (`MCP_Carrier`), the interpretation `mcp` of `mcp_registry`. A check is
+  classified by `mcp_classify` over the met `EvalInt` answers of the active
+  analyses.
+- `conf_context`, a `context_policy`: `Call_String k` for any `k` (`0` is
+  context-insensitive) or `Entry_State`, registered as `mcp_cs` and `mcp_es`.
+- `conf_globals`, a `globals_rule`: always-join, per-origin, Apinis warrowing,
   warrowing-per-origin, bounded narrowing. All five are vendored rules under one
   `TD_side_rule_Interp` interpretation.
-- `context_mode` — `Ctx_None`, `Ctx_EntryState`, `Ctx_CallString k` for any `k`
-  (including `0`).
-- `program_globals` — `Program_Globals_Flow_Sensitive` keeps program globals in
-  the flow-sensitive local state; `Program_Globals_Flow_Insensitive` keeps each
-  declared global at its own global unknown `Analysis_Global x` through the
-  keyed lifter `keyed_split_spec` (`typed_mcp_split`, `typed_mcp_split_es`,
-  both from `typed_mcp_keyed`). The analysis contract
+- `conf_program_globals`: `Program_Globals_Flow_Sensitive` keeps program globals
+  in the flow-sensitive local state; `Program_Globals_Flow_Insensitive` keeps each
+  declared global at its own global unknown `Analysis_Global x` through the keyed
+  lifter `gkeyed_split_spec` (`mcp_split`, `mcp_split_es`). The analysis contract
   is stated over an environment of global values (`genv`), so a transfer reads
   only the globals its edge mentions and publishes only those it may assign.
+- `conf_sem`, the options the domains read; today the signed-overflow policy,
+  `Assume_Top` (the default) or `Assume_Wraparound`.
 
-Every combination is answered, and every combination carries the source-level
-theorem. An empty or repeating activation list answers `Invalid_Activation`,
-and a malformed program answers `Malformed_Program`, before any configuration is
-consulted.
+Every combination carries the source-level theorem. An empty or repeating
+activation list answers `Invalid_Activation`, and a malformed program answers
+`Malformed_Program`, before any configuration is consulted; the logical `None` branch of the
+executable solve answers `No_Answer`.
 
 ### 2.5 Goblint correspondence, as the repository records it
 
@@ -364,8 +389,9 @@ Read bottom-up: each layer consumes the one below and adds exactly one thing.
 
 ```text
 L0  SOURCE EXECUTION
-    pstep / psteps / pcompletes                    VIMP_Proc
-    wf_source_program, cinit_stores                VIMP_Proc, VIMP_Globals
+    elaborate, elab_com, elab_ptable               Core_Exp, Core_Com, VIMP_Semantics
+    gpstep (generic) / pstep, psteps (canonical)   VIMP_Proc, VIMP_Semantics
+    wf_source_program, init_stores                 VIMP_Proc, VIMP_Semantics
              │  wf_compile_inputD
              v
 L1  COMPILATION AND SIMULATION
@@ -373,31 +399,28 @@ L1  COMPILATION AND SIMULATION
     compile_prog_wf / _finite / _calls_source_unique   Compile_Wellformed
     control_at, csim                               Residual_Location, Simulation_Relation
     csim_step, csim_star                           Simulation_Preservation
-    elab_pt, point, erase, at_node                 Elaborated_Compilation
-    psteps_lift, csim_point_compile_prog           Elaborated_Compilation
              │  source_run_has_activation_trace
              v
 L2  CONCRETE INTERPROCEDURAL SEMANTICS
-    activation_trace, valid_activation_trace (Root / intra / call / ret)     Activation_Trace_Def
+    valid_activation_trace (Root / intra / call / ret)     Activation_Trace_Def
     node_collect, node_collect_I / _E                Activation_Trace_Collect
-    activation_context_rel, context_policy,
-    call_context_total_on, activation_collect      Activation_Trace_Context
+    gactivation_context_rel, context policy,
+    gcall_context_total_on, activation_collect     Activation_Trace_Context
              │
              v
 L3  THE SOUNDNESS CONTRACT  ← the pivot of the thesis
-    locale activation_coverage: INIT, INTRA, CALL, RETURN, TOTAL
-    valid_activation_trace_covered_at                           Activation_Trace_Abstract
-    node_collect_semantic_postfix                   Activation_Trace_Abstract
+    locale gactivation_coverage: INIT, INTRA, CALL, RETURN, TOTAL
+    valid_activation_trace_covered_at              Activation_Trace_Abstract
     node_collect_eq_Union_activation_collect        Activation_Trace_Abstract
-    activation_collect_sound  (global shape)       Activation_Backbone
+    gactivation_collect_sound  (global shape)      Activation_Backbone
              │  "construct a cover that discharges the five obligations"
              v
 L4  WHAT AN ANALYSIS SUPPLIES
-    dg_spec (Spec analogue), man_local/global/sideg    DG_Spec, DG_Manager
-    analysis_contract: gammaDG_mono, step_sound,
-                        combine_sound                  DG_Spec_Sound
-    sound_nonrelational_transfer → state_dg_spec_contract   DG_Local_State_Spec
-    sound_/mono_nonrelational_ops (one interpretation per domain)    Nonrelational_Transfer
+    gdg_spec (Spec analogue), man_local/global/sideg   DG_Spec, DG_Manager
+    ganalysis_contract                             DG_Spec_Sound
+    class kind_int_domain (one instance per domain) Nonrelational_Domain
+    nonrel_spec_sound                              Nonrelational_Transfer
+    mcp_registry, mcp_comp_sound (analyses as one) MCP_Registry
              │
              v
 L5  EQUATIONS
@@ -407,13 +430,12 @@ L5  EQUATIONS
              │
              v
 L6  FROM A POST-SOLUTION TO A COVER
-    dg_context_activation  ⊢ EDGE, COMB           DG_Ctx_Activation
-    routed_context ⊢ CALL, COMB,
+    gdg_context_activation  ⊢ EDGE, COMB          DG_Ctx_Activation
+    grouted_context ⊢ CALL, COMB,
       activation_collect_dg_sound                  Routed_Context
-    route_unit, activation_collect_unit_eq_node_collect   Routed_Context_Unit
-    cs_route / cs_context  (call strings)          Call_String_Context,
-                                                   Call_String_Routed_Context
-    formals_route_lifted_gen  (entry state)        Entry_State_Routed_Context
+    cs_route / cs_context  (call strings; k = 0 is context-insensitive)
+                                                   Call_String_Context
+    mcp_route, admitted_contexts  (entry state)    MCP, DG_Analysis
              │
              v
 L7  SOLVER
@@ -426,48 +448,43 @@ L7  SOLVER
              │
              v
 L8  EXECUTABLE ↔ MATHEMATICAL
-    default_st (quotient), readback ρ⇘𝒢⇙ (overloaded:
-      default_st_to_fun, lifted, dg_state_to_fun)  Default_St_Base, Default_St_Transfer
-    generic_tf_st_for_commute, branch_st_commute        Nonrelational_Ops, Exec_Backward
-    dg_domain_exec, Routed_Exec_Refinement       Exec/Refinement/
-    lifted readback ρ, canonicalize_lift          Default_St_Reachability
+    gdefault_st (quotient), default_st_to_fun     Default_St_Base, Default_St_Transfer
+    nonrel_exec_spec_sound                         Nonrelational_Exec
+    Routed_Exec_Refinement                         Exec/Refinement/
+    canonicalize_lift                              DG_Result_Construction
              │
              v
 L9  PUBLICATION
     solved_table, lookup_table, table_contexts          Solved_Table
-    dg_analysis_adapter                                  DG_Analysis_Adapter
-    dg_pipeline / dg_analysis              DG_Analysis
-    live_unknowns, live_unknowns_cover,
-    fun_route_source_sound, fun_route_result_node_sound  DG_Live_Unknowns
-    source_activation_sound,
-    source_sound_from_collecting_cap                     Source_Activation_Sound
+    gdg_analysis_adapter                                 DG_Analysis_Adapter
+    dg_pipeline / gdg_analysis                           DG_Analysis
+    glive_unknowns, glive_unknowns_cover,
+    gfun_route_result_node_sound                         DG_Live_Unknowns
+    source_reaches_node_collect                          Source_Activation_Sound
              │
              v
 L10 CHECKS
     check_result (flat 3-valued), contextual_verdict = check_result lifted
-    classify_checks_verdicts, checks_proven         Check_Result,
-                                                    Contextual_Check_Report, Checks
+    classify_checks_verdicts                        Check_Result,
+                                                    Contextual_Check_Report
              │
              v
 L11 THE ANALYZER
-    run_voblint, analysis_report, analysis_report_of  Analysis_Run
+    report_of                                       Analysis_Run
+    PROVED, REFUTED, DEAD, SAFE                     Analysis_Report
+    report_run, report_state_sound,
+      report_check_sound                            Run_Report
     render_report (display projection)              Analysis_Render
-    covered_table, sound_classifier,
-      covered_table_of_activation                   Analysis_Run_Sound,
-                                                    Analysis_Run_Ctx_Sound
-    report_sem ℛ⇘res⇙ v, verdict_stores 𝒱⇘res⇙ v,
-      consistent_report, well_formed_report,
-      analysis_report_of_sound                      Analysis_Report
-    run_voblint_source_sound            ← headline Analysis_Certified
+    run_voblint, run_voblint_sound                  Run_Voblint
+    run_voblint_source_sound            ← headline Run_Voblint
     run_voblint_spine, run_voblint_report_contract
     run_voblint_check_sound
-    run_voblint_dead_check_unreached
-    run_voblint_check_sites
+    run_voblint_dead_unreached
     run_voblint_arithmetic_safe
              │
              v
 L12 NON-VACUITY AND EXPORT
-    certificate_demo_full_certificate               Example_End_To_End_Certificate
+    non-vacuity witnesses                           Example_Non_Vacuity
     export_code ... module_name Generated           Voblint_Codegen
       (file Voblint_Generated.ml; OCaml facade cli/voblint.ml, module Voblint)
 ```
@@ -476,33 +493,38 @@ L12 NON-VACUITY AND EXPORT
 
 ```isabelle
 theorem run_voblint_source_sound:
-  fixes p :: imp_prog and s0 s :: store
-  defines "𝒢 ≡ declared_global p" and "Π ≡ prog_table p" and "g ≡ prog_cfg p"
-  assumes s0: "s0 ∈ cinit_stores 𝒢"
-      and run: "𝒢, Π ⊢ (main_body Π, s0, []) →⇩p⇧* (residual, s, frs)"
-      and ans: "run_voblint config p = Analysed res"
-  shows "(∃v. p, s0 ⊢ (residual, s, frs) ⊳ v)
-       ∧ (∀v. p, s0 ⊢ (residual, s, frs) ⊳ v ⟶
-                s ∈ 𝒞⇘𝒢,g,cinit_stores 𝒢⇙ v
-              ∧ s ∈ ℛ⇘res⇙ v
-              ∧ s ∈ 𝒱⇘res⇙ v)"
+  assumes run: "run_voblint conf ds p = Analysed res"
+    and s0: "s0 ∈ init_stores (kenv_of ds)"
+    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
+                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+  shows "∃v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
+                    ⊢ (residual, s, frs) ≈ (v, s, stk)
+           ∧ s ∈ reaching ds p v
+           ∧ (∃d. Lifted d ∈ report_states_at res v
+                  ∧ s ∈ mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
+           ∧ ¬ DEAD res v
+           ∧ (∀c. PROVED res v c ⟶ truthy (eval c s))
+           ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (eval c s))
+           ∧ (SAFE res v ⟶ (∀ob ∈ obligations_at ds p v. s ⊨ ob))"
 ```
+
+(Amended 2026-10-15 for Stage 7; `Run_Voblint.thy` holds the statement.
+`reaching ds p v` abbreviates `node_collect (kenv_of ds) (elab_cfg p ds)
+(init_stores (kenv_of ds)) v`.)
 
 There is no termination premise: `run_voblint` solves with the executable
 `solve_c`, and `Analysed res` exists only where that solve returned.
 `run_voblint_spine` states the same chain keeping the activation trace `t` and
-its context `c`: `s ∈ 𝒜(v, c) ⊆ ⋃c'. 𝒜(v, c') = 𝒞 v ⊆ ℛ⇘res⇙ v ⊆ 𝒱⇘res⇙ v`.
+its context `c`: `s ∈ 𝒜(v, c)`, the buckets `⋃c'. 𝒜(v, c')` make up
+`reaching ds p v`, and the report holds a state at `v` describing `s`.
 
 Four things about this statement deserve a paragraph each in the thesis.
 
-*The node is determined through elaboration.* A raw source configuration does
-not determine a CFG node, because in `if (b) { x = 1; } else { x = 1; }` both
-branches leave `x = 1`. The run lifts to a run of the elaboration `elab_pt`
-(`psteps_lift`), and the annotated command `c` of that run determines the node
-`point c` (`csim_point_compile_prog`). `at_node` (`p, s0 ⊢ cfg ⊳ v`) packages
-the lifted run and the elaborated simulation. It is relational: a configuration
-reachable along two paths can be observed at two nodes, so the theorem states that
-some node exists and that every observed node is covered.
+*The node is existential.* A source configuration does not determine a CFG
+node, because in `if (b) { x = 1; } else { x = 1; }` both branches leave
+`x = 1`. The simulation `csim` (`≈`) relates the configuration to some node `v`
+of the elaborated graph, and the theorem states that such a node exists and
+that the report covers the store there.
 
 *The context is existential too.* Under entry-state routing one store may be
 admitted at several contexts; under call strings at exactly one. A statement
@@ -517,18 +539,22 @@ its executable solve returned, and that run gives the solver's domain
 membership. Termination for every program is not proved.
 
 *Well-formedness is not a premise either.* A malformed program answers
-`Malformed_Program`, and the `ans` assumption supplies the contract.
+`Malformed_Program`, and the `run` assumption supplies the contract.
 
 ### 3.2 What is trusted
 
 | Proved | Trusted |
 | --- | --- |
-| VIMP execution from a constructed `imp_prog` | lexer and parser (`cli/frontend/`, generated from `manifests/vimp-grammar.yaml`) |
+| core VIMP execution (`pstep`) of the elaboration of a constructed `imp_prog` | lexer and parser (`cli/frontend/`, generated from `manifests/vimp-grammar.yaml`), its block-scope resolution and its rewrite of a declaration without initializer into `x = __voblint_nondet_int()` |
 | compilation and forward simulation | Isabelle's code generator |
 | equation generation and the computed post-solution | the OCaml compiler, runtime, Zarith, `wasm_of_ocaml` |
 | the vendored solver's `part_post_solution` | solver termination for an arbitrary program |
-| the semantic report (`analysis_report`), its check verdicts and arithmetic diagnostics | `render_report` and the state strings, source positions, rendered graphs, the playground |
+| the semantic report (`report`), its check verdicts and arithmetic diagnostics | `render_report` and the state strings, source positions, rendered graphs, the playground |
 | | precision and completeness |
+
+Elaboration is an Isabelle definition, neither proved correct nor trusted code: a
+surface program means the core semantics of its elaboration, and that meaning
+belongs to the adequacy argument of §15.
 
 The one seam between Voblint and the vendored solver is
 `part_post_solution` — a two-part certificate (the local answer bounds the
@@ -668,9 +694,10 @@ as stated*, not about the quality of the work.
 
 ### C1 — End-to-end soundness for the analyzer that ships
 
-**Claim.** For every configuration the tool offers — five abstract domains,
-five global update rules, three context policies, call strings at every
-bound — whenever the analyzer returns a report, every finite execution of the
+**Claim.** For every configuration the tool offers — any activation of the six
+analyses (Sign, Interval, Parity, Congruence, Int at three refinement modes,
+Order), five global update rules, call strings at every bound or entry-state
+contexts, both placements of program globals, both overflow policies — whenever the analyzer returns a report, every finite execution of the
 source program is over-approximated by that report, and every definite verdict
 in it holds for that execution. The theorem is about the same
 constant that is exported to OCaml and called by the CLI and the browser
@@ -678,11 +705,10 @@ playground.
 
 **Evidence.** `run_voblint_source_sound`, `run_voblint_spine`,
 `run_voblint_report_contract`, `run_voblint_check_sound`,
-`run_voblint_dead_check_unreached`, `run_voblint_arithmetic_safe`
-(`Analysis_Certified.thy`); the configuration coverage argument in
-`docs/THEOREM_MAP.md`; `certificate_demo_full_certificate`
-(`Example_End_To_End_Certificate.thy`) discharging every premise by evaluation
-for one program; the single `export_code` in `Voblint_Codegen.thy`.
+`run_voblint_dead_unreached`, `run_voblint_arithmetic_safe`
+(`Run_Voblint.thy`); the configuration coverage argument in
+`docs/THEOREM_MAP.md`; `nv_source_certified` (`Example_Non_Vacuity.thy`)
+discharging every premise by evaluation for one program; the single `export_code` in `Voblint_Codegen.thy`.
 
 **Must compare.** Verasco (Coq, C, extracted, verified against CompCert C
 semantics) — the honest comparison is that Verasco covers a vastly larger
@@ -700,21 +726,21 @@ answers".
 ### C2 — A concrete semantics for calling context
 
 **Claim.** Calling context is given a semantics rather than postulated. A
-`context_policy` says which contexts may describe one concrete call
-transition; `activation_context_rel` threads it along a concrete trace; and
+context policy says which contexts may describe one concrete call
+transition; `gactivation_context_rel` threads it along a concrete trace; and
 `activation_collect` is the collecting semantics indexed by it. The relational
 form is essential, because Goblint's `enter` returns a list of alternatives
 and each routes separately, so one concrete call may be admitted at several
 contexts — buckets are a cover, not a partition. The conditional totality
-condition `call_context_total_on` is exactly what makes the buckets exhaust
+condition `gcall_context_total_on` is exactly what makes the buckets exhaust
 the context-insensitive collection
 (`node_collect_eq_Union_activation_collect`).
 
 **Evidence.** `Activation_Trace_Context.thy`, `Activation_Trace_Abstract.thy`,
-`Activation_Backbone.thy`; the multi-alternative regression
-`Example_Sign_DG_Overlapping_Enter.thy`; both policy instances
-(`Call_String_Routed_Context`, `Entry_State_Routed_Context`) discharging the
-same obligations.
+`Activation_Backbone.thy`; both policy instances (`mcp_cs`, `mcp_es` in
+`MCP.thy`) discharging the same obligations. The multi-alternative regression
+`Example_Sign_DG_Overlapping_Enter.thy` was removed with the untyped analyses
+and is not yet restored (`docs/theorem-migration.toml`).
 
 **Must compare.** Rival & Mauborgne's trace partitioning (the closest concept:
 partition the semantics by control history) and Sharir–Pnueli call strings.
@@ -783,15 +809,14 @@ is easy to demonstrate in one diagram.
 
 **Claim.** A domain proves its facts without mentioning a context, a routing
 function, a seed key, or a solver. A context policy proves its facts without
-mentioning a domain. Their composition is proved once. 60 configurations
-inherit one theorem, and each domain's registrations are *generated* from
-`manifests/analyses.yaml` rather than written.
+mentioning a domain. Their composition is proved once, and every configuration
+inherits one theorem.
 
-**Evidence.** `Sign_Sound.thy` / `Interval_Sound.thy` / `Parity_Sound.thy` /
-`Congruence_Sound.thy` / `Int_Sound.thy` (each explicitly says it mentions no
-context and no solver); `dg_analysis`, `dg_analysis_exec`,
-`Routed_Analysis_Sound.thy`, `Routed_Exec_Refinement.thy`; the generated
-`<Domain>_Analyses.thy` files and their drift check.
+**Evidence.** The `kind_int_domain` instances (`Sign_Kind.thy`,
+`Interval_Kind.thy`, `Parity_Kind.thy`, `Congruence_Kind.thy`,
+`Int_Tuple_Kind.thy`), which mention no context and no solver; `gdg_analysis`
+(`DG_Analysis.thy`), `Routed_Analysis_Sound.thy`, `Routed_Exec_Refinement.thy`;
+the registrations `mcp_cs`, `mcp_es`, `mcp_split`, `mcp_split_es`.
 
 **Must compare.** Goblint's own `Spec`/`Spec2Spec` modularity (the thing being
 modelled); Keidel & Erdweg's reusable components; Verasco's domain interfaces.
@@ -824,6 +849,13 @@ communication. Note the register's finding that two reduction edges Goblint has
 are missing here, and that `DefExc` is provably not addable under this
 project's `bounded_semilattice_sup_bot` discipline.
 
+*Stage 7 note (2026-10-15).* The analyzer's Int is now `int_tuple`
+(`Int_Tuple_Kind.thy`), the reduced product of Interval and Congruence at machine
+kinds, parametric in the same refinement modes. The four-component `int_dom`
+lattice and `Int_Refinement` remain in `Voblint_Domain` and
+`Voblint_Analysis_Int`, but no analysis runs it. TODO: decide whether C6 is
+restated for `int_tuple` and re-verify each evidence item.
+
 **Confidence.** **Medium.** "A verified reduced product" is not new in kind.
 The defensible sharpening is the *mode control with its proved reductiveness,
 the monotonicity asymmetry, and the narrowing impossibility argument* — those
@@ -848,6 +880,13 @@ single-default `Abs_State`), `Default_St_Transfer.thy`, `Default_St_Reachability
 `Abs_Int_ITP2012` — this is the direct antecedent and the theory header already
 argues against it.
 
+*Stage 7 note (2026-10-15).* Soundness is now stated over typed abstract states
+`'a tabs = var_id => 'a kd` (`Nonrelational_Domain.thy`); the carrier is
+`gdefault_st` keyed by `var_id`, and the commute theorems live in
+`Nonrelational_Exec.thy` (`nonrel_exec_spec_sound`). `abs_state`,
+`Exec_Backward.thy` and `Nonrelational_Ops.thy` are gone. TODO: restate the
+claim and evidence against the current carrier.
+
 **Confidence.** **Medium.** Present as an engineering contribution with a
 crisp justification, not as a research result. Its value in the thesis is
 pedagogical: it is the cleanest example of how a verification-friendly
@@ -865,6 +904,14 @@ domain proves a check three of its four components leave `UNKNOWN`.
 (`Example_Sign_DG_CallString_K2.thy`),
 `Example_Per_Origin_Widening_Precision.thy`,
 `Example_Int_*`, the `16-composite-domain` and `19-paper-examples` fixtures.
+
+*Stage 7 note (2026-10-15).* `sign_k2_strictly_more_precise_than_k1_at_g`,
+`Example_Per_Origin_Widening_Precision` and `Example_Int_*` were removed with the
+untyped analyses (`docs/theorem-migration.toml`). The current machine-checked
+witnesses are the evaluated verdicts of `Example_Run_Voblint_Precision.thy`:
+`step_verdicts` (only Int proves `x == 99`), `call_string_verdicts` (call strings
+of length 1 and entry states prove checks length 0 leaves unknown) and
+`overflow_verdicts` (the overflow option). TODO: restate the claim against these.
 
 **Must compare.** Nothing directly — this is methodology, not a result. But
 the scoping must be explicit: these are forcing witnesses for specific
@@ -897,6 +944,12 @@ unreachable, not merely unimported.
 **Evidence.** `src/Analyses/Relational/Rel_Order_Domain.thy` (576 lines),
 `src/Analyses/Relational/ROOT`, `Example_Relational_DG_Demo.thy`.
 
+*Stage 7 note (2026-10-15).* The order analysis is now `Order_Analysis.thy`
+in `Voblint_Analysis_Order`, parented on `Voblint_Nonrelational`, so the
+structural half of the claim no longer holds; it interprets `gdg_analysis`
+directly over `'v order_rel`. TODO: restate C9 without the session-graph
+argument and re-check the evidence.
+
 **Must compare.** Schwarz et al.'s clustered relational thread-modular
 analyses; Miné's octagons (as the analysis this is *not*).
 
@@ -926,8 +979,8 @@ rest on no oracle — most comparable theses assert that in prose.
 **Claim.** The verified analyzer is exported to OCaml, compiled to WebAssembly,
 and exposed as a browser-local artifact that runs the generated core itself
 rather than a reimplementation of it. The interface varies every dimension the
-soundness theorem quantifies over — five domains, five global update rules,
-three context policies with a call-string depth — and shows the solved result at
+soundness theorem quantifies over — the activated analyses, five global update
+rules, the context policy with a call-string depth — and shows the solved result at
 the granularity the theorems talk about: per-point abstract states, per-context
 CFG nodes, entry seeds as solver globals, check verdicts, arithmetic
 diagnostics, and the raw typed input and output of the generated core. The
@@ -1002,9 +1055,8 @@ an unfilled interface in their head. The generalization reads as earned.
 special case and once properly — and the second telling is the real one, so the
 first is scaffolding the reader must discard. Worse, the special case is
 *monovariant*, and the development's actual design makes monovariant analysis
-an instance of the routed one (every domain's unit registration interprets
-`dg_analysis_exec` at the unit route, as its call-string and entry-state
-registrations do at theirs). Presenting the special case as primary inverts the
+an instance of the routed one (the context-insensitive run is the call-string
+registration `mcp_cs` at length `0`). Presenting the special case as primary inverts the
 formalization's own architecture and creates a chapter-long correction later.
 
 ### Option C — Pipeline order: semantics, then analyzer, then soundness
@@ -1086,11 +1138,11 @@ that way.** It is discharged in five named steps, each in a different session:
 
 | Step | Discharges | Where |
 | --- | --- | --- |
-| `activation_coverage` / `activation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
-| `dg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
-| `routed_context` | CALL, COMB, for any context policy | `Voblint_Framework.Routed_Context` |
-| `dg_analysis` / `dg_analysis_exec` | the published table and the source bridge | `Voblint_Result` |
-| `covered_table` + `sound_classifier` / `run_voblint_source_sound` | the configuration-level statement | `Voblint_CLI` |
+| `gactivation_coverage` / `gactivation_collect_sound` | the contract itself | `Voblint_CFG`, `Voblint_Framework.Activation_Backbone` |
+| `gdg_context_activation` | EDGE, COMB, from a post-solution | `Voblint_Framework.DG_Ctx_Activation` |
+| `grouted_context` | CALL, COMB, for any context policy | `Voblint_Framework.Routed_Context` |
+| `dg_pipeline` / `gdg_analysis` | the published table and the source bridge | `Voblint_Result` |
+| `report_state_sound`, `report_check_sound` / `run_voblint_source_sound` | the configuration-level statement | `Voblint_CLI` |
 
 Chapter 9 therefore *assembles* rather than *proves*, and should say so. Each
 of the four chapters before it ends by discharging its own obligation; the
@@ -1286,7 +1338,7 @@ PART III — THE ANALYZER
   6.2 Facts without a program point (D_L/D_G, analysis vs program globals, manager)
   6.3 The analysis contract (dg_spec record; gammaDG_mono, step_sound,
       combine_sound, spec_wf; why CALL/TOTAL/INIT are discharged in Ch. 8)
-  6.4 Program globals: flow-sensitive or flow-insensitive (keyed_split_spec)
+  6.4 Program globals: flow-sensitive or flow-insensitive (gkeyed_split_spec)
   Reason for the structural change (2026-10-07): the eight-section plan
   documented the interface's implementation rather than the abstraction
   boundary. The Spec-correspondence and record sections merged into 6.1/6.3,
@@ -1361,7 +1413,7 @@ PART IV — INSTANCES AND PRACTICE
   10.5 Congruence: Chinese remainder as an exact meet
   10.6 int_dom: a reduced product with an explicit reduction policy
   10.7 Why narrowing cannot refine (a negative result)
-  10.8 Rel_Order_Domain: a carrier that is not a map
+  10.8 Order: a carrier that is not a map
 
 11 Engineering the Isabelle development
   (folded into Ch. 12 by the 2026-09-22 cut pass; see above)
@@ -1515,7 +1567,7 @@ strength, and the chapter should say which each later claim rests on:
 
 | Kind | What it can establish | Instances |
 | --- | --- | --- |
-| machine-checked | a theorem, for every input the statement ranges over | the five endpoints; `sign_k2_strictly_more_precise_than_k1_at_g`; `certificate_demo_full_certificate`; `thm_oracles = []` |
+| machine-checked | a theorem, for every input the statement ranges over | the five endpoints; `step_verdicts` and `call_string_verdicts` (`Example_Run_Voblint_Precision`); `nv_source_certified`; `thm_oracles = []` |
 | executable | that *this* program, at *this* configuration, answers *this* | the regression corpus; the `by eval` witnesses; the site-figure fixtures |
 | explorable | that a reader can check the above without Isabelle | the playground (C11) |
 
@@ -1544,14 +1596,18 @@ arrays (needs explicit semantics, not inherited), multi-analysis composition
 Maintain this table in `thesis/shared/` and check it with `thesis-refs`. Format:
 thesis section → theories → central definitions → central theorems.
 
+Stage 7 note (2026-10-15): rows 3.1–3.7 are updated; the rows from 4.2 on still
+name pre-Stage-7 identifiers in places (`docs/theorem-migration.toml` maps them).
+TODO: re-verify every row from 4.2 on against the current theories.
+
 | Thesis | Theories | Definitions | Theorems |
 | --- | --- | --- | --- |
-| 3.1–3.2 | `Voblint_VIMP.VIMP_Syntax`, `VIMP_Expr`, `VIMP_Proc` | `exp`, `aval`, `com`, `proc_decl`, `frame`, `pstep`, `psteps`, `pcompletes` | `pstep` inversion rules |
-| 3.3 | `Voblint_VIMP.VIMP_Globals` | `cinit_stores`, `enter_state`, `combine_env`, `enter_frame` | — |
+| 3.1–3.2 | `Voblint_VIMP.Machine_Kind`, `VIMP_Syntax`, `VIMP_Expr`, `Var_Id`, `Core_Exp`, `Core_Com`, `VIMP_Proc`, `VIMP_Semantics` | `ikind`, `ik_norm`, `src_exp`, `src_com`, `var_id`, `exp`, `eval`, `com`, `elaborate`, `elab_com`, `elab_ptable`, `kind_conv`, `proc_decl`, `gframe`, `gpstep`, `pstep`, `psteps` | `eval_in_range`, `eval_elaborate` |
+| 3.3 | `Voblint_VIMP.VIMP_Globals`, `VIMP_Semantics` | `init_stores`, `is_global`, `enter_state`, `combine_env`, `enter_frame` | — |
 | 3.4 | `Voblint_VIMP.VIMP_Proc`, `Voblint_Compile.Compile_Invariants` | `source_com`, `wf_source_com`, `value_providing`, `wf_source_program`, `wf_compile_input`, `wf_program_compile_input_exec` | `wf_source_programD`, `wf_compile_inputD` |
 | 3.5 | `Voblint_CFG.CFG_Def`, `CFG_Transfer`, `CFG_Exec` | `cfg_node`, `edge_action`, `call_action`, `intra`, `calls`, `wf_cfg`, `edge_step`, `edge_collect`, `call_enter`, `combine_collect`, `cstep` | `cfg_nodes_finite` |
-| 3.6 | `Voblint_Compile.VIMP_Proc_to_CFG` | `compile`, `compile_proc`, `compile_prog`, `prog_cfg` | — |
-| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location`, `Elaborated_Compilation` | `csim`, `control_at`, `procs_embedded`, `elab_pt`, `point`, `erase`, `at_node` | `csim_step`, `csim_star`, `procs_embedded_compile_prog`, `psteps_lift`, `csim_point_compile_prog`, `compile_prog_elab_pt` |
+| 3.6 | `Voblint_Compile.VIMP_Proc_to_CFG` | `compile`, `compile_proc`, `compile_prog`, `elab_cfg` | — |
+| 3.7 | `Voblint_Compile.Simulation_Relation`, `Simulation_Preservation`, `Residual_Location` | `csim`, `control_at`, `procs_embedded` | `csim_step`, `csim_star`, `procs_embedded_compile_prog` |
 | 3.8 | `Voblint_Compile.Compile_Wellformed`, `Procedure_Ownership`, `Live_Nodes` | `frag_stmts`, `prog_live` | `compile_prog_wf`, `compile_prog_finite`, `compile_prog_calls_source_unique`, `valid_activation_trace_entry_result_eq`, `prog_live_reaches` |
 | 4.2–4.4 | `Voblint_CFG.Activation_Trace_Def`, `Activation_Trace_Collect` | `activation_trace`, `activation_path`, `path_of`, `sink_node`, `sink_store`, `caller_of`, `extend`, `valid_activation_trace`, `node_collect` | `node_collect_I`, `node_collect_E` |
 | 4.5–4.6 | `Voblint_CFG.Activation_Trace_Context` | `context_policy`, `context_policy_of_fun`, `admits_call_context`, `activation_context_rel`, `call_context_total_on`, `activation_collect`, `c\<^sub>0` | `activation_collect_I`, `activation_collect_E`, `activation_collect_of_fun` |
@@ -1579,10 +1635,10 @@ thesis section → theories → central definitions → central theorems.
 | 10.4 | `Voblint_Analysis_Parity.*` | `parity`, `parity_min`, `parity_max`, `parity_refine_ops`, `inv_plus_parity` | `parity_tf_st_for_commute` |
 | 10.5 | `Voblint_Analysis_Congruence.*` | `congruence`, `congruence_le_rep`, `intersect_congruence_rep`, `inv_plus_congruence` | `congruence_lt_sound` |
 | 10.6–10.7 | `Voblint_Analysis_Int.*` | `int_dom`, `refine_mode`, `refine_round`, `refine_fix`, `int_dom_ops`, `int_tf_st_for` | `refine_reductive`, `refine_nonfixpoint_mono`, `int_tf.is_sound_nonrelational_transfer` |
-| 10.8 | `Voblint_Analysis_Relational.Rel_Order_Domain` | `relc`, `rel_order_spec`, `gamma_relc` | `analysis_contract` instance |
+| 10.8 | `Voblint_Analysis_Order.Order_Analysis` | `order_rel` | `order_analysis` interpretation of `gdg_analysis` |
 | 11.1–11.2 | `Voblint_Codegen.Voblint_Codegen` | the export root list | — |
 | 12.3 | `Voblint_Examples_Sign.Example_Sign_DG_CallString_K1/K2`, `Voblint_Examples_Tooling.Example_Per_Origin_Widening_Precision`, `Voblint_Examples_CLI.*` | — | `sign_k2_strictly_more_precise_than_k1_at_g` |
-| 12.x | `Voblint_Examples.Example_End_To_End_Certificate` | `certificate_demo_prog` | `certificate_demo_full_certificate` |
+| 12.x | `Voblint_Examples.Example_Non_Vacuity` | `nv_prog`, `nv_conf` | `nv_source_certified`, `nv_check_proved_sound` |
 
 ---
 
@@ -1639,7 +1695,7 @@ Where each chapter uses it:
 | --- | --- | --- |
 | `int-refinement.vimp` (`if (y+1==3) check(y==2)`) | the reduced product proving what three components cannot | 10.6 |
 | `division-possible.vimp` (nondeterministic divisor) | arithmetic diagnostics and the soundness category | 9.4, 12.2 |
-| `certificate_demo_prog` (`bump(1)`, `bump(41)`, `Int` + `Ctx_CallString 1`) | every premise discharged by evaluation | 12.x |
+| `nv_prog` (`Example_Non_Vacuity`, two calls of `bump`) | every premise discharged by evaluation | 12.x |
 | the Sign k=1/k=2 nesting program | the strict precision inequality | 12.3 |
 
 **Action item.** The spine program does not yet exist as a figure source. Add
@@ -1669,9 +1725,9 @@ Prefer generated over drawn wherever the infrastructure already exists
 6. **The call protocol sequence** (Ch. 7): caller value → `enter` → `route` →
    `Side` seed → entry read-back → exit read → `combine_env` →
    `combine_assign`, with the Goblint name beside each Voblint name.
-7. **The two representations and their morphism** (Ch. 8): `abs_state` on the
-   left, `default_st` on the right, the readback `ρ⇘𝒢⇙` between,
-   and one commuting square for a transfer.
+7. **The two representations and their morphism** (Ch. 8): the typed abstract
+   state `'a tabs` on the left, `gdefault_st` on the right, the readback
+   `default_st_to_fun` between, and one commuting square for a transfer.
 8. **The locale hierarchy** (Ch. 6 or Appendix A), generated by
    `tools/locale_graph.ML`.
 9. **The `numeric_domain` / `widening` class hierarchy** (Ch. 5), generated by
@@ -2108,7 +2164,7 @@ colours, with no linked assets.
 | VIMP as a small island in C | `svg/scope.svg` | 14.2 | extracted | n/a |
 | the price of precision (nodes) | `svg/cost-nodes.svg` | 12.3 | extracted | n/a |
 | the price of precision (checks) | `svg/cost-contexts.svg` | 12.3 | extracted | n/a |
-| session graph, Pure to `Analysis_Certified` | `session_graph.png` | 2.5, app. A | generated (Isabelle presentation) | yes, by construction |
+| session graph, Pure to `Run_Voblint` | `session_graph.png` | 2.5, app. A | generated (Isabelle presentation) | yes, by construction |
 | locale hierarchy of the D/G spine | `dot/locale_deps.dot` | 6 | generated (`locale_graph.ML`) | yes, by construction |
 | what the headline rests on | `thm_deps`, filtered | 9 | generated | yes, by construction |
 
@@ -2130,8 +2186,8 @@ Nothing else has a source. These four must be drawn:
 | --- | --- | --- |
 | `cstep`'s three rules beside `valid_activation_trace`'s four clauses | 4.3 | `CFG_Exec.thy`, `Activation_Trace_Def.thy`; `curryst` |
 | one `activation_trace` as a tree, with the `caller_of` chain | 4.2 | the running program; `syntree` or `fletcher` |
-| the five obligations as commuting squares | 4.7 | `activation_coverage` in `Activation_Trace_Abstract.thy`; `simulation` generalizes |
-| `abs_state` ↔ `default_st` and one commuting transfer | 8.5 | `Default_St_Transfer.thy`; `simulation` + `annotation-grid` |
+| the five obligations as commuting squares | 4.7 | `gactivation_coverage` in `Activation_Trace_Abstract.thy`; `simulation` generalizes |
+| `'a tabs` ↔ `gdefault_st` and one commuting transfer | 8.5 | `Default_St_Transfer.thy`; `simulation` + `annotation-grid` |
 
 Three further figures the explainer has and the thesis cannot lift, with the
 reason recorded in the manifest: `gamma`, `strategy-tree` and `timeline-of-runs`
@@ -2216,7 +2272,8 @@ and one claim was wrong.
 selects a session *group*; `thesis/README.md` says otherwise and is wrong. The
 session graph comes from the presentation build (`isabelle build -P`), which
 `pixi run pages-site-build` already runs — `build/github-pages/Voblint/<session>/session_graph.pdf`
-exists for all 28 sessions. `Voblint_CLI`'s is the useful one: Pure down to
+exists for all 28 sessions (before Stage 7; now 21, and the headline theory is
+`Run_Voblint`). `Voblint_CLI`'s is the useful one: Pure down to
 `Analysis_Certified`, 28 nodes, readable at 62% width, no filtering needed.
 Copied to `thesis/shared/generated/session_graph.png` and now used in place of
 the hand-drawn module graph it contradicted.
@@ -2269,7 +2326,8 @@ chain, not an exposition convenience. And `unit_dg_analysis` really is below
 analysis is an instance, not a special case" — the claim §6.1 uses to reject
 the example-first structure. (2026-09-28: the separate unit locale is gone; the
 unit context is now a registration of `dg_analysis_exec` at the unit
-route, exactly like the other two policies.)
+route, exactly like the other two policies. 2026-10-15: since Stage 7 it is
+call strings of length `0` under `mcp_cs`.)
 
 **`class_deps` needs work before it is a figure.** `Sorts.super_classes`
 returns the transitive closure, so 33 classes produce roughly 50 edges. The
@@ -2295,11 +2353,12 @@ and its quantitative claims are already regression-checked: the 59 fixtures in
 cannot leave a figure on the site silently wrong. Treating it as a source of
 figures only, as §12 did, undersells it.
 
-The prose was checked against the current theories while building this map. It
-is accurate — it names `pstep`, `cstep`, `valid_activation_trace`, `csim_step`,
+The prose was checked against the theories of the time while building this map
+(before Stage 7; re-check against `Run_Voblint.thy`). It named `pstep`, `cstep`, `valid_activation_trace`, `csim_step`,
 `source_run_has_activation_trace`, `part_post_solution_of_solve_c`, `gamma_reader_eq_lookup`
-and the five headline theorems correctly, and its statements of them match
-`Analysis_Certified.thy`. Where a section simplifies it says so.
+and the five headline theorems correctly, and its statements of them matched
+`Analysis_Certified.thy`, which Stage 7 replaced by `Run_Voblint.thy`. Where a
+section simplifies it says so.
 
 Format: web section → core idea → thesis destination → what to reuse → what to
 re-verify.
@@ -2391,8 +2450,8 @@ calls.*
 → **Reuse the per-theorem "what it assumes / what it proves" split.** The site
 states each theorem in prose beside its Isabelle statement, which is exactly the
 presentation §7 asks for in 9.8. It also has `run_voblint_arithmetic_intra_safe`,
-a corollary the blueprint's §3 spine omitted — verified present at
-`Analysis_Certified.thy:290`.
+a corollary the blueprint's §3 spine omitted; it is now a conclusion of
+`run_voblint_arithmetic_safe` (`Run_Voblint.thy`).
 → Re-verify: nothing; statements match.
 
 **`pipeline` — "From Isabelle to your browser tab"**
@@ -2512,18 +2571,22 @@ non-vacuity, and telling a reviewer where to look.
 
 ### 15.2 Where VIMP differs from C
 
-Verified against `VIMP_Expr.thy` and `VIMP_Globals.thy`.
+Verified against `Core_Exp.thy`, `VIMP_Semantics.thy` and `VIMP_Proc.thy`
+(amended for Stage 7, 2026-10-15: VIMP has machine-integer semantics only).
 
 | | VIMP | C |
 | --- | --- | --- |
-| integers | mathematical, unbounded | `ikind`-sized; wraps or is undefined |
+| integers | `ikind`-sized; every arithmetic result and conversion is normalized to its kind (`ik_norm`), so signed overflow wraps | `ikind`-sized; signed overflow is undefined |
+| undeclared kind | `I32` (`kenv_of`) | not applicable |
+| literals | must fit `i64` (`lits_fit`, checked by `wf_program_compile_input_exec`) | an unsuffixed decimal constant has no type beyond `long long` |
 | `a / 0` | **defined as `0`** (`c_div`) | undefined behaviour |
 | `a % 0` | **defined as `a`** (`c_mod`) | undefined behaviour |
 | `/` rounding | truncates toward zero | the same, since C99 |
 | `&&`, `\|\|` | both operands evaluated | short-circuits |
-| uninitialised locals of `main` | unconstrained (`cinit_stores`) | indeterminate |
-| uninitialised locals of a callee | **reset to `0`** (`enter_state`) | indeterminate |
-| globals at entry | zero (`cinit_stores`) | zero |
+| locals of `main` at entry | any value of their kind (`init_stores`) | indeterminate |
+| implicit locals of a callee | **reset to `0`** (`enter_state`) | not applicable |
+| a declaration without initializer | the parser writes `x = __voblint_nondet_int()` there: any value of `x`'s kind | indeterminate |
+| globals at entry | zero (`init_stores`) | zero |
 | `main` | may not `return` explicitly | may |
 
 Four of these need a sentence of consequence rather than a table row.
@@ -2533,7 +2596,11 @@ Four of these need a sentence of consequence rather than a table row.
 VIMP and says nothing whatever about the C program with the same text. The
 arithmetic diagnostic exists to mitigate this, but it is a separate claim with
 its own theorem (`run_voblint_arithmetic_safe`), not part of the check verdict.
-This belongs in Chapter 1, not only in Chapter 3.
+Signed overflow has the same shape: VIMP wraps where C is undefined, and the
+diagnostic covers it (`run_voblint_no_signed_overflow`). Whether the analyses
+assume a wrapped value is top or follow the wrap is a run option
+(`Assume_Top`, the default, or `Assume_Wraparound`); it changes precision, not
+the semantics. This belongs in Chapter 1, not only in Chapter 3.
 
 **Short-circuiting diverges in the report, not the semantics.** Because VIMP
 expressions are total and pure, evaluating both operands of `&&` yields the same
@@ -2542,26 +2609,34 @@ diagnostic traverses both operands, so `x != 0 && 10 / x > 1` draws a divisor
 warning where a C reader expects the guard to protect it.
 
 **`main`'s locals are more general than C, hence sound-safe.** C leaves an
-uninitialised automatic local indeterminate; `cinit_stores` constrains only the
-globals, so `main` starts with every local at any integer. The analyzer must
-therefore handle a superset of the initial states C permits, which can only
-cost precision.
+uninitialised automatic local indeterminate; `init_stores` fixes only the
+globals at zero, so `main` starts with every other identity at any value of its
+kind. The analyzer must therefore handle a superset of the initial states C
+permits, which can only cost precision.
 
-**A callee's locals are a definition of undefined behaviour.** `enter_state`
-keeps the globals and sets every other name to `0` before the formals are bound
-(`enter_state_apply`), in `pstep` and in `cstep` alike. Reading such a local
-before assigning it is undefined in C; VIMP, as with `/ 0`, gives it a value.
-The shipped analyses do not use the zero: the abstract entry resets locals to
-`top`, so `__voblint_check(y == 0)` on an unassigned callee local is `UNKNOWN`. The
-soundness theorem is stated over `pstep` and would equally accept an analysis
-that proved it, which would be a true statement about VIMP and not about C.
+**A callee's implicit locals are a definition of undefined behaviour.**
+`enter_state` keeps the globals and sets every other identity to `0` before the
+formals are bound, in `pstep` and in `cstep` alike. A program that writes no kind
+may use a local without declaring it, and reading it before assigning it then
+sees that zero, where C has no such program. A declared local never shows the
+zero: the parser's rewrite of its declaration draws a fresh value of its kind,
+and the parser rejects a use before the declaration. That rewrite is trusted,
+not proved (`docs/VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md`). The shipped
+analyses do not use the zero: the abstract entry resets locals to `KTop`
+(`nonrel_enter_frame`). The soundness theorem is stated over `pstep` and would equally accept
+an analysis that proved it, which would be a true statement about VIMP and not
+about C.
 
 ### 15.3 What a reviewer must check, in order of what a mistake would cost
 
 1. **`pstep` *is* the definition of VIMP.** Since the AFP IMP2 bridge was
    removed (2026-07-20), no external reference semantics cross-checks it.
    Everything rests on this and it should be stated outright rather than
-   discovered. See §15.4.
+   discovered. See §15.4. Surface VIMP, what the parser builds, has no semantics
+   of its own: a surface program means `pstep` of its elaboration
+   (`elab_ptable`), so the whole `Voblint_VIMP` session (evaluation, kind
+   normalization, implicit conversions, elaboration, declarations,
+   well-formedness) is part of this argument.
 2. **`valid_activation_trace`'s four rules against `cstep`'s three.** Does the trace
    semantics admit exactly the graph's runs? Too few and soundness is vacuous
    where it matters; too many and it is unprovable. Ch. 4's two figures exist to
@@ -2574,19 +2649,19 @@ that proved it, which would be a true statement about VIMP and not about C.
    no program in general, and one solve is evaluated inside Isabelle.
 5. **Non-vacuity.** Is a conclusion true because a set is empty? Not
    hypothetical here: the project has a recorded case where a conclusion was
-   provably empty for seeded runs, and `Example_End_To_End_Certificate` exists
-   precisely to witness that the headline is not.
-6. **`verdict_stores` (`𝒱⇘res⇙ v`).** Does `PROVED` mean what a report reader
-   takes it to mean, and is it clear that `REFUTED` is not a verified
-   counterexample? And `DEAD` is a sound emptiness test on report points, not an
-   exact one (`DEAD_not_exact`).
+   provably empty for seeded runs, and `Example_Non_Vacuity` exists precisely
+   to witness that the headline is not.
+6. **`PROVED`, `REFUTED`, `DEAD` and `SAFE` (`Analysis_Report.thy`).** Does
+   `PROVED` mean what a report reader takes it to mean, and is it clear that
+   `REFUTED` is not a verified counterexample? `DEAD` holds when every state the
+   report lists at a point is `Bot`: a sound emptiness test, not an exact one.
 7. **`wf_source_program`.** Every theorem assumes it. What does accepting fewer
    programs buy, and does it exclude anything interesting?
 8. **`csim` is not functional on raw programs**, so the headline names its node
-   through the elaboration. Why is the existential over the annotated command
-   harmless, and what does `psteps_lift` guarantee?
+   existentially: some node `v` simulates the configuration. Why is that
+   existential harmless?
 9. **The result reader takes the global environment.** `rd` in
-   `dg_analysis_adapter` reads a local value together with the solved global
+   `gdg_analysis_adapter` reads a local value together with the solved global
    environment (`genv global_of`) through the placement's recombination
    `place_cmb`. Under `Program_Globals_Flow_Sensitive` it ignores the
    environment, so the table is read from the local unknown alone; under

@@ -49,6 +49,10 @@ by executable compilation:
 - a call without a destination may ignore a returned value;
 - main contains no explicit return.
 
+The executable gate `wf_program_compile_input_exec`, which `run_voblint` checks
+and which implies `wf_compile_input`, also requires every literal to fit `i64`
+(`lits_fit`).
+
 Procedures have no separate user-visible result declaration. Their accepted
 return behavior is derived conservatively from syntax. `value_providing`
 requires a source body with no syntactic fall-through, no void return, and at

@@ -16,11 +16,12 @@ fresh on every activation: `21` calls the same procedure twice, `22` recurses
 with locals of three kinds, and `23` checks that an initializer replaces the
 arbitrary value each time.
 
-The frontend elaborates a typed program with the verified `typed_prog`: every
-operation computes at its C kind, every conversion becomes an explicit `Cast`,
-and the analyzer then runs on that lowered program. Signed overflow wraps (the
-`-fwrapv` reading), so these verdicts are about wrapping arithmetic, not about
-C programs whose signed arithmetic overflows.
+Isabelle elaborates the parsed program (`elab_ptable`, an Isabelle definition):
+every operation computes at its C kind, every conversion becomes an explicit
+`TCast`, and the analyzer runs on the elaborated core program. The concrete
+semantics wraps a signed overflow (the `-fwrapv` reading), so check verdicts are
+about wrapping arithmetic; the signed-overflow diagnostics of `27-signed-overflow`
+name the operations that may overflow in C.
 
 A program that writes no kind gives every variable the default kind i32;
 `08` checks that.

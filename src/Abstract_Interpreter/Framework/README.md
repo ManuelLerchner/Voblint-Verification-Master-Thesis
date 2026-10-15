@@ -27,7 +27,7 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 
 | Voblint | Goblint |
 | --- | --- |
-| `dgs_*` fields of `dg_spec` | `Spec.*` methods of the same name |
+| `dgs_*` fields of `gdg_spec` | `Spec.*` methods of the same name |
 | `man_local` / `man_global` / `man_sideg` | `man.local` / `man.global` / `man.sideg` |
 | `route` (notation `context♯`) | `Spec.context` |
 | `c\<^sub>0` (start context) | `Spec.startcontext` |
@@ -35,7 +35,7 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | `Analysis_Global v` | `G of V.t` |
 | `Activation_Seed` | none; stands in for `sidel` |
 | `FunctionResult` | `Function` |
-| `call_context_rel` / `activation_context_rel` | none; proof-only |
+| `gactivation_context_rel`, the `adm` context policy | none; proof-only |
 
 `context` is an Isar outer keyword, so the selector is spelled `route` and
 carries `context♯` as notation.
@@ -63,7 +63,7 @@ alternative's continuation and runs `dg_spec_combine_transfer` against that
 value. The edge half is the active compilation path and lives in `Spec/DG_Spec.thy`.
 
 Three audiences follow from that table. An analysis writes `man_local`,
-`man_global`, `man_sideg`, `sp_return`, the `local_*` adapters, and `dg_spec`
+`man_global`, `man_sideg`, `sp_return`, the `local_*` adapters, and `gdg_spec`
 fields. The framework owns everything from the program runners through the
 protocol builders. `QueryL`, `QueryG`, `Side`, `Answer` and `sp_compile` are
 the solver's, and appear in a specification only by mistake.
@@ -75,13 +75,13 @@ in the session derives from, transports, or instantiates one of them.
 
 | Interface | Adds | Where |
 | --- | --- | --- |
-| `dg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
-| `analysis_contract` | a joint concretization `gammaDG d g` the edge and combine programs' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
-| `dg_context_activation` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
-| `routed_context` | a context policy `route`/`call_context_rel`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
-| `dg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
+| `gdg_spec` | the analysis: one manager-native transfer per edge action, `enter`, `combine_env`/`combine_assign` -- Goblint's `Spec` | `Spec/DG_Spec.thy` |
+| `ganalysis_contract` | a joint concretization `gammaDG d g` the edge and combine programs' observations over-approximate | `Spec/DG_Spec_Sound.thy` |
+| `gdg_context_activation` | a solved system: `part_post_solution`, the covered keys, a reader; derives EDGE and COMB | `Activation/DG_Ctx_Activation.thy` |
+| `grouted_context` | a context policy `route`/`adm`/`seed`/`resolve` at any carrier and concretization; fixes the call programs `Context/Routed_Call_Programs.thy` builds, and derives CALL, COMB and activation-collect soundness | `Context/Routed_Context.thy` |
+| `gdg_analysis_adapter` | the published result table and check report, with their soundness | `Result/DG_Analysis_Adapter.thy` |
 
-Entry is deliberately absent from `analysis_contract`. A call answers a *list* of
+Entry is deliberately absent from `ganalysis_contract`. A call answers a *list* of
 alternatives, which is not an equation's answer, so what makes it sound is a
 property of the program the consuming generator builds from that list -- and the
 monovariant and routed generators build different programs. Each states its own
@@ -91,13 +91,14 @@ entry obligation, both through the shared `entry_pairs_cover`.
 
 | Folder | Question it answers | Theories |
 | --- | --- | --- |
-| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Ownership_Split_Spec` (`ownership_split_enter_sides`: the join of an entry's alternatives' global halves), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `keyed_split_contract`) |
+| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`ganalysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Ownership_Split_Spec` (`ownership_split_enter_sides`: the join of an entry's alternatives' global halves), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `gkeyed_split_contract`) |
 | `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `gabs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the return-value write -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (pointwise equations for the generic `combine_env` selector) |
 | `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Programs` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Indexed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied program hooks, and the `TD_side_mono` discharge asks each hook only for well-formedness, traverse/sides monotonicity and `env_indep_deps`), `DG_Reader_Transport` (`dg_reader_commute_gen`: a whole equation system read through a `bot`- and join-preserving reader pair) |
 | `Activation/` | What does one activation see? | `Activation_Backbone` (`activation_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
 | `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Programs` (the routed key space, and the programs one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those programs and discharges CALL and COMB), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
 | `Result/` | What does a solved table publish? | `Solved_Table`, `DG_Analysis_Adapter` |
-| `Checks/` | How is a `__goblint_assert` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Check_Report`, `Contextual_Check_Report`, `Check_Answer` |
+| `Checks/` | How is a `__voblint_check` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Check_Report`, `Contextual_Check_Report`, `Check_Answer`, `Bool_Refine` (refining a state by a Boolean condition, the same for every language) |
+| `Cooperation/` | How do several analyses run as one and answer each other's queries? | `Analysis_Query` (queries and answers between analyses), `Local_Spec_Product` (the product carrier), `MCP_Spec` (many cooperating analyses over one state, with the query channel), `MCP_Registry` (registered analyses run as one: `mcp_registry`, `act_gamma`, `mcp_classify`) |
 
 ## Layering
 
@@ -127,15 +128,16 @@ other dependency in the session is stated where it is used. That is what keeps
 `DG_Constraint_Programs` and `DG_Indexed_Generator` free of any domain and `Spec/`
 free of any CFG generator.
 
-The context policies that need a compiled program (`Entry_State_Routed_Context`,
-`Context_Space_Finite`) live in
-`Voblint_Routing`, under `src/Analyses/Shared/Routing/`; the executable carrier
-and its transport live in `Voblint_Exec`.
+The equations for a compiled program and the key-space finiteness arguments
+(`Compiled_Routed_Equations`, `Context_Space_Finite`) live in `Voblint_Routing`, under
+`src/Analyses/Shared/Routing/`; the executable carrier and its transport live in
+`Voblint_Exec`.
 
 ## Two directories hold context theories
 
 `Framework/Context/` is what a routed call *is*: the programs one call action
-generates, and the policy-generic locale every context instantiates.
-`src/Analyses/Shared/Routing/` holds the concrete policies -- call strings,
-entry states, and their finiteness -- which need a compiled program and so
-cannot live here. Neither is a duplicate of the other.
+generates, the policy-generic locale every context instantiates, and the call-string
+context (`Call_String_Context`). The entry-state route of the combined analyses is
+`mcp_route` in `Voblint_CLI.MCP`. `src/Analyses/Shared/Routing/` holds the equations
+for a compiled program and the finiteness of the key spaces, which need a compiled
+program and so cannot live here.
