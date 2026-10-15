@@ -832,13 +832,10 @@ and the join is $(d_1 ljoin d_2)(x) = d_1(x) ljoin d_2(x)$
 (@fig:pointwise). Because $conc$ is monotone, so is this concretization, and a
 larger state describes more stores.
 
-The non-relational analyses instantiate this form at the variable identities
-and tag each value with a machine kind (#isatype("tabs")). A value
-$ctor("KD")(k, a)$ of #isatype("kd") denotes $conc(a) inter "range"(k)$, the
-integers of $conc(a)$ that kind $k$ represents, #ctor("KBot") denotes no
-integer, and #ctor("KTop") every integer (#isaconst("gamma_kd")). The
-state's concretization #isaconst("gamma_tabs") further requires every
-variable to hold a value of its own kind (#isaconst("in_kinds")).
+The non-relational analyses instantiate this form at the variable identities,
+with values tagged by their kind (#isatype("tabs"), @sec:domain-kinds). Their
+concretization #isaconst("gamma_tabs") also requires every variable to hold a
+value of its own kind (#isaconst("in_kinds")).
 
 #let _pw-vals = ($bot$, "0", $top$)
 #figure(
@@ -1086,9 +1083,7 @@ proves the law once (#isathm("aeval_sound"), whose further premise, that the
 answers of the query channel hold at $s$, @ch:cooperation introduces). Each
 operation of $e$ is computed by the domain's operation at the operation's
 machine kind: #isaconst("arith_ik") for arithmetic and #isaconst("cast_ik")
-for a conversion, whose laws require the abstract result to contain the
-concrete result normalized to the kind (#isathm("arith_ik_sound")). Interval
-computes by interval arithmetic on the bounds. For example, if
+for a conversion (@sec:domain-kinds). For example, if
 $d(x) = ivl(0, 9)$ at a 32-bit kind, Interval evaluates `x + 1` to
 $ivl(1, 10)$.
 
@@ -1333,9 +1328,8 @@ the emptiness test, and the printer (@sec:domain-carrier-laws). The
 _primitives_ mirror the program's operations at a machine kind: the constants
 and arithmetic of forward evaluation (@sec:domain-forward), the comparisons
 (@sec:queries), and the comparison refinements and the intersection
-(@sec:branches). The class #isalocale("ik_domain") adds to the carrier
-operations a widening, a narrowing and an emptiness test at a given kind, which
-the kind-tagged values of @sec:nonrel-state need. Every non-relational domain
+(@sec:branches). The class #isalocale("ik_domain") adds the kind-indexed
+widening, narrowing and emptiness test of @sec:domain-kinds. Every non-relational domain
 hands its primitives over as an instance of the class
 #isalocale("kind_int_domain"), whose laws are the soundness conditions of this
 chapter (@fig:domain-carrier).
@@ -1383,7 +1377,7 @@ is such a carrier once its bit range is removed. A non-bottom value is
 denoting ${n}$, or `Excluded (S, r)`, denoting the integers in the bit range
 $r$ outside the finite set $S$. A Voblint carrier denotes sets of mathematical
 integers, and the kind's range is attached outside it (#isatype("kd"),
-@sec:nonrel-state), so a carrier value has no bit range, and `Excluded S`
+@sec:domain-kinds), so a carrier value has no bit range, and `Excluded S`
 denotes $ZZ without S$ (@fig:defexc). Then `Definite 1` and
 `Definite 2` have no least upper bound. Every `Excluded {p}` with
 $p in.not {1, 2}$ lies above both. A least upper bound $u$ would lie below
