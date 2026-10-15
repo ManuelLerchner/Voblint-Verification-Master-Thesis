@@ -23,9 +23,9 @@
       note: "Modulus 0 pins the value: exactly 4.",
     },
     {
-      label: "≥0 · [0,9] · odd · 1 (mod 3)",
+      label: "[0,9] · 1 (mod 6)",
       kind: "Int product",
-      test: (x) => x >= 0 && x <= 9 && mod(x, 2) === 1 && mod(x, 3) === 1,
+      test: (x) => x >= 0 && x <= 9 && mod(x, 6) === 1,
       note: "A product stands for the integers every component allows: here only `1` and `7`.",
     },
     {

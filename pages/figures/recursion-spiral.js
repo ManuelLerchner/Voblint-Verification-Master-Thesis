@@ -15,29 +15,30 @@
       fixture: "24-site-figures/03-recursion_grows_entry_state_diverges.vimp",
       turns: 7,
       endless: true,
+      verdict: "UNKNOWN",
       code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
       grid: {
         join: { none: NO, cs1: NO, cs2: NO, cs3: NO, entry: NO },
         "per-origin": { none: NO, cs1: NO, cs2: NO, cs3: NO, entry: NO },
         warrow: {
-          none: "[0,+∞]",
-          cs1: "[0,0] | [1,+∞]",
-          cs2: "[0,0] | [1,1] | [2,+∞]",
-          cs3: "[0,0] | [1,1] | [2,2] | [3,+∞]",
+          none: "[−2³¹,2³¹−1]",
+          cs1: "[0,0] | [−2³¹,2³¹−1]",
+          cs2: "[0,0] | [1,1] | [−2³¹,2³¹−1]",
+          cs3: "[0,0] | [1,1] | [2,2] | [−2³¹,2³¹−1]",
           entry: NO,
         },
         "warrow-per-origin": {
-          none: "[0,+∞]",
-          cs1: "[0,0] | [1,+∞]",
-          cs2: "[0,0] | [1,1] | [2,+∞]",
-          cs3: "[0,0] | [1,1] | [2,2] | [3,+∞]",
+          none: "[−2³¹,2³¹−1]",
+          cs1: "[0,0] | [−2³¹,2³¹−1]",
+          cs2: "[0,0] | [1,1] | [−2³¹,2³¹−1]",
+          cs3: "[0,0] | [1,1] | [2,2] | [−2³¹,2³¹−1]",
           entry: NO,
         },
         "bounded-narrowing": {
-          none: "[0,+∞]",
-          cs1: "[0,0] | [1,+∞]",
-          cs2: "[0,0] | [1,1] | [2,+∞]",
-          cs3: "[0,0] | [1,1] | [2,2] | [3,+∞]",
+          none: "[−2³¹,2³¹−1]",
+          cs1: "[0,0] | [−2³¹,2³¹−1]",
+          cs2: "[0,0] | [1,1] | [−2³¹,2³¹−1]",
+          cs3: "[0,0] | [1,1] | [2,2] | [−2³¹,2³¹−1]",
           entry: NO,
         },
       },
@@ -46,6 +47,7 @@
       fixture: "24-site-figures/precision/26-recursion_bounded_entry_state_join.vimp",
       turns: 11,
       endless: false,
+      verdict: "PROVED",
       code: "fun f(x) {\n  __voblint_check(x >= 0);\n\n  if (x < 10) {\n    f(x + 1);\n  }\n}\n\nfun main() {\n  f(0);\n}",
       grid: Object.fromEntries(
         ["join", "per-origin", "warrow", "warrow-per-origin", "bounded-narrowing"].map((g) => [
@@ -81,8 +83,8 @@
     grows: {
       join: "One context covers every depth, and Join adds each new entry to it: `[0, 0]`, `[0, 1]`, `[0, 2]`, … The value grows with every turn of the spiral, and the solve does not finish.",
       warrow:
-        "One context covers every depth. Its entry value keeps growing, so warrowing jumps to `[0, +∞]` instead of following the spiral outward, and `x >= 0` is proved for every turn.",
-      cs: "The call string keeps the last `k` call sites: `s₀` is the call in `main`, `s₁` the recursive one. The first `k` depths get contexts of their own with exact values. Every deeper call has the same `k` recursive sites, so they share one context, and warrowing cuts it off at `+∞`.",
+        "One context covers every depth. Its entry value keeps growing, so warrowing jumps to the largest `i32` instead of following the spiral outward. There `x + 1` may overflow, so `x` may be any `i32` and `x >= 0` stays UNKNOWN. That is the right answer: a run 2³¹ calls deep wraps `x` to a negative value.",
+      cs: "The call string keeps the last `k` call sites: `s₀` is the call in `main`, `s₁` the recursive one. The first `k` depths get contexts of their own with exact values. Every deeper call has the same `k` recursive sites, so they share one context, and warrowing cuts it off at the largest `i32`, where `x + 1` may overflow, so `x >= 0` stays UNKNOWN.",
       entry:
         "Entry-state contexts key each call by its entry state, and every depth enters with a new value: `x = 0`, `x = 1`, `x = 2`, … Each turn asks for yet another context, and the solve does not finish, even with warrowing. The growing chips illustrate that mechanism; only the time-out was measured.",
     },
@@ -275,10 +277,10 @@
       }, 1100);
     };
 
-    const answer = (value) =>
+    const answer = (value, verdict) =>
       value === NO
         ? `<span class="verdict unknown">no answer</span> <code>killed after ${SPIRAL_BOUND} s</code>`
-        : `<span class="verdict proved">PROVED</span> <code>x = ${escapeText(value)}</code>`;
+        : `<span class="verdict ${verdict.toLowerCase()}">${verdict}</span> <code>x = ${escapeText(value)}</code>`;
 
     const renderTable = () => {
       const grid = SPIRAL_PROGRAMS[program].grid;
@@ -314,7 +316,7 @@
       const globals = mode === "join" ? "join" : "warrow";
       const context = mode === "cs" ? `cs${k}` : mode === "entry" ? "entry" : "none";
       const value = cfg.grid[globals][context];
-      result.innerHTML = answer(value);
+      result.innerHTML = answer(value, cfg.verdict);
 
       if (value === NO) {
         setBridge(null);
@@ -324,7 +326,7 @@
         band(
           k,
           cfg.endless ? Infinity : cfg.turns - 1,
-          `[${csSites(k)}] ↦ x ∈ [${k}, ${cfg.endless ? "+∞" : 10}]`,
+          `[${csSites(k)}] ↦ x ∈ ${cfg.endless ? "any i32" : `[${k}, 10]`}`,
           "shared",
         );
         setBridge(cfg.endless ? k : null);
@@ -335,7 +337,7 @@
         band(
           0,
           cfg.endless ? Infinity : cfg.turns - 1,
-          `one context: x ∈ [0, ${cfg.endless ? "+∞" : 10}]`,
+          `one context: x ∈ ${cfg.endless ? "any i32" : "[0, 10]"}`,
           "shared",
         );
         setBridge(cfg.endless && mode === "warrow" ? 0 : null);
