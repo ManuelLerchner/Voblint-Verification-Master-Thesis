@@ -43,6 +43,23 @@ datatype ('a, 'v, 'e) gcom =
 type_synonym 'a acom = "('a, vname, exp) gcom"
 type_synonym com = "unit acom"
 
+text \<open>The expressions a command evaluates, as a list for the executable checks.\<close>
+
+fun com_exps :: "('a, 'v, 'e) gcom \<Rightarrow> 'e list" where
+  "com_exps (SKIP _) = []"
+| "com_exps (Assign _ _ e) = [e]"
+| "com_exps (Check _ _ e) = [e]"
+| "com_exps (Seq c1 c2) = com_exps c1 @ com_exps c2"
+| "com_exps (If _ b c1 c2) = b # com_exps c1 @ com_exps c2"
+| "com_exps (While _ b c) = b # com_exps c"
+| "com_exps (Call _ _ _ es) = es"
+| "com_exps (Return _ e) = (case e of Some e \<Rightarrow> [e] | None \<Rightarrow> [])"
+| "com_exps (Restore _) = []"
+| "com_exps (Unwind _) = []"
+
+lemma set_com_exps [simp]: "set (com_exps c) = set3_gcom c"
+  by (induction c) (auto split: option.splits)
+
 text \<open>The discriminators read as the equations they replace, so automation that used to
   substitute \<open>c = SKIP\<close> still finds the constructor.\<close>
 lemma is_SKIP_iff [simp]: "is_SKIP c \<longleftrightarrow> (\<exists>i. c = SKIP i)"

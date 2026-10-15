@@ -1,9 +1,9 @@
 (* Assembles a parsed program and decides what its integers mean.
 
-   A program that writes no kind anywhere is untyped: it keeps VIMP's
-   mathematical integers and goes to the analyzer as parsed. A program that
-   writes a kind on a global line, a formal, a return type or a local
-   declaration is typed, and then every declaration must carry one:
+   A program that writes no kind anywhere declares nothing, and every variable
+   takes the default kind i32 (kenv_of). A program that writes a kind on a
+   global line, a formal, a return type or a local declaration is typed, and
+   then every declaration must carry one:
 
      global u8 g;
      fun u16 f(u8 n) { u8 x; x = n + 1; return x; }
@@ -110,8 +110,8 @@ let is_typed globals defs =
 let fail fmt = Printf.ksprintf failwith fmt
 
 (* C gives an unsuffixed decimal literal the first of int, long, long long that
-   holds it and has no type for a larger one. The typed semantics would wrap
-   such a literal at i64, so a typed program may not write one. *)
+   holds it and has no type for a larger one. run_voblint rejects such a
+   literal as malformed (lits_fit); this reports it at parse time instead. *)
 let check_literal n =
   let i64_min = Z.neg (Z.shift_left Z.one 63)
   and i64_max = Z.pred (Z.shift_left Z.one 63) in
@@ -163,7 +163,6 @@ let kind_decls globals defs =
         if not (List.mem x gnames || List.mem x fnames || List.mem x lnames)
         then fail "undeclared variable '%s' in '%s'" x name)
       (com_vars [] body);
-    List.iter check_literal (com_literals [] body);
     (match ret with
     | None when returns_value body ->
         fail "'%s' returns a value but declares no return kind" name
@@ -200,6 +199,9 @@ let program (globals : global_line list) (defs : definition list) :
       main_body
       (List.concat_map fst globals)
   in
+  List.iter
+    (fun (_, _, _, _, body) -> List.iter check_literal (com_literals [] body))
+    defs;
   last_kind_decls :=
     if is_typed globals defs then kind_decls globals defs else [];
   p

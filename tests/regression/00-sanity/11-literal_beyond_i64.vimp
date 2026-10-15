@@ -1,0 +1,6 @@
+// PARAM: --analysis interval
+// C gives an unsuffixed decimal constant no type beyond long long, so a
+// literal outside i64 is rejected rather than wrapped (lits_fit).
+fun main() {
+  x = 99999999999999999999999;
+}

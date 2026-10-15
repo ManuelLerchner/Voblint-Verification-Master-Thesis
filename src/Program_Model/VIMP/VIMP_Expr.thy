@@ -190,4 +190,27 @@ fun exp_vnames :: "exp \<Rightarrow> vname set" where
 lemma finite_exp_vnames [simp]: "finite (exp_vnames a)"
   by (induction a) auto
 
+text \<open>Every literal of an expression fits \<^const>\<open>I64\<close>. C gives an unsuffixed
+  decimal constant no type beyond it (ISO/IEC 9899 6.4.4.1p5), so a well-formed program
+  writes no other.\<close>
+
+fun lits_fit :: "exp \<Rightarrow> bool" where
+  "lits_fit (N n) \<longleftrightarrow> ik_min I64 \<le> n \<and> n \<le> ik_max I64"
+| "lits_fit (V _) \<longleftrightarrow> True"
+| "lits_fit (Plus a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Minus a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Times a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Div a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Mod a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Less a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (LessEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Greater a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (GreaterEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (NotEq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Eq a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Not a) \<longleftrightarrow> lits_fit a"
+| "lits_fit (And a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Or a b) \<longleftrightarrow> lits_fit a \<and> lits_fit b"
+| "lits_fit (Cast _ a) \<longleftrightarrow> lits_fit a"
+
 end

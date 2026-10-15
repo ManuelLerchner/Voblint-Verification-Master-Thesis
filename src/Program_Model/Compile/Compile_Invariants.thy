@@ -101,7 +101,9 @@ definition wf_program_compile_input_exec :: "imp_prog => bool" where
          pi prog_main_name = Some (\<lparr>formals = [], body = prog_main p\<rparr>) \<and>
          wf_source_com pi (prog_main p) \<and> no_return (prog_main p) \<and>
          list_all (\<lambda>(_, decl). wf_proc_decl \<G> pi decl) procs \<and>
-         list_all (\<lambda>(q, _). special_table q = None) procs)"
+         list_all (\<lambda>(q, _). special_table q = None) procs \<and>
+         list_all lits_fit (com_exps (prog_main p)) \<and>
+         list_all (\<lambda>(_, decl). list_all lits_fit (com_exps (body decl))) procs)"
 
 lemma wf_program_compile_input_exec_sound:
   assumes "wf_program_compile_input_exec p"

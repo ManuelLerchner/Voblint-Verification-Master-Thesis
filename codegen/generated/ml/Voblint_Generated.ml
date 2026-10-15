@@ -6972,6 +6972,37 @@ let rec elab_com
     | g, fm, kappa, q, Restore i -> Restore i
     | g, fm, kappa, q, Unwind i -> Unwind i;;
 
+let rec lits_fit
+  = function N n -> less_eq_int (ik_min I64) n && less_eq_int n (ik_max I64)
+    | V uu -> true
+    | Plus (a, b) -> lits_fit a && lits_fit b
+    | Minus (a, b) -> lits_fit a && lits_fit b
+    | Times (a, b) -> lits_fit a && lits_fit b
+    | Div (a, b) -> lits_fit a && lits_fit b
+    | Mod (a, b) -> lits_fit a && lits_fit b
+    | Less (a, b) -> lits_fit a && lits_fit b
+    | LessEq (a, b) -> lits_fit a && lits_fit b
+    | Greater (a, b) -> lits_fit a && lits_fit b
+    | GreaterEq (a, b) -> lits_fit a && lits_fit b
+    | NotEq (a, b) -> lits_fit a && lits_fit b
+    | Eq (a, b) -> lits_fit a && lits_fit b
+    | Not a -> lits_fit a
+    | And (a, b) -> lits_fit a && lits_fit b
+    | Or (a, b) -> lits_fit a && lits_fit b
+    | Cast (uv, a) -> lits_fit a;;
+
+let rec com_exps
+  = function SKIP uu -> []
+    | Assign (uv, uw, e) -> [e]
+    | Check (ux, uy, e) -> [e]
+    | Seq (c1, c2) -> com_exps c1 @ com_exps c2
+    | If (uz, b, c1, c2) -> b :: com_exps c1 @ com_exps c2
+    | While (va, b, c) -> b :: com_exps c
+    | Call (vb, vc, vd, es) -> es
+    | Return (ve, e) -> (match e with None -> [] | Some ea -> [ea])
+    | Restore vf -> []
+    | Unwind vg -> [];;
+
 let rec sp_publish g d k = Side (g, d, k ());;
 
 let rec dg_sideg _D gk gd = sp_publish gk (DG (bot _D, gd));;
@@ -9746,8 +9777,13 @@ let rec wf_program_compile_input_exec
                            gwf_proc_decl equal_literal exp_vnames ret_var g pi
                              a)
                          procs &&
-                        list_all (fun (q, _) -> is_none (special_table q))
-                          procs))))))));;
+                        (list_all (fun (q, _) -> is_none (special_table q))
+                           procs &&
+                          (list_all lits_fit (com_exps (prog_main p)) &&
+                            list_all
+                              (fun (_, decl) ->
+                                list_all lits_fit (com_exps (body decl)))
+                              procs))))))))));;
 
 let rec conf_analyses
   (Voblint_conf_ext

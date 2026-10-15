@@ -47,10 +47,12 @@ subsection \<open>The source-level typed semantics\<close>
 text \<open>
   An unsuffixed decimal constant takes the first of \<^const>\<open>I32\<close> and
   \<^const>\<open>I64\<close> that represents its magnitude (ISO/IEC 9899 6.4.4.1p5); the frontend
-  folds a sign into the literal, and C types the unsigned token. \<open>esyn\<close> is the kind
-  an expression has of its own accord: a variable's kind, a literal's kind, the usual
-  arithmetic conversion of an arithmetic operator's operands, and \<^const>\<open>I32\<close> for
-  the truth value of a comparison or a logical operator.
+  folds a sign into the literal, and C types the unsigned token. A literal outside
+  \<^const>\<open>I64\<close> has no type in that list, and well-formedness rejects it
+  (\<^const>\<open>lits_fit\<close>). \<open>esyn\<close> is the kind an expression has of its own accord: a
+  variable's kind, a literal's kind, the usual arithmetic conversion of an arithmetic
+  operator's operands, and \<^const>\<open>I32\<close> for the truth value of a comparison or a
+  logical operator.
 \<close>
 
 definition ik_of_lit :: "int \<Rightarrow> ikind" where
