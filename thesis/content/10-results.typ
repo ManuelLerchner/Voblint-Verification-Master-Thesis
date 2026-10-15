@@ -309,7 +309,7 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
             circle((X(m), y), radius: 0.09, fill: col, stroke: none)
           }
         } else {
-          // Every integer m from `vals` upwards; the arrow marks the unbounded rest.
+          // Every m from `vals` up to the kind's maximum; the arrow marks the undrawn rest.
           line((X(vals), y), (X(hi), y), stroke: 3.2pt + col.lighten(60%), mark: (
             end: ">",
             fill: col.lighten(60%),
@@ -336,7 +336,8 @@ holds at the first call and fails at the second call when $x$ is $2$ or $3$.
     contexts. Each row is a set of stores. Both per-context rows lie inside the
     union row, and each later row lies inside the rows below it. The report
     admits $3$ and $5$, which no run reaches, and the stores verdict
-    #verdict(_vge) admits are unbounded. The check `m == 2` (line 4) sees the same
+    #verdict(_vge) admits extend past the drawn range to the largest 32-bit
+    value $2^31 - 1$. The check `m == 2` (line 4) sees the same
     stores. Report and verdict are analyzer output (claim #claim-ref("chain-split-entry"));
     the first three rows are derived by hand.],
   kind: image,

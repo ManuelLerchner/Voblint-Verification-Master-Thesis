@@ -230,28 +230,32 @@ their soundness (#isathm("nonrel_exec_spec_sound"), @sec:instances-supply).
     narrowing at its default bound 5), as on the
     #link("https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/#globals")[project site],
     where each cell opens its run in the playground. Each cell is
-    the verdict and state of the check row. Every check holds in every execution, so an #verdict("UNKNOWN") is lost
+    the verdict and state of the check row. Except in the growing recursion,
+    every check holds in every execution, so an #verdict("UNKNOWN") there is lost
     precision. "No answer in 5 s" means the command-line `--timeout 5` stopped
     the solve.],
 ) <fig:rules-programs>
 
 *Update rules.* _Evidence: executable._ @fig:rules-programs runs the five update rules of @sec:update-rules on
-four programs whose checks hold in every execution. In the first row `p(1)`
+four programs. In the first row `p(1)`
 and `p(2)` publish to the same entry seed. Warrow joins the two contributions
 before widening, so the second looks like growth, and the upper bound goes to
-$+infinity$. Per-origin warrowing widens each call site's contribution
-separately. Each origin writes one constant, so nothing grows.
+the largest 32-bit value. Per-origin warrowing widens each call site's
+contribution separately. Each origin writes one constant, so nothing grows.
 Evaluation pins the effect on two producers of one global: warrowing after
 the join loses the upper bound, and per-origin warrowing keeps it
 (#isathm("two_writer_slot_warrow_loses_upper_bound"),
 #isathm("two_writer_slot_warrow_per_origin_exact")).
-No rule is best on every row. In the last row the
-fixture header attributes the loss to the recursive call's own contribution:
-per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
-the division loses all information. We attribute Warrow's result to the fact that it joins in `main`'s argument $-1$ first, which keeps the lower bound. On the growing recursion the joining
-rules give no answer within the limit. The argument grows without bound, so we
-expect, without a proof, that their solve diverges (@sec:termination); the
-timeout alone does not show this (@sec:trust-boundary). Bounded narrowing, at
+On the shrinking recursion every rule proves the check, but the rules that
+widen per origin keep a weaker state: the recursive call's own contribution is
+widened, and the division `9 / (a + 2)` brings the lower bound back only to
+$-9$, where the joining rules and Warrow keep $-1$. The growing recursion is
+the one row whose check does not hold in every execution. At 32 bits `x + 1`
+wraps, so after $2^31$ nested calls `f` receives $-2^31$ and the check fails.
+The widening rules therefore lose nothing by reporting #verdict("UNKNOWN"). The
+joining rules raise the bound one value per round and give no answer within
+the limit. The timeout shows only that, and neither divergence nor termination
+of their solve (@sec:termination, @sec:trust-boundary). Bounded narrowing, at
 its default bound 5, reaches the verdicts of per-origin warrowing on all four
 programs.
 

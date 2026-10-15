@@ -1022,9 +1022,12 @@ It costs precision, however, as the following program shows.
   )
 }))
 
-In this program $y$ ends up as $|x|$, so the check always holds. Without
-refinement, both arms keep $x |-> ltop$, $y$ becomes $ltop$, and the state
-cannot show that the check holds. Backward refinement runs the condition in
+The first branch keeps $x$ between $-1000$ and $1000$. In this range `- x`
+cannot wrap, so $y$ ends up as $|x|$ and the check always holds. Without the
+bound it could fail: at $x = -2^31$, `- x` wraps to $-2^31$ in 32 bits. Without
+refinement, however, the analysis learns nothing from either condition: $x$
+keeps the top value of its kind, and so does $y$, so the state cannot show
+that the check holds. Backward refinement runs the condition in
 reverse, as in the backward abstract interpretation of tests by Cousot
 @cousot99[§§8.5, 10.1] and the backward analysis of Nipkow and Klein
 @nipkow14[§13.7].
@@ -1046,13 +1049,11 @@ Klein use the lattice meet for this and require it to be exact on the denoted
 sets. Voblint asks for less, namely an intersection that keeps every integer
 both operands share (#isathm("meet_ik_sound")). For Interval it is the meet of
 @sec:domain-carrier-laws. In the program above, $x$ starts at the top value
-of its 32-bit kind, $ivl(-2^31, 2^31 - 1)$. Interval refines it to
-$ivl(1, 2^31 - 1)$ on the true arm and to $ivl(-2^31, 0)$ on the false arm.
-Each arm then bounds $y$ from the refined $x$, and the join yields
-#raw(_g.state).
-// TODO(review): the listing now bounds x first, because `- x` wraps at x = -2^31 and
-// the unbounded check fails there. The prose above still walks through the
-// unbounded program; replacement passage in audit finding C5-01.
+of its 32-bit kind, $ivl(-2^31, 2^31 - 1)$. The false arm of the first
+condition refines it to $ivl(-1000, 1000)$, and joining the true arm's $0$
+keeps that interval. The second condition then refines $x$ to $ivl(1, 1000)$
+on its true arm and to $ivl(-1000, 0)$ on its false arm. Each arm bounds $y$
+from the refined $x$, and the join yields #raw(_g.state).
 
 The guard refinement #isaconst("nonrel_refine") takes a condition, the
 required truth value and a state, and applies the comparison refinements along
