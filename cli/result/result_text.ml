@@ -47,8 +47,11 @@ let obligation_text obligation =
   let call name =
     match operation with
     | C.TCast (k, a) ->
-        "(" ^ Vimp_printer.string_of_kind k ^ ") " ^ name ^ "("
-        ^ Typed_printer.string_of_texp a ^ ", "
+        "("
+        ^ Vimp_printer.string_of_kind k
+        ^ ") " ^ name ^ "("
+        ^ Typed_printer.string_of_texp a
+        ^ ", "
         ^ Typed_printer.string_of_texp (C.arithmetic_operand obligation)
         ^ ")"
     | _ -> Typed_printer.string_of_texp operation
@@ -68,12 +71,14 @@ let obligation_message verdict obligation =
     | C.Signed_Overflow, C.TArith (_, op, _, _) ->
         "signed integer overflow in " ^ operator_name op
     | C.Signed_Overflow, _ -> "signed integer overflow"
-    | ( (C.Conversion_Overflow | C.Min_Conversion_Overflow | C.Max_Conversion_Overflow),
+    | ( ( C.Conversion_Overflow | C.Min_Conversion_Overflow
+        | C.Max_Conversion_Overflow ),
         (C.TCast (k, _) | C.TN (k, _)) ) ->
         (if C.ik_signed k then "signed" else "unsigned")
         ^ " integer overflow in conversion"
-    | (C.Conversion_Overflow | C.Min_Conversion_Overflow | C.Max_Conversion_Overflow), _
-      ->
+    | ( ( C.Conversion_Overflow | C.Min_Conversion_Overflow
+        | C.Max_Conversion_Overflow ),
+        _ ) ->
         "integer overflow in conversion"
   in
   match verdict with
