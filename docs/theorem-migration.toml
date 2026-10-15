@@ -92,7 +92,7 @@ meaning = "The typed analyzer has no separate unit policy: no context is a call 
 [[theorem]]
 legacy = "run_voblint_legacy_entry_state_chain"
 typed = "run_voblint_entry_state_chain"
-meaning = "Admitted contexts typed_mcp_es.entry_context_rel; flow-insensitive globals are not supported on the typed path."
+meaning = "Admitted contexts mcp_es.entry_context_rel, or mcp_split_es.entry_context_rel under flow-insensitive program globals; both placements are covered."
 
 [[theorem]]
 legacy = "nv_source_certified"

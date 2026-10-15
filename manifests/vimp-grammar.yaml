@@ -36,12 +36,12 @@
 # the CLI relies on the well-formedness gate `wf_program_compile_input_exec`.
 #
 # Machine-kind declarations are CLI-only and written in scripts/gen_vimp_menhir.py
-# (gen_program_rule): `global u8 g;`, `fun u16 f(u8 n) { u8 x; ... }`. A program
-# that writes no kind is untyped and keeps mathematical integers; one that writes
-# any kind is typed and goes to the analyzer as the verified `typed_prog p ds`
-# (cli/frontend/vimp_typing.ml). The Isabelle notation reads untyped programs
-# only; a theory states a typed program as `typed_prog p ds`. The kind keywords
-# below also serve the `(k) e` cast, which both targets share.
+# (gen_program_rule): `global u8 g;`, `fun u16 f(u8 n) { u8 x; ... }`. Their kinds
+# become the program's kind_decls (cli/frontend/vimp_typing.ml); a variable without
+# one takes the default kind i32. The Isabelle notation reads programs without
+# declarations; a theory passes the kind declarations to run_voblint beside the
+# program. The kind keywords below also serve the `(k) e` cast, which both targets
+# share.
 #
 # Every production's AST-construction is exactly one of three shapes:
 #
