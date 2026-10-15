@@ -66,7 +66,7 @@ text \<open>Caller-side entry transfer at a call.  The actuals are evaluated in 
   the callee locals are reset (\<^const>\<open>enter_state\<close>, globals preserved), and the resulting
   values are bound to the callee formals, each converted to its formal.  All payload
   comes from the \<open>CallEdge\<close>, so the transfer needs no procedure table.  This is exactly
-  the entered store produced by the source \<^const>\<open>pstep\<close> \<open>Call\<close> rule.\<close>
+  the entered store produced by the source \<^const>\<open>vimp_sem.gpstep\<close> \<open>Call\<close> rule.\<close>
 
 definition gcall_enter :: "('v, 'e) gcall_action \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> ('v \<Rightarrow> int)" where
   "gcall_enter ca s =

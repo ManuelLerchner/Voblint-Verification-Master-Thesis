@@ -262,7 +262,7 @@ subsection \<open>The call-redex source shape\<close>
 
 text \<open>\<open>head_call c\<close> holds when the leftmost-innermost of \<open>c\<close> is a \<^const>\<open>Call\<close> to a procedure
   \<^const>\<open>special_table\<close> does not classify: the shape of an active residual whose next
-  \<^const>\<open>pstep\<close> pushes a frame.  A call \<^const>\<open>special_table\<close> classifies resolves in place
+  \<^const>\<open>vimp_sem.gpstep\<close> pushes a frame.  A call \<^const>\<open>special_table\<close> classifies resolves in place
   instead (\<^const>\<open>residual_sem.gintra_step\<close>'s \<open>ISpecial\<close>), so it is deliberately excluded here, mirroring
   \<^const>\<open>residual_sem.gintra_step\<close>'s own exclusion of \<^const>\<open>Call\<close>.\<close>
 fun head_call :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
@@ -303,7 +303,7 @@ lemma pop_ready_not_head_call: "pop_ready w \<Longrightarrow> \<not> head_call w
 subsection \<open>The return-initiation source shape\<close>
 
 text \<open>\<open>head_return c\<close> holds when the leftmost-innermost of \<open>c\<close> is a source \<^const>\<open>Return\<close>:
-  the shape whose next \<^const>\<open>pstep\<close> initiates a return.\<close>
+  the shape whose next \<^const>\<open>vimp_sem.gpstep\<close> initiates a return.\<close>
 fun head_return :: "('a, 'v, 'e) gcom \<Rightarrow> bool" where
   "head_return (Return i e) = True"
 | "head_return (Seq c1 c2) = head_return c1"
@@ -386,7 +386,7 @@ qed (auto split: if_splits)
 
 text \<open>The runtime invariant \<open>csim_step\<close> asks for: the active command may not return until a
   call has opened an activation for it.  Only the command matters --- neither the store nor
-  the frame stack --- and unlike a head-only guard this survives a \<^const>\<open>pstep\<close>, because it
+  the frame stack --- and unlike a head-only guard this survives a \<^const>\<open>vimp_sem.gpstep\<close>, because it
   already forbids the base-activation returns that a frame pop would expose.\<close>
 end
 
@@ -425,7 +425,7 @@ subsection \<open>Source-step classification\<close>
 text \<open>Sorting a source step into the three cases the simulation treats separately: an
   ordinary intra step, a call, or a return in progress.  The classification is what lets each
   preservation proof assume it is in exactly one case rather than re-deriving the exclusions
-  from \<^const>\<open>pstep\<close> every time.\<close>
+  from \<^const>\<open>vimp_sem.gpstep\<close> every time.\<close>
 context simrel_sem
 begin
 

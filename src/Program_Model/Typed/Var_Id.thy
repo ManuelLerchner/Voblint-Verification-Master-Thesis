@@ -32,7 +32,7 @@ fun var_scope :: "var_id \<Rightarrow> pname option" where
 | "var_scope ReturnVar = None"
 
 text \<open>The source name of an identity, which a report shows and erasure restores.
-  The return slot keeps the reserved name the untyped semantics stores results in.\<close>
+  The return slot keeps the reserved source name \<^const>\<open>ret_var\<close>.\<close>
 
 fun var_name :: "var_id \<Rightarrow> vname" where
   "var_name (GlobalId x) = x"

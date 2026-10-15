@@ -9,7 +9,7 @@
      fun u16 f(u8 n) { u8 x; x = n + 1; return x; }
 
    Its declarations become the verified elaboration's kind_decls, and the
-   program goes to the analyzer as `typed_prog p decls`, whose soundness
+   program goes to the analyzer as `run_voblint conf decls p`, whose soundness
    theorems cover the typed semantics. Declared locals are not zero: the parser
    lowers `u8 x;` to `x = __voblint_nondet_int();` where it is written, so a
    local holds an arbitrary value of its kind until the program writes it, as an

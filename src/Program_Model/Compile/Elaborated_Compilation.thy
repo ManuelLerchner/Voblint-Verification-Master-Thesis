@@ -821,8 +821,9 @@ fun at_node :: "imp_prog \<Rightarrow> store \<Rightarrow> com \<times> store \<
     ("(_,_ \<turnstile>/ _ \<rhd>/ _)" [51, 51, 51, 51] 50) where
   "p, s0 \<turnstile> (r, s, frs) \<rhd> v \<longleftrightarrow>
      (\<exists>c stk. erase c = r \<and> v = point c
-        \<and> declared_global p, elab_pt (prog_table p) (prog_procs p)
-            \<turnstile> (main_body (elab_pt (prog_table p) (prog_procs p)), s0, []) \<rightarrow>\<^sub>p\<^sup>* (c, s, frs)
+        \<and> star (vimp_sem.gpstep aval (declared_global p) ret_var (\<lambda>_ n. n)
+                   (elab_pt (prog_table p) (prog_procs p)))
+            (main_body (elab_pt (prog_table p) (prog_procs p)), s0, []) (c, s, frs)
         \<and> elab_pt (prog_table p) (prog_procs p), prog_cfg p, prog_main_name
             \<turnstile> (c, s, frs) \<approx> (v, s, stk))"
 

@@ -191,8 +191,8 @@ export_code
   N V Plus Minus Times Div Mod
   exp.Not And Or Less exp.Eq Cast
 
-  \<comment> \<open>Typed programs: kind declarations per identity, elaborated and lowered\<close>
-  typed_prog GlobalId ScopedId ReturnId I8 U8 I16 U16 I32 U32 I64 U64
+  \<comment> \<open>Typed programs: kind declarations per identity\<close>
+  GlobalId ScopedId ReturnId I8 U8 I16 U16 I32 U32 I64 U64
   Statement FunctionEntry FunctionResult
   int_of_integer nat_of_integer integer_of_int integer_of_nat
 

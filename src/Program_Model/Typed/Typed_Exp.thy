@@ -275,6 +275,27 @@ corollary teval_elaborate_syn:
   shows "teval (elaborate_syn \<rho> \<kappa> e) t = taval (\<kappa> \<circ> \<rho>) (esyn (\<kappa> \<circ> \<rho>) e) e (t \<circ> \<rho>)"
   using teval_elaborate [OF assms] by (simp add: elaborate_syn_def)
 
+text \<open>The identities a typed expression reads.\<close>
+
+fun tvars :: "texp \<Rightarrow> var_id set" where
+  "tvars (TN _ _) = {}"
+| "tvars (TVar _ v) = {v}"
+| "tvars (TArith _ _ a b) = tvars a \<union> tvars b"
+| "tvars (TCast _ a) = tvars a"
+| "tvars (TCmp _ a b) = tvars a \<union> tvars b"
+| "tvars (TNot a) = tvars a"
+| "tvars (TAnd a b) = tvars a \<union> tvars b"
+| "tvars (TOr a b) = tvars a \<union> tvars b"
+
+lemma tvars_elaborate: "tvars (elaborate \<rho> \<kappa> ik e) \<subseteq> range \<rho>"
+  by (induction e arbitrary: ik) (auto simp: Let_def tcast_to_def)
+
+text \<open>A conversion to a kind whose range contains the source kind's range changes no
+  value.\<close>
+
+definition ik_widens :: "ikind \<Rightarrow> ikind \<Rightarrow> bool" where
+  "ik_widens k ik \<longleftrightarrow> ik_min ik \<le> ik_min k \<and> ik_max k \<le> ik_max ik"
+
 subsection \<open>Erasure\<close>
 
 text \<open>

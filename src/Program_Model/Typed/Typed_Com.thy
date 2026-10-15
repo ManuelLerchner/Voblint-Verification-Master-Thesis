@@ -1,5 +1,5 @@
 theory Typed_Com
-  imports Typed_Exp
+  imports Typed_Exp "Voblint_VIMP.VIMP_Program"
 begin
 
 section \<open>Typed commands\<close>
@@ -23,6 +23,10 @@ fun elab_args :: "(vname \<Rightarrow> var_id) \<Rightarrow> kenv \<Rightarrow> 
   "elab_args \<rho> \<kappa> (f # fs) (e # es) = elaborate \<rho> \<kappa> (\<kappa> f) e # elab_args \<rho> \<kappa> fs es"
 | "elab_args \<rho> \<kappa> [] es = map (elaborate_syn \<rho> \<kappa>) es"
 | "elab_args \<rho> \<kappa> fs [] = []"
+
+lemma tvars_elab_args: "e \<in> set (elab_args \<rho> \<kappa> fs es) \<Longrightarrow> tvars e \<subseteq> range \<rho>"
+  by (induction \<rho> \<kappa> fs es rule: elab_args.induct)
+     (auto simp: elaborate_syn_def dest: subsetD [OF tvars_elaborate])
 
 text \<open>\<open>fm p\<close> lists the formals of procedure \<open>p\<close>, empty for a library call, and
   \<open>q\<close> is the procedure whose body is elaborated.\<close>
@@ -135,5 +139,18 @@ lemma length_elab_args [simp]: "length (elab_args \<rho> \<kappa> fs es) = lengt
 theorem skeleton_elab_com:
   "map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) (elab_com \<G> fm \<kappa> q c) = map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) c"
   by (induction c) (simp_all add: option.map_comp comp_def map_replicate_const)
+
+subsection \<open>Programs\<close>
+
+text \<open>Kinds are declared per identity, and an identity without a declaration is a C
+  \<open>int\<close>.\<close>
+
+type_synonym kind_decls = "(var_id \<times> ikind) list"
+
+definition kenv_of :: "kind_decls \<Rightarrow> kenv" where
+  "kenv_of ds v = (case map_of ds v of Some k \<Rightarrow> k | None \<Rightarrow> I32)"
+
+definition prog_formals :: "imp_prog \<Rightarrow> pname \<Rightarrow> vname list" where
+  "prog_formals p q = (case prog_table p q of Some d \<Rightarrow> formals d | None \<Rightarrow> [])"
 
 end

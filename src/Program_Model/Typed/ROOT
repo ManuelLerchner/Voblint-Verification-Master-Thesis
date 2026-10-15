@@ -9,5 +9,4 @@ session Voblint_Typed in "." = "Voblint_VIMP" +
     Var_Id
     Typed_Exp
     Typed_Com
-    Typed_Lower
     Typed_Semantics

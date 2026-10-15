@@ -84,29 +84,38 @@ lemma fg_one_decl: "fg_pi (STR ''one'') \<noteq> None" "formals (the (fg_pi (STR
 
 lemma fg_call_return_run:
   "\<exists>s1 s2 s3.
-     declared_global fg_prog, fg_pi \<turnstile> (main_body fg_pi, s, [])
-       \<rightarrow>\<^sub>p (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
-   \<and> declared_global fg_prog, fg_pi
-       \<turnstile> (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
-       \<rightarrow>\<^sub>p (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
-   \<and> declared_global fg_prog, fg_pi
-       \<turnstile> (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
-       \<rightarrow>\<^sub>p (SKIP fg_call, s3, [])"
+     vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi (main_body fg_pi, s, [])
+       (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
+   \<and> vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi
+       (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), s1, [Frame s (Some (STR ''x''))])
+       (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
+   \<and> vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi
+       (Seq (Unwind fg_ret) (Restore fg_call), s2, [Frame s (Some (STR ''x''))])
+       (SKIP fg_call, s3, [])"
 proof -
   obtain decl where d: "fg_pi (STR ''one'') = Some decl" using fg_one_decl(1) by blast
   with fg_one_decl have f: "formals decl = []"
     and b: "body decl = gcom.Return fg_ret (Some (N 1))" by simp_all
   have mb: "main_body fg_pi = gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') []" by eval
-  have call: "declared_global fg_prog, fg_pi
-      \<turnstile> (gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') [], s, [])
-      \<rightarrow>\<^sub>p (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call),
+  have call: "vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi
+      (gcom.Call fg_call (Some (STR ''x'')) (STR ''one'') [], s, [])
+      (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call),
            bind_formals [] [] (enter_state (declared_global fg_prog) s),
            [Frame s (Some (STR ''x''))])"
-    using gpstep.Call [where \<Pi> = fg_pi and p = "STR ''one''" and decl = decl and actuals = "[]"
-        and \<G> = "declared_global fg_prog" and s = s and i = fg_call and dst = "Some (STR ''x'')"
+    using vimp_sem.gpstep.Call [where ev = aval and rv = ret_var and conv = "\<lambda>_ n. n"
+        and \<Pi> = fg_pi and p = "STR ''one''" and decl = decl and actuals = "[]"
+        and glob = "declared_global fg_prog" and s = s and i = fg_call and dst = "Some (STR ''x'')"
         and frs = "[]", OF d] f b by simp
-  show ?thesis unfolding mb
-    using call gpstep.Seq2 [OF gpstep.ReturnSome] gpstep.UnwindAct by blast
+  have ret: "vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi
+      (Seq (gcom.Return fg_ret (Some (N 1))) (Restore fg_call), t, fr)
+      (Seq (Unwind fg_ret) (Restore fg_call), t(ret_var := aval (N 1) t), fr)" for t fr
+    by (rule vimp_sem.gpstep.Seq2) (rule vimp_sem.gpstep.ReturnSome)
+  have unw: "vimp_sem.gpstep aval (declared_global fg_prog) ret_var (\<lambda>_ n. n) fg_pi
+      (Seq (Unwind fg_ret) (Restore fg_call), t, [Frame s (Some (STR ''x''))])
+      (SKIP fg_call, combine_assign (Some (STR ''x'')) (t ret_var)
+         (combine_env (declared_global fg_prog) s t), [])" for t
+    by (rule vimp_sem.gpstep.UnwindAct [where conv = "\<lambda>_ n. n", simplified])
+  from call ret unw show ?thesis unfolding mb by blast
 qed
 
 lemma fg_call_return_points:

@@ -142,7 +142,7 @@ text \<open>
   \<open>rv\<close> is the return slot (Goblint's single \<^verbatim>\<open>return_varinfo\<close>), and \<open>conv\<close> converts a
   value written to a destination, as Goblint converts a stored value to its target's
   declared type. \<open>conv\<close> takes the destination as an option so that the instance without
-  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules of the untyped semantics. A call
+  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules without conversion. A call
   converts each actual to its formal, as an assignment converts to its destination, so
   every entry store holds each formal at its own kind. Elaboration has already
   converted an actual it produced, as CIL does, and there the conversion changes
@@ -209,46 +209,6 @@ declare gpstep.intros [simp, intro]
 
 end
 
-text \<open>The untyped semantics is the instance at source names and untyped expressions, with no
-  conversion. Its rules are the generic ones with these parameters substituted, so they read
-  exactly as the untyped semantics has always been stated.\<close>
-
-definition pstep :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
-                       \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p/ _)" [51, 51, 51, 51] 50)
-  where "pstep \<G> = vimp_sem.gpstep aval \<G> ret_var (\<lambda>_ n. n)"
-
-global_interpretation untyped?: vimp_sem aval \<G> ret_var "\<lambda>_ n. n"
-    rewrites "vimp_sem.gpstep aval \<G> ret_var (\<lambda>_ n. n) = pstep \<G>"
-  for \<G> :: "vname \<Rightarrow> bool"
-  by (simp add: pstep_def)
-
-abbreviation
-  psteps :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> 'a acom \<times> store \<times> frame list
-                        \<Rightarrow> 'a acom \<times> store \<times> frame list \<Rightarrow> bool"
-    ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>p\<^sup>*/ _)" [51, 51, 51, 51] 50)
-where "psteps \<G> \<Pi> x y \<equiv> star (pstep \<G> \<Pi>) x y"
-
-lemmas star_pstep_induct =
-  star.induct[of "pstep \<G> \<Pi>", split_format(complete), case_names refl step]
-
-subsection \<open>Completing runs\<close>
-
-text \<open>A run completes when it reaches \<open>SKIP\<close> with the frame stack it started
-  with; \<open>SKIP\<close> under a non-empty stack is stuck, not finished.\<close>
-abbreviation pcompletes :: "(vname \<Rightarrow> bool) \<Rightarrow> proc_table \<Rightarrow> com \<Rightarrow> store \<Rightarrow> store \<Rightarrow> bool" where
-  "pcompletes \<G> \<Pi> c s t \<equiv> \<G>, \<Pi> \<turnstile> (c, s, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t, [])"
-
-lemma pcompletes_skip: "pcompletes \<G> \<Pi> (SKIP ()) s s"
-  by (rule star.refl)
-
-lemma pcompletes_assign: "pcompletes \<G> \<Pi> (Assign () x a) s (s(x := \<lbrakk>a\<rbrakk>\<^sub>e s))"
-  by simp
-
-lemma pcompletes_special_nondet_int:
-  "pcompletes \<G> \<Pi> (Call () (Some x) special_pname_nondet_int []) s (s(x := v))"
-  by (simp add: special_table_def)
-
 context vimp_sem
 begin
 
@@ -265,19 +225,6 @@ lemma psteps_Seq2:
   by (induction rule: star.induct[of "gpstep \<Pi>", split_format(complete)]) (auto intro: star.step)
 
 end
-
-lemma pcompletes_Seq:
-  assumes "pcompletes \<G> \<Pi> c1 s s2" and "pcompletes \<G> \<Pi> c2 s2 t"
-  shows "pcompletes \<G> \<Pi> (Seq c1 c2) s t"
-  using psteps_Seq2[OF assms(1)] assms(2) by (meson Seq1 star.step star_trans)
-
-lemma pcompletes_IfTrue:
-  "truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c1 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If () b c1 c2) s t"
-  by (meson IfTrue star.step)
-
-lemma pcompletes_IfFalse:
-  "\<not> truthy (\<lbrakk>b\<rbrakk>\<^sub>e s) \<Longrightarrow> pcompletes \<G> \<Pi> c2 s t \<Longrightarrow> pcompletes \<G> \<Pi> (If () b c1 c2) s t"
-  by (meson IfFalse star.step)
 
 subsection \<open>Frame-stack extension\<close>
 
@@ -350,26 +297,7 @@ proof -
   then show ?thesis by simp
 qed
 
-text \<open>A value reaches the destination only through an explicit \<open>Return\<close>;
-  otherwise the destination receives \<open>ret_var\<close>'s \<open>enter_state\<close> value \<open>0\<close>.\<close>
 end
-
-lemma pcompletes_Call:
-  assumes p: "\<Pi> p = Some decl"
-      and arity: "length actuals = length (formals decl)"
-      and distinct_formals: "distinct (formals decl)"
-      and body: "pcompletes \<G> \<Pi> (body decl)
-                   (bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s)) t'"
-  shows "pcompletes \<G> \<Pi> (Call () dst p actuals) s
-           (combine_assign dst (t' ret_var) (combine_env \<G> s t'))"
-proof -
-  have "\<G>, \<Pi> \<turnstile> (Call () dst p actuals, s, []) \<rightarrow>\<^sub>p
-          (Seq (body decl) (Restore ()),
-           bind_formals (formals decl) (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) actuals) (enter_state \<G> s), [Frame s dst])"
-    using pstep_Call[where \<Pi> = \<Pi> and p = p, OF p arity distinct_formals] by simp
-  then show ?thesis
-    by (rule star.step) (rule psteps_Seq_Restore_body[OF psteps_frame_mono[OF body]])
-qed
 
 section \<open>Source-program well-formedness\<close>
 
@@ -593,46 +521,5 @@ lemma wf_source_programD:
     and "source_com (main_body \<Pi>)"
   using assms wf_source_com_source_com [of vars rv \<Pi>]
   unfolding gwf_source_program_def source_pi_def gwf_proc_decl_def by blast+
-
-
-section \<open>The semantics is inhabited\<close>
-
-text \<open>
-  Every theorem above is conditional on a step or a run existing, so this theory ends by
-  exhibiting one that exercises the parts most easily got wrong: a procedure call that pushes
-  a frame, returns a value, and pops the frame again.  Globals are empty here, so nothing the
-  callee wrote survives except the returned value --- which is what has to reach \<open>x\<close>.
-\<close>
-
-definition witness_ret1_pi :: proc_table where
-  "witness_ret1_pi p =
-     (if p = STR ''ret1'' then Some \<lparr>formals = [], body = Return () (Some (N 1))\<rparr> else None)"
-
-theorem pcompletes_witness:
-  "\<exists>t. pcompletes (\<lambda>_. False) witness_ret1_pi
-         (Call () (Some (STR ''x'')) (STR ''ret1'') []) s t
-     \<and> t (STR ''x'') = 1"
-proof -
-  let ?\<G> = "\<lambda>_ :: vname. False"
-  let ?fr = "[Frame s (Some (STR ''x''))]"
-  let ?en = "enter_state ?\<G> s"
-  let ?s' = "?en(ret_var := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
-  let ?t  = "(combine_env ?\<G> s ?s')(STR ''x'' := \<lbrakk>N 1\<rbrakk>\<^sub>e ?en)"
-  have q: "witness_ret1_pi (STR ''ret1'') = Some \<lparr>formals = [], body = Return () (Some (N 1))\<rparr>"
-    by (simp add: witness_ret1_pi_def)
-  have s1: "?\<G>, witness_ret1_pi \<turnstile> (Call () (Some (STR ''x'')) (STR ''ret1'') [], s, [])
-              \<rightarrow>\<^sub>p (Seq (Return () (Some (N 1))) (Restore ()), ?en, ?fr)"
-    using q by (rule pstep_Call_parameterless)
-  have s2: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Return () (Some (N 1))) (Restore ()), ?en, ?fr)
-              \<rightarrow>\<^sub>p (Seq (Unwind ()) (Restore ()), ?s', ?fr)"
-    by (intro Seq2 ReturnSome)
-  have s3: "?\<G>, witness_ret1_pi \<turnstile> (Seq (Unwind ()) (Restore ()), ?s', ?fr) \<rightarrow>\<^sub>p (SKIP (), ?t, [])"
-    using UnwindAct[of ?\<G> witness_ret1_pi "()" "()" ?s' s "Some (STR ''x'')" "[]"] by simp
-  from s1 s2 s3
-  have "pcompletes ?\<G> witness_ret1_pi (Call () (Some (STR ''x'')) (STR ''ret1'') []) s ?t"
-    by (meson star.refl star.step)
-  moreover have "?t (STR ''x'') = 1" by simp
-  ultimately show ?thesis by blast
-qed
 
 end

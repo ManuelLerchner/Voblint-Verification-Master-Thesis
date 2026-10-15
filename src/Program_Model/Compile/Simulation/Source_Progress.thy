@@ -6,7 +6,7 @@ section \<open>Reachable source configurations are never stuck\<close>
 
 text \<open>
   A stuck source configuration would silently cut executions short: every later program point
-  would be unreachable under \<^const>\<open>pstep\<close>, so an unreachability verdict could hold for the
+  would be unreachable under \<^const>\<open>vimp_sem.gpstep\<close>, so an unreachability verdict could hold for the
   wrong reason.  Progress rules this out for accepted programs: a reachable configuration
   either has finished --- \<^const>\<open>SKIP\<close> with no caller frame left --- or can take a step.
 

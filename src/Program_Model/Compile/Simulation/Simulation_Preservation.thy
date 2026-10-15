@@ -86,7 +86,7 @@ qed
 
 section \<open>Frame-stack plumbing\<close>
 
-text \<open>A single \<^const>\<open>pstep\<close> touches only the head region of the frame stack, so a bottom
+text \<open>A single \<^const>\<open>vimp_sem.gpstep\<close> touches only the head region of the frame stack, so a bottom
   segment \<open>extra\<close> rides along unchanged when the active part \<open>frs\<close> is non-empty.  This
   bridges the \<open>Nested\<close> snoc (the inner step threads all frames) to the induction hypothesis
   (stated on the inner frames alone).\<close>
@@ -554,7 +554,7 @@ lemma csim_not_unwind:
   by (erule csim.cases) (auto dest: control_at_not_unwind pop_ready_not_Unwind)
 
 text \<open>
-  One \<^const>\<open>pstep\<close> of a base returning activation \<^term>\<open>seq_after w afters\<close>
+  One \<^const>\<open>vimp_sem.gpstep\<close> of a base returning activation \<^term>\<open>seq_after w afters\<close>
   (\<^term>\<open>pop_ready w\<close>, framed by the single caller frame, CFG at \<^term>\<open>FunctionResult p\<close>)
   either \<^emph>\<open>pops\<close>: the source resumes at \<^term>\<open>seq_after (SKIP i) afters\<close> with the combined store
   and the CFG performs exactly one return \<^const>\<open>cfg_exec_sem.gcstep\<close> to \<open>cont\<close>, rebuilt as a \<open>Base\<close>

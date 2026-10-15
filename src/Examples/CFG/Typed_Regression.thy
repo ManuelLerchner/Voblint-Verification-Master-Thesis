@@ -1,5 +1,5 @@
 theory Typed_Regression
-  imports "Voblint_Typed.Typed_Lower" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Typed.Typed_Com" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Regression: typed elaboration\<close>
@@ -191,47 +191,6 @@ lemma sample_elaboration:
 proof -
   have "\<forall>e \<in> set3_gcom sample_com. cast_free e" by eval
   then show ?thesis by (intro conjI wt_tcom_elab_com tcom_erase_elab_com skeleton_elab_com)
-qed
-
-
-subsection \<open>A typed program through the analyzer's pipeline\<close>
-
-text \<open>\<open>x = 250; x = x + 10;\<close> at \<^const>\<open>U8\<close>. The typed program is an ordinary
-  program whose second assignment computes the wrapped value \<open>4\<close> under the untyped
-  evaluator, keeps the skeleton of the source, and evaluates only expressions whose
-  untyped value is their typed meaning.\<close>
-
-definition wrap_prog :: imp_prog where
-  "wrap_prog = program { fun main() { x = 250; x = x + 10; } }"
-
-definition wrap_kinds :: kind_decls where
-  "wrap_kinds = [(ScopedId prog_main_name (STR ''x''), U8)]"
-
-lemma wrap_typed_program:
-  "\<lbrakk>assign_rhs (seq_second (prog_main (typed_prog wrap_prog wrap_kinds)))\<rbrakk>\<^sub>e
-     ((\<lambda>_. 0)(STR ''x'' := 250)) = 4"
-  "map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) (prog_main (typed_prog wrap_prog wrap_kinds))
-     = map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) (prog_main wrap_prog)"
-  "\<forall>e' \<in> set3_gcom (prog_main (typed_prog wrap_prog wrap_kinds)).
-     \<exists>e \<in> set3_gcom (prog_main wrap_prog). \<exists>ik.
-       \<forall>s. \<lbrakk>e'\<rbrakk>\<^sub>e s = taval (kenv_of wrap_kinds \<circ> resolve_var (declared_global wrap_prog) prog_main_name) ik e s"
-proof -
-  have "prog_table wrap_prog prog_main_name \<noteq> None" by eval
-  then obtain d where d: "prog_table wrap_prog prog_main_name = Some d" by blast
-  have main: "prog_main (typed_prog wrap_prog wrap_kinds)
-                = lower_com (elab_com (declared_global wrap_prog) (prog_formals wrap_prog)
-                    (kenv_of wrap_kinds) prog_main_name (prog_main wrap_prog))"
-    using d by (simp add: prog_main_def main_body_def prog_table_typed_prog)
-  show "\<lbrakk>assign_rhs (seq_second (prog_main (typed_prog wrap_prog wrap_kinds)))\<rbrakk>\<^sub>e
-          ((\<lambda>_. 0)(STR ''x'' := 250)) = 4"
-    by eval
-  show "map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) (prog_main (typed_prog wrap_prog wrap_kinds))
-          = map_gcom id (\<lambda>_. ()) (\<lambda>_. ()) (prog_main wrap_prog)"
-    unfolding main skeleton_lower_com by (rule skeleton_elab_com)
-  show "\<forall>e' \<in> set3_gcom (prog_main (typed_prog wrap_prog wrap_kinds)).
-          \<exists>e \<in> set3_gcom (prog_main wrap_prog). \<exists>ik.
-            \<forall>s. \<lbrakk>e'\<rbrakk>\<^sub>e s = taval (kenv_of wrap_kinds \<circ> resolve_var (declared_global wrap_prog) prog_main_name) ik e s"
-    unfolding main using lower_com_meaning by blast
 qed
 
 end

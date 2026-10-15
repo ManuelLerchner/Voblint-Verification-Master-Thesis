@@ -584,7 +584,7 @@ lemma control_at_return_edge:
 
 subsection \<open>The intra-procedural source steps\<close>
 
-text \<open>\<open>gintra_step\<close> is the fragment of \<^const>\<open>pstep\<close> that stays inside one activation without
+text \<open>\<open>gintra_step\<close> is the fragment of \<^const>\<open>vimp_sem.gpstep\<close> that stays inside one activation without
   initiating a return: assignment, sequencing (head execution and head completion), both
   conditionals, and the loop unfolding.  It excludes \<^const>\<open>Call\<close> (pushes a frame),
   \<^const>\<open>Return\<close> (produces \<^const>\<open>Unwind\<close>), and the runtime-only \<^const>\<open>Restore\<close> / \<^const>\<open>Unwind\<close>

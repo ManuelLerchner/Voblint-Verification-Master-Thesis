@@ -183,7 +183,7 @@ fun gedge_step :: "('v, 'e) gedge_action \<Rightarrow> ('v \<Rightarrow> int) \<
 text \<open>One intra transition on a \<open>(node, store)\<close> pair.  An intra path is its \<^const>\<open>star\<close>, so
   reflexivity, transitivity and the induction rule come from \<^theory>\<open>HOL-IMP.Star\<close> rather than
   from a bespoke closure.  The name avoids \<open>gintra_step\<close>, which is the \<^emph>\<open>source\<close>-level
-  \<^const>\<open>pstep\<close> fragment.\<close>
+  \<^const>\<open>vimp_sem.gpstep\<close> fragment.\<close>
 
 definition gcfg_intra_step ::
     "('v, 'e) gcfg \<Rightarrow> cfg_node \<times> ('v \<Rightarrow> int) \<Rightarrow> cfg_node \<times> ('v \<Rightarrow> int) \<Rightarrow> bool" where

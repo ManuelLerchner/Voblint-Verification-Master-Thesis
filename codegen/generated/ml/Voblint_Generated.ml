@@ -196,8 +196,6 @@ module Generated : sig
     unit imp_prog_ext -> (var_id * ikind) list -> (var_id, texp, unit) gcfg_ext
   val sem_int_signed_overflow : 'a sem_conf_ext -> signed_overflow_policy
   val var_label : var_id -> string
-  val typed_prog :
-    unit imp_prog_ext -> (var_id * ikind) list -> unit imp_prog_ext
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val conf_analyses : 'a voblint_conf_ext -> typed_domain list
   val conf_context : 'a voblint_conf_ext -> typed_context
@@ -6619,12 +6617,21 @@ let rec map_filter
         (match f x with None -> map_filter f xs
           | Some y -> y :: map_filter f xs);;
 
-let ret_var : string = "#ret";;
+let rec sup_set _A
+  x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
+    | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
 
-let rec var_name = function GlobalId x -> x
-                   | ScopedId (uu, x) -> x
-                   | ReturnId uv -> ret_var
-                   | ReturnVar -> ret_var;;
+let bot_set : 'a set = Set [];;
+
+let rec tvars
+  = function TN (uu, uv) -> bot_set
+    | TVar (uw, v) -> inserta equal_var_id v bot_set
+    | TArith (ux, uy, a, b) -> sup_set equal_var_id (tvars a) (tvars b)
+    | TCast (uz, a) -> tvars a
+    | TCmp (va, a, b) -> sup_set equal_var_id (tvars a) (tvars b)
+    | TNot a -> tvars a
+    | TAnd (a, b) -> sup_set equal_var_id (tvars a) (tvars b)
+    | TOr (a, b) -> sup_set equal_var_id (tvars a) (tvars b);;
 
 let rec cfg_entry (Gcfg_ext (intra, calls, cfg_entry, more)) = cfg_entry;;
 
@@ -6796,8 +6803,6 @@ let rec mcp_qry
              (ls_query c ch x q))
       cs (top_query_lift (order_int_dom_ext bounded_lattice_unit));;
 
-let bot_set : 'a set = Set [];;
-
 let query_depth : nat = nat_of_integer (Z.of_int 1024);;
 
 let rec outer_man _A
@@ -6836,42 +6841,10 @@ let rec ls_query_update
 
 let rec with_qry h c = ls_query_update (fun _ -> h) c;;
 
-let rec aop_exp = function AAdd -> (fun a b -> Plus (a, b))
-                  | ASub -> (fun a b -> Minus (a, b))
-                  | AMul -> (fun a b -> Times (a, b))
-                  | ADiv -> (fun a b -> Div (a, b))
-                  | AMod -> (fun a b -> Mod (a, b));;
+let rec kenv_of
+  ds v = (match map_of equal_var_id ds v with None -> I32 | Some k -> k);;
 
-let rec cop_exp = function CLt -> (fun a b -> Less (a, b))
-                  | CLe -> (fun a b -> LessEq (a, b))
-                  | CGt -> (fun a b -> Greater (a, b))
-                  | CGe -> (fun a b -> GreaterEq (a, b))
-                  | CEq -> (fun a b -> Eq (a, b))
-                  | CNe -> (fun a b -> NotEq (a, b));;
-
-let rec ik_widens
-  k ik =
-    less_eq_int (ik_min ik) (ik_min k) && less_eq_int (ik_max k) (ik_max ik);;
-
-let rec texp_kind = function TN (ik, uu) -> ik
-                    | TVar (ik, uv) -> ik
-                    | TArith (ik, uw, ux, uy) -> ik
-                    | TCast (ik, uz) -> ik
-                    | TCmp (va, vb, vc) -> I32
-                    | TNot vd -> I32
-                    | TAnd (ve, vf) -> I32
-                    | TOr (vg, vh) -> I32;;
-
-let rec lower
-  = function TN (ik, n) -> N (ik_norm ik n)
-    | TVar (ik, v) -> Cast (ik, V (var_name v))
-    | TArith (ik, op, a, b) -> Cast (ik, aop_exp op (lower a) (lower b))
-    | TCast (ik, a) ->
-        (if ik_widens (texp_kind a) ik then lower a else Cast (ik, lower a))
-    | TCmp (op, a, b) -> cop_exp op (lower a) (lower b)
-    | TNot a -> Not (lower a)
-    | TAnd (a, b) -> And (lower a, lower b)
-    | TOr (a, b) -> Or (lower a, lower b);;
+let ret_var : string = "#ret";;
 
 let rec calls (Gcfg_ext (intra, calls, cfg_entry, more)) = calls;;
 
@@ -7237,10 +7210,6 @@ let rec special_table
                else (if ((p : string) = special_pname_max) then Some SD_Max
                       else None)));;
 
-let rec sup_set _A
-  x0 a = match x0, a with Set xs, a -> fold (inserta _A) xs a
-    | Coset xs, a -> Coset (filtera (fun x -> not (member _A x a)) xs);;
-
 let rec csize
   = function SKIP i -> one_nat
     | Assign (i, x, a) -> one_nat
@@ -7499,9 +7468,6 @@ let rec prog_table p = map_of equal_literal (proc_rep p);;
 let rec prog_formals
   p q = (match prog_table p q with None -> [] | Some a -> formals a);;
 
-let rec kenv_of
-  ds v = (match map_of equal_var_id ds v with None -> I32 | Some k -> k);;
-
 let rec typed_ptable
   p ds q =
     map_option
@@ -7578,6 +7544,19 @@ let rec tlive
               (tslot5 r) Bot)
     | Typed_Order, r ->
         not (equal_lifteda (equal_order_rel equal_var_id) (tslot6 r) Bot);;
+
+let rec ik_widens
+  k ik =
+    less_eq_int (ik_min ik) (ik_min k) && less_eq_int (ik_max k) (ik_max ik);;
+
+let rec texp_kind = function TN (ik, uu) -> ik
+                    | TVar (ik, uv) -> ik
+                    | TArith (ik, uw, ux, uy) -> ik
+                    | TCast (ik, uz) -> ik
+                    | TCmp (va, vb, vc) -> I32
+                    | TNot vd -> I32
+                    | TAnd (ve, vf) -> I32
+                    | TOr (vg, vh) -> I32;;
 
 let rec tinit_st _A
   ds = Abs_default_st
@@ -8505,16 +8484,6 @@ let rec tnarrow _A
                  (of_int_ik _A (texp_kind e) zero_inta)))
           sigma);;
 
-let rec tvars
-  = function TN (uu, uv) -> bot_set
-    | TVar (uw, v) -> inserta equal_var_id v bot_set
-    | TArith (ux, uy, a, b) -> sup_set equal_var_id (tvars a) (tvars b)
-    | TCast (uz, a) -> tvars a
-    | TCmp (va, a, b) -> sup_set equal_var_id (tvars a) (tvars b)
-    | TNot a -> tvars a
-    | TAnd (a, b) -> sup_set equal_var_id (tvars a) (tvars b)
-    | TOr (a, b) -> sup_set equal_var_id (tvars a) (tvars b);;
-
 let rec tatom _A
   sem kappa ch e pol sigma =
     (let sigmaa = tnarrow _A sem kappa ch e pol sigma in
@@ -9392,10 +9361,10 @@ let rec var_label = function GlobalId x -> x
                     | ReturnId f -> f ^ "::return"
                     | ReturnVar -> "return";;
 
-let rec var_namea = function ScopedId (f, x) -> x
-                    | GlobalId v -> var_label (GlobalId v)
-                    | ReturnId v -> var_label (ReturnId v)
-                    | ReturnVar -> var_label ReturnVar;;
+let rec var_name = function ScopedId (f, x) -> x
+                   | GlobalId v -> var_label (GlobalId v)
+                   | ReturnId v -> var_label (ReturnId v)
+                   | ReturnVar -> var_label ReturnVar;;
 
 let rec sup_fin _A = function Set [] -> abort_empty_set (sup_fin _A)
                      | Set (x :: xs) -> fold (sup _A.sup_semilattice_sup) xs x;;
@@ -9660,44 +9629,6 @@ let rec tfield_empty
         equal_lifteda (equal_order_rel equal_var_id) (tslot6 r) Bot;;
 
 let rec tmcp_emp asa p r = list_ex (fun a -> tfield_empty a r) asa;;
-
-let rec body_update
-  bodya (Gproc_decl_ext (formals, body, more)) =
-    Gproc_decl_ext (formals, bodya body, more);;
-
-let rec map_gcom
-  f1 f2 f3 x3 = match f1, f2, f3, x3 with f1, f2, f3, SKIP x1 -> SKIP (f1 x1)
-    | f1, f2, f3, Assign (x21, x22, x23) -> Assign (f1 x21, f2 x22, f3 x23)
-    | f1, f2, f3, Check (x31, x32, x33) -> Check (f1 x31, x32, f3 x33)
-    | f1, f2, f3, Seq (x41, x42) ->
-        Seq (map_gcom f1 f2 f3 x41, map_gcom f1 f2 f3 x42)
-    | f1, f2, f3, If (x51, x52, x53, x54) ->
-        If (f1 x51, f3 x52, map_gcom f1 f2 f3 x53, map_gcom f1 f2 f3 x54)
-    | f1, f2, f3, While (x61, x62, x63) ->
-        While (f1 x61, f3 x62, map_gcom f1 f2 f3 x63)
-    | f1, f2, f3, Call (x71, x72, x73, x74) ->
-        Call (f1 x71, map_option f2 x72, x73, map f3 x74)
-    | f1, f2, f3, Return (x81, x82) -> Return (f1 x81, map_option f3 x82)
-    | f1, f2, f3, Restore x9 -> Restore (f1 x9)
-    | f1, f2, f3, Unwind x10 -> Unwind (f1 x10);;
-
-let rec typed_proc
-  p ds q d =
-    body_update
-      (fun _ ->
-        map_gcom id var_name lower
-          (elab_com (declared_global p) (prog_formals p) (kenv_of ds) q
-            (body d)))
-      d;;
-
-let rec proc_rep_update
-  proc_repa (Imp_prog_ext (proc_rep, declared_global_vars, more)) =
-    Imp_prog_ext (proc_repa proc_rep, declared_global_vars, more);;
-
-let rec typed_prog
-  p ds =
-    proc_rep_update
-      (fun _ -> map (fun (q, d) -> (q, typed_proc p ds q d)) (proc_rep p)) p;;
 
 let rec prog_main p = main_body (prog_table p);;
 
@@ -10375,7 +10306,7 @@ let rec order_field_view
         (Typed_Order_Value
           (match d with Bot -> None | Lifted OBot -> None
             | Lifted (OFacts (_, ps)) ->
-              Some (map (fun (a, b) -> (var_namea a, var_namea b))
+              Some (map (fun (a, b) -> (var_name a, var_name b))
                      (sorted_list_of_set
                        ((equal_prod equal_var_id equal_var_id),
                          (linorder_prod linorder_var_id linorder_var_id))
