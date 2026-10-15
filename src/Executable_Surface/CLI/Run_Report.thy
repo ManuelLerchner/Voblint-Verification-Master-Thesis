@@ -922,14 +922,15 @@ definition field_view ::
 text \<open>An order fact relates variables of one procedure's state, so it names each by its
   own name.\<close>
 
-fun var_name :: "var_id \<Rightarrow> vname" where
-  "var_name (ScopedId f x) = x"
-| "var_name x = var_label x"
+fun order_var_label :: "var_id \<Rightarrow> vname" where
+  "order_var_label (ScopedId f x) = x"
+| "order_var_label x = var_label x"
 
 definition order_field_view :: "var_id order_rel lifted \<Rightarrow> report_value field_state" where
   "order_field_view d =
      Field_Whole (Order_Value (case d of
-        Lifted (OFacts _ ps) \<Rightarrow> Some (map (\<lambda>(a, b). (var_name a, var_name b)) (sorted_list_of_set ps))
+        Lifted (OFacts _ ps) \<Rightarrow>
+          Some (map (\<lambda>(a, b). (order_var_label a, order_var_label b)) (sorted_list_of_set ps))
       | _ \<Rightarrow> None))"
 
 definition render ::

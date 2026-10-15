@@ -10848,17 +10848,17 @@ let rec mcp_rd
                              (slot5 r),
                             slot6 r)))));;
 
-let rec var_name = function ScopedId (f, x) -> x
-                   | GlobalId v -> var_label (GlobalId v)
-                   | ReturnId v -> var_label (ReturnId v)
-                   | ReturnVar -> var_label ReturnVar;;
+let rec order_var_label = function ScopedId (f, x) -> x
+                          | GlobalId v -> var_label (GlobalId v)
+                          | ReturnId v -> var_label (ReturnId v)
+                          | ReturnVar -> var_label ReturnVar;;
 
 let rec order_field_view
   d = Field_Whole
         (Order_Value
           (match d with Bot -> None | Lifted OBot -> None
             | Lifted (OFacts (_, ps)) ->
-              Some (map (fun (a, b) -> (var_name a, var_name b))
+              Some (map (fun (a, b) -> (order_var_label a, order_var_label b))
                      (sorted_list_of_set
                        ((equal_prod equal_var_id equal_var_id),
                          (linorder_prod linorder_var_id linorder_var_id))
