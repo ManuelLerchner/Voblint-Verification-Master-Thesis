@@ -12,7 +12,7 @@
   const NO = null;
   const SPIRAL_PROGRAMS = {
     grows: {
-      fixture: "24-site-figures/03-recursion_grows_entry_state_diverges.vimp",
+      fixture: "24-site-figures/03-recursion_grows_entry_state_timeout.vimp",
       turns: 7,
       endless: true,
       verdict: "UNKNOWN",

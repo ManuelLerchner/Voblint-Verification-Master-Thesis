@@ -1,4 +1,5 @@
 // PARAM: --analysis interval
+// EXPECT-ARITHMETIC
 // The usual arithmetic conversions turn -1 into 4294967295 before it is
 // compared with an unsigned 32-bit value, so -1 < 1u is false, as in C.
 fun main() {
@@ -6,5 +7,5 @@ fun main() {
   u32 u;
   x = -1;
   u = 1;
-  __voblint_check(x < u); // REFUTED
+  __voblint_check(x < u); // REFUTED // ARITH: ERROR conversion-overflow
 }

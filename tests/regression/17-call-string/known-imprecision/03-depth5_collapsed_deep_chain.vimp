@@ -1,17 +1,21 @@
 // PARAM: --analysis interval --context call-string --context-depth 5
 // Adapted from Goblint tests/regression/79-callstring/01-multiple_tests_h5sens_cs.c
 // and 02-multiple_tests_h5ins_cs.c (ana.context.callString_length 5, i.e.
-// --context call-string --context-depth 5). Goblint proves a(7), e(5),
-// k(9) and o(5) (its widening delay tolerates about three collapsed
-// levels) and reports the 02 checks UNKNOWN; voblint proves the a/b/c
-// family and reports e, k and o UNKNOWN. Every concrete result is fixed,
-// so this is imprecision, not underdetermination.
+// --context call-string --context-depth 5). Every concrete result is fixed
+// and no value comes near the i32 bounds: x0..x3 are 11, y0 = 5, y1 = 6,
+// z0 = z1 = 2, and m is 0 after each o call. Goblint proves a(7), e(5),
+// k(9) and o(5) (its widening delay tolerates about three collapsed levels)
+// and reports the 02 checks UNKNOWN. Voblint proves the four a/b/c checks
+// and leaves the six e, k and o checks UNKNOWN; those six are the
+// imprecision this case pins. --context entry-state proves all ten.
 // The call string is exact only while the deepest activation chain fits in
 // K call sites. Beyond that every deeper activation carries the same
 // truncated key, so one callee-entry seed is the join of their arguments.
-// For a/b/c the joined seed contains 0 next to positive values; the else
-// edge of i == 0 moves the lower bound past 0, so the fall-through
-// `return 1` stays dead. What the other families lose, measured:
+// - a/b/c (PROVED): the joined seed contains 0 next to positive values.
+//   Interval's guard refinement for i != 0 strips the endpoint 0, so the
+//   seed reaching 0 < i is positive, the fall-through `return 1` stays dead,
+//   and the collapsed exit is exactly 11.
+// What the other families lose, measured:
 // - k/h: the joined seed is i=[0,2147483646], so the collapsed context
 //   admits values below 2 that the concrete run, which stops at k(2),
 //   never passes; its fall-through `return 1` joins z0 and z1 to [1,2].
@@ -21,7 +25,6 @@
 // - o with the global m: the collapsed context is entered from three call
 //   chains, warrowing widens its seed to i=[0,2147483646], the body writes
 //   m := i from it, and m reads back as [0,2147483646] after each call.
-// --context entry-state proves every check in this file.
 global m;
 fun a(i) {
   if (i == 0) { return 11; }

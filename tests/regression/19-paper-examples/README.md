@@ -63,8 +63,10 @@ paper's -- `[-inf,+inf]` under whole-value warrowing, `[-17,42]` per origin.
 `--program-globals flow-insensitive` selects the flow-insensitive placement:
 `g` and `h` each get their own global unknown, Example 5's `[g]` and `[h]`.
 Case 07 runs Fig. 1 that way. The summary of `g` ends at `[-17,42]`, which
-proves `g < 43` and not `g == 42`, as Example 1 says, and `h` widens to
-`[0,+inf]`, as Example 3 says. Example 2's loss does not survive there: under
+proves `g < 43` and not `g == 42`, as Example 1 says, and `h` widens to the
+maximum of its kind, the i32 reading of Example 3's `[0,+inf]`; the possible
+overflow of `h + 1` then gives `h` the whole i32 range under the default
+`assume_top`. Example 2's loss does not survive there: under
 `--globals warrow` the trace shows `g` widened to `[-inf,+inf]` on the way,
 after which warrowing narrows it back to `[-17,42]`. Under the joining rules
-`h` keeps growing and the solve does not finish within the time limit.
+`h` keeps growing and the solve gives no answer within the time limit.

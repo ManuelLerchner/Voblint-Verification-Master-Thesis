@@ -3861,11 +3861,11 @@ fun main() {
                   <span class="guide-name">Growing recursion</span>
                   <code data-lang="vimp">f(x) { f(x + 1); }</code> called as <code data-lang="vimp">f(0)</code>
                 </th>
-                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/01-recursion_grows_join_diverges.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/02-recursion_grows_per_origin_diverges.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
-                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
+                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/01-recursion_grows_join_timeout.vimp&amp;analysis=interval&amp;globals=join&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="bad"><a class="cell-link" href="playground.html?fixture=24-site-figures/02-recursion_grows_per_origin_timeout.vimp&amp;analysis=interval&amp;globals=per-origin&amp;context=none" title="Run this in the playground">no answer</a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_timeout.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_timeout.vimp&amp;analysis=interval&amp;globals=warrow-per-origin&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
+                <td class="meh"><a class="cell-link" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_timeout.vimp&amp;analysis=interval&amp;globals=bounded-narrowing&amp;context=none" title="Run this in the playground">UNKNOWN <code>[−2³¹,2³¹−1]</code></a></td>
               </tr>
               <tr>
                 <th scope="row">
@@ -3996,7 +3996,7 @@ fun main() {
           also reports <code>f</code>'s exit and the code after the call as unreachable, which is
           right: that recursion never returns. The turns are depths of real runs; how many solver
           rounds pass before warrowing jumps is not drawn.
-          <a class="try-link spiral-try" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_diverges.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
+          <a class="try-link spiral-try" href="playground.html?fixture=24-site-figures/03-recursion_grows_entry_state_timeout.vimp&amp;analysis=interval&amp;globals=warrow&amp;context=none">Run this setting ↗</a>
         </figcaption>
       </figure>
 

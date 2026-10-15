@@ -5,7 +5,7 @@
 // operands of a logical operator: its expressions are pure and total, and
 // x / 0 is 0. Voblint raises the obligations of both operands, so it reports a
 // hazard C would skip. Each ERROR below holds whenever its division is
-// evaluated, which VIMP does and C never would here. SAFE remains sound for
+// evaluated, which VIMP does and C never would here. Silence remains sound for
 // C's evaluation, because it covers a superset of the operations C evaluates.
 fun main() {
   i32 x = 0;

@@ -34,8 +34,10 @@ caller's destination, which is decided at the callee's `return`. As in Goblint,
 conversions to signed and unsigned kinds are both reported, although C defines
 a conversion to an unsigned kind as wraparound and leaves one to a signed kind
 implementation-defined. Voblint does not distinguish an explicit cast from an
-implicit conversion, and does not check the conversion of a library call's
-result (`min`, `max`). `precision/06` and `known-imprecision/05` run one
-program under each policy.
+implicit conversion. A library `min` or `max` result is converted like any
+written value, and its obligation is decided on the result
+(`26-machine-kinds/24`). `precision/06` and `known-imprecision/05` run one
+program under each policy. Every fixture here pins its diagnostics with
+`// EXPECT-ARITHMETIC`.
 
 Run with `pixi run python3 tests/run.py 27-signed-overflow`.

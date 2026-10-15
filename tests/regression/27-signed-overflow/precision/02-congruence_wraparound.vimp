@@ -1,16 +1,17 @@
 // PARAM: --analysis congruence --signed-overflow assume_wraparound
+// EXPECT-ARITHMETIC
 // The overflowing operations of 01-interval_wraparound.vimp under
 // Congruence: a constant result wraps to the constant the semantics computes
 // (handle_overflow), so every check is proved. The assume_top twin is
 // ../known-imprecision/02-congruence_assume_top.vimp.
 fun main() {
   a = 2147483647;
-  b = a + 1;
+  b = a + 1; // ARITH: WARN signed-overflow
   __voblint_check(b == -2147483648); // PROVED
   c = -2147483648;
-  d = c - 1;
+  d = c - 1; // ARITH: WARN signed-overflow
   __voblint_check(d == 2147483647); // PROVED
   e = 65536;
-  f = e * e;
+  f = e * e; // ARITH: WARN signed-overflow
   __voblint_check(f == 0); // PROVED
 }

@@ -2,11 +2,11 @@
 // The concrete value of total is fixed at 7, so total < 100 genuinely holds.
 // Sign cannot establish it, and unlike the Interval sibling
 // (04-globals/known-imprecision/01-repeated_call_site_widening.vimp) the
-// reason is not widening: the sign lattice has no magnitude at all. total is
-// Positive here, exactly and without loss, and sign_lt has no
-// comparison-against-a-nonzero-constant case -- Positive < 100 is undecidable
-// in a lattice whose only facts are Neg/Zero/Pos. Adding contexts, a finer
-// solver, or no widening at all would not change this answer.
+// reason is not widening: the sign lattice has no magnitude. total + n may
+// overflow i32 as far as two nonnegative signs tell, so total is Top at the
+// check; and sign_lt has no case comparing even a Positive against a
+// nonzero constant. Adding contexts, a finer solver, or no widening at all
+// would not change this answer.
 //
 // Kept next to the PROVED cases so they are not mistaken for general-purpose
 // numeric precision.

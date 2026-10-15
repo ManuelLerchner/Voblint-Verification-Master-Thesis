@@ -1,4 +1,5 @@
 // PARAM: --analysis congruence
+// EXPECT-ARITHMETIC
 // Concretely b, d and f are INT_MIN, INT_MAX and 0. Under the default
 // assume_top, Goblint's congruenceDomain.ml answers top for a signed + or *
 // unless no_ov holds, which standalone Congruence cannot establish, and for a
@@ -6,12 +7,12 @@
 // ../precision/02 proves all three under assume_wraparound.
 fun main() {
   a = 2147483647;
-  b = a + 1;
+  b = a + 1; // ARITH: WARN signed-overflow
   __voblint_check(b == -2147483648); // UNKNOWN
   c = -2147483648;
-  d = c - 1;
+  d = c - 1; // ARITH: WARN signed-overflow
   __voblint_check(d == 2147483647); // UNKNOWN
   e = 65536;
-  f = e * e;
+  f = e * e; // ARITH: WARN signed-overflow
   __voblint_check(f == 0); // UNKNOWN
 }

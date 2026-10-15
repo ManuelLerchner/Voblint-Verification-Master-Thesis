@@ -845,16 +845,16 @@ Under entry-state contexts we expect termination to fail for some programs.
 With Interval, a recursion that changes its argument at every level demands a
 fresh context at every level, and widening bounds the values of existing
 unknowns but not their number (#fixture(
-  "21-context-sensitivity/01-unbounded_context_chain_diverges.vimp",
-  label: "01-unbounded_context_chain_diverges",
+  "21-context-sensitivity/01-entry_state_context_chain_timeout.vimp",
+  label: "01-entry_state_context_chain_timeout",
 )). Goblint's configuration for the SV-COMP
 competition avoids this explosion by omitting intervals from the contexts of
 recursive functions @saan26phd[§3.4.3]. Finitely many unknowns do not suffice either: without contexts, the
 interval recursion `f(x) { f(x + 1) }` entered with $x = 0$ makes the one seed of `f`
 grow through $[0, 0], [0, 1], [0, 2], dots$, and the joining update rules never
 widen this chain (#fixture(
-  "24-site-figures/01-recursion_grows_join_diverges.vimp",
-  label: "01-recursion_grows_join_diverges",
+  "24-site-figures/01-recursion_grows_join_timeout.vimp",
+  label: "01-recursion_grows_join_timeout",
 ), @fig:rules-programs). Both programs exceed their time limits, and we expect, without proof, that
 they diverge (@sec:trust-boundary). Both are recursive. For partial
 tabulation over abstract calling contexts, Schulze Frielinghaus et al. give a

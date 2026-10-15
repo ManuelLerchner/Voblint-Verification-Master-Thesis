@@ -1,4 +1,5 @@
 // PARAM: --analysis int
+// EXPECT-ARITHMETIC
 // Under the default assume_top the Int product still keeps a congruence
 // across a signed * and + when its interval proves that the result fits:
 // Goblint's no_ov, passed from the interval to the congruence. The guard
@@ -14,6 +15,6 @@ fun main() {
     __voblint_check(x % 4 == 1); // PROVED
   }
   m = __voblint_nondet_int();
-  y = 4 * m + 1;
+  y = 4 * m + 1; // ARITH: WARN signed-overflow; WARN signed-overflow
   __voblint_check(y != 3); // UNKNOWN
 }

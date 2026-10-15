@@ -8,25 +8,19 @@
 // Each block exercises one sign operation through a check. The UNKNOWN rows
 // b < 0, d > 0 and q > 0 are soundness rows: b is -1 or 0, d is 1 or 0, and
 // q is n / c with both positive, so each condition holds in one execution
-// and fails in another.
-// The UNKNOWN rows a < 0, 0 < b and 0 < y are imprecision on fixed values
-// (-6, 6, 2): typed Sign has no magnitude, so it cannot exclude i32
-// wraparound of a product of nonzero signs or a sum of two positives, and
-// the transfer returns Top. Other operations that lose information on fixed
-// values are in ../known-imprecision/02-mixed_signs_lose_sign.vimp.
+// and fails in another. The products with zero, quotients and remainders
+// here cannot leave i32, so they keep their sign. Products of nonzero signs
+// and sums of positives may overflow and lose it; they are in
+// ../known-imprecision/07-nonzero_operands_may_wrap.vimp, and other
+// operations that lose information on fixed values in
+// ../known-imprecision/02-mixed_signs_lose_sign.vimp.
 fun main() {
   c = __voblint_nondet_int();
   n = __voblint_nondet_int();
-  a = -2 * 3;
-  __voblint_check(a < 0); // UNKNOWN
-  b = -2 * -3;
-  __voblint_check(0 < b); // UNKNOWN
   z = 0 * n;
   __voblint_check(z == 0); // PROVED
   x = 1;
-  y = x + x;
   __voblint_check(0 < x); // PROVED
-  __voblint_check(0 < y); // UNKNOWN
   if (c) { b = -1; } else { b = 0; }
   __voblint_check(b <= 0); // PROVED
   __voblint_check(b < 0); // UNKNOWN

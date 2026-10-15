@@ -4,31 +4,38 @@
 // (int_exact_division_recovers_parity, int_division_remainder_progressive),
 // the Refine_Never columns.
 //
+// m and n are bounded, so no operation here overflows i32 and every
+// result is fixed by its bounds: y = 1 and z = 0, even = 2 * n is even,
+// odd = -(4 * n + 1) is odd, and r = 1. Unbounded, the products wrap and the
+// quotients have no fixed parity (../soundness/01-exact_division_parity.vimp).
+//
 // Without refinement each component computes alone. z = -1 + y with y odd
-// in [0,1] is [-1,0], even, sign Top; nothing pins it to 0, so z == 0 is
-// UNKNOWN while z <= 0 follows from the interval. Exact division keeps
-// congruence 0 (mod 2) and 3 (mod 4) but leaves parity Top, and
-// congruence_eqb answers only on singletons, so neither equality is
-// refuted. The remainder stays [0,3] with 1 (mod 4).
+// in [0,1] is [-1,0] and even; nothing pins it to 0, so z == 0 is UNKNOWN
+// while z <= 0 follows from the interval. The remainder stays [0,3] with
+// 1 (mod 4), and neither component decides r == 1 or r > 0. The congruences
+// of the exact quotients (0 (mod 2) and 3 (mod 4)) exclude the compared
+// constants on their own, so both equalities are refuted in every mode.
 // ../precision/18-refinement_once_arithmetic.vimp is the same program under
 // once, where every check is decided.
 fun main() {
   x = -1;
   m = __voblint_nondet_int();
-  y = 2 * m + 1;
-  if (y >= 0) {
-    if (y <= 1) {
-      z = x + y;
-      __voblint_check(z == 0); // UNKNOWN
-      __voblint_check(z <= 0); // PROVED
+  if (-100 <= m && m <= 100) {
+    y = 2 * m + 1;
+    if (y >= 0) {
+      if (y <= 1) {
+        z = x + y;
+        __voblint_check(z == 0); // UNKNOWN
+        __voblint_check(z <= 0); // PROVED
+      }
     }
   }
   n = __voblint_nondet_int();
-  even = (6 * n) / 3;
-  odd = (12 * n + 3) / -3;
-  __voblint_check(even == 1); // UNKNOWN
-  __voblint_check(odd == 0); // UNKNOWN
   if (0 <= n && n <= 20) {
+    even = (6 * n) / 3;
+    odd = (12 * n + 3) / -3;
+    __voblint_check(even == 1); // REFUTED
+    __voblint_check(odd == -2); // REFUTED
     r = ((12 * n + 3) / 3) % 4;
     __voblint_check(r == 1); // UNKNOWN
     __voblint_check(r > 0); // UNKNOWN

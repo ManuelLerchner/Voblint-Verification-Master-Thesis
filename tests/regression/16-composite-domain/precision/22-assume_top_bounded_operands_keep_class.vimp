@@ -1,0 +1,30 @@
+// PARAM: --analysis int
+// The default-policy siblings of 02-times_produces_congruence.vimp and
+// 16-cross_component_emptiness.vimp, which run under assume_wraparound.
+// x is bounded to [-100,100], so x * 2 and 2 * x + 1 cannot overflow i32:
+// concretely y = 2 on the inner arm, and z is odd, so z == 0 never holds.
+//
+// Under the default assume_top, the interval shows that each product fits,
+// so the congruence keeps its class (Goblint's no_ov). The composite meets
+// [1,2] with 0 (mod 2) and gets y = 2, and no odd value lies in [0,0], so
+// the branch is dead; the emptiness test decides that also under
+// --int-refinement never (measured). Unbounded, the products may overflow,
+// the congruence goes to top, and neither check is decided
+// (../known-imprecision/04-assume_top_unbounded_operands_lose_class.vimp).
+fun main() {
+  x = __voblint_nondet_int();
+  if (-100 <= x && x <= 100) {
+    y = x * 2;
+    if (0 < y) {
+      if (y < 3) {
+        __voblint_check(y == 2); // PROVED
+      }
+    }
+    z = 2 * x + 1;
+    if (z >= 0) {
+      if (z <= 0) {
+        __voblint_check(false); // NOWARN
+      }
+    }
+  }
+}

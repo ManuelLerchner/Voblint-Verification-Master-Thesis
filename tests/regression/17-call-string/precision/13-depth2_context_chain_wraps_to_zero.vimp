@@ -3,11 +3,11 @@
 // (ana.context.widen enabled). f(x) recurses on x + 1 whenever x is
 // nonzero. Under i32 wraparound x + 1 passes 2147483647, wraps to
 // -2147483648 and climbs back to 0, so f(1) returns 0 and a == 0 holds,
-// as Goblint annotates it. The bounded call string keeps the context
-// space finite; under --context entry-state the same program creates a
-// fresh context per x value and diverges, which
-// 21-context-sensitivity/01-unbounded_context_chain_diverges.vimp pins
-// through --timeout.
+// as Goblint annotates it. f returns only from its x == 0 arm, so the
+// analysis proves a == 0 without following the wrap. The bounded call
+// string keeps the context space small; under --context entry-state the same
+// program needs one context per x value and gives no answer within 5 s
+// (21-context-sensitivity/01-entry_state_context_chain_timeout.vimp).
 fun f(x) {
   if (x != 0) { r = f(x + 1); return r; } else { return x; }
 }

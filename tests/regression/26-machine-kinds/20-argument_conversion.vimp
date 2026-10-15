@@ -1,4 +1,5 @@
 // PARAM: --analysis interval --signed-overflow assume_wraparound --context call-string --context-depth 1
+// EXPECT-ARITHMETIC
 // A call converts each argument to its formal's kind, as an assignment converts
 // to its destination: 200 becomes -56 at i8, -1 becomes 4294967295 at u32, and
 // a global passed to a narrower formal wraps the same way. A recursive call
@@ -19,19 +20,19 @@ fun i32 down(u8 n, i32 d) {
   if (d <= 0) {
     return n;
   }
-  r = down(n + 255, d - 1);
+  r = down(n + 255, d - 1); // ARITH: WARN conversion-overflow
   return r;
 }
 fun main() {
   i32 a;
   i64 b;
   i32 c;
-  a = narrow(200);
+  a = narrow(200); // ARITH: ERROR conversion-overflow
   __voblint_check(a == -56); // PROVED
-  b = widen(-1);
+  b = widen(-1); // ARITH: ERROR conversion-overflow
   __voblint_check(b == 4294967295); // PROVED
   g = 300;
-  a = narrow(g);
+  a = narrow(g); // ARITH: ERROR conversion-overflow
   __voblint_check(a == 44); // PROVED
   c = down(1, 2);
   __voblint_check(0 <= c); // PROVED

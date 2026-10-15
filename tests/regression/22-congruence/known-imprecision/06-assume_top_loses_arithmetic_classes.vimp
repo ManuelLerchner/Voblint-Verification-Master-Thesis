@@ -1,0 +1,38 @@
+// PARAM: --analysis congruence
+// The default-policy runs of the precision fixtures that use
+// --signed-overflow assume_wraparound. Every value is fixed at i32:
+// s = 4, a = 12, g = 5, x is even, so x != 3 holds and x == 5 is never
+// taken. 6 * n + 1 wraps to every odd i32, so r is odd and r == 4 is never
+// taken.
+//
+// Under the default assume_top, Goblint's congruenceDomain.ml answers top
+// for a signed + or * unless no_ov holds, and standalone Congruence has no
+// interval to establish it, not even for two singletons (cong_arith_ik).
+// So the singleton sum (08), the class returned through a call (05, 07),
+// the global stride (06), the even class (13) and its dead branch (03), and
+// the remainder's residue (09) are all lost. Only a difference of two
+// constants in range survives; ../precision/14 lists what Congruence still
+// decides under assume_top. The Int product keeps these classes when its
+// interval shows the result fits (27-signed-overflow/precision/04).
+global g;
+fun triple(p) { return p * 3; }
+fun bump() { g = g + 4; }
+fun main() {
+  s = 2 + 2;
+  __voblint_check(s == 4); // UNKNOWN
+  a = triple(4);
+  __voblint_check(a == 12); // UNKNOWN
+  g = 1;
+  bump();
+  __voblint_check(g == 5); // UNKNOWN
+  n = __voblint_nondet_int();
+  x = 2 * n;
+  __voblint_check(x != 3); // UNKNOWN
+  if (x == 5) {
+    __voblint_check(false); // REFUTED
+  }
+  r = (6 * n + 1) % 6;
+  if (r == 4) {
+    __voblint_check(false); // REFUTED
+  }
+}

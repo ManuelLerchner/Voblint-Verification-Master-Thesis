@@ -1,9 +1,11 @@
 // PARAM: --analysis interval
+// EXPECT-ARITHMETIC
 // At u8, 250 + 10 is computed at i32 (260) and converted back to u8, which
-// wraps it to 4.
+// wraps it to 4. The conversion of 260 to u8 is reported as an error,
+// although C defines it as wraparound (as in Goblint).
 fun main() {
   u8 x;
   x = 250;
-  x = x + 10;
+  x = x + 10; // ARITH: ERROR conversion-overflow
   __voblint_check(x == 4); // PROVED
 }

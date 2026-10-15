@@ -16,7 +16,9 @@ fresh on every activation: `21` calls the same procedure twice, `22` recurses
 with locals of three kinds, and `23` checks that an initializer replaces the
 arbitrary value each time. `24` checks the conversion of a library `min` or
 `max` result: an error, a warning or silence by whether the result itself fits
-the destination's kind.
+the destination's kind. Every fixture that converts or computes outside a
+kind (`01` to `05`, `07` to `09`, `11`, `19`, `20`, `24`) pins its diagnostics
+with `// EXPECT-ARITHMETIC`.
 
 Isabelle elaborates the parsed program (`elab_ptable`, an Isabelle definition):
 every operation computes at its C kind, every conversion becomes an explicit

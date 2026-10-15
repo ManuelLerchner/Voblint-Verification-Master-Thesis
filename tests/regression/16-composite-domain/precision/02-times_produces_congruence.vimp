@@ -15,7 +15,8 @@
 // Run under --signed-overflow assume_wraparound: the case tests classes that
 // survive wraparound modulo 2^32 on signed i32. Under Goblint's default
 // assume_top a signed operation that may overflow gives both components top
-// (27-signed-overflow/known-imprecision/03).
+// (../known-imprecision/04-assume_top_unbounded_operands_lose_class.vimp);
+// with x bounded the class survives (22-assume_top_bounded_operands_keep_class).
 fun main() {
   y = x * 2;
   if (0 < y) {

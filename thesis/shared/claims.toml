@@ -15,7 +15,7 @@ argv = [
   "sign",
   "tests/regression/07-sign-precision/known-imprecision/01-sign_cannot_bound_magnitude.vimp",
 ]
-why = "The known-imprecision example: sign tracks total=+ (positive) exactly but has no magnitude, so total<100 stays UNKNOWN."
+why = "The known-imprecision example: a sign has no magnitude, so it cannot rule out that total + n overflows; total becomes the kind's top and total<100 stays UNKNOWN."
 
 # Playground runs placed in Chapters 7 and 11, re-run through the CLI,
 # which links the same generated module as the browser page.
@@ -633,7 +633,7 @@ argv = [
   "join",
   "--timeout",
   "5",
-  "tests/regression/24-site-figures/01-recursion_grows_join_diverges.vimp",
+  "tests/regression/24-site-figures/01-recursion_grows_join_timeout.vimp",
 ]
 why = "Update-rule table, grows program under join: the verdict and state quoted in its cell. The solve does not finish within 5 s."
 expect_status = 3
@@ -648,7 +648,7 @@ argv = [
   "per-origin",
   "--timeout",
   "5",
-  "tests/regression/24-site-figures/02-recursion_grows_per_origin_diverges.vimp",
+  "tests/regression/24-site-figures/02-recursion_grows_per_origin_timeout.vimp",
 ]
 why = "Update-rule table, grows program under per-origin: the verdict and state quoted in its cell. The solve does not finish within 5 s."
 expect_status = 3

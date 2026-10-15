@@ -88,7 +88,7 @@ wrong-arity special call, rejected before compilation reaches the analyzer)
 -- and is checked for one of those structured error messages instead of a
 report. A case whose solver genuinely does not terminate on its fixpoint
 dependency structure is the same shape, with --timeout bounding the wait
-(21-context-sensitivity/01-unbounded_context_chain_diverges.vimp: entry-state
+(21-context-sensitivity/01-entry_state_context_chain_timeout.vimp: entry-state
 keying creates a fresh context per recursion level).
 
 A case may also carry a canonical CFG snapshot, checked independently of its
