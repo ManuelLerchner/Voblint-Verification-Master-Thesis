@@ -15,18 +15,7 @@ session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
     "Voblint_Analysis_Parity"
     "Voblint_Analysis_Congruence"
     "TD"
-  directories
-    "generated"
   theories
     Int_Warrowing
     Int_Refinement
     Int_Refinement_Control
-    Int_Arithmetic
-    Int_Backward
-    Int_Transfer
-    Int_Exec
-    Int_Sound
-    Int_Classify
-    Int_Fixpoint_Analyses
-    Int_Once_Analyses
-    Int_Never_Analyses

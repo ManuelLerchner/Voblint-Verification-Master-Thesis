@@ -14,7 +14,4 @@ session Voblint_Nonrelational in "." = "Voblint_Result" +
     "HOL-Computational_Algebra"
   theories
     Abstract_Arithmetic
-    Special_Ops
-    Nonrelational_Transfer
-    Nonrelational_Ops
     Exec_Backward

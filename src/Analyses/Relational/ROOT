@@ -1,9 +1,0 @@
-chapter Voblint
-
-session Voblint_Analysis_Relational in "." = "Voblint_Exec" +
-  description "Order carriers that are not pointwise abstract states"
-  sessions
-    "Voblint_Framework"
-  theories
-    Rel_Order_Domain
-    Rel_Order_Local

@@ -12,15 +12,6 @@ session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
     "Voblint_Exec"
     "HOL-Computational_Algebra"
     "TD"
-  directories
-    "generated"
   theories
     Congruence_Warrowing
     Congruence_Arithmetic
-    Congruence_Backward
-    Congruence_Special
-    Congruence_Transfer
-    Congruence_Exec
-    Congruence_Sound
-    Congruence_Classify
-    Congruence_Analyses
