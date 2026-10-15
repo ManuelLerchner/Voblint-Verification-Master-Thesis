@@ -98,3 +98,46 @@ meaning = "Admitted contexts typed_mcp_es.entry_context_rel; flow-insensitive gl
 legacy = "nv_source_certified"
 typed = ""
 meaning = "Legacy capstone cited by the thesis abstract; candidate replacement run_voblint_source_sound, pending review of the abstract's claim."
+
+# Demonstrations removed with the untyped analysis instances (M3, 7747a8144).
+# Sources remain at 7747a8144^. `typed` is filled once a typed port lands.
+
+[[theorem]]
+legacy = "update_rules_example"
+typed = ""
+meaning = "Example_Update_Rule_Steps; depends only on Globals_Rule and Interval_Warrowing, to be restored unchanged. Cited by thesis chapter 9."
+
+[[theorem]]
+legacy = "two_writer_slot_warrow_loses_upper_bound"
+typed = ""
+meaning = "Example_Per_Origin_Widening_Precision; hand-written equations over ivl, to be restored with its import moved to Interval_Warrowing. Cited by the thesis."
+
+[[theorem]]
+legacy = "two_writer_slot_warrow_per_origin_exact"
+typed = ""
+meaning = "As two_writer_slot_warrow_loses_upper_bound."
+
+[[theorem]]
+legacy = "read_g_depends_on_g_only"
+typed = ""
+meaning = "Example_Keyed_Global_Footprint; to be ported to typed edges over var_id after M4. Cited by the site."
+
+[[theorem]]
+legacy = "write_h_publishes_h_only"
+typed = ""
+meaning = "As read_g_depends_on_g_only."
+
+[[theorem]]
+legacy = "keyed_multiwrite_buffered_terminates"
+typed = ""
+meaning = "Example_Keyed_Solver_Update_Rule_Regression; framework-level equations over ivl and the untyped dg_spec, to be ported to gdg_spec after M4. Cited by the site, with w0_seed_at_entered_frame and w0_no_seed_at_caller_frame."
+
+[[theorem]]
+legacy = "ov_two_contexts_admitted"
+typed = ""
+meaning = "Example_Sign_DG_Overlapping_Enter: one call entered under two alternatives, routed to two contexts, on a custom Sign spec with a list-valued enter. No shipped typed analysis returns two alternatives, so a port needs its own typed spec. Cited by the thesis, with ov_empty_no_callee_context and ov_empty_continuation_bot."
+
+[[theorem]]
+legacy = "sign_k2_strictly_more_precise_than_k1_at_g"
+typed = ""
+meaning = "Example_Sign_DG_CallString_K2; to be restated through run_voblint in Example_Run_Voblint_Precision (k=2 proves a check k=1 does not). Cited by the thesis blueprint."
