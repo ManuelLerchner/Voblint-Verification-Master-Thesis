@@ -1,11 +1,9 @@
 tests/regression/06-reachability/precision/18-proved_unreachable.vimp [int]
 
 Arithmetic diagnostics
-Location  Point  Severity  Message
---------  -----  --------  --------------------------------------------
-9:3       pp1    WARNING   possible signed integer overflow in *: 3 * n
+None
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  ---------------------------------------
-11:5      pp3    x > 0      PROVED   int: x=intervals:[1,2]; congruences:⊤
+--------  -----  ---------  -------  -----
+12:5      pp3    x > 0      DEAD     

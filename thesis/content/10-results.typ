@@ -456,21 +456,22 @@ reachability. The corresponding theorem for #verdict("PROVED") and #verdict("REF
 #let _pu = check-row("verdicts-proved-unreachable", cond: "x > 0")
 #let _pu-int = check-row("verdicts-proved-unreachable-int", cond: "x > 0")
 
-*Truth and reachability are separate.* In the program below, $x = 3n$ is
-never $1$ or $2$, so no run reaches the check. Interval cannot see this. It
-keeps #raw(_pu.state) there, where `x > 0` holds, and reports
-#verdict(_pu.verdict). The verdict is sound: it claims `x > 0` only for runs
-that reach the check. Int also tracks
-$x equiv 0 med (mod 3)$, finds the state empty, and reports
+*Truth and reachability are separate.* In the program below, `n` and `x` are
+32-bit unsigned, so $x = 4n mod 2^32$. Since $4$ divides $2^32$, $x$ is a
+multiple of $4$ and never $1$, $2$ or $3$, so no run reaches the check.
+Interval cannot see this. It keeps #raw(_pu.state) there, where `x > 0` holds,
+and reports #verdict(_pu.verdict). The verdict is sound: it claims `x > 0` only
+for runs that reach the check. Int also tracks $x equiv 0 med (mod 4)$, a class
+that survives the reduction modulo $2^32$, finds the state empty, and reports
 #verdict(_pu-int.verdict).
 
 #[
   #show raw.where(block: true): set text(size: 6.5pt)
   #listing(lang: "c", claim: "verdicts-proved-unreachable", ```
   fun main() {
-    n = __voblint_nondet_int();
-    x = 3 * n;
-    if (0 < x && x < 3) {
+    u32 n;
+    u32 x = 4 * n;
+    if (0 < x && x < 4) {
       __voblint_check(x > 0);
     }
   }

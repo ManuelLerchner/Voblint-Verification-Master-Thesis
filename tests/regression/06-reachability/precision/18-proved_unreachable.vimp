@@ -1,13 +1,14 @@
 // PARAM: --analysis interval
-// A PROVED verdict makes no reachability claim. x = 3 * n is never 1 or 2, so
-// no run reaches the check; the interval analysis cannot see that and keeps
-// x = [1,2] there, where x > 0 holds. The verdict is PROVED, and it is sound:
-// it says that x > 0 holds whenever a run reaches the check, which is vacuous.
+// A PROVED verdict makes no reachability claim. x = 4 * n at u32 is a multiple
+// of 4 modulo 2^32, since 4 divides 2^32, so it is never 1, 2 or 3 and no run
+// reaches the check. The interval analysis cannot see that and keeps x = [1,3]
+// there, where x > 0 holds. The verdict is PROVED, and it is sound: it says
+// that x > 0 holds whenever a run reaches the check, which is vacuous.
 // Backs the example in thesis section 10.5.
 fun main() {
-  n = __voblint_nondet_int();
-  x = 3 * n;
-  if (0 < x && x < 3) {
+  u32 n;
+  u32 x = 4 * n;
+  if (0 < x && x < 4) {
     __voblint_check(x > 0);  // PROVED
   }
 }

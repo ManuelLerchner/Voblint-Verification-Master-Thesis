@@ -837,7 +837,7 @@
   },
   "verdicts-proved-unreachable": {
     "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (0 < x && x < 3) {\n    __voblint_check(x > 0);\n  }\n}",
+    "program": "fun main() {\n  u32 n;\n  u32 x = 4 * n;\n  if (0 < x && x < 4) {\n    __voblint_check(x > 0);\n  }\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -847,7 +847,7 @@
   },
   "verdicts-proved-unreachable-int": {
     "fixture": "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
-    "program": "fun main() {\n  n = __voblint_nondet_int();\n  x = 3 * n;\n  if (0 < x && x < 3) {\n    __voblint_check(x > 0);\n  }\n}",
+    "program": "fun main() {\n  u32 n;\n  u32 x = 4 * n;\n  if (0 < x && x < 4) {\n    __voblint_check(x > 0);\n  }\n}",
     "settings": {
       "analysis": "int",
       "context": "none",

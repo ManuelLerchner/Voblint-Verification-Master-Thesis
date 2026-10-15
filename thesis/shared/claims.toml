@@ -453,7 +453,7 @@ argv = [
   "interval",
   "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,2] although x = 3 * n never reaches the check."
+why = "A PROVED verdict makes no reachability claim: x > 0 is PROVED at x=[1,3] although x = 4 * n (u32) is never 1, 2 or 3, so no run reaches the check."
 
 [claims.verdicts-proved-unreachable-int]
 argv = [
@@ -461,7 +461,7 @@ argv = [
   "int",
   "tests/regression/06-reachability/precision/18-proved_unreachable.vimp",
 ]
-why = "The Int product also tracks x = 0 (mod 3), so it marks the same unreached check DEAD."
+why = "The Int product also tracks x = 0 (mod 4), which survives wraparound modulo 2^32, so it marks the same unreached check DEAD."
 
 # Figures redrawn from the explainer (Chapters 7, 8 and 12): context policies on the
 # playground demo, the counting loop solved, the update-rule table, and the
