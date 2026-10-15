@@ -194,6 +194,29 @@ returned (`solve_c_run`, `DG_Analysis.thy`). Nothing proves the solve returns
 in general. That the run solved enough keys is no premise either:
 `glive_unknowns_cover` (`DG_Live_Unknowns.thy`) proves it from termination.
 
+### Arithmetic obligations compared with C
+
+`SAFE` at a point means every obligation `obligations_at` lists there holds for every
+covered execution (`run_voblint_SAFE`). The obligations are defined in `Run_Report.thy`
+(`arith_obligations`); they are a deliberate policy, not a model of C's undefined
+behaviour:
+
+| Operation | Obligation | C (ISO/IEC 9899) |
+| --- | --- | --- |
+| `/`, `%` with divisor 0 | raised | undefined (6.5.5p5) |
+| signed `+`, `-`, `*`, `/` outside the kind | raised (`-x` is `0 - x`; `/` only for minimum / -1) | undefined (6.5p5) |
+| signed `INT_MIN % -1` | not raised: the remainder 0 fits | undefined, because the quotient does not fit |
+| unsigned arithmetic | not raised: wraps by definition | defined wraparound (6.2.5p9) |
+| conversion to an unsigned kind that does not fit | raised | defined wraparound (6.3.1.3p2) |
+| conversion to a signed kind that does not fit | raised | implementation-defined (6.3.1.3p3) |
+| conversion that widens into its target | not raised | value preserved |
+| operands under `&&`, `\|\|` | raised for both operands | second operand evaluated only if needed (6.5.13p4, 6.5.14p4) |
+
+So a warning is not a proof of undefined behaviour, and `SAFE` is stronger than C requires
+for conversions and short-circuit operands but misses `INT_MIN % -1`. The concrete
+semantics wraps signed overflow under both `signed_overflow_policy` settings; the policy only
+changes how the analysis abstracts a result that may overflow.
+
 ## 6. `export_code` and the code-generation trust boundary
 
 One `export_code` declaration (`Voblint_Codegen.thy`) targets OCaml with
