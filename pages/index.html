@@ -243,7 +243,7 @@
 
         <a
           class="pipeline"
-          href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Examples/Voblint.html"
+          href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Run_Voblint.html"
         >
           <i class="fa-solid fa-diagram-project" aria-hidden="true"></i>
           <span>Pipeline theory</span>
@@ -840,7 +840,7 @@
         </div>
         <noscript><p class="td-caption">The step-through needs JavaScript.</p></noscript>
 
-        <figcaption>The bottom row never moves. Reduction never drops an integer the value describes (<a href="Voblint/Voblint_Typed_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine_sound%7Cfact"><code>it_refine_sound</code></a>), so a reduced value is sound whenever the unreduced one was. One round is <a href="Voblint/Voblint_Typed_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine%7Cconst"><code>it_refine</code></a>: the congruence learns from the interval, then the interval is rounded to the class, as in one round of Goblint's <code>IntDomTuple.refine</code>. By default Int repeats rounds after every arithmetic operation and every guard until nothing changes (<a href="Voblint/Voblint_Typed_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine_mode%7Cconst"><code>it_refine_mode</code></a>). Here one round suffices; a second finds nothing new. No bound on the number of rounds is proved: in the logic the loop returns the value it started from if it never stops, and the generated code would keep iterating. The program runs under <code>--signed-overflow assume_wraparound</code>: <code>4 * n</code> may overflow, and the class <code>1 (mod 4)</code> survives the wrap only because 4 divides 2³².
+        <figcaption>The bottom row never moves. Reduction never drops an integer the value describes (<a href="Voblint/Voblint_Analysis_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine_sound%7Cfact"><code>it_refine_sound</code></a>), so a reduced value is sound whenever the unreduced one was. One round is <a href="Voblint/Voblint_Analysis_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine%7Cconst"><code>it_refine</code></a>: the congruence learns from the interval, then the interval is rounded to the class, as in one round of Goblint's <code>IntDomTuple.refine</code>. By default Int repeats rounds after every arithmetic operation and every guard until nothing changes (<a href="Voblint/Voblint_Analysis_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.it_refine_mode%7Cconst"><code>it_refine_mode</code></a>). Here one round suffices; a second finds nothing new. No bound on the number of rounds is proved: in the logic the loop returns the value it started from if it never stops, and the generated code would keep iterating. The program runs under <code>--signed-overflow assume_wraparound</code>: <code>4 * n</code> may overflow, and the class <code>1 (mod 4)</code> survives the wrap only because 4 divides 2³².
           <a class="try-link" href="playground.html?fixture=24-site-figures/precision/02-int_reduction_int.vimp&amp;analysis=int&amp;context=none">Compare the domains in the playground &#8599;</a></figcaption>
       </figure>
 
@@ -961,7 +961,7 @@
           </div>
         </div>
 
-        <figcaption>The states and verdicts are analyzer output for both programs under each selection of analyses; the numbered steps explain how the combined run gets there. In the first program Interval asks and the order analysis answers. In the second the direction reverses: at each assignment, the order analysis asks how the new value compares with the other variables, and Interval answers. The first direction is also checked in Isabelle: <a href="Voblint/Voblint_Typed_CLI/Cooperation_Regression.html#Cooperation_Regression.coop_verdicts%7Cfact"><code>coop_verdicts</code></a> evaluates a variant of the first program with <code>eval</code>, under Interval and Order combined and under each alone, and only the combination proves the check that needs Order's answer.<!-- TODO(typed-port): order_asks_needs_both (Order asking Interval, evaluated through run_voblint) -->
+        <figcaption>The states and verdicts are analyzer output for both programs under each selection of analyses; the numbered steps explain how the combined run gets there. In the first program Interval asks and the order analysis answers. In the second the direction reverses: at each assignment, the order analysis asks how the new value compares with the other variables, and Interval answers. The first direction is also checked in Isabelle: <a href="Voblint/Voblint_Examples_CLI/Cooperation_Regression.html#Cooperation_Regression.coop_verdicts%7Cfact"><code>coop_verdicts</code></a> evaluates a variant of the first program by code evaluation, under Interval and Order combined and under each alone, and only the combination proves the check that needs Order's answer.<!-- TODO(typed-port): order_asks_needs_both (Order asking Interval, evaluated through run_voblint) -->
           <a class="try-link" href="playground.html?fixture=25-cooperation/precision/03-equality_asked_of_order.vimp&amp;analysis=interval,order">Run the first program ↗</a>
           <a class="try-link" href="playground.html?fixture=25-cooperation/precision/06-order_asks_interval.vimp&amp;analysis=interval,order">Run the second ↗</a></figcaption>
       </figure>
@@ -973,9 +973,9 @@
           <i class="fa-solid fa-chevron-down blackbox-chevron" aria-hidden="true"></i>
         </summary>
         <div class="prose-block">
-          <p>Each analysis supplies a <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype"><code>local_spec</code></a>: its transfers, which may ask questions, and a handler that answers questions from its own state. An answer to “what does <code>e</code> evaluate to?” is sound at a store if the value of <code>e</code> there lies in the answer. Two laws make answers combine. The top answer holds everywhere, so an analysis that cannot answer says <code>⊤</code> and claims nothing. Two answers that both hold can be met, so a question asked of all analyses gets the meet of their answers (<a href="Voblint/Voblint_Framework/MCP_Registry.html#MCP_Registry.mcp_registry.mcp_answer%7Cconst"><code>mcp_answer</code></a>).</p>
+          <p>Each analysis supplies a <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.glocal_spec%7Ctype"><code>glocal_spec</code></a>: its transfers, which may ask questions, and a handler that answers questions from its own state. An answer to “what does <code>e</code> evaluate to?” is sound at a store if the value of <code>e</code> there lies in the answer. Two laws make answers combine. The top answer holds everywhere, so an analysis that cannot answer says <code>⊤</code> and claims nothing. Two answers that both hold can be met, so a question asked of all analyses gets the meet of their answers (<a href="Voblint/Voblint_Framework/MCP_Registry.html#MCP_Registry.mcp_registry.mcp_answer%7Cconst"><code>mcp_answer</code></a>).</p>
           <p>The questions travel through a channel built from the state before the edge (<a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.ls_channel%7Cconst"><code>ls_channel</code></a>). A question asked again while it is being answered gets <code>⊤</code>, as in Goblint's <code>MCP.query'</code>, and a depth bound (<a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.query_depth%7Cconst"><code>query_depth</code></a>) stops the recursion: the generated program aborts there, while in the logic the aborted branch answers <code>⊤</code>. No analysis has to be ordered before another. <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.ls_channel_sound%7Cfact"><code>ls_channel_sound</code></a> proves the channel's answers hold.</p>
-          <p>An analysis proves its own laws once, as <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, and the laws mention no other analysis. <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of%7Cconst"><code>dg_spec_of</code></a> turns a local specification into the record the equations consume, and <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.dg_spec_of_contract%7Cfact"><code>dg_spec_of_contract</code></a> carries the laws to the analysis contract. <a href="Voblint/Voblint_Framework/MCP_Registry.html#MCP_Registry.mcp_registry.mcp_comp_sound%7Cfact"><code>mcp_comp_sound</code></a> gives that contract for every nonempty selection of distinct analyses, so the rest of the pipeline treats a combination like a single analysis.</p>
+          <p>An analysis proves its own laws once, as <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.gsound_local_spec%7Cconst"><code>gsound_local_spec</code></a>, and the laws mention no other analysis. <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.dg_spec_of%7Cconst"><code>dg_spec_of</code></a> turns a local specification into the record the equations consume, and <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.dg_spec_of_contract%7Cfact"><code>dg_spec_of_contract</code></a> carries the laws to the analysis contract. <a href="Voblint/Voblint_Framework/MCP_Registry.html#MCP_Registry.mcp_registry.mcp_comp_sound%7Cfact"><code>mcp_comp_sound</code></a> gives that contract for every nonempty selection of distinct analyses, so the rest of the pipeline treats a combination like a single analysis.</p>
         </div>
       </details>
 
@@ -1248,15 +1248,15 @@
           <i class="fa-solid fa-chevron-down blackbox-chevron" aria-hidden="true"></i>
         </summary>
       <div class="prose-block">
-        <p>Start from the type. It is three lines long, and once <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> is named, it reads like the description above: an activation trace is one path plus the activations around it.</p>
-        <pre class="prose-code" data-lang="isabelle"><code>type_synonym activation_path = "(cfg_node &times; store) list"
+        <p>Start from the type. It is three lines long, and once <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_path%7Ctype"><code>gactivation_path</code></a> is named, it reads like the description above: an activation trace is one path plus the activations around it. It is generic in the variables <code>'v</code>, which core VIMP instantiates with its identities, <a href="Voblint/Voblint_VIMP/Var_Id.html#Var_Id.var_id%7Ctype"><code>var_id</code></a>.</p>
+        <pre class="prose-code" data-lang="isabelle"><code>type_synonym 'v gactivation_path = "(cfg_node &times; ('v &#8658; int)) list"
 
-datatype activation_trace =
-    Root                                                                   activation_path
-  | Call   (activation_trace_caller: activation_trace)                     activation_path
-  | Resume (activation_trace_current: activation_trace)
-           (activation_trace_callee: activation_trace)                     activation_path</code></pre>
-        <p>There is one constructor per situation an activation can be in. <code>Root</code> is <code>main</code>, which nobody called, so it carries a path and nothing else. <code>Call</code> is an activation that is running and will return to its caller, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_caller</code></a>, which it holds. <code>Resume</code> is the same activation after a callee has returned. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_current</code></a> is the activation stopped at its call node, and <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace_callee</code></a> is the finished callee. The callee is kept whole instead of being spliced into the path, so a returned call remains one box you can ask questions about.</p>
+datatype 'v gactivation_trace =
+    Root                                                                    'v gactivation_path
+  | Call   (activation_trace_caller: 'v gactivation_trace)                  'v gactivation_path
+  | Resume (activation_trace_current: 'v gactivation_trace)
+           (activation_trace_callee: 'v gactivation_trace)                  'v gactivation_path</code></pre>
+        <p>There is one constructor per situation an activation can be in. <code>Root</code> is <code>main</code>, which nobody called, so it carries a path and nothing else. <code>Call</code> is an activation that is running and will return to its caller, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace.activation_trace_caller%7Cconst"><code>activation_trace_caller</code></a>, which it holds. <code>Resume</code> is the same activation after a callee has returned. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace.activation_trace_current%7Cconst"><code>activation_trace_current</code></a> is the activation stopped at its call node, and <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace.activation_trace_callee%7Cconst"><code>activation_trace_callee</code></a> is the finished callee. The callee is kept whole instead of being spliced into the path, so a returned call remains one box you can ask questions about.</p>
       </div>
 
       <figure class="scene scene-obs">
@@ -1264,27 +1264,27 @@ datatype activation_trace =
           <div class="obs-terms">
             <p class="td-panel-title">Observers, at <span class="obs-subject"></span></p>
             <button type="button" data-obs="path">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.path_of%7Cconst"><code>path_of</code></a> :: activation_trace &#8658; activation_path</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.path_of%7Cconst"><code>path_of</code></a> :: 'v gactivation_trace &#8658; 'v gactivation_path</span>
               <span class="obs-gloss">the activation's own trace</span>
             </button>
             <button type="button" data-obs="entry">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.entry_store%7Cconst"><code>entry_store</code></a> :: activation_trace &#8658; store</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.entry_store%7Cconst"><code>entry_store</code></a> :: 'v gactivation_trace &#8658; ('v &#8658; int)</span>
               <span class="obs-gloss">the store it started in</span>
             </button>
             <button type="button" data-obs="sinknode">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_node%7Cconst"><code>sink_node</code></a> :: activation_trace &#8658; cfg_node</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_node%7Cconst"><code>sink_node</code></a> :: 'v gactivation_trace &#8658; cfg_node</span>
               <span class="obs-gloss">where it has got to</span>
             </button>
             <button type="button" data-obs="sinkstore">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a> :: activation_trace &#8658; store</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a> :: 'v gactivation_trace &#8658; ('v &#8658; int)</span>
               <span class="obs-gloss">what memory holds there</span>
             </button>
             <button type="button" data-obs="caller">
-              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> :: activation_trace &#8658; activation_trace option</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> :: 'v gactivation_trace &#8658; 'v gactivation_trace option</span>
               <span class="obs-gloss">who called it</span>
             </button>
             <button type="button" data-obs="callee">
-              <span class="obs-sig"><code>activation_trace_callee</code> :: activation_trace &#8658; activation_trace</span>
+              <span class="obs-sig"><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace.activation_trace_callee%7Cconst"><code>activation_trace_callee</code></a> :: 'v gactivation_trace &#8658; 'v gactivation_trace</span>
               <span class="obs-gloss">the call it just finished</span>
             </button>
           </div>
@@ -1376,7 +1376,7 @@ datatype activation_trace =
       <div class="prose-block">
         <h3>The analyzer never builds a trace</h3>
         <p>It could not usefully do so. Every trace is finite, but nothing bounds its length or how deeply it nests: a recursion has one activation per level, and as soon as the program reads an unconstrained input, the set of all traces is infinite.</p>
-        <p>An activation trace exists only as a value in the logic. It gives soundness something to be a statement <em>about</em>, and the proofs quantify over the set of traces without anything ever enumerating it. The generated code confirms this: of the <span data-stat="generated_ocaml">—</span> lines of OCaml exported from these theories, none mentions <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> or <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>. The specification is not part of the analyzer.</p>
+        <p>An activation trace exists only as a value in the logic. It gives soundness something to be a statement <em>about</em>, and the proofs quantify over the set of traces without anything ever enumerating it. The generated code confirms this: of the <span data-stat="generated_ocaml">—</span> lines of OCaml exported from these theories, none mentions <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace%7Ctype"><code>gactivation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.caller_of%7Cconst"><code>caller_of</code></a> or <a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>. The specification is not part of the analyzer.</p>
       </div>
     </section>
 
@@ -1409,25 +1409,25 @@ datatype activation_trace =
 
       <div class="prose-block">
         <h3>A variable is an identity, not a name</h3>
-        <p>Two procedures may both have a formal <code>n</code>, one <code>i8</code> and one <code>u32</code>. A kind table indexed by names could not hold both. The semantics therefore stores values under identities (<a href="Voblint/Voblint_Typed/Var_Id.html#Var_Id.var_id%7Ctype"><code>var_id</code></a>): <code>GlobalId x</code> for a global, <code>ScopedId f x</code> for a local or formal of <code>f</code>, <code>ReturnId f</code> for the kind <code>f</code> returns, and <code>ReturnVar</code> for the slot a <code>return</code> writes and a caller reads. Whether a variable is global is now read off its constructor, so the semantics needs no separate list of globals.</p>
+        <p>Two procedures may both have a formal <code>n</code>, one <code>i8</code> and one <code>u32</code>. A kind table indexed by names could not hold both. The semantics therefore stores values under identities (<a href="Voblint/Voblint_VIMP/Var_Id.html#Var_Id.var_id%7Ctype"><code>var_id</code></a>): <code>GlobalId x</code> for a global, <code>ScopedId f x</code> for a local or formal of <code>f</code>, <code>ReturnId f</code> for the kind <code>f</code> returns, and <code>ReturnVar</code> for the slot a <code>return</code> writes and a caller reads. Whether a variable is global is now read off its constructor, so the semantics needs no separate list of globals.</p>
         <p>C also lets an inner block redeclare a name: <code>{ i8 x = 7; … }</code> inside a procedure whose <code>x</code> is <code>i32</code>. The parser resolves this before the program reaches Isabelle. It renames each shadowing declaration to a fresh name, <code>x#2</code>, <code>x#3</code>, …, that no source program can write, so every declaration in a procedure has its own <code>ScopedId</code> and its own kind.</p>
       </div>
 
       <div class="prose-block">
         <h3>From surface VIMP to core VIMP</h3>
-        <p>What you write, and what the parser builds, is surface VIMP: it writes <code>x + 1</code> and leaves conversions implicit. What the semantics executes is core VIMP, which writes every kind and every conversion down. The step between them is the elaboration, and surface VIMP has no semantics of its own: a surface program means whatever its elaboration does in core VIMP. Its expressions (<a href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.texp%7Ctype"><code>texp</code></a>) are literals <code>TN</code>, variable reads <code>TVar</code>, arithmetic <code>TArith</code> and conversions <code>TCast</code>, each carrying its kind, plus comparisons and the logical operators, which yield 0 or 1. <a href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.elaborate%7Cconst"><code>elaborate</code></a> translates a surface expression at the kind its context wants, inserting the conversions C would perform; <a href="Voblint/Voblint_Typed/Typed_Com.html#Typed_Com.elab_com%7Cconst"><code>elab_com</code></a> does the same for statements and resolves each name to its identity. In <code>main</code> above, <code>x = x + 1</code> becomes</p>
+        <p>What you write, and what the parser builds, is surface VIMP: it writes <code>x + 1</code> and leaves conversions implicit. What the semantics executes is core VIMP, which writes every kind and every conversion down. The step between them is the elaboration, and surface VIMP has no semantics of its own: a surface program means whatever its elaboration does in core VIMP. Core VIMP's expressions (<a href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.exp%7Ctype"><code>exp</code></a>) are literals <code>TN</code>, variable reads <code>TVar</code>, arithmetic <code>TArith</code> and conversions <code>TCast</code>, each carrying its kind, plus comparisons and the logical operators, which yield 0 or 1. <a href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.elaborate%7Cconst"><code>elaborate</code></a> translates a surface expression (<a href="Voblint/Voblint_VIMP/VIMP_Syntax.html#VIMP_Syntax.src_exp%7Ctype"><code>src_exp</code></a>) at the kind its context wants, inserting the conversions C would perform; <a href="Voblint/Voblint_VIMP/Core_Com.html#Core_Com.elab_com%7Cconst"><code>elab_com</code></a> does the same for statements (<a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.src_com%7Ctype"><code>src_com</code></a>) and resolves each name to its identity. In <code>main</code> above, <code>x = x + 1</code> becomes</p>
         <pre class="prose-code" data-lang="isabelle"><code>Assign (ScopedId main x)
   (TArith I32 AAdd (TVar I32 (ScopedId main x)) (TN I32 1))</code></pre>
-        <p>and the <code>u8</code> version becomes <code>TCast U8 (TArith I32 AAdd (TCast I32 (TVar U8 x)) (TN I32 10))</code>. <a href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.teval%7Cconst"><code>teval</code></a> evaluates such a term with no kind table: it wraps at every <code>TArith</code> and <code>TCast</code> with the kind written on the node. The elaboration is an Isabelle function, and its output is well-typed (<a href="Voblint/Voblint_Typed/Typed_Com.html#Typed_Com.wt_tcom_elab_com%7Cfact"><code>wt_tcom_elab_com</code></a>), so every value an expression produces lies in its kind (<a href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.teval_in_range%7Cfact"><code>teval_in_range</code></a>).</p>
-        <p>The remaining conversions happen where a value is written. An assignment, a call's argument and a call's result are converted to the kind of the identity that receives them (<a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tconv%7Cconst"><code>tconv</code></a>), and a <code>return</code> converts its value to the procedure's return kind. A call <code>narrow(200)</code> to <code>fun i32 narrow(i8 n)</code> enters with <code>n = −56</code>. As a consequence a run never holds a value outside a variable's kind (<a href="Voblint/Voblint_Typed_CFG/Typed_Invariants.html#Typed_Invariants.typed_run_tstyped%7Cfact"><code>typed_run_tstyped</code></a>), and the analyses' soundness proofs use this fact.</p>
+        <p>and the <code>u8</code> version becomes <code>TCast U8 (TArith I32 AAdd (TCast I32 (TVar U8 x)) (TN I32 10))</code>. <a href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.eval%7Cconst"><code>eval</code></a> evaluates such a term with no kind table: it wraps at every <code>TArith</code> and <code>TCast</code> with the kind written on the node. The elaboration is an Isabelle function, and its output is well-typed (<a href="Voblint/Voblint_VIMP/Core_Com.html#Core_Com.wt_com_elab_com%7Cfact"><code>wt_com_elab_com</code></a>), so every value an expression produces lies in its kind (<a href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.eval_in_range%7Cfact"><code>eval_in_range</code></a>).</p>
+        <p>The remaining conversions happen where a value is written. An assignment, a call's argument and a call's result are converted to the kind of the identity that receives them (<a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.kind_conv%7Cconst"><code>kind_conv</code></a>), and a <code>return</code> converts its value to the procedure's return kind. A call <code>narrow(200)</code> to <code>fun i32 narrow(i8 n)</code> enters with <code>n = −56</code>. As a consequence no store the graph's activation traces reach holds a value outside a variable's kind (<a href="Voblint/Voblint_Compile/Kind_Invariants.html#Kind_Invariants.node_collect_in_kinds%7Cfact"><code>node_collect_in_kinds</code></a>), and the analyses' soundness proofs use this fact.</p>
       </div>
 
       <div class="prose-block">
         <h3>What the theorems quantify over</h3>
-        <p>There is one operational semantics, <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.vimp_sem.gpstep%7Cconst"><code>gpstep</code></a>, written once over an evaluator, a test for globals, a return slot and a conversion. Core VIMP's step <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a> is that semantics instantiated with <code>teval</code>, <code>GlobalId</code> as the globals, <code>ReturnVar</code> as the slot and <code>tconv</code>. The analyzer receives the parsed program <code>p</code> and its kind declarations <code>ds</code>, and the soundness theorems are about the runs of the elaborated program <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_ptable%7Cconst"><code>typed_ptable p ds</code></a> under <code>tpstep</code>. A run starts from any store in <a href="Voblint/Voblint_Typed/Typed_Semantics.html#Typed_Semantics.tinit_stores%7Cconst"><code>tinit_stores</code></a>: every global is 0, and every other identity holds some value of its kind. A local declared without an initializer is reset to an arbitrary value of its kind each time its declaration runs (<a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep_declare%7Cfact"><code>tpstep_declare</code></a>). The graph, the activation traces and the collecting semantics in the next sections are generic in the same way, and the analyzer's theorems use their core-VIMP instances.</p>
+        <p>There is one operational semantics, <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.vimp_sem.gpstep%7Cconst"><code>gpstep</code></a>, written once over an evaluator, a test for globals, a return slot and a conversion. Core VIMP's step <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a> is that semantics instantiated with <code>eval</code>, <code>GlobalId</code> as the globals, <code>ReturnVar</code> as the slot and <code>kind_conv</code>. The analyzer receives the parsed program <code>p</code> and its kind declarations <code>ds</code>, and the soundness theorems are about the runs of the elaborated program <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.elab_ptable%7Cconst"><code>elab_ptable p ds</code></a> under <code>pstep</code>. A run starts from any store in <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.init_stores%7Cconst"><code>init_stores</code></a>: every global is 0, and every other identity holds some value of its kind. A local declared without an initializer is reset to an arbitrary value of its kind each time its declaration runs (<a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep_declare%7Cfact"><code>pstep_declare</code></a>). The graph, the activation traces and the collecting semantics in the next sections are generic in the same way, and the analyzer's theorems use their core-VIMP instances.</p>
         <p>Three questions about these guarantees have different answers. The analyzer's soundness for runs of core VIMP is proved: the theorems quantify over exactly those runs. What a surface program means is fixed by definitions, and the elaboration is one of them, defined in Isabelle and applied inside <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint%7Cconst"><code>run_voblint</code></a>; that these definitions say what they should is argued below, not proved. The OCaml parser, and whether VIMP's integers behave like C's, are trusted.</p>
         <p>The proof stops at the parser. Isabelle receives <code>p</code> and <code>ds</code> after block scopes have been resolved into fresh names and declarations into those reset calls. That this follows C's scoping, and that every use of a local comes after its declaration, is trusted: the parser checks it and rejects a program that breaks it, and no theorem covers it. The same holds for the source line printed next to an arithmetic diagnostic. The theorem names the graph node, and the CLI finds the line through positions the parser recorded.</p>
-        <p>Whether these definitions are the integers you meant is not a theorem either. The meaning of a surface program is fixed by several definitions read together: <code>ik_norm</code>, the usual arithmetic conversions, <code>elaborate</code> and <code>elab_com</code>, <code>teval</code>, <code>tconv</code>, the declaration rule and <code>gpstep</code>. Two of them differ from C on purpose. Signed overflow wraps, as with <code>-fwrapv</code>, where C leaves it undefined; the arithmetic diagnostics are how you learn that a program may depend on it. Division by zero is defined, <code>a / 0 = 0</code> and <code>a % 0 = a</code>, and is reported the same way.</p>
+        <p>Whether these definitions are the integers you meant is not a theorem either. The meaning of a surface program is fixed by several definitions read together: <code>ik_norm</code>, the usual arithmetic conversions, <code>elaborate</code> and <code>elab_com</code>, <code>eval</code>, <code>kind_conv</code>, the declaration rule and <code>gpstep</code>. Two of them differ from C on purpose. Signed overflow wraps, as with <code>-fwrapv</code>, where C leaves it undefined; the arithmetic diagnostics are how you learn that a program may depend on it. Division by zero is defined, <code>a / 0 = 0</code> and <code>a % 0 = a</code>, and is reported the same way.</p>
       </div>
     </section>
 
@@ -1437,14 +1437,14 @@ datatype activation_trace =
         <p class="eyebrow">The meaning</p>
         <h2 id="semantics-heading">What a run is</h2>
         <p class="section-intro">A semantics is a rule for what a program does: given a state, which states may come next. Writing it down turns “what the program really does” from an appeal to intuition into a set you can quantify over.</p>
-        <p class="section-intro">Voblint relates two small-step semantics to a third, trace-based description of executions, because the three objects it has to relate have different shapes. A <strong>source</strong> step (<a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a>) rewrites a program that is still program text, carrying the store and a stack of caller frames. A <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through a control-flow graph, carrying a stack of return points. The third does not take steps. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a> is the activation trace from the previous section, and <strong><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></strong> is a rule that says which of those values the graph admits. It judges one activation with its whole history at once, instead of moving from one state to the next.</p>
-        <p class="section-intro">Soundness is stated against the third, because of what the analysis answers. It gives one value per program point, so the soundness claim has the form “at node <code>v</code>, this value covers every store a run can hold there”. <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a> has no notion of a node, so the claim cannot even be stated against it. <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> has nodes, but its state is a whole configuration including the call stack, and while it holds the current activation's store, it does not record which activation that is, so contexts, which are read off the activation, cannot be stated against it. Activation traces can: the traces whose path ends at <code>v</code> are exactly the activations standing there, one box each, and each holds the store at the end of its path.</p>
+        <p class="section-intro">Voblint relates two small-step semantics to a third, trace-based description of executions, because the three objects it has to relate have different shapes. A <strong>source</strong> step (<a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a>) rewrites a program that is still program text, carrying the store and a stack of caller frames. A <strong>CFG</strong> step (<a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>) moves a position through a control-flow graph, carrying a stack of return points. The third does not take steps. <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace%7Ctype"><code>gactivation_trace</code></a> is the activation trace from the previous section, and <strong><a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></strong> is a rule that says which of those values the graph admits. It judges one activation with its whole history at once, instead of moving from one state to the next.</p>
+        <p class="section-intro">Soundness is stated against the third, because of what the analysis answers. It gives one value per program point, so the soundness claim has the form “at node <code>v</code>, this value covers every store a run can hold there”. <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a> has no notion of a node, so the claim cannot even be stated against it. <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> has nodes, but its state is a whole configuration including the call stack, and while it holds the current activation's store, it does not record which activation that is, so contexts, which are read off the activation, cannot be stated against it. Activation traces can: the traces whose path ends at <code>v</code> are exactly the activations standing there, one box each, and each holds the store at the end of its path.</p>
       </div>
 
       <figure class="scene scene-run" data-step="0">
         <div class="run-layout">
           <div class="run-panel run-source">
-            <p class="td-panel-title">Source <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a></p>
+            <p class="td-panel-title">Source <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a></p>
             <div class="run-rulebox">
               <span class="run-rule-kind">applicable inductive rule</span>
               <code class="run-rule" data-rule="source"></code>
@@ -1540,7 +1540,7 @@ datatype activation_trace =
           </div>
 
           <div class="run-panel run-trace">
-            <p class="td-panel-title">Activation trace <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a> <small>in <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></small></p>
+            <p class="td-panel-title">Activation trace <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace%7Ctype"><code>gactivation_trace</code></a> <small>in <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a></small></p>
             <div class="run-rulebox">
               <span class="run-rule-kind">applicable inductive rule</span>
               <code class="run-rule" data-rule="trace"></code>
@@ -1588,11 +1588,11 @@ datatype activation_trace =
           except its formals, which take the actuals, and <code>x</code> in <code>main</code>
           starts at any value.
           The source rules are
-          <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a>,
+          <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a>,
           the graph rules
           <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a>,
           and the activation-trace type
-          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a>, whose
+          <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace%7Ctype"><code>gactivation_trace</code></a>, whose
           three constructors are <code>Root</code>, <code>Call</code> and <code>Resume</code>.
           <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>
           is the predicate that says one of them is a run the graph really admits.
@@ -1600,7 +1600,7 @@ datatype activation_trace =
           why a returned callee composes the same way whatever constructor it came from.
           The source rules shown are the ones that do the work; the congruence rules
           <code>Seq1</code> and <code>Seq2</code> that reach into a sequence are left out, and stores omit the
-          result slot <code>ReturnVar</code>, the <a href="Voblint/Voblint_Typed/Var_Id.html#Var_Id.var_id%7Ctype"><code>var_id</code></a> a <code>return</code> writes. The boxes on the right show who called whom, and a box holding two
+          result slot <code>ReturnVar</code>, the <a href="Voblint/Voblint_VIMP/Var_Id.html#Var_Id.var_id%7Ctype"><code>var_id</code></a> a <code>return</code> writes. The boxes on the right show who called whom, and a box holding two
           finished callees stands for two nested <code>Resume</code>s. In the value itself, a live
           <code>Call</code> holds its caller, so the nesting runs the other way until the callee
           returns and a <code>Resume</code> takes it in.
@@ -1608,7 +1608,7 @@ datatype activation_trace =
       </figure>
 
       <div class="prose-block">
-        <p>The semantics differ in the three stacks below the figure. At an open call, the source keeps a <code>Frame</code>: the caller's store and the variable to assign. The graph keeps the same and the node to return to. An activation trace keeps the caller itself, whole, as a field. Soundness has to name a program point, say which stores can be there, and do so one activation at a time, so the table asks all three the same four questions. The table adds a fourth candidate: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_path%7Ctype"><code>activation_path</code></a> is a list of pairs, and one such list for the whole run, instead of one per activation, is the flat list from the trace section.</p>
+        <p>The semantics differ in the three stacks below the figure. At an open call, the source keeps a <code>Frame</code>: the caller's store and the variable to assign. The graph keeps the same and the node to return to. An activation trace keeps the caller itself, whole, as a field. Soundness has to name a program point, say which stores can be there, and do so one activation at a time, so the table asks all three the same four questions. The table adds a fourth candidate: <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_path%7Ctype"><code>gactivation_path</code></a> is a list of pairs, and one such list for the whole run, instead of one per activation, is the flat list from the trace section.</p>
         <div class="table-wrap">
           <table class="obs-table">
             <thead>
@@ -1616,7 +1616,7 @@ datatype activation_trace =
             </thead>
             <tbody>
               <tr>
-                <th>a source configuration, <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a></th>
+                <th>a source configuration, <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a></th>
                 <td>no history is kept</td><td>not in the state</td><td>no notion of a CFG node at all</td><td>a frame, not a run</td>
               </tr>
               <tr>
@@ -1628,7 +1628,7 @@ datatype activation_trace =
                 <td>scan it, matching calls to returns</td><td>scan back to its call</td><td>the run's last step, not this activation's</td><td>scan back for the unmatched call</td>
               </tr>
               <tr class="is-good">
-                <th>an activation trace, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.activation_trace%7Ctype"><code>activation_trace</code></a></th>
+                <th>an activation trace, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.gactivation_trace%7Ctype"><code>gactivation_trace</code></a></th>
                 <td>a field</td><td>the first pair</td><td>the last pair</td><td>a field</td>
               </tr>
             </tbody>
@@ -1645,7 +1645,7 @@ datatype activation_trace =
         <p>The theories write this with a little notation. <code>g</code> is the compiled graph, <code>S</code> the set of stores a run may start in, and <code>𝒢</code> the classifier that says which variables are declared globals. <code>𝒯<sub>𝒢,g,S</sub></code> is the set of valid activation traces of <code>g</code> starting from <code>S</code> (<a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a>). For a trace <code>t</code>, <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_node%7Cconst"><code>sink_node</code></a> <code>t</code> and <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.sink_store%7Cconst"><code>sink_store</code></a> <code>t</code> are the node and the store at the end of its path. The stores collected at a node <code>v</code>, <code>𝒞<sub>𝒢,g,S</sub> v</code> (<a href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.node_collect%7Cconst"><code>node_collect</code></a>), are then:</p>
         <pre class="prose-code" data-lang="isabelle"><code>𝒞<sub>𝒢,g,S</sub> v =
   {sink_store t | t. t &#8712; 𝒯<sub>𝒢,g,S</sub> &#8743; sink_node t = v}</code></pre>
-        <p>The result is one set per node, holding the stores a real run can have there. Neither of the other two semantics yields this directly. Over <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a> there is no node <code>v</code> to index by. Over <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> it can be written, but the only finer index available there is the call stack, not the activation.</p>
+        <p>The result is one set per node, holding the stores a real run can have there. Neither of the other two semantics yields this directly. Over <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a> there is no node <code>v</code> to index by. Over <a href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst"><code>cstep</code></a> it can be written, but the only finer index available there is the call stack, not the activation.</p>
         <p>This is also where the grouping by activation is given up on purpose. A trace has to belong to one activation for “ends at <code>v</code>” to mean anything; the collection then forgets the activation and puts all stores at <code>v</code> into one set. <a href="Voblint/Voblint_CFG/Activation_Trace_Context.html#Activation_Trace_Context.activation_collect%7Cconst"><code>activation_collect</code></a> is the variant that keeps a key per activation, and a <a href="#settings">context</a> decides how much of that key to keep.</p>
       </div>
 
@@ -2127,7 +2127,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
         <p>The TD solver is <em>demand-driven</em>. It is asked for one unknown and evaluates that unknown's tree, and every <code>QueryL</code> on the way asks for another unknown, recursively. It computes exactly what the first question turns out to need. Voblint always asks the same question: the exit of the entry procedure under the root context.</p>
         <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_pipeline.root_query%7Cconst">root_query</a> p = (<a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_exit%7Cconst">cfg_exit</a> (prog_cfg p), root_ctx)</code></pre>
         <p>A terminating run ends at that point, so asking for it pulls in, one query at a time, every point its value depends on. The vendored solver therefore promises a <em>partial</em> <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst">post-solution</a> with three properties. It covers the question. Its covered set is closed under the dependencies the trees take. And for every covered unknown, the tree's answer is below <code>σ</code>'s value there, with its contributions below <code>σ</code> at the globals they write. Read as a pair, the answer together with the partial map of its contributions, that last property is the usual condition on a side-effecting right-hand side (<a href="Voblint/Voblint_Solver/Strategy_Tree_Pair.html#Strategy_Tree_Pair.part_post_solution_iff_rhs_pair%7Cfact"><code>part_post_solution_iff_rhs_pair</code></a>). The middle property speaks only of direct dependencies; <a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution_implies_trans_dep_subsumed%7Cfact"><code>part_post_solution_implies_trans_dep_subsumed</code></a> extends it to all of them, so everything transitively reachable from the question lies inside the covered set.</p>
-        <p>Every node a run can reach has a path in the graph to its procedure's exit, so the solver's backward queries reach it (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact"><code>live_unknowns_cover</code></a>). A key outside the solved set is still defined to read as <code>bot</code>:</p>
+        <p>Every node a run can reach has a path in the graph to its procedure's exit, so the solver's backward queries reach it (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.glive_unknowns_cover%7Cfact"><code>glive_unknowns_cover</code></a>). A key outside the solved set is still defined to read as <code>bot</code>:</p>
         <pre class="prose-code" data-lang="isabelle"><code><a href="Voblint/Voblint_Framework/Routed_Analysis_Sound.html#Routed_Analysis_Sound.solved_local_reader%7Cconst">solved_local_reader</a> vars σ k =
   (case k of Inl vc ⇒ (if vc ∈ vars then locals (σ (Inl vc)) else bot)
            | Inr _ ⇒ bot)</code></pre>
@@ -2445,7 +2445,7 @@ type_synonym ('x, 'g, 'd) eqsT = 'x ⇒ ('x, 'g, 'd) strategy_tree</code></pre>
           </div>
         </div>
 
-        <figcaption>This shows how the equations are generated, not how they are solved. Each node's right-hand side is built from its own incoming contributions (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>), independently of the other nodes, so the figure shows all five at once; select a node to see its equation. A call site contributes one program that publishes and then reads (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>). The solver later starts from the other end, at <code>exit_main</code>, as the <a href="#replay">solve replay</a> shows. <code>enter</code> and <code>combine</code> belong to the analysis, as fields of <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype"><code>dg_spec</code></a>; as in Goblint, combining is split into two fields, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> and then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint writes the two connections with <code>sidel</code> and a query of the callee's exit. The keys above are written without their context, which the next subsection adds.
+        <figcaption>This shows how the equations are generated, not how they are solved. Each node's right-hand side is built from its own incoming contributions (<a href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst"><code>routed_node_rhs</code></a>), independently of the other nodes, so the figure shows all five at once; select a node to see its equation. A call site contributes one program that publishes and then reads (<a href="Voblint/Voblint_Framework/Routed_Call_Programs.html#Routed_Call_Programs.routed_call_program%7Cconst"><code>routed_call_program</code></a>). The solver later starts from the other end, at <code>exit_main</code>, as the <a href="#replay">solve replay</a> shows. <code>enter</code> and <code>combine</code> belong to the analysis, as fields of <a href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec%7Ctype"><code>gdg_spec</code></a>; as in Goblint, combining is split into two fields, <a href="Voblint/Voblint_VIMP/VIMP_Globals.html#VIMP_Globals.combine_env%7Cconst"><code>combine_env</code></a> and then <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.combine_assign%7Cconst"><code>combine_assign</code></a>. Goblint writes the two connections with <code>sidel</code> and a query of the callee's exit. The keys above are written without their context, which the next subsection adds.
           <a class="try-link" href="playground.html?fixture=24-site-figures/known-imprecision/01-factorial_no_context.vimp&amp;analysis=interval&amp;context=entry-state">Run this program &#8599;</a></figcaption>
       </figure>
 
@@ -3012,7 +3012,7 @@ fun main() {
           <i class="fa-solid fa-chevron-down blackbox-chevron" aria-hidden="true"></i>
         </summary>
       <div class="prose-block">
-        <p>A program point is a <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a>: a numbered statement, or a procedure's entry or result, named by an arbitrary string. A context is whatever the policy keys copies by. That is a <a href="Voblint/Voblint_Framework/Call_String_Context.html#Call_String_Context.call_string%7Ctype"><code>call_string</code></a>, a list of call sites, or, under <a href="Voblint/Voblint_Routing/Entry_State_Routed_Context.html#Entry_State_Routed_Context.pure_entry_routed_context%7Clocale">entry states</a>, the list of abstract values the call binds to the callee's formals, read off the entered <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a>. Neither type is finite, and <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a> gives an equation for every pair of them. No step builds the equations, no table is allocated and no enumeration needs a bound. A solve evaluates the part of the system its query reaches.</p>
+        <p>A program point is a <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a>: a numbered statement, or a procedure's entry or result, named by an arbitrary string. A context is whatever the policy keys copies by. That is a <a href="Voblint/Voblint_Framework/Call_String_Context.html#Call_String_Context.call_string%7Ctype"><code>call_string</code></a>, a list of call sites, or, under <a href="Voblint/Voblint_Nonrelational/Nonrelational_Analysis.html#Nonrelational_Analysis.nonrel_es_ctx%7Cconst">entry states</a>, the list of abstract values the call binds to the callee's formals, read off the entered <a href="Voblint/Voblint_Nonrelational/Nonrelational_Exec.html#Nonrelational_Exec.tst%7Ctype"><code>tst</code></a>. Neither type is finite, and <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a> gives an equation for every pair of them. No step builds the equations, no table is allocated and no enumeration needs a bound. A solve evaluates the part of the system its query reaches.</p>
       </div>
 
       <div class="prose-block">
@@ -3551,14 +3551,14 @@ fun main() {
           </svg>
         </div>
         <figcaption>One cell is one equation, keyed here by the entry state a call arrives with. The ringed cell is the only one the solver is asked for (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_pipeline.root_query%7Cconst"><code>root_query</code></a>: the program's exit in the root context). Every other filled cell is there because a cell the solver had already reached read it. Each call appears as a loop. The dashed arrow is the seed the call publishes at the callee's entry; it creates that context, and the entry equation reads it back. The solid arrow is the callee's exit returning to the call site that queried it. Hollow cells are read too, and answer bottom: inside <code>f</code>, the guard <code>n &lt; 2</code> holds under <code>(1)</code> and <code>(0)</code> but not under <code>(3)</code> and <code>(2)</code>, so only two of <code>f</code>'s copies ever enter <code>g</code>. <code>w</code>'s two arrows return to its own column. It calls itself with a value nothing constrains, so caller and callee land in the same context and the unknown depends on itself. The solver iterates such an unknown, widening if needed, until it stops changing; whether that happens is the termination premise.</p>
-          <p>Only the coordinates this drawing names are drawn: one column per context, one row per program point. The <span aria-hidden="true">&#8734;</span> marks are axis breaks; across one, the spacing means nothing, and no drawing could list what they leave out. Both index types are infinite. A context is the list of abstract values a call binds to the callee's formals, projected out of an <a href="Voblint/Voblint_Domain/Nonrelational_State.html#Nonrelational_State.abs_state%7Ctype"><code>abs_state</code></a>. A program point is a <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a> whose procedure name can be any string, which is why <code>aaa</code>, <code>pp</code>, <code>zz</code> and <code>bb</code> are rows of this system although the program has no such procedures, and why most columns are contexts in which nothing was ever entered. The filled cells are everything the run reached; the system is the whole grid.</figcaption>
+          <p>Only the coordinates this drawing names are drawn: one column per context, one row per program point. The <span aria-hidden="true">&#8734;</span> marks are axis breaks; across one, the spacing means nothing, and no drawing could list what they leave out. Both index types are infinite. A context is the list of abstract values a call binds to the callee's formals, projected out of an <a href="Voblint/Voblint_Nonrelational/Nonrelational_Exec.html#Nonrelational_Exec.tst%7Ctype"><code>tst</code></a>. A program point is a <a href="Voblint/Voblint_CFG/CFG_Def.html#CFG_Def.cfg_node%7Ctype"><code>cfg_node</code></a> whose procedure name can be any string, which is why <code>aaa</code>, <code>pp</code>, <code>zz</code> and <code>bb</code> are rows of this system although the program has no such procedures, and why most columns are contexts in which nothing was ever entered. The filled cells are everything the run reached; the system is the whole grid.</figcaption>
       </figure>
       </details>
 
       <div class="prose-block">
         <p>Nothing builds this system. An equation system is an <a href="Unsorted/TD/Basics_side.html#Basics_side.eqsT%7Ctype"><code>eqsT</code></a>, and <code>eqsT</code> is a function type, <code>'x &#8658; strategy_tree</code>, from an unknown to its right-hand side. <a href="Voblint/Voblint_Routing/Compiled_Routed_Equations.html#Compiled_Routed_Equations.compiled_routed_eqs_for%7Cconst"><code>compiled_routed_eqs_for</code></a> defines one such function, and a function in Isabelle/HOL is total: it has a value at every argument of its type. So the right-hand side for every pair of a program point and a context is already defined. Nobody constructs it. The solver evaluates it when it needs it, so the infinite size of the system has no run-time cost.</p>
         <p>Only a query produces something finite. The solver receives the system and one unknown, and returns a <em>partial post-solution</em> (<a href="Unsorted/TD/Basics_side.html#Basics_side.part_post_solution%7Cconst"><code>part_post_solution</code></a>): every unknown it stabilised is at least what that unknown's equation computes, over the set of keys it reached. That set is finite because the run terminated; the system itself is infinite.</p>
-        <p>A key the solver never touched reads as bottom. The theorem shows that this loses nothing: the solved keys contain the root query and are closed under every step a run can take (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.live_unknowns_cover%7Cfact"><code>live_unknowns_cover</code></a>), so every key a run reaches is among them, and every answer in the result table is covered, including bottom at points no run reaches.</p>
+        <p>A key the solver never touched reads as bottom. The theorem shows that this loses nothing: the solved keys contain the root query and are closed under every step a run can take (<a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.glive_unknowns_cover%7Cfact"><code>glive_unknowns_cover</code></a>), so every key a run reaches is among them, and every answer in the result table is covered, including bottom at points no run reaches.</p>
       </div>
 
 
@@ -4001,7 +4001,7 @@ fun main() {
       </figure>
 
       <h3 class="setting-title" id="program-globals">Where program globals live</h3>
-      <p class="setting-copy">So far a VIMP <code>global</code> has behaved like a local that every procedure can see. It travels inside each point's state: into a callee with the caller's state, and back out through <code>combine</code>. The playground's <strong>Program globals</strong> setting (<code>--program-globals</code> on the command line, <a href="Voblint/Voblint_Typed_CLI/Typed_Run.html#Typed_Run.program_globals%7Ctype"><code>program_globals</code></a> in the theories) offers a second placement, the one the <a href="#ref-seidl-2026">FM 2026 tutorial</a> calls flow-insensitive.</p>
+      <p class="setting-copy">So far a VIMP <code>global</code> has behaved like a local that every procedure can see. It travels inside each point's state: into a callee with the caller's state, and back out through <code>combine</code>. The playground's <strong>Program globals</strong> setting (<code>--program-globals</code> on the command line, <a href="Voblint/Voblint_CLI/Analysis_Config.html#Analysis_Config.program_globals%7Ctype"><code>program_globals</code></a> in the theories) offers a second placement, the one the <a href="#ref-seidl-2026">FM 2026 tutorial</a> calls flow-insensitive.</p>
       <p class="setting-copy">Under <strong>Flow-insensitive</strong>, each declared global gets a global unknown of its own, and the points stop carrying it. An edge that assigns <code>g</code> publishes the new value of <code>g</code> to that unknown, an edge whose expressions mention <code>g</code> reads it, and a call reads only the globals its arguments mention. A point that touches no global depends on none, and a write to <code>g</code> re-runs only the points that read <code>g</code>.<!-- TODO(typed-port): read_g_depends_on_g_only, write_h_publishes_h_only (Example_Keyed_Global_Footprint checked this on one reading and one writing edge) --> The initial value 0 is published by the program's entry like any other write.</p>
       <p class="setting-copy">This placement costs precision, because one value has to cover everything the global ever holds, at every point. Take <code>set()</code> writing <code>Gx = 1</code> and <code>get()</code> returning <code>Gx</code>, called in that order from <code>main</code>. Flow-sensitively, Sign carries <code>Gx = +</code> from <code>set</code>'s exit into <code>get</code> and proves <code>0 &lt; y</code>. Flow-insensitively, the unknown of <code>Gx</code> joins the initial 0 with the written 1, Sign can only say <code>Gx &#8805; 0</code>, and <code>0 &lt; y</code> stays UNKNOWN. Run it <a href="playground.html?fixture=07-sign-precision/precision/19-callee_reads_global_after_setter.vimp&amp;analysis=sign&amp;globals=join">flow-sensitively</a> and <a href="playground.html?fixture=07-sign-precision/precision/21-callee_reads_shared_global_after_setter.vimp&amp;analysis=sign&amp;globals=join&amp;placement=flow-insensitive&amp;graph=analysis">flow-insensitively</a> to compare.</p>
       <p class="setting-copy">So why offer it? For a sequential VIMP program it only loses precision, as it does here. The reason is the language VIMP could grow into. The <a href="#ref-seidl-2026">FM 2026 tutorial</a> names multi-threaded code as a main source of mixed flow-sensitivity: a thread-modular analysis collects the values threads exchange through shared globals flow-insensitively, so it can track each thread's own state flow-sensitively without considering every thread that may run beside it. Goblint analyzes concurrent C this way. VIMP has no threads, so here the setting shows something narrower: the framework and its end-to-end theorem already carry a mixed flow-sensitive analysis. An extension with threads would reuse this machinery and add a thread semantics and synchronization.</p>
@@ -4054,7 +4054,7 @@ fun main() {
         </figcaption>
       </figure>
 
-      <p class="setting-copy">Both placements carry the same end-to-end theorem, <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>, because the setting is an argument of the analysis function it is stated about. The flow-insensitive one comes from a lifter, <a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_spec%7Cconst"><code>keyed_split_spec</code></a>, that wraps the active analyses. Its soundness proof (<a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_contract%7Cfact"><code>keyed_split_contract</code></a>) rests on a fact about the concrete semantics: a step leaves every global it does not assign unchanged (<a href="Voblint/Voblint_CFG/CFG_Transfer.html#CFG_Transfer.cfg_transfer_sem.edge_step_frame%7Cfact"><code>edge_step_frame</code></a>), so skipping the publication of an unwritten global loses nothing. Only per-variable state splits this way. The order analysis relates variables to each other and keeps its whole state at the points.</p>
+      <p class="setting-copy">Both placements carry the same end-to-end theorem, <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>, because the setting is an argument of the analysis function it is stated about. The flow-insensitive one comes from a lifter, <a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.gkeyed_split_spec%7Cconst"><code>gkeyed_split_spec</code></a>, that wraps the active analyses. Its soundness proof (<a href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.gkeyed_split_contract%7Cfact"><code>gkeyed_split_contract</code></a>) rests on a fact about the concrete semantics: a step leaves every global it does not assign unchanged (<a href="Voblint/Voblint_CFG/CFG_Transfer.html#CFG_Transfer.cfg_transfer_sem.edge_step_frame%7Cfact"><code>edge_step_frame</code></a>), so skipping the publication of an unwritten global loses nothing. Only per-variable state splits this way. The order analysis relates variables to each other and keeps its whole state at the points.</p>
       <p class="setting-copy">The global unknowns are side-effected, so the Globals setting above decides how their writes merge. Choosing Flow-insensitive switches it to <strong>Bounded narrowing</strong> unless you picked a rule yourself, because under plain warrowing a global's unknown that is widened and narrowed in turn need not settle.</p>
 
     </section>
@@ -4109,8 +4109,8 @@ fun main() {
         <h3>Correct with respect to what?</h3>
         <p>
           Every theorem here assumes one thing about your program: what a run of it does. For core
-          VIMP that is <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a>
-          and what it runs on: <a href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.teval%7Cconst"><code>teval</code></a>,
+          VIMP that is <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a>
+          and what it runs on: <a href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.eval%7Cconst"><code>eval</code></a>,
           which wraps every operation into its kind with <a href="Voblint/Voblint_VIMP/Machine_Kind.html#Machine_Kind.ik_norm%7Cconst"><code>ik_norm</code></a>,
           the conversion at every write, the initial stores, and operators down to
           <a href="Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.c_mod%7Cconst"><code>c_mod</code></a> taking its sign from the dividend, as C does.
@@ -4122,10 +4122,10 @@ fun main() {
         </p>
         <p>
           The graph and activation-trace semantics are not on that list: they are reached from
-          <code>tpstep</code> by proof
-          (<a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_source_reaches_node_collect%7Cfact"><code>typed_source_reaches_node_collect</code></a>).
+          <code>pstep</code> by proof
+          (<a href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_reaches_node_collect%7Cfact"><code>source_reaches_node_collect</code></a>).
         </p>
-        <p>What remains to be read lives in two sessions, <a href="Voblint/Voblint_VIMP/index.html"><code>Voblint_VIMP</code></a> (syntax, kinds, the generic step <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.vimp_sem.gpstep%7Cconst"><code>gpstep</code></a>, library calls) and <a href="Voblint/Voblint_Typed/index.html"><code>Voblint_Typed</code></a> (identities, core expressions and commands, the elaboration, the initial stores), plus the three definitions in <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html"><code>Typed_CFG</code></a> that put them together: <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tconv%7Cconst"><code>tconv</code></a>, <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a> and <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_ptable%7Cconst"><code>typed_ptable</code></a>. Everything else, from the compiler and the equation generator to the solver, the six analyses and the result table, Isabelle's kernel has already checked against them. This holds for PROVED, REFUTED and the reachability of checks (<a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_check_sound%7Cfact"><code>run_voblint_check_sound</code></a>); a reviewer also reads the theorem statements themselves. The DEAD and arithmetic theorems are stated over the compiled graph's collecting semantics, so reading them at source level also takes the compiler and the graph semantics.</p>
+        <p>What remains to be read lives in one session, <a href="Voblint/Voblint_VIMP/index.html"><code>Voblint_VIMP</code></a>: syntax, kinds, identities, core expressions and commands, the elaboration, the generic step <a href="Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.vimp_sem.gpstep%7Cconst"><code>gpstep</code></a> and library calls, plus the theory <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html"><code>VIMP_Semantics</code></a> that puts them together: the initial stores and the three definitions <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.kind_conv%7Cconst"><code>kind_conv</code></a>, <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a> and <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.elab_ptable%7Cconst"><code>elab_ptable</code></a>. Everything else, from the compiler and the equation generator to the solver, the six analyses and the result table, Isabelle's kernel has already checked against them. This holds for PROVED, REFUTED and the reachability of checks (<a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_check_sound%7Cfact"><code>run_voblint_check_sound</code></a>); a reviewer also reads the theorem statements themselves. The DEAD and arithmetic theorems are stated over the compiled graph's collecting semantics, so reading them at source level also takes the compiler and the graph semantics.</p>
       </div>
       <div class="prose-block">
         <h3>Where the proof starts and stops</h3>
@@ -4149,10 +4149,10 @@ fun main() {
           <rect class="zone untrusted" x="10" y="64" width="310" height="176" rx="14"/>
           <text class="zone-label" x="26" y="90">Unverified input</text>
 
-          <a class="semantics-link" href="Voblint/Voblint_Typed/index.html">
+          <a class="semantics-link" href="Voblint/Voblint_VIMP/index.html">
             <g class="semantics-input">
               <rect x="300" y="-58" width="670" height="48" rx="10"/>
-              <text x="635" y="-38" text-anchor="middle">Core VIMP semantics: tpstep, teval and the elaboration</text>
+              <text x="635" y="-38" text-anchor="middle">Core VIMP semantics: pstep, eval and the elaboration</text>
               <text class="semantics-sub" x="635" y="-21" text-anchor="middle">the one assumption no proof covers &#183; read it &#8599;</text>
             </g>
           </a>
@@ -4455,7 +4455,7 @@ fun main() {
               <span class="chain-index">1</span>
               <div>
                 <h4>Source runs</h4>
-                <p>Stores a run of <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst"><code>tpstep</code></a> has when it is about to test <code>n &lt; 2</code>.</p>
+                <p>Stores a run of <a href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst"><code>pstep</code></a> has when it is about to test <code>n &lt; 2</code>.</p>
               </div>
             </div>
             <svg class="chain-line" viewBox="0 0 560 64" aria-hidden="true"></svg>
@@ -4463,7 +4463,7 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">⊆</span>
-            <a href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_source_reaches_node_collect%7Cfact"><code>typed_source_reaches_node_collect</code></a>
+            <a href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_reaches_node_collect%7Cfact"><code>source_reaches_node_collect</code></a>
             <span>the simulation matches each source run to an activation trace in <a href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst"><code>valid_activation_trace</code></a> that ends at <code>pp0</code> with the same store</span>
           </li>
           <li class="chain-rung" data-rung="collect">
@@ -4484,8 +4484,8 @@ fun main() {
           </li>
           <li class="chain-link">
             <span class="chain-rel">=</span>
-            <a data-mode-link="none" href="Voblint/Voblint_Framework/Routed_Context_Unit.html#Routed_Context_Unit.activation_collect_unit_eq_node_collect%7Cfact"><code>activation_collect_unit_eq_node_collect</code></a>
-            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_node_collect_eq_Union_of_terminates%7Cfact"><code>entry_state_node_collect_eq_Union_of_terminates</code></a>
+            <a data-mode-link="none" href="Voblint/Voblint_CFG/Activation_Trace_Collect.html#Activation_Trace_Collect.collect_sem.node_collect_eq_Union_activation_of_fun%7Cfact"><code>node_collect_eq_Union_activation_of_fun</code></a>
+            <a data-mode-link="entry" hidden href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.gentry_state_node_collect_eq_Union_of_terminates%7Cfact"><code>gentry_state_node_collect_eq_Union_of_terminates</code></a>
             <span class="chain-link-note"></span>
           </li>
           <li class="chain-rung" data-rung="activation">
@@ -4507,7 +4507,7 @@ fun main() {
             <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context.activation_collect_dg_sound%7Cfact"><code>activation_collect_dg_sound</code></a>
             <span>given a post-solution and a sound specification, every trace step stays inside
             <code>γ</code>; the induction itself is
-            <a href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact"><code>activation_collect_sound</code></a>,
+            <a href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.collect_sem.gactivation_collect_sound%7Cfact"><code>gactivation_collect_sound</code></a>,
             which bounds the collection by any cover meeting five local obligations</span>
           </li>
           <li class="chain-rung" data-rung="gamma">
@@ -4543,9 +4543,9 @@ fun main() {
         <figcaption>
           Values at rung 4 are the analyzer's interval results for the factorial program, with the
           default Warrow. Links 2 to 4 compose into
-          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact"><code>fun_route_result_node_sound</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.gfun_route_result_node_sound%7Cfact"><code>gfun_route_result_node_sound</code></a>
           without context, and into
-          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.entry_state_lookup_sound_of_terminates%7Cfact"><code>entry_state_lookup_sound_of_terminates</code></a>
+          <a href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.gentry_state_lookup_sound_of_terminates%7Cfact"><code>gentry_state_lookup_sound_of_terminates</code></a>
           with entry-state contexts;
           <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>, the first
           flagship theorem below, adds link 1. On the executable side, one more step transports the solver's
@@ -4570,7 +4570,7 @@ fun main() {
           <path class="bridge-cliff" d="M850 140 H 1000 V 360 H 830 Z"/>
           <text class="bridge-cliff-label" x="72" y="210">every real run</text>
           <text class="bridge-cliff-label" x="926" y="210">the verdicts</text>
-          <text class="bridge-cliff-sub" x="72" y="232">tpstep*</text>
+          <text class="bridge-cliff-sub" x="72" y="232">pstep*</text>
           <text class="bridge-cliff-sub" x="926" y="232">PROVED · DEAD · SAFE</text>
 
           <g class="bridge-pillars">
@@ -4599,10 +4599,10 @@ fun main() {
 
         <div class="bridge-toggles" role="group" aria-label="Pillars">
           <button type="button" data-pillar="1" aria-pressed="true"><b>1</b> Compiler simulation <code>csim_step</code></button>
-          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>sound_local_spec</code></button>
-          <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>routing_adequate</code></button>
+          <button type="button" data-pillar="2" aria-pressed="true"><b>2</b> Sound transfers <code>gsound_local_spec</code></button>
+          <button type="button" data-pillar="3" aria-pressed="true"><b>3</b> Context coverage <code>grouting_adequate</code></button>
           <button type="button" data-pillar="4" aria-pressed="true"><b>4</b> Post-solution <code>partial_post_solution</code></button>
-          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Verdict classification <code>classify_proved</code></button>
+          <button type="button" data-pillar="5" aria-pressed="true"><b>5</b> Verdict classification <code>gclassify_proved</code></button>
         </div>
 
         <p class="bridge-caption" aria-live="polite">
@@ -4610,8 +4610,8 @@ fun main() {
           Click a pillar to remove it.
         </p>
 
-        <figcaption>Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.simrel_sem.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler. It also needs the other half of the simulation, which carries a source run into a valid activation trace. Pillar 2, <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst"><code>sound_local_spec</code></a>, is what every selectable analysis must prove about its transfers, and pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.dg_analysis.classify_proved%7Cfact"><code>classify_proved</code></a>, is what its check classifier must satisfy. A numeric domain proves neither by hand. It supplies the value operations of the type class <a href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel.html#Typed_Nonrel.kind_int_domain%7Cclass"><code>kind_int_domain</code></a> once, with their soundness laws, and both pillars follow for every instance (<a href="Voblint/Voblint_Typed_Nonrel/Typed_Transfer.html#Typed_Transfer.typed_spec_sound%7Cfact"><code>typed_spec_sound</code></a>, <a href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel_Analysis.html#Typed_Nonrel_Analysis.tclassify_sound%7Cfact"><code>tclassify_sound</code></a>). The order analysis proves pillar 2 directly (<a href="Voblint/Voblint_Typed_Order/Typed_Order_Analysis.html#Typed_Order_Analysis.ord_spec_sound%7Cfact"><code>ord_spec_sound</code></a>). Pillar 3, <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routing_adequate%7Cfact"><code>routing_adequate</code></a>, is discharged by each context policy. Pillar 4 connects to the vendored solver's own theorem, which promises a post-solution only for a solve that terminates. The analyzer runs the executable solver, which answers only where the solve terminates, so an answer discharges that condition (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.gdg_analysis.solve_c_run%7Cfact"><code>solve_c_run</code></a>) and no flagship theorem below takes it as a premise.</p>
-          <p>Two more obligations are not drawn: the initial state covers the initial stores, and the executable states read back to the transfers and routes the theorems are stated over. For a numeric domain, the transfer half of the second also follows from the class: the executable transfers read back to the ones the proofs use, and <a href="Voblint/Voblint_Typed_Nonrel/Typed_Exec.html#Typed_Exec.typed_exec_spec_sound%7Cfact"><code>typed_exec_spec_sound</code></a> proves the executable component sound from <code>typed_spec_sound</code>. The failures shown are what the obligations rule out; they are not bugs anyone has found in Voblint.</figcaption>
+        <figcaption>Pillar 1, <a href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.simrel_sem.csim_step%7Cfact"><code>csim_step</code></a>, is proved once, for the compiler. It also needs the other half of the simulation, which carries a source run into a valid activation trace. Pillar 2, <a href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.gsound_local_spec%7Cconst"><code>gsound_local_spec</code></a>, is what every selectable analysis must prove about its transfers, and pillar 5, <a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.gdg_analysis.gclassify_proved%7Cfact"><code>gclassify_proved</code></a>, is what its check classifier must satisfy. A numeric domain proves neither by hand. It supplies the value operations of the type class <a href="Voblint/Voblint_Nonrelational/Nonrelational_Domain.html#Nonrelational_Domain.kind_int_domain%7Cclass"><code>kind_int_domain</code></a> once, with their soundness laws, and both pillars follow for every instance (<a href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.nonrel_spec_sound%7Cfact"><code>nonrel_spec_sound</code></a>, <a href="Voblint/Voblint_Nonrelational/Nonrelational_Analysis.html#Nonrelational_Analysis.nonrel_classify_sound%7Cfact"><code>nonrel_classify_sound</code></a>). The order analysis proves pillar 2 directly (<a href="Voblint/Voblint_Analysis_Order/Order_Analysis.html#Order_Analysis.ord_spec_sound%7Cfact"><code>ord_spec_sound</code></a>). Pillar 3, <a href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context.grouting_adequate%7Cfact"><code>grouting_adequate</code></a>, is discharged by each context policy. Pillar 4 connects to the vendored solver's own theorem, which promises a post-solution only for a solve that terminates. The analyzer runs the executable solver, which answers only where the solve terminates, so an answer discharges that condition (<a href="Voblint/Voblint_Result/DG_Analysis.html#DG_Analysis.gdg_analysis.solve_c_run%7Cfact"><code>solve_c_run</code></a>) and no flagship theorem below takes it as a premise.</p>
+          <p>Two more obligations are not drawn: the initial state covers the initial stores, and the executable states read back to the transfers and routes the theorems are stated over. For a numeric domain, the transfer half of the second also follows from the class: the executable transfers read back to the ones the proofs use, and <a href="Voblint/Voblint_Nonrelational/Nonrelational_Exec.html#Nonrelational_Exec.nonrel_exec_spec_sound%7Cfact"><code>nonrel_exec_spec_sound</code></a> proves the executable component sound from <code>nonrel_spec_sound</code>. The failures shown are what the obligations rule out; they are not bugs anyone has found in Voblint.</figcaption>
       </figure>
 
       <h3 class="setting-title">What the proof forced us to make explicit</h3>
@@ -4668,7 +4668,7 @@ fun main() {
       <div class="section-heading">
         <p class="eyebrow">The guarantee, stated</p>
         <h2 id="theorems-heading">The flagship theorems</h2>
-        <p class="section-intro">Five theorems about <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint%7Cconst"><code>run_voblint</code></a>, the function that the analyzer in your browser calls, carry the guarantee. Each quantifies over runs of the elaborated program under <code>tpstep</code>, as the <a href="#integers">section on VIMP's integers</a> describes. The proof chain is the argument; this section gives the exact statements it ends in, for readers who want to audit them. Select one to see what it assumes and what it proves.</p>
+        <p class="section-intro">Five theorems about <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint%7Cconst"><code>run_voblint</code></a>, the function that the analyzer in your browser calls, carry the guarantee. Each quantifies over runs of the elaborated program under <code>pstep</code>, as the <a href="#integers">section on VIMP's integers</a> describes. The proof chain is the argument; this section gives the exact statements it ends in, for readers who want to audit them. Select one to see what it assumes and what it proves.</p>
       </div>
 
       <!-- notation:begin -->
@@ -4744,18 +4744,18 @@ fun main() {
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_source_sound:
   assumes "run_voblint conf ds p = Analysed res"
-      and "s0 ∈ tinit_stores (kenv_of ds)"
-      and "star (tpstep (kenv_of ds) (typed_ptable p ds))
-                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
-  shows "∃v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name
+      and "s0 ∈ init_stores (kenv_of ds)"
+      and "star (pstep (kenv_of ds) (elab_ptable p ds))
+                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+  shows "∃v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
                     ⊢ (residual, s, frs) ≈ (v, s, stk)
            ∧ s ∈ reaching ds p v
            ∧ (∃d. Lifted d ∈ report_states_at res v
-                  ∧ s ∈ tmcp.act_gamma ds (tactivation (conf_analyses conf)) d)
+                  ∧ s ∈ mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
            ∧ ¬ DEAD res v
-           ∧ (∀c. PROVED res v c ⟶ truthy (teval c s))
-           ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (teval c s))
-           ∧ (SAFE res v ⟶ (∀ob ∈ tobligations_at ds p v. s ⊨ ob))"</pre>
+           ∧ (∀c. PROVED res v c ⟶ truthy (eval c s))
+           ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (eval c s))
+           ∧ (SAFE res v ⟶ (∀ob ∈ obligations_at ds p v. s ⊨ ob))"</pre>
             </details>
           </article>
 
@@ -4778,15 +4778,15 @@ fun main() {
               <summary>Isabelle statement</summary>
 <pre>theorem run_voblint_check_sound:
   assumes "run_voblint conf ds p = Analysed res"
-      and "s0 ∈ tinit_stores (kenv_of ds)"
-      and "star (tpstep (kenv_of ds) (typed_ptable p ds))
-                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+      and "s0 ∈ init_stores (kenv_of ds)"
+      and "star (pstep (kenv_of ds) (elab_ptable p ds))
+                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
       and "next_check residual = Some (l, e)"
   shows "∃c ∈ set (report_checks res). check_label c = l ∧ check_exp c = e
            ∧ s ∈ reaching ds p (check_point c)
            ∧ check_verdict c ≠ Dead
-           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (teval e s))
-           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (teval e s))"</pre>
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (eval e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (eval e s))"</pre>
             </details>
           </article>
 
@@ -4833,8 +4833,8 @@ fun main() {
   assumes "run_voblint conf ds p = Analysed res"
       and "SAFE res v"
       and "s ∈ reaching ds p v"
-  shows "(v, a, w) ∈ intra (typed_cfg p ds) ⟹ e ∈ set (edge_expressions a)
-           ⟹ ob ∈ set (tarith_obligations e) ⟹ s ⊨ ob"</pre>
+  shows "(v, a, w) ∈ intra (elab_cfg p ds) ⟹ e ∈ set (edge_expressions a)
+           ⟹ ob ∈ set (arith_obligations e) ⟹ s ⊨ ob"</pre>
             </details>
           </article>
 
@@ -4858,17 +4858,17 @@ fun main() {
               <summary>Isabelle statement</summary>
 <pre>corollary run_voblint_labelled_check_sound:
   assumes "run_voblint conf ds p = Analysed res"
-      and "s0 ∈ tinit_stores (kenv_of ds)"
-      and "star (tpstep (kenv_of ds) (typed_ptable p ds))
-                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+      and "s0 ∈ init_stores (kenv_of ds)"
+      and "star (pstep (kenv_of ds) (elab_ptable p ds))
+                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
       and "next_check residual = Some (l, e)"
       and "distinct (map check_label (report_checks res))"
   shows "∃c ∈ set (report_checks res). check_label c = l"
     and "∀c ∈ set (report_checks res). check_label c = l ⟶
            check_exp c = e
            ∧ check_verdict c ≠ Dead
-           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (teval e s))
-           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (teval e s))"</pre>
+           ∧ (check_verdict c = Decided Check_Proved ⟶ truthy (eval e s))
+           ∧ (check_verdict c = Decided Check_Refuted ⟶ ¬ truthy (eval e s))"</pre>
             </details>
           </article>
         </div>
@@ -5030,7 +5030,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="1">
                 <p class="zoom-kicker">The flagship theorem</p>
-                <pre class="zoom-formal" data-lang="isabelle">check_verdict c = Decided Check_Proved ⟶ truthy (teval e s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">check_verdict c = Decided Check_Proved ⟶ truthy (eval e s)</pre>
                 <p>
                   For every store <code>s</code> a source run has when it is about to run the check,
                   a listed check for <code>i == 5</code> sits at a node <code>s</code> reaches, and
@@ -5041,7 +5041,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
 
               <li class="zoom-level" data-level="2">
                 <p class="zoom-kicker">Why the verdict may say PROVED</p>
-                <pre class="zoom-formal" data-lang="isabelle">tclassify sem κ c d = Check_Proved ⟹ s ∈ γ d ⟹ truthy (teval c s)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">nonrel_classify sem κ c d = Check_Proved ⟹ s ∈ γ d ⟹ truthy (eval c s)</pre>
                 <p>
                   The analysis says PROVED only when every store its state <code>d</code> describes
                   satisfies the check. At the check, <code>d</code> is <code>i ∈ [5, 5]</code>: one
@@ -5049,7 +5049,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   evaluates the check abstractly and reads off its truth value, and this lemma is
                   proved once for every domain of the class <code>kind_int_domain</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel_Analysis.html#Typed_Nonrel_Analysis.tclassify_sound%7Cfact">tclassify_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Nonrelational/Nonrelational_Analysis.html#Nonrelational_Analysis.nonrel_classify_sound%7Cfact">nonrel_classify_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="3">
@@ -5060,7 +5060,7 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   concretization of the result there. Our run's store, <code>i = 5</code>, is in
                   <code>γ([5, 5])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel_Analysis.html#Typed_Nonrel_Analysis.typed_nonrel_node_sound%7Cfact">typed_nonrel_node_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.gfun_route_result_node_sound%7Cfact">gfun_route_result_node_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="4">
@@ -5072,12 +5072,12 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   the next node. The solver's post-solution supplies the value, each edge's
                   transfer supplies the step.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact">activation_collect_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.collect_sem.gactivation_collect_sound%7Cfact">gactivation_collect_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="5">
                 <p class="zoom-kicker">One step: the edge <code>i := i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">s ∈ γ σ ⟹ s(x := ik_norm (κ x) (teval a s)) ∈ γ (tassign x a σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ γ σ ⟹ s(x := ik_norm (κ x) (eval a s)) ∈ γ (nonrel_assign x a σ)</pre>
                 <p>
                   On its last pass the run is at <code>B</code> with <code>i = 4</code>, inside
                   <code>σ(B) = [0, 4]</code>. This is the contract every transfer meets: the
@@ -5086,18 +5086,18 @@ __voblint_check(i == 5);   <span class="zoom-badge">✓ PROVED</span></code></pr
                   converts to <code>x</code>'s kind as the semantics does, and this lemma is proved
                   once for every domain of the class.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Typed_Nonrel/Typed_Transfer.html#Typed_Transfer.tassign_sound%7Cfact">tassign_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.nonrel_assign_sound%7Cfact">nonrel_assign_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="6">
                 <p class="zoom-kicker">The right-hand side <code>i + 1</code></p>
-                <pre class="zoom-formal" data-lang="isabelle">s ∈ γ σ ⟹ teval e s ∈ γ (taeval κ ch e σ)</pre>
+                <pre class="zoom-formal" data-lang="isabelle">s ∈ γ σ ⟹ eval e s ∈ γ (aeval κ ch e σ)</pre>
                 <p>
                   If every variable's value is covered by the abstract state, evaluating the
                   expression abstractly covers evaluating it concretely: <code>4 + 1 = 5</code>
                   lies in <code>γ([0, 4] + [1, 1])</code>.
                 </p>
-                <a class="isa-link" href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel.html#Typed_Nonrel.taeval_sound%7Cfact">taeval_sound ↗</a>
+                <a class="isa-link" href="Voblint/Voblint_Nonrelational/Nonrelational_Domain.html#Nonrelational_Domain.aeval_sound%7Cfact">aeval_sound ↗</a>
               </li>
 
               <li class="zoom-level" data-level="7">
@@ -5192,8 +5192,8 @@ qed</code></pre>
           </g>
 
           <g class="metro-stations">
-            <a class="metro-station" href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.tpstep%7Cconst" data-name="tpstep" data-theory="Voblint_Typed_CFG.Typed_CFG" data-info="Core VIMP's semantics: the generic step gpstep, run with teval, which wraps every operation into its kind, and with a conversion at every write. One step rewrites the rest of the elaborated program, the store and the caller frames.">
-              <circle cx="70" cy="70" r="8"/><text x="70" y="96">tpstep</text></a>
+            <a class="metro-station" href="Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst" data-name="pstep" data-theory="Voblint_VIMP.VIMP_Semantics" data-info="Core VIMP's semantics: the generic step gpstep, run with eval, which wraps every operation into its kind, and with a conversion at every write. One step rewrites the rest of the elaborated program, the store and the caller frames.">
+              <circle cx="70" cy="70" r="8"/><text x="70" y="96">pstep</text></a>
             <a class="metro-station" href="Voblint/Voblint_CFG/CFG_Exec.html#CFG_Exec.cstep%7Cconst" data-name="cstep" data-theory="Voblint_CFG.CFG_Exec" data-info="Graph execution: a node, a store and a stack of return points.">
               <circle cx="190" cy="70" r="8"/><text x="190" y="96">cstep</text></a>
             <a class="metro-station" href="Voblint/Voblint_CFG/Activation_Trace_Def.html#Activation_Trace_Def.valid_activation_trace%7Cconst" data-name="valid_activation_trace" data-theory="Voblint_CFG.Activation_Trace_Def" data-info="Activation traces: each records one activation's path, with its callers and finished callees nested inside.">
@@ -5207,31 +5207,31 @@ qed</code></pre>
               <circle cx="210" cy="165" r="8"/><text x="210" y="191">csim</text></a>
             <a class="metro-station" href="Voblint/Voblint_Compile/Simulation_Preservation.html#Simulation_Preservation.simrel_sem.csim_step%7Cfact" data-name="csim_step" data-theory="Voblint_Compile.Simulation_Preservation" data-info="Forward simulation: one source step is matched by zero or more CFG steps.">
               <circle cx="350" cy="165" r="8"/><text x="350" y="191">csim_step</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_source_run_has_activation_trace%7Cfact" data-name="typed_source_run_has_activation_trace" data-theory="Voblint_Typed_CFG.Typed_CFG" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid activation trace ending there.">
-              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">typed_source_run_has_activation_trace</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Typed_CFG/Typed_CFG.html#Typed_CFG.typed_source_reaches_node_collect%7Cfact" data-name="typed_source_reaches_node_collect" data-theory="Voblint_Typed_CFG.Typed_CFG" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
-              <circle cx="900" cy="165" r="11"/><text x="900" y="147">typed_source_reaches_node_collect</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_run_has_activation_trace%7Cfact" data-name="source_run_has_activation_trace" data-theory="Voblint_Compile.Source_To_Trace" data-info="Interchange of semantics and compiler: every source run has a matching graph configuration and a valid activation trace ending there.">
+              <rect x="569" y="58" width="22" height="120" rx="11"/><text x="560" y="124" text-anchor="end">source_run_has_activation_trace</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Compile/Source_To_Trace.html#Source_To_Trace.source_reaches_node_collect%7Cfact" data-name="source_reaches_node_collect" data-theory="Voblint_Compile.Source_To_Trace" data-info="The compiler line reaches the result: a source run's store is in the collecting semantics at the matched node.">
+              <circle cx="900" cy="165" r="11"/><text x="900" y="147">source_reaches_node_collect</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Typed_Nonrel/Typed_Nonrel.html#Typed_Nonrel.kind_int_domain%7Cclass" data-name="kind_int_domain" data-theory="Voblint_Typed_Nonrel.Typed_Nonrel" data-info="All a numeric domain writes: the value operations of one type class. A value per kind for top and for a literal, conversion, arithmetic under the signed-overflow option, comparison, meet, the refinement guards use, and an answer for queries, each with its soundness law.">
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Domain.html#Nonrelational_Domain.kind_int_domain%7Cclass" data-name="kind_int_domain" data-theory="Voblint_Nonrelational.Nonrelational_Domain" data-info="All a numeric domain writes: the value operations of one type class. A value per kind for top and for a literal, conversion, arithmetic under the signed-overflow option, comparison, meet, the refinement guards use, and an answer for queries, each with its soundness law.">
               <circle cx="70" cy="270" r="8"/><text x="70" y="296">kind_int_domain</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Typed_Nonrel/Typed_Transfer.html#Typed_Transfer.typed_spec_sound%7Cfact" data-name="typed_spec_sound" data-theory="Voblint_Typed_Nonrel.Typed_Transfer" data-info="Proved once for every instance of the class: the transfers, the guard filter, procedure entry and return, built from the class operations, form a sound local specification.">
-              <circle cx="230" cy="270" r="8"/><text x="230" y="296">typed_spec_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Typed_Nonrel/Typed_Exec.html#Typed_Exec.typed_exec_spec_sound%7Cfact" data-name="typed_exec_spec_sound" data-theory="Voblint_Typed_Nonrel.Typed_Exec" data-info="The executable transfers the analyzer runs read back to the ones the proofs reason about, so the executable component is sound by the same theorem, and there is no second implementation to keep in step.">
-              <circle cx="390" cy="270" r="8"/><text x="390" y="296">typed_exec_spec_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Typed_Order/Typed_Order_Analysis.html#Typed_Order_Analysis.ord_spec_sound%7Cfact" data-name="ord_spec_sound" data-theory="Voblint_Typed_Order.Typed_Order_Analysis" data-info="The order analysis joins without the class. It records pairs x ≤ y instead of one value per variable, and proves its local specification sound directly.">
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Transfer.html#Nonrelational_Transfer.nonrel_spec_sound%7Cfact" data-name="nonrel_spec_sound" data-theory="Voblint_Nonrelational.Nonrelational_Transfer" data-info="Proved once for every instance of the class: the transfers, the guard filter, procedure entry and return, built from the class operations, form a sound local specification.">
+              <circle cx="230" cy="270" r="8"/><text x="230" y="296">nonrel_spec_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Nonrelational/Nonrelational_Exec.html#Nonrelational_Exec.nonrel_exec_spec_sound%7Cfact" data-name="nonrel_exec_spec_sound" data-theory="Voblint_Nonrelational.Nonrelational_Exec" data-info="The executable transfers the analyzer runs read back to the ones the proofs reason about, so the executable component is sound by the same theorem, and there is no second implementation to keep in step.">
+              <circle cx="390" cy="270" r="8"/><text x="390" y="296">nonrel_exec_spec_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Analysis_Order/Order_Analysis.html#Order_Analysis.ord_spec_sound%7Cfact" data-name="ord_spec_sound" data-theory="Voblint_Analysis_Order.Order_Analysis" data-info="The order analysis joins without the class. It records pairs x ≤ y instead of one value per variable, and proves its local specification sound directly.">
               <circle cx="390" cy="222" r="8"/><text x="390" y="248">ord_spec_sound</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.sound_local_spec%7Cconst" data-name="sound_local_spec" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses: what every analysis the analyzer can select proves about its transfers, its query answers, procedure entry and return. The numeric domains get it from their type class; the order analysis proves it by hand. A local specification reads and publishes no globals.">
-              <circle cx="490" cy="270" r="11"/><text x="512" y="275" text-anchor="start">sound_local_spec</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.gsound_local_spec%7Cconst" data-name="gsound_local_spec" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses: what every analysis the analyzer can select proves about its transfers, its query answers, procedure entry and return. The numeric domains get it from their type class; the order analysis proves it by hand. A local specification reads and publishes no globals.">
+              <circle cx="490" cy="270" r="11"/><text x="512" y="275" text-anchor="start">gsound_local_spec</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" data-name="dg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign, plus a query handler. Goblint's Spec, in Isabelle.">
-              <circle cx="55" cy="350" r="8"/><text x="55" y="376">dg_spec</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.analysis_contract%7Clocale" data-name="analysis_contract" data-theory="Voblint_Framework.DG_Spec_Sound" data-info="The boundary of the proof: a dg_spec with a soundness assumption per transfer. Equations, routing and solver soundness are proved once for any analysis meeting it. An analysis that uses globals would meet it directly, without a local specification.">
-              <circle cx="160" cy="350" r="8"/><text x="160" y="376">analysis_contract</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec%7Ctype" data-name="gdg_spec" data-theory="Voblint_Framework.DG_Spec" data-info="An analysis as a record of transfer functions: skip, assign, special, branch, body, return, enter, event, combine_env and combine_assign, plus a query handler. Goblint's Spec, in Isabelle.">
+              <circle cx="55" cy="350" r="8"/><text x="55" y="376">gdg_spec</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/DG_Spec_Sound.html#DG_Spec_Sound.ganalysis_contract%7Clocale" data-name="ganalysis_contract" data-theory="Voblint_Framework.DG_Spec_Sound" data-info="The boundary of the proof: a gdg_spec with a soundness assumption per transfer. Equations, routing and solver soundness are proved once for any analysis meeting it. An analysis that uses globals would meet it directly, without a local specification.">
+              <circle cx="160" cy="350" r="8"/><text x="160" y="376">ganalysis_contract</text></a>
             <a class="metro-station" href="Voblint/Voblint_Framework/DG_Indexed_Generator.html#DG_Indexed_Generator.routed_node_rhs%7Cconst" data-name="routed_node_rhs" data-theory="Voblint_Framework.DG_Indexed_Generator" data-info="The equation generator: one strategy tree per (node, context), folding its incoming edges and call sites.">
               <circle cx="285" cy="350" r="8"/><text x="285" y="376">routed_node_rhs</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.routing_adequate%7Cfact" data-name="routing_adequate" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
-              <circle cx="415" cy="350" r="8"/><text x="415" y="376">routing_adequate</text></a>
-            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.dg_spec_of_contract%7Cfact" data-name="dg_spec_of_contract" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses and the framework: a sound local specification, lifted to a dg_spec, meets analysis_contract. This is where every analysis the analyzer runs enters the proof.">
+            <a class="metro-station" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context.grouting_adequate%7Cfact" data-name="grouting_adequate" data-theory="Voblint_Framework.Routed_Context" data-info="Context policies: every context the semantics admits for a call is one the policy routes some covering alternative to, and that key is solved. Each policy discharges it once.">
+              <circle cx="415" cy="350" r="8"/><text x="415" y="376">grouting_adequate</text></a>
+            <a class="metro-station metro-hub" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.mcp_sem.dg_spec_of_contract%7Cfact" data-name="dg_spec_of_contract" data-theory="Voblint_Framework.MCP_Spec" data-info="Interchange of the analyses and the framework: a sound local specification, lifted to a gdg_spec, meets ganalysis_contract. This is where every analysis the analyzer runs enters the proof.">
               <circle cx="490" cy="350" r="11"/><text x="512" y="332" text-anchor="start">dg_spec_of_contract</text></a>
 
             <a class="metro-station" href="Unsorted/TD/Basics_side.html#Basics_side.strategy_tree%7Ctype" data-name="strategy_tree" data-theory="TD.Basics_side" data-info="Right-hand sides as trees of queries, side effects and answers.">
@@ -5242,15 +5242,15 @@ qed</code></pre>
               <circle cx="390" cy="470" r="8"/><text x="390" y="496">TD solve</text></a>
             <a class="metro-station" href="Unsorted/TD/TD_side_upd_rule.html#TD_side_upd_rule.TD_side_upd_rule.partial_post_solution%7Cfact" data-name="partial_post_solution" data-theory="TD.TD_side_upd_rule" data-info="The vendored solver's own promise, and the fact each domain's registration uses: whatever the global update rule, a terminating solve answers with a post-solution.">
               <circle cx="560" cy="470" r="8"/><text x="560" y="496">partial_post_solution</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.routed_domain_exec.pp_st%7Cfact" data-name="pp_st" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver runs the buffered form of the equation generator, and this carries its post-solution to the form the framework's soundness is stated over.">
-              <circle cx="640" cy="440" r="8"/><text x="632" y="424" text-anchor="middle">pp_st</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Exec/Routed_Exec_Refinement.html#Routed_Exec_Refinement.pp_dg_spec_of%7Cfact" data-name="pp_dg_spec_of" data-theory="Voblint_Exec.Routed_Exec_Refinement" data-info="The executable carrier: the solver runs the buffered form of the equation generator, and this theorem carries its post-solution to the unbuffered form the framework's soundness is stated over.">
+              <circle cx="640" cy="440" r="8"/><text x="632" y="424" text-anchor="middle">pp_dg_spec_of</text></a>
 
-            <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.activation_collect_sound%7Cfact" data-name="activation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
-              <circle cx="600" cy="350" r="8"/><text x="600" y="376">activation_collect_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Framework/Activation_Backbone.html#Activation_Backbone.collect_sem.gactivation_collect_sound%7Cfact" data-name="gactivation_collect_sound" data-theory="Voblint_Framework.Activation_Backbone" data-info="The induction over traces, with no solver and no domain in it: any cover meeting five local obligations contains every store an activation reaches.">
+              <circle cx="600" cy="350" r="8"/><text x="600" y="376">gactivation_collect_sound</text></a>
             <a class="metro-station metro-hub metro-core" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context.activation_collect_dg_sound%7Cfact" data-name="activation_collect_dg_sound" data-theory="Voblint_Framework.Routed_Context" data-info="The central interchange of semantics, framework and solver: given a post-solution of the routed equations, a sound specification and the context policy's obligations, every store a trace reaches is inside γ of the solver's value.">
               <rect x="686" y="336" width="28" height="118" rx="14"/><text x="722" y="378" text-anchor="start">activation_collect_dg_sound</text></a>
-            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.dg_analysis.fun_route_result_node_sound%7Cfact" data-name="fun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through entry_state_lookup_sound_of_terminates.">
-              <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">fun_route_result_node_sound</text></a>
+            <a class="metro-station" href="Voblint/Voblint_Result/DG_Live_Unknowns.html#DG_Live_Unknowns.gdg_analysis.gfun_route_result_node_sound%7Cfact" data-name="gfun_route_result_node_sound" data-theory="Voblint_Result.DG_Live_Unknowns" data-info="The result read back from the solver covers the collecting semantics at every node, once the solve terminates, for any route that is a function of the call site, the no-context one included; entry-state contexts take the parallel one through gentry_state_lookup_sound_of_terminates.">
+              <circle cx="800" cy="440" r="8"/><text x="800" y="468" text-anchor="middle">gfun_route_result_node_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_sound%7Cfact" data-name="run_voblint_sound" data-theory="Voblint_CLI.Run_Voblint" data-info="The report run_voblint returns describes, at every node, every store the collecting semantics has there, for every activation list, update rule and context policy, and its definite verdicts hold of those stores. DEAD and SAFE are proved from it without a source run.">
               <circle cx="900" cy="440" r="11"/><text x="896" y="498" text-anchor="end">run_voblint_sound</text></a>
             <a class="metro-station metro-hub" href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_source_sound%7Cfact" data-name="run_voblint_source_sound" data-theory="Voblint_CLI.Run_Voblint" data-info="Interchange of compiler and result: the function the browser calls covers every run of the elaborated program, stopped anywhere. PROVED is the only terminal stated at a source run, so it is the only one routed through here.">
@@ -5279,15 +5279,15 @@ qed</code></pre>
           Stations are real definitions, theorems and the obligations an analysis discharges;
           wide markers are interchanges, where one result consumes the others that meet there. Being next
           to each other on a line says only that two stations belong to the same layer. The map
-          follows the session structure: the semantics line lives in <code>Voblint_VIMP</code>,
-          <code>Voblint_Typed</code>, <code>Voblint_CFG</code> and <code>Voblint_Typed_CFG</code>,
+          follows the session structure: the semantics line lives in <code>Voblint_VIMP</code> and
+          <code>Voblint_CFG</code>,
           the compiler in <code>Voblint_Compile</code>, the domain
-          line in <code>Voblint_Typed_Nonrel</code> and, for its branch,
-          <code>Voblint_Typed_Order</code>, the framework line in
+          line in <code>Voblint_Nonrelational</code> and, for its branch,
+          <code>Voblint_Analysis_Order</code>, the framework line in
           <code>Voblint_Framework</code>, the solver in the
           vendored <code>TD</code> session, <code>Voblint_Solver</code> and
           <code>Voblint_Exec</code>, and the result line in <code>Voblint_Routing</code>,
-          <code>Voblint_Result</code>, <code>Voblint_Typed_CLI</code> and <code>Voblint_CLI</code>.
+          <code>Voblint_Result</code> and <code>Voblint_CLI</code>.
         </p>
         <p>
           All three terminals are proved from one hub,
@@ -5295,7 +5295,7 @@ qed</code></pre>
           which says that the report's states at a node of the graph describe every store the
           collecting semantics has there.
           That is why the semantics line runs on into the central interchange: DEAD and SAFE are
-          stated over the collecting semantics, <a href="Voblint/Voblint_Typed_CLI/Typed_Run.html#Typed_Run.reaching%7Cconst"><code>reaching</code></a>,
+          stated over the collecting semantics, <a href="Voblint/Voblint_CLI/Analysis_Config.html#Analysis_Config.reaching%7Cconst"><code>reaching</code></a>,
           too. What
           <a href="Voblint/Voblint_CLI/Run_Voblint.html#Run_Voblint.run_voblint_source_sound%7Cfact"><code>run_voblint_source_sound</code></a>
           adds is the source run, and PROVED is the only terminal stated at one. DEAD skips it on
@@ -5339,19 +5339,19 @@ qed</code></pre>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L168-L263" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Spec</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" title="Definition in the formalization">dg_spec</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec%7Ctype" title="Definition in the formalization">gdg_spec</a>
             <span class="align-note">An analysis is a record with one transfer per edge action plus the call and return operations, matching Goblint's method-per-construct shape. Spec's startstate, exitstate and morphstate have no counterpart.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L170-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">D / G lattices</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec%7Ctype" title="Definition in the formalization">'dl / 'dg carriers</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec%7Ctype" title="Definition in the formalization">'dl / 'dg carriers</a>
             <span class="align-note">The local/global split exists. The shipped domains keep their whole state local unless program globals are flow-insensitive; then a lifter publishes each global's part of the combined state.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L171-L173" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Globals keyed by V</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.keyed_split_spec%7Cconst" title="Definition in the formalization">One unknown per program global</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/DG_Keyed_Split_Spec.html#DG_Keyed_Split_Spec.gkeyed_split_spec%7Cconst" title="Definition in the formalization">One unknown per program global</a>
             <span class="align-note">With flow-insensitive program globals, each declared global is a global unknown of its own, read only where an edge mentions it and published only where an edge may assign it. The names are the program's variables, and the combined analysis has no globals per component.</span>
           </li>
           <li class="align-row simplified">
@@ -5375,7 +5375,7 @@ qed</code></pre>
           <li class="align-row modeled">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/framework/analyses.ml#L196-L197" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">context from the callee state</a>
             <span class="align-link" aria-label="modeled"><span>modeled</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context%7Clocale" title="Definition in the formalization">Context selector on the entered state</a>
             <span class="align-note">The context is chosen from the state after enter, as in Goblint, though the selector does not see which callee it is choosing for.</span>
           </li>
           <li class="align-row simplified">
@@ -5393,19 +5393,19 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/callstring.ml#L19-L55" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Context-sensitivity options</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Typed_CLI/Typed_Run.html#Typed_Run.typed_context%7Ctype" title="Definition in the formalization">None, entry state, call strings</a>
+            <a class="align-voblint" href="Voblint/Voblint_CLI/Analysis_Config.html#Analysis_Config.context_policy%7Ctype" title="Definition in the formalization">None, entry state, call strings</a>
             <span class="align-note">Bounded call strings give a finite context space over a compiled program; nothing certifies that entry-state contexts stay finite, and lifters such as context gas are absent.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intDomTuple.ml#L14-L27" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">IntDomTuple</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Typed_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.int_tuple%7Ctype" title="Definition in the formalization">Int: interval × congruence</a>
+            <a class="align-voblint" href="Voblint/Voblint_Analysis_Int/Int_Tuple_Kind.html#Int_Tuple_Kind.int_tuple%7Ctype" title="Definition in the formalization">Int: interval × congruence</a>
             <span class="align-note">Goblint combines six optional integer domains; Int keeps the interval and congruence components and refines them as Goblint's tuple does. Sign and parity run as separate analyses and have no counterpart upstream. There is no exclusion-set component.</span>
           </li>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/cdomain/value/cdomains/int/intervalDomain.ml#L35-L69" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">Machine integers (ikind)</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Typed/Typed_Exp.html#Typed_Exp.texp%7Ctype" title="Definition in the formalization">A kind on every operation</a>
+            <a class="align-voblint" href="Voblint/Voblint_VIMP/Core_Exp.html#Core_Exp.exp%7Ctype" title="Definition in the formalization">A kind on every operation</a>
             <span class="align-note">Every variable has a machine kind, i32 unless declared otherwise, and the elaboration writes every conversion of C's usual arithmetic conversions explicitly into core VIMP, as CIL does with casts. Every domain converts its values soundly. The semantics wraps a signed overflow, which C leaves undefined. The domains follow Goblint's sem.int.signed_overflow: under assume_top, the default, an overflow gives the kind's whole range, and under assume_wraparound the domains wrap as the semantics does. The run's configuration selects one, and the soundness theorem holds for both. Goblint's third value, assume_none, assumes that no overflow happens and has no counterpart. Possible signed overflows, out-of-range conversions and zero divisors are reported as arithmetic diagnostics; unlike Goblint, unsigned wraparound is not.</span>
           </li>
           <li class="align-row simplified">
@@ -5423,7 +5423,7 @@ qed</code></pre>
           <li class="align-row simplified">
             <a class="align-goblint" href="https://github.com/goblint/analyzer/blob/5320a6b741e50dc049f7a1b85e1709e9565cc54a/src/analyses/mCP.ml" target="_blank" rel="noreferrer" title="Goblint source, pinned commit">MCP, the analysis combinator</a>
             <span class="align-link" aria-label="simplified"><span>simplified</span></span>
-            <a class="align-voblint" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.local_spec%7Ctype" title="Definition in the formalization">local_spec</a>
+            <a class="align-voblint" href="Voblint/Voblint_Framework/MCP_Spec.html#MCP_Spec.glocal_spec%7Ctype" title="Definition in the formalization">glocal_spec</a>
             <span class="align-note">The analyses a run activates share one combined state, one field each, and run in one solve. The state is unreachable as soon as one analysis's part is. Every operation, entry and return included, receives the query channel, and a return also receives the callee's. Activation has no dependency order.</span>
           </li>
           <li class="align-row absent">
@@ -5460,7 +5460,7 @@ qed</code></pre>
       </figure>
 
       <div class="prose-block">
-        <p>One row of the table deserves more than a line. Five of the six analyses keep a pointwise state, one abstract value per variable, so it is fair to ask whether the framework works only for that shape. The sixth, the order analysis, shows that it does not. Its carrier is a set of known pairs <code>x &#8804; y</code>, and it contains no <code>var_id &#8658; 'a</code> anywhere. <a href="Voblint/Voblint_Typed_Order/Typed_Order_Analysis.html"><code>Typed_Order_Analysis</code></a> runs this carrier inside the combined state, next to the other analyses, through the same interface as every selectable analysis: it supplies a local specification and proves it sound (<a href="Voblint/Voblint_Typed_Order/Typed_Order_Analysis.html#Typed_Order_Analysis.ord_spec_sound%7Cfact"><code>ord_spec_sound</code></a>), the interface the five pointwise analyses reach through their type class. It answers comparisons from the pairs it records, and at an assignment it asks the other analyses how the new value compares with each variable. It is deliberately small: it computes no transitive closure, and calls enter and return with no facts. Together with Interval, it proves checks that neither analysis proves alone (<a href="playground.html?fixture=25-cooperation/precision/03-equality_asked_of_order.vimp&amp;analysis=interval,order">an example</a>).<!-- TODO(typed-port): Rel_Order_Domain (the order carrier interpreting analysis_contract directly, without a local specification) --></p>
+        <p>One row of the table deserves more than a line. Five of the six analyses keep a pointwise state, one abstract value per variable, so it is fair to ask whether the framework works only for that shape. The sixth, the order analysis, shows that it does not. Its carrier is a set of known pairs <code>x &#8804; y</code>, and it contains no <code>var_id &#8658; 'a</code> anywhere. <a href="Voblint/Voblint_Analysis_Order/Order_Analysis.html"><code>Order_Analysis</code></a> runs this carrier inside the combined state, next to the other analyses, through the same interface as every selectable analysis: it supplies a local specification and proves it sound (<a href="Voblint/Voblint_Analysis_Order/Order_Analysis.html#Order_Analysis.ord_spec_sound%7Cfact"><code>ord_spec_sound</code></a>), the interface the five pointwise analyses reach through their type class. It answers comparisons from the pairs it records, and at an assignment it asks the other analyses how the new value compares with each variable. It is deliberately small: it computes no transitive closure, and calls enter and return with no facts. Together with Interval, it proves checks that neither analysis proves alone (<a href="playground.html?fixture=25-cooperation/precision/03-equality_asked_of_order.vimp&amp;analysis=interval,order">an example</a>).<!-- TODO(typed-port): Rel_Order_Domain (the order carrier interpreting analysis_contract directly, without a local specification) --></p>
       </div>
     </section>
 
@@ -5690,86 +5690,71 @@ qed</code></pre>
 
       <h3 class="setting-title">The formalization in cross-section</h3>
       <p class="setting-copy">The iceberg shows the size of the development; this figure shows its structure. Every Isabelle session is a rock layer, placed just above the highest session it builds on, from the logic at the bottom to the examples at the surface. Hover over a session, and the layers it rests on light up. A layer's thickness grows with its line count, so the core sample also shows where most of the material is.</p>
-      <p class="setting-copy">The CLI and browser expose all six analyses: Sign, Interval, Parity, Congruence, Int and relational Order. Order sits lower because it supplies its local specification directly, without the non-relational builder. Hover over CLI to see the dependencies of their shared entry point.</p>
+      <p class="setting-copy">The CLI and browser expose all six analyses: Sign, Interval, Parity, Congruence, Int and relational Order. Order shares a layer with the numeric analyses because its session rests on the per-variable builder, although it supplies its local specification directly instead of through the builder's class. Hover over CLI to see the dependencies of their shared entry point.</p>
 
       <figure class="scene scene-strata">
         <div class="strata-layout">
-          <svg class="strata-svg" viewBox="0 0 1000 651" role="img"
-            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then CFG, Domain, Solver and core VIMP, then Compile and Framework, the executable carrier and core semantics, Routing, Result, the shared arithmetic, the domain arithmetic beside the per-variable analysis builder, the analyses on machine kinds, the combined run, the CLI exposing all six analyses, code export, and the example sessions at the surface. Thickness grows with line count.">
+          <svg class="strata-svg" viewBox="0 0 1000 569" role="img"
+            aria-label="A cross-section of rock layers. Each Isabelle session lies one layer above the highest session it builds on: TD and VIMP on the Isabelle/HOL bedrock, then Domain, CFG and Solver, then Framework and Compile, the executable carrier, Routing, Result, the per-variable analysis builder, the five analyses Interval, Congruence, Sign, Order and Parity, the Int product, the CLI exposing all six analyses, code export, and the example sessions at the surface. Thickness grows with line count.">
               <g class="stratum stratum-examples" data-layer="examples">
                 <text class="stratum-name" x="306" y="32" text-anchor="end">Examples and regressions</text>
-                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="Voblint_CLI Voblint_Compile Voblint_Typed Voblint_Typed_CFG Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="28"></rect><text x="655.0" y="32">3 example sessions</text></a>
-              </g>
-              <g class="stratum stratum-d11" data-layer="d13">
-                <text class="stratum-name" x="306" y="58" text-anchor="end">Code export</text>
-                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="—" data-rests="Voblint_CLI Voblint_Typed Voblint_Typed_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="320.0" y="42" width="670.0" height="23"></rect><text x="655.0" y="58">Codegen</text></a>
-              </g>
-              <g class="stratum stratum-d11" data-layer="d12">
-                <text class="stratum-name" x="306" y="86" text-anchor="end">Entry point</text>
-                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_CFG Voblint_Domain Voblint_Framework Voblint_Solver Voblint_Typed Voblint_Typed_CLI" data-info="run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser, with the arithmetic diagnostics, and proves the source-level soundness results."><rect x="320.0" y="65" width="670.0" height="33"></rect><text x="655.0" y="86">CLI · five numeric analyses + Order</text></a>
+                <a class="stratum-part" href="Voblint/index.html" data-name="Voblint_Examples_*" data-meta="—" data-rests="Voblint_CLI Voblint_Compile Voblint_VIMP" data-info="Executable runs and regressions, one session per folder, most parented on the analysis session its witnesses exercise, with the Voblint capstone on top. Drawn as one layer at the surface; individually they sit as low as Voblint_Examples_CFG."><rect x="320.0" y="14" width="670.0" height="27"/><text x="655.0" y="32">3 example sessions</text></a>
               </g>
               <g class="stratum stratum-d11" data-layer="d11">
-                <text class="stratum-name" x="306" y="114" text-anchor="end">Combined run</text>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_CLI/index.html" data-name="Voblint_Typed_CLI" data-meta="—" data-rests="Voblint_Framework Voblint_Typed_Int Voblint_Typed_Order Voblint_Typed_Parity Voblint_Typed_Sign" data-info="The combined run of the selected analyses as one state, with every context policy, and its soundness for any distinct, nonempty selection."><rect x="320.0" y="98" width="670.0" height="24"></rect><text x="655.0" y="114">Typed CLI</text></a>
+                <text class="stratum-name" x="306" y="57" text-anchor="end">Code export</text>
+                <a class="stratum-part" href="Voblint/Voblint_Codegen/index.html" data-name="Voblint_Codegen" data-meta="—" data-rests="Voblint_CLI" data-info="The export_code declaration that writes the analyzer out as one OCaml module, on top of Voblint_CLI and last in ROOTS."><rect x="320.0" y="41" width="670.0" height="23"/><text x="655.0" y="57">Codegen</text></a>
               </g>
               <g class="stratum stratum-d10" data-layer="d10">
-                <text class="stratum-name" x="306" y="138" text-anchor="end">Int product</text>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Int/index.html" data-name="Voblint_Typed_Int" data-meta="—" data-rests="Voblint_Analysis_Int Voblint_Typed_Congruence Voblint_Typed_Interval Voblint_Typed_Nonrel Voblint_VIMP" data-info="Int, the reduced product of Interval and Congruence on machine kinds."><rect x="320.0" y="122" width="670.0" height="24"></rect><text x="655.0" y="138">Typed Int</text></a>
+                <text class="stratum-name" x="306" y="86" text-anchor="end">Entry point</text>
+                <a class="stratum-part" href="Voblint/Voblint_CLI/index.html" data-name="Voblint_CLI" data-meta="—" data-rests="Voblint_Analysis_Int Voblint_Analysis_Order Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Domain Voblint_Framework Voblint_Solver" data-info="The selected analyses run as one combined state under every global update rule and context policy, with its soundness for any distinct, nonempty selection. run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser, with the arithmetic diagnostics, and proves the source-level soundness results."><rect x="320.0" y="64" width="670.0" height="35"/><text x="655.0" y="86">CLI · five numeric analyses + Order</text></a>
               </g>
               <g class="stratum stratum-d9" data-layer="d9">
-                <text class="stratum-name" x="306" y="167" text-anchor="end">Domain arithmetic and analyses</text>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The refinement modes and reduction machinery of the Int product, reused by the typed Int analysis."><rect x="320.0" y="146" width="150.0" height="34"></rect><text x="395.0" y="167">Int</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Order/index.html" data-name="Voblint_Typed_Order" data-meta="—" data-rests="Voblint_Domain Voblint_Typed_Nonrel Voblint_VIMP" data-info="The relational Order analysis. It supplies its local specification directly, without the class, and answers comparisons to the other analyses."><rect x="470.0" y="146" width="104.0" height="34"></rect><text x="522.0" y="167">Order (relational)</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Interval/index.html" data-name="Voblint_Typed_Interval" data-meta="—" data-rests="Voblint_Analysis_Interval Voblint_Typed_Nonrel Voblint_VIMP" data-info="The Interval analysis on machine kinds: kind-aware arithmetic with wraparound or the kind's top on signed overflow, and widening bounded by the kind's range."><rect x="574.0" y="146" width="104.0" height="34"></rect><text x="626.0" y="167">Typed Interval</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Congruence/index.html" data-name="Voblint_Typed_Congruence" data-meta="—" data-rests="Voblint_Analysis_Congruence Voblint_Typed_Nonrel Voblint_VIMP" data-info="The Congruence analysis on machine kinds: classes normalized modulo the kind's width."><rect x="678.0" y="146" width="104.0" height="34"></rect><text x="730.0" y="167">Typed Congruence</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Sign/index.html" data-name="Voblint_Typed_Sign" data-meta="—" data-rests="Voblint_Analysis_Sign Voblint_Typed_Nonrel Voblint_VIMP" data-info="The Sign analysis on machine kinds: an instance of kind_int_domain."><rect x="782.0" y="146" width="104.0" height="34"></rect><text x="834.0" y="167">Typed Sign</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Parity/index.html" data-name="Voblint_Typed_Parity" data-meta="—" data-rests="Voblint_Analysis_Parity Voblint_Typed_Nonrel Voblint_VIMP" data-info="The Parity analysis on machine kinds: an instance of kind_int_domain."><rect x="886.0" y="146" width="104.0" height="34"></rect><text x="938.0" y="167">Typed Parity</text></a>
+                <text class="stratum-name" x="306" y="118" text-anchor="end">Int product</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Int/index.html" data-name="Voblint_Analysis_Int" data-meta="—" data-rests="TD Voblint_Analysis_Congruence Voblint_Analysis_Interval Voblint_Analysis_Parity Voblint_Analysis_Sign Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The refinement modes and reduction machinery of the Int product, and Int on machine kinds: the reduced product of Interval and Congruence, after Goblint's IntDomTuple."><rect x="320.0" y="99" width="670.0" height="30"/><text x="655.0" y="118">Int</text></a>
               </g>
               <g class="stratum stratum-d8" data-layer="d8">
-                <text class="stratum-name" x="306" y="204" text-anchor="end">Per-variable analysis builder and domain arithmetic</text>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_Nonrel/index.html" data-name="Voblint_Typed_Nonrel" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Result Voblint_Solver Voblint_Typed_CFG" data-info="What a per-variable domain reuses: the class kind_int_domain of value operations per kind, and everything built from it once: transfers, guard refinement, procedure entry, the check classifier, their executable versions and their soundness."><rect x="320.0" y="180" width="214.0" height="39"></rect><text x="427.0" y="204">Typed Nonrel</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="Interval arithmetic, widening and narrowing with their soundness, reused by the typed Interval analysis."><rect x="534.0" y="180" width="141.5" height="39"></rect><text x="604.7" y="204">Interval</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="Congruence arithmetic, including the remainder, with its soundness, reused by the typed Congruence analysis."><rect x="675.5" y="180" width="106.5" height="39"></rect><text x="728.7" y="204">Congruence</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The sign lattice's arithmetic and backward operations with their soundness, reused by the typed Sign analysis."><rect x="782.0" y="180" width="104.0" height="39"></rect><text x="834.0" y="204">Sign</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The parity lattice's arithmetic with its soundness, reused by the typed Parity analysis."><rect x="886.0" y="180" width="104.0" height="39"></rect><text x="938.0" y="204">Parity</text></a>
+                <text class="stratum-name" x="306" y="150" text-anchor="end">Analyses</text>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Interval/index.html" data-name="Voblint_Analysis_Interval" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The Interval domain: arithmetic, widening and narrowing with their soundness, and the Interval analysis on machine kinds, with wraparound or the kind's top on signed overflow and widening bounded by the kind's range."><rect x="320.0" y="129" width="209.1" height="34"/><text x="424.5" y="150">Interval</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Congruence/index.html" data-name="Voblint_Analysis_Congruence" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The Congruence domain: arithmetic, including the remainder, with its soundness, and the Congruence analysis on machine kinds, with classes normalized modulo the kind's width."><rect x="529.1" y="129" width="148.9" height="34"/><text x="603.5" y="150">Congruence</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Sign/index.html" data-name="Voblint_Analysis_Sign" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The Sign domain: the sign lattice's arithmetic and backward operations with their soundness, and the Sign analysis on machine kinds, an instance of kind_int_domain."><rect x="678.0" y="129" width="104.0" height="34"/><text x="730.0" y="150">Sign</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Order/index.html" data-name="Voblint_Analysis_Order" data-meta="—" data-rests="Voblint_Domain Voblint_Nonrelational Voblint_VIMP" data-info="The relational Order analysis over variable identities. It supplies its local specification directly, without the class, and answers comparisons to the other analyses."><rect x="782.0" y="129" width="104.0" height="34"/><text x="834.0" y="150">Order (relational)</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Analysis_Parity/index.html" data-name="Voblint_Analysis_Parity" data-meta="—" data-rests="TD Voblint_CFG Voblint_Compile Voblint_Domain Voblint_Framework Voblint_Nonrelational Voblint_Solver Voblint_VIMP" data-info="The Parity domain: the parity lattice's arithmetic with its soundness, and the Parity analysis on machine kinds, an instance of kind_int_domain."><rect x="886.0" y="129" width="104.0" height="34"/><text x="938.0" y="150">Parity</text></a>
               </g>
               <g class="stratum stratum-d7" data-layer="d7">
-                <text class="stratum-name" x="306" y="236" text-anchor="end">Shared arithmetic</text>
-                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="—" data-rests="Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_VIMP" data-info="Arithmetic shared by the per-variable domains: sound abstract arithmetic and the executable backward refinement."><rect x="320.0" y="219" width="670.0" height="25"></rect><text x="655.0" y="236">Nonrelational</text></a>
+                <text class="stratum-name" x="306" y="181" text-anchor="end">Per-variable analysis builder</text>
+                <a class="stratum-part" href="Voblint/Voblint_Nonrelational/index.html" data-name="Voblint_Nonrelational" data-meta="—" data-rests="Voblint_Compile Voblint_Domain Voblint_Exec Voblint_Framework Voblint_Result Voblint_Solver" data-info="What a per-variable domain reuses: the class kind_int_domain of value operations per kind, and everything built from it once: transfers, guard refinement, procedure entry, the check classifier, their executable versions and the analysis run by the shared D/G pipeline, with their soundness."><rect x="320.0" y="163" width="670.0" height="28"/><text x="655.0" y="181">Nonrelational</text></a>
               </g>
               <g class="stratum stratum-d6" data-layer="d6">
-                <text class="stratum-name" x="306" y="265" text-anchor="end">Result</text>
-                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_Solver Voblint_VIMP" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints such as source_sound and result_node_sound."><rect x="320.0" y="244" width="670.0" height="33"></rect><text x="655.0" y="265">Result</text></a>
+                <text class="stratum-name" x="306" y="211" text-anchor="end">Result</text>
+                <a class="stratum-part" href="Voblint/Voblint_Result/index.html" data-name="Voblint_Result" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework Voblint_Routing Voblint_Solver" data-info="The output end: what a solved routed system publishes, and the domain-free soundness endpoints that carry a source run into the result table."><rect x="320.0" y="191" width="670.0" height="31"/><text x="655.0" y="211">Result</text></a>
               </g>
               <g class="stratum stratum-d5" data-layer="d5">
-                <text class="stratum-name" x="306" y="293" text-anchor="end">Routing</text>
-                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="Context-routing policies over a compiled program: entry-state and call-string contexts, and the finiteness of their key spaces. The no-context policy itself is defined in the framework."><rect x="320.0" y="277" width="670.0" height="24"></rect><text x="655.0" y="293">Routing</text></a>
+                <text class="stratum-name" x="306" y="238" text-anchor="end">Routing</text>
+                <a class="stratum-part" href="Voblint/Voblint_Routing/index.html" data-name="Voblint_Routing" data-meta="—" data-rests="Voblint_Compile Voblint_Exec Voblint_Framework" data-info="The equations of a compiled program under a context policy, and the finiteness arguments for its context-key spaces."><rect x="320.0" y="222" width="670.0" height="23"/><text x="655.0" y="238">Routing</text></a>
               </g>
               <g class="stratum stratum-d4" data-layer="d4">
-                <text class="stratum-name" x="306" y="322" text-anchor="end">Executable carrier and core semantics</text>
-                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="301" width="496.5" height="33"></rect><text x="568.2" y="322">Exec</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed_CFG/index.html" data-name="Voblint_Typed_CFG" data-meta="—" data-rests="Voblint_Compile Voblint_Typed" data-info="Core VIMP's step tpstep and its graph, the instances of the generic semantics the analyzer's theorems quantify over, with the invariant that a run keeps every variable within its kind."><rect x="816.5" y="301" width="173.5" height="33"></rect><text x="903.2" y="322">Typed CFG</text></a>
+                <text class="stratum-name" x="306" y="262" text-anchor="end">Executable carrier</text>
+                <a class="stratum-part" href="Voblint/Voblint_Exec/index.html" data-name="Voblint_Exec" data-meta="—" data-rests="TD Voblint_Compile Voblint_Domain Voblint_Framework Voblint_VIMP" data-info="The executable carrier: association-list states, and the transport of a solved system to the function-valued states the framework is stated over."><rect x="320.0" y="245" width="670.0" height="26"/><text x="655.0" y="262">Exec</text></a>
               </g>
               <g class="stratum stratum-d3" data-layer="d3">
-                <text class="stratum-name" x="306" y="379" text-anchor="end">Framework and compiler</text>
-                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="—" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="320.0" y="334" width="423.0" height="81"></rect><text x="531.5" y="379">Framework</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="—" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler to a CFG and its correctness: structural invariants, the forward simulation csim_step, and the bridge from source runs to traces."><rect x="743.0" y="334" width="247.0" height="81"></rect><text x="866.5" y="379">Compile</text></a>
+                <text class="stratum-name" x="306" y="311" text-anchor="end">Framework and compiler</text>
+                <a class="stratum-part" href="Voblint/Voblint_Framework/index.html" data-name="Voblint_Framework" data-meta="—" data-rests="TD Voblint_CFG Voblint_Domain Voblint_Solver Voblint_VIMP" data-info="The D/G analysis framework: the analysis record and its contract, the local-specification interface every selectable analysis supplies, the equation generator, context routing and collecting soundness for an arbitrary CFG. No compiler, no domain."><rect x="320.0" y="271" width="397.3" height="71"/><text x="518.7" y="311">Framework</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Compile/index.html" data-name="Voblint_Compile" data-meta="—" data-rests="Voblint_CFG Voblint_VIMP" data-info="The compiler to a CFG and its correctness: structural invariants, the forward simulation csim_step, the bridge from source runs to traces, and the invariant that the elaborated graph's traces keep every variable within its kind."><rect x="717.3" y="271" width="272.7" height="71"/><text x="853.7" y="311">Compile</text></a>
               </g>
               <g class="stratum stratum-d2" data-layer="d2">
-                <text class="stratum-name" x="306" y="450" text-anchor="end">Values, graph, solver interface and core VIMP</text>
-                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="—" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the lattices of the numeric domains, the dead-code lift, pointwise states and backward filtering."><rect x="320.0" y="415" width="334.6" height="61"></rect><text x="487.3" y="450">Domain</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="—" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution, activation traces and the collecting semantics, each generic in the evaluator. It never mentions the compiler."><rect x="654.6" y="415" width="127.4" height="61"></rect><text x="718.3" y="450">CFG</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="—" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="782.0" y="415" width="104.0" height="61"></rect><text x="834.0" y="450">Solver</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_Typed/index.html" data-name="Voblint_Typed" data-meta="—" data-rests="Voblint_VIMP" data-info="Core VIMP: variable identities, expressions and commands that carry their kinds, the evaluation teval, the elaboration from surface VIMP, and the initial stores."><rect x="886.0" y="415" width="104.0" height="61"></rect><text x="938.0" y="450">Typed</text></a>
+                <text class="stratum-name" x="306" y="371" text-anchor="end">Values, graph and solver interface</text>
+                <a class="stratum-part" href="Voblint/Voblint_Domain/index.html" data-name="Voblint_Domain" data-meta="—" data-rests="TD Voblint_VIMP" data-info="What an abstract value is: sound-domain classes with concretization, the lattices of the numeric domains, the dead-code lift, pointwise states and backward filtering."><rect x="320.0" y="342" width="360.5" height="50"/><text x="500.2" y="371">Domain</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_CFG/index.html" data-name="Voblint_CFG" data-meta="—" data-rests="Voblint_VIMP" data-info="The graph model: nodes, intra and call edges, graph execution, activation traces and the collecting semantics, each generic in the evaluator. It never mentions the compiler."><rect x="680.5" y="342" width="177.1" height="50"/><text x="769.0" y="371">CFG</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_Solver/index.html" data-name="Voblint_Solver" data-meta="—" data-rests="TD" data-info="The strategy-tree equation language of the vendored solver, its post-solution vocabulary and the bridge into TD. It never sees a CFG."><rect x="857.6" y="342" width="132.4" height="50"/><text x="923.8" y="371">Solver</text></a>
               </g>
               <g class="stratum stratum-d1" data-layer="d1">
-                <text class="stratum-name" x="306" y="543" text-anchor="end">Solver and language</text>
-                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="—" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="320.0" y="476" width="566.0" height="125"></rect><text x="603.0" y="543">TD</text></a>
-                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="—" data-rests="" data-info="The language core: syntax of surface VIMP, the eight machine kinds and their wraparound, and the generic small-step semantics gpstep with calls, frames and returns, written over an evaluator and a conversion. Also the generated grammar. Parented on HOL, using HOL-IMP and Deriving."><rect x="886.0" y="476" width="104.0" height="125"></rect><text x="938.0" y="543">VIMP</text></a>
+                <text class="stratum-name" x="306" y="460" text-anchor="end">Solver and language</text>
+                <a class="stratum-part" href="Unsorted/TD/index.html" data-name="TD" data-meta="—" data-rests="" data-info="The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree."><rect x="320.0" y="392" width="566.0" height="127"/><text x="603.0" y="460">TD</text></a>
+                <a class="stratum-part" href="Voblint/Voblint_VIMP/index.html" data-name="Voblint_VIMP" data-meta="—" data-rests="" data-info="The source language: syntax of surface VIMP, the eight machine kinds and their wraparound, variable identities, core VIMP's expressions and commands with the evaluation eval, the elaboration from surface VIMP, and the generic small-step semantics gpstep with calls, frames and returns. Core VIMP's step pstep instantiates it, and the initial stores are fixed here. Also the generated grammar. Parented on HOL-Library, using HOL-IMP and Deriving."><rect x="886.0" y="392" width="104.0" height="127"/><text x="938.0" y="460">VIMP</text></a>
               </g>
               <g class="stratum stratum-bedrock" data-layer="bedrock">
-                <text class="stratum-name" x="306" y="623" text-anchor="end">Bedrock</text>
-                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="the logic and its libraries; not counted" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="320.0" y="601" width="670.0" height="36"></rect><text x="655.0" y="623">Isabelle/HOL · HOL-IMP · Deriving</text></a>
+                <text class="stratum-name" x="306" y="541" text-anchor="end">Bedrock</text>
+                <a class="stratum-part" href="https://isabelle.in.tum.de/" target="_blank" rel="noreferrer" data-name="Isabelle/HOL" data-meta="—" data-rests="" data-info="Isabelle/HOL, and the HOL-IMP library and AFP entry Deriving that Voblint_VIMP uses. Every layer above rests on the kernel checking its proofs."><rect x="320.0" y="519" width="670.0" height="36"/><text x="655.0" y="541">Isabelle/HOL · HOL-IMP · Deriving</text></a>
               </g>
           </svg>
 
@@ -5777,8 +5762,8 @@ qed</code></pre>
             <p class="td-panel-title">Core sample</p>
             <p class="strata-info-name"><code>Voblint_CLI</code></p>
             <p class="strata-info-meta">—</p>
-            <p class="strata-info-rests">Rests directly on <code>CFG</code>, <code>Domain</code>, <code>Framework</code>, <code>Solver</code>, <code>Typed</code> and <code>Typed CLI</code>.</p>
-            <p class="strata-info-text">run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser, with the arithmetic diagnostics, and proves the source-level soundness results.</p>
+            <p class="strata-info-rests">Rests directly on <code>Int</code>, <code>Order</code>, <code>Parity</code>, <code>Sign</code>, <code>CFG</code>, <code>Domain</code>, <code>Framework</code> and <code>Solver</code>.</p>
+            <p class="strata-info-text">The selected analyses run as one combined state under every global update rule and context policy, with its soundness for any distinct, nonempty selection. run_voblint exposes Sign, Interval, Parity, Congruence, Int and relational Order to the CLI and browser, with the arithmetic diagnostics, and proves the source-level soundness results.</p>
             <p class="strata-info-hint">Hover a layer to take a sample: the sessions it rests on light up. Click to open the session.</p>
           </div>
         </div>
@@ -6002,7 +5987,7 @@ qed</code></pre>
         <li>
           <a
             class="resource-card resource-card-featured"
-            href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_Examples/Voblint.html"
+            href="https://manuellerchner.github.io/Voblint-Verification-Master-Thesis/Voblint/Voblint_CLI/Run_Voblint.html"
           >
             <span class="resource-icon resource-icon-accent" aria-hidden="true">
               <i class="fa-solid fa-diagram-project"></i>
@@ -6010,8 +5995,8 @@ qed</code></pre>
             <span class="resource-content">
               <span class="resource-title">Certified pipeline theory</span>
               <span class="resource-description">
-                Open <code>Voblint.thy</code>, the downstream entry point that presents
-                the certified pipeline and links its major layers and flagship theorems.
+                Open <code>Run_Voblint.thy</code>, which defines the analyzer the CLI and
+                browser run and states its flagship theorems.
               </span>
             </span>
             <span class="resource-arrow" aria-hidden="true">→</span>

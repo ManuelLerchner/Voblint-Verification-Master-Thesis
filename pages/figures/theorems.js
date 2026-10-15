@@ -47,17 +47,17 @@
   const isaConst = isaEntity("const");
   const isaFact = isaEntity("fact");
 
-  const REACHING = isaConst("Voblint_Typed_CLI", "Typed_Run", "reaching");
+  const REACHING = isaConst("Voblint_CLI", "Analysis_Config", "reaching");
   const REPORT = ["Voblint_CLI", "Analysis_Report"];
-  const OBLIGATIONS = isaConst("Voblint_CLI", "Typed_Report", "tobligation_holds");
+  const OBLIGATIONS = isaConst("Voblint_CLI", "Run_Report", "obligation_holds");
 
   const RULE_EXPLANATIONS = {
     run: {
       clause:
-        "s0 ∈ tinit_stores (kenv_of ds)  ∧  star (tpstep (kenv_of ds) (typed_ptable p ds)) (main_body …, s0, []) (residual, s, frs)",
+        "s0 ∈ init_stores (kenv_of ds)  ∧  star (pstep (kenv_of ds) (elab_ptable p ds)) (main_body …, s0, []) (residual, s, frs)",
       text: "Start from an initial store (globals are `0`, every other variable holds some value of its kind) with an empty call stack, and let core VIMP's semantics run the elaborated program for any number of steps. It arrives at the rest of the program `residual`, the store `s` and the call frames `frs`. The run may stop anywhere, even inside a call.",
-      link: isaConst("Voblint_Typed_CFG", "Typed_CFG", "tpstep"),
-      linkText: "tpstep",
+      link: isaConst("Voblint_VIMP", "VIMP_Semantics", "pstep"),
+      linkText: "pstep",
     },
     ans: {
       clause: "run_voblint conf ds p = Analysed res",
@@ -67,7 +67,7 @@
     },
     v: {
       clause:
-        "∃v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name ⊢ (residual, s, frs) ≈ (v, s, stk)",
+        "∃v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name ⊢ (residual, s, frs) ≈ (v, s, stk)",
       text: "The compiler's simulation relation matches the reached source configuration with a configuration of the compiled graph at some node `v`, holding the same store `s`.",
       link: isaConst("Voblint_Compile", "Simulation_Relation", "csim"),
       linkText: "csim",
@@ -85,23 +85,23 @@
       linkText: "reaching",
     },
     cover: {
-      clause: "∃d. Lifted d ∈ report_states_at res v ∧ s ∈ tmcp.act_gamma ds … d",
+      clause: "∃d. Lifted d ∈ report_states_at res v ∧ s ∈ mcp.act_gamma ds … d",
       text: "Some state the report holds at `v`, under one of the contexts solved there, describes `s`, read through the concretization of the activated analyses. Not every context has to: another activation's state need not describe this store.",
       link: isaConst(...REPORT, "report_states_at"),
       linkText: "report_states_at",
     },
     checks: {
       clause:
-        "¬ DEAD res v ∧ (∀c. PROVED res v c ⟶ truthy (teval c s)) ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (teval c s))",
+        "¬ DEAD res v ∧ (∀c. PROVED res v c ⟶ truthy (eval c s)) ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (eval c s))",
       text: "`v` is not DEAD, and every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
       link: isaConst(...REPORT, "HAS_VERDICT"),
       linkText: "HAS_VERDICT",
     },
     safe0: {
-      clause: "SAFE res v ⟶ (∀ob ∈ tobligations_at ds p v. s ⊨ ob)",
+      clause: "SAFE res v ⟶ (∀ob ∈ obligations_at ds p v. s ⊨ ob)",
       text: "If the report names no arithmetic diagnostic at `v`, every obligation of the expressions evaluated there holds in `s`: no zero divisor, no signed overflow, no conversion out of range.",
       link: OBLIGATIONS,
-      linkText: "tobligation_holds",
+      linkText: "obligation_holds",
     },
     notdead: {
       clause: "check_verdict c ≠ Dead",
@@ -124,10 +124,10 @@
     },
     holds: {
       clause:
-        "(check_verdict c = Decided Check_Proved ⟶ truthy (teval e s)) ∧ (… Check_Refuted ⟶ ¬ truthy (teval e s))",
-      text: "Evaluating `e` in the store `s` agrees with the verdict: true for `PROVED`, false for `REFUTED`. `teval` is core VIMP's evaluation, with every operation wrapped into its kind.",
-      link: isaConst("Voblint_Typed", "Typed_Exp", "teval"),
-      linkText: "teval",
+        "(check_verdict c = Decided Check_Proved ⟶ truthy (eval e s)) ∧ (… Check_Refuted ⟶ ¬ truthy (eval e s))",
+      text: "Evaluating `e` in the store `s` agrees with the verdict: true for `PROVED`, false for `REFUTED`. `eval` is core VIMP's evaluation, with every operation wrapped into its kind.",
+      link: isaConst("Voblint_VIMP", "Core_Exp", "eval"),
+      linkText: "eval",
     },
     deadv: {
       clause: "DEAD res v",
@@ -149,10 +149,10 @@
     },
     div: {
       clause:
-        "(v, a, w) ∈ intra (typed_cfg p ds) ⟹ e ∈ set (edge_expressions a) ⟹ ob ∈ set (tarith_obligations e) ⟹ s ⊨ ob",
+        "(v, a, w) ∈ intra (elab_cfg p ds) ⟹ e ∈ set (edge_expressions a) ⟹ ob ∈ set (arith_obligations e) ⟹ s ⊨ ob",
       text: "For every expression on an edge leaving `v`, every obligation it raises holds in `s`: a divisor is non-zero, a signed operation's mathematical result lies in its kind, a narrowing conversion's operand fits its target. The theorem's other two parts state the same for a call's arguments and for a value returned to a caller.",
       link: OBLIGATIONS,
-      linkText: "tobligation_holds",
+      linkText: "obligation_holds",
     },
     distinct: {
       clause: "distinct (map check_label (report_checks res))",
@@ -162,7 +162,7 @@
     },
     sites: {
       clause:
-        "∀c ∈ set (report_checks res). check_label c = l ⟶ check_exp c = e ∧ check_verdict c ≠ Dead ∧ (… Proved ⟶ truthy (teval e s)) ∧ (… Refuted ⟶ ¬ truthy (teval e s))",
+        "∀c ∈ set (report_checks res). check_label c = l ⟶ check_exp c = e ∧ check_verdict c ≠ Dead ∧ (… Proved ⟶ truthy (eval e s)) ∧ (… Refuted ⟶ ¬ truthy (eval e s))",
       text: "A row exists under the label `l`, and every row under it is the row for the check about to run: same condition, not DEAD, and its verdict holds in `s`. The verdict shown at a check's line is therefore that check's.",
       link: isaFact("Voblint_CLI", "Run_Voblint", "run_voblint_labelled_check_sound"),
       linkText: "run_voblint_labelled_check_sound",
@@ -214,25 +214,25 @@
    */
   const ISABELLE_CONSTANTS = new Set([
     "star",
-    "tpstep",
-    "typed_ptable",
-    "typed_cfg",
+    "pstep",
+    "elab_ptable",
+    "elab_cfg",
     "kenv_of",
-    "tinit_stores",
+    "init_stores",
     "main_body",
     "run_voblint",
     "prog_main_name",
     "reaching",
     "report_states_at",
-    "tmcp",
+    "mcp",
     "act_gamma",
-    "tactivation",
+    "activation_of",
     "conf_analyses",
     "DEAD",
     "PROVED",
     "REFUTED",
     "SAFE",
-    "tobligations_at",
+    "obligations_at",
     "next_check",
     "set",
     "report_checks",
@@ -241,10 +241,10 @@
     "check_point",
     "check_verdict",
     "truthy",
-    "teval",
+    "eval",
     "intra",
     "edge_expressions",
-    "tarith_obligations",
+    "arith_obligations",
     "distinct",
     "map",
   ]);
