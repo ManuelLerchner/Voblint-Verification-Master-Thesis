@@ -116,7 +116,7 @@ verdict is printed at the source position of its check, and the text report chec
 #thy("classify_point")
 
 The state #ctor("Bot") gives #verdict("DEAD"). Any other state is classified
-by #isaconst("mcp_classify"), which asks every active analysis for the truth
+by #isaconst("mcp_classify", thy: "MCP_Carrier"), which asks every active analysis for the truth
 value of the check's condition through the query system of @sec:coop-queries and combines the
 answers by meet: an exact $1$ gives #verdict("PROVED"), an exact $0$ gives
 #verdict("REFUTED"), and any other answer gives #verdict("UNKNOWN"). A definite answer
@@ -146,7 +146,7 @@ tells the user that $x$ is positive there and nothing else.
 #verdict("REFUTED") gives the stores in which the condition fails, and
 #verdict("UNKNOWN") gives every store. The definition takes the evaluator
 $"ev"$ that gives a condition its meaning at a store as a parameter; for VIMP
-it is #isaconst("eval"):
+it is #isaconst("eval", thy: "Core_Exp"):
 
 #thy("verdict_holds")
 

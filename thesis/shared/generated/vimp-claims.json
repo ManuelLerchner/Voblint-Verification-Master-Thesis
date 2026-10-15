@@ -304,8 +304,8 @@
     }
   },
   "dom-guard-interval": {
-    "fixture": "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
-    "program": "fun main() {\n  x = 0;\n  x = __voblint_nondet_int();\n  if (0 < x) {\n    y = x;\n  } else {\n    y = - x;\n  }\n  __voblint_check(y >= 0);\n}",
+    "fixture": "thesis/shared/programs/guard-interval.vimp",
+    "program": "fun main() {\n  x = __voblint_nondet_int();\n  if (x < -1000 || x > 1000) {\n    x = 0;\n  }\n  if (0 < x) {\n    y = x;\n  } else {\n    y = - x;\n  }\n  __voblint_check(y >= 0);\n}",
     "settings": {
       "analysis": "interval",
       "context": "none",
@@ -636,7 +636,7 @@
     }
   },
   "rules-grows-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
+    "fixture": "tests/regression/24-site-figures/soundness/51-recursion_grows_bounded_narrowing.vimp",
     "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
     "settings": {
       "analysis": "interval",
@@ -646,7 +646,7 @@
     }
   },
   "rules-grows-warrow": {
-    "fixture": "tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp",
+    "fixture": "tests/regression/24-site-figures/soundness/13-recursion_grows_warrow.vimp",
     "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
     "settings": {
       "analysis": "interval",
@@ -656,7 +656,7 @@
     }
   },
   "rules-grows-warrow-per-origin": {
-    "fixture": "tests/regression/24-site-figures/precision/14-recursion_grows_warrow_per_origin.vimp",
+    "fixture": "tests/regression/24-site-figures/soundness/14-recursion_grows_warrow_per_origin.vimp",
     "program": "fun f(x) {\n  __voblint_check(x >= 0);\n  f(x + 1);\n}\n\nfun main() {\n  f(0);\n}",
     "settings": {
       "analysis": "interval",
@@ -716,7 +716,7 @@
     }
   },
   "rules-shrinks-bounded-narrowing": {
-    "fixture": "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
+    "fixture": "tests/regression/24-site-figures/precision/53-recursion_shrinks_bounded_narrowing.vimp",
     "program": "fun f(a) {\n  if (a < 4) {\n    f(9 / (a + 2));\n  }\n  __voblint_check(a <= 9);\n}\n\nfun main() {\n  f(-1);\n}",
     "settings": {
       "analysis": "interval",
@@ -756,7 +756,7 @@
     }
   },
   "rules-shrinks-warrow-per-origin": {
-    "fixture": "tests/regression/24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp",
+    "fixture": "tests/regression/24-site-figures/precision/52-recursion_shrinks_warrow_per_origin.vimp",
     "program": "fun f(a) {\n  if (a < 4) {\n    f(9 / (a + 2));\n  }\n  __voblint_check(a <= 9);\n}\n\nfun main() {\n  f(-1);\n}",
     "settings": {
       "analysis": "interval",

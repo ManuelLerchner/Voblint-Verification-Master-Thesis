@@ -219,13 +219,13 @@ arithmetic node the kind C computes it at under integer promotion and the usual
 arithmetic conversions, and makes every implicit conversion an explicit
 conversion node. A core expression is evaluated in a _store_ $s$ of type
 #isatype("store"), a total function #isai("var_id \<Rightarrow> int") from
-variable identities to integers. Evaluation #isaconst("eval") is a function
+variable identities to integers. Evaluation #isaconst("eval", thy: "Core_Exp") is a function
 defined by one equation per constructor. Every arithmetic node computes the
 mathematical result and wraps it into the range of its kind $k$ with
 #isaconst("ik_norm"), so for example
 $
-  #isaconst("eval") (e_1 attach(#vop("/"), br: k) e_2, s) = #isaconst("ik_norm") thin k thin (#isaconst("c_div") (#isaconst("eval") (e_1, s), #isaconst("eval") (e_2, s))), \
-  #isaconst("eval") (e_1 #vop("<") e_2, s) = cases(1 & "if" #isaconst("eval") (e_1, s) < #isaconst("eval") (e_2, s), 0 & "otherwise",)
+  #isaconst("eval", thy: "Core_Exp") (e_1 attach(#vop("/"), br: k) e_2, s) = #isaconst("ik_norm") thin k thin (#isaconst("c_div") (#isaconst("eval", thy: "Core_Exp") (e_1, s), #isaconst("eval", thy: "Core_Exp") (e_2, s))), \
+  #isaconst("eval", thy: "Core_Exp") (e_1 #vop("<") e_2, s) = cases(1 & "if" #isaconst("eval", thy: "Core_Exp") (e_1, s) < #isaconst("eval", thy: "Core_Exp") (e_2, s), 0 & "otherwise",)
 $
 and a variable read returns $s(x)$ unchanged, because every write already
 converts to the variable's kind. Every expression has a value, because VIMP
@@ -233,7 +233,7 @@ fixes the results of division and remainder by zero (#isaconst("c_div"),
 #isaconst("c_mod"), @sec:vimp-vs-c). It also has no effects, so a transfer
 function may evaluate a guard again, as the backward filtering of @ch:domains
 does. Input enters only through the statement `x = __voblint_nondet_int();`
-and never inside an expression. This keeps #isaconst("eval") a function.
+and never inside an expression. This keeps #isaconst("eval", thy: "Core_Exp") a function.
 
 Commands are built from expressions. Besides the structured statements, there
 are calls, which may store a result, and two markers that appear only during
@@ -409,7 +409,7 @@ call. Each suspended activation keeps its data in a _frame_.
   the caller's store and the variable, if any, that receives the result. The
   step relation #isaconst("pstep") relates a configuration of a core program to
   its successor. It is the instance of the generic relation in @fig:pstep at the
-  evaluator #isaconst("eval"), the globals #isaconst("is_global"), the return
+  evaluator #isaconst("eval", thy: "Core_Exp"), the globals #isaconst("is_global"), the return
   slot #ctor("ReturnVar", thy: "Var_Id") and the conversion
   #isaconst("kind_conv"), which wraps every value the relation writes into the
   kind of its destination.
@@ -515,7 +515,7 @@ wherever both languages have a construct but model it differently.
   },
   placement: none,
   caption: [Constructs that both languages have but model differently. The VIMP
-    rows restate #isaconst("c_div"), #isaconst("c_mod"), #isaconst("eval"),
+    rows restate #isaconst("c_div"), #isaconst("c_mod"), #isaconst("eval", thy: "Core_Exp"),
     #isaconst("init_stores"), #isaconst("enter_state") and #isaconst("pstep").],
 ) <tab:vimp-vs-c>
 

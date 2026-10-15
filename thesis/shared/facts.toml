@@ -29,25 +29,24 @@ why = "Arithmetic-safety endpoint cited in the introduction."
 [facts.source_run_has_activation_trace]
 why = "Main-statements appendix: source runs are represented by valid traces."
 fact = "bridge_sem.source_run_has_activation_trace"
-session = "Voblint_Compile"
-theory = "Voblint_Compile.Source_To_Trace"
 
 [facts.csim_step]
 why = "Program-model chapter: one source step is matched by the compiled graph."
+fact = "simrel_sem.csim_step"
 
 [facts.source_progress]
 why = "Program-model chapter: reachable configurations of a well-formed program are finished or can step."
+fact = "simrel_sem.source_progress"
 session = "Voblint_Compile"
 theory = "Voblint_Compile.Source_Progress"
 
 [facts.csim_star]
 why = "Main-statements appendix: simulation of source runs by the compiled graph."
+fact = "simrel_sem.csim_star"
 
 [facts.gactivation_collect_sound]
 why = "Main-statements appendix: the activation coverage theorem."
 fact = "collect_sem.gactivation_collect_sound"
-session = "Voblint_Framework"
-theory = "Voblint_Framework.Activation_Backbone"
 
 [facts.activation_collect_dg_sound]
 why = "Main-statements appendix: a solved D/G table satisfies the coverage obligations."
@@ -60,15 +59,19 @@ theory = "Voblint_Examples.Example_Non_Vacuity"
 
 [facts."gpstep.Call"]
 why = "Program-model chapter: the source step rule for a call."
+fact = "vimp_sem.gpstep.Call"
 
 [facts."gpstep.ReturnSome"]
 why = "Program-model chapter: the source step rule for returning a value."
+fact = "vimp_sem.gpstep.ReturnSome"
 
 [facts."gpstep.RestoreStep"]
 why = "Program-model chapter: the source step rule that restores the caller's frame."
+fact = "vimp_sem.gpstep.RestoreStep"
 
 [facts."gpstep.UnwindAct"]
 why = "Program-model chapter: the source step rule that pops the caller's frame after an explicit return."
+fact = "vimp_sem.gpstep.UnwindAct"
 
 [facts."compile.simps(4)"]
 why = "Program-model chapter: compiling a sequence hands the first command the second's entry."
@@ -94,50 +97,35 @@ theory = "Voblint_Examples.Example_Non_Vacuity"
 
 [facts.source_reaches_node_collect]
 why = "Chapter 4: source-reachable stores are collected."
-session = "Voblint_Compile"
-theory = "Voblint_Compile.Source_To_Trace"
 
 [facts.node_collect_eq_Union_activation_collect]
 why = "Chapter 4: exhaustive buckets under the coverage contract."
 fact = "gactivation_coverage.node_collect_eq_Union_activation_collect"
-session = "Voblint_CFG"
-theory = "Voblint_CFG.Activation_Trace_Abstract"
 
 [facts.node_collect_covered]
 why = "Chapter 4: the claims of all contexts contain the node collecting semantics."
 fact = "gactivation_coverage.node_collect_covered"
-session = "Voblint_CFG"
-theory = "Voblint_CFG.Activation_Trace_Abstract"
 
 [facts.cstep_preserves_activation_trace_repr]
 why = "Chapter 4: one graph step is matched by a trace rule."
-session = "Voblint_Compile"
-theory = "Voblint_Compile.Source_To_Trace"
+fact = "bridge_sem.cstep_preserves_activation_trace_repr"
 
 [facts.ls_channel_sound]
 why = "Cooperation chapter: the channel the framework supplies holds at every store of the state."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.MCP_Spec"
+fact = "mcp_sem.ls_channel_sound"
 
 [facts.mcp_combine_sound]
 why = "Cooperation chapter: independent sound components combine into a sound component."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.MCP_Spec"
+fact = "mcp_sem.mcp_combine_sound"
 
 [facts.routed_node_rhs_parts]
 why = "Chapter 8, interprocedural equations: the schematic right-hand side is the generator's answer at every valuation."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.DG_Indexed_Generator"
 
 [facts.routed_node_rhs_buffered_parts]
 why = "Chapter 8, interprocedural equations: the executed buffered generator answers the same join of parts as the reference generator."
-session = "Voblint_Framework"
-theory = "Voblint_Framework.DG_Indexed_Generator"
 
 [facts.nonrel_refine_sound]
 why = "Chapter 5, the guard refinement drops no store that passes the guard."
-session = "Voblint_Nonrelational"
-theory = "Voblint_Nonrelational.Nonrelational_Transfer"
 
 [facts.update_rules_example]
 why = "Solving chapter, update-rule figure: one global under each rule after each of four contributions."

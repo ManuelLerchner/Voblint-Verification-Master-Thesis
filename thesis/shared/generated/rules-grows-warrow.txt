@@ -1,9 +1,11 @@
-tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp [interval]
+tests/regression/24-site-figures/soundness/13-recursion_grows_warrow.vimp [interval]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+60:3      pp1    WARNING   possible signed integer overflow in +: x + 1
 
 Assertion checks
 Location  Point  Condition  Verdict  State
---------  -----  ---------  -------  --------------------
-56:3      pp0    x >= 0     PROVED   interval: x=[0,+∞]
+--------  -----  ---------  -------  ------------------------------------
+59:3      pp0    x >= 0     UNKNOWN  interval: x=[-2147483648,2147483647]

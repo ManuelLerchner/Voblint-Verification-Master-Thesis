@@ -282,7 +282,7 @@ call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
 The rules are stated once in the locale #isalocale("trace_sem"), whose
 parameters are the expression evaluator, the return slot, the conversion
 applied when a value is written, and the globals classifier. Core VIMP
-instantiates them with #isaconst("eval"), #isai("ReturnVar"),
+instantiates them with #isaconst("eval", thy: "Core_Exp"), #isai("ReturnVar"),
 #isai("kind_conv \<kappa>") (#isaconst("kind_conv")) and
 #isaconst("is_global"). That instance, for a kind environment $kappa$, is
 #isai("\<T>\<^bsub>\<kappa>,g,S\<^esub>") (#isaconst("valid_activation_trace")).

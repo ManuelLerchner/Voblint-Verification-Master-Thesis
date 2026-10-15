@@ -1,0 +1,12 @@
+fun main() {
+  x = __voblint_nondet_int();
+  if (x < -1000 || x > 1000) {
+    x = 0;
+  }
+  if (0 < x) {
+    y = x;
+  } else {
+    y = - x;
+  }
+  __voblint_check(y >= 0);
+}

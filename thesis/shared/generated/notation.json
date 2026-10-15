@@ -42,59 +42,6 @@
       "local": null
     },
     {
-      "id": "aval",
-      "group": "operator",
-      "kind": "notation",
-      "reads": "the value of _e_ in _s_",
-      "meaning": "the integer expression _e_ evaluates to in store _s_",
-      "forms": [
-        {
-          "const": "aval",
-          "cite": {
-            "kind": "const",
-            "name": "aval"
-          },
-          "symbol": "\\<lbrakk>e\\<rbrakk>\\<^sub>e s",
-          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sub>e",
-          "declaration": "fun",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "VIMP_Expr",
-          "file": "src/Program_Model/VIMP/VIMP_Expr.thy",
-          "href": "Voblint/Voblint_VIMP/VIMP_Expr.html#VIMP_Expr.aval%7Cconst",
-          "session": "Voblint_VIMP"
-        }
-      ],
-      "local": null
-    },
-    {
-      "id": "sound_evaluator",
-      "group": "operator",
-      "kind": "notation",
-      "reads": "the abstract value of _e_ in _d_",
-      "meaning": "the abstract value an evaluator computes for expression _e_ in abstract state _d_; it contains the concrete value whenever the store lies in {\\<gamma> d}",
-      "forms": [
-        {
-          "const": "aval_abs",
-          "cite": {
-            "kind": "locale",
-            "name": "sound_evaluator"
-          },
-          "symbol": "\\<lbrakk>e\\<rbrakk>\\<^sup>\\<sharp> d",
-          "mixfix": "\\<lbrakk>_\\<rbrakk>\\<^sup>\\<sharp>",
-          "declaration": "locale sound_evaluator",
-          "scope": "sound_evaluator",
-          "pretty_printed": true,
-          "theory": "Forward_Domain",
-          "file": "src/Abstract_Interpreter/Domain/Eval/Forward_Domain.thy",
-          "href": "Voblint/Voblint_Domain/Forward_Domain.html#Forward_Domain.sound_evaluator%7Clocale",
-          "session": "Voblint_Domain",
-          "scope_href": "Voblint/Voblint_Domain/Forward_Domain.html#Forward_Domain.sound_evaluator%7Clocale"
-        }
-      ],
-      "local": null
-    },
-    {
       "id": "abs_step",
       "group": "operator",
       "kind": "notation",
@@ -151,7 +98,7 @@
       "group": "operator",
       "kind": "notation",
       "reads": "_c_ steps to _c′_",
-      "meaning": "one small step of a source configuration (command, store, frame stack) under procedure table _Π_; the starred arrow is its reflexive-transitive closure",
+      "meaning": "one small step of a core VIMP configuration (command, store, frame stack) under kind environment _κ_ and procedure table _Π_; every value it writes is converted to its destination's kind; the starred arrow is its reflexive-transitive closure",
       "forms": [
         {
           "const": "pstep",
@@ -159,14 +106,14 @@
             "kind": "const",
             "name": "pstep"
           },
-          "symbol": "\\<G>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p c'",
+          "symbol": "\\<kappa>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p c'",
           "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>p/ _)",
           "declaration": "definition",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "VIMP_Proc",
-          "file": "src/Program_Model/VIMP/VIMP_Proc.thy",
-          "href": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.pstep%7Cconst",
+          "theory": "VIMP_Semantics",
+          "file": "src/Program_Model/VIMP/VIMP_Semantics.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.pstep%7Cconst",
           "session": "Voblint_VIMP"
         },
         {
@@ -175,14 +122,14 @@
             "kind": "const",
             "name": "psteps"
           },
-          "symbol": "\\<G>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p\\<^sup>* c'",
+          "symbol": "\\<kappa>,\\<Pi> \\<turnstile> c \\<rightarrow>\\<^sub>p\\<^sup>* c'",
           "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>p\\<^sup>*/ _)",
           "declaration": "abbreviation",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "VIMP_Proc",
-          "file": "src/Program_Model/VIMP/VIMP_Proc.thy",
-          "href": "Voblint/Voblint_VIMP/VIMP_Proc.html#VIMP_Proc.psteps%7Cconst",
+          "theory": "VIMP_Semantics",
+          "file": "src/Program_Model/VIMP/VIMP_Semantics.thy",
+          "href": "Voblint/Voblint_VIMP/VIMP_Semantics.html#VIMP_Semantics.psteps%7Cconst",
           "session": "Voblint_VIMP"
         }
       ],
@@ -193,7 +140,7 @@
       "group": "operator",
       "kind": "notation",
       "reads": "_c_ steps to _c′_ in _g_",
-      "meaning": "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_; the starred arrow is its reflexive-transitive closure",
+      "meaning": "one step of a graph configuration (node, store, frame stack) in control-flow graph _g_ under kind environment _κ_; the starred arrow is its reflexive-transitive closure",
       "forms": [
         {
           "const": "cstep",
@@ -201,7 +148,7 @@
             "kind": "const",
             "name": "cstep"
           },
-          "symbol": "\\<G>,g \\<turnstile> c \\<rightarrow>\\<^sub>c c'",
+          "symbol": "\\<kappa>,g \\<turnstile> c \\<rightarrow>\\<^sub>c c'",
           "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>c/ _)",
           "declaration": "definition",
           "scope": "global",
@@ -217,7 +164,7 @@
             "kind": "const",
             "name": "csteps"
           },
-          "symbol": "\\<G>,g \\<turnstile> c \\<rightarrow>\\<^sub>c\\<^sup>* c'",
+          "symbol": "\\<kappa>,g \\<turnstile> c \\<rightarrow>\\<^sub>c\\<^sup>* c'",
           "mixfix": "(_,_ \\<turnstile>/ _ \\<rightarrow>\\<^sub>c\\<^sup>*/ _)",
           "declaration": "abbreviation",
           "scope": "global",
@@ -257,32 +204,6 @@
       "local": null
     },
     {
-      "id": "at_node",
-      "group": "operator",
-      "kind": "notation",
-      "reads": "from _s₀_, _c_ is observed at node _v_ in _p_",
-      "meaning": "some run of the elaboration of program _p_ from store _s₀_ reaches an annotated configuration that erases to _c_, names node _v_ of the compiled graph and is related to _v_ by the simulation; a configuration reachable along two paths can be observed at two nodes",
-      "forms": [
-        {
-          "const": "at_node",
-          "cite": {
-            "kind": "const",
-            "name": "at_node"
-          },
-          "symbol": "p,s0 \\<turnstile> c \\<rhd> v",
-          "mixfix": "(_,_ \\<turnstile>/ _ \\<rhd>/ _)",
-          "declaration": "fun",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "Elaborated_Compilation",
-          "file": "src/Program_Model/Compile/Elaborated_Compilation.thy",
-          "href": "Voblint/Voblint_Compile/Elaborated_Compilation.html#Elaborated_Compilation.at_node%7Cconst",
-          "session": "Voblint_Compile"
-        }
-      ],
-      "local": null
-    },
-    {
       "id": "dgs_skip",
       "group": "operator",
       "kind": "notation",
@@ -297,12 +218,12 @@
           },
           "symbol": "skip\\<^sup>\\<sharp> S",
           "mixfix": "skip\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_skip%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_skip%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -313,12 +234,12 @@
           },
           "symbol": "assign\\<^sup>\\<sharp> S",
           "mixfix": "assign\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_assign%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_assign%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -329,12 +250,12 @@
           },
           "symbol": "special\\<^sup>\\<sharp> S",
           "mixfix": "special\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_special%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_special%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -345,12 +266,12 @@
           },
           "symbol": "branch\\<^sup>\\<sharp> S",
           "mixfix": "branch\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_branch%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_branch%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -361,12 +282,12 @@
           },
           "symbol": "body\\<^sup>\\<sharp> S",
           "mixfix": "body\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_body%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_body%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -377,12 +298,12 @@
           },
           "symbol": "return\\<^sup>\\<sharp> S",
           "mixfix": "return\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_return%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_return%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -393,12 +314,12 @@
           },
           "symbol": "event\\<^sup>\\<sharp> S",
           "mixfix": "event\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_event%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_event%7Cconst",
           "session": "Voblint_Framework"
         }
       ],
@@ -419,12 +340,12 @@
           },
           "symbol": "enter\\<^sup>\\<sharp> S",
           "mixfix": "enter\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_enter%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_enter%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -435,12 +356,12 @@
           },
           "symbol": "combine_env\\<^sup>\\<sharp> S",
           "mixfix": "combine'_env\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_env%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_combine_env%7Cconst",
           "session": "Voblint_Framework"
         },
         {
@@ -451,45 +372,19 @@
           },
           "symbol": "combine_assign\\<^sup>\\<sharp> S",
           "mixfix": "combine'_assign\\<^sup>\\<sharp>",
-          "declaration": "record dg_spec",
+          "declaration": "record gdg_spec",
           "scope": "global",
           "pretty_printed": true,
           "theory": "DG_Spec",
           "file": "src/Abstract_Interpreter/Framework/Spec/DG_Spec.thy",
-          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.dg_spec.dgs_combine_assign%7Cconst",
+          "href": "Voblint/Voblint_Framework/DG_Spec.html#DG_Spec.gdg_spec.dgs_combine_assign%7Cconst",
           "session": "Voblint_Framework"
         }
       ],
       "local": null
     },
     {
-      "id": "combine_collect_abs",
-      "group": "operator",
-      "kind": "notation",
-      "reads": "the abstract return of _σe_ into _σc_",
-      "meaning": "the abstract counterpart of the concrete return on abstract states: caller locals, callee globals, and the callee's result written to the destination",
-      "forms": [
-        {
-          "const": "combine_collect_abs",
-          "cite": {
-            "kind": "const",
-            "name": "combine_collect_abs"
-          },
-          "symbol": "combine\\<^sup>\\<sharp> \\<G> dst \\<sigma>c \\<sigma>e",
-          "mixfix": "combine\\<^sup>\\<sharp>",
-          "declaration": "definition",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "Transfer_Algebra",
-          "file": "src/Abstract_Interpreter/Framework/State/Transfer_Algebra.thy",
-          "href": "Voblint/Voblint_Framework/Transfer_Algebra.html#Transfer_Algebra.combine_collect_abs%7Cconst",
-          "session": "Voblint_Framework"
-        }
-      ],
-      "local": null
-    },
-    {
-      "id": "routed_context",
+      "id": "grouted_context",
       "group": "operator",
       "kind": "notation",
       "reads": "the computed callee context",
@@ -499,18 +394,18 @@
           "const": "route",
           "cite": {
             "kind": "locale",
-            "name": "routed_context"
+            "name": "grouted_context"
           },
           "symbol": "context\\<^sup>\\<sharp>",
           "mixfix": "context\\<^sup>\\<sharp>",
-          "declaration": "locale routed_context",
-          "scope": "routed_context",
+          "declaration": "locale grouted_context",
+          "scope": "grouted_context",
           "pretty_printed": true,
           "theory": "Routed_Context",
           "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
-          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context%7Clocale",
           "session": "Voblint_Framework",
-          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale"
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context%7Clocale"
         }
       ],
       "local": null
@@ -558,26 +453,26 @@
       "local": null
     },
     {
-      "id": "declared_global",
+      "id": "kenv_of",
       "group": "operator",
       "kind": "convention",
-      "reads": "the globals classifier",
-      "meaning": "the predicate on variable names that marks the globals; a program supplies it from its global declarations, and the theorems take it as a parameter",
+      "reads": "the kind environment",
+      "meaning": "the machine kind of every variable identity; a program supplies it from its kind declarations, an undeclared identity being {I32}, and the theorems take it as a parameter",
       "forms": [
         {
-          "const": "declared_global",
+          "const": "kenv_of",
           "cite": {
             "kind": "const",
-            "name": "declared_global"
+            "name": "kenv_of"
           },
-          "symbol": "\\<G>",
+          "symbol": "\\<kappa>",
           "mixfix": null,
           "declaration": "variable convention",
           "scope": "global",
           "pretty_printed": true,
-          "theory": "VIMP_Program",
-          "file": "src/Program_Model/VIMP/VIMP_Program.thy",
-          "href": "Voblint/Voblint_VIMP/VIMP_Program.html#VIMP_Program.declared_global%7Cconst",
+          "theory": "Core_Com",
+          "file": "src/Program_Model/VIMP/Core_Com.thy",
+          "href": "Voblint/Voblint_VIMP/Core_Com.html#Core_Com.kenv_of%7Cconst",
           "session": "Voblint_VIMP"
         }
       ],
@@ -596,9 +491,9 @@
             "kind": "const",
             "name": "valid_activation_trace"
           },
-          "symbol": "\\<T>\\<^bsub>\\<G>,g,S\\<^esub>",
+          "symbol": "\\<T>\\<^bsub>\\<kappa>,g,S\\<^esub>",
           "mixfix": "\\<T>\\<^bsub>_,_,_\\<^esub>",
-          "declaration": "inductive_set",
+          "declaration": "definition",
           "scope": "global",
           "pretty_printed": true,
           "theory": "Activation_Trace_Def",
@@ -607,25 +502,7 @@
           "session": "Voblint_CFG"
         }
       ],
-      "local": {
-        "const": "traces",
-        "cite": {
-          "kind": "const",
-          "name": "activation_coverage.traces"
-        },
-        "symbol": "\\<T>",
-        "mixfix": "\\<T>",
-        "declaration": "abbreviation",
-        "scope": "activation_coverage",
-        "pretty_printed": true,
-        "theory": "Activation_Trace_Abstract",
-        "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
-        "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.traces%7Cconst",
-        "session": "Voblint_CFG",
-        "expands": "\\<T>\\<^bsub>\\<G>,g,S\\<^esub>",
-        "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
-        "shorthand_for": "valid_activation_trace"
-      }
+      "local": null
     },
     {
       "id": "node_collect",
@@ -640,7 +517,7 @@
             "kind": "const",
             "name": "node_collect"
           },
-          "symbol": "\\<C>\\<^bsub>\\<G>,g,S\\<^esub> v",
+          "symbol": "\\<C>\\<^bsub>\\<kappa>,g,S\\<^esub> v",
           "mixfix": "\\<C>\\<^bsub>_,_,_\\<^esub>",
           "declaration": "definition",
           "scope": "global",
@@ -651,25 +528,7 @@
           "session": "Voblint_CFG"
         }
       ],
-      "local": {
-        "const": "collect",
-        "cite": {
-          "kind": "const",
-          "name": "activation_coverage.collect"
-        },
-        "symbol": "\\<C> v",
-        "mixfix": "\\<C>",
-        "declaration": "abbreviation",
-        "scope": "activation_coverage",
-        "pretty_printed": true,
-        "theory": "Activation_Trace_Abstract",
-        "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
-        "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.collect%7Cconst",
-        "session": "Voblint_CFG",
-        "expands": "\\<C>\\<^bsub>\\<G>,g,S\\<^esub>",
-        "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
-        "shorthand_for": "node_collect"
-      }
+      "local": null
     },
     {
       "id": "activation_collect",
@@ -684,7 +543,7 @@
             "kind": "const",
             "name": "activation_collect"
           },
-          "symbol": "\\<A>\\<^bsub>\\<G>,adm,c₀,g,S\\<^esub> v c",
+          "symbol": "\\<A>\\<^bsub>\\<kappa>,adm,c₀,g,S\\<^esub> v c",
           "mixfix": "\\<A>\\<^bsub>_,_,_,_,_\\<^esub>",
           "declaration": "definition",
           "scope": "global",
@@ -695,80 +554,10 @@
           "session": "Voblint_CFG"
         }
       ],
-      "local": {
-        "const": "buckets",
-        "cite": {
-          "kind": "const",
-          "name": "activation_coverage.buckets"
-        },
-        "symbol": "\\<A> v c",
-        "mixfix": "\\<A>",
-        "declaration": "abbreviation",
-        "scope": "activation_coverage",
-        "pretty_printed": true,
-        "theory": "Activation_Trace_Abstract",
-        "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
-        "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.buckets%7Cconst",
-        "session": "Voblint_CFG",
-        "expands": "\\<A>\\<^bsub>\\<G>,adm,c\\<^sub>0,g,S\\<^esub>",
-        "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale",
-        "shorthand_for": "activation_collect"
-      }
-    },
-    {
-      "id": "report_sem",
-      "group": "set",
-      "kind": "notation",
-      "reads": "the stores report _res_ describes at _v_",
-      "meaning": "the stores some state the analysis report holds at point _v_, under any of its contexts, describes",
-      "forms": [
-        {
-          "const": "report_sem",
-          "cite": {
-            "kind": "const",
-            "name": "report_sem"
-          },
-          "symbol": "\\<R>\\<^bsub>res\\<^esub> v",
-          "mixfix": "\\<R>\\<^bsub>_\\<^esub>",
-          "declaration": "definition",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "Analysis_Report",
-          "file": "src/Executable_Surface/CLI/Analysis_Report.thy",
-          "href": "Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.report_sem%7Cconst",
-          "session": "Voblint_CLI"
-        }
-      ],
       "local": null
     },
     {
-      "id": "verdict_stores",
-      "group": "set",
-      "kind": "notation",
-      "reads": "the stores the verdicts of _res_ at _v_ hold in",
-      "meaning": "the stores in which every definite verdict the analysis report gives at point _v_ holds: a proved condition is true, a refuted one false",
-      "forms": [
-        {
-          "const": "verdict_stores",
-          "cite": {
-            "kind": "const",
-            "name": "verdict_stores"
-          },
-          "symbol": "\\<V>\\<^bsub>res\\<^esub> v",
-          "mixfix": "\\<V>\\<^bsub>_\\<^esub>",
-          "declaration": "definition",
-          "scope": "global",
-          "pretty_printed": true,
-          "theory": "Analysis_Report",
-          "file": "src/Executable_Surface/CLI/Analysis_Report.thy",
-          "href": "Voblint/Voblint_CLI/Analysis_Report.html#Analysis_Report.verdict_stores%7Cconst",
-          "session": "Voblint_CLI"
-        }
-      ],
-      "local": null
-    },
-    {
-      "id": "activation_coverage.carries",
+      "id": "gactivation_coverage.carries",
       "group": "shorthand",
       "kind": "locale_abbreviation",
       "reads": "_t_ carries context _c_",
@@ -778,25 +567,25 @@
           "const": "carries",
           "cite": {
             "kind": "const",
-            "name": "activation_coverage.carries"
+            "name": "gactivation_coverage.carries"
           },
           "symbol": "carries t c",
           "mixfix": null,
           "declaration": "abbreviation",
-          "scope": "activation_coverage",
+          "scope": "gactivation_coverage",
           "pretty_printed": true,
           "theory": "Activation_Trace_Abstract",
           "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
-          "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.carries%7Cconst",
+          "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.gactivation_coverage.carries%7Cconst",
           "session": "Voblint_CFG",
-          "expands": "activation_context_rel \\<G> adm c\\<^sub>0 g",
-          "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"
+          "expands": "gactivation_context_rel adm c\\<^sub>0 g",
+          "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.gactivation_coverage%7Clocale"
         }
       ],
       "local": null
     },
     {
-      "id": "activation_coverage.admits",
+      "id": "gactivation_coverage.admits",
       "group": "shorthand",
       "kind": "locale_abbreviation",
       "reads": "_ctx′_ is admitted for the call at _u_",
@@ -806,25 +595,25 @@
           "const": "admits",
           "cite": {
             "kind": "const",
-            "name": "activation_coverage.admits"
+            "name": "gactivation_coverage.admits"
           },
           "symbol": "admits u ctx p s es ctx'",
           "mixfix": null,
           "declaration": "abbreviation",
-          "scope": "activation_coverage",
+          "scope": "gactivation_coverage",
           "pretty_printed": true,
           "theory": "Activation_Trace_Abstract",
           "file": "src/Program_Model/CFG/Collecting/Activation_Trace_Abstract.thy",
-          "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage.admits%7Cconst",
+          "href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.gactivation_coverage.admits%7Cconst",
           "session": "Voblint_CFG",
-          "expands": "admits_call_context \\<G> g adm",
-          "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.activation_coverage%7Clocale"
+          "expands": "gadmits_call_context g adm",
+          "scope_href": "Voblint/Voblint_CFG/Activation_Trace_Abstract.html#Activation_Trace_Abstract.gactivation_coverage%7Clocale"
         }
       ],
       "local": null
     },
     {
-      "id": "routed_context.cover",
+      "id": "grouted_context.cover",
       "group": "shorthand",
       "kind": "locale_abbreviation",
       "reads": "the stores claimed at _v_ in _ctx_",
@@ -834,19 +623,19 @@
           "const": "cover",
           "cite": {
             "kind": "const",
-            "name": "routed_context.cover"
+            "name": "grouted_context.cover"
           },
           "symbol": "cover v ctx",
           "mixfix": null,
           "declaration": "abbreviation (input)",
-          "scope": "routed_context",
+          "scope": "grouted_context",
           "pretty_printed": false,
           "theory": "Routed_Context",
           "file": "src/Abstract_Interpreter/Framework/Context/Routed_Context.thy",
-          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context.cover%7Cconst",
+          "href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context.cover%7Cconst",
           "session": "Voblint_Framework",
           "expands": "\\<gamma>\\<^sub>M (sg (Inl (v, ctx)))",
-          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.routed_context%7Clocale"
+          "scope_href": "Voblint/Voblint_Framework/Routed_Context.html#Routed_Context.grouted_context%7Clocale"
         }
       ],
       "local": null
@@ -856,14 +645,6 @@
     {
       "kind": "const",
       "name": "gamma"
-    },
-    {
-      "kind": "const",
-      "name": "aval"
-    },
-    {
-      "kind": "locale",
-      "name": "sound_evaluator"
     },
     {
       "kind": "const",
@@ -892,10 +673,6 @@
     {
       "kind": "const",
       "name": "csim"
-    },
-    {
-      "kind": "const",
-      "name": "at_node"
     },
     {
       "kind": "const",
@@ -938,12 +715,8 @@
       "name": "dgs_combine_assign"
     },
     {
-      "kind": "const",
-      "name": "combine_collect_abs"
-    },
-    {
       "kind": "locale",
-      "name": "routed_context"
+      "name": "grouted_context"
     },
     {
       "kind": "const",
@@ -955,7 +728,7 @@
     },
     {
       "kind": "const",
-      "name": "declared_global"
+      "name": "kenv_of"
     },
     {
       "kind": "const",
@@ -963,15 +736,7 @@
     },
     {
       "kind": "const",
-      "name": "activation_coverage.traces"
-    },
-    {
-      "kind": "const",
       "name": "node_collect"
-    },
-    {
-      "kind": "const",
-      "name": "activation_coverage.collect"
     },
     {
       "kind": "const",
@@ -979,31 +744,19 @@
     },
     {
       "kind": "const",
-      "name": "activation_coverage.buckets"
+      "name": "gactivation_coverage.carries"
     },
     {
       "kind": "const",
-      "name": "report_sem"
+      "name": "gactivation_coverage.admits"
     },
     {
       "kind": "const",
-      "name": "verdict_stores"
-    },
-    {
-      "kind": "const",
-      "name": "activation_coverage.carries"
-    },
-    {
-      "kind": "const",
-      "name": "activation_coverage.admits"
-    },
-    {
-      "kind": "const",
-      "name": "routed_context.cover"
+      "name": "grouted_context.cover"
     },
     {
       "kind": "locale",
-      "name": "activation_coverage"
+      "name": "gactivation_coverage"
     }
   ]
 }

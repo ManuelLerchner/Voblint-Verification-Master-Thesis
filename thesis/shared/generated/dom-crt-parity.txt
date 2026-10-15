@@ -1,11 +1,16 @@
 tests/regression/22-congruence/precision/04-crt_narrows_shared_class.vimp [parity]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  ------------------------------------------------
+12:3      pp2    WARNING   possible signed integer overflow in *: 4 * n
+12:3      pp2    WARNING   possible signed integer overflow in +: 4 * n + 1
+13:3      pp3    WARNING   possible signed integer overflow in *: 6 * m
+13:3      pp3    WARNING   possible signed integer overflow in +: 6 * m + 3
 
 Assertion checks
 Location  Point  Condition  Verdict  State
 --------  -----  ---------  -------  -----
-21:7      pp6    0          UNKNOWN  
-23:7      pp7    1          PROVED   
-26:5      pp8    1          PROVED   
+16:7      pp6    0          UNKNOWN  
+18:7      pp7    1          PROVED   
+21:5      pp8    1          PROVED   

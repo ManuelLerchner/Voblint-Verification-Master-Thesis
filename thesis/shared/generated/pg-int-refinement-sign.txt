@@ -1,7 +1,9 @@
 docs/readme-figures/int-refinement.vimp [sign]
 
 Arithmetic diagnostics
-None
+Location  Point  Severity  Message
+--------  -----  --------  --------------------------------------------
+2:3       pp0    WARNING   possible signed integer overflow in +: y + 1
 
 Assertion checks
 Location  Point  Condition  Verdict  State

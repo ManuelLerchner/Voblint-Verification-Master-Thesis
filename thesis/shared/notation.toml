@@ -181,14 +181,12 @@ group = "set"
 reads = "the valid activation traces of _g_ from _S_"
 meaning = "the activation traces of graph _g_ from initial stores _S_"
 forms = [{ const = "valid_activation_trace", args = ['\<kappa>', "g", "S"] }]
-local = { locale = "gactivation_coverage", const = "traces", args = [] }
 
 [[entry]]
 group = "set"
 reads = "the stores collected at _v_"
 meaning = "the stores valid activation traces reach at node _v_"
 forms = [{ const = "node_collect", args = ['\<kappa>', "g", "S", "v"] }]
-local = { locale = "gactivation_coverage", const = "collect", args = ["v"] }
 
 [[entry]]
 group = "set"
@@ -205,7 +203,6 @@ forms = [
     "c",
   ] },
 ]
-local = { locale = "gactivation_coverage", const = "buckets", args = ["v", "c"] }
 
 [[entry]]
 group = "shorthand"

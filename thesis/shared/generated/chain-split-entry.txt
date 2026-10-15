@@ -29,12 +29,12 @@ nodes:
       interval:
         a=[2,2]
         b=⊤
-        x=⊤
+        x=[-2147483648,2147483647]
   main_exit_main_ctx0: exit_main
       interval:
         a=[2,2]
         b=⊤
-        x=⊤
+        x=[-2147483648,2147483647]
   main_pp5_ctx0: pp5
       interval:
         a=⊤
@@ -54,7 +54,7 @@ nodes:
       interval:
         a=[2,2]
         b=⊤
-        x=⊤
+        x=[-2147483648,2147483647]
   main_entry_main_ctx0: entry_main
       interval:
         a=⊤

@@ -74,8 +74,8 @@ Only Interval has a widening that jumps ahead and a narrowing that refines
       ..row([Congruence], "2+3ℤ"),
       ..row(
         [Int],
-        claim-row("int-reduction-fixpoint", "68:7").state.split("x=").at(1),
-        shown: claim-row("int-reduction-fixpoint", "68:7")
+        claim-row("int-reduction-fixpoint", "74:7").state.split("x=").at(1),
+        shown: claim-row("int-reduction-fixpoint", "74:7")
           .state
           .split("x=")
           .at(1)
@@ -224,7 +224,7 @@ fun main() {
 
 // Each printed component of x as (label, value), so the rows follow the printer.
 #let _red(mode) = {
-  let row = claim-row("int-reduction-" + mode, "68:7")
+  let row = claim-row("int-reduction-" + mode, "74:7")
   let comps = row
     .state
     .split("x=")

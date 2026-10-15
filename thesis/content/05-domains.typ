@@ -855,7 +855,7 @@ An assignment `x = e` needs the abstract value of $e$. Forward evaluation
 computes it from an abstract state $d$, as in the generic abstract interpreter
 of Nipkow and Klein @nipkow14[§13.5.3]. The abstract result $asem(e) thin d$ must contain
 every concrete result:
-$ s in conc(d) ==> #isaconst("eval") thin e thin s in conc(asem(e) thin d). $
+$ s in conc(d) ==> #isaconst("eval", thy: "Core_Exp") thin e thin s in conc(asem(e) thin d). $
 Voblint defines this evaluation once for every domain (#isaconst("aeval")) and
 proves the law once (#isathm("aeval_sound"), whose further premise, that the
 answers of the query channel hold at $s$, @ch:cooperation introduces). Each
@@ -1001,7 +1001,7 @@ true arm of `if (0 < x)`, for example, $x$ is positive. Ignoring this knowledge 
 state before the branch already contains every store that takes either arm.
 It costs precision, however, as the following program shows.
 
-#let _g = claim-row("dom-guard-interval", "18:3")
+#let _g = claim-row("dom-guard-interval", "11:3")
 #align(center, block(width: 60%, {
   show raw: set text(size: 6.5pt)
   listing(
@@ -1009,6 +1009,9 @@ It costs precision, however, as the following program shows.
     claim: "dom-guard-interval",
     ```
     x = __voblint_nondet_int();
+    if (x < -1000 || x > 1000) {
+      x = 0;
+    }
     if (0 < x) {
       y = x;
     } else {
@@ -1047,9 +1050,9 @@ of its 32-bit kind, $ivl(-2^31, 2^31 - 1)$. Interval refines it to
 $ivl(1, 2^31 - 1)$ on the true arm and to $ivl(-2^31, 0)$ on the false arm.
 Each arm then bounds $y$ from the refined $x$, and the join yields
 #raw(_g.state).
-// TODO: re-run claim dom-guard-interval with the machine-integer analyzer. On
-// the false arm `- x` overflows at x = -2^31, so the check may no longer be
-// PROVED; adjust the program or the sentence to the regenerated output.
+// TODO(review): the listing now bounds x first, because `- x` wraps at x = -2^31 and
+// the unbounded check fails there. The prose above still walks through the
+// unbounded program; replacement passage in audit finding C5-01.
 
 The guard refinement #isaconst("nonrel_refine") takes a condition, the
 required truth value and a state, and applies the comparison refinements along

@@ -232,7 +232,7 @@ The solver sees one value per node and context and never looks inside it. The
 tuple is ordered, joined, and widened field by field (#isatype("analysis_product")),
 so each field evolves as it would alone, except that its transfers may ask the
 other fields. If one selected field shows that a node is unreachable, the whole
-tuple does (#isaconst("mcp_norm")).
+tuple does (#isaconst("mcp_norm", thy: "MCP_Carrier")).
 
 The combined state #isatype("mcp_st") has one field per analysis the analyzer
 ships, and a run uses the fields of the analyses the user selects
@@ -356,8 +356,8 @@ like a single analysis.
 Checks are decided from the same kind of answers. At a check with condition
 $b$, every active analysis answers the question #isaconst("EvalInt") about the
 truth value of $b$ from its own part of the solved state, and the analyzer
-meets these answers (#isaconst("mcp_answer")). An exact $1$ proves the check,
-and an exact $0$ refutes it (#isaconst("mcp_classify")). Several analyses
+meets these answers (#isaconst("mcp_answer", thy: "MCP_Carrier")). An exact $1$ proves the check,
+and an exact $0$ refutes it (#isaconst("mcp_classify", thy: "MCP_Carrier")). Several analyses
 together can thus decide a check that each alone leaves unknown, as the run
 #verdict("coop-eq-both", "16:7") of the opening example shows. The exchange
 also works in the other direction, with the order analysis asking Interval

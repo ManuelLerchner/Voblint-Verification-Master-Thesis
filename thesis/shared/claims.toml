@@ -235,9 +235,9 @@ why = "Chapter 3: && evaluates both operands, so the arithmetic diagnostic warns
 argv = [
   "--analysis",
   "interval",
-  "tests/regression/07-sign-precision/precision/08-nondet_guard_recovers_nonneg.vimp",
+  "thesis/shared/programs/guard-interval.vimp",
 ]
-why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,+∞]."
+why = "Backward filtering of 0 < x lets Interval prove y >= 0 after both arms, with y=[0,1000]; x is bounded first so that -x cannot wrap."
 
 [claims.dom-query-tree-sign]
 argv = [
@@ -665,7 +665,7 @@ argv = [
   "none",
   "--globals",
   "warrow",
-  "tests/regression/24-site-figures/precision/13-recursion_grows_warrow.vimp",
+  "tests/regression/24-site-figures/soundness/13-recursion_grows_warrow.vimp",
 ]
 why = "Update-rule table, grows program under warrow: the verdict and state quoted in its cell."
 
@@ -677,7 +677,7 @@ argv = [
   "none",
   "--globals",
   "warrow-per-origin",
-  "tests/regression/24-site-figures/precision/14-recursion_grows_warrow_per_origin.vimp",
+  "tests/regression/24-site-figures/soundness/14-recursion_grows_warrow_per_origin.vimp",
 ]
 why = "Update-rule table, grows program under warrow-per-origin: the verdict and state quoted in its cell."
 
@@ -725,7 +725,7 @@ argv = [
   "none",
   "--globals",
   "warrow-per-origin",
-  "tests/regression/24-site-figures/known-imprecision/09-recursion_shrinks_warrow_per_origin.vimp",
+  "tests/regression/24-site-figures/precision/52-recursion_shrinks_warrow_per_origin.vimp",
 ]
 why = "Update-rule table, shrinks program under warrow-per-origin: the verdict and state quoted in its cell."
 
@@ -761,7 +761,7 @@ argv = [
   "none",
   "--globals",
   "bounded-narrowing",
-  "tests/regression/24-site-figures/precision/51-recursion_grows_bounded_narrowing.vimp",
+  "tests/regression/24-site-figures/soundness/51-recursion_grows_bounded_narrowing.vimp",
 ]
 why = "Update-rule table, grows program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
 
@@ -773,7 +773,7 @@ argv = [
   "none",
   "--globals",
   "bounded-narrowing",
-  "tests/regression/24-site-figures/known-imprecision/20-recursion_shrinks_bounded_narrowing.vimp",
+  "tests/regression/24-site-figures/precision/53-recursion_shrinks_bounded_narrowing.vimp",
 ]
 why = "Update-rule table, shrinks program under bounded narrowing (default bound 5): the verdict and state quoted in its cell."
 

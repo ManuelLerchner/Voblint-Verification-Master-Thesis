@@ -1,11 +1,19 @@
 {
  "input": {
-  "as": [
-   "Interval_Analysis"
-  ],
-  "rule": "Globals_Warrow",
-  "ctx": "Ctx_None",
-  "pg": "Program_Globals_Flow_Sensitive",
+  "conf": {
+   "conf_analyses": [
+    "Typed_Interval"
+   ],
+   "conf_context": {
+    "Typed_Call_String": 0
+   },
+   "conf_globals": "Globals_Warrow",
+   "conf_program_globals": "Program_Globals_Flow_Sensitive",
+   "conf_sem": {
+    "sem_int_signed_overflow": "Assume_Top"
+   }
+  },
+  "ds": [],
   "p": {
    "declared_global_vars": [],
    "prog_main": {
@@ -130,9 +138,17 @@
       [
        {
         "EA_Assign": [
-         "k",
          {
-          "N": 10
+          "ScopedId": [
+           "main",
+           "k"
+          ]
+         },
+         {
+          "TN": [
+           "i32",
+           10
+          ]
          }
         ]
        },
@@ -148,14 +164,32 @@
       [
        {
         "EA_Assign": [
-         "q",
          {
-          "Div": [
+          "ScopedId": [
+           "main",
+           "q"
+          ]
+         },
+         {
+          "TArith": [
+           "i32",
+           "ADiv",
            {
-            "N": 100
+            "TN": [
+             "i32",
+             100
+            ]
            },
            {
-            "V": "k"
+            "TVar": [
+             "i32",
+             {
+              "ScopedId": [
+               "main",
+               "k"
+              ]
+             }
+            ]
            }
           ]
          }
@@ -174,7 +208,12 @@
        {
         "EA_Special": [
          "Nondet_Int",
-         "d"
+         {
+          "ScopedId": [
+           "main",
+           "d"
+          ]
+         }
         ]
        },
        {
@@ -189,14 +228,32 @@
       [
        {
         "EA_Assign": [
-         "y",
          {
-          "Div": [
+          "ScopedId": [
+           "main",
+           "y"
+          ]
+         },
+         {
+          "TArith": [
+           "i32",
+           "ADiv",
            {
-            "N": 100
+            "TN": [
+             "i32",
+             100
+            ]
            },
            {
-            "V": "d"
+            "TVar": [
+             "i32",
+             {
+              "ScopedId": [
+               "main",
+               "d"
+              ]
+             }
+            ]
            }
           ]
          }
@@ -219,12 +276,24 @@
           3
          ],
          {
-          "Less": [
+          "TCmp": [
+           "CLt",
            {
-            "N": 0
+            "TN": [
+             "i32",
+             0
+            ]
            },
            {
-            "V": "q"
+            "TVar": [
+             "i32",
+             {
+              "ScopedId": [
+               "main",
+               "q"
+              ]
+             }
+            ]
            }
           ]
          }
@@ -279,27 +348,23 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
+           "main::d",
            "⊤"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "⊤"
           ],
           [
-           "y",
+           "main::y",
            "⊤"
           ]
          ]
@@ -311,18 +376,94 @@
      "state_diagnostics": [
       [
        {
+        "arithmetic_hazard": "Division_By_Zero",
         "arithmetic_operation": {
-         "Div": [
+         "TArith": [
+          "i32",
+          "ADiv",
           {
-           "N": 100
+           "TN": [
+            "i32",
+            100
+           ]
           },
           {
-           "V": "k"
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "k"
+             ]
+            }
+           ]
           }
          ]
         },
-        "arithmetic_divisor": {
-         "V": "k"
+        "arithmetic_operand": {
+         "TVar": [
+          "i32",
+          {
+           "ScopedId": [
+            "main",
+            "k"
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "Lifted": "Check_Proved"
+       }
+      ],
+      [
+       {
+        "arithmetic_hazard": "Signed_Overflow",
+        "arithmetic_operation": {
+         "TArith": [
+          "i32",
+          "ADiv",
+          {
+           "TN": [
+            "i32",
+            100
+           ]
+          },
+          {
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "k"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        "arithmetic_operand": {
+         "TArith": [
+          "i32",
+          "ADiv",
+          {
+           "TN": [
+            "i32",
+            100
+           ]
+          },
+          {
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "k"
+             ]
+            }
+           ]
+          }
+         ]
         }
        },
        {
@@ -338,27 +479,23 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
+             "main::d",
              "⊤"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "[10,10]"
             ],
             [
-             "y",
+             "main::y",
              "⊤"
             ]
            ]
@@ -377,27 +514,23 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
+           "main::d",
            "⊤"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "[10,10]"
           ],
           [
-           "y",
+           "main::y",
            "⊤"
           ]
          ]
@@ -415,27 +548,23 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
-             "⊤"
+             "main::d",
+             "[-2147483648,2147483647]"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "[10,10]"
             ],
             [
-             "y",
+             "main::y",
              "⊤"
             ]
            ]
@@ -454,27 +583,23 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
-           "⊤"
+           "main::d",
+           "[-2147483648,2147483647]"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "[10,10]"
           ],
           [
-           "y",
+           "main::y",
            "⊤"
           ]
          ]
@@ -486,22 +611,98 @@
      "state_diagnostics": [
       [
        {
+        "arithmetic_hazard": "Division_By_Zero",
         "arithmetic_operation": {
-         "Div": [
+         "TArith": [
+          "i32",
+          "ADiv",
           {
-           "N": 100
+           "TN": [
+            "i32",
+            100
+           ]
           },
           {
-           "V": "d"
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "d"
+             ]
+            }
+           ]
           }
          ]
         },
-        "arithmetic_divisor": {
-         "V": "d"
+        "arithmetic_operand": {
+         "TVar": [
+          "i32",
+          {
+           "ScopedId": [
+            "main",
+            "d"
+           ]
+          }
+         ]
         }
        },
        {
         "Lifted": "Check_Unknown"
+       }
+      ],
+      [
+       {
+        "arithmetic_hazard": "Signed_Overflow",
+        "arithmetic_operation": {
+         "TArith": [
+          "i32",
+          "ADiv",
+          {
+           "TN": [
+            "i32",
+            100
+           ]
+          },
+          {
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "d"
+             ]
+            }
+           ]
+          }
+         ]
+        },
+        "arithmetic_operand": {
+         "TArith": [
+          "i32",
+          "ADiv",
+          {
+           "TN": [
+            "i32",
+            100
+           ]
+          },
+          {
+           "TVar": [
+            "i32",
+            {
+             "ScopedId": [
+              "main",
+              "d"
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       },
+       {
+        "Lifted": "Check_Proved"
        }
       ]
      ],
@@ -513,28 +714,24 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
-             "⊤"
+             "main::d",
+             "[-2147483648,2147483647]"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "[10,10]"
             ],
             [
-             "y",
-             "⊤"
+             "main::y",
+             "[-100,100]"
             ]
            ]
           }
@@ -552,28 +749,24 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
-           "⊤"
+           "main::d",
+           "[-2147483648,2147483647]"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "[10,10]"
           ],
           [
-           "y",
-           "⊤"
+           "main::y",
+           "[-100,100]"
           ]
          ]
         }
@@ -583,12 +776,24 @@
      "state_checks": [
       [
        {
-        "Less": [
+        "TCmp": [
+         "CLt",
          {
-          "N": 0
+          "TN": [
+           "i32",
+           0
+          ]
          },
          {
-          "V": "q"
+          "TVar": [
+           "i32",
+           {
+            "ScopedId": [
+             "main",
+             "q"
+            ]
+           }
+          ]
          }
         ]
        },
@@ -606,28 +811,24 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
-             "⊤"
+             "main::d",
+             "[-2147483648,2147483647]"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "[10,10]"
             ],
             [
-             "y",
-             "⊤"
+             "main::y",
+             "[-100,100]"
             ]
            ]
           }
@@ -645,28 +846,24 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
-           "⊤"
+           "main::d",
+           "[-2147483648,2147483647]"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "[10,10]"
           ],
           [
-           "y",
-           "⊤"
+           "main::y",
+           "[-100,100]"
           ]
          ]
         }
@@ -683,28 +880,24 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
-             "⊤"
+             "main::d",
+             "[-2147483648,2147483647]"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "[10,10]"
             ],
             [
-             "y",
-             "⊤"
+             "main::y",
+             "[-100,100]"
             ]
            ]
           }
@@ -722,28 +915,24 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
-           "⊤"
+           "main::d",
+           "[-2147483648,2147483647]"
           ],
           [
-           "d",
-           "⊤"
-          ],
-          [
-           "k",
+           "main::k",
            "[10,10]"
           ],
           [
-           "q",
+           "main::q",
            "[10,10]"
           ],
           [
-           "y",
-           "⊤"
+           "main::y",
+           "[-100,100]"
           ]
          ]
         }
@@ -762,27 +951,23 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
+           "main::d",
            "⊤"
           ],
           [
-           "d",
+           "main::k",
            "⊤"
           ],
           [
-           "k",
+           "main::q",
            "⊤"
           ],
           [
-           "q",
-           "⊤"
-          ],
-          [
-           "y",
+           "main::y",
            "⊤"
           ]
          ]
@@ -800,27 +985,23 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
+             "main::d",
              "⊤"
             ],
             [
-             "d",
-             "⊤"
-            ],
-            [
-             "k",
+             "main::k",
              "[10,10]"
             ],
             [
-             "q",
+             "main::q",
              "⊤"
             ],
             [
-             "y",
+             "main::y",
              "⊤"
             ]
            ]
@@ -839,27 +1020,23 @@
      "state_value": {
       "Lifted": [
        [
-        "Interval_Analysis",
+        "Typed_Interval",
         {
          "Field_Store": [
           [
-           "#ret",
+           "main::d",
            "⊤"
           ],
           [
-           "d",
+           "main::k",
            "⊤"
           ],
           [
-           "k",
+           "main::q",
            "⊤"
           ],
           [
-           "q",
-           "⊤"
-          ],
-          [
-           "y",
+           "main::y",
            "⊤"
           ]
          ]
@@ -877,27 +1054,23 @@
        {
         "Lifted": [
          [
-          "Interval_Analysis",
+          "Typed_Interval",
           {
            "Field_Store": [
             [
-             "#ret",
+             "main::d",
              "⊤"
             ],
             [
-             "d",
+             "main::k",
              "⊤"
             ],
             [
-             "k",
+             "main::q",
              "⊤"
             ],
             [
-             "q",
-             "⊤"
-            ],
-            [
-             "y",
+             "main::y",
              "⊤"
             ]
            ]
@@ -920,12 +1093,24 @@
       3
      ],
      "check_exp": {
-      "Less": [
+      "TCmp": [
+       "CLt",
        {
-        "N": 0
+        "TN": [
+         "i32",
+         0
+        ]
        },
        {
-        "V": "q"
+        "TVar": [
+         "i32",
+         {
+          "ScopedId": [
+           "main",
+           "q"
+          ]
+         }
+        ]
        }
       ]
      },
@@ -952,18 +1137,40 @@
      },
      "diagnostic_occurrence": 0,
      "diagnostic_obligation": {
+      "arithmetic_hazard": "Division_By_Zero",
       "arithmetic_operation": {
-       "Div": [
+       "TArith": [
+        "i32",
+        "ADiv",
         {
-         "N": 100
+         "TN": [
+          "i32",
+          100
+         ]
         },
         {
-         "V": "d"
+         "TVar": [
+          "i32",
+          {
+           "ScopedId": [
+            "main",
+            "d"
+           ]
+          }
+         ]
         }
        ]
       },
-      "arithmetic_divisor": {
-       "V": "d"
+      "arithmetic_operand": {
+       "TVar": [
+        "i32",
+        {
+         "ScopedId": [
+          "main",
+          "d"
+         ]
+        }
+       ]
       }
      },
      "diagnostic_verdict": "Check_Unknown"

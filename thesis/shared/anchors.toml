@@ -34,6 +34,7 @@ chapter = "ch:program-model"
 concept = "Expression evaluation"
 kind = "const"
 name = "eval"
+thy = "Core_Exp"
 
 [[anchor]]
 chapter = "ch:program-model"
