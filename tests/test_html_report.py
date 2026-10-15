@@ -640,7 +640,7 @@ def test_several_domains_run_as_one_analysis(tmp_path):
         if status is not None
     ]
     reported = [row for row in reported if row.startswith("check ")]
-    assert reported == ["check y == 2 PROVED"], reported
+    assert reported == ["check x == 3 PROVED"], reported
 
 
 def test_context_sensitive_report_draws_contexts_and_verdicts(tmp_path):

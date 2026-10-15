@@ -1,0 +1,15 @@
+// PARAM: --analysis interval,congruence
+// The program of precision/01-refinement_beats_components.vimp, run with
+// Interval and Congruence as two analyses in one solve. Each keeps its own
+// answer for x (Interval [1, 5], Congruence 3Z) and neither narrows the other,
+// so x == 3 stays UNKNOWN; the int product, which reduces the two, proves it.
+fun main() {
+  m = __voblint_nondet_int();
+  if (m < 0 || m > 100) {
+    m = 0;
+  }
+  x = 3 * m;
+  if (x >= 1 && x <= 5) {
+    __voblint_check(x == 3); // UNKNOWN
+  }
+}
