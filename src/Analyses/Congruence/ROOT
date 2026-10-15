@@ -1,6 +1,6 @@
 chapter Voblint
 
-session Voblint_Analysis_Congruence in "." = "Voblint_Nonrelational" +
+session Voblint_Analysis_Congruence in "." = "Voblint_Result" +
   description "The Congruence domain: normalized residue-class lattice, arithmetic, backward filtering, transfers, executable bridge"
   sessions
     "Voblint_VIMP"

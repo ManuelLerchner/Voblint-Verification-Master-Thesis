@@ -16,8 +16,7 @@ text \<open>
 
   Each operation is proved sound (concrete values drawn from the operands land
   in the computed interval) and monotone (widening either operand widens the
-  result). Those two facts are what \<open>Interval_Backward\<close> later needs to
-  interpret the shared \<open>sound_arith_ops\<close> locale at Interval.
+  result).
 \<close>
 
 instantiation ivl :: plus begin

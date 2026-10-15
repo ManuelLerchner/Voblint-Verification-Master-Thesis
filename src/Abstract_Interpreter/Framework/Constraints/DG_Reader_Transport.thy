@@ -1,5 +1,5 @@
 theory DG_Reader_Transport
-  imports Routed_Context_Unit
+  imports Routed_Context
 begin
 
 section \<open>Reading a whole equation system through a pair of readers\<close>
@@ -26,11 +26,10 @@ subsection \<open>Carrier-generic whole-CFG commute\<close>
 
 text \<open>
   The commute facts below only ever use that a reader preserves \<open>bot\<close> and \<open>(\<squnion>)\<close>; no
-  proof in the chain inspects \<open>default_st_to_fun\<close> or \<open>abs_state\<close> itself.
+  proof in the chain inspects \<open>default_st_to_fun\<close> or \<open>gabs_state\<close> itself.
   \<open>dg_reader_commute_gen\<close> factors that out: a pair of local/global readers \<open>Floc\<close>/\<open>Fglob\<close>
   satisfying those two laws, from which every whole-tree and whole-equation-system commute
-  fact in this chain is proved once.  The pair of represented functions \<open>dg_state_to_fun\<close> and
-  its reachability-lifted version are both thin instances of the same engine.
+  fact in this chain is proved once.
 \<close>
 
 text \<open>

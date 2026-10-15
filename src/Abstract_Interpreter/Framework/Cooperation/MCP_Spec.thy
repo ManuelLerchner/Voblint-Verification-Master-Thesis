@@ -20,7 +20,7 @@ text \<open>
   analyses are never read.
 
   Every operation of a component receives the query channel of the manager
-  Goblint hands it, \<open>man.ask\<close>, as a function \<^typ>\<open>channel\<close> from queries to
+  Goblint hands it, \<open>man.ask\<close>, as a function \<^typ>\<open>'e gchannel\<close> from queries to
   answers: its query handler (\<open>S.query man q\<close>), its edge transfers, its entry
   (\<open>S.enter man\<close>) and both stages of its return. The return stages also receive
   the callee's channel, which Goblint's normal-call transfer in \<open>constraints.ml\<close>
@@ -51,8 +51,6 @@ record ('vr,'e,'s) glocal_spec =
   ls_enter :: "'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> ('s \<times> 's) list"
   ls_combine_env :: "'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
   ls_combine_assign :: "'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
-
-type_synonym 's local_spec = "(vname, exp, 's) glocal_spec"
 
 text \<open>
   The edge transfers are separate fields, one per kind of edge, as Goblint's
@@ -523,7 +521,6 @@ text \<open>
 \<close>
 
 type_synonym ('vr,'e,'s) gcertified_component = "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<times> ('vr,'e,'s) glocal_spec"
-type_synonym 's certified_component = "(vname, exp, 's) gcertified_component"
 
 fun mcp_independent :: "('vr,'e,'s) gcertified_component list \<Rightarrow> bool" where
   "mcp_independent [] \<longleftrightarrow> True"

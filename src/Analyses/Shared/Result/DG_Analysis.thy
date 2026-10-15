@@ -38,69 +38,6 @@ text \<open>
   not.
 \<close>
 
-subsection \<open>The formals route, once for every domain\<close>
-
-text \<open>
-  Keying a callee on the abstract values its formals hold on entry, at the
-  executable carrier. \<^const>\<open>formals_route_lifted_gen\<close> is the same decision one
-  layer up, on the state a solved table hands out; the equation below is what
-  lets a routed instance discharge its routing-agreement obligation without a
-  domain-specific lemma. The routed generator enters the callee frame before it
-  routes, so the route itself only projects the formals out of the state it is
-  handed.
-\<close>
-
-definition exec_formals_route ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> pp \<Rightarrow> 'a list
-       \<Rightarrow> ('a::bot) default_st lifted \<Rightarrow> call_action \<Rightarrow> 'a list" where
-  "exec_formals_route \<G> u ctx d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars
-          (\<rho>\<^bsub>\<G>\<^esub> (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0)))"
-
-text \<open>
-  The same routing decision taken from a solved \<^emph>\<open>result\<close> instead of from the
-  solver's carrier. A rendering that draws one node per activation has to know
-  which callee context a call edge enters, and the table it draws from holds
-  \<^typ>\<open>'a abs_state\<close> rather than \<^typ>\<open>'a default_st\<close> --- so the projection
-  \<^const>\<open>exec_formals_route\<close> performs is unavailable to it, and the entered
-  state has to be recomputed from the caller's. \<open>enter\<close> is the domain's own
-  entry transfer and is the only domain-specific value involved; emptiness is
-  \<^const>\<open>is_empty\<close>, the \<^class>\<open>executable_domain\<close> operation every domain carries.
-
-  The witness search runs over the formals rather than over the whole state,
-  and it has to: \<^const>\<open>is_empty_state\<close> quantifies over every \<^typ>\<open>vname\<close>, so
-  its code equation would demand an \<^class>\<open>enum\<close> instance for
-  \<^typ>\<open>String.literal\<close> and this constant would not generate code at all.
-  Restricting to the formals is also exact rather than merely cheaper ---
-  procedure entry resets every non-global variable to top and leaves every
-  global at the caller's own value, so no name outside the formals can witness
-  emptiness that the caller did not already have.
-
-  \<^const>\<open>None\<close> means the call routes nowhere, because the entered state
-  represents no concrete store. It is not a sentinel context: an empty formal
-  list is a legitimate context in its own right --- a zero-formal callee's own
-  entry is genuinely keyed at \<open>[]\<close> --- so no \<^typ>\<open>'a list\<close> value could carry
-  that meaning without colliding with a real one.
-\<close>
-
-definition callee_ctx_of ::
-    "((vname \<Rightarrow> bool) \<Rightarrow> vname list \<Rightarrow> exp list \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state)
-       \<Rightarrow> (vname \<Rightarrow> bool) \<Rightarrow> call_action \<Rightarrow> ('a::executable_domain) abs_state
-       \<Rightarrow> 'a list option" where
-  "callee_ctx_of enter \<G> ca st =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        (let entered = enter \<G> pars args st
-         in if list_ex (\<lambda>x. is_empty (entered x)) pars then None
-            else Some (formals_context pars entered)))"
-
-lemma exec_formals_route_commute:
-  "formals_route_lifted_gen u ctx (\<rho>\<^bsub>\<G>\<^esub> d) ca
-     = exec_formals_route \<G> u ctx d ca"
-  by (cases d; cases ca)
-     (simp_all add: formals_route_lifted_gen_def formals_route_lifted_def
-        exec_formals_route_def default_st_to_fun_def)
-
 subsection \<open>The construction\<close>
 
 text \<open>

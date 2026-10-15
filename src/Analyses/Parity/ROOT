@@ -1,6 +1,6 @@
 chapter Voblint
 
-session Voblint_Analysis_Parity in "." = "Voblint_Nonrelational" +
+session Voblint_Analysis_Parity in "." = "Voblint_Result" +
   description "The Parity domain: lattice, transfers, executable bridge"
   sessions
     "Voblint_VIMP"

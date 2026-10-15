@@ -36,8 +36,7 @@ text \<open>
   canonicalized to structural \<open>Bot\<close>, so \<open>Lifted a\<close> with an \<open>empty_pred\<close>-bottom \<open>a\<close> never
   actually escapes a value-producing step in practice, even though the raw datatype and
   order permit it. This theory does not know or assume that \<open>empty_pred\<close> means semantic
-  emptiness -- \<open>Nonrelational_Reachability\<close> is where \<open>empty_pred\<close> is instantiated to
-  \<open>is_empty_state\<close> and proved to coincide with an empty concretization.
+  emptiness; a carrier that instantiates it proves that coincidence itself.
 \<close>
 
 subsection \<open>The lifted order and lattice structure\<close>
@@ -343,8 +342,7 @@ text \<open>
   changes what a payload concretizes to: the \<open>if\<close> only chooses between
   \<open>gam a\<close> and \<open>{}\<close>, and those coincide exactly when \<open>empty_pred a\<close> does.
   This is the generic fact every \<open>gamma_*_lift\<close> correctness statement
-  (\<open>Nonrelational_Reachability\<close>'s \<open>is_empty_state_lift_iff\<close>) reduces to, once
-  \<open>empty_pred\<close>'s own iff-correctness is in hand.
+  reduces to, once \<open>empty_pred\<close>'s own iff-correctness is in hand.
 \<close>
 
 lemma gamma_normalize_lift:
@@ -395,8 +393,7 @@ text \<open>
   primitive a solver combines lifted values with: \<open>\<squnion>\<close> (joining several contributions at a
   program point) and \<open>\<nabla>\<Delta>\<close> (the warrowing update rule). Both need only that \<open>empty_pred\<close>
   itself is downward closed under the payload's order (\<open>mono\<close> below) -- exactly
-  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close>, or \<open>default_st_is_bot_for\<close>'s own
-  monotonicity once bridged through \<open>default_st_to_fun_mono\<close> -- not any fact
+  \<open>is_empty_antimono\<close>'s shape at \<^class>\<open>numeric_domain\<close> -- not any fact
   specific to how \<open>empty_pred\<close> itself is computed.
 \<close>
 
@@ -488,7 +485,7 @@ lemma normalized_lift_bind:
 
 text \<open>
   Generic monotonicity for the reachability dispatch, proved once here instead of at every
-  instantiation (\<open>abs_state\<close>, \<open>default_st\<close>, ...): whenever the underlying transfer is
+  instantiation (\<open>gabs_state\<close>, \<open>gdefault_st\<close>, ...): whenever the underlying transfer is
   monotone and the bottom predicate is downward closed (as \<open>is_empty_state\<close> always is, via
   \<open>is_empty_state_antimono\<close>), \<open>transfer_lift\<close>/\<open>transfer_lift2\<close> are monotone.
 \<close>

@@ -1,6 +1,6 @@
 chapter Voblint
 
-session Voblint_Analysis_Int in "." = "Voblint_Nonrelational" +
+session Voblint_Analysis_Int in "." = "Voblint_Result" +
   description "The int_dom analysis family: a reduced product of Sign, Interval, Parity and Congruence, with verified progressive and structural-fixpoint refinement"
   sessions
     "Voblint_VIMP"

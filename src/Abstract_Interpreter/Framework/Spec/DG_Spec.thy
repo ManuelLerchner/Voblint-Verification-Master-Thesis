@@ -31,7 +31,7 @@ text \<open>
 
 
 text \<open>
-  An \<open>analysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
+  A \<open>ganalysis_event\<close> is an analyzer-visible occurrence distinct from an ordinary
   control-flow transfer: a domain may observe it, but it must not by itself refine
   execution. The channel mirrors Goblint's separation of its ordinary \<open>Spec\<close>
   transfer methods (\<open>assign\<close>/\<open>branch\<close>/\<open>skip\<close>/...) from \<open>Spec.event\<close>. The
@@ -55,8 +55,6 @@ text \<open>
 datatype 'e ganalysis_event =
   Check_Event check_label 'e
 
-type_synonym analysis_event = "exp ganalysis_event"
-
 record ('vr,'e,'x,'k,'v,'dl,'dg) gdg_spec =
   dgs_skip           :: "('e,'x,'k,'v,'dl,'dg) gman_transfer" ("skip\<^sup>\<sharp>")
   dgs_assign         :: "'vr \<Rightarrow> 'e \<Rightarrow> ('e,'x,'k,'v,'dl,'dg) gman_transfer" ("assign\<^sup>\<sharp>")
@@ -76,7 +74,7 @@ record ('vr,'e,'x,'k,'v,'dl,'dg) gdg_spec =
 text \<open>
   \<open>dgs_query\<close> is Goblint's \<open>Spec.query\<close>: it answers a query from the manager
   it is given, and may read globals or ask further queries through it. What an
-  answer claims is fixed by \<^const>\<open>eval_holds\<close>; answering \<open>\<top>\<close> claims
+  answer claims is fixed by \<^const>\<open>geval_holds\<close>; answering \<open>\<top>\<close> claims
   nothing.
 \<close>
 
@@ -118,7 +116,7 @@ text \<open>
   \<open>EA_Check\<close> routes through \<^const>\<open>dgs_event\<close> rather than \<^const>\<open>dgs_skip\<close>:
   a check is an analysis event (on the channel that mirrors Goblint's
   \<open>Spec.event\<close>; Goblint's own check goes through \<open>special\<close>, see
-  \<open>analysis_event\<close> above), and conflating it with skip would make a future domain's
+  \<open>ganalysis_event\<close> above), and conflating it with skip would make a future domain's
   non-identity skip silently change what a check edge does. A concrete
   \<open>gdg_spec\<close> therefore supplies its own notion of a
   check event directly, the same way it already supplies
@@ -373,7 +371,6 @@ text \<open>
 \<close>
 
 type_synonym 'e gchannel = "'e gquery \<Rightarrow> answer"
-type_synonym channel = "exp gchannel"
 
 text \<open>
   The local query handler: answers are a pure function of the local value.
@@ -510,8 +507,7 @@ text \<open>
   Goblint's \<open>combine_env\<close> answers the callee exit and its \<open>combine_assign\<close>
   answers \<open>man.local\<close>, so the composed default there ends at the callee's
   value. Both are neutral for their own purpose; this one is neutral for
-  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage, such as
-  \<open>ownership_split_dg_spec_st_for\<close> in \<open>Ownership_Split_Exec\<close>, relies on
+  \<^emph>\<open>record update\<close>. A wrapper that overrides only the final stage relies on
   that: were the default to substitute the callee exit first, the wrapper would run against a
   continuation the caller never had. Changing the default is therefore an
   audit of every partial override, not a one-line edit.

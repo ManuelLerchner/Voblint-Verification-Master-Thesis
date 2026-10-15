@@ -72,7 +72,7 @@ subsection \<open>Join and semilattice structure\<close>
 
 text \<open>
   Join is the pointwise join of both dictionaries, which respects extensional
-  equality and so lifts to \<open>default_st\<close> as a bounded join-semilattice.
+  equality and so lifts to \<open>gdefault_st\<close> as a bounded join-semilattice.
 \<close>
 
 definition merge_default_st_rep ::

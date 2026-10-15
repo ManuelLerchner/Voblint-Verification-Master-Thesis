@@ -100,12 +100,12 @@ and the rule (`for as k r`), and a caller applies the locale's constants to
 all three.
 
 The entry-state run keys a callee on the abstract values its formals hold on
-entry. Here `exec_formals_route` does read the state it is handed — the callee
+entry. Here the executable route does read the state it is handed — the callee
 frame the routed generator has already entered — so the applicable endpoint is
 `entry_state_activation_collect_sound`, whose admitted-context relation is the
 one the entry answer induces rather than the graph of a function on stores.
 That difference is why the executable route and its abstract counterpart
-`formals_route_lifted_gen` are separate parameters.
+are separate parameters.
 
 The context-insensitive run is neither of these: it is `parity_rule`, the
 registration of the same assembly at the unit context.

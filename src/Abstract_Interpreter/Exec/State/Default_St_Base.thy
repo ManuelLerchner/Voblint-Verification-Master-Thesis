@@ -6,8 +6,8 @@ section \<open>Finite default-map representation\<close>
 
 text \<open>
   An abstract state has to be a finite thing before a solver can run on it. A
-  \<open>default_dict\<close> is a finite dictionary that answers every name it does not
-  list with a default. A \<open>default_st_rep\<close> is two of them, one per partition:
+  \<open>gdefault_dict\<close> is a finite dictionary that answers every name it does not
+  list with a default. A \<open>gdefault_st_rep\<close> is two of them, one per partition:
   a local dictionary and a global one. Reading a location consults the
   dictionary of its partition. Nothing forces a stored value to differ from
   its default.
@@ -56,8 +56,8 @@ text \<open>
     fixed \<open>top\<close> cannot represent at all.
 
   What the defaults cost is visible throughout this theory: the order has to
-  compare them, extensional equality has to pin them, and the emptiness test in
-  \<open>Default_St_Reachability\<close> has to reason about them. That cost is the price of the
+  compare them, extensional equality has to pin them, and an emptiness test
+  has to reason about them. That cost is the price of the
   three points above, not an accident of the first representation tried.
 \<close>
 
@@ -73,7 +73,6 @@ instance String.literal :: infinite_key
   by standard (rule infinite_literal)
 
 type_synonym ('k, 'a) gdefault_dict = "'a \<times> ('k \<times> 'a) list"
-type_synonym 'a default_dict = "(vname, 'a) gdefault_dict"
 
 fun default_dict_get :: "('k, 'a) gdefault_dict => 'k => 'a" where
   "default_dict_get (d, ps) x = (case map_of ps x of Some a => a | None => d)"
@@ -171,7 +170,6 @@ datatype 'k glocation =
   Local_Location (location_vname: 'k)
 | Global_Location (location_vname: 'k)
 
-type_synonym location = "vname glocation"
 
 lemma all_location_iff:
   "(\<forall>loc. P loc) \<longleftrightarrow> (\<forall>x. P (Local_Location x)) \<and> (\<forall>x. P (Global_Location x))"
@@ -180,7 +178,6 @@ lemma all_location_iff:
 text \<open>The local dictionary comes first, the global one second.\<close>
 
 type_synonym ('k, 'a) gdefault_st_rep = "('k, 'a) gdefault_dict \<times> ('k, 'a) gdefault_dict"
-type_synonym 'a default_st_rep = "(vname, 'a) gdefault_st_rep"
 
 fun default_st_rep_get ::
   "('k, 'a::bot) gdefault_st_rep => 'k glocation => 'a" where
@@ -250,7 +247,7 @@ lemma le_default_st_rep_code_iff:
 subsection \<open>The extensional quotient, lookup and point update\<close>
 
 text \<open>
-  \<open>default_st\<close> is the quotient of raw states by extensional equality.
+  \<open>gdefault_st\<close> is the quotient of raw states by extensional equality.
   Lookup and point update lift to it because both respect the equivalence.
 \<close>
 
@@ -259,7 +256,6 @@ quotient_type ('k, 'a) gdefault_st =
   morphisms rep_default_st Abs_default_st
   by (rule equivp_eq_default_st_rep)
 
-type_synonym 'a default_st = "(vname, 'a) gdefault_st"
 
 lift_definition default_st_get ::
   "('k, 'a::bot) gdefault_st => 'k glocation => 'a"

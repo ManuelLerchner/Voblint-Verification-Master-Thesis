@@ -1,12 +1,13 @@
 theory Parity_Domain
-  imports Parity_Warrowing "Voblint_Nonrelational.Abstract_Arithmetic"
+  imports Parity_Warrowing
+    "Voblint_Domain.Forward_Domain"
+    "Voblint_Domain.Numeric_Queries" "Voblint_Domain.Nonrelational_State"
 begin
 
-section \<open>Parity arithmetic and expression evaluation\<close>
+section \<open>Parity arithmetic\<close>
 
 text \<open>
-  Parity arithmetic, comparison queries and the evaluator \<open>aval_parity\<close>, with the
-  soundness and monotonicity facts \<open>sound_arith_ops\<close> asks of a domain.
+  Parity arithmetic and comparison queries, with their soundness and monotonicity facts.
 \<close>
 
 subsection \<open>Abstract arithmetic\<close>
@@ -170,77 +171,10 @@ lemma parity_mod_mono:
       simp add: parity_mod_def less_eq_parity_def)
 
 
-subsection \<open>Abstract expression evaluation\<close>
-
-text \<open>
-  \<open>aval_parity\<close> evaluates an expression bottom-up with the parity operations above.
-  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
-  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
-  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
-\<close>
-
-fun aval_parity :: "exp => (vname => parity) => parity" where
-    "aval_parity (N n)       d = parity_of_int n"
-  | "aval_parity (V v)       d = d v"
-  | "aval_parity (Plus  a b) d = aval_parity a d + aval_parity b d"
-  | "aval_parity (Minus a b) d = aval_parity a d - aval_parity b d"
-  | "aval_parity (Times a b) d = aval_parity a d * aval_parity b d"
-  | "aval_parity (Div a b) d = parity_div (aval_parity a d) (aval_parity b d)"
-  | "aval_parity (Mod a b) d = parity_mod (aval_parity a d) (aval_parity b d)"
-  | "aval_parity (Less a b)  d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int (parity_lt (aval_parity a d) (aval_parity b d)))"
-  | "aval_parity (LessEq a b)  d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int
-               (map_option HOL.Not (parity_lt (aval_parity b d) (aval_parity a d))))"
-  | "aval_parity (Greater a b)  d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int (parity_lt (aval_parity b d) (aval_parity a d)))"
-  | "aval_parity (GreaterEq a b)  d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int
-               (map_option HOL.Not (parity_lt (aval_parity a d) (aval_parity b d))))"
-  | "aval_parity (NotEq a b) d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int
-               (map_option HOL.Not (parity_eqb (aval_parity a d) (aval_parity b d))))"
-  | "aval_parity (exp.Eq a b) d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int (parity_eqb (aval_parity a d) (aval_parity b d)))"
-  | "aval_parity (exp.Not a)  d =
-       (if is_empty (aval_parity a d) then bot
-        else of_bool_option parity_of_int (map_option HOL.Not (parity_tobool (aval_parity a d))))"
-  | "aval_parity (And a b)    d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int
-               (and_opt (parity_tobool (aval_parity a d)) (parity_tobool (aval_parity b d))))"
-  | "aval_parity (Or a b)     d =
-       (if is_empty (aval_parity a d) \<or> is_empty (aval_parity b d) then bot
-        else of_bool_option parity_of_int
-               (or_opt (parity_tobool (aval_parity a d)) (parity_tobool (aval_parity b d))))"
-  | "aval_parity (Cast ik a) d = aval_parity a d"
-
 text \<open>A conversion to a machine kind preserves parity (@{thm even_ik_norm_iff}), so the
   parity cast is the identity.\<close>
 
 lemma parity_cast_sound: "i \<in> gamma_parity a \<Longrightarrow> ik_norm ik i \<in> gamma_parity a"
   by (cases a) simp_all
-
-interpretation parity_arith: mono_arith_ops
-    aval_parity parity_of_int "(+)" "(-)" "(*)" parity_div parity_mod
-    parity_lt parity_eqb parity_tobool "\<lambda>_ a. a"
-  apply unfold_locales
-  apply (simp_all add: parity_of_int_gamma parity_plus_sound parity_minus_sound parity_times_sound
-    parity_div_sound parity_mod_sound parity_cast_sound
-                        parity_plus_combine_mono parity_minus_combine_mono parity_times_combine_mono
-                          parity_div_mono parity_mod_mono
-                        parity_lt_sound parity_eqb_sound parity_tobool_sound[unfolded truthy_def]
-                        sup_parity_def
-                    del: parity_lt.simps parity_eqb.simps parity_tobool.simps)
-  apply (blast intro: parity_lt_mono[unfolded is_empty_parity]
-                      parity_eqb_mono[unfolded is_empty_parity]
-                      parity_tobool_mono[unfolded is_empty_parity])+
-  done
 
 end

@@ -10,9 +10,9 @@ text \<open>
   meaning \<open>x \<le> y\<close> at every store the value describes. No closure: two known
   facts \<open>x \<le> y\<close> and \<open>y \<le> z\<close> do not automatically yield \<open>x \<le> z\<close> in this
   carrier. This is deliberately the least amount of relational structure that
-  is still relational (a pair of variables, not one) and not \<open>abs_state\<close>
-  (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier). Its concretization is a
-  set of stores, not of integers, so it is an \<^class>\<open>executable_domain\<close> but not a
+  is still relational (a pair of variables, not one) and not \<open>gabs_state\<close>
+  (no \<open>vname \<Rightarrow> 'a\<close> function type anywhere in the carrier). It describes stores,
+  not integers, so it is an \<^class>\<open>executable_domain\<close> but not a
   \<^class>\<open>numeric_domain\<close>.
 \<close>
 
@@ -73,8 +73,7 @@ end
 lemma bot_relc_eq [simp]: "(\<bottom> :: relc) = RelBot"
   by (simp add: bot_relc_def)
 
-text \<open>\<open>\<top>\<close> is the empty constraint set: vacuously true of every pair, so its
-  concretization is \<open>UNIV\<close> (\<open>gamma_relc_top\<close>).\<close>
+text \<open>\<open>\<top>\<close> is the empty constraint set: vacuously true of every pair.\<close>
 
 instantiation relc :: order_top
 begin
@@ -115,51 +114,6 @@ qed
 
 end
 
-subsection \<open>Concretization\<close>
-
-text \<open>
-  A set of pairs denotes the stores satisfying \<open>s x <= s y\<close> for each pair;
-  \<open>RelBot\<close> denotes no store. Concretization is monotone in the order.
-\<close>
-
-fun gamma_relc :: "relc \<Rightarrow> store set" where
-  "gamma_relc RelBot = {}"
-| "gamma_relc (RelC ps) = {s. \<forall>(x, y) \<in> ps. s x \<le> s y}"
-
-adhoc_overloading gamma_S == gamma_relc
-
-lemma gamma_relc_top [simp]: "\<gamma> (\<top> :: relc) = UNIV"
-  unfolding top_relc_def by simp
-
-lemma gamma_relc_mono:
-  fixes d d' :: relc
-  assumes "d \<le> d'"
-  shows "\<gamma> d \<subseteq> \<gamma> d'"
-  using assms by (cases d; cases d') auto
-
-text \<open>
-  Executable membership reader. \<open>RelBot\<close> answers \<open>True\<close> for every pair: its
-  concretization is empty, so every fact holds of it vacuously, and it never needs
-  to materialize \<open>UNIV\<close>.
-\<close>
-
-fun relc_has :: "vname \<Rightarrow> vname \<Rightarrow> relc \<Rightarrow> bool" where
-  "relc_has x y RelBot = True"
-| "relc_has x y (RelC ps) = ((x, y) \<in> ps)"
-
-subsection \<open>Forgetting a variable\<close>
-
-text \<open>The one operation every imprecise fallback reuses.\<close>
-
-fun forget_relc :: "vname \<Rightarrow> relc \<Rightarrow> relc" where
-  "forget_relc x RelBot = RelBot"
-| "forget_relc x (RelC ps) = RelC {(a, b) \<in> ps. a \<noteq> x \<and> b \<noteq> x}"
-
-lemma forget_relc_sound[intro]:
-  assumes "s \<in> \<gamma> d"
-  shows "s(x := v) \<in> \<gamma> (forget_relc x d)"
-  using assms by (cases d) auto
-
 subsection \<open>Executable operations\<close>
 
 text \<open>
@@ -192,15 +146,5 @@ definition to_string_relc :: "relc \<Rightarrow> String.literal" where
 instance ..
 
 end
-
-lemma is_empty_relc_gamma: "is_empty d \<longleftrightarrow> \<gamma> d = {}" for d :: relc
-proof (cases d)
-  case (RelC ps)
-  then have "(\<lambda>_. 0) \<in> \<gamma> d" by auto
-  with RelC show ?thesis by (auto simp: is_empty_relc_def)
-qed (simp add: is_empty_relc_def)
-
-lemma exact_emptiness_relc: "exact_emptiness (is_empty :: relc \<Rightarrow> bool) gamma_relc"
-  by (rule exact_emptinessI) (rule is_empty_relc_gamma)
 
 end

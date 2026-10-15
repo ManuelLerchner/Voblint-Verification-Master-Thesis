@@ -9,7 +9,7 @@ they demonstrate the domain, they are not part of the reusable instance.
 | --- | --- |
 | `Sign_Warrowing.thy` | widening (join), narrowing (left argument), and the `numeric_domain` instance; the lattice itself is `Voblint_Domain.Sign_Lattice` |
 | `Sign_Arithmetic.thy` | abstract arithmetic over signs |
-| `Sign_Backward.thy` | inverse operators, `sign_refine_ops`, and the `mono_refinement` certificate `sign_backward_domain` |
+| `Sign_Backward.thy` | inverse operators, with their soundness and monotonicity |
 | `Sign_Special.thy` | `sign_min`/`sign_max`, the abstract implementation of the `Min`/`Max` special calls |
 | `Sign_Numeric_Queries.thy` | Sign's comparison queries, derived from the inverse operators |
 | `Sign_Transfer.thy` | the `sign_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
@@ -56,13 +56,13 @@ all three: the call-string run, `mcp_cs_rule` with Sign active, answers
 `mcp_cs_rule.result as k r gs p`.
 
 The entry-state run keys a callee on the abstract values its formals hold on
-entry. Here `exec_formals_route` does read the state it is handed — the callee
+entry. Here the executable route does read the state it is handed — the callee
 frame the routed generator has already entered — so the applicable endpoint is
 `entry_state_activation_collect_sound`, whose admitted-context relation is the
 one the entry answer induces rather than the graph of a function on stores.
 That difference is the whole content of the routing-agreement obligation, and
 it is why the executable route and its abstract counterpart
-`formals_route_lifted_gen` are separate parameters.
+are separate parameters.
 
 The context-insensitive run is the third policy: it is `sign_rule`, Sign's own
 registration of `dg_analysis_exec` at the unit route.

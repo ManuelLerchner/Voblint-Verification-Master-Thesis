@@ -54,12 +54,10 @@ text \<open>
   operator evaluates to \<open>0\<close> or \<open>1\<close>, so its truth is the exact answer \<open>1\<close> or
   \<open>0\<close>; Goblint derives its former \<open>MustBeEqual\<close> and \<open>MayBeLess\<close> queries from
   \<open>EvalInt\<close> the same way (lines 528 to 539). The query is a constructor
-  rather than a bare \<^typ>\<open>exp\<close> so that a later kind extends the datatype.
+  rather than a bare expression so that a later kind extends the datatype.
 \<close>
 
 datatype 'e gquery = EvalInt 'e
-
-type_synonym query = "exp gquery"
 
 type_synonym answer = "int_dom query_lift"
 
@@ -90,28 +88,7 @@ proof
     by (cases q) (simp add: gamma_query_lift_inf[OF gamma_inf_int_dom])
 qed
 
-fun eval_holds :: "query \<Rightarrow> answer \<Rightarrow> store \<Rightarrow> bool" where
-  "eval_holds (EvalInt e) a s \<longleftrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s \<in> gamma_answer a"
-
-lemma geval_holds_aval [simp]: "geval_holds aval = eval_holds"
-proof (intro ext)
-  fix q a s show "geval_holds aval q a s = eval_holds q a s" by (cases q) simp
-qed
-
-interpretation eval_query: query_algebra eval_holds
-proof
-  fix q :: query and a b :: answer and s
-  show "eval_holds q \<top> s"
-    by (cases q) simp
-  show "eval_holds q a s \<Longrightarrow> eval_holds q b s \<Longrightarrow> eval_holds q (a \<sqinter> b) s"
-    by (cases q) (simp add: gamma_query_lift_inf[OF gamma_inf_int_dom])
-qed
-
-declare geval_query.top_sound [simp] eval_query.top_sound [simp]
-
-lemma geval_channel_holds_aval [simp]:
-  "geval_query.channel_holds aval = eval_query.channel_holds"
-  by (simp add: geval_query.channel_holds_def eval_query.channel_holds_def fun_eq_iff)
+declare geval_query.top_sound [simp]
 
 text \<open>
   The exact answer for a known integer, and a known integer read back from
@@ -129,12 +106,6 @@ lemma gamma_answer_of_int [simp]:
 fun answer_const :: "answer \<Rightarrow> int option" where
   "answer_const (QLifted d) = int_dom_constant d"
 | "answer_const _ = None"
-
-lemma eval_holds_constD:
-  assumes "eval_holds (EvalInt e) a s" and "answer_const a = Some n"
-  shows "\<lbrakk>e\<rbrakk>\<^sub>e s = n"
-  using assms gamma_int_dom_constant_subset
-  by (cases a rule: answer_const.cases) auto
 
 lemma answer_const_of_int [simp]: "answer_const (answer_of_int n) = Some n"
   by (simp add: answer_of_int_def int_dom_of_int_def int_dom_constant_def

@@ -1,6 +1,6 @@
 theory Congruence_Arithmetic
   imports Congruence_Warrowing
-    "Voblint_Nonrelational.Abstract_Arithmetic"
+    "Voblint_Domain.Numeric_Queries"
 begin
 
 section \<open>Congruence arithmetic\<close>
@@ -823,83 +823,5 @@ next
       by (simp add: congruence_cast_def)
   qed (use False ne2 in \<open>simp add: congruence_cast_def\<close>)
 qed
-
-text \<open>
-  \<open>aval_congruence\<close> evaluates an expression bottom-up with the congruence operations above.
-  A comparison is \<open>bot\<close> when either operand is empty; otherwise it is the
-  literal its three-valued query decides, or the join of \<open>0\<close> and \<open>1\<close> on
-  \<open>None\<close>. These are the equations \<open>sound_arith_ops\<close> expects of an evaluator.
-\<close>
-
-fun aval_congruence ::
-    "exp => (vname => congruence) => congruence"
-where
-  "aval_congruence (N n) sigma = congruence_of_int n"
-| "aval_congruence (V x) sigma = sigma x"
-| "aval_congruence (Plus e1 e2) sigma =
-     aval_congruence e1 sigma + aval_congruence e2 sigma"
-| "aval_congruence (Minus e1 e2) sigma =
-     aval_congruence e1 sigma - aval_congruence e2 sigma"
-| "aval_congruence (Times e1 e2) sigma =
-     aval_congruence e1 sigma * aval_congruence e2 sigma"
-  | "aval_congruence (Div e1 e2) sigma = congruence_div (aval_congruence e1 sigma) (aval_congruence e2 sigma)"
-  | "aval_congruence (Mod e1 e2) sigma = congruence_mod (aval_congruence e1 sigma) (aval_congruence e2 sigma)"
-| "aval_congruence (Less e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma)))"
-| "aval_congruence (LessEq e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (map_option HOL.Not
-                (congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma))))"
-| "aval_congruence (Greater e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (congruence_lt (aval_congruence e2 sigma) (aval_congruence e1 sigma)))"
-| "aval_congruence (GreaterEq e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (map_option HOL.Not
-                (congruence_lt (aval_congruence e1 sigma) (aval_congruence e2 sigma))))"
-| "aval_congruence (NotEq e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (map_option HOL.Not
-                (congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma))))"
-| "aval_congruence (exp.Eq e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (congruence_eqb (aval_congruence e1 sigma) (aval_congruence e2 sigma)))"
-| "aval_congruence (exp.Not e) sigma =
-     (if is_empty (aval_congruence e sigma) then bot
-      else of_bool_option congruence_of_int
-             (map_option HOL.Not (congruence_tobool (aval_congruence e sigma))))"
-| "aval_congruence (And e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (and_opt (congruence_tobool (aval_congruence e1 sigma))
-                (congruence_tobool (aval_congruence e2 sigma))))"
-| "aval_congruence (Or e1 e2) sigma =
-     (if is_empty (aval_congruence e1 sigma) \<or> is_empty (aval_congruence e2 sigma) then bot
-      else of_bool_option congruence_of_int
-             (or_opt (congruence_tobool (aval_congruence e1 sigma))
-                (congruence_tobool (aval_congruence e2 sigma))))"
-| "aval_congruence (Cast ik e) sigma = congruence_cast ik (aval_congruence e sigma)"
-
-interpretation congruence_arith: mono_arith_ops
-    aval_congruence congruence_of_int "(+)" "(-)" "(*)" congruence_div congruence_mod
-    congruence_lt congruence_eqb congruence_tobool congruence_cast
-  apply unfold_locales
-  apply (simp_all add: congruence_plus_sound congruence_minus_sound congruence_times_sound
-    congruence_div_sound congruence_mod_sound congruence_cast_sound congruence_cast_mono
-                        congruence_plus_mono congruence_minus_mono congruence_times_mono
-                          congruence_div_mono congruence_mod_mono
-                        congruence_lt_sound congruence_eqb_sound
-                        congruence_tobool_sound[unfolded truthy_def])
-  apply (blast intro: congruence_lt_mono[unfolded is_empty_congruence]
-                      congruence_eqb_mono[unfolded is_empty_congruence]
-                      congruence_tobool_mono[unfolded is_empty_congruence])+
-  done
 
 end

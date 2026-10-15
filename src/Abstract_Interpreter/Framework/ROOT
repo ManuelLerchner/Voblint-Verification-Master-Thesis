@@ -40,7 +40,6 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     DG_Ctx_Activation
     Routed_Call_Programs
     Routed_Context
-    Routed_Context_Unit
     DG_Keyed_Split_Spec
     (* Analyses composed as a product, answering each other's queries. *)
     Analysis_Query
@@ -50,14 +49,8 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)
     Solved_Table
-    (* Ordinary __goblint_assert checks: store-only checks, with no
-       ghost-domain or additional trace-projection dependency. *)
-    Checks
-    (* The flat three-valued check-result lattice, split out so the
-       report/aggregation layers below don't have to pull in the domain
-       classifier locale just for the verdict type. *)
+    (* The flat three-valued check-result lattice. *)
     Check_Result
-    Abstract_Checks
     Check_Report
     Contextual_Check_Report
     Check_Answer

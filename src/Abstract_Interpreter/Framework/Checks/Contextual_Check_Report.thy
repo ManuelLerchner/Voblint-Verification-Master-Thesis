@@ -87,35 +87,6 @@ text \<open>
   nothing.
 \<close>
 
-fun bool_valued :: "exp \<Rightarrow> bool" where
-  "bool_valued (Not _) = True"
-| "bool_valued (And _ _) = True"
-| "bool_valued (Or _ _) = True"
-| "bool_valued (Less _ _) = True"
-| "bool_valued (LessEq _ _) = True"
-| "bool_valued (Greater _ _) = True"
-| "bool_valued (GreaterEq _ _) = True"
-| "bool_valued (Eq _ _) = True"
-| "bool_valued (NotEq _ _) = True"
-| "bool_valued _ = False"
-
-lemma aval_bool_valued:
-  "bool_valued e \<Longrightarrow> \<lbrakk>e\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) then 1 else 0)"
-  by (cases e) auto
-
-definition check_truth_exp :: "exp \<Rightarrow> exp" where
-  "check_truth_exp c = (if bool_valued c then c else NotEq c (N 0))"
-
-lemma bool_valued_check_truth_exp [simp]: "bool_valued (check_truth_exp c)"
-  by (simp add: check_truth_exp_def)
-
-lemma aval_check_truth_exp:
-  "\<lbrakk>check_truth_exp c\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>c\<rbrakk>\<^sub>e s) then 1 else 0)"
-  by (auto simp: check_truth_exp_def dest: aval_bool_valued[of c s])
-
-abbreviation check_query_of :: "exp \<Rightarrow> query" where
-  "check_query_of c \<equiv> EvalInt (check_truth_exp c)"
-
 fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
   "classify_answer QBot = Dead"
 | "classify_answer a =
@@ -127,25 +98,6 @@ lemma classify_answer_cases:
   "classify_answer a = Decided Check_Proved \<Longrightarrow> 0 \<notin> gamma_answer a"
   "classify_answer a = Decided Check_Refuted \<Longrightarrow> 1 \<notin> gamma_answer a"
   by (cases a; simp only: classify_answer.simps answer_excludes_iff split: if_splits; simp)+
-
-lemma classify_answer_proved:
-  assumes "classify_answer a = Decided Check_Proved"
-    and "eval_holds (check_query_of c) a s"
-  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using classify_answer_cases(1)[OF assms(1)] assms(2)
-  by (auto simp: aval_check_truth_exp split: if_splits)
-
-lemma classify_answer_refuted:
-  assumes "classify_answer a = Decided Check_Refuted"
-    and "eval_holds (check_query_of c) a s"
-  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using classify_answer_cases(2)[OF assms(1)] assms(2)
-  by (auto simp: aval_check_truth_exp split: if_splits)
-
-lemma classify_answer_dead:
-  assumes "classify_answer a = Dead"
-  shows "\<not> eval_holds (EvalInt e) a s"
-  using assms by (cases a) (auto split: if_splits)
 
 subsection \<open>Aggregating the contexts observed at one check\<close>
 
@@ -195,18 +147,6 @@ lemma aggregate_verdicts_eq_Dead_iff:
   assumes "finite vs"
   shows "aggregate_verdicts vs = Dead \<longleftrightarrow> (\<forall>v \<in> vs. v = Dead)"
   using assms by (induction vs rule: finite_induct) simp_all
-
-text \<open>The opposite direction, for a report that has only one observation per
-  check and therefore no dead case to distinguish: every entry is
-  \<open>Decided\<close>. Deadness is not asserted either way --- such a report simply does
-  not carry the channel that would express it.\<close>
-
-definition decided_report ::
-  "check_report_entry list \<Rightarrow> (pp \<times> exp \<times> contextual_verdict) list" where
-  "decided_report = map (\<lambda>(u, cnd, r). (u, cnd, Decided r))"
-
-lemma length_decided_report [simp]: "length (decided_report rs) = length rs"
-  unfolding decided_report_def by simp
 
 subsection \<open>Whole-program contextual check report\<close>
 
@@ -272,7 +212,7 @@ subsection \<open>Contextual proved/refuted soundness\<close>
 
 text \<open>
   The \<open>Decided Check_Proved\<close>/\<open>Decided Check_Refuted\<close> analogues of
-  \<open>classify_checks_proved_sound\<close>/\<open>classify_checks_refuted_sound\<close>: an
+  \<open>gclassify_checks_proved_sound\<close>/\<open>gclassify_checks_refuted_sound\<close>: an
   aggregated verdict of \<^term>\<open>Decided Check_Proved\<close> forces every observation
   folded into it to be \<^const>\<open>Dead\<close> or \<^term>\<open>Decided Check_Proved\<close> --- never
   a disagreeing \<^term>\<open>Decided Check_Refuted\<close> or \<^term>\<open>Decided Check_Unknown\<close>,
@@ -369,8 +309,8 @@ proof
 qed
 
 text \<open>
-  The context-indexed report analogue of \<open>classify_checks_proved_sound\<close>/
-  \<open>classify_checks_refuted_sound\<close>, stated once for any decided,
+  The context-indexed report analogue of \<open>gclassify_checks_proved_sound\<close>/
+  \<open>gclassify_checks_refuted_sound\<close>, stated once for any decided,
   non-\<open>Check_Unknown\<close> aggregate: it forces the classifier's own reading at
   every \<^const>\<open>Lifted\<close> context to agree. The image set being folded is
   shown finite from the aggregate equation itself (\<open>Finite_Set.fold_infinite\<close>:

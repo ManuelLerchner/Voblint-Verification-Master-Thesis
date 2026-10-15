@@ -1,6 +1,7 @@
 theory Routed_Exec_Refinement
   imports
-    Ownership_Split_Exec
+    Default_St_Reachability
+    "Voblint_Framework.DG_Ownership_Split_Spec"
     "Voblint_Framework.DG_Reader_Transport"
 begin
 

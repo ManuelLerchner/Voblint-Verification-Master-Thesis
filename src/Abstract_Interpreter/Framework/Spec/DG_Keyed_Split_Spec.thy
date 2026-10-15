@@ -7,10 +7,10 @@ begin
 section \<open>One solver unknown per global name\<close>
 
 text \<open>
-  The ownership-split lifter of \<open>DG_Ownership_Split_Spec\<close> keeps every program
-  global in one shared value. Reading a global therefore depends on all of them,
-  and writing one wakes every reader of any other. Goblint keys its globals by
-  name instead, and this theory does the same for a whole-state component.
+  Keeping every program global in one shared value makes reading a global depend
+  on all of them, and writing one wakes every reader of any other. Goblint keys
+  its globals by name instead, and this theory does the same for a whole-state
+  component.
 
   A global name \<open>x\<close> lives at its own unknown. Its value there is a global half
   that describes \<open>x\<close> alone, cut out of a whole state by \<open>rg x\<close>. A transfer
@@ -164,7 +164,7 @@ text \<open>
   Each transfer reads its names, recombines them with the point's local half,
   runs the wrapped whole-state operation, publishes the names it may change and
   answers with the local half of the result. \<open>cmb\<close> and \<open>rl\<close> are the binary
-  recombination and local projection the ownership split already uses.
+  recombination of a local and a global half and the local projection.
 \<close>
 
 definition keyed_transfer ::
@@ -249,7 +249,7 @@ text \<open>
   Every edge runs the component's closed step through \<open>keyed_transfer\<close>, reading
   the globals its expressions mention and publishing the globals it may assign.
   A return reads nothing and may assign its destination. The return pipeline is
-  wrapped once, as in the ownership split.
+  wrapped once rather than stage by stage.
 
   A call reads the globals its actuals mention and passes every other global as
   \<open>free\<close>. The context a call enters is computed from that state, and the analyzer
@@ -281,13 +281,6 @@ where
          dgs_combine_assign := (\<lambda>ci. keyed_combine_transfer cmb rl rg free
             (global_names_in \<G> (case_option [] (\<lambda>x. [x]) (ci_dst ci)))
             (\<lambda>dc de. ls_combine c (ls_channel c dc) (ls_channel c de) ci dc de)) \<rparr>)"
-
-abbreviation keyed_split_spec ::
-  "(vname \<Rightarrow> bool) \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> (vname \<Rightarrow> 'd \<Rightarrow> 'd)
-   \<Rightarrow> (vname list \<Rightarrow> 'd) \<Rightarrow> 'd local_spec
-   \<Rightarrow> (vname, exp, 'x,'k,vname,'d::bounded_semilattice_sup_bot,'d) gdg_spec"
-where
-  "keyed_split_spec \<equiv> gkeyed_split_spec exp_vnames ret_var"
 
 lemma dg_spec_step_keyed_split_spec [simp]:
   "dg_spec_step (gkeyed_split_spec evars rv \<G> cmb rl rg free c) a

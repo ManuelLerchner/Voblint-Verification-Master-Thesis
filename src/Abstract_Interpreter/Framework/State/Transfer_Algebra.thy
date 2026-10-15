@@ -96,7 +96,7 @@ text \<open>
   Procedure entry itself is not defined here. \<^const>\<open>enter_frame\<close> and
   \<^const>\<open>enter_binding\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Proc\<close>) are already generic in
   the state's codomain, and the concrete semantics is \<^const>\<open>enter_binding\<close> at
-  the reset value \<open>0\<close> and the evaluator \<^const>\<open>aval\<close>
+  the reset value \<open>0\<close> and the language's evaluator
   (\<^const>\<open>cfg_transfer_sem.gcall_enter\<close>). An abstract domain runs the same constant at its own
   \<open>top\<close> and its own evaluator, so the two can never drift apart: there is one
   definition and two instances of it.
@@ -172,7 +172,7 @@ text \<open>
   A call site reads the formals and actuals off \<^typ>\<open>call_info\<close> rather than
   passing them separately, but that projection stays at the call site: a domain
   writes \<open>enter_binding \<G> top ev (ci_formals ci) (ci_args ci)\<close>, exactly as the
-  return side writes \<open>combine\<^sup>\<sharp> \<G> (ci_dst ci)\<close>. No constant here wraps it.
+  return side writes \<open>combine_assign (ci_dst ci)\<close>. No constant here wraps it.
 
   The caller's own continuation is not computed here either. Goblint's
   \<open>Spec.enter\<close> answers caller/callee pairs and \<open>constraints.ml\<close> hands the caller
@@ -195,63 +195,5 @@ lemma combine_assign_mono:
   assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
   shows "combine_assign dst v1 s1 \<le> combine_assign dst v2 s2"
   using assms by (cases dst) (auto simp: le_fun_def)
-
-text \<open>
-  Return combination joins caller locals with callee globals and then assigns the
-  callee's @{const ret_var} to the optional destination.  The ordinary abstract
-  state update publishes the result without domain-specific return machinery.
-\<close>
-definition combine_collect_abs ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> vname option \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state \<Rightarrow> 'a abs_state"
-    ("combine\<^sup>\<sharp>") where
-  "combine_collect_abs \<G> dst dc de =
-     combine_assign dst (de ret_var) (combine_env \<G> dc de)"
-
-lemma combine_collect_abs_mono:
-  fixes dc1 dc2 de1 de2 :: "'a::order abs_state"
-  assumes c: "dc1 \<le> dc2" and e: "de1 \<le> de2"
-  shows "combine\<^sup>\<sharp> \<G> dst dc1 de1 \<le> combine\<^sup>\<sharp> \<G> dst dc2 de2"
-  unfolding combine_collect_abs_def
-  by (rule combine_assign_mono[OF le_funD[OF e] combine_env_mono[OF c e]])
-
-text \<open>
-  The binary env-combine is the destination-free instance of the
-  return-threaded combine: with no destination the return slot is not written.
-  Together with the writing case these reduce the abstract combine under a
-  \<open>cases dst\<close>, so no caller unfolds its definition by hand.
-\<close>
-lemma combine_collect_abs_None[simp]:
-  "combine\<^sup>\<sharp> \<G> None a b = combine_env \<G> a b"
-  by (simp add: combine_collect_abs_def)
-
-lemma combine_collect_abs_Some[simp]:
-  "combine\<^sup>\<sharp> \<G> (Some x) a b = (combine_env \<G> a b)(x := b ret_var)"
-  by (simp add: combine_collect_abs_def)
-
-subsection \<open>Soundness of the structural return combine\<close>
-
-
-text \<open>
-  Soundness of the abstract combine including result publication.  A pure
-  @{class numeric_domain} fact: the destination slot is sound because the callee's
-  @{const ret_var} slot is, and every other slot is handled by
-  @{thm combine_env_sound}.
-\<close>
-lemma combine_collect_sound [intro]:
-  fixes dc de :: "'a::numeric_domain abs_state"
-  assumes sc: "s \<in> \<gamma> dc" and se: "t \<in> \<gamma> de"
-  shows "cfg_transfer_sem.gcombine_collect ret_var (\<lambda>_ n. n) \<G> dst s t \<in> \<gamma> (combine\<^sup>\<sharp> \<G> dst dc de)"
-  unfolding cfg_transfer_sem.gcombine_collect_def combine_collect_abs_def
-  using combine_env_sound[OF sc se] gamma_stateD[OF se]
-  by (cases dst) (auto simp add: gamma_state_upd)
-
-subsection \<open>The C-faithful initial store set\<close>
-
-text \<open>
-  \<^const>\<open>cinit_stores\<close> (\<^theory>\<open>Voblint_VIMP.VIMP_Globals\<close>) is the C-faithful initial
-  store set. Any analysis that uses a domain-specific abstract seed \<open>s0\<close>
-  satisfying \<open>cinit_stores \<G> \<subseteq> \<gamma> s0\<close> may state its soundness
-  theorem against \<open>cinit_stores \<G>\<close> rather than \<open>UNIV\<close>, matching VIMP's
-  C-like initialization semantics.\<close>
 
 end

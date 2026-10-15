@@ -148,8 +148,7 @@ fun tanswer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> typed_domain \<Rightar
 | "tanswer sem \<kappa> Typed_Order v ch = ord_query ch (tslot6 v)"
 
 text \<open>A check asks for the truth value of its condition: a comparison or a logical
-  operator is that value already, as \<^const>\<open>check_truth_exp\<close> asks of an untyped
-  condition, and any other condition is compared with zero.\<close>
+  operator is that value already, and any other condition is compared with zero.\<close>
 
 fun truth_texp :: "texp \<Rightarrow> texp" where
   "truth_texp (TCmp op a b) = TCmp op a b"

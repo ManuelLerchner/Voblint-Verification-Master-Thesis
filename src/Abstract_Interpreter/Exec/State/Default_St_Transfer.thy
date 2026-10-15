@@ -11,7 +11,7 @@ text \<open>
   variable names, and which names are global is a property of the program, not
   of the carrier. \<open>location_of\<close> is that classifier applied: it turns a name
   into the location holding its value, and \<open>default_st_rep_to_fun\<close> maps a
-  whole state to the function \<^typ>\<open>'a abs_state\<close> it represents, the form
+  whole state to the function \<^typ>\<open>('k, 'a) gabs_state\<close> it represents, the form
   soundness is stated over.
 
   The rest of the theory is the operations a call and a return need --
@@ -560,7 +560,7 @@ text \<open>
   A carrier state denotes the stores its function denotes. This is the one
   concretization the carrier offers to semantic statements; the represented
   function itself stays a refinement device, used to relate carrier operations
-  to their counterparts on \<^typ>\<open>'a abs_state\<close>. Only the classifier
+  to their counterparts on \<^typ>\<open>('k, 'a) gabs_state\<close>. Only the classifier
   \<open>\<G>\<close> is needed besides the state, because it decides which location holds each
   name's value. A context that fixes \<open>\<G>\<close> may register
   \<open>default_st_gamma \<G>\<close> under \<open>\<gamma> _\<close> with \<open>adhoc_overloading\<close>.

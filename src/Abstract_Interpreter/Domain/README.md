@@ -24,16 +24,16 @@ mentions a graph, an equation, or a solver run.
 
 | File | Role |
 | --- | --- |
-| `Nonrelational_State.thy` | Pointwise `'a abs_state = vname => 'a`, product concretization, and witness-bottom detection |
-| `Nonrelational_Reachability.thy` | Composition of pointwise stores with the generic reachability lift: `gamma_state_lift` and `is_empty_state_lift` |
+| `Nonrelational_State.thy` | Pointwise `('k, 'a) gabs_state = 'k => 'a`, product concretization, and witness-bottom detection |
+| `Nonrelational_Reachability.thy` | Composition of pointwise stores with the generic reachability lift: the concretization of a lifted pointwise state |
 
 ## `Eval/`
 
 | File | Role |
 | --- | --- |
-| `Forward_Domain.thy` | Forward expression evaluation over a numeric domain: `sound_evaluator` and `sound_truth_test` |
-| `Backward_Domain.thy` | `sound_inverse_ops`: the inverse operators on abstract values; `sound_refinement`: their use on pointwise states, the derived `afilter`/`bfilter` guard refinement, the counterpart of Goblint's `BaseInvariant` |
-| `Backward_Domain_Mono.thy` | reductiveness of the `sound_refinement` filters, and `mono_refinement`: monotone inverse operators and the filtering facts they buy |
+| `Forward_Domain.thy` | Truth tests on a numeric domain: `sound_truth_test` and `mono_truth_test` |
+| `Backward_Domain.thy` | `sound_inverse_ops`: the inverse operators on abstract values, the counterpart of Goblint's `BaseInvariant` |
+| `Backward_Domain_Mono.thy` | `le_pair`, the componentwise order that states an inverse operator's monotonicity |
 | `Numeric_Queries.thy` | The `sound_numeric_queries` interface the check layer consumes, and `numeric_query_judgments`, which builds an instance from four yes/no judgments |
 | `Backward_Numeric_Queries.thy` | The four judgments every `sound_inverse_ops` instance answers for free, read off its own inverse operators |
 
@@ -51,4 +51,4 @@ mentions a graph, an equation, or a solver run.
 
 | File | Role |
 | --- | --- |
-| `Order_Lattice.thy` | The order carrier `relc`, a set of known `x <= y` pairs: its lattice, concretization to stores, `forget_relc`, and its `executable_domain` instance. It is not a `numeric_domain`: it describes stores, not integers |
+| `Order_Lattice.thy` | The order carrier `relc`, a set of known `x <= y` pairs: its lattice and its `executable_domain` instance, which renders an order value. It is not a `numeric_domain`: it describes stores, not integers |

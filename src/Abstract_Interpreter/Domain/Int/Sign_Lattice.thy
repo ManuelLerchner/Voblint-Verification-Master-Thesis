@@ -204,8 +204,7 @@ subsection \<open>Meet\<close>
 
 text \<open>
   The sign meet is exact: it concretizes to the intersection of its operands.
-  As a @{class semilattice_inf} instance it gives @{text \<open>inf_mono\<close>} for free,
-  which the monotonicity proof of @{text bfilter} needs.
+  As a @{class semilattice_inf} instance it gives @{text \<open>inf_mono\<close>} for free.
 \<close>
 
 instantiation sign :: inf begin

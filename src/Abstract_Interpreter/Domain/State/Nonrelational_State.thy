@@ -5,7 +5,7 @@ begin
 section \<open>What a store of one abstract value per variable denotes, and when it denotes nothing\<close>
 
 text \<open>
-  A non-relational abstract state, \<open>'a abs_state\<close>, pairs every program
+  A non-relational abstract state, \<open>('k, 'a) gabs_state\<close>, pairs every program
   variable with one abstract value, independently of every other variable
   -- the "non-relational" in the name. \<open>gamma_state\<close> says what that
   pairing denotes: exactly the concrete stores where each variable's value
@@ -20,10 +20,9 @@ text \<open>
 \<close>
 
 type_synonym ('k, 'a) gabs_state = "'k => 'a"
-type_synonym 'a abs_state = "(vname, 'a) gabs_state"
 
 (* HOL ships fun :: (type, bounded_lattice) bounded_lattice but not this
-   weaker pointwise instance; abs_state needs it for TD_side part_post_solution. *)
+   weaker pointwise instance; gabs_state needs it for TD_side part_post_solution. *)
 instance "fun" :: (type, bounded_semilattice_sup_bot) bounded_semilattice_sup_bot ..
 
 text \<open>Pointwise join on abstract states is idempotent because the value-domain
@@ -40,7 +39,7 @@ lemma gamma_stateI [intro]:
   "(\<And>x. s x \<in> \<gamma> (d x)) \<Longrightarrow> s \<in> \<gamma> d"
   unfolding gamma_state_def by simp
 
-(* Note: pointwise bot / sup on 'a abs_state come from HOL's
+(* Note: pointwise bot / sup on gabs_state come from HOL's
    fun :: bot and fun :: sup instances; no extra definitions needed. *)
 
 subsection \<open>State concretization laws\<close>
@@ -115,13 +114,11 @@ text \<open>
   reconfirm what the first already decided.
 
   \<open>is_empty_state\<close> is a logical characterization of that condition, not an
-  executable test: \<open>'a abs_state\<close> is a raw function \<open>vname \<Rightarrow> 'a\<close>, and
-  \<^typ>\<open>vname\<close> is infinite, so \<open>\<exists>x. is_empty (d x)\<close> has no code equation --
-  there is no finite witness search for code generation to compile. The
-  finite executable bottom test a real dispatcher runs is \<open>default_st_is_bot_for\<close>,
-  defined downstream in the \<open>Voblint_Exec\<close> session, which scans only the
-  state's finitely many stored locations and is proved to agree with
-  \<open>is_empty_state\<close> on every such state.
+  executable test: a state is a raw function \<open>'k \<Rightarrow> 'a\<close>, and for an
+  infinite variable type \<open>\<exists>x. is_empty (d x)\<close> has no code equation --
+  there is no finite witness search for code generation to compile. An
+  executable carrier supplies its own finite bottom test, which scans only the
+  state's finitely many stored locations.
 \<close>
 
 definition is_empty_state :: "('k, 'a::executable_domain) gabs_state \<Rightarrow> bool" where

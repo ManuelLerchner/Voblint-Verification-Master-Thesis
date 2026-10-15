@@ -10,7 +10,7 @@ Executable witnesses live under
 | `Interval_Lattice.thy` | lives in `Voblint_Domain` (`src/Abstract_Interpreter/Domain/Int/`): bounds, order, lattice, and concretization |
 | `Interval_Warrowing.thy` | widening/narrowing operators and laws, then the `numeric_domain` instance, which needs them |
 | `Interval_Arithmetic.thy` | abstract arithmetic over intervals |
-| `Interval_Backward.thy` | inverse operators, `ivl_refine_ops`, and the `mono_refinement` certificate |
+| `Interval_Backward.thy` | inverse operators and `ivl_refine_ops` |
 | `Interval_Transfer.thy` | the `ivl_ops` bundle and its one `mono_nonrelational_ops` interpretation, which derives the filters, branch, check classifier and transfer |
 | `Interval_Domain.thy` | aggregate import façade and small domain demonstrations |
 | `Interval_Exec.thy` | executable transfer mirror + commutation |
@@ -41,7 +41,7 @@ the applicable endpoint, and `k` being runtime data is why that registration
 leaves it free beside the rule (`for k r`).
 
 The entry-state run keys a callee on the abstract values its formals hold on
-entry. `exec_formals_route` does read the state it is handed, so
+entry. The executable route does read the state it is handed, so
 `entry_state_activation_collect_sound` applies instead — its admitted-context
 relation is the one the entry answer induces rather than the graph of a
 function on stores. Interval's bottom-sensitive handling of that entry state,

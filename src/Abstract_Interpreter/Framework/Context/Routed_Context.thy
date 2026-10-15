@@ -761,65 +761,10 @@ lemma routed_entry_context_rel_total:
   by blast
 
 
-subsection \<open>Formal-entry contexts: routing on the callee's declared formals\<close>
+subsection \<open>The call at a call site\<close>
 
 text \<open>
-  A context type derived from the callee's declared formals rather than call-site
-  history: \<open>'a list\<close>, one abstract value per formal, in the order \<^const>\<open>CallEdge\<close>
-  already carries them --- populated at compile time from the callee's own
-  declaration, so no separate procedure-table lookup is needed here.
-  \<open>formals_context\<close> is the plain per-variable projection (\<^typ>\<open>'a abs_state\<close> is
-  \<^typ>\<open>vname \<Rightarrow> 'a\<close>, so this is just \<^const>\<open>map\<close>), and the routing functions
-  below apply it to the state they are handed. That state is already the
-  \<^emph>\<open>entered\<close> callee frame:
-  \<^const>\<open>routed_callee_call_program\<close> runs the specification's own enter transfer first and
-  passes its answer to \<open>route\<close>, so a routing function must not enter again.
-  \<open>formals_context_sem\<close> is the trace-semantic counterpart, decoding the concrete
-  entered store's formals the same way, given the point abstraction \<open>decode\<close> a
-  domain provides for a concrete value and the CFG needed to look up a call
-  site's own formal list. Neither definition mentions a domain-specific accessor
-  beyond \<open>decode\<close> itself, nor a specification, so any domain reusing
-  \<^locale>\<open>grouted_context\<close> instantiates this pair once instead of
-  hand-writing a per-formal projection.
-\<close>
-
-definition formals_context :: "vname list \<Rightarrow> 'a abs_state \<Rightarrow> 'a list" where
-  "formals_context pars d = map d pars"
-
-text \<open>The formals of the call originating at \<open>u\<close>: at most one, by the compiler's
-  own invariant (\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close> emits a single \<^const>\<open>CallEdge\<close>
-  per \<^const>\<open>Call\<close>); \<open>[]\<close> if \<open>u\<close> has none.\<close>
-
-definition formals_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> vname list" where
-  "formals_at_call_site g u =
-     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
-        (_, CallEdge _ pars _, _, _) # _ \<Rightarrow> pars
-      | _ \<Rightarrow> [])"
-
-definition formals_context_sem ::
-  "cfg \<Rightarrow> (int \<Rightarrow> 'a) \<Rightarrow> cfg_node \<Rightarrow> 'a list \<Rightarrow> store \<Rightarrow> 'a list"
-where
-  "formals_context_sem g decode u ctx s = formals_context (formals_at_call_site g u) (decode \<circ> s)"
-
-text \<open>
-  The whole matched \<^type>\<open>call_action\<close> at a node, not only its formals: an
-  \<open>enterc\<close> built purely from the caller's own solved abstract state (rather than
-  by decoding the concrete entered store, as \<^const>\<open>formals_context_sem\<close> does) needs
-  the callee's actuals too, to recompute the same \<^const>\<open>dgs_enter\<close> the route
-  itself already ran. Same convention as \<^const>\<open>formals_at_call_site\<close>: the head
-  of the filtered call list, \<open>CallEdge None [] []\<close> if \<open>u\<close> has no outgoing call.
-\<close>
-
-definition call_action_at_call_site :: "cfg \<Rightarrow> pp \<Rightarrow> call_action" where
-  "call_action_at_call_site g u =
-     (case filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) of
-        (_, ca, _, _) # _ \<Rightarrow> ca
-      | _ \<Rightarrow> CallEdge None [] [])"
-
-
-text \<open>
-  Not a locale theorem, same as routing agreement itself: whether a node has at
-  most one outgoing call is a per-instance fact about \<open>g\<close>, true for
+  Whether a node has at most one outgoing call is a per-instance fact about \<open>g\<close>, true for
   \<open>compile_prog\<close> output (\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close>'s
   \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
 \<close>
@@ -854,44 +799,5 @@ proof -
     apply (cases "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g)")
     using singleton_iff subset_singletonD by(fastforce)+
 qed
-
-lemma call_action_at_call_site_eq:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, ca, cf, af) \<in> calls g"
-  shows "call_action_at_call_site g u = ca"
-  unfolding call_action_at_call_site_def
-  using calls_filter_singleton[OF fin uniq ce] by simp
-
-
-subsection \<open>Formal-entry contexts at the routed spine's lifted carrier\<close>
-
-text \<open>
-  \<^const>\<open>formals_context\<close> above operates on the unlifted
-  \<^typ>\<open>'a abs_state\<close>, the shape an abstract-carrier \<^locale>\<open>grouted_context\<close> caller state
-  has. The routed executable spine (\<^locale>\<open>gdg_context_activation\<close>, every current
-  instance) instead carries \<^typ>\<open>'a abs_state lifted\<close> throughout, to represent an
-  activation the solver has not yet covered. \<open>formals_route_lifted\<close>/
-  \<open>formals_route_lifted_gen\<close> are the same formal-entry projection at that carrier:
-  a caller point that is \<^const>\<open>Bot\<close> routes to the all-\<open>bot\<close> formal context (the
-  entered callee frame is then \<^const>\<open>Bot\<close> too), the same collapse an EntryState
-  routed instance needs for its own executable/abstract route. Like the
-  projection above, these read the state they are handed and never re-enter, so
-  neither mentions a specification.
-\<close>
-
-definition formals_route_lifted ::
-  "'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-where
-  "formals_route_lifted d ca =
-     (case ca of CallEdge dst pars args \<Rightarrow>
-        formals_context pars (case d of Bot \<Rightarrow> bot | Lifted d0 \<Rightarrow> d0))"
-
-definition formals_route_lifted_gen ::
-  "pp \<Rightarrow> 'a list \<Rightarrow> 'a::numeric_domain abs_state lifted \<Rightarrow> call_action \<Rightarrow> 'a list"
-where
-  "formals_route_lifted_gen u ctx d ca = formals_route_lifted d ca"
 
 end

@@ -91,13 +91,13 @@ entry obligation, both through the shared `entry_pairs_cover`.
 
 | Folder | Question it answers | Theories |
 | --- | --- | --- |
-| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Ownership_Split_Spec` (the `Spec2Spec` lifter that puts a whole-state analysis's global names on one shared global unknown), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `keyed_split_contract`) |
-| `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `abs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the structural return combine -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (the local/global projections derived from the generic `combine_env` selector) |
+| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Ownership_Split_Spec` (`ownership_split_enter_sides`: the join of an entry's alternatives' global halves), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `keyed_split_contract`) |
+| `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `gabs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the return-value write -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (pointwise equations for the generic `combine_env` selector) |
 | `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Programs` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Indexed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied program hooks, and the `TD_side_mono` discharge asks each hook only for well-formedness, traverse/sides monotonicity and `env_indep_deps`), `DG_Reader_Transport` (`dg_reader_commute_gen`: a whole equation system read through a `bot`- and join-preserving reader pair) |
 | `Activation/` | What does one activation see? | `Activation_Backbone` (`activation_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
-| `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Programs` (the routed key space, and the programs one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those programs and discharges CALL and COMB), `Routed_Context_Unit` (the context-insensitive policy: `route_unit`, its trace-semantic counterpart `enterc_unit`, and `activation_collect_unit_eq_node_collect`, the collapse of the one context's bucket to `node_collect`), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
+| `Context/` | How is a call routed, which contexts exist, and what does a solved routed system say? | `Routed_Call_Programs` (the routed key space, and the programs one call action generates: seed publication, callee-exit read, return combine, plus what each reads and publishes), `Routed_Context` (the locale that fixes those programs and discharges CALL and COMB), `Call_String_Context` (the data and its two projections), `Routed_Analysis_Sound` (a solved routed system composed with a context policy, once) |
 | `Result/` | What does a solved table publish? | `Solved_Table`, `DG_Analysis_Adapter` |
-| `Checks/` | How is a `__goblint_assert` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Checks`, `Abstract_Checks`, `Check_Report`, `Contextual_Check_Report` |
+| `Checks/` | How is a `__goblint_assert` discharged against that table? | `Check_Result` (the flat three-valued verdict), `Check_Report`, `Contextual_Check_Report`, `Check_Answer` |
 
 ## Layering
 
@@ -108,7 +108,7 @@ Spec/DG_State                      <- (Voblint_Domain.Abstract_Domain only)
 Spec/DG_Manager                    <- DG_State
 Spec/DG_Spec                       <- DG_Manager
 Spec/DG_Spec_Sound                 <- DG_Spec
-Spec/DG_Ownership_Split_Spec       <- MCP_Spec, State/State_Restriction
+Spec/DG_Ownership_Split_Spec       <- MCP_Spec
 Spec/DG_Keyed_Split_Spec           <- MCP_Spec
 Constraints/DG_Constraint_Programs <- DG_State
 Constraints/DG_Indexed_Generator     <- DG_Constraint_Programs, CFG_Enumeration
@@ -116,11 +116,10 @@ Activation/DG_Ctx_Activation       <- DG_Spec_Sound, DG_Indexed_Generator
 Context/Routed_Call_Programs       <- DG_Spec_Sound, DG_Indexed_Generator
 Context/Routed_Context             <- Routed_Call_Programs, DG_Ctx_Activation,
                                       MCP_Spec, Activation_Backbone
-Context/Routed_Context_Unit        <- Routed_Context
-Constraints/DG_Reader_Transport    <- Routed_Context_Unit
+Constraints/DG_Reader_Transport    <- Routed_Context
 Result/DG_Analysis_Adapter         <- Routed_Context, Contextual_Check_Report,
                                       Solved_Table
-Context/Routed_Analysis_Sound      <- DG_Analysis_Adapter, Routed_Context_Unit
+Context/Routed_Analysis_Sound      <- DG_Analysis_Adapter, Routed_Context
 ```
 
 `DG_State` imports only the type classes its lattice instances need; every

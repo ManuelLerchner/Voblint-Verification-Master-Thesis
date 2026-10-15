@@ -17,7 +17,7 @@ text \<open>
 
   A context-insensitive analysis is this constructor at the unit context:
   \<open>Analysis_Global ()\<close> as the only global key, \<open>Activation_Seed\<close> as the seed
-  constructor and \<open>route_unit\<close> as the routing function. There is no second
+  constructor and the constant routing function. There is no second
   unit-context generator.
 
   Solver policy is deliberately outside this constructor. Always-join,

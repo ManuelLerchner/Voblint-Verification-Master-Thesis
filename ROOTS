@@ -7,7 +7,6 @@ src/Abstract_Interpreter/Framework
 src/Abstract_Interpreter/Exec
 src/Analyses/Shared/Routing
 src/Analyses/Shared/Result
-src/Analyses/Shared/Nonrelational
 src/Analyses/Sign
 src/Analyses/Typed_Sign
 src/Analyses/Interval

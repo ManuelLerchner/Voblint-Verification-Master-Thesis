@@ -1,6 +1,6 @@
 chapter Voblint
 
-session Voblint_Analysis_Sign in "." = "Voblint_Nonrelational" +
+session Voblint_Analysis_Sign in "." = "Voblint_Result" +
   description "The Sign domain: seven-element lattice, executable bridge, end-to-end soundness"
   sessions
     "Voblint_VIMP"

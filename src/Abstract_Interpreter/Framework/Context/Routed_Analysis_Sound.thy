@@ -1,5 +1,5 @@
 theory Routed_Analysis_Sound
-  imports DG_Analysis_Adapter Routed_Context_Unit
+  imports DG_Analysis_Adapter
 begin
 
 section \<open>Reading a solved routed system as an analysis result\<close>

@@ -1,6 +1,6 @@
 chapter Voblint
 
-session Voblint_Typed_Nonrel in "." = "Voblint_Nonrelational" +
+session Voblint_Typed_Nonrel in "." = "Voblint_Result" +
   description "Kind-aware integer domains, the typed non-relational transfer and its
     executable carrier, and the typed analysis run by the shared D/G pipeline at any
     such domain, with its end-to-end soundness"

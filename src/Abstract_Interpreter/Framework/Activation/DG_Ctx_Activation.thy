@@ -16,8 +16,8 @@ text \<open>
   Entry and callee-seed coverage remain with the concrete analysis.
 
   Both carriers are parameters: \<open>\<gamma>\<^sub>D\<^sub>G\<close> interprets a D/G pair, while
-  \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not an
-  \<open>abs_state\<close> therefore instantiates this locale directly. The generator
+  \<open>\<gamma>\<^sub>M\<close> interprets whatever \<open>sg\<close> returns. An analysis whose reader is not a
+  \<open>gabs_state\<close> therefore instantiates this locale directly. The generator
   buffers its writes at \<open>Inr buffer_key\<close>; \<open>global_of\<close> names the key each global
   name is read from, and \<open>sg_cov\<close> ties the reader at a covered key to
   \<open>\<gamma>\<^sub>D\<^sub>G\<close> of the local slot against the environment \<^term>\<open>genv global_of sigma\<close>.

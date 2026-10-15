@@ -103,7 +103,7 @@ theorem compiled_call_string_gk_finite:
 section \<open>The monovariant policy\<close>
 
 text \<open>
-  The same result for the monovariant \<open>route_unit\<close> policy, where it needs less: a context is
+  The same result for the monovariant policy, where it needs less: a context is
   \<^typ>\<open>unit\<close>, so the context factor is a singleton and the node bound is the
   entire hypothesis. Stated over \<open>fst ` vars\<close> rather than a product, since with
   one context there is nothing for a product to say.

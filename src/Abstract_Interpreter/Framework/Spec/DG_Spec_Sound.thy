@@ -201,8 +201,7 @@ text \<open>
 
   Both levels earn their place, which is why there are two of them.
   \<open>combine_transfer_program\<close> is used at an arbitrary
-  \<^type>\<open>gman_combine_transfer\<close> --- by the ownership-split observation
-  equations in \<open>DG_Ownership_Split_Spec\<close>, and by the relational domain's --- while
+  \<^type>\<open>gman_combine_transfer\<close>, while
   \<open>dg_spec_combine_program\<close> is used at a selected specification, by
   \<open>combine_sound_program\<close> below, which restates the return obligation at
   two \<^emph>\<open>solver addresses\<close>. That is what the value form cannot express: a

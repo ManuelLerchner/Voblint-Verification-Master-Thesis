@@ -1,16 +1,14 @@
 theory Check_Answer
-  imports Abstract_Checks Contextual_Check_Report
+  imports Contextual_Check_Report
 begin
 
 section \<open>A domain's answer to the value of an expression\<close>
 
 text \<open>
-  A domain with a check decision procedure answers \<open>EvalInt e\<close> for every
-  comparison or logical operator \<open>e\<close>: such an expression evaluates to \<open>0\<close> or
-  \<open>1\<close>, so a decided \<^const>\<open>sound_check_query.check_query\<close> is the
-  exact integer, and an undecided one is the interval \<open>[0, 1]\<close>. Other
-  expressions it declines with \<open>\<top>\<close>. A check is then classified from this
-  answer exactly as the domain's own \<open>classify_check\<close> classified it.
+  A domain that decides a comparison or logical operator \<open>e\<close> three-valuedly
+  answers \<open>EvalInt e\<close> with \<open>bool_answer\<close>: such an expression evaluates to
+  \<open>0\<close> or \<open>1\<close>, so a decided truth value is the exact integer, and an undecided
+  one is the interval \<open>[0, 1]\<close>. \<open>classify_bool_answer\<close> reads the verdict back.
 \<close>
 
 definition bool_answer :: "bool option \<Rightarrow> answer" where
@@ -43,47 +41,6 @@ proof (cases r)
     by (simp add: bool_answer_def classify_answer_gamma)
 qed (auto simp: bool_answer_def classify_answer_of_int)
 
-context sound_check_query
-begin
-
-fun eval_answer :: "'d \<Rightarrow> query \<Rightarrow> answer" where
-  "eval_answer d (EvalInt e) = (if bool_valued e then bool_answer (check_query e d) else \<top>)"
-
-lemma eval_answer_sound:
-  assumes mem: "s \<in> \<gamma>\<^sub>S d"
-  shows "eval_holds q (eval_answer d q) s"
-proof (cases q)
-  case (EvalInt e)
-  show ?thesis
-  proof (cases "bool_valued e")
-    case True
-    have v: "\<lbrakk>e\<rbrakk>\<^sub>e s = (if truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) then 1 else 0)"
-      by (rule aval_bool_valued[OF True])
-    show ?thesis
-    proof (cases "check_query e d")
-      case None
-      then show ?thesis
-        using EvalInt True v by (simp add: bool_answer_def split: if_splits)
-    next
-      case (Some b)
-      have "truthy (\<lbrakk>e\<rbrakk>\<^sub>e s) = b"
-        by (rule check_query_sound[OF mem Some])
-      then show ?thesis
-        using EvalInt True v Some by (simp add: bool_answer_def split: if_splits)
-    qed
-  qed (simp add: EvalInt)
-qed
-
-lemma check_query_check_truth_exp: "check_query (check_truth_exp c) d = check_query c d"
-  by (cases c) (simp_all add: check_truth_exp_def truthy_query_def)
-
-theorem classify_eval_answer:
-  "classify_answer (eval_answer d (check_query_of c)) = Decided (classify_check c d)"
-  by (simp add: check_query_check_truth_exp classify_bool_answer classify_check_def
-      split: option.splits bool.splits)
-
-end
-
 section \<open>Deciding a check from an answer\<close>
 
 text \<open>
@@ -97,8 +54,7 @@ text \<open>
 
 text \<open>
   The question is the check's truth value, which a language spells with its own
-  expressions: \<open>tx c\<close> evaluates to \<open>1\<close> where \<open>c\<close> holds and to \<open>0\<close> elsewhere. For the
-  untyped language it is \<^const>\<open>check_truth_exp\<close>.
+  expressions: \<open>tx c\<close> evaluates to \<open>1\<close> where \<open>c\<close> holds and to \<open>0\<close> elsewhere.
 \<close>
 
 definition answer_check ::
@@ -120,23 +76,5 @@ proof -
     and "answer_check tx q c v = Check_Refuted \<Longrightarrow> \<not> truthy (ev c s)"
     using val by (auto simp: answer_check_def classify_answer_gamma split: if_splits)
 qed
-
-lemma answer_check_proved:
-  assumes "answer_check check_truth_exp q c v = Check_Proved"
-    and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
-  shows "truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using answer_check_gproved[where ev = aval and tx = check_truth_exp, OF aval_check_truth_exp] assms
-  by simp
-
-lemma answer_check_refuted:
-  assumes "answer_check check_truth_exp q c v = Check_Refuted"
-    and "eval_holds (check_query_of c) (q v (check_query_of c)) s"
-  shows "\<not> truthy (\<lbrakk>c\<rbrakk>\<^sub>e s)"
-  using answer_check_grefuted[where ev = aval and tx = check_truth_exp, OF aval_check_truth_exp] assms
-  by simp
-
-lemma (in sound_check_query) answer_check_eval_answer:
-  "answer_check check_truth_exp eval_answer = classify_check"
-  by (simp add: fun_eq_iff answer_check_def classify_eval_answer del: eval_answer.simps)
 
 end

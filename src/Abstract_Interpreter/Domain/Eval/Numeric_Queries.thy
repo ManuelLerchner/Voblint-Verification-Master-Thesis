@@ -16,8 +16,8 @@ text \<open>
   \<open>sound_numeric_queries\<close> fixes that shape together with its soundness
   obligation, as \<open>sound_truth_test\<close> does for \<open>tobool\<close>. Kept in a session with
   no \<open>exp\<close>/\<open>store\<close> concept at all, so a domain
-  that only has these two operations could still interpret it: the
-  \<open>sound_refinement\<close> locale refines an
+  that only has these two operations could still interpret it: an inverse
+  operator refines an
   abstract value under an assumed truth value; \<open>sound_numeric_queries\<close>
   instead classifies an already-fixed pair of values as provably related,
   provably unrelated, or neither.
@@ -25,7 +25,7 @@ text \<open>
   \<open>numeric_query_judgments\<close>, below, is how every domain here builds such an
   instance: it packages four yes/no judgments into the two queries and proves
   the obligation once, so no domain restates that step. Where the four
-  judgments come from is the domain's business. Every \<open>sound_refinement\<close>
+  judgments come from is the domain's business. Every \<open>sound_inverse_ops\<close>
   instance reads them off its own narrowing operators, in the
   \<open>Backward_Numeric_Queries\<close> theory, and gets an instance for free; a
   concrete domain may instead supply sharper, hand-tuned judgments when that

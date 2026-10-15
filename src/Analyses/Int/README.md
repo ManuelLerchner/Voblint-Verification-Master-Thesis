@@ -4,7 +4,7 @@
 Congruence. It is the only domain here whose components can talk to each other, and
 that exchange — refinement — is what this session is about.
 
-It is parented on `Voblint_Nonrelational` and lists the four component sessions, so it
+It is parented on `Voblint_Result` and lists the four component sessions, so it
 is the one analysis session that sees more than its own domain, by construction.
 
 ## Vocabulary
@@ -137,7 +137,7 @@ activation list.
 A call string is the last `k` call sites on the stack. `cs_route` never reads
 the state it is handed, which makes `fun_route_activation_collect_sound` the
 applicable endpoint. The entry-state run keys a callee on the abstract values
-its formals hold on entry, and `exec_formals_route` does read that state, so
+its formals hold on entry, and the executable route does read that state, so
 `entry_state_activation_collect_sound` applies there instead — its
 admitted-context relation is the one the entry answer induces rather than the
 graph of a function on stores.

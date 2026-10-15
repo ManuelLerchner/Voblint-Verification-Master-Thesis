@@ -1,7 +1,7 @@
 theory Sign_Backward
   imports
     Sign_Arithmetic
-    "Voblint_Nonrelational.Exec_Backward"
+    "Voblint_Domain.Backward_Domain_Mono"
     "Voblint_Domain.Backward_Numeric_Queries"
 begin
 
@@ -12,11 +12,9 @@ text \<open>The sign meet lives with the lattice in \<^theory>\<open>Voblint_Dom
 subsection \<open>Backward-analysis: inverse operators\<close>
 
 text \<open>
-  Per the backward-domain plan, @{text inv_less_sign} provides sign-specific
-  refinement when a guard @{text "e1 < e2"} is known true or false. Plus/minus/times
-  are too coarse for useful arithmetic inversion in sign, so they instantiate the
-  shared @{const inv_conservative} (identity) instead of a per-domain no-op; the
-  structural bfilter propagation (And/Or/Not/Eq) is where sign gains.
+  @{text inv_less_sign} provides sign-specific refinement when a guard
+  @{text "e1 < e2"} is known true or false. Plus/minus/times are too coarse for
+  useful arithmetic inversion in sign, so this theory gives no inverse for them.
 \<close>
 
 fun inv_less_sign :: "bool => sign => sign => sign * sign" where
@@ -42,9 +40,8 @@ lemma inv_less_sign_sound:
 
 text \<open>
   @{text inv_eq_sign} narrows on a guard @{text \<open>e1 = e2\<close>} known true or
-  false. The true branch narrows both operands to their intersection, exactly
-  matching what \<open>bfilter\<close> already computes for @{text \<open>Eq _ _ True\<close>}
-  via @{const inf} directly. The false branch only narrows a boundary
+  false. The true branch narrows both operands to their intersection,
+  @{const inf}. The false branch only narrows a boundary
   singleton away from a wider operand that has @{const SZero} as one of its
   bounds: excluding @{text 0} from @{const SNonNeg} leaves @{const SPos},
   from @{const SNonPos} leaves @{const SNeg}; both directions, symmetric in
@@ -212,45 +209,5 @@ next
     using False fst_mono snd_mono
     by (simp only: inv_less_sign.simps Let_def sign_le_iff prod.sel)
 qed
-
-subsection \<open>The refinement operations and their certificate\<close>
-
-text \<open>
-  Sign's refinement choices: the lattice meet, the sign-specific comparison
-  inverses, and the conservative identity for arithmetic. The guard filters and
-  the branch are not stated here; \<open>Sign_Transfer\<close> derives them from this record
-  and the evaluator.
-\<close>
-
-definition sign_refine_ops :: "sign refine_ops" where
-  "sign_refine_ops =
-     \<lparr>r_tobool = sign_tobool, r_inv_less = inv_less_sign, r_inv_eq = inv_eq_sign,
-      r_inv_plus = inv_conservative, r_inv_minus = inv_conservative,
-      r_inv_times = inv_conservative, r_intersect = inf\<rparr>"
-
-lemma sign_refine_ops_simps [simp]:
-  "r_tobool sign_refine_ops = sign_tobool"
-  "r_inv_less sign_refine_ops = inv_less_sign"
-  "r_inv_eq sign_refine_ops = inv_eq_sign"
-  "r_inv_plus sign_refine_ops = inv_conservative"
-  "r_inv_minus sign_refine_ops = inv_conservative"
-  "r_inv_times sign_refine_ops = inv_conservative"
-  "r_intersect sign_refine_ops = inf"
-  by (simp_all add: sign_refine_ops_def)
-
-text \<open>
-  The certificate discharges soundness, monotonicity, and reductiveness together
-  against @{locale mono_refinement}. Each \<open>inv_*\<close>'s mono/reductive obligation
-  is one @{const le_pair} fact, transparent notation for the componentwise \<open>\<and>\<close> the
-  per-operator lemmas above already prove.
-\<close>
-
-lemma sign_backward_domain:
-  "mono_refinement inf aval_sign sign_tobool
-     inv_less_sign inv_eq_sign inv_conservative inv_conservative inv_conservative"
-proof unfold_locales
-qed (use sign_tobool_mono in \<open>simp_all add: inf_sign_sound inv_less_sign_sound
-       inv_eq_sign_sound inv_conservative_def sign_tobool_sound inf_mono sign_arith.aval_dom_mono
-       inv_less_sign_mono inv_eq_sign_mono le_infI1 le_infI2\<close>)
 
 end
