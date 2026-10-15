@@ -424,7 +424,7 @@ text \<open>
 theorem run_voblint_call_string_chain:
   fixes p :: imp_prog and ds :: kind_decls and k :: nat
   defines "g \<equiv> typed_cfg p ds" and "S \<equiv> tinit_stores (kenv_of ds)"
-    and "adm \<equiv> context_policy_of_fun (typed_cs k)"
+    and "adm \<equiv> context_policy_of_fun (cs_context k)"
   assumes run: "run_voblint conf ds p = Analysed res"
     and cx: "conf_context conf = Typed_Call_String k"
     and s0: "s0 \<in> S"
@@ -446,7 +446,7 @@ proof -
   have buckets: "(\<Union>c'. typed.gactivation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v"
     for v
     unfolding adm_def g_def S_def tnode_collect_def
-    by (rule typed_mcp.fun_route_node_collect_eq_Union[where ctx_fun = "typed_cs k", symmetric])
+    by (rule typed_mcp.fun_route_node_collect_eq_Union[where ctx_fun = "cs_context k", symmetric])
   show ?thesis
     unfolding g_def S_def
     by (rule run_voblint_spine[OF run s0[unfolded S_def] exec has_ctx[unfolded g_def S_def]

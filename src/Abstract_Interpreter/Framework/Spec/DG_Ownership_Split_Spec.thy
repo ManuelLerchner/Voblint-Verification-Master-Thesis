@@ -1,5 +1,5 @@
 theory DG_Ownership_Split_Spec
-  imports DG_Local_State_Spec State_Restriction "Voblint_Solver.Strategy_Program_Fold"
+  imports "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability" State_Restriction "Voblint_Solver.Strategy_Program_Fold"
 begin
 
 section \<open>Lifting a whole-state analysis onto the global channel\<close>

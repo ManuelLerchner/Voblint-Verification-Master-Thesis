@@ -1,5 +1,5 @@
 theory Typed_Invariants
-  imports Typed_CFG
+  imports Source_To_Trace
 begin
 
 section \<open>Typed stores stay typed\<close>

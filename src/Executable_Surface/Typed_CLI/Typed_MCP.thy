@@ -113,7 +113,7 @@ global_interpretation typed_mcp: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
     "tmcp_comp sem ds (tactivation as)" "tmcp_emp (tactivation as)" tmcp_rd
     "tmcp_init ds (tactivation as)"
-    Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
+    Analysis_Buffer Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((var_id, cfg_node list) global_unknown)
        TYPE((tmcp_st lifted, tmcp_st lifted) dg_state) r"
@@ -184,8 +184,8 @@ lemma typed_mcp_node_sound:
   shows "(reaching ds p v)
            \<subseteq> (\<Union>ctx. tmcp.act_gamma ds (tactivation as) (typed_mcp.state_at sem ds as k r tglobal p ctx v))"
   using typed_mcp.gfun_route_result_node_sound
-      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
-  by (simp add: tnode_collect_def)
+      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "cs_context k" v]
+  by (simp add: tnode_collect_def cs_route_def cs_context_def)
 
 theorem typed_mcp_verdict_sound:
   assumes wf: "wf_program_compile_input p"

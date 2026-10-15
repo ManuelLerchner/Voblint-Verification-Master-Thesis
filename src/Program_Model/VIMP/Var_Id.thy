@@ -1,5 +1,5 @@
 theory Var_Id
-  imports "Voblint_VIMP.VIMP_Proc"
+  imports VIMP_Proc
 begin
 
 section \<open>Static variable identities\<close>

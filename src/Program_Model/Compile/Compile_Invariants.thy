@@ -414,4 +414,31 @@ proof -
   then show ?thesis by simp
 qed
 
+section \<open>The typed program is a compiler input\<close>
+
+text \<open>The typed program is a well-formed compiler input whenever the source program is:
+  elaboration resolves every name to an identity distinct from the return slot, and keeps
+  the control structure the contract inspects.\<close>
+
+theorem typed_wf_compile_input:
+  assumes wf: "wf_compile_input (declared_global p) (prog_table p) ps"
+  shows "gwf_compile_input tvars ReturnVar tglobal (typed_ptable p ds) ps"
+proof -
+  from wf have src: "wf_source_program (declared_global p) (prog_table p)"
+    by (simp add: gwf_compile_input_def)
+  note main = typed_ptable_main [OF src, of ds]
+  have "gwf_source_com tvars ReturnVar (typed_ptable p ds) (main_body (typed_ptable p ds))"
+    using src by (simp add: main(2) gwf_source_com_elab_com gwf_source_program_def)
+  moreover have "no_return (main_body (typed_ptable p ds))"
+    using src by (simp add: main(2) gwf_source_program_def)
+  moreover have "gwf_proc_decl tvars ReturnVar tglobal (typed_ptable p ds) decl"
+    if "typed_ptable p ds q = Some decl" for q decl
+    using that gwf_proc_decl_typed [OF src] by (auto simp: typed_ptable_def)
+  moreover have "special_table q = None" if "typed_ptable p ds q \<noteq> None" for q
+    using that src by (simp add: gwf_source_program_def)
+  ultimately show ?thesis
+    using wf main(1)
+    by (simp add: gwf_compile_input_def gwf_source_program_def greserved_ret_var_def)
+qed
+
 end

@@ -7,7 +7,6 @@ session Voblint_CLI in "." = "Voblint_Typed_CLI" +
      independent of the demonstration and regression theories in
      Voblint_Examples"
   sessions
-    "Voblint_Typed"
     "HOL-Library"
   theories
     Dispatch_Carrier

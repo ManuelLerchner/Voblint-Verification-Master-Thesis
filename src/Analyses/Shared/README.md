@@ -132,8 +132,7 @@ value becomes a sign or an interval.
 ## Reading order
 
 `Routing/Compiled_Routed_Equations` first for the executable construction,
-then `Call_String_Routed_Context`, the policy whose route never reads the state;
-`Entry_State_Routed_Context` reads as a variation on it. Then
+then `Entry_State_Routed_Context`. Then
 `Result/DG_Result_Construction` for what a solve turns into,
 `Result/Analysis_Surface` for how a caller reads that back, and
 `Result/DG_Analysis` for the assembly that puts all of it together ---

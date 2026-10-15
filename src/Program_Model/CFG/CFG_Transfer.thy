@@ -1,5 +1,5 @@
 theory CFG_Transfer
-  imports CFG_Def
+  imports CFG_Def "Voblint_VIMP.Typed_Semantics"
 begin
 
 section \<open>What each kind of edge does to the store\<close>
@@ -179,5 +179,14 @@ lemma distinct_global_footprints [simp]:
   "distinct (gcall_global_reads evars G es)"
   by (simp_all add: globals_in_exp_def gedge_global_reads_def gedge_global_writes_def
     gcall_global_reads_def)
+
+section \<open>The typed instance\<close>
+
+text \<open>Core VIMP instantiates the edge and transfer semantics with the typed evaluator, the
+  shared return slot, conversion to the destination's kind and the \<^const>\<open>GlobalId\<close>
+  globals.\<close>
+
+global_interpretation typed: cfg_transfer_sem teval ReturnVar "tconv \<kappa>" tglobal
+  for \<kappa> :: kenv .
 
 end

@@ -1,5 +1,5 @@
 theory VIMP_Proc_to_CFG
-  imports "Voblint_CFG.CFG_Def"
+  imports "Voblint_CFG.CFG_Def" "Voblint_VIMP.Typed_Semantics"
 begin
 
 section \<open>Procedure-aware CFG compilation for \<open>com\<close> programs\<close>
@@ -504,5 +504,13 @@ proof -
     unfolding compile_proc_def r_def by (auto simp: Let_def)
   with cb e i show ?thesis unfolding r_def by (auto intro: that)
 qed
+
+section \<open>The typed graph\<close>
+
+text \<open>The typed graph compiles the elaborated procedures directly; no expression on it is
+  lowered back to source names.\<close>
+
+definition typed_cfg :: "imp_prog \<Rightarrow> kind_decls \<Rightarrow> (var_id, texp) gcfg" where
+  "typed_cfg p ds = compile_prog (typed_ptable p ds) (prog_procs p)"
 
 end

@@ -1,5 +1,6 @@
 theory DG_Keyed_Split_Spec
-  imports DG_Local_State_Spec "Voblint_Solver.Strategy_Tree_Side_Buffering"
+  imports "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability"
+    "Voblint_Solver.Strategy_Tree_Side_Buffering"
     "Voblint_Solver.Strategy_Program_Fold"
 begin
 

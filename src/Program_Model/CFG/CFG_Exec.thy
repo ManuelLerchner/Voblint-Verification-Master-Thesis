@@ -116,4 +116,15 @@ lemma frames_match_activation:
      = frames_match frs stk"
   by (simp add: frames_match_def cframe_act_def)
 
+section \<open>The typed instance\<close>
+
+definition tcstep :: "kenv \<Rightarrow> (var_id, texp) gcfg
+    \<Rightarrow> var_id gcconf \<Rightarrow> var_id gcconf \<Rightarrow> bool" where
+  "tcstep \<kappa> = cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal"
+
+global_interpretation typed: cfg_exec_sem teval ReturnVar "tconv \<kappa>" tglobal
+  rewrites "cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal = tcstep \<kappa>"
+  for \<kappa> :: kenv
+  by (simp add: tcstep_def)
+
 end

@@ -209,6 +209,18 @@ end
 
 end
 
+section \<open>The typed instance\<close>
+
+text \<open>The stores valid activation traces of the typed graph reach at a node.\<close>
+
+definition tnode_collect :: "kenv \<Rightarrow> (var_id, texp) gcfg \<Rightarrow> tstore set \<Rightarrow> cfg_node \<Rightarrow> tstore set" where
+  "tnode_collect \<kappa> = collect_sem.gnode_collect teval ReturnVar (tconv \<kappa>) tglobal"
+
+global_interpretation typed: collect_sem teval ReturnVar "tconv \<kappa>" tglobal
+  rewrites "collect_sem.gnode_collect teval ReturnVar (tconv \<kappa>) tglobal = tnode_collect \<kappa>"
+  for \<kappa> :: kenv
+  by (simp add: tnode_collect_def)
+
 section \<open>The collecting semantics is inhabited\<close>
 
 text \<open>
@@ -219,9 +231,12 @@ text \<open>
   collected at the entry, and the assigned store is collected one edge later.
 \<close>
 
-definition activation_trace_witness_cfg :: cfg where
+abbreviation activation_trace_witness_var :: var_id where
+  "activation_trace_witness_var \<equiv> GlobalId (STR ''x'')"
+
+definition activation_trace_witness_cfg :: "(var_id, texp) gcfg" where
   "activation_trace_witness_cfg =
-     \<lparr> intra = {(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1)},
+     \<lparr> intra = {(Statement 0, EA_Assign activation_trace_witness_var (TN I32 1), Statement 1)},
        calls = {},
        cfg_entry = Statement 0 \<rparr>"
 
@@ -229,39 +244,40 @@ lemma activation_trace_witness_entry [simp]: "cfg_entry activation_trace_witness
   by (simp add: activation_trace_witness_cfg_def)
 
 lemma activation_trace_witness_edge [simp]:
-  "(Statement 0, EA_Assign (STR ''x'') (N 1), Statement 1) \<in> intra activation_trace_witness_cfg"
+  "(Statement 0, EA_Assign activation_trace_witness_var (TN I32 1), Statement 1)
+     \<in> intra activation_trace_witness_cfg"
   by (simp add: activation_trace_witness_cfg_def)
 
-text \<open>The witness runs at source names and the evaluator \<^const>\<open>aval\<close>.\<close>
+text \<open>The witness runs at the typed instance, for every kind environment.\<close>
 
 lemma activation_trace_witness_root:
-  "Root [(Statement 0, s)]
-     \<in> trace_sem.gvalid_activation_trace aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s}"
+  "Root [(Statement 0, s)] \<in> typed.gvalid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
 proof -
-  interpret C: collect_sem aval ret_var "\<lambda>_ n. n" \<G> .
   have "Root [(cfg_entry activation_trace_witness_cfg, s)]
-          \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
-    by (rule C.gvalid_activation_trace.root) simp
+          \<in> typed.gvalid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+    by (rule typed.gvalid_activation_trace.root) simp
   then show ?thesis by simp
 qed
 
 theorem node_collect_witness:
-  "s \<in> collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s} (Statement 0)"
-  "s(STR ''x'' := 1)
-     \<in> collect_sem.gnode_collect aval ret_var (\<lambda>_ n. n) \<G> activation_trace_witness_cfg {s} (Statement 1)"
+  "s \<in> tnode_collect \<kappa> activation_trace_witness_cfg {s} (Statement 0)"
+  "s(activation_trace_witness_var := tconv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1))
+     \<in> tnode_collect \<kappa> activation_trace_witness_cfg {s} (Statement 1)"
 proof -
-  interpret C: collect_sem aval ret_var "\<lambda>_ n. n" \<G> .
-  have root: "Root [(Statement 0, s)] \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
+  have root: "Root [(Statement 0, s)] \<in> typed.gvalid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
     by (rule activation_trace_witness_root)
-  show "s \<in> C.gnode_collect activation_trace_witness_cfg {s} (Statement 0)"
-    using C.node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
-  have "extend (Root [(Statement 0, s)]) (Statement 1, s(STR ''x'' := 1))
-          \<in> C.gvalid_activation_trace activation_trace_witness_cfg {s}"
-    by (rule C.gvalid_activation_trace.intra[OF root, where a = "EA_Assign (STR ''x'') (N 1)"
-                                        and v = "Statement 1"])
+  show "s \<in> tnode_collect \<kappa> activation_trace_witness_cfg {s} (Statement 0)"
+    using typed.node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
+  have "extend (Root [(Statement 0, s)])
+          (Statement 1, s(activation_trace_witness_var
+             := tconv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1)))
+          \<in> typed.gvalid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+    by (rule typed.gvalid_activation_trace.intra[OF root,
+          where a = "EA_Assign activation_trace_witness_var (TN I32 1)" and v = "Statement 1"])
        (simp_all add: activation_trace_witness_cfg_def sink_node_def sink_store_def)
-  from C.node_collect_I[OF this]
-  show "s(STR ''x'' := 1) \<in> C.gnode_collect activation_trace_witness_cfg {s} (Statement 1)"
+  from typed.node_collect_I[OF this]
+  show "s(activation_trace_witness_var := tconv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1))
+          \<in> tnode_collect \<kappa> activation_trace_witness_cfg {s} (Statement 1)"
     by (simp add: sink_node_def sink_store_def)
 qed
 

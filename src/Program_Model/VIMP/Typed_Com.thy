@@ -1,5 +1,5 @@
 theory Typed_Com
-  imports Typed_Exp "Voblint_VIMP.VIMP_Program"
+  imports Typed_Exp VIMP_Program
 begin
 
 section \<open>Typed commands\<close>

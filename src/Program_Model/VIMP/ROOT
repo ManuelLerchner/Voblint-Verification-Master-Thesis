@@ -7,7 +7,9 @@ chapter Voblint
    it costs nothing -- heap ancestry preloads, it does not import, so no theory
    context changes. *)
 session Voblint_VIMP in "." = "HOL-Library" +
-  description "VIMP syntax, small-step, and procedure language"
+  description
+    "The source language: surface VIMP syntax, its elaboration to core VIMP over
+     machine-integer kinds and variable identities, and the core small-step semantics"
   sessions
     Deriving
     "HOL-IMP"
@@ -25,5 +27,9 @@ session Voblint_VIMP in "." = "HOL-Library" +
     VIMP_Special
     VIMP_Proc
     VIMP_Program
+    Var_Id
+    Typed_Exp
+    Typed_Com
+    Typed_Semantics
     VIMP_Grammar_Generated
     VIMP_Notation

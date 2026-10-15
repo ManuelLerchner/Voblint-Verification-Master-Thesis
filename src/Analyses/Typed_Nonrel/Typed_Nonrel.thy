@@ -1,5 +1,5 @@
 theory Typed_Nonrel
-  imports "Voblint_Typed_CFG.Typed_Invariants" "Voblint_Domain.Kind_Lifted"
+  imports "Voblint_Compile.Typed_Invariants" "Voblint_Domain.Kind_Lifted"
     "Voblint_Framework.Analysis_Query"
 begin
 

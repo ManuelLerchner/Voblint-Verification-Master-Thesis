@@ -3,6 +3,7 @@ theory Typed_Nonrel_Analysis
     Typed_Exec
     "Voblint_Result.DG_Live_Unknowns"
     "Voblint_Solver.Globals_Rule"
+    "Voblint_Framework.Call_String_Context"
 begin
 
 unbundle default_st_syntax
@@ -144,14 +145,11 @@ next
   case (CallsUnique p) show ?case by (rule typed_cfg_calls_source_unique)
 qed
 
-abbreviation typed_cs :: "nat \<Rightarrow> cfg_node \<Rightarrow> cfg_node list \<Rightarrow> 'x \<Rightarrow> cfg_node list" where
-  "typed_cs k u ctx x \<equiv> take k (u # ctx)"
-
 global_interpretation typed_nonrel: gdg_analysis
     teval ReturnVar "\<lambda>_. tconv (kenv_of ds)" "\<lambda>_. tglobal" "\<lambda>_. tinit_stores (kenv_of ds)"
     "\<lambda>_ _. typed_exec_spec sem (kenv_of ds) :: (var_id, texp, 'a::kind_int_domain tst lifted) glocal_spec"
     "\<lambda>_. tst_is_bot" "\<lambda>\<G>. default_st_to_fun \<G>" "tinit_st ds"
-    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_ u ctx d ca. typed_cs k u ctx d" "[]"
+    "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
        TYPE(('a tst lifted, 'a tst lifted) dg_state) r"
@@ -184,8 +182,8 @@ lemma typed_nonrel_node_sound:
            \<subseteq> (\<Union>ctx. gamma_tabs (kenv_of ds)
                  (typed_nonrel.state_at sem ds k r tglobal p ctx v :: 'a tabs))"
   using typed_nonrel.gfun_route_result_node_sound
-      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k" v]
-  by (simp add: tnode_collect_def)
+      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "cs_context k" v]
+  by (simp add: tnode_collect_def cs_route_def cs_context_def)
 
 theorem typed_nonrel_source_sound:
   assumes wf: "wf_program_compile_input p"
@@ -204,17 +202,17 @@ theorem typed_nonrel_report_ctx_sound:
     and solves: "typed_nonrel.terminates TYPE('a::kind_int_domain) sem ds k r tglobal p"
   shows "(v, c, Check_Proved) \<in> set (typed_nonrel.report TYPE('a) sem ds k r tglobal p ctx)
            \<Longrightarrow> \<forall>s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds)) tglobal
-                     (context_policy_of_fun (typed_cs k)) [] (typed_cfg p ds)
+                     (context_policy_of_fun (cs_context k)) [] (typed_cfg p ds)
                      (tinit_stores (kenv_of ds)) v ctx. truthy (teval c s)"
     and "(v, c, Check_Refuted) \<in> set (typed_nonrel.report TYPE('a) sem ds k r tglobal p ctx)
            \<Longrightarrow> \<forall>s \<in> ctx_sem.gactivation_collect teval ReturnVar (tconv (kenv_of ds)) tglobal
-                     (context_policy_of_fun (typed_cs k)) [] (typed_cfg p ds)
+                     (context_policy_of_fun (cs_context k)) [] (typed_cfg p ds)
                      (tinit_stores (kenv_of ds)) v ctx. \<not> truthy (teval c s)"
   using typed_nonrel.gfun_route_report_proved_sound
-      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k"]
+      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "cs_context k"]
     typed_nonrel.gfun_route_report_refuted_sound
-      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "typed_cs k"]
-  by simp_all
+      [OF typed_cfg_def _ typed_wf_compile_input[OF wf] solves, of "cs_context k"]
+  by (simp_all add: cs_route_def cs_context_def)
 
 text \<open>The aggregate a caller prints: one verdict per check over every context the solved
   table covers at its node. A decided verdict holds at every typed store reaching the
@@ -262,10 +260,10 @@ lemma activation_context_of_typed_cs0: "activation_context_of (\<lambda>_ _ _. [
 lemma typed_cs0_node_collect:
   "tnode_collect \<kappa> g S v
      = ctx_sem.gactivation_collect teval ReturnVar (tconv \<kappa>) tglobal
-         (context_policy_of_fun (typed_cs 0)) [] g S v []"
+         (context_policy_of_fun (cs_context 0)) [] g S v []"
   unfolding tnode_collect_def
-    collect_sem.node_collect_eq_Union_activation_of_fun[where f = "typed_cs 0" and c\<^sub>0 = "[]"]
-  by (auto simp: ctx_sem.activation_collect_of_fun activation_context_of_typed_cs0)
+    collect_sem.node_collect_eq_Union_activation_of_fun[where f = "cs_context 0" and c\<^sub>0 = "[]"]
+  by (auto simp: ctx_sem.activation_collect_of_fun cs_context_0 activation_context_of_typed_cs0)
 
 context
   fixes sem :: sem_conf and ds :: kind_decls and r :: globals_rule

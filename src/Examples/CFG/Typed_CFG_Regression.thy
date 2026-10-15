@@ -1,5 +1,5 @@
 theory Typed_CFG_Regression
-  imports "Voblint_Typed_CFG.Typed_CFG" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_Compile.Source_To_Trace" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Regression: the typed graph\<close>

@@ -31,6 +31,5 @@ session Voblint_Compile in "." = "Voblint_CFG" +
     (* The bridge, and the only theory that needs both branches: a source run
        becomes a valid activation trace (csim -> valid_activation_trace). *)
     Source_To_Trace
-    (* Elaboration annotates each statement with its compiled nodes; on the
-       compiler's output the simulation names its node (csim_point_compile_prog). *)
-    Elaborated_Compilation
+    (* Typed stores stay typed along valid activation traces of the typed graph. *)
+    Typed_Invariants

@@ -187,14 +187,12 @@ module Generated : sig
   type ('a, 'b, 'c, 'd, 'e, 'f, 'g) analysis_report_ext
   type ('a, 'b, 'c, 'd, 'e, 'f, 'g, 'h, 'i) report_renderer_ext
   val cfg_entry : ('a, 'b, 'c) gcfg_ext -> cfg_node
-  val prog_procs : unit imp_prog_ext -> string list
+  val sem_int_signed_overflow : 'a sem_conf_ext -> signed_overflow_policy
   val declared_global_vars : 'a imp_prog_ext -> string list
   val prog_table :
     unit imp_prog_ext ->
       string -> (unit, string, exp, unit) gproc_decl_ext option
-  val typed_cfg :
-    unit imp_prog_ext -> (var_id * ikind) list -> (var_id, texp, unit) gcfg_ext
-  val sem_int_signed_overflow : 'a sem_conf_ext -> signed_overflow_policy
+  val prog_procs : unit imp_prog_ext -> string list
   val var_label : var_id -> string
   val prog_main : unit imp_prog_ext -> (unit, string, exp) gcom
   val conf_analyses : 'a voblint_conf_ext -> typed_domain list
@@ -203,6 +201,8 @@ module Generated : sig
   val conf_globals : 'a voblint_conf_ext -> globals_rule
   val string_of_typed_value : typed_value -> string
   val conf_sem : 'a voblint_conf_ext -> unit sem_conf_ext
+  val typed_cfg :
+    unit imp_prog_ext -> (var_id * ikind) list -> (var_id, texp, unit) gcfg_ext
   val arithmetic_operation : 'a arithmetic_obligation -> 'a
   val arithmetic_hazard : 'a arithmetic_obligation -> arithmetic_hazard
   val arithmetic_operand : 'a arithmetic_obligation -> 'a
@@ -7204,316 +7204,6 @@ let rec dg_spec_of _B _C
 
 let rec stabl (State_ext (called, infl, stabl, sigma, more)) = stabl;;
 
-let rec body (Gproc_decl_ext (formals, body, more)) = body;;
-
-let rec classify_special
-  uu x1 = match uu, x1 with SD_Nondet_Int, [] -> Some Nondet_Int
-    | SD_Min, [a; b] -> Some (Min (a, b))
-    | SD_Max, [a; b] -> Some (Max (a, b))
-    | SD_Min, [] -> None
-    | SD_Min, [v] -> None
-    | SD_Min, v :: vb :: vd :: ve -> None
-    | SD_Max, [] -> None
-    | SD_Max, [v] -> None
-    | SD_Max, v :: vb :: vd :: ve -> None
-    | SD_Nondet_Int, v :: va -> None
-    | uu, [v] -> None
-    | uu, v :: vb :: vd :: ve -> None;;
-
-let rec formals (Gproc_decl_ext (formals, body, more)) = formals;;
-
-let rec call_formals
-  pi q =
-    (match pi q
-      with None ->
-        failwith "call_formals: call to an undeclared procedure" (fun _ -> [])
-      | Some a -> formals a);;
-
-let special_pname_nondet_int : string = "__voblint_nondet_int";;
-
-let special_pname_min : string = "min";;
-
-let special_pname_max : string = "max";;
-
-let rec special_table
-  p = (if ((p : string) = special_pname_nondet_int) then Some SD_Nondet_Int
-        else (if ((p : string) = special_pname_min) then Some SD_Min
-               else (if ((p : string) = special_pname_max) then Some SD_Max
-                      else None)));;
-
-let rec csize
-  = function SKIP i -> one_nat
-    | Assign (i, x, a) -> one_nat
-    | Check (i, l, c) -> one_nat
-    | Seq (c1, c2) -> plus_nat (csize c1) (csize c2)
-    | If (i, b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
-    | While (i, b, c) -> plus_nat one_nat (csize c)
-    | Call (i, dst, q, actuals) -> one_nat
-    | Return (i, e) -> one_nat
-    | Restore i -> one_nat
-    | Unwind i -> one_nat;;
-
-let rec is_SKIP = function SKIP x1 -> true
-                  | Assign (x21, x22, x23) -> false
-                  | Check (x31, x32, x33) -> false
-                  | Seq (x41, x42) -> false
-                  | If (x51, x52, x53, x54) -> false
-                  | While (x61, x62, x63) -> false
-                  | Call (x71, x72, x73, x74) -> false
-                  | Return (x81, x82) -> false
-                  | Restore x9 -> false
-                  | Unwind x10 -> false;;
-
-let rec compile _B _C
-  pi p x2 k n = match pi, p, x2, k, n with
-    pi, p, SKIP i, k, n ->
-      (suc n,
-        (Statement n,
-          (inserta
-             (equal_prod equal_cfg_node
-               (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-             (Statement n, (EA_Nop, k)) bot_set,
-            bot_set)))
-    | pi, p, Assign (i, x, a), k, n ->
-        (suc n,
-          (Statement n,
-            (inserta
-               (equal_prod equal_cfg_node
-                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-               (Statement n, (EA_Assign (x, a), k)) bot_set,
-              bot_set)))
-    | pi, p, Check (i, l, c), k, n ->
-        (suc n,
-          (Statement n,
-            (inserta
-               (equal_prod equal_cfg_node
-                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-               (Statement n, (EA_Check (l, c), k)) bot_set,
-              bot_set)))
-    | pi, p, Seq (c1, c2), k, n ->
-        (let (_, (en1, (e1, k1))) =
-           compile _B _C pi p c1 (Statement (plus_nat n (csize c1))) n in
-         let (n2, (_, (e2, k2))) =
-           compile _B _C pi p c2 k (plus_nat n (csize c1)) in
-          (n2, (en1, (sup_set
-                        (equal_prod equal_cfg_node
-                          (equal_prod (equal_gedge_action _B _C)
-                            equal_cfg_node))
-                        e1 e2,
-                       sup_set
-                         (equal_prod equal_cfg_node
-                           (equal_prod (equal_gcall_action _B _C)
-                             (equal_prod equal_cfg_node equal_cfg_node)))
-                         k1 k2))))
-    | pi, p, If (i, b, c1, c2), k, n ->
-        (let (n1, (en1, (e1, k1))) = compile _B _C pi p c1 k (suc n) in
-         let (n2, (en2, (e2, k2))) = compile _B _C pi p c2 k n1 in
-          (n2, (Statement n,
-                 (sup_set
-                    (equal_prod equal_cfg_node
-                      (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                    (sup_set
-                      (equal_prod equal_cfg_node
-                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                      (inserta
-                        (equal_prod equal_cfg_node
-                          (equal_prod (equal_gedge_action _B _C)
-                            equal_cfg_node))
-                        (Statement n,
-                          (EA_Assume b, (if is_SKIP c1 then k else en1)))
-                        (inserta
-                          (equal_prod equal_cfg_node
-                            (equal_prod (equal_gedge_action _B _C)
-                              equal_cfg_node))
-                          (Statement n,
-                            (EA_AssumeNot b, (if is_SKIP c2 then k else en2)))
-                          bot_set))
-                      (if is_SKIP c1 then bot_set else e1))
-                    (if is_SKIP c2 then bot_set else e2),
-                   sup_set
-                     (equal_prod equal_cfg_node
-                       (equal_prod (equal_gcall_action _B _C)
-                         (equal_prod equal_cfg_node equal_cfg_node)))
-                     k1 k2))))
-    | pi, p, While (i, b, c), k, n ->
-        (let (n1, (en1, (e1, k1))) = compile _B _C pi p c (Statement n) (suc n)
-           in
-          (n1, (Statement n,
-                 (sup_set
-                    (equal_prod equal_cfg_node
-                      (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                    (inserta
-                      (equal_prod equal_cfg_node
-                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                      (Statement n, (EA_Assume b, en1))
-                      (inserta
-                        (equal_prod equal_cfg_node
-                          (equal_prod (equal_gedge_action _B _C)
-                            equal_cfg_node))
-                        (Statement n, (EA_AssumeNot b, k)) bot_set))
-                    e1,
-                   k1))))
-    | pi, p, Call (i, dst, q, actuals), k, n ->
-        (match special_table q
-          with None ->
-            (suc n,
-              (Statement n,
-                (bot_set,
-                  inserta
-                    (equal_prod equal_cfg_node
-                      (equal_prod (equal_gcall_action _B _C)
-                        (equal_prod equal_cfg_node equal_cfg_node)))
-                    (Statement n,
-                      (CallEdge (dst, call_formals pi q, actuals),
-                        (FunctionEntry q, k)))
-                    bot_set)))
-          | Some desc ->
-            (match classify_special desc actuals
-              with None ->
-                (suc n,
-                  (Statement n,
-                    (inserta
-                       (equal_prod equal_cfg_node
-                         (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                       (Statement n, (EA_Nop, k)) bot_set,
-                      bot_set)))
-              | Some sc ->
-                (match dst
-                  with None ->
-                    (suc n,
-                      (Statement n,
-                        (inserta
-                           (equal_prod equal_cfg_node
-                             (equal_prod (equal_gedge_action _B _C)
-                               equal_cfg_node))
-                           (Statement n, (EA_Nop, k)) bot_set,
-                          bot_set)))
-                  | Some x ->
-                    (suc n,
-                      (Statement n,
-                        (inserta
-                           (equal_prod equal_cfg_node
-                             (equal_prod (equal_gedge_action _B _C)
-                               equal_cfg_node))
-                           (Statement n, (EA_Special (sc, x), k)) bot_set,
-                          bot_set))))))
-    | pi, p, Return (i, e), k, n ->
-        (suc n,
-          (Statement n,
-            (inserta
-               (equal_prod equal_cfg_node
-                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-               (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
-              bot_set)))
-    | pi, p, Restore i, k, n ->
-        (suc n,
-          (Statement n,
-            (inserta
-               (equal_prod equal_cfg_node
-                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-               (Statement n, (EA_Nop, k)) bot_set,
-              bot_set)))
-    | pi, p, Unwind i, k, n ->
-        (suc n,
-          (Statement n,
-            (inserta
-               (equal_prod equal_cfg_node
-                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-               (Statement n, (EA_Nop, k)) bot_set,
-              bot_set)));;
-
-let rec compile_proc _B _C
-  pi p decl n =
-    (let r = plus_nat n (csize (body decl)) in
-     let (_, (ben, (e, k))) = compile _B _C pi p (body decl) (Statement r) n in
-      (suc r,
-        (inserta
-           (equal_prod equal_cfg_node
-             (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-           (FunctionEntry p, (EA_Body p, ben))
-           (inserta
-             (equal_prod equal_cfg_node
-               (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-             (Statement r, (EA_Ret (None, p), FunctionResult p)) e),
-          k)));;
-
-let rec compile_procs _B _C
-  pi x1 n = match pi, x1, n with pi, [], n -> (n, (bot_set, bot_set))
-    | pi, p :: ps, n ->
-        (match pi p with None -> compile_procs _B _C pi ps n
-          | Some decl ->
-            (let (n1, (e, k)) = compile_proc _B _C pi p decl n in
-             let (n2, (ea, ka)) = compile_procs _B _C pi ps n1 in
-              (n2, (sup_set
-                      (equal_prod equal_cfg_node
-                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-                      e ea,
-                     sup_set
-                       (equal_prod equal_cfg_node
-                         (equal_prod (equal_gcall_action _B _C)
-                           (equal_prod equal_cfg_node equal_cfg_node)))
-                       k ka))));;
-
-let prog_main_name : string = "main";;
-
-let rec main_body
-  pi = (match pi prog_main_name
-         with None ->
-           failwith "main_body: entry procedure not declared"
-             (fun _ -> SKIP (failwith "undefined"))
-         | Some a -> body a);;
-
-let rec compile_prog _B _C
-  pi ps =
-    (let (n1, (eprocs, kprocs)) = compile_procs _B _C pi ps zero_nat in
-     let (_, (emain, kmain)) =
-       compile_proc _B _C pi prog_main_name
-         (Gproc_decl_ext ([], main_body pi, ())) n1
-       in
-      Gcfg_ext
-        (sup_set
-           (equal_prod equal_cfg_node
-             (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
-           eprocs emain,
-          sup_set
-            (equal_prod equal_cfg_node
-              (equal_prod (equal_gcall_action _B _C)
-                (equal_prod equal_cfg_node equal_cfg_node)))
-            kprocs kmain,
-          FunctionEntry prog_main_name, ()));;
-
-let rec proc_rep
-  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
-
-let rec prog_procs
-  p = filtera (fun n -> not ((n : string) = prog_main_name))
-        (map fst (proc_rep p));;
-
-let rec declared_global_vars
-  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
-
-let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
-
-let rec prog_table p = map_of equal_literal (proc_rep p);;
-
-let rec prog_formals
-  p q = (match prog_table p q with None -> [] | Some a -> formals a);;
-
-let rec typed_ptable
-  p ds q =
-    map_option
-      (fun d ->
-        Gproc_decl_ext
-          (map (resolve_var (declared_global p) q) (formals d),
-            elab_com (declared_global p) (prog_formals p) (kenv_of ds) q
-              (body d),
-            ()))
-      (prog_table p q);;
-
-let rec typed_cfg
-  p ds =
-    compile_prog equal_var_id equal_texp (typed_ptable p ds) (prog_procs p);;
-
 let rec tslot3 r = pleft (pright (pright r));;
 
 let rec tslot3o r = pleft (pright (tslot3 r));;
@@ -7799,6 +7489,17 @@ let rec kd_key
     | f, KD (k, a) -> Key_List [Key_Int one_inta; ikind_key k; f a]
     | f, KTop -> Key_List [Key_Int (Int_of_integer (Z.of_int 2))];;
 
+let rec body (Gproc_decl_ext (formals, body, more)) = body;;
+
+let prog_main_name : string = "main";;
+
+let rec main_body
+  pi = (match pi prog_main_name
+         with None ->
+           failwith "main_body: entry procedure not declared"
+             (fun _ -> SKIP (failwith "undefined"))
+         | Some a -> body a);;
+
 let rec no_return = function Seq (c1, c2) -> no_return c1 && no_return c2
                     | If (uu, uv, c1, c2) -> no_return c1 && no_return c2
                     | While (uw, ux, c) -> no_return c
@@ -7953,6 +7654,16 @@ let rec sort_key _B
 let rec sorted_list_of_set (_A1, _A2)
   (Set xs) = sort_key _A2 (fun x -> x) (remdups _A1 xs);;
 
+let rec declared_global_vars
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = declared_global_vars;;
+
+let rec formals (Gproc_decl_ext (formals, body, more)) = formals;;
+
+let rec proc_rep
+  (Imp_prog_ext (proc_rep, declared_global_vars, more)) = proc_rep;;
+
+let rec prog_table p = map_of equal_literal (proc_rep p);;
+
 let rec sup_seta _A (Set xs) = fold (sup_set _A) xs bot_set;;
 
 let rec exp_vnames
@@ -8005,6 +7716,12 @@ let rec scope_vnames_list
   p owner =
     sorted_list_of_set (equal_literal, linorder_literal)
       (scope_vnames p owner);;
+
+let rec declared_global p x = membera equal_literal (declared_global_vars p) x;;
+
+let rec prog_procs
+  p = filtera (fun n -> not ((n : string) = prog_main_name))
+        (map fst (proc_rep p));;
 
 let rec ord_vars
   p = remdups equal_var_id
@@ -9661,6 +9378,32 @@ let rec tfield_empty
 
 let rec tmcp_emp asa p r = list_ex (fun a -> tfield_empty a r) asa;;
 
+let rec prog_formals
+  p q = (match prog_table p q with None -> [] | Some a -> formals a);;
+
+let rec is_SKIP = function SKIP x1 -> true
+                  | Assign (x21, x22, x23) -> false
+                  | Check (x31, x32, x33) -> false
+                  | Seq (x41, x42) -> false
+                  | If (x51, x52, x53, x54) -> false
+                  | While (x61, x62, x63) -> false
+                  | Call (x71, x72, x73, x74) -> false
+                  | Return (x81, x82) -> false
+                  | Restore x9 -> false
+                  | Unwind x10 -> false;;
+
+let rec csize
+  = function SKIP i -> one_nat
+    | Assign (i, x, a) -> one_nat
+    | Check (i, l, c) -> one_nat
+    | Seq (c1, c2) -> plus_nat (csize c1) (csize c2)
+    | If (i, b, c1, c2) -> plus_nat (plus_nat one_nat (csize c1)) (csize c2)
+    | While (i, b, c) -> plus_nat one_nat (csize c)
+    | Call (i, dst, q, actuals) -> one_nat
+    | Return (i, e) -> one_nat
+    | Restore i -> one_nat
+    | Unwind i -> one_nat;;
+
 let rec prog_main p = main_body (prog_table p);;
 
 let rec map_local_spec
@@ -9670,6 +9413,32 @@ let rec map_local_spec
           (fun ch ci x de -> k (ls_combine_assign c ch ci x de));;
 
 let rec greserved_ret_var rv g = not (g rv);;
+
+let special_pname_nondet_int : string = "__voblint_nondet_int";;
+
+let special_pname_min : string = "min";;
+
+let special_pname_max : string = "max";;
+
+let rec special_table
+  p = (if ((p : string) = special_pname_nondet_int) then Some SD_Nondet_Int
+        else (if ((p : string) = special_pname_min) then Some SD_Min
+               else (if ((p : string) = special_pname_max) then Some SD_Max
+                      else None)));;
+
+let rec classify_special
+  uu x1 = match uu, x1 with SD_Nondet_Int, [] -> Some Nondet_Int
+    | SD_Min, [a; b] -> Some (Min (a, b))
+    | SD_Max, [a; b] -> Some (Max (a, b))
+    | SD_Min, [] -> None
+    | SD_Min, [v] -> None
+    | SD_Min, v :: vb :: vd :: ve -> None
+    | SD_Max, [] -> None
+    | SD_Max, [v] -> None
+    | SD_Max, v :: vb :: vd :: ve -> None
+    | SD_Nondet_Int, v :: va -> None
+    | uu, [v] -> None
+    | uu, v :: vb :: vd :: ve -> None;;
 
 let rec may_fallthrough
   = function SKIP uu -> true
@@ -10336,6 +10105,237 @@ let rec typed_domain_name = function Typed_Sign -> "sign"
 
 let rec tdeclared_globals
   p = map (fun a -> GlobalId a) (declared_global_vars p);;
+
+let rec call_formals
+  pi q =
+    (match pi q
+      with None ->
+        failwith "call_formals: call to an undeclared procedure" (fun _ -> [])
+      | Some a -> formals a);;
+
+let rec compile _B _C
+  pi p x2 k n = match pi, p, x2, k, n with
+    pi, p, SKIP i, k, n ->
+      (suc n,
+        (Statement n,
+          (inserta
+             (equal_prod equal_cfg_node
+               (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+             (Statement n, (EA_Nop, k)) bot_set,
+            bot_set)))
+    | pi, p, Assign (i, x, a), k, n ->
+        (suc n,
+          (Statement n,
+            (inserta
+               (equal_prod equal_cfg_node
+                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+               (Statement n, (EA_Assign (x, a), k)) bot_set,
+              bot_set)))
+    | pi, p, Check (i, l, c), k, n ->
+        (suc n,
+          (Statement n,
+            (inserta
+               (equal_prod equal_cfg_node
+                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+               (Statement n, (EA_Check (l, c), k)) bot_set,
+              bot_set)))
+    | pi, p, Seq (c1, c2), k, n ->
+        (let (_, (en1, (e1, k1))) =
+           compile _B _C pi p c1 (Statement (plus_nat n (csize c1))) n in
+         let (n2, (_, (e2, k2))) =
+           compile _B _C pi p c2 k (plus_nat n (csize c1)) in
+          (n2, (en1, (sup_set
+                        (equal_prod equal_cfg_node
+                          (equal_prod (equal_gedge_action _B _C)
+                            equal_cfg_node))
+                        e1 e2,
+                       sup_set
+                         (equal_prod equal_cfg_node
+                           (equal_prod (equal_gcall_action _B _C)
+                             (equal_prod equal_cfg_node equal_cfg_node)))
+                         k1 k2))))
+    | pi, p, If (i, b, c1, c2), k, n ->
+        (let (n1, (en1, (e1, k1))) = compile _B _C pi p c1 k (suc n) in
+         let (n2, (en2, (e2, k2))) = compile _B _C pi p c2 k n1 in
+          (n2, (Statement n,
+                 (sup_set
+                    (equal_prod equal_cfg_node
+                      (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                    (sup_set
+                      (equal_prod equal_cfg_node
+                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                      (inserta
+                        (equal_prod equal_cfg_node
+                          (equal_prod (equal_gedge_action _B _C)
+                            equal_cfg_node))
+                        (Statement n,
+                          (EA_Assume b, (if is_SKIP c1 then k else en1)))
+                        (inserta
+                          (equal_prod equal_cfg_node
+                            (equal_prod (equal_gedge_action _B _C)
+                              equal_cfg_node))
+                          (Statement n,
+                            (EA_AssumeNot b, (if is_SKIP c2 then k else en2)))
+                          bot_set))
+                      (if is_SKIP c1 then bot_set else e1))
+                    (if is_SKIP c2 then bot_set else e2),
+                   sup_set
+                     (equal_prod equal_cfg_node
+                       (equal_prod (equal_gcall_action _B _C)
+                         (equal_prod equal_cfg_node equal_cfg_node)))
+                     k1 k2))))
+    | pi, p, While (i, b, c), k, n ->
+        (let (n1, (en1, (e1, k1))) = compile _B _C pi p c (Statement n) (suc n)
+           in
+          (n1, (Statement n,
+                 (sup_set
+                    (equal_prod equal_cfg_node
+                      (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                    (inserta
+                      (equal_prod equal_cfg_node
+                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                      (Statement n, (EA_Assume b, en1))
+                      (inserta
+                        (equal_prod equal_cfg_node
+                          (equal_prod (equal_gedge_action _B _C)
+                            equal_cfg_node))
+                        (Statement n, (EA_AssumeNot b, k)) bot_set))
+                    e1,
+                   k1))))
+    | pi, p, Call (i, dst, q, actuals), k, n ->
+        (match special_table q
+          with None ->
+            (suc n,
+              (Statement n,
+                (bot_set,
+                  inserta
+                    (equal_prod equal_cfg_node
+                      (equal_prod (equal_gcall_action _B _C)
+                        (equal_prod equal_cfg_node equal_cfg_node)))
+                    (Statement n,
+                      (CallEdge (dst, call_formals pi q, actuals),
+                        (FunctionEntry q, k)))
+                    bot_set)))
+          | Some desc ->
+            (match classify_special desc actuals
+              with None ->
+                (suc n,
+                  (Statement n,
+                    (inserta
+                       (equal_prod equal_cfg_node
+                         (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                       (Statement n, (EA_Nop, k)) bot_set,
+                      bot_set)))
+              | Some sc ->
+                (match dst
+                  with None ->
+                    (suc n,
+                      (Statement n,
+                        (inserta
+                           (equal_prod equal_cfg_node
+                             (equal_prod (equal_gedge_action _B _C)
+                               equal_cfg_node))
+                           (Statement n, (EA_Nop, k)) bot_set,
+                          bot_set)))
+                  | Some x ->
+                    (suc n,
+                      (Statement n,
+                        (inserta
+                           (equal_prod equal_cfg_node
+                             (equal_prod (equal_gedge_action _B _C)
+                               equal_cfg_node))
+                           (Statement n, (EA_Special (sc, x), k)) bot_set,
+                          bot_set))))))
+    | pi, p, Return (i, e), k, n ->
+        (suc n,
+          (Statement n,
+            (inserta
+               (equal_prod equal_cfg_node
+                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+               (Statement n, (EA_Ret (e, p), FunctionResult p)) bot_set,
+              bot_set)))
+    | pi, p, Restore i, k, n ->
+        (suc n,
+          (Statement n,
+            (inserta
+               (equal_prod equal_cfg_node
+                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+               (Statement n, (EA_Nop, k)) bot_set,
+              bot_set)))
+    | pi, p, Unwind i, k, n ->
+        (suc n,
+          (Statement n,
+            (inserta
+               (equal_prod equal_cfg_node
+                 (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+               (Statement n, (EA_Nop, k)) bot_set,
+              bot_set)));;
+
+let rec compile_proc _B _C
+  pi p decl n =
+    (let r = plus_nat n (csize (body decl)) in
+     let (_, (ben, (e, k))) = compile _B _C pi p (body decl) (Statement r) n in
+      (suc r,
+        (inserta
+           (equal_prod equal_cfg_node
+             (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+           (FunctionEntry p, (EA_Body p, ben))
+           (inserta
+             (equal_prod equal_cfg_node
+               (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+             (Statement r, (EA_Ret (None, p), FunctionResult p)) e),
+          k)));;
+
+let rec compile_procs _B _C
+  pi x1 n = match pi, x1, n with pi, [], n -> (n, (bot_set, bot_set))
+    | pi, p :: ps, n ->
+        (match pi p with None -> compile_procs _B _C pi ps n
+          | Some decl ->
+            (let (n1, (e, k)) = compile_proc _B _C pi p decl n in
+             let (n2, (ea, ka)) = compile_procs _B _C pi ps n1 in
+              (n2, (sup_set
+                      (equal_prod equal_cfg_node
+                        (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+                      e ea,
+                     sup_set
+                       (equal_prod equal_cfg_node
+                         (equal_prod (equal_gcall_action _B _C)
+                           (equal_prod equal_cfg_node equal_cfg_node)))
+                       k ka))));;
+
+let rec compile_prog _B _C
+  pi ps =
+    (let (n1, (eprocs, kprocs)) = compile_procs _B _C pi ps zero_nat in
+     let (_, (emain, kmain)) =
+       compile_proc _B _C pi prog_main_name
+         (Gproc_decl_ext ([], main_body pi, ())) n1
+       in
+      Gcfg_ext
+        (sup_set
+           (equal_prod equal_cfg_node
+             (equal_prod (equal_gedge_action _B _C) equal_cfg_node))
+           eprocs emain,
+          sup_set
+            (equal_prod equal_cfg_node
+              (equal_prod (equal_gcall_action _B _C)
+                (equal_prod equal_cfg_node equal_cfg_node)))
+            kprocs kmain,
+          FunctionEntry prog_main_name, ()));;
+
+let rec typed_ptable
+  p ds q =
+    map_option
+      (fun d ->
+        Gproc_decl_ext
+          (map (resolve_var (declared_global p) q) (formals d),
+            elab_com (declared_global p) (prog_formals p) (kenv_of ds) q
+              (body d),
+            ()))
+      (prog_table p q);;
+
+let rec typed_cfg
+  p ds =
+    compile_prog equal_var_id equal_texp (typed_ptable p ds) (prog_procs p);;
 
 let rec order_field_view
   d = Field_Whole
@@ -14957,6 +14957,8 @@ equal_var_id))))))))
                     (fun _ -> FunctionEntry prog_main_name) tglobal p)
                 root))));;
 
+let rec cs_route k u ctx d ca = take k (u :: ctx);;
+
 let rec typed_cs_run
   conf k ds p =
     (let sem = conf_sem conf in
@@ -15075,9 +15077,9 @@ let rec typed_cs_run
                   (tmcp_comp sem ds (tactivation asa))
                   (tmcp_emp (tactivation asa)) tmcp_rd
                   (fun a -> Analysis_Global a)
-                  (fun a b -> Activation_Seed (a, b))
-                  (fun _ u ctx _ _ -> take k (u :: ctx)) (fun _ d _ -> d)
-                  (fun _ d -> d) (fun _ _ d _ -> d) tglobal p sol))
+                  (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k)
+                  (fun _ d _ -> d) (fun _ d -> d) (fun _ _ d _ -> d) tglobal p
+                  sol))
             (solve_c_traced
               (equal_prod equal_cfg_node (equal_list equal_cfg_node))
               (equal_global_unknown equal_var_id (equal_list equal_cfg_node))
@@ -15992,8 +15994,7 @@ let rec typed_cs_run
                   (tmcp_comp sem ds (tactivation asa))
                   (tmcp_init ds (tactivation asa)) Analysis_Buffer
                   (fun a -> Analysis_Global a)
-                  (fun a b -> Activation_Seed (a, b))
-                  (fun _ u ctx _ _ -> take k (u :: ctx)) []
+                  (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k) []
                   (fun _ ->
                     dg_spec_of equal_texp
                       (bot_lifted
@@ -16147,8 +16148,7 @@ ik_domain_parity)))
                     (tmcp_comp sem ds (tactivation asa))
                     (tmcp_emp (tactivation asa)) tmcp_rd
                     (fun a -> Analysis_Global a)
-                    (fun a b -> Activation_Seed (a, b))
-                    (fun _ u ctx _ _ -> take k (u :: ctx))
+                    (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k)
                     (fun _ d e ->
                       split_cmb_lifted
                         ((semilattice_sup_analysis_product
@@ -17884,8 +17884,7 @@ ik_domain_parity)))
                     (tmcp_comp sem ds (tactivation asa))
                     (tmcp_init ds (tactivation asa)) Analysis_Buffer
                     (fun a -> Analysis_Global a)
-                    (fun a b -> Activation_Seed (a, b))
-                    (fun _ u ctx _ _ -> take k (u :: ctx)) []
+                    (fun a b -> Activation_Seed (a, b)) (fun _ -> cs_route k) []
                     (fun _ ->
                       gkeyed_split_spec equal_texp
                         (equal_var_id, linorder_var_id)

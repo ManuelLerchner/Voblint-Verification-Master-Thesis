@@ -41,13 +41,11 @@ session Voblint_Framework in "." = "Voblint_CFG" +
     Routed_Call_Programs
     Routed_Context
     Routed_Context_Unit
-    DG_Local_State_Spec
     DG_Keyed_Split_Spec
     (* Analyses composed as a product, answering each other's queries. *)
     Analysis_Query
     Local_Spec_Product
     MCP_Spec
-    Channel_Wrappers
     Call_String_Context
     (* Domain-generic solved-result table: per-point reachability and the
        per-context/per-node lookup surface downstream consumers read. *)

@@ -395,21 +395,51 @@ qed
 
 end
 
-section \<open>The bridge is inhabited\<close>
+section \<open>The typed instance\<close>
 
-text \<open>\<open>source_run_has_activation_trace\<close> and the collecting corollaries all assume a well-formed compiler
-  input, so the session ends by exhibiting one and running the bridge on it.  The zero-step
-  run of the empty \<open>main\<close> is enough: it yields an actual node of an actual compiled graph and
-  an actual \<^const>\<open>trace_sem.gvalid_activation_trace\<close> witness, so none of the above is vacuously true.\<close>
+global_interpretation typed: bridge_sem teval tglobal ReturnVar "tconv \<kappa>"
+  rewrites "vimp_sem.gpstep teval tglobal ReturnVar (tconv \<kappa>) = tpstep \<kappa>"
+    and "cfg_exec_sem.gcstep teval ReturnVar (tconv \<kappa>) tglobal = tcstep \<kappa>"
+    and "collect_sem.gnode_collect teval ReturnVar (tconv \<kappa>) tglobal = tnode_collect \<kappa>"
+  for \<kappa> :: kenv
+  by (simp_all add: tpstep_def tcstep_def tnode_collect_def)
 
-theorem source_run_has_activation_trace_witness:
-  "\<exists>v stk t. witness_pi, witness_cfg, prog_main_name \<turnstile> (SKIP (), s0, []) \<approx> (v, s0, stk)
-           \<and> bridge_sem.gactivation_trace_repr aval (\<lambda>_. False) ret_var (\<lambda>_ n. n)
-               witness_cfg {s0} (v, s0, stk) t"
+section \<open>Typed runs reach the typed graph\<close>
+
+text \<open>Every run of the typed program is simulated on the typed graph, and its store is
+  the sink of a valid activation trace there. Both are the generic bridge at the typed
+  instance; nothing about kinds enters the simulation proof.\<close>
+
+theorem typed_source_run_has_activation_trace:
+  assumes wf: "wf_program_compile_input p"
+    and s0: "s0 \<in> S"
+    and run: "star (tpstep \<kappa> (typed_ptable p ds))
+                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk t. typed_ptable p ds, typed_cfg p ds, prog_main_name
+                      \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+                   \<and> typed.gactivation_trace_repr \<kappa> (typed_cfg p ds) S (v, s, stk) t"
+  unfolding typed_cfg_def
+  by (rule typed.source_run_has_activation_trace [OF typed_wf_compile_input [OF wf] s0 run])
+
+text \<open>Hence every store a typed run reaches lies in the typed collecting semantics at the
+  node simulating it. This is the inclusion a sound typed analysis result bounds.\<close>
+
+theorem typed_source_reaches_node_collect:
+  assumes wf: "wf_program_compile_input p"
+    and s0: "s0 \<in> S"
+    and run: "star (tpstep \<kappa> (typed_ptable p ds))
+                (main_body (typed_ptable p ds), s0, []) (residual, s, frs)"
+  shows "\<exists>v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name
+                    \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
+                 \<and> s \<in> tnode_collect \<kappa> (typed_cfg p ds) S v"
 proof -
-  interpret B: bridge_sem aval "\<lambda>_. False" ret_var "\<lambda>_ n. n" .
-  show ?thesis
-    using B.source_run_has_activation_trace[OF witness_wf singletonI star.refl] by simp
+  from typed_source_run_has_activation_trace [OF wf s0 run] obtain v stk t
+    where sim: "typed_ptable p ds, typed_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
+      and rep: "typed.gactivation_trace_repr \<kappa> (typed_cfg p ds) S (v, s, stk) t"
+    by blast
+  from rep have "s \<in> tnode_collect \<kappa> (typed_cfg p ds) S v"
+    by (auto simp: typed.gactivation_trace_repr_def typed.gnode_collect_def)
+  with sim show ?thesis by blast
 qed
 
 end

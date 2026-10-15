@@ -18,9 +18,7 @@ refinement layer, not as part of the framework.
 | `State/Default_St_Restriction_Refinement.thy` | `default_st_to_fun gs`: the `'a abs_state` a state represents, and what commutes with it |
 | `Spec/Exec_DG_State.thy` | The executable D/G carrier `default_st` and the functions it represents, parametric in the classifier |
 | `Spec/Ownership_Split_Exec.thy` | The ownership-splitting analysis at that carrier: the generic transfer at the executable merge/project triple |
-| `Spec/DG_Local_State_Exec.thy` | The executable Base-style D/G construction: definitions and their selector equations |
-| `Refinement/DG_Local_State_Exec_Refinement.thy` | `dg_domain_exec`: soundness at the executable carrier, pulled back through the represented functions |
-| `Refinement/Routed_Exec_Refinement.thy` | The routed layer, once for every domain and context policy: `pp_st` reconciles the buffered generator a domain solves with the unbuffered one the framework is stated over |
+| `Refinement/Routed_Exec_Refinement.thy` | `pp_dg_spec_of` reconciles the buffered generator a component solves with the unbuffered one the framework is stated over |
 
 Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 
@@ -29,10 +27,8 @@ Parent: `Voblint_Framework`. No theory here imports `Voblint_Compile`.
 ```text
 State/       the executable state: representation, algebra, classifier boundary,
              dead-code test, the represented function and the result conversion
-Spec/        analyses built at that carrier: the D/G pair, the ownership split,
-             the Base local-state construction
-Refinement/  what relates the carrier to the mathematical one: dg_domain_exec
-             and the routed post-solution
+Spec/        analyses built at that carrier: the D/G pair and the ownership split
+Refinement/  the routed post-solution
 ```
 
 Dependencies run State -> Spec -> Refinement.

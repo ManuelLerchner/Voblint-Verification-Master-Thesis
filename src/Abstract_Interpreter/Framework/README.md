@@ -22,7 +22,6 @@ Parents: `Voblint_CFG` (the graph and its collecting semantics),
 | alternative | one `(continuation, callee entry)` pair; a call answers a list of them | `Spec/DG_Manager.thy` |
 | former | a transfer compiled to a solver right-hand side, addressed at one unknown | `Spec/DG_Spec.thy` |
 | routed | keyed by `(program point, context)`, with callee activations seeded through a global slot | `Context/Routed_Call_Programs.thy` |
-| whole-state | the Base-style shape where `D` is one `abs_state` and no global is touched | `Spec/DG_Local_State_Spec.thy` |
 
 ### Goblint names
 
@@ -92,7 +91,7 @@ entry obligation, both through the shared `entry_pairs_cover`.
 
 | Folder | Question it answers | Theories |
 | --- | --- | --- |
-| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Local_State_Spec` (`sound_nonrelational_transfer`, and the two whole-state constructions built from it -- raw and reachability-lifted), `DG_Ownership_Split_Spec` (the `Spec2Spec` lifter that puts a whole-state analysis's global names on one shared global unknown), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `keyed_split_contract`) |
+| `Spec/` | What does an analysis supply, and when is it sound? | `DG_State` (the value a D/G unknown carries, and its lattice), `DG_Manager` (the Goblint-`man`-shaped record: `man_local` a value, `man_global`/`man_sideg` effectful capabilities that `mk_dg_man` closes the current routed global key into, with the projection rules that keep a built manager folded), `DG_Spec` (the record itself, the edge-action dispatch, the program formers, and the local-only shapes whose compiled trees provably carry no `QueryG` and no `Side`), `DG_Spec_Sound` (`analysis_contract` stated against the edge and combine programs' own `traverse_program`/`sides_of_program` observations, never a reconstructed `'dg × 'dl` pair, plus `enter_runs`/`enter_deps`, which name what an entry program hands its continuation under a fixed solution), `DG_Ownership_Split_Spec` (the `Spec2Spec` lifter that puts a whole-state analysis's global names on one shared global unknown), `DG_Keyed_Split_Spec` (the lifter the analyzer runs under flow-insensitive program globals: one global unknown per declared global, read where an edge mentions it and published where it may assign it, sound by `keyed_split_contract`) |
 | `State/` | What algebra does a whole-state transfer compute in? | `Transfer_Algebra` (the `abs_state` operations a Base-style transfer is assembled from -- entry frame reset and formal binding, the structural return combine -- with their soundness and monotonicity against `gamma_state`), `State_Restriction` (the local/global projections derived from the generic `combine_env` selector) |
 | `Constraints/` | What is a right-hand side, and how does the solver see the graph? | `CFG_Enumeration` (predecessors, call sites and returns as lists), `DG_Constraint_Programs` (edge formers over a solver address, and the fold that turns several right-hand sides for one unknown into one), `DG_Indexed_Generator` (the keyed equation generators and their buffered-generator correspondence -- spec-free: every equation is folded from supplied program hooks, and the `TD_side_mono` discharge asks each hook only for well-formedness, traverse/sides monotonicity and `env_indep_deps`), `DG_Reader_Transport` (`dg_reader_commute_gen`: a whole equation system read through a `bot`- and join-preserving reader pair) |
 | `Activation/` | What does one activation see? | `Activation_Backbone` (`activation_coverage` in global shape: five obligations on an arbitrary `cover` bound `activation_collect`), `DG_Ctx_Activation` (the D/G-native discharge of that backbone's obligations from a post-solution) |
@@ -109,15 +108,14 @@ Spec/DG_State                      <- (Voblint_Domain.Abstract_Domain only)
 Spec/DG_Manager                    <- DG_State
 Spec/DG_Spec                       <- DG_Manager
 Spec/DG_Spec_Sound                 <- DG_Spec
-Spec/DG_Local_State_Spec           <- DG_Spec_Sound, State/Transfer_Algebra
-Spec/DG_Ownership_Split_Spec       <- DG_Local_State_Spec, State/State_Restriction
-Spec/DG_Keyed_Split_Spec           <- DG_Local_State_Spec
+Spec/DG_Ownership_Split_Spec       <- MCP_Spec, State/State_Restriction
+Spec/DG_Keyed_Split_Spec           <- MCP_Spec
 Constraints/DG_Constraint_Programs <- DG_State
 Constraints/DG_Indexed_Generator     <- DG_Constraint_Programs, CFG_Enumeration
 Activation/DG_Ctx_Activation       <- DG_Spec_Sound, DG_Indexed_Generator
 Context/Routed_Call_Programs       <- DG_Spec_Sound, DG_Indexed_Generator
 Context/Routed_Context             <- Routed_Call_Programs, DG_Ctx_Activation,
-                                      DG_Local_State_Spec, Activation_Backbone
+                                      MCP_Spec, Activation_Backbone
 Context/Routed_Context_Unit        <- Routed_Context
 Constraints/DG_Reader_Transport    <- Routed_Context_Unit
 Result/DG_Analysis_Adapter         <- Routed_Context, Contextual_Check_Report,
@@ -130,8 +128,8 @@ other dependency in the session is stated where it is used. That is what keeps
 `DG_Constraint_Programs` and `DG_Indexed_Generator` free of any domain and `Spec/`
 free of any CFG generator.
 
-The context policies that need a compiled program (`Call_String_Routed_Context`,
-`Entry_State_Routed_Context`, `Context_Space_Finite`) live in
+The context policies that need a compiled program (`Entry_State_Routed_Context`,
+`Context_Space_Finite`) live in
 `Voblint_Routing`, under `src/Analyses/Shared/Routing/`; the executable carrier
 and its transport live in `Voblint_Exec`.
 

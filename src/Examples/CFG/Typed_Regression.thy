@@ -1,5 +1,5 @@
 theory Typed_Regression
-  imports "Voblint_Typed.Typed_Com" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_VIMP.Typed_Com" "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Regression: typed elaboration\<close>
