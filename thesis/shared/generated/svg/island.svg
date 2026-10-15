@@ -27,7 +27,7 @@
           <g class="region" tabindex="0" data-note="Threads and data races. VIMP is single-threaded, so there is no interleaving and no need for Goblint&#x27;s `sync`.">
             <ellipse cx="640" cy="110" rx="78" ry="40"/><text x="640" y="115">threads</text>
           </g>
-          <g class="region" tabindex="0" data-note="Machine integers wrap around. VIMP's integers are mathematical unless a program declares machine kinds; declared kinds are lowered to explicit conversions with wrapping signed overflow, which C leaves undefined.">
+          <g class="region" tabindex="0" data-note="Machine integers wrap around. VIMP has eight machine kinds, i32 by default, with C's usual arithmetic conversions made explicit; a signed overflow wraps, which C leaves undefined, and is reported as a diagnostic.">
             <ellipse cx="770" cy="220" rx="80" ry="44"/><text x="770" y="216">machine</text><text x="770" y="234">integers</text>
           </g>
           <g class="region" tabindex="0" data-note="Floating point is absent: every VIMP value is an integer.">
