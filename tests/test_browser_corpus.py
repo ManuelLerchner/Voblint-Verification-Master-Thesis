@@ -67,7 +67,9 @@ def web_call(path):
         s.get("context_depth", 0),
         s.get("int_refinement", "fixpoint"),
         placement,
-        ";".join(f"{path_}={s[key]}" for key, path_ in OPTION_PATHS.items() if key in s),
+        ";".join(
+            f"{path_}={s[key]}" for key, path_ in OPTION_PATHS.items() if key in s
+        ),
         path.read_text(),
         "compact",
     ]

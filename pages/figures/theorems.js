@@ -66,7 +66,8 @@
       linkText: "run_voblint",
     },
     v: {
-      clause: "∃v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name ⊢ (residual, s, frs) ≈ (v, s, stk)",
+      clause:
+        "∃v stk. typed_ptable p ds, typed_cfg p ds, prog_main_name ⊢ (residual, s, frs) ≈ (v, s, stk)",
       text: "The compiler's simulation relation matches the reached source configuration with a configuration of the compiled graph at some node `v`, holding the same store `s`.",
       link: isaConst("Voblint_Compile", "Simulation_Relation", "csim"),
       linkText: "csim",
@@ -90,7 +91,8 @@
       linkText: "report_states_at",
     },
     checks: {
-      clause: "¬ DEAD res v ∧ (∀c. PROVED res v c ⟶ truthy (teval c s)) ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (teval c s))",
+      clause:
+        "¬ DEAD res v ∧ (∀c. PROVED res v c ⟶ truthy (teval c s)) ∧ (∀c. REFUTED res v c ⟶ ¬ truthy (teval c s))",
       text: "`v` is not DEAD, and every definite verdict the report gives at `v` is valid in `s`: `PROVED` means the condition is true in `s`, `REFUTED` that it is false. `UNKNOWN` claims nothing.",
       link: isaConst(...REPORT, "HAS_VERDICT"),
       linkText: "HAS_VERDICT",
@@ -146,7 +148,8 @@
       linkText: "SAFE",
     },
     div: {
-      clause: "(v, a, w) ∈ intra (typed_cfg p ds) ⟹ e ∈ set (edge_expressions a) ⟹ ob ∈ set (tarith_obligations e) ⟹ s ⊨ ob",
+      clause:
+        "(v, a, w) ∈ intra (typed_cfg p ds) ⟹ e ∈ set (edge_expressions a) ⟹ ob ∈ set (tarith_obligations e) ⟹ s ⊨ ob",
       text: "For every expression on an edge leaving `v`, every obligation it raises holds in `s`: a divisor is non-zero, a signed operation's mathematical result lies in its kind, a narrowing conversion's operand fits its target. The theorem's other two parts state the same for a call's arguments and for a value returned to a caller.",
       link: OBLIGATIONS,
       linkText: "tobligation_holds",

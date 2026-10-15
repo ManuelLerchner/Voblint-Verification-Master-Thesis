@@ -6,7 +6,9 @@
    * lights what it rests on directly and, lighter, everything below that in turn.
    */
   const strataLabel = (name) =>
-    name === "TD" ? "TD" : name.replace("Voblint_Analysis_", "").replace("Voblint_", "").replace("_", " ");
+    name === "TD"
+      ? "TD"
+      : name.replace("Voblint_Analysis_", "").replace("Voblint_", "").replace("_", " ");
 
   const STRATA_DESC = {
     TD: "The vendored top-down solver with side effects and its verification: strategy trees, update rules and the post-solution theorems. Parented on HOL and its libraries, including the AFP's Root_Balanced_Tree.",

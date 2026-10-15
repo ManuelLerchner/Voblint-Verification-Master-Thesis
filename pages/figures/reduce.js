@@ -46,8 +46,7 @@
 
     const render = (i) => {
       const state = REDUCE_STEPS[i];
-      const together = (x) =>
-        ["interval", "congruence"].every((c) => REDUCE_TESTS[state[c]](x));
+      const together = (x) => ["interval", "congruence"].every((c) => REDUCE_TESTS[state[c]](x));
 
       for (const row of rows) {
         const comp = row.dataset.comp;

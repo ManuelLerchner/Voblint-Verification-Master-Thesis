@@ -350,9 +350,7 @@ let () =
   let actual_proc_demo_intra =
     show_intra_list (cfg_intra_edges proc_demo_cfg)
   in
-  let actual_proc_demo_calls =
-    show_calls_list (cfg_call_edges proc_demo_cfg)
-  in
+  let actual_proc_demo_calls = show_calls_list (cfg_call_edges proc_demo_cfg) in
   let actual_no_call_global_self_ref_interval =
     report Interval no_call_global_self_ref_prog
   in

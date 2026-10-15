@@ -63,8 +63,7 @@ let context_of_name name depth =
   | "none", None -> Ok (C.Call_String (C.nat_of_integer Z.zero))
   | "entry-state", None -> Ok C.Entry_State
   | "call-string", Some k when k < 0 -> Error Negative_depth
-  | "call-string", Some k ->
-      Ok (C.Call_String (C.nat_of_integer (Z.of_int k)))
+  | "call-string", Some k -> Ok (C.Call_String (C.nat_of_integer (Z.of_int k)))
   | "call-string", None -> Error Missing_depth
   | ("none" | "entry-state"), Some _ -> Error Unexpected_depth
   | _ -> Error Unknown_context

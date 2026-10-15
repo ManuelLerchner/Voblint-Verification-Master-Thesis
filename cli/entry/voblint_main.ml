@@ -42,8 +42,7 @@ let usage =
   \  [--output FILE]\n\
   \  FILE.vimp\n\
    voblint --parse-only FILE.vimp\n\
-   voblint --ast FILE.vimp\n\
-   \n\
+   voblint --ast FILE.vimp\n\n\
    Options:\n\
   \  --analysis sign|interval|int|parity|congruence|order[,...]\n\
   \                             Abstract domain to run (required, unless\n\
@@ -705,8 +704,7 @@ let () =
         print_endline
           (Render_json.result_json
              ~shared:(placement = C.Program_Globals_Flow_Insensitive)
-             0. prog ~stmt_positions
-             ~header_positions ~raw result)
+             0. prog ~stmt_positions ~header_positions ~raw result)
     | C.Invalid_Activation | C.Malformed_Program | C.No_Answer ->
         print_endline raw);
     exit 0

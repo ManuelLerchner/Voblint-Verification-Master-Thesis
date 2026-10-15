@@ -202,13 +202,8 @@ let lines n = List.concat_map A.section_lines n.sections @ n.findings
 
 let build prog
     (result :
-      ( C.var_id,
-        C.exp,
-        C.var_id,
-        C.analysis,
-        string,
-        unit )
-      C.run_result_ext) : t =
+      (C.var_id, C.exp, C.var_id, C.analysis, string, unit) C.run_result_ext) :
+    t =
   let g = C.res_cfg result in
   let owner_of = A.owners g in
   let names_of = scope prog g owner_of in
