@@ -255,33 +255,33 @@ lemma activation_trace_witness_edge [simp]:
 text \<open>The witness runs at the typed instance, for every kind environment.\<close>
 
 lemma activation_trace_witness_root:
-  "Root [(Statement 0, s)] \<in> valid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+  "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub>"
 proof -
   have "Root [(cfg_entry activation_trace_witness_cfg, s)]
-          \<in> valid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+          \<in> \<T>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub>"
     by (rule vimp.gvalid_activation_trace.root) simp
   then show ?thesis by simp
 qed
 
 theorem node_collect_witness:
-  "s \<in> node_collect \<kappa> activation_trace_witness_cfg {s} (Statement 0)"
+  "s \<in> \<C>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub> (Statement 0)"
   "s(activation_trace_witness_var := kind_conv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1))
-     \<in> node_collect \<kappa> activation_trace_witness_cfg {s} (Statement 1)"
+     \<in> \<C>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub> (Statement 1)"
 proof -
-  have root: "Root [(Statement 0, s)] \<in> valid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+  have root: "Root [(Statement 0, s)] \<in> \<T>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub>"
     by (rule activation_trace_witness_root)
-  show "s \<in> node_collect \<kappa> activation_trace_witness_cfg {s} (Statement 0)"
+  show "s \<in> \<C>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub> (Statement 0)"
     using vimp.node_collect_I[OF root] by (simp add: sink_node_def sink_store_def)
   have "extend (Root [(Statement 0, s)])
           (Statement 1, s(activation_trace_witness_var
              := kind_conv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1)))
-          \<in> valid_activation_trace \<kappa> activation_trace_witness_cfg {s}"
+          \<in> \<T>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub>"
     by (rule vimp.gvalid_activation_trace.intra[OF root,
           where a = "EA_Assign activation_trace_witness_var (TN I32 1)" and v = "Statement 1"])
        (simp_all add: activation_trace_witness_cfg_def sink_node_def sink_store_def)
   from vimp.node_collect_I[OF this]
   show "s(activation_trace_witness_var := kind_conv \<kappa> (Some activation_trace_witness_var) (ik_norm I32 1))
-          \<in> node_collect \<kappa> activation_trace_witness_cfg {s} (Statement 1)"
+          \<in> \<C>\<^bsub>\<kappa>,activation_trace_witness_cfg,{s}\<^esub> (Statement 1)"
     by (simp add: sink_node_def sink_store_def)
 qed
 

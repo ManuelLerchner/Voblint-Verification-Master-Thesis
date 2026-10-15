@@ -24,6 +24,9 @@ text \<open>
 
 datatype 'e bool_view = BV_Not 'e | BV_And 'e 'e | BV_Or 'e 'e | BV_Atom
 
+text \<open>The parameters of that refinement. The size bound on operands makes the recursion
+  on the condition well-founded.\<close>
+
 locale bool_refine =
   fixes view :: "'e \<Rightarrow> 'e bool_view" and sz :: "'e \<Rightarrow> nat"
     and atom :: "'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's" and feas :: "'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> bool"
@@ -109,38 +112,6 @@ proof (induction e pol \<sigma> rule: brefine.induct)
   next
     case BV_Atom
     with 1 atom_sound show ?thesis by (subst brefine.simps) simp
-  qed
-qed
-
-text \<open>A property every step keeps is kept. The atom need keep it only for conditions
-  in a class \<open>P\<close> that contains the operands of its members, such as the conditions that
-  do not read a given variable.\<close>
-
-lemma brefine_inv:
-  assumes sub_not: "\<And>e a. view e = BV_Not a \<Longrightarrow> P e \<Longrightarrow> P a"
-    and sub_and: "\<And>e a b. view e = BV_And a b \<Longrightarrow> P e \<Longrightarrow> P a \<and> P b"
-    and sub_or: "\<And>e a b. view e = BV_Or a b \<Longrightarrow> P e \<Longrightarrow> P a \<and> P b"
-    and atom_inv: "\<And>e pol \<sigma>. view e = BV_Atom \<Longrightarrow> P e \<Longrightarrow> Q \<sigma> \<Longrightarrow> Q (atom e pol \<sigma>)"
-    and join_inv: "\<And>x y. Q x \<Longrightarrow> Q y \<Longrightarrow> Q (join x y)"
-    and dead_inv: "\<And>x. Q x \<Longrightarrow> Q (dead x)"
-  shows "P e \<Longrightarrow> Q \<sigma> \<Longrightarrow> Q (brefine e pol \<sigma>)"
-proof (induction e pol \<sigma> rule: brefine.induct)
-  case (1 e pol \<sigma>)
-  show ?case
-  proof (cases "view e")
-    case (BV_Not a)
-    with 1 sub_not[OF BV_Not] show ?thesis by (subst brefine.simps) simp
-  next
-    case (BV_And a b)
-    with 1 sub_and[OF BV_And] show ?thesis
-      by (subst brefine.simps) (auto split: bool.splits intro: join_inv dead_inv)
-  next
-    case (BV_Or a b)
-    with 1 sub_or[OF BV_Or] show ?thesis
-      by (subst brefine.simps) (auto split: bool.splits intro: join_inv dead_inv)
-  next
-    case BV_Atom
-    with 1 atom_inv show ?thesis by (subst brefine.simps) simp
   qed
 qed
 

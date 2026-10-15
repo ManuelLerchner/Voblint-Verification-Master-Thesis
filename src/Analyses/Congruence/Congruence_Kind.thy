@@ -319,7 +319,8 @@ instance proof
   show "(fits \<Longrightarrow> m \<in> ik_range k \<and> n \<in> ik_range k) \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b
       \<Longrightarrow> ik_norm k (aop_eval op m n) \<in> numeric_domain_class.gamma (arith_ik ovp k op fits a b)" for ovp fits
-    using cong_arith_ik_sound[where operands_fit = fits and ovp = ovp and op = op and k = k and m = m and n = n]
+    using cong_arith_ik_sound[where operands_fit = fits and ovp = ovp and op = op and k = k and m =
+      m and n = n]
     by (simp add: arith_ik_congruence_def)
   show "cmp_ik c a b = Some r \<Longrightarrow> m \<in> numeric_domain_class.gamma a
       \<Longrightarrow> n \<in> numeric_domain_class.gamma b \<Longrightarrow> cop_eval c m n = r"

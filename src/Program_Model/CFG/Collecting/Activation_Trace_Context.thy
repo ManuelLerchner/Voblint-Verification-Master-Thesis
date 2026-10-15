@@ -79,6 +79,9 @@ lemma context_policy_of_fun_nonempty [simp]:
   "context_policy_of_fun f u ctx ci caller entered \<noteq> {}"
   by (simp add: context_policy_of_fun_def)
 
+text \<open>The context-indexed collecting semantics over the activation-trace semantics of
+  \<^locale>\<open>trace_sem\<close>: which activation a context policy admits, and what it collects.\<close>
+
 locale ctx_sem = trace_sem ev rv conv glob
   for ev :: "'e \<Rightarrow> ('v \<Rightarrow> int) \<Rightarrow> int" and rv :: 'v
     and conv :: "'v option \<Rightarrow> int \<Rightarrow> int" and glob :: "'v \<Rightarrow> bool"
@@ -364,7 +367,8 @@ lemma activation_context_entry_invariant:
 proof (intro ballI allI impI)
   fix u c assume mem: "u \<in> callers callee" and cof: "caller_of u = Some c"
   have uv: "u \<in> (gvalid_activation_trace g S)" using callers_valid[OF assms mem] .
-  have cv: "c \<in> (gvalid_activation_trace g S)" using valid_activation_trace_caller_valid[OF uv cof] .
+  have cv: "c \<in> (gvalid_activation_trace g S)" using valid_activation_trace_caller_valid[OF uv cof]
+    .
   have tc_u: "gactivation_context_rel (context_policy_of_fun enterc) initial_ctx g u
                 (activation_context_of enterc initial_ctx u)"
     by (simp only: activation_context_rel_of_fun_iff[OF uv])

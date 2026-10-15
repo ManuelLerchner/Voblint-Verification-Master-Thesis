@@ -93,28 +93,28 @@ text \<open>
 
 lemma pstep_declare:
   assumes "\<Pi> special_pname_nondet_int = None"
-  shows "pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')
+  shows "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (c', s', frs')
            \<longleftrightarrow> c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
 proof
-  assume "pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')"
+  assume "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (c', s', frs')"
   then show "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
     using assms by (auto elim!: vimp.CallSE simp: special_table_def)
 next
   assume "c' = SKIP i \<and> frs' = frs \<and> (\<exists>n \<in> ik_range (\<kappa> x). s' = s(x := n))"
   then obtain n where n: "n \<in> ik_range (\<kappa> x)" and eq: "c' = SKIP i" "frs' = frs" "s' = s(x := n)"
     by blast
-  have "pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs)
-          (SKIP i, s(x := kind_conv \<kappa> (Some x) n), frs)"
+  have "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (SKIP i, s(x := kind_conv \<kappa> (Some x) n), frs)"
     by (rule vimp.Special[where desc = SD_Nondet_Int and sc = "Nondet_Int :: exp gspecial_call"])
        (simp_all add: special_table_def)
-  with n eq show "pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) (c', s', frs')"
+  with n eq
+  show "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p (c', s', frs')"
     by (simp del: ik_range_iff)
 qed
 
 corollary pstep_declare_forgets:
   assumes "\<Pi> special_pname_nondet_int = None"
-  shows "pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s(x := m), frs) cfg
-           \<longleftrightarrow> pstep \<kappa> \<Pi> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) cfg"
+  shows "\<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s(x := m), frs) \<rightarrow>\<^sub>p cfg
+           \<longleftrightarrow> \<kappa>,\<Pi> \<turnstile> (gcom.Call i (Some x) special_pname_nondet_int [], s, frs) \<rightarrow>\<^sub>p cfg"
   by (cases cfg) (simp add: pstep_declare[where \<Pi> = \<Pi>, OF assms])
 
 section \<open>The typed program\<close>
@@ -133,6 +133,9 @@ lemma elab_ptable_None_iff [simp]: "elab_ptable p ds q = None \<longleftrightarr
 
 subsection \<open>Elaboration keeps the control structure\<close>
 
+text \<open>Elaboration rewrites expressions only, so every predicate on a command's control
+  structure is the same before and after it.\<close>
+
 lemma elab_com_control [simp]:
   "source_com (elab_com \<G> fm \<kappa> q c) = source_com c"
   "may_fallthrough (elab_com \<G> fm \<kappa> q c) = may_fallthrough c"
@@ -150,6 +153,9 @@ lemma classify_special_map_None_iff [simp]:
   by (cases "(d, xs)" rule: classify_special.cases) auto
 
 subsection \<open>Well-formedness carries over\<close>
+
+text \<open>Elaborated expressions never mention the return slot, so a well-formed source
+  program elaborates to a well-formed typed program.\<close>
 
 lemma ReturnVar_notin_range_resolve_var [simp]: "ReturnVar \<notin> range (resolve_var \<G> q)"
   by (auto simp: resolve_var_def)

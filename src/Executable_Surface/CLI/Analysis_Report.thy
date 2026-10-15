@@ -14,24 +14,12 @@ text \<open>
 
 subsection \<open>The states a report holds\<close>
 
-definition report_states_at :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted set" where
+definition report_states_at :: "('k, 'x, 'vr, 'e, 'n, 's) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted set"
+  where
   "report_states_at res v = state_value ` {st \<in> set (report_states res). state_point st = v}"
 
 lemma finite_report_states_at [simp]: "finite (report_states_at res v)"
   by (simp add: report_states_at_def)
-
-text \<open>
-  \<^const>\<open>report_point_join\<close> joins the states a report holds at a point over its
-  contexts, and every one of them lies below the join.
-\<close>
-
-lemma fold_sup_ge: "x \<in> set xs \<or> x \<le> acc \<Longrightarrow> x \<le> fold (\<squnion>) xs (acc :: 'a::semilattice_sup)"
-  by (induction xs arbitrary: acc) (auto intro: le_supI1 le_supI2)
-
-lemma report_states_at_le_point_join:
-  fixes res :: "('k, 'x, 'vr, 'e, 'n, 's::join_val_sup) analysis_report"
-  shows "d \<in> report_states_at res v \<Longrightarrow> d \<le> report_point_join res v"
-  unfolding report_states_at_def report_point_join_sup by (auto intro!: fold_sup_ge)
 
 subsection \<open>Verdicts\<close>
 
@@ -200,4 +188,3 @@ lemma inj_call_string_key: "inj (\<lambda>ctx. Key_List (map Key_Node ctx))"
   by (rule injI) (simp add: inj_def)
 
 end
-

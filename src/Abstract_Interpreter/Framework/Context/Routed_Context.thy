@@ -1,5 +1,6 @@
 theory Routed_Context
-  imports Routed_Call_Programs DG_Ctx_Activation "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability"
+  imports Routed_Call_Programs DG_Ctx_Activation "Voblint_Framework.MCP_Spec" Transfer_Algebra
+    "Voblint_Domain.Nonrelational_Reachability"
     Activation_Backbone
 begin
 
@@ -36,13 +37,13 @@ text \<open>
   Beyond \<^locale>\<open>gdg_context_activation\<close>'s parameters: \<open>seed\<close> injects a routed
   \<open>(pp, 'c)\<close> pair into the global-key space; \<open>adm\<close> is the trace-semantic context relation
   keying the activation-trace collecting semantics; and two obligations about it cannot be
-  discharged generically.  \<open>routing_adequate\<close> is adequacy: whenever \<open>adm\<close> admits a context
+  discharged generically.  \<open>grouting_adequate\<close> is adequacy: whenever \<open>adm\<close> admits a context
   for a real call edge and a covered caller store, some alternative of the specification's
   own entry run describes that call --- its continuation half containing the caller store,
   its entry half containing the entered store, and its route being exactly the admitted
   context.  The three come from one alternative rather than three, which is what keeps a
   multi-alternative entry from mixing one alternative's continuation with another's callee
-  frame.  \<open>routing_total\<close> is existence: every covered call admits some context.
+  frame.  \<open>grouting_total\<close> is existence: every covered call admits some context.
   Restricting both to an edge of \<open>g\<close> (rather than quantifying over every value of the
   \<open>call_action\<close> type) matches how CALL and COMB below only ever invoke them at a matched
   edge, and keeps the obligations provable for an abstract domain that is exact on edges
@@ -141,7 +142,7 @@ abbreviation (input) admits where
   "admits \<equiv> gadmits_call_context g adm"
 
 text \<open>
-  One place unpacks the call's entry protocol. \<open>routing_adequate\<close> is a nest
+  One place unpacks the call's entry protocol. \<open>grouting_adequate\<close> is a nest
   of existentials over one entry run, and both CALL and COMB need the same
   witnesses: unpacking it separately in each would let them drift onto
   \<^emph>\<open>different\<close> alternatives of the same call, which is precisely the
@@ -569,7 +570,6 @@ next
   qed
 qed
 
-
 subsection \<open>Activation-collect soundness against the routed local unknown\<close>
 
 text \<open>
@@ -577,7 +577,7 @@ text \<open>
   local unknown's own \<open>\<gamma>\<^sub>M\<close> reading. The five obligations of
   \<^locale>\<open>gactivation_coverage\<close> are this locale's own facts: the two entry bounds discharge
   \<open>INIT\<close> together, \<open>dg_ctx_act_edge\<close> is \<open>INTRA\<close>, the CALL and COMB theorems above are
-  \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>routing_total\<close> read through the reader is \<open>TOTAL\<close>. An
+  \<open>CALL\<close> and \<open>RETURN\<close>, and \<open>grouting_total\<close> read through the reader is \<open>TOTAL\<close>. An
   instance therefore gets its activation-indexed soundness theorem by interpretation alone.
 \<close>
 
@@ -644,9 +644,9 @@ qed
 text \<open>
   Every valid activation trace of a covered program carries some context under this instance's own
   \<open>adm\<close>: the same four EDGE/CALL/COMB/TOTAL facts that bound the buckets above also make
-  \<open>gactivation_coverage\<close> total here, so an example such as
-  \<open>Example_Interval_Source_Ctx\<close> can discharge the \<open>has_ctx\<close> premise \<open>source_sound_from_collecting_cap\<close> asks for without restating the
-  interpretation itself.
+  \<open>gactivation_coverage\<close> total here, so a caller can discharge the \<open>has_ctx\<close> premise
+  \<open>source_store_in_activation_collect\<close> asks for without restating the interpretation
+  itself.
 \<close>
 
 lemma routed_valid_activation_trace_has_context:
@@ -697,7 +697,6 @@ qed
 
 end
 
-
 subsection \<open>The context relation a solved entry-state table induces\<close>
 
 text \<open>
@@ -730,14 +729,6 @@ where
       \<and> entered \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)
       \<and> ctx' = route u ctx entry (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))}"
 
-lemma routed_entry_context_relI:
-  assumes "(cont, entry) \<in> set (alts ci (dg_local (sigma (Inl (u, ctx)))))"
-    and "caller \<in> \<gamma>\<^sub>D\<^sub>G cont (genv global_of sigma)"
-    and "entered \<in> \<gamma>\<^sub>D\<^sub>G entry (genv global_of sigma)"
-  shows "route u ctx entry (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))
-           \<in> routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered"
-  using assms unfolding routed_entry_context_rel_def by blast
-
 text \<open>Invoke with \<open>obtain\<close>: the alternative is a witness the classical reasoner should not
   be left to guess.\<close>
 lemma routed_entry_context_relE:
@@ -759,45 +750,5 @@ lemma routed_entry_context_rel_total:
     "routed_entry_context_rel alts \<gamma>\<^sub>D\<^sub>G sigma global_of route u ctx ci caller entered \<noteq> {}"
   using assms unfolding routed_entry_context_rel_def
   by blast
-
-
-subsection \<open>The call at a call site\<close>
-
-text \<open>
-  Whether a node has at most one outgoing call is a per-instance fact about \<open>g\<close>, true for
-  \<open>compile_prog\<close> output (\<open>Voblint_Compile.VIMP_Proc_to_CFG\<close>'s
-  \<open>compile_prog_calls_source_unique\<close>) but not for an arbitrary hand-built CFG.
-\<close>
-
-lemma calls_filter_singleton:
-  assumes fin: "finite (calls g)"
-    and uniq: "\<And>ca1 ce1 af1 ca2 ce2 af2.
-                 (u, ca1, ce1, af1) \<in> calls g \<Longrightarrow> (u, ca2, ce2, af2) \<in> calls g
-                 \<Longrightarrow> ca1 = ca2 \<and> ce1 = ce2 \<and> af1 = af2"
-    and ce: "(u, ca, cf, af) \<in> calls g"
-  shows "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g) = [(u, ca, cf, af)]"
-proof -
-  let ?P = "\<lambda>(c, ca, ce, k). c = u"
-  let ?L = "cfg_calls_list g"
-  have mem: "(u, ca, cf, af) \<in> set ?L" using ce fin by simp
-  have distinctL: "distinct ?L" unfolding cfg_calls_list_code by (rule distinct_sorted_list_of_set)
-  have "set (filter ?P ?L) = {(u, ca, cf, af)}"
-  proof (rule set_eqI, rule iffI)
-    fix x assume hx: "x \<in> set (filter ?P ?L)"
-    then have memx: "x \<in> set ?L" and px: "?P x" by auto
-    obtain c ca' ce' af' where x: "x = (c, ca', ce', af')" by (cases x) auto
-    from px x have cU: "c = u" by simp
-    from memx x cU fin have "(u, ca', ce', af') \<in> calls g" by simp
-    with uniq[OF ce] have "ca' = ca" "ce' = cf" "af' = af" by auto
-    thus "x \<in> {(u, ca, cf, af)}" using x cU by simp
-  next
-    fix x assume "x \<in> {(u, ca, cf, af)}"
-    thus "x \<in> set (filter ?P ?L)" using mem by simp
-  qed
-  moreover have "distinct (filter ?P ?L)" using distinctL by (rule distinct_filter)
-  ultimately show ?thesis
-    apply (cases "filter (\<lambda>(c, ca, ce, k). c = u) (cfg_calls_list g)")
-    using singleton_iff subset_singletonD by(fastforce)+
-qed
 
 end

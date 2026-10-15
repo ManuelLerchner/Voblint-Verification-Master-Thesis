@@ -20,7 +20,8 @@ locale mcp_registry =
   fixes ev :: "'e \<Rightarrow> ('vr \<Rightarrow> int) \<Rightarrow> int" and rv :: 'vr
     and pconv :: "'p \<Rightarrow> 'vr option \<Rightarrow> int \<Rightarrow> int" and pglob :: "'p \<Rightarrow> 'vr \<Rightarrow> bool"
     and tx :: "'e \<Rightarrow> 'e"
-    and field :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'a \<Rightarrow> ('vr, 'e, 's::{semilattice_sup, order_bot} lifted) glocal_spec"
+    and field ::
+      "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 'a \<Rightarrow> ('vr, 'e, 's::{semilattice_sup, order_bot} lifted) glocal_spec"
     and live :: "'a \<Rightarrow> 's \<Rightarrow> bool"
     and rd :: "('vr \<Rightarrow> bool) \<Rightarrow> 's \<Rightarrow> 'v::bot"
     and val_gamma :: "'a \<Rightarrow> 'v \<Rightarrow> ('vr \<Rightarrow> int) set"
@@ -120,6 +121,9 @@ lemma single_entry_mcp_comp: "as \<noteq> [] \<Longrightarrow> single_entry (mcp
 
 subsection \<open>What the combined state publishes\<close>
 
+text \<open>The combined state denotes the stores every active analysis admits, and it is
+  empty as soon as one active analysis reports its own field empty.\<close>
+
 lemma mcp_gamma_rd:
   "mcp_gamma (map (part_gamma \<G>) as) x = gamma_lift (act_gamma as) (map_lift (rd \<G>) x)"
   if "as \<noteq> []"
@@ -147,7 +151,7 @@ subsection \<open>Deciding a check from every active analysis\<close>
 
 text \<open>
   The combined answer meets the active analyses' answers, as \<open>MCP.query'\<close> does,
-  and a check is decided from it as Goblint's \<open>assert\<close> reads \<open>eval_bool\<close>. The
+  and a check is decided from it as Goblint's \<open>assert\<close> reads \<open>Queries.eval_bool\<close>. The
   question goes through the channel the combined answer closes over itself
   (\<^const>\<open>ask_rec\<close>), so an answer that asks about a subexpression reaches every
   active analysis, and a query cycle answers \<open>\<top>\<close>.
@@ -192,4 +196,3 @@ lemma mcp_classify_sound:
 end
 
 end
-

@@ -322,4 +322,89 @@ allow = [
   "source_run_has_activation_trace_witness",
   # named in SESSION_CLEANUP_PLAYBOOK.md
   "pcompletes_witness",
+  # (cited results, continued)
+  # named in THESIS_BLUEPRINT.md
+  "activation_collect_of_fun",
+  # named in TYPED_CFG_PLAN.md
+  "compile_prog_calls_from",
+  # named in CALLSTRING_CONTEXT_DESIGN.md, THESIS_BLUEPRINT.md
+  "cs_route_context_agree",
+  # named in CALLSTRING_CONTEXT_DESIGN.md
+  "cs_route_indep_of_data",
+  # named in COOPERATING_ANALYSES_DESIGN.md
+  "dg_spec_wf_query",
+  # named in 08-equations.typ, NEXT_STEPS.md
+  "entry_state_activation_collect_sound",
+  # named in CORE_REFACTOR_PLAN.md
+  "fun_upd_sup_mono",
+  # named in GLOSSARY.md
+  "gfun_route_report_proved_sound",
+  # named in BACKWARD_FILTER_SHARING_MEASUREMENT.md
+  "is_empty_state_antimono",
+  # named in THEOREM_MAP.md, PROOF_OVERVIEW.md
+  "node_collect_in_kinds",
+  # named in 11-instances.typ
+  "post_narrow_refinement_would_violate_narrow_ge",
+  # named in VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md, THEOREM_MAP.md
+  "pstep_declare_forgets",
+  # named in 11-instances.typ
+  "refine_exact",
+  # named in 11-instances.typ, THESIS_BLUEPRINT.md
+  "refine_reductive",
+  # named in THEOREM_MAP.md
+  "report_point_sound",
+  # named in 10-results.typ, index.html
+  "run_voblint_arithmetic_refuted",
+  # named in index.html, RUN_VOBLINT_INTERFACE.md
+  "run_voblint_dead_unreached",
+  # named in THEOREM_MAP.md, VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md
+  "run_voblint_no_conversion_overflow",
+  # named in VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md, THESIS_BLUEPRINT.md
+  "run_voblint_no_signed_overflow",
+  # named in THEOREM_MAP.md
+  "run_voblint_obligations_cover",
+  # named in index.html, VERIFICATION_CHAIN_AND_TRUST_BOUNDARY.md
+  "run_voblint_sound",
+  # named in 07-cooperation.typ
+  "sound_conservative_local_spec",
+  # named in GOBLINT_ALIGNMENT_REGISTER.md
+  "to_string_relc_regression",
+
+  # Executed regression cases: each pins analyzer output by evaluation.
+  "arith_refined",
+  "const_value",
+  "conv_values",
+  "guard_value",
+  "loop_facts",
+  "mixed_facts",
+  "mixed_refined",
+  "odd_step_terminates",
+  "odd_step_value",
+  "parity_value",
+  "pow2_terminates",
+  "sign_value",
+  "swrap_values",
+  "unsigned_values",
+  "wrap_terminates_c",
+  "refinement_once_not_fixpoint",
+
+  # Kept for a reason the prose or a sibling gives.
+  # rule 4: refuted twin of the cited gfun_route_report_proved_sound
+  "gfun_route_report_refuted_sound",
+  # evidence for the Int_Refinement_Control prose that Refine_Once is monotone
+  "refine_once_mono",
+  # the content of Routed_Exec_Refinement, named in Exec/README.md
+  "pp_dg_spec_of",
+  # its named halves mcp_classify_proved/_refuted are cited
+  "mcp_classify_sound",
+  # its named halves nonrel_classify_proved/_refuted are cited
+  "nonrel_classify_sound",
+  # its named halves ord_classify_proved/_refuted are cited
+  "ord_classify_sound",
+  # the assumption of sound_truth_test, which thesis chapter 5 names
+  "tobool_sound",
+  # component soundness of gdg_analysis, named in THESIS_BLUEPRINT.md
+  "gcomp_sound",
+  # one entry alternative per call, named in GOBLINT_ALIGNMENT_REGISTER.md
+  "genter_single",
 ]

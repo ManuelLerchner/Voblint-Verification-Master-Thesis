@@ -39,9 +39,6 @@ lemma sound_emptinessD [dest]: "sound_emptiness e \<gamma>' \<Longrightarrow> e 
 lemma exact_emptinessI [intro]: "(\<And>x. e x \<longleftrightarrow> \<gamma>' x = {}) \<Longrightarrow> exact_emptiness e \<gamma>'"
   unfolding exact_emptiness_def by blast
 
-lemma exact_emptinessD: "exact_emptiness e \<gamma>' \<Longrightarrow> e x \<longleftrightarrow> \<gamma>' x = {}"
-  unfolding exact_emptiness_def by blast
-
 lemma exact_emptiness_sound: "exact_emptiness e \<gamma>' \<Longrightarrow> sound_emptiness e \<gamma>'"
   unfolding exact_emptiness_def sound_emptiness_def by blast
 

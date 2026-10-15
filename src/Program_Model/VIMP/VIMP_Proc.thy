@@ -129,14 +129,6 @@ where
   "enter_binding \<G> reset_val ev xs es s =
      bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame \<G> reset_val s)"
 
-text \<open>The concrete instance, spelled out: this is the equation that lets a
-  soundness statement about the shared constant be read as one about the entry
-  store the source semantics actually builds.\<close>
-lemma enter_binding_concrete:
-  "enter_binding \<G> 0 src_aval xs es s
-     = bind_formals xs (map (\<lambda>e. \<lbrakk>e\<rbrakk>\<^sub>e s) es) (enter_state \<G> s)"
-  by (simp add: enter_binding_def enter_state_def)
-
 text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
   the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
   domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating
@@ -229,9 +221,6 @@ end
 context vimp_sem
 begin
 
-lemmas star_gpstep_induct =
-  star.induct[of "gpstep \<Pi>", split_format(complete), case_names refl step]
-
 lemma combine_env_rv_irrelevant [simp]:
   "\<not> glob rv \<Longrightarrow> combine_env glob fr (t(rv := v)) = combine_env glob fr t"
   by (rule ext) simp
@@ -258,18 +247,6 @@ lemma pstep_frame_extend:
         arbitrary: c s frs c' s' frs' rule: gpstep.induct)
      auto
 
-lemma psteps_frame_extend:
-  "star (gpstep \<Pi>) (c, s, frs) (c', s', frs') \<Longrightarrow>
-   star (gpstep \<Pi>) (c, s, frs @ extra) (c', s', frs' @ extra)"
-  by (induction rule: star.induct[of "gpstep \<Pi>", split_format(complete)])
-     (auto intro: pstep_frame_extend star.step)
-
-lemma psteps_frame_mono:
-  "star (gpstep \<Pi>) (c, s, []) (SKIP i, t, []) \<Longrightarrow>
-   star (gpstep \<Pi>) (c, s, extra) (SKIP i, t, extra)"
-  using psteps_frame_extend[where frs = "[]" and frs' = "[]" and extra = extra]
-  by simp
-
 end
 
 subsection \<open>Call completion\<close>
@@ -283,11 +260,6 @@ lemma combine_env_ret_var_irrelevant [simp]:
 
 context vimp_sem
 begin
-
-lemma psteps_Seq_Restore_body:
-  assumes "star (gpstep \<Pi>) (c, s0, [Frame fr dst]) (SKIP i, t', [Frame fr dst])"
-  shows "star (gpstep \<Pi>) (Seq c (Restore j), s0, [Frame fr dst]) (SKIP j, combine_assign dst (conv dst (t' rv)) (combine_env glob fr t'), [])"
-  using psteps_Seq2[OF assms] by (meson Seq1 RestoreStep star.refl star.step star_trans)
 
 lemma pstep_Call:
   assumes "\<Pi> p = Some decl"
@@ -472,7 +444,8 @@ definition gwf_proc_decl ::
      list_all (gvalid_formal rv \<G>) (formals decl) \<and>
      gwf_source_com vars rv \<Pi> (body decl)"
 
-abbreviation wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, src_exp) gproc_decl \<Rightarrow> bool" where
+abbreviation wf_proc_decl :: "(vname \<Rightarrow> bool) \<Rightarrow> 'a ptable \<Rightarrow> ('a, vname, src_exp) gproc_decl \<Rightarrow> bool"
+  where
   "wf_proc_decl \<equiv> gwf_proc_decl exp_vnames ret_var"
 
 definition greserved_ret_var :: "'v \<Rightarrow> ('v \<Rightarrow> bool) \<Rightarrow> bool" where

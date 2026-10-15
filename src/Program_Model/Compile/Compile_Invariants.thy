@@ -1,5 +1,5 @@
 theory Compile_Invariants
-  imports Compile_Wellformed "Voblint_VIMP.VIMP_Program" "Voblint_CFG.CFG_Prune"
+  imports Compile_Wellformed "Voblint_CFG.CFG_Prune"
 begin
 
 section \<open>What a program must satisfy, and what its graph then satisfies\<close>

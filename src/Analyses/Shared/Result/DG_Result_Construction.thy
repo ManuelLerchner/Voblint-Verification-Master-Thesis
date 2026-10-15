@@ -1,7 +1,6 @@
 theory DG_Result_Construction
   imports
     "Voblint_Framework.DG_Analysis_Adapter"
-    "Voblint_VIMP.VIMP_Program"
     "Voblint_Exec.Default_St_Reachability"
 begin
 

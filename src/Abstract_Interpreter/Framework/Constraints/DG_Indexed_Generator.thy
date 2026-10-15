@@ -57,18 +57,7 @@ text \<open>
   the contributions is therefore a scheduling decision, not an encoding
   detail, and swapping the encodings is a question for the executable
   regression corpus rather than for these theorems.
-  \<open>routed_node_rhs_mono_eq\<close>,
-  \<open>routed_node_rhs_mono_sides\<close> and
-  \<open>routed_node_rhs_mono_deps\<close> close the file by
-  discharging the vendored solver's own @{const TD_side_mono} preconditions
-  from per-hook properties --- well-formedness, traverse/sides monotonicity
-  and dependency monotonicity --- for an arbitrary generator instance. They are
-  the hypotheses of the vendored least-solution theorem for the solver without
-  widening and narrowing, not a property of the result. The warrowing solver
-  \<open>TD_side_upd_rule\<close> that the shipped analyses run needs none of them, and no
-  shipped analysis discharges the per-hook properties.
 \<close>
-
 
 subsection \<open>The heterogeneous seeded keyed generator\<close>
 
@@ -180,7 +169,6 @@ lemma routed_contribution_programsE:
     | "t \<in> set (extra route ctx v)"
   using assms by (auto simp: routed_contribution_programs_def)
 
-
 text \<open>
   The local value a node's fold starts from: \<open>bot0\<close>, joined with the injected
   \<open>d\<^sub>0\<close> at the CFG entry. An abbreviation, so every statement that spells the
@@ -216,7 +204,6 @@ where
         let t = sp_compile (side_rhs_fold_dg (rhs_init g bot0 d\<^sub>0 v)
                   (routed_contribution_programs pred_sel site_sel route it cmb extra g c v))
         in if v = cfg_entry g then Side (buffer_key_at c) (DG bot g\<^sub>0) t else t)"
-
 
 lemma eq_routed_node_rhs:
   assumes wf: "\<And>w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
@@ -429,7 +416,6 @@ proof -
 qed
 
 subsection \<open>Correspondence: the buffered generator against the direct one\<close>
-
 
 text \<open>
   A pointwise correspondence between two parallel contribution lists -- one Side-free
@@ -930,51 +916,6 @@ qed
 
 subsection \<open>Threefold monotonicity for an arbitrary generator instance\<close>
 
-text \<open>
-  The three
-  @{const TD_side_mono} preconditions reduce to a per-program contract on the
-  intra, combine, and extra hooks, discharged once here and reusable at every
-  context policy --- a routed context policy is then a second interpretation
-  of this reduction, not a second monotonicity proof. The outer @{const Side}
-  wrapper at @{term "cfg_entry g"} is invisible to @{const traverse_rhs} and
-  @{const dep_aux} (a \<^const>\<open>Side\<close> node only ever repackages, never queries);
-  it only has to be threaded through the @{const sides_of_rhs} case via
-  \<open>fun_upd_sup_mono\<close>, below.
-\<close>
-
-lemma routed_node_rhs_mono_eq:
-  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
-  assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
-                     extra g c w). sp_wf p"
-  assumes intra_mono: "\<And>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      traverse_program (it c src a) s1 \<le> traverse_program (it c src a) s2"
-  assumes comb_mono: "\<And>v c cc ca s1 s2. (cc, ca) \<in> set (site_sel g v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      traverse_program (cmb route c ca cc v) s1 \<le> traverse_program (cmb route c ca cc v) s2"
-  assumes extra_mono: "\<And>v c t s1 s2. t \<in> set (extra route c v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      traverse_program t s1 \<le> traverse_program t s2"
-  shows
-    "is_mono_eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0)"
-proof (unfold is_mono_eq_def, intro allI)
-  fix x s1 s2
-  show "s1 \<le> s2 \<longrightarrow>
-      eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) x s1
-        \<le> eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) x s2"
-  proof (intro impI)
-    assume le: "s1 \<le> s2"
-    obtain v c where x: "x = (v, c)" by (cases x)
-    have tree_mono:
-        "\<forall>t \<in> set (routed_contribution_programs pred_sel site_sel route it cmb extra g c v).
-                       \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> traverse_program t s1 \<le> traverse_program t s2"
-      using intra_mono comb_mono extra_mono
-      by (auto simp: routed_contribution_programs_def)
-    show "eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) x s1
-          \<le> eq (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) x s2"
-      unfolding x eq_routed_node_rhs[OF wf]
-      using side_rhs_fold_dg_mono[OF wf tree_mono le]
-      by (simp add: traverse_side_rhs_fold_dg[OF wf])
-  qed
-qed
-
 text \<open>A generic fact about pointwise-ordered functions, function update, and
   join --- nothing here mentions a strategy tree. It has exactly one use, in
   the publication case below, so it stays beside that call site rather than in
@@ -990,86 +931,6 @@ proof -
   show ?thesis unfolding eq by (rule sup_mono[OF assms order_refl])
 qed
 
-lemma routed_node_rhs_mono_sides:
-  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
-  assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
-                     extra g c w). sp_wf p"
-  assumes intra_sides_mono: "\<And>v c src a s1 s2. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      sides_of_program (it c src a) s1 \<le> sides_of_program (it c src a) s2"
-  assumes comb_sides_mono: "\<And>v c cc ca s1 s2. (cc, ca) \<in> set (site_sel g v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      sides_of_program (cmb route c ca cc v) s1 \<le> sides_of_program (cmb route c ca cc v) s2"
-  assumes extra_sides_mono: "\<And>v c t s1 s2. t \<in> set (extra route c v) \<Longrightarrow> s1 \<le> s2 \<Longrightarrow>
-      sides_of_program t s1 \<le> sides_of_program t s2"
-  shows
-    "mono_sides (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0)"
-proof (unfold mono_sides_def, intro allI)
-  fix x s1 s2
-  show "s1 \<le> s2 \<longrightarrow>
-      sides_of_rhs (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 x) s1
-        \<le> sides_of_rhs
-            (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 x) s2"
-  proof (intro impI)
-    assume le: "s1 \<le> s2"
-    obtain v c where x: "x = (v, c)" by (cases x)
-    have tree_sides_mono: "\<And>w. \<forall>t \<in> set
-                       (routed_contribution_programs pred_sel site_sel route it cmb extra g c w).
-                       \<forall>s1 s2. s1 \<le> s2 \<longrightarrow> sides_of_program t s1 \<le> sides_of_program t s2"
-      using intra_sides_mono comb_sides_mono extra_sides_mono
-      by (auto simp: routed_contribution_programs_def)
-    have fold_le: "\<And>acc w. (sides_of_program (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s1)
-                  \<le> (sides_of_program (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)) s2)"
-      by (rule side_rhs_fold_dg_sides_mono[OF wf tree_sides_mono le])
-    show "sides_of_rhs
-            (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 x) s1
-          \<le> sides_of_rhs
-            (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0 x) s2"
-      unfolding x routed_node_rhs_def
-      by (simp add: Let_def fold_le fun_upd_sup_mono[OF fold_le] split: if_splits)
-  qed
-qed
-
-lemma routed_node_rhs_mono_deps:
-  fixes g :: "('vr::linorder, 'e::linorder) gcfg"
-  assumes wf: "\<And>c w. \<forall>p \<in> set (routed_contribution_programs pred_sel site_sel route it cmb
-                     extra g c w). sp_wf p"
-  assumes intra_deps_mono: "\<And>v c src a. (src, a) \<in> set (pred_sel g v c) \<Longrightarrow>
-      mono_tree_deps (sp_compile (it c src a))"
-  assumes comb_deps_mono: "\<And>v c cc ca. (cc, ca) \<in> set (site_sel g v) \<Longrightarrow>
-      mono_tree_deps (sp_compile (cmb route c ca cc v))"
-  assumes extra_deps_mono: "\<And>v c t. t \<in> set (extra route c v)
-      \<Longrightarrow> mono_tree_deps (sp_compile t)"
-  shows
-    "mono_deps (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0)"
-proof (unfold mono_deps_def, intro allI)
-  fix x s1 s2
-  show "s1 \<le> s2 \<longrightarrow>
-      dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s1 x
-        \<subseteq> dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s2 x"
-  proof (intro impI)
-    assume ord: "s1 \<le> s2"
-    obtain v c where x: "x = (v, c)" by (cases x)
-    have tree_deps_mono: "\<And>w t.
-        t \<in> set (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)
-        \<Longrightarrow> mono_tree_deps (sp_compile t)"
-      using intra_deps_mono comb_deps_mono extra_deps_mono
-      by (auto simp: routed_contribution_programs_def)
-    have fold_mono: "\<And>acc w. mono_tree_deps (sp_compile (side_rhs_fold_dg acc
-                      (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
-      by (rule side_rhs_fold_dg_mono_tree_deps[OF wf]) (rule tree_deps_mono)
-    have dsub: "\<And>acc w. (dep_program s1 (side_rhs_fold_dg acc
-                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))
-                \<subseteq> (dep_program s2 (side_rhs_fold_dg acc
-                  (routed_contribution_programs pred_sel site_sel route it cmb extra g c w)))"
-      using fold_mono[unfolded mono_tree_deps_def] ord by blast
-    show "dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s1 x
-            \<subseteq> dep (routed_node_rhs pred_sel site_sel buffer_key_at route it cmb extra g bot0 d\<^sub>0 g\<^sub>0) s2 x"
-      unfolding x dep_def routed_node_rhs_def
-      by (simp add: Let_def dsub split: if_splits)
-  qed
-qed
-
 text \<open>
   The generator never sees a specification: the intra hook supplies each
   edge's program, exactly as \<open>cmb\<close> and \<open>extra\<close> already supply theirs,
@@ -1079,7 +940,6 @@ text \<open>
   \<open>g\<^sub>0\<close>; a routed activation seed is not its own but arrives through
   \<open>extra\<close>.
 \<close>
-
 
 subsection \<open>Initial global values as side effects\<close>
 

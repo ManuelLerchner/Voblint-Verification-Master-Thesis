@@ -114,7 +114,8 @@ begin
 lemma compile_control_at_SKIP_exit_path:
   "control_at \<Pi> p c0 k n (SKIP i) v \<Longrightarrow> compile \<Pi> p c0 k n = (n', en, E, K)
    \<Longrightarrow> E \<subseteq> intra g \<Longrightarrow> star (gcfg_intra_step g) (v, s) (k, s)"
-proof (induction c0 k n "(SKIP i) :: ('a, 'v, 'e) gcom" v arbitrary: n' en E K rule: control_at.induct)
+proof (induction c0 k n "(SKIP i) :: ('a, 'v, 'e) gcom" v arbitrary: n' en E K rule:
+  control_at.induct)
   case (Skip k n)
   then have "(Statement n, EA_Nop, k) \<in> intra g" by auto
   then show ?case by (rule intra_path_nop)

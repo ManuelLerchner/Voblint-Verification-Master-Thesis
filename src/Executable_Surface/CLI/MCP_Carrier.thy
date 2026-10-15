@@ -77,7 +77,12 @@ definition mcp_rd :: "(var_id \<Rightarrow> bool) \<Rightarrow> mcp_st \<Rightar
 
 subsection \<open>Each analysis on its own field\<close>
 
-definition field :: "sem_conf \<Rightarrow> kenv \<Rightarrow> imp_prog \<Rightarrow> analysis \<Rightarrow> (var_id, exp, mcp_st lifted) glocal_spec" where
+text \<open>Each selectable analysis runs its own specification on one slot of the carrier,
+  through a lens that reads and writes that slot alone; \<open>val_gamma\<close> reads the
+  stores the slot denotes.\<close>
+
+definition field ::
+  "sem_conf \<Rightarrow> kenv \<Rightarrow> imp_prog \<Rightarrow> analysis \<Rightarrow> (var_id, exp, mcp_st lifted) glocal_spec" where
   "field sem \<kappa> p a = (case a of
       Interval \<Rightarrow> lens_of (lift_get slot1) (lift_put set_slot1) (nonrel_exec_spec sem \<kappa>)
     | Congruence \<Rightarrow> lens_of (lift_get slot2) (lift_put set_slot2) (nonrel_exec_spec sem \<kappa>)
@@ -134,7 +139,8 @@ fun field_empty :: "analysis \<Rightarrow> mcp_st \<Rightarrow> bool" where
 | "field_empty Parity r = st_lift_empty (slot5 r)"
 | "field_empty Order r = (slot6 r = Bot)"
 
-definition t_answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs lifted \<Rightarrow> exp gchannel \<Rightarrow> exp gchannel" where
+definition t_answer ::
+  "sem_conf \<Rightarrow> kenv \<Rightarrow> 'a::kind_int_domain tabs lifted \<Rightarrow> exp gchannel \<Rightarrow> exp gchannel" where
   "t_answer sem \<kappa> x ch q = (case x of Bot \<Rightarrow> \<top> | Lifted d \<Rightarrow> nonrel_query sem \<kappa> ch d q)"
 
 fun answer :: "sem_conf \<Rightarrow> kenv \<Rightarrow> analysis \<Rightarrow> mcp_val \<Rightarrow> exp gchannel \<Rightarrow> exp gchannel" where
@@ -161,6 +167,10 @@ lemma eval_truth_exp: "eval (truth_exp c) s = (if truthy (eval c s) then 1 else 
   by (cases c) (simp_all add: truthy_def ik_norm_def ik_min_def ik_max_def)
 
 subsection \<open>The registry\<close>
+
+text \<open>Each field is sound for its own slot and leaves every other slot's stores in
+  place, so the fields together interpret the registry locale
+  \<^locale>\<open>mcp_registry\<close>.\<close>
 
 lemma t_answer_sound:
   assumes "s \<in> gamma_lift (gamma_tabs \<kappa>) x" and "geval_query.channel_holds eval ch s"
@@ -210,14 +220,6 @@ lemma mcp_bot_slots [simp]:
   "slot3o (\<bottom> :: mcp_val) = Bot" "slot3f (\<bottom> :: mcp_val) = Bot"
   "slot4 (\<bottom> :: mcp_val) = Bot" "slot5 (\<bottom> :: mcp_val) = Bot" "slot6 (\<bottom> :: mcp_val) = Bot"
   by (simp_all add: bot_analysis_product_def bot_lifted_def)
-
-lemma slot_mono:
-  fixes r r' :: mcp_st
-  assumes "r \<le> r'"
-  shows "slot1 r \<le> slot1 r'" "slot2 r \<le> slot2 r'" "slot3n r \<le> slot3n r'"
-    "slot3o r \<le> slot3o r'" "slot3f r \<le> slot3f r'"
-    "slot4 r \<le> slot4 r'" "slot5 r \<le> slot5 r'" "slot6 r \<le> slot6 r'"
-  using assms by (simp_all add: less_eq_analysis_product_def)
 
 lemma field_sound:
   "mcp_sem.gsound_local_spec eval ReturnVar (kind_conv \<kappa>) is_global
@@ -277,10 +279,12 @@ next
 next
   case (EmptyRd p a r) show ?case
     by (cases a rule: analysis_cases)
-       (simp_all add: mcp_rd_def st_lift_empty_def t_lift_empty_def st_is_bot_iff t_empty_def split: lifted.splits)
+       (simp_all add: mcp_rd_def st_lift_empty_def t_lift_empty_def st_is_bot_iff t_empty_def split:
+         lifted.splits)
 next
   case (EmptyGamma a v) then show ?case
-    by (cases a rule: analysis_cases) (auto simp: t_lift_empty_def dest: t_empty_sound split: lifted.splits)
+    by (cases a rule: analysis_cases)
+      (auto simp: t_lift_empty_def dest: t_empty_sound split: lifted.splits)
 next
   case (Bot a) show ?case
     by (cases a rule: analysis_cases) (simp_all add: bot_analysis_product_def bot_lifted_def)

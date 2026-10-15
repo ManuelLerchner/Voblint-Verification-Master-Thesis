@@ -177,20 +177,6 @@ where
      publish_at m rg W (f (cmb (man_local m) g)) \<bind> (\<lambda>_.
      sp_return (rl (f (cmb (man_local m) g)))))"
 
-lemma dep_keyed_transfer:
-  "dep_program \<tau> (transfer_program (keyed_transfer cmb rl rg free R W f) src key)
-     = insert src ((Inr \<circ> key) ` set R)"
-  by (simp add: dep_transfer_program keyed_transfer_def
-      sp_compile_with_def sp_bind_def sp_return_def)
-
-lemma side_path_keyed_transfer:
-  "side_path \<tau> (sp_compile
-      (transfer_program (keyed_transfer cmb rl rg free R W f) src key)) = map key W"
-  by (cases src)
-     (simp_all add: transfer_program_def transfer_program_at_def keyed_transfer_def
-        sp_compile_def sp_compile_with_def sp_map_def sp_bind_def sp_return_def
-        dg_read_at_def sp_read_local_def sp_read_global_def)
-
 definition keyed_combine_transfer ::
   "('d \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('d \<Rightarrow> 'd) \<Rightarrow> ('v \<Rightarrow> 'd \<Rightarrow> 'd) \<Rightarrow> ('v list \<Rightarrow> 'd)
    \<Rightarrow> 'v list \<Rightarrow> ('d \<Rightarrow> 'd \<Rightarrow> 'd)
@@ -311,7 +297,6 @@ lemma dg_spec_wf_keyed_split_spec [intro, simp]:
   by (auto simp: keyed_transfer_def keyed_enter_transfer_def keyed_combine_transfer_def
       intro!: sp_wf_bind)
 
-
 subsection \<open>Soundness of the keyed lifter\<close>
 
 text \<open>
@@ -391,7 +376,8 @@ proof -
         by (auto simp: S.gedge_collect_def)
       have "s \<in> gm (cmb ?d ?g)"
         using s gm_mono[OF cmb_mono[OF order_refl view_ge]] by blast
-      then have "s' \<in> S.gedge_collect a (gm (cmb ?d ?g))" using st by (auto simp: S.gedge_collect_def)
+      then have "s' \<in> S.gedge_collect a (gm (cmb ?d ?g))" using st
+        by (auto simp: S.gedge_collect_def)
       then have r: "s' \<in> gm ?r" using S.closed_step_sound[OF sound] by blast
       have fr: "\<forall>x. \<G> x \<longrightarrow> x \<notin> set ?W \<longrightarrow> s' x = s x"
         using S.edge_step_frame[OF st] by auto

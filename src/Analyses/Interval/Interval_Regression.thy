@@ -6,8 +6,7 @@ section \<open>Regression: the typed Interval analysis, executed\<close>
 
 text \<open>
   Each case runs the certified solver on a typed program inside Isabelle and pins the
-  published value of one variable. Termination is decided by evaluation, so the
-  end-to-end theorems of \<open>Nonrelational_Analysis\<close> apply to these runs.
+  published value of one variable. Termination is decided by evaluation.
 \<close>
 
 
@@ -34,7 +33,8 @@ lemma loop_terminates_c:
      (cfg_exit (elab_cfg loop_prog []), []) \<noteq> None"
   by eval
 
-lemma loop_terminates: "nonrel.terminates TYPE(ivl) default_sem_conf [] 0 Globals_Join is_global loop_prog"
+lemma loop_terminates:
+  "nonrel.terminates TYPE(ivl) default_sem_conf [] 0 Globals_Join is_global loop_prog"
   unfolding nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF loop_terminates_c] by simp
 

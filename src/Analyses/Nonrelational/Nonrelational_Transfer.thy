@@ -67,11 +67,13 @@ lemma min_ik_sound:
   shows "min m n \<in> numeric_domain_class.gamma (min_ik a b :: 'a::kind_int_domain)"
 proof (cases "m \<le> n")
   case True
-  then have "m \<in> numeric_domain_class.gamma (fst (refine_ik CLe a b))" using refine_ik_sound[of CLe m n a b] assms by simp
+  then have "m \<in> numeric_domain_class.gamma (fst (refine_ik CLe a b))"
+    using refine_ik_sound[of CLe m n a b] assms by simp
   with True show ?thesis using gamma_mono[OF sup.cobounded1] by (fastforce simp: min_ik_def)
 next
   case False
-  then have "n \<in> numeric_domain_class.gamma (snd (refine_ik CGt a b))" using refine_ik_sound[of CGt m n a b] assms by simp
+  then have "n \<in> numeric_domain_class.gamma (snd (refine_ik CGt a b))"
+    using refine_ik_sound[of CGt m n a b] assms by simp
   with False show ?thesis using gamma_mono[OF sup.cobounded2] by (fastforce simp: min_ik_def)
 qed
 
@@ -80,11 +82,13 @@ lemma max_ik_sound:
   shows "max m n \<in> numeric_domain_class.gamma (max_ik a b :: 'a::kind_int_domain)"
 proof (cases "m \<le> n")
   case True
-  then have "n \<in> numeric_domain_class.gamma (snd (refine_ik CLe a b))" using refine_ik_sound[of CLe m n a b] assms by simp
+  then have "n \<in> numeric_domain_class.gamma (snd (refine_ik CLe a b))"
+    using refine_ik_sound[of CLe m n a b] assms by simp
   with True show ?thesis using gamma_mono[OF sup.cobounded1] by (fastforce simp: max_ik_def)
 next
   case False
-  then have "m \<in> numeric_domain_class.gamma (fst (refine_ik CGt a b))" using refine_ik_sound[of CGt m n a b] assms by simp
+  then have "m \<in> numeric_domain_class.gamma (fst (refine_ik CGt a b))"
+    using refine_ik_sound[of CGt m n a b] assms by simp
   with False show ?thesis using gamma_mono[OF sup.cobounded2] by (fastforce simp: max_ik_def)
 qed
 
@@ -212,7 +216,8 @@ definition nonrel_enter_state ::
      bind_formals ps (map2 (\<lambda>p e. KD (\<kappa> p) (cast_ik (sem_int_signed_overflow sem) (src_kind \<kappa> e) (\<kappa> p) (aeval_ask sem \<kappa> ch e \<sigma>))) ps es)
        (nonrel_enter_frame \<sigma>)"
 
-definition nonrel_combine_assign :: "var_id option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs" where
+definition nonrel_combine_assign :: "var_id option \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> 'a tabs \<Rightarrow> 'a tabs"
+  where
   "nonrel_combine_assign dst \<sigma> \<sigma>\<^sub>e =
      (case dst of None \<Rightarrow> \<sigma>
       | Some x \<Rightarrow> \<sigma>(x := KD (\<kappa> x)
@@ -245,13 +250,15 @@ proof -
 qed
 
 lemma special_val_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and "special_result eval sc t v"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+    "special_result eval sc t v"
   shows "ik_norm (\<kappa> x) v \<in> numeric_domain_class.gamma (special_val sc x \<sigma>)"
 proof (cases sc)
   case Nondet_Int then show ?thesis by (simp add: special_val_def top_ik_sound)
 next
   case (Min a b)
-  then have v: "v \<in> numeric_domain_class.gamma (min_ik (aeval_ask sem \<kappa> ch a \<sigma>) (aeval_ask sem \<kappa> ch b \<sigma>))"
+  then have v:
+    "v \<in> numeric_domain_class.gamma (min_ik (aeval_ask sem \<kappa> ch a \<sigma>) (aeval_ask sem \<kappa> ch b \<sigma>))"
     using assms(3) min_ik_sound[OF aeval_ask_sound[OF assms(1,2)] aeval_ask_sound[OF assms(1,2)]]
     by simp
   have rng: "v \<in> ik_range k" if "pair_kind \<kappa> a b = Some k" for k
@@ -262,7 +269,8 @@ next
     by (simp only: special_val_def gspecial_call.case) (rule cast_ik_sound[OF rng v])
 next
   case (Max a b)
-  then have v: "v \<in> numeric_domain_class.gamma (max_ik (aeval_ask sem \<kappa> ch a \<sigma>) (aeval_ask sem \<kappa> ch b \<sigma>))"
+  then have v:
+    "v \<in> numeric_domain_class.gamma (max_ik (aeval_ask sem \<kappa> ch a \<sigma>) (aeval_ask sem \<kappa> ch b \<sigma>))"
     using assms(3) max_ik_sound[OF aeval_ask_sound[OF assms(1,2)] aeval_ask_sound[OF assms(1,2)]]
     by simp
   have rng: "v \<in> ik_range k" if "pair_kind \<kappa> a b = Some k" for k
@@ -274,7 +282,8 @@ next
 qed
 
 lemma nonrel_special_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and "special_result eval sc t v"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+    "special_result eval sc t v"
   shows "t(x := ik_norm (\<kappa> x) v) \<in> gamma_tabs \<kappa> (nonrel_special sc x \<sigma>)"
   unfolding nonrel_special_def
   using gamma_tabs_upd[OF assms(1)] special_val_sound[OF assms] by simp
@@ -294,7 +303,8 @@ proof (cases "v = ReturnVar")
 qed (use assms in \<open>simp add: narrow_var_def\<close>)
 
 lemma refine_var_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and "eval e t \<in> numeric_domain_class.gamma a"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+    "eval e t \<in> numeric_domain_class.gamma a"
   shows "t \<in> gamma_tabs \<kappa> (refine_var e a \<sigma>)"
   using assms
 proof (induction e arbitrary: a \<sigma>)
@@ -334,7 +344,8 @@ next
       have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
           = refine_var e\<^sub>2 (raw_aop_ik ASub a a\<^sub>1) (refine_var e\<^sub>1 (raw_aop_ik ASub a a\<^sub>2) \<sigma>)"
         using fits AAdd by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
-      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis by simp
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis
+        by simp
     next
       case ASub
       have m': "eval e\<^sub>1 t \<in> numeric_domain_class.gamma (raw_aop_ik AAdd a a\<^sub>2)"
@@ -344,7 +355,8 @@ next
       have "refine_var (TArith ik op e\<^sub>1 e\<^sub>2) a \<sigma>
           = refine_var e\<^sub>2 (raw_aop_ik ASub a\<^sub>1 a) (refine_var e\<^sub>1 (raw_aop_ik AAdd a a\<^sub>2) \<sigma>)"
         using fits ASub by (simp add: a\<^sub>1_def a\<^sub>2_def Let_def)
-      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis by simp
+      with TArith.IH(2)[OF TArith.IH(1)[OF TArith.prems(1,2) m'] TArith.prems(2) n'] show ?thesis
+        by simp
     qed (use fits TArith.prems in \<open>simp_all add: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
   next
     case nofit: False
@@ -361,7 +373,9 @@ next
         case k: True
         have "eval e\<^sub>1 t \<in> ik_range ik" by (rule src_kind_sound[OF vimp k])
         then have "eval e\<^sub>1 t \<in> numeric_domain_class.gamma (arith_ik (sem_int_signed_overflow sem) ik (if op = AAdd then ASub else AAdd) False a a\<^sub>2)"
-          using arith_ik_sound[where k = ik and op = "if op = AAdd then ASub else AAdd", OF FalseE r n] True
+          using arith_ik_sound[where k = ik and op = "if op = AAdd then ASub else AAdd", OF FalseE r
+            n]
+            True
           by (auto simp: ik_norm_norm_add ik_norm_norm_diff simp del: ik_range_iff)
         with k show ?thesis
           unfolding \<sigma>'_def using TArith.IH(1)[OF TArith.prems(1,2)] by simp
@@ -389,13 +403,14 @@ next
         qed
         with k show ?thesis using TArith.IH(2)[OF s1 TArith.prems(2)] by simp
       qed (simp add: s1)
-      with eq show ?thesis by (simp only:)
+      with eq show ?thesis by simp
     qed (use nofit TArith.prems in \<open>auto simp: a\<^sub>1_def a\<^sub>2_def Let_def\<close>)
   qed
 qed simp_all
 
 lemma nonrel_refine_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and "truthy (eval b t) = pol"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+    "truthy (eval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (nonrel_refine b pol \<sigma>)"
 proof -
   let ?\<gamma> = "\<lambda>\<sigma>. gamma_tabs \<kappa> \<sigma> \<inter> Collect (geval_query.channel_holds eval ch)"
@@ -419,10 +434,13 @@ proof -
     have g: "t \<in> gamma_tabs \<kappa> \<sigma>" and h: "geval_query.channel_holds eval ch t" using that(1) by auto
     have holds: "cop_eval ?c (eval l t) (eval r t)"
       using that(2) TCmp by (auto split: if_splits)
-    obtain al ar where ref: "refine_ik ?c (aeval_ask sem \<kappa> ch l \<sigma>) (aeval_ask sem \<kappa> ch r \<sigma>) = (al, ar)"
+    obtain al ar where ref:
+      "refine_ik ?c (aeval_ask sem \<kappa> ch l \<sigma>) (aeval_ask sem \<kappa> ch r \<sigma>) = (al, ar)"
       by (cases "refine_ik ?c (aeval_ask sem \<kappa> ch l \<sigma>) (aeval_ask sem \<kappa> ch r \<sigma>)")
     have "eval l t \<in> numeric_domain_class.gamma al" "eval r t \<in> numeric_domain_class.gamma ar"
-      using refine_ik_sound[OF holds aeval_ask_sound[OF g h, where sem = sem] aeval_ask_sound[OF g h, where sem = sem]] ref
+      using refine_ik_sound[OF holds aeval_ask_sound[OF g h, where sem = sem]
+        aeval_ask_sound[OF g h, where sem = sem]]
+        ref
       by simp_all
     then show ?thesis using ref g h TCmp by (simp add: nonrel_narrow_def refine_var_sound)
   qed (use bare[OF that] in \<open>simp_all add: nonrel_narrow_def\<close>)
@@ -468,7 +486,8 @@ lemma gamma_tabs_restrict:
   by (simp add: gamma_tabs_def)
 
 lemma nonrel_branch_sound:
-  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and "truthy (eval b t) = pol"
+  assumes "t \<in> gamma_tabs \<kappa> \<sigma>" and ch: "geval_query.channel_holds eval ch t" and
+    "truthy (eval b t) = pol"
   shows "t \<in> gamma_tabs \<kappa> (nonrel_branch b pol \<sigma>)"
 proof -
   have refined: "t \<in> gamma_tabs \<kappa> (\<lambda>v. if v \<in> exp_vars b then nonrel_refine b pol \<sigma> v else \<sigma> v)"
@@ -511,7 +530,8 @@ proof (cases r)
   case None with assms show ?thesis by (simp add: nonrel_return_def)
 next
   case (Some e)
-  with gamma_tabs_upd[OF assms(1) ret_kd_sound[OF assms]] show ?thesis by (simp add: nonrel_return_def)
+  with gamma_tabs_upd[OF assms(1) ret_kd_sound[OF assms]] show ?thesis
+    by (simp add: nonrel_return_def)
 qed
 
 text \<open>Binding a formal is an assignment in the callee's frame of a value the caller
@@ -551,7 +571,8 @@ lemma nonrel_enter_state_sound:
 proof -
   have "enter_state is_global t \<in> gamma_tabs \<kappa> (nonrel_enter_frame \<sigma>)"
     using gamma_tabsD[OF assms(1)] in_kinds_enter_state
-    by (intro gamma_tabsI) (auto simp: enter_state_def nonrel_enter_frame_def enter_frame_def combine_env_def)
+    by (intro gamma_tabsI)
+      (auto simp: enter_state_def nonrel_enter_frame_def enter_frame_def combine_env_def)
   then show ?thesis unfolding nonrel_enter_state_def by (rule bind_formals_sound[OF assms])
 qed
 
@@ -588,7 +609,6 @@ proof -
 qed
 
 end
-
 
 subsection \<open>The typed component\<close>
 
@@ -647,14 +667,15 @@ proof -
       by (simp add: nonrel_spec_def T.gsound_event_def)
     show "T.gsound_enter (gamma_tabs \<kappa>) (ls_enter (nonrel_spec sem \<kappa>))"
       unfolding T.gsound_enter_def
-      by (auto simp: nonrel_spec_def cfg_transfer_sem.call_enter_CallEdge intro: nonrel_enter_state_sound)
+      by (auto simp: nonrel_spec_def cfg_transfer_sem.call_enter_CallEdge intro:
+        nonrel_enter_state_sound)
     show "T.gsound_combine (gamma_tabs \<kappa>) (ls_combine_env (nonrel_spec sem \<kappa>))
         (ls_combine_assign (nonrel_spec sem \<kappa>))"
       unfolding T.gsound_combine_def
-      by (auto simp: nonrel_spec_def cfg_transfer_sem.gcombine_collect_def intro: nonrel_combine_sound)
+      by (auto simp: nonrel_spec_def cfg_transfer_sem.gcombine_collect_def intro:
+        nonrel_combine_sound)
   qed
 qed
-
 
 subsection \<open>Kind consistency\<close>
 
@@ -676,107 +697,13 @@ lemma kd_at_simps [simp]:
 definition kind_consistent :: "kenv \<Rightarrow> 'a tabs \<Rightarrow> bool" where
   "kind_consistent \<kappa> \<sigma> \<longleftrightarrow> (\<forall>v. v \<noteq> ReturnVar \<longrightarrow> kd_at (\<kappa> v) (\<sigma> v))"
 
-lemma kind_consistent_upd:
-  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> (x \<noteq> ReturnVar \<Longrightarrow> kd_at (\<kappa> x) d)
-     \<Longrightarrow> kind_consistent \<kappa> (\<sigma>(x := d))"
-  by (auto simp: kind_consistent_def)
-
-lemma kd_at_sup: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<squnion> b)"
-  for a b :: "'a::ik_domain kd"
-  by (cases a; cases b) auto
-
-lemma kd_at_widen: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<nabla> b)"
-  for a b :: "'a::ik_domain kd"
-  by (cases a; cases b) auto
-
-lemma kd_at_narrow: "kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (a \<Delta> b)"
-  for a b :: "'a::ik_domain kd"
-  by (cases a; cases b) auto
-
-lemma kind_consistent_sup:
-  "kind_consistent \<kappa> \<sigma>\<^sub>1 \<Longrightarrow> kind_consistent \<kappa> \<sigma>\<^sub>2 \<Longrightarrow> kind_consistent \<kappa> (\<sigma>\<^sub>1 \<squnion> \<sigma>\<^sub>2)"
-  for \<sigma>\<^sub>1 \<sigma>\<^sub>2 :: "'a::ik_domain tabs"
-  by (simp add: kind_consistent_def kd_at_sup)
-
-lemma kind_consistent_pointwise:
-  assumes "kind_consistent \<kappa> \<sigma>\<^sub>1" "kind_consistent \<kappa> \<sigma>\<^sub>2"
-    and "\<And>k a b. kd_at k a \<Longrightarrow> kd_at k b \<Longrightarrow> kd_at k (f a b)"
-  shows "kind_consistent \<kappa> (\<lambda>v. f (\<sigma>\<^sub>1 v) (\<sigma>\<^sub>2 v))"
-  using assms by (simp add: kind_consistent_def)
-
 lemma kind_consistent_bot [simp]: "kind_consistent \<kappa> \<bottom>"
   by (simp add: kind_consistent_def bot_fun_def bot_kd_def)
 
-context
-  fixes sem :: sem_conf and \<kappa> :: kenv
-begin
-
-lemma nonrel_assign_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_assign sem \<kappa> ch x e \<sigma>)"
-  by (simp add: nonrel_assign_def kind_consistent_upd)
-
-lemma nonrel_special_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_special sem \<kappa> ch sc x \<sigma>)"
-  by (simp add: nonrel_special_def kind_consistent_upd)
-
-lemma narrow_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (narrow_var \<kappa> v a \<sigma>)"
-  by (simp add: narrow_var_def kind_consistent_upd)
-
-lemma refine_var_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (refine_var sem \<kappa> ch e a \<sigma>)"
-  by (induction e arbitrary: a \<sigma>) (auto simp: narrow_var_kind Let_def split: aop.splits)
-
-lemma nonrel_refine_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_refine sem \<kappa> ch b pol \<sigma>)"
-  unfolding nonrel_refine_def
-  apply (rule bool_refine.brefine_inv[OF nonrel_bool_locale, where P = "\<lambda>_. True" and Q = "kind_consistent \<kappa>"])
-  apply (simp_all add: kind_consistent_sup)
-  subgoal for e pol \<sigma>'
-    unfolding nonrel_atom_def nonrel_narrow_def Let_def case_prod_beta
-    by (cases e) (auto intro!: refine_var_kind simp del: refine_var.simps)
-  done
-
-lemma nonrel_branch_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_branch sem \<kappa> ch b pol \<sigma>)"
-proof -
-  assume k: "kind_consistent \<kappa> \<sigma>"
-  have "kind_consistent \<kappa> (\<lambda>v. if v \<in> exp_vars b then nonrel_refine sem \<kappa> ch b pol \<sigma> v else \<sigma> v)"
-    using k nonrel_refine_kind[OF k, of ch b pol] by (simp add: kind_consistent_def)
-  then show ?thesis by (simp add: nonrel_branch_def Let_def split: option.splits)
-qed
-
-lemma nonrel_return_kind: "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_return sem \<kappa> ch r \<sigma>)"
-  by (simp add: nonrel_return_def kind_consistent_upd split: option.splits)
-
-lemma nonrel_enter_state_kind:
-  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> (nonrel_enter_state sem \<kappa> ch ps es \<sigma>)"
-proof -
-  assume kc: "kind_consistent \<kappa> \<sigma>"
-  have frame: "kind_consistent \<kappa> (nonrel_enter_frame \<sigma>)"
-    using kc by (simp add: kind_consistent_def nonrel_enter_frame_def enter_frame_def combine_env_def)
-  have "kind_consistent \<kappa> (bind_formals ps (map2 f ps es) \<tau>)"
-    if "kind_consistent \<kappa> \<tau>" and "\<And>p e. kd_at (\<kappa> p) (f p e)" for f :: "var_id \<Rightarrow> exp \<Rightarrow> 'a kd" and \<tau>
-    using that
-  proof (induction ps arbitrary: es \<tau>)
-    case (Cons p ps)
-    show ?case
-    proof (cases es)
-      case (Cons e es')
-      have "kind_consistent \<kappa> (\<tau>(p := f p e))"
-        using Cons.prems by (simp add: kind_consistent_upd)
-      from Cons.IH[OF this Cons.prems(2), of es'] \<open>es = e # es'\<close> show ?thesis by simp
-    qed (use Cons.prems in simp)
-  qed simp
-  then show ?thesis
-    using frame by (simp add: nonrel_enter_state_def)
-qed
-
-lemma nonrel_combine_kind:
-  "kind_consistent \<kappa> \<sigma> \<Longrightarrow> kind_consistent \<kappa> \<sigma>\<^sub>e
-     \<Longrightarrow> kind_consistent \<kappa> (nonrel_combine_assign sem \<kappa> dst (combine_env is_global \<sigma> \<sigma>\<^sub>e) \<sigma>\<^sub>e)"
-  by (cases dst)
-     (simp_all add: nonrel_combine_assign_def kind_consistent_def combine_env_def)
-
-end
-
 text \<open>The guard refinement runs as the generic recursion at the typed instance.\<close>
 
-global_interpretation nonrel_bool: bool_refine nonrel_view size "nonrel_atom sem \<kappa> ch" "nonrel_feas sem \<kappa> ch" sup "\<lambda>_. \<bottom>"
+global_interpretation nonrel_bool: bool_refine nonrel_view size "nonrel_atom sem \<kappa> ch"
+  "nonrel_feas sem \<kappa> ch" sup "\<lambda>_. \<bottom>"
   for sem \<kappa> ch
   defines nonrel_refine_exec = nonrel_bool.brefine
   by (rule nonrel_bool_locale)

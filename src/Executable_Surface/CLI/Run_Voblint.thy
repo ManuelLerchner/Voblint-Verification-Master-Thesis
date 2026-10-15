@@ -264,8 +264,8 @@ text \<open>
 theorem run_voblint_source_sound:
   assumes run: "run_voblint conf ds p = Analysed res"
     and s0: "s0 \<in> init_stores (kenv_of ds)"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
                     \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> s \<in> reaching ds p v
@@ -295,8 +295,8 @@ text \<open>
 theorem run_voblint_check_sound:
   assumes run: "run_voblint conf ds p = Analysed res"
     and s0: "s0 \<in> init_stores (kenv_of ds)"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and chk: "next_check residual = Some (l, e)"
   shows "\<exists>c \<in> set (report_checks res). check_label c = l \<and> check_exp c = e
            \<and> s \<in> reaching ds p (check_point c)
@@ -311,7 +311,8 @@ proof -
     where sim: "elab_ptable p ds, elab_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and s: "s \<in> reaching ds p v"
     by blast
-  from csim_next_check_edge[OF sim chk] obtain w where "(v, EA_Check l e, w) \<in> intra (elab_cfg p ds)"
+  from csim_next_check_edge[OF sim chk]
+  obtain w where "(v, EA_Check l e, w) \<in> intra (elab_cfg p ds)"
     by blast
   from report_check_row[OF wf rep this] obtain c where c: "c \<in> set (report_checks res)"
     and pt: "check_point c = v" and lbl: "check_label c = l" and ex: "check_exp c = e"
@@ -331,8 +332,8 @@ text \<open>
 corollary run_voblint_labelled_check_sound:
   assumes run: "run_voblint conf ds p = Analysed res"
     and s0: "s0 \<in> init_stores (kenv_of ds)"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and chk: "next_check residual = Some (l, e)"
     and distinct: "distinct (map check_label (report_checks res))"
   shows "\<exists>c \<in> set (report_checks res). check_label c = l"
@@ -380,17 +381,17 @@ theorem run_voblint_spine:
   defines "g \<equiv> elab_cfg p ds" and "S \<equiv> init_stores (kenv_of ds)"
   assumes run: "run_voblint conf ds p = Analysed res"
     and s0: "s0 \<in> S"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
-    and has_ctx: "\<And>t. t \<in> valid_activation_trace (kenv_of ds) g S
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
+    and has_ctx: "\<And>t. t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>
                    \<Longrightarrow> \<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
-    and buckets: "\<And>v. (\<Union>c'. activation_collect (kenv_of ds) adm c\<^sub>0 g S v c')
+    and buckets: "\<And>v. (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c')
                    = reaching ds p v"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
            \<and> vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c
-           \<and> s \<in> activation_collect (kenv_of ds) adm c\<^sub>0 g S v c
-           \<and> (\<Union>c'. activation_collect (kenv_of ds) adm c\<^sub>0 g S v c') = reaching ds p v
+           \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
                   \<and> s \<in> mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
            \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (eval c s))
@@ -406,11 +407,12 @@ proof -
     where sim: "elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and rep: "vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t"
       and rel: "vimp.gactivation_context_rel (kenv_of ds) adm c\<^sub>0 g t c"
-      and mem: "s \<in> activation_collect (kenv_of ds) adm c\<^sub>0 g S v c"
+      and mem: "s \<in> \<A>\<^bsub>kenv_of ds,adm,c\<^sub>0,g,S\<^esub> v c"
     unfolding cfg by blast
   have s: "s \<in> reaching ds p v" using mem buckets[of v] by blast
   show ?thesis
-    using sim rep rel mem buckets[of v] run_voblint_states[OF run s] run_voblint_report_sound[OF run s]
+    using sim rep rel mem buckets[of v] run_voblint_states[OF run s]
+      run_voblint_report_sound[OF run s]
     by blast
 qed
 
@@ -428,22 +430,23 @@ theorem run_voblint_call_string_chain:
   assumes run: "run_voblint conf ds p = Analysed res"
     and cx: "conf_context conf = Call_String k"
     and s0: "s0 \<in> S"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
            \<and> vimp.gactivation_context_rel (kenv_of ds) adm [] g t c
-           \<and> s \<in> activation_collect (kenv_of ds) adm [] g S v c
-           \<and> (\<Union>c'. activation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v
+           \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c') = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
                   \<and> s \<in> mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
            \<and> (\<forall>c. PROVED res v c \<longrightarrow> truthy (eval c s))
            \<and> (\<forall>c. REFUTED res v c \<longrightarrow> \<not> truthy (eval c s))"
 proof -
   have has_ctx: "\<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm [] g t c"
-    if "t \<in> valid_activation_trace (kenv_of ds) g S" for t
-    unfolding adm_def by (rule exI, subst vimp.activation_context_rel_of_fun_iff[OF that]) (rule refl)
-  have buckets: "(\<Union>c'. activation_collect (kenv_of ds) adm [] g S v c') = reaching ds p v"
+    if "t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>" for t
+    unfolding adm_def
+    by (rule exI, subst vimp.activation_context_rel_of_fun_iff[OF that]) (rule refl)
+  have buckets: "(\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,[],g,S\<^esub> v c') = reaching ds p v"
     for v
     unfolding adm_def g_def S_def node_collect_def activation_collect_def
     by (rule mcp_cs.fun_route_node_collect_eq_Union[where ctx_fun = "cs_context k", symmetric])
@@ -469,13 +472,13 @@ theorem run_voblint_entry_state_chain:
   assumes run: "run_voblint conf ds p = Analysed res"
     and cx: "conf_context conf = Entry_State"
     and s0: "s0 \<in> S"
-    and exec: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                 (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of ds),(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t c. elab_ptable p ds, g, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
            \<and> vimp.gactivation_trace_repr (kenv_of ds) g S (v, s, stk) t
            \<and> vimp.gactivation_context_rel (kenv_of ds) adm mcp_root_ctx g t c
-           \<and> s \<in> activation_collect (kenv_of ds) adm mcp_root_ctx g S v c
-           \<and> (\<Union>c'. activation_collect (kenv_of ds) adm mcp_root_ctx g S v c')
+           \<and> s \<in> \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c
+           \<and> (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c')
                = reaching ds p v
            \<and> (\<exists>d. Lifted d \<in> report_states_at res v
                   \<and> s \<in> mcp.act_gamma ds (activation_of (conf_analyses conf)) d)
@@ -485,9 +488,9 @@ proof -
   from run have wf: "wf_program_compile_input p"
     and rep: "report_run conf ds p = Some res"
     by (auto elim!: run_voblint_AnalysedE intro: wf_program_compile_input_exec_sound)
-  have chain: "(\<forall>t. t \<in> valid_activation_trace (kenv_of ds) g S
+  have chain: "(\<forall>t. t \<in> \<T>\<^bsub>kenv_of ds,g,S\<^esub>
                   \<longrightarrow> (\<exists>c. vimp.gactivation_context_rel (kenv_of ds) adm mcp_root_ctx g t c))
-    \<and> (\<forall>v. (\<Union>c'. activation_collect (kenv_of ds) adm mcp_root_ctx g S v c')
+    \<and> (\<forall>v. (\<Union>c'. \<A>\<^bsub>kenv_of ds,adm,mcp_root_ctx,g,S\<^esub> v c')
              = reaching ds p v)"
   proof (cases "conf_program_globals conf")
     case Program_Globals_Flow_Sensitive

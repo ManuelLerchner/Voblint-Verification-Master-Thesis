@@ -21,10 +21,4 @@ text \<open>
 abbreviation le_pair :: "'a::order \<times> 'a \<Rightarrow> 'a \<times> 'a \<Rightarrow> bool" where
   "le_pair p q \<equiv> fst p \<le> fst q \<and> snd p \<le> snd q"
 
-lemma le_pair_fst: "le_pair p q \<Longrightarrow> fst p \<le> fst q"
-  by simp
-
-lemma le_pair_snd: "le_pair p q \<Longrightarrow> snd p \<le> snd q"
-  by simp
-
 end

@@ -7,10 +7,10 @@ section \<open>Which solved keys a terminating solve is closed on\<close>
 text \<open>
   The key set a terminating solve returns is not one the soundness argument can use as it
   stands: it may hold keys the solver queried under an earlier value and no longer reads,
-  and keys of procedures whose result it never solved.  \<open>live_unknowns\<close> keeps a solved key
+  and keys of procedures whose result it never solved.  \<open>glive_unknowns\<close> keeps a solved key
   when its node belongs to a procedure (\<^theory>\<open>Voblint_Compile.Live_Nodes\<close>) whose result
   is solved at the same context.  From what each generated equation reads under the final
-  valuation, \<open>live_unknowns_cover\<close> shows that set closed under every intra edge, every call
+  valuation, \<open>glive_unknowns_cover\<close> shows that set closed under every intra edge, every call
   continuation and every call that enters a live state, with no premise beyond termination
   and a well-formed program.  The endpoints below restate the routed soundness over these
   keys and carry it to the published table.
@@ -443,7 +443,8 @@ next
   have ce': "entry_alt (pglob p) p ?ci ?caller ?g = (c, e)"
     using ce by (simp add: sol_global_def)
   have sc: "s \<in> pgam p c ?g"
-    and ec: "cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s \<in> pgam p e ?g"
+    and ec:
+      "cfg_transfer_sem.gcall_enter ev (pconv p) (pglob p) (CallEdge dst pars args) s \<in> pgam p e ?g"
     using cov ce by (simp_all add: entry_pairs_cover_def sol_global_def)
   have re: "route (pglob p) u ctx e (CallEdge dst pars args) = ctx'"
     using req ce by (simp add: entry_of_def)

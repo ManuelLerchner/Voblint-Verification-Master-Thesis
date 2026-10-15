@@ -17,26 +17,10 @@ text \<open>
 definition in_kinds :: "kenv \<Rightarrow> store \<Rightarrow> bool" where
   "in_kinds \<kappa> t \<longleftrightarrow> (\<forall>v. v \<noteq> ReturnVar \<longrightarrow> t v \<in> ik_range (\<kappa> v))"
 
-lemma in_kinds_all_in_kinds: "in_kinds \<kappa> t \<longleftrightarrow> all_in_kinds \<kappa> (t(ReturnVar := 0))"
-  by (auto simp: in_kinds_def all_in_kinds_def simp del: ik_range_iff)
-
 lemma in_kinds_update [simp]:
   "in_kinds \<kappa> t \<Longrightarrow> in_kinds \<kappa> (t(v := ik_norm (\<kappa> v) n))"
   "in_kinds \<kappa> t \<Longrightarrow> in_kinds \<kappa> (t(ReturnVar := n))"
   by (auto simp: in_kinds_def simp del: ik_range_iff)
-
-lemma eval_cong: "(\<And>v. v \<in> exp_vars e \<Longrightarrow> s v = t v) \<Longrightarrow> eval e s = eval e t"
-  by (induction e) auto
-
-lemma eval_in_kinds_in_range:
-  assumes "in_kinds \<kappa> t" and "wt_exp \<kappa> e" and "ReturnVar \<notin> exp_vars e"
-  shows "eval e t \<in> ik_range (exp_kind e)"
-proof -
-  have "eval e t = eval e (t(ReturnVar := 0))"
-    using assms(3) by (intro eval_cong) auto
-  then show ?thesis
-    using eval_in_range [OF assms(2)] assms(1) by (simp add: in_kinds_all_in_kinds)
-qed
 
 lemma in_kinds_bind_formals:
   "in_kinds \<kappa> t \<Longrightarrow> (\<And>x n. (x, n) \<in> set (zip xs ns) \<Longrightarrow> n \<in> ik_range (\<kappa> x))
@@ -63,10 +47,6 @@ definition calls_in_kinds :: "kenv \<Rightarrow> (var_id, exp) gcfg \<Rightarrow
   "calls_in_kinds \<kappa> g \<longleftrightarrow>
      (\<forall>u dst pars es v w. (u, CallEdge dst pars es, v, w) \<in> calls g \<longrightarrow>
         list_all (\<lambda>e. wt_exp \<kappa> e \<and> ReturnVar \<notin> exp_vars e) es \<and> args_ok \<kappa> pars es)"
-
-lemma args_ok_zip:
-  "args_ok \<kappa> xs es \<Longrightarrow> (x, e) \<in> set (zip xs es) \<Longrightarrow> exp_kind e = \<kappa> x"
-  by (induction \<kappa> xs es rule: args_ok.induct) auto
 
 lemma zip_map2_self: "zip xs (map2 f xs ys) = map (\<lambda>(x, y). (x, f x y)) (zip xs ys)"
 proof (induction xs arbitrary: ys)
@@ -102,7 +82,7 @@ lemma caller_of_callers: "caller_of t = Some c \<Longrightarrow> insert c (calle
 
 lemma valid_activation_trace_callers_in_kinds:
   assumes vimp: "calls_in_kinds \<kappa> g" and S: "\<And>s. s \<in> S \<Longrightarrow> in_kinds \<kappa> s"
-    and t: "t \<in> valid_activation_trace \<kappa> g S"
+    and t: "t \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
   shows "in_kinds \<kappa> (sink_store t) \<and> (\<forall>c \<in> callers t. in_kinds \<kappa> (sink_store c))"
   using t
 proof (induction t rule: vimp.gvalid_activation_trace.induct)
@@ -129,17 +109,16 @@ qed
 
 theorem valid_activation_trace_in_kinds:
   assumes "calls_in_kinds \<kappa> g" and "\<And>s. s \<in> S \<Longrightarrow> in_kinds \<kappa> s"
-    and "t \<in> valid_activation_trace \<kappa> g S"
+    and "t \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
   shows "in_kinds \<kappa> (sink_store t)"
   using valid_activation_trace_callers_in_kinds [OF assms] by blast
 
 theorem node_collect_in_kinds:
   assumes "calls_in_kinds \<kappa> g" and "\<And>s. s \<in> S \<Longrightarrow> in_kinds \<kappa> s"
-    and "s \<in> node_collect \<kappa> g S v"
+    and "s \<in> \<C>\<^bsub>\<kappa>,g,S\<^esub> v"
   shows "in_kinds \<kappa> s"
   using assms(3) valid_activation_trace_in_kinds [OF assms(1,2)]
   by (auto simp: vimp.gnode_collect_def)
-
 
 subsection \<open>The typed graph has typed calls\<close>
 
@@ -216,61 +195,6 @@ proof -
     from compile_calls_from [OF cb M] main show ?thesis
       by (metis gproc_decl.select_convs(2))
   qed
-qed
-
-lemma com_calls_elab_com:
-  "com_calls (elab_com \<G> fm \<kappa> r c)
-     = (\<lambda>(dst, q, es). (map_option (resolve_var \<G> r) dst, q,
-                         elab_args (resolve_var \<G> r) \<kappa> (map (resolve_var \<G> q) (fm q)) es))
-       ` com_calls c"
-  by (induction c) (auto simp: image_Un)
-
-lemma call_formals_elab_ptable:
-  "call_formals (elab_ptable p ds) q = map (resolve_var (declared_global p) q) (prog_formals p q)"
-  by (cases "prog_table p q") (auto simp: elab_ptable_def prog_formals_def Code.abort_def)
-
-theorem calls_in_kinds_elab_cfg:
-  assumes wf: "wf_program_compile_input p"
-  shows "calls_in_kinds (kenv_of ds) (elab_cfg p ds)"
-  unfolding calls_in_kinds_def
-proof (intro allI impI)
-  fix u dst pars es v w
-  assume e: "(u, CallEdge dst pars es, v, w) \<in> calls (elab_cfg p ds)"
-  from wf have src: "wf_source_program (declared_global p) (prog_table p)"
-    by (simp add: gwf_compile_input_def)
-  from compile_prog_calls_from [OF elab_ptable_main(1) [OF src] e [unfolded elab_cfg_def]]
-  obtain r d q where d: "elab_ptable p ds r = Some d" and c: "(dst, q, es) \<in> com_calls (body d)"
-    and pars: "pars = call_formals (elab_ptable p ds) q"
-    by blast
-  let ?\<rho> = "resolve_var (declared_global p) r"
-  let ?fs = "map (resolve_var (declared_global p) q) (prog_formals p q)"
-  from d c obtain es0 where es: "es = elab_args ?\<rho> (kenv_of ds) ?fs es0"
-    by (auto simp: elab_ptable_def com_calls_elab_com)
-  have "list_all (\<lambda>e. wt_exp (kenv_of ds) e \<and> ReturnVar \<notin> exp_vars e) es"
-    using elab_args_wt [of "kenv_of ds" ?\<rho> ?fs es0] exp_vars_elab_args [of _ ?\<rho> "kenv_of ds" ?fs es0]
-      ReturnVar_notin_range_resolve_var [of "declared_global p" r]
-    unfolding es list_all_iff by blast
-  moreover have "args_ok (kenv_of ds) pars es"
-    using elab_args_wt [of "kenv_of ds" ?\<rho> ?fs es0] by (simp add: es pars call_formals_elab_ptable del: call_formals_def)
-  ultimately show "list_all (\<lambda>e. wt_exp (kenv_of ds) e \<and> ReturnVar \<notin> exp_vars e) es
-                     \<and> args_ok (kenv_of ds) pars es" ..
-qed
-
-
-text \<open>Hence a typed run keeps its store typed: every identity other than the return slot
-  holds a value of its kind at every point of the run.\<close>
-
-theorem run_in_kinds:
-  assumes wf: "wf_program_compile_input p"
-    and s0: "in_kinds (kenv_of ds) s0"
-    and run: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
-  shows "in_kinds (kenv_of ds) s"
-proof -
-  from source_reaches_node_collect [OF wf _ run, of "{s0}"]
-  obtain v where "s \<in> node_collect (kenv_of ds) (elab_cfg p ds) {s0} v" by blast
-  then show ?thesis
-    using node_collect_in_kinds [OF calls_in_kinds_elab_cfg [OF wf]] s0 by blast
 qed
 
 lemma init_stores_in_kinds: "t \<in> init_stores \<kappa> \<Longrightarrow> in_kinds \<kappa> t"

@@ -118,6 +118,9 @@ lemma frames_match_activation:
 
 section \<open>The typed instance\<close>
 
+text \<open>VIMP's CFG step: the generic step at VIMP's expression evaluator, return slot,
+  return-value conversion of the declared kinds and global predicate.\<close>
+
 definition cstep :: "kenv \<Rightarrow> (var_id, exp) gcfg
     \<Rightarrow> var_id gcconf \<Rightarrow> var_id gcconf \<Rightarrow> bool"
     ("(_,_ \<turnstile>/ _ \<rightarrow>\<^sub>c/ _)" [51, 51, 51, 51] 50) where

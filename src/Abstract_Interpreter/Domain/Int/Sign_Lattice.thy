@@ -239,10 +239,6 @@ lemma gamma_inf_sign [simp]:
   "gamma_sign (a \<sqinter> b) = gamma_sign a \<inter> gamma_sign b"
   by (cases a; cases b) auto
 
-lemma inf_sign_sound:
-  "n \<in> gamma_sign a \<Longrightarrow> n \<in> gamma_sign b \<Longrightarrow> n \<in> gamma_sign (a \<sqinter> b)"
-  by simp
-
 instance sign :: semilattice_inf
 proof intro_classes
   fix x y z :: sign

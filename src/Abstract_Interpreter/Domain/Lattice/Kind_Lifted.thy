@@ -96,6 +96,9 @@ instance kd :: (ik_domain) bounded_semilattice_sup_bot ..
 
 subsection \<open>Widening and narrowing at the operands' kind\<close>
 
+text \<open>Two operands of one kind are widened or narrowed by the component domain at that
+  kind. Widening operands of different kinds gives \<^const>\<open>KTop\<close>.\<close>
+
 instantiation kd :: (ik_domain) warrowing
 begin
 
@@ -158,8 +161,5 @@ instance proof
 qed
 
 end
-
-lemma gamma_kd_KD_range: "\<gamma> (KD k a) \<subseteq> ik_range k"
-  by simp
 
 end

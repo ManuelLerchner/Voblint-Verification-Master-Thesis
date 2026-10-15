@@ -15,7 +15,8 @@ text \<open>Each refinement mode of Int is an analysis of its own.\<close>
 datatype analysis =
   Interval | Congruence | Ana_Int refine_mode | Order | Sign | Parity
 
-lemma analysis_cases [case_names Interval Congruence Int_Never Int_Once Int_Fixpoint Order Sign Parity]:
+lemma analysis_cases
+  [case_names Interval Congruence Int_Never Int_Once Int_Fixpoint Order Sign Parity]:
   obtains "a = Interval" | "a = Congruence" | "a = Ana_Int Refine_Never"
     | "a = Ana_Int Refine_Once" | "a = Ana_Int Refine_Fixpoint" | "a = Order"
     | "a = Sign" | "a = Parity"
@@ -52,7 +53,6 @@ text \<open>The typed stores that reach a node from a store whose globals are ze
   kinds: what every soundness theorem of a typed run is stated over.\<close>
 
 abbreviation reaching :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> store set" where
-  "reaching ds p v \<equiv> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v"
+  "reaching ds p v \<equiv> \<C>\<^bsub>kenv_of ds,elab_cfg p ds,init_stores (kenv_of ds)\<^esub> v"
 
 end
-

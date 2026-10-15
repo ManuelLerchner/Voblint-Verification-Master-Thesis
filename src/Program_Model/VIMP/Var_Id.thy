@@ -97,7 +97,8 @@ lemma all_in_kindsD: "all_in_kinds \<kappa> t \<Longrightarrow> t v \<in> ik_ran
 lemma all_in_kinds_zero [simp, intro]: "all_in_kinds \<kappa> (\<lambda>_. 0)"
   by (simp add: all_in_kinds_def del: ik_range_iff)
 
-lemma all_in_kinds_update [simp, intro]: "all_in_kinds \<kappa> t \<Longrightarrow> all_in_kinds \<kappa> (t(v := ik_norm (\<kappa> v) n))"
+lemma all_in_kinds_update [simp, intro]:
+  "all_in_kinds \<kappa> t \<Longrightarrow> all_in_kinds \<kappa> (t(v := ik_norm (\<kappa> v) n))"
   by (simp add: all_in_kinds_def del: ik_range_iff)
 
 end

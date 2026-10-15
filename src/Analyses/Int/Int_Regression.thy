@@ -4,6 +4,11 @@ begin
 
 section \<open>Regression: the typed Interval-Congruence product, executed\<close>
 
+text \<open>
+  Each case runs the certified solver on a typed program inside Isabelle and pins the
+  published value of one variable. Termination is decided by evaluation.
+\<close>
+
 abbreviation it_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> int_fixpoint int_tuple tabs" where
   "it_state_at ds p \<equiv> nonrel.state_at default_sem_conf ds 0 Globals_Join is_global p []"
 

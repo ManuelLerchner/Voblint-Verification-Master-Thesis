@@ -1,5 +1,5 @@
 theory Example_Non_Vacuity
-  imports "Voblint_CLI.Run_Voblint" "Voblint_VIMP.VIMP_Notation"
+  imports "Voblint_CLI.Run_Voblint"
 begin
 
 section \<open>The headline theorems are not vacuous\<close>
@@ -90,9 +90,8 @@ text \<open>One call of \<open>bump\<close>: enter, return \<open>n + 1\<close>,
 
 lemma nv_call:
   assumes k: "k \<in> ik_range I32" and k1: "k + 1 \<in> ik_range I32"
-  shows "star (pstep (kenv_of []) (elab_ptable nv_prog []))
-     (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, [])
-     (SKIP (), t(nv_var x := k + 1), [])"
+  shows
+    "(kenv_of []),(elab_ptable nv_prog []) \<turnstile> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), t(nv_var x := k + 1), [])"
 proof -
   let ?\<kappa> = "kenv_of []" and ?\<Pi> = "elab_ptable nv_prog []"
   let ?n = "ScopedId (STR ''bump'') (STR ''n'')"
@@ -100,17 +99,16 @@ proof -
   let ?c = "bind_formals [?n] (map2 (\<lambda>y. kind_conv ?\<kappa> (Some y)) [?n] [eval (TN I32 k) t])
               (enter_state is_global t)"
   let ?c' = "?c(ReturnVar := eval ?E ?c)"
-  have s1: "pstep ?\<kappa> ?\<Pi> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, [])
-              (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])"
+  have s1:
+    "?\<kappa>,?\<Pi> \<turnstile> (gcom.Call () (Some (nv_var x)) (STR ''bump'') [TN I32 k], t, []) \<rightarrow>\<^sub>p (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])"
     using vimp.pstep_Call[where \<Pi> = ?\<Pi> and p = "STR ''bump''", OF nv_bump,
         of "[TN I32 k]" ?\<kappa> "()" "Some (nv_var x)" t "[]"]
     by simp
-  have s2: "pstep ?\<kappa> ?\<Pi> (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))])
-              (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])"
+  have s2:
+    "?\<kappa>,?\<Pi> \<turnstile> (Seq (Return () (Some ?E)) (Restore ()), ?c, [Frame t (Some (nv_var x))]) \<rightarrow>\<^sub>p (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])"
     by (rule vimp.Seq2) (rule vimp.ReturnSome)
-  have s3: "pstep ?\<kappa> ?\<Pi> (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))])
-              (SKIP (), combine_assign (Some (nv_var x)) (kind_conv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar))
-                          (combine_env is_global t ?c'), [])"
+  have s3:
+    "?\<kappa>,?\<Pi> \<turnstile> (Seq (Unwind ()) (Restore ()), ?c', [Frame t (Some (nv_var x))]) \<rightarrow>\<^sub>p (SKIP (), combine_assign (Some (nv_var x)) (kind_conv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar)) (combine_env is_global t ?c'), [])"
     by (rule vimp.UnwindAct)
   have eq: "combine_assign (Some (nv_var x)) (kind_conv ?\<kappa> (Some (nv_var x)) (?c' ReturnVar))
               (combine_env is_global t ?c') = t(nv_var x := k + 1)"
@@ -130,8 +128,7 @@ abbreviation nv_checks :: "(unit, var_id, exp) gcom" where
 text \<open>The typed run, stopped with the first check about to execute.\<close>
 
 lemma nv_to_check:
-  "star (pstep (kenv_of []) (elab_ptable nv_prog []))
-     (main_body (elab_ptable nv_prog []), \<lambda>_. 0, []) (nv_checks, nv_final, [])"
+  "(kenv_of []),(elab_ptable nv_prog []) \<turnstile> (main_body (elab_ptable nv_prog []), \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (nv_checks, nv_final, [])"
 proof -
   let ?\<kappa> = "kenv_of []" and ?\<Pi> = "elab_ptable nv_prog []"
   let ?C1 = "gcom.Call () (Some (nv_var (STR ''a''))) (STR ''bump'') [TN I32 5]"
@@ -141,13 +138,13 @@ proof -
   let ?t1 = "(\<lambda>_. 0)(nv_var (STR ''a'') := 6) :: store"
   have r: "(4::int) \<in> ik_range I32" "(5::int) \<in> ik_range I32" "(6::int) \<in> ik_range I32"
     by eval+
-  have c1: "star (pstep ?\<kappa> ?\<Pi>) (?C1, \<lambda>_. 0, []) (SKIP (), ?t1, [])"
+  have c1: "?\<kappa>,?\<Pi> \<turnstile> (?C1, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), ?t1, [])"
     using nv_call[where k = 5 and x = "STR ''a''" and t = "\<lambda>_. 0", OF r(2)] r(3) by simp
-  have c2: "star (pstep ?\<kappa> ?\<Pi>) (?C2, ?t1, []) (SKIP (), nv_final, [])"
+  have c2: "?\<kappa>,?\<Pi> \<turnstile> (?C2, ?t1, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), nv_final, [])"
     using nv_call[where k = 4 and x = "STR ''b''" and t = ?t1, OF r(1)] r(2) by simp
-  have calls: "star (pstep ?\<kappa> ?\<Pi>) (Seq ?C1 ?C2, \<lambda>_. 0, []) (SKIP (), nv_final, [])"
+  have calls: "?\<kappa>,?\<Pi> \<turnstile> (Seq ?C1 ?C2, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (SKIP (), nv_final, [])"
     using vimp.psteps_Seq2[OF c1, of ?C2] c2 by (meson vimp.Seq1 star.step star_trans)
-  have "star (pstep ?\<kappa> ?\<Pi>) (Seq (Seq ?C1 ?C2) ?K1, \<lambda>_. 0, []) (?K1, nv_final, [])"
+  have "?\<kappa>,?\<Pi> \<turnstile> (Seq (Seq ?C1 ?C2) ?K1, \<lambda>_. 0, []) \<rightarrow>\<^sub>p\<^sup>* (?K1, nv_final, [])"
     using vimp.psteps_Seq2[OF calls, of ?K1] by (meson vimp.Seq1 star.step star.refl star_trans)
   then show ?thesis unfolding nv_main by (rule vimp.psteps_Seq2)
 qed
@@ -207,7 +204,8 @@ proof -
     and checks: "map (\<lambda>chk. (check_point chk, check_verdict chk)) (report_checks res)
                    = [(Statement 4, Decided Check_Proved), (Statement 5, Decided Check_Proved)]"
     by (rule nv_analysed)
-  have nc: "next_check nv_checks = Some ((0, 0), TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
+  have nc:
+    "next_check nv_checks = Some ((0, 0), TCmp CEq (TVar I32 (nv_var (STR ''a''))) (TN I32 6))"
     by simp
   from run_voblint_check_sound [OF ans nv_init nv_to_check nc]
   obtain chk where listed: "chk \<in> set (report_checks res)"
@@ -428,7 +426,8 @@ lemma ret_enter_zero [simp]: "enter_state is_global (\<lambda>_. 0) = (\<lambda>
 
 lemma ret_combine:
   assumes "\<And>v. is_global v \<Longrightarrow> t v = 0"
-  shows "vimp.gcombine_collect \<kappa> (Some x) (\<lambda>_. 0) t = (\<lambda>_. 0)(x := kind_conv \<kappa> (Some x) (t ReturnVar))"
+  shows
+    "vimp.gcombine_collect \<kappa> (Some x) (\<lambda>_. 0) t = (\<lambda>_. 0)(x := kind_conv \<kappa> (Some x) (t ReturnVar))"
   using assms by (auto simp: cfg_transfer_sem.gcombine_collect_def fun_eq_iff)
 
 text \<open>The policy of the illustration: the callee context is the entry value of \<open>n\<close>.\<close>
@@ -513,11 +512,11 @@ lemma ret_globals_zero: "is_global v \<Longrightarrow> (((\<lambda>_. 0)(ret_n :
   by (cases v) simp_all
 
 lemma ret_reaches_second_call:
-  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> node_collect ret_\<kappa> ret_g (init_stores ret_\<kappa>) (Statement 3)"
+  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3)"
 proof -
-  have e0: "(\<lambda>_. 0) \<in> node_collect ret_\<kappa> ret_g (init_stores ret_\<kappa>) (FunctionEntry (STR ''main''))"
+  have e0: "(\<lambda>_. 0) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (FunctionEntry (STR ''main''))"
     using vimp.node_collect_init [OF nv_init, of ret_\<kappa> ret_g] by (simp add: ret_entry)
-  have s2: "(\<lambda>_. 0) \<in> node_collect ret_\<kappa> ret_g (init_stores ret_\<kappa>) (Statement 2)"
+  have s2: "(\<lambda>_. 0) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 2)"
     by (rule vimp.node_collect_intra_step [OF e0, where a = "EA_Body (STR ''main'')"])
        (auto simp: ret_intra)
   have ce: "(Statement 2, CallEdge (Some (nv_var (STR ''a''))) [ret_n] [TN I32 1],
@@ -541,7 +540,7 @@ text \<open>
 \<close>
 
 theorem return_at_caller_context_unsound:
-  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> node_collect ret_\<kappa> ret_g (init_stores ret_\<kappa>) (Statement 3)
+  "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<in> \<C>\<^bsub>ret_\<kappa>,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3)
    \<and> (\<Union>c. ret_cover (Statement 3) c) = {}"
   using ret_reaches_second_call by (simp add: ret_cover_def)
 
@@ -554,32 +553,32 @@ text \<open>
 \<close>
 
 lemma resume_keeps_context:
-  assumes s: "s \<in> activation_collect \<kappa> adm c0 g S u ctx"
+  assumes s: "s \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> u ctx"
     and ce: "(u, CallEdge dst pars args, FunctionEntry q, cont) \<in> calls g"
     and body: "star (vimp.gcfg_intra_step \<kappa> g)
                  (FunctionEntry q, vimp.gcall_enter \<kappa> (CallEdge dst pars args) s)
                  (FunctionResult q, t)"
-  shows "vimp.gcombine_collect \<kappa> dst s t \<in> activation_collect \<kappa> adm c0 g S cont ctx"
+  shows "vimp.gcombine_collect \<kappa> dst s t \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> cont ctx"
 proof -
-  from s obtain caller where cv: "caller \<in> valid_activation_trace \<kappa> g S"
+  from s obtain caller where cv: "caller \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     and cn: "sink_node caller = u" and ck: "vimp.gactivation_context_rel \<kappa> adm c0 g caller ctx"
     and cs: "sink_store caller = s"
     by (rule vimp.activation_collect_E)
   let ?entered = "Call caller [(FunctionEntry q, vimp.gcall_enter \<kappa> (CallEdge dst pars args) s)]"
-  have ev: "?entered \<in> valid_activation_trace \<kappa> g S"
+  have ev: "?entered \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     using vimp.gvalid_activation_trace.call [OF cv, where dst = dst and pars = pars and args = args
                             and p = q and cont = cont]
       ce cn cs by simp
-  obtain callee where dv: "callee \<in> valid_activation_trace \<kappa> g S"
+  obtain callee where dv: "callee \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     and dn: "sink_node callee = FunctionResult q" and ds: "sink_store callee = t"
     and dc: "caller_of callee = caller_of ?entered"
     by (rule vimp.valid_activation_trace_intra_path_extend [OF _ ev]) (use body in simp_all)
   let ?r = "Resume caller callee
               (path_of caller @ [(cont, vimp.gcombine_collect \<kappa> dst
                   (sink_store caller) (sink_store callee))])"
-  have rv: "?r \<in> valid_activation_trace \<kappa> g S"
+  have rv: "?r \<in> \<T>\<^bsub>\<kappa>,g,S\<^esub>"
     by (rule vimp.gvalid_activation_trace.ret [OF dv _ dn]) (use dc ce cn in simp_all)
-  have "sink_store ?r \<in> activation_collect \<kappa> adm c0 g S (sink_node ?r) ctx"
+  have "sink_store ?r \<in> \<A>\<^bsub>\<kappa>,adm,c0,g,S\<^esub> (sink_node ?r) ctx"
     by (rule vimp.activation_collect_I [OF rv refl]) (use ck in simp)
   then show ?thesis using cs ds by (simp add: sink_node_def sink_store_def)
 qed
@@ -618,28 +617,28 @@ lemma tot_weak_obligations:
 text \<open>
   The claim meets INIT, INTRA, CALL and RETURN and fails only TOTAL. The run resumes at
   the second call site in the initial context, where the claim is empty, so the
-  per-context conclusion of \<open>activation_collect_sound\<close> fails.
+  per-context conclusion of \<open>gactivation_collect_sound\<close> fails.
 \<close>
 
 theorem total_dropped_unsound:
   "(\<lambda>_. 0)(nv_var (STR ''a'') := 1)
-     \<in> activation_collect ret_\<kappa> tot_R 0 ret_g (init_stores ret_\<kappa>) (Statement 3) 0
+     \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,init_stores ret_\<kappa>\<^esub> (Statement 3) 0
    \<and> (\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<notin> tot_cover (Statement 3) 0"
 proof
   let ?S = "init_stores ret_\<kappa>"
   let ?t0 = "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0)]"
-  have v0: "?t0 \<in> valid_activation_trace ret_\<kappa> ret_g ?S"
+  have v0: "?t0 \<in> \<T>\<^bsub>ret_\<kappa>,ret_g,?S\<^esub>"
     using vimp.gvalid_activation_trace.root [where s = "\<lambda>_. 0" and S = ?S and g = ret_g]
       nv_init by (simp add: ret_entry)
   have v1: "Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)]
-              \<in> valid_activation_trace ret_\<kappa> ret_g ?S"
+              \<in> \<T>\<^bsub>ret_\<kappa>,ret_g,?S\<^esub>"
     using vimp.gvalid_activation_trace.intra
       [OF v0, where a = "EA_Body (STR ''main'')" and v = "Statement 2" and s' = "\<lambda>_. 0"]
     by (simp add: ret_intra sink_node_def sink_store_def)
-  have s2: "(\<lambda>_. 0) \<in> activation_collect ret_\<kappa> tot_R 0 ret_g ?S (Statement 2) 0"
+  have s2: "(\<lambda>_. 0) \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub> (Statement 2) 0"
   proof -
     have "sink_store (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])
-            \<in> activation_collect ret_\<kappa> tot_R 0 ret_g ?S
+            \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub>
                 (sink_node (Root [(FunctionEntry (STR ''main''), \<lambda>_. 0), (Statement 2, \<lambda>_. 0)])) 0"
       by (rule vimp.activation_collect_I [OF v1]) (simp_all add: sink_node_def)
     then show ?thesis by (simp add: sink_node_def sink_store_def)
@@ -653,7 +652,7 @@ proof
               (FunctionResult (STR ''f''), ((\<lambda>_. 0)(ret_n := 1))(ReturnVar := 1))"
     using ret_f_body [where k = 1] by (simp add: ret_enter)
   show "(\<lambda>_. 0)(nv_var (STR ''a'') := 1)
-          \<in> activation_collect ret_\<kappa> tot_R 0 ret_g ?S (Statement 3) 0"
+          \<in> \<A>\<^bsub>ret_\<kappa>,tot_R,0,ret_g,?S\<^esub> (Statement 3) 0"
     using resume_keeps_context [OF s2 ce bd]
     by (simp add: ret_combine [OF ret_globals_zero] kenv_of_def)
   show "(\<lambda>_. 0)(nv_var (STR ''a'') := 1) \<notin> tot_cover (Statement 3) 0"
@@ -673,8 +672,8 @@ text \<open>
   \<open>y = 1\<close>.
 \<close>
 
-abbreviation up_x :: var_id where "up_x \<equiv> ScopedId (STR ''main'') (STR ''x'')"
-abbreviation up_y :: var_id where "up_y \<equiv> ScopedId (STR ''main'') (STR ''y'')"
+abbreviation up_x :: var_id where "up_x \<equiv> (nv_var (STR ''x''))"
+abbreviation up_y :: var_id where "up_y \<equiv> (nv_var (STR ''y''))"
 abbreviation up_a :: var_id where "up_a \<equiv> ScopedId (STR ''p'') (STR ''a'')"
 
 definition unpaired_answer :: "(store set \<times> store set) list" where
@@ -685,18 +684,18 @@ definition unpaired_answer :: "(store set \<times> store set) list" where
 definition pairwise_contribution :: "(store set \<times> store set) list \<Rightarrow> store set" where
   "pairwise_contribution P =
      (\<Union>(q, e) \<in> set P.
-        {vimp.gcombine_collect (kenv_of []) (Some up_y) s0 (t(ReturnVar := t up_a))
+        {vimp.gcombine_collect (ret_\<kappa>) (Some up_y) s0 (t(ReturnVar := t up_a))
          | s0 t. s0 \<in> q \<and> t \<in> e})"
 
 theorem unpaired_entry_cover_unsound:
   defines "s \<equiv> (\<lambda>_. 0)(up_x := 1) :: store"
       and "s' \<equiv> (\<lambda>_. 0)(up_a := 1) :: store"
-  shows "s' = vimp.gcall_enter (kenv_of []) (CallEdge (Some up_y) [up_a] [TVar I32 up_x]) s"
+  shows "s' = vimp.gcall_enter (ret_\<kappa>) (CallEdge (Some up_y) [up_a] [TVar I32 up_x]) s"
     and "(\<exists>(q, e) \<in> set unpaired_answer. s \<in> q)"
     and "(\<exists>(q, e) \<in> set unpaired_answer. s' \<in> e)"
     and "\<not> entry_pairs_cover id s s' unpaired_answer"
     and "\<forall>u \<in> pairwise_contribution unpaired_answer. u up_y < 0"
-    and "vimp.gcombine_collect (kenv_of []) (Some up_y) s (s'(ReturnVar := s' up_a)) up_y = 1"
+    and "vimp.gcombine_collect (ret_\<kappa>) (Some up_y) s (s'(ReturnVar := s' up_a)) up_y = 1"
   by (auto simp: s_def s'_def unpaired_answer_def pairwise_contribution_def
                  entry_pairs_cover_def vimp.call_enter_CallEdge enter_state_def enter_frame_def
                  cfg_transfer_sem.gcombine_collect_def kenv_of_def fun_eq_iff)

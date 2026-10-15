@@ -31,6 +31,14 @@ end
 lemma key_of_var_var_id [simp]: "(key_of_var :: var_id \<Rightarrow> var_id) x = x"
   by (simp add: key_of_var_var_id_def)
 
+text \<open>
+  A carrier whose state splits into a chosen list of globals and the rest.
+  \<open>split_cmb gs d g\<close> takes the globals in \<open>gs\<close> from \<open>g\<close> and everything else from \<open>d\<close>;
+  \<open>split_rl gs\<close> forgets the globals in \<open>gs\<close>. \<open>split_free R\<close> is the global half a
+  transfer reads in place of every global outside \<open>R\<close>: it claims nothing about those
+  names and leaves the names in \<open>R\<close> to the values actually read.
+\<close>
+
 class ownership_split = order_bot +
   fixes split_cmb :: "var_id list \<Rightarrow> 'a \<Rightarrow> 'a \<Rightarrow> 'a"
     and split_rl :: "var_id list \<Rightarrow> 'a \<Rightarrow> 'a"
@@ -43,13 +51,6 @@ class ownership_split = order_bot +
     and split_free_ge: "n \<notin> set R \<Longrightarrow> split_global_at n d \<le> split_free R"
     and split_global_at_bot: "split_global_at n bot = bot"
 
-text \<open>
-  \<open>split_cmb gs d g\<close> takes the globals in \<open>gs\<close> from \<open>g\<close> and everything else from \<open>d\<close>;
-  \<open>split_rl gs\<close> forgets the globals in \<open>gs\<close>. \<open>split_free R\<close> is the global half a
-  transfer reads in place of every global outside \<open>R\<close>: it claims nothing about those
-  names and leaves the names in \<open>R\<close> to the values actually read.
-\<close>
-
 instantiation gdefault_st :: (split_key, "{order_bot, order_top}") ownership_split
 begin
 
@@ -61,7 +62,8 @@ definition split_cmb_gdefault_st ::
 definition split_rl_gdefault_st :: "var_id list \<Rightarrow> ('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
   "split_rl_gdefault_st gs d = fold (\<lambda>x a. a\<langle>Global_Location (key_of_var x) := bot\<rangle>) gs d"
 
-definition split_global_at_gdefault_st :: "var_id \<Rightarrow> ('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st" where
+definition split_global_at_gdefault_st :: "var_id \<Rightarrow> ('a, 'b) gdefault_st \<Rightarrow> ('a, 'b) gdefault_st"
+  where
   "split_global_at_gdefault_st x d =
      bot\<langle>Global_Location (key_of_var x) := d\<langle>Global_Location (key_of_var x)\<rangle>\<rangle>"
 
@@ -144,7 +146,8 @@ instantiation analysis_product :: (ownership_split, ownership_split) ownership_s
 begin
 
 definition split_cmb_analysis_product ::
-  "var_id list \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product" where
+  "var_id list \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product \<Rightarrow> ('a, 'b) analysis_product"
+    where
   "split_cmb_analysis_product gs d g =
      Product (split_cmb gs (pleft d) (pleft g)) (split_cmb gs (pright d) (pright g))"
 
@@ -359,7 +362,7 @@ lemma keyed_field_gamma:
              (lift_get f (split_cmb gs (Lifted a) (full_view split_global_at gs E))))
     \<longleftrightarrow> in_kinds \<kappa> s \<and> (\<forall>y. s y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
                             then (lift_val (lift_get f (E y)))\<langle>Global_Location y\<rangle>
-                            else st\<langle>location_of is_global y\<rangle>))"
+                            else st\<langle>nonrel_loc y\<rangle>))"
   by (auto simp: keyed_field_read[OF hom fa] gamma_tabs_def default_st_to_fun_def location_of_def
       split_cmb_gdefault_st_get view_of_default_st_get image_iff)
 
@@ -382,17 +385,18 @@ lemma keyed_field_mix:
 proof -
   interpret split_hom f by (rule hom)
   obtain ri where r: "r = Lifted ri" using s' by (cases r) (simp_all add: lift_get_def)
-  obtain stR where fr_i: "f ri = Lifted stR" using s' r by (cases "f ri") (simp_all add: lift_get_def)
+  obtain stR where fr_i: "f ri = Lifted stR" using s' r
+    by (cases "f ri") (simp_all add: lift_get_def)
   obtain a0 where l0: "l0 = Lifted a0" using s by (cases l0) (simp_all add: lift_get_def)
   obtain st0 where fa0: "f a0 = Lifted st0"
     using s l0 by (cases "f a0") (simp_all add: split_cmb_Lifted hom_cmb lift_get_def)
   have rl: "split_rl gs r = Lifted (split_rl gs ri)" by (simp add: r split_rl_lifted_def)
   have frl: "f (split_rl gs ri) = Lifted (split_rl gs stR)"
     by (simp add: hom_rl fr_i split_rl_lifted_def)
-  have s'R: "in_kinds \<kappa> s'" "\<And>y. s' y \<in> gamma_kd (stR\<langle>location_of is_global y\<rangle>)"
+  have s'R: "in_kinds \<kappa> s'" "\<And>y. s' y \<in> gamma_kd (stR\<langle>nonrel_loc y\<rangle>)"
     using s' by (simp_all add: r fr_i lift_get_def gamma_tabs_def default_st_to_fun_def)
   have s0: "\<And>y. s y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
-               then (lift_val (lift_get f (e y)))\<langle>Global_Location y\<rangle> else st0\<langle>location_of is_global y\<rangle>)"
+               then (lift_val (lift_get f (e y)))\<langle>Global_Location y\<rangle> else st0\<langle>nonrel_loc y\<rangle>)"
     using s by (simp add: l0 keyed_field_gamma[OF hom fa0])
   show ?thesis
     unfolding rl keyed_field_gamma[OF hom frl]
@@ -402,7 +406,7 @@ proof -
     fix y
     show "s' y \<in> gamma_kd (if is_global y \<and> y \<in> set gs
         then (lift_val (lift_get f (if y \<in> set W then split_global_at y r else e y)))\<langle>Global_Location y\<rangle>
-        else (split_rl gs stR)\<langle>location_of is_global y\<rangle>)"
+        else (split_rl gs stR)\<langle>nonrel_loc y\<rangle>)"
     proof (cases "is_global y \<and> y \<in> set gs")
       case False
       then show ?thesis using s'R(2)[of y]
@@ -434,7 +438,8 @@ lemma keyed_field_init:
 proof
   interpret split_hom f by (rule hom)
   fix s
-  assume s: "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (Lifted i)))"
+  assume s:
+    "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (Lifted i)))"
   then obtain st where fi: "f i = Lifted st" by (cases "f i") (simp_all add: lift_get_def)
   show "s \<in> gamma_lift (gamma_tabs \<kappa>) (map_lift (default_st_to_fun is_global) (lift_get f (split_cmb gs (Lifted i)
       (full_view split_global_at gs (\<lambda>x. split_global_at x (Lifted i))))))"
@@ -725,5 +730,3 @@ proof
 qed
 
 end
-
-

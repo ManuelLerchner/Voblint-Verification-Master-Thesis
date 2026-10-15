@@ -203,7 +203,6 @@ end
 instance analysis_product :: (join_val_sup, join_val_sup) join_val_sup
   by standard (simp add: vjoin_analysis_product_def sup_analysis_product_def vjoin_sup)
 
-
 definition report_point_join ::
     "('k, 'x, 'vr, 'e, 'n, 's::join_val) analysis_report \<Rightarrow> pp \<Rightarrow> 's lifted" where
   "report_point_join res v =
@@ -222,17 +221,12 @@ definition report_steps_join ::
         [] \<Rightarrow> []
       | s # ss \<Rightarrow> fold (map2 (\<lambda>(w, a) (_, b). (w, vjoin a b))) ss s)"
 
-lemma report_point_join_sup:
-  fixes res :: "('k, 'x, 'vr, 'e, 'n, 's::join_val_sup) analysis_report"
-  shows "report_point_join res v =
-     fold (\<squnion>) (map state_value (filter (\<lambda>st. state_point st = v) (report_states res))) Bot"
-  unfolding report_point_join_def by (simp add: vjoin_sup[abs_def])
-
 record ('vr, 'e, 'n, 'd, 'v) run_result =
   res_cfg :: "('vr, 'e) gcfg"
   res_contexts :: "'v analysis_context list"
   res_states :: "('e, ('d, 'v) analysis_view) result_state list"
-  res_joined :: "(pp \<times> ('d, 'v) analysis_view lifted \<times> (pp \<times> ('d, 'v) analysis_view lifted) list) list"
+  res_joined ::
+    "(pp \<times> ('d, 'v) analysis_view lifted \<times> (pp \<times> ('d, 'v) analysis_view lifted) list) list"
   res_routes :: "call_route list"
   res_checks :: "'e result_check list"
   res_globals :: "('n, ('d, 'v) analysis_view) result_global list"
@@ -278,7 +272,6 @@ definition render_report ::
            res_globals = map (map_result_global state) (report_globals res),
            res_diagnostics = report_diagnostics res,
            res_graph = analysis_graph_of (rr_footprints rr) res \<rparr>)"
-
 
 lemma render_report_columns [simp]:
   "res_cfg (render_report rr show res) = report_cfg res"

@@ -71,7 +71,6 @@ proof (rule ext)
         simp_all add: location_of_def)
 qed
 
-
 definition default_st_to_fun ::
   "('k => bool) => ('k, 'a::bot) gdefault_st => 'k => 'a"
 where
@@ -120,11 +119,6 @@ lemma default_st_get_initial [simp]:
   unfolding default_st_to_fun_def initial_default_st_def
   by (auto simp: location_of_def split: if_splits)
 
-lemma default_st_to_fun_initial:
-  "\<rho>\<^bsub>\<G>\<^esub> (initial_default_st local_value global_value) =
-   (\<lambda>x. if \<G> x then global_value else local_value)"
-  by (rule ext) simp
-
 text \<open>
   The quotient-level projection agrees with the raw one at \<open>s\<close>'s own chosen
   representative -- so any raw-level fact about @{const default_st_rep_to_fun}
@@ -146,7 +140,6 @@ lemma default_st_to_fun_mono:
   unfolding default_st_to_fun_def le_fun_def
   by (simp add: le_default_st_iff)
 
-
 text \<open>
   Each quotient-level refinement equation is its raw counterpart transported
   along the quotient: unfolding the projection leaves a goal in
@@ -156,7 +149,6 @@ text \<open>
   unfold instead, since its representative is fixed only up to
   \<^const>\<open>eq_default_st_rep\<close>.
 \<close>
-
 
 subsection \<open>Assignment and formal binding\<close>
 
@@ -238,15 +230,6 @@ lift_definition bind_formals_default_st ::
   is bind_formals_default_st_rep
   by (rule eq_default_st_rep_bind_formals)
 
-text \<open>A single-formal call binds exactly one location, so its reduction is a
-  plain \<^const>\<open>default_st_set\<close>. An instance with a
-  one-argument procedure call cites this directly instead of unfolding
-  \<^const>\<open>bind_formals_default_st\<close>'s fold.\<close>
-
-lemma bind_formals_default_st_singleton:
-  "bind_formals_default_st \<G> [x] [a] s = s\<langle>location_of \<G> x := a\<rangle>"
-  by transfer (simp add: bind_formals_default_st_rep_def eq_default_st_rep_def)
-
 lemma default_st_rep_to_fun_fold_set:
   "default_st_rep_to_fun \<G>
       (fold (\<lambda>(x, a) t. default_st_rep_set t (location_of \<G> x) a) ps s) =
@@ -282,7 +265,6 @@ proof (rule ext)
         simp_all add: location_of_def)
 qed
 
-
 subsection \<open>Ownership restriction and combination\<close>
 
 text \<open>
@@ -299,7 +281,6 @@ definition restrict_local_default_st_rep ::
 definition restrict_global_default_st_rep ::
   "('k, 'a::bot) gdefault_st_rep => ('k, 'a) gdefault_st_rep" where
   "restrict_global_default_st_rep s = ((bot, []), snd s)"
-
 
 lemma default_st_rep_get_restrict_local:
   "default_st_rep_get (restrict_local_default_st_rep s) loc =
@@ -411,7 +392,6 @@ lemma default_st_get_combine [simp]:
       | Global_Location x => se\<langle>loc\<rangle>)"
   by transfer (rule default_st_rep_get_combine)
 
-
 lemma default_st_rep_to_fun_combine [simp]:
   "default_st_rep_to_fun \<G> (combine_default_st_rep sc se) =
    combine_env \<G> (default_st_rep_to_fun \<G> sc)
@@ -438,12 +418,10 @@ proof (rule ext)
     by (cases "\<G> x") simp_all
 qed
 
-
 lemma default_st_to_fun_sup [simp]:
   "\<rho>\<^bsub>\<G>\<^esub> (s \<squnion> t) =
    \<rho>\<^bsub>\<G>\<^esub> s \<squnion> \<rho>\<^bsub>\<G>\<^esub> t"
   by (rule ext) (simp add: default_st_to_fun_def sup_fun_def)
-
 
 subsection \<open>Frame entry\<close>
 
@@ -501,7 +479,6 @@ lemma default_st_to_fun_enter_frame [simp]:
   unfolding default_st_to_fun_def
   by transfer
      (rule default_st_rep_to_fun_enter_frame[unfolded default_st_rep_to_fun_def])
-
 
 subsection \<open>Executable restriction and combination laws\<close>
 
@@ -576,11 +553,6 @@ lemma default_st_gamma_mono:
 
 lemma default_st_gamma_bot [simp]: "default_st_gamma \<G> bot = {}"
   by (simp add: default_st_gamma_def)
-
-lemma default_st_gamma_initial:
-  "default_st_gamma \<G> (initial_default_st local_value global_value) =
-   \<gamma> (\<lambda>x. if \<G> x then global_value else local_value)"
-  by (simp add: default_st_gamma_def default_st_to_fun_initial)
 
 unbundle no default_st_syntax
 

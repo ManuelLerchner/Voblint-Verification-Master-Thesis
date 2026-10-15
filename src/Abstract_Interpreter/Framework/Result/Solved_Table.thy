@@ -231,9 +231,4 @@ lemma wf_solved_table_LiftedD [dest]:
      \<Longrightarrow> \<not> empty_pred st"
   unfolding wf_solved_table_def by blast
 
-lemma finite_table_contexts:
-  assumes "finite_solved_table r"
-  shows "finite (table_contexts r v)"
-  using assms unfolding finite_solved_table_def table_contexts_def by simp
-
 end

@@ -1,6 +1,5 @@
 theory Example_Run_Voblint_Regression
-  imports
-    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Run_Voblint"
+  imports "Voblint_CLI.Run_Voblint"
 begin
 
 text \<open>
@@ -82,7 +81,7 @@ lemma demo_interval: "run_checks [Interval] demo_prog
 
 text \<open>
   Two calls grow a global. Without contexts the two calls share \<open>inc\<close>'s entry, so
-  \<open>total + n\<close> at \<open>i32\<close> may overflow under the default \<open>assume_top\<close> and both domains
+  \<open>total + n\<close> at \<open>i32\<close> may overflow under the default \<^verbatim>\<open>assume_top\<close> and both domains
   lose the bound: neither check is decided.
 \<close>
 

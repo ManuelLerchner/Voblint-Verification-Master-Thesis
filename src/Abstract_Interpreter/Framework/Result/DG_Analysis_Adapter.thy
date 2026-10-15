@@ -27,7 +27,7 @@ text \<open>
   matching how Interval's own Warrow/join/per-origin solver choice is already
   orthogonal to its context.
 
-  \<open>gammaDG_rd\<close> asks that publishing a local value together with a global one
+  \<open>ggammaDG_rd\<close> asks that publishing a local value together with a global one
   keeps exactly the stores the pair denotes,
   \<open>\<gamma>\<^sub>D\<^sub>G d g' = gamma_lift \<gamma>\<^sub>V (rd d g')\<close>. The global value the table
   pairs with every local one is the solved global unknown at
@@ -106,7 +106,7 @@ text \<open>Canonicality holds unconditionally here: \<^const>\<open>canonicaliz
   Finiteness cannot be proved here, because \<open>vars\<close> is a fixed arbitrary set and
   this locale deliberately does not know which solver produced it --- that is
   what keeps it independent of solver choice. It is therefore an assumption,
-  \<open>vars_finite\<close>, and an interpretation discharges it from the solver it actually
+  \<open>gvars_finite\<close>, and an interpretation discharges it from the solver it actually
   ran: \<open>finite_stabl_solve\<close> says a terminating solve stabilizes finitely many
   unknowns, and the interpretation site is the only place that knows \<open>vars\<close> is
   that stable set.

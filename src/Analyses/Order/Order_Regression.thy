@@ -4,6 +4,11 @@ begin
 
 section \<open>Regression: the typed order analysis, executed\<close>
 
+text \<open>
+  Each case runs the certified solver on a typed program inside Isabelle and pins the
+  order facts published at the end of \<open>f\<close>. Termination is decided by evaluation.
+\<close>
+
 abbreviation f_var :: "vname \<Rightarrow> var_id" where
   "f_var x \<equiv> ScopedId (STR ''f'') x"
 

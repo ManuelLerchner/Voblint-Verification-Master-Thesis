@@ -26,14 +26,7 @@ text \<open>
   CFG session are both in scope.
 \<close>
 
-
 subsection \<open>The structural environment combine\<close>
-
-lemma combine_env_mono:
-  fixes sc1 sc2 se1 se2 :: "('k, 'a::order) gabs_state"
-  assumes "sc1 \<le> sc2" and "se1 \<le> se2"
-  shows "combine_env \<G> sc1 se1 \<le> combine_env \<G> sc2 se2"
-  using assms by (auto simp: combine_env_def le_fun_def)
 
 text \<open>
   Soundness of the abstract combine: combining a caller store (sound for sc) with
@@ -78,18 +71,6 @@ lemma bind_formals_sound [intro]:
     by (cases vs; cases avs) (auto simp: gamma_state_upd)
   done
 
-lemma bind_formals_mono:
-  fixes d1 d2 :: "('k, 'a::order) gabs_state"
-  assumes base: "d1 \<le> d2"
-    and vals: "list_all2 (\<le>) avs1 avs2"
-  shows "bind_formals xs avs1 d1 \<le> bind_formals xs avs2 d2"
-  using assms apply (induction xs arbitrary: avs1 avs2 d1 d2)
-  subgoal
-    by simp
-  subgoal for _ _ avs1 avs2
-    by (cases avs1; cases avs2) (auto simp add: le_fun_def)
-  done
-
 subsection \<open>Procedure entry: binding formals and resetting the frame\<close>
 
 text \<open>
@@ -114,12 +95,6 @@ lemma enter_frame_sound [intro]:
   shows "enter_state \<G> s \<in> \<gamma> (enter_frame \<G> reset_val d)"
   unfolding gamma_state_def enter_state_def
   using gamma_stateD[OF sv] reset_full by auto
-
-lemma enter_frame_mono:
-  fixes reset_val :: "'a::order"
-  assumes "d1 \<le> d2"
-  shows "enter_frame \<G> reset_val d1 \<le> enter_frame \<G> reset_val d2"
-  by (simp add: assms le_funD le_funI)
 
 text \<open>
   \<^const>\<open>bind_formals\<close>'s own soundness and monotonicity are relational in the
@@ -156,18 +131,6 @@ proof (rule enter_binding_sound_list_all2[OF sv reset_full])
     by (rule list_all2_map_mapI) (rule eval)
 qed
 
-lemma enter_binding_mono:
-  fixes reset_val :: "'a::order" and d1 d2 :: "('k, 'a) gabs_state"
-  assumes state_le: "d1 \<le> d2"
-    and eval_mono: "\<And>e. e \<in> set es \<Longrightarrow> aval_abs e d1 \<le> aval_abs e d2"
-  shows "enter_binding \<G> reset_val aval_abs xs es d1
-           \<le> enter_binding \<G> reset_val aval_abs xs es d2"
-  unfolding enter_binding_def
-proof (rule bind_formals_mono[OF enter_frame_mono[OF state_le]])
-  show "list_all2 (\<le>) (map (\<lambda>e. aval_abs e d1) es) (map (\<lambda>e. aval_abs e d2) es)"
-    by (rule list_all2_map_mapI) (rule eval_mono)
-qed
-
 text \<open>
   A call site reads the formals and actuals off \<^typ>\<open>call_info\<close> rather than
   passing them separately, but that projection stays at the call site: a domain
@@ -183,17 +146,5 @@ text \<open>
   this algebra chooses that half: the operations below are what a whole-state
   domain computes each half \<^emph>\<open>with\<close>.
 \<close>
-
-subsection \<open>The structural return combine\<close>
-
-text \<open>The return-value write is a single-slot update, hence monotone in both the
-  written value and the state it writes into.  Any combine built over it inherits
-  monotonicity from this one fact.\<close>
-
-lemma combine_assign_mono:
-  fixes s1 s2 :: "('k, 'a::order) gabs_state"
-  assumes v: "v1 \<le> v2" and s: "s1 \<le> s2"
-  shows "combine_assign dst v1 s1 \<le> combine_assign dst v2 s2"
-  using assms by (cases dst) (auto simp: le_fun_def)
 
 end

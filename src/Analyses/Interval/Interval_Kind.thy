@@ -1,7 +1,8 @@
 theory Interval_Kind
   imports
     "Voblint_Analysis_Interval.Interval_Arithmetic"
-    "Voblint_Analysis_Interval.Interval_Numeric_Queries" "Voblint_Nonrelational.Nonrelational_Domain"
+    "Voblint_Analysis_Interval.Interval_Numeric_Queries"
+      "Voblint_Nonrelational.Nonrelational_Domain"
 begin
 
 section \<open>Intervals at a kind\<close>
@@ -77,15 +78,6 @@ qed
 
 end
 
-text \<open>On operands within the kind's range, a growing bound moves exactly to the kind's
-  limit, as in Goblint.\<close>
-
-lemma widen_ivl_ik_in_range:
-  assumes "l1 < l0" and "ik_lo k \<le> l1" and "u0 < u1" and "u1 \<le> ik_hi k"
-  shows "widen_ivl_ik k (Ivl l0 u0) (Ivl l1 u1) = Ivl (ik_lo k) (ik_hi k)"
-  using assms by (auto simp: min_def max_def)
-
-
 section \<open>Intervals as a kind-aware integer domain\<close>
 
 text \<open>
@@ -99,41 +91,6 @@ definition ik_ivl :: "ikind \<Rightarrow> ivl" where "ik_ivl k = Ivl (ik_lo k) (
 
 lemma gamma_ik_ivl [simp]: "gamma_ivl (ik_ivl k) = ik_range k"
   by (auto simp: ik_ivl_def ik_lo_def ik_hi_def less_eq_eint_def)
-
-text \<open>
-  Truncation keeps the order of a block of fewer than \<open>M\<close> consecutive integers
-  whenever it keeps the order of the block's ends: the block then does not cross a
-  multiple of \<open>M\<close>.
-\<close>
-
-lemma mod_interval_wrap:
-  fixes x y n M :: int
-  assumes M: "0 < M" and xn: "x \<le> n" and ny: "n \<le> y" and w: "y - x < M"
-    and ord: "x mod M \<le> y mod M"
-  shows "x mod M \<le> n mod M \<and> n mod M \<le> y mod M"
-proof -
-  define r where "r = x mod M"
-  have r0: "0 \<le> r" "r < M" using M by (simp_all add: r_def)
-  have shift: "(x + d) mod M = (r + d) mod M" for d
-    by (simp add: r_def mod_add_left_eq)
-  have fits: "r + (y - x) < M"
-  proof (rule ccontr)
-    assume "\<not> r + (y - x) < M"
-    then have ge: "M \<le> r + (y - x)" by simp
-    have "(r + (y - x)) mod M = ((r + (y - x) - M) + M) mod M" by simp
-    also have "\<dots> = (r + (y - x) - M) mod M" by (rule mod_add_self2)
-    also have "\<dots> = r + (y - x) - M"
-      by (rule mod_pos_pos_trivial) (use ge r0 w in auto)
-    finally have "(r + (y - x)) mod M = r + (y - x) - M" .
-    moreover have "y mod M = (r + (y - x)) mod M" using shift[of "y - x"] by simp
-    ultimately show False using ord w r_def by simp
-  qed
-  have yv: "y mod M = r + (y - x)"
-    using shift[of "y - x"] fits r0 xn ny by simp
-  have nv: "n mod M = r + (n - x)"
-    using shift[of "n - x"] fits r0 xn ny by simp
-  show ?thesis using yv nv xn ny r_def by simp
-qed
 
 text \<open>
   A kind that wraps under the overflow policy wraps a finite interval that spans less
@@ -209,7 +166,6 @@ lemma ivl_aop_sound:
   "m \<in> gamma_ivl a \<Longrightarrow> n \<in> gamma_ivl b \<Longrightarrow> aop_eval op m n \<in> gamma_ivl (ivl_aop op a b)"
   by (cases op) (simp_all add: ivl_plus_sound ivl_minus_sound ivl_times_sound ivl_div_sound
       ivl_mod_sound)
-
 
 fun ivl_lo :: "ivl \<Rightarrow> eint" where "ivl_lo (Ivl l u) = l"
 fun ivl_hi :: "ivl \<Rightarrow> eint" where "ivl_hi (Ivl l u) = u"

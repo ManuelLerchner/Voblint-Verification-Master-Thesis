@@ -1,5 +1,6 @@
 theory DG_Ownership_Split_Spec
-  imports "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability" State_Restriction "Voblint_Solver.Strategy_Program_Fold"
+  imports "Voblint_Framework.MCP_Spec" Transfer_Algebra "Voblint_Domain.Nonrelational_Reachability"
+    State_Restriction "Voblint_Solver.Strategy_Program_Fold"
 begin
 
 section \<open>Publishing the global halves of an entry's alternatives\<close>

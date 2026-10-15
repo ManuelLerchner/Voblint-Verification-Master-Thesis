@@ -1,6 +1,5 @@
 theory Example_Sign_Mixed_Flow
-  imports
-    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Run_Voblint"
+  imports "Voblint_CLI.Run_Voblint"
 begin
 
 section \<open>A mixed flow-sensitive analysis, sound end to end for one program\<close>
@@ -47,8 +46,8 @@ text \<open>
 
 theorem mf_checks_hold:
   assumes s0: "s0 \<in> init_stores (kenv_of [])"
-    and exec: "star (pstep (kenv_of []) (elab_ptable mf_program []))
-                 (main_body (elab_ptable mf_program []), s0, []) (residual, s, frs)"
+    and exec:
+      "(kenv_of []),(elab_ptable mf_program []) \<turnstile> (main_body (elab_ptable mf_program []), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
     and chk: "next_check residual = Some (l, e)"
   shows "truthy (eval e s)"
 proof -
@@ -68,4 +67,3 @@ proof -
 qed
 
 end
-

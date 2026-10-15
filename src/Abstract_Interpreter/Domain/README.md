@@ -32,7 +32,7 @@ mentions a graph, an equation, or a solver run.
 
 | File | Role |
 | --- | --- |
-| `Forward_Domain.thy` | Truth tests on a numeric domain: `sound_truth_test` and `mono_truth_test` |
+| `Forward_Domain.thy` | Truth tests on a numeric domain: `sound_truth_test` |
 | `Backward_Domain.thy` | `sound_inverse_ops`: the inverse operators on abstract values, the counterpart of Goblint's `BaseInvariant` |
 | `Backward_Domain_Mono.thy` | `le_pair`, the componentwise order that states an inverse operator's monotonicity |
 | `Numeric_Queries.thy` | The `sound_numeric_queries` interface the check layer consumes, and `numeric_query_judgments`, which builds an instance from four yes/no judgments |

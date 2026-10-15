@@ -146,7 +146,8 @@ lemma cstep_frame_extend:
 
 lemma cstep_star_frame_extend:
   assumes "star (gcstep g) c c'"
-  shows "star (gcstep g) (fst c, fst (snd c), snd (snd c) @ E) (fst c', fst (snd c'), snd (snd c') @ E)"
+  shows
+    "star (gcstep g) (fst c, fst (snd c), snd (snd c) @ E) (fst c', fst (snd c'), snd (snd c') @ E)"
   using assms
 proof (induction rule: star.induct)
   case (refl a) show ?case by simp
@@ -416,7 +417,9 @@ next
       by (rule control_at_skip_to_exit[OF ctrl _ comp Esub]) simp
     have "gcstep g (kin, s0, [(cont, dst, caller)]) (FunctionResult q, s0, [(cont, dst, caller)])"
       using gcstep.Intra[OF exitedge edge_step_EA_Ret_ret_store_mem] by simp
-    with star1 have star: "star (gcstep g) (v0, s0, [(cont, dst, caller)]) (FunctionResult q, s0, [(cont, dst, caller)])"
+    with star1
+    have star:
+      "star (gcstep g) (v0, s0, [(cont, dst, caller)]) (FunctionResult q, s0, [(cont, dst, caller)])"
       by (rule star_trans[OF _ star_step1])
     have "\<Pi>, g, pc \<turnstile> (seq_after (Restore i) afters, s0, [Frame caller dst]) \<approx> (FunctionResult q, s0, [(cont, dst, caller)])"
       by (rule csim.Returning[OF _ _ Nested.hyps(3) Nested.hyps(4) Nested.hyps(5)]) simp_all
@@ -494,7 +497,8 @@ next
     obtain ir e cafters where innerform: "inner = seq_after (Return ir e) cafters"
       using head_return_seq_after_form[OF hr_inner] by blast
     \<comment> \<open>the head step is @{text \<open>Return e --> Unwind\<close>}, leaving the continuations \<open>cafters\<close>\<close>
-    have stepin1: "gpstep \<Pi> (seq_after (Return ir e) cafters, s0, [Frame caller dst]) (inner', s', fz)"
+    have stepin1:
+      "gpstep \<Pi> (seq_after (Return ir e) cafters, s0, [Frame caller dst]) (inner', s', fz)"
       using stepin True innerform by simp
     obtain h' where inner'form: "inner' = seq_after h' cafters"
         and hstep: "gpstep \<Pi> (Return ir e, s0, [Frame caller dst]) (h', s', fz)"
@@ -514,7 +518,8 @@ next
       using control_at_seq_after_return_edge[OF ctrl[unfolded innerform] refl comp] by blast
     have edgeg: "(Statement j, EA_Ret e q, FunctionResult q) \<in> intra g"
       using edge Esub by blast
-    have cstep1: "gcstep g (Statement j, s0, [(cont, dst, caller)]) (FunctionResult q, gret_store e s0, [(cont, dst, caller)])"
+    have cstep1:
+      "gcstep g (Statement j, s0, [(cont, dst, caller)]) (FunctionResult q, gret_store e s0, [(cont, dst, caller)])"
       using gcstep.Intra[OF edgeg edge_step_EA_Ret_ret_store_mem] .
     \<comment> \<open>the enclosing wrapper becomes @{text Returning}\<close>
     have rel: "\<Pi>, g, pc \<turnstile> (seq_after (Seq (seq_after (Unwind ir) cafters) (Restore i)) afters, gret_store e s0,

@@ -102,7 +102,8 @@ proof -
 
   qed
   from valid_activation_trace_intra_path_extend[OF path_to_ret tv]
-  obtain t' where t'v: "t' \<in> gvalid_activation_trace (?g) (S)" and t'n: "sink_node t' = FunctionResult p"
+  obtain t' where t'v: "t' \<in> gvalid_activation_trace (?g) (S)" and t'n:
+    "sink_node t' = FunctionResult p"
     and t's: "sink_store t' = s" and t'c: "caller_of t' = caller_of t"
     and t'h: "fst (hd (path_of t')) = fst (hd (path_of t))" by blast
   show ?thesis
@@ -130,7 +131,8 @@ corollary source_completes_node_collect_exit:
 proof -
   let ?g = "compile_prog Pi ps"
   from source_completes_valid_activation_trace_result[OF wf s0 run]
-  obtain t p where tv: "t \<in> gvalid_activation_trace (?g) (S)" and hd_t: "fst (hd (path_of t)) = cfg_entry ?g"
+  obtain t p where tv: "t \<in> gvalid_activation_trace (?g) (S)" and hd_t:
+    "fst (hd (path_of t)) = cfg_entry ?g"
     and sn: "sink_node t = FunctionResult p" and ss: "sink_store t = s" by blast
   have "fst (hd (path_of t)) = FunctionEntry prog_main_name"
     using hd_t by (simp add: compile_prog_def Let_def split: prod.splits)

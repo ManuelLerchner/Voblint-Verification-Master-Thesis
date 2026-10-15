@@ -246,7 +246,6 @@ definition ctx_succ :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow> 
      route \<G> u ctx (entry_of \<G> p (call_info_of ca q) (dg_local (sol_env \<G> p (Inl (u, ctx))))
                       (sol_global \<G> p)) ca"
 
-
 text \<open>
   Where a call leads when it contributes at all: \<open>None\<close> when the entered state is
   bottom, which is exactly when the routed call program drops the alternative, and
@@ -259,7 +258,6 @@ definition live_succ :: "('vr \<Rightarrow> bool) \<Rightarrow> 'p \<Rightarrow>
      (if entry_of \<G> p (call_info_of ca q) (dg_local (sol_env \<G> p (Inl (u, ctx))))
            (sol_global \<G> p) = Bot
       then None else Some (ctx_succ \<G> p u ctx ca q))"
-
 
 text \<open>
   The values one solution publishes. The seeds are read exactly as a table entry is,
@@ -1027,45 +1025,6 @@ lemma admitted_contexts_alt:
 abbreviation entry_context_rel :: "('vr, 'e, 'c) gcontext_policy" where
   "entry_context_rel \<equiv> admitted_contexts pgs p"
 
-text \<open>
-  How a caller shows that this call is admitted at the context it computed: the
-  concrete caller store is described by the recombined caller, and the entered
-  store by the callee frame entered from it, each recombined against the solved
-  global. The single alternative means a witness never has to name the
-  alternatives list.
-\<close>
-
-lemma admitted_contextsI:
-  assumes caller: "s \<in> pgam (fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol))
-                     gsol"
-    and entered_in: "s' \<in> pgam (entered ci (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
-  shows "route pgs u ctx (entered ci (dg_local (sol_env pgs p (Inl (u, ctx)))))
-             (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))
-           \<in> entry_context_rel u ctx ci s s'"
-  unfolding admitted_contexts_alt
-  by (rule routed_entry_context_relI
-        [where cont = "fst (entry_alt pgs p ci (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)"])
-     (use caller entered_in in \<open>simp_all add: entry_of_def sol_global_def\<close>)
-
-text \<open>
-  The same fact with the call action spelled as the caller has it. A witness
-  names a literal \<^const>\<open>CallEdge\<close>, while the rule above reconstructs one from
-  the \<^type>\<open>call_info\<close>'s three projections, and \<^theory_text>\<open>rule\<close> does not reduce the
-  projections. Every concrete instance wants this shape.
-\<close>
-
-lemma admitted_contextsI_call:
-  assumes caller: "s \<in> pgam (fst (entry_alt pgs p (call_info_of (CallEdge dst pars args) q)
-                       (dg_local (sol_env pgs p (Inl (u, ctx)))) gsol)) gsol"
-    and entered_in: "s' \<in> pgam (entered (call_info_of (CallEdge dst pars args) q)
-                           (dg_local (sol_env pgs p (Inl (u, ctx))))) gsol"
-  shows "route pgs u ctx
-             (entered (call_info_of (CallEdge dst pars args) q)
-                (dg_local (sol_env pgs p (Inl (u, ctx)))))
-             (CallEdge dst pars args)
-           \<in> entry_context_rel u ctx (call_info_of (CallEdge dst pars args) q) s s'"
-  using admitted_contextsI[OF caller entered_in] by simp
-
 lemma entry_state_routed_analysis_sound:
   assumes solves: "terminates pgs p"
     and fwd_ok: "\<And>u a v ctx. (u, ctx) \<in> sol_vars pgs p
@@ -1169,7 +1128,8 @@ corollary entry_state_activation_collect_sound:
 theorem entry_state_has_context:
   assumes entry_cov: "(cfg_entry (pcfg p), root_ctx) \<in> sol_vars pgs p"
     and trace: "t \<in> trace_sem.gvalid_activation_trace ev rv (pconv p) pgs (pcfg p) (pinit p)"
-  shows "\<exists>c. ctx_sem.gactivation_context_rel ev (pconv p) pgs entry_context_rel root_ctx (pcfg p) t c"
+  shows
+    "\<exists>c. ctx_sem.gactivation_context_rel ev (pconv p) pgs entry_context_rel root_ctx (pcfg p) t c"
   using entry.routed_valid_activation_trace_has_context
       [OF entry_cov _ entry_init_env_le[OF entry_cov] trace] cinit_le_init
   by simp
@@ -1225,7 +1185,8 @@ proof (rule activation_collect_sound_of[OF solves entry_cov fwd_ok comb_fwd_ok])
   have req: "route pgs u ctx d (CallEdge dst pars args) = ctx'" for d
     using Rc
     by (simp add:
-      route_const[of _ _ _ _ "cfg_transfer_sem.gcall_enter ev (pconv p) pgs (CallEdge dst pars args) s"])
+      route_const[of _ _ _ _
+        "cfg_transfer_sem.gcall_enter ev (pconv p) pgs (CallEdge dst pars args) s"])
   show "route pgs u ctx
           (entered (call_info_of (CallEdge dst pars args) q)
              (dg_local (sol_env pgs p (Inl (u, ctx)))))
@@ -1466,7 +1427,8 @@ proof -
     let ?w = "cmb d ?v"
     let ?E = "dg_pipeline.comp_entry comp ?\<G> p ci ?w"
     let ?W = "global_names_in ?\<G> (ci_formals ci)"
-    let ?ce = "cfg_transfer_sem.gcall_enter ev (pconv p) ?\<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"
+    let ?ce =
+      "cfg_transfer_sem.gcall_enter ev (pconv p) ?\<G> (CallEdge (ci_dst ci) (ci_formals ci) (ci_args ci))"
     have alt: "dg_pipeline.entry_alt comp (\<lambda>\<G>. rl)
         (\<lambda>p ci d e. cmb d (view_of rg (gcall_global_reads evars (pglob p) (ci_args ci)) e
            (free (gcall_global_reads evars (pglob p) (ci_args ci)))))

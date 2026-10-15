@@ -43,11 +43,6 @@ subsection \<open>The two facts every instance needs\<close>
 text \<open>Routing agreement, generically: since neither side reads \<open>d\<close>/\<open>s\<close>, this holds for
   \<^emph>\<open>any\<close> \<open>k\<close>, \<open>u\<close>, \<open>ctx\<close>, \<open>d\<close>, \<open>ca\<close>, \<open>s\<close> with zero case analysis.\<close>
 
-text \<open>At bound \<open>0\<close> every call lands in the one empty context.\<close>
-
-lemma cs_context_0: "cs_context 0 = (\<lambda>_ _ _. [])"
-  by (simp add: fun_eq_iff cs_context_def)
-
 lemma cs_route_context_agree: "cs_route k u ctx d ca = cs_context k u ctx s"
   by (simp add: cs_route_def cs_context_def)
 

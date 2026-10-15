@@ -1,6 +1,5 @@
 theory Example_Run_Voblint_Precision
-  imports
-    "Voblint_VIMP.VIMP_Notation" "Voblint_CLI.Run_Voblint"
+  imports "Voblint_CLI.Run_Voblint"
 begin
 
 section \<open>Precision of the public run, per analysis and option\<close>
@@ -70,7 +69,7 @@ lemma call_string_verdicts:
 subsection \<open>Signed overflow\<close>
 
 text \<open>
-  The concrete semantics wraps \<open>INT_MAX + 1\<close> to \<open>INT_MIN\<close>. Under Goblint's default
+  The concrete semantics wraps \<^verbatim>\<open>INT_MAX + 1\<close> to \<^verbatim>\<open>INT_MIN\<close>. Under Goblint's default
   \<^verbatim>\<open>assume_top\<close> the signed overflow gives Interval the kind's top, and the check is
   unknown; under \<^verbatim>\<open>assume_wraparound\<close> Interval wraps as the concrete semantics does and
   proves it.

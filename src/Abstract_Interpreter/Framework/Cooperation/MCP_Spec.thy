@@ -59,7 +59,8 @@ text \<open>
   step on an arbitrary edge is derived from them.
 \<close>
 
-definition ls_step :: "('vr,'e,'s) glocal_spec \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
+definition ls_step :: "('vr,'e,'s) glocal_spec \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's"
+  where
   "ls_step c ch = local_spec_step (ls_skip c ch) (ls_assign c ch) (ls_special c ch)
      (ls_branch c ch) (ls_body c ch) (ls_return c ch) (ls_event c ch)"
 
@@ -184,7 +185,8 @@ definition gsound_special ::
      (\<forall>ch x s sc y t. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> t \<in> gspecial_step sc y s
         \<longrightarrow> t \<in> gm (f ch sc y x))"
 
-definition gsound_branch :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+definition gsound_branch :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool"
+  where
   "gsound_branch gm f \<longleftrightarrow>
      (\<forall>ch x s b pol. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> truthy (ev b s) = pol
         \<longrightarrow> s \<in> gm (f ch b pol x))"
@@ -199,7 +201,8 @@ definition gsound_return ::
      (\<forall>ch x s r p. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s
         \<longrightarrow> s(rv := (case r of None \<Rightarrow> s rv | Some a \<Rightarrow> ev a s)) \<in> gm (f ch r p x))"
 
-definition gsound_event :: "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e ganalysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
+definition gsound_event ::
+  "('s \<Rightarrow> ('vr \<Rightarrow> int) set) \<Rightarrow> ('e gchannel \<Rightarrow> 'e ganalysis_event \<Rightarrow> 's \<Rightarrow> 's) \<Rightarrow> bool" where
   "gsound_event gm f \<longleftrightarrow>
      (\<forall>ch x s evt. s \<in> gm x \<longrightarrow> geval_query.channel_holds ev ch s \<longrightarrow> s \<in> gm (f ch evt x))"
 
@@ -439,7 +442,8 @@ definition event_identity :: "'e gchannel \<Rightarrow> 'e ganalysis_event \<Rig
 definition branch_identity :: "'e gchannel \<Rightarrow> 'e \<Rightarrow> bool \<Rightarrow> 's \<Rightarrow> 's" where
   "branch_identity ch b pol x = x"
 
-definition combine_env_identity :: "'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+definition combine_env_identity :: "'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+  where
   "combine_env_identity ch ch' ci x de = x"
 
 context mcp_sem
@@ -459,13 +463,6 @@ lemma sound_event_identity: "gsound_event gm event_identity"
 
 lemma sound_branch_identity: "gsound_branch gm branch_identity"
   by (simp add: gsound_branch_def branch_identity_def)
-
-lemma sound_combine_env_identity:
-  "gsound_combine gm combine_env_identity ca \<longleftrightarrow>
-     (\<forall>ch' s t ci x de. s \<in> gm x \<longrightarrow> t \<in> gm de \<longrightarrow> geval_query.channel_holds ev ch' t \<longrightarrow>
-        gcombine_collect (ci_dst ci) s t \<in> gm (ca ch' ci x de))"
-  unfolding gsound_combine_def combine_env_identity_def
-  using geval_query.channel_holds_top by blast
 
 end
 
@@ -601,15 +598,18 @@ text \<open>
   same channel, as every Goblint component gets the same \<open>man.ask\<close>.
 \<close>
 
-definition mcp_step :: "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
+definition mcp_step ::
+  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gedge_action \<Rightarrow> 's \<Rightarrow> 's" where
   "mcp_step cs ch a x = fold (\<lambda>c y. ls_step c ch a y) cs x"
 
 definition mcp_en_from ::
-  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list" where
+  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<times> 's \<Rightarrow> 's enter_result list"
+    where
   "mcp_en_from cs ch ci p = fold (\<lambda>c ps. concat (map (ls_enter c ch ci) ps)) cs [p]"
 
 definition mcp_comb ::
-  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's" where
+  "('vr,'e,'s) glocal_spec list \<Rightarrow> 'e gchannel \<Rightarrow> 'e gchannel \<Rightarrow> ('vr,'e) gcall_info \<Rightarrow> 's \<Rightarrow> 's \<Rightarrow> 's"
+    where
   "mcp_comb cs ch ch' ci x de = fold (\<lambda>c y. ls_combine c ch ch' ci y de) cs x"
 
 text \<open>
@@ -850,7 +850,6 @@ definition dg_spec_of :: "('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'x,'k,'v
         (\<lambda>dc de. ls_combine_assign c (ls_channel c de) ci dc de)),
      dgs_query := local_query (ls_channel c) \<rparr>"
 
-
 lemma dg_spec_of_simps [simp]:
   "skip\<^sup>\<sharp> (dg_spec_of c) = local_transfer \<lbrakk>EA_Nop\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
   "assign\<^sup>\<sharp> (dg_spec_of c) x e = local_transfer \<lbrakk>EA_Assign x e\<rbrakk>\<^sup>\<sharp>\<^bsub>c\<^esub>"
@@ -991,7 +990,8 @@ qed
 theorem mcp_contract:
   assumes "\<forall>(\<gamma>\<^sub>i, c\<^sub>i) \<in> set comps. gsound_local_spec \<gamma>\<^sub>i c\<^sub>i" and "mcp_independent comps"
     and "comps \<noteq> []"
-  shows "ganalysis_contract ev rv conv glob (mcp_spec (map snd comps)) (\<lambda>d g. mcp_gamma (map fst comps) d)"
+  shows
+    "ganalysis_contract ev rv conv glob (mcp_spec (map snd comps)) (\<lambda>d g. mcp_gamma (map fst comps) d)"
   unfolding mcp_spec_def by (rule dg_spec_of_contract[OF mcp_combine_sound[OF assms]])
 
 end
@@ -1006,7 +1006,8 @@ text \<open>
   of the whole state, which are the stores the field describes as well.
 \<close>
 
-definition lens_of :: "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'c) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec"
+definition lens_of ::
+  "('s \<Rightarrow> 'c) \<Rightarrow> ('s \<Rightarrow> 'c \<Rightarrow> 's) \<Rightarrow> ('vr,'e,'c) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec"
 where
   "lens_of get put c = make_local_spec
      (\<lambda>ch x. ls_query c ch (get x))
@@ -1062,7 +1063,8 @@ text \<open>
   once it runs in the combined state.
 \<close>
 
-definition with_qry :: "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec" where
+definition with_qry ::
+  "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> ('vr,'e,'s) glocal_spec \<Rightarrow> ('vr,'e,'s) glocal_spec" where
   "with_qry h c = c\<lparr>ls_query := h\<rparr>"
 
 context mcp_sem
@@ -1233,11 +1235,6 @@ lemma lift_get_mono:
   assumes "\<And>r r'. r \<le> r' \<Longrightarrow> f r \<le> f r'"
   shows "x \<le> y \<Longrightarrow> lift_get f x \<le> lift_get f y"
   using assms by (cases x; cases y) simp_all
-
-lemma lift_get_put_other:
-  assumes "\<And>r v. f2 (u1 r v) = f2 r" and "f2 \<bottom> = \<bottom>"
-  shows "lift_get f2 (lift_put u1 x v) = lift_get f2 x"
-  using assms by (cases x) (simp_all add: lift_put_def)
 
 text \<open>
   Components that each own a distinct field are independent: a list of

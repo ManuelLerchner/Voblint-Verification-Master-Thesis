@@ -8,7 +8,7 @@ text \<open>
   A domain that decides a comparison or logical operator \<open>e\<close> three-valuedly
   answers \<open>EvalInt e\<close> with \<open>bool_answer\<close>: such an expression evaluates to
   \<open>0\<close> or \<open>1\<close>, so a decided truth value is the exact integer, and an undecided
-  one is the interval \<open>[0, 1]\<close>. \<open>classify_bool_answer\<close> reads the verdict back.
+  one is the interval \<open>[0, 1]\<close>.
 \<close>
 
 definition bool_answer :: "bool option \<Rightarrow> answer" where
@@ -23,23 +23,6 @@ lemma classify_answer_gamma:
               else if 1 \<notin> gamma_answer a then Check_Refuted else Check_Unknown)"
   using answer_excludes_iff[of 0 a] answer_excludes_iff[of 1 a]
   by (cases a) (auto simp del: answer_excludes.simps)
-
-lemma classify_answer_of_int:
-  "classify_answer (answer_of_int 1) = Decided Check_Proved"
-  "classify_answer (answer_of_int 0) = Decided Check_Refuted"
-  by (simp_all add: answer_of_int_def is_bottom_int_dom_correct)
-
-lemma classify_bool_answer:
-  "classify_answer (bool_answer r) =
-     Decided (case r of Some True \<Rightarrow> Check_Proved | Some False \<Rightarrow> Check_Refuted
-                      | None \<Rightarrow> Check_Unknown)"
-proof (cases r)
-  case None
-  have "answer_of_ivl (Ivl (Fin 0) (Fin 1)) \<noteq> QBot"
-    by (simp add: answer_of_ivl_def)
-  with None show ?thesis
-    by (simp add: bool_answer_def classify_answer_gamma)
-qed (auto simp: bool_answer_def classify_answer_of_int)
 
 section \<open>Deciding a check from an answer\<close>
 

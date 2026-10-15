@@ -237,11 +237,13 @@ next
   case (OFacts t ps)
   define s' where "s' = s(x := ik_norm (\<kappa> x) (eval e s))"
   have up: "s' x \<le> s' y"
-    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TCast (\<kappa> x) e) (TVar (\<kappa> y) y)))) = Some 1" for y
+    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TCast (\<kappa> x) e) (TVar (\<kappa> y) y)))) = Some 1" for
+      y
     using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
     by (simp add: s'_def split: if_splits)
   have down: "s' y \<le> s' x"
-    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1" for y
+    if "y \<noteq> x" "answer_const (ch (EvalInt (TCmp CLe (TVar (\<kappa> y) y) (TCast (\<kappa> x) e)))) = Some 1" for
+      y
     using that geval_holds_constD[OF geval_query.channel_holdsD[OF ch] that(2)]
     by (simp add: s'_def split: if_splits)
   have mem: "s' \<in> gamma_ord \<kappa> (OFacts t ps)" using post OFacts by (simp add: s'_def)
@@ -280,7 +282,8 @@ text \<open>
   the untyped order analysis: a callee may change globals, so no fact survives it.
 \<close>
 
-definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, exp, var_id order_rel lifted) glocal_spec" where
+definition ord_spec :: "kenv \<Rightarrow> var_id list \<Rightarrow> (var_id, exp, var_id order_rel lifted) glocal_spec"
+  where
   "ord_spec \<kappa> ys =
      \<lparr> ls_query = ord_query,
        ls_skip = (\<lambda>ch d. d),
@@ -345,7 +348,7 @@ proof -
     show "T.gsound_event (gamma_ord_lift \<kappa>) (ls_event (ord_spec \<kappa> ys))"
       by (simp add: ord_spec_def T.gsound_event_def)
     show "T.gsound_assign (gamma_ord_lift \<kappa>) (ls_assign (ord_spec \<kappa> ys))"
-      by (auto simp: ord_spec_def T.gsound_assign_def dest!: L
+      by (auto dest!: L simp: ord_spec_def T.gsound_assign_def
           intro!: ord_learn_sound ord_forget_sound)
     show "T.gsound_special (gamma_ord_lift \<kappa>) (ls_special (ord_spec \<kappa> ys))"
       by (auto simp: ord_spec_def T.gsound_special_def dest!: L intro: ord_forget_sound)
@@ -360,7 +363,8 @@ proof -
     show "T.gsound_combine (gamma_ord_lift \<kappa>) (ls_combine_env (ord_spec \<kappa> ys))
         (ls_combine_assign (ord_spec \<kappa> ys))"
       by (auto simp: ord_spec_def T.gsound_combine_def combine_env_identity_def
-          cfg_transfer_sem.gcombine_collect_def intro!: in_kinds_gcombine dest: ord_in_kinds_in_kinds)
+          cfg_transfer_sem.gcombine_collect_def intro!: in_kinds_gcombine dest:
+            ord_in_kinds_in_kinds)
   qed
 qed
 
@@ -422,45 +426,4 @@ next
   case (CallsUnique p) show ?case by (rule elab_cfg_calls_source_unique)
 qed
 
-subsection \<open>End-to-end soundness\<close>
-
-context
-  fixes ds :: kind_decls and r :: globals_rule
-begin
-
-lemma order_analysis_node_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "order_analysis.terminates ds r is_global p"
-  shows "node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v
-           \<subseteq> gamma_ord (kenv_of ds) (order_analysis.state_at ds r is_global p () v)"
-  using order_analysis.gfun_route_result_node_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "\<lambda>_ _ _. ()" v]
-  by (simp add: node_collect_def UNIV_unit)
-
-text \<open>A proved order check holds at every typed store reaching its node; a refuted one
-  fails at every such store. Neither verdict says the node is reached.\<close>
-
-theorem order_analysis_report_proved_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "order_analysis.terminates ds r is_global p"
-    and mem: "(v, c, Check_Proved) \<in> set (order_analysis.report ds r is_global p ())"
-  shows "\<forall>s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v.
-           truthy (eval c s)"
-  using order_analysis.gfun_route_report_proved_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves mem, of "\<lambda>_ _ _. ()"]
-    order_analysis.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
-  by (simp add: node_collect_def)
-
-theorem order_analysis_report_refuted_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "order_analysis.terminates ds r is_global p"
-    and mem: "(v, c, Check_Refuted) \<in> set (order_analysis.report ds r is_global p ())"
-  shows "\<forall>s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v.
-           \<not> truthy (eval c s)"
-  using order_analysis.gfun_route_report_refuted_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves mem, of "\<lambda>_ _ _. ()"]
-    order_analysis.fun_route_node_collect_eq_Union[of ds p v "\<lambda>_ _ _. ()"]
-  by (simp add: node_collect_def)
-
-end
 end

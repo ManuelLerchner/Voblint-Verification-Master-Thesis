@@ -45,7 +45,7 @@ text \<open>
   concretization the locale below pairs with it, which publishes each local
   value together with the solved global at \<open>Inr buffer_key\<close>. Under that
   pairing the two coverage obligations \<^locale>\<open>gdg_context_activation\<close> asks for
-  hold by construction, given \<open>gammaDG_rd\<close> and that the publication map takes
+  hold by construction, given \<open>ggammaDG_rd\<close> and that the publication map takes
   \<open>bot\<close> to \<^const>\<open>Bot\<close>. Neither depends on the domain or the context policy,
   so no instance need prove them again.
 \<close>

@@ -20,7 +20,8 @@ text \<open>
 
 subsection \<open>Verdicts\<close>
 
-definition nonrel_classify :: "sem_conf \<Rightarrow> kenv \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> check_result" where
+definition nonrel_classify :: "sem_conf \<Rightarrow> kenv \<Rightarrow> exp \<Rightarrow> 'a::kind_int_domain tabs \<Rightarrow> check_result"
+  where
   "nonrel_classify sem \<kappa> c d =
      (case truth_ik (aeval sem \<kappa> (\<lambda>_. \<top>) c d) of
         Some True \<Rightarrow> Check_Proved
@@ -103,7 +104,7 @@ lemma nonrel_routed:
   "gdg_analysis
     eval ReturnVar (\<lambda>_. kind_conv (kenv_of ds)) (\<lambda>_. is_global) (\<lambda>_. init_stores (kenv_of ds))
     (\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec)
-    (\<lambda>_. st_is_bot) (\<lambda>\<G>. default_st_to_fun \<G>) (nonrel_init_st ds)
+    (\<lambda>_. st_is_bot) (\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>) (nonrel_init_st ds)
     (Analysis_Global ()) Analysis_Global Activation_Seed
     (TD_side_rule_Interp_solve r)
     (TD_side_rule_Interp.solve_dom TYPE((unit, 'c) global_unknown)
@@ -148,7 +149,7 @@ qed
 global_interpretation nonrel: gdg_analysis
     eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
     "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec"
-    "\<lambda>_. st_is_bot" "\<lambda>\<G>. default_st_to_fun \<G>" "nonrel_init_st ds"
+    "\<lambda>_. st_is_bot" "\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>" "nonrel_init_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>_. cs_route k" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, cfg_node list) global_unknown)
@@ -159,133 +160,6 @@ global_interpretation nonrel: gdg_analysis
     "\<lambda>p. elab_cfg p ds" "\<lambda>_. FunctionEntry prog_main_name"
   for sem ds r k
   by (rule nonrel_routed)
-
-subsection \<open>End-to-end soundness\<close>
-
-text \<open>
-  A terminating solve of the typed analysis bounds every store a typed run of
-  the program reaches: the run starts in a store whose globals are zero at their kinds,
-  and its node's state under some context bounds it. A verdict at a context is sound for
-  the activations that context admits. Without call strings (\<open>k = 0\<close>) the one context
-  admits every activation, so a verdict is sound for every store reaching its node.
-  Termination is a premise about this program, as for the untyped analyses.
-\<close>
-
-context
-  fixes sem :: sem_conf and ds :: kind_decls and r :: globals_rule and k :: nat
-begin
-
-lemma nonrel_node_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds k r is_global p"
-  shows "node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. gamma_tabs (kenv_of ds)
-                 (nonrel.state_at sem ds k r is_global p ctx v :: 'a tabs))"
-  using nonrel.gfun_route_result_node_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k" v]
-  by (simp add: node_collect_def cs_route_def cs_context_def)
-
-theorem nonrel_source_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds k r is_global p"
-    and s0: "s0 \<in> init_stores (kenv_of ds)"
-    and run: "star (pstep (kenv_of ds) (elab_ptable p ds))
-                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
-  shows "\<exists>v stk ctx. elab_ptable p ds, elab_cfg p ds, prog_main_name
-                    \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> gamma_tabs (kenv_of ds) (nonrel.state_at sem ds k r is_global p ctx v :: 'a tabs)"
-  using source_reaches_node_collect[OF wf s0 run] nonrel_node_sound[OF wf solves]
-  by blast
-
-theorem nonrel_report_ctx_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds k r is_global p"
-  shows "(v, c, Check_Proved) \<in> set (nonrel.report TYPE('a) sem ds k r is_global p ctx)
-           \<Longrightarrow> \<forall>s \<in> ctx_sem.gactivation_collect eval ReturnVar (kind_conv (kenv_of ds)) is_global
-                     (context_policy_of_fun (cs_context k)) [] (elab_cfg p ds)
-                     (init_stores (kenv_of ds)) v ctx. truthy (eval c s)"
-    and "(v, c, Check_Refuted) \<in> set (nonrel.report TYPE('a) sem ds k r is_global p ctx)
-           \<Longrightarrow> \<forall>s \<in> ctx_sem.gactivation_collect eval ReturnVar (kind_conv (kenv_of ds)) is_global
-                     (context_policy_of_fun (cs_context k)) [] (elab_cfg p ds)
-                     (init_stores (kenv_of ds)) v ctx. \<not> truthy (eval c s)"
-  using nonrel.gfun_route_report_proved_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k"]
-    nonrel.gfun_route_report_refuted_sound
-      [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k"]
-  by (simp_all add: cs_route_def cs_context_def)
-
-text \<open>The aggregate a caller prints: one verdict per check over every context the solved
-  table covers at its node. A decided verdict holds at every typed store reaching the
-  node, whichever context reached it.\<close>
-
-theorem nonrel_verdict_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds k r is_global p"
-    and mem: "(v, c, Decided res) \<in> set (nonrel.verdict_report TYPE('a) sem ds k r is_global p)"
-    and s: "s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v"
-  shows "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-proof -
-  obtain ctx where sc:
-    "s \<in> gamma_tabs (kenv_of ds) (nonrel.state_at sem ds k r is_global p ctx v :: 'a tabs)"
-    using nonrel_node_sound[OF wf solves] s by blast
-  have decided:
-    "nonrel_classify sem (kenv_of ds) c (nonrel.state_at sem ds k r is_global p ctx v :: 'a tabs) = res"
-    if known: "res \<noteq> Check_Unknown"
-  proof (cases
-    "lookup_table (nonrel.result sem ds k r is_global p :: (_, 'a tabs) solved_table) v ctx")
-    case Bot
-    then show ?thesis using sc by (simp add: nonrel.state_at_unfold)
-  next
-    case (Lifted st)
-    have fin: "finite (intra (elab_cfg p ds))" by (simp add: elab_cfg_def compile_prog_finite)
-    show ?thesis
-      using classify_checks_ctx_decided_sound[OF fin
-          mem[unfolded nonrel.verdict_report_def] Lifted known] Lifted
-      by (simp add: nonrel.state_at_unfold)
-  qed
-  show "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    using decided nonrel_classify_proved[OF sc] by auto
-  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-    using decided nonrel_classify_refuted[OF sc] by auto
-qed
-end
-
-text \<open>A proved check holds at every typed store reaching its node; a refuted one fails at
-  every such store. Neither verdict says the node is reached.\<close>
-
-lemma activation_context_of_cs0: "activation_context_of (\<lambda>_ _ _. []) [] t = []"
-  by (induction t) simp_all
-
-lemma cs0_node_collect:
-  "node_collect \<kappa> g S v
-     = ctx_sem.gactivation_collect eval ReturnVar (kind_conv \<kappa>) is_global
-         (context_policy_of_fun (cs_context 0)) [] g S v []"
-  unfolding node_collect_def
-    collect_sem.node_collect_eq_Union_activation_of_fun[where f = "cs_context 0" and c\<^sub>0 = "[]"]
-  by (auto simp: ctx_sem.activation_collect_of_fun cs_context_0 activation_context_of_cs0)
-
-context
-  fixes sem :: sem_conf and ds :: kind_decls and r :: globals_rule
-begin
-
-theorem nonrel_report_proved_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds 0 r is_global p"
-    and mem: "(v, c, Check_Proved) \<in> set (nonrel.report TYPE('a) sem ds 0 r is_global p [])"
-  shows "\<forall>s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v.
-           truthy (eval c s)"
-  using nonrel_report_ctx_sound(1)[OF wf solves mem] by (simp add: cs0_node_collect)
-
-theorem nonrel_report_refuted_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel.terminates TYPE('a::kind_int_domain) sem ds 0 r is_global p"
-    and mem: "(v, c, Check_Refuted) \<in> set (nonrel.report TYPE('a) sem ds 0 r is_global p [])"
-  shows "\<forall>s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v.
-           \<not> truthy (eval c s)"
-  using nonrel_report_ctx_sound(2)[OF wf solves mem] by (simp add: cs0_node_collect)
-
-end
 
 subsection \<open>Entry-state contexts\<close>
 
@@ -307,7 +181,7 @@ definition nonrel_es_ctx ::
 global_interpretation nonrel_es: gdg_analysis
     eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
     "\<lambda>_ _. nonrel_exec_spec sem (kenv_of ds) :: (var_id, exp, 'a::kind_int_domain tst lifted) glocal_spec"
-    "\<lambda>_. st_is_bot" "\<lambda>\<G>. default_st_to_fun \<G>" "nonrel_init_st ds"
+    "\<lambda>_. st_is_bot" "\<lambda>\<G>. \<rho>\<^bsub>\<G>\<^esub>" "nonrel_init_st ds"
     "Analysis_Global ()" Analysis_Global Activation_Seed "\<lambda>\<G> u ctx d ca. nonrel_es_ctx \<G> d ca" "[]"
     "TD_side_rule_Interp_solve r"
     "TD_side_rule_Interp.solve_dom TYPE((unit, 'a kd list) global_unknown)
@@ -319,69 +193,6 @@ global_interpretation nonrel_es: gdg_analysis
   for sem ds r
   by (rule nonrel_routed)
 
-context
-  fixes sem :: sem_conf and ds :: kind_decls and r :: globals_rule
-begin
-
-lemma nonrel_es_node_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel_es.terminates TYPE('a::kind_int_domain) sem ds r is_global p"
-  shows "node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v
-           \<subseteq> (\<Union>ctx. gamma_tabs (kenv_of ds)
-                 (nonrel_es.state_at sem ds r is_global p ctx v :: 'a tabs))"
-proof
-  fix s assume "s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v"
-  then obtain ctx :: "'a kd list" where "s \<in> ctx_sem.gactivation_collect eval ReturnVar (kind_conv (kenv_of ds)) is_global
-      (nonrel_es.admitted_contexts sem ds r is_global p) [] (elab_cfg p ds) (init_stores (kenv_of ds)) v ctx"
-    using nonrel_es.gentry_state_node_collect_eq_Union_of_terminates
-        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v]
-    by (auto simp: node_collect_def)
-  then have "s \<in> gamma_lift (gamma_tabs (kenv_of ds))
-      (lookup_table (nonrel_es.result sem ds r is_global p :: (_, 'a tabs) solved_table) v ctx)"
-    using nonrel_es.gentry_state_lookup_sound_of_terminates
-        [OF elab_cfg_def elab_wf_compile_input[OF wf] solves, of v ctx]
-    by blast
-  then have "s \<in> gamma_tabs (kenv_of ds) (nonrel_es.state_at sem ds r is_global p ctx v :: 'a tabs)"
-    by (auto simp: nonrel_es.state_at_unfold split: lifted.splits)
-  then show "s \<in> (\<Union>ctx. gamma_tabs (kenv_of ds) (nonrel_es.state_at sem ds r is_global p ctx v :: 'a tabs))"
-    by blast
-qed
-
-theorem nonrel_es_verdict_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "nonrel_es.terminates TYPE('a::kind_int_domain) sem ds r is_global p"
-    and mem: "(v, c, Decided res) \<in> set (nonrel_es.verdict_report TYPE('a) sem ds r is_global p)"
-    and s: "s \<in> node_collect (kenv_of ds) (elab_cfg p ds) (init_stores (kenv_of ds)) v"
-  shows "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-proof -
-  obtain ctx where sc:
-    "s \<in> gamma_tabs (kenv_of ds) (nonrel_es.state_at sem ds r is_global p ctx v :: 'a tabs)"
-    using nonrel_es_node_sound[OF wf solves] s by blast
-  have decided:
-    "nonrel_classify sem (kenv_of ds) c (nonrel_es.state_at sem ds r is_global p ctx v :: 'a tabs) = res"
-    if known: "res \<noteq> Check_Unknown"
-  proof (cases
-    "lookup_table (nonrel_es.result sem ds r is_global p :: (_, 'a tabs) solved_table) v ctx")
-    case Bot
-    then show ?thesis using sc by (simp add: nonrel_es.state_at_unfold)
-  next
-    case (Lifted st)
-    have fin: "finite (intra (elab_cfg p ds))" by (simp add: elab_cfg_def compile_prog_finite)
-    show ?thesis
-      using classify_checks_ctx_decided_sound[OF fin
-          mem[unfolded nonrel_es.verdict_report_def] Lifted known] Lifted
-      by (simp add: nonrel_es.state_at_unfold)
-  qed
-  show "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    using decided nonrel_classify_proved[OF sc] by auto
-  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-    using decided nonrel_classify_refuted[OF sc] by auto
-qed
-
-end
-
 unbundle no default_st_syntax
 
 end
-

@@ -46,4 +46,3 @@ lemma coop_verdicts:
   by eval+
 
 end
-

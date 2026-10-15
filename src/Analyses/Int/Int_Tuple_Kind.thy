@@ -48,6 +48,8 @@ lemma gamma_it_IT [simp]: "gamma_it (IT i c) = gamma_ivl i \<inter> gamma_congru
 
 subsection \<open>Lattice\<close>
 
+text \<open>The order, join, bottom and top are taken componentwise.\<close>
+
 instantiation int_tuple :: (type) "{order_top, bounded_semilattice_sup_bot}"
 begin
 
@@ -246,6 +248,9 @@ qed (simp_all add: it_refine_mode_def it_refine_sound)
 
 subsection \<open>Domain instances\<close>
 
+text \<open>Widening and narrowing also act componentwise; a value is empty when its congruence
+  class has no member between its interval's bounds.\<close>
+
 instantiation int_tuple :: (type) numeric_domain
 begin
 
@@ -374,7 +379,8 @@ definition meet_ik_int_tuple :: "'a int_tuple \<Rightarrow> 'a int_tuple \<Right
   "meet_ik_int_tuple a b =
      it_refine_mode (int_mode TYPE('a)) (IT (meet_ik (it_ivl a) (it_ivl b)) (meet_ik (it_cong a) (it_cong b)))"
 
-definition refine_ik_int_tuple :: "cop \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<times> 'a int_tuple" where
+definition refine_ik_int_tuple :: "cop \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<Rightarrow> 'a int_tuple \<times> 'a int_tuple"
+  where
   "refine_ik_int_tuple c a b =
      (let (i1, i2) = refine_ik c (it_ivl a) (it_ivl b);
           (c1, c2) = refine_ik c (it_cong a) (it_cong b)
@@ -411,7 +417,8 @@ instance proof
       using cast_ik_sound[where a = i and k = k and ovp = ovp, OF src] ni by simp
     moreover have "ik_norm k n \<in> gamma_congruence
         (if fits_ik k i then cg else cast_ik ovp sk k cg)"
-      using fits_ik_sound[of k i n] cast_ik_sound[where a = cg and k = k and ovp = ovp, OF src] ni nc
+      using fits_ik_sound[of k i n] cast_ik_sound[where a = cg and k = k and ovp = ovp, OF src] ni
+        nc
       by (auto simp del: ik_range_iff)
     ultimately show ?thesis
       unfolding cast_ik_int_tuple_def a int_tuple.sel by (rule it_refine_IT_sound)
@@ -431,7 +438,8 @@ instance proof
     moreover have "ik_norm k (aop_eval op m n) \<in> gamma_congruence
         (if fits_ik k ?r then raw_aop_ik op c1 c2 else arith_ik ovp k op fits c1 c2)"
       using fits_ik_sound[of k ?r] rv raw_aop_ik_sound[of m c1 n c2]
-        arith_ik_sound[where k = k and op = op and operands_fit = fits and ovp = ovp and a = c1 and b = c2,
+        arith_ik_sound[where k = k and op = op and operands_fit = fits and ovp = ovp and a = c1 and
+          b = c2,
           OF fit] ma nb
       by (auto simp: a b simp del: ik_range_iff)
     ultimately show ?thesis
@@ -465,11 +473,11 @@ instance proof
     by (cases a) (simp add: answer_ik_int_tuple_def gamma_query_lift_inf[OF gamma_inf_int_dom])
   show "(\<And>k. sk = Some k \<Longrightarrow> n \<in> ik_range k) \<Longrightarrow> n \<in> gamma_answer q
       \<Longrightarrow> n \<in> numeric_domain_class.gamma (of_answer_ik sk q :: 'a int_tuple)" for sk q
-    using of_answer_ik_sound[of sk n q, where 'a = ivl] of_answer_ik_sound[of sk n q, where 'a = congruence]
+    using of_answer_ik_sound[of sk n q, where 'a = ivl]
+      of_answer_ik_sound[of sk n q, where 'a = congruence]
     by (simp add: of_answer_ik_int_tuple_def)
 qed
 
 end
 
 end
-

@@ -46,7 +46,6 @@ abbreviation Dead :: contextual_verdict where
 abbreviation Decided :: "check_result \<Rightarrow> contextual_verdict" where
   "Decided r \<equiv> Lifted r"
 
-
 subsection \<open>Classifying one contextual point\<close>
 
 text \<open>
@@ -93,11 +92,6 @@ fun classify_answer :: "answer \<Rightarrow> contextual_verdict" where
      (if answer_excludes 0 a then Decided Check_Proved
       else if answer_excludes 1 a then Decided Check_Refuted
       else Decided Check_Unknown)"
-
-lemma classify_answer_cases:
-  "classify_answer a = Decided Check_Proved \<Longrightarrow> 0 \<notin> gamma_answer a"
-  "classify_answer a = Decided Check_Refuted \<Longrightarrow> 1 \<notin> gamma_answer a"
-  by (cases a; simp only: classify_answer.simps answer_excludes_iff split: if_splits; simp)+
 
 subsection \<open>Aggregating the contexts observed at one check\<close>
 
@@ -258,7 +252,6 @@ proof
     using aggregate_verdicts_member_le[OF aggregate_verdicts_decided_finite[OF agg] \<open>v \<in> vs\<close>] .
   with agg known show "v = Dead \<or> v = Decided r" by simp
 qed
-
 
 subsection \<open>One condition at one point, over its contexts\<close>
 

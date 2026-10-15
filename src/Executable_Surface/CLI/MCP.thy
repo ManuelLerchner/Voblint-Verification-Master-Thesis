@@ -46,8 +46,7 @@ proof
 qed
 
 text \<open>What the combination owes the pipeline does not depend on the context policy, so
-  it is proved once, for any route and root context, as for the untyped analyses
-  (\<open>mcp_routed_dg_analysis\<close>).\<close>
+  it is proved once, for any route and root context.\<close>
 
 lemma mcp_cs_routed:
   "gdg_analysis
@@ -71,7 +70,8 @@ proof (rule gdg_analysis_whole_stateI[OF td_certified_solver], goal_cases CompSo
       = (\<lambda>d. gamma_lift (mcp.act_gamma ds (activation_of as)) (map_lift (mcp_rd is_global) d))"
     by (rule ext) (rule mcp.mcp_gamma_rd[OF activation_of_ne])
   show ?case
-    using mcp.mcp_comp_sound[OF distinct_activation_of activation_of_ne, where sem = sem and ds = ds and p = p,
+    using mcp.mcp_comp_sound[OF distinct_activation_of activation_of_ne, where sem = sem and ds = ds
+      and p = p,
         of as]
     unfolding eq by simp
 next
@@ -109,6 +109,9 @@ qed
 
 subsection \<open>At call-string contexts\<close>
 
+text \<open>The combination run with \<open>k\<close>-bounded call strings as contexts, rooted at the
+  empty call string.\<close>
+
 global_interpretation mcp_cs: gdg_analysis
     eval ReturnVar "\<lambda>_. kind_conv (kenv_of ds)" "\<lambda>_. is_global" "\<lambda>_. init_stores (kenv_of ds)"
     "mcp_comp sem ds (activation_of as)" "mcp_emp (activation_of as)" mcp_rd
@@ -129,7 +132,7 @@ subsection \<open>At entry-state contexts\<close>
 
 text \<open>
   A call is keyed by what each active field gives the callee's formals on entry, as the
-  untyped analyses key it (\<open>mcp_formals_route\<close>); a field no active analysis runs keys
+  entry-state analyses key a single domain (\<^const>\<open>nonrel_es_ctx\<close>); a field no active analysis runs keys
   nothing, and the order field keys nothing.
 \<close>
 
@@ -174,8 +177,12 @@ global_interpretation mcp_es: gdg_analysis
 
 subsection \<open>End-to-end soundness\<close>
 
+text \<open>Under either context policy, every typed store reaching a node lies in the
+  combined state the solved table holds there at some context.\<close>
+
 context
-  fixes sem :: sem_conf and ds :: kind_decls and as :: "analysis list" and r :: globals_rule and k :: nat
+  fixes sem :: sem_conf and ds :: kind_decls and as :: "analysis list" and r :: globals_rule and k
+    :: nat
 begin
 
 lemma mcp_cs_node_sound:
@@ -186,36 +193,6 @@ lemma mcp_cs_node_sound:
   using mcp_cs.gfun_route_result_node_sound
       [OF elab_cfg_def _ elab_wf_compile_input[OF wf] solves, of "cs_context k" v]
   by (simp add: node_collect_def cs_route_def cs_context_def)
-
-theorem mcp_cs_verdict_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "mcp_cs.terminates sem ds as k r is_global p"
-    and mem: "(v, c, Decided res) \<in> set (mcp_cs.verdict_report sem ds as k r is_global p)"
-    and s: "s \<in> (reaching ds p v)"
-  shows "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-proof -
-  obtain ctx where sc: "s \<in> mcp.act_gamma ds (activation_of as) (mcp_cs.state_at sem ds as k r is_global p ctx v)"
-    using mcp_cs_node_sound[OF wf solves] s by blast
-  have decided:
-    "mcp_classify sem ds (activation_of as) c (mcp_cs.state_at sem ds as k r is_global p ctx v) = res"
-    if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (mcp_cs.result sem ds as k r is_global p) v ctx")
-    case Bot
-    then show ?thesis using sc by (simp add: mcp_cs.state_at_unfold mcp.act_gamma_bot)
-  next
-    case (Lifted st)
-    have fin: "finite (intra (elab_cfg p ds))" by (simp add: elab_cfg_def compile_prog_finite)
-    show ?thesis
-      using classify_checks_ctx_decided_sound[OF fin
-          mem[unfolded mcp_cs.verdict_report_def] Lifted known] Lifted
-      by (simp add: mcp_cs.state_at_unfold)
-  qed
-  show "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    using decided mcp.mcp_classify_proved[OF sc] by auto
-  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-    using decided mcp.mcp_classify_refuted[OF sc] by auto
-qed
 
 lemma mcp_es_node_sound:
   assumes wf: "wf_program_compile_input p"
@@ -239,36 +216,6 @@ proof
     by (auto simp: mcp_es.state_at_unfold split: lifted.splits)
   then show "s \<in> (\<Union>ctx. mcp.act_gamma ds (activation_of as) (mcp_es.state_at sem ds as r is_global p ctx v))"
     by blast
-qed
-
-theorem mcp_es_verdict_sound:
-  assumes wf: "wf_program_compile_input p"
-    and solves: "mcp_es.terminates sem ds as r is_global p"
-    and mem: "(v, c, Decided res) \<in> set (mcp_es.verdict_report sem ds as r is_global p)"
-    and s: "s \<in> (reaching ds p v)"
-  shows "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    and "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-proof -
-  obtain ctx where sc: "s \<in> mcp.act_gamma ds (activation_of as) (mcp_es.state_at sem ds as r is_global p ctx v)"
-    using mcp_es_node_sound[OF wf solves] s by blast
-  have decided:
-    "mcp_classify sem ds (activation_of as) c (mcp_es.state_at sem ds as r is_global p ctx v) = res"
-    if known: "res \<noteq> Check_Unknown"
-  proof (cases "lookup_table (mcp_es.result sem ds as r is_global p) v ctx")
-    case Bot
-    then show ?thesis using sc by (simp add: mcp_es.state_at_unfold mcp.act_gamma_bot)
-  next
-    case (Lifted st)
-    have fin: "finite (intra (elab_cfg p ds))" by (simp add: elab_cfg_def compile_prog_finite)
-    show ?thesis
-      using classify_checks_ctx_decided_sound[OF fin
-          mem[unfolded mcp_es.verdict_report_def] Lifted known] Lifted
-      by (simp add: mcp_es.state_at_unfold)
-  qed
-  show "res = Check_Proved \<Longrightarrow> truthy (eval c s)"
-    using decided mcp.mcp_classify_proved[OF sc] by auto
-  show "res = Check_Refuted \<Longrightarrow> \<not> truthy (eval c s)"
-    using decided mcp.mcp_classify_refuted[OF sc] by auto
 qed
 
 end

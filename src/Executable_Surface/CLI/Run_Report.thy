@@ -1,5 +1,5 @@
 theory Run_Report
-  imports Analysis_Report MCP_Split
+  imports Analysis_Report
 begin
 
 section \<open>The report of a typed run\<close>
@@ -134,7 +134,8 @@ proof -
   have answer: "eval a t \<in> gamma_ivl (answer_ivl (ch (EvalInt a)))" for a
     using geval_query.channel_holdsD[OF assms, of "EvalInt a"] by (auto intro: answer_ivl_sound)
   have truth: "eval a t \<in> gamma_ivl (Ivl (Fin 0) (Fin 1))"
-    if "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
+    if
+      "a \<in> {TCmp c x y | c x y. True} \<union> range TNot \<union> {TAnd x y | x y. True} \<union> {TOr x y | x y. True}"
     for a
     using that by (auto simp: less_eq_eint_def)
   have ans: "eval a t \<in> gamma_ivl (operand_ivl ch a)" for a
@@ -162,7 +163,8 @@ proof -
     using assms gamma_ivl_mono[of i "ik_ivl k"]
     by (auto simp: fits_verdict_def split: if_splits)
   show "fits_verdict k i = Check_Refuted \<Longrightarrow> n \<notin> ik_range k"
-    using assms by (auto simp: fits_verdict_def is_bottom_ivl_correct gamma_inf_ivl split: if_splits)
+    using assms
+    by (auto simp: fits_verdict_def is_bottom_ivl_correct gamma_inf_ivl split: if_splits)
 qed
 
 definition obligation_classify ::
@@ -218,7 +220,8 @@ definition return_sites ::
              | _ \<Rightarrow> []) (cfg_intra_list g)))
          (cfg_calls_list g))))"
 
-definition prog_obligation_sites :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
+definition prog_obligation_sites ::
+  "kind_decls \<Rightarrow> imp_prog \<Rightarrow> (pp \<times> exp arithmetic_obligation list) list" where
   "prog_obligation_sites ds p =
      obligation_sites arith_obligations (elab_cfg p ds) @ return_sites ds p"
 
@@ -329,10 +332,12 @@ proof (rule injI)
   fix a b :: mcp_ctx
   assume eq: "mcp_ctx_key a = mcp_ctx_key b"
   obtain i c tn to tf s q u
-    where a: "a = Product i (Product c (Product (Product tn (Product to tf)) (Product s (Product q u))))"
+    where a:
+      "a = Product i (Product c (Product (Product tn (Product to tf)) (Product s (Product q u))))"
     by (metis analysis_product.exhaust)
   obtain i' c' tn' to' tf' s' q' u'
-    where b: "b = Product i' (Product c' (Product (Product tn' (Product to' tf')) (Product s' (Product q' u'))))"
+    where b:
+      "b = Product i' (Product c' (Product (Product tn' (Product to' tf')) (Product s' (Product q' u'))))"
     by (metis analysis_product.exhaust)
   from eq have keys:
     "map (kd_key ivl_key) i = map (kd_key ivl_key) i'"
@@ -406,23 +411,8 @@ definition report_run :: "voblint_conf \<Rightarrow> kind_decls \<Rightarrow> im
 
 subsection \<open>What the builder keeps\<close>
 
-text \<open>A check row is a row of the solve's verdict report, and every state the solved
-  table covers is listed, whatever the language.\<close>
-
-lemma report_of_check_mem:
-  assumes "chk \<in> set (report_checks
-             (report_of config vars g globals sites cond procs ctx_key ctx_tag classify sr))"
-  shows "(check_point chk, check_exp chk, check_verdict chk)
-           \<in> set (classify_checks_verdicts g (run_table sr) classify)"
-proof -
-  from assms have "chk \<in> set (result_checks_of g (run_table sr) classify)"
-    by (simp add: report_of_def Let_def)
-  then have "(check_point chk, check_exp chk, check_verdict chk)
-      \<in> set (map (\<lambda>chk. (check_point chk, check_exp chk, check_verdict chk))
-                 (result_checks_of g (run_table sr) classify))"
-    by (simp only: set_map) (rule imageI)
-  then show ?thesis by (simp only: result_checks_of_verdicts)
-qed
+text \<open>Every state the solved table holds at a node, at any context, is listed among
+  the report's states for that node.\<close>
 
 lemma report_of_state_mem:
   assumes fin: "finite (covered_keys (run_table sr))" and inj: "inj ctx_key"
@@ -793,20 +783,11 @@ lemma arith_obligations_overflow:
            \<in> set (arith_obligations e)"
   by (induction e) auto
 
-lemma arith_obligations_division:
-  "TArith k op a b \<in> subexps e \<Longrightarrow> op = ADiv \<or> op = AMod
-     \<Longrightarrow> Arithmetic_Obligation Division_By_Zero (TArith k op a b) b \<in> set (arith_obligations e)"
-  by (induction e) auto
-
 lemma arith_obligations_conversion:
   "TCast k a \<in> subexps e \<Longrightarrow> \<not> ik_widens (exp_kind a) k
      \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TCast k a) a \<in> set (arith_obligations e)"
   by (induction e) auto
 
-lemma arith_obligations_literal:
-  "TN k n \<in> subexps e \<Longrightarrow> n \<notin> ik_range k
-     \<Longrightarrow> Arithmetic_Obligation Conversion_Overflow (TN k n) (TN k n) \<in> set (arith_obligations e)"
-  by (induction e) (auto simp del: ik_range_iff)
 subsection \<open>Rendering a typed report\<close>
 
 text \<open>
@@ -815,7 +796,6 @@ text \<open>
   and an entry-state context the formal values of its active fields. Typed analyses keep
   every variable in a point's own state, so no edge reads or writes a global unknown.
 \<close>
-
 
 instantiation order_rel :: (type) join_val
 begin

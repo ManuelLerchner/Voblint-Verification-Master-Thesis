@@ -105,16 +105,20 @@ definition combine_assign_st :: "var_id option \<Rightarrow> 'a::kind_int_domain
 
 text \<open>Each agrees with its counterpart on the represented function.\<close>
 
-lemma nonrel_rd_assign_st [simp]: "nonrel_rd (assign_st x e st) = nonrel_assign sem \<kappa> ch x e (nonrel_rd st)"
+lemma nonrel_rd_assign_st [simp]:
+  "nonrel_rd (assign_st x e st) = nonrel_assign sem \<kappa> ch x e (nonrel_rd st)"
   by (simp add: assign_st_def nonrel_assign_def)
 
-lemma nonrel_rd_special_st [simp]: "nonrel_rd (special_st sc x st) = nonrel_special sem \<kappa> ch sc x (nonrel_rd st)"
+lemma nonrel_rd_special_st [simp]:
+  "nonrel_rd (special_st sc x st) = nonrel_special sem \<kappa> ch sc x (nonrel_rd st)"
   by (simp add: special_st_def nonrel_special_def)
 
-lemma nonrel_rd_branch_st [simp]: "nonrel_rd (branch_st b pol st) = nonrel_branch sem \<kappa> ch b pol (nonrel_rd st)"
+lemma nonrel_rd_branch_st [simp]:
+  "nonrel_rd (branch_st b pol st) = nonrel_branch sem \<kappa> ch b pol (nonrel_rd st)"
   by (simp add: branch_st_def nonrel_branch_def nonrel_rd_write_back Let_def split: option.splits)
 
-lemma nonrel_rd_return_st [simp]: "nonrel_rd (return_st r st) = nonrel_return sem \<kappa> ch r (nonrel_rd st)"
+lemma nonrel_rd_return_st [simp]:
+  "nonrel_rd (return_st r st) = nonrel_return sem \<kappa> ch r (nonrel_rd st)"
   by (simp add: return_st_def nonrel_return_def split: option.splits)
 
 lemma nonrel_rd_enter_st [simp]:

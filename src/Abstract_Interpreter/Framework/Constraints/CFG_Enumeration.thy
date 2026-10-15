@@ -28,7 +28,9 @@ text \<open>The ordinary incoming transitions of a node: an intra edge is a tota
   at every node --- including the \<^term>\<open>EA_Ret e p\<close> edges into \<^term>\<open>FunctionResult p\<close>, by
   which return values are summarised as ordinary predecessor folding.\<close>
 
-definition intra_predecessors :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) set" where
+definition intra_predecessors ::
+  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) set"
+    where
   "intra_predecessors g v = {(u, a). (u, a, v) \<in> intra g}"
 
 lemma intra_predecessors_iff [simp]:
@@ -46,7 +48,8 @@ proof -
 qed
 
 definition intra_predecessor_list ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gedge_action) list"
+      where
   "intra_predecessor_list g v =
      map (\<lambda>(u, a, w). (u, a)) (filter (\<lambda>(u, a, w). w = v) (cfg_intra_list g))"
 
@@ -63,7 +66,9 @@ text \<open>The call tuples whose callee entry is the queried node \<open>v\<clo
   entry contribution is the caller state routed through the call action's parameter
   binding, which is what an analysis's entry operation computes.\<close>
 
-definition entry_calls :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) set" where
+definition entry_calls ::
+  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) set"
+    where
   "entry_calls g v = {(c, ca). \<exists>k. (c, ca, v, k) \<in> calls g}"
 
 lemma entry_calls_iff [simp]:
@@ -80,7 +85,9 @@ proof -
   then show ?thesis using assms finite_subset finite_imageI by blast
 qed
 
-definition entry_call_list :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) list" where
+definition entry_call_list ::
+  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) list"
+    where
   "entry_call_list g v =
      map (\<lambda>(c, ca, ce, k). (c, ca)) (filter (\<lambda>(c, ca, ce, k). ce = v) (cfg_calls_list g))"
 
@@ -99,7 +106,8 @@ text \<open>The call tuples whose call site is the queried node \<open>v\<close>
   continuation-indexed enumerations below do not expose.\<close>
 
 definition call_successors ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) set" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) set"
+      where
   "call_successors g v = {(ce, ca, k). (v, ca, ce, k) \<in> calls g}"
 
 lemma call_successors_iff [simp]:
@@ -117,7 +125,8 @@ proof -
 qed
 
 definition call_successor_list ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) list"
+      where
   "call_successor_list g v =
      map (\<lambda>(c, ca, ce, k). (ce, ca, k)) (filter (\<lambda>(c, ca, ce, k). c = v) (cfg_calls_list g))"
 
@@ -148,7 +157,8 @@ text \<open>
 \<close>
 
 definition call_targets ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) set" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) set"
+      where
   "call_targets g v = {(c, ca, p). (c, ca, FunctionEntry p, v) \<in> calls g}"
 
 lemma call_targets_iff [simp]:
@@ -163,7 +173,8 @@ fun call_target_at ::
 | "call_target_at v _ = None"
 
 definition call_target_list ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> pname) list"
+      where
   "call_target_list g v = List.map_filter (call_target_at v) (cfg_calls_list g)"
 
 lemma set_map_filter_call_target_at:
@@ -247,7 +258,8 @@ text \<open>The return edges, as an image of \<^const>\<open>call_targets\<close
   unique, so there is no well-defined downstream lookup that could recover it instead.\<close>
 
 definition return_call_actions ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) set" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) set"
+      where
   "return_call_actions g v =
      (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) ` call_targets g v"
 
@@ -262,7 +274,8 @@ lemma finite_return_call_actions [intro]:
   using finite_call_targets[OF assms] by (simp add: return_call_actions_def)
 
 definition return_call_action_list ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action \<times> cfg_node) list"
+      where
   "return_call_action_list g v =
      map (\<lambda>(c, ca, p). (c, ca, FunctionResult p)) (call_target_list g v)"
 
@@ -294,7 +307,8 @@ text \<open>
 \<close>
 
 definition call_site_list ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> (cfg_node \<times> ('vr::linorder, 'e::linorder) gcall_action) list"
+      where
   "call_site_list g v = remdups (map (\<lambda>(c, ca, p). (c, ca)) (call_target_list g v))"
 
 lemma distinct_call_site_list [simp]:
@@ -309,7 +323,8 @@ lemma set_call_site_list [simp]:
   by (force simp: set_call_target_list[OF assms] call_targets_def image_iff)
 
 definition static_targets ::
-    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pname list" where
+    "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> pname list"
+      where
   "static_targets g v cc ca =
      map (\<lambda>(c, a, p). p)
        (filter (\<lambda>(c, a, p). c = cc \<and> a = ca) (call_target_list g v))"
@@ -345,7 +360,8 @@ proof -
 qed
 
 definition static_resolve ::
-  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'd \<Rightarrow> pname list" where
+  "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> cfg_node \<Rightarrow> cfg_node \<Rightarrow> ('vr::linorder, 'e::linorder) gcall_action \<Rightarrow> 'd \<Rightarrow> pname list"
+    where
   "static_resolve g v cc ca d = static_targets g v cc ca"
 
 lemma static_resolve_iff [simp]:
@@ -424,7 +440,8 @@ text \<open>
   should carry.
 \<close>
 
-definition vars_cover_exec :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool" where
+definition vars_cover_exec :: "('vr::linorder, 'e::linorder) gcfg \<Rightarrow> (cfg_node \<times> unit) set \<Rightarrow> bool"
+  where
   "vars_cover_exec g vars \<longleftrightarrow>
      (cfg_entry g, ()) \<in> vars
    \<and> list_all (\<lambda>(u, a, v). (v, ()) \<in> vars) (cfg_intra_list g)

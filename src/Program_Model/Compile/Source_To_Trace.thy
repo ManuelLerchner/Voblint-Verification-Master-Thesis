@@ -30,7 +30,6 @@ inductive stack_repr :: "('v, 'e) gcfg \<Rightarrow> 'v gcframe list \<Rightarro
           \<Longrightarrow> stack_repr g stk caller
           \<Longrightarrow> stack_repr g ((cont, dst, s) # stk) t"
 
-
 text \<open>Inversion by the shape of the runtime stack.  A frame's clause recurses on the shorter
   stack, so it stays plain \<open>[elim]\<close>; an empty stack has only one clause and is \<open>[elim!]\<close>.\<close>
 inductive_cases stack_repr_NilE [elim!]: "stack_repr g [] t"
@@ -82,7 +81,8 @@ lemma activation_trace_repr_Return:
               (path_of (the (caller_of t0)) @ [(cont, gcombine_collect dst caller tst)]))"
 proof -
   let ?g = "compile_prog \<Pi> ps"
-  from rep have t0v: "t0 \<in> gvalid_activation_trace (?g) (S)" and sn0: "sink_node t0 = FunctionResult q"
+  from rep
+  have t0v: "t0 \<in> gvalid_activation_trace (?g) (S)" and sn0: "sink_node t0 = FunctionResult q"
     and ss0: "sink_store t0 = tst"
     and stk0: "stack_repr ?g ((cont, dst, caller) # stk) t0"
     by (auto simp: gactivation_trace_repr_def)
@@ -91,7 +91,8 @@ proof -
     and edge: "(sink_node c, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     and stkc: "stack_repr ?g stk c"
     by (cases rule: stack_repr.cases) auto
-  have cvalid: "c \<in> gvalid_activation_trace (?g) (S)" using valid_activation_trace_caller_valid[OF t0v cof] .
+  have cvalid: "c \<in> gvalid_activation_trace (?g) (S)"
+    using valid_activation_trace_caller_valid[OF t0v cof] .
   have pq: "p = q" using valid_activation_trace_entry_result_eq[OF wf t0v entryp sn0] .
   have cthe: "the (caller_of t0) = c" using cof by simp
   let ?r = "gcombine_collect dst caller tst"
@@ -134,7 +135,8 @@ proof (cases rule: gcstep.cases)
     using Intra by (auto simp: gactivation_trace_repr_def)
   have e1: "(sink_node t, a, v) \<in> intra ?g" using Intra sn by simp
   have e2: "s' \<in> gedge_step a (sink_store t)" using Intra ss by simp
-  have "extend t (v, s') \<in> gvalid_activation_trace (?g) (S)" using gvalid_activation_trace.intra[OF tv e1 e2] .
+  have "extend t (v, s') \<in> gvalid_activation_trace (?g) (S)"
+    using gvalid_activation_trace.intra[OF tv e1 e2] .
   moreover have "stack_repr ?g stk' (extend t (v, s'))"
     using stack_repr_cong[OF str] valid_activation_trace_path_nonempty[OF tv] by simp
   ultimately have "gactivation_trace_repr ?g S (v, s', stk') (extend t (v, s'))"
@@ -257,19 +259,6 @@ lemma stack_repr_Nil_iff:
   "stack_repr g stk t \<Longrightarrow> (stk = []) = (caller_of t = None)"
   by (cases rule: stack_repr.cases) auto
 
-text \<open>A callerless activation carries exactly the initial context, whatever the policy ---
-  the \<open>Root\<close> case never consults \<open>adm\<close>, and the \<open>Resume\<close> case only forwards to the same
-  callerless ancestor. No validity is needed: the two clauses involved name no edge.\<close>
-context bridge_sem
-begin
-
-lemma activation_context_rel_caller_of_None:
-  "caller_of t = None
-   \<Longrightarrow> gactivation_context_rel adm c\<^sub>0 g t c \<longleftrightarrow> c = c\<^sub>0"
-  by (induction t) auto
-
-end
-
 subsection \<open>The source bridge\<close>
 
 text \<open>Composing the initial \<open>csim.Base\<close> with \<open>csim_star\<close> (the source-to-\<^const>\<open>cfg_exec_sem.gcstep\<close>
@@ -367,35 +356,12 @@ proof -
   then show ?thesis using sim rep by blast
 qed
 
-text \<open>The witness-free top-level result: a store reached with an empty source frame stack lies in
-  the activation collecting at the fixed seed context --- no \<^type>\<open>gactivation_trace\<close> witness and no context
-  existential. This is the shape a user reads for main-level program points.\<close>
-theorem source_toplevel_in_activation_collect:
-  assumes wf: "gwf_compile_input vars rv glob \<Pi> ps"
-    and s0: "s0 \<in> S"
-    and run: "star (gpstep \<Pi>) (main_body \<Pi>, s0, []) (residual, s, [])"
-  shows "\<exists>v. \<Pi>, compile_prog \<Pi> ps, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, [])
-             \<and> s \<in> gactivation_collect adm c\<^sub>0 (compile_prog \<Pi> ps) S v c\<^sub>0"
-proof -
-  let ?g = "compile_prog \<Pi> ps"
-  from source_run_has_activation_trace[OF wf s0 run] obtain v stk t
-    where sim: "\<Pi>, ?g, prog_main_name \<turnstile> (residual, s, []) \<approx> (v, s, stk)"
-      and rep: "gactivation_trace_repr ?g S (v, s, stk) t" by blast
-  have stk0: "stk = []" using sim by blast
-  from rep stk0 have tv: "t \<in> gvalid_activation_trace (?g) (S)" and sn: "sink_node t = v"
-    and ss: "sink_store t = s" and sr: "stack_repr ?g [] t"
-    by (auto simp: gactivation_trace_repr_def)
-  have cof: "caller_of t = None" using stack_repr_Nil_iff[OF sr] by simp
-  have covered: "gactivation_context_rel adm c\<^sub>0 ?g t c\<^sub>0"
-    by (simp add: activation_context_rel_caller_of_None[OF cof])
-  have "s \<in> gactivation_collect adm c\<^sub>0 ?g S v c\<^sub>0"
-    using activation_collect_I[OF tv sn covered] ss by simp
-  then show ?thesis using sim stk0 by blast
-qed
-
 end
 
 section \<open>The typed instance\<close>
+
+text \<open>The bridge at VIMP's evaluator, global predicate, return slot and return-value
+  conversion, with the generic relations rewritten to VIMP's own constants.\<close>
 
 global_interpretation vimp: bridge_sem eval is_global ReturnVar "kind_conv \<kappa>"
   rewrites "vimp_sem.gpstep eval is_global ReturnVar (kind_conv \<kappa>) = pstep \<kappa>"
@@ -417,8 +383,8 @@ text \<open>Every run of the typed program is simulated on the typed graph, and 
 theorem source_run_has_activation_trace:
   assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
-    and run: "star (pstep \<kappa> (elab_ptable p ds))
-                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and run:
+      "\<kappa>,(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk t. elab_ptable p ds, elab_cfg p ds, prog_main_name
                       \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
                    \<and> vimp.gactivation_trace_repr \<kappa> (elab_cfg p ds) S (v, s, stk) t"
@@ -431,17 +397,17 @@ text \<open>Hence every store a typed run reaches lies in the typed collecting s
 theorem source_reaches_node_collect:
   assumes wf: "wf_program_compile_input p"
     and s0: "s0 \<in> S"
-    and run: "star (pstep \<kappa> (elab_ptable p ds))
-                (main_body (elab_ptable p ds), s0, []) (residual, s, frs)"
+    and run:
+      "\<kappa>,(elab_ptable p ds) \<turnstile> (main_body (elab_ptable p ds), s0, []) \<rightarrow>\<^sub>p\<^sup>* (residual, s, frs)"
   shows "\<exists>v stk. elab_ptable p ds, elab_cfg p ds, prog_main_name
                     \<turnstile> (residual, s, frs) \<approx> (v, s, stk)
-                 \<and> s \<in> node_collect \<kappa> (elab_cfg p ds) S v"
+                 \<and> s \<in> \<C>\<^bsub>\<kappa>,elab_cfg p ds,S\<^esub> v"
 proof -
   from source_run_has_activation_trace [OF wf s0 run] obtain v stk t
     where sim: "elab_ptable p ds, elab_cfg p ds, prog_main_name \<turnstile> (residual, s, frs) \<approx> (v, s, stk)"
       and rep: "vimp.gactivation_trace_repr \<kappa> (elab_cfg p ds) S (v, s, stk) t"
     by blast
-  from rep have "s \<in> node_collect \<kappa> (elab_cfg p ds) S v"
+  from rep have "s \<in> \<C>\<^bsub>\<kappa>,elab_cfg p ds,S\<^esub> v"
     by (auto simp: vimp.gactivation_trace_repr_def vimp.gnode_collect_def)
   with sim show ?thesis by blast
 qed

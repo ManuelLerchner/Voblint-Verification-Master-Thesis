@@ -26,7 +26,6 @@ datatype 'e arithmetic_obligation = Arithmetic_Obligation
   (arithmetic_operation: 'e)
   (arithmetic_operand: 'e)
 
-
 section \<open>Sites and their solved classifications\<close>
 
 text \<open>
@@ -34,7 +33,6 @@ text \<open>
   evaluates; \<open>obligation_sites\<close> turns them into the obligations the solved table then
   classifies, given how an expression of the language yields them.
 \<close>
-
 
 text \<open>Only suppress a negative guard edge when the same point has a matching
   positive guard edge. All other expression-bearing edges remain in the report.\<close>
@@ -54,7 +52,6 @@ definition obligation_sites ::
        \<Rightarrow> (pp \<times> 'e arithmetic_obligation list) list" where
   "obligation_sites obls g =
      map (\<lambda>(v, es). (v, concat (map obls es))) (arithmetic_expression_sites g)"
-
 
 text \<open>A diagnostic names an obligation of a site list, read through a classifier of
   obligations. The site list and the classifier depend on the expression language and
@@ -124,7 +121,6 @@ lemma arithmetic_expression_sites_call:
   using assms unfolding arithmetic_expression_sites_def
   by (force simp: image_iff)
 
-
 lemma arithmetic_diagnostics_absent:
   assumes site: "(v, obligations) \<in> set sites"
     and ob: "obligation \<in> set obligations"
@@ -191,19 +187,5 @@ lemma arithmetic_diagnostics_refuted:
       = Lifted Check_Refuted"
   using assms unfolding arithmetic_diagnostics_def
   by (auto dest!: arithmetic_diagnostic_of_refuted)
-
-text \<open>A diagnostic names an obligation of its own point.\<close>
-
-lemma arithmetic_diagnostic_of_mem:
-  "d \<in> set (arithmetic_diagnostic_of v i ob verdict) \<Longrightarrow>
-     diagnostic_point d = v \<and> diagnostic_obligation d = ob"
-  by (cases "(v, i, ob, verdict)" rule: arithmetic_diagnostic_of.cases) auto
-
-lemma arithmetic_diagnostics_site:
-  assumes "d \<in> set (arithmetic_diagnostics sites r classify)"
-  shows "\<exists>obligations. (diagnostic_point d, obligations) \<in> set sites
-    \<and> diagnostic_obligation d \<in> set obligations"
-  using assms unfolding arithmetic_diagnostics_def
-  by (fastforce dest: arithmetic_diagnostic_of_mem set_zip_rightD)
 
 end

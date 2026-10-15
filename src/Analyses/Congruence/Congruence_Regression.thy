@@ -1,8 +1,14 @@
 theory Congruence_Regression
-  imports Congruence_Kind "Voblint_Nonrelational.Nonrelational_Analysis" "Voblint_VIMP.VIMP_Notation"
+  imports Congruence_Kind "Voblint_Nonrelational.Nonrelational_Analysis"
+    "Voblint_VIMP.VIMP_Notation"
 begin
 
 section \<open>Regression: the typed Congruence analysis, executed\<close>
+
+text \<open>
+  Each case runs the certified solver on a typed program inside Isabelle and pins the
+  published value of one variable. Termination is decided by evaluation.
+\<close>
 
 abbreviation cong_state_at :: "kind_decls \<Rightarrow> imp_prog \<Rightarrow> cfg_node \<Rightarrow> congruence tabs" where
   "cong_state_at ds p \<equiv> nonrel.state_at default_sem_conf ds 0 Globals_Join is_global p []"
@@ -67,7 +73,8 @@ lemma pow2_terminates_c:
      (cfg_exit (elab_cfg pow2_prog []), []) \<noteq> None"
   by eval
 
-lemma pow2_terminates: "nonrel.terminates TYPE(congruence) default_sem_conf [] 0 Globals_Join is_global pow2_prog"
+lemma pow2_terminates:
+  "nonrel.terminates TYPE(congruence) default_sem_conf [] 0 Globals_Join is_global pow2_prog"
   unfolding nonrel.terminates_code
   using TD_side_rule_Interp.solve_dom_of_solve_c[OF pow2_terminates_c] by simp
 

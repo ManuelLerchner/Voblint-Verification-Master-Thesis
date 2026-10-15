@@ -71,7 +71,8 @@ definition of_int_ik_parity :: "ikind \<Rightarrow> int \<Rightarrow> parity" wh
 definition cast_ik_parity :: "signed_overflow_policy \<Rightarrow> ikind option \<Rightarrow> ikind \<Rightarrow> parity \<Rightarrow> parity" where
   "cast_ik_parity ovp sk k a = a"
 
-definition arith_ik_parity :: "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> parity" where
+definition arith_ik_parity ::
+  "signed_overflow_policy \<Rightarrow> ikind \<Rightarrow> aop \<Rightarrow> bool \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> parity" where
   "arith_ik_parity ovp k op fits = parity_aop op"
 
 definition cmp_ik_parity :: "cop \<Rightarrow> parity \<Rightarrow> parity \<Rightarrow> bool option" where

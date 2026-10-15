@@ -61,7 +61,7 @@ theorem compiled_call_strings_finite:
   by (rule call_strings_bounded_finite)
 
 text \<open>
-  The practical corollary a \<open>call_string_routed_context\<close> instance can cite directly:
+  The practical corollary an instance routed by call strings can cite directly:
   every \<open>(node, call-string)\<close> pair a \<open>k\<close>-bounded call-string analysis over a compiled
   program could ever solve for lies in a fixed finite set, so \<open>vars\<close> --- whatever a
   particular solver run actually populates it with --- is finite because it lies in a

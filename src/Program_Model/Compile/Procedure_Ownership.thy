@@ -651,7 +651,8 @@ proof -
       and cof: "caller_of callee = Some caller" and res: "sink_node callee = FunctionResult p"
       and e: "(sink_node caller, CallEdge dst pars args, FunctionEntry p, cont) \<in> calls ?g"
     have cin: "caller \<in> callers callee" using cof callers_caller_subset callers_refl by blast
-    have cv: "caller \<in> gvalid_activation_trace (?g) (S)" using valid_activation_trace_caller_valid[OF cvcallee cof] .
+    have cv: "caller \<in> gvalid_activation_trace (?g) (S)"
+      using valid_activation_trace_caller_valid[OF cvcallee cof] .
     have "frag_ok \<Pi> ps caller" using ch cin by blast
     then show "frag_ok \<Pi> ps (Resume caller callee (path_of caller
             @ [(cont, gcombine_collect dst (sink_store caller) (sink_store callee))]))"

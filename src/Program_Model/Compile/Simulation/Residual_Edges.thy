@@ -258,6 +258,9 @@ qed simp_all
 
 subsection \<open>SKIP relocation to the continuation\<close>
 
+text \<open>A completed sub-command reaches its fragment's continuation by CFG steps that keep
+  the store and the activation stack.\<close>
+
 context cfg_exec_sem
 begin
 
@@ -598,7 +601,8 @@ begin
 inductive gintra_step ::
   "('a, 'v, 'e) gptable \<Rightarrow> ('a, 'v, 'e) gcom \<times> ('v \<Rightarrow> int) \<times> 'v gframe list
     \<Rightarrow> ('a, 'v, 'e) gcom \<times> ('v \<Rightarrow> int) \<times> 'v gframe list \<Rightarrow> bool" for \<Pi> where
-  IAssign [intro]: "gintra_step \<Pi> (Assign i x a, s, frs) ((SKIP i), s(x := conv (Some x) (ev a s)), frs)"
+  IAssign [intro]:
+    "gintra_step \<Pi> (Assign i x a, s, frs) ((SKIP i), s(x := conv (Some x) (ev a s)), frs)"
 | ISpecial [intro]: "special_table q = Some desc \<Longrightarrow> classify_special desc actuals = Some sc \<Longrightarrow>
              special_result ev sc s v \<Longrightarrow>
              gintra_step \<Pi> (Call i (Some x) q actuals, s, frs) ((SKIP i), s(x := conv (Some x) v), frs)"
