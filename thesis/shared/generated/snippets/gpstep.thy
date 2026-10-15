@@ -16,7 +16,8 @@ where
              \<Longrightarrow> length actuals = length (formals decl)
              \<Longrightarrow> distinct (formals decl)
              \<Longrightarrow> vals = map (\<lambda>e. ev e s) actuals
-             \<Longrightarrow> callee = bind_formals (formals decl) vals (enter_state glob s)
+             \<Longrightarrow> callee = bind_formals (formals decl) (map2 (\<lambda>x. conv (Some x)) (formals decl) vals)
+                           (enter_state glob s)
              \<Longrightarrow> gpstep \<Pi> (Call i dst p actuals, s, frs)
                    (Seq (body decl) (Restore i), callee, Frame s dst # frs)"
 | Special: "special_table p = Some desc

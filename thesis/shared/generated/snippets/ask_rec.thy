@@ -1,5 +1,5 @@
 (* src/Abstract_Interpreter/Framework/Cooperation/MCP_Spec.thy *)
-fun ask_rec :: "(channel \<Rightarrow> 's \<Rightarrow> channel) \<Rightarrow> nat \<Rightarrow> query set \<Rightarrow> 's \<Rightarrow> channel" where
+fun ask_rec :: "('e gchannel \<Rightarrow> 's \<Rightarrow> 'e gchannel) \<Rightarrow> nat \<Rightarrow> 'e gquery set \<Rightarrow> 's \<Rightarrow> 'e gchannel" where
   "ask_rec H 0 asked x q =
      Code.abort (STR ''query recursion exceeded query_depth'') (\<lambda>_. \<top>)"
 | "ask_rec H (Suc n) asked x q =

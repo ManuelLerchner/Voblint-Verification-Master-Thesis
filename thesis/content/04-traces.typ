@@ -202,7 +202,7 @@ idea to a sequential program and records one activation's view of the run
 We turn the grouping of @fig:flat-nested into a datatype.
 
 #block(breakable: false)[
-  #definition(name: [Activation trace], isa: "activation_trace", cmd: "datatype")[
+  #definition(name: [Activation trace], isa: "gactivation_trace", cmd: "datatype")[
     A trace has one constructor per way an activation begins or continues
     (@fig:activation-trace).
   ]
@@ -215,7 +215,7 @@ We turn the grouping of @fig:flat-nested into a datatype.
     },
     kind: image,
     placement: none,
-    caption: [The declarations of #isatype("activation_path") and #isatype("activation_trace"), lifted from the theory. An #isatype("activation_path") is the path of one activation, a list of pairs of a CFG node and a store.],
+    caption: [The declarations of #isatype("gactivation_path") and #isatype("gactivation_trace"), lifted from the theory. Both are generic in the type of variables. An #isatype("gactivation_path") is the path of one activation, a list of pairs of a CFG node and a store.],
   ) <fig:activation-trace>
 ]
 
@@ -273,16 +273,24 @@ callee that another activation created, for instance continue `main` after its
 call `sum(2)` with the finished inner activation `sum(1)`, whose caller is
 `sum(2)`. Validity rules out such terms.
 
-#definition(name: [Valid traces], isa: "valid_activation_trace", cmd: "inductive_set")[
-  For a global-variable classifier $cal(G)$, a graph $g$, and a set $S$ of
-  initial stores, #isai("\<T>\<^bsub>\<G>,g,S\<^esub>") (#isaconst("valid_activation_trace")) is
-  the least set of traces closed under the four rules of @fig:valid-rules.
+#definition(name: [Valid traces], isa: "gvalid_activation_trace", cmd: "inductive_set")[
+  For a graph $g$ and a set $S$ of initial stores,
+  #isai("gvalid_activation_trace g S") (#isaconst("gvalid_activation_trace")) is the
+  least set of traces closed under the four rules of @fig:valid-rules.
 ]
+
+The rules are stated once in the locale #isalocale("trace_sem"), whose
+parameters are the expression evaluator, the return slot, the conversion
+applied when a value is written, and the globals classifier. Core VIMP
+instantiates them with #isaconst("eval"), #isai("ReturnVar"),
+#isai("kind_conv \<kappa>") (#isaconst("kind_conv")) and
+#isaconst("is_global"). That instance, for a kind environment $kappa$, is
+#isai("\<T>\<^bsub>\<kappa>,g,S\<^esub>") (#isaconst("valid_activation_trace")).
 
 #figure(
   thy("valid_activation_trace"),
   kind: image,
-  caption: [The four rules of #isaconst("valid_activation_trace"): root, intra, call, and ret. Each reads the graph relation for its own kind of step: #isaconst("intra") for local flow, and #isaconst("calls") both for entering a callee and for recovering the continuation $italic("cont")$ at a return.],
+  caption: [The four rules of #isaconst("gvalid_activation_trace"): root, intra, call, and ret. Each reads the graph relation for its own kind of step: #isaconst("intra") for local flow, and #isaconst("calls") both for entering a callee and for recovering the continuation $italic("cont")$ at a return.],
 ) <fig:valid-rules>
 
 The root rule corresponds to the initial graph configuration, and the other
@@ -299,7 +307,7 @@ result node serves every caller of $p$, so the rule finds the caller through
 #isai("caller_of callee = Some caller") and takes a #isaconst("calls") edge
 from its call node into $p$, which on compiled programs is the only such edge. That edge
 names the continuation $italic("cont")$, where the caller continues with the
-store that #isaconst("combine_collect") builds from both final stores.
+store that #isaconst("gcombine_collect") builds from both final stores.
 
 === Graph runs are valid traces #thy-badge("Voblint_Compile", "Source_To_Trace") <sec:source-bridge>
 
@@ -307,7 +315,7 @@ The traces describe the runs of the compiled graph, and through @sec:csim
 those of VIMP programs, keeping the history that the frame stack discards.
 
 #block(breakable: false)[
-  #definition(name: [Trace representation], isa: "activation_trace_repr", cmd: "definition")[
+  #definition(name: [Trace representation], isa: "gactivation_trace_repr", cmd: "definition")[
     A valid trace represents a graph configuration if it ends at the configuration's node and store, and its chain of creating callers matches
     the runtime frame stack (@fig:activation-trace-repr).
   ]
@@ -321,7 +329,7 @@ those of VIMP programs, keeping the history that the frame stack discards.
     kind: image,
     placement: none,
     caption: [The declarations of #isaconst("stack_repr") and
-      #isaconst("activation_trace_repr"), lifted from the theory.],
+      #isaconst("gactivation_trace_repr"), lifted from the theory.],
   ) <fig:activation-trace-repr>
 ]
 
@@ -351,15 +359,17 @@ collecting semantics_. It plays the role of the collecting semantics of @ch:back
 with procedures, with valid traces in place of runs.
 
 #block(breakable: false)[
-  #definition(name: [Node collecting semantics], isa: "node_collect", cmd: "definition")[
+  #definition(name: [Node collecting semantics], isa: "gnode_collect", cmd: "definition")[
     #thy("node_collect")
   ]
 ]
 
-A store is in #isai("\<C>\<^bsub>\<G>,g,S\<^esub> v") exactly when some valid
-trace ends at $v$ with this store. The classifier, graph, and initial stores
-are those of the program at hand, written #isai("\<G>"), #isai("g"), and
-#isai("S") from here on. A procedure's result is an ordinary collected node,
+Its core VIMP instance is #isai("\<C>\<^bsub>\<kappa>,g,S\<^esub>")
+(#isaconst("node_collect")), and a store is in
+#isai("\<C>\<^bsub>\<kappa>,g,S\<^esub> v") exactly when some valid trace ends at $v$
+with this store. The kind environment, graph, and initial stores are those of
+the program at hand, written #isai("\<kappa>"), #isai("g"), and #isai("S") from
+here on. A procedure's result is an ordinary collected node,
 and the stores in which a run of the whole program completes are those collected at $ctor("FunctionResult") italic("main")$. Every store that a finite source
 execution of a well-formed program reaches therefore lies in the node
 collecting semantics at a corresponding node
@@ -394,7 +404,7 @@ value of the callee's formal parameters in the entry state (@ch:equations), and
 nothing bounds the number of such contexts (@sec:termination). Goblint obtains the context of a
 callee by applying each analysis's `context` function to the callee's abstract
 entry state (@sec:rel-goblint), and Erhard et al. treat full entry states, their projections, and call strings in one framework @erhard25[§4]. Voblint
-offers the context-insensitive policy, bounded call strings, and entry-state contexts (#isatype("context_mode"), @ch:equations).
+offers bounded call strings, whose length zero gives the context-insensitive analysis, and entry-state contexts, selected by the configuration's #isatype("context_policy") (@ch:equations).
 
 These context selectors are functions, each choosing one callee context per
 call from the call site, the caller's context, or the entry state. Goblint's entry operation, however, may return several
@@ -411,21 +421,23 @@ concrete call lies in several alternatives and belongs to several contexts at
 once. A context function of the call cannot express this, so a Voblint policy
 returns, for each concrete call, a set of callee contexts. The analyses
 shipped with Voblint return one alternative per call, so for them the set has
-at most one element for a fixed caller context. A separate example returns two
-overlapping alternatives and admits one concrete call in two contexts
-(#isathm("ov_two_contexts_admitted")). The set may also be empty. Under entry-state contexts it is empty for every
+at most one element for a fixed caller context. An entry operation that
+returned two overlapping alternatives would admit one concrete call in two
+contexts.
+// TODO: restore ov_two_contexts_admitted (removed in M3; docs/theorem-migration.toml)
+The set may also be empty. Under entry-state contexts it is empty for every
 caller store that the analysis's state at the call site does not describe, for
 instance at a call that the analysis considers unreachable. No alternative
 describes such a store, so no context is admitted for it. Emptiness is
-harmless there, because the claim contains no such store. It is harmful at a call that the program actually makes. In one example, an
-entry operation that returns no alternative leaves the callee unanalyzed and
-the continuation at $lbot$ (#isathm("ov_empty_no_callee_context"),
-#isathm("ov_empty_continuation_bot")), although the program, which has no
-branches, reaches the continuation. The coverage contract rules this out
+harmless there, because the claim contains no such store. It is harmful at a call that the program actually makes. An entry operation
+that returned no alternative there would leave the callee unanalyzed and the
+continuation at $lbot$, although a program without branches reaches the
+continuation.
+// TODO: restore ov_empty_no_callee_context and ov_empty_continuation_bot (removed in M3; docs/theorem-migration.toml) The coverage contract rules this out
 through #oblig("TOTAL") (@sec:contract).
 
 #block(breakable: false)[
-  #definition(name: [Context policy], isa: "context_policy", cmd: "type_synonym")[
+  #definition(name: [Context policy], isa: "gcontext_policy", cmd: "type_synonym")[
     A context policy maps a concrete call to the set of callee contexts it admits
     (@fig:call-context-rel).
   ]
@@ -437,7 +449,7 @@ through #oblig("TOTAL") (@sec:contract).
     },
     kind: image,
     placement: none,
-    caption: [The declaration of #isatype("context_policy"), lifted from the theory.],
+    caption: [The declaration of #isatype("gcontext_policy"), lifted from the theory.],
   ) <fig:call-context-rel>
 ]
 
@@ -461,11 +473,11 @@ caller, and the return later combines this description with the callee's
 result. A context is therefore admitted only for a caller store that its
 alternative describes (@sec:eq-routing).
 
-#isaconst("admits_call_context") applies $italic("adm")$ to an actual call edge
+#isaconst("gadmits_call_context") applies $italic("adm")$ to an actual call edge
 of the graph, with the entered store that the edge's entry transfer
-#isaconst("call_enter") computes from the caller's store.
+#isaconst("gcall_enter") computes from the caller's store.
 
-The relation #isaconst("activation_context_rel") assigns contexts to whole
+The relation #isaconst("gactivation_context_rel") assigns contexts to whole
 traces. It does not pick one context per activation. It states which contexts
 an activation may carry, and there can be none, one, or several. The root
 activation carries the initial context #isai("c\<^sub>0"). A called activation
@@ -478,7 +490,7 @@ the contexts that the caller had before the call. The
 draws, for each policy, the contexts that the analyzer creates for one program, with every copy of a procedure labeled by its context.
 
 #block(breakable: false)[
-  #definition(name: [Context of a trace], isa: "activation_context_rel", cmd: "inductive")[
+  #definition(name: [Context of a trace], isa: "gactivation_context_rel", cmd: "inductive")[
     The contexts that a trace may carry (@fig:trace-context).
   ]
 
@@ -489,7 +501,7 @@ draws, for each policy, the contexts that the analyzer creates for one program, 
     },
     kind: image,
     placement: none,
-    caption: [The declaration of #isaconst("activation_context_rel"), lifted from the theory.],
+    caption: [The declaration of #isaconst("gactivation_context_rel"), lifted from the theory.],
   ) <fig:trace-context>
 ]
 
@@ -501,14 +513,15 @@ trace ending at $v$ with that store carries $c$.
 #block(breakable: false)[
   #definition(
     name: [Activation collecting semantics],
-    isa: "activation_collect",
+    isa: "gactivation_collect",
     cmd: "definition",
   )[
     #thy("activation_collect")
   ]
 ]
 
-We call #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") the _activation collecting semantics_ at $v$ and $c$.
+Its core VIMP instance is #isaconst("activation_collect"). We call
+#isai("\<A>\<^bsub>\<kappa>,adm,c₀,g,S\<^esub> v c") the _activation collecting semantics_ at $v$ and $c$.
 It contains the final stores of the valid traces that end at $v$ and carry
 $c$, and the claim for the unknown $[v, c]$ must contain it. In the running example under interval entry-state contexts, `bump(5)` gets the
 context $[[5, 5]]$ and `bump(4)` the context $[[4, 4]]$
@@ -526,7 +539,7 @@ contract of the next section guarantees this.
 == The coverage contract #thy-badge("Voblint_CFG", "Activation_Trace_Abstract") <sec:contract>
 
 The goal is a claim #isai("cover") $v$ $c$, a set of stores for each node and
-context, that contains #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c"). A claim is a mathematical
+context, that contains #isai("\<A>\<^bsub>\<kappa>,adm,c₀,g,S\<^esub> v c"). A claim is a mathematical
 object, and its sets of stores may be infinite. The analyzer instead computes
 abstract values, and @ch:equations takes #isai("cover v c") to be the
 concretization of the value computed for $[v, c]$. The coverage contract
@@ -586,7 +599,7 @@ these obligations at one call, together with a fifth, #oblig("TOTAL").
 The fifth obligation, #oblig("TOTAL"), concerns a call at a call site $u$ in
 a caller context $c$ from a caller store $s$. If $s in #isai("cover u c")$,
 #oblig("TOTAL") requires the policy to admit at least one callee context for
-the call from $s$ (#isaconst("call_context_total_on")).
+the call from $s$ (#isaconst("gcall_context_total_on")).
 
 The other four obligations do not suffice without it
 (#isathm("total_dropped_unsound")). At a call that gets no context, #oblig("CALL") and #oblig("RETURN") hold
@@ -601,7 +614,8 @@ call strings admit a context for every call and meet #oblig("TOTAL") for every
 claim (#isathm("call_context_total_on_of_fun")). For entry-state contexts it
 follows from the coverage of the analysis's entry (@sec:eq-routing).
 Isabelle states the five obligations as the assumptions of the locale
-#isalocale("activation_coverage") (@fig:activation-coverage).
+#isalocale("gactivation_coverage") (@fig:activation-coverage), generic in the
+same parameters as #isalocale("trace_sem").
 
 #figure(
   {
@@ -610,20 +624,20 @@ Isabelle states the five obligations as the assumptions of the locale
   },
   kind: image,
   placement: top,
-  caption: [The declaration of #isalocale("activation_coverage"), lifted from the
+  caption: [The declaration of #isalocale("gactivation_coverage"), lifted from the
     theory. In #oblig("RETURN"), $p'$ and #isai("es") range over every call edge
     out of #isai("u"). On compiled programs a call site has one call edge
     (#isathm("compile_prog_calls_source_unique")), so $p' = p$.],
 ) <fig:activation-coverage>
 
 #block(breakable: false)[
-  #theorem(name: [Context-indexed soundness], isa: "activation_collect_sound")[
+  #theorem(name: [Context-indexed soundness], isa: "gactivation_collect_sound")[
     If the claim meets the five obligations of
-    #isalocale("activation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
+    #isalocale("gactivation_coverage"), then for every node $v$ and context $c$, the activation collecting semantics
     at $v$ and $c$ is contained in the claim #isai("cover v c").
   ]
 
-  #proved("activation_collect_sound")
+  #proved("gactivation_collect_sound")
 ]
 
 #block(breakable: false)[

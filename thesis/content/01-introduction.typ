@@ -403,12 +403,12 @@ shows the resulting chain of inclusions at one program point.
     ring(
       vb.proved,
       [Verdicts],
-      [#isaconst("verdict_stores"): stores in which every definite verdict at $v$
-        holds (@ch:results)],
+      [stores in which every definite verdict at $v$ holds (#isaconst("PROVED"),
+        #isaconst("REFUTED"), @ch:results)],
       ring(
         vb.accent,
         [Report],
-        [#isaconst("report_sem"): stores the report's states at $v$ describe
+        [stores the states #isaconst("report_states_at") lists at $v$ describe
           (@ch:results)],
         ring(
           vb.cong,
@@ -452,16 +452,16 @@ each.
   reaches the corresponding program point, for all analysis settings it offers,
   whenever it returns a report (#isathm("run_voblint_source_sound"),
   @sec:headline). Companion theorems justify #verdict("DEAD")
-  (#isathm("run_voblint_dead_check_unreached")) and the absence of arithmetic
+  (#isathm("run_voblint_dead_unreached")) and the absence of arithmetic
   warnings (#isathm("run_voblint_arithmetic_safe")). No mechanized analyzer we found proves
   this for recursive procedures under configurable context sensitivity
   (@tab:state-of-art).
 - _A concrete semantics of calling contexts._ An analyzer keeps one abstract
-  state per calling context, but ordinary executions carry no contexts. A context policy (#isatype("context_policy")) therefore maps each concrete
+  state per calling context, but ordinary executions carry no contexts. A context policy (#isatype("gcontext_policy")) therefore maps each concrete
   call to the set of callee contexts it admits, and from these sets each
   activation trace gets the contexts it may carry
-  (#isaconst("activation_context_rel")). Provided a claim meets the coverage
-  contract (#isalocale("activation_coverage")), which admits every covered call
+  (#isaconst("gactivation_context_rel")). Provided a claim meets the coverage
+  contract (#isalocale("gactivation_coverage")), which admits every covered call
   at some context,
   the stores collected per context together equal the stores of the
   context-free semantics (#isathm("node_collect_eq_Union_activation_collect"),
@@ -475,10 +475,10 @@ each.
   theorems compose them for all analysis settings the analyzer offers. A numeric
   domain proves only its primitive operations sound, and the transfer
   functions derived from them are proved sound once
-  (#isalocale("sound_nonrelational_ops")). A context policy proves only that
+  (#isathm("nonrel_spec_sound")). A context policy proves only that
   its contexts agree with the concrete semantics and that every covered call
   gets at least one
-  (#isalocale("routed_context")), from which #isathm("activation_collect_dg_sound")
+  (#isalocale("grouted_context")), from which #isathm("activation_collect_dg_sound")
   derives coverage (@sec:eq-discharge). Analyses that
   exchange facts through Goblint-style queries compose, provided there is at least one component and each component's operations
   preserve the others' concretizations (#isathm("mcp_combine_sound"),
@@ -492,7 +492,7 @@ each.
   would also hold for an analyzer that answers #verdict("UNKNOWN") everywhere. Theorems proved by evaluation exclude this: the analyzer gives definite verdicts on
   a concrete program (#isathm("nv_check_proved_sound")), and one context policy
   is strictly more precise than another on a concrete program
-  (#isathm("sign_k2_strictly_more_precise_than_k1_at_g"), @sec:eval-precision).
+  (#isathm("call_string_verdicts"), @sec:eval-precision).
 
 == Scope and limitations <sec:intro-scope>
 

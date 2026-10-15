@@ -43,21 +43,23 @@ after CIL normalization, with pointers, a heap, threads, machine integers, and f
 unknowns and mentions no VIMP construct. The coverage contract has one
 obligation per rule of #isaconst("valid_activation_trace"). It refers to VIMP
 only through the graph, its stores, and three step functions,
-#isaconst("edge_step"), #isaconst("call_enter"), and #isaconst("combine_collect")
+#isaconst("gedge_step"), #isaconst("gcall_enter"), and #isaconst("gcombine_collect")
 (@sec:contract). We therefore expect three parts to carry over to a language
 whose activations do not interfere: the shape of the coverage contract, the
 theorem that the contexts exhaust the node collecting semantics, and the
 composition of @sec:eq-discharge. The step functions and every proof that
 unfolds them would have to be redone.
 
-Machine integers are covered in a restricted form that avoids this redo. A
-program that declares kinds is lowered to explicit conversions (@sec:vimp), so
-the step functions, the routing and the certificate stay unchanged, and each
-domain only adds a sound conversion of its values. Signed overflow wraps there,
-where C leaves it undefined. Reporting it instead, as Goblint does
-@saan26phd[§3.3.2], would let a domain keep its ideal-integer bounds and check
-them against the type. A C-like treatment of division
-by zero changes more. The semantics would need an error outcome, and the verdicts of @sec:verdict-meaning would need a meaning for it.
+Machine integers did not need this redo. Elaboration makes every conversion
+and the kind of every operation explicit in core VIMP (@sec:vimp), so the step
+functions are instantiated at the core evaluator and the kind conversion, and
+the routing and the certificate stay unchanged. Signed overflow wraps in the
+semantics and division by zero yields a value, where C leaves both undefined.
+The analyzer reports where they may occur instead
+(#isathm("run_voblint_arithmetic_safe")), as Goblint reports overflow
+@saan26phd[§3.3.2]. Treating them as undefined behavior changes more. The
+semantics would need an error outcome, and the verdicts of
+@sec:verdict-meaning would need a meaning for it.
 
 Pointers into the stack break the assumption that activations do not
 interfere. A return keeps the caller's locals (@sec:calls), and this fails once
@@ -86,7 +88,7 @@ transfer to a C program with the same text (@sec:vimp-vs-c). We argue, but do no
 simulation from source runs to graph runs and the representation of graph runs
 by valid traces are proved in the forward direction only (@sec:csim,
 @sec:valid). Within the analyzer, only the combined state as a whole publishes
-to analysis globals. #isaconst("rel_order_spec") is therefore selectable only in
+to analysis globals. #isaconst("ord_spec") is therefore selectable only in
 its local form, and one update rule serves every global unknown of a run
 (@sec:mixed-flow, @sec:relational, @sec:update-rules).
 
@@ -120,12 +122,11 @@ A richer source language, up to a subset of C, needs the new obligations that
 also needs a semantics and a preservation argument per construct at every
 layer.
 
-Such a language would extend the elaboration of @sec:csim. For VIMP,
-elaboration only records where the compiler places each statement, and erasure
-relates the elaborated runs to the runs of the program as written. A front end
-for C would use the same annotated syntax to resolve names, types, and
-expressions and to make conversions explicit, with erasure again connecting the
-result to the source.
+Such a language would extend the elaboration of surface VIMP into core VIMP
+(@sec:vimp). For VIMP, elaboration resolves names to variable identities, fixes
+the kind of every operation and makes every implicit conversion explicit. A
+front end for C would do the same for C's types and expressions, and the
+meaning of the result would be argued as for VIMP.
 
 The adequacy of #isaconst("pstep") is argued and checked against example
 programs (@sec:vimp-vs-c). A fuel-bounded evaluator whose runs are proved to be
@@ -145,7 +146,7 @@ interface admits several (@sec:calls). Path-sensitive analyses that split a
 call into cases therefore remain future work. The contexts of an activation
 depend only on how the activation was entered. Digests refine unknowns by
 other abstractions of a local trace (@sec:rel-goblint). Generalizing
-#isaconst("activation_context_rel") to such abstractions of activation traces
+#isaconst("gactivation_context_rel") to such abstractions of activation traces
 would allow path- or history-sensitive unknowns, each with its own
 admissibility conditions.
 
@@ -209,8 +210,8 @@ In the other direction, a verified component exported as OCaml could replace
 its unverified counterpart in Goblint. That needs more than the export. It
 needs the data refinement of @sec:limitations, a correspondence between the
 component's interface and Goblint's, and soundness for C's integers, since the
-component's proofs assume VIMP's integers, which are unbounded or wrap at a
-declared kind (@sec:vimp-vs-c).
+component's proofs assume VIMP's integers, which wrap at their kind and give
+division by zero a value (@sec:vimp-vs-c).
 
 Voblint verifies neither Goblint nor an analyzer for C. It establishes a
 smaller result. For a Goblint-style architecture with recursive procedures,

@@ -1,6 +1,6 @@
 (* src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy *)
-datatype activation_trace =
-    Root activation_path
-  | Call (activation_trace_caller: activation_trace) activation_path
-  | Resume (activation_trace_current: activation_trace) (activation_trace_callee: activation_trace)
-    activation_path
+datatype 'v gactivation_trace =
+    Root "'v gactivation_path"
+  | Call (activation_trace_caller: "'v gactivation_trace") "'v gactivation_path"
+  | Resume (activation_trace_current: "'v gactivation_trace")
+    (activation_trace_callee: "'v gactivation_trace") "'v gactivation_path"

@@ -392,8 +392,8 @@ concrete result only has to be a subset of the abstract one. For the
 increment `i = i + 1`, the interval transfer $[l, u] |-> [l + 1, u + 1]$, the
 addition #isaconst("plus_ivl") with $[1, 1]$, is sound. Applied to
 $[0, 4]$, it yields $[1, 5]$, which contains every successor $i = 1, dots, 5$. Voblint states the property once per kind of edge in
-#isalocale("sound_nonrelational_transfer"), for instance for an assignment as
-#isathm("tf_sound_assign_for"). It composes along paths @mine17[Thm. 2.6], and
+#isaconst("gsound_local_spec"), for instance for an assignment as
+#isaconst("gsound_assign"). It composes along paths @mine17[Thm. 2.6], and
 at control-flow joins the upper-bound laws of join and monotonicity of
 concretization keep the states from both predecessors
 (#isathm("gamma_sup_ub1"), #isathm("gamma_sup_ub2")).
@@ -578,7 +578,7 @@ widening replaces a growing bound by $+infinity$ @cousot77[§9.2] @mine17[§4.5.
 so widening at $h$ turns the first change there, from $[0, 0]$ to $[0, 1]$, into
 $[0, +infinity]$ at once, a post-fixpoint that loses the bound $5$ of the loop
 condition `i < 5`. The branch into the body refines the head's value against the
-condition (#isalocale("sound_refinement"), @sec:branches), and restricts $[0, +infinity]$ to $[0, 4]$ (#isaconst("inv_less_ivl")).
+condition (#isalocale("kind_int_domain"), @sec:branches), and restricts $[0, +infinity]$ to $[0, 4]$ (#isaconst("ivl_refine")).
 The body yields $[1, 5]$, and evaluating the head again gives
 $[0, 0] ljoin [1, 5] = [0, 5]$. A widened iteration only grows and would not
 take this smaller value. A _narrowing_ lets it descend and, under the
@@ -792,7 +792,7 @@ $tau$", $tau_1 => tau_2$ for the type of functions from $tau_1$ to $tau_2$,
 $x$ to $t$. A _datatype_ declares a type by its constructors and comes with
 case distinction and structural induction. VIMP's commands
 #isatype("gcom") are one (@sec:vimp). A _record_ is a tuple with named fields.
-The analysis interface #isatype("dg_spec") is one (@sec:sound-core).
+The analysis interface #isatype("gdg_spec") is one (@sec:sound-core).
 
 Every HOL function is total, so an ordinary recursive definition needs a
 termination proof. Otherwise a definition such as $f(n) = f(n) + 1$ would yield $0 = 1$ @nipkow14[§2.3.4]. Isabelle's function package can also define a
@@ -825,25 +825,28 @@ proves a property of every element with one case per rule. The solver's
 verification defines #isaconst("reach"), the unknowns on which a
 query $x$ transitively depends, by two rules:
 #thy("reach")
-Source execution #isaconst("pstep") (@fig:pstep), graph execution
-#isaconst("cstep") (@fig:cstep), the valid activation traces
-#isaconst("valid_activation_trace") and the reflexive–transitive closure
-$scripts(->)^*$ of a step relation are defined by rules as well, and a source
+Source execution #isaconst("gpstep") (@fig:pstep), graph execution
+#isaconst("gcstep") (@fig:cstep), the valid activation traces
+#isaconst("gvalid_activation_trace") and the reflexive–transitive closure
+$scripts(->)^*$ of a step relation are defined by rules as well. VIMP's
+#isaconst("pstep"), #isaconst("cstep") and #isaconst("valid_activation_trace")
+are these relations instantiated at its evaluator and conversions, and a source
 run is written $scripts(->)_p^*$ (#isaconst("psteps")).
 
 A theorem declares its variables and their types after #isai("fixes"),
 introduces abbreviations local to the statement after #isai("defines"), lists
 its premises after #isai("assumes") and states its conclusion after
-#isai("shows"). The source-level theorem of @sec:headline uses all four:
+#isai("shows"). The source-level theorem of @sec:headline uses the last two,
+and #isathm("run_voblint_spine") uses all four:
 // deps: preview -- shown for its syntax; @sec:headline introduces what it uses.
 #proved("run_voblint_source_sound")
-It fixes a program $p :: #isatype("imp_prog")$ and two stores, abbreviates the
-program's globals classifier, procedure table and graph, and assumes an initial
-store, a source run $scripts(->)_p^*$ from it and an answer of the analyzer. It
-shows that the reached configuration is observed at some graph node $v$
-(written $gt.closed$, #isaconst("at_node"), @sec:csim), and that at every such
-node the reached store lies in the collecting semantics, in the state the
-report gives there, and in the stores its verdicts admit. Inside a proposition, $A ==> B$ is implication and $exists$,
+It is stated about a program $p :: #isatype("imp_prog")$ and its kind
+declarations $"ds"$, and assumes an answer of the analyzer, an initial store and
+a run of #isaconst("pstep") on the elaborated program (#isaconst("elab_ptable"))
+from it. It shows that some graph node $v$ simulates the reached configuration
+(written $approx$, #isaconst("csim"), @sec:csim), and that at this node the
+reached store is collected (#isaconst("reaching")), lies in a state the report
+lists, and satisfies every definite claim the report makes there. Inside a proposition, $A ==> B$ is implication and $exists$,
 $and$, $or$ are the usual connectives. Subscripts, superscripts, and symbols
 such as $tack.r$ are notation for a constant applied to its arguments, and the
 text names the constant at first use.

@@ -1,6 +1,5 @@
-(* src/Executable_Surface/CLI/Analysis_Certified.thy *)
+(* src/Executable_Surface/CLI/Run_Voblint.thy *)
 theorem run_voblint_report_contract:
-  assumes "run_voblint config p = Analysed res"
-  shows "valid_config config" "wf_program_compile_input_exec p"
-    and "report_config res = config" "report_cfg res = prog_cfg p"
-    and "well_formed_report res" "sound_report p res"
+  assumes "run_voblint conf ds p = Analysed res"
+  shows "valid_activation (conf_analyses conf)" and "wf_program_compile_input_exec p"
+    and "report_config res = conf" and "report_cfg res = elab_cfg p ds"

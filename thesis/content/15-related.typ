@@ -303,7 +303,7 @@ into $[u, A]$ already in the concrete semantics @schwarz25phd[§2.3]. The local-
 has no procedures, and Schwarz lists procedures among the features that Goblint
 implements but the local-trace semantics does not yet support
 @schwarz25phd[§8, p. 277].
-In Voblint, the context relation #isaconst("activation_context_rel") (@sec:contexts)
+In Voblint, the context relation #isaconst("gactivation_context_rel") (@sec:contexts)
 plays a similar role for sequential activations, with two differences. A
 digest is a function, so every trace has exactly one digest and the traces
 split into disjoint groups @schwarz25phd[§2.3, Def. 4, Thm. 4]. One activation
@@ -333,7 +333,7 @@ only as sets of constraints, and no solver computes them @dabrowski09[§7].
 
 The concrete semantics of Dabrowski and Pichardie, which carries contexts and
 is parameterized by a context policy, is the closest precedent for Voblint's. Voblint's differs in three respects. Its contexts are admitted by a relation,
-the totality condition #isaconst("call_context_total_on") makes the
+the totality condition #isaconst("gcall_context_total_on") makes the
 context-indexed collection exhaustive
 (#isathm("node_collect_eq_Union_activation_collect")), and the indexing is
 connected to an executable solver.

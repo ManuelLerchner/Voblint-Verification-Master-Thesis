@@ -36,7 +36,7 @@ that context depends on the abstract entry state computed from the caller,
 which becomes known only while the equations are solved. Formally, the goal is
 that every post-solution $sol$ satisfies
 $
-  #isai("\<A>\<^bsub>\<G>,adm,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c))
+  #isai("\<A>\<^bsub>\<kappa>,adm,c₀,g,S\<^esub> v c") subset.eq conc_(M)(sol(v, c))
 $
 at every node $v$ and context $c$. The left side is the activation collecting
 semantics of @sec:contexts, and $conc_(M)(sol(v, c))$ is the set of stores
@@ -232,7 +232,7 @@ describes no store. Goblint's normal-call transfer
 )[skips]
 bottom entry states in the same way. The optimization is sound because a state
 classified as bottom is required to have an empty concretization
-(#isathm("routed_context.is_bot_sound", thy: "Routed_Context", display: "is_bot_sound")).
+(#isathm("routed_context_base.is_bot_sound", thy: "Routed_Context", display: "is_bot_sound")).
 
 == Routing and context policies #thy-badge("Voblint_Framework", "Routed_Context") <sec:eq-routing>
 
@@ -321,12 +321,12 @@ $
 ) <fig:eq-adequacy>
 
 We call this condition _adequacy_
-(#isathm("routed_context.routing_adequate", thy: "Routed_Context", display: "routing_adequate")).
+(#isathm("grouted_context.grouting_adequate", thy: "Routed_Context", display: "grouting_adequate")).
 It also requires the callee's entry unknown in $c'$ to be in the solved set.
 #oblig("CALL") and #oblig("RETURN") need adequacy, because the call publishes
 $e$ and its continuation reads the callee's result in the same $c'$. A second
 condition, _totality_
-(#isathm("routed_context.routing_total", thy: "Routed_Context", display: "routing_total")),
+(#isathm("grouted_context.grouting_total", thy: "Routed_Context", display: "grouting_total")),
 requires $italic("adm")$ to admit at least one context for every concrete call
 from a store that the caller's solved value covers. Without totality, a
 concrete call could be assigned no context at all and would therefore
@@ -345,7 +345,6 @@ soundness theorem and are proved once for each context policy.
       table.hline(),
       [*policy*], [*$italic("adm")$ admits $c'$ iff*], [*routed to*], [*why they agree*],
       table.hline(stroke: 0.5pt),
-      [unit], [$c' = ()$], [$()$], [both constant],
       [call strings], [$c' = "take"_k (u dot c)$], [$"take"_k (u dot c)$], [the same term],
       [entry states],
       [$c' = e|_"formals"$, $(q, e)$ covers $(s, s')$],
@@ -361,12 +360,13 @@ soundness theorem and are proved once for each context policy.
     site, $"take"_k$ keeps the first $k$ entries, $e|_"formals"$ lists the
     formals' values in $e$, and an entry pair
     $(q, e)$ of the caller's solved value covers $(s, s')$ when
-    $s in conc(q)$ and $s' in conc(e)$. Unit and call strings are
-    _functional_ policies, since they choose the context without reading
-    abstract states.],
+    $s in conc(q)$ and $s' in conc(e)$. Call strings are a _functional_
+    policy, since they choose the context without reading abstract states. At
+    $k = 0$ every call enters the empty call string, which is the
+    context-insensitive analysis.],
 ) <tab:eq-policies>
 
-For unit and call strings the correspondence is direct, as the last column of
+For call strings the correspondence is direct, as the last column of
 @tab:eq-policies shows. $italic("adm")$ admits exactly the context that the
 routing function computes for the call, which does not depend on $e$
 (#isaconst("context_policy_of_fun")), so totality is immediate. Adequacy then reduces to the entry coverage of @sec:calls and a routed entry unknown in the solved set.
@@ -509,9 +509,9 @@ covers the induced collecting semantics.
 ) <tab:eq-obligations>
 
 The argument holds for every domain and context policy. Its locale
-#isalocale("routed_context") assumes a post-solution $sol$ on a solved set
+#isalocale("grouted_context") assumes a post-solution $sol$ on a solved set
 closed under local edges and call continuations, the
-#isalocale("analysis_contract") of @ch:analysis-interface, a sound bottom test,
+#isalocale("ganalysis_contract") of @ch:analysis-interface, a sound bottom test,
 a sound callee resolution, and adequate and total routing. The theorem adds that the program entry
 is solved in the initial context and that the initial stores $S_0$ lie in
 $conc_(D G)(d_0, e_0)$: the initial state $d_0$ describes them under an

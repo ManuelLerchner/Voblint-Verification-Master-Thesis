@@ -1,6 +1,7 @@
 (* src/Program_Model/Compile/Simulation/Simulation_Relation.thy *)
-inductive csim :: "'a ptable \<Rightarrow> cfg \<Rightarrow> pname \<Rightarrow> 'a acom \<times> store \<times> frame list
-                    \<Rightarrow> cfg_node \<times> store \<times> cframe list \<Rightarrow> bool"
+inductive csim :: "('a, 'v, 'e) gptable \<Rightarrow> ('v, 'e) gcfg \<Rightarrow> pname
+                    \<Rightarrow> ('a, 'v, 'e) gcom \<times> ('v \<Rightarrow> int) \<times> 'v gframe list
+                    \<Rightarrow> cfg_node \<times> ('v \<Rightarrow> int) \<times> 'v gcframe list \<Rightarrow> bool"
     ("(_,_,_ \<turnstile>/ _ \<approx>/ _)" [51, 51, 51, 51, 51] 50) for \<Pi> g where
   Base:
     "control_at \<Pi> p body_p k n c v \<Longrightarrow> compiled_at \<Pi> g p body_p k n \<Longrightarrow>

@@ -145,32 +145,48 @@
   ],
 
   // --------------------------------------------------------------- programs --
-  term("vimp", "VIMP", _prog, isa: isatype("com"), see: <sec:vimp>)[
-    The procedural imperative language this thesis analyses: mathematical
-    integer variables split into locals and globals, procedures with value
-    parameters and optional results, recursion, loops and assertion checks.
-  ],
-  term("store", "store", _prog, isa: isatype("store"), see: <sec:pstep>)[
-    A total function from variable names to integers. The running activation
-    has one store; locals and globals are told apart by the classifier, not by
-    separate components.
+  term("vimp", "VIMP", _prog, isa: [#isatype("src_com"), #isatype("com")], see: <sec:vimp>)[
+    The procedural imperative language this thesis analyses: integer variables
+    of C's machine kinds split into locals and globals, procedures with value
+    parameters and optional results, recursion, loops and assertion checks. The
+    parser produces surface VIMP; elaboration translates it into core VIMP,
+    which alone has a semantics.
   ],
   term(
-    "classifier",
-    "globals classifier",
+    "elaboration",
+    "elaboration",
     _prog,
-    isa: isaconst("declared_global"),
-    notation: nota("declared_global"),
+    isa: [#isaconst("elaborate"), #isaconst("elab_com"), #isaconst("elab_ptable")],
+    see: <sec:vimp>,
+  )[
+    The translation of a surface program into core VIMP: every name resolved to
+    a variable identity, every operation given the kind C computes it at, and
+    every implicit conversion made explicit. A surface program means the core
+    semantics of its elaboration; that this is the intended meaning is argued,
+    not proved.
+  ],
+  term("store", "store", _prog, isa: isatype("store"), see: <sec:vimp>)[
+    A total function from variable identities to integers. The running
+    activation has one store; locals and globals are told apart by their
+    identities, not by separate components.
+  ],
+  term(
+    "kind-environment",
+    "kind environment",
+    _prog,
+    isa: [#isatype("kenv"), #isaconst("kenv_of")],
+    notation: isai("\<kappa>"),
     see: <sec:pstep>,
   )[
-    The predicate on variable names that marks the globals. A program supplies
-    it from its global declarations; the theorems take it as a parameter.
+    The machine kind of every variable identity. A program supplies it from its
+    kind declarations, an undeclared identity being a C `int`; the semantics
+    and the theorems take it as a parameter.
   ],
   term(
     "source-configuration",
     "source configuration",
     _prog,
-    isa: isatype("frame"),
+    isa: isatype("gframe"),
     see: <sec:pstep>,
   )[
     A triple of the command that remains to run, the current store and a stack
@@ -185,31 +201,33 @@
     notation: nota("pstep", "psteps"),
     see: <sec:pstep>,
   )[
-    The small-step relation on source configurations for a classifier and a
-    procedure table. It is the definition of VIMP, and every soundness theorem
-    is ultimately a statement about it.
+    The small-step relation on core VIMP configurations for a kind environment
+    and a procedure table. It is the central definition of VIMP, and every
+    soundness theorem is ultimately a statement about its runs on an elaborated
+    program.
   ],
   term(
     "entry-store",
     "entered store",
     _prog,
-    isa: [#isaconst("call_enter"), #isaconst("enter_state")],
+    isa: [#isaconst("gcall_enter"), #isaconst("enter_state")],
     see: <sec:pstep>,
   )[
     The store a callee starts with: the caller's globals, every other variable
     reset to zero, and the formals bound to the actuals evaluated in the
-    caller's store.
+    caller's store, each converted to its formal's kind.
   ],
   term(
     "return-merge",
     "return merge",
     _prog,
-    isa: [#isaconst("combine_collect"), #isaconst("combine_env"), #isaconst("combine_assign")],
+    isa: [#isaconst("gcombine_collect"), #isaconst("combine_env"), #isaconst("combine_assign")],
     see: <sec:calls>,
   )[
     The store at the caller's continuation: the caller's locals and the
     callee's globals (#isaconst("combine_env")), then the returned value
-    written to the destination variable (#isaconst("combine_assign")).
+    converted to the destination's kind and written to the destination
+    variable (#isaconst("combine_assign")).
   ],
   term(
     "wf-source-program",
@@ -221,14 +239,15 @@
     The static contract the compilation bridge requires: distinct procedure
     names, declared callees, matching arities, no use of the return-value
     variable, a return discipline, and an argument-free `main` that completes
-    by falling through. The analyzer checks an executable form of it.
+    by falling through. The analyzer checks an executable form of it, which
+    also rejects literals outside the 64-bit range.
   ],
   term(
     "cfg",
     "control-flow graph",
     _prog,
     abbr: "CFG",
-    isa: [#isatype("cfg"), #isaconst("intra"), #isaconst("calls")],
+    isa: [#isatype("gcfg"), #isaconst("elab_cfg"), #isaconst("intra"), #isaconst("calls")],
     see: <sec:cfg>,
   )[
     The procedure-aware graph a program compiles to. Local edges $(u, a, v)$
@@ -278,22 +297,6 @@
     frame. Forward simulation matches every source run by a graph run that
     preserves it; the converse is not proved, and soundness does not need it.
   ],
-  term(
-    "elaboration",
-    "elaboration",
-    _prog,
-    isa: [#isaconst("elab_pt"), #isaconst("point", thy: "Elaborated_Compilation"), #isaconst("at_node"), #isathm("psteps_lift")],
-    see: <sec:csim>,
-  )[
-    The elaboration annotates every statement with the nodes the compiler emits
-    for it. The elaborated program compiles to the same graph, its residual
-    command names its node (#isaconst("point", thy: "Elaborated_Compilation")), and every run of the program as
-    written is the erasure of one of its runs. A source configuration is observed
-    at the node its lift names ($gt.closed$, #isaconst("at_node")), and a
-    configuration reachable along two paths can be observed at two nodes. The elaboration
-    exists only in the proof.
-  ],
-
   // ----------------------------------------------------------------- traces --
   term("activation", "activation", _trace, see: <sec:why-traces>)[
     One execution of a procedure body from its entry. Repeated and recursive
@@ -303,7 +306,7 @@
     "activation-trace",
     "activation trace",
     _trace,
-    isa: isatype("activation_trace"),
+    isa: isatype("gactivation_trace"),
     see: <sec:activation-trace>,
   )[
     A record of one activation: #ctor("Root") for the initial activation,
@@ -325,9 +328,9 @@
   ],
   term("initial-stores", "initial stores", _trace, notation: isai("S"), see: <sec:collect>)[
     The set of stores a run may start from. The analyzer's theorems use the
-    stores whose globals are zero and whose other names, the locals of
-    `main`, are unconstrained (#isaconst("cinit_stores")). A callee's locals
-    do not come from $S$: they start at zero on entry.
+    stores whose globals are zero and whose other identities hold some value
+    of their kind (#isaconst("init_stores")). A callee's locals do not come
+    from $S$: they start at zero on entry.
   ],
   term(
     "trace-collect",
@@ -351,7 +354,7 @@
     "call-context-rel",
     "call-context relation",
     _trace,
-    isa: [#isatype("context_policy"), #isaconst("admits_call_context")],
+    isa: [#isatype("gcontext_policy"), #isaconst("gadmits_call_context")],
     notation: isai("R"),
     see: <sec:contexts>,
   )[
@@ -364,7 +367,7 @@
     "trace-context",
     "context of a trace",
     _trace,
-    isa: isaconst("activation_context_rel"),
+    isa: isaconst("gactivation_context_rel"),
     see: <sec:contexts>,
   )[
     The inductive relation stating which contexts a trace carries. A
@@ -392,7 +395,7 @@
     "coverage-contract",
     "coverage contract",
     _trace,
-    isa: [#isalocale("activation_coverage"), #isaconst("call_context_total_on")],
+    isa: [#isalocale("gactivation_coverage"), #isaconst("gcall_context_total_on")],
     see: <sec:contract>,
   )[
     Five local obligations on a cover under which it contains every valid
@@ -423,11 +426,11 @@
     "abs-state",
     "pointwise abstract state",
     _dom,
-    isa: [#isatype("abs_state"), #isaconst("gamma_state")],
+    isa: [#isatype("gabs_state"), #isaconst("gamma_state")],
     notation: nota("gamma_S"),
     see: <ch:domains>,
   )[
-    A function from variable names to abstract values. It represents the stores
+    A function from variables to abstract values. It represents the stores
     $s$ with $s(x) in conc(sigma(x))$ for every $x$, and so forgets every
     relation between variables.
   ],
@@ -448,7 +451,7 @@
     "backward-filtering",
     "backward filtering",
     _dom,
-    isa: [#isalocale("sound_refinement"), #isaconst("bfilter")],
+    isa: [#isaconst("nonrel_refine"), #isathm("nonrel_branch_sound")],
     see: <ch:domains>,
   )[
     Refining a state under a guard with inverse operators. A filter may keep
@@ -469,31 +472,30 @@
     "numeric-analyses",
     "numeric analyses",
     _dom,
-    isa: isatype("analysis_domain"),
+    isa: isatype("analysis"),
     see: <ch:instances>,
   )[
     The five selectable domains: Sign, Interval, Parity, Congruence and the
     reduced product Int.
   ],
-  term("reduced-product", "reduced product", _dom, isa: isatype("int_dom"), see: <ch:instances>)[
-    The Int carrier: one Sign, Interval, Parity and Congruence value,
-    representing the intersection of their meanings. Reduction lets each
-    component tighten the others.
+  term("reduced-product", "reduced product", _dom, isa: isatype("int_tuple"), see: <ch:instances>)[
+    The Int carrier: one Interval and one Congruence value, representing the
+    intersection of their meanings. Reduction lets each component tighten the
+    other; the refinement mode selects how often.
   ],
   term(
     "relational-witness",
     "relational witness",
     _dom,
-    isa: isaconst("rel_order_spec"),
+    isa: isaconst("ord_spec"),
     see: <sec:relational>,
   )[
     An analysis over a relational carrier that discharges the same analysis
-    soundness contract as the numeric analyses. It is not
-    selectable in the analyzer.
+    soundness contract as the numeric analyses.
   ],
 
   // -------------------------------------------------------------- equations --
-  term("dg-spec", "analysis specification", _eq, isa: isatype("dg_spec"), see: <sec:sound-core>)[
+  term("dg-spec", "analysis specification", _eq, isa: isatype("gdg_spec"), see: <sec:sound-core>)[
     The record of operations an analysis supplies, following Goblint's `Spec`:
     seven edge transfers (skip, assign, special, branch, body, return, event),
     the call entry, and the two combine stages.
@@ -553,7 +555,7 @@
     "sound-spec",
     "analysis soundness contract",
     _eq,
-    isa: isalocale("analysis_contract"),
+    isa: isalocale("ganalysis_contract"),
     see: <sec:sound-core>,
   )[
     The obligations a specification owes its concretization: monotonicity,
@@ -602,12 +604,12 @@
     "context-policy",
     "context policy",
     _eq,
-    isa: [#isatype("context_mode"), #isaconst("cs_route"), #isaconst("routed_entry_context_rel")],
+    isa: [#isatype("context_policy"), #isaconst("cs_route"), #isaconst("routed_entry_context_rel")],
     see: <sec:eq-routing>,
   )[
-    The run setting that selects callee contexts: the single unit context of
-    the context-insensitive analysis; call strings, the most recent call sites
-    cut to a fixed length $k$; or entry states, the abstract values of the
+    The run setting that selects callee contexts: call strings, the most recent
+    call sites cut to a fixed length $k$, where $k = 0$ is the
+    context-insensitive analysis; or entry states, the abstract values of the
     callee's formals at entry. Under entry states, overlapping entry pairs can
     place one call in several contexts.
   ],
@@ -619,7 +621,7 @@
     "routing-adequacy",
     "routing adequacy",
     _eq,
-    isa: isalocale("routed_context"),
+    isa: isalocale("grouted_context"),
     see: <sec:eq-routing>,
   )[
     Whenever the call-context relation admits $c'$ for a covered call, one
@@ -667,13 +669,13 @@
     "carrier",
     "executable carrier",
     _solve,
-    isa: [#isatype("default_st"), #isaconst("readback")],
+    isa: [#isatype("gdefault_st"), #isaconst("readback")],
     see: <ch:solving>,
   )[
     The finite state representation: a local default, a global default and a
-    list of overrides indexed by locations (names tagged local or global),
+    list of overrides indexed by locations (identities tagged local or global),
     quotiented by equal lookups. Readback, $rho_(cal(G))$, turns it into a
-    function on names by looking each name up at the location its
+    function on identities by looking each one up at the location its
     classification selects; the same overloaded readback applies to lifted and
     D/G states.
   ],
@@ -681,7 +683,7 @@
     "commutation",
     "commutation",
     _solve,
-    isa: isathm("generic_tf_st_for_commute"),
+    isa: [#isathm("nonrel_rd_assign_st"), #isathm("nonrel_exec_spec_sound")],
     see: <ch:solving>,
   )[
     The property that a carrier operation followed by readback equals readback
@@ -698,7 +700,8 @@
     see: <sec:codegen>,
   )[
     The HOL function from a configuration (analyses, global update rule,
-    context policy) and a VIMP syntax tree to an answer:
+    context policy, placement of program globals, signed-overflow policy), kind
+    declarations and a surface VIMP syntax tree to an answer:
     #isaconst("Invalid_Activation"), #isaconst("Malformed_Program"),
     #isaconst("No_Answer") or #isaconst("Analysed") with a semantic report. The
     source-level theorems and the code export concern this one constant.
@@ -707,14 +710,13 @@
     "report",
     "analysis report",
     _res,
-    isa: [#isatype("analysis_report"), #isaconst("report_sem"), #isaconst("verdict_stores")],
+    isa: [#isatype("analysis_report"), #isaconst("report_states_at")],
     see: <sec:chain>,
   )[
     What an analyzed answer carries: one semantic state per solved point and
-    context, the check verdicts and the arithmetic diagnostics. Its semantics at
-    a point $v$ is the set of stores its states there describe; its verdict
-    semantics is the set of stores in which every definite verdict at $v$
-    holds.
+    context, the check verdicts and the arithmetic diagnostics. The states at a
+    point $v$ describe every store that reaches $v$, and every definite verdict
+    at $v$ holds at each such store.
   ],
   term("verdict", "verdict", _res, isa: isatype("contextual_verdict"), see: <sec:verdicts>)[
     The classification of a check at a node: the per-context answers joined in
@@ -738,7 +740,7 @@
     "DEAD",
     _res,
     sort: "verdict 4",
-    isa: isathm("run_voblint_dead_check_unreached"),
+    isa: isathm("run_voblint_dead_unreached"),
     see: <sec:verdicts>,
   )[
     The collecting semantics at the check's node is empty: the only verdict
@@ -751,9 +753,10 @@
     isa: isathm("run_voblint_arithmetic_safe"),
     see: <sec:verdicts>,
   )[
-    A diagnostic at a node where the abstraction could not exclude a zero
-    divisor. Where no warning is reported, every divisor is nonzero in every
-    collected store; a warning does not establish a failing execution.
+    A diagnostic at a node where the abstraction could not exclude a division
+    by zero, a signed overflow or a conversion that changes its value. Where no
+    warning is reported, none of these occurs in any collected store; a
+    warning does not establish a failing execution.
   ],
   term(
     "source-theorem",
@@ -762,11 +765,12 @@
     isa: [#isathm("run_voblint_source_sound"), #isathm("run_voblint_spine")],
     see: <sec:headline>,
   )[
-    For every finite source run from an initial store, if the analyzer returns
-    a report, the reached configuration is observed at some node
-    ($gt.closed$, #isaconst("at_node")). At every node where it is observed, the
-    store is collected, the report describes it in some context, every `PROVED`
-    condition listed there holds of it, and every `REFUTED` condition fails.
+    For every finite run of the elaborated program from an initial store, if
+    the analyzer returns a report, the reached configuration is simulated at
+    some node ($approx$, #isaconst("csim")). At that node the store is
+    collected, the report describes it in some context, the node is not
+    `DEAD`, every `PROVED` condition listed there holds of it, every `REFUTED`
+    condition fails, and at a `SAFE` node every arithmetic obligation holds.
   ],
 
   // ------------------------------------------------------- Isabelle, trust --

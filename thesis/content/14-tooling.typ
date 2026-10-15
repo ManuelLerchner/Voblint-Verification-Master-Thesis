@@ -39,14 +39,12 @@ repository therefore keeps a few sources and derives everything else from them
 (@fig:pipeline). One grammar file yields the Isabelle syntax of VIMP, the
 analyzer's parser and its printer. The parser lies outside the proof and hands
 the proved analyzer its syntax tree (@sec:trust-boundary), but it and the
-Isabelle syntax are generated from the same language description. An
-analysis manifest names each analysis, its value type and the theories that
-prove it sound. From it, a generator writes the registration of each numeric domain (@sec:instances-supply) and the combined state of @ch:cooperation, and
-Isabelle checks every generated proof. The generator exists because the
-repetition lies outside what a theory can express: each domain is registered
-once per context policy it supports, for every update rule, and the combined
-state has one field per analysis, of differing types. With dependent types, a heterogeneous list indexed
-by these types could express it inside the logic @chlipala13cpdt[ch. 9]; HOL's
+Isabelle syntax are generated from the same language description. The analyses
+themselves are written out in the theories. Each numeric domain instantiates
+one class (@sec:instances-supply), and the combined state of @ch:cooperation
+has one field per analysis, of differing types, so the registry proofs case on
+the analysis. With dependent types, a heterogeneous list indexed by these types
+could express the combined state inside the logic @chlipala13cpdt[ch. 9]; HOL's
 simple types cannot. #isaconst("run_voblint") itself reaches OCaml through
 #isacmd("export_code") (@sec:codegen). Because the derived files are checked
 against their sources, a stale name, statement, or quoted output fails the build
@@ -107,40 +105,19 @@ instead of reaching the reader (@fig:pipeline).
       gen(<g>, <g1>),
       gen(<g>, <g2>),
       gen(<g>, <g3>),
-      src(
-        (0, 4),
-        link(repo-blob + "manifests/analyses.yaml")[analysis manifest \ `analyses.yaml`],
-        <m>,
-      ),
+      src((0, 5), link(repo-blob + "src")[theories, built session \ and analyzer], <t>),
       out(
-        (1, 3.5),
-        link(
-          repo-blob + "src/Analyses/Sign/generated/Sign_Analyses.thy",
-        )[per-domain registration theories],
-        <m1>,
-      ),
-      out(
-        (1, 4.5),
-        link(
-          repo-blob + "src/Executable_Surface/CLI/generated/MCP_Carrier.thy",
-        )[combined state of all analyses],
-        <m2>,
-      ),
-      gen(<m>, <m1>),
-      gen(<m>, <m2>),
-      src((0, 7), link(repo-blob + "src")[theories, built session \ and analyzer], <t>),
-      out(
-        (1, 6),
+        (1, 4),
         link(repo-blob + "codegen/generated/ml/Voblint_Generated.ml")[generated OCaml analyzer],
         <t1>,
       ),
       out(
-        (1, 7),
+        (1, 5),
         link(repo-blob + "thesis/shared/generated")[theorem statements, snippets, links],
         <t2>,
       ),
       out(
-        (1, 8),
+        (1, 6),
         link(repo-blob + "thesis/shared/generated")[quoted analyzer output, figures],
         <t3>,
       ),

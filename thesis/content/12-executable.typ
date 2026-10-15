@@ -104,9 +104,9 @@ nothing about its running time or how it computes the result. One such cost was 
 program of 256 chained assignments, taken on one machine, attributed most of
 the CPU time to the compiler, which ran once per equation evaluation. The cause
 was #isaconst("init_publications"). On every equation evaluation it tests
-whether the unknown is the program's entry, and its definition names the entry
-as #isai("cfg_entry (prog_cfg p)"). The generated code evaluates this term as
-written, so it compiled the whole program to find a node that is always the
+whether the unknown is the program's entry, and its definition then named the
+entry as #isai("cfg_entry (prog_cfg p)"). The generated code evaluated this term
+as written, so it compiled the whole program to find a node that is always the
 entry of `main` (@fig:init-publications).
 
 #figure(
@@ -145,7 +145,7 @@ entry of `main` (@fig:init-publications).
         <new>,
         "-|>",
         stroke: 0.6pt + vb.proved,
-        label: lab[code equation],
+        label: lab[entry parameter],
         label-side: right,
       ),
     )
@@ -153,19 +153,22 @@ entry of `main` (@fig:init-publications).
   kind: image,
   placement: none,
   caption: [The entry test of #isaconst("init_publications") in the generated
-    code. Generated from the definition (red), it compiled the program at every
-    equation evaluation. Generated from the proved code equation
-    #isathm("init_publications_code") (green), it compares with a constant.],
+    code. Generated from the earlier definition (red), it compiled the program at
+    every equation evaluation. With the entry supplied as a constant (green), it
+    compares with that constant.],
 ) <fig:init-publications>
 
-Isabelle lets a theory replace the equation that code generation uses for a constant with any proved equation for it. #isathm("init_publications_code")
-states #isaconst("init_publications") with the entry node
-#isai("FunctionEntry prog_main_name") written out and follows from
-#isathm("cfg_entry_compile_prog") by simplification. The definition and every
-theorem about it stay unchanged, and no trust is added (@sec:trust-boundary). The trace hook of @sec:tracing, by contrast, adds a mapping to
-handwritten OCaml to the trusted base.
-The proof establishes that the equations agree, and the unchanged corpus and
-solver traces only confirm that the code generator uses the new one. On the same machine, the
+Isabelle lets a theory replace the equation that code generation uses for a
+constant with any proved equation for it, and the first fix was such a proved
+code equation with the entry node #isai("FunctionEntry prog_main_name")
+written out. The current definition takes the entry as a parameter of the
+analysis locale (#isalocale("dg_pipeline")). Each registration instantiates it
+with #isai("FunctionEntry prog_main_name"), and a locale assumption requires it
+to be the entry of the analyzed graph, which is that node for every compiled
+program (#isathm("cfg_entry_compile_prog")). Neither fix adds trust
+(@sec:trust-boundary). The trace hook of @sec:tracing, by contrast, adds a
+mapping to handwritten OCaml to the trusted base. Before the migration to
+machine integers and on the same machine, the
 #link(repo-blob + "scripts/gen_bench_program.py")[generated] chain of 256
 assignments then ran #_speedup("chain256") times faster, and a program of 512
 assignments in procedures of eight statements #_speedup("procs512") times
@@ -181,17 +184,20 @@ further.
 
 == The unverified shell <sec:ocaml-boundary>
 
-The generated #isaconst("run_voblint") takes a configuration and a syntax tree
-and returns a typed answer, so unverified code has to surround it on both sides. Before it, an
-`ocamllex` lexer and a Menhir parser turn the program text a user writes into
-an #isatype("imp_prog") and write
-each check's source position into its label. After it,
+The generated #isaconst("run_voblint") takes a configuration, kind declarations
+and a syntax tree and returns a typed answer, so unverified code has to
+surround it on both sides. Before it, an `ocamllex` lexer and a Menhir parser
+turn the program text a user writes into a surface program
+(#isatype("imp_prog")) and the kinds of its variables, resolve block scopes,
+rewrite a declaration without initializer into a call of
+`__voblint_nondet_int`, and write each check's source position into its label. After it,
 #isaconst("render_report") turns the report's states into text. Handwritten
 code then prints the command-line report, each check at the position its label
 carries, or serializes the answer as JSON, from which the playground draws the
-graph and places the verdicts and arithmetic diagnostics in the editor. Isabelle's code export maps HOL's mathematical integers to
-arbitrary-precision Zarith integers, so the generated code computes with
-VIMP's integers (@sec:vimp-vs-c). The command-line tool and the playground share the parser,
+graph and places the verdicts and arithmetic diagnostics in the editor. Isabelle's code export maps HOL's integers to arbitrary-precision Zarith
+integers. The generated code computes VIMP's machine-integer values as such
+integers, which the semantics keeps within each kind's range by explicit
+normalization (@sec:vimp-vs-c). The command-line tool and the playground share the parser,
 the generated module, and the code that turns a request into an analysis
 configuration. They differ in their surroundings: the command-line tool
 manages processes and files, and the playground's worker exchanges JSON with
@@ -254,9 +260,9 @@ the vendored solver @tilscher26 untouched. Voblint therefore supplies traced
 versions of its code equations that report each
 step through one constant, #isaconst("trace_event"), which is $()$ in the
 logic. Because it is $()$, each traced equation is proved equal to the one it
-replaces (for example #isathm("solve_rec_c_traced")\; #isathm("cs_route_traced"),
-#isathm("trace_route"), and #isathm("trace_run") do the same for routing and the
-reading of the result). Code export replaces the original equations with these,
+replaces (for example #isathm("solve_rec_c_traced")\; #isathm("trace_route"),
+#isathm("cs_run_traced"), and #isathm("es_run_traced") do the same for routing
+and the reading of the result). Code export replaces the original equations with these,
 so one generated analyzer serves traced and untraced runs alike. In OCaml, #isaconst("trace_event") is mapped
 to a hook that records the event when tracing is on. This mapping adds one target
 mapping to the trusted base: the hook must return, raise nothing, and leave the
@@ -297,13 +303,14 @@ Three questions decide what a run of the delivered analyzer establishes, and @fi
 *What is proved.* #isathm("run_voblint_source_sound") and the verdict theorems
 of @sec:verdict-meaning hold for every report #isaconst("run_voblint")
 returns, from the syntax tree it receives to the semantic report. The proof
-covers the compiler, the
+covers the elaboration, the compiler, the
 well-formedness test, the vendored solver with its executable refinement and
 the executable state carrier.
 
 *What is trusted.* Two groups lie outside the proof. The first is the
-handwritten code around the generated analyzer: the lexer, the parser, the
-translation of a request into a configuration, and the presentation, including
+handwritten code around the generated analyzer: the lexer, the parser with its
+block-scope resolution and its rewriting of declarations without initializer,
+the translation of a request into a configuration, and the presentation, including
 the placement of arithmetic diagnostics. #isaconst("render_report") is
 generated and passes verdicts and diagnostics through unchanged
 (#isathm("render_report_columns")), but no theorem relates its state strings to

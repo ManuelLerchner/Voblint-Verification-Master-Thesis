@@ -46,14 +46,15 @@ Interval, entry-state contexts, and warrowing. The theory builds the source run 
 It computes the answer by evaluation: both checks are #verdict("PROVED").
 #isathm("nv_source_certified") instantiates
 #isathm("run_voblint_source_sound") with every premise discharged. Its
-conclusion gives a node at which the run is observed (#isaconst("at_node"))
-together with the three memberships there. In the same way,
+conclusion gives a node $v$ that the simulation #isaconst("csim") relates to
+the stopped run, at which the run's store reaches $v$, a reported state
+describes the store, and $v$ is not #verdict("DEAD"). In the same way,
 #isathm("nv_check_proved_sound") instantiates
 #isathm("run_voblint_check_sound") at the check `a == 6`. For the reachability
 claim, a second program sets `x = 1` and guards a check by `x < 0`; the
-analyzer marks it #verdict("DEAD"), and #isathm("nv_dead_unreached") instantiates
-#isathm("run_voblint_dead_check_unreached") to conclude that the collecting
-semantics at that node is empty. The source runs are proved by rule application, and the compiled graphs and the answers are proved by `eval`. The instances
+analyzer marks it #verdict("DEAD"), and #isathm("nv_dead_unreached") concludes,
+from the same report guarantees #isathm("run_voblint_dead_unreached") rests on,
+that no store reaches that node. The source runs are proved by rule application, and the compiled graphs and the answers are proved by `eval`. The instances
 cover a definite truth verdict, #verdict("PROVED"), and the reachability
 verdict #verdict("DEAD").
 
@@ -148,13 +149,11 @@ only.
 #let _k99 = claim-snapshot("cost-down-k99")
 #let _k100 = claim-snapshot("cost-down-k100")
 
-*Contexts.* _Evidence: executable, and evaluated._ @fig:eq-policies showed
-which calls each context policy separates. #isathm("sign_k2_strictly_more_precise_than_k1_at_g") proves a
-strict separation on one program: the Sign value of a parameter at a procedure
-entry is strictly lower under call strings of length 2 than under length 1,
-with the component values computed by `eval`. The theorem uses Sign because
-its widening is its join and its narrowing returns the current value, so the
-difference cannot come from widening.
+*Contexts.* _Evidence: executable._ @fig:eq-policies showed
+which calls each context policy separates.
+// TODO: restore sign_k2_strictly_more_precise_than_k1_at_g through run_voblint
+// (removed in M3; docs/theorem-migration.toml) before claiming an evaluated
+// strict separation between call strings of length 1 and 2 again.
 
 The gain from contexts is not proportional to their cost. `down(100)` recurses to `down(0)`, so `n >= 0`
 holds at every call. Call strings of length 100 give
@@ -164,14 +163,16 @@ stands for the deepest calls, widening removes the lower bound there, and the
 check is #snapshot-verdict(_k99, "n >= 0") (claims #claim-ref("cost-down-k99") and
 #claim-ref("cost-down-k100")).
 
-*Modularity.* _Evidence: source inspection._ Adding the order analysis required three proofs about its local
-specification (#isathm("order_spec_sound"), #isathm("single_entry_order_spec"),
-#isathm("relc_qry_sound")), a lattice instance, an entry in the analysis manifest
-(@ch:tooling), and a few class instances for the command-line layer. No theory of the framework or of the numeric domains refers to
-it outside document text. A new numeric domain proves its lattice laws and its
-forward, backward, and query operations sound once
-(#isalocale("sound_nonrelational_ops")), and the generic construction derives
-its transfer functions and their soundness (@sec:instances-supply).
+*Modularity.* _Evidence: source inspection._ Adding the order analysis required
+proofs about its local specification and its query (#isathm("ord_spec_sound"),
+#isathm("ord_query_sound"), #isathm("single_entry_ord_spec")), a lattice
+instance, and its registration in the command-line layer: a constructor of the
+#isatype("analysis") datatype, a field of the combined state, and the cases of
+the registry proofs. No theory of the framework or of the numeric domains refers to
+it outside document text. A new numeric domain instantiates the class
+#isalocale("kind_int_domain"), proving its lattice laws and its operations
+sound once, and the generic construction derives its transfer functions and
+their soundness (#isathm("nonrel_exec_spec_sound"), @sec:instances-supply).
 
 #let _verdict(name, cond) = {
   if claim-timed-out(name) { return text(fill: vb.unproved)[no answer in 5 s] }
@@ -234,16 +235,16 @@ its transfer functions and their soundness (@sec:instances-supply).
     the solve.],
 ) <fig:rules-programs>
 
-*Update rules.* _Evidence: executable, and evaluated for a system
-with two writers to one global._ @fig:rules-programs runs the five update rules of @sec:update-rules on
+*Update rules.* _Evidence: executable._ @fig:rules-programs runs the five update rules of @sec:update-rules on
 four programs whose checks hold in every execution. In the first row `p(1)`
 and `p(2)` publish to the same entry seed. Warrow joins the two contributions
 before widening, so the second looks like growth, and the upper bound goes to
 $+infinity$. Per-origin warrowing widens each call site's contribution
 separately. Each origin writes one constant, so nothing grows.
-#isathm("two_writer_slot_warrow_loses_upper_bound") and
-#isathm("two_writer_slot_warrow_per_origin_exact") prove the same effect on a
-system with two writers to one global by `eval`. No rule is best on every row. In the last row the
+// TODO: restore two_writer_slot_warrow_loses_upper_bound and
+// two_writer_slot_warrow_per_origin_exact (removed in M3;
+// docs/theorem-migration.toml) to back this effect by evaluation again.
+No rule is best on every row. In the last row the
 fixture header attributes the loss to the recursive call's own contribution:
 per-origin warrowing widens it to $-infinity$, `a + 2` may then be zero, and
 the division loses all information. We attribute Warrow's result to the fact that it joins in `main`'s argument $-1$ first, which keeps the lower bound. On the growing recursion the joining
@@ -256,8 +257,8 @@ programs.
 
 #let _z(name) = claim-check(name, "z == 1")
 
-*Refinement inside Int.* _Evidence: executable._ Int combines the four base
-domains in one value and refines them against each other (@sec:reduced-product).
+*Refinement inside Int.* _Evidence: executable._ Int combines Interval and
+Congruence in one value and refines them against each other (@sec:reduced-product).
 In the program below, `q` is $4n + 1$ for some $n in [0, 20]$, so `r` is $1$.
 
 #let _r(name) = claim-check("int-refine-" + name, "r == 1")
@@ -282,7 +283,7 @@ two to #raw(_r("int").at(4).split("r=").at(1)) and proves the check (claims
 #claim-ref("int-refine-*")). @fig:goblint-1161 and @fig:stride2 show the same
 effect.
 
-*Queries between analyses.* _Evidence: executable, and evaluated._ Separate
+*Queries between analyses.* _Evidence: executable._ Separate
 analyses refine each other only through queries (@ch:cooperation). In the
 following program they do so in both directions:
 
@@ -306,11 +307,10 @@ check is #verdict(_z("coop-mutual-both").at(3)) (claims
 #claim-ref("coop-mutual-*")). Int asks at every assignment, and at `z = (x <= y)`
 the answer is decisive. On a check of `x <= y` itself, the order analysis
 would answer the check directly, though it still needs Int's answers at the
-assignments to `y`. On two related programs with Interval in place of Int,
-#isathm("coop_demo_needs_both"), #isathm("order_asks_interval_alone"),
-#isathm("order_asks_order_alone"), and #isathm("order_asks_needs_both") prove by
-`eval`, one direction each, that the check is proved only with both
-analyses.
+assignments to `y`.
+// TODO: restore coop_demo_needs_both and the order_asks_* lemmas (removed in M3;
+// docs/theorem-migration.toml) to show by evaluation that each direction needs
+// both analyses.
 
 == Tests of the unverified parts <sec:eval-corpus>
 

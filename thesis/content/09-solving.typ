@@ -609,9 +609,13 @@ In Isabelle, the nodes of a procedure are #isaconst("prog_node").
 and #isathm("prog_node_entry"), #isathm("prog_node_intra"), and
 #isathm("prog_node_calls") that executions stay among them. The restricted set
 is
-#isaconst("dg_analysis.live_unknowns", thy: "DG_Live_Unknowns", display: "live_unknowns"),
+#isaconst("gdg_analysis.glive_unknowns", thy: "DG_Live_Unknowns", display: "glive_unknowns"),
 and
-#isathm("dg_analysis.live_unknowns_cover", thy: "DG_Live_Unknowns", display: "live_unknowns_cover")
+#isathm(
+  "gdg_analysis.glive_unknowns_cover",
+  thy: "DG_Live_Unknowns",
+  display: "glive_unknowns_cover",
+)
 proves from a well-formed program and a terminating solve alone that it
 contains the entry and is closed under execution steps. The final theorem
 therefore needs no premise about which unknowns the solve visited.
@@ -627,7 +631,7 @@ returns that same result. Finiteness lets
 verdict. Since the proof uses nothing else, the solver is a parameter of the
 analysis, and another solver, for instance one with local side effects
 (@sec:outlook-extending), attaches to Voblint by proving the same four facts.
-In Isabelle, the analysis locale #isalocale("dg_analysis") takes the solver
+In Isabelle, the analysis locale #isalocale("gdg_analysis") takes the solver
 as a parameter and extends #isalocale("certified_solver"), which states the
 four facts. #isathm("td_certified_solver") proves them for the vendored
 solver under every update rule.
@@ -667,6 +671,8 @@ No rule is more precise on every program, and the rules also differ in
 termination. @sec:eval-precision compares them on the programs of
 @fig:rules-programs.
 
+// TODO: restore update_rules_example (removed in M3; docs/theorem-migration.toml) and cite
+// it in the caption; until then the cells come from the last generated facts.json.
 #let _rule-steps = update-rule-steps()
 
 #figure(
@@ -718,20 +724,20 @@ termination. @sec:eval-precision compares them on the programs of
     #raw("[0,4]") is not below #raw("[0,3]"), and narrows at step 3. Warrow per origin widens only when A's own contribution grows. Bounded narrowing
     agrees with warrow per origin here, since A switches to narrowing once, and
     the bound 5 is never reached. A widened bound is set
-    bold and marked $nabla$. The cells are read from
-    #isathm("update_rules_example"), which evaluates the vendored rules with
-    Voblint's interval operators; the contributions separate the rules and come
-    from no program.],
+    bold and marked $nabla$. The cells are the values the vendored rules compute
+    with Voblint's interval operators; the contributions separate the rules and
+    come from no program.],
 ) <fig:update-rules>
 
 == Making abstract states executable #thy-badge("Voblint_Exec", "Default_St_Base") <sec:represented-function>
 
 The pointwise analyses of @ch:domains are specified over abstract states
-$"Var" -> A$, total functions on variable names (the relational order
-analysis has its own state type, #isatype("relc")). This suits proofs, where
+#isatype("tabs"), total functions from variable identities to abstract values
+tagged with their kind (the relational order analysis has its own state type,
+#isatype("order_rel")). This suits proofs, where
 lookup is function application and the lattice operations are pointwise. The solver, however, cannot compute with it: after every
 evaluation it decides whether an unknown changed, and deciding $f lle g$ for two such
-functions means checking $f(x) lle g(x)$ for infinitely many names $x$. Nipkow and Klein address the same
+functions means checking $f(x) lle g(x)$ for infinitely many identities $x$. Nipkow and Klein address the same
 problem in the abstract interpreter of Concrete Semantics by refining total
 function states to a finite representation with a default @nipkow14[§13.6]:
 a state is a finite list of variables with their values, every unlisted name
@@ -744,15 +750,18 @@ short, distinct from the carrier of a domain, @ch:background).
 
 VIMP initializes globals to zero, as
 C does for objects with static storage (#c11("6.7.9p10")), and leaves the
-locals of `main` arbitrary (@sec:vimp-vs-c). The initial state must give every local
-the value #ltop and every global the value $0^sharp$, the abstract value of the
-constant $0$, without listing the declared globals. Voblint's carrier
-therefore keeps two default dictionaries, one for the names the program
-treats as local and one for the globals, each a default paired with a finite
-list of overrides. We write the state with local dictionary $(d_l, "ls")$ and
-global dictionary $(d_g, "gs")$ as $⟪(d_l, "ls"), (d_g, "gs")⟫$. The initial
-state is $⟪(ltop, []), (0^sharp, [])⟫$, and the least element is
-$⟪(lbot, []), (lbot, [])⟫$.
+locals of `main` arbitrary within their kinds (@sec:vimp-vs-c). The initial
+state must give every local the value #ltop and every global the value $0^sharp$
+at its kind, the abstract value of the constant $0$, without listing every
+global identity. Voblint's carrier therefore keeps two default dictionaries,
+one for the local identities and one for the global ones, each a default
+paired with a finite list of overrides. We write the state with local
+dictionary $(d_l, "ls")$ and global dictionary $(d_g, "gs")$ as
+$⟪(d_l, "ls"), (d_g, "gs")⟫$. The initial state
+(#isaconst("nonrel_init_st")) is $⟪(ltop, []), (0^sharp, "gs")⟫$, where the
+global default is the zero of kind `I32`, the kind of an undeclared identity,
+and $"gs"$ overrides it with the zero of its kind for every declared identity.
+The least element is $⟪(lbot, []), (lbot, [])⟫$.
 
 Different representations can describe the same state: overrides of distinct
 names may appear in any order, and an override equal to its default changes
@@ -761,25 +770,31 @@ that answer every lookup alike:
 
 #thy("default_st")
 
-Two carrier states are therefore equal exactly when every lookup agrees
+The non-relational analyses use it at #isatype("tst"), with variable
+identities as keys and kind-tagged abstract values as values. Two carrier states are therefore equal exactly when every lookup agrees
 (#isathm("default_st_eq_iff")). Comparing the two defaults and the finitely
 many listed names decides the order (#isathm("le_default_st_rep_code_iff")),
 and equality tests it in both directions.
 
-The program's global-variable classifier $cal(G)$ (@sec:pstep) assigns each
-name $x$ its _location_ $ell(x)$, local or global. A lookup reads the
+The classifier #isaconst("is_global") tells global
+identities from local ones and assigns each identity $x$ its _location_
+$ell(x)$, local or global. A lookup reads the
 dictionary of the variable's location: the override if there is one, the
 default otherwise. We write
 $d⟨l⟩$ for the lookup at location $l$ and $d⟨l := a⟩$ for the update. Looking
-up every variable at its location gives the total function $rho_(cal(G))(d)$
+up every variable at its location gives the total function $rho_(#isaconst("is_global"))(d)$
 that a carrier state represents (#isaconst("default_st_to_fun")). A carrier
 state means what its function means under the concretization
-#isaconst("gamma_state") of @sec:nonrel-state, so its own concretization
-(#isaconst("default_st_gamma")) is
-$ conc(d) = conc(rho_(cal(G))(d)) = setcomp(s, forall x. s(x) in conc(d⟨ell(x)⟩)). $
+#isaconst("gamma_tabs") of the non-relational analyses, which keeps the stores
+whose values lie within their kinds (#isaconst("in_kinds")) and in the concretization of
+each identity's abstract value. Its own concretization (#isaconst("gamma_exec"))
+is therefore
+$
+  conc(d) = conc(rho_(#isaconst("is_global"))(d)) = setcomp(s, #isaconst("in_kinds") thin s and forall x. s(x) in conc(d⟨ell(x)⟩)).
+$
 The solver never computes $conc(d)$. It uses only the executable lattice operations. Function states get order, join, and bottom pointwise from HOL, but
 no widening or narrowing. The carrier instantiates all of these classes on
-#isatype("default_st") whenever the values do, so the generic solver runs on
+#isatype("gdefault_st") whenever the values do, so the generic solver runs on
 it unchanged.
 
 Distinct carrier states can still denote the same stores: every state whose
@@ -793,27 +808,24 @@ pointwise operation on functions. For the join,
 $(d union.sq e)⟨l⟩ = d⟨l⟩ union.sq e⟨l⟩$, and analogous lemmas cover
 bottom, order, widening, and narrowing. The transfer functions must commute
 with the represented function in the same way,
-$ rho_(cal(G))("op"_"exec" (d)) = "op"_"abs" (rho_(cal(G))(d)), $
-and since $conc(d) = conc(rho_(cal(G))(d))$, the soundness facts of
+$ rho_(#isaconst("is_global"))("op"_"exec" (d)) = "op"_"abs" (rho_(#isaconst("is_global"))(d)), $
+and since $conc(d) = conc(rho_(#isaconst("is_global"))(d))$, the soundness facts of
 @ch:analysis-interface then transport from the abstract to the executable
-operation. The locale #isalocale("dg_analysis_exec") states this commutation
-for the transfer on nonempty states and for procedure entry. For primitives
-proved sound it holds without a per-domain proof, because the abstract and
-executable steps are derived from the same operations
-(#isathm("sound_nonrelational_ops.tf_st_for_commute"), @sec:instances-supply).
+operation. Commutation lemmas such as #isathm("nonrel_rd_assign_st") state
+this for each transfer and for procedure entry. They are proved once for every
+instance of #isalocale("kind_int_domain"), because the abstract and executable
+steps are derived from the same operations (@sec:instances-supply), and
+#isathm("nonrel_exec_spec_sound") uses them to carry the soundness of the
+abstract transfers to the carrier.
 
 Emptiness, on which #verdict("DEAD") rests (@ch:domains), is the one operation the
-listed overrides do not decide: an unlisted variable can make the state empty
-through its default. The carrier's test inspects the local default, the
-overrides that the represented function reads, and each declared global. The globals are listed explicitly because a program has finitely many of them, so
-the global default may describe no variable at all.
-#isathm("default_st_is_bot_for_gamma_iff") proves the test exact,
-$ #isaconst("default_st_is_bot_for") space "globals" space d <==> conc(d) = emptyset, $
-provided the list enumerates exactly the globals of $cal(G)$. Because the test
-is exact, collapsing the states it finds empty to #lbot commutes with the
-represented function, as the specification's collapse requires, and a state
-it keeps is nonempty, which is where the numeric transfer commutes
-(#isaconst("live_default_st")).
+listed overrides do not decide: an unlisted identity can make the state empty
+through its default. The carrier's test (#isaconst("st_is_bot")) inspects both
+defaults and the overrides that the represented function reads.
+#isathm("st_is_bot_iff") shows that it succeeds exactly when the represented
+function maps some identity to an empty value, and #isathm("st_is_bot_sound")
+that a state it finds empty denotes no store. Collapsing such a state to #lbot
+therefore loses no store.
 
 == Why termination is not proved <sec:termination>
 

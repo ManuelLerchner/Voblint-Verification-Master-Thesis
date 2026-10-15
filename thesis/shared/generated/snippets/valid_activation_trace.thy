@@ -1,32 +1,31 @@
 (* src/Program_Model/CFG/Collecting/Activation_Trace_Def.thy *)
-inductive_set valid_activation_trace ::
-    "(vname \<Rightarrow> bool) \<Rightarrow> cfg \<Rightarrow> store set \<Rightarrow> activation_trace set"
-    ("\<T>\<^bsub>_,_,_\<^esub>")
-  for \<G> and g and S where
+inductive_set gvalid_activation_trace ::
+    "('v, 'e) gcfg \<Rightarrow> ('v \<Rightarrow> int) set \<Rightarrow> 'v gactivation_trace set"
+  for g and S where
   root:
     "s \<in> S
-     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+     \<Longrightarrow> Root [(cfg_entry g, s)] \<in> gvalid_activation_trace g S"
 | intra:
-    "t \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "t \<in> gvalid_activation_trace g S
      \<Longrightarrow> (sink_node t, a, v) \<in> intra g
-     \<Longrightarrow> s' \<in> edge_step a (sink_store t)
-     \<Longrightarrow> extend t (v, s') \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+     \<Longrightarrow> s' \<in> gedge_step a (sink_store t)
+     \<Longrightarrow> extend t (v, s') \<in> gvalid_activation_trace g S"
 | call:
-    "caller \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "caller \<in> gvalid_activation_trace g S
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
      \<Longrightarrow> Call caller
            [(FunctionEntry p,
-             call_enter \<G> (CallEdge dst pars args) (sink_store caller))]
-         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+             gcall_enter (CallEdge dst pars args) (sink_store caller))]
+         \<in> gvalid_activation_trace g S"
 | ret:
-    "callee \<in> \<T>\<^bsub>\<G>,g,S\<^esub>
+    "callee \<in> gvalid_activation_trace g S
      \<Longrightarrow> caller_of callee = Some caller
      \<Longrightarrow> sink_node callee = FunctionResult p
      \<Longrightarrow> (sink_node caller, CallEdge dst pars args, FunctionEntry p, cont)
            \<in> calls g
      \<Longrightarrow> Resume caller callee
            (path_of caller
-              @ [(cont, combine_collect \<G> dst
+              @ [(cont, gcombine_collect dst
                           (sink_store caller) (sink_store callee))])
-         \<in> \<T>\<^bsub>\<G>,g,S\<^esub>"
+         \<in> gvalid_activation_trace g S"

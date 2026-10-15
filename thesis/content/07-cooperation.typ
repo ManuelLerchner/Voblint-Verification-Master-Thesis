@@ -40,7 +40,7 @@ fun main() {
 ```)
 
 Interval keeps one range per variable. After the guards both `x` and `y` are
-still unbounded, so `x == y` evaluates to $ivl(0, 1)$ and the check stays
+still unconstrained within their kind, so `x == y` evaluates to $ivl(0, 1)$ and the check stays
 #verdict("coop-eq-interval", "16:7") with #state("coop-eq-interval", "16:7").
 The order analysis is relational. Its state is a set of pairs $(x, y)$, each
 meaning that the value of $x$ is at most the value of $y$. After the guards it
@@ -77,7 +77,7 @@ the order analysis knows at that point (@fig:mcp-step).
       life(0),
       life(1),
       life(2),
-      party((0, 0), [Interval \ $x, y$ unbounded]),
+      party((0, 0), [Interval \ $x, y$ unconstrained]),
       party((1, 0), [channel], color: vb.accent),
       party((2, 0), [Order \ $x lt.eq y, y lt.eq x$]),
       msg((0, 1), (1, 1), [asks #isaconst("EvalInt") $(x == y)$]),
@@ -117,15 +117,16 @@ combine into one analysis that meets the analysis contract of @sec:sound-core.
 The analyses must agree on what a question means and on what an answer
 claims. A _query_ asks for a fact about the stores a state describes. Voblint
 has one kind, named after Goblint's. The query #isaconst("EvalInt") $e$ asks
-which integers the expression $e$ may evaluate to. Its answer is a value of the reduced product Int (#isatype("int_dom"),
-@sec:reduced-product), lifted by a bottom and by a top element that claims nothing
-(#isatype("query_lift")). A
+which integers the expression $e$ may evaluate to. Its answer is a record
+(#isatype("int_dom")) of a sign, an interval, a parity and a congruence, lifted
+by a bottom and by a top element that claims nothing (#isatype("query_lift")). A
 comparison evaluates to $0$ or $1$, so the exact answer $1$ to
 #isaconst("EvalInt") $(x == y)$ says that $x = y$.
 
-#definition(name: [Truth of an answer], isa: "eval_holds", cmd: "fun")[
-  An answer $a$ to #isaconst("EvalInt") $e$ _holds_ at a store $s$ if
-  $sem(e)_e s in conc(a)$:
+#definition(name: [Truth of an answer], isa: "geval_holds", cmd: "fun")[
+  An answer $a$ to #isaconst("EvalInt") $e$ _holds_ at a store $s$ if the
+  value of $e$ in $s$, under the language's evaluator $italic("ev")$, lies in
+  $conc(a)$:
   #{
     show raw.where(block: true): set text(size: 6.5pt)
     thy("eval_holds")
@@ -147,7 +148,7 @@ Their meet is $ivl(0, 1) lmeet 1 = 1$, so $x = y$. Goblint's `MCP.query'` combin
 same way, as formalized by Apinis @apinis14[§5.5].
 
 A transfer may ask several questions. The framework therefore hands it all
-answers at once, as a _channel_ $italic("ch")$ of type #isatype("channel"), a function
+answers at once, as a _channel_ $italic("ch")$ of type #isatype("gchannel"), a function
 from queries to answers. A channel _holds_ at a store $s$ if every answer it
 gives holds at $s$:
 #{
@@ -160,11 +161,11 @@ and the pointwise meet of two channels that hold at $s$ holds at $s$
 
 == Proving an analysis against any channel #thy-badge("Voblint_Framework", "MCP_Spec") <sec:coop-channels>
 
-Interval's assignment in @fig:mcp-step uses the wrapper
-#isaconst("ask_assign"), which any analysis can put around its assignment
-$x := e$. The wrapper asks #isaconst("EvalInt") $e$. When the answer is one
-integer $n$, it runs the analysis's own assignment of the literal $n$, and
-otherwise the assignment of $e$. At $z := (x == y)$ Interval receives $1$ and
+Interval's assignment in @fig:mcp-step evaluates its right-hand side with
+#isaconst("aeval_ask"), the abstract evaluation every non-relational analysis
+uses. For an expression $e$ other than a literal, it asks #isaconst("EvalInt")
+$e$ and meets the answer with the analysis's own value of $e$. At
+$z := (x == y)$ Interval receives $1$, meets it with its own $ivl(0, 1)$, and
 sets $z$ to $ivl(1, 1)$, which is right only if the answer is true. Proving
 that from the order analysis's invariant would couple the two proofs.
 
@@ -174,17 +175,17 @@ $#isaconst("ls_step") thin c thin italic("ch") thin a thin x$ of an analysis $c$
 receives a channel $italic("ch")$ besides the action $a$ and the value $x$
 before the edge. Soundness is the condition of @sec:calls with one extra
 premise. For every channel $italic("ch")$, every $s in conc(x)$ _at which
-$italic("ch")$ holds_, and every $s' in$ #isai("edge_step a s"), we require
+$italic("ch")$ holds_, and every $s' in$ #isai("gedge_step a s"), we require
 $s' in conc(#isaconst("ls_step") thin c thin italic("ch") thin a thin x)$, and
 #isathm("ls_step_sound_iff") splits this into one law per kind of edge. In the
 example, the premise excludes the stores where $x != y$, at which the answer
-$1$ is false. At the others $e$ evaluates to $1$, so the analysis's soundness
-for the literal $1$ gives soundness for $e$. One theorem covers every analysis
-(#isathm("ask_assign_sound")). Its proof uses only that the answer holds, so it
-works with every partner whose answers hold.
+$1$ is false. At the others the value of $e$ lies in both the answer and the
+analysis's own value, hence in their meet. One theorem covers every
+non-relational analysis (#isathm("aeval_ask_sound")). Its proof uses only that
+the answer holds, so it works with every partner whose answers hold.
 
 An analysis without analysis globals is written as a _local specification_
-(#isatype("local_spec"), @fig:local-spec), whose operations each take a
+(#isatype("glocal_spec"), @fig:local-spec), whose operations each take a
 channel, and whose handler #isaconst("ls_query") answers queries about a
 state.
 
@@ -195,19 +196,19 @@ state.
   },
   kind: image,
   placement: auto,
-  caption: [The declaration of #isatype("local_spec"), lifted from the theory.
-    Every operation receives a channel of type #isatype("channel"), and the
+  caption: [The declaration of #isatype("glocal_spec"), lifted from the theory.
+    Every operation receives a channel of type #isatype("gchannel"), and the
     first combine stage receives two.],
 ) <fig:local-spec>
 
-Soundness of a local specification (#isaconst("sound_local_spec")) asks for a
+Soundness of a local specification (#isaconst("gsound_local_spec")) asks for a
 monotone concretization, which turns the solver's inequalities into inclusions
 as in @sec:sound-core, and one law per operation, with one law for the two
 combine stages together (#isathm("sound_local_spec_iff")). The edge and combine
 laws are the counterparts of the step and combine laws of the analysis contract
 (@sec:sound-core), and the enter law matches entry coverage, each assuming that its channels hold. The new handler law requires the handler's answers about a state $x$ to
 hold at every store of $conc(x)$ at which the channel it receives holds
-(#isaconst("sound_query")). It is the analysis's promise to its partners, and
+(#isaconst("gsound_query")). It is the analysis's promise to its partners, and
 the only one they rely on. Beyond the analysis contract, a sound local
 specification thus also contains entry coverage and the handler law.
 
@@ -226,7 +227,7 @@ of @sec:eval-precision the order analysis needs Interval's, at the same program
 point and context. The framework therefore runs all selected analyses as a
 single analysis whose abstract state is a tuple with one field per analysis.
 At `z = (x == y)` this state is the pair of Interval's state, in which $x$ and
-$y$ are unbounded, and the order analysis's state $\{x lt.eq y, y lt.eq x\}$.
+$y$ are unconstrained, and the order analysis's state $\{x lt.eq y, y lt.eq x\}$.
 The solver sees one value per node and context and never looks inside it. The
 tuple is ordered, joined, and widened field by field (#isatype("analysis_product")),
 so each field evolves as it would alone, except that its transfers may ask the
@@ -367,15 +368,15 @@ also works in the other direction, with the order analysis asking Interval
 A new analysis joins the combined state by proving the laws of its local
 specification, which mention no other analysis. Its field, the lens, and the code that reads its answers are generated from its entry in the analysis
 manifest (@ch:tooling), so only its operations and their proofs are written by
-hand. There are two routes to these proofs. A numeric domain proves its
-primitive operations sound once (#isalocale("sound_nonrelational_ops"),
-@sec:instances-supply), and the framework derives the laws from that proof
-(#isathm("sound_nonrelational_ops.dg_analysis_execI")). Any other analysis
+hand. There are two routes to these proofs. A non-relational domain
+instantiates the class #isalocale("kind_int_domain") (@sec:instances-supply),
+and one generic proof derives the laws for every instance
+(#isathm("nonrel_spec_sound")). Any other analysis
 starts from conservative defaults, a handler that answers $ltop$ and
 operations that keep the state at skips, guards, procedure bodies, events, and the first combine stage. These defaults are sound for every concretization (#isathm("sound_conservative_local_spec")). The
-analysis then supplies and proves the assignment, the special calls, the return, enter, and the second combine stage, and proves each operation that replaces a default. The order analysis follows this route. It answers comparisons between
-variables it has ordered, asks at assignments, and enters and returns with no
-facts (#isathm("order_spec_sound")).
+analysis then supplies and proves the assignment, the special calls, the return, enter, and the second combine stage, and proves each operation that replaces a default. The order analysis follows this route and also replaces the default at
+guards. It answers comparisons between variables it has ordered, asks at
+assignments, and returns with no facts (#isathm("ord_spec_sound")).
 
 Two limits remain. Components cannot read or publish analysis globals
 (@sec:shared-facts), which Goblint's MCP allows by tagging each analysis's
