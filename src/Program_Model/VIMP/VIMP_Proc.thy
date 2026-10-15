@@ -118,10 +118,10 @@ qed
 text \<open>Whole procedure entry, for the same reason: reset every local to a chosen
   value, keep the globals, then bind the formals to the actuals evaluated in the
   caller's own state. Which state and which evaluator is all that separates the
-  concrete entry from an abstract one -- the concrete semantics runs it at
-  \<^const>\<open>src_aval\<close> and the reset value \<open>0\<close>, an abstract domain at its own
-  evaluator and its own \<open>top\<close> -- so it is one definition, not a concrete one
-  with an \<open>_abs\<close> copy beside it.\<close>
+  concrete entry from an abstract one -- the concrete semantics enters with its
+  evaluator and the reset value \<open>0\<close>, an abstract domain with its own evaluator and its
+  own \<open>top\<close> -- so it is one definition, not a concrete one with an \<open>_abs\<close> copy
+  beside it.\<close>
 definition enter_binding ::
   "('k \<Rightarrow> bool) \<Rightarrow> 'a \<Rightarrow> ('e \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> 'a)
    \<Rightarrow> 'k list \<Rightarrow> 'e list \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)"
@@ -130,9 +130,9 @@ where
      bind_formals xs (map (\<lambda>e. ev e s) es) (enter_frame \<G> reset_val s)"
 
 text \<open>The return-slot write is a pure per-variable update, generic in the codomain:
-  the concrete VIMP semantics uses it at \<open>store = vname \<Rightarrow> int\<close>, and every abstract
-  domain's own \<open>vname \<Rightarrow> 'a\<close> state reuses the same definition rather than restating
-  an \<open>_abs\<close> copy of it.\<close>
+  the concrete semantics uses it at a store of integers, and every abstract domain's
+  state of abstract values reuses the same definition rather than restating an
+  \<open>_abs\<close> copy of it.\<close>
 fun combine_assign :: "'k option \<Rightarrow> 'a \<Rightarrow> ('k \<Rightarrow> 'a) \<Rightarrow> ('k \<Rightarrow> 'a)" where
   "combine_assign None _ s = s"
 | "combine_assign (Some x) v s = s(x := v)"
@@ -150,8 +150,10 @@ text \<open>
   syntax: \<open>ev\<close> evaluates an expression, \<open>glob\<close> classifies the variables a call keeps,
   \<open>rv\<close> is the return slot (Goblint's single \<^verbatim>\<open>return_varinfo\<close>), and \<open>conv\<close> converts a
   value written to a destination, as Goblint converts a stored value to its target's
-  declared type. \<open>conv\<close> takes the destination as an option so that the instance without
-  conversion, \<open>\<lambda>_ n. n\<close>, gives back exactly the rules without conversion. A call
+  declared type. \<open>conv\<close> takes the destination as an option because a call without a
+  destination converts nothing. The canonical semantics \<open>pstep\<close>
+  (theory \<open>VIMP_Semantics\<close>) instantiates \<open>conv\<close> with \<open>kind_conv\<close>, which
+  wraps a value into its destination's kind. A call
   converts each actual to its formal, as an assignment converts to its destination, so
   every entry store holds each formal at its own kind. Elaboration has already
   converted an actual it produced, as CIL does, and there the conversion changes
