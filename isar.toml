@@ -326,7 +326,7 @@ allow = [
   # (cited results, continued)
   # named in THESIS_BLUEPRINT.md
   "activation_collect_of_fun",
-  # named in TYPED_CFG_PLAN.md
+  # named in docs/history/TYPED_CFG_PLAN.md
   "compile_prog_calls_from",
   # named in CALLSTRING_CONTEXT_DESIGN.md, THESIS_BLUEPRINT.md
   "cs_route_context_agree",

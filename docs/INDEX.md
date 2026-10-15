@@ -40,8 +40,6 @@ match the tree.
 - [CFG compiler continuation redesign](CFG_COMPILER_CONTINUATION_REDESIGN.md)
 - [DG interface validation against Goblint](GOBLINT_DG_INTERFACE_VALIDATION.md)
 - [Backward-filter sharing measurement](BACKWARD_FILTER_SHARING_MEASUREMENT.md)
-- [M4 semantic baseline](M4_SEMANTIC_BASELINE.md) — observable results the
-  interval and global-across-call witnesses pin.
 
 ## Work and verification
 
@@ -58,8 +56,6 @@ match the tree.
   Interval × order demo.
 - [Proof verification gates](PROOF_PHASES.md) — checks required for each proof
   layer and for the repository.
-- [Typed analyzer plan](TYPED_CFG_PLAN.md) and [machine integers](TYPED_IR.md) —
-  how the machine-integer language replaced the mathematical one, historical.
 - [Goblint-alignment tracks](GOBLINT_ALIGNMENT_TRACKS.md) — the remaining M2
   and M3 context-alignment tracks.
 - [`solve_dom` total-correctness route](P1_TOTAL_CORRECTNESS_ROUTE.md) and
@@ -82,6 +78,10 @@ maintained against the current tree.
 
 Recent archived records:
 
+- [Typed analyzer plan](history/TYPED_CFG_PLAN.md), [machine integers](history/TYPED_IR.md)
+  and [typed reuse inventory](history/TYPED_REUSE_INVENTORY.md): how the machine-integer
+  language replaced the mathematical one
+- [M4 semantic baseline](history/M4_SEMANTIC_BASELINE.md)
 - [Export-surface audit](history/EXPORT_SURFACE_AUDIT.md)
 - [Cleanup migration plan](history/CLEANUP_MIGRATION_PLAN.md)
 - [Post-deletion cleanup queue](history/POST_DELETION_CLEANUP_QUEUE.md)

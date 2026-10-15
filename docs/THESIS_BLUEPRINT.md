@@ -8,7 +8,7 @@
 > **Amended 2026-10-15 (Stage 7).** VIMP now has one, machine-integer semantics:
 > surface VIMP is elaborated to core VIMP, which `pstep` executes, and the
 > mathematical-integer semantics, the lowering and the untyped analyzer are gone
-> (`docs/TYPED_CFG_PLAN.md`). §§2.2–2.4, 3, 3.1, 3.2, 15.2 and 15.3 and the
+> (`docs/history/TYPED_CFG_PLAN.md`). §§2.2–2.4, 3, 3.1, 3.2, 15.2 and 15.3 and the
 > language rows of §8 are updated; C6, C7, C8 and C9 carry Stage 7 notes. Other
 > sections may still use pre-Stage-7 names (`Ctx_None`, `analysis_domain`,
 > `abs_state`, `Analysis_Certified`, ...); `docs/theorem-migration.toml` maps
